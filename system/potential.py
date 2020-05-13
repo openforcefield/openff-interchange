@@ -1,16 +1,16 @@
-from typing import Dict, Set
+from typing import Union, Dict, Set
 
 from pint import Quantity
 from pydantic import BaseModel, validator
 from sympy import Expr
 
 
-class Potential(BaseModel):
+class AnalyticalPotential(BaseModel):
     """Generic representation of an interaction potential."""
     name: str
-    expression: Expr
-    parameters: Dict[Expr, Quantity]
-    independent_variables: Set[Expr]
+    expression: Union[Expr, str]
+    parameters: Dict[Union[Expr, str], Quantity]
+    independent_variables: Set[Union[Expr, str]]
 
     @validator("expression")
     def is_valid_sympy_expr(cls, val):
