@@ -3,6 +3,9 @@ channels:
 dependencies:
     # Base depends
   - python
+  - pint
+  - pydantic
+  - sympy
   - pip
 
     # Testing
