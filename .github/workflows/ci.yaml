@@ -5,14 +5,14 @@ on: [push, pull_request]
 jobs:
   test:
 
-    runs-on: {{ '${{ matrix.os }}' }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macOS-latest, ubuntu-latest, windows-latest]
         python-version: [3.6, 3.7]
     env:
-      PYVER: {{ '${{ matrix.python-version }}' }}
-      CI_OS: {{ '${{ matrix.os }}' }}
+      CI_OS: ${{ matrix.cfg.os }}
+      PYVER: ${{ matrix.python-version }}
 
     steps:
     - uses: actions/checkout@v1
@@ -49,7 +49,3 @@ jobs:
 
     - name: CodeCov
       uses: codecov/codecov-action@v1
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-{{ '${{ matrix.os }}' }}-py{{ '${{ matrix.python-version }}' }}
