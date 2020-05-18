@@ -44,7 +44,7 @@ jobs:
     - name: Configure conda
       shell: bash
       run: |
-        . devtools/gh-actions/initialize_conda.sh
+        . devtools/github-actions/initialize_conda.sh
         conda activate
         conda config --set always_yes yes
         conda install --quiet conda conda-build jinja2 anaconda-client
