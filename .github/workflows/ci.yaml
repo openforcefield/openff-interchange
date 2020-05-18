@@ -34,6 +34,22 @@ jobs:
         df -h
         ulimit -a
 
+    - name: Fix conda permissions in MacOS
+      shell: bash
+      if: startsWith(matrix.cfg.os, 'macOS')
+      run: |
+        sudo chown -R $(id -u):$(id -g) ${CONDA}
+
+    - name: Configure conda
+      shell: bash
+      run: |
+        . devtools/gh-actions/initialize_conda.sh
+        conda activate
+        conda config --set always_yes yes
+        conda install --quiet conda conda-build jinja2 anaconda-client
+        conda update --all
+        conda list
+
     - name: Create environment for package
       shell: bash
       run: |
