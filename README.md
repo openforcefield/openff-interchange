@@ -7,6 +7,8 @@ openff-system
 
 A molecular system object from the Open Force Field Initiative
 
+**Please note that this software in an early and experimental state and unsuitable for production.**
+
 ### Copyright
 
 Copyright (c) 2020, Open Force Field Initiative
