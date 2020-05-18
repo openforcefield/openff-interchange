@@ -19,10 +19,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macOS-latest, ubuntu-latest, windows-latest]
+        os: [macOS-latest, ubuntu-latest]
         python-version: [3.6, 3.7]
     env:
-      CI_OS: ${{ matrix.cfg.os }}
+      CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
 
     steps:
@@ -37,7 +37,13 @@ jobs:
 
     - name: Fix conda permissions in MacOS
       shell: bash
-      if: startsWith(matrix.cfg.os, 'macOS')
+      if: startsWith(matrix.os, 'macOS')
+      run: |
+        sudo chown -R $(id -u):$(id -g) ${CONDA}
+
+    - name: Fix conda permissions in MacOS
+      shell: bash
+      if: startsWith(matrix.os, 'macOS')
       run: |
         sudo chown -R $(id -u):$(id -g) ${CONDA}
 
