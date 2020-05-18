@@ -1,4 +1,4 @@
-name: CI
+name: ci
 
 on:
   push:
@@ -9,6 +9,8 @@ on:
     branches:
       - "master"
       - "maintenance/.+"
+  schedule:
+      - cron: "0 0 * * * "
 
 jobs:
   test:
