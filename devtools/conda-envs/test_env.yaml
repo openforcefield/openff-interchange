@@ -1,7 +1,6 @@
 name: test
 channels:
   - conda-forge
-  - omina/label/beta
 
 dependencies:
     # Base depends
@@ -10,7 +9,6 @@ dependencies:
   - pydantic
   - pint
   - sympy
-  - openff-evaluator
 
     # Testing
   - pytest

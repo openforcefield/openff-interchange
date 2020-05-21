@@ -58,6 +58,8 @@ jobs:
         conda activate
         conda info
         python devtools/scripts/create_conda_env.py -n=test -p=$PYVER devtools/conda-envs/test_env.yaml
+        conda install -c conda-forge -c omnia -c omnia/label/beta openff-evaluator
+        conda list
 
     - name: Install package
       shell: bash
