@@ -12,16 +12,16 @@ class TestPotential(BaseTest):
     def test_analytical_potential_constructor(self):
         pot = AnalyticalPotential(
             name="TestPotential",
-            expression=sympy.sympify("mx+b"),
+            expression=sympy.sympify("m*x+b"),
             independent_variables={sympy.sympify("x")},
         )
 
         assert pot.name == "TestPotential"
-        assert compare_sympy_expr(pot.expression, "mx+b")
+        assert compare_sympy_expr(pot.expression, "m*x+b")
 
         pot_from_str = AnalyticalPotential(
             name="TestPotentialFromString",
-            expression="mx+b",
+            expression="m*x+b",
             independent_variables={"x"},
         )
 
@@ -30,14 +30,14 @@ class TestPotential(BaseTest):
     def test_parametrized_analytical_potential_constructor(self):
         pot = ParametrizedAnalyticalPotential(
             name="TestPotential",
-            expression="mx+b",
+            expression="m*x+b",
             independent_variables={"x"},
-            parameters={"a": 0.5 * u.dimensionless, "b": -1.0 * u.dimensionless},
+            parameters={"m": 0.5 * u.dimensionless, "b": -1.0 * u.dimensionless},
         )
 
         assert pot.name == "TestPotential"
-        assert compare_sympy_expr(pot.expression, "mx+b")
-        assert "a" in pot.parameters.keys()
+        assert compare_sympy_expr(pot.expression, "m*x+b")
+        assert "m" in pot.parameters.keys()
         assert "b" in pot.parameters.keys()
-        assert pot.parameters["a"] == 0.5 * u.dimensionless
+        assert pot.parameters["m"] == 0.5 * u.dimensionless
         assert pot.parameters["b"] == -1.0 * u.dimensionless
