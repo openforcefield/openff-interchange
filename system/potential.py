@@ -14,7 +14,7 @@ class AnalyticalPotential(BaseModel):
 
     name: str
     expression: Union[Expr, str]
-    independent_variables: Set[Union[Expr, str]]
+    independent_variables: Union[str, Set[Union[Expr, str]]]
 
     @validator("expression")
     def is_valid_sympy_expr(cls, val):
