@@ -18,9 +18,9 @@ class AnalyticalPotential(BaseModel):
     @validator("expression")
     def is_valid_sympy_expr(cls, val):
         if isinstance(val, Expr):
-            return val
+            return str(val)
         elif isinstance(val, str):
-            return Expr(val)
+            return val
 
     class Config:
         arbitrary_types_allowed = True
