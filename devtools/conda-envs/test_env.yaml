@@ -1,9 +1,14 @@
 name: test
 channels:
+  - conda-forge
+
 dependencies:
     # Base depends
   - python
   - pip
+  - pydantic
+  - pint
+  - sympy
 
     # Testing
   - pytest
