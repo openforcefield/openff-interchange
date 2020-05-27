@@ -1,27 +1,43 @@
-from sympy import Expr
-from pint import Quantity
+import sympy
+import pint
 
-from system.potential import AnalyticalPotential
+from system.potential import AnalyticalPotential, ParametrizedAnalyticalPotential
+from system.utils import compare_sympy_expr
+from system.tests.base_test import BaseTest
 
 
-def test_analytical_potential_constructor():
-    pot = AnalyticalPotential(
-        name="X",
-        expression=Expr("x+1"),
-        independent_variables={Expr("j")},
-        parameters={Expr("x"): Quantity(1)},
-    )
+u = pint.UnitRegistry()
 
-    assert pot.name == "X"
-    assert pot.expression == Expr("x+1")
-    assert pot.independent_variables == {Expr("j")}
-    assert pot.parameters == dict({Expr("x"): Quantity(1)})
+class TestPotential(BaseTest):
+    def test_analytical_potential_constructor(self):
+        pot = AnalyticalPotential(
+            name="TestPotential",
+            expression=sympy.sympify("m*x+b"),
+            independent_variables={sympy.sympify("x")},
+        )
 
-    pot_from_str = AnalyticalPotential(
-        name="X",
-        expression="x+1",
-        independent_variables={Expr("j")},
-        parameters={Expr("x"): Quantity(1)},
-    )
+        assert pot.name == "TestPotential"
+        assert compare_sympy_expr(pot.expression, "m*x+b")
 
-    assert pot.expression == pot_from_str.expression
+        pot_from_str = AnalyticalPotential(
+            name="TestPotentialFromString",
+            expression="m*x+b",
+            independent_variables={"x"},
+        )
+
+        assert compare_sympy_expr(pot.expression, pot_from_str.expression)
+
+    def test_parametrized_analytical_potential_constructor(self):
+        pot = ParametrizedAnalyticalPotential(
+            name="TestPotential",
+            expression="m*x+b",
+            independent_variables={"x"},
+            parameters={"m": 0.5 * u.dimensionless, "b": -1.0 * u.dimensionless},
+        )
+
+        assert pot.name == "TestPotential"
+        assert compare_sympy_expr(pot.expression, "m*x+b")
+        assert "m" in pot.parameters.keys()
+        assert "b" in pot.parameters.keys()
+        assert pot.parameters["m"] == 0.5 * u.dimensionless
+        assert pot.parameters["b"] == -1.0 * u.dimensionless
