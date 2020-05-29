@@ -1,6 +1,7 @@
 name: test
 channels:
   - conda-forge
+  - omnia
 
 dependencies:
     # Base depends
@@ -11,8 +12,6 @@ dependencies:
   - pytest
   - pytest-cov
   - codecov
-
-    # Pip-only installs
-  #- pip:
-  #  - codecov
-
+  - sympy
+  - pint
+  - openmm
