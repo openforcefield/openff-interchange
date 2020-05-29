@@ -18,3 +18,4 @@ dependencies:
   - sympy
   - pint
   - openmm
+  - openforcefield
