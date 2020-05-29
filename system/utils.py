@@ -2,7 +2,7 @@ import sympy
 import pint
 
 
-def pint_to_openmm(quantity):
+def pint_to_simtk(quantity):
     """Convert a pint Quantity to an OpenMM unit."""
     raise NotImplementedError()
 
