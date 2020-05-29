@@ -24,11 +24,18 @@ class TestSystem(BaseTest):
             forcefield=ForceField.from_toolkit_forcefield(argon_ff),
         )
 
+    def test_constructor_toolkit(self, argon_ff, argon_top):
+        """Test the basic constructor directly from toolkit objects"""
+        System(
+            topology=argon_top,
+            forcefield=argon_ff,
+        )
+
     def test_run_typing(self, argon_ff, argon_top):
         """Test that run_typing properly stores the parameter id"""
         test_system = System(
-            topology=Topology.from_toolkit_topology(argon_top),
-            forcefield=ForceField.from_toolkit_forcefield(argon_ff),
+            topology=argon_top,
+            forcefield=argon_ff,
         )
 
         test_system.run_typing(
