@@ -1,4 +1,4 @@
-from typing import Iterable, Set
+from typing import Union, Iterable, List, Dict
 
 import numpy as np
 from pydantic import BaseModel, validator
@@ -15,48 +15,105 @@ from .utils import simtk_to_pint
 u = pint.UnitRegistry()
 
 
-class Topology:
+class ForceField(BaseModel):
 
-    def __init__(self, toolkit_topology):
-        self.atoms = [Atom(atom.atomic_number) for atom in toolkit_topology.topology_atoms]
+    parameters: Dict[str, Potential]
 
-class ForceField:
+    @classmethod
+    def from_toolkit_forcefield(cls, toolkit_forcefield):
 
-    types: Set[Potential]
+        for param in toolkit_forcefield['vdW'].parameters:
+            if param.sigma is None:
+                sigma = 2. * param.rmin_half / (2.**(1. / 6.))
+            else:
+                sigma = param.sigma
+            sigma = simtk_to_pint(sigma)
+            epsilon = simtk_to_pint(param.epsilon)
+
+            potential = Potential(
+                name=param.id,
+                expression='4*epsilon*((sigma/r)**12-(sigma/r)**6)',
+                independent_variables={'r'},
+                parameters={'sigma': sigma, 'epsilon': epsilon},
+            )
+
+            try:
+                forcefield.parameters[param.id] = potential
+            except UnboundLocalError:
+                forcefield = cls(parameters={param.id: potential})
+
+        return forcefield
 
 
 class Atom(ToolkitAtom):
 
-    def __init__(self, atomic_number, atom_type=None):
+    class Config:
+        arbitrary_types_allowed = True
+
+    def __init__(self, atomic_number, parameter_id=None):
         super().__init__(
             atomic_number=atomic_number,
             formal_charge=0,
             is_aromatic=False,
         )
-        self._atom_type = atom_type
+        self._parameter_id = parameter_id
 
     @property
     def atomic_number(self):
         return self._atomic_number
 
     @property
-    def atom_type(self):
-        return self._atom_type
+    def parameter_id(self):
+        return self._parameter_id
 
-    @atom_type.setter
-    def atom_type(self, potential):
-        self._atom_type = potential
+    @parameter_id.setter
+    def parameter_id(self, potential):
+        self._parameter_id = potential
+
+
+class Topology(BaseModel):
+
+    atoms: List[Atom]
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    @classmethod
+    def from_toolkit_topology(cls, toolkit_topology):
+
+        atoms = []
+
+        for atom in toolkit_topology.topology_atoms:
+            atoms.append(Atom(atom))
+
+        return cls(atoms=atoms)
 
 
 class System(BaseModel):
     """The OpenFF System object."""
 
-    toolkit_forcefield: ToolkitForceField = None
-    toolkit_topology: ToolkitTopology = None
-    topology: Topology = None
-    forcefield: ForceField = None
+    topology: Union[Topology, ToolkitTopology]
+    forcefield: Union[ForceField, ToolkitForceField]
     positions: Iterable = None
     box: Iterable = None
+
+    @validator("forcefield")
+    def validate_forcefield(cls, val):
+        if isinstance(val, ToolkitForceField):
+            return ForceField.from_toolkit_forcefield(val)
+        elif isinstance(val, ForceField):
+            return val
+        else:
+            raise TypeError
+
+    @validator("topology")
+    def validate_topology(cls, val):
+        if isinstance(val, ToolkitTopology):
+            return Topology.from_toolkit_topology(val)
+        elif isinstance(val, Topology):
+            return val
+        else:
+            raise TypeError
 
     @validator("*")
     def dummy_validator(cls, val):
@@ -65,51 +122,18 @@ class System(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def to_file(self):
-        raise NotImplementedError()
-
-    def populate_from_toolkit_data(self):
-        """Construct a System from provided ForceField and Topology."""
-        self.box = [10, 10, 10] * u.nm
-
-        self.positions = np.random.random((self.toolkit_topology.n_topology_atoms, 3)) * u.nm
-
-        self.topology = Topology(self.toolkit_topology)
-
-        self.forcefield = dict()
-
+    def run_typing(self, toolkit_forcefield, toolkit_topology):
         # Only doing on vdW for now
-        matches = self.toolkit_forcefield.get_parameter_handler('vdW').find_matches(self.toolkit_topology)
+        matches = toolkit_forcefield.get_parameter_handler('vdW').find_matches(toolkit_topology)
 
-
-        lj_map = {}
+        typing_map = {}
 
         for atom_key, atom_match in matches.items():
-            atom_idx = atom_key[0]
+            typing_map[atom_key[0]] = atom_match.parameter_type.id
+            self.topology.atoms[atom_key[0]].parameter_id = atom_match.parameter_type.id
 
-            lj_type = atom_match.parameter_type
-
-            if lj_type.sigma is None:
-                sigma = 2. * lj_type.rmin_half / (2.**(1. / 6.))
-            else:
-                sigma = lj_type.sigma
-            sigma = simtk_to_pint(sigma)
-            epsilon = simtk_to_pint(lj_type.epsilon)
-
-            potential = Potential(
-                name=lj_type.id,
-                expression='4*epsilon*((sigma/r)**12-(sigma/r)**6)',
-                independent_variables={'r'},
-                parameters={'sigma': sigma, 'epsilon': epsilon},
-            )
-
-            lj_map[atom_idx] = potential.name
-
-            self.forcefield[potential.name] = potential
-
-        for key, val in lj_map.items():
-            self.topology.atoms[key].atom_type = self.forcefield[val]
-
+    def to_file(self):
+        raise NotImplementedError()
 
     def from_file(self):
         raise NotImplementedError()
