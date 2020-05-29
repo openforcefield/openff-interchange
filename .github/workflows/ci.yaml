@@ -73,6 +73,10 @@ jobs:
         . devtools/github-actions/initialize_conda.sh
         conda activate test
         pytest -v
+        pytest -v --cov=system --cov-report=xml --cov-config=setup.cfg
 
-    - name: CodeCov
+    - name: Codecov
       uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: true
