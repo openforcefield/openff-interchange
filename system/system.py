@@ -22,7 +22,7 @@ class ForceField(BaseModel):
     @classmethod
     def from_toolkit_forcefield(cls, toolkit_forcefield):
 
-        for param in toolkit_forcefield['vdW'].parameters:
+        for param in toolkit_forcefield.get_parameter_handler('vdW').parameters:
             if param.sigma is None:
                 sigma = 2. * param.rmin_half / (2.**(1. / 6.))
             else:
