@@ -73,7 +73,7 @@ class Atom(ToolkitAtom):
 
 class Topology(BaseModel):
 
-    atoms: List[Atom]
+    atoms: List[ToolkitAtom]
 
     class Config:
         arbitrary_types_allowed = True
@@ -84,7 +84,7 @@ class Topology(BaseModel):
         atoms = []
 
         for atom in toolkit_topology.topology_atoms:
-            atoms.append(Atom(atom))
+            atoms.append(atom.atom)
 
         return cls(atoms=atoms)
 
