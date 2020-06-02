@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macOS-latest, ubuntu-latest]
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7]
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
@@ -73,6 +73,10 @@ jobs:
         . devtools/github-actions/initialize_conda.sh
         conda activate test
         pytest -v
+        pytest -v --cov=system --cov-report=xml --cov-config=setup.cfg
 
-    - name: CodeCov
+    - name: Codecov
       uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: true
