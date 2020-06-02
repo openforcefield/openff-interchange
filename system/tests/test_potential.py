@@ -12,11 +12,13 @@ class TestPotential(BaseTest):
     def test_analytical_potential_constructor(self):
         pot = AnalyticalPotential(
             name="TestPotential",
+            smirks="[#6]",
             expression=sympy.sympify("m*x+b"),
             independent_variables={sympy.sympify("x")},
         )
 
         assert pot.name == "TestPotential"
+        assert pot.smirks == "[#6]"
         assert compare_sympy_expr(pot.expression, "m*x+b")
 
         pot_from_str = AnalyticalPotential(

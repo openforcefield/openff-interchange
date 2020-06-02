@@ -12,7 +12,8 @@ class AnalyticalPotential(BaseModel):
     form and lacking parameters.
     """
 
-    name: str
+    name: str = None
+    smirks: str = None
     expression: Union[Expr, str]
     independent_variables: Union[str, Set[Union[Expr, str]]]
 
