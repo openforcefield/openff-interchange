@@ -1,12 +1,12 @@
 import pytest
 
-from system import System, ForceField, Topology
+from system import System, PotentialCollection, Topology
 from system.tests.base_test import BaseTest
 
 
 class TestForceField(BaseTest):
     def test_forcefield_from_toolkit(self, argon_ff):
-        ff = ForceField.from_toolkit_forcefield(argon_ff)
+        ff = PotentialCollection.from_toolkit_forcefield(argon_ff)
         assert ff is not None
 
 
@@ -21,7 +21,7 @@ class TestSystem(BaseTest):
         """Test the basic constructor"""
         System(
             topology=Topology.from_toolkit_topology(argon_top),
-            forcefield=ForceField.from_toolkit_forcefield(argon_ff),
+            forcefield=PotentialCollection.from_toolkit_forcefield(argon_ff),
         )
 
     def test_constructor_toolkit(self, argon_ff, argon_top):

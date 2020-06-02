@@ -15,7 +15,7 @@ from .utils import simtk_to_pint
 u = pint.UnitRegistry()
 
 
-class ForceField(BaseModel):
+class PotentialCollection(BaseModel):
 
     parameters: Dict[str, Potential]
 
@@ -93,15 +93,15 @@ class System(BaseModel):
     """The OpenFF System object."""
 
     topology: Union[Topology, ToolkitTopology]
-    forcefield: Union[ForceField, ToolkitForceField]
+    forcefield: Union[PotentialCollection, ToolkitForceField]
     positions: Iterable = None
     box: Iterable = None
 
     @validator("forcefield")
     def validate_forcefield(cls, val):
         if isinstance(val, ToolkitForceField):
-            return ForceField.from_toolkit_forcefield(val)
-        elif isinstance(val, ForceField):
+            return PotentialCollection.from_toolkit_forcefield(val)
+        elif isinstance(val, PotentialCollection):
             return val
         else:
             raise TypeError
