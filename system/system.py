@@ -4,8 +4,7 @@ from pydantic import BaseModel, validator
 import pint
 
 from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.topology import Topology as ToolkitTopology
-from openforcefield.topology.molecule import Atom as ToolkitAtom
+from openforcefield.topology import Topology
 
 from .potential import ParametrizedAnalyticalPotential as Potential
 from .typing.smirnoff import build_slots_parameter_map
@@ -80,54 +79,10 @@ class PotentialCollection(BaseModel):
         return self.handlers[handler_name]
 
 
-class Atom(ToolkitAtom):
-
-    class Config:
-        arbitrary_types_allowed = True
-
-    def __init__(self, atomic_number, parameter_id=None):
-        super().__init__(
-            atomic_number=atomic_number,
-            formal_charge=0,
-            is_aromatic=False,
-        )
-        self._parameter_id = parameter_id
-
-    @property
-    def atomic_number(self):
-        return self._atomic_number
-
-    @property
-    def parameter_id(self):
-        return self._parameter_id
-
-    @parameter_id.setter
-    def parameter_id(self, potential):
-        self._parameter_id = potential
-
-
-class Topology(BaseModel):
-
-    atoms: List[ToolkitAtom]
-
-    class Config:
-        arbitrary_types_allowed = True
-
-    @classmethod
-    def from_toolkit_topology(cls, toolkit_topology):
-
-        atoms = []
-
-        for atom in toolkit_topology.topology_atoms:
-            atoms.append(atom.atom)
-
-        return cls(atoms=atoms)
-
-
 class System(BaseModel):
     """The OpenFF System object."""
 
-    topology: Union[Topology, ToolkitTopology]
+    topology: Topology
     potential_collection: Union[PotentialCollection, ForceField]
     positions: Iterable = None
     box: Iterable = None
@@ -144,10 +99,8 @@ class System(BaseModel):
 
     @validator("topology")
     def validate_topology(cls, val):
-        if isinstance(val, ToolkitTopology):
+        if isinstance(val, Topology):
             return val
-        elif isinstance(val, Topology):
-            return NotImplementedError
         else:
             raise TypeError
 

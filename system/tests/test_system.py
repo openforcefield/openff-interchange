@@ -27,12 +27,6 @@ class TestPotentialCollection(BaseTest):
         assert ff is not None
 
 
-class TestTopology(BaseTest):
-    def test_topology_from_toolkit(self, argon_top):
-        top = Topology.from_toolkit_topology(argon_top)
-        assert top is not None
-
-
 class TestSystem(BaseTest):
     def test_constructor(self, argon_ff, argon_top):
         """Test the basic constructor"""
