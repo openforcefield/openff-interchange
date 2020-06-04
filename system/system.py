@@ -1,6 +1,5 @@
 from typing import Union, Iterable, List, Dict
 
-import numpy as np
 from pydantic import BaseModel, validator
 import pint
 
