@@ -4,45 +4,81 @@ import numpy as np
 from pydantic import BaseModel, validator
 import pint
 
-from openforcefield.typing.engines.smirnoff import ForceField as ToolkitForceField
+from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.topology import Topology as ToolkitTopology
 from openforcefield.topology.molecule import Atom as ToolkitAtom
 
 from .potential import ParametrizedAnalyticalPotential as Potential
+from .typing.smirnoff import build_slots_parameter_map
 from .utils import simtk_to_pint
 
 
 u = pint.UnitRegistry()
 
 
+class PotentialHandler(BaseModel):
+
+    name: str
+    potentials: Dict[str, Potential] = None
+
+    def __getitem__(self, potential_smirks):
+        return self.potentials[potential_smirks]
+
+def handler_conversion(forcefield, potential_collection, handler_name):
+    """Temporary stand-in for .to_potential calls in toolkit ParameterHandler objects."""
+    if handler_name != 'vdW':
+        raise NotImplementedError
+
+    for param in forcefield.get_parameter_handler(handler_name).parameters:
+        if param.sigma is None:
+            sigma = 2. * param.rmin_half / (2.**(1. / 6.))
+        else:
+            sigma = param.sigma
+        sigma = simtk_to_pint(sigma)
+        epsilon = simtk_to_pint(param.epsilon)
+
+        potential = Potential(
+            name=param.id,
+            smirks=param.smirks,
+            expression='4*epsilon*((sigma/r)**12-(sigma/r)**6)',
+            independent_variables={'r'},
+            parameters={'sigma': sigma, 'epsilon': epsilon},
+        )
+
+        try:
+            potential_collection.handlers['vdW'][param.smirks] = potential
+        except (AttributeError, TypeError):
+            potential_collection.handlers = {
+                'vdW': PotentialHandler(
+                    name='vdW',
+                    potentials={
+                        param.smirks: potential,
+                    }
+                )
+
+            }
+
+    return potential_collection
+
+
 class PotentialCollection(BaseModel):
 
-    parameters: Dict[str, Potential]
+    handlers: Dict[str, PotentialHandler] = None
 
     @classmethod
     def from_toolkit_forcefield(cls, toolkit_forcefield):
 
-        for param in toolkit_forcefield.get_parameter_handler('vdW').parameters:
-            if param.sigma is None:
-                sigma = 2. * param.rmin_half / (2.**(1. / 6.))
-            else:
-                sigma = param.sigma
-            sigma = simtk_to_pint(sigma)
-            epsilon = simtk_to_pint(param.epsilon)
+        toolkit_handlers = toolkit_forcefield._parameter_handlers.keys()
+        supported_handlers = ['vdW']
 
-            potential = Potential(
-                name=param.id,
-                expression='4*epsilon*((sigma/r)**12-(sigma/r)**6)',
-                independent_variables={'r'},
-                parameters={'sigma': sigma, 'epsilon': epsilon},
-            )
+        for handler in toolkit_handlers:
+            if handler not in supported_handlers:
+                continue
+            handler_conversion(toolkit_forcefield, cls, handler)
+        return cls
 
-            try:
-                forcefield.parameters[param.id] = potential
-            except UnboundLocalError:
-                forcefield = cls(parameters={param.id: potential})
-
-        return forcefield
+    def __getitem__(self, handler_name):
+        return self.handlers[handler_name]
 
 
 class Atom(ToolkitAtom):
@@ -93,13 +129,14 @@ class System(BaseModel):
     """The OpenFF System object."""
 
     topology: Union[Topology, ToolkitTopology]
-    forcefield: Union[PotentialCollection, ToolkitForceField]
+    potential_collection: Union[PotentialCollection, ForceField]
     positions: Iterable = None
     box: Iterable = None
+    slots_map: Dict = None
 
-    @validator("forcefield")
+    @validator("potential_collection")
     def validate_forcefield(cls, val):
-        if isinstance(val, ToolkitForceField):
+        if isinstance(val, ForceField):
             return PotentialCollection.from_toolkit_forcefield(val)
         elif isinstance(val, PotentialCollection):
             return val
@@ -123,14 +160,11 @@ class System(BaseModel):
         arbitrary_types_allowed = True
 
     def run_typing(self, toolkit_forcefield, toolkit_topology):
-        # Only doing on vdW for now
-        matches = toolkit_forcefield.get_parameter_handler('vdW').find_matches(toolkit_topology)
-
-        typing_map = {}
-
-        for atom_key, atom_match in matches.items():
-            typing_map[atom_key[0]] = atom_match.parameter_type.id
-            self.topology.atoms[atom_key[0]].parameter_id = atom_match.parameter_type.id
+        """Just store the slots map"""
+        self.slots_map = build_slots_parameter_map(
+            forcefield=toolkit_forcefield,
+            topology=toolkit_topology
+        )
 
     def to_file(self):
         raise NotImplementedError()
