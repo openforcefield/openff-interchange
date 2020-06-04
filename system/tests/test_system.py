@@ -20,13 +20,6 @@ class TestSystem(BaseTest):
     def test_constructor(self, argon_ff, argon_top):
         """Test the basic constructor"""
         System(
-            topology=Topology.from_toolkit_topology(argon_top),
-            forcefield=PotentialCollection.from_toolkit_forcefield(argon_ff),
-        )
-
-    def test_constructor_toolkit(self, argon_ff, argon_top):
-        """Test the basic constructor directly from toolkit objects"""
-        System(
             topology=argon_top,
             forcefield=argon_ff,
         )
@@ -42,6 +35,3 @@ class TestSystem(BaseTest):
             toolkit_forcefield=argon_ff,
             toolkit_topology=argon_top,
         )
-
-        for atom in test_system.topology.atoms:
-            assert atom.parameter_id == 'n1'

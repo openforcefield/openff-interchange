@@ -109,9 +109,9 @@ class System(BaseModel):
     @validator("topology")
     def validate_topology(cls, val):
         if isinstance(val, ToolkitTopology):
-            return Topology.from_toolkit_topology(val)
-        elif isinstance(val, Topology):
             return val
+        elif isinstance(val, Topology):
+            return NotImplementedError
         else:
             raise TypeError
 
