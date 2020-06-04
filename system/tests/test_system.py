@@ -21,12 +21,6 @@ class TestPotentialHandler(BaseTest):
 
         assert collection['vdW']['[#18:1]'].parameters['sigma'] == 0.3 * u.nm
 
-class TestPotentialCollection(BaseTest):
-    def test_potential_collection_from_toolkit(self, argon_ff):
-        ff = PotentialCollection.from_toolkit_forcefield(argon_ff)
-        assert ff is not None
-
-
 class TestSystem(BaseTest):
     def test_constructor(self, argon_ff, argon_top):
         """Test the basic constructor"""
