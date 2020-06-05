@@ -7,14 +7,24 @@ from system.utils import simtk_to_pint, pint_to_simtk, compare_sympy_expr
 
 u = pint.UnitRegistry()
 
+simtk_quantitites = [
+    4.0 * simtk_unit.nanometer,
+    5.0 * simtk_unit.angstrom,
+]
 
-def test_simtk_to_pint():
+pint_quantities = [
+    4.0 * u.nanometer,
+    5.0 * u.angstrom,
+]
+@pytest.mark.parametrize(
+    'simtk_quantity,pint_quantity',
+    [(s, p) for s, p in zip(simtk_quantitites, pint_quantities)]
+)
+def test_simtk_to_pint(simtk_quantity, pint_quantity):
     """Test conversion from SimTK Quantity to pint Quantity."""
-    simtk_quantity = 10.0 * simtk_unit.nanometer
+    converted_pint_quantity = simtk_to_pint(simtk_quantity)
 
-    pint_quantity = simtk_to_pint(simtk_quantity)
-
-    assert pint_quantity == 10.0 * u.nanometer
+    assert pint_quantity == converted_pint_quantity
 
 
 def test_pint_to_simtk():
