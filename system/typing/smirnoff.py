@@ -36,6 +36,7 @@ def add_handler(forcefield, potential_collection, handler_name):
     """Temporary stand-in for .to_potential calls in toolkit ParameterHandler objects."""
     if handler_name not in ['vdW', 'Bonds']:
         warn(f'handler {handler_name} not implemented')
+        return potential_collection
 
     if handler_name == 'vdW':
         potential_collection.handlers.update({'vdW': PotentialHandler(name='vdW')})
@@ -66,26 +67,26 @@ def add_handler(forcefield, potential_collection, handler_name):
             potential = Potential(
                 name=param.id,
                 smirks=param.smirks,
-                expression='1/2*k(length-length_0)**2',
+                expression='1/2*k*(length-length_0)**2',
                 independent_variables={'length_0'},
-                parameters={'k': k, 'length_0': length},
+                parameters={'k': k, 'length': length},
             )
 
             potential_collection.handlers['Bonds'].potentials[param.smirks] = potential
 
-                }
-
-        return potential_collection
+    return potential_collection
 
 
 def build_smirnoff_collection(forcefield):
     """Build a PotentialCollection storing data in a SMIRNOFF force field."""
-    handlers = [*forcefield._parameter_handlers.keys()]
+    supported_handlers = {'vdW', 'Bonds'}
+
+    handlers = [h for h in forcefield._parameter_handlers.keys() if h in supported_handlers]
 
     smirnoff_collection = PotentialCollection()
 
     for handler in handlers:
-        add_handler(forcefield, smirnoff_collection, handler)
+        smirnoff_collection = add_handler(forcefield, smirnoff_collection, handler)
 
     return smirnoff_collection
 

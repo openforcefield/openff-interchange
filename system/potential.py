@@ -40,10 +40,6 @@ class ParametrizedAnalyticalPotential(AnalyticalPotential):
         symbols_in_indep_vars = sympy.symbols(values['independent_variables'])
         symbols_in_parameters = sympy.symbols(set(val.keys()))
 
-        print(symbols_in_expr)
-        print(symbols_in_indep_vars)
-        print(symbols_in_parameters)
-
         assert symbols_in_expr - symbols_in_indep_vars - symbols_in_parameters == set()
 
         return val
