@@ -56,9 +56,11 @@ def handler_conversion(forcefield, potential_collection, handler_name):
 
     return potential_collection
 
+
 class SMIRNOFFPotentialHandler(PotentialHandler):
 
     pass
+
 
 class SMIRNOFFCollection(PotentialCollection):
 

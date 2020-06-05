@@ -1,11 +1,11 @@
-import pytest
 import pint
 
-from system import System, PotentialHandler, PotentialCollection, Topology, handler_conversion
+from system import System, PotentialHandler, PotentialCollection, handler_conversion
 from system.tests.base_test import BaseTest
 
 
 u = pint.UnitRegistry()
+
 
 class TestPotentialHandler(BaseTest):
     def test_handler_conversion(self, argon_ff):
@@ -20,6 +20,7 @@ class TestPotentialHandler(BaseTest):
         )
 
         assert collection['vdW']['[#18:1]'].parameters['sigma'] == 0.3 * u.nm
+
 
 class TestSystem(BaseTest):
     def test_constructor(self, argon_ff, argon_top):

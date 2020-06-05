@@ -8,6 +8,7 @@ from system.tests.base_test import BaseTest
 
 u = pint.UnitRegistry()
 
+
 class TestPotential(BaseTest):
     def test_analytical_potential_constructor(self):
         pot = AnalyticalPotential(

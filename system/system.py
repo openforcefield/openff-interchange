@@ -1,4 +1,4 @@
-from typing import Union, Iterable, List, Dict
+from typing import Union, Iterable, Dict
 
 from pydantic import BaseModel, validator
 import pint

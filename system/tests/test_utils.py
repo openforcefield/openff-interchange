@@ -1,5 +1,4 @@
 import pytest
-import sympy
 from simtk import unit as simtk_unit
 import pint
 
@@ -7,6 +6,7 @@ from system.utils import simtk_to_pint, pint_to_simtk, compare_sympy_expr
 
 
 u = pint.UnitRegistry()
+
 
 def test_simtk_to_pint():
     """Test conversion from SimTK Quantity to pint Quantity."""
@@ -16,10 +16,12 @@ def test_simtk_to_pint():
 
     assert pint_quantity == 10.0 * u.nanometer
 
+
 def test_pint_to_simtk():
     """Test conversion from pint Quantity to SimTK Quantity."""
     with pytest.raises(NotImplementedError):
         pint_to_simtk(None)
+
 
 @pytest.mark.parametrize(
     'expr1,expr2,result',
@@ -31,4 +33,4 @@ def test_pint_to_simtk():
     ]
 )
 def test_compare_sympy_expr(expr1, expr2, result):
-    compare_sympy_expr(expr1, expr2) == result
+    assert compare_sympy_expr(expr1, expr2) == result

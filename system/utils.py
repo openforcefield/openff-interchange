@@ -34,6 +34,7 @@ def compare_sympy_expr(expr1, expr2):
 
     return sympy.simplify(expr1 - expr2) == 0
 
+
 def get_test_file_path(test_file):
     dir_path = resource_filename('system', 'tests/files/')
     test_file_path = pathlib.Path(dir_path).joinpath(test_file)
