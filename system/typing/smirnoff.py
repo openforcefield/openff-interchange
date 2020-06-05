@@ -38,6 +38,7 @@ def add_handler(forcefield, potential_collection, handler_name):
         warn(f'handler {handler_name} not implemented')
 
     if handler_name == 'vdW':
+        potential_collection.handlers.update({'vdW': PotentialHandler(name='vdW')})
         for param in forcefield.get_parameter_handler(handler_name).parameters:
             if param.sigma is None:
                 sigma = 2. * param.rmin_half / (2.**(1. / 6.))
@@ -54,20 +55,10 @@ def add_handler(forcefield, potential_collection, handler_name):
                 parameters={'sigma': sigma, 'epsilon': epsilon},
             )
     
-            try:
-                potential_collection.handlers['vdW'][param.smirks] = potential
-            except (AttributeError, TypeError):
-                potential_collection.handlers = {
-                    'vdW': SMIRNOFFPotentialHandler(
-                        name='vdW',
-                        potentials={
-                            param.smirks: potential,
-                        }
-                    )
-    
-                }
+            potential_collection.handlers['vdW'].potentials[param.smirks] = potential
 
     elif handler_name == 'Bonds':
+        potential_collection.handlers.update({'Bonds': PotentialHandler(name='Bonds')})
         for param in forcefield.get_parameter_handler('Bonds').parameters:
             k = simtk_to_pint(param.k)
             length = simtk_to_pint(param.length)
@@ -80,16 +71,7 @@ def add_handler(forcefield, potential_collection, handler_name):
                 parameters={'k': k, 'length_0': length},
             )
 
-            try:
-                potential_collection.handlers['Bonds'][param.smirks] = potential
-            except (AttributeError, TypeError):
-                potential_collection.handlers = {
-                    'Bonds': SMIRNOFFPotentialHandler(
-                        name='Bonds',
-                        potentials={
-                            param.smirks: potential,
-                        }
-                    )
+            potential_collection.handlers['Bonds'].potentials[param.smirks] = potential
 
                 }
 
