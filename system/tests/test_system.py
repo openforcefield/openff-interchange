@@ -1,7 +1,9 @@
 import pint
 
-from system import System, PotentialHandler, PotentialCollection, handler_conversion
-from system.tests.base_test import BaseTest
+from ..system import System
+from ..collections import PotentialHandler, PotentialCollection
+from ..typing.smirnoff import add_handler
+from .base_test import BaseTest
 
 
 u = pint.UnitRegistry()
@@ -9,7 +11,7 @@ u = pint.UnitRegistry()
 
 class TestPotentialHandler(BaseTest):
     def test_handler_conversion(self, argon_ff):
-        collection = handler_conversion(
+        collection = add_handler(
             forcefield=argon_ff,
             potential_collection=PotentialCollection(
                 parameters={

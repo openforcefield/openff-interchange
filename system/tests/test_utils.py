@@ -27,7 +27,7 @@ def test_pint_to_simtk():
     'expr1,expr2,result',
     [
         ('x+1', 'x+1', True),
-        ('x+1', 'x**2+1', True),
+        ('x+1', 'x**2+1', False),
         ('0.5*k*(th-th0)**2', 'k*(th-th0)**2', False),
         ('k*(1+cos(n*th-th0))', 'k*(1+cos(n*th-th0))', True),
     ]

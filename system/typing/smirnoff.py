@@ -20,7 +20,7 @@ def build_smirnoff_map(topology, forcefield):
     return typing_map
 
 
-def handler_conversion(forcefield, potential_collection, handler_name):
+def add_handler(forcefield, potential_collection, handler_name):
     """Temporary stand-in for .to_potential calls in toolkit ParameterHandler objects."""
     if handler_name != 'vdW':
         raise NotImplementedError
@@ -57,6 +57,18 @@ def handler_conversion(forcefield, potential_collection, handler_name):
     return potential_collection
 
 
+def build_smirnoff_collection(forcefield):
+    """Build a PotentialCollection storing data in a SMIRNOFF force field."""
+    handlers = [*forcefield._parameter_handlers.keys()]
+
+    smirnoff_collection = PotentialCollection()
+
+    for handler in handlers:
+        add_handler(forcefield, smirnoff_collection, handler)
+
+    return smirnoff_collection
+
+
 class SMIRNOFFPotentialHandler(PotentialHandler):
 
     pass
@@ -67,11 +79,4 @@ class SMIRNOFFCollection(PotentialCollection):
     @classmethod
     def from_toolkit_forcefield(cls, toolkit_forcefield):
 
-        toolkit_handlers = toolkit_forcefield._parameter_handlers.keys()
-        supported_handlers = ['vdW']
-
-        for handler in toolkit_handlers:
-            if handler not in supported_handlers:
-                continue
-            handler_conversion(toolkit_forcefield, cls, handler)
-        return cls
+        return build_smirnoff_collection(toolkit_forcefield)
