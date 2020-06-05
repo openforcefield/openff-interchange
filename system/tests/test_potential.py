@@ -1,6 +1,8 @@
+import json
+
 import sympy
 import pint
-
+from pydantic import parse_obj_as
 from system.potential import AnalyticalPotential, ParametrizedAnalyticalPotential
 from system.utils import compare_sympy_expr
 from system.tests.base_test import BaseTest
@@ -43,3 +45,21 @@ class TestPotential(BaseTest):
         assert "b" in pot.parameters.keys()
         assert pot.parameters["m"] == 0.5 * u.dimensionless
         assert pot.parameters["b"] == -1.0 * u.dimensionless
+
+    def test_serialization(self):
+        pot = AnalyticalPotential(
+            smirks='[#6]',
+            expression='m*x+b',
+            independent_variables='x',
+        )
+
+        pot_param = ParametrizedAnalyticalPotential(
+            smirks=pot.smirks,
+            expression='m*x+b',
+            independent_variables={'x'},
+            parameters={'m': 1 * u.dimensionless, 'b': 1 * u.dimensionless},
+        )
+
+        # Depending on the equality operator may be dangerous
+        pot == parse_obj_as(AnalyticalPotential, pot.dict())
+        pot == parse_obj_as(ParametrizedAnalyticalPotential, pot_param.dict())
