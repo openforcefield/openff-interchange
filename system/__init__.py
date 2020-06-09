@@ -4,7 +4,6 @@ A molecular system object from the Open Force Field Initiative
 """
 
 # Add imports here
-from .system import *
 
 # Handle versioneer
 from ._version import get_versions

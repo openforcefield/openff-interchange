@@ -1,6 +1,9 @@
 import sympy
 import pint
 
+from pkg_resources import resource_filename
+import pathlib
+
 
 def pint_to_simtk(quantity):
     """Convert a pint Quantity to an OpenMM unit."""
@@ -30,3 +33,15 @@ def compare_sympy_expr(expr1, expr2):
     expr2 = sympy.sympify(expr2)
 
     return sympy.simplify(expr1 - expr2) == 0
+
+
+def get_test_file_path(test_file):
+    dir_path = resource_filename('system', 'tests/files/')
+    test_file_path = pathlib.Path(dir_path).joinpath(test_file)
+
+    if test_file_path.is_file():
+        return test_file_path
+    else:
+        raise FileNotFoundError(
+            f'could not file file {test_file} in path {dir_path}'
+        )

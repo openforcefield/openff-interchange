@@ -1,34 +1,65 @@
-"""
-system.py
-A molecular system object from the Open Force Field Initiative
+from typing import Union, Iterable, Dict
 
-Handles the primary functions
-"""
+from pydantic import BaseModel, validator
+import pint
 
+from openforcefield.typing.engines.smirnoff import ForceField
+from openforcefield.topology import Topology
 
-def canvas(with_attribution=True):
-    """
-    Placeholder function to show example docstring (NumPy format)
-
-    Replace this function and doc string for your own project
-
-    Parameters
-    ----------
-    with_attribution : bool, Optional, default: True
-        Set whether or not to display who the quote is from
-
-    Returns
-    -------
-    quote : str
-        Compiled string including quote and optional attribution
-    """
-
-    quote = "The code is but a canvas to our imagination."
-    if with_attribution:
-        quote += "\n\t- Adapted from Henry David Thoreau"
-    return quote
+from .typing.smirnoff import build_smirnoff_map, SMIRNOFFCollection
+from .collections import PotentialCollection
 
 
-if __name__ == "__main__":
-    # Do something if this file is invoked on its own
-    print(canvas())
+u = pint.UnitRegistry()
+
+
+class System(BaseModel):
+    """The OpenFF System object."""
+
+    topology: Topology
+    potential_collection: Union[PotentialCollection, ForceField]
+    positions: Iterable = None
+    box: Iterable = None
+    slots_map: Dict = None
+
+    @validator("potential_collection")
+    def validate_potential_collection(cls, val):
+        if isinstance(val, ForceField):
+            return SMIRNOFFCollection.from_toolkit_forcefield(val)
+        elif isinstance(val, PotentialCollection):
+            return val
+        else:
+            raise TypeError
+
+    @validator("topology")
+    def validate_topology(cls, val):
+        if isinstance(val, Topology):
+            return val
+        else:
+            raise TypeError
+
+    @validator("*")
+    def dummy_validator(cls, val):
+        return val
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    def run_typing(self, toolkit_forcefield, toolkit_topology):
+        """Just store the slots map"""
+        self.slots_map = build_smirnoff_map(
+            forcefield=toolkit_forcefield,
+            topology=toolkit_topology
+        )
+
+    def to_file(self):
+        raise NotImplementedError()
+
+    def from_file(self):
+        raise NotImplementedError()
+
+    def to_parmed(self):
+        raise NotImplementedError()
+
+    def to_openmm(self):
+        raise NotImplementedError()

@@ -7,6 +7,9 @@ dependencies:
     # Base depends
   - python
   - pip
+  - pydantic
+  - pint
+  - sympy
 
     # Testing
   - pytest
@@ -15,3 +18,4 @@ dependencies:
   - sympy
   - pint
   - openmm
+  - openforcefield
