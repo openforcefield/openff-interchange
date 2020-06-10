@@ -16,6 +16,8 @@ pint_quantities = [
     4.0 * u.nanometer,
     5.0 * u.angstrom,
 ]
+
+
 @pytest.mark.parametrize(
     'simtk_quantity,pint_quantity',
     [(s, p) for s, p in zip(simtk_quantitites, pint_quantities)]

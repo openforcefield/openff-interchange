@@ -47,7 +47,7 @@ def add_handler(forcefield, potential_collection, handler_name):
                 sigma = param.sigma
             sigma = simtk_to_pint(sigma)
             epsilon = simtk_to_pint(param.epsilon)
-    
+
             potential = Potential(
                 name=param.id,
                 smirks=param.smirks,
@@ -55,7 +55,7 @@ def add_handler(forcefield, potential_collection, handler_name):
                 independent_variables={'r'},
                 parameters={'sigma': sigma, 'epsilon': epsilon},
             )
-    
+
             potential_collection.handlers['vdW'].potentials[param.smirks] = potential
 
     elif handler_name == 'Bonds':
