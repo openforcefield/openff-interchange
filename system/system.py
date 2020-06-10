@@ -2,6 +2,7 @@ from typing import Iterable, Dict
 
 from pydantic import BaseModel, validator, root_validator
 import pint
+from qcelemental.models.types import Array
 
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.topology import Topology
@@ -20,8 +21,8 @@ class System(BaseModel):
     forcefield: ForceField = None
     potential_collection: PotentialCollection = None
     potential_map: Dict = None
-    positions: Iterable = None
-    box: Iterable = None
+    positions: Array[float]
+    box: Array[float]
     slots_map: Dict = None
 
     @root_validator

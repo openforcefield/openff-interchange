@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.topology.molecule import Molecule
@@ -24,3 +25,11 @@ class BaseTest:
         mol.generate_conformers(n_conformers=1)
 
         return Topology.from_molecules(10 * [mol])
+
+    @pytest.fixture
+    def argon_coords(self, argon_top):
+        return np.zeros(shape=(argon_top.n_topology_atoms, 3))
+
+    @pytest.fixture
+    def argon_box(self):
+        return np.array([1, 1, 1])

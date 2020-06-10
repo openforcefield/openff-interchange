@@ -36,7 +36,7 @@ class TestSystem(BaseTest):
     def smirnoff_collection(self, argon_ff):
         return build_smirnoff_collection(argon_ff)
 
-    def test_constructor(self, argon_ff, argon_top, smirks_map, smirnoff_collection):
+    def test_constructor(self, argon_ff, argon_top, argon_coords, argon_box, smirks_map, smirnoff_collection):
         """
         Test the basic constructor behavior from SMIRNOFF
 
@@ -45,33 +45,43 @@ class TestSystem(BaseTest):
         System(
             topology=argon_top,
             forcefield=argon_ff,
+            positions=argon_coords,
+            box=argon_box,
         )
 
         System(
             topology=argon_top,
             potential_collection=smirnoff_collection,
             potential_map=smirks_map,
+            positions=argon_coords,
+            box=argon_box,
         )
 
         with pytest.raises(ValidationError):
             System(
                 potential_collection=smirnoff_collection,
                 potential_map=smirks_map,
+                positions=argon_coords,
+                box=argon_box,
             )
 
         with pytest.raises(ValidationError):
             System(
                 topology=argon_top,
                 potential_collection=smirnoff_collection,
+                positions=argon_coords,
+                box=argon_box,
             )
 
         with pytest.raises(ValidationError):
             System(
                 topology=argon_top,
                 potential_map=smirks_map,
+                positions=argon_coords,
+                box=argon_box,
             )
 
-    def test_automatic_typing(self, argon_ff, argon_top):
+    def test_automatic_typing(self, argon_ff, argon_top, argon_coords, argon_box):
         """
         Test that, when only forcefield is provided, typing dicts are built automatically.
 
@@ -80,6 +90,8 @@ class TestSystem(BaseTest):
         test_system = System(
             topology=argon_top,
             forcefield=argon_ff,
+            positions=argon_coords,
+            box=argon_box,
         )
 
         assert test_system.potential_collection is not None
