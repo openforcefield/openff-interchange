@@ -1,15 +1,17 @@
-from typing import Iterable, Dict
+from typing import Dict
 
+import numpy as np
 from pydantic import BaseModel, validator, root_validator
 import pint
 from qcelemental.models.types import Array
+from simtk.unit import Quantity as SimTKQuantity
 
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.topology import Topology
 
 from .typing.smirnoff import build_smirnoff_map, build_smirnoff_collection
 from .collections import PotentialCollection
-
+from .utils import simtk_to_pint
 
 u = pint.UnitRegistry()
 
@@ -21,6 +23,7 @@ class System(BaseModel):
     forcefield: ForceField = None
     potential_collection: PotentialCollection = None
     potential_map: Dict = None
+    # These Array (numpy-drived qcel objects) probably should be custom pint.Quantity-derived objects
     positions: Array[float]
     box: Array[float]
     slots_map: Dict = None
@@ -52,6 +55,19 @@ class System(BaseModel):
     @validator("topology")
     def validate_topology(cls, val):
         if isinstance(val, Topology):
+            return val
+        else:
+            raise TypeError
+
+    # TODO: I needed to set pre=True to get this to override the Array type. This is bad
+    # and instead this attribute should be handled by a custom class that deals with
+    # all of the complexity (NumPy/simtk.unit.Quantity/pint.Quantity) and spits out
+    # a single thing that plays nicely with things
+    @validator("positions", "box", pre=True)
+    def validate_in_space(cls, val):
+        if isinstance(val, SimTKQuantity):
+            return simtk_to_pint(val)
+        elif isinstance(val, (np.ndarray, Array)):
             return val
         else:
             raise TypeError
