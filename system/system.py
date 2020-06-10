@@ -1,6 +1,6 @@
 from typing import Union, Iterable, Dict
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, root_validator
 import pint
 
 from openforcefield.typing.engines.smirnoff import ForceField
@@ -17,16 +17,32 @@ class System(BaseModel):
     """The OpenFF System object."""
 
     topology: Topology
-    potential_collection: Union[PotentialCollection, ForceField]
+    forcefield: ForceField = None
+    potential_collection: PotentialCollection = None
+    potential_map: Dict = None
     positions: Iterable = None
     box: Iterable = None
     slots_map: Dict = None
 
-    @validator("potential_collection")
-    def validate_potential_collection(cls, val):
+    @root_validator
+    def validate_forcefield_data(cls, values):
+        # TODO: Replace this messy logic with something cleaner
+        if values['forcefield'] is None:
+            if values['potential_collection'] is None or values['potential_map'] is None:
+                raise TypeError('not given an ff, need collection & map')
+        if values['forcefield'] is not None and values['potential_collection'] is not None and values['potential_map'] is not None:
+            raise TypeError('ff redundantly specified')
+        return values
+
+    @validator("forcefield")
+    def validate_forcefield(cls, val):
+        return val
+
+    @validator("forcefield")
+    def xvalidate_forcefield(cls, val, values):
+        if val is None:
+            return val
         if isinstance(val, ForceField):
-            return SMIRNOFFCollection.from_toolkit_forcefield(val)
-        elif isinstance(val, PotentialCollection):
             return val
         else:
             raise TypeError
@@ -45,11 +61,11 @@ class System(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def run_typing(self, toolkit_forcefield, toolkit_topology):
+    def run_typing(self, forcefield, topology):
         """Just store the slots map"""
         self.slots_map = build_smirnoff_map(
-            forcefield=toolkit_forcefield,
-            topology=toolkit_topology
+            forcefield=forcefield,
+            topology=topology,
         )
 
     def to_file(self):
