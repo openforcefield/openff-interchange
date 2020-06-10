@@ -6,7 +6,7 @@ import pint
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.topology import Topology
 
-from .typing.smirnoff import build_smirnoff_map
+from .typing.smirnoff import build_smirnoff_map, build_smirnoff_collection
 from .collections import PotentialCollection
 
 
@@ -30,8 +30,12 @@ class System(BaseModel):
         if values['forcefield'] is None:
             if values['potential_collection'] is None or values['potential_map'] is None:
                 raise TypeError('not given an ff, need collection & map')
-        if values['forcefield'] is not None and values['potential_collection'] is not None and values['potential_map'] is not None:
-            raise TypeError('ff redundantly specified')
+        if values['forcefield'] is not None:
+            if values['potential_collection'] is not None and values['potential_map'] is not None:
+                raise TypeError('ff redundantly specified, will not be used')
+            # TODO: Let other typing engines drop in here
+            values['potential_map'] = build_smirnoff_map(forcefield=values['forcefield'], topology=values['topology'])
+            values['potential_collection'] = build_smirnoff_collection(forcefield=values['forcefield'])
         return values
 
     # TODO: These valiators pretty much don't do anything now
@@ -54,12 +58,12 @@ class System(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+    # TODO: Make these two functions a drop-in for different typing engines?
     def run_typing(self, forcefield, topology):
-        """Just store the slots map"""
-        self.slots_map = build_smirnoff_map(
-            forcefield=forcefield,
-            topology=topology,
-        )
+        return build_smirnoff_map(forcefield=forcefield, topology=topology)
+
+    def get_potential_collection(self, forcefield):
+        return build_smirnoff_collection(forcefield=forcefield)
 
     def to_file(self):
         raise NotImplementedError()

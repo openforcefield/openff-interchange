@@ -71,14 +71,16 @@ class TestSystem(BaseTest):
                 potential_map=smirks_map,
             )
 
-    def test_run_typing(self, argon_ff, argon_top):
-        """Test that run_typing properly stores the parameter id"""
+    def test_automatic_typing(self, argon_ff, argon_top):
+        """
+        Test that, when only forcefield is provided, typing dicts are built automatically.
+
+        # TODO: Make sure the results are reasonble, not just existent.
+        """
         test_system = System(
             topology=argon_top,
             forcefield=argon_ff,
         )
 
-        test_system.run_typing(
-            forcefield=argon_ff,
-            topology=argon_top,
-        )
+        assert test_system.potential_collection is not None
+        assert test_system.potential_map is not None
