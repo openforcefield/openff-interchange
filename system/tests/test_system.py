@@ -55,6 +55,12 @@ class TestSystem(BaseTest):
 
         with pytest.raises(ValidationError):
             System(
+                potential_collection=smirnoff_collection,
+                potential_map=smirks_map,
+            )
+
+        with pytest.raises(ValidationError):
+            System(
                 topology=argon_top,
                 potential_collection=smirnoff_collection,
             )

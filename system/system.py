@@ -1,4 +1,4 @@
-from typing import Union, Iterable, Dict
+from typing import Iterable, Dict
 
 from pydantic import BaseModel, validator, root_validator
 import pint
@@ -6,7 +6,7 @@ import pint
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.topology import Topology
 
-from .typing.smirnoff import build_smirnoff_map, SMIRNOFFCollection
+from .typing.smirnoff import build_smirnoff_map
 from .collections import PotentialCollection
 
 
@@ -34,12 +34,9 @@ class System(BaseModel):
             raise TypeError('ff redundantly specified')
         return values
 
+    # TODO: These valiators pretty much don't do anything now
     @validator("forcefield")
     def validate_forcefield(cls, val):
-        return val
-
-    @validator("forcefield")
-    def xvalidate_forcefield(cls, val, values):
         if val is None:
             return val
         if isinstance(val, ForceField):
@@ -53,10 +50,6 @@ class System(BaseModel):
             return val
         else:
             raise TypeError
-
-    @validator("*")
-    def dummy_validator(cls, val):
-        return val
 
     class Config:
         arbitrary_types_allowed = True
