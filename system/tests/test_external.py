@@ -1,9 +1,5 @@
 from simtk.openmm.app import PDBFile
 
-from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.topology import Topology, Molecule
-from openforcefield.utils import get_data_file_path
-
 from ..system import System
 from ..utils import get_test_file_path
 from .base_test import BaseTest

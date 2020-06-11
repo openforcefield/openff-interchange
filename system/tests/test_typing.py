@@ -1,5 +1,3 @@
-import pytest
-
 from ..typing.smirnoff import build_smirnoff_map, build_smirnoff_collection
 from .base_test import BaseTest
 
