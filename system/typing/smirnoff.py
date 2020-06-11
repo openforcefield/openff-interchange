@@ -27,7 +27,7 @@ def build_smirnoff_map(topology, forcefield):
     return typing_map
 
 
-def add_handler(forcefield, potential_collection, handler_name):
+def add_handler(forcefield, potential_collection, handler_name, smirks_map=None):
     """Temporary stand-in for .to_potential calls in toolkit ParameterHandler objects."""
     if handler_name not in SUPPORTED_HANDLERS:
         warn(f'handler {handler_name} not implemented')
@@ -36,6 +36,9 @@ def add_handler(forcefield, potential_collection, handler_name):
     if handler_name == 'vdW':
         potential_collection.handlers.update({'vdW': PotentialHandler(name='vdW')})
         for param in forcefield.get_parameter_handler(handler_name).parameters:
+            if smirks_map is not None:
+                if param.smirks not in smirks_map[handler_name].values():
+                    continue
             if param.sigma is None:
                 sigma = 2. * param.rmin_half / (2.**(1. / 6.))
             else:
@@ -56,6 +59,9 @@ def add_handler(forcefield, potential_collection, handler_name):
     elif handler_name == 'Bonds':
         potential_collection.handlers.update({'Bonds': PotentialHandler(name='Bonds')})
         for param in forcefield.get_parameter_handler('Bonds').parameters:
+            if smirks_map is not None:
+                if param.smirks not in smirks_map[handler_name].values():
+                    continue
             k = simtk_to_pint(param.k)
             length = simtk_to_pint(param.length)
 
@@ -72,6 +78,9 @@ def add_handler(forcefield, potential_collection, handler_name):
     elif handler_name == 'Angles':
         potential_collection.handlers.update({'Angles': PotentialHandler(name='Angles')})
         for param in forcefield.get_parameter_handler('Angles').parameters:
+            if smirks_map is not None:
+                if param.smirks not in smirks_map[handler_name].values():
+                    continue
             k = simtk_to_pint(param.k)
             angle = simtk_to_pint(param.angle)
 
@@ -88,14 +97,14 @@ def add_handler(forcefield, potential_collection, handler_name):
     return potential_collection
 
 
-def build_smirnoff_collection(forcefield):
+def build_smirnoff_collection(forcefield, smirks_map=None):
     """Build a PotentialCollection storing data in a SMIRNOFF force field."""
     handlers = [h for h in forcefield._parameter_handlers.keys() if h in SUPPORTED_HANDLERS]
 
     smirnoff_collection = PotentialCollection()
 
     for handler in handlers:
-        smirnoff_collection = add_handler(forcefield, smirnoff_collection, handler)
+        smirnoff_collection = add_handler(forcefield, smirnoff_collection, handler, smirks_map=smirks_map)
 
     return smirnoff_collection
 

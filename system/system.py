@@ -67,7 +67,9 @@ class System(BaseModel):
     def validate_in_space(cls, val):
         if isinstance(val, SimTKQuantity):
             return simtk_to_pint(val)
-        elif isinstance(val, (np.ndarray, Array)):
+        elif isinstance(val, np.ndarray):
+            return val * u.nm
+        elif isinstance(val, Array):
             return val
         else:
             raise TypeError
