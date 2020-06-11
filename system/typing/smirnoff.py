@@ -9,25 +9,16 @@ def build_smirnoff_map(topology, forcefield):
     """Turn a SMIRNOFF force field into a mapping between slots and SMIRKS"""
     typing_map = dict()
 
-    if 'vdW' in forcefield._parameter_handlers.keys():
+    for handler in forcefield._parameter_handlers.keys():
+
         slot_potential_map = dict()
 
-        matches = forcefield.get_parameter_handler('vdW').find_matches(topology)
+        matches = forcefield.get_parameter_handler(handler).find_matches(topology)
 
         for atom_key, atom_match in matches.items():
             slot_potential_map[atom_key] = atom_match.parameter_type.smirks
 
-        typing_map['vdW'] = slot_potential_map
-
-    if 'Bonds' in forcefield._parameter_handlers.keys():
-        slot_potential_map = dict()
-
-        matches = forcefield.get_parameter_handler('Bonds').find_matches(topology)
-
-        for bond_key, bond_match in matches.items():
-            slot_potential_map[bond_key] = bond_match.parameter_type.smirks
-
-        typing_map['Bonds'] = slot_potential_map
+        typing_map[handler] = slot_potential_map
 
     return typing_map
 
@@ -73,6 +64,22 @@ def add_handler(forcefield, potential_collection, handler_name):
             )
 
             potential_collection.handlers['Bonds'].potentials[param.smirks] = potential
+
+    elif handler_name == 'Angles':
+        potential_collection.handlers.update({'Angles': PotentialHandler(name='Angles')})
+        for param in forcefield.get_parameter_handler('Angles').parameters:
+            k = simtk_to_pint(param.k)
+            angle = simtk_to_pint(param.angle)
+
+            potential = Potential(
+                name=param.id,
+                smirks=param.smirks,
+                expression='1/2*k*(angle-angle_0)**2',
+                independent_variables={'angle_0'},
+                parameters={'k': k, 'angle': angle},
+            )
+
+            potential_collection.handlers['Angles'].potentials[param.smirks] = potential
 
     return potential_collection
 
