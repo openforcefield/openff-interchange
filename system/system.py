@@ -1,10 +1,11 @@
-from typing import Dict
+from typing import Dict, Union
 
 import numpy as np
 from pydantic import BaseModel, validator, root_validator
 import pint
 from qcelemental.models.types import Array
 from simtk.unit import Quantity as SimTKQuantity
+from simtk.openmm.app import Topology as OpenMMTopology
 
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.topology import Topology
@@ -19,7 +20,7 @@ u = pint.UnitRegistry()
 class System(BaseModel):
     """The OpenFF System object."""
 
-    topology: Topology
+    topology: Union[Topology, OpenMMTopology]
     forcefield: ForceField = None
     potential_collection: PotentialCollection = None
     potential_map: Dict = None
@@ -52,10 +53,12 @@ class System(BaseModel):
         else:
             raise TypeError
 
-    @validator("topology")
+    @validator("topology", pre=True)
     def validate_topology(cls, val):
         if isinstance(val, Topology):
             return val
+        elif isinstance(val, OpenMMTopology):
+            return Topology.from_openmm(val)
         else:
             raise TypeError
 

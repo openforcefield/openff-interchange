@@ -7,7 +7,7 @@ from .base_test import BaseTest
 
 class TestFromOpenMM(BaseTest):
 
-    def test_from_openmm_pdbfile(self, argon_top, argon_ff):
+    def test_from_openmm_pdbfile(self, argon_ff, argon_top):
         # TODO: Host files like this here instead of grabbing from the toolkit
         pdb_file_path = get_test_file_path('10-argons.pdb')
         pdbfile = PDBFile(pdb_file_path.as_posix())
