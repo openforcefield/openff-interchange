@@ -5,6 +5,10 @@ from ..utils import simtk_to_pint
 from ..potential import ParametrizedAnalyticalPotential as Potential
 
 
+# TODO: Probably shouldn't have this as a global variable floating around
+SUPPORTED_HANDLERS = {'vdW', 'Bonds', 'Angles'}
+
+
 def build_smirnoff_map(topology, forcefield):
     """Turn a SMIRNOFF force field into a mapping between slots and SMIRKS"""
     typing_map = dict()
@@ -25,7 +29,7 @@ def build_smirnoff_map(topology, forcefield):
 
 def add_handler(forcefield, potential_collection, handler_name):
     """Temporary stand-in for .to_potential calls in toolkit ParameterHandler objects."""
-    if handler_name not in ['vdW', 'Bonds']:
+    if handler_name not in SUPPORTED_HANDLERS:
         warn(f'handler {handler_name} not implemented')
         return potential_collection
 
@@ -86,9 +90,7 @@ def add_handler(forcefield, potential_collection, handler_name):
 
 def build_smirnoff_collection(forcefield):
     """Build a PotentialCollection storing data in a SMIRNOFF force field."""
-    supported_handlers = {'vdW', 'Bonds'}
-
-    handlers = [h for h in forcefield._parameter_handlers.keys() if h in supported_handlers]
+    handlers = [h for h in forcefield._parameter_handlers.keys() if h in SUPPORTED_HANDLERS]
 
     smirnoff_collection = PotentialCollection()
 
