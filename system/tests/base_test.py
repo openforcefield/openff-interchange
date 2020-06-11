@@ -15,8 +15,8 @@ class BaseTest:
 
     @pytest.fixture
     def argon_ff(self):
-        """Fixture that loads an SMIRNOFF XML"""
-        return ForceField(get_test_file_path('ar.offxml'))
+        """Fixture that loads an SMIRNOFF XML for argon"""
+        return ForceField(get_test_file_path('argon.offxml'))
 
     @pytest.fixture
     def argon_top(self):
@@ -33,3 +33,8 @@ class BaseTest:
     @pytest.fixture
     def argon_box(self):
         return np.array([1, 1, 1])
+
+    @pytest.fixture
+    def ammonia_ff(self):
+        """Fixture that loads an SMIRNOFF XML for ammonia"""
+        return ForceField(get_test_file_path('ammonia.offxml'))
