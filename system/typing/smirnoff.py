@@ -2,7 +2,7 @@ from warnings import warn
 from typing import Dict
 
 from pydantic import BaseModel
-import jax.numpy as jnp
+import numpy as np
 
 from ..collections import PotentialHandler, PotentialCollection
 from ..utils import simtk_to_pint
@@ -152,7 +152,7 @@ class SMIRNOFFPotentialTerm(BaseModel):
         return term
 
     def smirks_map_to_atom_indices(self):
-        return jnp.array([val[0] for val in self.smirks_map[self.name].keys()])
+        return np.array([val[0] for val in self.smirks_map[self.name].keys()])
 
     def term_to_flattened_array(self):
         raise NotImplementedError
@@ -187,7 +187,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         for i, pot in enumerate(self.potentials.values()):
             p.append([pot.parameters['sigma'].magnitude, pot.parameters['epsilon'].magnitude])
             mapping.update({pot.smirks: i})
-        return jnp.array(p), mapping
+        return np.array(p), mapping
 
 
 potential_term_mapping = {'vdW': SMIRNOFFvdWTerm}
