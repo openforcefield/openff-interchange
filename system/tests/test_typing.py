@@ -1,20 +1,30 @@
-from ..typing.smirnoff import build_smirnoff_map, build_smirnoff_collection
+import pytest
+
+from ..typing.smirnoff import SMIRNOFFPotentialTerm, SMIRNOFFvdWTerm, SMIRNOFFTermCollection
+from ..exceptions import SMIRNOFFHandlerNotImplementedError
 from .base_test import BaseTest
 
 
 class TestSMIRNOFFTyping(BaseTest):
-    def test_typing(self, argon_ff, argon_top):
-        smirks_map = build_smirnoff_map(forcefield=argon_ff, topology=argon_top)
 
-        assert all([smirks == '[#18:1]' for slot, smirks in smirks_map['vdW'].items()])
+    def test_reconstruct_toolkit_forcefield(self, argon_ff, argon_top):
+        ff_collection = SMIRNOFFTermCollection.from_toolkit_data(argon_ff, argon_top)
 
-    # There's a better way to this; pytest doesn't let fixtures be passed to parametrize
-    # TODO: check for proper conversion, not just completeness
-    def test_smirnoff_collection(self, argon_ff, ammonia_ff):
-        smirnoff_collection = build_smirnoff_collection(forcefield=argon_ff)
+        # TODO: check for proper conversion, not just completeness
 
-        assert sorted(smirnoff_collection.handlers.keys()) == ['vdW']
+        assert [*ff_collection.terms.keys()] == ['vdW']
 
-        smirnoff_collection = build_smirnoff_collection(forcefield=ammonia_ff)
+        assert all([smirks == '[#18:1]' for smirks in ff_collection.terms['vdW'].smirks_map.values()])
 
-        assert sorted(smirnoff_collection.handlers.keys()) == ['Angles', 'Bonds', 'vdW']
+    def test_construct_term_from_toolkit_forcefield(self, argon_ff, argon_top):
+        val1 = SMIRNOFFPotentialTerm.build_from_toolkit_data(name='vdW', forcefield=argon_ff, topology=argon_top)
+        val2 = SMIRNOFFvdWTerm.build_from_toolkit_data(name='vdW', forcefield=argon_ff, topology=argon_top)
+
+        # TODO: DO something here that isn't so dangerous
+        assert val1 == val2
+
+    # There's probably a better way to this, but pytest doesn't let fixtures be passed to parametrize
+    def test_unimplementedtest_smirnoff_collection(self, ammonia_ff, ammonia_top):
+
+        with pytest.raises(SMIRNOFFHandlerNotImplementedError):
+            SMIRNOFFTermCollection.from_toolkit_data(ammonia_ff, ammonia_top)

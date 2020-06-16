@@ -27,6 +27,14 @@ class BaseTest:
         return Topology.from_molecules(10 * [mol])
 
     @pytest.fixture
+    def ammonia_top(self):
+        """Fixture that builds a simple ammonia topology"""
+        mol = Molecule.from_smiles('N')
+        mol.generate_conformers(n_conformers=1)
+
+        return Topology.from_molecules(10 * [mol])
+
+    @pytest.fixture
     def argon_coords(self, argon_top):
         return np.zeros(shape=(argon_top.n_topology_atoms, 3))
 

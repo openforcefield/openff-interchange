@@ -3,38 +3,35 @@ import pint
 from pydantic import ValidationError
 
 from ..system import System
-from ..collections import PotentialHandler, PotentialCollection
-from ..typing.smirnoff import add_handler, build_smirnoff_map, build_smirnoff_collection
+from ..collections import *
+from ..typing.smirnoff import *
 from .base_test import BaseTest
 
 
 u = pint.UnitRegistry()
 
 
-class TestPotentialHandler(BaseTest):
-    def test_handler_conversion(self, argon_ff):
-        collection = add_handler(
+class TestPotentialEnergyTerm(BaseTest):
+    def test_term_conversion(self, argon_ff, argon_top):
+        term = SMIRNOFFvdWTerm.build_from_toolkit_data(
+            # TODO: name shouldn't be required here, something about the inheritance is dirty
+            name='vdW',
             forcefield=argon_ff,
-            potential_collection=PotentialCollection(
-                parameters={
-                    'vdW': PotentialHandler(name='vdW'),
-                }
-            ),
-            handler_name='vdW',
+            topology=argon_top,
         )
 
-        assert collection['vdW']['[#18:1]'].parameters['sigma'] == 0.3 * u.nm
+        assert term.potentials['[#18:1]'].parameters['sigma'] == 0.3 * u.nm
 
 
 class TestSystem(BaseTest):
 
     @pytest.fixture
     def smirks_map(self, argon_ff, argon_top):
-        return build_smirnoff_map(forcefield=argon_ff, topology=argon_top)
+        return build_slot_smirks_map(forcefield=argon_ff, topology=argon_top)
 
     @pytest.fixture
-    def smirnoff_collection(self, argon_ff):
-        return build_smirnoff_collection(argon_ff)
+    def smirnoff_collection(self, argon_ff, argon_top):
+        return SMIRNOFFTermCollection.from_toolkit_data(toolkit_forcefield=argon_ff, toolkit_topology=argon_top)
 
     def test_constructor(self, argon_ff, argon_top, argon_coords, argon_box, smirks_map, smirnoff_collection):
         """

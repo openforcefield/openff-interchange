@@ -10,11 +10,19 @@ from simtk.openmm.app import Topology as OpenMMTopology
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.topology import Topology
 
-from .typing.smirnoff import build_smirnoff_map, build_smirnoff_collection
+from .typing.smirnoff import *
 from .collections import PotentialCollection
 from .utils import simtk_to_pint
 
 u = pint.UnitRegistry()
+
+def potential_map_from_terms(collection):
+    mapping = dict()
+
+    for key, val in collection.terms.items():
+        mapping[key] = val.smirks_map
+
+    return mapping
 
 
 class System(BaseModel):
@@ -39,8 +47,11 @@ class System(BaseModel):
             if values['potential_collection'] is not None and values['potential_map'] is not None:
                 raise TypeError('ff redundantly specified, will not be used')
             # TODO: Let other typing engines drop in here
-            values['potential_map'] = build_smirnoff_map(forcefield=values['forcefield'], topology=values['topology'])
-            values['potential_collection'] = build_smirnoff_collection(forcefield=values['forcefield'])
+            values['potential_collection'] = SMIRNOFFTermCollection.from_toolkit_data(
+                toolkit_forcefield=values['forcefield'],
+                toolkit_topology=values['topology'],
+            )
+            values['potential_map'] = potential_map_from_terms(values['potential_collection'])
         return values
 
     # TODO: These valiators pretty much don't do anything now
