@@ -3,7 +3,6 @@ import pint
 from pydantic import ValidationError
 
 from ..system import System
-from ..collections import *
 from ..typing.smirnoff import *
 from .base_test import BaseTest
 

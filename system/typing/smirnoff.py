@@ -4,7 +4,6 @@ from typing import Dict
 from pydantic import BaseModel
 import numpy as np
 
-from ..collections import PotentialHandler, PotentialCollection
 from ..utils import simtk_to_pint
 from ..potential import ParametrizedAnalyticalPotential as Potential
 from ..exceptions import SMIRNOFFHandlerNotImplementedError
@@ -61,7 +60,6 @@ def build_smirks_potential_map_term(name, forcefield, smirks_map=None):
 
 
 def build_smirks_potential_map_vdw(forcefield, smirks_map=None):
-    # potential_collection.handlers.update({'vdW': PotentialHandler(name='vdW')})
     mapping = dict()
 
     for param in forcefield.get_parameter_handler('vdW').parameters:
@@ -131,18 +129,6 @@ def build_smirks_potential_map_angles(forcefield, smirks_map=None):
         mapping[param.smirks] = potential
 
     return mapping
-
-
-def build_smirnoff_collection(forcefield, smirks_map=None):
-    """Build a PotentialCollection storing data in a SMIRNOFF force field."""
-    handlers = [h for h in forcefield._parameter_handlers.keys() if h in SUPPORTED_HANDLERS]
-
-    smirnoff_collection = PotentialCollection()
-
-    for handler in handlers:
-        smirnoff_collection = add_handler(forcefield, smirnoff_collection, handler, smirks_map=smirks_map)
-
-    return smirnoff_collection
 
 
 class SMIRNOFFPotentialTerm(BaseModel):

@@ -11,7 +11,6 @@ from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.topology import Topology
 
 from .typing.smirnoff import *
-from .collections import PotentialCollection
 from .utils import simtk_to_pint
 
 u = pint.UnitRegistry()
