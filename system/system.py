@@ -30,28 +30,29 @@ class System(BaseModel):
 
     topology: Union[Topology, OpenMMTopology]
     forcefield: ForceField = None
-    potential_collection: PotentialCollection = None
-    potential_map: Dict = None
+    slot_smirks_map: Dict = None
+    smirks_potential_map: Dict = None
+    term_collection: SMIRNOFFTermCollection = None
     # These Array (numpy-drived qcel objects) probably should be custom pint.Quantity-derived objects
     positions: Array[float]
     box: Array[float]
-    slots_map: Dict = None
 
     @root_validator
     def validate_forcefield_data(cls, values):
         # TODO: Replace this messy logic with something cleaner
         if values['forcefield'] is None:
-            if values['potential_collection'] is None or values['potential_map'] is None:
-                raise TypeError('not given an ff, need collection & map')
+            if values['slot_smirks_map'] is None or values['smirks_potential_map'] is None:
+                raise TypeError('not given an ff, need map')
         if values['forcefield'] is not None:
-            if values['potential_collection'] is not None and values['potential_map'] is not None:
+            if values['smirks_potential_map'] is not None and values['slot_smirks_map'] is not None and values['term_collection'] is not None:
                 raise TypeError('ff redundantly specified, will not be used')
             # TODO: Let other typing engines drop in here
-            values['potential_collection'] = SMIRNOFFTermCollection.from_toolkit_data(
+            values['slot_smirks_map'] = build_slot_smirks_map(forcefield=values['forcefield'], topology=values['topology'])
+            values['term_collection'] = SMIRNOFFTermCollection.from_toolkit_data(
                 toolkit_forcefield=values['forcefield'],
                 toolkit_topology=values['topology'],
             )
-            values['potential_map'] = potential_map_from_terms(values['potential_collection'])
+            values['smirks_potential_map'] = potential_map_from_terms(values['term_collection'])
         return values
 
     # TODO: These valiators pretty much don't do anything now
@@ -94,9 +95,6 @@ class System(BaseModel):
     # TODO: Make these two functions a drop-in for different typing engines?
     def run_typing(self, forcefield, topology):
         return build_smirnoff_map(forcefield=forcefield, topology=topology)
-
-    def get_potential_collection(self, forcefield):
-        return build_smirnoff_collection(forcefield=forcefield)
 
     def to_file(self):
         raise NotImplementedError()

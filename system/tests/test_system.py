@@ -26,14 +26,18 @@ class TestPotentialEnergyTerm(BaseTest):
 class TestSystem(BaseTest):
 
     @pytest.fixture
-    def smirks_map(self, argon_ff, argon_top):
+    def slot_smirks_map(self, argon_ff, argon_top):
         return build_slot_smirks_map(forcefield=argon_ff, topology=argon_top)
 
     @pytest.fixture
-    def smirnoff_collection(self, argon_ff, argon_top):
+    def smirks_potential_map(self, argon_ff, slot_smirks_map):
+        return build_smirks_potential_map(forcefield=argon_ff, smirks_map=slot_smirks_map)
+
+    @pytest.fixture
+    def term_collection(self, argon_ff, argon_top):
         return SMIRNOFFTermCollection.from_toolkit_data(toolkit_forcefield=argon_ff, toolkit_topology=argon_top)
 
-    def test_constructor(self, argon_ff, argon_top, argon_coords, argon_box, smirks_map, smirnoff_collection):
+    def test_constructor(self, argon_ff, argon_top, argon_coords, argon_box, slot_smirks_map, smirks_potential_map, term_collection):
         """
         Test the basic constructor behavior from SMIRNOFF
 
@@ -48,16 +52,17 @@ class TestSystem(BaseTest):
 
         System(
             topology=argon_top,
-            potential_collection=smirnoff_collection,
-            potential_map=smirks_map,
+            term_collection=term_collection,
+            slot_smirks_map=slot_smirks_map,
+            smirks_potential_map=smirks_potential_map,
             positions=argon_coords,
             box=argon_box,
         )
 
         with pytest.raises(ValidationError):
             System(
-                potential_collection=smirnoff_collection,
-                potential_map=smirks_map,
+                term_collection=term_collection,
+                potential_map=smirks_potential_map,
                 positions=argon_coords,
                 box=argon_box,
             )
@@ -65,7 +70,7 @@ class TestSystem(BaseTest):
         with pytest.raises(ValidationError):
             System(
                 topology=argon_top,
-                potential_collection=smirnoff_collection,
+                term_collection=term_collection,
                 positions=argon_coords,
                 box=argon_box,
             )
@@ -73,7 +78,7 @@ class TestSystem(BaseTest):
         with pytest.raises(ValidationError):
             System(
                 topology=argon_top,
-                potential_map=smirks_map,
+                potential_map=smirks_potential_map,
                 positions=argon_coords,
                 box=argon_box,
             )
@@ -91,5 +96,5 @@ class TestSystem(BaseTest):
             box=argon_box,
         )
 
-        assert test_system.potential_collection is not None
-        assert test_system.potential_map is not None
+        assert test_system.slot_smirks_map is not None
+        assert test_system.smirks_potential_map is not None

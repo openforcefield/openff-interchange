@@ -24,22 +24,33 @@ def build_slot_smirks_map(topology, forcefield):
 
 
 def build_slot_smirks_map_term(handler, forcefield, topology):
-    """Get mapping between slot keys and SMIRKS"""
-    slot_potential_map = dict()
+    """Get mapping between slot keys and SMIRKS for only one term"""
+    slot_smirks_map = dict()
 
     matches = forcefield.get_parameter_handler(handler).find_matches(topology)
 
     for atom_key, atom_match in matches.items():
-        slot_potential_map[atom_key] = atom_match.parameter_type.smirks
+        slot_smirks_map[atom_key] = atom_match.parameter_type.smirks
 
-    return slot_potential_map
+    return slot_smirks_map
 
 
-def build_smirks_potential_map(name, forcefield, smirks_map=None):
+def build_smirks_potential_map(forcefield, smirks_map=None):
+    mapping = dict()
+
+    for handler in forcefield._parameter_handlers.keys():
+        if handler not in SUPPORTED_HANDLERS:
+            continue
+        mapping[handler] = build_smirks_potential_map_term(handler, forcefield, smirks_map[handler])
+
+    return mapping
+
+
+def build_smirks_potential_map_term(name, forcefield, smirks_map=None):
     """Temporary stand-in for .to_potential calls in toolkit ParameterHandler objects."""
     if name not in SUPPORTED_HANDLERS:
         warn(f'handler {name} not implemented')
-        return potential_collection
+        raise Exception # return potential_collection
 
     if name == 'vdW':
         return build_smirks_potential_map_vdw(forcefield=forcefield, smirks_map=smirks_map)
@@ -148,7 +159,7 @@ class SMIRNOFFPotentialTerm(BaseModel):
     def build_from_toolkit_data(cls, name, forcefield, topology):
         term = cls(name=name)
         term.smirks_map = build_slot_smirks_map_term(name, forcefield=forcefield, topology=topology)
-        term.potentials = build_smirks_potential_map(name, forcefield=forcefield, smirks_map=term.smirks_map)
+        term.potentials = build_smirks_potential_map_term(name, forcefield=forcefield, smirks_map=term.smirks_map)
         return term
 
     def smirks_map_to_atom_indices(self):
@@ -172,7 +183,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
     def build_from_toolkit_data(cls, name, forcefield, topology):
         term = cls(name=name)
         term.smirks_map = build_slot_smirks_map_term(name, forcefield=forcefield, topology=topology)
-        term.potentials = build_smirks_potential_map(name, forcefield=forcefield, smirks_map=term.smirks_map)
+        term.potentials = build_smirks_potential_map_term(name, forcefield=forcefield, smirks_map=term.smirks_map)
         return term
 
     def get_p(self):
