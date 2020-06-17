@@ -4,12 +4,10 @@ from functools import partial
 
 from pydantic import BaseModel
 import numpy as np
-import jax
-import jax.numpy as jnp
 
-from ..utils import simtk_to_pint
+from ..utils import simtk_to_pint, jax_available
 from ..potential import ParametrizedAnalyticalPotential as Potential
-from ..exceptions import SMIRNOFFHandlerNotImplementedError
+from ..exceptions import SMIRNOFFHandlerNotImplementedError, JAXNotInstalledError
 
 # TODO: Probably shouldn't have this as a global variable floating around
 SUPPORTED_HANDLERS = {'vdW', 'Bonds', 'Angles'}
@@ -175,7 +173,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         term.potentials = build_smirks_potential_map_term(name, forcefield=forcefield, smirks_map=term.smirks_map)
         return term
 
-    def get_p(self):
+    def get_p(self, use_jax=False):
         """get p from a SMIRNOFFPotentialTerm
         returns
 
@@ -183,28 +181,42 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
                 indices in this array are freshly created
             mapping : dict mapping smirks patterns (for this term) to their 'id' that was just generated
         """
+        if use_jax:
+            import jax.numpy as np
+        else:
+            import numpy as np
+
         p = []
         mapping = dict()
         for i, pot in enumerate(self.potentials.values()):
             p.append([pot.parameters['sigma'].magnitude, pot.parameters['epsilon'].magnitude])
             mapping.update({pot.smirks: i})
-        return jnp.array(p), mapping
+        return np.array(p), mapping
 
-    def get_q(self, p=None, mapping=None):
+    def get_q(self, p=None, mapping=None, use_jax=False):
+        if use_jax:
+            import jax.numpy as np
+        else:
+            import numpy as np
+
         if p is None or mapping is None:
             (p, mapping) = self.get_p()
         q = []
         for i, val in enumerate(self.smirks_map.keys()):
             q.append(p[mapping[self.smirks_map[(i,)]]])
-        return jnp.array(q)
+        return np.array(q)
 
     def parametrize(self, p=None, smirks_map=None, mapping=None):
         if p is None or mapping is None:
-            (p, mapping) = self.get_p()
-        return self.get_q(p=p, mapping=mapping)
+            (p, mapping) = self.get_p(use_jax=True)
+        return self.get_q(p=p, mapping=mapping, use_jax=True)
 
+    # TODO: Don't use JAX so forcefully when calling other functions from here
     def get_param_matrix(self):
-        (p, mapping) = self.get_p()
+        if not jax_available:
+            raise JAXNotInstalledError
+        import jax
+        (p, mapping) = self.get_p(use_jax=True)
         parametrize_partial = partial(self.parametrize, smirks_map=self.smirks_map, mapping=mapping)
 
         jac_parametrize = jax.jacfwd(parametrize_partial)

@@ -45,3 +45,10 @@ def get_test_file_path(test_file):
         raise FileNotFoundError(
             f'could not file file {test_file} in path {dir_path}'
         )
+
+
+try:
+    import jax
+    jax_available = True
+except ImportError:
+    jax_available = False

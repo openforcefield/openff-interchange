@@ -1,15 +1,18 @@
+import pytest
 import numpy as np
-import jax
-import jax.numpy as jnp
-from jax.interpreters.xla import DeviceArray
 
 from .base_test import BaseTest
 from ..system import System
-
+from ..utils import jax_available
 
 class TestMatrixRepresentations(BaseTest):
 
+    @pytest.mark.skipif(not jax_available, reason='Requires JAX')
     def test_to_p_q(self, argon_ff, argon_top):
+        import jax
+        import jax.numpy as jnp
+        from jax.interpreters.xla import DeviceArray
+
         argon = System(
                 topology=argon_top,
                 forcefield=argon_ff,
@@ -20,14 +23,14 @@ class TestMatrixRepresentations(BaseTest):
         # Probably better to get the SMIRNOFFvdWTerm directly from processing the force field
         term = argon.term_collection.terms['vdW']
 
-        (p, mapping) = term.get_p()
+        (p, mapping) = term.get_p(use_jax=True)
 
-        assert isinstance(p, (np.ndarray, jax.interpreters.xla.DeviceArray))
+        assert isinstance(p, DeviceArray)
         assert p.shape == (1, 2)
 
-        q = term.get_q()
+        q = term.get_q(use_jax=True)
 
-        assert isinstance(q, (np.ndarray, jax.interpreters.xla.DeviceArray))
+        assert isinstance(q, DeviceArray)
         assert q.shape == (4, 2)
 
         assert jnp.allclose(q, term.parametrize(p))
