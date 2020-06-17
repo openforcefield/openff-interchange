@@ -168,11 +168,12 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
 
     name: str = 'vdW'
 
-#    @classmethod
-#    def build_from_toolkit_data(cls, name, forcefield, topology):
-#        term = cls(name=name)
-#        term.smirks_map = build_slot_smirks_map_term(name, forcefield=forcefield, topology=topology)
-#        term.potentials = build_smirks_potential_map(name, forcefield=forcefield, smirks_map=self.smirks_map)
+    @classmethod
+    def build_from_toolkit_data(cls, name, forcefield, topology):
+        term = cls(name=name)
+        term.smirks_map = build_slot_smirks_map_term(name, forcefield=forcefield, topology=topology)
+        term.potentials = build_smirks_potential_map(name, forcefield=forcefield, smirks_map=term.smirks_map)
+        return term
 
     def get_p(self):
         """get p from a SMIRNOFFPotentialTerm
@@ -190,7 +191,22 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         return np.array(p), mapping
 
 
-potential_term_mapping = {'vdW': SMIRNOFFvdWTerm}
+class SMIRNOFFBondTerm(SMIRNOFFPotentialTerm):
+
+    name: str = 'Bonds'
+
+
+class SMIRNOFFAngleTerm(SMIRNOFFPotentialTerm):
+
+    name: str = 'Angles'
+
+
+potential_term_mapping = {
+    'vdW': SMIRNOFFvdWTerm,
+    'Bonds': SMIRNOFFBondTerm,
+    'Angles': SMIRNOFFAngleTerm,
+}
+
 
 class SMIRNOFFTermCollection(BaseModel):
 
