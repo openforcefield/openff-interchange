@@ -1,8 +1,11 @@
 from warnings import warn
 from typing import Dict
+from functools import partial
 
 from pydantic import BaseModel
 import numpy as np
+import jax
+import jax.numpy as jnp
 
 from ..utils import simtk_to_pint
 from ..potential import ParametrizedAnalyticalPotential as Potential
@@ -185,8 +188,29 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         for i, pot in enumerate(self.potentials.values()):
             p.append([pot.parameters['sigma'].magnitude, pot.parameters['epsilon'].magnitude])
             mapping.update({pot.smirks: i})
-        return np.array(p), mapping
+        return jnp.array(p), mapping
 
+    def get_q(self, p=None, mapping=None):
+        if p is None or mapping is None:
+            (p, mapping) = self.get_p()
+        q = []
+        for i, val in enumerate(self.smirks_map.keys()):
+            q.append(p[mapping[self.smirks_map[(i,)]]])
+        return jnp.array(q)
+
+    def parametrize(self, p=None, smirks_map=None, mapping=None):
+        if p is None or mapping is None:
+            (p, mapping) = self.get_p()
+        return self.get_q(p=p, mapping=mapping)
+
+    def get_param_matrix(self):
+        (p, mapping) = self.get_p()
+        parametrize_partial = partial(self.parametrize, smirks_map=self.smirks_map, mapping=mapping)
+
+        jac_parametrize = jax.jacfwd(parametrize_partial)
+        jac_res = jac_parametrize(p)
+
+        return jac_res.reshape(-1, p.flatten().shape[0])
 
 class SMIRNOFFBondTerm(SMIRNOFFPotentialTerm):
 
