@@ -1,13 +1,10 @@
 import pytest
-import pint
 from pydantic import ValidationError
 
 from ..system import System
 from ..typing.smirnoff import *
+from .. import unit
 from .base_test import BaseTest
-
-
-u = pint.UnitRegistry()
 
 
 class TestPotentialEnergyTerm(BaseTest):
@@ -19,7 +16,7 @@ class TestPotentialEnergyTerm(BaseTest):
             topology=argon_top,
         )
 
-        assert term.potentials['[#18:1]'].parameters['sigma'] == 0.3 * u.nm
+        assert term.potentials['[#18:1]'].parameters['sigma'] == 0.3 * unit.nm
 
 
 class TestSystem(BaseTest):

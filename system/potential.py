@@ -1,9 +1,10 @@
 from typing import Dict, Set, Union
 
-from pint import Quantity
 from pydantic import BaseModel, validator
 import sympy
 from sympy import Expr
+
+from . import unit
 
 
 class AnalyticalPotential(BaseModel):
@@ -31,7 +32,7 @@ class AnalyticalPotential(BaseModel):
 class ParametrizedAnalyticalPotential(AnalyticalPotential):
     """AnalyticalPotential but filled with parameters."""
 
-    parameters: Dict[Union[Expr, str], Quantity]
+    parameters: Dict[Union[Expr, str], unit.Quantity]
 
     @validator("parameters")
     def is_valid(cls, val, values):

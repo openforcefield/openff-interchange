@@ -3,7 +3,8 @@ openff-system
 A molecular system object from the Open Force Field Initiative
 """
 
-# Add imports here
+import pint
+unit = pint.UnitRegistry()
 
 # Handle versioneer
 from ._version import get_versions

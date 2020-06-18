@@ -1,8 +1,9 @@
 import sympy
-import pint
 
 from pkg_resources import resource_filename
 import pathlib
+
+from . import unit
 
 
 def pint_to_simtk(quantity):
@@ -20,8 +21,7 @@ def simtk_to_pint(simtk_quantity):
     simtk_unit = simtk_quantity.unit
     simtk_value = simtk_quantity.value_in_unit(simtk_unit)
 
-    u = pint.UnitRegistry()
-    pint_unit = u(simtk_unit.get_name())
+    pint_unit = unit(simtk_unit.get_name())
     pint_quantity = simtk_value * pint_unit
 
     return pint_quantity

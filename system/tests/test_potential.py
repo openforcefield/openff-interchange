@@ -1,12 +1,10 @@
 import sympy
-import pint
 from pydantic import parse_obj_as
-from system.potential import AnalyticalPotential, ParametrizedAnalyticalPotential
-from system.utils import compare_sympy_expr
-from system.tests.base_test import BaseTest
 
-
-u = pint.UnitRegistry()
+from .. import unit
+from ..potential import AnalyticalPotential, ParametrizedAnalyticalPotential
+from ..utils import compare_sympy_expr
+from ..tests.base_test import BaseTest
 
 
 class TestPotential(BaseTest):
@@ -35,15 +33,15 @@ class TestPotential(BaseTest):
             name="TestPotential",
             expression="m*x+b",
             independent_variables={"x"},
-            parameters={"m": 0.5 * u.dimensionless, "b": -1.0 * u.dimensionless},
+            parameters={"m": 0.5 * unit.dimensionless, "b": -1.0 * unit.dimensionless},
         )
 
         assert pot.name == "TestPotential"
         assert compare_sympy_expr(pot.expression, "m*x+b")
         assert "m" in pot.parameters.keys()
         assert "b" in pot.parameters.keys()
-        assert pot.parameters["m"] == 0.5 * u.dimensionless
-        assert pot.parameters["b"] == -1.0 * u.dimensionless
+        assert pot.parameters["m"] == 0.5 * unit.dimensionless
+        assert pot.parameters["b"] == -1.0 * unit.dimensionless
 
     def test_serialization(self):
         pot = AnalyticalPotential(
@@ -56,7 +54,7 @@ class TestPotential(BaseTest):
             smirks=pot.smirks,
             expression='m*x+b',
             independent_variables={'x'},
-            parameters={'m': 1 * u.dimensionless, 'b': 1 * u.dimensionless},
+            parameters={'m': 1 * unit.dimensionless, 'b': 1 * unit.dimensionless},
         )
 
         # Depending on the equality operator may be dangerous

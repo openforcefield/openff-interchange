@@ -1,19 +1,18 @@
 from typing import Dict, Union
 
-import numpy as np
-from pydantic import BaseModel, validator, root_validator
-import pint
-from qcelemental.models.types import Array
+from pydantic import validator, root_validator
+
 from simtk.unit import Quantity as SimTKQuantity
 from simtk.openmm.app import Topology as OpenMMTopology
 
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.topology import Topology
 
+from . import unit
 from .typing.smirnoff import *
 from .utils import simtk_to_pint
+from .types import UnitArray
 
-u = pint.UnitRegistry()
 
 def potential_map_from_terms(collection):
     mapping = dict()
@@ -32,9 +31,8 @@ class System(BaseModel):
     slot_smirks_map: Dict = None
     smirks_potential_map: Dict = None
     term_collection: SMIRNOFFTermCollection = None
-    # These Array (numpy-drived qcel objects) probably should be custom pint.Quantity-derived objects
-    positions: Array[float]
-    box: Array[float]
+    positions: UnitArray
+    box: UnitArray
 
     @root_validator
     def validate_forcefield_data(cls, values):
@@ -80,10 +78,10 @@ class System(BaseModel):
     @validator("positions", "box", pre=True)
     def validate_in_space(cls, val):
         if isinstance(val, SimTKQuantity):
-            return simtk_to_pint(val)
+            return UnitArray(simtk_to_pint(val))
         elif isinstance(val, np.ndarray):
-            return val * u.nm
-        elif isinstance(val, Array):
+            return UnitArray(val)
+        elif isinstance(val, UnitArray):
             return val
         else:
             raise TypeError
