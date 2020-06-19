@@ -215,6 +215,9 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
             (p, mapping) = self.get_p(use_jax=True)
         return self.get_q(p=p, mapping=mapping, use_jax=True)
 
+    def parametrize_partial(self):
+        return partial(self.parametrize, smirks_map=self.smirks_map, mapping=self.get_p()[1])
+
     # TODO: Don't use JAX so forcefully when calling other functions from here
     def get_param_matrix(self):
         if not jax_available:
