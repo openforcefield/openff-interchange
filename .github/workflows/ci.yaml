@@ -55,6 +55,7 @@ jobs:
       shell: bash -l {0}
       run: |
           conda install jax -c conda-forge
+          python -c "import jax"
 
     - name: Run tests
       shell: bash -l {0}
