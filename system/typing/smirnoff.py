@@ -41,7 +41,11 @@ def build_smirks_potential_map(forcefield, smirks_map=None):
     for handler in forcefield._parameter_handlers.keys():
         if handler not in SUPPORTED_HANDLERS:
             continue
-        mapping[handler] = build_smirks_potential_map_term(handler, forcefield, smirks_map[handler])
+        if smirks_map:
+            partial_smirks_map = smirks_map[handler]
+        else:
+            partial_smirks_map = None
+        mapping[handler] = build_smirks_potential_map_term(handler, forcefield, partial_smirks_map)
 
     return mapping
 
