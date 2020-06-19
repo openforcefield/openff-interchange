@@ -1,9 +1,13 @@
-import sympy
-
 from pkg_resources import resource_filename
 import pathlib
 
+import sympy
+from simtk import openmm
+
+from openforcefield.utils import unit_to_string
+
 from . import unit
+from .types import UnitArray
 
 
 def pint_to_simtk(quantity):
@@ -21,10 +25,10 @@ def simtk_to_pint(simtk_quantity):
     simtk_unit = simtk_quantity.unit
     simtk_value = simtk_quantity.value_in_unit(simtk_unit)
 
-    pint_unit = unit(simtk_unit.get_name())
-    pint_quantity = simtk_value * pint_unit
+    target_unit = unit_to_string(simtk_unit)
+    target_unit = unit.Unit(target_unit)
 
-    return pint_quantity
+    return UnitArray(simtk_value, units=target_unit)
 
 
 def compare_sympy_expr(expr1, expr2):
@@ -45,6 +49,23 @@ def get_test_file_path(test_file):
         raise FileNotFoundError(
             f'could not file file {test_file} in path {dir_path}'
         )
+
+
+def get_nonbonded_force_from_openmm_system(omm_system):
+    for force in omm_system.getForces():
+        if type(force) == openmm.NonbondedForce:
+            return force
+
+
+def get_partial_charges_from_openmm_system(omm_system):
+    """Get partial charges from an OpenMM system as a unit.Quantity array."""
+    # TODO: deal with virtual sites
+    n_particles = omm_system.getNumParticles()
+    force = get_nonbonded_force_from_openmm_system(omm_system)
+    # TODO: don't assume the partial charge will always be parameter 0
+    partial_charges = [simtk_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)]
+    partial_charges = unit.Quantity.from_list(partial_charges)
+    return partial_charges
 
 
 try:

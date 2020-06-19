@@ -1,20 +1,22 @@
 import pytest
+import numpy as np
 from simtk import unit as simtk_unit
-import pint
 
-from system.utils import simtk_to_pint, pint_to_simtk, compare_sympy_expr
+from .. import unit
+from system.utils import simtk_to_pint, pint_to_simtk, compare_sympy_expr, get_partial_charges_from_openmm_system
+from .base_test import BaseTest
 
-
-u = pint.UnitRegistry()
 
 simtk_quantitites = [
     4.0 * simtk_unit.nanometer,
     5.0 * simtk_unit.angstrom,
+    1.0 * simtk_unit.elementary_charge,
 ]
 
 pint_quantities = [
-    4.0 * u.nanometer,
-    5.0 * u.angstrom,
+    4.0 * unit.nanometer,
+    5.0 * unit.angstrom,
+    1.0 * unit.elementary_charge,
 ]
 
 
@@ -46,3 +48,13 @@ def test_pint_to_simtk():
 )
 def test_compare_sympy_expr(expr1, expr2, result):
     assert compare_sympy_expr(expr1, expr2) == result
+
+
+class TestOpenMM(BaseTest):
+    def test_openmm_partial_charges(self, argon_ff, argon_top):
+        omm_system = argon_ff.create_openmm_system(argon_top)
+        partial_charges = get_partial_charges_from_openmm_system(omm_system)
+
+        assert isinstance(partial_charges, unit.Quantity)
+        assert partial_charges.units == unit.elementary_charge
+        assert np.allclose(partial_charges.magnitude, np.zeros(4))
