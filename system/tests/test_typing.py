@@ -1,7 +1,10 @@
 import pytest
 
-from ..typing.smirnoff import SMIRNOFFPotentialTerm, SMIRNOFFvdWTerm, SMIRNOFFTermCollection
+from openforcefield.topology import Molecule, Topology
+
+from ..typing.smirnoff import SMIRNOFFPotentialTerm, SMIRNOFFvdWTerm, SMIRNOFFTermCollection, ElectrostaticsTerm, SUPPORTED_HANDLERS
 from ..exceptions import SMIRNOFFHandlerNotImplementedError
+from ..utils import get_partial_charges_from_openmm_system
 from .base_test import BaseTest
 
 
@@ -23,12 +26,23 @@ class TestSMIRNOFFTyping(BaseTest):
         for term in ff_collection.terms.values():
             assert term.potentials.keys() is not None
 
-    def test_construct_term_from_toolkit_forcefield(self, argon_ff, argon_top):
-        val1 = SMIRNOFFPotentialTerm.build_from_toolkit_data(name='vdW', forcefield=argon_ff, topology=argon_top)
-        val2 = SMIRNOFFvdWTerm.build_from_toolkit_data(name='vdW', forcefield=argon_ff, topology=argon_top)
+    def test_more_map_functions(self, parsley, ethanol_top):
+        ff_collection = SMIRNOFFTermCollection.from_toolkit_data(parsley, ethanol_top)
+
+        assert sorted(ff_collection.terms.keys()) == sorted(SUPPORTED_HANDLERS)
+
+    def test_construct_term_from_toolkit_forcefield(self, parsley, ethanol_top):
+        val1 = SMIRNOFFPotentialTerm.build_from_toolkit_data(name='vdW', forcefield=parsley, topology=ethanol_top)
+        val2 = SMIRNOFFvdWTerm.build_from_toolkit_data(name='vdW', forcefield=parsley, topology=ethanol_top)
 
         # TODO: DO something here that isn't so dangerous
         assert val1 == val2
+
+        ref = get_partial_charges_from_openmm_system(parsley.create_openmm_system(ethanol_top))
+
+        partial_charges = ElectrostaticsTerm.build_from_toolkit_data(name='Electrostatics', forcefield=parsley, topology=ethanol_top)
+
+        assert all(partial_charges.values() == ref)
 
     def test_unimplemented_conversions(self, parsley, ethanol_top):
 

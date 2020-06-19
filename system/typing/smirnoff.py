@@ -5,12 +5,13 @@ from functools import partial
 from pydantic import BaseModel
 import numpy as np
 
-from ..utils import simtk_to_pint, jax_available
+from .. import unit
+from ..utils import simtk_to_pint, jax_available, get_partial_charges_from_openmm_system
 from ..potential import ParametrizedAnalyticalPotential as Potential
 from ..exceptions import SMIRNOFFHandlerNotImplementedError, JAXNotInstalledError
 
 # TODO: Probably shouldn't have this as a global variable floating around
-SUPPORTED_HANDLERS = {'vdW', 'Bonds', 'Angles'}
+SUPPORTED_HANDLERS = {'vdW', 'Bonds', 'Angles', 'Electrostatics'}
 
 
 def build_slot_smirks_map(topology, forcefield):
@@ -27,12 +28,27 @@ def build_slot_smirks_map_term(handler, forcefield, topology):
     """Get mapping between slot keys and SMIRKS for only one term"""
     slot_smirks_map = dict()
 
+    if handler == 'Electrostatics':
+        return dummy_atomic_slots_map(topology)
+
     matches = forcefield.get_parameter_handler(handler).find_matches(topology)
 
     for atom_key, atom_match in matches.items():
         slot_smirks_map[atom_key] = atom_match.parameter_type.smirks
 
     return slot_smirks_map
+
+
+def dummy_atomic_slots_map(topology):
+    """
+    Return something that looks like a slot -> SMIRKS map, but the SMIRKS patterns
+    are actually just atom indices as strings
+    """
+    mapping = dict()
+
+    for idx, atom in enumerate(topology.topology_atoms):
+        mapping[(idx,)] = str(idx)
+    return mapping
 
 
 def build_smirks_potential_map(forcefield, smirks_map=None):
@@ -50,7 +66,7 @@ def build_smirks_potential_map(forcefield, smirks_map=None):
     return mapping
 
 
-def build_smirks_potential_map_term(name, forcefield, smirks_map=None):
+def build_smirks_potential_map_term(name, forcefield, smirks_map=None, topology=None):
     """Temporary stand-in for .to_potential calls in toolkit ParameterHandler objects."""
     if name not in SUPPORTED_HANDLERS:
         warn(f'handler {name} not implemented')
@@ -62,6 +78,8 @@ def build_smirks_potential_map_term(name, forcefield, smirks_map=None):
         return build_smirks_potential_map_bonds(forcefield=forcefield, smirks_map=smirks_map)
     if name == 'Angles':
         return build_smirks_potential_map_angles(forcefield=forcefield, smirks_map=smirks_map)
+    if name == 'Electrostatics':
+        return build_smirks_potential_map_electrostatics(forcefield=forcefield, topology=topology, smirks_map=smirks_map)
 
 
 def build_smirks_potential_map_vdw(forcefield, smirks_map=None):
@@ -132,6 +150,27 @@ def build_smirks_potential_map_angles(forcefield, smirks_map=None):
         )
 
         mapping[param.smirks] = potential
+
+    return mapping
+
+
+def build_smirks_potential_map_electrostatics(forcefield, topology, smirks_map=None):
+    """
+    Note: This mapping does not go through SMIRKS and should be replaced with future toolkit features;
+    See https://github.com/openforcefield/openforcefield/issues/619
+
+    Note: This mapping does not store an interaction term, it only stores the partial charge
+    """
+    mapping = dict()
+
+    if not smirks_map:
+        smirks_map = build_slot_smirks_map_term('Electrostatics', forcefield=forcefield, topology=topology)
+
+    breakpoint()
+    partial_charges = get_partial_charges_from_openmm_system(forcefield.create_openmm_system(topology))
+
+    for key, val in smirks_map.values():
+        mapping[val] = partial_charges[smirks_map[0]]
 
     return mapping
 
@@ -241,10 +280,25 @@ class SMIRNOFFAngleTerm(SMIRNOFFPotentialTerm):
     name: str = 'Angles'
 
 
+class ElectrostaticsTerm(SMIRNOFFPotentialTerm):
+
+    name: str = 'Electrostatics'
+    smirks_map: Dict[tuple, str] = dict()
+    potentials: Dict[str, unit.Quantity] = dict()
+
+    @classmethod
+    def built_from_toolkit_data(cls, name, forcefield, topology):
+        breakpoint()
+        term = cls(name=name)
+        term.smirks_map = build_slot_smirks_map_term(name, forcefield=forcefield, topology=topology)
+        term.potentials = build_smirks_potential_map_electrostatics(forcefield=forcefield, topology=topology, smirks_map=term.smirks_map)
+        return term
+
 potential_term_mapping = {
     'vdW': SMIRNOFFvdWTerm,
     'Bonds': SMIRNOFFBondTerm,
     'Angles': SMIRNOFFAngleTerm,
+    'Electrostatics': ElectrostaticsTerm,
 }
 
 
