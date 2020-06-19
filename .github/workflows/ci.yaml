@@ -9,14 +9,9 @@ on:
     branches:
       - "master"
       - "maintenance/.+"
-  schedule:
-      - cron: "0 0 * * * "
 
 jobs:
   test:
-
-    if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openforcefield') || (github.event_name != 'schedule')
-
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -30,6 +25,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - uses: goanpeca/setup-miniconda@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+        activate-environment: test
+        environment-file: devtools/conda-envs/test_env.yaml
+        auto-activate-base: false
+
     - name: Additional info about the build
       shell: bash
       run: |
@@ -37,45 +39,27 @@ jobs:
         df -h
         ulimit -a
 
-    - name: Fix conda permissions in MacOS
-      shell: bash
-      if: startsWith(matrix.os, 'macOS')
+    - name: Environment Information
+      shell: bash -l {0}
       run: |
-        sudo chown -R $(id -u):$(id -g) ${CONDA}
-
-    - name: Configure conda
-      shell: bash
-      run: |
-        . devtools/github-actions/initialize_conda.sh
-        conda activate
-        conda config --set always_yes yes
-        conda install --quiet conda conda-build jinja2 anaconda-client
-        conda update --all
+        conda info
         conda list
 
-    - name: Create environment for package
-      shell: bash
-      run: |
-        . devtools/github-actions/initialize_conda.sh
-        conda activate
-        conda info
-        python devtools/scripts/create_conda_env.py -n=test -p=$PYVER devtools/conda-envs/test_env.yaml
-
     - name: Install package
-      shell: bash
+      shell: bash -l {0}
       run: |
-        . devtools/github-actions/initialize_conda.sh
-        conda activate test
-        python -m pip install . --no-deps
-        conda list --show-channel-urls
+        python -m pip install --no-deps .
+
+    - name: Install JAX if using Python 3.7
+      if: ${{ matrix.python-version == 3.7 }}
+      shell: bash -l {0}
+      run: |
+          conda install jax -c conda-forge
 
     - name: Run tests
-      shell: bash
+      shell: bash -l {0}
       run: |
-        . devtools/github-actions/initialize_conda.sh
-        conda activate test
-        pytest -v
-        pytest -v --cov=system --cov-report=xml --cov-config=setup.cfg
+        pytest -v --cov=system --cov-report=xml --cov-config=setup.cfg system/tests/
 
     - name: Codecov
       uses: codecov/codecov-action@v1
