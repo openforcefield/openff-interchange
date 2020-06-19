@@ -1,6 +1,7 @@
 from typing import Dict, Union
 
 from pydantic import validator, root_validator
+import pint
 
 from simtk.unit import Quantity as SimTKQuantity
 from simtk.openmm.app import Topology as OpenMMTopology
@@ -78,13 +79,25 @@ class System(BaseModel):
     @validator("positions", "box", pre=True)
     def validate_in_space(cls, val):
         if isinstance(val, SimTKQuantity):
-            return UnitArray(simtk_to_pint(val))
-        elif isinstance(val, np.ndarray):
-            return UnitArray(val)
-        elif isinstance(val, UnitArray):
+            val = UnitArray(simtk_to_pint(val))
+        if isinstance(val, (pint.Quantity, np.ndarray, UnitArray)):
+            val = UnitArray(val)
+            if val.dimensionless:
+                val *= unit.nm
+            if not val.is_compatible_with('nm'):
+                raise TypeError  # Make this a custom exception?
             return val
         else:
             raise TypeError
+
+    @validator("box")
+    def validate_box(cls, val):
+        if val.shape == (3, 3):
+            return val
+        elif val.shape == (3,):
+            return val * np.eye(3)
+        else:
+            raise ValueError
 
     class Config:
         arbitrary_types_allowed = True
