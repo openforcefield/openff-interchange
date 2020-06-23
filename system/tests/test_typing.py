@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 
 from openforcefield.topology import Molecule, Topology
 
@@ -40,9 +41,10 @@ class TestSMIRNOFFTyping(BaseTest):
 
         ref = get_partial_charges_from_openmm_system(parsley.create_openmm_system(ethanol_top))
 
-        partial_charges = ElectrostaticsTerm.build_from_toolkit_data(name='Electrostatics', forcefield=parsley, topology=ethanol_top)
+        eh = ElectrostaticsTerm.build_from_toolkit_data(name='Electrostatics', forcefield=parsley, topology=ethanol_top)
+        partial_charges = [*eh.potentials.values()]
 
-        assert all(partial_charges.values() == ref)
+        assert np.allclose(partial_charges, ref)
 
     def test_unimplemented_conversions(self, parsley, ethanol_top):
 

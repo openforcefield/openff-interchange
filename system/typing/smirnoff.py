@@ -166,11 +166,10 @@ def build_smirks_potential_map_electrostatics(forcefield, topology, smirks_map=N
     if not smirks_map:
         smirks_map = build_slot_smirks_map_term('Electrostatics', forcefield=forcefield, topology=topology)
 
-    breakpoint()
     partial_charges = get_partial_charges_from_openmm_system(forcefield.create_openmm_system(topology))
 
-    for key, val in smirks_map.values():
-        mapping[val] = partial_charges[smirks_map[0]]
+    for key, val in smirks_map.items():
+        mapping[val] = partial_charges[int(val)]
 
     return mapping
 
@@ -287,8 +286,8 @@ class ElectrostaticsTerm(SMIRNOFFPotentialTerm):
     potentials: Dict[str, unit.Quantity] = dict()
 
     @classmethod
-    def built_from_toolkit_data(cls, name, forcefield, topology):
-        breakpoint()
+    def build_from_toolkit_data(cls, name, forcefield, topology):
+
         term = cls(name=name)
         term.smirks_map = build_slot_smirks_map_term(name, forcefield=forcefield, topology=topology)
         term.potentials = build_smirks_potential_map_electrostatics(forcefield=forcefield, topology=topology, smirks_map=term.smirks_map)
