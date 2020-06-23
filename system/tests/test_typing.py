@@ -27,7 +27,18 @@ class TestSMIRNOFFTyping(BaseTest):
         for term in ff_collection.terms.values():
             assert term.potentials.keys() is not None
 
+    @pytest.mark.xfail(strict=False)
     def test_more_map_functions(self, parsley, ethanol_top):
+        # TODO: Better way of testing individual handlers
+        # Workaround until https://github.com/openforcefield/openforcefield/issues/552 is implemented
+        parsley_handlers = list(parsley._parameter_handlers.keys())
+
+        # Currently fails since this strips out the AM1BCC handler, which causes typing to fail
+        # without an option to bypass AM1BCC altogether
+        for handler in parsley._parameter_handlers.keys():
+            if handler not in SUPPORTED_HANDLERS:
+                parsley._parameter_handlers.pop(handler)
+
         ff_collection = SMIRNOFFTermCollection.from_toolkit_data(parsley, ethanol_top)
 
         assert sorted(ff_collection.terms.keys()) == sorted(SUPPORTED_HANDLERS)
