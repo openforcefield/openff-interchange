@@ -44,7 +44,7 @@ def get_test_file_path(test_file):
     test_file_path = pathlib.Path(dir_path).joinpath(test_file)
 
     if test_file_path.is_file():
-        return test_file_path
+        return test_file_path.as_posix()
     else:
         raise FileNotFoundError(
             f'could not file file {test_file} in path {dir_path}'

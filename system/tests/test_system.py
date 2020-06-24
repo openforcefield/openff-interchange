@@ -98,6 +98,37 @@ class TestSystem(BaseTest):
 
 class TestProtoSystem(BaseTest):
 
+    def test_constructor(self, argon_top, argon_coords, argon_box):
+        """
+        TODO: Check that the instances are reasonable, not just don't error
+        """
+        ProtoSystem(
+            topology=argon_top,
+            positions=argon_coords,
+            box=argon_box,
+        )
+
+        with pytest.raises(ValidationError):
+            ProtoSystem(
+                positions=argon_coords,
+                box=argon_box,
+            )
+
+        with pytest.raises(ValidationError):
+            ProtoSystem(
+                topology=argon_top,
+                box=argon_box,
+            )
+
+        with pytest.raises(ValidationError):
+            ProtoSystem(
+                positions=argon_coords,
+                box=argon_box,
+            )
+
+
+class TestValidators(BaseTest):
+
     @pytest.mark.parametrize('values,units', [
         ([4, 4, 4], 'nm'),
         ([60, 60, 60], 'angstrom'),
