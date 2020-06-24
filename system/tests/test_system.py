@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from ..system import System
+from ..system import System, ProtoSystem
 from ..typing.smirnoff import *
 from .. import unit
 from .base_test import BaseTest
@@ -79,27 +79,6 @@ class TestSystem(BaseTest):
                 box=argon_box,
             )
 
-    @pytest.mark.parametrize('values,units', [
-        ([4, 4, 4], 'nm'),
-        ([60, 60, 60], 'angstrom'),
-        ([[4, 0, 0], [0, 4, 0], [0, 0, 4]], 'nm'),
-    ])
-    def test_valiate_box(self, values, units):
-        box = System.validate_box(unit.Quantity(values, units=units))
-
-        assert box.shape == (3, 3)
-        assert box.units == unit.Unit(units)
-
-    @pytest.mark.parametrize('values,units', [
-        (3 * [4], 'hour'),
-        (3 * [4], 'acre'),
-        (2 * [4], 'nm'),
-        (4 * [4], 'nm'),
-    ])
-    def test_validate_box_bad(self, values, units):
-        with pytest.raises(TypeError):
-            System.validate_box(values, units=units)
-
     def test_automatic_typing(self, argon_ff, argon_top, argon_coords, argon_box):
         """
         Test that, when only forcefield is provided, typing dicts are built automatically.
@@ -115,3 +94,28 @@ class TestSystem(BaseTest):
 
         assert test_system.slot_smirks_map is not None
         assert test_system.smirks_potential_map is not None
+
+
+class TestProtoSystem(BaseTest):
+
+    @pytest.mark.parametrize('values,units', [
+        ([4, 4, 4], 'nm'),
+        ([60, 60, 60], 'angstrom'),
+        ([[4, 0, 0], [0, 4, 0], [0, 0, 4]], 'nm'),
+    ])
+    def test_valiate_box(self, values, units):
+        box = ProtoSystem.validate_box(unit.Quantity(values, units=units))
+
+        assert box.shape == (3, 3)
+        assert box.units == unit.Unit(units)
+
+    @pytest.mark.parametrize('values,units', [
+        (3 * [4], 'hour'),
+        (3 * [4], 'acre'),
+        (2 * [4], 'nm'),
+        (4 * [4], 'nm'),
+    ])
+    def test_validate_box_bad(self, values, units):
+        with pytest.raises(TypeError):
+            ProtoSystem.validate_box(values, units=units)
+

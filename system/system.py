@@ -6,7 +6,7 @@ import pint
 from simtk.unit import Quantity as SimTKQuantity
 from simtk.openmm.app import Topology as OpenMMTopology
 
-from openforcefield.typing.engines.smirnoff import ForceField
+from openforcefield.typing.engines.smirnoff import ForceField, ParameterHandler
 from openforcefield.topology import Topology
 
 from . import unit
@@ -24,53 +24,12 @@ def potential_map_from_terms(collection):
     return mapping
 
 
-class System(BaseModel):
-    """The OpenFF System object."""
+class ProtoSystem(BaseModel):
+    """A primitive object for other System objects to be built off of"""
 
     topology: Union[Topology, OpenMMTopology]
-    forcefield: ForceField = None
-    slot_smirks_map: Dict = None
-    smirks_potential_map: Dict = None
-    term_collection: SMIRNOFFTermCollection = None
     positions: UnitArray
     box: UnitArray
-
-    @root_validator
-    def validate_forcefield_data(cls, values):
-        # TODO: Replace this messy logic with something cleaner
-        if values['forcefield'] is None:
-            if values['slot_smirks_map'] is None or values['smirks_potential_map'] is None:
-                raise TypeError('not given an ff, need map')
-        if values['forcefield'] is not None:
-            if values['smirks_potential_map'] is not None and values['slot_smirks_map'] is not None and values['term_collection'] is not None:
-                raise TypeError('ff redundantly specified, will not be used')
-            # TODO: Let other typing engines drop in here
-            values['slot_smirks_map'] = build_slot_smirks_map(forcefield=values['forcefield'], topology=values['topology'])
-            values['term_collection'] = SMIRNOFFTermCollection.from_toolkit_data(
-                toolkit_forcefield=values['forcefield'],
-                toolkit_topology=values['topology'],
-            )
-            values['smirks_potential_map'] = potential_map_from_terms(values['term_collection'])
-        return values
-
-    # TODO: These valiators pretty much don't do anything now
-    @validator("forcefield")
-    def validate_forcefield(cls, val):
-        if val is None:
-            return val
-        if isinstance(val, ForceField):
-            return val
-        else:
-            raise TypeError
-
-    @validator("topology", pre=True)
-    def validate_topology(cls, val):
-        if isinstance(val, Topology):
-            return val
-        elif isinstance(val, OpenMMTopology):
-            return Topology.from_openmm(val)
-        else:
-            raise TypeError
 
     # TODO: I needed to set pre=True to get this to override the Array type. This is bad
     # and instead this attribute should be handled by a custom class that deals with
@@ -98,6 +57,55 @@ class System(BaseModel):
             return val * np.eye(3)
         else:
             raise ValueError
+
+    @validator("topology", pre=True)
+    def validate_topology(cls, val):
+        if isinstance(val, Topology):
+            return val
+        elif isinstance(val, OpenMMTopology):
+            return Topology.from_openmm(val)
+        else:
+            raise TypeError
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
+class System(ProtoSystem):
+    """The OpenFF System object."""
+
+    forcefield: Union[ForceField, ParameterHandler] = None
+    slot_smirks_map: Dict = None
+    smirks_potential_map: Dict = None
+    term_collection: SMIRNOFFTermCollection = None
+
+    @root_validator
+    def validate_forcefield_data(cls, values):
+        # TODO: Replace this messy logic with something cleaner
+        if values['forcefield'] is None:
+            if values['slot_smirks_map'] is None or values['smirks_potential_map'] is None:
+                raise TypeError('not given an ff, need maps')
+        if values['forcefield'] is not None:
+            if values['smirks_potential_map'] is not None and values['slot_smirks_map'] is not None and values['term_collection'] is not None:
+                raise TypeError('ff redundantly specified, will not be used')
+            # TODO: Let other typing engines drop in here
+            values['slot_smirks_map'] = build_slot_smirks_map(forcefield=values['forcefield'], topology=values['topology'])
+            values['term_collection'] = SMIRNOFFTermCollection.from_toolkit_data(
+                toolkit_forcefield=values['forcefield'],
+                toolkit_topology=values['topology'],
+            )
+            values['smirks_potential_map'] = potential_map_from_terms(values['term_collection'])
+        return values
+
+    # TODO: These valiators pretty much don't do anything now
+    @validator("forcefield")
+    def validate_forcefield(cls, val):
+        if val is None:
+            return val
+        if isinstance(val, ForceField):
+            return val
+        else:
+            raise TypeError
 
     class Config:
         arbitrary_types_allowed = True
