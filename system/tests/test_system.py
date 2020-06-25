@@ -10,9 +10,7 @@ from .base_test import BaseTest
 class TestPotentialEnergyTerm(BaseTest):
     def test_term_conversion(self, argon_ff, argon_top):
         term = SMIRNOFFvdWTerm.build_from_toolkit_data(
-            # TODO: name shouldn't be required here, something about the inheritance is dirty
-            name='vdW',
-            forcefield=argon_ff,
+            handler=argon_ff['vdW'],
             topology=argon_top,
         )
 
@@ -63,21 +61,25 @@ class TestSystem(BaseTest):
                 box=argon_box,
             )
 
-        with pytest.raises(ValidationError):
-            System(
-                topology=argon_top,
-                term_collection=term_collection,
-                positions=argon_coords,
-                box=argon_box,
-            )
+        # This would raise ValidationError before we consider un-typed `System`s
+        #with pytest.raises(ValidationError):
+        #    System(
+        #        topology=argon_top,
+        #        term_collection=term_collection,
+        #        positions=argon_coords,
+        #        box=argon_box,
+        #    )
+        #    raise ValidationError
 
-        with pytest.raises(ValidationError):
-            System(
-                topology=argon_top,
-                potential_map=smirks_potential_map,
-                positions=argon_coords,
-                box=argon_box,
-            )
+        # This would raise an exception before we consider un-typed `System`s
+        #with pytest.raises(ValidationError):
+        #    System(
+        #        topology=argon_top,
+        #        potential_map=smirks_potential_map,
+        #        positions=argon_coords,
+        #        box=argon_box,
+        #    )
+        #    raise ValidationError
 
     def test_automatic_typing(self, argon_ff, argon_top, argon_coords, argon_box):
         """

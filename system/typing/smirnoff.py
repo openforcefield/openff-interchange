@@ -5,6 +5,8 @@ from functools import partial
 from pydantic import BaseModel
 import numpy as np
 
+from openforcefield.typing.engines.smirnoff import ForceField
+
 from .. import unit
 from ..utils import simtk_to_pint, jax_available, get_partial_charges_from_openmm_system
 from ..potential import ParametrizedAnalyticalPotential as Potential
@@ -61,32 +63,32 @@ def build_smirks_potential_map(forcefield, smirks_map=None):
             partial_smirks_map = smirks_map[handler]
         else:
             partial_smirks_map = None
-        mapping[handler] = build_smirks_potential_map_term(handler, forcefield, partial_smirks_map)
+        mapping[handler] = build_smirks_potential_map_term(forcefield[handler], partial_smirks_map)
 
     return mapping
 
 
-def build_smirks_potential_map_term(name, forcefield, smirks_map=None, topology=None):
+def build_smirks_potential_map_term(handler, smirks_map=None, topology=None, forcefield=None):
     """Temporary stand-in for .to_potential calls in toolkit ParameterHandler objects."""
-    if name not in SUPPORTED_HANDLERS:
+    if handler._TAGNAME not in SUPPORTED_HANDLERS:
         warn(f'handler {name} not implemented')
         raise Exception # return potential_collection
 
-    if name == 'vdW':
-        return build_smirks_potential_map_vdw(forcefield=forcefield, smirks_map=smirks_map)
-    if name == 'Bonds':
-        return build_smirks_potential_map_bonds(forcefield=forcefield, smirks_map=smirks_map)
-    if name == 'Angles':
-        return build_smirks_potential_map_angles(forcefield=forcefield, smirks_map=smirks_map)
-    if name == 'Electrostatics':
+    if handler._TAGNAME == 'vdW':
+        return build_smirks_potential_map_vdw(handler=handler, smirks_map=smirks_map)
+    if handler._TAGNAME == 'Bonds':
+        return build_smirks_potential_map_bonds(handler=handler, smirks_map=smirks_map)
+    if handler._TAGNAME == 'Angles':
+        return build_smirks_potential_map_angles(handler=handler, smirks_map=smirks_map)
+    if handler._TAGNAME == 'Electrostatics':
         return build_smirks_potential_map_electrostatics(forcefield=forcefield, topology=topology, smirks_map=smirks_map)
 
 
-def build_smirks_potential_map_vdw(forcefield, smirks_map=None):
+def build_smirks_potential_map_vdw(handler, smirks_map=None):
     mapping = dict()
 
-    for param in forcefield['vdW'].parameters:
-        if not smirks_map:
+    for param in handler.parameters:
+        if smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
         if not param.sigma:
@@ -109,10 +111,10 @@ def build_smirks_potential_map_vdw(forcefield, smirks_map=None):
     return mapping
 
 
-def build_smirks_potential_map_bonds(forcefield, smirks_map=None):
+def build_smirks_potential_map_bonds(handler, smirks_map=None):
     mapping = dict()
 
-    for param in forcefield['Bonds'].parameters:
+    for param in handler.parameters:
         if smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
@@ -131,10 +133,10 @@ def build_smirks_potential_map_bonds(forcefield, smirks_map=None):
 
     return mapping
 
-def build_smirks_potential_map_angles(forcefield, smirks_map=None):
+def build_smirks_potential_map_angles(handler, smirks_map=None):
     mapping = dict()
 
-    for param in forcefield['Angles'].parameters:
+    for param in handler.parameters:
         if not smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
@@ -166,6 +168,9 @@ def build_smirks_potential_map_electrostatics(forcefield, topology, smirks_map=N
     if not smirks_map:
         smirks_map = build_slot_smirks_map_term(forcefield['Electrostatics'], topology=topology)
 
+    # TODO: get partial charges from just a (single) electrostatics handler
+    # Note: Requires some toolkit changes, something like
+    # partial_charges = get_partial_charges_from_openmm_system(handler.get_partial_charges(topology))
     partial_charges = get_partial_charges_from_openmm_system(forcefield.create_openmm_system(topology))
 
     for key, val in smirks_map.items():
@@ -185,10 +190,10 @@ class SMIRNOFFPotentialTerm(BaseModel):
     potentials: Dict[str, Potential] = dict()
 
     @classmethod
-    def build_from_toolkit_data(cls, name, forcefield, topology):
-        term = cls(name=name)
-        term.smirks_map = build_slot_smirks_map_term(handler=forcefield[name], topology=topology)
-        term.potentials = build_smirks_potential_map_term(name, forcefield=forcefield, smirks_map=term.smirks_map)
+    def build_from_toolkit_data(cls, handler, topology):
+        term = cls(name=handler._TAGNAME)
+        term.smirks_map = build_slot_smirks_map_term(handler=handler, topology=topology)
+        term.potentials = build_smirks_potential_map_term(handler=handler, smirks_map=term.smirks_map)
         return term
 
     def smirks_map_to_atom_indices(self):
@@ -209,10 +214,10 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
     name: str = 'vdW'
 
     @classmethod
-    def build_from_toolkit_data(cls, name, forcefield, topology):
-        term = cls(name=name)
-        term.smirks_map = build_slot_smirks_map_term(handler=forcefield[name], topology=topology)
-        term.potentials = build_smirks_potential_map_term(name, forcefield=forcefield, smirks_map=term.smirks_map)
+    def build_from_toolkit_data(cls, handler, topology):
+        term = cls(name=handler._TAGNAME)
+        term.smirks_map = build_slot_smirks_map_term(handler=handler, topology=topology)
+        term.potentials = build_smirks_potential_map_term(handler=handler, smirks_map=term.smirks_map)
         return term
 
     def get_p(self, use_jax=False):
@@ -279,6 +284,7 @@ class SMIRNOFFAngleTerm(SMIRNOFFPotentialTerm):
     name: str = 'Angles'
 
 
+# Note: This class is structured differently from other SMIRNOFFPotentialTerm children
 class ElectrostaticsTerm(SMIRNOFFPotentialTerm):
 
     name: str = 'Electrostatics'
@@ -311,16 +317,19 @@ class SMIRNOFFTermCollection(BaseModel):
     @classmethod
     def from_toolkit_data(cls, toolkit_forcefield, toolkit_topology):
         collection = cls()
-        for handler in toolkit_forcefield._parameter_handlers.keys():
-            if handler not in SUPPORTED_HANDLERS:
-                raise SMIRNOFFHandlerNotImplementedError(handler)
-            if handler not in potential_term_mapping.keys():
-                raise SMIRNOFFHandlerNotImplementedError(handler)
-            if handler in potential_term_mapping.keys():
-                term = potential_term_mapping[handler]()
-                collection.terms[handler] = term.build_from_toolkit_data(
-                    name=handler,
-                    forcefield=toolkit_forcefield,
-                    topology=toolkit_topology
-                )
+        for handler_name, handler in toolkit_forcefield._parameter_handlers.items():
+            collection.add_parameter_handler(handler=handler, forcefield=toolkit_forcefield[handler_name], topology=toolkit_topology)
         return collection
+
+    def add_parameter_handler(self, handler, topology, forcefield=None):
+        handler_name = handler._TAGNAME
+        if handler_name not in SUPPORTED_HANDLERS:
+            raise SMIRNOFFHandlerNotImplementedError(handler_name)
+        if handler_name not in potential_term_mapping.keys():
+            raise SMIRNOFFHandlerNotImplementedError(handler_name)
+        if handler_name in potential_term_mapping.keys():
+            term = potential_term_mapping[handler_name]()
+            self.terms[handler_name] = term.build_from_toolkit_data(
+                handler=handler,
+                topology=topology,
+            )

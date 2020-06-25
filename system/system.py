@@ -96,7 +96,7 @@ class System(ProtoSystem):
         # TODO: Replace this messy logic with something cleaner
         if not values['forcefield']:
             if not values['slot_smirks_map'] or not values['smirks_potential_map']:
-                raise TypeError('not given an ff, need maps')
+                pass  # raise TypeError('not given an ff, need maps')
         if values['forcefield']:
             if values['smirks_potential_map'] and values['slot_smirks_map'] and values['term_collection']:
                 raise TypeError('ff redundantly specified, will not be used')

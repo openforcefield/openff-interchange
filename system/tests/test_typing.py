@@ -44,8 +44,8 @@ class TestSMIRNOFFTyping(BaseTest):
         assert sorted(ff_collection.terms.keys()) == sorted(SUPPORTED_HANDLERS)
 
     def test_construct_term_from_toolkit_forcefield(self, parsley, ethanol_top):
-        val1 = SMIRNOFFPotentialTerm.build_from_toolkit_data(name='vdW', forcefield=parsley, topology=ethanol_top)
-        val2 = SMIRNOFFvdWTerm.build_from_toolkit_data(name='vdW', forcefield=parsley, topology=ethanol_top)
+        val1 = SMIRNOFFPotentialTerm.build_from_toolkit_data(handler=parsley['vdW'], topology=ethanol_top)
+        val2 = SMIRNOFFvdWTerm.build_from_toolkit_data(handler=parsley['vdW'], topology=ethanol_top)
 
         # TODO: DO something here that isn't so dangerous
         assert val1 == val2
