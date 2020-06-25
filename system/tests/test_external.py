@@ -35,8 +35,8 @@ class TestFromOpenMM(BaseTest):
 
     @pytest.fixture
     def unique_molecules(self):
-        molecules = ['water', 'cyclohexane', 'methane', 'propane', 'ethanol', 'butanol']
-        return [Molecule.from_iupac(mol) for mol in molecules]
+        molecules = ['O', 'C1CCCCC1', 'C', 'CCC', 'CCO', 'CCCCO']
+        return [Molecule.from_smiles(mol) for mol in molecules]
         # What if, instead ...
         # Molecule.from_iupac(molecules)
 

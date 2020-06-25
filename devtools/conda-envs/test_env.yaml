@@ -2,7 +2,6 @@ name: test
 channels:
   - conda-forge
   - omnia
-  - openeye
 
 dependencies:
     # Base depends
@@ -21,4 +20,3 @@ dependencies:
   - pint
   - openmm
   - openforcefield>=0.7.0
-  - openeye-toolkits
