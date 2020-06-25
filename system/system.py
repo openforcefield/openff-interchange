@@ -79,6 +79,18 @@ class System(ProtoSystem):
     smirks_potential_map: Dict = dict()
     term_collection: SMIRNOFFTermCollection = None
 
+    @classmethod
+    def from_proto_system(cls, proto_system, forcefield=None, slot_smirks_map=dict(), smirks_potential_map=dict(), term_collection=SMIRNOFFTermCollection()):
+        return cls(
+            topology=proto_system.topology,
+            positions=proto_system.positions,
+            box=proto_system.box,
+            forcefield=forcefield,
+            slot_smirks_map=slot_smirks_map,
+            smirks_potential_map=smirks_potential_map,
+            term_collection=term_collection,
+        )
+
     @root_validator
     def validate_forcefield_data(cls, values):
         # TODO: Replace this messy logic with something cleaner

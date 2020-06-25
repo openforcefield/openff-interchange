@@ -95,6 +95,29 @@ class TestSystem(BaseTest):
         assert test_system.slot_smirks_map is not None
         assert test_system.smirks_potential_map is not None
 
+    def test_from_proto_system(self, argon_ff, argon_top, argon_coords, argon_box):
+
+        proto_system = ProtoSystem(
+            topology=argon_top,
+            positions=argon_coords,
+            box=argon_box,
+        )
+
+        assert proto_system.topology is not None
+        ref = System(
+            topology=argon_top,
+            positions=argon_coords,
+            box=argon_box,
+            forcefield=argon_ff,
+        )
+
+        converted = System.from_proto_system(proto_system=proto_system, forcefield=argon_ff)
+
+        assert np.allclose(converted.box, ref.box)
+        assert np.allclose(converted.positions, ref.positions)
+
+        # TODO: replace with == if there is ever a safe Topology.__eq__()
+        assert converted.topology is ref.topology
 
 class TestProtoSystem(BaseTest):
 
