@@ -18,20 +18,20 @@ def build_slot_smirks_map(topology, forcefield):
     """Turn a SMIRNOFF force field into a mapping between slots and SMIRKS"""
     typing_map = dict()
 
-    for handler in forcefield._parameter_handlers.keys():
-        typing_map[handler] = build_slot_smirks_map_term(handler, forcefield, topology)
+    for handler_name, handler in forcefield._parameter_handlers.items():
+        typing_map[handler_name] = build_slot_smirks_map_term(handler, topology)
 
     return typing_map
 
 
-def build_slot_smirks_map_term(handler, forcefield, topology):
+def build_slot_smirks_map_term(handler, topology):
     """Get mapping between slot keys and SMIRKS for only one term"""
     slot_smirks_map = dict()
 
-    if handler == 'Electrostatics':
+    if handler._TAGNAME == 'Electrostatics':
         return dummy_atomic_slots_map(topology)
 
-    matches = forcefield.get_parameter_handler(handler).find_matches(topology)
+    matches = handler.find_matches(topology)
 
     for atom_key, atom_match in matches.items():
         slot_smirks_map[atom_key] = atom_match.parameter_type.smirks
@@ -85,7 +85,7 @@ def build_smirks_potential_map_term(name, forcefield, smirks_map=None, topology=
 def build_smirks_potential_map_vdw(forcefield, smirks_map=None):
     mapping = dict()
 
-    for param in forcefield.get_parameter_handler('vdW').parameters:
+    for param in forcefield['vdW'].parameters:
         if not smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
@@ -112,7 +112,7 @@ def build_smirks_potential_map_vdw(forcefield, smirks_map=None):
 def build_smirks_potential_map_bonds(forcefield, smirks_map=None):
     mapping = dict()
 
-    for param in forcefield.get_parameter_handler('Bonds').parameters:
+    for param in forcefield['Bonds'].parameters:
         if smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
@@ -134,7 +134,7 @@ def build_smirks_potential_map_bonds(forcefield, smirks_map=None):
 def build_smirks_potential_map_angles(forcefield, smirks_map=None):
     mapping = dict()
 
-    for param in forcefield.get_parameter_handler('Angles').parameters:
+    for param in forcefield['Angles'].parameters:
         if not smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
@@ -164,7 +164,7 @@ def build_smirks_potential_map_electrostatics(forcefield, topology, smirks_map=N
     mapping = dict()
 
     if not smirks_map:
-        smirks_map = build_slot_smirks_map_term('Electrostatics', forcefield=forcefield, topology=topology)
+        smirks_map = build_slot_smirks_map_term(forcefield['Electrostatics'], topology=topology)
 
     partial_charges = get_partial_charges_from_openmm_system(forcefield.create_openmm_system(topology))
 
@@ -187,7 +187,7 @@ class SMIRNOFFPotentialTerm(BaseModel):
     @classmethod
     def build_from_toolkit_data(cls, name, forcefield, topology):
         term = cls(name=name)
-        term.smirks_map = build_slot_smirks_map_term(name, forcefield=forcefield, topology=topology)
+        term.smirks_map = build_slot_smirks_map_term(handler=forcefield[name], topology=topology)
         term.potentials = build_smirks_potential_map_term(name, forcefield=forcefield, smirks_map=term.smirks_map)
         return term
 
@@ -211,7 +211,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
     @classmethod
     def build_from_toolkit_data(cls, name, forcefield, topology):
         term = cls(name=name)
-        term.smirks_map = build_slot_smirks_map_term(name, forcefield=forcefield, topology=topology)
+        term.smirks_map = build_slot_smirks_map_term(handler=forcefield[name], topology=topology)
         term.potentials = build_smirks_potential_map_term(name, forcefield=forcefield, smirks_map=term.smirks_map)
         return term
 
@@ -289,7 +289,7 @@ class ElectrostaticsTerm(SMIRNOFFPotentialTerm):
     def build_from_toolkit_data(cls, name, forcefield, topology):
 
         term = cls(name=name)
-        term.smirks_map = build_slot_smirks_map_term(name, forcefield=forcefield, topology=topology)
+        term.smirks_map = build_slot_smirks_map_term(handler=forcefield[name], topology=topology)
         term.potentials = build_smirks_potential_map_electrostatics(forcefield=forcefield, topology=topology, smirks_map=term.smirks_map)
         return term
 
