@@ -86,10 +86,10 @@ def build_smirks_potential_map_vdw(forcefield, smirks_map=None):
     mapping = dict()
 
     for param in forcefield.get_parameter_handler('vdW').parameters:
-        if smirks_map is not None:
+        if not smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
-        if param.sigma is None:
+        if not param.sigma:
             sigma = 2. * param.rmin_half / (2.**(1. / 6.))
         else:
             sigma = param.sigma
@@ -113,7 +113,7 @@ def build_smirks_potential_map_bonds(forcefield, smirks_map=None):
     mapping = dict()
 
     for param in forcefield.get_parameter_handler('Bonds').parameters:
-        if smirks_map is not None:
+        if smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
         k = simtk_to_pint(param.k)
@@ -135,7 +135,7 @@ def build_smirks_potential_map_angles(forcefield, smirks_map=None):
     mapping = dict()
 
     for param in forcefield.get_parameter_handler('Angles').parameters:
-        if smirks_map is not None:
+        if not smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
         k = simtk_to_pint(param.k)
@@ -241,7 +241,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         else:
             import numpy as np
 
-        if p is None or mapping is None:
+        if None in (p, mapping):
             (p, mapping) = self.get_p()
         q = []
         for i, val in enumerate(self.smirks_map.keys()):
@@ -249,7 +249,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         return np.array(q)
 
     def parametrize(self, p=None, smirks_map=None, mapping=None):
-        if p is None or mapping is None:
+        if None in (p, mapping):
             (p, mapping) = self.get_p(use_jax=True)
         return self.get_q(p=p, mapping=mapping, use_jax=True)
 

@@ -75,18 +75,18 @@ class System(ProtoSystem):
     """The OpenFF System object."""
 
     forcefield: Union[ForceField, ParameterHandler] = None
-    slot_smirks_map: Dict = None
-    smirks_potential_map: Dict = None
+    slot_smirks_map: Dict = dict()
+    smirks_potential_map: Dict = dict()
     term_collection: SMIRNOFFTermCollection = None
 
     @root_validator
     def validate_forcefield_data(cls, values):
         # TODO: Replace this messy logic with something cleaner
-        if values['forcefield'] is None:
-            if values['slot_smirks_map'] is None or values['smirks_potential_map'] is None:
+        if not values['forcefield']:
+            if not values['slot_smirks_map'] or not values['smirks_potential_map']:
                 raise TypeError('not given an ff, need maps')
-        if values['forcefield'] is not None:
-            if values['smirks_potential_map'] is not None and values['slot_smirks_map'] is not None and values['term_collection'] is not None:
+        if values['forcefield']:
+            if values['smirks_potential_map'] and values['slot_smirks_map'] and values['term_collection']:
                 raise TypeError('ff redundantly specified, will not be used')
             # TODO: Let other typing engines drop in here
             values['slot_smirks_map'] = build_slot_smirks_map(forcefield=values['forcefield'], topology=values['topology'])
@@ -100,7 +100,7 @@ class System(ProtoSystem):
     # TODO: These valiators pretty much don't do anything now
     @validator("forcefield")
     def validate_forcefield(cls, val):
-        if val is None:
+        if not val:
             return val
         if isinstance(val, ForceField):
             return val
