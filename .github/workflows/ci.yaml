@@ -21,6 +21,7 @@ jobs:
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
+      OE_LICENSE: ${{ github.workspace }}/oe_license.txt
 
     steps:
     - uses: actions/checkout@v2
@@ -44,6 +45,13 @@ jobs:
       run: |
         conda info
         conda list
+
+    - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
+      shell: bash
+      env:
+        OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
+      run: |
+        echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
     - name: Install package
       shell: bash -l {0}
