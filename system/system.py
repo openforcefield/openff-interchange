@@ -122,9 +122,23 @@ class System(ProtoSystem):
     class Config:
         arbitrary_types_allowed = True
 
-    # TODO: Make these two functions a drop-in for different typing engines?
-    def run_typing(self, forcefield, topology):
-        return build_smirnoff_map(forcefield=forcefield, topology=topology)
+    def apply_single_parameter_handler(self, parameter_handler):
+        # TODO: Abstract this away to be SMIRNOFF-agnostic
+        if parameter_handler._TAGNAME == 'Electrostatics':
+            raise NotImplementedError()
+
+        self.slot_smirks_map[parameter_handler._TAGNAME] = build_slot_smirks_map_term(
+            handler=parameter_handler,
+            topology=self.topology,
+        )
+
+        self.smirks_potential_map[parameter_handler._TAGNAME] = build_smirks_potential_map_term(
+            handler=parameter_handler,
+            topology=self.topology,
+            forcefield=self.forcefield,
+        )
+
+        self.term_collection.add_parameter_handler(parameter_handler, topology=self.topology, forcefield=None)
 
     def to_file(self):
         raise NotImplementedError()

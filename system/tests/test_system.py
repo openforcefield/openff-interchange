@@ -121,6 +121,27 @@ class TestSystem(BaseTest):
         # TODO: replace with == if there is ever a safe Topology.__eq__()
         assert converted.topology is ref.topology
 
+    def test_apply_single_parameter_handler(self, argon_ff, argon_top, argon_coords, argon_box):
+
+        argon = System(
+            topology=argon_top,
+            positions=argon_coords,
+            box=argon_box,
+            smirks_potential_map=dict(),
+            slot_smirks_map=dict(),
+            term_collection=dict(),
+        )
+
+        assert not argon.slot_smirks_map
+        assert not argon.smirks_potential_map
+        assert not argon.term_collection.terms
+
+        argon.apply_single_parameter_handler(argon_ff['vdW'])
+
+        assert 'vdW' in argon.slot_smirks_map.keys()
+        assert 'vdW' in argon.smirks_potential_map.keys()
+        assert 'vdW' in argon.term_collection.terms.keys()
+
 class TestProtoSystem(BaseTest):
 
     def test_constructor(self, argon_top, argon_coords, argon_box):
