@@ -1,8 +1,10 @@
 from pkg_resources import resource_filename
 import pathlib
+from typing import List
 
 import sympy
 from simtk import openmm
+from simtk import unit as simtk_unit
 
 from openforcefield.utils import unit_to_string
 
@@ -22,13 +24,16 @@ def simtk_to_pint(simtk_quantity):
     Note: This function is adapted from evaluator.utils.openmm.openmm_quantity_to_pint,
     as part of the OpenFF Evaluator, Copyright (c) 2019 Open Force Field Consortium.
     """
-    simtk_unit = simtk_quantity.unit
-    simtk_value = simtk_quantity.value_in_unit(simtk_unit)
+    # Unwrap list of Quantity into a Quantity
+    if isinstance(simtk_quantity, List):
+        simtk_quantity = simtk_unit.Quantity(simtk_quantity)
+    openmm_unit = simtk_quantity.unit
+    openmm_value = simtk_quantity.value_in_unit(openmm_unit)
 
-    target_unit = unit_to_string(simtk_unit)
+    target_unit = unit_to_string(openmm_unit)
     target_unit = unit.Unit(target_unit)
 
-    return UnitArray(simtk_value, units=target_unit)
+    return UnitArray(openmm_value, units=target_unit)
 
 
 def compare_sympy_expr(expr1, expr2):

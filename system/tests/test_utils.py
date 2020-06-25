@@ -30,6 +30,13 @@ def test_simtk_to_pint(simtk_quantity, pint_quantity):
 
     assert pint_quantity == converted_pint_quantity
 
+def test_simtk_list_of_quantities_to_pint():
+    """Test conversion from Quantity lists, lists of Quantity"""
+    list_of_quantities = [val * simtk_unit.meter for val in range(10)]
+    quantity_list = simtk_unit.meter * [val for val in range(10)]
+
+    assert list_of_quantities != quantity_list
+    assert all(simtk_to_pint(list_of_quantities) == simtk_to_pint(quantity_list))
 
 def test_pint_to_simtk():
     """Test conversion from pint Quantity to SimTK Quantity."""
