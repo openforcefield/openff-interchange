@@ -47,12 +47,11 @@ jobs:
         conda list
 
     - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
-      shell: bash
+      shell: bash -l {0}
       env:
         OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
       run: |
         echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
-        conda install openeye-toolkits
           python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
 
     - name: Install package
