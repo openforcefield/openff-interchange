@@ -60,7 +60,7 @@ jobs:
     - name: Run tests
       shell: bash -l {0}
       run: |
-        pytest -v --cov=system --cov-report=xml --cov-config=setup.cfg system/tests/
+        pytest -v --cov=openff/system --cov-report=xml --cov-config=setup.cfg openff/system/tests/
 
     - name: Codecov
       uses: codecov/codecov-action@v1
