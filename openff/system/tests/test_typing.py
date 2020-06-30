@@ -27,21 +27,26 @@ class TestSMIRNOFFTyping(BaseTest):
         for term in ff_collection.terms.values():
             assert term.potentials.keys() is not None
 
-    @pytest.mark.xfail(strict=False)
     def test_more_map_functions(self, parsley, ethanol_top):
         # TODO: Better way of testing individual handlers
-        # Workaround until https://github.com/openforcefield/openforcefield/issues/552 is implemented
-        parsley_handlers = list(parsley._parameter_handlers.keys())
 
-        # Currently fails since this strips out the AM1BCC handler, which causes typing to fail
-        # without an option to bypass AM1BCC altogether
-        for handler in parsley._parameter_handlers.keys():
-            if handler not in SUPPORTED_HANDLERS:
-                parsley._parameter_handlers.pop(handler)
+        term_collection = SMIRNOFFTermCollection()
 
-        ff_collection = SMIRNOFFTermCollection.from_toolkit_data(parsley, ethanol_top)
+        # TODO: This should just be `term_collection = SMIRNOFFTermCollection.from_toolkit_data(parsley, ethanol_top)`
+        for name, handler in parsley._parameter_handlers.items():
+            if name in SUPPORTED_HANDLERS:
+                term_collection.add_parameter_handler(handler=handler, topology=ethanol_top, forcefield=parsley)
 
-        assert sorted(ff_collection.terms.keys()) == sorted(SUPPORTED_HANDLERS)
+        # Do this in separate steps so that Electrostatics handler can access the handlers it depends on
+        handlers_to_drop = []
+        for name in parsley._parameter_handlers.keys():
+            if name not in SUPPORTED_HANDLERS:
+                handlers_to_drop.append(name)
+
+        for name in handlers_to_drop:
+            parsley._parameter_handlers.pop(name)
+
+        assert sorted(term_collection.terms.keys()) == sorted(SUPPORTED_HANDLERS)
 
     def test_construct_term_from_toolkit_forcefield(self, parsley, ethanol_top):
         val1 = SMIRNOFFPotentialTerm.build_from_toolkit_data(handler=parsley['vdW'], topology=ethanol_top)
@@ -52,7 +57,7 @@ class TestSMIRNOFFTyping(BaseTest):
 
         ref = get_partial_charges_from_openmm_system(parsley.create_openmm_system(ethanol_top))
 
-        eh = ElectrostaticsTerm.build_from_toolkit_data(name='Electrostatics', forcefield=parsley, topology=ethanol_top)
+        eh = ElectrostaticsTerm.build_from_toolkit_data(handler=parsley['Electrostatics'], forcefield=parsley, topology=ethanol_top)
         partial_charges = [*eh.potentials.values()]
 
         assert np.allclose(partial_charges, ref)
