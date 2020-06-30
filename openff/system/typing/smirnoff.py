@@ -13,7 +13,7 @@ from ..potential import ParametrizedAnalyticalPotential as Potential
 from ..exceptions import SMIRNOFFHandlerNotImplementedError, JAXNotInstalledError
 
 # TODO: Probably shouldn't have this as a global variable floating around
-SUPPORTED_HANDLERS = {'vdW', 'Bonds', 'Angles', 'ProperTrosions', 'Electrostatics'}
+SUPPORTED_HANDLERS = {'vdW', 'Bonds', 'Angles', 'ProperTrosions', 'ImproperTrosions', 'Electrostatics'}
 
 
 def build_slot_smirks_map(topology, forcefield):
@@ -82,6 +82,8 @@ def build_smirks_potential_map_term(handler, smirks_map=None, topology=None, for
         return build_smirks_potential_map_angles(handler=handler, smirks_map=smirks_map)
     if handler._TAGNAME == 'ProperTorsions':
         return build_smirks_potential_map_propers(handler=handler, smirks_map=smirks_map)
+    if handler._TAGNAME == 'ImproperTorsions':
+        return build_smirks_potential_map_impropers(handler=handler, smirks_map=smirks_map)
     if handler._TAGNAME == 'Electrostatics':
         return build_smirks_potential_map_electrostatics(forcefield=forcefield, topology=topology, smirks_map=smirks_map)
 
@@ -158,6 +160,53 @@ def build_smirks_potential_map_angles(handler, smirks_map=None):
     return mapping
 
 def build_smirks_potential_map_propers(handler, smirks_map=None):
+    # TODO: Properly deal with arbitrary values of n
+    mapping = dict()
+
+    def expr_from_n(n):
+        return f'k{n}*(1+cos(periodicity{n}*theta-phase{n})'
+
+    expr = ''
+    params = {}
+    for param in handler.parameters:
+        if not smirks_map:
+            if param.smirks not in smirks_map.values():
+                continue
+        if param.k1:
+            expr += expr_from_n(1)
+            params.update({
+                'k1': simtk_to_pint(param.k1),
+                'periodicity1': simtk_to_pint(param.periodicity1),
+                'phase1': simtk_to_pint(param.phase1),
+            })
+        if param.k2:
+            expr += expr_from_n(2)
+            params.update({
+                'k2': simtk_to_pint(param.k2),
+                'periodicity2': simtk_to_pint(param.periodicity2),
+                'phase2': simtk_to_pint(param.phase2),
+            })
+        if param.k3:
+            expr += expr_from_n(3)
+            params.update({
+                'k3': simtk_to_pint(param.k3),
+                'periodicity3': simtk_to_pint(param.periodicity3),
+                'phase3': simtk_to_pint(param.phase3),
+            })
+
+        potential = Potential(
+            name=param.id,
+            smirks=param.smirks,
+            expression=expr,
+            independent_variables={'theta'},
+            parameters=params,
+        )
+
+        mapping[param.smirks] = potential
+
+    return mapping
+
+def build_smirks_potential_map_imppropers(handler, smirks_map=None):
     # TODO: Properly deal with arbitrary values of n
     mapping = dict()
 
@@ -337,6 +386,11 @@ class SMIRNOFFProperTorsionTerm(SMIRNOFFPotentialTerm):
     name: str = 'ProperTorsions'
 
 
+class SMIRNOFFImproperTorsionTerm(SMIRNOFFPotentialTerm):
+
+    name: str = 'ImproperTorsions'
+
+
 # Note: This class is structured differently from other SMIRNOFFPotentialTerm children
 class ElectrostaticsTerm(SMIRNOFFPotentialTerm):
 
@@ -357,6 +411,7 @@ potential_term_mapping = {
     'Bonds': SMIRNOFFBondTerm,
     'Angles': SMIRNOFFAngleTerm,
     'ProperTorsions': SMIRNOFFProperTorsionTerm,
+    'ImproperTorsions': SMIRNOFFImproperTorsionTerm,
     'Electrostatics': ElectrostaticsTerm,
 }
 
