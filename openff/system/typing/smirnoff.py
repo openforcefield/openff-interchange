@@ -271,7 +271,7 @@ class SMIRNOFFPotentialTerm(BaseModel):
     potentials: Dict[str, Potential] = dict()
 
     @classmethod
-    def build_from_toolkit_data(cls, handler, topology):
+    def build_from_toolkit_data(cls, handler, topology, forcefield=None):
         term = cls(name=handler._TAGNAME)
         term.smirks_map = build_slot_smirks_map_term(handler=handler, topology=topology)
         term.potentials = build_smirks_potential_map_term(handler=handler, smirks_map=term.smirks_map)
@@ -295,7 +295,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
     name: str = 'vdW'
 
     @classmethod
-    def build_from_toolkit_data(cls, handler, topology):
+    def build_from_toolkit_data(cls, handler, topology, forcefield=None):
         term = cls(name=handler._TAGNAME)
         term.smirks_map = build_slot_smirks_map_term(handler=handler, topology=topology)
         term.potentials = build_smirks_potential_map_term(handler=handler, smirks_map=term.smirks_map)
@@ -383,10 +383,10 @@ class ElectrostaticsTerm(SMIRNOFFPotentialTerm):
     potentials: Dict[str, unit.Quantity] = dict()
 
     @classmethod
-    def build_from_toolkit_data(cls, name, forcefield, topology):
+    def build_from_toolkit_data(cls, handler, topology, forcefield=None):
 
-        term = cls(name=name)
-        term.smirks_map = build_slot_smirks_map_term(handler=forcefield[name], topology=topology)
+        term = cls(name=handler._TAGNAME)
+        term.smirks_map = build_slot_smirks_map_term(handler=handler, topology=topology)
         term.potentials = build_smirks_potential_map_electrostatics(forcefield=forcefield, topology=topology, smirks_map=term.smirks_map)
         return term
 
@@ -411,7 +411,7 @@ class SMIRNOFFTermCollection(BaseModel):
     def from_toolkit_data(cls, toolkit_forcefield, toolkit_topology):
         collection = cls()
         for handler_name, handler in toolkit_forcefield._parameter_handlers.items():
-            collection.add_parameter_handler(handler=handler, forcefield=toolkit_forcefield[handler_name], topology=toolkit_topology)
+            collection.add_parameter_handler(handler=handler, forcefield=toolkit_forcefield, topology=toolkit_topology)
         return collection
 
     def add_parameter_handler(self, handler, topology, forcefield=None):
@@ -425,4 +425,5 @@ class SMIRNOFFTermCollection(BaseModel):
             self.terms[handler_name] = term.build_from_toolkit_data(
                 handler=handler,
                 topology=topology,
+                forcefield=forcefield,
             )
