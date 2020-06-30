@@ -27,15 +27,15 @@ class TestSMIRNOFFTyping(BaseTest):
         for term in ff_collection.terms.values():
             assert term.potentials.keys() is not None
 
-    def test_more_map_functions(self, parsley, ethanol_top):
+    def test_more_map_functions(self, parsley, cyclohexane_top):
         # TODO: Better way of testing individual handlers
 
         term_collection = SMIRNOFFTermCollection()
 
-        # TODO: This should just be `term_collection = SMIRNOFFTermCollection.from_toolkit_data(parsley, ethanol_top)`
+        # TODO: This should just be `term_collection = SMIRNOFFTermCollection.from_toolkit_data(parsley, cyclohexane_top)`
         for name, handler in parsley._parameter_handlers.items():
             if name in SUPPORTED_HANDLERS:
-                term_collection.add_parameter_handler(handler=handler, topology=ethanol_top, forcefield=parsley)
+                term_collection.add_parameter_handler(handler=handler, topology=cyclohexane_top, forcefield=parsley)
 
         # Do this in separate steps so that Electrostatics handler can access the handlers it depends on
         handlers_to_drop = []

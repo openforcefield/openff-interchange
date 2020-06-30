@@ -40,8 +40,15 @@ class BaseTest:
 
     @pytest.fixture
     def ethanol_top(self):
-        """Fixture that builds a simple ammonia topology"""
+        """Fixture that builds a simple ethanol topology"""
         mol = Molecule.from_smiles('CCO')
+
+        return Topology.from_molecules(4 * [mol])
+
+    @pytest.fixture
+    def cyclohexane_top(self):
+        """Fixture that builds a simple cyclohexane topology"""
+        mol = Molecule.from_smiles('C1CCCCC1')
 
         return Topology.from_molecules(4 * [mol])
 
