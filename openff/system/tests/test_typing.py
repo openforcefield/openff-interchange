@@ -3,7 +3,7 @@ import numpy as np
 
 from openforcefield.topology import Molecule, Topology
 
-from ..typing.smirnoff import SMIRNOFFPotentialTerm, SMIRNOFFvdWTerm, SMIRNOFFTermCollection, ElectrostaticsTerm, SUPPORTED_HANDLERS
+from ..typing.smirnoff import SMIRNOFFPotentialTerm, SMIRNOFFvdWTerm, SMIRNOFFTermCollection, ElectrostaticsTerm, SUPPORTED_HANDLER_MAPPING
 from ..exceptions import SMIRNOFFHandlerNotImplementedError
 from ..utils import get_partial_charges_from_openmm_system
 from .base_test import BaseTest
@@ -34,19 +34,19 @@ class TestSMIRNOFFTyping(BaseTest):
 
         # TODO: This should just be `term_collection = SMIRNOFFTermCollection.from_toolkit_data(parsley, cyclohexane_top)`
         for name, handler in parsley._parameter_handlers.items():
-            if name in SUPPORTED_HANDLERS:
+            if name in SUPPORTED_HANDLER_MAPPING.keys():
                 term_collection.add_parameter_handler(handler=handler, topology=cyclohexane_top, forcefield=parsley)
 
         # Do this in separate steps so that Electrostatics handler can access the handlers it depends on
         handlers_to_drop = []
         for name in parsley._parameter_handlers.keys():
-            if name not in SUPPORTED_HANDLERS:
+            if name not in SUPPORTED_HANDLER_MAPPING.keys():
                 handlers_to_drop.append(name)
 
         for name in handlers_to_drop:
             parsley._parameter_handlers.pop(name)
 
-        assert sorted(term_collection.terms.keys()) == sorted(SUPPORTED_HANDLERS)
+        assert sorted(term_collection.terms.keys()) == sorted(SUPPORTED_HANDLER_MAPPING.keys())
 
     def test_construct_term_from_toolkit_forcefield(self, parsley, ethanol_top):
         val1 = SMIRNOFFPotentialTerm.build_from_toolkit_data(handler=parsley['vdW'], topology=ethanol_top)

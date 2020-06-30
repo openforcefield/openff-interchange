@@ -12,9 +12,6 @@ from ..utils import simtk_to_pint, jax_available, get_partial_charges_from_openm
 from ..potential import ParametrizedAnalyticalPotential as Potential
 from ..exceptions import SMIRNOFFHandlerNotImplementedError, JAXNotInstalledError
 
-# TODO: Probably shouldn't have this as a global variable floating around
-SUPPORTED_HANDLERS = {'vdW', 'Bonds', 'Angles', 'ProperTorsions', 'ImproperTorsions', 'Electrostatics'}
-
 
 def build_slot_smirks_map(topology, forcefield):
     """Turn a SMIRNOFF force field into a mapping between slots and SMIRKS"""
@@ -57,7 +54,7 @@ def build_smirks_potential_map(forcefield, smirks_map=None):
     mapping = dict()
 
     for handler in forcefield._parameter_handlers.keys():
-        if handler not in SUPPORTED_HANDLERS:
+        if handler not in SUPPORTED_HANDLER_MAPPING.keys():
             continue
         if smirks_map:
             partial_smirks_map = smirks_map[handler]
@@ -70,7 +67,7 @@ def build_smirks_potential_map(forcefield, smirks_map=None):
 
 def build_smirks_potential_map_term(handler, smirks_map=None, topology=None, forcefield=None):
     """Temporary stand-in for .to_potential calls in toolkit ParameterHandler objects."""
-    if handler._TAGNAME not in SUPPORTED_HANDLERS:
+    if handler._TAGNAME not in SUPPORTED_HANDLER_MAPPING.keys():
         warn(f'handler {name} not implemented')
         raise Exception # return potential_collection
 
@@ -390,7 +387,8 @@ class ElectrostaticsTerm(SMIRNOFFPotentialTerm):
         term.potentials = build_smirks_potential_map_electrostatics(forcefield=forcefield, topology=topology, smirks_map=term.smirks_map)
         return term
 
-potential_term_mapping = {
+
+SUPPORTED_HANDLER_MAPPING = {
     'vdW': SMIRNOFFvdWTerm,
     'Bonds': SMIRNOFFBondTerm,
     'Angles': SMIRNOFFAngleTerm,
@@ -416,14 +414,12 @@ class SMIRNOFFTermCollection(BaseModel):
 
     def add_parameter_handler(self, handler, topology, forcefield=None):
         handler_name = handler._TAGNAME
-        if handler_name not in SUPPORTED_HANDLERS:
-            raise SMIRNOFFHandlerNotImplementedError(handler_name)
-        if handler_name not in potential_term_mapping.keys():
-            raise SMIRNOFFHandlerNotImplementedError(handler_name)
-        if handler_name in potential_term_mapping.keys():
-            term = potential_term_mapping[handler_name]()
+        if handler_name in SUPPORTED_HANDLER_MAPPING.keys():
+            term = SUPPORTED_HANDLER_MAPPING[handler_name]()
             self.terms[handler_name] = term.build_from_toolkit_data(
                 handler=handler,
                 topology=topology,
                 forcefield=forcefield,
             )
+        else:
+            raise SMIRNOFFHandlerNotImplementedError(handler_name)
