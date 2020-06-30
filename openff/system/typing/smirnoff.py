@@ -13,7 +13,7 @@ from ..potential import ParametrizedAnalyticalPotential as Potential
 from ..exceptions import SMIRNOFFHandlerNotImplementedError, JAXNotInstalledError
 
 # TODO: Probably shouldn't have this as a global variable floating around
-SUPPORTED_HANDLERS = {'vdW', 'Bonds', 'Angles', 'ProperTrosions', 'ImproperTrosions', 'Electrostatics'}
+SUPPORTED_HANDLERS = {'vdW', 'Bonds', 'Angles', 'ProperTorsions', 'ImproperTorsions', 'Electrostatics'}
 
 
 def build_slot_smirks_map(topology, forcefield):
@@ -164,34 +164,26 @@ def build_smirks_potential_map_propers(handler, smirks_map=None):
     mapping = dict()
 
     def expr_from_n(n):
-        return f'k{n}*(1+cos(periodicity{n}*theta-phase{n})'
+        return f'k{n}*(1+cos(periodicity{n}*theta-phase{n}))'
 
-    expr = ''
-    params = {}
     for param in handler.parameters:
         if not smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
-        if param.k1:
-            expr += expr_from_n(1)
+
+        expr = '0'
+        params = dict()
+
+        for n in range(3):
+            try:
+                param.k[n]
+            except IndexError:
+                continue
+            expr += '+' + expr_from_n(n+1)
             params.update({
-                'k1': simtk_to_pint(param.k1),
-                'periodicity1': simtk_to_pint(param.periodicity1),
-                'phase1': simtk_to_pint(param.phase1),
-            })
-        if param.k2:
-            expr += expr_from_n(2)
-            params.update({
-                'k2': simtk_to_pint(param.k2),
-                'periodicity2': simtk_to_pint(param.periodicity2),
-                'phase2': simtk_to_pint(param.phase2),
-            })
-        if param.k3:
-            expr += expr_from_n(3)
-            params.update({
-                'k3': simtk_to_pint(param.k3),
-                'periodicity3': simtk_to_pint(param.periodicity3),
-                'phase3': simtk_to_pint(param.phase3),
+                f'k{n+1}': simtk_to_pint(param.k[n]),
+                f'periodicity{n+1}': param.periodicity[n] * unit.dimensionless,
+                f'phase{n+1}': simtk_to_pint(param.phase[n]),
             })
 
         potential = Potential(
@@ -206,39 +198,31 @@ def build_smirks_potential_map_propers(handler, smirks_map=None):
 
     return mapping
 
-def build_smirks_potential_map_imppropers(handler, smirks_map=None):
+def build_smirks_potential_map_impropers(handler, smirks_map=None):
     # TODO: Properly deal with arbitrary values of n
     mapping = dict()
 
     def expr_from_n(n):
         return f'k{n}*(1+cos(periodicity{n}*theta-phase{n})'
 
-    expr = ''
-    params = {}
     for param in handler.parameters:
         if not smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
-        if param.k1:
-            expr += expr_from_n(1)
+
+        expr = ''
+        params = {}
+
+        for n in range(3):
+            try:
+                param.k[n]
+            except IndexError:
+                continue
+            expr += '+' + expr_from_n(n+1)
             params.update({
-                'k1': simtk_to_pint(param.k1),
-                'periodicity1': simtk_to_pint(param.periodicity1),
-                'phase1': simtk_to_pint(param.phase1),
-            })
-        if param.k2:
-            expr += expr_from_n(2)
-            params.update({
-                'k2': simtk_to_pint(param.k2),
-                'periodicity2': simtk_to_pint(param.periodicity2),
-                'phase2': simtk_to_pint(param.phase2),
-            })
-        if param.k3:
-            expr += expr_from_n(3)
-            params.update({
-                'k3': simtk_to_pint(param.k3),
-                'periodicity3': simtk_to_pint(param.periodicity3),
-                'phase3': simtk_to_pint(param.phase3),
+                f'k{n+1}': simtk_to_pint(param.k[n]),
+                f'periodicity{n+1}': param.periodicity[n] * unit.dimensionless,
+                f'phase{n+1}': simtk_to_pint(param.phase[n]),
             })
 
         potential = Potential(
