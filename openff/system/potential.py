@@ -27,6 +27,7 @@ class AnalyticalPotential(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+        validate_assignment = True
 
 
 class ParametrizedAnalyticalPotential(AnalyticalPotential):

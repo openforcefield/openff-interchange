@@ -69,6 +69,7 @@ class ProtoSystem(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+        validate_assignment = True
 
 
 class System(ProtoSystem):
@@ -121,6 +122,7 @@ class System(ProtoSystem):
 
     class Config:
         arbitrary_types_allowed = True
+        validate_assignment = True
 
     def apply_single_parameter_handler(self, parameter_handler):
         # TODO: Abstract this away to be SMIRNOFF-agnostic

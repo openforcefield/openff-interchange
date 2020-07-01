@@ -285,6 +285,7 @@ class SMIRNOFFPotentialTerm(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+        validate_assignment = True
 
 
 class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
@@ -404,6 +405,7 @@ class SMIRNOFFTermCollection(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+        validate_assignment = True
 
     @classmethod
     def from_toolkit_data(cls, toolkit_forcefield, toolkit_topology):
