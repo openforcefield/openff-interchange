@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from ..system import System, ProtoSystem
-from ..typing.smirnoff import *
+from ..typing.smirnoff.data import *
 from .. import unit
 from .base_test import BaseTest
 

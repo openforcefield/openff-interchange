@@ -7,10 +7,10 @@ import numpy as np
 
 from openforcefield.typing.engines.smirnoff import ForceField
 
-from .. import unit
-from ..utils import simtk_to_pint, jax_available, get_partial_charges_from_openmm_system
-from ..potential import ParametrizedAnalyticalPotential as Potential
-from ..exceptions import SMIRNOFFHandlerNotImplementedError, JAXNotInstalledError
+from ... import unit
+from ...utils import simtk_to_pint, jax_available, get_partial_charges_from_openmm_system
+from ...potential import ParametrizedAnalyticalPotential as Potential
+from ...exceptions import SMIRNOFFHandlerNotImplementedError, JAXNotInstalledError
 
 
 def build_slot_smirks_map(topology, forcefield):

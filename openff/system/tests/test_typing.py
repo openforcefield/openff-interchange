@@ -3,7 +3,7 @@ import numpy as np
 
 from openforcefield.topology import Molecule, Topology
 
-from ..typing.smirnoff import SMIRNOFFPotentialTerm, SMIRNOFFvdWTerm, SMIRNOFFTermCollection, ElectrostaticsTerm, SUPPORTED_HANDLER_MAPPING
+from ..typing.smirnoff.data import SMIRNOFFPotentialTerm, SMIRNOFFvdWTerm, SMIRNOFFTermCollection, ElectrostaticsTerm, SUPPORTED_HANDLER_MAPPING
 from ..exceptions import SMIRNOFFHandlerNotImplementedError
 from ..utils import get_partial_charges_from_openmm_system
 from .base_test import BaseTest

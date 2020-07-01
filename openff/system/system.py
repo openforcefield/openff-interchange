@@ -10,7 +10,7 @@ from openforcefield.typing.engines.smirnoff import ForceField, ParameterHandler
 from openforcefield.topology import Topology
 
 from . import unit
-from .typing.smirnoff import *
+from .typing.smirnoff.data import *
 from .utils import simtk_to_pint
 from .types import UnitArray
 
