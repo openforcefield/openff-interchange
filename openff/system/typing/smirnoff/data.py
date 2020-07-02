@@ -277,11 +277,14 @@ class SMIRNOFFPotentialTerm(BaseModel):
     def smirks_map_to_atom_indices(self):
         return np.array([val[0] for val in self.smirks_map[self.name].keys()])
 
-    def term_to_flattened_array(self):
+    def get_force_field_parameters(self):
+        raise NotImplementedError
+
+    def get_system_parameters(self):
         raise NotImplementedError
 
     def parametrize(self):
-        return smirks_map_to_flattened_array(p=p, smirks_map=smirks_map, mapping=mapping)
+        raise NotImplementedError
 
     class Config:
         arbitrary_types_allowed = True
@@ -299,7 +302,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         term.potentials = build_smirks_potential_map_term(handler=handler, smirks_map=term.smirks_map)
         return term
 
-    def get_p(self, use_jax=False):
+    def get_force_field_parameters(self, use_jax=False):
         """get p from a SMIRNOFFPotentialTerm
         returns
 
@@ -315,18 +318,19 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         p = []
         mapping = dict()
         for i, pot in enumerate(self.potentials.values()):
-            p.append([pot.parameters['sigma'].magnitude, pot.parameters['epsilon'].magnitude])
+            p.append(pot.parameters['sigma'].magnitude)
+            p.append(pot.parameters['epsilon'].magnitude)
             mapping.update({pot.smirks: i})
         return np.array(p), mapping
 
-    def get_q(self, p=None, mapping=None, use_jax=False):
+    def get_system_parameters(self, p=None, mapping=None, use_jax=False):
         if use_jax:
             import jax.numpy as np
         else:
             import numpy as np
 
         if None in (p, mapping):
-            (p, mapping) = self.get_p()
+            (p, mapping) = self.get_force_field_parameters(use_jax=use_jax)
         q = []
         for i, val in enumerate(self.smirks_map.keys()):
             q.append(p[mapping[self.smirks_map[(i,)]]])
@@ -334,18 +338,18 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
 
     def parametrize(self, p=None, smirks_map=None, mapping=None):
         if None in (p, mapping):
-            (p, mapping) = self.get_p(use_jax=True)
-        return self.get_q(p=p, mapping=mapping, use_jax=True)
+            (p, mapping) = self.get_force_field_parameters(use_jax=True)
+        return self.get_system_parameters(p=p, mapping=mapping, use_jax=True)
 
     def parametrize_partial(self):
-        return partial(self.parametrize, smirks_map=self.smirks_map, mapping=self.get_p()[1])
+        return partial(self.parametrize, smirks_map=self.smirks_map, mapping=self.get_force_field_parameters()[1])
 
     # TODO: Don't use JAX so forcefully when calling other functions from here
     def get_param_matrix(self):
         if not jax_available:
             raise JAXNotInstalledError
         import jax
-        (p, mapping) = self.get_p(use_jax=True)
+        (p, mapping) = self.get_force_field_parameters(use_jax=True)
         parametrize_partial = partial(self.parametrize, smirks_map=self.smirks_map, mapping=mapping)
 
         jac_parametrize = jax.jacfwd(parametrize_partial)
@@ -357,10 +361,121 @@ class SMIRNOFFBondTerm(SMIRNOFFPotentialTerm):
 
     name: str = 'Bonds'
 
+    def get_force_field_parameters(self, use_jax=False):
+        """get p from a SMIRNOFFPotentialTerm
+        returns
+
+            p : flattened representation of force field parameters (for this term in a potential energy expression).
+                indices in this array are freshly created
+            mapping : dict mapping smirks patterns (for this term) to their 'id' that was just generated
+        """
+        if use_jax:
+            import jax.numpy as np
+        else:
+            import numpy as np
+
+        p = []
+        mapping = dict()
+        for i, pot in enumerate(self.potentials.values()):
+            p.append(pot.parameters['length'].magnitude)
+            p.append(pot.parameters['k'].magnitude)
+            mapping.update({pot.smirks: i})
+        return np.array(p), mapping
+
+    def get_system_parameters(self, p=None, mapping=None, use_jax=False):
+        if use_jax:
+            import jax.numpy as np
+        else:
+            import numpy as np
+
+        if None in (p, mapping):
+            (p, mapping) = self.get_force_field_parameters(use_jax=use_jax)
+        q = []
+        for key, val in self.smirks_map.items():
+            q.append(p[mapping[val]])
+        return np.array(q)
+
+    def parametrize(self, p=None, smirks_map=None, mapping=None):
+        if None in (p, mapping):
+            (p, mapping) = self.get_force_field_parameters(use_jax=True)
+        return self.get_system_parameters(p=p, mapping=mapping, use_jax=True)
+
+    def parametrize_partial(self):
+        return partial(self.parametrize, smirks_map=self.smirks_map, mapping=self.get_force_field_parameters()[1])
+
+    def get_param_matrix(self):
+        if not jax_available:
+            raise JAXNotInstalledError
+        import jax
+        (p, mapping) = self.get_force_field_parameters(use_jax=True)
+        parametrize_partial = partial(self.parametrize, smirks_map=self.smirks_map, mapping=mapping)
+
+        jac_parametrize = jax.jacfwd(parametrize_partial)
+        jac_res = jac_parametrize(p)
+
+        return jac_res.reshape(-1, p.flatten().shape[0])
+
+
 
 class SMIRNOFFAngleTerm(SMIRNOFFPotentialTerm):
 
     name: str = 'Angles'
+
+    def get_force_field_parameters(self, use_jax=False):
+        """get p from a SMIRNOFFPotentialTerm
+        returns
+
+            p : flattened representation of force field parameters (for this term in a potential energy expression).
+                indices in this array are freshly created
+            mapping : dict mapping smirks patterns (for this term) to their 'id' that was just generated
+        """
+        if use_jax:
+            import jax.numpy as np
+        else:
+            import numpy as np
+
+        p = []
+        mapping = dict()
+        for i, pot in enumerate(self.potentials.values()):
+            p.append(pot.parameters['angle'].magnitude)
+            p.append(pot.parameters['k'].magnitude)
+            mapping.update({pot.smirks: i})
+        return np.array(p), mapping
+
+    def get_system_parameters(self, p=None, mapping=None, use_jax=False):
+        if use_jax:
+            import jax.numpy as np
+        else:
+            import numpy as np
+
+        if None in (p, mapping):
+            (p, mapping) = self.get_force_field_parameters(use_jax=use_jax)
+        q = []
+        for key, val in self.smirks_map.items():
+            q.append(p[mapping[val]])
+        return np.array(q)
+
+    def parametrize(self, p=None, smirks_map=None, mapping=None):
+        if None in (p, mapping):
+            (p, mapping) = self.get_force_field_parameters(use_jax=True)
+        return self.get_system_parameters(p=p, mapping=mapping, use_jax=True)
+
+    def parametrize_partial(self):
+        return partial(self.parametrize, smirks_map=self.smirks_map, mapping=self.get_force_field_parameters()[1])
+
+    def get_param_matrix(self):
+        if not jax_available:
+            raise JAXNotInstalledError
+        import jax
+        (p, mapping) = self.get_force_field_parameters(use_jax=True)
+        parametrize_partial = partial(self.parametrize, smirks_map=self.smirks_map, mapping=mapping)
+
+        jac_parametrize = jax.jacfwd(parametrize_partial)
+        jac_res = jac_parametrize(p)
+
+        return jac_res.reshape(-1, p.flatten().shape[0])
+
+
 
 
 class SMIRNOFFProperTorsionTerm(SMIRNOFFPotentialTerm):
