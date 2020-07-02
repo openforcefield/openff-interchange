@@ -42,3 +42,7 @@ class TestMatrixRepresentations(BaseTest):
         ref = jnp.load(get_test_file_path(f'ethanol_param_{handler_name.lower()}.npy'))
 
         assert jnp.allclose(ref, param_matrix)
+
+        # TODO: Update with other handlers that can safely be assumed to follow 1:1 slot:smirks mapping
+        if handler_name in ['vdW', 'Bonds', 'Angles']:
+            assert np.allclose(np.sum(param_matrix, axis=1), np.ones(param_matrix.shape[0]))
