@@ -3,7 +3,9 @@ import numpy as np
 
 from openforcefield.topology import Molecule, Topology
 
-from ..typing.smirnoff.data import SMIRNOFFPotentialTerm, SMIRNOFFvdWTerm, SMIRNOFFTermCollection, ElectrostaticsTerm, SUPPORTED_HANDLER_MAPPING
+from ..typing.smirnoff.data import (SMIRNOFFPotentialTerm, SMIRNOFFvdWTerm, SMIRNOFFBondTerm,
+    SMIRNOFFTermCollection, ElectrostaticsTerm, SUPPORTED_HANDLER_MAPPING, build_slot_smirks_map_term,
+    build_smirks_potential_map_term)
 from ..exceptions import SMIRNOFFHandlerNotImplementedError
 from ..utils import get_partial_charges_from_openmm_system
 from .base_test import BaseTest
@@ -67,3 +69,40 @@ class TestSMIRNOFFTyping(BaseTest):
         # TODO: Replace this with a system contained a truly unsupported potential
         with pytest.raises(SMIRNOFFHandlerNotImplementedError):
             SMIRNOFFTermCollection.from_toolkit_data(parsley, ethanol_top)
+
+
+class TestSMIRNOFFBondTerm(BaseTest):
+
+    handler_expression_mapping = {
+        'vdW' : '4*epsilon*((sigma/r)**12-(sigma/r)**6)',
+        'Bonds' : '1/2*k*(length-length_0)**2',
+        'Angles' : '1/2*k*(angle-angle_0)**2',
+    }
+
+    @pytest.mark.parametrize(
+        'handler_name,expression',
+            [
+                ('vdW', '4*epsilon*((sigma/r)**12-(sigma/r)**6)'),
+                ('Bonds', '1/2*k*(length-length_0)**2'),
+                ('Angles', '1/2*k*(angle-angle_0)**2'),
+            ]
+    )
+    def test_smirnoff_terms(self, parsley, ethanol_top, handler_name, expression):
+        smirnoff_term = SMIRNOFFBondTerm.build_from_toolkit_data(
+            handler=parsley[handler_name],
+            topology=ethanol_top,
+            forcefield=None,
+        )
+
+        assert smirnoff_term.smirks_map == build_slot_smirks_map_term(
+            parsley[handler_name],
+            ethanol_top,
+        )
+
+        assert smirnoff_term.potentials == build_smirks_potential_map_term(
+            handler=parsley[handler_name],
+            smirks_map=smirnoff_term.smirks_map,
+        )
+
+        for smirks, pot in smirnoff_term.potentials.items():
+            assert pot.expression == expression
