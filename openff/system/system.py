@@ -1,4 +1,5 @@
 from typing import Dict, Union
+from collections import OrderedDict
 
 from pydantic import validator, root_validator
 import pint
@@ -117,6 +118,13 @@ class System(ProtoSystem):
             return val
         if isinstance(val, ForceField):
             return val
+        if isinstance(val, OrderedDict):
+            # TODO: Make this the default drop-in if the toolkit reworks ForceField to be more dict-like
+            forcefield = ForceField()
+            forcefield._load_smirnoff_data(val)
+            return forcefield
+        if isinstance(val, str):
+            return ForceField(val)
         else:
             raise TypeError
 

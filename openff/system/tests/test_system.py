@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from ..system import System, ProtoSystem
 from ..typing.smirnoff.data import *
 from .. import unit
+from ..utils import compare_forcefields
 from .base_test import BaseTest
 
 
@@ -196,3 +197,7 @@ class TestValidators(BaseTest):
         with pytest.raises(TypeError):
             ProtoSystem.validate_box(values, units=units)
 
+    def test_validate_forcefield(self, parsley):
+        compare_forcefields(parsley, System.validate_forcefield(parsley))
+        compare_forcefields(parsley, System.validate_forcefield(parsley._to_smirnoff_data()))
+        compare_forcefields(parsley, System.validate_forcefield('openff-1.0.0.offxml'))
