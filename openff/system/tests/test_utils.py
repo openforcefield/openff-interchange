@@ -2,8 +2,10 @@ import pytest
 import numpy as np
 from simtk import unit as simtk_unit
 
+from openforcefield.typing.engines.smirnoff import ForceField
+
 from .. import unit
-from system.utils import simtk_to_pint, pint_to_simtk, compare_sympy_expr, get_partial_charges_from_openmm_system
+from system.utils import simtk_to_pint, pint_to_simtk, compare_sympy_expr, get_partial_charges_from_openmm_system, compare_forcefields
 from .base_test import BaseTest
 
 
@@ -55,6 +57,15 @@ def test_pint_to_simtk():
 )
 def test_compare_sympy_expr(expr1, expr2, result):
     assert compare_sympy_expr(expr1, expr2) == result
+
+
+class TestUtils(BaseTest):
+
+    def test_compare_forcefields(self, parsley):
+        compare_forcefields(parsley, parsley)
+        compare_forcefields(ForceField('openff-1.0.0.offxml'), parsley)
+        compare_forcefields(parsley, ForceField('openff-1.0.0.offxml'))
+        compare_forcefields(ForceField('openff-1.0.0.offxml'), ForceField('openff-1.0.0.offxml'))
 
 
 class TestOpenMM(BaseTest):

@@ -1,12 +1,14 @@
 from pkg_resources import resource_filename
 import pathlib
 from typing import List
+from collections import OrderedDict
 
 import sympy
 from simtk import openmm
 from simtk import unit as simtk_unit
 
 from openforcefield.utils import unit_to_string
+from openforcefield.typing.engines.smirnoff import ForceField
 
 from . import unit
 from .types import UnitArray
@@ -72,6 +74,17 @@ def get_partial_charges_from_openmm_system(omm_system):
     partial_charges = unit.Quantity.from_list(partial_charges)
     return partial_charges
 
+def _check_forcefield_dict(forcefield):
+    if isinstance(forcefield, ForceField):
+        return forcefield._to_smirnoff_data()
+    elif isinstance(forcefield, OrderedDict):
+        return forcefield
+
+def compare_forcefields(ff1, ff2):
+    ff1 = _check_forcefield_dict(ff1)
+    ff2 = _check_forcefield_dict(ff2)
+
+    assert ff1 == ff2
 
 try:
     import jax
