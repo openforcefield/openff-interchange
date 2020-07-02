@@ -45,7 +45,7 @@ def compare_sympy_expr(expr1, expr2):
 
 
 def get_test_file_path(test_file):
-    dir_path = resource_filename('system', 'tests/files/')
+    dir_path = resource_filename('openff.system', 'tests/files/')
     test_file_path = pathlib.Path(dir_path).joinpath(test_file)
 
     if test_file_path.is_file():

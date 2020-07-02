@@ -138,7 +138,7 @@ def build_smirks_potential_map_angles(handler, smirks_map=None):
     mapping = dict()
 
     for param in handler.parameters:
-        if not smirks_map:
+        if smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
         k = simtk_to_pint(param.k)
@@ -164,7 +164,7 @@ def build_smirks_potential_map_propers(handler, smirks_map=None):
         return f'k{n}*(1+cos(periodicity{n}*theta-phase{n}))'
 
     for param in handler.parameters:
-        if not smirks_map:
+        if smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
 
@@ -200,14 +200,14 @@ def build_smirks_potential_map_impropers(handler, smirks_map=None):
     mapping = dict()
 
     def expr_from_n(n):
-        return f'k{n}*(1+cos(periodicity{n}*theta-phase{n})'
+        return f'k{n}*(1+cos(periodicity{n}*theta-phase{n}))'
 
     for param in handler.parameters:
-        if not smirks_map:
+        if smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
 
-        expr = ''
+        expr = '0'
         params = {}
 
         for n in range(3):
