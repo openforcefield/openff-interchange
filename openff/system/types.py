@@ -11,11 +11,12 @@ class UnitArrayMeta(type):
 
 class UnitArray(unit.Quantity, metaclass=UnitArrayMeta):
     """
-    See https://github.com/samuelcolvin/pydantic/issues/380#issuecomment-594639970
+    Thin wrapper around pint.Quantity for compliance with Pydantic classes
 
-    TODO: Handle various cases of implicit units, i.e. NumPy arrays that intend
-    TODO: Use dtype
+    See https://github.com/samuelcolvin/pydantic/issues/380#issuecomment-594639970
     """
+    # TODO: Handle various cases of implicit units, i.e. NumPy arrays that intend
+    # TODO: Use dtype
 
     @classmethod
     def __get_validators__(cls):

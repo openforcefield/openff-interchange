@@ -14,7 +14,7 @@ from ...exceptions import SMIRNOFFHandlerNotImplementedError, JAXNotInstalledErr
 
 
 def build_slot_smirks_map(topology, forcefield):
-    """Turn a SMIRNOFF force field into a mapping between slots and SMIRKS"""
+    """Generate a mapping between slots and SMIRKS patterns given an OpenFF ForceField"""
     typing_map = dict()
 
     for handler_name, handler in forcefield._parameter_handlers.items():
@@ -24,7 +24,7 @@ def build_slot_smirks_map(topology, forcefield):
 
 
 def build_slot_smirks_map_term(handler, topology):
-    """Get mapping between slot keys and SMIRKS for only one term"""
+    """Generate a mapping between slots and SMIRKS patterns for one parameter handler in an OpenFF ForceField"""
     slot_smirks_map = dict()
 
     if handler._TAGNAME == 'Electrostatics':
@@ -51,6 +51,7 @@ def dummy_atomic_slots_map(topology):
 
 
 def build_smirks_potential_map(forcefield, smirks_map=None):
+    """Generate a mapping between SMIRKS patterns and potential objects for an entire OpenFF ForceField"""
     mapping = dict()
 
     for handler in forcefield._parameter_handlers.keys():
@@ -66,7 +67,7 @@ def build_smirks_potential_map(forcefield, smirks_map=None):
 
 
 def build_smirks_potential_map_term(handler, smirks_map=None, topology=None, forcefield=None):
-    """Temporary stand-in for .to_potential calls in toolkit ParameterHandler objects."""
+    """Generate a mapping between SMIRKS patterns and potential objects for a single parameter handler in an OpenFF ForceField"""
     if handler._TAGNAME not in SUPPORTED_HANDLER_MAPPING.keys():
         warn(f'handler {name} not implemented')
         raise Exception # return potential_collection
@@ -236,6 +237,8 @@ def build_smirks_potential_map_impropers(handler, smirks_map=None):
 
 def build_smirks_potential_map_electrostatics(forcefield, topology, smirks_map=None):
     """
+    Build a mapping between SMIRKS patterns and partial charges
+
     Note: This mapping does not go through SMIRKS and should be replaced with future toolkit features;
     See https://github.com/openforcefield/openforcefield/issues/619
 
@@ -259,8 +262,16 @@ def build_smirks_potential_map_electrostatics(forcefield, topology, smirks_map=N
 
 class SMIRNOFFPotentialTerm(BaseModel):
     """
-    Base class for handling terms in a potential energy function,
-    adhering to the functionality of the SMIRNOFF specification.
+    Base class for handling terms in a potential energy function according to the SMIRNOFF specification
+
+    Parameters
+    ----------
+    name : str
+        A string identifier, often the id tag of the parameter
+    smirks_map : dict of [tuple : str]
+        Mapping between the slots, as tuples, and corresponding SMIRKS patterns
+    potentials : dict of [str : openff.system.potential.Potential]
+        Mapping between SMIRKS patterns and corresponding potential objects
     """
 
     name: str
@@ -269,6 +280,7 @@ class SMIRNOFFPotentialTerm(BaseModel):
 
     @classmethod
     def build_from_toolkit_data(cls, handler, topology, forcefield=None):
+        """Construct a SMIRNOFFPotentialTerm from OpenFF Toolkit objects"""
         term = cls(name=handler._TAGNAME)
         term.smirks_map = build_slot_smirks_map_term(handler=handler, topology=topology)
         term.potentials = build_smirks_potential_map_term(handler=handler, smirks_map=term.smirks_map)
@@ -488,8 +500,8 @@ class SMIRNOFFImproperTorsionTerm(SMIRNOFFPotentialTerm):
     name: str = 'ImproperTorsions'
 
 
-# Note: This class is structured differently from other SMIRNOFFPotentialTerm children
 class ElectrostaticsTerm(SMIRNOFFPotentialTerm):
+    # Note: This class is structured differently from other SMIRNOFFPotentialTerm children
 
     name: str = 'Electrostatics'
     smirks_map: Dict[tuple, str] = dict()

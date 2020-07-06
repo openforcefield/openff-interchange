@@ -1,4 +1,8 @@
 class SMIRNOFFHandlerNotImplementedError(Exception):
+    """
+    Exception for when of the SMIRNOFF specification that are not implemented
+    here are found
+    """
     def __init__(self, *args):
         if args:
             self.name = args[0]
@@ -11,6 +15,9 @@ class SMIRNOFFHandlerNotImplementedError(Exception):
 
 
 class JAXNotInstalledError(ImportError):
+    """
+    Exception for when JAX is called, but not installed
+    """
     def __str__(self):
         msg = (
             '\nThis function requires JAX, which was not found to be installed.'

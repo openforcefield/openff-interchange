@@ -17,6 +17,7 @@ from .types import UnitArray
 
 
 def potential_map_from_terms(collection):
+    """Builds a high-level smirks map from corresponding maps for each handler"""
     mapping = dict()
 
     for key, val in collection.terms.items():
@@ -26,8 +27,20 @@ def potential_map_from_terms(collection):
 
 
 class ProtoSystem(BaseModel):
-    """A primitive object for other System objects to be built off of"""
+    """
+    A primitive object for other System objects to be built off of
 
+    .. warning :: This API is experimental and subject to change.
+
+    Parameters
+    ----------
+    topology : openforcefield.topology.Topology or simtk.openmm.app.topology.Topology
+        A representation of the chemical topology of the system
+    positions : UnitArray
+        Positions of all atoms in the system
+    box : UnitArray
+        Periodic box vectors
+    """
     topology: Union[Topology, OpenMMTopology]
     positions: UnitArray
     box: UnitArray
@@ -74,8 +87,30 @@ class ProtoSystem(BaseModel):
 
 
 class System(ProtoSystem):
-    """The OpenFF System object."""
+    """The OpenFF System object.
 
+    .. warning :: This API is experimental and subject to change.
+
+    Parameters
+    ----------
+    topology : openforcefield.topology.Topology or simtk.openmm.app.topology.Topology
+        A representation of the chemical topology of the system
+    positions : UnitArray
+        Positions of all atoms in the system
+    box : UnitArray
+        Periodic box vectors
+    forcefield : openforcefield.typing.engines.smirnoff.forcefield.ForceField or
+        openforcefield.typing.engines.smirnoff.parameters.ParameterHandler, optional
+        A SMIRNOFF force field or portion thereof as a parameter handler
+    slot_smirks_map : dict, optional
+        A nested dictionary mapping, for each handler, slot identifiers to SMIRKS
+        patterns
+    smirks_potential_map : dict, optional
+        A nested dictionary mapping, for each handler, SMIRKS patterns to instantiated
+        potential objects
+    term_colection : openff.system.typing.smirnoff.data.SMIRNOFFTermCollection, optional
+        A collection of instantiated potential terms from a SMIRNOFF force field
+    """
     forcefield: Union[ForceField, ParameterHandler] = None
     slot_smirks_map: Dict = dict()
     smirks_potential_map: Dict = dict()
@@ -83,6 +118,7 @@ class System(ProtoSystem):
 
     @classmethod
     def from_proto_system(cls, proto_system, forcefield=None, slot_smirks_map=dict(), smirks_potential_map=dict(), term_collection=SMIRNOFFTermCollection()):
+        """Construct a System from an existing ProtoSystem and other parameters"""
         return cls(
             topology=proto_system.topology,
             positions=proto_system.positions,
@@ -133,6 +169,7 @@ class System(ProtoSystem):
         validate_assignment = True
 
     def apply_single_parameter_handler(self, parameter_handler):
+        """Apply a single parameter handler to a system."""
         # TODO: Abstract this away to be SMIRNOFF-agnostic
         if parameter_handler._TAGNAME == 'Electrostatics':
             raise NotImplementedError()

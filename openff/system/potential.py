@@ -11,6 +11,21 @@ class AnalyticalPotential(BaseModel):
     """
     Generic representation of an interaction potential having an analytic
     form and lacking parameters.
+
+    .. warning :: This API is experimental and subject to change.
+
+    Parameters
+    ----------
+    name : str, optional
+        A string identifier
+    smirks : str, optional
+        The SMIRKS pattern associated with the potential,
+        if using the SMIRNOFF specification
+    expression : str or sympy.Expr
+        A symbolic representation of the analytical expression defining the
+        functional form of the potential
+    independent_variables : set of str or sympy.Expr
+        A symbolic representation of the independent variable of this potential
     """
 
     name: str = None
@@ -31,8 +46,24 @@ class AnalyticalPotential(BaseModel):
 
 
 class ParametrizedAnalyticalPotential(AnalyticalPotential):
-    """AnalyticalPotential but filled with parameters."""
+    """AnalyticalPotential but filled with parameters.
 
+    .. warning :: This API is experimental and subject to change.
+
+    Parameters
+    ----------
+    name : str, optional
+        A string identifier
+    smirks : str, optional
+        The SMIRKS pattern associated with the potential,
+        if using the SMIRNOFF specification
+    expression : str or sympy.Expr
+        A symbolic representation of the analytical expression defining the
+        functional form of the potential
+    independent_variables : set of str or sympy.Expr
+        A symbolic representation of the independent variable of this potential
+    parameters : dict of [str or sympy.Expr : unit.Quantity]
+    """
     parameters: Dict[Union[Expr, str], unit.Quantity]
 
     @validator("parameters")
