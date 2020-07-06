@@ -5,7 +5,9 @@ from simtk import unit as simtk_unit
 from openforcefield.typing.engines.smirnoff import ForceField
 
 from .. import unit
-from system.utils import simtk_to_pint, pint_to_simtk, compare_sympy_expr, get_partial_charges_from_openmm_system, compare_forcefields
+from ..utils import simtk_to_pint, pint_to_simtk, compare_sympy_expr, \
+    get_partial_charges_from_openmm_system, compare_forcefields, eval_expr
+from ..potential import ParametrizedAnalyticalPotential
 from .base_test import BaseTest
 
 
@@ -67,6 +69,15 @@ class TestUtils(BaseTest):
         compare_forcefields(parsley, ForceField('openff-1.0.0.offxml'))
         compare_forcefields(ForceField('openff-1.0.0.offxml'), ForceField('openff-1.0.0.offxml'))
 
+    @pytest.mark.skip
+    def test_eval_expr(self):
+        pot = ParametrizedAnalyticalPotential(
+            expression='a*x+b',
+            parameters={'a': 0.5 * unit.dimensionless, 'b': -2.0 * unit.meter},
+            independent_variables={'x'},
+        )
+
+        assert eval_expr(pot, 2.0 * unit.meter) == -1 * unit.meter
 
 class TestOpenMM(BaseTest):
     def test_openmm_partial_charges(self, argon_ff, argon_top):

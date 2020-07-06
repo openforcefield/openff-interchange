@@ -89,6 +89,17 @@ def compare_forcefields(ff1, ff2):
 
     assert ff1 == ff2
 
+def eval_expr(pot, ref):
+    """Hack to evaluate a potential expression given that it is fully specified"""
+    variables = list(pot.independent_variables) + list(pot.parameters.keys())
+    variables = [sympy.symbols(var) for var in variables]
+    values = [ref] + list(pot.parameters.values())
+
+    for var in variables:
+        sympy.symbols(var)
+
+    return sympy.sympify(pot.expression).subs(dict(zip(variables, values)))
+
 try:
     import jax
     jax_available = True
