@@ -6,7 +6,8 @@ from openforcefield.typing.engines.smirnoff import ForceField
 
 from .. import unit
 from ..utils import simtk_to_pint, pint_to_simtk, compare_sympy_expr, \
-    get_partial_charges_from_openmm_system, compare_forcefields, eval_expr
+    get_partial_charges_from_openmm_system, compare_forcefields, eval_expr, \
+    unwrap_list_of_pint_quantities
 from ..potential import ParametrizedAnalyticalPotential
 from .base_test import BaseTest
 
@@ -68,6 +69,12 @@ class TestUtils(BaseTest):
         compare_forcefields(ForceField('openff-1.0.0.offxml'), parsley)
         compare_forcefields(parsley, ForceField('openff-1.0.0.offxml'))
         compare_forcefields(ForceField('openff-1.0.0.offxml'), ForceField('openff-1.0.0.offxml'))
+
+    def test_unwrap_quantities(self):
+        wrapped = [1 * unit.m, 1.5 * unit.m]
+        unwrapped = [1, 1.5] * unit.m
+
+        assert all(unwrapped == unwrap_list_of_pint_quantities(wrapped))
 
     @pytest.mark.skip
     def test_eval_expr(self):
