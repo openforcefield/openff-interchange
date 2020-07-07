@@ -14,6 +14,21 @@ class SMIRNOFFHandlerNotImplementedError(Exception):
         return msg
 
 
+class ToolkitTopologyConformersNotFoundError(Exception):
+    """
+    Exception for when reference molecules in a toolkit topology is required to contain
+    conformers, but they are not found
+    """
+    def __init__(self, *args):
+        if args:
+            self.mol = str(args[0])
+
+    def __str__(self):
+        msg = "A reference molecule in the topology does not contain any conformers"
+        if self.mol:
+            msg += f"The molecule lacking a conformer is {mol}"
+
+
 class JAXNotInstalledError(ImportError):
     """
     Exception for when JAX is called, but not installed

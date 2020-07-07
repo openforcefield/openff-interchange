@@ -14,6 +14,7 @@ from . import unit
 from .typing.smirnoff.data import *
 from .utils import simtk_to_pint
 from .types import UnitArray
+from .exceptions import ToolkitTopologyConformersNotFoundError
 
 
 def potential_map_from_terms(collection):
@@ -132,6 +133,26 @@ class System(ProtoSystem):
             slot_smirks_map=slot_smirks_map,
             smirks_potential_map=smirks_potential_map,
             term_collection=term_collection,
+        )
+
+    @classmethod
+    def from_toolkit(cls, topology, forcefield):
+        """Attempt to construct a System from a toolkit Topology and ForceField"""
+        positions = None
+        for ref_mol in topology.reference_molecules:
+            if not ref_mol.conformers:
+                raise ToolkitTopologyConformersNotFoundError(ref_mol)
+            mol_pos = simtk_to_pint(ref_mol.conformers[0])
+            if not positions:
+                positions = mol_pos
+            else:
+                positions = np.vstack([positions, mol_pos])
+
+        return cls(
+            topology=topology,
+            forcefield=forcefield,
+            positions=positions,
+            box=topology.box_vectors,
         )
 
     @root_validator

@@ -538,6 +538,43 @@ class SMIRNOFFTermCollection(BaseModel):
     @classmethod
     def from_toolkit_data(cls, toolkit_forcefield, toolkit_topology):
         collection = cls()
+        # Temporary workaround for dealing with charge handlers individually
+        partial_charges = get_partial_charges_from_openmm_system(
+            toolkit_forcefield.create_openmm_system(toolkit_topology)
+        )
+
+        # TODO: Properly deal with the case of partial charges intentionally being zeros
+        if np.allclose(partial_charges, 0):
+            smirks_map = dummy_atomic_slots_map(topology=toolkit_topology)
+            potentials = build_smirks_potential_map_electrostatics(
+                forcefield=None,
+                topology=toolkit_topology,
+                smirks_map=smirks_map,
+                partial_charges=partial_charges,
+            )
+        else:
+            smirks_map = build_slot_smirks_map_term(
+                toolkit_forcefield['Electrostatics'],
+                topology=toolkit_topology
+            )
+
+            potentials = build_smirks_potential_map_electrostatics(
+                forcefield=toolkit_forcefield,
+                topology=toolkit_topology,
+                smirks_map=smirks_map,
+                partial_charges=partial_charges,
+            )
+
+        electrostatics_term = ElectrostaticsTerm(
+            name='Electrostatics',
+            smirks_map=smirks_map,
+            potentials=potentials,
+        )
+
+        for handler_to_drop in ['Constraints', 'ToolkitAM1BCC', 'Electrostatics']:
+            if handler_to_drop in toolkit_forcefield.registered_parameter_handlers:
+                toolkit_forcefield._parameter_handlers.pop(handler_to_drop)
+
         for handler_name, handler in toolkit_forcefield._parameter_handlers.items():
             collection.add_parameter_handler(handler=handler, forcefield=toolkit_forcefield, topology=toolkit_topology)
         return collection
