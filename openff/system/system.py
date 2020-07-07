@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Dict, Union, Optional
 from collections import OrderedDict
 
 from pydantic import validator, root_validator
@@ -38,12 +38,12 @@ class ProtoSystem(BaseModel):
         A representation of the chemical topology of the system
     positions : UnitArray
         Positions of all atoms in the system
-    box : UnitArray
-        Periodic box vectors
+    box : UnitArray, optional
+        Periodic box vectors. A value of None implies a non-periodic system
     """
     topology: Union[Topology, OpenMMTopology]
     positions: UnitArray
-    box: UnitArray
+    box: Optional[UnitArray]
 
     # TODO: I needed to set pre=True to get this to override the Array type. This is bad
     # and instead this attribute should be handled by a custom class that deals with
@@ -51,6 +51,9 @@ class ProtoSystem(BaseModel):
     # a single thing that plays nicely with things
     @validator("positions", "box", pre=True)
     def validate_in_space(cls, val):
+        # TODO: More gracefully deal with None values
+        if val is None:
+            return val
         if isinstance(val, SimTKQuantity):
             val = UnitArray(simtk_to_pint(val))
         if isinstance(val, (pint.Quantity, np.ndarray, UnitArray)):
@@ -65,6 +68,8 @@ class ProtoSystem(BaseModel):
 
     @validator("box")
     def validate_box(cls, val):
+        if val is None:
+            return val
         if val.shape == (3, 3):
             return val
         elif val.shape == (3,):
@@ -97,8 +102,8 @@ class System(ProtoSystem):
         A representation of the chemical topology of the system
     positions : UnitArray
         Positions of all atoms in the system
-    box : UnitArray
-        Periodic box vectors
+    box : UnitArray, optional
+        Periodic box vectors. A value of None implies a non-periodic system
     forcefield : openforcefield.typing.engines.smirnoff.forcefield.ForceField or
         openforcefield.typing.engines.smirnoff.parameters.ParameterHandler, optional
         A SMIRNOFF force field or portion thereof as a parameter handler

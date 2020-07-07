@@ -47,6 +47,13 @@ class TestSystem(BaseTest):
 
         System(
             topology=argon_top,
+            forcefield=argon_ff,
+            positions=argon_coords,
+            box=None,
+        )
+
+        System(
+            topology=argon_top,
             term_collection=term_collection,
             slot_smirks_map=slot_smirks_map,
             smirks_potential_map=smirks_potential_map,
