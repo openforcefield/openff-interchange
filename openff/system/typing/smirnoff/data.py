@@ -235,7 +235,7 @@ def build_smirks_potential_map_impropers(handler, smirks_map=None):
 
     return mapping
 
-def build_smirks_potential_map_electrostatics(forcefield, topology, smirks_map=None):
+def build_smirks_potential_map_electrostatics(forcefield, topology, smirks_map=None, partial_charges=None):
     """
     Build a mapping between SMIRKS patterns and partial charges
 
@@ -252,10 +252,11 @@ def build_smirks_potential_map_electrostatics(forcefield, topology, smirks_map=N
     # TODO: get partial charges from just a (single) electrostatics handler
     # Note: Requires some toolkit changes, something like
     # partial_charges = get_partial_charges_from_openmm_system(handler.get_partial_charges(topology))
-    partial_charges = get_partial_charges_from_openmm_system(forcefield.create_openmm_system(topology))
+    if partial_charges is None:
+        partial_charges = get_partial_charges_from_openmm_system(forcefield.create_openmm_system(topology))
 
     for key, val in smirks_map.items():
-        mapping[val] = partial_charges[int(val)]
+        mapping[val] = partial_charges[int(key[0])]
 
     return mapping
 
@@ -508,10 +509,10 @@ class ElectrostaticsTerm(SMIRNOFFPotentialTerm):
     potentials: Dict[str, unit.Quantity] = dict()
 
     @classmethod
-    def build_from_toolkit_data(cls, handler, topology, forcefield=None):
+    def build_from_toolkit_data(cls, topology, forcefield=None):
 
-        term = cls(name=handler._TAGNAME)
-        term.smirks_map = build_slot_smirks_map_term(handler=handler, topology=topology)
+        term = cls(name='Electrostatics')
+        term.smirks_map = dummy_atomic_slots_map(topology=topology)
         term.potentials = build_smirks_potential_map_electrostatics(forcefield=forcefield, topology=topology, smirks_map=term.smirks_map)
         return term
 
@@ -545,10 +546,17 @@ class SMIRNOFFTermCollection(BaseModel):
         handler_name = handler._TAGNAME
         if handler_name in SUPPORTED_HANDLER_MAPPING.keys():
             term = SUPPORTED_HANDLER_MAPPING[handler_name]()
-            self.terms[handler_name] = term.build_from_toolkit_data(
-                handler=handler,
-                topology=topology,
-                forcefield=forcefield,
-            )
+
+            if handler_name == 'Electrostatics':
+                self.terms[handler_name] = term.build_from_toolkit_data(
+                    topology=topology,
+                    forcefield=forcefield,
+                )
+            else:
+                self.terms[handler_name] = term.build_from_toolkit_data(
+                    handler=handler,
+                    topology=topology,
+                    forcefield=forcefield,
+                )
         else:
             raise SMIRNOFFHandlerNotImplementedError(handler_name)
