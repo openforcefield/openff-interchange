@@ -572,7 +572,8 @@ class SMIRNOFFTermCollection(BaseModel):
         )
 
         for handler_to_drop in ['Constraints', 'ToolkitAM1BCC', 'Electrostatics']:
-            if handler_to_drop in toolkit_forcefield.registered_parameter_handlers:
+            # TODO: toolkit_forcefield.registered_parameter_handlers when OFFTK 0.7.1 is released
+            if handler_to_drop in toolkit_forcefield._parameter_handlers.keys():
                 toolkit_forcefield._parameter_handlers.pop(handler_to_drop)
 
         for handler_name, handler in toolkit_forcefield._parameter_handlers.items():
