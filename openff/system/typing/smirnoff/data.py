@@ -624,7 +624,7 @@ class SMIRNOFFTermCollection(BaseModel):
             name='Electrostatics', smirks_map=smirks_map, potentials=potentials,
         )
 
-        collection['Electrostatics'] = electrostatics_term
+        collection.terms['Electrostatics'] = electrostatics_term
 
         for handler_to_drop in ['Constraints', 'ToolkitAM1BCC', 'Electrostatics']:
             # TODO: toolkit_forcefield.registered_parameter_handlers when OFFTK 0.7.1 is released

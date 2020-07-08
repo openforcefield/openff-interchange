@@ -25,7 +25,7 @@ class TestSMIRNOFFTyping(BaseTest):
     ):
         ff_collection = SMIRNOFFTermCollection.from_toolkit_data(argon_ff, argon_top)
 
-        assert [*ff_collection.terms.keys()] == ['vdW']
+        assert [*ff_collection.terms.keys()] == ['Electrostatics', 'vdW']
 
         found_smirks = ff_collection.terms['vdW'].smirks_map.values()
         assert all([smirks == '[#18:1]' for smirks in found_smirks])
@@ -34,7 +34,7 @@ class TestSMIRNOFFTyping(BaseTest):
             ammonia_ff, ammonia_top,
         )
 
-        assert sorted(ff_collection.terms.keys()) == ['Angles', 'Bonds', 'vdW']
+        assert sorted(ff_collection.terms.keys()) == ['Angles', 'Bonds', 'Electrostatics', 'vdW']
 
         for term in ff_collection.terms.values():
             assert term.potentials.keys() is not None
