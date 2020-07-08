@@ -1,0 +1,35 @@
+name: lint
+
+on:
+  push:
+    paths:
+      - 'openff/**.py'
+      - 'setup.cfg'
+
+jobs:
+
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: '3.7'
+      - name: Install the package
+        run: |
+          python setup.py develop --no-deps
+
+      - name: Install linters
+        run: |
+          pip install flake8 black
+
+      - name: Run black
+        run: |
+          black openff --check -S
+
+      - name: Run flake8
+        run: |
+          flake8 openff
