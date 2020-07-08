@@ -11,8 +11,8 @@ class UnitModel(BaseModel):
     distance_values: UnitArray[unit.nm]
     time_values: UnitArray[unit.ns]
 
-class TestUnitArray:
 
+class TestUnitArray:
     def test_pint_model(self):
 
         model = UnitModel(

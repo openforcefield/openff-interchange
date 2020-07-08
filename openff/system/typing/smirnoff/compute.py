@@ -8,7 +8,8 @@ def get_distance(a, b):
     get distance between two UnitArray quantities since __array_method__ isn't implemented
     for np.linalg.norm on pint.Quantity
     """
-    return np.sqrt(np.sum((b-a)**2))
+    return np.sqrt(np.sum((b - a) ** 2))
+
 
 def build_distance_matrix(system_in):
     """
@@ -29,6 +30,7 @@ def build_distance_matrix(system_in):
             distances[i, j] = UnitArray(r.magnitude, units=r.units)
 
     return distances
+
 
 def compute_vdw(system_in):
     """

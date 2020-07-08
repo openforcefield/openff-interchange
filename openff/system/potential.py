@@ -64,6 +64,7 @@ class ParametrizedAnalyticalPotential(AnalyticalPotential):
         A symbolic representation of the independent variable of this potential
     parameters : dict of [str or sympy.Expr : unit.Quantity]
     """
+
     parameters: Dict[Union[Expr, str], unit.Quantity]
 
     @validator("parameters")

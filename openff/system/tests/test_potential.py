@@ -45,9 +45,7 @@ class TestPotential(BaseTest):
 
     def test_serialization(self):
         pot = AnalyticalPotential(
-            smirks='[#6]',
-            expression='m*x+b',
-            independent_variables='x',
+            smirks='[#6]', expression='m*x+b', independent_variables='x',
         )
 
         pot_param = ParametrizedAnalyticalPotential(

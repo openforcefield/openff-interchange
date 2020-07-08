@@ -1,7 +1,8 @@
 from typing import Dict, Union, Optional
 from collections import OrderedDict
 
-from pydantic import validator, root_validator
+import numpy as np
+from pydantic import validator, root_validator, BaseModel
 import pint
 
 from simtk.unit import Quantity as SimTKQuantity
@@ -11,7 +12,12 @@ from openforcefield.typing.engines.smirnoff import ForceField, ParameterHandler
 from openforcefield.topology import Topology
 
 from . import unit
-from .typing.smirnoff.data import *
+from .typing.smirnoff.data import (
+    SMIRNOFFTermCollection,
+    build_slot_smirks_map,
+    build_slot_smirks_map_term,
+    build_smirks_potential_map_term,
+)
 from .utils import simtk_to_pint
 from .types import UnitArray
 from .exceptions import ToolkitTopologyConformersNotFoundError
@@ -42,6 +48,7 @@ class ProtoSystem(BaseModel):
     box : UnitArray, optional
         Periodic box vectors. A value of None implies a non-periodic system
     """
+
     topology: Union[Topology, OpenMMTopology]
     positions: UnitArray
     box: Optional[UnitArray]
@@ -117,13 +124,21 @@ class System(ProtoSystem):
     term_colection : openff.system.typing.smirnoff.data.SMIRNOFFTermCollection, optional
         A collection of instantiated potential terms from a SMIRNOFF force field
     """
+
     forcefield: Union[ForceField, ParameterHandler] = None
     slot_smirks_map: Dict = dict()
     smirks_potential_map: Dict = dict()
     term_collection: SMIRNOFFTermCollection = None
 
     @classmethod
-    def from_proto_system(cls, proto_system, forcefield=None, slot_smirks_map=dict(), smirks_potential_map=dict(), term_collection=SMIRNOFFTermCollection()):
+    def from_proto_system(
+        cls,
+        proto_system,
+        forcefield=None,
+        slot_smirks_map=dict(),
+        smirks_potential_map=dict(),
+        term_collection=SMIRNOFFTermCollection(),
+    ):
         """Construct a System from an existing ProtoSystem and other parameters"""
         return cls(
             topology=proto_system.topology,
@@ -162,15 +177,17 @@ class System(ProtoSystem):
             if not values['slot_smirks_map'] or not values['smirks_potential_map']:
                 pass  # raise TypeError('not given an ff, need maps')
         if values['forcefield']:
-            if values['smirks_potential_map'] and values['slot_smirks_map'] and values['term_collection']:
-                raise TypeError('ff redundantly specified, will not be used')
             # TODO: Let other typing engines drop in here
-            values['slot_smirks_map'] = build_slot_smirks_map(forcefield=values['forcefield'], topology=values['topology'])
+            values['slot_smirks_map'] = build_slot_smirks_map(
+                forcefield=values['forcefield'], topology=values['topology']
+            )
             values['term_collection'] = SMIRNOFFTermCollection.from_toolkit_data(
                 toolkit_forcefield=values['forcefield'],
                 toolkit_topology=values['topology'],
             )
-            values['smirks_potential_map'] = potential_map_from_terms(values['term_collection'])
+            values['smirks_potential_map'] = potential_map_from_terms(
+                values['term_collection']
+            )
         return values
 
     # TODO: These valiators pretty much don't do anything now
@@ -194,24 +211,23 @@ class System(ProtoSystem):
         arbitrary_types_allowed = True
         validate_assignment = True
 
-    def apply_single_parameter_handler(self, parameter_handler):
+    def apply_single_handler(self, handler):
         """Apply a single parameter handler to a system."""
         # TODO: Abstract this away to be SMIRNOFF-agnostic
-        if parameter_handler._TAGNAME == 'Electrostatics':
+        if handler._TAGNAME == 'Electrostatics':
             raise NotImplementedError()
 
-        self.slot_smirks_map[parameter_handler._TAGNAME] = build_slot_smirks_map_term(
-            handler=parameter_handler,
-            topology=self.topology,
+        self.slot_smirks_map[handler._TAGNAME] = build_slot_smirks_map_term(
+            handler=handler, topology=self.topology,
         )
 
-        self.smirks_potential_map[parameter_handler._TAGNAME] = build_smirks_potential_map_term(
-            handler=parameter_handler,
-            topology=self.topology,
-            forcefield=self.forcefield,
+        self.smirks_potential_map[handler._TAGNAME] = build_smirks_potential_map_term(
+            handler=handler, topology=self.topology, forcefield=self.forcefield,
         )
 
-        self.term_collection.add_parameter_handler(parameter_handler, topology=self.topology, forcefield=None)
+        self.term_collection.add_parameter_handler(
+            handler, topology=self.topology, forcefield=None
+        )
 
     def to_file(self):
         raise NotImplementedError()

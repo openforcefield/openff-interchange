@@ -36,11 +36,13 @@ def simtk_to_pint(simtk_quantity):
 
     return UnitArray(openmm_value, units=target_unit)
 
+
 def unwrap_list_of_pint_quantities(quantities):
     assert set(val.units for val in quantities) == {quantities[0].units}
     parsed_unit = quantities[0].units
     vals = [val.magnitude for val in quantities]
     return UnitArray(vals, units=parsed_unit)
+
 
 def compare_sympy_expr(expr1, expr2):
     """Checks if two expression-likes are equivalent."""
@@ -58,9 +60,7 @@ def get_test_file_path(test_file):
     if test_file_path.is_file():
         return test_file_path.as_posix()
     else:
-        raise FileNotFoundError(
-            f'could not file file {test_file} in path {dir_path}'
-        )
+        raise FileNotFoundError(f"could not file file {test_file} in path {dir_path}")
 
 
 def get_nonbonded_force_from_openmm_system(omm_system):
@@ -76,9 +76,12 @@ def get_partial_charges_from_openmm_system(omm_system):
     n_particles = omm_system.getNumParticles()
     force = get_nonbonded_force_from_openmm_system(omm_system)
     # TODO: don't assume the partial charge will always be parameter 0
-    partial_charges = [simtk_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)]
+    partial_charges = [
+        simtk_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)
+    ]
     partial_charges = unit.Quantity.from_list(partial_charges)
     return partial_charges
+
 
 def _check_forcefield_dict(forcefield):
     """Ensure an OpenFF ForceField is represented as a dict and convert it if it is not"""
@@ -87,12 +90,14 @@ def _check_forcefield_dict(forcefield):
     elif isinstance(forcefield, OrderedDict):
         return forcefield
 
+
 def compare_forcefields(ff1, ff2):
     """Compare dict representations of OpenFF ForceField objects fore equality"""
     ff1 = _check_forcefield_dict(ff1)
     ff2 = _check_forcefield_dict(ff2)
 
     assert ff1 == ff2
+
 
 def eval_expr(pot, ref):
     """Hack to evaluate a potential expression given that it is fully specified"""
@@ -105,8 +110,10 @@ def eval_expr(pot, ref):
 
     return sympy.sympify(pot.expression).subs(dict(zip(variables, values)))
 
+
 try:
     import jax
+
     jax_available = True
 except ImportError:
     jax_available = False

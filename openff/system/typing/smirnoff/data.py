@@ -8,7 +8,11 @@ import numpy as np
 from openforcefield.typing.engines.smirnoff import ForceField
 
 from ... import unit
-from ...utils import simtk_to_pint, jax_available, get_partial_charges_from_openmm_system
+from ...utils import (
+    simtk_to_pint,
+    jax_available,
+    get_partial_charges_from_openmm_system,
+)
 from ...potential import ParametrizedAnalyticalPotential as Potential
 from ...exceptions import SMIRNOFFHandlerNotImplementedError, JAXNotInstalledError
 
@@ -61,29 +65,35 @@ def build_smirks_potential_map(forcefield, smirks_map=None):
             partial_smirks_map = smirks_map[handler]
         else:
             partial_smirks_map = None
-        mapping[handler] = build_smirks_potential_map_term(forcefield[handler], partial_smirks_map)
+        mapping[handler] = build_smirks_potential_map_term(
+            forcefield[handler], partial_smirks_map,
+        )
 
     return mapping
 
 
-def build_smirks_potential_map_term(handler, smirks_map=None, topology=None, forcefield=None):
+def build_smirks_potential_map_term(
+    handler, smirks_map=None, topology=None, forcefield=None,
+):
     """Generate a mapping between SMIRKS patterns and potential objects for a single parameter handler in an OpenFF ForceField"""
-    if handler._TAGNAME not in SUPPORTED_HANDLER_MAPPING.keys():
-        warn(f'handler {name} not implemented')
-        raise Exception # return potential_collection
+    function_map = {
+        'vdW': build_smirks_potential_map_vdw,
+        'Bonds': build_smirks_potential_map_bonds,
+        'Angles': build_smirks_potential_map_angles,
+        'ProperTorsions': build_smirks_potential_map_propers,
+        'ImproperTorsions': build_smirks_potential_map_impropers,
+    }
 
-    if handler._TAGNAME == 'vdW':
-        return build_smirks_potential_map_vdw(handler=handler, smirks_map=smirks_map)
-    if handler._TAGNAME == 'Bonds':
-        return build_smirks_potential_map_bonds(handler=handler, smirks_map=smirks_map)
-    if handler._TAGNAME == 'Angles':
-        return build_smirks_potential_map_angles(handler=handler, smirks_map=smirks_map)
-    if handler._TAGNAME == 'ProperTorsions':
-        return build_smirks_potential_map_propers(handler=handler, smirks_map=smirks_map)
-    if handler._TAGNAME == 'ImproperTorsions':
-        return build_smirks_potential_map_impropers(handler=handler, smirks_map=smirks_map)
-    if handler._TAGNAME == 'Electrostatics':
-        return build_smirks_potential_map_electrostatics(forcefield=forcefield, topology=topology, smirks_map=smirks_map)
+    try:
+        return function_map[handler._TAGNAME](handler=handler, smirks_map=smirks_map)
+    except KeyError:
+        if handler._TAGNAME == 'Electrostatics':
+            return build_smirks_potential_map_electrostatics(
+                forcefield=forcefield, topology=topology, smirks_map=smirks_map,
+            )
+        else:
+            warn(f'handler {name} not implemented')
+            raise Exception  # TODO: return potential_collection
 
 
 def build_smirks_potential_map_vdw(handler, smirks_map=None):
@@ -94,7 +104,7 @@ def build_smirks_potential_map_vdw(handler, smirks_map=None):
             if param.smirks not in smirks_map.values():
                 continue
         if not param.sigma:
-            sigma = 2. * param.rmin_half / (2.**(1. / 6.))
+            sigma = 2.0 * param.rmin_half / (2.0 ** (1.0 / 6.0))
         else:
             sigma = param.sigma
         sigma = simtk_to_pint(sigma)
@@ -135,6 +145,7 @@ def build_smirks_potential_map_bonds(handler, smirks_map=None):
 
     return mapping
 
+
 def build_smirks_potential_map_angles(handler, smirks_map=None):
     mapping = dict()
 
@@ -157,6 +168,7 @@ def build_smirks_potential_map_angles(handler, smirks_map=None):
 
     return mapping
 
+
 def build_smirks_potential_map_propers(handler, smirks_map=None):
     # TODO: Properly deal with arbitrary values of n
     mapping = dict()
@@ -177,12 +189,14 @@ def build_smirks_potential_map_propers(handler, smirks_map=None):
                 param.k[n]
             except IndexError:
                 continue
-            expr += '+' + expr_from_n(n+1)
-            params.update({
-                f'k{n+1}': simtk_to_pint(param.k[n]),
-                f'periodicity{n+1}': param.periodicity[n] * unit.dimensionless,
-                f'phase{n+1}': simtk_to_pint(param.phase[n]),
-            })
+            expr += '+' + expr_from_n(n + 1)
+            params.update(
+                {
+                    f'k{n+1}': simtk_to_pint(param.k[n]),
+                    f'periodicity{n+1}': param.periodicity[n] * unit.dimensionless,
+                    f'phase{n+1}': simtk_to_pint(param.phase[n]),
+                }
+            )
 
         potential = Potential(
             name=param.id,
@@ -195,6 +209,7 @@ def build_smirks_potential_map_propers(handler, smirks_map=None):
         mapping[param.smirks] = potential
 
     return mapping
+
 
 def build_smirks_potential_map_impropers(handler, smirks_map=None):
     # TODO: Properly deal with arbitrary values of n
@@ -216,12 +231,14 @@ def build_smirks_potential_map_impropers(handler, smirks_map=None):
                 param.k[n]
             except IndexError:
                 continue
-            expr += '+' + expr_from_n(n+1)
-            params.update({
-                f'k{n+1}': simtk_to_pint(param.k[n]),
-                f'periodicity{n+1}': param.periodicity[n] * unit.dimensionless,
-                f'phase{n+1}': simtk_to_pint(param.phase[n]),
-            })
+            expr += '+' + expr_from_n(n + 1)
+            params.update(
+                {
+                    f'k{n+1}': simtk_to_pint(param.k[n]),
+                    f'periodicity{n+1}': param.periodicity[n] * unit.dimensionless,
+                    f'phase{n+1}': simtk_to_pint(param.phase[n]),
+                }
+            )
 
         potential = Potential(
             name=param.id,
@@ -235,7 +252,10 @@ def build_smirks_potential_map_impropers(handler, smirks_map=None):
 
     return mapping
 
-def build_smirks_potential_map_electrostatics(forcefield, topology, smirks_map=None, partial_charges=None):
+
+def build_smirks_potential_map_electrostatics(
+    forcefield, topology, smirks_map=None, partial_charges=None,
+):
     """
     Build a mapping between SMIRKS patterns and partial charges
 
@@ -247,13 +267,17 @@ def build_smirks_potential_map_electrostatics(forcefield, topology, smirks_map=N
     mapping = dict()
 
     if not smirks_map:
-        smirks_map = build_slot_smirks_map_term(forcefield['Electrostatics'], topology=topology)
+        smirks_map = build_slot_smirks_map_term(
+            forcefield['Electrostatics'], topology=topology,
+        )
 
     # TODO: get partial charges from just a (single) electrostatics handler
     # Note: Requires some toolkit changes, something like
     # partial_charges = get_partial_charges_from_openmm_system(handler.get_partial_charges(topology))
     if partial_charges is None:
-        partial_charges = get_partial_charges_from_openmm_system(forcefield.create_openmm_system(topology))
+        partial_charges = get_partial_charges_from_openmm_system(
+            forcefield.create_openmm_system(topology),
+        )
 
     for key, val in smirks_map.items():
         mapping[val] = partial_charges[int(key[0])]
@@ -284,7 +308,9 @@ class SMIRNOFFPotentialTerm(BaseModel):
         """Construct a SMIRNOFFPotentialTerm from OpenFF Toolkit objects"""
         term = cls(name=handler._TAGNAME)
         term.smirks_map = build_slot_smirks_map_term(handler=handler, topology=topology)
-        term.potentials = build_smirks_potential_map_term(handler=handler, smirks_map=term.smirks_map)
+        term.potentials = build_smirks_potential_map_term(
+            handler=handler, smirks_map=term.smirks_map,
+        )
         return term
 
     def smirks_map_to_atom_indices(self):
@@ -318,7 +344,9 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         term.scale13 = handler.scale13
         term.scale14 = handler.scale14
         term.smirks_map = build_slot_smirks_map_term(handler=handler, topology=topology)
-        term.potentials = build_smirks_potential_map_term(handler=handler, smirks_map=term.smirks_map)
+        term.potentials = build_smirks_potential_map_term(
+            handler=handler, smirks_map=term.smirks_map,
+        )
         return term
 
     def get_force_field_parameters(self, use_jax=False):
@@ -361,20 +389,28 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         return self.get_system_parameters(p=p, mapping=mapping, use_jax=True)
 
     def parametrize_partial(self):
-        return partial(self.parametrize, smirks_map=self.smirks_map, mapping=self.get_force_field_parameters()[1])
+        return partial(
+            self.parametrize,
+            smirks_map=self.smirks_map,
+            mapping=self.get_force_field_parameters()[1],
+        )
 
     # TODO: Don't use JAX so forcefully when calling other functions from here
     def get_param_matrix(self):
         if not jax_available:
             raise JAXNotInstalledError
         import jax
+
         (p, mapping) = self.get_force_field_parameters(use_jax=True)
-        parametrize_partial = partial(self.parametrize, smirks_map=self.smirks_map, mapping=mapping)
+        parametrize_partial = partial(
+            self.parametrize, smirks_map=self.smirks_map, mapping=mapping,
+        )
 
         jac_parametrize = jax.jacfwd(parametrize_partial)
         jac_res = jac_parametrize(p)
 
         return jac_res.reshape(-1, p.flatten().shape[0])
+
 
 class SMIRNOFFBondTerm(SMIRNOFFPotentialTerm):
 
@@ -420,20 +456,26 @@ class SMIRNOFFBondTerm(SMIRNOFFPotentialTerm):
         return self.get_system_parameters(p=p, mapping=mapping, use_jax=True)
 
     def parametrize_partial(self):
-        return partial(self.parametrize, smirks_map=self.smirks_map, mapping=self.get_force_field_parameters()[1])
+        return partial(
+            self.parametrize,
+            smirks_map=self.smirks_map,
+            mapping=self.get_force_field_parameters()[1],
+        )
 
     def get_param_matrix(self):
         if not jax_available:
             raise JAXNotInstalledError
         import jax
+
         (p, mapping) = self.get_force_field_parameters(use_jax=True)
-        parametrize_partial = partial(self.parametrize, smirks_map=self.smirks_map, mapping=mapping)
+        parametrize_partial = partial(
+            self.parametrize, smirks_map=self.smirks_map, mapping=mapping,
+        )
 
         jac_parametrize = jax.jacfwd(parametrize_partial)
         jac_res = jac_parametrize(p)
 
         return jac_res.reshape(-1, p.flatten().shape[0])
-
 
 
 class SMIRNOFFAngleTerm(SMIRNOFFPotentialTerm):
@@ -480,21 +522,26 @@ class SMIRNOFFAngleTerm(SMIRNOFFPotentialTerm):
         return self.get_system_parameters(p=p, mapping=mapping, use_jax=True)
 
     def parametrize_partial(self):
-        return partial(self.parametrize, smirks_map=self.smirks_map, mapping=self.get_force_field_parameters()[1])
+        return partial(
+            self.parametrize,
+            smirks_map=self.smirks_map,
+            mapping=self.get_force_field_parameters()[1],
+        )
 
     def get_param_matrix(self):
         if not jax_available:
             raise JAXNotInstalledError
         import jax
+
         (p, mapping) = self.get_force_field_parameters(use_jax=True)
-        parametrize_partial = partial(self.parametrize, smirks_map=self.smirks_map, mapping=mapping)
+        parametrize_partial = partial(
+            self.parametrize, smirks_map=self.smirks_map, mapping=mapping,
+        )
 
         jac_parametrize = jax.jacfwd(parametrize_partial)
         jac_res = jac_parametrize(p)
 
         return jac_res.reshape(-1, p.flatten().shape[0])
-
-
 
 
 class SMIRNOFFProperTorsionTerm(SMIRNOFFPotentialTerm):
@@ -519,7 +566,9 @@ class ElectrostaticsTerm(SMIRNOFFPotentialTerm):
 
         term = cls(name='Electrostatics')
         term.smirks_map = dummy_atomic_slots_map(topology=topology)
-        term.potentials = build_smirks_potential_map_electrostatics(forcefield=forcefield, topology=topology, smirks_map=term.smirks_map)
+        term.potentials = build_smirks_potential_map_electrostatics(
+            forcefield=forcefield, topology=topology, smirks_map=term.smirks_map,
+        )
         return term
 
 
@@ -560,8 +609,7 @@ class SMIRNOFFTermCollection(BaseModel):
             )
         else:
             smirks_map = build_slot_smirks_map_term(
-                toolkit_forcefield['Electrostatics'],
-                topology=toolkit_topology
+                toolkit_forcefield['Electrostatics'], topology=toolkit_topology
             )
 
             potentials = build_smirks_potential_map_electrostatics(
@@ -572,9 +620,7 @@ class SMIRNOFFTermCollection(BaseModel):
             )
 
         electrostatics_term = ElectrostaticsTerm(
-            name='Electrostatics',
-            smirks_map=smirks_map,
-            potentials=potentials,
+            name='Electrostatics', smirks_map=smirks_map, potentials=potentials,
         )
 
         for handler_to_drop in ['Constraints', 'ToolkitAM1BCC', 'Electrostatics']:
@@ -583,7 +629,11 @@ class SMIRNOFFTermCollection(BaseModel):
                 toolkit_forcefield._parameter_handlers.pop(handler_to_drop)
 
         for handler_name, handler in toolkit_forcefield._parameter_handlers.items():
-            collection.add_parameter_handler(handler=handler, forcefield=toolkit_forcefield, topology=toolkit_topology)
+            collection.add_parameter_handler(
+                handler=handler,
+                forcefield=toolkit_forcefield,
+                topology=toolkit_topology,
+            )
         return collection
 
     def add_parameter_handler(self, handler, topology, forcefield=None):
@@ -593,14 +643,11 @@ class SMIRNOFFTermCollection(BaseModel):
 
             if handler_name == 'Electrostatics':
                 self.terms[handler_name] = term.build_from_toolkit_data(
-                    topology=topology,
-                    forcefield=forcefield,
+                    topology=topology, forcefield=forcefield,
                 )
             else:
                 self.terms[handler_name] = term.build_from_toolkit_data(
-                    handler=handler,
-                    topology=topology,
-                    forcefield=forcefield,
+                    handler=handler, topology=topology, forcefield=forcefield,
                 )
         else:
             raise SMIRNOFFHandlerNotImplementedError(handler_name)

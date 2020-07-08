@@ -6,7 +6,6 @@ from ..tests.base_test import BaseTest
 
 
 class TestCompute(BaseTest):
-
     def test_compute_vdw(self, parsley):
         mol = Molecule.from_smiles('CCCCC(=O)C')
         mol.generate_conformers(n_conformers=1)

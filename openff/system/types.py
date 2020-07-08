@@ -15,6 +15,7 @@ class UnitArray(unit.Quantity, metaclass=UnitArrayMeta):
 
     See https://github.com/samuelcolvin/pydantic/issues/380#issuecomment-594639970
     """
+
     # TODO: Handle various cases of implicit units, i.e. NumPy arrays that intend
     # TODO: Use dtype
 
