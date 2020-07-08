@@ -8,7 +8,7 @@ from ..tests.base_test import BaseTest
 class TestCompute(BaseTest):
 
     def test_compute_vdw(self, parsley):
-        mol = Molecule.from_iupac('hexanone')
+        mol = Molecule.from_smiles('CCCCC(=O)C')
         mol.generate_conformers(n_conformers=1)
         top = Topology.from_molecules(mol)
         hexanone = System.from_toolkit(topology=top, forcefield=parsley)
