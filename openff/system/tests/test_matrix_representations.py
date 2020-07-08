@@ -3,7 +3,6 @@ import numpy as np
 
 from .base_test import BaseTest
 from ..typing.smirnoff.data import SMIRNOFFvdWTerm, SMIRNOFFBondTerm, SMIRNOFFAngleTerm
-from ..system import System
 from ..utils import jax_available, get_test_file_path
 
 

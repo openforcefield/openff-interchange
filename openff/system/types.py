@@ -1,5 +1,3 @@
-from pint import UndefinedUnitError
-
 from . import unit
 
 
@@ -28,6 +26,6 @@ class UnitArray(unit.Quantity, metaclass=UnitArrayMeta):
         try:
             val = unit.Quantity(val)
             return val
-        # TODO: Handle other exceptions, like UndefinedUnitError
+        # TODO: Handle other exceptions, like pint.UndefinedUnitError
         except TypeError as e:
             raise TypeError from e

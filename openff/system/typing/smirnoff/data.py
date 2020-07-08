@@ -5,8 +5,6 @@ from functools import partial
 from pydantic import BaseModel
 import numpy as np
 
-from openforcefield.typing.engines.smirnoff import ForceField
-
 from ... import unit
 from ...utils import (
     simtk_to_pint,
@@ -75,7 +73,10 @@ def build_smirks_potential_map(forcefield, smirks_map=None):
 def build_smirks_potential_map_term(
     handler, smirks_map=None, topology=None, forcefield=None,
 ):
-    """Generate a mapping between SMIRKS patterns and potential objects for a single parameter handler in an OpenFF ForceField"""
+    """
+    Generate a mapping between SMIRKS patterns and potential objects for a
+    single parameter handler in an OpenFF ForceField
+    """
     function_map = {
         'vdW': build_smirks_potential_map_vdw,
         'Bonds': build_smirks_potential_map_bonds,
@@ -92,7 +93,7 @@ def build_smirks_potential_map_term(
                 forcefield=forcefield, topology=topology, smirks_map=smirks_map,
             )
         else:
-            warn(f'handler {name} not implemented')
+            warn(f'handler {handler._TAGNAME} not implemented')
             raise Exception  # TODO: return potential_collection
 
 
@@ -623,6 +624,8 @@ class SMIRNOFFTermCollection(BaseModel):
             name='Electrostatics', smirks_map=smirks_map, potentials=potentials,
         )
 
+        collection['Electrostatics'] = electrostatics_term
+
         for handler_to_drop in ['Constraints', 'ToolkitAM1BCC', 'Electrostatics']:
             # TODO: toolkit_forcefield.registered_parameter_handlers when OFFTK 0.7.1 is released
             if handler_to_drop in toolkit_forcefield._parameter_handlers.keys():
@@ -634,6 +637,7 @@ class SMIRNOFFTermCollection(BaseModel):
                 forcefield=toolkit_forcefield,
                 topology=toolkit_topology,
             )
+
         return collection
 
     def add_parameter_handler(self, handler, topology, forcefield=None):

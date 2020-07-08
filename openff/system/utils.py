@@ -114,6 +114,7 @@ def eval_expr(pot, ref):
 try:
     import jax
 
+    jax.__version__
     jax_available = True
 except ImportError:
     jax_available = False

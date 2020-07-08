@@ -1,12 +1,9 @@
 import pytest
 import numpy as np
 
-from openforcefield.topology import Molecule, Topology
-
 from ..typing.smirnoff.data import (
     SMIRNOFFPotentialTerm,
     SMIRNOFFvdWTerm,
-    SMIRNOFFBondTerm,
     SMIRNOFFTermCollection,
     ElectrostaticsTerm,
     SUPPORTED_HANDLER_MAPPING,
@@ -49,7 +46,8 @@ class TestSMIRNOFFTyping(BaseTest):
 
         SUPPORTED_HANDLER_MAPPING.pop('Electrostatics')
 
-        # TODO: This should just be `term_collection = SMIRNOFFTermCollection.from_toolkit_data(parsley, cyclohexane_top)`
+        # TODO: This should just be
+        # term_collection = SMIRNOFFTermCollection.from_toolkit_data(parsley, cyclohexane_top)
         for name, handler in parsley._parameter_handlers.items():
             if name in SUPPORTED_HANDLER_MAPPING.keys():
                 term_collection.add_parameter_handler(
@@ -70,7 +68,7 @@ class TestSMIRNOFFTyping(BaseTest):
         assert found_keys == expected_keys
 
     def test_construct_term_from_toolkit_forcefield(self, parsley, ethanol_top):
-        val2 = SMIRNOFFvdWTerm.build_from_toolkit_data(
+        SMIRNOFFvdWTerm.build_from_toolkit_data(
             handler=parsley['vdW'], topology=ethanol_top
         )
 
@@ -111,7 +109,7 @@ class TestSMIRNOFFTerms(BaseTest):
         ],
     )
     def test_smirnoff_terms(self, parsley, ethanol_top, handler_name, expression):
-        smirnoff_term = SMIRNOFFBondTerm.build_from_toolkit_data(
+        smirnoff_term = SMIRNOFFPotentialTerm.build_from_toolkit_data(
             handler=parsley[handler_name], topology=ethanol_top, forcefield=None,
         )
 
@@ -129,7 +127,7 @@ class TestSMIRNOFFTerms(BaseTest):
 
 class TestSMIRNOFFvdWTerm(BaseTest):
     def test_basic_constructor(self, ethanol_top, parsley):
-        term = SMIRNOFFvdWTerm.build_from_toolkit_data(parsley['vdW'], ethanol_top)
+        SMIRNOFFvdWTerm.build_from_toolkit_data(parsley['vdW'], ethanol_top)
 
     def test_scaling_factors(self, ethanol_top, parsley):
         parsley_vdw = parsley['vdW']

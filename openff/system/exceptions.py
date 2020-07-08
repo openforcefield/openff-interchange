@@ -28,7 +28,7 @@ class ToolkitTopologyConformersNotFoundError(Exception):
     def __str__(self):
         msg = "A reference molecule in the topology does not contain any conformers"
         if self.mol:
-            msg += f"The molecule lacking a conformer is {mol}"
+            msg += f"The molecule lacking a conformer is {self.mol}"
 
 
 class JAXNotInstalledError(ImportError):

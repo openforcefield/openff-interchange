@@ -1,11 +1,16 @@
 import pytest
+import numpy as np
 from pydantic import ValidationError
 
-from simtk import unit as openmm_unit
 from openforcefield.topology import Molecule, Topology
 
 from ..system import System, ProtoSystem
-from ..typing.smirnoff.data import *
+from ..typing.smirnoff.data import (
+    SMIRNOFFvdWTerm,
+    SMIRNOFFTermCollection,
+    build_slot_smirks_map,
+    build_smirks_potential_map,
+)
 from .. import unit
 from ..utils import compare_forcefields
 from .base_test import BaseTest
@@ -104,8 +109,6 @@ class TestSystem(BaseTest):
         mol = Molecule.from_smiles('CCO')
         mol.generate_conformers(n_conformers=1)
         top = Topology.from_molecules(mol)
-
-        ff = parsley
 
         System.from_toolkit(topology=top, forcefield=parsley)
 
