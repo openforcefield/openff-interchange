@@ -53,11 +53,7 @@ class TestSMIRNOFFTyping(BaseTest):
         assert sorted(term_collection.terms.keys()) == sorted(SUPPORTED_HANDLER_MAPPING.keys())
 
     def test_construct_term_from_toolkit_forcefield(self, parsley, ethanol_top):
-        val1 = SMIRNOFFPotentialTerm.build_from_toolkit_data(handler=parsley['vdW'], topology=ethanol_top)
         val2 = SMIRNOFFvdWTerm.build_from_toolkit_data(handler=parsley['vdW'], topology=ethanol_top)
-
-        # TODO: DO something here that isn't so dangerous
-        assert val1 == val2
 
         ref = get_partial_charges_from_openmm_system(parsley.create_openmm_system(ethanol_top))
 
@@ -74,7 +70,7 @@ class TestSMIRNOFFTyping(BaseTest):
         SMIRNOFFTermCollection.from_toolkit_data(parsley, ethanol_top)
 
 
-class TestSMIRNOFFBondTerm(BaseTest):
+class TestSMIRNOFFTerms(BaseTest):
 
     handler_expression_mapping = {
         'vdW' : '4*epsilon*((sigma/r)**12-(sigma/r)**6)',
@@ -111,6 +107,9 @@ class TestSMIRNOFFBondTerm(BaseTest):
             assert pot.expression == expression
 
 class TestSMIRNOFFvdWTerm(BaseTest):
+
+    def test_basic_constructor(self, ethanol_top, parsley):
+        term = SMIRNOFFvdWTerm.build_from_toolkit_data(parsley['vdW'], ethanol_top)
 
     def test_scaling_factors(self, ethanol_top, parsley):
         parsley_vdw = parsley['vdW']
