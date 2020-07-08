@@ -307,10 +307,16 @@ class SMIRNOFFPotentialTerm(BaseModel):
 class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
 
     name: str = 'vdW'
+    scale12: float = 0.0
+    scale13: float = 0.0
+    scale14: float = 0.5
 
     @classmethod
     def build_from_toolkit_data(cls, handler, topology, forcefield=None):
         term = cls(name=handler._TAGNAME)
+        term.scale12 = handler.scale12
+        term.scale13 = handler.scale13
+        term.scale14 = handler.scale14
         term.smirks_map = build_slot_smirks_map_term(handler=handler, topology=topology)
         term.potentials = build_smirks_potential_map_term(handler=handler, smirks_map=term.smirks_map)
         return term

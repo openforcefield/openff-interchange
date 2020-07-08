@@ -110,6 +110,23 @@ class TestSMIRNOFFBondTerm(BaseTest):
         for smirks, pot in smirnoff_term.potentials.items():
             assert pot.expression == expression
 
+class TestSMIRNOFFvdWTerm(BaseTest):
+
+    def test_scaling_factors(self, ethanol_top, parsley):
+        parsley_vdw = parsley['vdW']
+        ref = SMIRNOFFvdWTerm.build_from_toolkit_data(parsley_vdw, ethanol_top)
+        factors = [ref.scale12, ref.scale13, ref.scale14]
+
+        assert factors == [0.0, 0.0, 0.5]
+
+        # Cannot handle non-zero scale12 or scale13 with current toolkit
+        parsley_vdw.scale14 = 14.14
+
+        mod = SMIRNOFFvdWTerm.build_from_toolkit_data(parsley_vdw, ethanol_top)
+        factors = [mod.scale12, mod.scale13, mod.scale14]
+
+        assert factors == [0.0, 0.0, 14.14]
+
 class TestElectrostaticsTerm(BaseTest):
 
     def test_build_dummy_electrostatics(self, argon_ff, argon_top):
