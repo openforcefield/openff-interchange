@@ -1,6 +1,7 @@
 import numpy as np
 
 from ...types import UnitArray
+from ...utils import unwrap_list_of_pint_quantities
 
 
 def get_distance(a, b):
@@ -34,7 +35,7 @@ def build_distance_matrix(system_in):
 
 def compute_vdw(system_in):
     """
-    Compute the vdW contribution tot he potential energy function.
+    Compute the vdW contribution to the potential energy function.
     This is mean to serve as a stand-in for a something more performant with a similar signature
     """
     slots = system_in.slot_smirks_map['vdW'].keys()
@@ -62,3 +63,60 @@ def compute_vdw(system_in):
             energy += ener
 
     return energy
+
+
+def compute_bonds(system_in):
+    """
+    Compute the bond contribution to the potential energy function.
+    This is mean to serve as a stand-in for a something more performant with a similar signature
+    """
+    slots = system_in.slot_smirks_map['Bonds'].keys()
+    term = system_in.term_collection.terms['Bonds']
+
+    def get_r(slot):
+        """
+        in: slot as a tuple of atom indicies, i.e. (4, 7)
+        out: bond length
+        """
+        id1, id2 = slot[0], slot[1]
+        pos1 = system_in.positions[id1, :]
+        pos2 = system_in.positions[id2, :]
+
+        return get_distance(pos2, pos1)
+
+    energy = 0
+    for slot in slots:
+        r = get_r(slot)
+        k = term.potentials[term.smirks_map[slot]].parameters['k']
+        length = term.potentials[term.smirks_map[slot]].parameters['length']
+
+        ener = 0.5 * k * (length - r) ** 2
+        energy += ener
+
+    return energy
+
+
+SUPPORTED_HANDLERS = {
+    'vdW': compute_vdw,
+    'Bonds': compute_bonds,
+}
+
+
+def compute_potential_energy(system_in, handlers=None):
+    if not handlers:
+        handlers = [*system_in.term_collection.terms.keys()]
+
+    partial_potential_energies = dict()
+    for handler in handlers:
+        try:
+            partial_energy = SUPPORTED_HANDLERS[handler](system_in)
+            partial_potential_energies[handler] = partial_energy
+        except KeyError as e:
+            print('handler not supported yet')
+            raise KeyError from e
+
+    # TODO: Do this summation without recasting
+
+    return np.sum(
+        unwrap_list_of_pint_quantities([*partial_potential_energies.values()])
+    )
