@@ -133,17 +133,17 @@ class TestSMIRNOFFvdWTerm(BaseTest):
     def test_scaling_factors(self, ethanol_top, parsley):
         parsley_vdw = parsley['vdW']
         ref = SMIRNOFFvdWTerm.build_from_toolkit_data(parsley_vdw, ethanol_top)
-        factors = [ref.scale12, ref.scale13, ref.scale14]
+        factors = [ref.scale12, ref.scale13, ref.scale14, ref.scale15]
 
-        assert factors == [0.0, 0.0, 0.5]
+        assert factors == [0.0, 0.0, 0.5, 1.0]
 
         # Cannot handle non-zero scale12 or scale13 with current toolkit
         parsley_vdw.scale14 = 14.14
 
         mod = SMIRNOFFvdWTerm.build_from_toolkit_data(parsley_vdw, ethanol_top)
-        factors = [mod.scale12, mod.scale13, mod.scale14]
+        factors = [mod.scale12, mod.scale13, mod.scale14, mod.scale15]
 
-        assert factors == [0.0, 0.0, 14.14]
+        assert factors == [0.0, 0.0, 14.14, 1.0]
 
 
 class TestElectrostaticsTerm(BaseTest):

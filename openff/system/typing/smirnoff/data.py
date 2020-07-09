@@ -333,17 +333,32 @@ class SMIRNOFFPotentialTerm(BaseModel):
 
 class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
 
+    # TODO: Should there be None-like default values; should everything
+    #  necessarily be specified at construction, or a later check?
     name: str = 'vdW'
     scale12: float = 0.0
     scale13: float = 0.0
     scale14: float = 0.5
+    scale15: float = 1.0
+    cutoff: unit.Quantity
+    switch_width: unit.Quantity
+    method: str
 
     @classmethod
     def build_from_toolkit_data(cls, handler, topology, forcefield=None):
-        term = cls(name=handler._TAGNAME)
-        term.scale12 = handler.scale12
-        term.scale13 = handler.scale13
-        term.scale14 = handler.scale14
+        assert handler.potential == 'Lennard-Jones-12-6'
+        # TODO: abstract cutoff treatment into another class?
+
+        term = cls(
+            name=handler._TAGNAME,
+            scale12=handler.scale12,
+            scale13=handler.scale13,
+            scale14=handler.scale14,
+            scale15=handler.scale15,
+            cutoff=simtk_to_pint(handler.cutoff),
+            switch_width=simtk_to_pint(handler.switch_width),
+            method=handler.method,
+        )
         term.smirks_map = build_slot_smirks_map_term(handler=handler, topology=topology)
         term.potentials = build_smirks_potential_map_term(
             handler=handler, smirks_map=term.smirks_map,
