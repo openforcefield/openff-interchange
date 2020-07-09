@@ -5,6 +5,7 @@ from openforcefield.topology import Topology, Molecule
 from ..typing.smirnoff.compute import (
     compute_vdw,
     compute_bonds,
+    compute_electrostatics,
     compute_potential_energy,
 )
 from .. import unit
@@ -33,10 +34,18 @@ class TestCompute(BaseTest):
         assert bond > 0
         assert bond.units == unit.Unit('kilocalorie/mole')
 
+    def test_compute_electrostatics(self, hexanone):
+        electrostatics = compute_electrostatics(hexanone)
+
+        assert electrostatics.units == unit.Unit('kilocalorie/mole')
+
     def test_summing(self, hexanone):
         vdw = compute_vdw(hexanone)
         bonds = compute_bonds(hexanone)
+        electrostatics = compute_electrostatics(hexanone)
 
-        total = compute_potential_energy(hexanone, handlers=['Bonds', 'vdW'])
+        total = compute_potential_energy(
+            hexanone, handlers=['Bonds', 'vdW', 'Electrostatics']
+        )
 
-        assert total == vdw + bonds
+        assert total == vdw + bonds + electrostatics

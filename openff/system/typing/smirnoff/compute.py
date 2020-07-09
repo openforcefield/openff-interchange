@@ -2,6 +2,7 @@ import numpy as np
 
 from ...types import UnitArray
 from ...utils import unwrap_list_of_pint_quantities
+from ... import unit
 
 
 def get_distance(a, b):
@@ -96,9 +97,42 @@ def compute_bonds(system_in):
     return energy
 
 
+def compute_electrostatics(system_in):
+    """
+    Compute the electrostatics contribution to the potential energy function.
+    This is mean to serve as a stand-in for a something more performant with a similar signature
+    """
+
+    # From NIST CODATA 2014, see Table 3 in 10.1007/s10822-016-9977-1
+    COUL = 332.0637130232 * unit.Unit(
+        'kilocalorie / mole  * angstrom / elementary_charge ** 2'
+    )
+    slots = system_in.slot_smirks_map['Electrostatics'].keys()
+    term = system_in.term_collection.terms['Electrostatics']
+
+    distances = build_distance_matrix(system_in)
+
+    energy = 0
+    for i in slots:
+        for j in slots:
+            if i == j:
+                continue
+
+            r = distances[i[0], j[0]]
+            q1 = term.potentials[term.smirks_map[i]]
+            q2 = term.potentials[term.smirks_map[j]]
+
+            ener = q1 * q2 * COUL / r
+
+            energy += ener
+
+    return energy
+
+
 SUPPORTED_HANDLERS = {
     'vdW': compute_vdw,
     'Bonds': compute_bonds,
+    'Electrostatics': compute_electrostatics,
 }
 
 
