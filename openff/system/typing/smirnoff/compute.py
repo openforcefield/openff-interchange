@@ -58,7 +58,7 @@ def compute_vdw(system_in):
             sig = (sig1 + sig2) * 0.5
             eps = (eps1 * eps2) ** 0.5
 
-            ener = 4 * eps * ((sig/r) ** 12 - (sig/r) ** 6)
+            ener = 4 * eps * ((sig / r) ** 12 - (sig / r) ** 6)
             energy += ener
 
     return energy

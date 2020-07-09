@@ -34,7 +34,8 @@ class TestSMIRNOFFTyping(BaseTest):
             ammonia_ff, ammonia_top,
         )
 
-        assert sorted(ff_collection.terms.keys()) == ['Angles', 'Bonds', 'Electrostatics', 'vdW']
+        expected = ['Angles', 'Bonds', 'Electrostatics', 'vdW']
+        assert sorted(ff_collection.terms.keys()) == sorted(expected)
 
         for term in ff_collection.terms.values():
             assert term.potentials.keys() is not None
@@ -69,7 +70,7 @@ class TestSMIRNOFFTyping(BaseTest):
 
     def test_construct_term_from_toolkit_forcefield(self, parsley, ethanol_top):
         SMIRNOFFvdWTerm.build_from_toolkit_data(
-            handler=parsley['vdW'], topology=ethanol_top
+            handler=parsley['vdW'], topology=ethanol_top,
         )
 
         ref = get_partial_charges_from_openmm_system(
