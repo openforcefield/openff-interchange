@@ -2,29 +2,23 @@ import pytest
 import numpy as np
 
 from .base_test import BaseTest
-from ..typing.smirnoff.data import SMIRNOFFvdWTerm, SMIRNOFFBondTerm, SMIRNOFFAngleTerm
+from ..typing.smirnoff.data import SUPPORTED_HANDLER_MAPPING
 from ..utils import jax_available, get_test_file_path
 
 
 class TestMatrixRepresentations(BaseTest):
     @pytest.mark.skipif(not jax_available, reason='Requires JAX')
     @pytest.mark.parametrize(
-        'term_class,n_ff_terms,n_sys_terms',
-        [
-            (SMIRNOFFvdWTerm, 10, 36),
-            (SMIRNOFFBondTerm, 8, 32),
-            (SMIRNOFFAngleTerm, 6, 52),
-        ],
+        'handler_name,n_ff_terms,n_sys_terms',
+        [('vdW', 10, 36), ('Bonds', 8, 32), ('Angles', 6, 52)],
     )
     def test_to_force_field_to_system_parameters(
-        self, parsley, ethanol_top, term_class, n_ff_terms, n_sys_terms
+        self, parsley, ethanol_top, handler_name, n_ff_terms, n_sys_terms
     ):
         import jax.numpy as jnp
         from jax.interpreters.xla import DeviceArray
 
-        handler_name = term_class().name
-
-        term = term_class.build_from_toolkit_data(
+        term = SUPPORTED_HANDLER_MAPPING[handler_name].build_from_toolkit_data(
             handler=parsley[handler_name], topology=ethanol_top,
         )
 

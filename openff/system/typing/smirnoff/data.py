@@ -658,7 +658,7 @@ class SMIRNOFFTermCollection(BaseModel):
     def add_parameter_handler(self, handler, topology, forcefield=None):
         handler_name = handler._TAGNAME
         if handler_name in SUPPORTED_HANDLER_MAPPING.keys():
-            term = SUPPORTED_HANDLER_MAPPING[handler_name]()
+            term = SUPPORTED_HANDLER_MAPPING[handler_name]
 
             if handler_name == 'Electrostatics':
                 self.terms[handler_name] = term.build_from_toolkit_data(
