@@ -1,7 +1,7 @@
 from typing import Dict, Set, Union
 
-from pydantic import BaseModel, validator
 import sympy
+from pydantic import BaseModel, validator
 from sympy import Expr
 
 from . import unit
@@ -70,8 +70,8 @@ class ParametrizedAnalyticalPotential(AnalyticalPotential):
     @validator("parameters")
     def is_valid(cls, val, values):
 
-        symbols_in_expr = sympy.sympify(values['expression']).free_symbols
-        symbols_in_indep_vars = sympy.symbols(values['independent_variables'])
+        symbols_in_expr = sympy.sympify(values["expression"]).free_symbols
+        symbols_in_indep_vars = sympy.symbols(values["independent_variables"])
         symbols_in_parameters = sympy.symbols(set(val.keys()))
 
         assert symbols_in_expr - symbols_in_indep_vars - symbols_in_parameters == set()

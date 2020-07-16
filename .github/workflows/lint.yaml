@@ -24,11 +24,15 @@ jobs:
 
       - name: Install linters
         run: |
-          pip install flake8 black
+          pip install black isort flake8
 
       - name: Run black
         run: |
-          black openff --check -S
+          black openff --check
+
+      - name: Run black
+        run: |
+          isort --check-only openff
 
       - name: Run flake8
         run: |

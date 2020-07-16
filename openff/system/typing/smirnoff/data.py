@@ -1,18 +1,18 @@
-from warnings import warn
-from typing import Dict
 from functools import partial
+from typing import Dict
+from warnings import warn
 
-from pydantic import BaseModel
 import numpy as np
+from pydantic import BaseModel
 
 from ... import unit
-from ...utils import (
-    simtk_to_pint,
-    jax_available,
-    get_partial_charges_from_openmm_system,
-)
+from ...exceptions import JAXNotInstalledError, SMIRNOFFHandlerNotImplementedError
 from ...potential import ParametrizedAnalyticalPotential as Potential
-from ...exceptions import SMIRNOFFHandlerNotImplementedError, JAXNotInstalledError
+from ...utils import (
+    get_partial_charges_from_openmm_system,
+    jax_available,
+    simtk_to_pint,
+)
 
 
 def build_slot_smirks_map(topology, forcefield):
@@ -29,7 +29,7 @@ def build_slot_smirks_map_term(handler, topology):
     """Generate a mapping between slots and SMIRKS patterns for one parameter handler in an OpenFF ForceField"""
     slot_smirks_map = dict()
 
-    if handler._TAGNAME == 'Electrostatics':
+    if handler._TAGNAME == "Electrostatics":
         return dummy_atomic_slots_map(topology)
 
     matches = handler.find_matches(topology)
@@ -78,22 +78,22 @@ def build_smirks_potential_map_term(
     single parameter handler in an OpenFF ForceField
     """
     function_map = {
-        'vdW': build_smirks_potential_map_vdw,
-        'Bonds': build_smirks_potential_map_bonds,
-        'Angles': build_smirks_potential_map_angles,
-        'ProperTorsions': build_smirks_potential_map_propers,
-        'ImproperTorsions': build_smirks_potential_map_impropers,
+        "vdW": build_smirks_potential_map_vdw,
+        "Bonds": build_smirks_potential_map_bonds,
+        "Angles": build_smirks_potential_map_angles,
+        "ProperTorsions": build_smirks_potential_map_propers,
+        "ImproperTorsions": build_smirks_potential_map_impropers,
     }
 
     try:
         return function_map[handler._TAGNAME](handler=handler, smirks_map=smirks_map)
     except KeyError:
-        if handler._TAGNAME == 'Electrostatics':
+        if handler._TAGNAME == "Electrostatics":
             return build_smirks_potential_map_electrostatics(
                 forcefield=forcefield, topology=topology, smirks_map=smirks_map,
             )
         else:
-            warn(f'handler {handler._TAGNAME} not implemented')
+            warn(f"handler {handler._TAGNAME} not implemented")
             raise Exception  # TODO: return potential_collection
 
 
@@ -114,9 +114,9 @@ def build_smirks_potential_map_vdw(handler, smirks_map=None):
         potential = Potential(
             name=param.id,
             smirks=param.smirks,
-            expression='4*epsilon*((sigma/r)**12-(sigma/r)**6)',
-            independent_variables={'r'},
-            parameters={'sigma': sigma, 'epsilon': epsilon},
+            expression="4*epsilon*((sigma/r)**12-(sigma/r)**6)",
+            independent_variables={"r"},
+            parameters={"sigma": sigma, "epsilon": epsilon},
         )
 
         mapping[param.smirks] = potential
@@ -137,9 +137,9 @@ def build_smirks_potential_map_bonds(handler, smirks_map=None):
         potential = Potential(
             name=param.id,
             smirks=param.smirks,
-            expression='1/2*k*(length-length_0)**2',
-            independent_variables={'length_0'},
-            parameters={'k': k, 'length': length},
+            expression="1/2*k*(length-length_0)**2",
+            independent_variables={"length_0"},
+            parameters={"k": k, "length": length},
         )
 
         mapping[param.smirks] = potential
@@ -160,9 +160,9 @@ def build_smirks_potential_map_angles(handler, smirks_map=None):
         potential = Potential(
             name=param.id,
             smirks=param.smirks,
-            expression='1/2*k*(angle-angle_0)**2',
-            independent_variables={'angle_0'},
-            parameters={'k': k, 'angle': angle},
+            expression="1/2*k*(angle-angle_0)**2",
+            independent_variables={"angle_0"},
+            parameters={"k": k, "angle": angle},
         )
 
         mapping[param.smirks] = potential
@@ -175,14 +175,14 @@ def build_smirks_potential_map_propers(handler, smirks_map=None):
     mapping = dict()
 
     def expr_from_n(n):
-        return f'k{n}*(1+cos(periodicity{n}*theta-phase{n}))'
+        return f"k{n}*(1+cos(periodicity{n}*theta-phase{n}))"
 
     for param in handler.parameters:
         if smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
 
-        expr = '0'
+        expr = "0"
         params = dict()
 
         for n in range(3):
@@ -190,12 +190,12 @@ def build_smirks_potential_map_propers(handler, smirks_map=None):
                 param.k[n]
             except IndexError:
                 continue
-            expr += '+' + expr_from_n(n + 1)
+            expr += "+" + expr_from_n(n + 1)
             params.update(
                 {
-                    f'k{n+1}': simtk_to_pint(param.k[n]),
-                    f'periodicity{n+1}': param.periodicity[n] * unit.dimensionless,
-                    f'phase{n+1}': simtk_to_pint(param.phase[n]),
+                    f"k{n+1}": simtk_to_pint(param.k[n]),
+                    f"periodicity{n+1}": param.periodicity[n] * unit.dimensionless,
+                    f"phase{n+1}": simtk_to_pint(param.phase[n]),
                 }
             )
 
@@ -203,7 +203,7 @@ def build_smirks_potential_map_propers(handler, smirks_map=None):
             name=param.id,
             smirks=param.smirks,
             expression=expr,
-            independent_variables={'theta'},
+            independent_variables={"theta"},
             parameters=params,
         )
 
@@ -217,14 +217,14 @@ def build_smirks_potential_map_impropers(handler, smirks_map=None):
     mapping = dict()
 
     def expr_from_n(n):
-        return f'k{n}*(1+cos(periodicity{n}*theta-phase{n}))'
+        return f"k{n}*(1+cos(periodicity{n}*theta-phase{n}))"
 
     for param in handler.parameters:
         if smirks_map:
             if param.smirks not in smirks_map.values():
                 continue
 
-        expr = '0'
+        expr = "0"
         params = {}
 
         for n in range(3):
@@ -232,12 +232,12 @@ def build_smirks_potential_map_impropers(handler, smirks_map=None):
                 param.k[n]
             except IndexError:
                 continue
-            expr += '+' + expr_from_n(n + 1)
+            expr += "+" + expr_from_n(n + 1)
             params.update(
                 {
-                    f'k{n+1}': simtk_to_pint(param.k[n]),
-                    f'periodicity{n+1}': param.periodicity[n] * unit.dimensionless,
-                    f'phase{n+1}': simtk_to_pint(param.phase[n]),
+                    f"k{n+1}": simtk_to_pint(param.k[n]),
+                    f"periodicity{n+1}": param.periodicity[n] * unit.dimensionless,
+                    f"phase{n+1}": simtk_to_pint(param.phase[n]),
                 }
             )
 
@@ -245,7 +245,7 @@ def build_smirks_potential_map_impropers(handler, smirks_map=None):
             name=param.id,
             smirks=param.smirks,
             expression=expr,
-            independent_variables={'theta'},
+            independent_variables={"theta"},
             parameters=params,
         )
 
@@ -269,7 +269,7 @@ def build_smirks_potential_map_electrostatics(
 
     if not smirks_map:
         smirks_map = build_slot_smirks_map_term(
-            forcefield['Electrostatics'], topology=topology,
+            forcefield["Electrostatics"], topology=topology,
         )
 
     # TODO: get partial charges from just a (single) electrostatics handler
@@ -335,7 +335,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
 
     # TODO: Should there be None-like default values; should everything
     #  necessarily be specified at construction, or a later check?
-    name: str = 'vdW'
+    name: str = "vdW"
     scale12: float = 0.0
     scale13: float = 0.0
     scale14: float = 0.5
@@ -346,7 +346,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
 
     @classmethod
     def build_from_toolkit_data(cls, handler, topology, forcefield=None):
-        assert handler.potential == 'Lennard-Jones-12-6'
+        assert handler.potential == "Lennard-Jones-12-6"
         # TODO: abstract cutoff treatment into another class?
 
         term = cls(
@@ -381,8 +381,8 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         p = []
         mapping = dict()
         for i, pot in enumerate(self.potentials.values()):
-            p.append(pot.parameters['sigma'].magnitude)
-            p.append(pot.parameters['epsilon'].magnitude)
+            p.append(pot.parameters["sigma"].magnitude)
+            p.append(pot.parameters["epsilon"].magnitude)
             mapping.update({pot.smirks: i})
         return np.array(p), mapping
 
@@ -430,7 +430,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
 
 class SMIRNOFFBondTerm(SMIRNOFFPotentialTerm):
 
-    name: str = 'Bonds'
+    name: str = "Bonds"
 
     def get_force_field_parameters(self, use_jax=False):
         """get p from a SMIRNOFFPotentialTerm
@@ -448,8 +448,8 @@ class SMIRNOFFBondTerm(SMIRNOFFPotentialTerm):
         p = []
         mapping = dict()
         for i, pot in enumerate(self.potentials.values()):
-            p.append(pot.parameters['length'].magnitude)
-            p.append(pot.parameters['k'].magnitude)
+            p.append(pot.parameters["length"].magnitude)
+            p.append(pot.parameters["k"].magnitude)
             mapping.update({pot.smirks: i})
         return np.array(p), mapping
 
@@ -496,7 +496,7 @@ class SMIRNOFFBondTerm(SMIRNOFFPotentialTerm):
 
 class SMIRNOFFAngleTerm(SMIRNOFFPotentialTerm):
 
-    name: str = 'Angles'
+    name: str = "Angles"
 
     def get_force_field_parameters(self, use_jax=False):
         """get p from a SMIRNOFFPotentialTerm
@@ -514,8 +514,8 @@ class SMIRNOFFAngleTerm(SMIRNOFFPotentialTerm):
         p = []
         mapping = dict()
         for i, pot in enumerate(self.potentials.values()):
-            p.append(pot.parameters['angle'].magnitude)
-            p.append(pot.parameters['k'].magnitude)
+            p.append(pot.parameters["angle"].magnitude)
+            p.append(pot.parameters["k"].magnitude)
             mapping.update({pot.smirks: i})
         return np.array(p), mapping
 
@@ -562,25 +562,25 @@ class SMIRNOFFAngleTerm(SMIRNOFFPotentialTerm):
 
 class SMIRNOFFProperTorsionTerm(SMIRNOFFPotentialTerm):
 
-    name: str = 'ProperTorsions'
+    name: str = "ProperTorsions"
 
 
 class SMIRNOFFImproperTorsionTerm(SMIRNOFFPotentialTerm):
 
-    name: str = 'ImproperTorsions'
+    name: str = "ImproperTorsions"
 
 
 class ElectrostaticsTerm(SMIRNOFFPotentialTerm):
     # Note: This class is structured differently from other SMIRNOFFPotentialTerm children
 
-    name: str = 'Electrostatics'
+    name: str = "Electrostatics"
     smirks_map: Dict[tuple, str] = dict()
     potentials: Dict[str, unit.Quantity] = dict()
 
     @classmethod
     def build_from_toolkit_data(cls, topology, forcefield=None):
 
-        term = cls(name='Electrostatics')
+        term = cls(name="Electrostatics")
         term.smirks_map = dummy_atomic_slots_map(topology=topology)
         term.potentials = build_smirks_potential_map_electrostatics(
             forcefield=forcefield, topology=topology, smirks_map=term.smirks_map,
@@ -589,12 +589,12 @@ class ElectrostaticsTerm(SMIRNOFFPotentialTerm):
 
 
 SUPPORTED_HANDLER_MAPPING = {
-    'vdW': SMIRNOFFvdWTerm,
-    'Bonds': SMIRNOFFBondTerm,
-    'Angles': SMIRNOFFAngleTerm,
-    'ProperTorsions': SMIRNOFFProperTorsionTerm,
-    'ImproperTorsions': SMIRNOFFImproperTorsionTerm,
-    'Electrostatics': ElectrostaticsTerm,
+    "vdW": SMIRNOFFvdWTerm,
+    "Bonds": SMIRNOFFBondTerm,
+    "Angles": SMIRNOFFAngleTerm,
+    "ProperTorsions": SMIRNOFFProperTorsionTerm,
+    "ImproperTorsions": SMIRNOFFImproperTorsionTerm,
+    "Electrostatics": ElectrostaticsTerm,
 }
 
 
@@ -625,7 +625,7 @@ class SMIRNOFFTermCollection(BaseModel):
             )
         else:
             smirks_map = build_slot_smirks_map_term(
-                toolkit_forcefield['Electrostatics'], topology=toolkit_topology
+                toolkit_forcefield["Electrostatics"], topology=toolkit_topology
             )
 
             potentials = build_smirks_potential_map_electrostatics(
@@ -636,12 +636,12 @@ class SMIRNOFFTermCollection(BaseModel):
             )
 
         electrostatics_term = ElectrostaticsTerm(
-            name='Electrostatics', smirks_map=smirks_map, potentials=potentials,
+            name="Electrostatics", smirks_map=smirks_map, potentials=potentials,
         )
 
-        collection.terms['Electrostatics'] = electrostatics_term
+        collection.terms["Electrostatics"] = electrostatics_term
 
-        for handler_to_drop in ['Constraints', 'ToolkitAM1BCC', 'Electrostatics']:
+        for handler_to_drop in ["Constraints", "ToolkitAM1BCC", "Electrostatics"]:
             # TODO: toolkit_forcefield.registered_parameter_handlers when OFFTK 0.7.1 is released
             if handler_to_drop in toolkit_forcefield._parameter_handlers.keys():
                 toolkit_forcefield._parameter_handlers.pop(handler_to_drop)
@@ -660,7 +660,7 @@ class SMIRNOFFTermCollection(BaseModel):
         if handler_name in SUPPORTED_HANDLER_MAPPING.keys():
             term = SUPPORTED_HANDLER_MAPPING[handler_name]
 
-            if handler_name == 'Electrostatics':
+            if handler_name == "Electrostatics":
                 self.terms[handler_name] = term.build_from_toolkit_data(
                     topology=topology, forcefield=forcefield,
                 )

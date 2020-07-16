@@ -1,8 +1,8 @@
 import numpy as np
 
+from ... import unit
 from ...types import UnitArray
 from ...utils import unwrap_list_of_pint_quantities
-from ... import unit
 
 
 def get_distance(a, b):
@@ -39,8 +39,8 @@ def compute_vdw(system_in):
     Compute the vdW contribution to the potential energy function.
     This is mean to serve as a stand-in for a something more performant with a similar signature
     """
-    slots = system_in.slot_smirks_map['vdW'].keys()
-    term = system_in.term_collection.terms['vdW']
+    slots = system_in.slot_smirks_map["vdW"].keys()
+    term = system_in.term_collection.terms["vdW"]
 
     distances = build_distance_matrix(system_in)
 
@@ -51,10 +51,10 @@ def compute_vdw(system_in):
                 continue
 
             r = distances[i[0], j[0]]
-            sig1 = term.potentials[term.smirks_map[i]].parameters['sigma']
-            eps1 = term.potentials[term.smirks_map[i]].parameters['epsilon']
-            sig2 = term.potentials[term.smirks_map[j]].parameters['sigma']
-            eps2 = term.potentials[term.smirks_map[j]].parameters['epsilon']
+            sig1 = term.potentials[term.smirks_map[i]].parameters["sigma"]
+            eps1 = term.potentials[term.smirks_map[i]].parameters["epsilon"]
+            sig2 = term.potentials[term.smirks_map[j]].parameters["sigma"]
+            eps2 = term.potentials[term.smirks_map[j]].parameters["epsilon"]
 
             # TODO: Encode mixing rules somewhere?
             sig = (sig1 + sig2) * 0.5
@@ -71,8 +71,8 @@ def compute_bonds(system_in):
     Compute the bond contribution to the potential energy function.
     This is mean to serve as a stand-in for a something more performant with a similar signature
     """
-    slots = system_in.slot_smirks_map['Bonds'].keys()
-    term = system_in.term_collection.terms['Bonds']
+    slots = system_in.slot_smirks_map["Bonds"].keys()
+    term = system_in.term_collection.terms["Bonds"]
 
     def get_r(slot):
         """
@@ -88,8 +88,8 @@ def compute_bonds(system_in):
     energy = 0
     for slot in slots:
         r = get_r(slot)
-        k = term.potentials[term.smirks_map[slot]].parameters['k']
-        length = term.potentials[term.smirks_map[slot]].parameters['length']
+        k = term.potentials[term.smirks_map[slot]].parameters["k"]
+        length = term.potentials[term.smirks_map[slot]].parameters["length"]
 
         ener = 0.5 * k * (length - r) ** 2
         energy += ener
@@ -105,10 +105,10 @@ def compute_electrostatics(system_in):
 
     # From NIST CODATA 2014, see Table 3 in 10.1007/s10822-016-9977-1
     COUL = 332.0637130232 * unit.Unit(
-        'kilocalorie / mole  * angstrom / elementary_charge ** 2'
+        "kilocalorie / mole  * angstrom / elementary_charge ** 2"
     )
-    slots = system_in.slot_smirks_map['Electrostatics'].keys()
-    term = system_in.term_collection.terms['Electrostatics']
+    slots = system_in.slot_smirks_map["Electrostatics"].keys()
+    term = system_in.term_collection.terms["Electrostatics"]
 
     distances = build_distance_matrix(system_in)
 
@@ -130,9 +130,9 @@ def compute_electrostatics(system_in):
 
 
 SUPPORTED_HANDLERS = {
-    'vdW': compute_vdw,
-    'Bonds': compute_bonds,
-    'Electrostatics': compute_electrostatics,
+    "vdW": compute_vdw,
+    "Bonds": compute_bonds,
+    "Electrostatics": compute_electrostatics,
 }
 
 
@@ -146,7 +146,7 @@ def compute_potential_energy(system_in, handlers=None):
             partial_energy = SUPPORTED_HANDLERS[handler](system_in)
             partial_potential_energies[handler] = partial_energy
         except KeyError as e:
-            print('handler not supported yet')
+            print("handler not supported yet")
             raise KeyError from e
 
     # TODO: Do this summation without recasting

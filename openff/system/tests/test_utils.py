@@ -1,22 +1,20 @@
-import pytest
 import numpy as np
+import pytest
+from openforcefield.typing.engines.smirnoff import ForceField
 from simtk import unit as simtk_unit
 
-from openforcefield.typing.engines.smirnoff import ForceField
-
 from .. import unit
+from ..potential import ParametrizedAnalyticalPotential
 from ..utils import (
-    simtk_to_pint,
-    pint_to_simtk,
-    compare_sympy_expr,
-    get_partial_charges_from_openmm_system,
     compare_forcefields,
+    compare_sympy_expr,
     eval_expr,
+    get_partial_charges_from_openmm_system,
+    pint_to_simtk,
+    simtk_to_pint,
     unwrap_list_of_pint_quantities,
 )
-from ..potential import ParametrizedAnalyticalPotential
 from .base_test import BaseTest
-
 
 simtk_quantitites = [
     4.0 * simtk_unit.nanometer,
@@ -32,7 +30,7 @@ pint_quantities = [
 
 
 @pytest.mark.parametrize(
-    'simtk_quantity,pint_quantity',
+    "simtk_quantity,pint_quantity",
     [(s, p) for s, p in zip(simtk_quantitites, pint_quantities)],
 )
 def test_simtk_to_pint(simtk_quantity, pint_quantity):
@@ -58,12 +56,12 @@ def test_pint_to_simtk():
 
 
 @pytest.mark.parametrize(
-    'expr1,expr2,result',
+    "expr1,expr2,result",
     [
-        ('x+1', 'x+1', True),
-        ('x+1', 'x**2+1', False),
-        ('0.5*k*(th-th0)**2', 'k*(th-th0)**2', False),
-        ('k*(1+cos(n*th-th0))', 'k*(1+cos(n*th-th0))', True),
+        ("x+1", "x+1", True),
+        ("x+1", "x**2+1", False),
+        ("0.5*k*(th-th0)**2", "k*(th-th0)**2", False),
+        ("k*(1+cos(n*th-th0))", "k*(1+cos(n*th-th0))", True),
     ],
 )
 def test_compare_sympy_expr(expr1, expr2, result):
@@ -72,7 +70,7 @@ def test_compare_sympy_expr(expr1, expr2, result):
 
 class TestUtils(BaseTest):
     def test_compare_forcefields(self, parsley):
-        parsley_name = 'openff-1.0.0.offxml'
+        parsley_name = "openff-1.0.0.offxml"
         compare_forcefields(parsley, parsley)
         compare_forcefields(ForceField(parsley_name), parsley)
         compare_forcefields(parsley, ForceField(parsley_name))
@@ -87,9 +85,9 @@ class TestUtils(BaseTest):
     @pytest.mark.skip
     def test_eval_expr(self):
         pot = ParametrizedAnalyticalPotential(
-            expression='a*x+b',
-            parameters={'a': 0.5 * unit.dimensionless, 'b': -2.0 * unit.meter},
-            independent_variables={'x'},
+            expression="a*x+b",
+            parameters={"a": 0.5 * unit.dimensionless, "b": -2.0 * unit.meter},
+            independent_variables={"x"},
         )
 
         assert eval_expr(pot, 2.0 * unit.meter) == -1 * unit.meter

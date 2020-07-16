@@ -4,7 +4,7 @@ from . import unit
 class UnitArrayMeta(type):
     # TODO: would be nice to be able to sneak dtype and/or units in here
     def __getitem__(self, units, dtype=None):
-        return type('UnitArray', (UnitArray,), {"_dtype": dtype, "_units": units})
+        return type("UnitArray", (UnitArray,), {"_dtype": dtype, "_units": units})
 
 
 class UnitArray(unit.Quantity, metaclass=UnitArrayMeta):

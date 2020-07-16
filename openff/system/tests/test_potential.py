@@ -3,8 +3,8 @@ from pydantic import parse_obj_as
 
 from .. import unit
 from ..potential import AnalyticalPotential, ParametrizedAnalyticalPotential
-from ..utils import compare_sympy_expr
 from ..tests.base_test import BaseTest
+from ..utils import compare_sympy_expr
 
 
 class TestPotential(BaseTest):
@@ -45,14 +45,14 @@ class TestPotential(BaseTest):
 
     def test_serialization(self):
         pot = AnalyticalPotential(
-            smirks='[#6]', expression='m*x+b', independent_variables='x',
+            smirks="[#6]", expression="m*x+b", independent_variables="x",
         )
 
         pot_param = ParametrizedAnalyticalPotential(
             smirks=pot.smirks,
-            expression='m*x+b',
-            independent_variables={'x'},
-            parameters={'m': 1 * unit.dimensionless, 'b': 1 * unit.dimensionless},
+            expression="m*x+b",
+            independent_variables={"x"},
+            parameters={"m": 1 * unit.dimensionless, "b": 1 * unit.dimensionless},
         )
 
         # Depending on the equality operator may be dangerous

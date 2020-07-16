@@ -1,14 +1,13 @@
-from pkg_resources import resource_filename
 import pathlib
-from typing import List
 from collections import OrderedDict
+from typing import List
 
 import sympy
+from openforcefield.typing.engines.smirnoff import ForceField
+from openforcefield.utils import unit_to_string
+from pkg_resources import resource_filename
 from simtk import openmm
 from simtk import unit as simtk_unit
-
-from openforcefield.utils import unit_to_string
-from openforcefield.typing.engines.smirnoff import ForceField
 
 from . import unit
 from .types import UnitArray
@@ -54,7 +53,7 @@ def compare_sympy_expr(expr1, expr2):
 
 def get_test_file_path(test_file):
     """Given a filename in the collection of data files, return its full path"""
-    dir_path = resource_filename('openff.system', 'tests/files/')
+    dir_path = resource_filename("openff.system", "tests/files/")
     test_file_path = pathlib.Path(dir_path).joinpath(test_file)
 
     if test_file_path.is_file():

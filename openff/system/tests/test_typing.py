@@ -1,12 +1,12 @@
-import pytest
 import numpy as np
+import pytest
 
 from ..typing.smirnoff.data import (
-    SMIRNOFFPotentialTerm,
-    SMIRNOFFvdWTerm,
-    SMIRNOFFTermCollection,
-    ElectrostaticsTerm,
     SUPPORTED_HANDLER_MAPPING,
+    ElectrostaticsTerm,
+    SMIRNOFFPotentialTerm,
+    SMIRNOFFTermCollection,
+    SMIRNOFFvdWTerm,
     build_slot_smirks_map_term,
     build_smirks_potential_map_term,
 )
@@ -25,16 +25,16 @@ class TestSMIRNOFFTyping(BaseTest):
     ):
         ff_collection = SMIRNOFFTermCollection.from_toolkit_data(argon_ff, argon_top)
 
-        assert [*ff_collection.terms.keys()] == ['Electrostatics', 'vdW']
+        assert [*ff_collection.terms.keys()] == ["Electrostatics", "vdW"]
 
-        found_smirks = ff_collection.terms['vdW'].smirks_map.values()
-        assert all([smirks == '[#18:1]' for smirks in found_smirks])
+        found_smirks = ff_collection.terms["vdW"].smirks_map.values()
+        assert all([smirks == "[#18:1]" for smirks in found_smirks])
 
         ff_collection = SMIRNOFFTermCollection.from_toolkit_data(
             ammonia_ff, ammonia_top,
         )
 
-        expected = ['Angles', 'Bonds', 'Electrostatics', 'vdW']
+        expected = ["Angles", "Bonds", "Electrostatics", "vdW"]
         assert sorted(ff_collection.terms.keys()) == sorted(expected)
 
         for term in ff_collection.terms.values():
@@ -45,7 +45,7 @@ class TestSMIRNOFFTyping(BaseTest):
 
         term_collection = SMIRNOFFTermCollection()
 
-        SUPPORTED_HANDLER_MAPPING.pop('Electrostatics')
+        SUPPORTED_HANDLER_MAPPING.pop("Electrostatics")
 
         # TODO: This should just be
         # term_collection = SMIRNOFFTermCollection.from_toolkit_data(parsley, cyclohexane_top)
@@ -70,7 +70,7 @@ class TestSMIRNOFFTyping(BaseTest):
 
     def test_construct_term_from_toolkit_forcefield(self, parsley, ethanol_top):
         SMIRNOFFvdWTerm.build_from_toolkit_data(
-            handler=parsley['vdW'], topology=ethanol_top,
+            handler=parsley["vdW"], topology=ethanol_top,
         )
 
         ref = get_partial_charges_from_openmm_system(
@@ -96,17 +96,17 @@ class TestSMIRNOFFTyping(BaseTest):
 
 class TestSMIRNOFFTerms(BaseTest):
     handler_expression_mapping = {
-        'vdW': '4*epsilon*((sigma/r)**12-(sigma/r)**6)',
-        'Bonds': '1/2*k*(length-length_0)**2',
-        'Angles': '1/2*k*(angle-angle_0)**2',
+        "vdW": "4*epsilon*((sigma/r)**12-(sigma/r)**6)",
+        "Bonds": "1/2*k*(length-length_0)**2",
+        "Angles": "1/2*k*(angle-angle_0)**2",
     }
 
     @pytest.mark.parametrize(
-        'handler_name,expression',
+        "handler_name,expression",
         [
-            ('vdW', '4*epsilon*((sigma/r)**12-(sigma/r)**6)'),
-            ('Bonds', '1/2*k*(length-length_0)**2'),
-            ('Angles', '1/2*k*(angle-angle_0)**2'),
+            ("vdW", "4*epsilon*((sigma/r)**12-(sigma/r)**6)"),
+            ("Bonds", "1/2*k*(length-length_0)**2"),
+            ("Angles", "1/2*k*(angle-angle_0)**2"),
         ],
     )
     def test_smirnoff_terms(self, parsley, ethanol_top, handler_name, expression):
@@ -128,10 +128,10 @@ class TestSMIRNOFFTerms(BaseTest):
 
 class TestSMIRNOFFvdWTerm(BaseTest):
     def test_basic_constructor(self, ethanol_top, parsley):
-        SMIRNOFFvdWTerm.build_from_toolkit_data(parsley['vdW'], ethanol_top)
+        SMIRNOFFvdWTerm.build_from_toolkit_data(parsley["vdW"], ethanol_top)
 
     def test_scaling_factors(self, ethanol_top, parsley):
-        parsley_vdw = parsley['vdW']
+        parsley_vdw = parsley["vdW"]
         ref = SMIRNOFFvdWTerm.build_from_toolkit_data(parsley_vdw, ethanol_top)
         factors = [ref.scale12, ref.scale13, ref.scale14, ref.scale15]
 

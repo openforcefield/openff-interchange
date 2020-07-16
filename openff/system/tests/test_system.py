@@ -1,17 +1,16 @@
-import pytest
 import numpy as np
+import pytest
+from openforcefield.topology import Molecule, Topology
 from pydantic import ValidationError
 
-from openforcefield.topology import Molecule, Topology
-
-from ..system import System, ProtoSystem
+from .. import unit
+from ..system import ProtoSystem, System
 from ..typing.smirnoff.data import (
-    SMIRNOFFvdWTerm,
     SMIRNOFFTermCollection,
+    SMIRNOFFvdWTerm,
     build_slot_smirks_map,
     build_smirks_potential_map,
 )
-from .. import unit
 from ..utils import compare_forcefields
 from .base_test import BaseTest
 
@@ -19,10 +18,10 @@ from .base_test import BaseTest
 class TestPotentialEnergyTerm(BaseTest):
     def test_term_conversion(self, argon_ff, argon_top):
         term = SMIRNOFFvdWTerm.build_from_toolkit_data(
-            handler=argon_ff['vdW'], topology=argon_top,
+            handler=argon_ff["vdW"], topology=argon_top,
         )
 
-        assert term.potentials['[#18:1]'].parameters['sigma'] == 0.3 * unit.nm
+        assert term.potentials["[#18:1]"].parameters["sigma"] == 0.3 * unit.nm
 
 
 class TestSystem(BaseTest):
@@ -106,7 +105,7 @@ class TestSystem(BaseTest):
         #    raise ValidationError
 
     def test_construct_single_molecule(self, parsley):
-        mol = Molecule.from_smiles('CCO')
+        mol = Molecule.from_smiles("CCO")
         mol.generate_conformers(n_conformers=1)
         top = Topology.from_molecules(mol)
 
@@ -175,11 +174,11 @@ class TestSystem(BaseTest):
         assert not argon.smirks_potential_map
         assert not argon.term_collection.terms
 
-        argon.apply_single_handler(argon_ff['vdW'])
+        argon.apply_single_handler(argon_ff["vdW"])
 
-        assert 'vdW' in argon.slot_smirks_map.keys()
-        assert 'vdW' in argon.smirks_potential_map.keys()
-        assert 'vdW' in argon.term_collection.terms.keys()
+        assert "vdW" in argon.slot_smirks_map.keys()
+        assert "vdW" in argon.smirks_potential_map.keys()
+        assert "vdW" in argon.term_collection.terms.keys()
 
 
 class TestProtoSystem(BaseTest):
@@ -201,11 +200,11 @@ class TestProtoSystem(BaseTest):
 
 class TestValidators(BaseTest):
     @pytest.mark.parametrize(
-        'values,units',
+        "values,units",
         [
-            ([4, 4, 4], 'nm'),
-            ([60, 60, 60], 'angstrom'),
-            ([[4, 0, 0], [0, 4, 0], [0, 0, 4]], 'nm'),
+            ([4, 4, 4], "nm"),
+            ([60, 60, 60], "angstrom"),
+            ([[4, 0, 0], [0, 4, 0], [0, 0, 4]], "nm"),
         ],
     )
     def test_valiate_box(self, values, units):
@@ -215,13 +214,13 @@ class TestValidators(BaseTest):
         assert box.units == unit.Unit(units)
 
     @pytest.mark.parametrize(
-        'values,units',
+        "values,units",
         [
-            (3 * [4], 'hour'),
-            (3 * [4], 'acre'),
-            (2 * [4], 'nm'),
-            (4 * [4], 'nm'),
-            (5 * [4], 'kilojoule'),
+            (3 * [4], "hour"),
+            (3 * [4], "acre"),
+            (2 * [4], "nm"),
+            (4 * [4], "nm"),
+            (5 * [4], "kilojoule"),
         ],
     )
     def test_validate_box_bad(self, values, units):
@@ -229,5 +228,5 @@ class TestValidators(BaseTest):
             ProtoSystem.validate_box(values, units=units)
 
     def test_validate_forcefield(self, parsley):
-        for ff in [parsley, parsley._to_smirnoff_data(), 'openff-1.0.0.offxml']:
+        for ff in [parsley, parsley._to_smirnoff_data(), "openff-1.0.0.offxml"]:
             compare_forcefields(parsley, System.validate_forcefield(ff))

@@ -1,17 +1,17 @@
-from typing import Dict, Union, Optional
 from collections import OrderedDict
+from typing import Dict, Optional, Union
 
 import numpy as np
-from pydantic import validator, root_validator, BaseModel
 import pint
-
-from simtk.unit import Quantity as SimTKQuantity
-from simtk.openmm.app import Topology as OpenMMTopology
-
-from openforcefield.typing.engines.smirnoff import ForceField, ParameterHandler
 from openforcefield.topology import Topology
+from openforcefield.typing.engines.smirnoff import ForceField, ParameterHandler
+from pydantic import BaseModel, root_validator, validator
+from simtk.openmm.app import Topology as OpenMMTopology
+from simtk.unit import Quantity as SimTKQuantity
 
 from . import unit
+from .exceptions import ToolkitTopologyConformersNotFoundError
+from .types import UnitArray
 from .typing.smirnoff.data import (
     SMIRNOFFTermCollection,
     build_slot_smirks_map,
@@ -19,8 +19,6 @@ from .typing.smirnoff.data import (
     build_smirks_potential_map_term,
 )
 from .utils import simtk_to_pint
-from .types import UnitArray
-from .exceptions import ToolkitTopologyConformersNotFoundError
 
 
 def potential_map_from_terms(collection):
@@ -68,7 +66,7 @@ class ProtoSystem(BaseModel):
             val = UnitArray(val)
             if val.dimensionless:
                 val *= unit.nm
-            if not val.is_compatible_with('nm'):
+            if not val.is_compatible_with("nm"):
                 raise TypeError  # Make this a custom exception?
             return val
         else:
@@ -173,20 +171,20 @@ class System(ProtoSystem):
     @root_validator
     def validate_forcefield_data(cls, values):
         # TODO: Replace this messy logic with something cleaner
-        if not values['forcefield']:
-            if not values['slot_smirks_map'] or not values['smirks_potential_map']:
+        if not values["forcefield"]:
+            if not values["slot_smirks_map"] or not values["smirks_potential_map"]:
                 pass  # raise TypeError('not given an ff, need maps')
-        if values['forcefield']:
+        if values["forcefield"]:
             # TODO: Let other typing engines drop in here
-            values['slot_smirks_map'] = build_slot_smirks_map(
-                forcefield=values['forcefield'], topology=values['topology']
+            values["slot_smirks_map"] = build_slot_smirks_map(
+                forcefield=values["forcefield"], topology=values["topology"]
             )
-            values['term_collection'] = SMIRNOFFTermCollection.from_toolkit_data(
-                toolkit_forcefield=values['forcefield'],
-                toolkit_topology=values['topology'],
+            values["term_collection"] = SMIRNOFFTermCollection.from_toolkit_data(
+                toolkit_forcefield=values["forcefield"],
+                toolkit_topology=values["topology"],
             )
-            values['smirks_potential_map'] = potential_map_from_terms(
-                values['term_collection']
+            values["smirks_potential_map"] = potential_map_from_terms(
+                values["term_collection"]
             )
         return values
 
@@ -214,7 +212,7 @@ class System(ProtoSystem):
     def apply_single_handler(self, handler):
         """Apply a single parameter handler to a system."""
         # TODO: Abstract this away to be SMIRNOFF-agnostic
-        if handler._TAGNAME == 'Electrostatics':
+        if handler._TAGNAME == "Electrostatics":
             raise NotImplementedError()
 
         self.slot_smirks_map[handler._TAGNAME] = build_slot_smirks_map_term(
