@@ -1,3 +1,4 @@
+import networkx as nx
 import numpy as np
 
 from ... import unit
@@ -11,6 +12,23 @@ def get_distance(a, b):
     for np.linalg.norm on pint.Quantity
     """
     return np.sqrt(np.sum((b - a) ** 2))
+
+
+def get_exception_mask(system_in):
+    """Generate a mask of non-bonded scaling"""
+    n_atoms = system_in.topology.n_topology_atoms
+    arr = UnitArray(np.ones((n_atoms, n_atoms)), units=unit.dimensionless)
+    for top_mol in system_in.topology.topology_molecules:
+        graph = top_mol.reference_molecule.to_networkx()
+        spl = dict(nx.all_pairs_shortest_path_length(graph))
+        for i in range(top_mol.n_atoms):
+            for j in range(top_mol.n_atoms):
+                length = spl[i][j]
+                if length < 3:
+                    arr[i][j] = 0
+                elif length == 3:
+                    arr[i][j] = 1 / 1.2
+    return arr
 
 
 def build_distance_matrix(system_in):
@@ -37,7 +55,7 @@ def build_distance_matrix(system_in):
 def compute_vdw(system_in):
     """
     Compute the vdW contribution to the potential energy function.
-    This is mean to serve as a stand-in for a something more performant with a similar signature
+    This is meant to serve as a stand-in for a something more performant with a similar signature
     """
     slots = system_in.slot_smirks_map["vdW"].keys()
     term = system_in.term_collection.terms["vdW"]

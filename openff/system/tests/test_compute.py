@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 from openforcefield.topology import Molecule, Topology
 
@@ -9,6 +10,7 @@ from ..typing.smirnoff.compute import (
     compute_electrostatics,
     compute_potential_energy,
     compute_vdw,
+    get_exception_mask,
 )
 
 
@@ -48,3 +50,15 @@ class TestCompute(BaseTest):
         )
 
         assert total == vdw + bonds + electrostatics
+
+    @pytest.mark.parametrize("smiles,mean", [("O", 0.0), ("OO", 5 / 3 / 16)])
+    def test_exception_mask(self, parsley, smiles, mean):
+        """Test that generation of the exception produces the expected values for small systems."""
+        mol = Molecule.from_smiles(smiles)
+        mol.generate_conformers(n_conformers=1)
+        top = Topology.from_molecules([mol])
+        test_system = System.from_toolkit(top, parsley)
+
+        mask = get_exception_mask(test_system)
+
+        assert np.mean(mask) == mean
