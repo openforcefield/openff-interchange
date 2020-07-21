@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from openforcefield.topology import Molecule, Topology
 from pydantic import ValidationError
+from simtk import unit as simtk_unit
 
 from .. import unit
 from ..system import ProtoSystem, System
@@ -114,9 +115,15 @@ class TestSystem(BaseTest):
         assert test_system.positions.shape == (9, 3)
 
     def test_construct_multiple_molecules(self, parsley):
-        mol = Molecule.from_smiles("CCO")
-        mol.generate_conformers(n_conformers=1)
-        top = Topology.from_molecules([mol, mol])
+        # Make two separate molecules with different positions
+        mol1 = Molecule.from_smiles("CCO")
+        mol2 = Molecule.from_smiles("CCO")
+        mol1.generate_conformers(n_conformers=1)
+        mol2.generate_conformers(n_conformers=1)
+        mol2.conformers[0] += simtk_unit.angstrom * np.ones(
+            shape=mol1.conformers[0].shape
+        )
+        top = Topology.from_molecules([mol1, mol2])
 
         test_system = System.from_toolkit(topology=top, forcefield=parsley)
 

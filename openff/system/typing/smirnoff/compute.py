@@ -61,14 +61,20 @@ def compute_vdw(system_in):
     term = system_in.term_collection.terms["vdW"]
 
     distances = build_distance_matrix(system_in)
+    mask = get_exception_mask(system_in)
 
     energy = 0
     for i in slots:
         for j in slots:
             if i == j:
                 continue
+            scale = mask[i[0], j[0]]
+            if scale == 0:
+                continue
 
             r = distances[i[0], j[0]]
+            if r.magnitude == 0 or np.isnan(r.magnitude):
+                continue
             sig1 = term.potentials[term.smirks_map[i]].parameters["sigma"]
             eps1 = term.potentials[term.smirks_map[i]].parameters["epsilon"]
             sig2 = term.potentials[term.smirks_map[j]].parameters["sigma"]
@@ -79,7 +85,7 @@ def compute_vdw(system_in):
             eps = (eps1 * eps2) ** 0.5
 
             ener = 4 * eps * ((sig / r) ** 12 - (sig / r) ** 6)
-            energy += ener
+            energy += scale * ener
 
     return energy
 

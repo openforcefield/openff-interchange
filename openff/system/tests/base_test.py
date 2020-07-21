@@ -40,7 +40,7 @@ class BaseTest:
     def ethanol_top(self):
         """Fixture that builds a simple ethanol topology"""
         mol = Molecule.from_smiles("CCO")
-
+        mol.generate_conformers(n_conformers=1)
         return Topology.from_molecules(4 * [mol])
 
     @pytest.fixture

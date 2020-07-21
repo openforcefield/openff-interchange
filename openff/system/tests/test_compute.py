@@ -17,36 +17,33 @@ from ..typing.smirnoff.compute import (
 class TestCompute(BaseTest):
     # TODO: Compare these energies to a reference like OpenMM
     @pytest.fixture
-    def hexanone(self, parsley):
-        mol = Molecule.from_smiles("CCCC(=O)C")
-        mol.generate_conformers(n_conformers=1)
-        top = Topology.from_molecules(mol)
-        return System.from_toolkit(topology=top, forcefield=parsley)
+    def test_system(self, ethanol_top, parsley):
+        return System.from_toolkit(topology=ethanol_top, forcefield=parsley)
 
-    def test_compute_vdw(self, hexanone):
-        vdw = compute_vdw(hexanone)
+    def test_compute_vdw(self, test_system):
+        vdw = compute_vdw(test_system)
 
         assert vdw > 0
         assert vdw.units == unit.Unit("kilocalorie/mole")
 
-    def test_compute_bonds(self, hexanone):
-        bond = compute_bonds(hexanone)
+    def test_compute_bonds(self, test_system):
+        bond = compute_bonds(test_system)
 
         assert bond > 0
         assert bond.units == unit.Unit("kilocalorie/mole")
 
-    def test_compute_electrostatics(self, hexanone):
-        electrostatics = compute_electrostatics(hexanone)
+    def test_compute_electrostatics(self, test_system):
+        electrostatics = compute_electrostatics(test_system)
 
         assert electrostatics.units == unit.Unit("kilocalorie/mole")
 
-    def test_summing(self, hexanone):
-        vdw = compute_vdw(hexanone)
-        bonds = compute_bonds(hexanone)
-        electrostatics = compute_electrostatics(hexanone)
+    def test_summing(self, test_system):
+        vdw = compute_vdw(test_system)
+        bonds = compute_bonds(test_system)
+        electrostatics = compute_electrostatics(test_system)
 
         total = compute_potential_energy(
-            hexanone, handlers=["Bonds", "vdW", "Electrostatics"]
+            test_system, handlers=["Bonds", "vdW", "Electrostatics"]
         )
 
         assert total == vdw + bonds + electrostatics

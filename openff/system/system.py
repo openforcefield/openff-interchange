@@ -62,13 +62,16 @@ class ProtoSystem(BaseModel):
             return val
         if isinstance(val, SimTKQuantity):
             val = UnitArray(simtk_to_pint(val))
-        if isinstance(val, (pint.Quantity, np.ndarray, UnitArray)):
-            val = UnitArray(val)
+        if isinstance(val, np.ndarray):
+            return UnitArray(val, units=unit.nm)
+        if isinstance(val, (pint.Quantity, UnitArray)):
             if val.dimensionless:
-                val *= unit.nm
-            if not val.is_compatible_with("nm"):
+                units = unit.nm
+            else:
+                units = val.units
+            if not units.is_compatible_with("nm"):
                 raise TypeError  # Make this a custom exception?
-            return val
+            return UnitArray(val.magnitude, units=units)
         else:
             raise TypeError
 
