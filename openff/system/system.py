@@ -152,11 +152,11 @@ class System(ProtoSystem):
     def from_toolkit(cls, topology, forcefield):
         """Attempt to construct a System from a toolkit Topology and ForceField"""
         positions = None
-        for ref_mol in topology.reference_molecules:
-            if not ref_mol.conformers:
-                raise ToolkitTopologyConformersNotFoundError(ref_mol)
-            mol_pos = simtk_to_pint(ref_mol.conformers[0])
-            if not positions:
+        for top_mol in topology.topology_molecules:
+            if not top_mol.reference_molecule.conformers:
+                raise ToolkitTopologyConformersNotFoundError(top_mol)
+            mol_pos = simtk_to_pint(top_mol.reference_molecule.conformers[0])
+            if positions is None:
                 positions = mol_pos
             else:
                 positions = np.vstack([positions, mol_pos])

@@ -109,12 +109,18 @@ class TestSystem(BaseTest):
         mol.generate_conformers(n_conformers=1)
         top = Topology.from_molecules(mol)
 
-        System.from_toolkit(topology=top, forcefield=parsley)
+        test_system = System.from_toolkit(topology=top, forcefield=parsley)
 
-        # The OpenFF Toolkit only supports units through SimTK's unit module
-        # top.box_vectors = 4 * np.ones(3) * openmm_unit.nanometer
+        assert test_system.positions.shape == (9, 3)
 
-        # System.from_toolkit(topology=top, forcefield=parsley)
+    def test_construct_multiple_molecules(self, parsley):
+        mol = Molecule.from_smiles("CCO")
+        mol.generate_conformers(n_conformers=1)
+        top = Topology.from_molecules([mol, mol])
+
+        test_system = System.from_toolkit(topology=top, forcefield=parsley)
+
+        assert test_system.positions.shape == (18, 3)
 
     def test_automatic_typing(self, argon_ff, argon_top, argon_coords, argon_box):
         """
