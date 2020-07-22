@@ -16,18 +16,24 @@ def get_distance(a, b):
 
 def get_exception_mask(system_in):
     """Generate a mask of non-bonded scaling"""
+    term = system_in.term_collection.terms["vdW"]
+    factors = {1: term.scale12, 2: term.scale13, 3: term.scale14, 4: term.scale15}
+
     n_atoms = system_in.topology.n_topology_atoms
-    arr = UnitArray(np.ones((n_atoms, n_atoms)), units=unit.dimensionless)
+    arr = np.ones((n_atoms, n_atoms)) - np.eye(n_atoms)
+
     for top_mol in system_in.topology.topology_molecules:
         graph = top_mol.reference_molecule.to_networkx()
-        spl = dict(nx.all_pairs_shortest_path_length(graph))
-        for i in range(top_mol.n_atoms):
-            for j in range(top_mol.n_atoms):
-                length = spl[i][j]
-                if length < 3:
-                    arr[i][j] = 0
-                elif length == 3:
-                    arr[i][j] = 1 / 1.2
+        spl = dict(nx.all_pairs_shortest_path_length(graph, cutoff=4))
+        for i in range(n_atoms):
+            for j in range(n_atoms):
+                try:
+                    # Skip pairs with distance in graph > 5
+                    length = spl[i][j]
+                except KeyError:
+                    continue
+                if 0 < length < 5:
+                    arr[i][j] = factors[length]
     return arr
 
 

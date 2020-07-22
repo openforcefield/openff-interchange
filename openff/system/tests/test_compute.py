@@ -48,7 +48,7 @@ class TestCompute(BaseTest):
 
         assert total == vdw + bonds + electrostatics
 
-    @pytest.mark.parametrize("smiles,mean", [("O", 0.0), ("OO", 5 / 3 / 16)])
+    @pytest.mark.parametrize("smiles,mean", [("O", 0.0), ("OO", 0.5 * 2 / 16)])
     def test_exception_mask(self, parsley, smiles, mean):
         """Test that generation of the exception produces the expected values for small systems."""
         mol = Molecule.from_smiles(smiles)
