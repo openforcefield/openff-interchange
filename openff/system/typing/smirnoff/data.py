@@ -343,14 +343,18 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
     cutoff: unit.Quantity
     switch_width: unit.Quantity
     method: str
+    combining_rule: str = "Lorentz-Berthelot"
 
     @classmethod
     def build_from_toolkit_data(cls, handler, topology, forcefield=None):
         assert handler.potential == "Lennard-Jones-12-6"
+
+        # TODO: move compatibility checks into another abstraction layer?
         # TODO: abstract cutoff treatment into another class?
 
         term = cls(
             name=handler._TAGNAME,
+            combining_rules=handler.combining_rules,
             scale12=handler.scale12,
             scale13=handler.scale13,
             scale14=handler.scale14,
