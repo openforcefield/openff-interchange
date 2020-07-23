@@ -385,8 +385,9 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         p = []
         mapping = dict()
         for i, pot in enumerate(self.potentials.values()):
-            p.append(pot.parameters["sigma"].magnitude)
-            p.append(pot.parameters["epsilon"].magnitude)
+            p.append(
+                [pot.parameters["sigma"].magnitude, pot.parmaters["epsilon"].magnitude]
+            )
             mapping.update({pot.smirks: i})
         return np.array(p), mapping
 
@@ -452,8 +453,9 @@ class SMIRNOFFBondTerm(SMIRNOFFPotentialTerm):
         p = []
         mapping = dict()
         for i, pot in enumerate(self.potentials.values()):
-            p.append(pot.parameters["length"].magnitude)
-            p.append(pot.parameters["k"].magnitude)
+            p.append(
+                [pot.parameters["length"].magnitude, pot.parameters["k"].magnitude]
+            )
             mapping.update({pot.smirks: i})
         return np.array(p), mapping
 
@@ -518,8 +520,7 @@ class SMIRNOFFAngleTerm(SMIRNOFFPotentialTerm):
         p = []
         mapping = dict()
         for i, pot in enumerate(self.potentials.values()):
-            p.append(pot.parameters["angle"].magnitude)
-            p.append(pot.parameters["k"].magnitude)
+            p.append([pot.parameters["angle"].magnitude, pot.parameters["k"].magnitude])
             mapping.update({pot.smirks: i})
         return np.array(p), mapping
 
