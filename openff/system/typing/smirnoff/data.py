@@ -386,7 +386,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         mapping = dict()
         for i, pot in enumerate(self.potentials.values()):
             p.append(
-                [pot.parameters["sigma"].magnitude, pot.parmaters["epsilon"].magnitude]
+                [pot.parameters["sigma"].magnitude, pot.parameters["epsilon"].magnitude]
             )
             mapping.update({pot.smirks: i})
         return np.array(p), mapping

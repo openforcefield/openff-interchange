@@ -10,7 +10,7 @@ class TestMatrixRepresentations(BaseTest):
     @pytest.mark.skipif(not jax_available, reason="Requires JAX")
     @pytest.mark.parametrize(
         "handler_name,n_ff_terms,n_sys_terms",
-        [("vdW", 10, 36), ("Bonds", 8, 32), ("Angles", 6, 52)],
+        [("vdW", 10, 72), ("Bonds", 8, 64), ("Angles", 6, 104)],
     )
     def test_to_force_field_to_system_parameters(
         self, parsley, ethanol_top, handler_name, n_ff_terms, n_sys_terms
@@ -25,12 +25,12 @@ class TestMatrixRepresentations(BaseTest):
         (p, mapping) = term.get_force_field_parameters(use_jax=True)
 
         assert isinstance(p, DeviceArray)
-        assert p.shape == (n_ff_terms,)
+        assert np.prod(p.shape) == n_ff_terms
 
         q = term.get_system_parameters(use_jax=True)
 
         assert isinstance(q, DeviceArray)
-        assert q.shape == (n_sys_terms,)
+        assert np.prod(q.shape) == n_sys_terms
 
         assert jnp.allclose(q, term.parametrize(p))
 
