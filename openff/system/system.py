@@ -10,7 +10,7 @@ from simtk.openmm.app import Topology as OpenMMTopology
 from simtk.unit import Quantity as SimTKQuantity
 
 from . import unit
-from .exceptions import ToolkitTopologyConformersNotFoundError
+from .exceptions import InvalidBoxError, ToolkitTopologyConformersNotFoundError
 from .types import UnitArray
 from .typing.smirnoff.data import (
     SMIRNOFFTermCollection,
@@ -70,7 +70,11 @@ class ProtoSystem(BaseModel):
             else:
                 units = val.units
             if not units.is_compatible_with("nm"):
-                raise TypeError  # Make this a custom exception?
+                raise pint.DimensionalityError(
+                    units1="nm",
+                    units2=units,
+                    extra_msg=".\tBox vectors must be in length units.",
+                )
             return UnitArray(val.magnitude, units=units)
         else:
             raise TypeError
@@ -84,7 +88,7 @@ class ProtoSystem(BaseModel):
         elif val.shape == (3,):
             return val * np.eye(3)
         else:
-            raise ValueError
+            raise InvalidBoxError
 
     @validator("topology", pre=True)
     def validate_topology(cls, val):

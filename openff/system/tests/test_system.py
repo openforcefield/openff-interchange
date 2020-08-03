@@ -1,10 +1,12 @@
 import numpy as np
+import pint
 import pytest
 from openforcefield.topology import Molecule, Topology
 from pydantic import ValidationError
 from simtk import unit as simtk_unit
 
 from .. import unit
+from ..exceptions import InvalidBoxError
 from ..system import ProtoSystem, System
 from ..typing.smirnoff.data import (
     SMIRNOFFTermCollection,
@@ -226,19 +228,17 @@ class TestValidators(BaseTest):
         assert box.shape == (3, 3)
         assert box.units == unit.Unit(units)
 
+    @pytest.mark.parametrize("values,units", [(2 * [4], "nm"), (4 * [4], "nm")])
+    def test_validate_box_bad_shape(self, values, units):
+        with pytest.raises(InvalidBoxError):
+            ProtoSystem.validate_box(unit.Quantity(values, units=units))
+
     @pytest.mark.parametrize(
-        "values,units",
-        [
-            (3 * [4], "hour"),
-            (3 * [4], "acre"),
-            (2 * [4], "nm"),
-            (4 * [4], "nm"),
-            (5 * [4], "kilojoule"),
-        ],
+        "values,units", [(3 * [4], "hour"), (3 * [4], "acre"), (5 * [4], "kilojoule")],
     )
-    def test_validate_box_bad(self, values, units):
-        with pytest.raises(TypeError):
-            ProtoSystem.validate_box(values, units=units)
+    def test_validate_box_bad_units(self, values, units):
+        with pytest.raises(pint.DimensionalityError):
+            ProtoSystem.validate_in_space(unit.Quantity(values, units=units))
 
     def test_validate_forcefield(self, parsley):
         for ff in [parsley, parsley._to_smirnoff_data(), "openff-1.0.0.offxml"]:

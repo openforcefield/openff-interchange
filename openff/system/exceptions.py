@@ -43,3 +43,9 @@ class JAXNotInstalledError(ImportError):
             "\n`pip install --upgrade pip && pip install --upgrade jax jaxlib`."
         )
         return msg
+
+
+class InvalidBoxError(TypeError):
+    """
+    Generic exception for errors reading box data
+    """
