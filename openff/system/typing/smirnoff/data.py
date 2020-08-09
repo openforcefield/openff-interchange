@@ -369,7 +369,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         )
         return term
 
-    def get_force_field_parameters(self, use_jax=False):
+    def get_force_field_parameters(self, use_jax=True):
         """get p from a SMIRNOFFPotentialTerm
         returns
 
@@ -391,7 +391,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
             mapping.update({pot.smirks: i})
         return np.array(p), mapping
 
-    def get_system_parameters(self, p=None, mapping=None, use_jax=False):
+    def get_system_parameters(self, p=None, mapping=None, use_jax=True):
         if use_jax:
             import jax.numpy as np
         else:
@@ -417,7 +417,7 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         )
 
     # TODO: Don't use JAX so forcefully when calling other functions from here
-    def get_param_matrix(self):
+    def get_param_matrix(self, use_jax=True):
         if not jax_available:
             raise JAXNotInstalledError
         import jax
@@ -437,7 +437,7 @@ class SMIRNOFFBondTerm(SMIRNOFFPotentialTerm):
 
     name: str = "Bonds"
 
-    def get_force_field_parameters(self, use_jax=False):
+    def get_force_field_parameters(self, use_jax=True):
         """get p from a SMIRNOFFPotentialTerm
         returns
 
@@ -459,7 +459,7 @@ class SMIRNOFFBondTerm(SMIRNOFFPotentialTerm):
             mapping.update({pot.smirks: i})
         return np.array(p), mapping
 
-    def get_system_parameters(self, p=None, mapping=None, use_jax=False):
+    def get_system_parameters(self, p=None, mapping=None, use_jax=True):
         if use_jax:
             import jax.numpy as np
         else:
@@ -484,7 +484,7 @@ class SMIRNOFFBondTerm(SMIRNOFFPotentialTerm):
             mapping=self.get_force_field_parameters()[1],
         )
 
-    def get_param_matrix(self):
+    def get_param_matrix(self, use_jax=True):
         if not jax_available:
             raise JAXNotInstalledError
         import jax
@@ -504,7 +504,7 @@ class SMIRNOFFAngleTerm(SMIRNOFFPotentialTerm):
 
     name: str = "Angles"
 
-    def get_force_field_parameters(self, use_jax=False):
+    def get_force_field_parameters(self, use_jax=True):
         """get p from a SMIRNOFFPotentialTerm
         returns
 
@@ -524,7 +524,7 @@ class SMIRNOFFAngleTerm(SMIRNOFFPotentialTerm):
             mapping.update({pot.smirks: i})
         return np.array(p), mapping
 
-    def get_system_parameters(self, p=None, mapping=None, use_jax=False):
+    def get_system_parameters(self, p=None, mapping=None, use_jax=True):
         if use_jax:
             import jax.numpy as np
         else:
