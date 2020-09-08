@@ -99,7 +99,7 @@ def compute_vdw(system_in):
 def compute_bonds(system_in):
     """
     Compute the bond contribution to the potential energy function.
-    This is mean to serve as a stand-in for a something more performant with a similar signature
+    This is meant to serve as a stand-in for a something more performant with a similar signature
     """
     slots = system_in.slot_smirks_map["Bonds"].keys()
     term = system_in.term_collection.terms["Bonds"]
@@ -130,7 +130,7 @@ def compute_bonds(system_in):
 def compute_electrostatics(system_in):
     """
     Compute the electrostatics contribution to the potential energy function.
-    This is mean to serve as a stand-in for a something more performant with a similar signature
+    This is meant to serve as a stand-in for a something more performant with a similar signature
     """
 
     # From NIST CODATA 2014, see Table 3 in 10.1007/s10822-016-9977-1
