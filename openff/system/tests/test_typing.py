@@ -21,7 +21,11 @@ class TestSMIRNOFFTyping(BaseTest):
     # There's probably a better way to this, but pytest doesn't let fixtures be passed to parametrize
     # TODO: check for proper conversion, not just completeness
     def test_reconstruct_toolkit_forcefield(
-        self, argon_ff, argon_top, ammonia_ff, ammonia_top,
+        self,
+        argon_ff,
+        argon_top,
+        ammonia_ff,
+        ammonia_top,
     ):
         ff_collection = SMIRNOFFTermCollection.from_toolkit_data(argon_ff, argon_top)
 
@@ -31,7 +35,8 @@ class TestSMIRNOFFTyping(BaseTest):
         assert all([smirks == "[#18:1]" for smirks in found_smirks])
 
         ff_collection = SMIRNOFFTermCollection.from_toolkit_data(
-            ammonia_ff, ammonia_top,
+            ammonia_ff,
+            ammonia_top,
         )
 
         expected = ["Angles", "Bonds", "Electrostatics", "vdW"]
@@ -70,7 +75,8 @@ class TestSMIRNOFFTyping(BaseTest):
 
     def test_construct_term_from_toolkit_forcefield(self, parsley, ethanol_top):
         SMIRNOFFvdWTerm.build_from_toolkit_data(
-            handler=parsley["vdW"], topology=ethanol_top,
+            handler=parsley["vdW"],
+            topology=ethanol_top,
         )
 
         ref = get_partial_charges_from_openmm_system(
@@ -78,7 +84,8 @@ class TestSMIRNOFFTyping(BaseTest):
         )
 
         electrostatics_term = ElectrostaticsTerm.build_from_toolkit_data(
-            forcefield=parsley, topology=ethanol_top,
+            forcefield=parsley,
+            topology=ethanol_top,
         )
         partial_charges = unwrap_list_of_pint_quantities(
             [*electrostatics_term.potentials.values()]
@@ -111,15 +118,19 @@ class TestSMIRNOFFTerms(BaseTest):
     )
     def test_smirnoff_terms(self, parsley, ethanol_top, handler_name, expression):
         smirnoff_term = SMIRNOFFPotentialTerm.build_from_toolkit_data(
-            handler=parsley[handler_name], topology=ethanol_top, forcefield=None,
+            handler=parsley[handler_name],
+            topology=ethanol_top,
+            forcefield=None,
         )
 
         assert smirnoff_term.smirks_map == build_slot_smirks_map_term(
-            parsley[handler_name], ethanol_top,
+            parsley[handler_name],
+            ethanol_top,
         )
 
         assert smirnoff_term.potentials == build_smirks_potential_map_term(
-            handler=parsley[handler_name], smirks_map=smirnoff_term.smirks_map,
+            handler=parsley[handler_name],
+            smirks_map=smirnoff_term.smirks_map,
         )
 
         for smirks, pot in smirnoff_term.potentials.items():
@@ -149,10 +160,12 @@ class TestSMIRNOFFvdWTerm(BaseTest):
 class TestElectrostaticsTerm(BaseTest):
     def test_build_dummy_electrostatics(self, argon_ff, argon_top):
         ElectrostaticsTerm.build_from_toolkit_data(
-            forcefield=argon_ff, topology=argon_top,
+            forcefield=argon_ff,
+            topology=argon_top,
         )
 
     def test_build_parsley_electrostatics(self, parsley, ethanol_top):
         ElectrostaticsTerm.build_from_toolkit_data(
-            forcefield=parsley, topology=ethanol_top,
+            forcefield=parsley,
+            topology=ethanol_top,
         )

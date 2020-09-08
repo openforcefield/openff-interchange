@@ -19,7 +19,8 @@ class TestMatrixRepresentations(BaseTest):
         from jax.interpreters.xla import DeviceArray
 
         term = SUPPORTED_HANDLER_MAPPING[handler_name].build_from_toolkit_data(
-            handler=parsley[handler_name], topology=ethanol_top,
+            handler=parsley[handler_name],
+            topology=ethanol_top,
         )
 
         (p, mapping) = term.get_force_field_parameters(use_jax=True)

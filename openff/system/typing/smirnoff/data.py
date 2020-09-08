@@ -64,14 +64,18 @@ def build_smirks_potential_map(forcefield, smirks_map=None):
         else:
             partial_smirks_map = None
         mapping[handler] = build_smirks_potential_map_term(
-            forcefield[handler], partial_smirks_map,
+            forcefield[handler],
+            partial_smirks_map,
         )
 
     return mapping
 
 
 def build_smirks_potential_map_term(
-    handler, smirks_map=None, topology=None, forcefield=None,
+    handler,
+    smirks_map=None,
+    topology=None,
+    forcefield=None,
 ):
     """
     Generate a mapping between SMIRKS patterns and potential objects for a
@@ -90,7 +94,9 @@ def build_smirks_potential_map_term(
     except KeyError:
         if handler._TAGNAME == "Electrostatics":
             return build_smirks_potential_map_electrostatics(
-                forcefield=forcefield, topology=topology, smirks_map=smirks_map,
+                forcefield=forcefield,
+                topology=topology,
+                smirks_map=smirks_map,
             )
         else:
             warn(f"handler {handler._TAGNAME} not implemented")
@@ -255,7 +261,10 @@ def build_smirks_potential_map_impropers(handler, smirks_map=None):
 
 
 def build_smirks_potential_map_electrostatics(
-    forcefield, topology, smirks_map=None, partial_charges=None,
+    forcefield,
+    topology,
+    smirks_map=None,
+    partial_charges=None,
 ):
     """
     Build a mapping between SMIRKS patterns and partial charges
@@ -269,7 +278,8 @@ def build_smirks_potential_map_electrostatics(
 
     if not smirks_map:
         smirks_map = build_slot_smirks_map_term(
-            forcefield["Electrostatics"], topology=topology,
+            forcefield["Electrostatics"],
+            topology=topology,
         )
 
     # TODO: get partial charges from just a (single) electrostatics handler
@@ -310,7 +320,8 @@ class SMIRNOFFPotentialTerm(BaseModel):
         term = cls(name=handler._TAGNAME)
         term.smirks_map = build_slot_smirks_map_term(handler=handler, topology=topology)
         term.potentials = build_smirks_potential_map_term(
-            handler=handler, smirks_map=term.smirks_map,
+            handler=handler,
+            smirks_map=term.smirks_map,
         )
         return term
 
@@ -365,7 +376,8 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
         )
         term.smirks_map = build_slot_smirks_map_term(handler=handler, topology=topology)
         term.potentials = build_smirks_potential_map_term(
-            handler=handler, smirks_map=term.smirks_map,
+            handler=handler,
+            smirks_map=term.smirks_map,
         )
         return term
 
@@ -424,7 +436,9 @@ class SMIRNOFFvdWTerm(SMIRNOFFPotentialTerm):
 
         (p, mapping) = self.get_force_field_parameters(use_jax=True)
         parametrize_partial = partial(
-            self.parametrize, smirks_map=self.smirks_map, mapping=mapping,
+            self.parametrize,
+            smirks_map=self.smirks_map,
+            mapping=mapping,
         )
 
         jac_parametrize = jax.jacfwd(parametrize_partial)
@@ -491,7 +505,9 @@ class SMIRNOFFBondTerm(SMIRNOFFPotentialTerm):
 
         (p, mapping) = self.get_force_field_parameters(use_jax=True)
         parametrize_partial = partial(
-            self.parametrize, smirks_map=self.smirks_map, mapping=mapping,
+            self.parametrize,
+            smirks_map=self.smirks_map,
+            mapping=mapping,
         )
 
         jac_parametrize = jax.jacfwd(parametrize_partial)
@@ -556,7 +572,9 @@ class SMIRNOFFAngleTerm(SMIRNOFFPotentialTerm):
 
         (p, mapping) = self.get_force_field_parameters(use_jax=True)
         parametrize_partial = partial(
-            self.parametrize, smirks_map=self.smirks_map, mapping=mapping,
+            self.parametrize,
+            smirks_map=self.smirks_map,
+            mapping=mapping,
         )
 
         jac_parametrize = jax.jacfwd(parametrize_partial)
@@ -588,7 +606,9 @@ class ElectrostaticsTerm(SMIRNOFFPotentialTerm):
         term = cls(name="Electrostatics")
         term.smirks_map = dummy_atomic_slots_map(topology=topology)
         term.potentials = build_smirks_potential_map_electrostatics(
-            forcefield=forcefield, topology=topology, smirks_map=term.smirks_map,
+            forcefield=forcefield,
+            topology=topology,
+            smirks_map=term.smirks_map,
         )
         return term
 
@@ -641,7 +661,9 @@ class SMIRNOFFTermCollection(BaseModel):
             )
 
         electrostatics_term = ElectrostaticsTerm(
-            name="Electrostatics", smirks_map=smirks_map, potentials=potentials,
+            name="Electrostatics",
+            smirks_map=smirks_map,
+            potentials=potentials,
         )
 
         collection.terms["Electrostatics"] = electrostatics_term
@@ -667,11 +689,14 @@ class SMIRNOFFTermCollection(BaseModel):
 
             if handler_name == "Electrostatics":
                 self.terms[handler_name] = term.build_from_toolkit_data(
-                    topology=topology, forcefield=forcefield,
+                    topology=topology,
+                    forcefield=forcefield,
                 )
             else:
                 self.terms[handler_name] = term.build_from_toolkit_data(
-                    handler=handler, topology=topology, forcefield=forcefield,
+                    handler=handler,
+                    topology=topology,
+                    forcefield=forcefield,
                 )
         else:
             raise SMIRNOFFHandlerNotImplementedError(handler_name)

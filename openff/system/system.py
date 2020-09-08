@@ -223,11 +223,14 @@ class System(ProtoSystem):
             raise NotImplementedError()
 
         self.slot_smirks_map[handler._TAGNAME] = build_slot_smirks_map_term(
-            handler=handler, topology=self.topology,
+            handler=handler,
+            topology=self.topology,
         )
 
         self.smirks_potential_map[handler._TAGNAME] = build_smirks_potential_map_term(
-            handler=handler, topology=self.topology, forcefield=self.forcefield,
+            handler=handler,
+            topology=self.topology,
+            forcefield=self.forcefield,
         )
 
         self.term_collection.add_parameter_handler(

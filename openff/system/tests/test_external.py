@@ -56,7 +56,8 @@ class TestFromOpenMM(BaseTest):
         pdb_file_path = get_data_file_path("systems/packmol_boxes/" + pdb_path)
         pdbfile = PDBFile(pdb_file_path)
         off_top = Topology.from_openmm(
-            pdbfile.topology, unique_molecules=unique_molecules,
+            pdbfile.topology,
+            unique_molecules=unique_molecules,
         )
         proto_system = ProtoSystem(
             topology=off_top,
@@ -66,5 +67,6 @@ class TestFromOpenMM(BaseTest):
 
         assert np.allclose(proto_system.positions, simtk_to_pint(pdbfile.positions))
         assert np.allclose(
-            proto_system.box, simtk_to_pint(pdbfile.topology.getPeriodicBoxVectors()),
+            proto_system.box,
+            simtk_to_pint(pdbfile.topology.getPeriodicBoxVectors()),
         )

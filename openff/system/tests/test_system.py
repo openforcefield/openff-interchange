@@ -21,7 +21,8 @@ from .base_test import BaseTest
 class TestPotentialEnergyTerm(BaseTest):
     def test_term_conversion(self, argon_ff, argon_top):
         term = SMIRNOFFvdWTerm.build_from_toolkit_data(
-            handler=argon_ff["vdW"], topology=argon_top,
+            handler=argon_ff["vdW"],
+            topology=argon_top,
         )
 
         assert term.potentials["[#18:1]"].parameters["sigma"] == 0.3 * unit.nm
@@ -41,7 +42,8 @@ class TestSystem(BaseTest):
     @pytest.fixture
     def term_collection(self, argon_ff, argon_top):
         return SMIRNOFFTermCollection.from_toolkit_data(
-            toolkit_forcefield=argon_ff, toolkit_topology=argon_top,
+            toolkit_forcefield=argon_ff,
+            toolkit_topology=argon_top,
         )
 
     def test_constructor(
@@ -67,7 +69,10 @@ class TestSystem(BaseTest):
         )
 
         System(
-            topology=argon_top, forcefield=argon_ff, positions=argon_coords, box=None,
+            topology=argon_top,
+            forcefield=argon_ff,
+            positions=argon_coords,
+            box=None,
         )
 
         System(
@@ -148,11 +153,17 @@ class TestSystem(BaseTest):
         assert test_system.smirks_potential_map is not None
 
     def test_from_proto_system(
-        self, argon_ff, argon_top, argon_coords, argon_box,
+        self,
+        argon_ff,
+        argon_top,
+        argon_coords,
+        argon_box,
     ):
 
         proto_system = ProtoSystem(
-            topology=argon_top, positions=argon_coords, box=argon_box,
+            topology=argon_top,
+            positions=argon_coords,
+            box=argon_box,
         )
 
         assert proto_system.topology is not None
@@ -165,7 +176,8 @@ class TestSystem(BaseTest):
         )
 
         converted = System.from_proto_system(
-            proto_system=proto_system, forcefield=argon_ff,
+            proto_system=proto_system,
+            forcefield=argon_ff,
         )
 
         assert np.allclose(converted.box, ref.box)
@@ -234,7 +246,8 @@ class TestValidators(BaseTest):
             ProtoSystem.validate_box(unit.Quantity(values, units=units))
 
     @pytest.mark.parametrize(
-        "values,units", [(3 * [4], "hour"), (3 * [4], "acre"), (5 * [4], "kilojoule")],
+        "values,units",
+        [(3 * [4], "hour"), (3 * [4], "acre"), (5 * [4], "kilojoule")],
     )
     def test_validate_box_bad_units(self, values, units):
         with pytest.raises(pint.DimensionalityError):
