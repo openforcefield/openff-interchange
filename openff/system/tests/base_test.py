@@ -3,7 +3,9 @@ import pytest
 from openforcefield.topology.molecule import Molecule
 from openforcefield.topology.topology import Topology
 from openforcefield.typing.engines.smirnoff import ForceField
-from system.utils import get_test_file_path
+from simtk import unit as omm_unit
+
+from openff.system.utils import get_test_file_path
 
 
 class BaseTest:
@@ -21,8 +23,11 @@ class BaseTest:
     def argon_top(self):
         """Fixture that builds a simple arogon topology"""
         mol = Molecule.from_smiles("[#18]")
+        mol.generate_conformers(n_conformers=1)
+        top = Topology.from_molecules(4 * [mol])
+        top.box_vectors = np.eye(3) * 4 * omm_unit.nanometer
 
-        return Topology.from_molecules(4 * [mol])
+        return top
 
     @pytest.fixture
     def ammonia_ff(self):

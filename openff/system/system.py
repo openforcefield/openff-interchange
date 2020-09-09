@@ -11,6 +11,7 @@ from simtk.unit import Quantity as SimTKQuantity
 
 from . import unit
 from .exceptions import InvalidBoxError, ToolkitTopologyConformersNotFoundError
+from .interop import parmed
 from .types import UnitArray
 from .typing.smirnoff.data import (
     SMIRNOFFTermCollection,
@@ -172,7 +173,7 @@ class System(ProtoSystem):
             topology=topology,
             forcefield=forcefield,
             positions=positions,
-            box=topology.box_vectors,
+            box=simtk_to_pint(topology.box_vectors),
         )
 
     @root_validator
@@ -244,7 +245,7 @@ class System(ProtoSystem):
         raise NotImplementedError()
 
     def to_parmed(self):
-        raise NotImplementedError()
+        return parmed.to_parmed(self)
 
     def to_openmm(self):
         raise NotImplementedError()
