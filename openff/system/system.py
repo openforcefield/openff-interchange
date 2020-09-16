@@ -169,11 +169,16 @@ class System(ProtoSystem):
             else:
                 positions = np.vstack([positions, mol_pos])
 
+        if topology.box_vectors is not None:
+            box = simtk_to_pint(topology.box_vectors)
+        else:
+            box = None
+
         return cls(
             topology=topology,
             forcefield=forcefield,
             positions=positions,
-            box=simtk_to_pint(topology.box_vectors),
+            box=box,
         )
 
     @root_validator
