@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 import numpy as np
@@ -51,25 +52,49 @@ def to_parmed(off_system: Any) -> pmd.Structure:
                 )
             )
 
-    if "Propers" in off_system.term_collection.terms:
-        proper_term = off_system.term_collection.terms["Propers"]
+    if "ProperTorsions" in off_system.term_collection.terms:
+        proper_term = off_system.term_collection.terms["ProperTorsions"]
         for proper, smirks in proper_term.smirks_map.items():
             idx_1, idx_2, idx_3, idx_4 = proper
             pot = proper_term.potentials[proper_term.smirks_map[proper]]
-            # TODO: Look at cost of redundant conversions, to ensure correct units of .m
-            pass
-    #            k = pot.parameters["k"].magnitude  # kcal/mol/rad**2
-    #            theta = pot.parameters["angle"].magnitude  # degree
-    #            angle_type = pmd.AngleType(k=k, theteq=theta)
-    #            structure.angles.append(
-    #                pmd.Angle(
-    #                    atom1=structure.atoms[idx_1],
-    #                    atom2=structure.atoms[idx_2],
-    #                    atom3=structure.atoms[idx_3],
-    #                    type=angle_type,
-    #                )
-    #            )
-    # TODO: How to populate angles & dihedrals?
+            # TODO: Better way of storing periodic data in generally, probably need to improve Potential
+            n = re.search(r"\d", "".join(pot.parameters.keys())).group()
+            k = pot.parameters["k" + n].m  # kcal/mol
+            periodicity = pot.parameters["periodicity" + n].m  # dimless
+            phase = pot.parameters["phase" + n].m  # degree
+
+            dihedral_type = pmd.DihedralType(per=periodicity, phi_k=k, phase=phase)
+            structure.dihedrals.append(
+                pmd.Dihedral(
+                    atom1=structure.atoms[idx_1],
+                    atom2=structure.atoms[idx_2],
+                    atom3=structure.atoms[idx_3],
+                    atom4=structure.atoms[idx_4],
+                    type=dihedral_type,
+                )
+            )
+
+    if "ImroperTorsions" in off_system.term_collection.terms:
+        improper_term = off_system.term_collection.terms["ImproperTorsions"]
+        for improper, smirks in improper_term.smirks_map.items():
+            idx_1, idx_2, idx_3, idx_4 = improper
+            pot = improper_term.potentials[improper_term.smirks_map[improper]]
+            # TODO: Better way of storing periodic data in generally, probably need to improve Potential
+            n = re.search(r"\d", "".join(pot.parameters.keys())).group()
+            k = pot.parameters["k" + n].m  # kcal/mol
+            periodicity = pot.parameters["periodicity" + n].m  # dimless
+            phase = pot.parameters["phase" + n].m  # degree
+
+            dihedral_type = pmd.DihedralType(per=periodicity, phi_k=k, phase=phase)
+            structure.dihedrals.append(
+                pmd.Dihedral(
+                    atom1=structure.atoms[idx_1],
+                    atom2=structure.atoms[idx_2],
+                    atom3=structure.atoms[idx_3],
+                    atom4=structure.atoms[idx_4],
+                    type=dihedral_type,
+                )
+            )
 
     vdw_term = off_system.term_collection.terms["vdW"]
     for pmd_idx, pmd_atom in enumerate(structure.atoms):

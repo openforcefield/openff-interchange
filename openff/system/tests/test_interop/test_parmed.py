@@ -38,6 +38,7 @@ class TestParmedConversion(BaseTest):
             topology=ethanol_top.to_openmm(), system=omm_system
         )
 
-        assert len(struct.atoms) == len(struct_from_omm.atoms)
-        assert len(struct.bonds) == len(struct_from_omm.bonds)
-        assert len(struct.angles) == len(struct_from_omm.angles)
+        for attr in ["atoms", "bonds", "angles", "dihedrals"]:
+            assert len(getattr(struct, attr)) == len(
+                getattr(struct_from_omm, attr)
+            ), print(attr)
