@@ -54,6 +54,12 @@ def test_parmed_openmm():
             prefix="methane1",
         )
 
+        openff_pmd_gmx(
+            topology=top,
+            forcefield=parsley,
+            prefix="methane2",
+        )
+
         ener1, ener1_file = gmx_energy(
             top="methane1.top",
             gro="methane1.gro",
