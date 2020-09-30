@@ -1,5 +1,6 @@
 import numpy as np
 import parmed as pmd
+import pytest
 from openforcefield.typing.engines.smirnoff import ForceField
 from simtk import unit as omm_unit
 
@@ -26,6 +27,7 @@ class TestParmedConversion(BaseTest):
         struct.save("x.top", combine="all")
         struct.save("x.gro", combine="all")
 
+    @pytest.mark.xfail
     def test_basic_conversion_ethanol(self, ethanol_top):
         # Use the un-constrained Parsley because ParmEd doesn't properly process bond constraints from OpenMM
         parsley = ForceField("openff_unconstrained-1.0.0.offxml")
