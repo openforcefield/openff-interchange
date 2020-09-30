@@ -10,7 +10,7 @@ class TestMatrixRepresentations(BaseTest):
     @pytest.mark.skipif(not jax_available, reason="Requires JAX")
     @pytest.mark.parametrize(
         "handler_name,n_ff_terms,n_sys_terms",
-        [("vdW", 10, 72), ("Bonds", 8, 64), ("Angles", 6, 104)],
+        [("vdW", 10, 18), ("Bonds", 8, 16), ("Angles", 6, 26)],
     )
     def test_to_force_field_to_system_parameters(
         self, parsley, ethanol_top, handler_name, n_ff_terms, n_sys_terms

@@ -11,7 +11,8 @@ from ..base_test import BaseTest
 class TestParmedConversion(BaseTest):
     def test_box(self, argon_ff, argon_top):
         struct = System.from_toolkit(
-            forcefield=argon_ff, topology=argon_top
+            forcefield=argon_ff,
+            topology=argon_top,
         ).to_parmed()
         assert np.allclose(
             struct.box[:3],
