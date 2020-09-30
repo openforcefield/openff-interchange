@@ -15,7 +15,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     for topology_molecule in off_system.topology.topology_molecules:
         for atom in topology_molecule.atoms:
             structure.add_atom(
-                pmd.Atom(atomic_number=atom.atomic_number), resname="", resnum=0
+                pmd.Atom(atomic_number=atom.atomic_number), resname="FOO", resnum=0
             )
 
     if "Bonds" in off_system.term_collection.terms:
@@ -111,6 +111,10 @@ def to_parmed(off_system: Any) -> pmd.Structure:
             .magnitude
         )
         pmd_atom.charge = partial_charge
+
+    # Assign dummy residue names, GROMACS will not accept empty strings
+    for res in structure.residues:
+        res.name = "FOO"
 
     structure.positions = off_system.positions.to(unit.angstrom).m
 

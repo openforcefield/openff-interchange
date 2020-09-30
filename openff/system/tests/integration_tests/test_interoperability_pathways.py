@@ -1,5 +1,3 @@
-import tempfile
-
 import numpy as np
 import parmed as pmd
 from intermol.gromacs import energies as gmx_energy
@@ -23,6 +21,11 @@ def openff_openmm_pmd_gmx(
         xyz=topology.topology_molecules[0].reference_molecule.conformers[0],
     )
 
+    # Assign dummy residue names, GROMACS will not accept empty strings
+    # TODO: Patch upstream?
+    for res in struct.residues:
+        res.name = "FOO"
+
     struct.save(prefix + ".gro")
     struct.save(prefix + ".top")
 
@@ -40,36 +43,37 @@ def openff_pmd_gmx(
     struct.save(prefix + ".top")
 
 
-def test_parmed_openmm():
+def test_parmed_openmm(tmpdir):
+    tmpdir.chdir()
+
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
     mol = Molecule.from_smiles("C")
     mol.generate_conformers(n_conformers=1)
     top = Topology.from_molecules(mol)
     top.box_vectors = 4 * np.eye(3) * unit.nanometer
 
-    with tempfile.TemporaryDirectory():  # This probably doesn't work
-        openff_openmm_pmd_gmx(
-            topology=top,
-            forcefield=parsley,
-            prefix="methane1",
-        )
+    openff_openmm_pmd_gmx(
+        topology=top,
+        forcefield=parsley,
+        prefix="methane1",
+    )
 
-        openff_pmd_gmx(
-            topology=top,
-            forcefield=parsley,
-            prefix="methane2",
-        )
+    openff_pmd_gmx(
+        topology=top,
+        forcefield=parsley,
+        prefix="methane2",
+    )
 
-        ener1, ener1_file = gmx_energy(
-            top="methane1.top",
-            gro="methane1.gro",
-            mdp=resource_filename("intermol", "tests/gromacs/grompp_vacuum.mdp"),
-        )
+    ener1, ener1_file = gmx_energy(
+        top="methane1.top",
+        gro="methane1.gro",
+        mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
+    )
 
-        ener2, ener2_file = gmx_energy(
-            top="methane2.top",
-            gro="methane2.gro",
-            mdp=resource_filename("intermol", "tests/gromacs/grompp_vacuum.mdp"),
-        )
+    ener2, ener2_file = gmx_energy(
+        top="methane2.top",
+        gro="methane2.gro",
+        mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
+    )
 
-        assert ener1 == ener2
+    assert ener1 == ener2
