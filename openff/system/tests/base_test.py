@@ -39,8 +39,8 @@ class BaseTest:
 
     @pytest.fixture
     def ethanol_top(self):
-        """Fixture that builds a simple ethanol topology"""
-        return top_from_smiles("CCO")
+        """Fixture that builds a simple four ethanol topology"""
+        return top_from_smiles("CCO", n_molecules=4)
 
     @pytest.fixture
     def cyclohexane_top(self):
