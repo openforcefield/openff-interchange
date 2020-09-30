@@ -60,11 +60,6 @@ jobs:
           conda install jax -c conda-forge
           python -c "import jax"
 
-    - name: Install development version of toolkit
-      shell: bash -l {0}
-      run: |
-        python -m pip install git+https://github.com/openforcefield/openforcefield
-
     - name: Run tests
       shell: bash -l {0}
       run: |
