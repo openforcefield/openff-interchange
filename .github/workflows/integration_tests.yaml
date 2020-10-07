@@ -1,4 +1,4 @@
-name: ci
+name: Integration tests
 
 on:
   push:
@@ -61,7 +61,7 @@ jobs:
     - name: Run tests
       shell: bash -l {0}
       run: |
-        pytest -v --cov=openff/system --cov-report=xml --cov-config=setup.cfg openff/system/tests/integration_tests/
+        pytest -v --cov=openff/system/ --cov-report=xml --cov-config=setup.cfg openff/system/tests/integration_tests/
 
     - name: Codecov
       uses: codecov/codecov-action@v1
