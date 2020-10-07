@@ -3,9 +3,10 @@ import pytest
 from openforcefield.topology.molecule import Molecule
 from openforcefield.topology.topology import Topology
 from openforcefield.typing.engines.smirnoff import ForceField
-from simtk import unit as omm_unit
 
 from openff.system.utils import get_test_file_path
+
+from .utils import top_from_smiles
 
 
 class BaseTest:
@@ -22,12 +23,7 @@ class BaseTest:
     @pytest.fixture
     def argon_top(self):
         """Fixture that builds a simple arogon topology"""
-        mol = Molecule.from_smiles("[#18]")
-        mol.generate_conformers(n_conformers=1)
-        top = Topology.from_molecules(4 * [mol])
-        top.box_vectors = np.eye(3) * 4 * omm_unit.nanometer
-
-        return top
+        return top_from_smiles("[#18]")
 
     @pytest.fixture
     def ammonia_ff(self):
@@ -43,20 +39,13 @@ class BaseTest:
 
     @pytest.fixture
     def ethanol_top(self):
-        """Fixture that builds a simple ethanol topology"""
-        mol = Molecule.from_smiles("CCO")
-        mol.generate_conformers(n_conformers=1)
-        top = Topology.from_molecules(4 * [mol])
-        top.box_vectors = np.eye(3) * 4 * omm_unit.nanometer
-
-        return top
+        """Fixture that builds a simple four ethanol topology"""
+        return top_from_smiles("CCO", n_molecules=4)
 
     @pytest.fixture
     def cyclohexane_top(self):
         """Fixture that builds a simple cyclohexane topology"""
-        mol = Molecule.from_smiles("C1CCCCC1")
-
-        return Topology.from_molecules(4 * [mol])
+        return top_from_smiles("C1CCCCC1")
 
     @pytest.fixture
     def parsley(self):
