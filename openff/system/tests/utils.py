@@ -30,3 +30,13 @@ def top_from_smiles(
     # TODO: Revisit if/after Topology.is_periodic
     top.box_vectors = np.eye(3) * 10 * unit.nanometer
     return top
+
+
+def compare_energies(ener1, ener2):
+    """Compare two GROMACS energy dicts from InterMol"""
+    assert ener1.keys() == ener2.keys()
+    for key in ener1.keys():
+        assert np.isclose(
+            ener1[key] / ener1[key].unit,
+            ener2[key] / ener2[key].unit,
+        )

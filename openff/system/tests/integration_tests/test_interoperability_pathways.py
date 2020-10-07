@@ -7,6 +7,7 @@ from pkg_resources import resource_filename
 from simtk import unit
 
 from ...system import System
+from ..utils import compare_energies
 
 
 def openff_openmm_pmd_gmx(
@@ -76,4 +77,4 @@ def test_parmed_openmm(tmpdir):
         mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
     )
 
-    assert ener1 == ener2
+    compare_energies(ener1, ener2)
