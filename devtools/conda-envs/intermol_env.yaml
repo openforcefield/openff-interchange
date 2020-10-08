@@ -2,6 +2,7 @@ name: test
 channels:
   - conda-forge
   - omnia
+  - bioconda
   - mwt
 
 dependencies:
@@ -22,3 +23,5 @@ dependencies:
   - openmm
   - openforcefield>=0.7.0
   - intermol
+  - gromacs
+  - lammps
