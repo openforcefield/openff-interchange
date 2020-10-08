@@ -1,0 +1,27 @@
+name: test
+channels:
+  - conda-forge
+  - omnia
+  - bioconda
+  - mwt
+
+dependencies:
+    # Base depends
+  - python
+  - pip
+  - pydantic
+  - pint
+  - sympy
+  - qcelemental
+
+    # Testing
+  - pytest
+  - pytest-cov
+  - codecov
+  - sympy
+  - pint
+  - openmm
+  - openforcefield>=0.7.0
+  - intermol
+  - gromacs
+  - lammps
