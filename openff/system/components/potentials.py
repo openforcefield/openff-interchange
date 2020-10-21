@@ -35,3 +35,9 @@ class PotentialHandler(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         validate_assignment = True
+
+    def store_matches(self):
+        raise NotImplementedError
+
+    def store_potentials(self):
+        raise NotImplementedError

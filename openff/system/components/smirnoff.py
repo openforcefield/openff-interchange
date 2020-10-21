@@ -16,15 +16,25 @@ class SMIRNOFFBondHandler(PotentialHandler):
     potentials: Dict[str, Potential] = dict()
 
     def store_matches(self, forcefield: ForceField, topology: Topology) -> None:
+        """
+        Populate self.slot_map with key-val pairs of slots
+        and unique potential identifiers
+
+        """
         matches = forcefield["Bonds"].find_matches(topology)
         for key, val in matches.items():
             self.slot_map[key] = val.parameter_type.smirks
 
     def store_potentials(self, forcefield: ForceField) -> None:
+        """
+        Populate self.potentials with key-val pairs of unique potential
+        identifiers and their associated Potential objects
+
+        """
         for smirks in self.slot_map.values():
             # ParameterHandler.get_parameter returns a list, although this
             # should only ever be length 1
-            parameter_type = [forcefield["Bonds"].get_parameter({"smirks": smirks})][0]
+            parameter_type = forcefield["Bonds"].get_parameter({"smirks": smirks})[0]
             potential = Potential(
                 parameters={
                     "k": simtk_to_pint(parameter_type.k),
