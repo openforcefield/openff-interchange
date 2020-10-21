@@ -1,4 +1,4 @@
-from typing import Dict, Set, Union
+from typing import Dict, Optional, Set, Union
 
 from pydantic import BaseModel, validator
 from sympy import Expr
@@ -9,7 +9,7 @@ from openff.system import unit
 class Potential(BaseModel):
     """Base class for storing applied parameters"""
 
-    required_parameters: Dict[str, unit.Quantity] = dict()
+    parameters: Dict[str, Optional[unit.Quantity]] = dict()
 
     class Config:
         arbitrary_types_allowed = True
@@ -23,7 +23,7 @@ class PotentialHandler(BaseModel):
     expression: Union[Expr, str]
     independent_variables: Union[str, Set[Union[Expr, str]]]
     slot_map: Dict[tuple, str] = dict()
-    potentials: Dict[str, str] = dict()
+    potentials: Dict[str, Potential] = dict()
 
     @validator("expression")
     def is_valid_sympy_expr(cls, val):
