@@ -1,19 +1,29 @@
 """
 Monkeypatching external classes with custom functionality
 """
+from typing import Dict
+
 from openforcefield.topology.topology import Topology
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
+from pydantic import BaseModel
 
+from openff.system.components.potentials import PotentialHandler
 from openff.system.components.smirnoff import SMIRNOFFAngleHandler, SMIRNOFFBondHandler
 
 
-class System:
+class System(BaseModel):
     """
     A fake system meant only to demonstrate how `PotentialHandler`s are
     meant to be structured
 
     """
+
+    handlers: Dict[str, PotentialHandler] = dict()
+
+    class Config:
+        arbitrary_types_allowed = True
+        validate_assignment = True
 
 
 def to_openff_system(self, topology: Topology, **kwargs) -> System:
@@ -22,7 +32,6 @@ def to_openff_system(self, topology: Topology, **kwargs) -> System:
 
     """
     system = System()
-    system.handlers = dict()
 
     bonds = self["Bonds"].create_bond_potential_handler(topology=topology, **kwargs)
     angles = self["Angles"].create_angle_potential_handler(topology=topology, **kwargs)
