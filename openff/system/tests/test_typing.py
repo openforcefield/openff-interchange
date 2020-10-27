@@ -8,7 +8,8 @@
 #     SMIRNOFFvdWHandler,
 # )
 # from openff.system.component
-# from openff.system.stubs import ForceField
+from openff.system.stubs import ForceField
+
 #
 # from ..utils import (
 #     get_partial_charges_from_openmm_system,
