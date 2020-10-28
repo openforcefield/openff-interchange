@@ -156,10 +156,19 @@ class SMIRNOFFvdWHandler(PotentialHandler):
         """
         for smirks in self.slot_map.values():
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
-            potential = Potential(
-                parameters={
-                    "sigma": simtk_to_pint(parameter_type.sigma),
-                    "epsilon": simtk_to_pint(parameter_type.epsilon),
-                },
-            )
+            try:
+                potential = Potential(
+                    parameters={
+                        "sigma": simtk_to_pint(parameter_type.sigma),
+                        "epsilon": simtk_to_pint(parameter_type.epsilon),
+                    },
+                )
+            except AttributeError:
+                # Handle rmin_half pending https://github.com/openforcefield/openforcefield/pull/750
+                potential = Potential(
+                    parameters={
+                        "sigma": simtk_to_pint(parameter_type.rmin_half / 2 ** (1 / 6)),
+                        "epsilon": simtk_to_pint(parameter_type.epsilon),
+                    },
+                )
             self.potentials[smirks] = potential
