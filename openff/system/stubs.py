@@ -37,8 +37,10 @@ def to_openff_system(self, topology: Topology, **kwargs) -> System:
             "vdW",
         ]:
             continue
-        handler = self[parameter_handler._TAGNAME].create_potential(topology=topology)
-        system.handlers.update({parameter_handler: handler})
+        if parameter_handler._TAGNAME not in self.registered_parameter_handlers:
+            continue
+        handler = self[parameter_handler._TAGNAME].create_potential(topology=topology)()
+        system.handlers.update({parameter_handler._TAGNAME: handler})
 
     return system
 

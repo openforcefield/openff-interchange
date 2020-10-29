@@ -172,3 +172,10 @@ class SMIRNOFFvdWHandler(PotentialHandler):
                     },
                 )
             self.potentials[smirks] = potential
+
+
+SUPPORTED_HANDLER_MAPPING = {
+    "Bonds": SMIRNOFFBondHandler,
+    "Angles": SMIRNOFFAngleHandler,
+    "vdW": SMIRNOFFvdWHandler,
+}
