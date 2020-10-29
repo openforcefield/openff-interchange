@@ -28,7 +28,7 @@ class PotentialHandler(BaseModel):
     @validator("expression")
     def is_valid_sympy_expr(cls, val):
         if isinstance(val, Expr):
-            return str(val)
+            return val.args[0]
         elif isinstance(val, str):
             return val
 
