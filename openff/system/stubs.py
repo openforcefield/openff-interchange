@@ -8,6 +8,7 @@ from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
+    ElectrostaticsHandler,
     ProperTorsionHandler,
     vdWHandler,
 )
@@ -16,6 +17,7 @@ from openff.system.components.potentials import PotentialHandler
 from openff.system.components.smirnoff import (
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
+    SMIRNOFFElectrostaticsHandler,
     SMIRNOFFProperTorsionHandler,
     SMIRNOFFvdWHandler,
 )
@@ -42,6 +44,10 @@ def to_openff_system(self, topology: Topology, **kwargs) -> System:
         handler = self[parameter_handler._TAGNAME].create_potential(topology=topology)
         system.handlers.update({parameter_handler._TAGNAME: handler})
 
+    charges = self["Electrostatics"].create_potential(
+        forcefield=self, topology=topology
+    )
+    system.handlers.update({"Electrostatics": charges})
     return system
 
 
@@ -107,6 +113,15 @@ def create_vdw_potential_handler(
     return handler
 
 
+def create_charges(
+    self, forcefield: ForceField, topology: Topology
+) -> SMIRNOFFElectrostaticsHandler:
+    handler = SMIRNOFFElectrostaticsHandler()
+    handler.store_charges(forcefield=forcefield, topology=topology)
+
+    return handler
+
+
 def create_potential_handler(
     self,
     topology: Topology,
@@ -135,4 +150,5 @@ BondHandler.create_potential = create_bond_potential_handler
 AngleHandler.create_potential = create_angle_potential_handler
 ProperTorsionHandler.create_potential = create_proper_torsion_potential_handler
 vdWHandler.create_potential = create_vdw_potential_handler
+ElectrostaticsHandler.create_potential = create_charges
 ForceField.create_openff_system = to_openff_system

@@ -1,15 +1,18 @@
 from typing import Dict, Set
 
 from openforcefield.topology.topology import Topology
+from openforcefield.typing.engines.smirnoff.forcefield import ForceField
 from openforcefield.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
     ProperTorsionHandler,
     vdWHandler,
 )
+from pydantic import BaseModel
 
+from openff.system import unit
 from openff.system.components.potentials import Potential, PotentialHandler
-from openff.system.utils import simtk_to_pint
+from openff.system.utils import get_partial_charges_from_openmm_system, simtk_to_pint
 
 
 class SMIRNOFFBondHandler(PotentialHandler):
@@ -172,6 +175,35 @@ class SMIRNOFFvdWHandler(PotentialHandler):
                     },
                 )
             self.potentials[smirks] = potential
+
+
+class SMIRNOFFElectrostaticsHandler(BaseModel):
+
+    name: str = "Electrostatics"
+    expression: str = "coul"
+    independent_variables: Set[str] = {"r"}
+    charge_map: Dict[tuple, unit.Quantity] = dict()
+
+    def store_charges(
+        self,
+        forcefield: ForceField,
+        topology: Topology,
+    ) -> None:
+        """
+        Populate self.slot_map with key-val pairs of slots
+        and unique potential identifiers
+
+        """
+        partial_charges = get_partial_charges_from_openmm_system(
+            forcefield.create_openmm_system(topology=topology)
+        )
+
+        for i, charge in enumerate(partial_charges):
+            self.charge_map[(i,)] = partial_charges[i]
+
+    class Config:
+        arbitrary_types_allowed = True
+        validate_assignment = True
 
 
 SUPPORTED_HANDLER_MAPPING = {
