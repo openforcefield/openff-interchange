@@ -39,7 +39,7 @@ def to_openff_system(self, topology: Topology, **kwargs) -> System:
             continue
         if parameter_handler._TAGNAME not in self.registered_parameter_handlers:
             continue
-        handler = self[parameter_handler._TAGNAME].create_potential(topology=topology)()
+        handler = self[parameter_handler._TAGNAME].create_potential(topology=topology)
         system.handlers.update({parameter_handler._TAGNAME: handler})
 
     return system
@@ -77,6 +77,36 @@ def create_angle_potential_handler(
     return handler
 
 
+def create_proper_torsion_potential_handler(
+    self,
+    topology: Topology,
+    **kwargs,
+) -> SMIRNOFFProperTorsionHandler:
+    """
+    A method, patched onto BondHandler, that creates a corresponding SMIRNOFFBondHandler
+    """
+    handler = SMIRNOFFProperTorsionHandler()
+    handler.store_matches(parameter_handler=self, topology=topology)
+    handler.store_potentials(parameter_handler=self)
+
+    return handler
+
+
+def create_vdw_potential_handler(
+    self,
+    topology: Topology,
+    **kwargs,
+) -> SMIRNOFFvdWHandler:
+    """
+    A method, patched onto BondHandler, that creates a corresponding SMIRNOFFBondHandler
+    """
+    handler = SMIRNOFFvdWHandler()
+    handler.store_matches(parameter_handler=self, topology=topology)
+    handler.store_potentials(parameter_handler=self)
+
+    return handler
+
+
 def create_potential_handler(
     self,
     topology: Topology,
@@ -101,16 +131,8 @@ mapping = {
 #       create_potential_handler, handler_class=potential_handler
 #   )
 
-BondHandler.create_potential = functools.partialmethod(
-    create_potential_handler, handler_class=SMIRNOFFBondHandler
-)
-AngleHandler.create_potential = functools.partialmethod(
-    create_potential_handler, handler_class=SMIRNOFFAngleHandler
-)
-ProperTorsionHandler.create_potential = functools.partialmethod(
-    create_potential_handler, handler_class=SMIRNOFFProperTorsionHandler
-)
-vdWHandler.create_potential = functools.partialmethod(
-    create_potential_handler, handler_class=SMIRNOFFvdWHandler
-)
+BondHandler.create_potential = create_bond_potential_handler
+AngleHandler.create_potential = create_angle_potential_handler
+ProperTorsionHandler.create_potential = create_proper_torsion_potential_handler
+vdWHandler.create_potential = create_vdw_potential_handler
 ForceField.create_openff_system = to_openff_system
