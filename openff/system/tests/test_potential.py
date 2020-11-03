@@ -1,62 +1,54 @@
-import sympy
-from pydantic import parse_obj_as
+from openforcefield.topology import Molecule, Topology
+from openforcefield.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
+from simtk import unit as omm_unit
 
-from .. import unit
-from ..potential import AnalyticalPotential, ParametrizedAnalyticalPotential
-from ..tests.base_test import BaseTest
-from ..utils import compare_sympy_expr
+from openff.system.tests.base_test import BaseTest
+from openff.system.utils import simtk_to_pint
 
 
-class TestPotential(BaseTest):
-    def test_analytical_potential_constructor(self):
-        pot = AnalyticalPotential(
-            name="TestPotential",
-            smirks="[#6]",
-            expression=sympy.sympify("m*x+b"),
-            independent_variables={sympy.sympify("x")},
+class TestBondPotentialHandler(BaseTest):
+    def test_bond_parameter_handler(self):
+        top = Topology.from_molecules(Molecule.from_smiles("O=O"))
+
+        bond_handler = BondHandler(version=0.3)
+        bond_parameter = BondHandler.BondType(
+            smirks="[*:1]~[*:2]",
+            k=1.5 * omm_unit.kilocalorie_per_mole / omm_unit.angstrom ** 2,
+            length=1.5 * omm_unit.angstrom,
+            id="b1000",
         )
+        bond_handler.add_parameter(bond_parameter.to_dict())
 
-        assert pot.name == "TestPotential"
-        assert pot.smirks == "[#6]"
-        assert compare_sympy_expr(pot.expression, "m*x+b")
+        from openff.system.stubs import ForceField
 
-        pot_from_str = AnalyticalPotential(
-            name="TestPotentialFromString",
-            expression="m*x+b",
-            independent_variables={"x"},
+        forcefield = ForceField()
+        forcefield.register_parameter_handler(bond_handler)
+        bond_potentials = forcefield["Bonds"].create_potential(top)
+
+        pot = bond_potentials.potentials[bond_potentials.slot_map[(0, 1)]]
+        kcal_ang2_mol = omm_unit.kilocalorie_per_mole / omm_unit.angstrom ** 2
+
+        assert pot.parameters["k"] == simtk_to_pint(1.5 * kcal_ang2_mol)
+
+    def test_angle_parameter_handler(self):
+        top = Topology.from_molecules(Molecule.from_smiles("CCC"))
+
+        angle_handler = AngleHandler(version=0.3)
+        angle_parameter = AngleHandler.AngleType(
+            smirks="[*:1]~[*:2]~[*:3]",
+            k=2.5 * omm_unit.kilocalorie_per_mole / omm_unit.degree ** 2,
+            angle=100 * omm_unit.degree,
+            id="b1000",
         )
+        angle_handler.add_parameter(angle_parameter.to_dict())
 
-        assert compare_sympy_expr(pot.expression, pot_from_str.expression)
+        from openff.system.stubs import ForceField
 
-    def test_parametrized_analytical_potential_constructor(self):
-        pot = ParametrizedAnalyticalPotential(
-            name="TestPotential",
-            expression="m*x+b",
-            independent_variables={"x"},
-            parameters={"m": 0.5 * unit.dimensionless, "b": -1.0 * unit.dimensionless},
-        )
+        forcefield = ForceField()
+        forcefield.register_parameter_handler(angle_handler)
+        angle_potentials = forcefield["Angles"].create_potential(top)
 
-        assert pot.name == "TestPotential"
-        assert compare_sympy_expr(pot.expression, "m*x+b")
-        assert "m" in pot.parameters.keys()
-        assert "b" in pot.parameters.keys()
-        assert pot.parameters["m"] == 0.5 * unit.dimensionless
-        assert pot.parameters["b"] == -1.0 * unit.dimensionless
+        pot = angle_potentials.potentials[angle_potentials.slot_map[(0, 1, 2)]]
+        kcal_deg2_mol = omm_unit.kilocalorie_per_mole / omm_unit.degree ** 2
 
-    def test_serialization(self):
-        pot = AnalyticalPotential(
-            smirks="[#6]",
-            expression="m*x+b",
-            independent_variables="x",
-        )
-
-        pot_param = ParametrizedAnalyticalPotential(
-            smirks=pot.smirks,
-            expression="m*x+b",
-            independent_variables={"x"},
-            parameters={"m": 1 * unit.dimensionless, "b": 1 * unit.dimensionless},
-        )
-
-        # Depending on the equality operator may be dangerous
-        pot == parse_obj_as(AnalyticalPotential, pot.dict())
-        pot == parse_obj_as(ParametrizedAnalyticalPotential, pot_param.dict())
+        assert pot.parameters["k"] == simtk_to_pint(2.5 * kcal_deg2_mol)
