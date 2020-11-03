@@ -44,10 +44,12 @@ def to_openff_system(self, topology: Topology, **kwargs) -> System:
         handler = self[parameter_handler._TAGNAME].create_potential(topology=topology)
         system.handlers.update({parameter_handler._TAGNAME: handler})
 
-    charges = self["Electrostatics"].create_potential(
-        forcefield=self, topology=topology
-    )
-    system.handlers.update({"Electrostatics": charges})
+    if "Electrostatics" in self.registered_parameter_handlers:
+        charges = self["Electrostatics"].create_potential(
+            forcefield=self, topology=topology
+        )
+        system.handlers.update({"Electrostatics": charges})
+
     return system
 
 

@@ -1,9 +1,10 @@
 import numpy as np
 import pytest
 
-from ..typing.smirnoff.data import SUPPORTED_HANDLER_MAPPING
 from ..utils import get_test_file_path, jax_available
 from .base_test import BaseTest
+
+SUPPORTED_HANDLER_MAPPING = {}
 
 
 class TestMatrixRepresentations(BaseTest):

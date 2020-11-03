@@ -5,14 +5,15 @@ from warnings import warn
 import numpy as np
 from pydantic import BaseModel
 
-from ... import unit
-from ...exceptions import JAXNotInstalledError, SMIRNOFFHandlerNotImplementedError
-from ...potential import ParametrizedAnalyticalPotential as Potential
-from ...utils import (
+from openff.system.utils import (
     get_partial_charges_from_openmm_system,
     jax_available,
     simtk_to_pint,
 )
+
+from ... import unit
+from ...exceptions import JAXNotInstalledError, SMIRNOFFHandlerNotImplementedError
+from ...potential import ParametrizedAnalyticalPotential as Potential
 
 
 def build_slot_smirks_map(topology, forcefield):

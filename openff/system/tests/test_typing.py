@@ -28,23 +28,22 @@ class TestSMIRNOFFTyping(BaseTest):
         ammonia_ff,
         ammonia_top,
     ):
+
         argon_sys = argon_ff.create_openff_system(argon_top)
         assert [*argon_sys.handlers.keys()] == ["vdW"]
 
         found_smirks = argon_sys.handlers["vdW"].slot_map.values()
         assert all([smirks == "[#18:1]" for smirks in found_smirks])
 
+        ammonia_sys = ammonia_ff.create_openff_system(ammonia_top)
 
-#        ff_collection = SMIRNOFFTermCollection.from_toolkit_data(
-#            ammonia_ff,
-#            ammonia_top,
-#        )
-#
-#        expected = ["Angles", "Bonds", "Electrostatics", "vdW"]
-#        assert sorted(ff_collection.terms.keys()) == sorted(expected)
-#
-#        for term in ff_collection.terms.values():
-#            assert term.potentials.keys() is not None
+        expected = ["Angles", "Bonds", "vdW"]
+        assert sorted(ammonia_sys.handlers.keys()) == sorted(expected)
+
+        for handler_name, handler in ammonia_sys.handlers.items():
+            assert len([*handler.potentials.items()]) > 0
+
+
 #
 #    def test_more_map_functions(self, parsley, cyclohexane_top):
 #        # TODO: Better way of testing individual handlers
