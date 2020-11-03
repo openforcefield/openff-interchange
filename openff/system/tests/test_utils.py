@@ -4,11 +4,9 @@ from openforcefield.typing.engines.smirnoff import ForceField
 from simtk import unit as simtk_unit
 
 from .. import unit
-from ..potential import ParametrizedAnalyticalPotential
 from ..utils import (
     compare_forcefields,
     compare_sympy_expr,
-    eval_expr,
     get_partial_charges_from_openmm_system,
     pint_to_simtk,
     simtk_to_pint,
@@ -81,16 +79,6 @@ class TestUtils(BaseTest):
         unwrapped = [1, 1.5] * unit.m
 
         assert all(unwrapped == unwrap_list_of_pint_quantities(wrapped))
-
-    @pytest.mark.skip
-    def test_eval_expr(self):
-        pot = ParametrizedAnalyticalPotential(
-            expression="a*x+b",
-            parameters={"a": 0.5 * unit.dimensionless, "b": -2.0 * unit.meter},
-            independent_variables={"x"},
-        )
-
-        assert eval_expr(pot, 2.0 * unit.meter) == -1 * unit.meter
 
 
 class TestOpenMM(BaseTest):

@@ -1,15 +1,18 @@
 import numpy as np
 import parmed as pmd
+import pytest
 from intermol.gromacs import energies as gmx_energy
 from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff.forcefield import ForceField
 from pkg_resources import resource_filename
 from simtk import unit
 
-from ...system import System
+from openff.system.components.system import System
+
 from ..utils import compare_energies
 
 
+@pytest.mark.skip
 def openff_openmm_pmd_gmx(
     topology: Topology, forcefield: ForceField, prefix: str
 ) -> None:
@@ -31,6 +34,7 @@ def openff_openmm_pmd_gmx(
     struct.save(prefix + ".top")
 
 
+@pytest.mark.skip
 def openff_pmd_gmx(
     topology: Topology,
     forcefield: ForceField,
@@ -44,6 +48,7 @@ def openff_pmd_gmx(
     struct.save(prefix + ".top")
 
 
+@pytest.mark.skip
 def test_parmed_openmm(tmpdir):
     tmpdir.chdir()
 
