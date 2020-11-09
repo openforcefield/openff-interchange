@@ -21,3 +21,4 @@ dependencies:
   - pint
   - openmm
   - openforcefield>=0.7.2
+  - nbval
