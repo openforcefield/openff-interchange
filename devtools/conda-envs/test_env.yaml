@@ -11,6 +11,7 @@ dependencies:
   - pint
   - sympy
   - qcelemental
+  - jax  # TODO: Make this optional?
 
     # Testing
   - pytest
@@ -20,3 +21,4 @@ dependencies:
   - pint
   - openmm
   - openforcefield>=0.7.2
+  - nbval

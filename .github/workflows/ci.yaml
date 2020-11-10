@@ -21,6 +21,7 @@ jobs:
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
+      COV: --cov=openff/system --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
     - uses: actions/checkout@v2
@@ -60,10 +61,15 @@ jobs:
           conda install jax -c conda-forge
           python -c "import jax"
 
-    - name: Run tests
+    - name: Run unit tests
       shell: bash -l {0}
       run: |
-        pytest -v --cov=openff/system/ --cov-report=xml --cov-config=setup.cfg openff/system/tests/ --ignore=openff/system/tests/integration_tests/
+        pytest -v $COV openff/system/tests/ --ignore=openff/system/tests/integration_tests/
+
+    - name: Run example notebooks
+      shell: bash -l {0}
+      run: |
+        pytest -v $COV examples/ --nbval --ignore=examples/SMIRNOFF_simulation.ipynb
 
     - name: Codecov
       uses: codecov/codecov-action@v1
