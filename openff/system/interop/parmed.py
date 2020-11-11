@@ -4,13 +4,13 @@ from typing import Any
 import numpy as np
 import parmed as pmd
 
-from .. import unit
+from openff.system import unit
 
 
 def to_parmed(off_system: Any) -> pmd.Structure:
     """Convert an OpenFF System to a ParmEd Structure"""
     structure = pmd.Structure()
-    _convert_box(off_system, structure)
+    _convert_box(off_system.box, structure)
 
     for topology_molecule in off_system.topology.topology_molecules:
         for atom in topology_molecule.atoms:
@@ -18,13 +18,15 @@ def to_parmed(off_system: Any) -> pmd.Structure:
                 pmd.Atom(atomic_number=atom.atomic_number), resname="FOO", resnum=0
             )
 
-    if "Bonds" in off_system.term_collection.terms:
-        bond_term = off_system.term_collection.terms["Bonds"]
-        for bond, smirks in bond_term.smirks_map.items():
+    if "Bonds" in off_system.handlers.keys():
+        bond_handler = off_system.handlers["Bonds"]
+        for bond, smirks in bond_handler.slot_map.items():
             idx_1, idx_2 = bond
-            pot = bond_term.potentials[bond_term.smirks_map[bond]]
+            pot = bond_handler.potentials[smirks]
+            # TODO: Safer unit conversion
             k = pot.parameters["k"].m / 2
             length = pot.parameters["length"].m
+            # TODO: Look up if BondType already exists in struct
             bond_type = pmd.BondType(k=k, req=length)
             structure.bonds.append(
                 pmd.Bond(
@@ -34,14 +36,15 @@ def to_parmed(off_system: Any) -> pmd.Structure:
                 )
             )
 
-    if "Angles" in off_system.term_collection.terms:
-        angle_term = off_system.term_collection.terms["Angles"]
-        for angle, smirks in angle_term.smirks_map.items():
+    if "Angles" in off_system.handlers.keys():
+        angle_term = off_system.handlers["Angles"]
+        for angle, smirks in angle_term.slot_map.items():
             idx_1, idx_2, idx_3 = angle
-            pot = angle_term.potentials[angle_term.smirks_map[angle]]
+            pot = angle_term.potentials[smirks]
             # TODO: Look at cost of redundant conversions, to ensure correct units of .m
             k = pot.parameters["k"].magnitude  # kcal/mol/rad**2
             theta = pot.parameters["angle"].magnitude  # degree
+            # TODO: Look up if AngleType already exists in struct
             angle_type = pmd.AngleType(k=k, theteq=theta)
             structure.angles.append(
                 pmd.Angle(
@@ -52,7 +55,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
                 )
             )
 
-    if "ProperTorsions" in off_system.term_collection.terms:
+    if False:  # "ProperTorsions" in off_system.term_collection.terms:
         proper_term = off_system.term_collection.terms["ProperTorsions"]
         for proper, smirks in proper_term.smirks_map.items():
             idx_1, idx_2, idx_3, idx_4 = proper
@@ -74,7 +77,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
                 )
             )
 
-    if "ImroperTorsions" in off_system.term_collection.terms:
+    if False:  # "ImroperTorsions" in off_system.term_collection.terms:
         improper_term = off_system.term_collection.terms["ImproperTorsions"]
         for improper, smirks in improper_term.smirks_map.items():
             idx_1, idx_2, idx_3, idx_4 = improper
@@ -96,21 +99,25 @@ def to_parmed(off_system: Any) -> pmd.Structure:
                 )
             )
 
-    vdw_term = off_system.term_collection.terms["vdW"]
+    vdw_handler = off_system.handlers["vdW"]
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
-        potential = vdw_term.potentials[vdw_term.smirks_map[(pmd_idx,)]]
+        smirks = vdw_handler.slot_map[(pmd_idx,)]
+        potential = vdw_handler.potentials[smirks]
         sigma, epsilon = _lj_params_from_potential(potential)
         pmd_atom.sigma = sigma
         pmd_atom.epsilon = epsilon
 
-    electrostatics_term = off_system.term_collection.terms["Electrostatics"]
-    for pmd_idx, pmd_atom in enumerate(structure.atoms):
-        partial_charge = (
-            electrostatics_term.potentials[str(pmd_idx)]
-            .to(unit.elementary_charge)
-            .magnitude
-        )
-        pmd_atom.charge = partial_charge
+    if "Electrostatics" in off_system.handlers.keys():
+        electrostatics_handler = off_system.handlers["Electrostatics"]
+
+        for pmd_idx, pmd_atom in enumerate(structure.atoms):
+            smirks = electrostatics_handler.slot_map[(pmd_idx,)]
+            partial_charge = (
+                electrostatics_handler.potentials[smirks]
+                .to(unit.elementary_charge)
+                .magnitude
+            )
+            pmd_atom.charge = partial_charge
 
     # Assign dummy residue names, GROMACS will not accept empty strings
     for res in structure.residues:
@@ -121,9 +128,9 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     return structure
 
 
-def _convert_box(off_system: Any, structure: pmd.Structure) -> None:
+def _convert_box(box: unit.Quantity, structure: pmd.Structure) -> None:
     # TODO: Convert box vectors to box lengths + angles
-    lengths = off_system.box.to(unit("angstrom")).diagonal().magnitude
+    lengths = box.to(unit("angstrom")).diagonal().magnitude
     angles = 3 * [90]
     structure.box = np.hstack([lengths, angles])
 

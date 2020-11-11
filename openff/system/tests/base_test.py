@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 from openforcefield.topology.molecule import Molecule
 from openforcefield.topology.topology import Topology
-from openforcefield.typing.engines.smirnoff import ForceField
 
+from openff.system.stubs import ForceField
 from openff.system.utils import get_test_file_path
 
 from .utils import top_from_smiles

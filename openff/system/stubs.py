@@ -29,7 +29,7 @@ def to_openff_system(self, topology: Topology, **kwargs) -> System:
     A method, patched onto ForceField, that creates a System object
 
     """
-    system = System()
+    sys_out = System()
 
     for parameter_handler, potential_handler in mapping.items():
         if parameter_handler._TAGNAME not in [
@@ -42,15 +42,18 @@ def to_openff_system(self, topology: Topology, **kwargs) -> System:
         if parameter_handler._TAGNAME not in self.registered_parameter_handlers:
             continue
         handler = self[parameter_handler._TAGNAME].create_potential(topology=topology)
-        system.handlers.update({parameter_handler._TAGNAME: handler})
+        sys_out.handlers.update({parameter_handler._TAGNAME: handler})
 
     if "Electrostatics" in self.registered_parameter_handlers:
         charges = self["Electrostatics"].create_potential(
             forcefield=self, topology=topology
         )
-        system.handlers.update({"Electrostatics": charges})
+        sys_out.handlers.update({"Electrostatics": charges})
 
-    return system
+    sys_out.box = sys_out.validate_box(topology.box_vectors)
+    sys_out.topology = topology
+    assert "topology" in dir(sys_out)
+    return sys_out
 
 
 def create_bond_potential_handler(
