@@ -10,9 +10,9 @@ from openff.system.types import UnitArray
 
 
 class TestParmedConversion(BaseTest):
-    @pytest.mark.skip
     def test_box(self, argon_ff, argon_top):
-        sys_out = argon_ff.create_openff_system(argon_top)
+        box = UnitArray(np.array([4, 4, 4]), units="nanometer")
+        sys_out = argon_ff.create_openff_system(topology=argon_top, box=box)
         sys_out.positions = UnitArray(
             np.zeros(
                 shape=(argon_top.n_topology_atoms, 3),
@@ -23,7 +23,7 @@ class TestParmedConversion(BaseTest):
 
         assert np.allclose(
             struct.box[:3],
-            argon_top.box_vectors.value_in_unit(omm_unit.angstrom).diagonal(),
+            [40, 40, 40],
         )
 
     def test_basic_conversion_argon(self, argon_ff, argon_top):

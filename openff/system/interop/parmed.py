@@ -130,9 +130,12 @@ def to_parmed(off_system: Any) -> pmd.Structure:
 
 def _convert_box(box: unit.Quantity, structure: pmd.Structure) -> None:
     # TODO: Convert box vectors to box lengths + angles
-    lengths = box.to(unit("angstrom")).diagonal().magnitude
-    angles = 3 * [90]
-    structure.box = np.hstack([lengths, angles])
+    if box is None:
+        structure.box = [0, 0, 0, 90, 90, 90]
+    else:
+        lengths = box.to(unit("angstrom")).diagonal().magnitude
+        angles = 3 * [90]
+        structure.box = np.hstack([lengths, angles])
 
 
 def _lj_params_from_potential(potential):

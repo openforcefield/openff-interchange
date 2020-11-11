@@ -30,15 +30,15 @@ class System(BaseModel):
     def validate_box(cls, val):
         if val is None:
             return val
-        if val.shape == (3, 3):
-            pass
-        elif val.shape == (3,):
-            val *= np.eye(3)
-        else:
-            raise ValueError  # InvalidBoxError
         if type(val) == omm_unit.Quantity:
             val = simtk_to_pint(val)
+        if val.shape == (3, 3):
             return val
+        elif val.shape == (3,):
+            val = val * np.eye(3)
+            return val
+        else:
+            raise ValueError  # InvalidBoxError
 
 
 System.to_parmed = to_parmed

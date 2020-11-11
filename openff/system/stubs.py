@@ -2,6 +2,7 @@
 Monkeypatching external classes with custom functionality
 """
 import functools
+from typing import Optional, Union
 
 from openforcefield.topology.topology import Topology
 from openforcefield.typing.engines.smirnoff import ForceField
@@ -12,6 +13,7 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ProperTorsionHandler,
     vdWHandler,
 )
+from simtk import unit as omm_unit
 
 from openff.system.components.potentials import PotentialHandler
 from openff.system.components.smirnoff import (
@@ -22,9 +24,15 @@ from openff.system.components.smirnoff import (
     SMIRNOFFvdWHandler,
 )
 from openff.system.components.system import System
+from openff.system.types import UnitArray
 
 
-def to_openff_system(self, topology: Topology, **kwargs) -> System:
+def to_openff_system(
+    self,
+    topology: Topology,
+    box: Optional[Union[omm_unit.Quantity, UnitArray]] = None,
+    **kwargs,
+) -> System:
     """
     A method, patched onto ForceField, that creates a System object
 
@@ -50,9 +58,13 @@ def to_openff_system(self, topology: Topology, **kwargs) -> System:
         )
         sys_out.handlers.update({"Electrostatics": charges})
 
-    sys_out.box = sys_out.validate_box(topology.box_vectors)
+    if box is None:
+        sys_out.box = sys_out.validate_box(topology.box_vectors)
+    else:
+        sys_out.box = sys_out.validate_box(box)
+
     sys_out.topology = topology
-    assert "topology" in dir(sys_out)
+
     return sys_out
 
 
