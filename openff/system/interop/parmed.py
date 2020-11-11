@@ -108,16 +108,20 @@ def to_parmed(off_system: Any) -> pmd.Structure:
         pmd_atom.epsilon = epsilon
 
     if "Electrostatics" in off_system.handlers.keys():
+        has_electrostatics = True
         electrostatics_handler = off_system.handlers["Electrostatics"]
+    else:
+        has_electrostatics = False
 
-        for pmd_idx, pmd_atom in enumerate(structure.atoms):
-            smirks = electrostatics_handler.slot_map[(pmd_idx,)]
-            partial_charge = (
-                electrostatics_handler.potentials[smirks]
-                .to(unit.elementary_charge)
-                .magnitude
-            )
-            pmd_atom.charge = partial_charge
+    for pmd_idx, pmd_atom in enumerate(structure.atoms):
+        if has_electrostatics:
+            partial_charge = electrostatics_handler.charge_map[(pmd_idx,)]
+            partial_charge_unitless = partial_charge.to(
+                unit.elementary_charge
+            ).magnitude
+            pmd_atom.charge = partial_charge_unitless
+        else:
+            pmd_atom.charge = 0
 
     # Assign dummy residue names, GROMACS will not accept empty strings
     for res in structure.residues:
