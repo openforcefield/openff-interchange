@@ -2,6 +2,8 @@ import numpy as np
 from openforcefield.topology import Molecule, Topology
 from simtk import unit
 
+from openff.system.exceptions import InterMolEnergyComparisonError
+
 
 def top_from_smiles(
     smiles: str,
@@ -34,9 +36,23 @@ def top_from_smiles(
 
 def compare_energies(ener1, ener2):
     """Compare two GROMACS energy dicts from InterMol"""
+
     assert ener1.keys() == ener2.keys()
+
+    flaky_keys = ["Kinetic En.", "Temperature"]
+    raise_exception = False
+    failed_runs = []
     for key in ener1.keys():
-        assert np.isclose(
-            ener1[key] / ener1[key].unit,
-            ener2[key] / ener2[key].unit,
-        )
+        if key in flaky_keys:
+            continue
+        try:
+            assert np.isclose(
+                ener1[key] / ener1[key].unit,
+                ener2[key] / ener2[key].unit,
+            )
+        except AssertionError:
+            raise_exception = True
+            failed_runs.append([key, ener1[key], ener2[key]])
+
+    if raise_exception:
+        raise InterMolEnergyComparisonError(failed_runs)

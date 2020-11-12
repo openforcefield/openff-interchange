@@ -1,7 +1,11 @@
+import tempfile
+
 import numpy as np
 import parmed as pmd
+import pytest
 from intermol.gromacs import energies as gmx_energy
 from openforcefield.topology import Molecule, Topology
+from openforcefield.utils.utils import temporary_cd
 from pkg_resources import resource_filename
 from simtk import unit as omm_unit
 
@@ -55,39 +59,44 @@ def openff_pmd_gmx(
     struct.save(prefix + ".top")
 
 
-def test_parmed_openmm(tmpdir):
+@pytest.mark.parametrize("smiles", ["C"])  # , "CC", "CCO"])
+def test_parmed_openmm(tmpdir, smiles):
     tmpdir.chdir()
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
-    mol = Molecule.from_smiles("C")
+    mol = Molecule.from_smiles(smiles)
     mol.generate_conformers(n_conformers=1)
     top = Topology.from_molecules(mol)
     box = 4 * np.eye(3) * omm_unit.nanometer
 
-    openff_openmm_pmd_gmx(
-        topology=top,
-        forcefield=parsley,
-        box=box,
-        prefix="methane1",
-    )
+    with tempfile.TemporaryDirectory() as omm_tempdir:
+        with temporary_cd(omm_tempdir):
+            openff_openmm_pmd_gmx(
+                topology=top,
+                forcefield=parsley,
+                box=box,
+                prefix="methane1",
+            )
 
-    openff_pmd_gmx(
-        topology=top,
-        forcefield=parsley,
-        box=box,
-        prefix="methane2",
-    )
+            ener1, ener1_file = gmx_energy(
+                top="methane1.top",
+                gro="methane1.gro",
+                mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
+            )
 
-    ener1, ener1_file = gmx_energy(
-        top="methane1.top",
-        gro="methane1.gro",
-        mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
-    )
+    with tempfile.TemporaryDirectory() as off_tempdir:
+        with temporary_cd(off_tempdir):
+            openff_pmd_gmx(
+                topology=top,
+                forcefield=parsley,
+                box=box,
+                prefix="methane2",
+            )
 
-    ener2, ener2_file = gmx_energy(
-        top="methane2.top",
-        gro="methane2.gro",
-        mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
-    )
+            ener2, ener2_file = gmx_energy(
+                top="methane2.top",
+                gro="methane2.gro",
+                mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
+            )
 
     compare_energies(ener1, ener2)

@@ -49,3 +49,9 @@ class InvalidBoxError(TypeError):
     """
     Generic exception for errors reading box data
     """
+
+
+class InterMolEnergyComparisonError(AssertionError):
+    """
+    Exception for when energies derived from InterMol do not match
+    """
