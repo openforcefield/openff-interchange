@@ -14,8 +14,16 @@ def to_parmed(off_system: Any) -> pmd.Structure:
 
     for topology_molecule in off_system.topology.topology_molecules:
         for atom in topology_molecule.atoms:
+            atomic_number = atom.atomic_number
+            element = pmd.periodic_table.Element[atomic_number]
+            mass = pmd.periodic_table.Mass[element]
             structure.add_atom(
-                pmd.Atom(atomic_number=atom.atomic_number), resname="FOO", resnum=0
+                pmd.Atom(
+                    atomic_number=atomic_number,
+                    mass=mass,
+                ),
+                resname="FOO",
+                resnum=0,
             )
 
     if "Bonds" in off_system.handlers.keys():
@@ -35,6 +43,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
                     type=bond_type,
                 )
             )
+            structure.bond_types.append(bond_type)
 
     if "Angles" in off_system.handlers.keys():
         angle_term = off_system.handlers["Angles"]
@@ -42,7 +51,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
             idx_1, idx_2, idx_3 = angle
             pot = angle_term.potentials[smirks]
             # TODO: Look at cost of redundant conversions, to ensure correct units of .m
-            k = pot.parameters["k"].magnitude  # kcal/mol/rad**2
+            k = pot.parameters["k"].magnitude / 2  # kcal/mol/rad**2
             theta = pot.parameters["angle"].magnitude  # degree
             # TODO: Look up if AngleType already exists in struct
             angle_type = pmd.AngleType(k=k, theteq=theta)
@@ -54,6 +63,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
                     type=angle_type,
                 )
             )
+            structure.angle_types.append(angle_type)
 
     if False:  # "ProperTorsions" in off_system.term_collection.terms:
         proper_term = off_system.term_collection.terms["ProperTorsions"]
@@ -103,9 +113,22 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         smirks = vdw_handler.slot_map[(pmd_idx,)]
         potential = vdw_handler.potentials[smirks]
+        element = pmd.periodic_table.Element[pmd_atom.element]
         sigma, epsilon = _lj_params_from_potential(potential)
-        pmd_atom.sigma = sigma
-        pmd_atom.epsilon = epsilon
+
+        atom_type = pmd.AtomType(
+            name=element + str(pmd_idx),
+            number=pmd_idx,
+            mass=pmd.periodic_table.Mass[element],
+        )
+
+        atom_type.set_lj_params(
+            eps=epsilon,
+            rmin=sigma / 2 ** (1 / 6),
+        )
+        pmd_atom.atom_type = atom_type
+        pmd_atom.type = atom_type.name
+        pmd_atom.name = pmd_atom.type
 
     if "Electrostatics" in off_system.handlers.keys():
         has_electrostatics = True
@@ -119,7 +142,8 @@ def to_parmed(off_system: Any) -> pmd.Structure:
             partial_charge_unitless = partial_charge.to(
                 unit.elementary_charge
             ).magnitude
-            pmd_atom.charge = partial_charge_unitless
+            pmd_atom.charge = float(partial_charge_unitless)
+            pmd_atom.atom_type.charge = float(partial_charge_unitless)
         else:
             pmd_atom.charge = 0
 
@@ -143,7 +167,8 @@ def _convert_box(box: unit.Quantity, structure: pmd.Structure) -> None:
 
 
 def _lj_params_from_potential(potential):
-    sigma = potential.parameters["sigma"].to(unit.angstrom)
-    epsilon = potential.parameters["epsilon"].to(unit.Unit("kilocalorie/mol"))
+    kcal_mol = unit.Unit("kilocalories / mol")
+    sigma = potential.parameters["sigma"].to(unit.angstrom).magnitude
+    epsilon = potential.parameters["epsilon"].to(kcal_mol).magnitude
 
-    return sigma.magnitude, epsilon.magnitude
+    return sigma, epsilon
