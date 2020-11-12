@@ -3,20 +3,24 @@ import parmed as pmd
 import pytest
 from intermol.gromacs import energies as gmx_energy
 from openforcefield.topology import Molecule, Topology
-from openforcefield.typing.engines.smirnoff.forcefield import ForceField
 from pkg_resources import resource_filename
-from simtk import unit
+from simtk import unit as omm_unit
 
 from openff.system.components.system import System
+from openff.system.stubs import ForceField
+from openff.system.utils import simtk_to_pint
 
 from ..utils import compare_energies
 
 
-@pytest.mark.skip
 def openff_openmm_pmd_gmx(
-    topology: Topology, forcefield: ForceField, prefix: str
+    topology: Topology,
+    forcefield: ForceField,
+    box: omm_unit.Quantity,
+    prefix: str,
 ) -> None:
     """Pipeline to write GROMACS files from and OpenMM system through ParmEd"""
+    topology.box_vectors = box
     omm_sys = forcefield.create_openmm_system(topology)
 
     struct = pmd.openmm.load_topology(
@@ -34,13 +38,18 @@ def openff_openmm_pmd_gmx(
     struct.save(prefix + ".top")
 
 
-@pytest.mark.skip
 def openff_pmd_gmx(
     topology: Topology,
     forcefield: ForceField,
+    box: omm_unit.Quantity,
     prefix: str,
 ) -> None:
-    off_sys = System.from_toolkit(topology=topology, forcefield=forcefield)
+    topology.box_vectors = box
+    off_sys = forcefield.create_openff_system(topology=topology)
+
+    off_top_positions = topology.topology_molecules[0].reference_molecule.conformers[0]
+    # TODO: Update this when better processing of OFFTop positions is supported
+    off_sys.positions = simtk_to_pint(off_top_positions)
 
     struct = off_sys.to_parmed()
 
@@ -48,7 +57,6 @@ def openff_pmd_gmx(
     struct.save(prefix + ".top")
 
 
-@pytest.mark.skip
 def test_parmed_openmm(tmpdir):
     tmpdir.chdir()
 
@@ -56,17 +64,19 @@ def test_parmed_openmm(tmpdir):
     mol = Molecule.from_smiles("C")
     mol.generate_conformers(n_conformers=1)
     top = Topology.from_molecules(mol)
-    top.box_vectors = 4 * np.eye(3) * unit.nanometer
+    box = 4 * np.eye(3) * omm_unit.nanometer
 
     openff_openmm_pmd_gmx(
         topology=top,
         forcefield=parsley,
+        box=box,
         prefix="methane1",
     )
 
     openff_pmd_gmx(
         topology=top,
         forcefield=parsley,
+        box=box,
         prefix="methane2",
     )
 
