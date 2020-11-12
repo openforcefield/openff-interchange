@@ -1,12 +1,10 @@
 import numpy as np
 import parmed as pmd
-import pytest
 from intermol.gromacs import energies as gmx_energy
 from openforcefield.topology import Molecule, Topology
 from pkg_resources import resource_filename
 from simtk import unit as omm_unit
 
-from openff.system.components.system import System
 from openff.system.stubs import ForceField
 from openff.system.utils import simtk_to_pint
 
