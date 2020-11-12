@@ -39,7 +39,7 @@ def compare_energies(ener1, ener2):
 
     assert ener1.keys() == ener2.keys()
 
-    flaky_keys = ["Kinetic En.", "Temperature"]
+    flaky_keys = ["Temperature", "Kinetic En.", "Total Energy"]
     raise_exception = False
     failed_runs = []
     for key in ener1.keys():
