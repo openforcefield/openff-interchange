@@ -123,7 +123,11 @@ def create_vdw_potential_handler(
     """
     A method, patched onto BondHandler, that creates a corresponding SMIRNOFFBondHandler
     """
-    handler = SMIRNOFFvdWHandler()
+    handler = SMIRNOFFvdWHandler(
+        scale_13=self.scale13,
+        scale_14=self.scale14,
+        scale_15=self.scale15,
+    )
     handler.store_matches(parameter_handler=self, topology=topology)
     handler.store_potentials(parameter_handler=self)
 
@@ -133,7 +137,11 @@ def create_vdw_potential_handler(
 def create_charges(
     self, forcefield: ForceField, topology: Topology
 ) -> SMIRNOFFElectrostaticsHandler:
-    handler = SMIRNOFFElectrostaticsHandler()
+    handler = SMIRNOFFElectrostaticsHandler(
+        scale_13=self.scale13,
+        scale_14=self.scale14,
+        scale_15=self.scale15,
+    )
     handler.store_charges(forcefield=forcefield, topology=topology)
 
     return handler

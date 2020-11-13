@@ -138,6 +138,9 @@ class SMIRNOFFvdWHandler(PotentialHandler):
     independent_variables: Set[str] = {"r"}
     slot_map: Dict[tuple, str] = dict()
     potentials: Dict[str, Potential] = dict()
+    scale_13: float = 0.0
+    scale_14: float = 0.5
+    scale_15: float = 1.0
 
     def store_matches(
         self,
@@ -185,6 +188,9 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
     expression: str = "coul"
     independent_variables: Set[str] = {"r"}
     charge_map: Dict[tuple, unit.Quantity] = dict()
+    scale_13: float = 0.0
+    scale_14: float = 0.8333333333
+    scale_15: float = 1.0
 
     def store_charges(
         self,
