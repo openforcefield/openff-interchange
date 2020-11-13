@@ -6,11 +6,19 @@ import parmed as pmd
 
 from openff.system import unit
 
+kcal_mol = unit.Unit("kilocalories / mol")
+
 
 def to_parmed(off_system: Any) -> pmd.Structure:
     """Convert an OpenFF System to a ParmEd Structure"""
     structure = pmd.Structure()
     _convert_box(off_system.box, structure)
+
+    if "Electrostatics" in off_system.handlers.keys():
+        has_electrostatics = True
+        electrostatics_handler = off_system.handlers["Electrostatics"]
+    else:
+        has_electrostatics = False
 
     for topology_molecule in off_system.topology.topology_molecules:
         for atom in topology_molecule.atoms:
@@ -65,27 +73,56 @@ def to_parmed(off_system: Any) -> pmd.Structure:
             )
             structure.angle_types.append(angle_type)
 
-    if False:  # "ProperTorsions" in off_system.term_collection.terms:
-        proper_term = off_system.term_collection.terms["ProperTorsions"]
-        for proper, smirks in proper_term.smirks_map.items():
+    # ParmEd treats 1-4 scaling factors at the level of each DihedralType,
+    # whereas SMIRNOFF captures them at the level of the non-bonded handler,
+    # so they need to be stored here for processing dihedrals
+    vdw_14 = off_system.handlers["vdW"].scale_14
+    if has_electrostatics:
+        coul_14 = off_system.handlers["Electrostatics"].scale_14
+    else:
+        coul_14 = 1.0
+    vdw_handler = off_system.handlers["vdW"]
+    if "ProperTorsions" in off_system.handlers.keys():
+        proper_term = off_system.handlers["ProperTorsions"]
+        for proper, smirks in proper_term.slot_map.items():
             idx_1, idx_2, idx_3, idx_4 = proper
-            pot = proper_term.potentials[proper_term.smirks_map[proper]]
-            # TODO: Better way of storing periodic data in generally, probably need to improve Potential
-            n = re.search(r"\d", "".join(pot.parameters.keys())).group()
-            k = pot.parameters["k" + n].m  # kcal/mol
-            periodicity = pot.parameters["periodicity" + n].m  # dimless
-            phase = pot.parameters["phase" + n].m  # degree
-
-            dihedral_type = pmd.DihedralType(per=periodicity, phi_k=k, phase=phase)
-            structure.dihedrals.append(
-                pmd.Dihedral(
-                    atom1=structure.atoms[idx_1],
-                    atom2=structure.atoms[idx_2],
-                    atom3=structure.atoms[idx_3],
-                    atom4=structure.atoms[idx_4],
-                    type=dihedral_type,
+            pot = proper_term.potentials[smirks]
+            for n in range(pot.parameters["n_terms"]):
+                k = pot.parameters["k"][n].to(kcal_mol).magnitude
+                periodicity = pot.parameters["periodicity"][n]
+                phase = pot.parameters["phase"][n].magnitude
+                dihedral_type = pmd.DihedralType(
+                    phi_k=k,
+                    per=periodicity,
+                    phase=phase,
+                    scnb=1 / vdw_14,
+                    scee=1 / coul_14,
                 )
-            )
+                structure.dihedrals.append(
+                    pmd.Dihedral(
+                        atom1=structure.atoms[idx_1],
+                        atom2=structure.atoms[idx_2],
+                        atom3=structure.atoms[idx_3],
+                        atom4=structure.atoms[idx_4],
+                        type=dihedral_type,
+                    )
+                )
+                structure.dihedral_types.append(dihedral_type)
+                vdw1 = vdw_handler.potentials[vdw_handler.slot_map[(idx_1,)]]
+                vdw4 = vdw_handler.potentials[vdw_handler.slot_map[(idx_4,)]]
+                sig1, eps1 = _lj_params_from_potential(vdw1)
+                sig4, eps4 = _lj_params_from_potential(vdw4)
+                sig = (sig1 + sig4) * 0.5
+                eps = (eps1 * eps4) ** 0.5
+                nbtype = pmd.NonbondedExceptionType(
+                    rmin=sig * 2 ** (1 / 6), epsilon=eps * vdw_14, chgscale=coul_14
+                )
+                structure.adjusts.append(
+                    pmd.NonbondedException(
+                        structure.atoms[idx_1], structure.atoms[idx_4], type=nbtype
+                    )
+                )
+                structure.adjust_types.append(nbtype)
 
     if False:  # "ImroperTorsions" in off_system.term_collection.terms:
         improper_term = off_system.term_collection.terms["ImproperTorsions"]
@@ -117,24 +154,16 @@ def to_parmed(off_system: Any) -> pmd.Structure:
         sigma, epsilon = _lj_params_from_potential(potential)
 
         atom_type = pmd.AtomType(
-            name=element + str(pmd_idx),
+            name=element + str(pmd_idx + 1),
             number=pmd_idx,
+            atomic_number=pmd_atom.atomic_number,
             mass=pmd.periodic_table.Mass[element],
         )
 
-        atom_type.set_lj_params(
-            eps=epsilon,
-            rmin=sigma / 2 ** (1 / 6),
-        )
+        atom_type.set_lj_params(eps=epsilon, rmin=sigma * 2 ** (1 / 6) / 2)
         pmd_atom.atom_type = atom_type
         pmd_atom.type = atom_type.name
         pmd_atom.name = pmd_atom.type
-
-    if "Electrostatics" in off_system.handlers.keys():
-        has_electrostatics = True
-        electrostatics_handler = off_system.handlers["Electrostatics"]
-    else:
-        has_electrostatics = False
 
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         if has_electrostatics:
@@ -167,7 +196,6 @@ def _convert_box(box: unit.Quantity, structure: pmd.Structure) -> None:
 
 
 def _lj_params_from_potential(potential):
-    kcal_mol = unit.Unit("kilocalories / mol")
     sigma = potential.parameters["sigma"].to(unit.angstrom).magnitude
     epsilon = potential.parameters["epsilon"].to(kcal_mol).magnitude
 
