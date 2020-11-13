@@ -10,7 +10,7 @@ from openff.system import unit
 class Potential(BaseModel):
     """Base class for storing applied parameters"""
 
-    parameters: Dict[str, Optional[unit.Quantity]] = dict()
+    parameters: Dict[str, Optional[Union[unit.Quantity, List, int]]] = dict()
 
     class Config:
         arbitrary_types_allowed = True

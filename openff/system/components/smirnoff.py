@@ -119,11 +119,13 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
             # ParameterHandler.get_parameter returns a list, although this
             # should only ever be length 1
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
+            n_terms = len(parameter_type.k)
             potential = Potential(
                 parameters={
-                    "k": simtk_to_pint(parameter_type.k),
-                    "periodicity": simtk_to_pint(parameter_type.periodicity),
-                    "phase": simtk_to_pint(parameter_type.phase),
+                    "k": [simtk_to_pint(val) for val in parameter_type.k],
+                    "periodicity": parameter_type.periodicity,
+                    "phase": [simtk_to_pint(val) for val in parameter_type.phase],
+                    "n_terms": n_terms,
                 },
             )
             self.potentials[smirks] = potential
