@@ -29,6 +29,8 @@ class SMIRNOFFBondHandler(PotentialHandler):
         and unique potential identifiers
 
         """
+        if self.slot_map:
+            self.slot_map = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             self.slot_map[key] = val.parameter_type.smirks
@@ -39,6 +41,8 @@ class SMIRNOFFBondHandler(PotentialHandler):
         identifiers and their associated Potential objects
 
         """
+        if self.potentials:
+            self.potentials = dict()
         for smirks in self.slot_map.values():
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             potential = Potential(
