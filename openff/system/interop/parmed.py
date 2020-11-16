@@ -1,4 +1,3 @@
-import re
 from typing import Any
 
 import numpy as np
@@ -36,14 +35,20 @@ def to_parmed(off_system: Any) -> pmd.Structure:
 
     if "Bonds" in off_system.handlers.keys():
         bond_handler = off_system.handlers["Bonds"]
-        for bond, smirks in bond_handler.slot_map.items():
-            idx_1, idx_2 = bond
-            pot = bond_handler.potentials[smirks]
-            # TODO: Safer unit conversion
-            k = pot.parameters["k"].m / 2
-            length = pot.parameters["length"].m
-            # TODO: Look up if BondType already exists in struct
-            bond_type = pmd.BondType(k=k, req=length)
+        bond_map = dict()
+        for bond_slot, smirks in bond_handler.slot_map.items():
+            idx_1, idx_2 = bond_slot
+            try:
+                bond_type = bond_map[smirks]
+            except KeyError:
+                pot = bond_handler.potentials[smirks]
+                k = pot.parameters["k"].m / 2
+                length = pot.parameters["length"].m
+                bond_type = pmd.BondType(k=k, req=length)
+                bond_map[smirks] = bond_type
+                del pot, k, length
+            if bond_type not in structure.bond_types:
+                structure.bond_types.append(bond_type)
             structure.bonds.append(
                 pmd.Bond(
                     atom1=structure.atoms[idx_1],
@@ -51,7 +56,9 @@ def to_parmed(off_system: Any) -> pmd.Structure:
                     type=bond_type,
                 )
             )
-            structure.bond_types.append(bond_type)
+            del bond_type, idx_1, idx_2, smirks, bond_slot
+
+    assert structure.bonds[0].type.req > 1.5
 
     if "Angles" in off_system.handlers.keys():
         angle_term = off_system.handlers["Angles"]
@@ -124,27 +131,27 @@ def to_parmed(off_system: Any) -> pmd.Structure:
                 )
                 structure.adjust_types.append(nbtype)
 
-    if False:  # "ImroperTorsions" in off_system.term_collection.terms:
-        improper_term = off_system.term_collection.terms["ImproperTorsions"]
-        for improper, smirks in improper_term.smirks_map.items():
-            idx_1, idx_2, idx_3, idx_4 = improper
-            pot = improper_term.potentials[improper_term.smirks_map[improper]]
-            # TODO: Better way of storing periodic data in generally, probably need to improve Potential
-            n = re.search(r"\d", "".join(pot.parameters.keys())).group()
-            k = pot.parameters["k" + n].m  # kcal/mol
-            periodicity = pot.parameters["periodicity" + n].m  # dimless
-            phase = pot.parameters["phase" + n].m  # degree
-
-            dihedral_type = pmd.DihedralType(per=periodicity, phi_k=k, phase=phase)
-            structure.dihedrals.append(
-                pmd.Dihedral(
-                    atom1=structure.atoms[idx_1],
-                    atom2=structure.atoms[idx_2],
-                    atom3=structure.atoms[idx_3],
-                    atom4=structure.atoms[idx_4],
-                    type=dihedral_type,
-                )
-            )
+    #    if False:  # "ImroperTorsions" in off_system.term_collection.terms:
+    #        improper_term = off_system.term_collection.terms["ImproperTorsions"]
+    #        for improper, smirks in improper_term.smirks_map.items():
+    #            idx_1, idx_2, idx_3, idx_4 = improper
+    #            pot = improper_term.potentials[improper_term.smirks_map[improper]]
+    #            # TODO: Better way of storing periodic data in generally, probably need to improve Potential
+    #            n = re.search(r"\d", "".join(pot.parameters.keys())).group()
+    #            k = pot.parameters["k" + n].m  # kcal/mol
+    #            periodicity = pot.parameters["periodicity" + n].m  # dimless
+    #            phase = pot.parameters["phase" + n].m  # degree
+    #
+    #            dihedral_type = pmd.DihedralType(per=periodicity, phi_k=k, phase=phase)
+    #            structure.dihedrals.append(
+    #                pmd.Dihedral(
+    #                    atom1=structure.atoms[idx_1],
+    #                    atom2=structure.atoms[idx_2],
+    #                    atom3=structure.atoms[idx_3],
+    #                    atom4=structure.atoms[idx_4],
+    #                    type=dihedral_type,
+    #                )
+    #            )
 
     vdw_handler = off_system.handlers["vdW"]
     for pmd_idx, pmd_atom in enumerate(structure.atoms):

@@ -59,7 +59,8 @@ def openff_pmd_gmx(
     struct.save(prefix + ".top")
 
 
-@pytest.mark.parametrize("smiles", ["C"])  # , "CC", "CCO"])
+# @pytest.mark.parametrize("smiles", ["C", "CC", "CCO"])
+@pytest.mark.parametrize("smiles", ["CC"])
 def test_parmed_openmm(tmpdir, smiles):
     tmpdir.chdir()
 
@@ -75,12 +76,12 @@ def test_parmed_openmm(tmpdir, smiles):
                 topology=top,
                 forcefield=parsley,
                 box=box,
-                prefix="methane1",
+                prefix="mol1",
             )
 
             ener1, ener1_file = gmx_energy(
-                top="methane1.top",
-                gro="methane1.gro",
+                top="mol1.top",
+                gro="mol1.gro",
                 mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
             )
 
@@ -90,12 +91,12 @@ def test_parmed_openmm(tmpdir, smiles):
                 topology=top,
                 forcefield=parsley,
                 box=box,
-                prefix="methane2",
+                prefix="mol2",
             )
 
             ener2, ener2_file = gmx_energy(
-                top="methane2.top",
-                gro="methane2.gro",
+                top="mol2.top",
+                gro="mol2.gro",
                 mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
             )
 
