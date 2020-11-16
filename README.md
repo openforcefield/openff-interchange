@@ -7,12 +7,13 @@ A molecular system object from the Open Force Field Initiative
 
 **Please note that this software in an early and experimental state and unsuitable for production.**
 
+Some examples are available via [binder](https://mybinder.org/v2/gh/openforcefield/openff-system/master?filepath=%2Fexamples%2F), runnable in a web browser without installing anyting on your computer.
+
 ### Copyright
 
 Copyright (c) 2020, Open Force Field Initiative
 
 
 #### Acknowledgements
- 
-Project based on the 
-[Computational Molecular Science Python Cookiecutter](https://github.com/molssi/cookiecutter-cms) version 1.2.
+
+Project based on the [Computational Molecular Science Python Cookiecutter](https://github.com/molssi/cookiecutter-cms) version 1.2.

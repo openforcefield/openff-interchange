@@ -1,0 +1,9 @@
+#!/bin/bash
+
+mkdir src
+cd src
+
+git clone https://github.com/openforcefield/openff-system.git
+cd openff-system
+python -m pip install .
+cd ..
