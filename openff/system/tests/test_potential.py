@@ -25,7 +25,7 @@ class TestBondPotentialHandler(BaseTest):
         forcefield.register_parameter_handler(bond_handler)
         bond_potentials = forcefield["Bonds"].create_potential(top)
 
-        pot = bond_potentials.potentials[bond_potentials.slot_map[(0, 1)]]
+        pot = bond_potentials.potentials[bond_potentials.slot_map["(0, 1)"]]
         kcal_ang2_mol = omm_unit.kilocalorie_per_mole / omm_unit.angstrom ** 2
 
         assert pot.parameters["k"] == simtk_to_pint(1.5 * kcal_ang2_mol)
@@ -48,7 +48,7 @@ class TestBondPotentialHandler(BaseTest):
         forcefield.register_parameter_handler(angle_handler)
         angle_potentials = forcefield["Angles"].create_potential(top)
 
-        pot = angle_potentials.potentials[angle_potentials.slot_map[(0, 1, 2)]]
+        pot = angle_potentials.potentials[angle_potentials.slot_map["(0, 1, 2)"]]
         kcal_deg2_mol = omm_unit.kilocalorie_per_mole / omm_unit.degree ** 2
 
         assert pot.parameters["k"] == simtk_to_pint(2.5 * kcal_deg2_mol)
