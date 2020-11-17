@@ -5,26 +5,38 @@ from openforcefield.typing.engines.smirnoff import ForceField
 from simtk import unit as omm_unit
 
 from openff.system.components.system import System
+from openff.system.tests.base_test import BaseTest
+from openff.system.types import UnitArray
 
-from ..base_test import BaseTest
 
-
-@pytest.mark.skip
 class TestParmedConversion(BaseTest):
     def test_box(self, argon_ff, argon_top):
-        struct = System.from_toolkit(
-            forcefield=argon_ff,
-            topology=argon_top,
-        ).to_parmed()
+        box = UnitArray(np.array([4, 4, 4]), units="nanometer")
+        sys_out = argon_ff.create_openff_system(topology=argon_top, box=box)
+        sys_out.positions = UnitArray(
+            np.zeros(
+                shape=(argon_top.n_topology_atoms, 3),
+            ),
+            units="angstrom",
+        )
+        struct = sys_out.to_parmed()
+
         assert np.allclose(
             struct.box[:3],
-            argon_top.box_vectors.value_in_unit(omm_unit.angstrom).diagonal(),
+            [40, 40, 40],
         )
 
     def test_basic_conversion_argon(self, argon_ff, argon_top):
-        struct = System.from_toolkit(
-            forcefield=argon_ff, topology=argon_top
-        ).to_parmed()
+        argon_top.box_vectors = np.array([4, 4, 4]) * omm_unit.nanometer
+        sys_out = argon_ff.create_openff_system(argon_top)
+        sys_out.positions = UnitArray(
+            np.zeros(
+                shape=(argon_top.n_topology_atoms, 3),
+            ),
+            units="angstrom",
+        )
+        struct = sys_out.to_parmed()
+
         # As partial sanity check, see if it they save without error
         struct.save("x.top", combine="all")
         struct.save("x.gro", combine="all")
