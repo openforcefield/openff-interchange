@@ -37,7 +37,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
         bond_handler = off_system.handlers["Bonds"]
         bond_map = dict()
         for bond_slot, smirks in bond_handler.slot_map.items():
-            idx_1, idx_2 = bond_slot
+            idx_1, idx_2 = eval(bond_slot)
             try:
                 bond_type = bond_map[smirks]
             except KeyError:
@@ -58,12 +58,10 @@ def to_parmed(off_system: Any) -> pmd.Structure:
             )
             del bond_type, idx_1, idx_2, smirks, bond_slot
 
-    assert structure.bonds[0].type.req > 1.5
-
     if "Angles" in off_system.handlers.keys():
         angle_term = off_system.handlers["Angles"]
         for angle, smirks in angle_term.slot_map.items():
-            idx_1, idx_2, idx_3 = angle
+            idx_1, idx_2, idx_3 = eval(angle)
             pot = angle_term.potentials[smirks]
             # TODO: Look at cost of redundant conversions, to ensure correct units of .m
             k = pot.parameters["k"].magnitude / 2  # kcal/mol/rad**2
@@ -92,7 +90,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     if "ProperTorsions" in off_system.handlers.keys():
         proper_term = off_system.handlers["ProperTorsions"]
         for proper, smirks in proper_term.slot_map.items():
-            idx_1, idx_2, idx_3, idx_4 = proper
+            idx_1, idx_2, idx_3, idx_4 = eval(proper)
             pot = proper_term.potentials[smirks]
             for n in range(pot.parameters["n_terms"]):
                 k = pot.parameters["k"][n].to(kcal_mol).magnitude
@@ -115,8 +113,8 @@ def to_parmed(off_system: Any) -> pmd.Structure:
                     )
                 )
                 structure.dihedral_types.append(dihedral_type)
-                vdw1 = vdw_handler.potentials[vdw_handler.slot_map[(idx_1,)]]
-                vdw4 = vdw_handler.potentials[vdw_handler.slot_map[(idx_4,)]]
+                vdw1 = vdw_handler.potentials[vdw_handler.slot_map[str((idx_1,))]]
+                vdw4 = vdw_handler.potentials[vdw_handler.slot_map[str((idx_4,))]]
                 sig1, eps1 = _lj_params_from_potential(vdw1)
                 sig4, eps4 = _lj_params_from_potential(vdw4)
                 sig = (sig1 + sig4) * 0.5
@@ -155,7 +153,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
 
     vdw_handler = off_system.handlers["vdW"]
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
-        smirks = vdw_handler.slot_map[(pmd_idx,)]
+        smirks = vdw_handler.slot_map[str((pmd_idx,))]
         potential = vdw_handler.potentials[smirks]
         element = pmd.periodic_table.Element[pmd_atom.element]
         sigma, epsilon = _lj_params_from_potential(potential)

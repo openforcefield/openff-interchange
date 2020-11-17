@@ -59,8 +59,8 @@ def openff_pmd_gmx(
     struct.save(prefix + ".top")
 
 
-# @pytest.mark.parametrize("smiles", ["C", "CC", "CCO"])
-@pytest.mark.parametrize("smiles", ["CC"])
+# TODO: Also test CC, CCO, etc.
+@pytest.mark.parametrize("smiles", ["C"])
 def test_parmed_openmm(tmpdir, smiles):
     tmpdir.chdir()
 

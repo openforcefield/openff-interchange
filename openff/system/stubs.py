@@ -1,7 +1,6 @@
 """
 Monkeypatching external classes with custom functionality
 """
-import functools
 from typing import Optional, Union
 
 from openforcefield.topology.topology import Topology
@@ -15,7 +14,6 @@ from openforcefield.typing.engines.smirnoff.parameters import (
 )
 from simtk import unit as omm_unit
 
-from openff.system.components.potentials import PotentialHandler
 from openff.system.components.smirnoff import (
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
@@ -147,29 +145,12 @@ def create_charges(
     return handler
 
 
-def create_potential_handler(
-    self,
-    topology: Topology,
-    handler_class: PotentialHandler,
-    **kwargs,
-) -> PotentialHandler:
-    handler = handler_class()
-    handler.store_matches(parameter_handler=self, topology=topology)
-    handler.store_potentials(parameter_handler=self)
-    return functools.partial(handler_class, topology=topology)
-
-
 mapping = {
     BondHandler: SMIRNOFFBondHandler,
     AngleHandler: SMIRNOFFAngleHandler,
     ProperTorsionHandler: SMIRNOFFProperTorsionHandler,
     vdWHandler: SMIRNOFFvdWHandler,
 }
-
-# for potential_handler, parameter_handler in mapping.items():
-#   parameter_handler.create_potential = functools.partialmethod(
-#       create_potential_handler, handler_class=potential_handler
-#   )
 
 BondHandler.create_potential = create_bond_potential_handler
 AngleHandler.create_potential = create_angle_potential_handler
