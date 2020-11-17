@@ -23,7 +23,7 @@ class PotentialHandler(BaseModel):
     name: str
     expression: Union[Expr, str]
     independent_variables: Union[str, Set[Union[Expr, str]]]
-    slot_map: Dict[tuple, str] = dict()
+    slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
 
     @validator("expression")
