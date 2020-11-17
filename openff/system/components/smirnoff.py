@@ -20,7 +20,7 @@ class SMIRNOFFBondHandler(PotentialHandler):
     name: str = "Bonds"
     expression: str = "1/2 * k * (r - length) ** 2"
     independent_variables: Set[str] = {"r"}
-    slot_map: Dict[tuple, str] = dict()
+    slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
 
     def store_matches(self, parameter_handler: BondHandler, topology: Topology) -> None:
@@ -33,6 +33,7 @@ class SMIRNOFFBondHandler(PotentialHandler):
             self.slot_map = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
+            key = str(key)
             self.slot_map[key] = val.parameter_type.smirks
 
     def store_potentials(self, parameter_handler: BondHandler) -> None:
@@ -59,7 +60,7 @@ class SMIRNOFFAngleHandler(PotentialHandler):
     name: str = "Angles"
     expression: str = "1/2 * k * (angle - theta)"
     independent_variables: Set[str] = {"theta"}
-    slot_map: Dict[tuple, str] = dict()
+    slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
 
     def store_matches(
@@ -72,6 +73,7 @@ class SMIRNOFFAngleHandler(PotentialHandler):
         """
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
+            key = str(key)
             self.slot_map[key] = val.parameter_type.smirks
 
     def store_potentials(self, parameter_handler: AngleHandler) -> None:
@@ -98,7 +100,7 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
     name: str = "ProperTorsions"
     expression: str = "k*(1+cos(periodicity*theta-phase))"
     independent_variables: Set[str] = {"theta"}
-    slot_map: Dict[tuple, str] = dict()
+    slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
 
     def store_matches(
@@ -111,6 +113,7 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
         """
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
+            key = str(key)
             self.slot_map[key] = val.parameter_type.smirks
 
     def store_potentials(self, parameter_handler: ProperTorsionHandler) -> None:
@@ -138,7 +141,7 @@ class SMIRNOFFvdWHandler(PotentialHandler):
     name: str = "vdW"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     independent_variables: Set[str] = {"r"}
-    slot_map: Dict[tuple, str] = dict()
+    slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
 
     def store_matches(
@@ -153,6 +156,7 @@ class SMIRNOFFvdWHandler(PotentialHandler):
         """
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
+            key = str(key)
             self.slot_map[key] = val.parameter_type.smirks
 
     def store_potentials(self, parameter_handler: vdWHandler) -> None:
