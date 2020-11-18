@@ -43,14 +43,14 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
 
     def store_constraints(self, parameter_handler: ConstraintHandler) -> None:
         """
-        Populate self.potentials with key-val pairs of unique potential
+        Populate self.constraints with key-val pairs of unique potential
         identifiers and their associated Potential objects
 
         TODO: Raname to store_potentials potentials for consistency?
 
         """
-        if self.potentials:
-            self.potentials = dict()
+        if self.constraints:
+            self.constraints = dict()
         for smirks in self.slot_map.values():
             # Simply store _if_ this slot is to be constrained;
             # let the details be dealt with by the interoperability layer
