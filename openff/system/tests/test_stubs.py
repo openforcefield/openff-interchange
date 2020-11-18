@@ -13,5 +13,8 @@ class TestStubs(BaseTest):
 
         out = parsley.create_openff_system(top)
 
+        assert "Constraints" in out.handlers.keys()
         assert "Bonds" in out.handlers.keys()
         assert "Angles" in out.handlers.keys()
+        assert "ProperTorsions" in out.handlers.keys()
+        assert "vdW" in out.handlers.keys()

@@ -5,6 +5,7 @@ from openforcefield.typing.engines.smirnoff.forcefield import ForceField
 from openforcefield.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
+    ConstraintHandler,
     ProperTorsionHandler,
     vdWHandler,
 )
@@ -13,6 +14,47 @@ from pydantic import BaseModel
 from openff.system import unit
 from openff.system.components.potentials import Potential, PotentialHandler
 from openff.system.utils import get_partial_charges_from_openmm_system, simtk_to_pint
+
+
+class SMIRNOFFConstraintHandler(PotentialHandler):
+
+    name: str = "Constraints"
+    expression: str = ""
+    independent_variables: Set[str] = {""}
+    slot_map: Dict[str, str] = dict()
+    constraints: Dict[
+        str, bool
+    ] = dict()  # should this be named potentials for consistency?
+
+    def store_matches(
+        self, parameter_handler: ConstraintHandler, topology: Topology
+    ) -> None:
+        """
+        Populate self.slot_map with key-val pairs of slots
+        and unique potential identifiers
+
+        """
+        if self.slot_map:
+            self.slot_map = dict()
+        matches = parameter_handler.find_matches(topology)
+        for key, val in matches.items():
+            key = str(key)
+            self.slot_map[key] = val.parameter_type.smirks
+
+    def store_constraints(self, parameter_handler: ConstraintHandler) -> None:
+        """
+        Populate self.potentials with key-val pairs of unique potential
+        identifiers and their associated Potential objects
+
+        TODO: Raname to store_potentials potentials for consistency?
+
+        """
+        if self.potentials:
+            self.potentials = dict()
+        for smirks in self.slot_map.values():
+            # Simply store _if_ this slot is to be constrained;
+            # let the details be dealt with by the interoperability layer
+            self.constraints[smirks] = True
 
 
 class SMIRNOFFBondHandler(PotentialHandler):
@@ -223,6 +265,7 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
 
 
 SUPPORTED_HANDLER_MAPPING = {
+    "Constriants": SMIRNOFFConstraintHandler,
     "Bonds": SMIRNOFFBondHandler,
     "Angles": SMIRNOFFAngleHandler,
     "vdW": SMIRNOFFvdWHandler,
