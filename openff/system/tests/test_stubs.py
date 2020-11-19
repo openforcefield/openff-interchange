@@ -13,5 +13,76 @@ class TestStubs(BaseTest):
 
         out = parsley.create_openff_system(top)
 
+        assert "Constraints" in out.handlers.keys()
         assert "Bonds" in out.handlers.keys()
         assert "Angles" in out.handlers.keys()
+        assert "ProperTorsions" in out.handlers.keys()
+        assert "vdW" in out.handlers.keys()
+
+
+class TestConstraints(BaseTest):
+    """Test the handling of SMIRNOFF constraints"""
+
+    def test_force_field_basic_constraints(self, parsley):
+        """Test that a force field Constraints tag adds a
+        Constraints handler with expected data"""
+        # TODO: Replace with more minimal force field
+
+        top = Topology.from_molecules(Molecule.from_smiles("CC"))
+        sys_out = parsley.create_openff_system(top)
+
+        assert "Constraints" in sys_out.handlers.keys()
+        constraints = sys_out.handlers["Constraints"]
+        assert "(0, 1)" not in constraints.slot_map.keys()  # C-C bond
+        assert "(0, 2)" in constraints.slot_map.keys()  # C-H bond
+        assert len(constraints.slot_map.keys()) == 6  # number of C-H bonds
+        assert len({constraints.slot_map.values()}) == 1  # always True
+        assert constraints.constraints[constraints.slot_map["(0, 2)"]] is True
+
+    def test_force_field_no_constraints(self, parsley_unconstrained):
+        """Test that a force field _without_ a Constraints tag does not add a
+        Constraints handler"""
+        # TODO: Replace with more minimal force field
+
+        top = Topology.from_molecules(Molecule.from_smiles("CC"))
+        sys_out = parsley_unconstrained.create_openff_system(top)
+
+        assert "Constraints" not in sys_out.handlers.keys()
+
+    def test_no_matched_constraints(self, parsley):
+        """Test that a force field with a Constraints tag adds an empty
+        Constraints handler when the topology does not match any parameters"""
+        # TODO: Replace with more minimal force field
+
+        top = Topology.from_molecules(Molecule.from_smiles("O=C=O"))
+        sys_out = parsley.create_openff_system(top)
+
+        assert "Constraints" in sys_out.handlers.keys()
+
+        constraints = sys_out.handlers["Constraints"]
+        assert constraints.slot_map == dict()
+        assert constraints.constraints == dict()
+
+    def test_constraint_reassignment(self, parsley):
+        """Test that constraints already existing in a parametrized system
+        can be updated against new force field data"""
+        # TODO: Replace with more minimal force field
+
+        top = Topology.from_molecules(Molecule.from_smiles("CCO"))
+        constrained = parsley.create_openff_system(top)
+
+        assert len(constrained.handlers["Constraints"].slot_map.keys()) == 6
+
+        # Update Parsley to also constrain C-O bonds
+        parsley["Constraints"].add_parameter({"smirks": "[#6:1]-[#8:2]"})
+
+        constrained.handlers["Constraints"].store_matches(
+            parameter_handler=parsley["Constraints"],
+            topology=top,
+        )
+
+        constrained.handlers["Constraints"].store_constraints(
+            parameter_handler=parsley["Constraints"],
+        )
+
+        assert len(constrained.handlers["Constraints"].slot_map.keys()) == 7

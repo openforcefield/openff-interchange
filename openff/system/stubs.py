@@ -8,6 +8,7 @@ from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
+    ConstraintHandler,
     ElectrostaticsHandler,
     ProperTorsionHandler,
     vdWHandler,
@@ -17,6 +18,7 @@ from simtk import unit as omm_unit
 from openff.system.components.smirnoff import (
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
+    SMIRNOFFConstraintHandler,
     SMIRNOFFElectrostaticsHandler,
     SMIRNOFFProperTorsionHandler,
     SMIRNOFFvdWHandler,
@@ -39,11 +41,13 @@ def to_openff_system(
 
     for parameter_handler, potential_handler in mapping.items():
         if parameter_handler._TAGNAME not in [
+            "Constraints",
             "Bonds",
             "Angles",
             "ProperTorsions",
             "vdW",
         ]:
+            # Once the SMIRNOFF spec is implemented, this should be an exception
             continue
         if parameter_handler._TAGNAME not in self.registered_parameter_handlers:
             continue
@@ -64,6 +68,22 @@ def to_openff_system(
     sys_out.topology = topology
 
     return sys_out
+
+
+def create_constraint_handler(
+    self,
+    topology: Topology,
+    **kwargs,
+) -> SMIRNOFFConstraintHandler:
+    """
+    A method, patched onto ConstraintHandler, that creates a corresponding SMIRNOFFConstraintHandler
+
+    """
+    handler = SMIRNOFFConstraintHandler()
+    handler.store_matches(parameter_handler=self, topology=topology)
+    handler.store_constraints(parameter_handler=self)
+
+    return handler
 
 
 def create_bond_potential_handler(
@@ -146,12 +166,14 @@ def create_charges(
 
 
 mapping = {
+    ConstraintHandler: SMIRNOFFConstraintHandler,
     BondHandler: SMIRNOFFBondHandler,
     AngleHandler: SMIRNOFFAngleHandler,
     ProperTorsionHandler: SMIRNOFFProperTorsionHandler,
     vdWHandler: SMIRNOFFvdWHandler,
 }
 
+ConstraintHandler.create_potential = create_constraint_handler
 BondHandler.create_potential = create_bond_potential_handler
 AngleHandler.create_potential = create_angle_potential_handler
 ProperTorsionHandler.create_potential = create_proper_torsion_potential_handler
