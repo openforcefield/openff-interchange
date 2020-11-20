@@ -2,9 +2,9 @@ from typing import Dict, List, Optional, Set, Union
 
 import jax.numpy as jnp
 from pydantic import BaseModel, validator
-from sympy import Expr
 
 from openff.system import unit
+from openff.system.exceptions import InvalidExpressionError
 
 
 class Potential(BaseModel):
@@ -21,17 +21,19 @@ class PotentialHandler(BaseModel):
     """Base class for storing parametrized force field data"""
 
     name: str
-    expression: Union[Expr, str]
-    independent_variables: Union[str, Set[Union[Expr, str]]]
+    expression: str
+    independent_variables: Union[str, Set[str]]
     slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
 
-    @validator("expression")
-    def is_valid_sympy_expr(cls, val):
-        if isinstance(val, Expr):
-            return val.args[0]
-        elif isinstance(val, str):
+    # Pydantic silently casts some types (int, float, Decimal) to str
+    # in models that expect str; this may be updates, see #1098
+    @validator("expression", pre=True)
+    def is_valid_expr(cls, val):
+        if isinstance(val, str):
             return val
+        else:
+            raise InvalidExpressionError
 
     class Config:
         arbitrary_types_allowed = True
