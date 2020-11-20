@@ -21,6 +21,7 @@ jobs:
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
+      COV: --cov=openff/system --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
     - uses: actions/checkout@v2
@@ -61,7 +62,7 @@ jobs:
     - name: Run tests
       shell: bash -l {0}
       run: |
-        pytest -v --cov=openff/system/ --cov-report=xml --cov-config=setup.cfg openff/system/tests/integration_tests/
+        pytest -v $COV openff/system/tests/integration_tests/
 
     - name: Codecov
       uses: codecov/codecov-action@v1
