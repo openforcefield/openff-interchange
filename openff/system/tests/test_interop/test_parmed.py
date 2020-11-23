@@ -1,17 +1,18 @@
 import numpy as np
-import parmed as pmd
 import pytest
-from openforcefield.typing.engines.smirnoff import ForceField
-from simtk import unit as omm_unit
 
-from openff.system.components.system import System
+from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
+from openff.system.tests.utils import top_from_smiles
 from openff.system.types import UnitArray
 
 
 class TestParmedConversion(BaseTest):
-    def test_box(self, argon_ff, argon_top):
-        box = UnitArray(np.array([4, 4, 4]), units="nanometer")
+    @pytest.fixture()
+    def box(self):
+        return UnitArray(np.array([4, 4, 4]), units="nanometer")
+
+    def test_box(self, argon_ff, argon_top, box):
         sys_out = argon_ff.create_openff_system(topology=argon_top, box=box)
         sys_out.positions = UnitArray(
             np.zeros(
@@ -26,9 +27,8 @@ class TestParmedConversion(BaseTest):
             [40, 40, 40],
         )
 
-    def test_basic_conversion_argon(self, argon_ff, argon_top):
-        argon_top.box_vectors = np.array([4, 4, 4]) * omm_unit.nanometer
-        sys_out = argon_ff.create_openff_system(argon_top)
+    def test_basic_conversion_argon(self, argon_ff, argon_top, box):
+        sys_out = argon_ff.create_openff_system(argon_top, box=box)
         sys_out.positions = UnitArray(
             np.zeros(
                 shape=(argon_top.n_topology_atoms, 3),
@@ -41,20 +41,43 @@ class TestParmedConversion(BaseTest):
         struct.save("x.top", combine="all")
         struct.save("x.gro", combine="all")
 
-    @pytest.mark.xfail
-    def test_basic_conversion_ethanol(self, ethanol_top):
-        # Use the un-constrained Parsley because ParmEd doesn't properly process bond constraints from OpenMM
+        assert np.allclose(struct.box, np.array([40, 40, 40, 90, 90, 90]))
+
+    def test_basic_conversion(self, box):
+        top = top_from_smiles("C")
         parsley = ForceField("openff_unconstrained-1.0.0.offxml")
-        struct = System.from_toolkit(
-            forcefield=parsley, topology=ethanol_top
-        ).to_parmed()
 
-        omm_system = parsley.create_openmm_system(topology=ethanol_top)
-        struct_from_omm = pmd.openmm.load_topology(
-            topology=ethanol_top.to_openmm(), system=omm_system
+        off_sys = parsley.create_openff_system(topology=top, box=box)
+        off_sys.positions = UnitArray(
+            np.zeros(
+                shape=(top.n_topology_atoms, 3),
+            ),
+            units="angstrom",
         )
+        struct = off_sys.to_parmed()
 
-        for attr in ["atoms", "bonds", "angles", "dihedrals"]:
-            assert len(getattr(struct, attr)) == len(
-                getattr(struct_from_omm, attr)
-            ), print(attr)
+        sigma0 = struct.atoms[0].atom_type.sigma
+        epsilon0 = struct.atoms[0].atom_type.epsilon
+
+        sigma1 = struct.atoms[1].atom_type.sigma
+        epsilon1 = struct.atoms[1].atom_type.epsilon
+
+        bond_k = struct.bonds[0].type.k
+        req = struct.bonds[0].type.req
+
+        angle_k = struct.angles[0].type.k
+        theteq = struct.angles[0].type.theteq
+
+        assert sigma0 == pytest.approx(1.6998347542117673)
+        assert epsilon0 == pytest.approx(0.1094)
+
+        assert sigma1 == pytest.approx(1.3247663938746845)
+        assert epsilon1 == pytest.approx(0.0157)
+
+        assert bond_k == pytest.approx(379.04658864565)
+        assert req == pytest.approx(1.092888378383)
+
+        assert angle_k == pytest.approx(37.143507635885)
+        assert theteq == pytest.approx(107.5991506326)
+
+        assert np.allclose(struct.box, np.array([40, 40, 40, 90, 90, 90]))
