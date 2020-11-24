@@ -54,12 +54,14 @@ else:
             yield cls.validate
 
         @classmethod
-        def validate(cls, v: Union[int, str, np.ndarray, unit.Quantity]) -> np.ndarray:
+        def validate(
+            cls, v: Union[list, int, str, np.ndarray, unit.Quantity]
+        ) -> np.ndarray:
             if isinstance(v, (int, str)):
                 raise TypeError("not implemented")
 
             # If it's a list, cast into array before asking its __dtype__
-            if isinstance(v, (list)):
+            if isinstance(v, list):
                 v = np.asarray(v)
 
             dtype = getattr(cls, "__dtype__", None)
@@ -73,16 +75,13 @@ else:
 
             if isinstance(v, Quantity):
                 q = v.to(cls.base_unit)
-                # return cls(q.m)
                 tmp = q.m
             elif isinstance(v, np.ndarray):
                 q = unit.Quantity(v, cls.base_unit)
-                # return cls(q.m)
                 tmp = q.m
             else:
-                import ipdb
+                raise ValueError(f"Unexpected type {type(v)} found.")
 
-                ipdb.set_trace()
             try:
                 result = np.array(tmp, dtype=dtype, copy=False, ndmin=len(shape))
                 if len(shape):
@@ -102,4 +101,4 @@ class LengthArray(BaseArray):
 
 
 class MassArray(BaseArray):
-    base_unit = "dalton"
+    base_unit = "atomic_mass_constant"
