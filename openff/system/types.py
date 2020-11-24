@@ -1,31 +1,105 @@
-from . import unit
+import json
+from typing import TYPE_CHECKING, Any, Union
+
+import numpy as np
+from pint import Quantity
+from simtk import unit as omm_unit
+
+from openff.system import unit
+from openff.system.utils import simtk_to_pint
 
 
-class UnitArrayMeta(type):
-    # TODO: would be nice to be able to sneak dtype and/or units in here
-    def __getitem__(self, units, dtype=None):
-        return type("UnitArray", (UnitArray,), {"_dtype": dtype, "_units": units})
+class _ArrayMeta(type):
+    def __getitem__(self, t):
+        return type("BaseArray", (BaseArray,), {"__dtype__": t})
 
 
-class UnitArray(unit.Quantity, metaclass=UnitArrayMeta):
-    """
-    Thin wrapper around pint.Quantity for compliance with Pydantic classes
+class TypedArrayEncoder(json.JSONEncoder):
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, unit.Quantity):
+            if obj.m.shape:
+                # Better would be ... "data": np.ascontiguousarray(obj).tobytes().hex()}
+                data = {"_nd_": True, "dtype": obj.m.dtype.str, "data": obj.m.tolist()}
+                if len(obj.m.shape) > 1:
+                    data["shape"] = obj.m.shape
+                data["base_unit"] = str(obj.units)
+                return data
 
-    See https://github.com/samuelcolvin/pydantic/issues/380#issuecomment-594639970
-    """
+            else:
+                return obj.tolist()
 
-    # TODO: Handle various cases of implicit units, i.e. NumPy arrays that intend
-    # TODO: Use dtype
+        return json.JSONEncoder.default(self, obj)
 
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate_type
 
-    @classmethod
-    def validate_type(cls, val):
-        try:
-            val = unit.Quantity(val)
-            return val
-        # TODO: Handle other exceptions, like pint.UndefinedUnitError
-        except TypeError as e:
-            raise TypeError from e
+def typed_array_encoder(v):
+    return json.dumps(v, cls=TypedArrayEncoder)
+
+
+if TYPE_CHECKING:
+    BaseArray = np.ndarray
+else:
+
+    class BaseArray(np.ndarray, metaclass=_ArrayMeta):
+        """
+        TODO:
+          * Can .base_unit be protected?
+          * Should this fundamentall by np.ndarray or unit.Quantity?
+
+        """
+
+        base_unit = "not implemented"
+
+        @classmethod
+        def __get_validators__(cls):
+            yield cls.validate
+
+        @classmethod
+        def validate(cls, v: Union[int, str, np.ndarray, unit.Quantity]) -> np.ndarray:
+            if isinstance(v, (int, str)):
+                raise TypeError("not implemented")
+
+            # If it's a list, cast into array before asking its __dtype__
+            if isinstance(v, (list)):
+                v = np.asarray(v)
+
+            dtype = getattr(cls, "__dtype__", None)
+            if isinstance(dtype, tuple):
+                dtype, shape = dtype
+            else:
+                shape = tuple()
+
+            if isinstance(v, omm_unit.Quantity):
+                v = simtk_to_pint(v)
+
+            if isinstance(v, Quantity):
+                q = v.to(cls.base_unit)
+                # return cls(q.m)
+                tmp = q.m
+            elif isinstance(v, np.ndarray):
+                q = unit.Quantity(v, cls.base_unit)
+                # return cls(q.m)
+                tmp = q.m
+            else:
+                import ipdb
+
+                ipdb.set_trace()
+            try:
+                result = np.array(tmp, dtype=dtype, copy=False, ndmin=len(shape))
+                if len(shape):
+                    result = result.reshape(shape)
+                return unit.Quantity(result, cls.base_unit)
+
+            except ValueError:
+                raise ValueError("Could not cast {} to NumPy Array!".format(v))
+
+        @classmethod
+        def __repr__(cls):
+            return str(cls) + " " + cls.base_unit
+
+
+class LengthArray(BaseArray):
+    base_unit = "nanometer"
+
+
+class MassArray(BaseArray):
+    base_unit = "dalton"

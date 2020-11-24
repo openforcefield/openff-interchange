@@ -24,13 +24,13 @@ from openff.system.components.smirnoff import (
     SMIRNOFFvdWHandler,
 )
 from openff.system.components.system import System
-from openff.system.types import UnitArray
+from openff.system.types import BaseArray
 
 
 def to_openff_system(
     self,
     topology: Topology,
-    box: Optional[Union[omm_unit.Quantity, UnitArray]] = None,
+    box: Optional[Union[omm_unit.Quantity, BaseArray]] = None,
     **kwargs,
 ) -> System:
     """
