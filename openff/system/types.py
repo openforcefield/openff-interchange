@@ -91,9 +91,8 @@ else:
             except ValueError:
                 raise ValueError("Could not cast {} to NumPy Array!".format(v))
 
-        @classmethod
-        def __repr__(cls):
-            return str(cls) + " " + cls.base_unit
+        def __repr__(self):
+            return str(self) + " " + self.base_unit
 
 
 class LengthArray(BaseArray):
@@ -102,3 +101,35 @@ class LengthArray(BaseArray):
 
 class MassArray(BaseArray):
     base_unit = "atomic_mass_constant"
+
+
+class Meta(type):
+    def __repr__(cls):
+        return "ok" + cls.base_unit
+
+
+class BaseQuantity(float, metaclass=Meta):
+    base_unit = "not implemented"
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v: Union[str, int, float]):
+        if isinstance(v, str):
+            q = unit.Quantity(v)
+            return cls(q.to(cls.base_unit).m)
+        else:
+            return cls(float(v))
+
+    def __repr__(self):
+        return str(self) + " " + self.base_unit
+
+
+class SigmaQuantity(BaseQuantity):
+    base_unit = "nanometer"
+
+
+class EpsilonQuantity(BaseQuantity):
+    base_unit = "kcal/mol"
