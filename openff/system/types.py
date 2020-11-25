@@ -1,5 +1,5 @@
 import json
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, TypeVar, Union
 
 import numpy as np
 from pint import Quantity
@@ -7,11 +7,6 @@ from simtk import unit as omm_unit
 
 from openff.system import unit
 from openff.system.utils import simtk_to_pint
-
-
-class _ArrayMeta(type):
-    def __getitem__(self, t):
-        return type("BaseArray", (BaseArray,), {"__dtype__": t})
 
 
 class TypedArrayEncoder(json.JSONEncoder):
@@ -38,12 +33,17 @@ def typed_array_encoder(v):
 if TYPE_CHECKING:
     BaseArray = np.ndarray
 else:
+    ArrayType = TypeVar("ArrayType", bound="BaseArray")
+
+    class _ArrayMeta(type):
+        def __getitem__(self, t):
+            return type("BaseArray", (BaseArray,), {"__dtype__": t})
 
     class BaseArray(np.ndarray, metaclass=_ArrayMeta):
         """
         TODO:
           * Can .base_unit be protected?
-          * Should this fundamentall by np.ndarray or unit.Quantity?
+          * Should this fundamentally be an np.ndarray or unit.Quantity?
 
         """
 
@@ -56,7 +56,7 @@ else:
         @classmethod
         def validate(
             cls, v: Union[list, int, str, np.ndarray, unit.Quantity]
-        ) -> np.ndarray:
+        ) -> ArrayType:
             if isinstance(v, (int, str)):
                 raise TypeError("not implemented")
 
