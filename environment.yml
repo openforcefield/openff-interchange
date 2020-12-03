@@ -1,24 +1,18 @@
-name: test
+# Environment file for Jupyter notebook examples
+name: binder-env
 channels:
   - conda-forge
   - omnia
-
+  - defaults
 dependencies:
-    # Base depends
   - python
   - pip
   - pydantic
   - pint
   - sympy
   - qcelemental
-  - jax  # TODO: Make this optional?
-
-    # Testing
-  - pytest
-  - pytest-cov
-  - codecov
+  - jax
   - sympy
   - pint
   - openmm
   - openforcefield>=0.7.2
-  - nbval

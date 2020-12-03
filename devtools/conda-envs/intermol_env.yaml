@@ -13,6 +13,7 @@ dependencies:
   - pint
   - sympy
   - qcelemental
+  - jax
 
     # Testing
   - pytest
