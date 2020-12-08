@@ -197,6 +197,7 @@ def _convert_box(box, structure: pmd.Structure) -> None:
         structure.box = [0, 0, 0, 90, 90, 90]
     else:
         lengths = box.diagonal()  # .to(unit("angstrom")).diagonal().magnitude
+        lengths = lengths * 10  # nm to Angstrom
         angles = 3 * [90]
         structure.box = np.hstack([lengths, angles])
 

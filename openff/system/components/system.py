@@ -29,7 +29,7 @@ class System(BaseModel):
         if val is None:
             return val
         elif type(val) == omm_unit.Quantity:
-            val = val / omm_unit.nanometer
+            val /= omm_unit.nanometer
         elif type(val) == np.ndarray:
             pass
         if val.shape == (3, 3):

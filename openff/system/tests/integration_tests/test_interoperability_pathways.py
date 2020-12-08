@@ -10,7 +10,6 @@ from pkg_resources import resource_filename
 from simtk import unit as omm_unit
 
 from openff.system.stubs import ForceField
-from openff.system.utils import simtk_to_pint
 
 from ..utils import compare_energies
 
@@ -49,9 +48,10 @@ def openff_pmd_gmx(
     topology.box_vectors = box
     off_sys = forcefield.create_openff_system(topology=topology)
 
-    off_top_positions = topology.topology_molecules[0].reference_molecule.conformers[0]
+    ref_mol = topology.topology_molecules[0].reference_molecule
+    off_top_positions = ref_mol.conformers[0]
     # TODO: Update this when better processing of OFFTop positions is supported
-    off_sys.positions = simtk_to_pint(off_top_positions)
+    off_sys.positions = off_top_positions / omm_unit.angstrom
 
     struct = off_sys.to_parmed()
 
