@@ -1,4 +1,4 @@
-from . import unit
+from openff.system import unit
 
 
 class UnitArrayMeta(type):

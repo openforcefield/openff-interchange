@@ -5,8 +5,7 @@ from openforcefield.topology.topology import Topology
 
 from openff.system.stubs import ForceField
 from openff.system.utils import get_test_file_path
-
-from .utils import top_from_smiles
+from openff.system.tests.utils import top_from_smiles
 
 
 class BaseTest:

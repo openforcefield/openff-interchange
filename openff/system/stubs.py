@@ -39,7 +39,7 @@ def to_openff_system(
     """
     sys_out = System()
 
-    for parameter_handler, potential_handler in mapping.items():
+    for parameter_handler in mapping.keys():
         if parameter_handler._TAGNAME not in [
             "Constraints",
             "Bonds",

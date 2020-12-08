@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from ..utils import get_test_file_path, jax_available
-from .base_test import BaseTest
+from openff.system.tests.base_test import BaseTest
+from openff.system.utils import get_test_file_path, jax_available
 
 SUPPORTED_HANDLER_MAPPING = {}
 

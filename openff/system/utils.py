@@ -9,8 +9,8 @@ from pkg_resources import resource_filename
 from simtk import openmm
 from simtk import unit as simtk_unit
 
-from . import unit
-from .types import UnitArray
+from openff.system import unit
+from openff.system.types import UnitArray
 
 
 def pint_to_simtk(quantity):

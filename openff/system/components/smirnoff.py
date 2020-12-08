@@ -262,7 +262,7 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
         )
 
         for i, charge in enumerate(partial_charges):
-            self.charge_map[(i,)] = partial_charges[i]
+            self.charge_map[(i,)] = charge
 
     class Config:
         arbitrary_types_allowed = True
