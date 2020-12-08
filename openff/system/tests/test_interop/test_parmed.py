@@ -4,23 +4,19 @@ import pytest
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.utils import top_from_smiles
-from openff.system.types import UnitArray
 
 
 class TestParmedConversion(BaseTest):
     @pytest.fixture()
     def box(self):
-        return UnitArray(np.array([4, 4, 4]), units="nanometer")
+        # UnitArray(np.array([4, 4, 4]), units="nanometer")
+        return np.array([40.0, 40.0, 40.0])
 
     def test_box(self, argon_ff, argon_top, box):
-        sys_out = argon_ff.create_openff_system(topology=argon_top, box=box)
-        sys_out.positions = UnitArray(
-            np.zeros(
-                shape=(argon_top.n_topology_atoms, 3),
-            ),
-            units="angstrom",
-        )
-        struct = sys_out.to_parmed()
+        off_sys = argon_ff.create_openff_system(topology=argon_top, box=box)
+        # UnitArray(...)
+        off_sys.positions = np.zeros(shape=(argon_top.n_topology_atoms, 3))
+        struct = off_sys.to_parmed()
 
         assert np.allclose(
             struct.box[:3],
@@ -28,14 +24,10 @@ class TestParmedConversion(BaseTest):
         )
 
     def test_basic_conversion_argon(self, argon_ff, argon_top, box):
-        sys_out = argon_ff.create_openff_system(argon_top, box=box)
-        sys_out.positions = UnitArray(
-            np.zeros(
-                shape=(argon_top.n_topology_atoms, 3),
-            ),
-            units="angstrom",
-        )
-        struct = sys_out.to_parmed()
+        off_sys = argon_ff.create_openff_system(argon_top, box=box)
+        # UnitArray(...)
+        off_sys.positions = np.zeros(shape=(argon_top.n_topology_atoms, 3))
+        struct = off_sys.to_parmed()
 
         # As partial sanity check, see if it they save without error
         struct.save("x.top", combine="all")
@@ -48,12 +40,8 @@ class TestParmedConversion(BaseTest):
         parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
         off_sys = parsley.create_openff_system(topology=top, box=box)
-        off_sys.positions = UnitArray(
-            np.zeros(
-                shape=(top.n_topology_atoms, 3),
-            ),
-            units="angstrom",
-        )
+        # UnitArray(...)
+        off_sys.positions = np.zeros(shape=(top.n_topology_atoms, 3))
         struct = off_sys.to_parmed()
 
         sigma0 = struct.atoms[0].atom_type.sigma

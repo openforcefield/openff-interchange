@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 import numpy as np
 from openforcefield.topology.topology import Topology
@@ -7,8 +7,6 @@ from simtk import unit as omm_unit
 
 from openff.system.components.potentials import PotentialHandler
 from openff.system.interop.parmed import to_parmed
-from openff.system.types import UnitArray
-from openff.system.utils import simtk_to_pint
 
 
 class System(BaseModel):
@@ -20,8 +18,8 @@ class System(BaseModel):
 
     handlers: Dict[str, PotentialHandler] = dict()
     topology: Optional[Topology] = None
-    box: Optional[UnitArray] = None
-    positions: Optional[UnitArray] = None
+    box: Optional[Union[omm_unit.Quantity, np.ndarray]] = None
+    positions: Optional[Union[omm_unit.Quantity, np.ndarray]] = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -30,8 +28,10 @@ class System(BaseModel):
     def validate_box(cls, val):
         if val is None:
             return val
-        if type(val) == omm_unit.Quantity:
-            val = simtk_to_pint(val)
+        elif type(val) == omm_unit.Quantity:
+            val = val / omm_unit.nanometer
+        elif type(val) == np.ndarray:
+            pass
         if val.shape == (3, 3):
             return val
         elif val.shape == (3,):

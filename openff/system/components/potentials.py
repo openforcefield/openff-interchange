@@ -3,14 +3,13 @@ from typing import Dict, List, Optional, Set, Union
 import jax.numpy as jnp
 from pydantic import BaseModel, validator
 
-from openff.system import unit
 from openff.system.exceptions import InvalidExpressionError
 
 
 class Potential(BaseModel):
     """Base class for storing applied parameters"""
 
-    parameters: Dict[str, Optional[Union[unit.Quantity, List, int]]] = dict()
+    parameters: Dict[str, Optional[Union[List, float]]] = dict()
 
     class Config:
         arbitrary_types_allowed = True
@@ -48,7 +47,7 @@ class PotentialHandler(BaseModel):
     def get_force_field_parameters(self):
         params: list = list()
         for potential in self.potentials.values():
-            row = [val.magnitude for val in potential.parameters.values()]
+            row = [val for val in potential.parameters.values()]  # val.magnitude
             params.append(row)
 
         return jnp.array(params)
