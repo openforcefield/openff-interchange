@@ -9,8 +9,7 @@ from openff.system.tests.utils import top_from_smiles
 class TestParmedConversion(BaseTest):
     @pytest.fixture()
     def box(self):
-        # UnitArray(np.array([4, 4, 4]), units="nanometer")
-        return np.array([40.0, 40.0, 40.0])
+        return np.array([4.0, 4.0, 4.0])
 
     def test_box(self, argon_ff, argon_top, box):
         off_sys = argon_ff.create_openff_system(topology=argon_top, box=box)
