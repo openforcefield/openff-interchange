@@ -10,10 +10,14 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 from pydantic import BaseModel
+from simtk import unit as omm_unit
 
-from openff.system import unit
 from openff.system.components.potentials import Potential, PotentialHandler
-from openff.system.utils import get_partial_charges_from_openmm_system, simtk_to_pint
+from openff.system.utils import get_partial_charges_from_openmm_system
+
+kcal_mol = omm_unit.kilocalorie_per_mole
+kcal_mol_angstroms = kcal_mol / omm_unit.angstrom ** 2
+kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 
 class SMIRNOFFConstraintHandler(PotentialHandler):
@@ -90,8 +94,8 @@ class SMIRNOFFBondHandler(PotentialHandler):
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             potential = Potential(
                 parameters={
-                    "k": simtk_to_pint(parameter_type.k),
-                    "length": simtk_to_pint(parameter_type.length),
+                    "k": parameter_type.k / kcal_mol_angstroms,
+                    "length": parameter_type.length / omm_unit.angstrom,
                 },
             )
             self.potentials[smirks] = potential
@@ -130,8 +134,8 @@ class SMIRNOFFAngleHandler(PotentialHandler):
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             potential = Potential(
                 parameters={
-                    "k": simtk_to_pint(parameter_type.k),
-                    "angle": simtk_to_pint(parameter_type.angle),
+                    "k": parameter_type.k / kcal_mol_radians,
+                    "angle": parameter_type.angle / omm_unit.degree,
                 },
             )
             self.potentials[smirks] = potential
@@ -177,9 +181,9 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
                 identifier = key
                 potential = Potential(
                     parameters={
-                        "k": simtk_to_pint(parameter_type.k[n]),
+                        "k": parameter_type.k[n] / kcal_mol,
                         "periodicity": parameter_type.periodicity[n],
-                        "phase": simtk_to_pint(parameter_type.phase[n]),
+                        "phase": parameter_type.phase[n] / omm_unit.degree,
                     },
                 )
                 self.potentials[identifier] = potential
@@ -222,16 +226,16 @@ class SMIRNOFFvdWHandler(PotentialHandler):
             try:
                 potential = Potential(
                     parameters={
-                        "sigma": simtk_to_pint(parameter_type.sigma),
-                        "epsilon": simtk_to_pint(parameter_type.epsilon),
+                        "sigma": parameter_type.sigma / omm_unit.angstrom,
+                        "epsilon": parameter_type.epsilon / kcal_mol,
                     },
                 )
             except AttributeError:
                 # Handle rmin_half pending https://github.com/openforcefield/openforcefield/pull/750
                 potential = Potential(
                     parameters={
-                        "sigma": simtk_to_pint(parameter_type.rmin_half / 2 ** (1 / 6)),
-                        "epsilon": simtk_to_pint(parameter_type.epsilon),
+                        "sigma": parameter_type.sigma / omm_unit.angstrom,
+                        "epsilon": parameter_type.epsilon / kcal_mol,
                     },
                 )
             self.potentials[smirks] = potential
@@ -242,7 +246,7 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
     name: str = "Electrostatics"
     expression: str = "coul"
     independent_variables: Set[str] = {"r"}
-    charge_map: Dict[tuple, unit.Quantity] = dict()
+    charge_map: Dict[tuple, float] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.8333333333
     scale_15: float = 1.0
@@ -259,7 +263,7 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
         """
         partial_charges = get_partial_charges_from_openmm_system(
             forcefield.create_openmm_system(topology=topology)
-        )
+        )  # / omm_unit.elementary_charge
 
         for i, charge in enumerate(partial_charges):
             self.charge_map[(i,)] = charge

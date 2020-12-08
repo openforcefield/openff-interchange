@@ -7,7 +7,7 @@ from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils import unit_to_string
 from pkg_resources import resource_filename
 from simtk import openmm
-from simtk import unit as simtk_unit
+from simtk import unit as omm_unit
 
 from openff.system import unit
 from openff.system.types import UnitArray
@@ -26,7 +26,7 @@ def simtk_to_pint(simtk_quantity):
     as part of the OpenFF Evaluator, Copyright (c) 2019 Open Force Field Consortium.
     """
     if isinstance(simtk_quantity, List):
-        simtk_quantity = simtk_unit.Quantity(simtk_quantity)
+        simtk_quantity = omm_unit.Quantity(simtk_quantity)
     openmm_unit = simtk_quantity.unit
     openmm_value = simtk_quantity.value_in_unit(openmm_unit)
 
@@ -75,10 +75,12 @@ def get_partial_charges_from_openmm_system(omm_system):
     n_particles = omm_system.getNumParticles()
     force = get_nonbonded_force_from_openmm_system(omm_system)
     # TODO: don't assume the partial charge will always be parameter 0
+    # partial_charges = [simtk_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)]
     partial_charges = [
-        simtk_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)
+        force.getParticleParameters(idx)[0] / omm_unit.elementary_charge
+        for idx in range(n_particles)
     ]
-    partial_charges = unit.Quantity.from_list(partial_charges)
+
     return partial_charges
 
 
