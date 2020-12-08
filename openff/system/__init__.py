@@ -1,4 +1,5 @@
 import pint
+
 from openff.system._version import get_versions
 
 unit = pint.UnitRegistry()

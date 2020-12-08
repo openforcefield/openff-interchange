@@ -4,8 +4,8 @@ from openforcefield.topology.molecule import Molecule
 from openforcefield.topology.topology import Topology
 
 from openff.system.stubs import ForceField
-from openff.system.utils import get_test_file_path
 from openff.system.tests.utils import top_from_smiles
+from openff.system.utils import get_test_file_path
 
 
 class BaseTest:
