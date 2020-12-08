@@ -155,8 +155,11 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
         """
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
-            key = str(key)
-            self.slot_map[key] = val.parameter_type.smirks
+            n_terms = len(val.parameter_type.k)
+            for n in range(n_terms):
+                # This (later) assumes that `_` is disallowed in SMIRKS ...
+                identifier = str(key) + f"_{n}"
+                self.slot_map[identifier] = val.parameter_type.smirks + f"_{n}"
 
     def store_potentials(self, parameter_handler: ProperTorsionHandler) -> None:
         """
@@ -164,20 +167,22 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
         identifiers and their associated Potential objects
 
         """
-        for smirks in self.slot_map.values():
+        for key in self.slot_map.values():
             # ParameterHandler.get_parameter returns a list, although this
             # should only ever be length 1
+            smirks = key.split("_")[0]
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             n_terms = len(parameter_type.k)
-            potential = Potential(
-                parameters={
-                    "k": [simtk_to_pint(val) for val in parameter_type.k],
-                    "periodicity": parameter_type.periodicity,
-                    "phase": [simtk_to_pint(val) for val in parameter_type.phase],
-                    "n_terms": n_terms,
-                },
-            )
-            self.potentials[smirks] = potential
+            for n in range(n_terms):
+                identifier = key
+                potential = Potential(
+                    parameters={
+                        "k": simtk_to_pint(parameter_type.k[n]),
+                        "periodicity": parameter_type.periodicity[n],
+                        "phase": simtk_to_pint(parameter_type.phase[n]),
+                    },
+                )
+                self.potentials[identifier] = potential
 
 
 class SMIRNOFFvdWHandler(PotentialHandler):
