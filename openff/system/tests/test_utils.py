@@ -3,8 +3,9 @@ import pytest
 from openforcefield.typing.engines.smirnoff import ForceField
 from simtk import unit as simtk_unit
 
-from .. import unit
-from ..utils import (
+from openff.system import unit
+from openff.system.tests.base_test import BaseTest
+from openff.system.utils import (
     compare_forcefields,
     compare_sympy_expr,
     get_partial_charges_from_openmm_system,
@@ -12,7 +13,6 @@ from ..utils import (
     simtk_to_pint,
     unwrap_list_of_pint_quantities,
 )
-from .base_test import BaseTest
 
 simtk_quantitites = [
     4.0 * simtk_unit.nanometer,

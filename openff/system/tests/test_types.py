@@ -1,8 +1,8 @@
 import pytest
 from pydantic import BaseModel
 
-from .. import unit
-from ..types import UnitArray
+from openff.system import unit
+from openff.system.types import UnitArray
 
 
 class UnitModel(BaseModel):

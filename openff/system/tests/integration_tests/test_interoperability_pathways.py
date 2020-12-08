@@ -10,8 +10,7 @@ from pkg_resources import resource_filename
 from simtk import unit as omm_unit
 
 from openff.system.stubs import ForceField
-
-from ..utils import compare_energies
+from openff.system.tests.utils import compare_energies
 
 
 def openff_openmm_pmd_gmx(

@@ -24,7 +24,7 @@ jobs:
 
       - name: Install linters
         run: |
-          pip install black isort flake8
+          pip install black isort flake8 flake8-bugbear flake8-absolute-import
 
       - name: Run black
         run: |

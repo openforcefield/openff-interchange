@@ -58,8 +58,8 @@ class PotentialHandler(BaseModel):
         mapping = self.get_mapping()
         q: List = list()
 
-        for idx, val in enumerate(self.slot_map.keys()):
-            q.append(p[mapping[self.slot_map[val]]])
+        for key in self.slot_map.keys():
+            q.append(p[mapping[self.slot_map[key]]])
 
         return jnp.array(q)
 
