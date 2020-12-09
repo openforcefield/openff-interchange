@@ -246,7 +246,7 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
     name: str = "Electrostatics"
     expression: str = "coul"
     independent_variables: Set[str] = {"r"}
-    charge_map: Dict[tuple, float] = dict()
+    charge_map: Dict[str, float] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.8333333333
     scale_15: float = 1.0
@@ -266,7 +266,7 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
         )  # / omm_unit.elementary_charge
 
         for i, charge in enumerate(partial_charges):
-            self.charge_map[(i,)] = charge
+            self.charge_map[str((i,))] = charge
 
     class Config:
         arbitrary_types_allowed = True
