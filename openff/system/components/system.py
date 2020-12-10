@@ -6,6 +6,7 @@ from pydantic import BaseModel, validator
 from simtk import unit as omm_unit
 
 from openff.system.components.potentials import PotentialHandler
+from openff.system.interop.openmm import to_openmm
 from openff.system.interop.parmed import to_parmed
 
 
@@ -42,3 +43,4 @@ class System(BaseModel):
 
 
 System.to_parmed = to_parmed
+System.to_openmm = to_openmm
