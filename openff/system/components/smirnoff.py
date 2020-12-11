@@ -251,6 +251,7 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
     name: str = "Electrostatics"
     expression: str = "coul"
     independent_variables: Set[str] = {"r"}
+    method: str = "PME"
     charge_map: Dict[str, float] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.8333333333
@@ -266,6 +267,8 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
         and unique potential identifiers
 
         """
+        self.method = forcefield["Electrostatics"].method
+
         partial_charges = get_partial_charges_from_openmm_system(
             forcefield.create_openmm_system(topology=topology)
         )  # / omm_unit.elementary_charge

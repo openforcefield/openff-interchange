@@ -78,7 +78,7 @@ def _process_impproper_torsion_forces(openff_sys, openmm_sys):
 
 def _process_nonbonded_forces(openff_sys, openmm_sys):
     # Store the pairings, not just the supported methods for each
-    supported_cutoff_methods = [["Cutoff", "PME"]]
+    supported_cutoff_methods = [["cutoff", "pme"]]
 
     vdw_handler = openff_sys.handlers["vdW"]
     if vdw_handler.method not in [val[0] for val in supported_cutoff_methods]:
@@ -87,7 +87,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
     vdw_cutoff = vdw_handler.cutoff * unit.angstrom
 
     electrostatics_handler = openff_sys.handlers["Electrostatics"]  # Split this out
-    if electrostatics_handler.method not in [v[1] for v in supported_cutoff_methods]:
+    if electrostatics_handler.method.lower() not in [
+        v[1] for v in supported_cutoff_methods
+    ]:
         raise UnsupportedCutoffMethodError()
 
     non_bonded_force = openmm.NonbondedForce()
