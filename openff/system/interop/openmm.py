@@ -18,11 +18,15 @@ def to_openmm(openff_sys) -> openmm.System:
     if openff_sys.box is not None:
         openmm_sys.setDefaultPeriodicBoxVectors(*openff_sys.box)
 
-    _process_bond_forces(openff_sys, openmm_sys)
-    _process_angle_forces(openff_sys, openmm_sys)
+    # Add particles (both atoms and virtual sites) with appropriate masses
+    for atom in openff_sys.topology.topology_particles:
+        openmm_sys.addParticle(atom.atom.mass)
+
+    _process_nonbonded_forces(openff_sys, openmm_sys)
     _process_proper_torsion_forces(openff_sys, openmm_sys)
     _process_impproper_torsion_forces(openff_sys, openmm_sys)
-    _process_nonbonded_forces(openff_sys, openmm_sys)
+    _process_angle_forces(openff_sys, openmm_sys)
+    _process_bond_forces(openff_sys, openmm_sys)
 
     return openmm_sys
 
@@ -65,8 +69,6 @@ def _process_angle_forces(openff_sys, openmm_sys):
             k=k,
         )
 
-    pass
-
 
 def _process_proper_torsion_forces(openff_sys, openmm_sys):
     pass
@@ -95,6 +97,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
     non_bonded_force = openmm.NonbondedForce()
     openmm_sys.addForce(non_bonded_force)
 
+    for _ in openff_sys.topology.topology_particles:
+        non_bonded_force.addParticle(0.0, 1.0, 0.0)
+
     if vdw_handler.method == "cutoff":
         if openff_sys.box is None:
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
@@ -103,7 +108,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
             non_bonded_force.setUseDispersionCorrection(True)
             non_bonded_force.setCutoffDistance(vdw_cutoff)
 
-    for vdw_atom, vdw_smirks in vdw_handler.slot_map.values():
+    for vdw_atom, vdw_smirks in vdw_handler.slot_map.items():
         atom_idx = eval(vdw_atom)[0]
 
         partial_charge = electrostatics_handler.charge_map[vdw_atom]
