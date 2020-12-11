@@ -116,3 +116,31 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
         sigma, epsilon = _lj_params_from_potential(vdw_potential)
 
         non_bonded_force.setParticleParameters(atom_idx, partial_charge, sigma, epsilon)
+
+    # from vdWHandler.postprocess_system
+    bond_particle_indices = []
+
+    for topology_molecule in openff_sys.topology.topology_molecules:
+
+        top_mol_particle_start_index = topology_molecule.atom_start_topology_index
+
+        for topology_bond in topology_molecule.bonds:
+
+            top_index_1 = topology_molecule._ref_to_top_index[
+                topology_bond.bond.atom1_index
+            ]
+            top_index_2 = topology_molecule._ref_to_top_index[
+                topology_bond.bond.atom2_index
+            ]
+
+            top_index_1 += top_mol_particle_start_index
+            top_index_2 += top_mol_particle_start_index
+
+            bond_particle_indices.append((top_index_1, top_index_2))
+
+    # OpenMM thinks these exceptions were already added
+    non_bonded_force.createExceptionsFromBonds(
+        bond_particle_indices,
+        electrostatics_handler.scale_14,
+        vdw_handler.scale_14,
+    )

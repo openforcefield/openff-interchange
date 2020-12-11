@@ -16,13 +16,13 @@ def test_from_openmm():
     toolkit_energy = _get_energy_from_openmm_system(
         openmm_sys=parsley.create_openmm_system(top),
         openmm_top=top.to_openmm(),
-        positions=mol.conformer[0],
+        positions=mol.conformers[0],
     )
 
     system_energy = _get_energy_from_openmm_system(
         openmm_sys=parsley.create_openff_system(top).to_openmm(),
         openmm_top=top.to_openmm(),
-        positions=mol.conformer[0],
+        positions=mol.conformers[0],
     )
 
     assert toolkit_energy == system_energy
