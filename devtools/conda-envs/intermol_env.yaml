@@ -22,7 +22,7 @@ dependencies:
   - sympy
   - pint
   - openmm
-  - openforcefield>=0.7.0
+  - openforcefield >=0.7.0
   - intermol
   - gromacs
   - lammps
