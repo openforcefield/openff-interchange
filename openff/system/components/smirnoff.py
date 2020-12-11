@@ -194,6 +194,8 @@ class SMIRNOFFvdWHandler(PotentialHandler):
     name: str = "vdW"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     independent_variables: Set[str] = {"r"}
+    method: str = "Cutoff"
+    cutoff: float = 9.0
     slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
     scale_13: float = 0.0
@@ -221,6 +223,9 @@ class SMIRNOFFvdWHandler(PotentialHandler):
         identifiers and their associated Potential objects
 
         """
+        self.method = parameter_handler.method
+        self.cutoff = parameter_handler.cutoff / omm_unit.angstrom
+
         for smirks in self.slot_map.values():
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             try:
