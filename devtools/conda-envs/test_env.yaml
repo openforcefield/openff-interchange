@@ -19,6 +19,6 @@ dependencies:
   - codecov
   - sympy
   - pint
-  - openmm
-  - openforcefield>=0.7.2
+  - openmm >= 7.5
+  - openforcefield >=0.7.2
   - nbval
