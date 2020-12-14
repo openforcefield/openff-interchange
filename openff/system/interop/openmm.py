@@ -7,6 +7,10 @@ kcal_mol = unit.kilocalorie_per_mole
 kcal_ang = kcal_mol / unit.angstrom ** 2
 kcal_rad = kcal_mol / unit.radian ** 2
 
+kj_mol = unit.kilojoule_per_mole
+kj_nm = kj_mol / unit.nanometer ** 2
+kj_rad = kj_mol / unit.radian ** 2
+
 
 def to_openmm(openff_sys) -> openmm.System:
     """Convert an OpenFF System to a ParmEd Structure"""
@@ -39,8 +43,8 @@ def _process_bond_forces(openff_sys, openmm_sys):
     for bond, key in bond_handler.slot_map.items():
         indices = eval(bond)
         params = bond_handler.potentials[key].parameters
-        k = params["k"] * kcal_ang
-        length = params["length"] * unit.angstrom
+        k = params["k"] * kcal_ang / kj_nm
+        length = params["length"] * unit.angstrom / unit.nanometer
 
         harmonic_bond_force.addBond(
             particle1=indices[0],
@@ -58,7 +62,7 @@ def _process_angle_forces(openff_sys, openmm_sys):
     for angle, key in angle_handler.slot_map.items():
         indices = eval(angle)
         params = angle_handler.potentials[key].parameters
-        k = params["k"] * kcal_ang
+        k = params["k"] * kcal_rad / kj_rad
         angle = params["angle"] * unit.degree
 
         harmonic_angle_force.addAngle(
@@ -114,6 +118,8 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
         partial_charge = electrostatics_handler.charge_map[vdw_atom]
         vdw_potential = vdw_handler.potentials[vdw_smirks]
         sigma, epsilon = _lj_params_from_potential(vdw_potential)
+        sigma = sigma * unit.angstrom
+        epsilon = epsilon * kcal_mol
 
         non_bonded_force.setParticleParameters(atom_idx, partial_charge, sigma, epsilon)
 

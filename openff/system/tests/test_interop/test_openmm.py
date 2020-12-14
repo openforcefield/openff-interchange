@@ -1,14 +1,24 @@
 import numpy as np
+import pytest
 from openforcefield.topology import Molecule, Topology
 from simtk import openmm, unit
 
 from openff.system.stubs import ForceField
 
 
-def test_from_openmm():
+@pytest.mark.parametrize("mol", ["C", "N"])
+def test_from_openmm(mol):
+    """
+    Test that ForceField.create_openmm_system and System.to_openmm produce
+    objects with similar energies
+
+    TODO: Tighten tolerances
+
+    """
+
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
-    mol = Molecule.from_smiles("C")
+    mol = Molecule.from_smiles(mol)
     mol.generate_conformers(n_conformers=1)
     top = Topology.from_molecules([mol])
     top.box_vectors = np.asarray([4, 4, 4]) * unit.nanometer
@@ -25,7 +35,12 @@ def test_from_openmm():
         positions=mol.conformers[0],
     )
 
-    assert toolkit_energy == system_energy
+    np.testing.assert_allclose(
+        toolkit_energy / unit.kilojoule_per_mole,
+        system_energy / unit.kilojoule_per_mole,
+        rtol=1e-4,
+        atol=1e-4,
+    )
 
 
 def _get_energy_from_openmm_system(openmm_sys, openmm_top, positions):
