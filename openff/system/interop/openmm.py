@@ -75,7 +75,30 @@ def _process_angle_forces(openff_sys, openmm_sys):
 
 
 def _process_proper_torsion_forces(openff_sys, openmm_sys):
-    pass
+    proper_torsion_force = openmm.PeriodicTorsionForce()
+    openmm_sys.addForce(proper_torsion_force)
+
+    torsion_handler = openff_sys.handlers["ProperTorsions"]
+    idivf = torsion_handler.idivf
+
+    for torsion_key, key in torsion_handler.slot_map.items():
+        torsion, idx = torsion_key.split("_")
+        indices = eval(torsion)
+        params = torsion_handler.potentials[key].parameters
+
+        k = params["k"] * kcal_mol / kj_mol
+        periodicity = int(params["periodicity"])
+        phase = params["phase"] * unit.degree
+
+        proper_torsion_force.addTorsion(
+            indices[0],
+            indices[1],
+            indices[2],
+            indices[3],
+            periodicity,
+            phase,
+            k / idivf,
+        )
 
 
 def _process_impproper_torsion_forces(openff_sys, openmm_sys):

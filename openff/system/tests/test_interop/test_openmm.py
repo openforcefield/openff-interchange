@@ -6,7 +6,7 @@ from simtk import openmm, unit
 from openff.system.stubs import ForceField
 
 
-@pytest.mark.parametrize("mol", ["C", "N"])
+@pytest.mark.parametrize("mol", ["C", "CC"])
 def test_from_openmm(mol):
     """
     Test that ForceField.create_openmm_system and System.to_openmm produce
