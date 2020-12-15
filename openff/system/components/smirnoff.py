@@ -9,10 +9,11 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ProperTorsionHandler,
     vdWHandler,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from simtk import unit as omm_unit
 
 from openff.system.components.potentials import Potential, PotentialHandler
+from openff.system.exceptions import UnsupportedParameterError
 from openff.system.utils import get_partial_charges_from_openmm_system
 
 kcal_mol = omm_unit.kilocalorie_per_mole
@@ -146,8 +147,14 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
     name: str = "ProperTorsions"
     expression: str = "k*(1+cos(periodicity*theta-phase))"
     independent_variables: Set[str] = {"theta"}
+    idivf: float = 1.0
     slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
+
+    @validator("idivf")
+    def validate_idivf(cls, val):
+        if val != 1.0:
+            return UnsupportedParameterError
 
     def store_matches(
         self, parameter_handler: ProperTorsionHandler, topology: Topology
