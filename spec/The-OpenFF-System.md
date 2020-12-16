@@ -26,13 +26,14 @@ TODO: Populated tables like this for each component below
 
 ### Force field data
 
-System parameters (force field parameters applied to a chemical topology) are represented as the sum of individual components (`PotentialHandler`s). Teach term in a potential energy function is expected to be captured by a `PotentialHandler` or combination thereof. These closely mirror the `ParameterHandler`s in OpenFF Toolkit, and may merge in the future.
+System parameters (force field parameters applied to a chemical topology) are represented as the sum of individual components (`PotentialHandler`s). Each term in a potential energy function is expected to be captured by a `PotentialHandler` or combination thereof. These closely mirror the `ParameterHandler`s in OpenFF Toolkit, and may merge in the future.
 
 Each `PotentialHandler` subclass must specify an string-like `expression` that encodes the algebra of its energy evaluation and a collection of `independent_variables` that specify which variables in the expression do not need to be specified by system parameters. The remaining variables are then expected to be specified in a sequence of `Potential` objects stored in the handler.
 
 ```python3
-potential_handler = PotentialHandler(expression="m*x+b",
-independent_variables={"x"}) potential_handler.expression
+>>> potential_handler = PotentialHandler(expression="m*x+b", independent_variables={"x"})
+>>> potential_handler.expression
+"m*x+b"
 ```
 
 | MUST | MAY |  MUST NOT |
@@ -77,7 +78,7 @@ Box vectors are optional. In order to represent non-periodic (i.e. vacuum) syste
 
 ## Interoperability
 
-In contrast to existing efforts, this specification does not assume first-class compatibility with any particular molecular simulation engines or software stacks. It instead aims to provide a general and flexible model for storing data and separate out interoperability tasks as a separate layer.
+This specification does not assume first-class compatibility with any particular molecular simulation engines or software stacks. It instead aims to provide a general and flexible model for storing data and separate out interoperability tasks as a separate layer.
 
 Separating the internal representation from the interoperability layer allows for a clear layer between them in which sanity checks can be carried out and compand compatibility checks can be encoded. For example, if an object in memory includes CMAP terms, it cannot be written to Cassandra, which does not support CMAPs, or if an object in memory includes Buckingham potentials, it cannot be converted to a ParmEd Structure.
 
@@ -85,7 +86,7 @@ Separating the internal representation from the interoperability layer allows fo
 
 ### Tracking parameter sources
 
-Given a parametrized system, it is typically difficult and often impossible to track the origin of parameter. Here, all potential handlers will expose methods that point to their source parameters.
+Given a parametrized system, it is typically difficult and often impossible to track the origin of parameter. Here, all potential handlers will expose methods that point to their source parameters. For each parameter in a parametrized system, there must be a method that uniquely indefinies its source of the data, i.e. a unique identifier in a force field and the identity of that force field.
 
 ### Exposing differential representations
 
@@ -158,7 +159,7 @@ The reference implementation is the [openff-system](https://github.com/openforce
 
 ### Representation of physical quantities
 
-Pint. Most of the time an "out of the box" implementation, but some cases will require special treatment.
+Quantities (both array and scalar data) stored internally must be tagged with units via `[Pint](https://github.com/hgrecco/pint)` or a close derivative. Some interfaces may expose unitless quantities, if necessary, but most represnetations exposed to the user must be unit-tagged. Implementation details, particularly relating to compatibility with the rest of the OpenFF stack, are to be determined.
 
 ## Relevant edge cases
 
@@ -172,6 +173,7 @@ Pint. Most of the time an "out of the box" implementation, but some cases will r
 * Tracking rigid bodies/freeze groups
 * Supporting HMR or other isotropic-like mutations
 * Tracking the _history_ of a parameter in addition to only its source
+* Storing `expression`-like data for mathematically complex potentials like machine-learning based models
 
 ## Version history
 
