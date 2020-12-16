@@ -61,3 +61,15 @@ class InvalidExpressionError(ValueError):
     """
     Exception for when an expression cannot safely be interpreted
     """
+
+
+class UnsupportedCutoffMethodError(BaseException):
+    """
+    Exception for incompatibilities in cutoff methods
+    """
+
+
+class UnsupportedParameterError(ValueError):
+    """
+    Exception for parameters having unsupported values, i.e. non-1.0 idivf
+    """

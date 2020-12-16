@@ -9,10 +9,11 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ProperTorsionHandler,
     vdWHandler,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from simtk import unit as omm_unit
 
 from openff.system.components.potentials import Potential, PotentialHandler
+from openff.system.exceptions import UnsupportedParameterError
 from openff.system.utils import get_partial_charges_from_openmm_system
 
 kcal_mol = omm_unit.kilocalorie_per_mole
@@ -146,8 +147,14 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
     name: str = "ProperTorsions"
     expression: str = "k*(1+cos(periodicity*theta-phase))"
     independent_variables: Set[str] = {"theta"}
+    idivf: float = 1.0
     slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
+
+    @validator("idivf")
+    def validate_idivf(cls, val):
+        if val != 1.0:
+            return UnsupportedParameterError
 
     def store_matches(
         self, parameter_handler: ProperTorsionHandler, topology: Topology
@@ -189,11 +196,49 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
                 self.potentials[identifier] = potential
 
 
+class SMIRNOFFImproperTorsionHandler(PotentialHandler):
+
+    name: str = "ImproperTorsions"
+    expression: str = "k*(1+cos(periodicity*theta-phase))"
+    independent_variables: Set[str] = {"theta"}
+    idivf: float = 1.0
+    slot_map: Dict[str, str] = dict()
+    potentials: Dict[str, Potential] = dict()
+
+    @validator("idivf")
+    def validate_idivf(cls, val):
+        if val != 1.0:
+            return UnsupportedParameterError
+
+    def store_matches(
+        self, parameter_handler: ProperTorsionHandler, topology: Topology
+    ) -> None:
+        """
+        Populate self.slot_map with key-val pairs of slots
+        and unique potential identifiers
+
+        """
+        matches = parameter_handler.find_matches(topology)
+        if len(matches) > 0:
+            raise NotImplementedError
+
+    def store_potentials(self, parameter_handler: ProperTorsionHandler) -> None:
+        """
+        Populate self.potentials with key-val pairs of unique potential
+        identifiers and their associated Potential objects
+
+        """
+        if len(self.slot_map) > 0:
+            raise NotImplementedError
+
+
 class SMIRNOFFvdWHandler(PotentialHandler):
 
     name: str = "vdW"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     independent_variables: Set[str] = {"r"}
+    method: str = "Cutoff"
+    cutoff: float = 9.0
     slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
     scale_13: float = 0.0
@@ -221,6 +266,9 @@ class SMIRNOFFvdWHandler(PotentialHandler):
         identifiers and their associated Potential objects
 
         """
+        self.method = parameter_handler.method
+        self.cutoff = parameter_handler.cutoff / omm_unit.angstrom
+
         for smirks in self.slot_map.values():
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             try:
@@ -246,6 +294,7 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
     name: str = "Electrostatics"
     expression: str = "coul"
     independent_variables: Set[str] = {"r"}
+    method: str = "PME"
     charge_map: Dict[str, float] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.8333333333
@@ -261,6 +310,8 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
         and unique potential identifiers
 
         """
+        self.method = forcefield["Electrostatics"].method
+
         partial_charges = get_partial_charges_from_openmm_system(
             forcefield.create_openmm_system(topology=topology)
         )  # / omm_unit.elementary_charge
