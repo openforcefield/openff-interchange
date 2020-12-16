@@ -1,15 +1,14 @@
 import numpy as np
 import pytest
 
-from ..utils import get_test_file_path, jax_available
-from .base_test import BaseTest
+from openff.system.tests.base_test import BaseTest
+from openff.system.utils import get_test_file_path, jax_available
 
 SUPPORTED_HANDLER_MAPPING = {}
 
 
 class TestMatrixRepresentations(BaseTest):
     @pytest.mark.skipif(not jax_available, reason="Requires JAX")
-    @pytest.mark.skip
     @pytest.mark.parametrize(
         "handler_name,n_ff_terms,n_sys_terms",
         [("vdW", 10, 72), ("Bonds", 8, 64), ("Angles", 6, 104)],
@@ -20,26 +19,26 @@ class TestMatrixRepresentations(BaseTest):
         import jax.numpy as jnp
         from jax.interpreters.xla import DeviceArray
 
-        term = SUPPORTED_HANDLER_MAPPING[handler_name].build_from_toolkit_data(
-            handler=parsley[handler_name],
-            topology=ethanol_top,
-        )
+        from openff.system.stubs import ForceField
 
-        (p, mapping) = term.get_force_field_parameters(use_jax=True)
+        handler = parsley[handler_name].create_potential(topology=ethanol_top)
+
+        p = handler.get_force_field_parameters()
 
         assert isinstance(p, DeviceArray)
         assert np.prod(p.shape) == n_ff_terms
 
-        q = term.get_system_parameters(use_jax=True)
+        q = handler.get_system_parameters()
 
         assert isinstance(q, DeviceArray)
         assert np.prod(q.shape) == n_sys_terms
 
-        assert jnp.allclose(q, term.parametrize(p))
+        assert jnp.allclose(q, handler.parametrize(p))
 
-        param_matrix = term.get_param_matrix()
+        param_matrix = handler.get_param_matrix()
 
-        ref = jnp.load(get_test_file_path(f"ethanol_param_{handler_name.lower()}.npy"))
+        ref_file = get_test_file_path(f"ethanol_param_{handler_name.lower()}.npy")
+        ref = jnp.load(ref_file)
 
         assert jnp.allclose(ref, param_matrix)
 

@@ -3,8 +3,9 @@ import pytest
 from openforcefield.typing.engines.smirnoff import ForceField
 from simtk import unit as simtk_unit
 
-from .. import unit
-from ..utils import (
+from openff.system import unit
+from openff.system.tests.base_test import BaseTest
+from openff.system.utils import (
     compare_forcefields,
     compare_sympy_expr,
     get_partial_charges_from_openmm_system,
@@ -12,7 +13,6 @@ from ..utils import (
     simtk_to_pint,
     unwrap_list_of_pint_quantities,
 )
-from .base_test import BaseTest
 
 simtk_quantitites = [
     4.0 * simtk_unit.nanometer,
@@ -86,6 +86,7 @@ class TestOpenMM(BaseTest):
         omm_system = argon_ff.create_openmm_system(argon_top)
         partial_charges = get_partial_charges_from_openmm_system(omm_system)
 
-        assert isinstance(partial_charges, unit.Quantity)
-        assert partial_charges.units == unit.elementary_charge
-        assert np.allclose(partial_charges.magnitude, np.zeros(4))
+        # assert isinstance(partial_charges, unit.Quantity)
+        # assert partial_charges.units == unit.elementary_charge
+        assert isinstance(partial_charges, list)
+        assert np.allclose(partial_charges, np.zeros(4))  # .magnitude

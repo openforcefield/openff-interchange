@@ -17,15 +17,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [macOS-latest, ubuntu-latest]
-        python-version: [3.6, 3.7]
+        python-version: [3.6, 3.7, 3.8, 3.9]
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
+      COV: --cov=openff/system --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
     - uses: actions/checkout@v2
 
-    - uses: conda-incubator/setup-miniconda@v1
+    - uses: conda-incubator/setup-miniconda@v2
       with:
         python-version: ${{ matrix.python-version }}
         activate-environment: test
@@ -51,7 +52,7 @@ jobs:
     - name: Install package
       shell: bash -l {0}
       run: |
-        python -m pip install --no-deps .
+        python setup.py develop --no-deps
 
     - name: Install JAX if using Python 3.7
       if: ${{ matrix.python-version == 3.7 }}
@@ -60,10 +61,15 @@ jobs:
           conda install jax -c conda-forge
           python -c "import jax"
 
-    - name: Run tests
+    - name: Run unit tests
       shell: bash -l {0}
       run: |
-        pytest -v --cov=openff/system/ --cov-report=xml --cov-config=setup.cfg openff/system/tests/ --ignore=openff/system/tests/integration_tests/
+        pytest -v $COV openff/system/tests/ --ignore=openff/system/tests/integration_tests/
+
+    - name: Run example notebooks
+      shell: bash -l {0}
+      run: |
+        pytest -v $COV examples/ --nbval --ignore=examples/SMIRNOFF_simulation.ipynb
 
     - name: Codecov
       uses: codecov/codecov-action@v1

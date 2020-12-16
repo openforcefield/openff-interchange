@@ -1,0 +1,18 @@
+# Environment file for Jupyter notebook examples
+name: binder-env
+channels:
+  - conda-forge
+  - omnia
+  - defaults
+dependencies:
+  - python
+  - pip
+  - pydantic
+  - pint
+  - sympy
+  - qcelemental
+  - jax
+  - sympy
+  - pint
+  - openmm
+  - openforcefield>=0.7.2

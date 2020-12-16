@@ -4,9 +4,8 @@ from openforcefield.utils import get_data_file_path
 from simtk.openmm.app import PDBFile
 
 from openff.system.components.system import System
-
-from ..utils import get_test_file_path
-from .base_test import BaseTest
+from openff.system.tests.base_test import BaseTest
+from openff.system.utils import get_test_file_path
 
 
 class TestFromOpenMM(BaseTest):
