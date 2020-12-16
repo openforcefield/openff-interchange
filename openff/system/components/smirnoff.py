@@ -196,6 +196,42 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
                 self.potentials[identifier] = potential
 
 
+class SMIRNOFFImproperTorsionHandler(PotentialHandler):
+
+    name: str = "ImproperTorsions"
+    expression: str = "k*(1+cos(periodicity*theta-phase))"
+    independent_variables: Set[str] = {"theta"}
+    idivf: float = 1.0
+    slot_map: Dict[str, str] = dict()
+    potentials: Dict[str, Potential] = dict()
+
+    @validator("idivf")
+    def validate_idivf(cls, val):
+        if val != 1.0:
+            return UnsupportedParameterError
+
+    def store_matches(
+        self, parameter_handler: ProperTorsionHandler, topology: Topology
+    ) -> None:
+        """
+        Populate self.slot_map with key-val pairs of slots
+        and unique potential identifiers
+
+        """
+        matches = parameter_handler.find_matches(topology)
+        if len(matches) > 0:
+            raise NotImplementedError
+
+    def store_potentials(self, parameter_handler: ProperTorsionHandler) -> None:
+        """
+        Populate self.potentials with key-val pairs of unique potential
+        identifiers and their associated Potential objects
+
+        """
+        if len(self.slot_map) > 0:
+            raise NotImplementedError
+
+
 class SMIRNOFFvdWHandler(PotentialHandler):
 
     name: str = "vdW"

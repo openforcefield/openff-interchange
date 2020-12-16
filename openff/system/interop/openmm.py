@@ -28,7 +28,8 @@ def to_openmm(openff_sys) -> openmm.System:
 
     _process_nonbonded_forces(openff_sys, openmm_sys)
     _process_proper_torsion_forces(openff_sys, openmm_sys)
-    _process_impproper_torsion_forces(openff_sys, openmm_sys)
+    if len(openff_sys.handlers["ImproperTorsions"].slot_map) > 0:
+        _process_improper_torsion_forces(openff_sys, openmm_sys)
     _process_angle_forces(openff_sys, openmm_sys)
     _process_bond_forces(openff_sys, openmm_sys)
 
@@ -101,8 +102,8 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
         )
 
 
-def _process_impproper_torsion_forces(openff_sys, openmm_sys):
-    pass
+def _process_improper_torsion_forces(openff_sys, openmm_sys):
+    raise NotImplementedError
 
 
 def _process_nonbonded_forces(openff_sys, openmm_sys):

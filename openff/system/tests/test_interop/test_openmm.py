@@ -50,6 +50,21 @@ def test_from_openmm_single_mols(mol, n_mols):
     )
 
 
+def test_unsupported_handler():
+    """Test raising NotImplementedError when converting a system with data
+    not currently supported in System.to_openmm()"""
+
+    parsley = ForceField("openff_unconstrained-1.0.0.offxml")
+
+    mol = Molecule.from_smiles("Cc1ccccc1")
+    mol.generate_conformers(n_conformers=1)
+    top = Topology.from_molecules(mol)
+
+    with pytest.raises(NotImplementedError):
+        # TODO: Catch this at openff_sys.to_openmm, not upstream
+        parsley.create_openff_system(top)
+
+
 def _get_energy_from_openmm_system(openmm_sys, openmm_top, positions):
     integrator = openmm.VerletIntegrator(1 * unit.femtoseconds)
 
