@@ -128,13 +128,12 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
     for _ in openff_sys.topology.topology_particles:
         non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
-    if vdw_handler.method == "cutoff":
-        if openff_sys.box is None:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-        else:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
-            non_bonded_force.setUseDispersionCorrection(True)
-            non_bonded_force.setCutoffDistance(vdw_cutoff)
+    if openff_sys.box is None:
+        non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+    else:
+        non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
+        non_bonded_force.setUseDispersionCorrection(True)
+        non_bonded_force.setCutoffDistance(vdw_cutoff)
 
     for vdw_atom, vdw_smirks in vdw_handler.slot_map.items():
         atom_idx = eval(vdw_atom)[0]
@@ -167,6 +166,16 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
             top_index_2 += top_mol_particle_start_index
 
             bond_particle_indices.append((top_index_1, top_index_2))
+
+    non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
+    non_bonded_force.setCutoffDistance(9.0 * unit.angstrom)
+    non_bonded_force.setEwaldErrorTolerance(1.0e-4)
+
+    # It's not clear why this needs to happen here, but it cannot be set above
+    # and satisfy vdW/Electrostatics methods Cutoff and PME; see create_force
+    # and postprocess_system methods in toolkit
+    if openff_sys.box is None:
+        non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
 
     # OpenMM thinks these exceptions were already added
     non_bonded_force.createExceptionsFromBonds(
