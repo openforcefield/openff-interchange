@@ -24,7 +24,7 @@ def test_from_openmm_single_mols(periodic, mol, n_mols):
     mol.generate_conformers(n_conformers=1)
     top = Topology.from_molecules(n_mols * [mol])
     if periodic:
-        top.box_vectors = np.eye(3) * np.asarray([4, 4, 4]) * unit.nanometer
+        top.box_vectors = np.eye(3) * np.asarray([10, 10, 10]) * unit.nanometer
     else:
         top.box_vectors = None
 
@@ -32,7 +32,7 @@ def test_from_openmm_single_mols(periodic, mol, n_mols):
         positions = mol.conformers[0]
     elif n_mols == 2:
         positions = np.vstack(
-            [mol.conformers[0], mol.conformers[0] + 2 * unit.nanometer]
+            [mol.conformers[0], mol.conformers[0] + 3 * unit.nanometer]
         )
 
     toolkit_system = parsley.create_openmm_system(top)
