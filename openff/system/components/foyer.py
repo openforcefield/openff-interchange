@@ -28,3 +28,27 @@ class FoyerAtomTypes(PotentialHandler):
 
         for key, val in type_map.items():
             self.slot_map[key] = val["atomtype"]
+
+    def store_potentials(self):
+        """"""
+
+
+class FoyerBondHandler(PotentialHandler):
+
+    name: str = "Bonds"
+    expression: str = "1/2 * k * (r - length) ** 2"
+    independent_variables: Set[str] = {"r"}
+    slot_map: Dict[str, str] = dict()
+    potentials: Dict[str, Potential] = dict()
+
+    def make_slot_map(self):
+        pass
+        # populates a dict with the structure like
+        # self.slot_map = {"(0, 1)": ["opls_140", "opls_141"]}
+
+    def lookup_key(self):
+        for identifier in self.slot_map.values():
+            # look up FF data from identifier (or directly consult the
+            # topology, which would involve droppint the make_slot_map method)
+            # store FF data into a Potential object
+            self.potentials[identifier] = Potential(...)
