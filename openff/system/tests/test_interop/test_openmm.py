@@ -43,6 +43,7 @@ def test_from_openmm_single_mols(periodic, mol, n_mols):
         system1=toolkit_system,
         system2=native_system,
         positions=positions,
+        box_vectors=top.box_vectors,
     )
 
 
