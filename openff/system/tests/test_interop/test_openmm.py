@@ -36,7 +36,7 @@ def test_from_openmm_single_mols(periodic, mol, n_mols):
         positions = np.vstack(
             [mol.conformers[0], mol.conformers[0] + 3 * unit.nanometer]
         )
-        positions = positions * unit.nanometer
+        positions = positions * unit.angstrom
 
     toolkit_system = parsley.create_openmm_system(top)
 
