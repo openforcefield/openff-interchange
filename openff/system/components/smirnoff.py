@@ -6,6 +6,7 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
     ConstraintHandler,
+    ImproperTorsionHandler,
     ProperTorsionHandler,
     vdWHandler,
 )
@@ -201,17 +202,11 @@ class SMIRNOFFImproperTorsionHandler(PotentialHandler):
     name: str = "ImproperTorsions"
     expression: str = "k*(1+cos(periodicity*theta-phase))"
     independent_variables: Set[str] = {"theta"}
-    idivf: float = 1.0
     slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
 
-    @validator("idivf")
-    def validate_idivf(cls, val):
-        if val != 1.0:
-            return UnsupportedParameterError
-
     def store_matches(
-        self, parameter_handler: ProperTorsionHandler, topology: Topology
+        self, parameter_handler: ImproperTorsionHandler, topology: Topology
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
@@ -219,17 +214,35 @@ class SMIRNOFFImproperTorsionHandler(PotentialHandler):
 
         """
         matches = parameter_handler.find_matches(topology)
-        if len(matches) > 0:
-            raise NotImplementedError
+        for key, val in matches.items():
+            n_terms = len(val.parameter_type.k)
+            for n in range(n_terms):
+                # This (later) assumes that `_` is disallowed in SMIRKS ...
+                identifier = str(key) + f"_{n}"
+                self.slot_map[identifier] = val.parameter_type.smirks + f"_{n}"
 
-    def store_potentials(self, parameter_handler: ProperTorsionHandler) -> None:
+    def store_potentials(self, parameter_handler: ImproperTorsionHandler) -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
         identifiers and their associated Potential objects
 
         """
-        if len(self.slot_map) > 0:
-            raise NotImplementedError
+        for key in self.slot_map.values():
+            # ParameterHandler.get_parameter returns a list, although this
+            # should only ever be length 1
+            smirks = key.split("_")[0]
+            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
+            n_terms = len(parameter_type.k)
+            for n in range(n_terms):
+                identifier = key
+                potential = Potential(
+                    parameters={
+                        "k": parameter_type.k[n] / kcal_mol,
+                        "periodicity": parameter_type.periodicity[n],
+                        "phase": parameter_type.phase[n] / omm_unit.degree,
+                    },
+                )
+                self.potentials[identifier] = potential
 
 
 class SMIRNOFFvdWHandler(PotentialHandler):

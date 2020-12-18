@@ -139,8 +139,7 @@ def create_improper_torsion_potential_handler(
     """
     handler = SMIRNOFFImproperTorsionHandler()
     handler.store_matches(parameter_handler=self, topology=topology)
-    if len(handler.slot_map) > 0:
-        handler.store_potentials(parameter_handler=self)
+    handler.store_potentials(parameter_handler=self)
 
     return handler
 

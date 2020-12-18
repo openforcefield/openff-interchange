@@ -8,7 +8,10 @@ from openff.system.stubs import ForceField
 
 
 @pytest.mark.parametrize("periodic", [True, False])
-@pytest.mark.parametrize("mol,n_mols", [("C", 1), ("CC", 1), ("C", 2), ("CC", 2)])
+@pytest.mark.parametrize(
+    "mol,n_mols",
+    [("C", 1), ("CC", 1), ("C", 2), ("CC", 2), ("C(C)=C", 1), ("C(C)=C", 2)],
+)
 def test_from_openmm_single_mols(periodic, mol, n_mols):
     """
     Test that ForceField.create_openmm_system and System.to_openmm produce
@@ -48,18 +51,3 @@ def test_from_openmm_single_mols(periodic, mol, n_mols):
         positions=positions,
         box_vectors=top.box_vectors,
     )
-
-
-def test_unsupported_handler():
-    """Test raising NotImplementedError when converting a system with data
-    not currently supported in System.to_openmm()"""
-
-    parsley = ForceField("openff_unconstrained-1.0.0.offxml")
-
-    mol = Molecule.from_smiles("Cc1ccccc1")
-    mol.generate_conformers(n_conformers=1)
-    top = Topology.from_molecules(mol)
-
-    with pytest.raises(NotImplementedError):
-        # TODO: Catch this at openff_sys.to_openmm, not upstream
-        parsley.create_openff_system(top)

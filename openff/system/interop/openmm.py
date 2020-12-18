@@ -28,8 +28,7 @@ def to_openmm(openff_sys) -> openmm.System:
 
     _process_nonbonded_forces(openff_sys, openmm_sys)
     _process_proper_torsion_forces(openff_sys, openmm_sys)
-    if len(openff_sys.handlers["ImproperTorsions"].slot_map) > 0:
-        _process_improper_torsion_forces(openff_sys, openmm_sys)
+    _process_improper_torsion_forces(openff_sys, openmm_sys)
     _process_angle_forces(openff_sys, openmm_sys)
     _process_bond_forces(openff_sys, openmm_sys)
 
@@ -76,22 +75,22 @@ def _process_angle_forces(openff_sys, openmm_sys):
 
 
 def _process_proper_torsion_forces(openff_sys, openmm_sys):
-    proper_torsion_force = openmm.PeriodicTorsionForce()
-    openmm_sys.addForce(proper_torsion_force)
+    torsion_force = openmm.PeriodicTorsionForce()
+    openmm_sys.addForce(torsion_force)
 
-    torsion_handler = openff_sys.handlers["ProperTorsions"]
-    idivf = torsion_handler.idivf
+    proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
+    idivf = proper_torsion_handler.idivf
 
-    for torsion_key, key in torsion_handler.slot_map.items():
+    for torsion_key, key in proper_torsion_handler.slot_map.items():
         torsion, idx = torsion_key.split("_")
         indices = eval(torsion)
-        params = torsion_handler.potentials[key].parameters
+        params = proper_torsion_handler.potentials[key].parameters
 
         k = params["k"] * kcal_mol / kj_mol
         periodicity = int(params["periodicity"])
         phase = params["phase"] * unit.degree
 
-        proper_torsion_force.addTorsion(
+        torsion_force.addTorsion(
             indices[0],
             indices[1],
             indices[2],
@@ -103,7 +102,43 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
 
 
 def _process_improper_torsion_forces(openff_sys, openmm_sys):
-    raise NotImplementedError
+    torsion_force = None
+    for force in openmm_sys.getForces():
+        if type(force) == openmm.PeriodicTorsionForce:
+            torsion_force = force
+            break
+
+    if torsion_force is None:
+        # TODO: Support case of no propers but some impropers?
+        raise Exception
+
+    improper_torsion_handler = openff_sys.handlers["ImproperTorsions"]
+    improper_idivf = 3.0
+
+    for torsion_key, key in improper_torsion_handler.slot_map.items():
+        torsion, idx = torsion_key.split("_")
+        indices = eval(torsion)
+        params = improper_torsion_handler.potentials[key].parameters
+
+        k = params["k"] * kcal_mol / kj_mol
+        periodicity = int(params["periodicity"])
+        phase = params["phase"] * unit.degree
+
+        central_atom = indices[1]
+        other_atoms = [indices[0], indices[2], indices[3]]
+        for p in [
+            (other_atoms[i], other_atoms[j], other_atoms[k])
+            for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]
+        ]:
+            torsion_force.addTorsion(
+                central_atom,
+                p[0],
+                p[1],
+                p[2],
+                periodicity,
+                phase,
+                k / improper_idivf,
+            )
 
 
 def _process_nonbonded_forces(openff_sys, openmm_sys):
