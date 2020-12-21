@@ -79,7 +79,6 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
     openmm_sys.addForce(torsion_force)
 
     proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
-    idivf = proper_torsion_handler.idivf
 
     for torsion_key, key in proper_torsion_handler.slot_map.items():
         torsion, idx = torsion_key.split("_")
@@ -88,7 +87,8 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
 
         k = params["k"] * kcal_mol / kj_mol
         periodicity = int(params["periodicity"])
-        phase = params["phase"] * unit.degree
+        phase = params["phase"] * unit.degree / unit.radian
+        idivf = int(params["idivf"])
 
         torsion_force.addTorsion(
             indices[0],
@@ -102,18 +102,18 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
 
 
 def _process_improper_torsion_forces(openff_sys, openmm_sys):
-    torsion_force = None
+    if "ImproperTorsions" not in openff_sys.handlers.keys():
+        raise Exception
+
     for force in openmm_sys.getForces():
         if type(force) == openmm.PeriodicTorsionForce:
             torsion_force = force
             break
-
-    if torsion_force is None:
+    else:
         # TODO: Support case of no propers but some impropers?
         raise Exception
 
     improper_torsion_handler = openff_sys.handlers["ImproperTorsions"]
-    improper_idivf = 3.0
 
     for torsion_key, key in improper_torsion_handler.slot_map.items():
         torsion, idx = torsion_key.split("_")
@@ -122,22 +122,22 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys):
 
         k = params["k"] * kcal_mol / kj_mol
         periodicity = int(params["periodicity"])
-        phase = params["phase"] * unit.degree
+        phase = params["phase"] * unit.degree / unit.radian
+        idivf = params["idivf"]
 
-        central_atom = indices[1]
         other_atoms = [indices[0], indices[2], indices[3]]
         for p in [
             (other_atoms[i], other_atoms[j], other_atoms[k])
             for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]
         ]:
             torsion_force.addTorsion(
-                central_atom,
+                indices[1],
                 p[0],
                 p[1],
                 p[2],
                 periodicity,
                 phase,
-                k / improper_idivf,
+                k / idivf,
             )
 
 
@@ -202,6 +202,12 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
 
             bond_particle_indices.append((top_index_1, top_index_2))
 
+    non_bonded_force.createExceptionsFromBonds(
+        bond_particle_indices,
+        electrostatics_handler.scale_14,
+        vdw_handler.scale_14,
+    )
+
     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
     non_bonded_force.setCutoffDistance(9.0 * unit.angstrom)
     non_bonded_force.setEwaldErrorTolerance(1.0e-4)
@@ -211,10 +217,3 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
     # and postprocess_system methods in toolkit
     if openff_sys.box is None:
         non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-
-    # OpenMM thinks these exceptions were already added
-    non_bonded_force.createExceptionsFromBonds(
-        bond_particle_indices,
-        electrostatics_handler.scale_14,
-        vdw_handler.scale_14,
-    )

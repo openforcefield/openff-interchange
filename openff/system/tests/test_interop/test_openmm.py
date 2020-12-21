@@ -8,9 +8,15 @@ from openff.system.stubs import ForceField
 
 
 @pytest.mark.parametrize("periodic", [True, False])
+@pytest.mark.parametrize("n_mols", [1, 2])
 @pytest.mark.parametrize(
-    "mol,n_mols",
-    [("C", 1), ("CC", 1), ("C", 2), ("CC", 2), ("C(C)=C", 1), ("C(C)=C", 2)],
+    "mol",
+    [
+        "C",
+        "CC",  # Adds a proper torsion term(s)
+        "CCOC",  # This hits t86, which has a non-1.0 idivf
+        "C1COC(=O)O1",  # This adds an improper, i2
+    ],
 )
 def test_from_openmm_single_mols(periodic, mol, n_mols):
     """

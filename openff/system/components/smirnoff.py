@@ -10,11 +10,10 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ProperTorsionHandler,
     vdWHandler,
 )
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 from simtk import unit as omm_unit
 
 from openff.system.components.potentials import Potential, PotentialHandler
-from openff.system.exceptions import UnsupportedParameterError
 from openff.system.utils import get_partial_charges_from_openmm_system
 
 kcal_mol = omm_unit.kilocalorie_per_mole
@@ -148,14 +147,8 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
     name: str = "ProperTorsions"
     expression: str = "k*(1+cos(periodicity*theta-phase))"
     independent_variables: Set[str] = {"theta"}
-    idivf: float = 1.0
     slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
-
-    @validator("idivf")
-    def validate_idivf(cls, val):
-        if val != 1.0:
-            return UnsupportedParameterError
 
     def store_matches(
         self, parameter_handler: ProperTorsionHandler, topology: Topology
@@ -192,6 +185,7 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
                         "k": parameter_type.k[n] / kcal_mol,
                         "periodicity": parameter_type.periodicity[n],
                         "phase": parameter_type.phase[n] / omm_unit.degree,
+                        "idivf": parameter_type.idivf[n],
                     },
                 )
                 self.potentials[identifier] = potential
@@ -215,6 +209,14 @@ class SMIRNOFFImproperTorsionHandler(PotentialHandler):
         """
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
+            parameter_handler._assert_correct_connectivity(
+                val,
+                [
+                    (0, 1),
+                    (1, 2),
+                    (1, 3),
+                ],
+            )
             n_terms = len(val.parameter_type.k)
             for n in range(n_terms):
                 # This (later) assumes that `_` is disallowed in SMIRKS ...
@@ -240,6 +242,7 @@ class SMIRNOFFImproperTorsionHandler(PotentialHandler):
                         "k": parameter_type.k[n] / kcal_mol,
                         "periodicity": parameter_type.periodicity[n],
                         "phase": parameter_type.phase[n] / omm_unit.degree,
+                        "idivf": 3.0,
                     },
                 )
                 self.potentials[identifier] = potential
