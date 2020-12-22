@@ -1,4 +1,68 @@
+import json
+from typing import Any
+
+from pydantic import BaseModel
+
 from openff.system import unit
+
+
+class _FloatQuantityMeta(type):
+    def __getitem__(self, t):
+        return type("FloatQuantity", (FloatQuantity,), {"__unit__": t})
+
+
+class FloatQuantity(float, metaclass=_FloatQuantityMeta):
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate_type
+
+    @classmethod
+    def validate_type(cls, val):
+        unit_ = getattr(cls, "__unit__", Any)
+        if unit_ is Any:
+            if isinstance(val, float):
+                # input doesn't have a unit, it's just a float-ish type
+                raise ValueError("This needs unit")
+            elif isinstance(val, unit.Quantity):
+                return unit.Quantity(val)
+            else:
+                raise ValueError(
+                    f"Bad input, expected float or pint.Quantity-like, got {type(val)})"
+                )
+        else:
+            unit_ = unit(unit_)
+            if isinstance(val, unit.Quantity):
+                # some custom behavior could go here
+                assert unit_.dimensionality == val.dimensionality
+                # return through converting to some intended default units (taken from the class)
+                return val.to(unit_)
+                # could return here, without converting
+                # (could be inconsistent with data model - heteregenous but compatible units)
+                # return val
+            elif isinstance(val, (float, int)):
+                return val * unit_
+            elif isinstance(val, str):
+                # could do custom deserialization here?
+                return unit.Quantity(val).to(unit_)
+
+
+class FloatQuantityEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, unit.Quantity):
+            return {
+                "val": obj.magnitude,
+                "unit": str(obj.units),
+            }
+        return json.JSONEncoder.default(self, obj)
+
+
+def custom_quantity_encoder(v):
+    return json.dumps(v, cls=FloatQuantityEncoder)
+
+
+class DefaultModel(BaseModel):
+    class Config:
+        json_encoders = {unit.Quantity: custom_quantity_encoder}
 
 
 class UnitArrayMeta(type):
