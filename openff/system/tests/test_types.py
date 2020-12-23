@@ -43,15 +43,24 @@ class TestFloatQuantity:
             mass: FloatQuantity["atomic_mass_constant"]
             charge: FloatQuantity["elementary_charge"]
             foo: FloatQuantity
+            bar: FloatQuantity["degree"]
 
-        a = Atom(mass=4, charge=0 * unit.elementary_charge, foo=2.0 * unit.nanometer)
+        a = Atom(
+            mass=4,
+            charge=0 * unit.elementary_charge,
+            foo=2.0 * unit.nanometer,
+            bar="90.0 degree",
+        )
 
         assert a.mass == 4 * unit.atomic_mass_constant
         assert a.charge == 0 * unit.elementary_charge
+        assert a.foo == 2.0 * unit.nanometer
+        assert a.bar == 90 * unit.degree
 
         # TODO: Update with custom deserialization to == a.dict()
         assert json.loads(a.json()) == {
             "mass": '{"val": 4, "unit": "atomic_mass_constant"}',
             "charge": '{"val": 0, "unit": "elementary_charge"}',
             "foo": '{"val": 2.0, "unit": "nanometer"}',
+            "bar": '{"val": 90.0, "unit": "degree"}',
         }
