@@ -1,10 +1,11 @@
 import json
 
+import numpy as np
 import pytest
 from pydantic import BaseModel
 
 from openff.system import unit
-from openff.system.types import DefaultModel, FloatQuantity, UnitArray
+from openff.system.types import ArrayQuantity, DefaultModel, FloatQuantity, UnitArray
 
 
 class UnitModel(BaseModel):
@@ -38,7 +39,7 @@ class TestUnitArray:
 
 
 class TestFloatQuantity:
-    def test_unit_model(self):
+    def test_float_quantity_model(self):
         class Atom(DefaultModel):
             mass: FloatQuantity["atomic_mass_constant"]
             charge: FloatQuantity["elementary_charge"]
@@ -63,4 +64,28 @@ class TestFloatQuantity:
             "charge": '{"val": 0, "unit": "elementary_charge"}',
             "foo": '{"val": 2.0, "unit": "nanometer"}',
             "bar": '{"val": 90.0, "unit": "degree"}',
+        }
+
+    def test_array_quantity_model(self):
+        class Molecule(DefaultModel):
+            masses: ArrayQuantity["atomic_mass_constant"]
+            charges: ArrayQuantity["elementary_charge"]
+            foo: ArrayQuantity
+            bar: ArrayQuantity["degree"]
+            baz: ArrayQuantity["second"]
+
+        m = Molecule(
+            masses=[16, 1, 1],
+            charges=[-1, 0.5, 0.5],
+            foo=np.array([2.0, -2.0, 0.0]) * unit.nanometer,
+            bar=[0, 90, 180],
+            baz=np.array([3, 2, 1]).tobytes(),
+        )
+
+        assert json.loads(m.json()) == {
+            "masses": '{"val": [16, 1, 1], "unit": "atomic_mass_constant"}',
+            "charges": '{"val": [-1.0, 0.5, 0.5], "unit": "elementary_charge"}',
+            "foo": '{"val": [2.0, -2.0, 0.0], "unit": "nanometer"}',
+            "bar": '{"val": [0, 90, 180], "unit": "degree"}',
+            "baz": '{"val": [3, 2, 1], "unit": "second"}',
         }
