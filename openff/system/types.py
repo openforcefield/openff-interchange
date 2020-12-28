@@ -74,6 +74,21 @@ def custom_quantity_encoder(v):
     return json.dumps(v, cls=QuantityEncoder)
 
 
+def json_loader(data):
+    data = json.loads(data)
+    for key, val in data.items():
+        try:
+            v = json.loads(val)
+            if "unit" in v:
+                unit_ = unit(v["unit"])
+                val = v["val"]
+                data[key] = unit_ * val
+        except Exception as e:
+            # TODO: Figure out what cases to catch here
+            raise e
+    return data
+
+
 class _ArrayQuantityMeta(type):
     def __getitem__(self, t):
         return type("ArrayQuantity", (ArrayQuantity,), {"__unit__": t})
@@ -123,6 +138,7 @@ class DefaultModel(BaseModel):
         json_encoders = {
             unit.Quantity: custom_quantity_encoder,
         }
+        json_loads = json_loader
 
 
 class UnitArrayMeta(type):

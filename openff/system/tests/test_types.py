@@ -89,3 +89,15 @@ class TestFloatQuantity:
             "bar": '{"val": [0, 90, 180], "unit": "degree"}',
             "baz": '{"val": [3, 2, 1], "unit": "second"}',
         }
+
+        parsed = Molecule.parse_raw(m.json())
+
+        # TODO: Better Model __eq__; pydantic just looks at their .dicts, which doesn't
+        # play nicely with arrays out of the box
+        assert parsed.__fields__ == m.__fields__
+
+        for key in m.dict().keys():
+            try:
+                assert getattr(m, key) == getattr(parsed, key)
+            except ValueError:
+                assert all(getattr(m, key) == getattr(parsed, key))
