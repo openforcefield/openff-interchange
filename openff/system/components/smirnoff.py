@@ -175,20 +175,20 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
         for key in self.slot_map.values():
             # ParameterHandler.get_parameter returns a list, although this
             # should only ever be length 1
-            smirks = key.split("_")[0]
+            smirks, n = key.split("_")
+            n = int(n)
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
-            n_terms = len(parameter_type.k)
-            for n in range(n_terms):
-                identifier = key
-                potential = Potential(
-                    parameters={
-                        "k": parameter_type.k[n] / kcal_mol,
-                        "periodicity": parameter_type.periodicity[n],
-                        "phase": parameter_type.phase[n] / omm_unit.degree,
-                        "idivf": parameter_type.idivf[n],
-                    },
-                )
-                self.potentials[identifier] = potential
+            # n_terms = len(parameter_type.k)
+            identifier = key
+            potential = Potential(
+                parameters={
+                    "k": parameter_type.k[n] / kcal_mol,
+                    "periodicity": parameter_type.periodicity[n],
+                    "phase": parameter_type.phase[n] / omm_unit.degree,
+                    "idivf": parameter_type.idivf[n],
+                },
+            )
+            self.potentials[identifier] = potential
 
 
 class SMIRNOFFImproperTorsionHandler(PotentialHandler):
