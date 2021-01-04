@@ -13,7 +13,19 @@ kj_rad = kj_mol / unit.radian ** 2
 
 
 def to_openmm(openff_sys) -> openmm.System:
-    """Convert an OpenFF System to a ParmEd Structure"""
+    """Convert an OpenFF System to a ParmEd Structure
+
+    Parameters
+    ----------
+    openff_sys : openff.system.System
+        An OpenFF System object
+
+    Returns
+    -------
+    openmm_sys : openmm.System
+        The corresponding OpenMM System object
+
+    """
 
     openmm_sys = openmm.System()
 
@@ -36,6 +48,7 @@ def to_openmm(openff_sys) -> openmm.System:
 
 
 def _process_bond_forces(openff_sys, openmm_sys):
+    """Process the Bonds section of an OpenFF System into a corresponding openmm.HarmonicBondForce"""
     harmonic_bond_force = openmm.HarmonicBondForce()
     openmm_sys.addForce(harmonic_bond_force)
 
@@ -55,6 +68,7 @@ def _process_bond_forces(openff_sys, openmm_sys):
 
 
 def _process_angle_forces(openff_sys, openmm_sys):
+    """Process the Angles section of an OpenFF System into a corresponding openmm.HarmonicAngleForce"""
     harmonic_angle_force = openmm.HarmonicAngleForce()
     openmm_sys.addForce(harmonic_angle_force)
 
@@ -75,6 +89,8 @@ def _process_angle_forces(openff_sys, openmm_sys):
 
 
 def _process_proper_torsion_forces(openff_sys, openmm_sys):
+    """Process the Propers section of an OpenFF System into corresponding
+    forces within an openmm.PeriodicTorsionForce"""
     torsion_force = openmm.PeriodicTorsionForce()
     openmm_sys.addForce(torsion_force)
 
@@ -102,6 +118,8 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
 
 
 def _process_improper_torsion_forces(openff_sys, openmm_sys):
+    """Process the Impropers section of an OpenFF System into corresponding
+    forces within an openmm.PeriodicTorsionForce"""
     if "ImproperTorsions" not in openff_sys.handlers.keys():
         raise Exception
 
@@ -142,6 +160,7 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys):
 
 
 def _process_nonbonded_forces(openff_sys, openmm_sys):
+    """Process the vdW and Electrostatics sections of an OpenFF System into a corresponding openmm.NonbondedForce"""
     # Store the pairings, not just the supported methods for each
     supported_cutoff_methods = [["cutoff", "pme"]]
 
