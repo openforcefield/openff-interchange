@@ -15,6 +15,7 @@ from openff.system.utils import get_test_file_path
     [
         "C",
         "CC",  # Adds a proper torsion term(s)
+        "OC=O",  # Simplest molecule with a multi-term torsion
         "CCOC",  # This hits t86, which has a non-1.0 idivf
         "C1COC(=O)O1",  # This adds an improper, i2
     ],
