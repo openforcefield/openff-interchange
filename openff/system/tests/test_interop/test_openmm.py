@@ -5,6 +5,7 @@ from openforcefield.topology import Molecule, Topology
 from simtk import unit
 
 from openff.system.stubs import ForceField
+from openff.system.utils import get_test_file_path
 
 
 @pytest.mark.parametrize("periodic", [True, False])
@@ -27,7 +28,7 @@ def test_from_openmm_single_mols(periodic, mol, n_mols):
 
     """
 
-    parsley = ForceField("openff_unconstrained-1.0.0.offxml")
+    parsley = ForceField(get_test_file_path("parsley.offxml"))
 
     mol = Molecule.from_smiles(mol)
     mol.generate_conformers(n_conformers=1)
