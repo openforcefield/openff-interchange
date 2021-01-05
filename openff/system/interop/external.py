@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Union
 
 from openff.system.components.system import System
 from openff.system.exceptions import (
@@ -23,11 +24,14 @@ class ParmEdWrapper(InteroperabilityWrapper):
     def __init__(self):
         self._write_formats = [".gro"]
 
-    def to_file(self, openff_sys: System, file_path: Path):
+    def to_file(self, openff_sys: System, file_path: Union[str, Path]):
         """
         Convert an OpenFF System to a ParmEd Structure and write it to a file
 
         """
+        if type(file_path) == str:
+            file_path = Path(file_path)
+
         file_ext = file_path.suffix.lower()
         if file_ext not in self._write_formats:
             raise UnsupportedExportError(file_ext)
