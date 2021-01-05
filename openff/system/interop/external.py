@@ -22,7 +22,7 @@ class ParmEdWrapper(InteroperabilityWrapper):
     """Wrapper around ParmEd writers"""
 
     def __init__(self):
-        self._write_formats = [".gro"]
+        self._write_formats = [".gro", ".top"]
 
     def to_file(self, openff_sys: System, file_path: Union[str, Path]):
         """
