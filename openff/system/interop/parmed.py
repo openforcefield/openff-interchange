@@ -185,7 +185,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     for res in structure.residues:
         res.name = "FOO"
 
-    structure.positions = off_system.positions  # .to(unit.angstrom).m
+    structure.positions = off_system.positions * 10  # .to(unit.angstrom).m
 
     return structure
 

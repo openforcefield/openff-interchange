@@ -12,8 +12,10 @@ def test_internal_gro_writer():
     out.box = [4, 4, 4] * np.eye(3)
     out.positions = np.random.rand(15).reshape((5, 3))
 
-    # TODO: Ensure these two files are sufficiently similar, something like
-    # $ diff internal.gro parmed.gro | grep ">" | wc -l
-    # should return 2 or 3 lines
     out.to_gro("internal.gro", writer="internal")
     out.to_gro("parmed.gro", writer="parmed")
+
+    with open("internal.gro", "r") as file1:
+        with open("parmed.gro", "r") as file2:
+            # Ignore first two lines and last line
+            assert file1.readlines()[2:-1] == file2.readlines()[2:-1]
