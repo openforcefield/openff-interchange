@@ -48,9 +48,9 @@ def openff_pmd_gmx_indirect(
     off_sys = forcefield.create_openff_system(topology=topology)
 
     ref_mol = topology.topology_molecules[0].reference_molecule
-    off_top_positions = ref_mol.conformers[0]
+    off_top_positions = ref_mol.conformers[0] / omm_unit.nanometer
     # TODO: Update this when better processing of OFFTop positions is supported
-    off_sys.positions = off_top_positions / omm_unit.angstrom
+    off_sys.positions = off_top_positions
 
     struct = off_sys.to_parmed()
 
@@ -68,9 +68,9 @@ def openff_pmd_gmx_direct(
     off_sys = forcefield.create_openff_system(topology=topology)
 
     ref_mol = topology.topology_molecules[0].reference_molecule
-    off_top_positions = ref_mol.conformers[0]
+    off_top_positions = ref_mol.conformers[0] / omm_unit.nanometer
     # TODO: Update this when better processing of OFFTop positions is supported
-    off_sys.positions = off_top_positions / omm_unit.angstrom
+    off_sys.positions = off_top_positions
 
     off_sys.to_gro(prefix + ".gro")
     off_sys.to_top(prefix + ".top")
