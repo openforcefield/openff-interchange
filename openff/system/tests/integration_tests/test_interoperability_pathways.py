@@ -38,7 +38,7 @@ def openff_openmm_pmd_gmx(
     struct.save(prefix + ".top")
 
 
-def openff_pmd_gmx(
+def openff_pmd_gmx_indirect(
     topology: Topology,
     forcefield: ForceField,
     box: omm_unit.Quantity,
@@ -48,9 +48,9 @@ def openff_pmd_gmx(
     off_sys = forcefield.create_openff_system(topology=topology)
 
     ref_mol = topology.topology_molecules[0].reference_molecule
-    off_top_positions = ref_mol.conformers[0]
+    off_top_positions = ref_mol.conformers[0] / omm_unit.nanometer
     # TODO: Update this when better processing of OFFTop positions is supported
-    off_sys.positions = off_top_positions / omm_unit.angstrom
+    off_sys.positions = off_top_positions
 
     struct = off_sys.to_parmed()
 
@@ -58,7 +58,24 @@ def openff_pmd_gmx(
     struct.save(prefix + ".top")
 
 
-# TODO: Also test CC, CCO, etc.
+def openff_pmd_gmx_direct(
+    topology: Topology,
+    forcefield: ForceField,
+    box: omm_unit.Quantity,
+    prefix: str,
+) -> None:
+    topology.box_vectors = box
+    off_sys = forcefield.create_openff_system(topology=topology)
+
+    ref_mol = topology.topology_molecules[0].reference_molecule
+    off_top_positions = ref_mol.conformers[0] / omm_unit.nanometer
+    # TODO: Update this when better processing of OFFTop positions is supported
+    off_sys.positions = off_top_positions
+
+    off_sys.to_gro(prefix + ".gro")
+    off_sys.to_top(prefix + ".top")
+
+
 @pytest.mark.parametrize("smiles", ["C"])
 def test_parmed_openmm(tmpdir, smiles):
     tmpdir.chdir()
@@ -75,28 +92,45 @@ def test_parmed_openmm(tmpdir, smiles):
                 topology=top,
                 forcefield=parsley,
                 box=box,
-                prefix="mol1",
+                prefix="via_openmm",
             )
 
             ener1, ener1_file = gmx_energy(
-                top="mol1.top",
-                gro="mol1.gro",
+                top="via_openmm.top",
+                gro="via_openmm.gro",
                 mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
             )
 
     with tempfile.TemporaryDirectory() as off_tempdir:
         with temporary_cd(off_tempdir):
-            openff_pmd_gmx(
+            openff_pmd_gmx_indirect(
                 topology=top,
                 forcefield=parsley,
                 box=box,
-                prefix="mol2",
+                prefix="via_conversion",
             )
 
             ener2, ener2_file = gmx_energy(
-                top="mol2.top",
-                gro="mol2.gro",
+                top="via_conversion.top",
+                gro="via_conversion.gro",
                 mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
             )
 
     compare_energies(ener1, ener2)
+
+    with tempfile.TemporaryDirectory() as off_tempdir:
+        with temporary_cd(off_tempdir):
+            openff_pmd_gmx_indirect(
+                topology=top,
+                forcefield=parsley,
+                box=box,
+                prefix="via_call",
+            )
+
+            ener3, ener3_file = gmx_energy(
+                top="via_call.top",
+                gro="via_call.gro",
+                mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
+            )
+
+    compare_energies(ener2, ener3)

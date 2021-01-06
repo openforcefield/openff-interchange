@@ -73,3 +73,32 @@ class UnsupportedParameterError(ValueError):
     """
     Exception for parameters having unsupported values, i.e. non-1.0 idivf
     """
+
+
+class UnsupportedExportError(BaseException):
+    """
+    Exception for attempting to write to an unsupported file format
+    """
+
+    def __init__(self, *args):
+        if args:
+            self.file_ext = args[0]
+
+    def __str__(self):
+        if self.file_ext:
+            msg = f"Writing file format {self.file_ext} not supported."
+        else:
+            msg = "Writing unknown file format"
+        return msg
+
+
+class MissingBoxError(BaseException):
+    """
+    Exception for when box vectors are needed but missing
+    """
+
+
+class MissingPositionsError(BaseException):
+    """
+    Exception for when positions are needed but missing
+    """

@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Dict, Optional, Union
 
 import numpy as np
@@ -40,6 +41,25 @@ class System(BaseModel):
             return val
         else:
             raise ValueError  # InvalidBoxError
+
+    def to_gro(self, file_path: Union[Path, str], writer="parmed"):
+        """Export this system to a .gro file using ParmEd"""
+        # TODO: Enum-style class for handling writer arg?
+        if writer == "parmed":
+            from openff.system.interop.external import ParmEdWrapper
+
+            ParmEdWrapper().to_file(self, file_path)
+
+        elif writer == "internal":
+            from openff.system.interop import internal
+
+            internal.to_gro(self, file_path)
+
+    def to_top(self, file_path: Union[Path, str]):
+        """Export this system to a .top file using ParmEd"""
+        from openff.system.interop.external import ParmEdWrapper
+
+        return ParmEdWrapper().to_file(self, file_path)
 
 
 System.to_parmed = to_parmed
