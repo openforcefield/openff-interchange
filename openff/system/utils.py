@@ -10,7 +10,6 @@ from simtk import openmm
 from simtk import unit as omm_unit
 
 from openff.system import unit
-from openff.system.types import UnitArray
 
 
 def pint_to_simtk(quantity):
@@ -33,14 +32,14 @@ def simtk_to_pint(simtk_quantity):
     target_unit = unit_to_string(openmm_unit)
     target_unit = unit.Unit(target_unit)
 
-    return UnitArray(openmm_value, units=target_unit)
+    return openmm_value * target_unit
 
 
 def unwrap_list_of_pint_quantities(quantities):
     assert set(val.units for val in quantities) == {quantities[0].units}
     parsed_unit = quantities[0].units
     vals = [val.magnitude for val in quantities]
-    return UnitArray(vals, units=parsed_unit)
+    return vals * parsed_unit
 
 
 def compare_sympy_expr(expr1, expr2):

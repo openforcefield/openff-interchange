@@ -13,7 +13,6 @@ class TestParmedConversion(BaseTest):
 
     def test_box(self, argon_ff, argon_top, box):
         off_sys = argon_ff.create_openff_system(topology=argon_top, box=box)
-        # UnitArray(...)
         off_sys.positions = np.zeros(shape=(argon_top.n_topology_atoms, 3))
         struct = off_sys.to_parmed()
 
@@ -24,7 +23,6 @@ class TestParmedConversion(BaseTest):
 
     def test_basic_conversion_argon(self, argon_ff, argon_top, box):
         off_sys = argon_ff.create_openff_system(argon_top, box=box)
-        # UnitArray(...)
         off_sys.positions = np.zeros(shape=(argon_top.n_topology_atoms, 3))
         struct = off_sys.to_parmed()
 
