@@ -27,13 +27,12 @@ from openff.system.components.smirnoff import (
 )
 from openff.system.components.system import System
 from openff.system.exceptions import SMIRNOFFHandlerNotImplementedError
-from openff.system.types import UnitArray
 
 
 def to_openff_system(
     self,
     topology: Topology,
-    box: Optional[Union[omm_unit.Quantity, UnitArray]] = None,
+    box: Optional[Union[omm_unit.Quantity]] = None,
     **kwargs,
 ) -> System:
     """
