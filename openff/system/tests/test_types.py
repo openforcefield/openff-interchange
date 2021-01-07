@@ -38,7 +38,7 @@ class TestUnitArray:
             UnitArray([4, 4], units=input)
 
 
-class TestFloatQuantity:
+class TestQuantityTypes:
     def test_float_quantity_model(self):
         class Atom(DefaultModel):
             mass: FloatQuantity["atomic_mass_constant"]
@@ -66,6 +66,11 @@ class TestFloatQuantity:
             "bar": '{"val": 90.0, "unit": "degree"}',
         }
 
+        parsed = Atom.parse_raw(a.json())
+        assert a == parsed
+
+        assert Atom(**a.dict()) == a
+
     @pytest.mark.parametrize("val", [True, [1]])
     def test_bad_float_quantity_type(self, val):
         class Atom(DefaultModel):
@@ -86,7 +91,7 @@ class TestFloatQuantity:
 
         m = Molecule(
             masses=[16, 1, 1],
-            charges=[-1, 0.5, 0.5],
+            charges=np.asarray([-1, 0.5, 0.5]),
             foo=np.array([2.0, -2.0, 0.0]) * unit.nanometer,
             bar=[0, 90, 180],
             baz=np.array([3, 2, 1]).tobytes(),

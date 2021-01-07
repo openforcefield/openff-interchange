@@ -123,10 +123,8 @@ class ArrayQuantity(float, metaclass=_ArrayQuantityMeta):
             if isinstance(val, unit.Quantity):
                 assert unit_.dimensionality == val.dimensionality
                 return val.to(unit_)
-            elif isinstance(val, np.ndarray):
+            elif isinstance(val, (np.ndarray, list)):
                 return val * unit_
-            elif isinstance(val, list):
-                return np.array(val) * unit_
             elif isinstance(val, bytes):
                 # Define outside loop
                 dt = np.dtype(int)
@@ -146,6 +144,7 @@ class DefaultModel(BaseModel):
             unit.Quantity: custom_quantity_encoder,
         }
         json_loads = json_loader
+        validate_assignment = True
 
 
 class UnitArrayMeta(type):
