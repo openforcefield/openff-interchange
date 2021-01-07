@@ -40,11 +40,13 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 # could return here, without converting
                 # (could be inconsistent with data model - heteregenous but compatible units)
                 # return val
-            elif isinstance(val, (float, int)):
+            elif isinstance(val, (float, int)) and not isinstance(val, bool):
                 return val * unit_
             elif isinstance(val, str):
                 # could do custom deserialization here?
                 return unit.Quantity(val).to(unit_)
+            else:
+                raise ValueError(f"Could not validate data of type {type(val)}")
 
 
 class QuantityEncoder(json.JSONEncoder):
@@ -131,6 +133,8 @@ class ArrayQuantity(float, metaclass=_ArrayQuantityMeta):
                 # could do custom deserialization here?
                 raise NotImplementedError
                 #  return unit.Quantity(val).to(unit_)
+            else:
+                raise ValueError(f"Could not validate data of type {type(val)}")
 
 
 class DefaultModel(BaseModel):

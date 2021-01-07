@@ -66,6 +66,16 @@ class TestFloatQuantity:
             "bar": '{"val": 90.0, "unit": "degree"}',
         }
 
+    @pytest.mark.parametrize("val", [True, [1]])
+    def test_bad_float_quantity_type(self, val):
+        class Atom(DefaultModel):
+            mass: FloatQuantity["atomic_mass_constant"]
+
+        with pytest.raises(
+            ValueError, match=r"Could not validate data of type .*[bool|list].*"
+        ):
+            Atom(mass=True)
+
     def test_array_quantity_model(self):
         class Molecule(DefaultModel):
             masses: ArrayQuantity["atomic_mass_constant"]
@@ -101,3 +111,13 @@ class TestFloatQuantity:
                 assert getattr(m, key) == getattr(parsed, key)
             except ValueError:
                 assert all(getattr(m, key) == getattr(parsed, key))
+
+    @pytest.mark.parametrize("val", [True, [1]])
+    def test_bad_array_quantity_type(self, val):
+        class Atom(DefaultModel):
+            mass: ArrayQuantity["atomic_mass_constant"]
+
+        with pytest.raises(
+            ValueError, match=r"Could not validate data of type .*[bool|list].*"
+        ):
+            Atom(mass=True)
