@@ -76,18 +76,21 @@ def custom_quantity_encoder(v):
     return json.dumps(v, cls=QuantityEncoder)
 
 
-def json_loader(data):
+def json_loader(data: str) -> dict:
+    # TODO: recursively call this function for nested models
     data = json.loads(data)
     for key, val in data.items():
         try:
+            # Directly look for an encoded FloatQuantity/ArrayQuantity,
+            # which is itself a dict
             v = json.loads(val)
-            if "unit" in v:
-                unit_ = unit(v["unit"])
-                val = v["val"]
-                data[key] = unit_ * val
-        except Exception as e:
-            # TODO: Figure out what cases to catch here
-            raise e
+        except json.JSONDecodeError:
+            # Handles some cases of the val being a primitive type
+            continue
+        # TODO: More gracefully parse non-FloatQuantity/ArrayQuantity dicts
+        unit_ = unit(v["unit"])
+        val = v["val"]
+        data[key] = unit_ * val
     return data
 
 

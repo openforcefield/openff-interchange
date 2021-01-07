@@ -121,3 +121,27 @@ class TestFloatQuantity:
             ValueError, match=r"Could not validate data of type .*[bool|list].*"
         ):
             Atom(mass=True)
+
+    def test_float_and_quantity_type(self):
+        class MixedModel(DefaultModel):
+            scalar_data: FloatQuantity
+            array_data: ArrayQuantity
+            name: str
+
+        m = MixedModel(
+            scalar_data=1.0 * unit.meter, array_data=[-1, 0] * unit.second, name="foo"
+        )
+
+        assert json.loads(m.json()) == {
+            "scalar_data": '{"val": 1.0, "unit": "meter"}',
+            "array_data": '{"val": [-1, 0], "unit": "second"}',
+            "name": "foo",
+        }
+
+        parsed = MixedModel.parse_raw(m.json())
+
+        for key in m.dict().keys():
+            try:
+                assert getattr(m, key) == getattr(parsed, key)
+            except ValueError:
+                assert all(getattr(m, key) == getattr(parsed, key))
