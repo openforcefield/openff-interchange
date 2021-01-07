@@ -2,6 +2,7 @@ import json
 
 import numpy as np
 import pytest
+from pydantic import ValidationError
 
 from openff.system import unit
 from openff.system.types import ArrayQuantity, DefaultModel, FloatQuantity
@@ -119,3 +120,22 @@ class TestQuantityTypes:
                 assert getattr(m, key) == getattr(parsed, key)
             except ValueError:
                 assert all(getattr(m, key) == getattr(parsed, key))
+
+    def test_model_mutability(self):
+        class Model(DefaultModel):
+            time: FloatQuantity["second"]
+            lengths: ArrayQuantity["foot"]
+
+        m = Model(time=10 * unit.second, lengths=[3, 4] * unit.foot)
+
+        m.time = 0.5 * unit.minute
+        m.lengths = [2, 1] * unit.yard
+
+        assert m.time == 30 * unit.second
+        assert (m.lengths == [6, 3] * unit.foot).all()
+
+        with pytest.raises(ValidationError, match="1 validation error for Model"):
+            m.time = 1 * unit.gram
+
+        with pytest.raises(ValidationError, match="1 validation error for Model"):
+            m.lengths = 1 * unit.watt
