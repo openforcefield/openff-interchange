@@ -43,13 +43,13 @@ class TestQuantityTypes:
 
     @pytest.mark.parametrize("val", [True, [1]])
     def test_bad_float_quantity_type(self, val):
-        class Atom(DefaultModel):
-            mass: FloatQuantity["atomic_mass_constant"]
+        class Model(DefaultModel):
+            a: FloatQuantity["atomic_mass_constant"]
 
         with pytest.raises(
             ValueError, match=r"Could not validate data of type .*[bool|list].*"
         ):
-            Atom(mass=True)
+            Model(a=val)
 
     def test_array_quantity_model(self):
         class Molecule(DefaultModel):
@@ -87,15 +87,15 @@ class TestQuantityTypes:
             except ValueError:
                 assert all(getattr(m, key) == getattr(parsed, key))
 
-    @pytest.mark.parametrize("val", [True, [1]])
+    @pytest.mark.parametrize("val", [True, 1])
     def test_bad_array_quantity_type(self, val):
-        class Atom(DefaultModel):
-            mass: ArrayQuantity["atomic_mass_constant"]
+        class Model(DefaultModel):
+            a: ArrayQuantity["atomic_mass_constant"]
 
         with pytest.raises(
-            ValueError, match=r"Could not validate data of type .*[bool|list].*"
+            ValueError, match=r"Could not validate data of type .*[bool|int].*"
         ):
-            Atom(mass=True)
+            Model(a=val)
 
     def test_float_and_quantity_type(self):
         class MixedModel(DefaultModel):
@@ -120,6 +120,30 @@ class TestQuantityTypes:
                 assert getattr(m, key) == getattr(parsed, key)
             except ValueError:
                 assert all(getattr(m, key) == getattr(parsed, key))
+
+    def test_model_missing_units(self):
+        class ImplicitModel(DefaultModel):
+            implicit_float: FloatQuantity = None
+            implicit_array: ArrayQuantity = None
+            explicit_float: FloatQuantity["dimensionless"] = None
+            explicit_array: ArrayQuantity["dimensionless"] = None
+
+        # Ensure the model can be constructed with units passed to implicit-unit fields
+        m = ImplicitModel(
+            implicit_float=4 * unit.dimensionless,
+            implicit_array=[4] * unit.dimensionless,
+            explicit_float=4,
+            explicit_array=[4],
+        )
+
+        assert m.implicit_float == m.explicit_float
+        assert m.implicit_array[0] == m.implicit_array
+
+        with pytest.raises(ValidationError, match=r"Value 4.0 .*a unit.*"):
+            ImplicitModel(implicit_float=4.0)
+
+        with pytest.raises(ValidationError, match=r".*Value \[4.0\].*a unit.*"):
+            ImplicitModel(implicit_array=[4.0])
 
     def test_model_mutability(self):
         class Model(DefaultModel):

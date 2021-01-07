@@ -21,15 +21,13 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
     def validate_type(cls, val):
         unit_ = getattr(cls, "__unit__", Any)
         if unit_ is Any:
-            if isinstance(val, float):
-                # input doesn't have a unit, it's just a float-ish type
-                raise ValueError("This needs unit")
+            if isinstance(val, (float, int)):
+                # TODO: Can this exception be raised with knowledge of the field it's in?
+                raise ValueError(f"Value {val} needs to be tagged with a unit")
             elif isinstance(val, unit.Quantity):
                 return unit.Quantity(val)
             else:
-                raise ValueError(
-                    f"Bad input, expected float or pint.Quantity-like, got {type(val)})"
-                )
+                raise ValueError(f"Could not validate data of type {type(val)}")
         else:
             unit_ = unit(unit_)
             if isinstance(val, unit.Quantity):
@@ -69,7 +67,6 @@ class QuantityEncoder(json.JSONEncoder):
                 "val": data,
                 "unit": str(obj.units),
             }
-        return json.JSONEncoder.default(self, obj)
 
 
 def custom_quantity_encoder(v):
@@ -108,16 +105,14 @@ class ArrayQuantity(float, metaclass=_ArrayQuantityMeta):
     def validate_type(cls, val):
         unit_ = getattr(cls, "__unit__", Any)
         if unit_ is Any:
-            if isinstance(val, np.ndarray):
-                # input doesn't have a unit, it's just a float-ish type
-                raise ValueError("This needs unit")
+            if isinstance(val, (list, np.ndarray)):
+                # TODO: Can this exception be raised with knowledge of the field it's in?
+                raise ValueError(f"Value {val} needs to be tagged with a unit")
             elif isinstance(val, unit.Quantity):
                 # Redundant cast? Maybe this handles pint vs openff.system.unit?
                 return unit.Quantity(val)
             else:
-                raise ValueError(
-                    f"Bad input, expected ndarray or pint.Quantity-like, got {type(val)})"
-                )
+                raise ValueError(f"Could not validate data of type {type(val)}")
         else:
             unit_ = unit(unit_)
             if isinstance(val, unit.Quantity):
