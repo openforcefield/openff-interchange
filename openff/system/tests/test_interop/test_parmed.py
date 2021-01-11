@@ -53,10 +53,10 @@ class TestParmedConversion(BaseTest):
         angle_k = struct.angles[0].type.k
         theteq = struct.angles[0].type.theteq
 
-        assert sigma0 == pytest.approx(1.6998347542117673)
+        assert sigma0 == pytest.approx(3.3996695084235347)
         assert epsilon0 == pytest.approx(0.1094)
 
-        assert sigma1 == pytest.approx(1.3247663938746845)
+        assert sigma1 == pytest.approx(2.649532787749369)
         assert epsilon1 == pytest.approx(0.0157)
 
         assert bond_k == pytest.approx(379.04658864565)
