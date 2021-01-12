@@ -13,6 +13,7 @@ from openforcefield.typing.engines.smirnoff.parameters import (
 from pydantic import BaseModel
 from simtk import unit as omm_unit
 
+from openff.system import unit
 from openff.system.components.potentials import Potential, PotentialHandler
 from openff.system.utils import get_partial_charges_from_openmm_system
 
@@ -180,14 +181,13 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             # n_terms = len(parameter_type.k)
             identifier = key
-            potential = Potential(
-                parameters={
-                    "k": parameter_type.k[n],
-                    "periodicity": parameter_type.periodicity[n],
-                    "phase": parameter_type.phase[n],
-                    "idivf": parameter_type.idivf[n],
-                },
-            )
+            parameters = {
+                "k": parameter_type.k[n],
+                "periodicity": parameter_type.periodicity[n] * unit.dimensionless,
+                "phase": parameter_type.phase[n],
+                "idivf": parameter_type.idivf[n] * unit.dimensionless,
+            }
+            potential = Potential(parameters=parameters)
             self.potentials[identifier] = potential
 
 
@@ -237,14 +237,13 @@ class SMIRNOFFImproperTorsionHandler(PotentialHandler):
             n_terms = len(parameter_type.k)
             for n in range(n_terms):
                 identifier = key
-                potential = Potential(
-                    parameters={
-                        "k": parameter_type.k[n],
-                        "periodicity": parameter_type.periodicity[n],
-                        "phase": parameter_type.phase[n],
-                        "idivf": 3.0,
-                    },
-                )
+                parameters = {
+                    "k": parameter_type.k[n],
+                    "periodicity": parameter_type.periodicity[n] * unit.dimensionless,
+                    "phase": parameter_type.phase[n],
+                    "idivf": 3.0 * unit.dimensionless,
+                }
+                potential = Potential(parameters=parameters)
                 self.potentials[identifier] = potential
 
 
@@ -333,7 +332,7 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
         )
 
         for i, charge in enumerate(partial_charges):
-            self.charge_map[str((i,))] = charge
+            self.charge_map[str((i,))] = charge * unit.elementary_charge
 
     class Config:
         arbitrary_types_allowed = True
