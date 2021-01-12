@@ -8,7 +8,6 @@ from openff.system.stubs import ForceField
 from openff.system.utils import get_test_file_path
 
 
-@pytest.mark.parametrize("periodic", [True, False])
 @pytest.mark.parametrize("n_mols", [1, 2])
 @pytest.mark.parametrize(
     "mol",
@@ -20,13 +19,13 @@ from openff.system.utils import get_test_file_path
         "C1COC(=O)O1",  # This adds an improper, i2
     ],
 )
-def test_from_openmm_single_mols(periodic, mol, n_mols):
+def test_from_openmm_single_mols(mol, n_mols):
     """
     Test that ForceField.create_openmm_system and System.to_openmm produce
     objects with similar energies
 
     TODO: Tighten tolerances
-
+    TODO: Test periodic and non-periodic
     """
 
     parsley = ForceField(get_test_file_path("parsley.offxml"))
@@ -36,10 +35,7 @@ def test_from_openmm_single_mols(periodic, mol, n_mols):
     top = Topology.from_molecules(n_mols * [mol])
     mol.conformers[0] -= np.min(mol.conformers) * unit.angstrom
 
-    if periodic:
-        top.box_vectors = np.eye(3) * np.asarray([10, 10, 10]) * unit.nanometer
-    else:
-        top.box_vectors = None
+    top.box_vectors = np.eye(3) * np.asarray([10, 10, 10]) * unit.nanometer
 
     if n_mols == 1:
         positions = mol.conformers[0]
@@ -51,7 +47,7 @@ def test_from_openmm_single_mols(periodic, mol, n_mols):
 
     toolkit_system = parsley.create_openmm_system(top)
 
-    native_system = parsley.create_openff_system(top).to_openmm()
+    native_system = parsley.create_openff_system(topology=top).to_openmm()
 
     compare_system_energies(
         system1=toolkit_system,

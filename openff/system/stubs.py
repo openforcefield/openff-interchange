@@ -1,8 +1,6 @@
 """
 Monkeypatching external classes with custom functionality
 """
-from typing import Optional, Union
-
 from openforcefield.topology.topology import Topology
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.typing.engines.smirnoff.parameters import (
@@ -14,7 +12,6 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ProperTorsionHandler,
     vdWHandler,
 )
-from simtk import unit as omm_unit
 
 from openff.system.components.smirnoff import (
     SMIRNOFFAngleHandler,
@@ -32,7 +29,7 @@ from openff.system.exceptions import SMIRNOFFHandlerNotImplementedError
 def to_openff_system(
     self,
     topology: Topology,
-    box: Optional[Union[omm_unit.Quantity]] = None,
+    box=None,
     **kwargs,
 ) -> System:
     """
@@ -55,10 +52,14 @@ def to_openff_system(
         )
         sys_out.handlers.update({"Electrostatics": charges})
 
-    if box is None:
-        sys_out.box = sys_out.validate_box(topology.box_vectors)
+    # `box` argument is only overriden if passed `None` and the input topology
+    # has box vectors
+    if box is None and topology.box_vectors is not None:
+        from simtk import unit
+
+        sys_out.box = topology.box_vectors / unit.nanometer
     else:
-        sys_out.box = sys_out.validate_box(box)
+        sys_out.box = box
 
     sys_out.topology = topology
 

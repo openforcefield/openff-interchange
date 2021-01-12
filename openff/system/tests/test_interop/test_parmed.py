@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.utils import top_from_smiles
@@ -13,7 +14,9 @@ class TestParmedConversion(BaseTest):
 
     def test_box(self, argon_ff, argon_top, box):
         off_sys = argon_ff.create_openff_system(topology=argon_top, box=box)
-        off_sys.positions = np.zeros(shape=(argon_top.n_topology_atoms, 3))
+        off_sys.positions = (
+            np.zeros(shape=(argon_top.n_topology_atoms, 3)) * unit.angstrom
+        )
         struct = off_sys.to_parmed()
 
         assert np.allclose(

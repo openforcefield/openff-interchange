@@ -9,18 +9,20 @@ from openforcefield.utils.utils import temporary_cd
 from pkg_resources import resource_filename
 from simtk import unit as omm_unit
 
+from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.utils import compare_energies
+from openff.system.types import ArrayQuantity
 
 
 def openff_openmm_pmd_gmx(
     topology: Topology,
     forcefield: ForceField,
-    box: omm_unit.Quantity,
+    box: ArrayQuantity,
     prefix: str,
 ) -> None:
     """Pipeline to write GROMACS files from and OpenMM system through ParmEd"""
-    topology.box_vectors = box
+    topology.box_vectors = box.to(unit.nanometer).magnitude * omm_unit.nanometer
     omm_sys = forcefield.create_openmm_system(topology)
 
     struct = pmd.openmm.load_topology(
@@ -41,14 +43,14 @@ def openff_openmm_pmd_gmx(
 def openff_pmd_gmx_indirect(
     topology: Topology,
     forcefield: ForceField,
-    box: omm_unit.Quantity,
+    box: ArrayQuantity,
     prefix: str,
 ) -> None:
-    topology.box_vectors = box
     off_sys = forcefield.create_openff_system(topology=topology)
+    off_sys.box = box
 
     ref_mol = topology.topology_molecules[0].reference_molecule
-    off_top_positions = ref_mol.conformers[0] / omm_unit.nanometer
+    off_top_positions = ref_mol.conformers[0] / omm_unit.nanometer * unit.nanometer
     # TODO: Update this when better processing of OFFTop positions is supported
     off_sys.positions = off_top_positions
 
@@ -61,14 +63,14 @@ def openff_pmd_gmx_indirect(
 def openff_pmd_gmx_direct(
     topology: Topology,
     forcefield: ForceField,
-    box: omm_unit.Quantity,
+    box: ArrayQuantity,
     prefix: str,
 ) -> None:
-    topology.box_vectors = box
     off_sys = forcefield.create_openff_system(topology=topology)
+    off_sys.box = box
 
     ref_mol = topology.topology_molecules[0].reference_molecule
-    off_top_positions = ref_mol.conformers[0] / omm_unit.nanometer
+    off_top_positions = ref_mol.conformers[0] / omm_unit.nanometer * unit.nanometer
     # TODO: Update this when better processing of OFFTop positions is supported
     off_sys.positions = off_top_positions
 
@@ -84,7 +86,7 @@ def test_parmed_openmm(tmpdir, smiles):
     mol = Molecule.from_smiles(smiles)
     mol.generate_conformers(n_conformers=1)
     top = Topology.from_molecules(mol)
-    box = 4 * np.eye(3) * omm_unit.nanometer
+    box = 4 * np.eye(3) * unit.nanometer
 
     with tempfile.TemporaryDirectory() as omm_tempdir:
         with temporary_cd(omm_tempdir):
@@ -120,7 +122,7 @@ def test_parmed_openmm(tmpdir, smiles):
 
     with tempfile.TemporaryDirectory() as off_tempdir:
         with temporary_cd(off_tempdir):
-            openff_pmd_gmx_indirect(
+            openff_pmd_gmx_direct(
                 topology=top,
                 forcefield=parsley,
                 box=box,
