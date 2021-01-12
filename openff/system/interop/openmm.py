@@ -1,5 +1,6 @@
 from simtk import openmm, unit
 
+from openff.system import unit as off_unit
 from openff.system.exceptions import UnsupportedCutoffMethodError
 from openff.system.interop.parmed import _lj_params_from_potential
 
@@ -32,7 +33,8 @@ def to_openmm(openff_sys) -> openmm.System:
     # OpenFF box stored implicitly as nm, and that happens to be what
     # OpenMM casts box vectors to if provided only an np.ndarray
     if openff_sys.box is not None:
-        openmm_sys.setDefaultPeriodicBoxVectors(*openff_sys.box)
+        box = openff_sys.box.to(off_unit.nanometer).magnitude
+        openmm_sys.setDefaultPeriodicBoxVectors(*box)
 
     # Add particles (both atoms and virtual sites) with appropriate masses
     for atom in openff_sys.topology.topology_particles:

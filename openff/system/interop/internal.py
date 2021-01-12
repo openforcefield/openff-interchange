@@ -4,6 +4,7 @@ from typing import Union
 import numpy as np
 from parmed.periodic_table import AtomicNum
 
+from openff.system import unit
 from openff.system.components.system import System
 
 lookup_dict = dict((v, k) for k, v in AtomicNum.items())
@@ -25,7 +26,7 @@ def to_gro(openff_sys: System, file_path: Union[Path, str]):
         for idx, atom in enumerate(openff_sys.topology.topology_atoms):
             atom_name = lookup_dict[atom.atomic_number] + str(idx + 1)
             # TODO: Make sure these are in nanometers
-            pos = openff_sys.positions[idx]
+            pos = openff_sys.positions[idx].to(unit.nanometer).magnitude
             gro.write(
                 # If writing velocities:
                 # "\n%5d%-5s%5s%5d%8.3f%8.3f%8.3f%8.4f%8.4f%8.4f" % (
@@ -42,7 +43,7 @@ def to_gro(openff_sys: System, file_path: Union[Path, str]):
             )
 
         # TODO: Ensure nanometers
-        box = openff_sys.box
+        box = openff_sys.box.to(unit.nanometer).magnitude
         # Check for rectangular
         if (box == np.diag(np.diagonal(box))).all():
             for i in range(3):

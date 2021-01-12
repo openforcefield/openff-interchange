@@ -185,7 +185,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     for res in structure.residues:
         res.name = "FOO"
 
-    structure.positions = off_system.positions * 10.0  # .to(unit.angstrom).m
+    structure.positions = off_system.positions.to(unit.angstrom).magnitude
 
     return structure
 
@@ -194,12 +194,12 @@ def to_parmed(off_system: Any) -> pmd.Structure:
 def _convert_box(box, structure: pmd.Structure) -> None:
     # TODO: Convert box vectors to box lengths + angles
     if box is None:
-        structure.box = [0, 0, 0, 90, 90, 90]
+        lengths = [0, 0, 0]
     else:
-        lengths = box.diagonal()  # .to(unit("angstrom")).diagonal().magnitude
-        lengths = lengths * 10  # nm to Angstrom
-        angles = 3 * [90]
-        structure.box = np.hstack([lengths, angles])
+        # TODO: Handle non-rectangular boxes
+        lengths = box.diagonal().to(unit("angstrom")).magnitude
+    angles = 3 * [90]
+    structure.box = np.hstack([lengths, angles])
 
 
 def _lj_params_from_potential(potential):
