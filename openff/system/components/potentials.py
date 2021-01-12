@@ -1,22 +1,26 @@
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Set, Union
 
 import jax.numpy as jnp
-from pydantic import BaseModel, validator
+from pydantic import validator
 
 from openff.system.exceptions import InvalidExpressionError
+from openff.system.types import DefaultModel, FloatQuantity
 
 
-class Potential(BaseModel):
+class Potential(DefaultModel):
     """Base class for storing applied parameters"""
 
-    parameters: Dict[str, Optional[Union[List, float]]] = dict()
+    # ... Dict[str, FloatQuantity] = dict()
+    parameters: Dict = dict()
 
-    class Config:
-        arbitrary_types_allowed = True
-        validate_assignment = True
+    @validator("parameters")
+    def validate_parameters(cls, v):
+        for key, val in v.items():
+            v[key] = FloatQuantity.validate_type(val)
+        return v
 
 
-class PotentialHandler(BaseModel):
+class PotentialHandler(DefaultModel):
     """Base class for storing parametrized force field data"""
 
     name: str
@@ -33,10 +37,6 @@ class PotentialHandler(BaseModel):
             return val
         else:
             raise InvalidExpressionError
-
-    class Config:
-        arbitrary_types_allowed = True
-        validate_assignment = True
 
     def store_matches(self):
         raise NotImplementedError

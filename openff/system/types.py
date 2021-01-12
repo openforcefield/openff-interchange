@@ -27,6 +27,8 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 raise ValueError(f"Value {val} needs to be tagged with a unit")
             elif isinstance(val, unit.Quantity):
                 return unit.Quantity(val)
+            elif isinstance(val, omm_unit.Quantity):
+                return _from_omm_quantity(val)
             else:
                 raise ValueError(f"Could not validate data of type {type(val)}")
         else:
@@ -39,7 +41,7 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 # could return here, without converting
                 # (could be inconsistent with data model - heteregenous but compatible units)
                 # return val
-            if isinstance(val, omm_unit.Quantity):
+            elif isinstance(val, omm_unit.Quantity):
                 return _from_omm_quantity(val)
             elif isinstance(val, (float, int)) and not isinstance(val, bool):
                 return val * unit_
@@ -53,7 +55,7 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
 def _from_omm_quantity(val):
     """Helper function to convert float quantities tagged with SimTK/OpenMM units to
     a Pint-compatible quantity"""
-    assert type(val.value_in_unit(val.unit)) == float
+    assert type(val.value_in_unit(val.unit)) in {float, int}
     unit_ = val.unit
     quantity_ = val.value_in_unit(unit_)
     return quantity_ * unit.Unit(str(unit_))

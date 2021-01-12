@@ -4,6 +4,7 @@ from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
 from simtk import unit as omm_unit
 
+from openff.system import unit
 from openff.system.components.potentials import PotentialHandler
 from openff.system.tests.base_test import BaseTest
 
@@ -41,7 +42,8 @@ class TestBondPotentialHandler(BaseTest):
 
         pot = bond_potentials.potentials[bond_potentials.slot_map["(0, 1)"]]
 
-        assert pot.parameters["k"] == pytest.approx(1.5)
+        kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
+        assert pot.parameters["k"].to(kcal_mol_a2).magnitude == pytest.approx(1.5)
 
     def test_angle_potential_handler(self):
         top = Topology.from_molecules(Molecule.from_smiles("CCC"))
@@ -63,4 +65,5 @@ class TestBondPotentialHandler(BaseTest):
 
         pot = angle_potentials.potentials[angle_potentials.slot_map["(0, 1, 2)"]]
 
-        assert pot.parameters["k"] == pytest.approx(2.5)
+        kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
+        assert pot.parameters["k"].to(kcal_mol_rad2).magnitude == pytest.approx(2.5)

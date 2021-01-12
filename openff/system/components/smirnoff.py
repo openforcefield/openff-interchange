@@ -95,8 +95,8 @@ class SMIRNOFFBondHandler(PotentialHandler):
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             potential = Potential(
                 parameters={
-                    "k": parameter_type.k / kcal_mol_angstroms,
-                    "length": parameter_type.length / omm_unit.angstrom,
+                    "k": parameter_type.k,
+                    "length": parameter_type.length,
                 },
             )
             self.potentials[smirks] = potential
@@ -135,8 +135,8 @@ class SMIRNOFFAngleHandler(PotentialHandler):
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             potential = Potential(
                 parameters={
-                    "k": parameter_type.k / kcal_mol_radians,
-                    "angle": parameter_type.angle / omm_unit.degree,
+                    "k": parameter_type.k,
+                    "angle": parameter_type.angle,
                 },
             )
             self.potentials[smirks] = potential
@@ -182,9 +182,9 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
             identifier = key
             potential = Potential(
                 parameters={
-                    "k": parameter_type.k[n] / kcal_mol,
+                    "k": parameter_type.k[n],
                     "periodicity": parameter_type.periodicity[n],
-                    "phase": parameter_type.phase[n] / omm_unit.degree,
+                    "phase": parameter_type.phase[n],
                     "idivf": parameter_type.idivf[n],
                 },
             )
@@ -239,9 +239,9 @@ class SMIRNOFFImproperTorsionHandler(PotentialHandler):
                 identifier = key
                 potential = Potential(
                     parameters={
-                        "k": parameter_type.k[n] / kcal_mol,
+                        "k": parameter_type.k[n],
                         "periodicity": parameter_type.periodicity[n],
-                        "phase": parameter_type.phase[n] / omm_unit.degree,
+                        "phase": parameter_type.phase[n],
                         "idivf": 3.0,
                     },
                 )
@@ -290,16 +290,16 @@ class SMIRNOFFvdWHandler(PotentialHandler):
             try:
                 potential = Potential(
                     parameters={
-                        "sigma": parameter_type.sigma / omm_unit.angstrom,
-                        "epsilon": parameter_type.epsilon / kcal_mol,
+                        "sigma": parameter_type.sigma,
+                        "epsilon": parameter_type.epsilon,
                     },
                 )
             except AttributeError:
                 # Handle rmin_half pending https://github.com/openforcefield/openforcefield/pull/750
                 potential = Potential(
                     parameters={
-                        "sigma": parameter_type.sigma / omm_unit.angstrom,
-                        "epsilon": parameter_type.epsilon / kcal_mol,
+                        "sigma": parameter_type.sigma,
+                        "epsilon": parameter_type.epsilon,
                     },
                 )
             self.potentials[smirks] = potential
@@ -330,7 +330,7 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
 
         partial_charges = get_partial_charges_from_openmm_system(
             forcefield.create_openmm_system(topology=topology)
-        )  # / omm_unit.elementary_charge
+        )
 
         for i, charge in enumerate(partial_charges):
             self.charge_map[str((i,))] = charge
