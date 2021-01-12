@@ -37,3 +37,7 @@ jobs:
       - name: Run flake8
         run: |
           flake8 openff
+
+      - name: Run mypy
+        run: |
+          mypy openff --namespace-packages
