@@ -47,7 +47,7 @@ class PotentialHandler(DefaultModel):
     def get_force_field_parameters(self):
         params: list = list()
         for potential in self.potentials.values():
-            row = [val for val in potential.parameters.values()]  # val.magnitude
+            row = [val.magnitude for val in potential.parameters.values()]
             params.append(row)
 
         return jnp.array(params)

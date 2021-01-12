@@ -81,7 +81,7 @@ def _process_angle_forces(openff_sys, openmm_sys):
         k = params["k"].to(off_unit.Unit(str(kcal_rad))).magnitude
         k = k * kcal_rad / kj_rad
         angle = params["angle"].to(off_unit.degree).magnitude
-        k = k * unit.degree / unit.radian
+        angle = angle * unit.degree / unit.radian
 
         harmonic_angle_force.addAngle(
             particle1=indices[0],
