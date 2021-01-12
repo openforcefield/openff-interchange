@@ -3,6 +3,7 @@ import json
 import numpy as np
 import pytest
 from pydantic import ValidationError
+from simtk import unit as omm_unit
 
 from openff.system import unit
 from openff.system.types import ArrayQuantity, DefaultModel, FloatQuantity
@@ -15,18 +16,21 @@ class TestQuantityTypes:
             charge: FloatQuantity["elementary_charge"]
             foo: FloatQuantity
             bar: FloatQuantity["degree"]
+            baz: FloatQuantity["angstrom"]
 
         a = Atom(
             mass=4,
             charge=0 * unit.elementary_charge,
             foo=2.0 * unit.nanometer,
             bar="90.0 degree",
+            baz=0.4 * omm_unit.angstrom,
         )
 
         assert a.mass == 4 * unit.atomic_mass_constant
         assert a.charge == 0 * unit.elementary_charge
         assert a.foo == 2.0 * unit.nanometer
         assert a.bar == 90 * unit.degree
+        assert a.baz == 0.4 * unit.angstrom
 
         # TODO: Update with custom deserialization to == a.dict()
         assert json.loads(a.json()) == {
@@ -34,6 +38,7 @@ class TestQuantityTypes:
             "charge": '{"val": 0, "unit": "elementary_charge"}',
             "foo": '{"val": 2.0, "unit": "nanometer"}',
             "bar": '{"val": 90.0, "unit": "degree"}',
+            "baz": '{"val": 0.4, "unit": "angstrom"}',
         }
 
         parsed = Atom.parse_raw(a.json())

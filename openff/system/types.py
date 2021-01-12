@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from pydantic import BaseModel
+from simtk import unit as omm_unit
 
 from openff.system import unit
 
@@ -38,6 +39,8 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 # could return here, without converting
                 # (could be inconsistent with data model - heteregenous but compatible units)
                 # return val
+            if isinstance(val, omm_unit.Quantity):
+                return _from_omm_quantity(val)
             elif isinstance(val, (float, int)) and not isinstance(val, bool):
                 return val * unit_
             elif isinstance(val, str):
@@ -45,6 +48,15 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 return unit.Quantity(val).to(unit_)
             else:
                 raise ValueError(f"Could not validate data of type {type(val)}")
+
+
+def _from_omm_quantity(val):
+    """Helper function to convert float quantities tagged with SimTK/OpenMM units to
+    a Pint-compatible quantity"""
+    assert type(val.value_in_unit(val.unit)) == float
+    unit_ = val.unit
+    quantity_ = val.value_in_unit(unit_)
+    return quantity_ * unit.Unit(str(unit_))
 
 
 class QuantityEncoder(json.JSONEncoder):
