@@ -1,6 +1,7 @@
 """
 Monkeypatching external classes with custom functionality
 """
+import numpy as np
 from openforcefield.topology.topology import Topology
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.typing.engines.smirnoff.parameters import (
@@ -57,7 +58,8 @@ def to_openff_system(
     if box is None and topology.box_vectors is not None:
         from simtk import unit
 
-        sys_out.box = topology.box_vectors / unit.nanometer
+        # getDefaultPeriodicBoxVectors() / unit.nanometer is a tuple
+        sys_out.box = np.asarray(topology.box_vectors / unit.nanometer)
     else:
         sys_out.box = box
 
