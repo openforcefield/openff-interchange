@@ -7,7 +7,6 @@ from openff.system import unit
 from openff.system.tests.base_test import BaseTest
 from openff.system.utils import (
     compare_forcefields,
-    compare_sympy_expr,
     get_partial_charges_from_openmm_system,
     pint_to_simtk,
     simtk_to_pint,
@@ -51,19 +50,6 @@ def test_pint_to_simtk():
     """Test conversion from pint Quantity to SimTK Quantity."""
     with pytest.raises(NotImplementedError):
         pint_to_simtk(None)
-
-
-@pytest.mark.parametrize(
-    "expr1,expr2,result",
-    [
-        ("x+1", "x+1", True),
-        ("x+1", "x**2+1", False),
-        ("0.5*k*(th-th0)**2", "k*(th-th0)**2", False),
-        ("k*(1+cos(n*th-th0))", "k*(1+cos(n*th-th0))", True),
-    ],
-)
-def test_compare_sympy_expr(expr1, expr2, result):
-    assert compare_sympy_expr(expr1, expr2) == result
 
 
 class TestUtils(BaseTest):
