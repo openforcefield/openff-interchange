@@ -9,17 +9,13 @@ dependencies:
   - pip
   - pydantic
   - pint
-  - sympy
-  - qcelemental
-  - jax  # TODO: Make this optional?
+  - openmm >=7.5
+  - openforcefield >=0.8.3
+  - jax
 
     # Testing
   - pytest
   - pytest-cov
   - codecov
-  - sympy
-  - pint
-  - openmm >= 7.5
-  - openforcefield >=0.8.3
   - nbval
   - mypy
