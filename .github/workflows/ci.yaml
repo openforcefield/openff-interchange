@@ -61,6 +61,10 @@ jobs:
           conda install jax -c conda-forge
           python -c "import jax"
 
+    - name: Run mypy
+      run: |
+        mypy openff --namespace-packages
+
     - name: Run unit tests
       shell: bash -l {0}
       run: |

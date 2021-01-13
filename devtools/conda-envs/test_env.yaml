@@ -22,3 +22,4 @@ dependencies:
   - openmm >= 7.5
   - openforcefield >=0.8.3
   - nbval
+  - mypy
