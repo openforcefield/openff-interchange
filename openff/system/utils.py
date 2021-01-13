@@ -2,7 +2,6 @@ import pathlib
 from collections import OrderedDict
 from typing import List
 
-import sympy
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils import unit_to_string
 from pkg_resources import resource_filename
@@ -40,14 +39,6 @@ def unwrap_list_of_pint_quantities(quantities):
     parsed_unit = quantities[0].units
     vals = [val.magnitude for val in quantities]
     return vals * parsed_unit
-
-
-def compare_sympy_expr(expr1, expr2):
-    """Checks if two expression-likes are equivalent."""
-    expr1 = sympy.sympify(expr1)
-    expr2 = sympy.sympify(expr2)
-
-    return sympy.simplify(expr1 - expr2) == 0
 
 
 def get_test_file_path(test_file):
@@ -97,18 +88,6 @@ def compare_forcefields(ff1, ff2):
     ff2 = _check_forcefield_dict(ff2)
 
     assert ff1 == ff2
-
-
-def eval_expr(pot, ref):
-    """Hack to evaluate a potential expression given that it is fully specified"""
-    variables = list(pot.independent_variables) + list(pot.parameters.keys())
-    variables = [sympy.symbols(var) for var in variables]
-    values = [ref] + list(pot.parameters.values())
-
-    for var in variables:
-        sympy.symbols(var)
-
-    return sympy.sympify(pot.expression).subs(dict(zip(variables, values)))
 
 
 try:
