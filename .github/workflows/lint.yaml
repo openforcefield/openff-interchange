@@ -2,9 +2,13 @@ name: lint
 
 on:
   push:
-    paths:
-      - 'openff/**.py'
-      - 'setup.cfg'
+    branches:
+      - "master"
+      - "maintenance/.+"
+  pull_request:
+    branches:
+      - "master"
+      - "maintenance/.+"
 
 jobs:
 
