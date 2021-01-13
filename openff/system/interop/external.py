@@ -29,10 +29,12 @@ class ParmEdWrapper(InteroperabilityWrapper):
         Convert an OpenFF System to a ParmEd Structure and write it to a file
 
         """
-        if type(file_path) == str:
-            file_path = Path(file_path)
+        if isinstance(file_path, str):
+            path = Path(file_path)
+        if isinstance(file_path, Path):
+            path = file_path
 
-        file_ext = file_path.suffix.lower()
+        file_ext = path.suffix.lower()
         if file_ext not in self._write_formats:
             raise UnsupportedExportError(file_ext)
 
@@ -42,6 +44,6 @@ class ParmEdWrapper(InteroperabilityWrapper):
         if openff_sys.box is None:
             raise MissingBoxError
 
-        struct = openff_sys.to_parmed()
+        struct = openff_sys.to_parmed()  # type: ignore
 
-        struct.save(file_path.as_posix(), overwrite=True)
+        struct.save(path.as_posix(), overwrite=True)

@@ -1,5 +1,5 @@
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict
 
 import numpy as np
 from pydantic import BaseModel
@@ -89,8 +89,8 @@ def custom_quantity_encoder(v):
 
 def json_loader(data: str) -> dict:
     # TODO: recursively call this function for nested models
-    data = json.loads(data)
-    for key, val in data.items():
+    out: Dict = json.loads(data)
+    for key, val in out.items():
         try:
             # Directly look for an encoded FloatQuantity/ArrayQuantity,
             # which is itself a dict
@@ -101,20 +101,20 @@ def json_loader(data: str) -> dict:
         # TODO: More gracefully parse non-FloatQuantity/ArrayQuantity dicts
         unit_ = unit(v["unit"])
         val = v["val"]
-        data[key] = unit_ * val
-    return data
+        out[key] = unit_ * val
+    return out
 
 
-class _ArrayQuantityMeta(type):
+class ArrayQuantityMeta(type):
     def __getitem__(self, t):
         return type("ArrayQuantity", (ArrayQuantity,), {"__unit__": t})
 
 
 if TYPE_CHECKING:
-    Array = np.array
+    ArrayQuantity = np.array
 else:
 
-    class ArrayQuantity(float, metaclass=_ArrayQuantityMeta):
+    class ArrayQuantity(float, metaclass=ArrayQuantityMeta):
         @classmethod
         def __get_validators__(cls):
             yield cls.validate_type

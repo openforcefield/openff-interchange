@@ -54,12 +54,10 @@ jobs:
       run: |
         python setup.py develop --no-deps
 
-    - name: Install JAX if using Python 3.7
-      if: ${{ matrix.python-version == 3.7 }}
+    - name: Run mypy
       shell: bash -l {0}
       run: |
-          conda install jax -c conda-forge
-          python -c "import jax"
+        mypy openff --namespace-packages
 
     - name: Run unit tests
       shell: bash -l {0}

@@ -1,6 +1,6 @@
 import pint
 
-from openff.system._version import get_versions
+from openff.system._version import get_versions  # type: ignore
 
 unit = pint.UnitRegistry()
 

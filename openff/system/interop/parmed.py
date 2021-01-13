@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Dict
 
 import numpy as np
 import parmed as pmd
@@ -37,7 +37,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
 
     if "Bonds" in off_system.handlers.keys():
         bond_handler = off_system.handlers["Bonds"]
-        bond_map = dict()
+        bond_map: Dict = dict()
         for bond_slot, smirks in bond_handler.slot_map.items():
             idx_1, idx_2 = eval(bond_slot)
             try:
