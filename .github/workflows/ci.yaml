@@ -67,7 +67,7 @@ jobs:
     - name: Run example notebooks
       shell: bash -l {0}
       run: |
-        pytest -v $COV examples/ --nbval --ignore=examples/SMIRNOFF_simulation.ipynb
+        pytest -v $COV examples/ --nbval-lax
 
     - name: Codecov
       uses: codecov/codecov-action@v1
