@@ -8,7 +8,9 @@ Releases follow versioning as described in
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
+
 0.1.0 - Initial Release
 -----------------------
 
-The an initial pre-release.
+The is an initial release in a pre-alpha phase.
