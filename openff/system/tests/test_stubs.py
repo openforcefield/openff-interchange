@@ -1,5 +1,8 @@
+import pytest
 from openforcefield.topology import Molecule, Topology
+from openforcefield.utils import get_data_file_path
 
+from openff.system.exceptions import SMIRNOFFHandlersNotImplementedError
 from openff.system.tests.base_test import BaseTest
 
 
@@ -18,6 +21,16 @@ class TestStubs(BaseTest):
         assert "Angles" in out.handlers.keys()
         assert "ProperTorsions" in out.handlers.keys()
         assert "vdW" in out.handlers.keys()
+
+    def test_unsupported_handler(self):
+        from openff.system.stubs import ForceField
+
+        gbsa_ff = ForceField(get_data_file_path("test_forcefields/GBSA_HCT-1.0.offxml"))
+
+        with pytest.raises(
+            SMIRNOFFHandlersNotImplementedError, match=r"SMIRNOFF parameters not.*GBSA"
+        ):
+            gbsa_ff.create_openff_system(topology=None)
 
 
 class TestConstraints(BaseTest):
