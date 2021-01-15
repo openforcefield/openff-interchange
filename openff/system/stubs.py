@@ -40,7 +40,7 @@ def to_openff_system(
     _check_supported_handlers(self)
 
     for parameter_handler in self.registered_parameter_handlers:
-        if parameter_handler == "ToolkitAM1BCC":
+        if parameter_handler in {"ToolkitAM1BCC", "LibraryCharges"}:
             continue
         elif parameter_handler == "Electrostatics":
             potential_handler = create_charges(
@@ -191,7 +191,7 @@ def _check_supported_handlers(forcefield: ForceField):
 
     unsupported = list()
     for handler in forcefield.registered_parameter_handlers:
-        if handler == "ToolkitAM1BCC":
+        if handler in {"ToolkitAM1BCC", "LibraryCharges"}:
             continue
         if handler not in supported_handlers:
             unsupported.append(handler)

@@ -99,3 +99,18 @@ class TestConstraints(BaseTest):
         )
 
         assert len(constrained.handlers["Constraints"].slot_map.keys()) == 7
+
+
+class TestElectrostatics(BaseTest):
+    def test_library_charge_assignment(self):
+        from openforcefield.tests.test_forcefield import xml_ethanol_library_charges_ff
+
+        from openff.system.stubs import ForceField
+
+        forcefield = ForceField("openff-1.3.0.offxml")
+
+        top = Topology.from_molecules(
+            [Molecule.from_smiles(smi) for smi in ["[Na+]", "[Cl-]"]]
+        )
+
+        forcefield.create_openff_system(top)
