@@ -2,9 +2,9 @@
 Monkeypatching external classes with custom functionality
 """
 import numpy as np
-from openforcefield.topology.topology import Topology
-from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.typing.engines.smirnoff.parameters import (
+from openff.toolkit.topology.topology import Topology
+from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
     ConstraintHandler,

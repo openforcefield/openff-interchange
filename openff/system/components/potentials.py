@@ -1,6 +1,6 @@
 from typing import Dict, List, Set, Union
 
-from openforcefield.utils.utils import requires_package
+from openff.toolkit.utils.utils import requires_package
 from pydantic import validator
 
 from openff.system.exceptions import InvalidExpressionError

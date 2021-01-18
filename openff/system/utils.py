@@ -2,8 +2,8 @@ import pathlib
 from collections import OrderedDict
 from typing import List
 
-from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.utils import unit_to_string
+from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.toolkit.utils import unit_to_string
 from pkg_resources import resource_filename
 from simtk import openmm
 from simtk import unit as omm_unit

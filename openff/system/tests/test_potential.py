@@ -1,7 +1,7 @@
 import pydantic
 import pytest
-from openforcefield.topology import Molecule, Topology
-from openforcefield.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
+from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
 from simtk import unit as omm_unit
 
 from openff.system import unit

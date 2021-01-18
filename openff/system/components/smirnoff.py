@@ -1,8 +1,8 @@
 from typing import Dict, Set
 
-from openforcefield.topology.topology import Topology
-from openforcefield.typing.engines.smirnoff.forcefield import ForceField
-from openforcefield.typing.engines.smirnoff.parameters import (
+from openff.toolkit.topology.topology import Topology
+from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
+from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
     ConstraintHandler,
@@ -294,7 +294,7 @@ class SMIRNOFFvdWHandler(PotentialHandler):
                     },
                 )
             except AttributeError:
-                # Handle rmin_half pending https://github.com/openforcefield/openforcefield/pull/750
+                # Handle rmin_half pending https://github.com/openforcefield/openff-toolkit/pull/750
                 potential = Potential(
                     parameters={
                         "sigma": parameter_type.sigma,

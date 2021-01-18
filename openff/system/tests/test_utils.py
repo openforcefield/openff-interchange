@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from openforcefield.typing.engines.smirnoff import ForceField
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from simtk import unit as simtk_unit
 
 from openff.system import unit

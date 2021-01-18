@@ -1,7 +1,7 @@
 name: test
 channels:
   - conda-forge
-  - omnia
+  - conda-forge/label/openff-toolkit_rc
   - bioconda
 
 dependencies:
@@ -11,7 +11,7 @@ dependencies:
   - pydantic
   - pint
   - openmm
-  - openforcefield >=0.8.3
+  - openff-toolkit
   - jax
 
     # Testing

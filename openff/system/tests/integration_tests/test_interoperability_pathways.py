@@ -4,8 +4,8 @@ import numpy as np
 import parmed as pmd
 import pytest
 from intermol.gromacs import energies as gmx_energy
-from openforcefield.topology import Molecule, Topology
-from openforcefield.utils.utils import temporary_cd
+from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.utils.utils import temporary_cd
 from pkg_resources import resource_filename
 from simtk import unit as omm_unit
 

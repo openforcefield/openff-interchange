@@ -1,5 +1,5 @@
 import numpy as np
-from openforcefield.topology import Molecule
+from openff.toolkit.topology import Molecule
 from simtk import unit as omm_unit
 
 from openff.system.stubs import ForceField

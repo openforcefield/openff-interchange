@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
-from openforcefield.tests.utils import compare_system_energies
-from openforcefield.topology import Molecule, Topology
+from openff.toolkit.tests.utils import compare_system_energies
+from openff.toolkit.topology import Molecule, Topology
 from simtk import unit
 
 from openff.system.stubs import ForceField

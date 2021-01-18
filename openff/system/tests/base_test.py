@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
-from openforcefield.topology.molecule import Molecule
-from openforcefield.topology.topology import Topology
+from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.topology.topology import Topology
 
 from openff.system.stubs import ForceField
 from openff.system.tests.utils import top_from_smiles

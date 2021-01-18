@@ -1,5 +1,5 @@
 import numpy as np
-from openforcefield.topology import Molecule, Topology
+from openff.toolkit.topology import Molecule, Topology
 from simtk import unit
 
 from openff.system.exceptions import InterMolEnergyComparisonError
@@ -21,7 +21,7 @@ def top_from_smiles(
 
     Returns
     -------
-    top : openforcefield.topology.Topology
+    top : opennff.toolkit.topology.Topology
         A single-molecule, gas phase-like topology
 
     """
