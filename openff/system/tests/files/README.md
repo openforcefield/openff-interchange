@@ -12,5 +12,5 @@ Documenting how some of these files were generated
 `parsley.offxml`:
   - This file is a based on a copy of `openff_unconstrained-1.0.0.offxml` (1/4/21)
   - The 1-4 scaling term in the Electrostatics handler is hard-coded to 0.83333 to replicate a bug in the OpenFF Toolkit
-    - See https://github.com/openforcefield/openforcefield/issues/408
+    - See https://github.com/openforcefield/opennff-toolkit/issues/408
     - Once this bug is fixed, a mainline force field loaded from the entry point should be used

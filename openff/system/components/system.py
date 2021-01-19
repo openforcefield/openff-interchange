@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Dict, Optional, Union
 
 import numpy as np
-from openforcefield.topology.topology import Topology
+from openff.toolkit.topology.topology import Topology
 from pydantic import validator
 
 from openff.system.components.potentials import PotentialHandler

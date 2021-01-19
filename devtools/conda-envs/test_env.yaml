@@ -1,8 +1,6 @@
 name: test
 channels:
   - conda-forge
-  - omnia
-
 dependencies:
     # Base depends
   - python
@@ -10,9 +8,8 @@ dependencies:
   - pydantic
   - pint
   - openmm >=7.5
-  - openforcefield >=0.8.3
+  - openff-toolkit
   - jax
-
     # Testing
   - pytest
   - pytest-cov

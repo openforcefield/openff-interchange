@@ -1,6 +1,6 @@
 import pytest
-from openforcefield.topology import Molecule, Topology
-from openforcefield.utils import get_data_file_path
+from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.utils import get_data_file_path
 from simtk import openmm
 
 from openff.system.components.system import System

@@ -1,6 +1,6 @@
 from typing import Dict, List, Set, Union
 
-import jax.numpy as jnp
+from openff.toolkit.utils.utils import requires_package
 from pydantic import validator
 
 from openff.system.exceptions import InvalidExpressionError
@@ -44,15 +44,21 @@ class PotentialHandler(DefaultModel):
     def store_potentials(self):
         raise NotImplementedError
 
+    @requires_package("jax")
     def get_force_field_parameters(self):
+        import jax
+
         params: list = list()
         for potential in self.potentials.values():
             row = [val.magnitude for val in potential.parameters.values()]
             params.append(row)
 
-        return jnp.array(params)
+        return jax.numpy.array(params)
 
+    @requires_package("jax")
     def get_system_parameters(self, p=None):
+        import jax
+
         if p is None:
             p = self.get_force_field_parameters()
         mapping = self.get_mapping()
@@ -61,7 +67,7 @@ class PotentialHandler(DefaultModel):
         for key in self.slot_map.keys():
             q.append(p[mapping[self.slot_map[key]]])
 
-        return jnp.array(q)
+        return jax.numpy.array(q)
 
     def get_mapping(self) -> Dict:
         mapping: Dict = dict()
