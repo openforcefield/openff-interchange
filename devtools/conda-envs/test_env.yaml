@@ -1,8 +1,6 @@
 name: test
 channels:
   - conda-forge
-  - conda-forge/label/openff-toolkit_rc
-
 dependencies:
     # Base depends
   - python
@@ -12,7 +10,6 @@ dependencies:
   - openmm >=7.5
   - openff-toolkit
   - jax
-
     # Testing
   - pytest
   - pytest-cov
