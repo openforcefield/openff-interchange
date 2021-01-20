@@ -2,6 +2,7 @@ import json
 from typing import TYPE_CHECKING, Any, Dict
 
 import numpy as np
+import unyt
 from pydantic import BaseModel
 from simtk import unit as omm_unit
 
@@ -43,6 +44,8 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 # return val
             elif isinstance(val, omm_unit.Quantity):
                 return _from_omm_quantity(val)
+            elif isinstance(val, unyt.unyt_quantity):
+                return _from_unyt_quantity(val)
             elif isinstance(val, (float, int)) and not isinstance(val, bool):
                 return val * unit_
             elif isinstance(val, str):
@@ -59,6 +62,15 @@ def _from_omm_quantity(val):
     unit_ = val.unit
     quantity_ = val.value_in_unit(unit_)
     return quantity_ * unit.Unit(str(unit_))
+
+
+def _from_unyt_quantity(val):
+    """Helper function to convert unyt arrays to Pint quantities"""
+    quantity = val.to_pint()
+    # Ensure a float-like quantity is a float, not a scalar array
+    if isinstance(val, unyt.unyt_quantity):
+        quantity = float(quantity.magnitude) * quantity.units
+    return quantity
 
 
 class QuantityEncoder(json.JSONEncoder):
@@ -137,7 +149,11 @@ else:
                     assert unit_.dimensionality == val.dimensionality
                     return val.to(unit_)
                 elif isinstance(val, (np.ndarray, list)):
-                    return val * unit_
+                    # Must check for unyt_array, not unyt_quantity, which is a subclass
+                    if isinstance(val, unyt.unyt_array):
+                        return _from_unyt_quantity(val)
+                    else:
+                        return val * unit_
                 elif isinstance(val, bytes):
                     # Define outside loop
                     dt = np.dtype(int)

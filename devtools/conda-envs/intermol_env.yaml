@@ -17,3 +17,4 @@ dependencies:
   - codecov
   - intermol
   - gromacs
+  - unyt

@@ -2,6 +2,7 @@ import json
 
 import numpy as np
 import pytest
+import unyt
 from pydantic import ValidationError
 from simtk import unit as omm_unit
 
@@ -101,6 +102,23 @@ class TestQuantityTypes:
             ValueError, match=r"Could not validate data of type .*[bool|int].*"
         ):
             Model(a=val)
+
+    def test_unyt_quantities(self):
+        class Subject(DefaultModel):
+            age: FloatQuantity["year"]
+            height: FloatQuantity["centimeter"]
+            doses: ArrayQuantity["milligram"]
+
+        subject = Subject(
+            age=20.0,
+            height=170.0 * unyt.cm,
+            doses=[2, 1, 1] * unyt.gram,
+        )
+
+        # Ensure unyt scalars (unyt.unyt_quantity) are stored as floats
+        assert type(subject.age.m) == float
+        assert type(subject.height.m) == float
+        assert type(subject.doses.m) == np.ndarray
 
     def test_float_and_quantity_type(self):
         class MixedModel(DefaultModel):

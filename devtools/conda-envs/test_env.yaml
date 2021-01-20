@@ -16,3 +16,4 @@ dependencies:
   - codecov
   - nbval
   - mypy
+  - unyt
