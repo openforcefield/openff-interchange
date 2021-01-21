@@ -1,11 +1,17 @@
+import tempfile
+
 import numpy as np
+from intermol.gromacs import energies as gmx_energy
 from openff.toolkit.topology import Molecule
+from openff.toolkit.utils.utils import temporary_cd
+from pkg_resources import resource_filename
 from simtk import unit as omm_unit
 
 from openff.system.stubs import ForceField
+from openff.system.tests.utils import compare_energies
 
 
-def test_internal_gro_writer():
+def test_internal_gromacs_writers():
     mol = Molecule.from_smiles("C")
     mol.generate_conformers(n_conformers=1)
     top = mol.to_topology()
@@ -15,10 +21,34 @@ def test_internal_gro_writer():
     out.box = [4, 4, 4] * np.eye(3)
     out.positions = mol.conformers[0] / omm_unit.nanometer
 
-    out.to_gro("internal.gro", writer="internal")
-    out.to_gro("parmed.gro", writer="parmed")
+    with tempfile.TemporaryDirectory() as off_tempdir:
+        with temporary_cd(off_tempdir):
+            out.to_gro("internal.gro", writer="internal")
+            out.to_gro("parmed.gro", writer="parmed")
 
-    with open("internal.gro", "r") as file1:
-        with open("parmed.gro", "r") as file2:
+            compare_gro_files("internal.gro", "parmed.gro")
+
+            out.to_top("internal.top", writer="internal")
+            out.to_top("parmed.top", writer="parmed")
+
+            pmd_energy, _ = gmx_energy(
+                top="parmed.top",
+                gro="parmed.gro",
+                mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
+            )
+
+            internal_energy, _ = gmx_energy(
+                top="internal.top",
+                gro="internal.gro",
+                mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
+            )
+
+            compare_energies(pmd_energy, internal_energy)
+
+
+def compare_gro_files(file1: str, file2: str):
+    """Helper function to compare the contents of two GRO files"""
+    with open(file1, "r") as f1:
+        with open(file2, "r") as f2:
             # Ignore first two lines and last line
-            assert file1.readlines()[2:-1] == file2.readlines()[2:-1]
+            assert f1.readlines()[2:-1] == f2.readlines()[2:-1]
