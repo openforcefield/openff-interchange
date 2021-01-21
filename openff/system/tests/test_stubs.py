@@ -103,8 +103,6 @@ class TestConstraints(BaseTest):
 
 class TestElectrostatics(BaseTest):
     def test_library_charge_assignment(self):
-        from openff.toolkit.tests.test_forcefield import xml_ethanol_library_charges_ff
-
         from openff.system.stubs import ForceField
 
         forcefield = ForceField("openff-1.3.0.offxml")
