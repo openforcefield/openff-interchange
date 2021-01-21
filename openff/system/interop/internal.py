@@ -159,12 +159,12 @@ def _write_atoms(openff_sys: System, top_file: IO, typemap: Dict):
     """Write the [ atoms ] section"""
     top_file.write("[ atoms ]\n")
     top_file.write(";num, type, resnum, resname, atomname, cgnr, q, m\n")
-    for atom_idx, atom in enumerate(openff_sys.topology.topology_atoms):
+    for atom_idx, atom in enumerate(openff_sys.topology.topology_atoms):  # type: ignore
         atom_type = typemap[atom_idx]
         element = lookup_dict[atom.atomic_number]
         mass = pmd.periodic_table.Mass[element]
         charge = (
-            openff_sys.handlers["Electrostatics"].charge_map[str((atom_idx,))].magnitude
+            openff_sys.handlers["Electrostatics"].charge_map[str((atom_idx,))].magnitude  # type: ignore
         )
         top_file.write(
             "{0:6d} {1:18s} {2:6d} {3:8s} {4:8s} {5:6d} "
@@ -183,17 +183,15 @@ def _write_atoms(openff_sys: System, top_file: IO, typemap: Dict):
 
 def _write_valence(openff_sys: System, top_file: IO):
     """Write the [ bonds ], [ angles ], and [ dihedrals ] sections"""
-    if "Bonds" in openff_sys.handlers.keys():
-        _write_bonds(openff_sys, top_file)
-    if "Angles" in openff_sys.handlers.keys():
-        _write_angles(openff_sys, top_file)
-    if "ProperTorsions" in openff_sys.handlers.keys():
-        pass
-    if "ImproperTorsions" in openff_sys.handlers.keys():
-        pass
+    _write_bonds(openff_sys, top_file)
+    _write_angles(openff_sys, top_file)
+    _write_dihedrals(openff_sys, top_file)
 
 
 def _write_bonds(openff_sys: System, top_file: IO):
+    if "Bonds" not in openff_sys.handlers.keys():
+        return
+
     top_file.write("[ bonds ]\n")
     top_file.write("; ai\taj\tfunc\tr\tk\n")
 
@@ -218,6 +216,9 @@ def _write_bonds(openff_sys: System, top_file: IO):
 
 
 def _write_angles(openff_sys: System, top_file: IO):
+    if "Angles" not in openff_sys.handlers.keys():
+        return
+
     top_file.write("[ angles ]\n")
     top_file.write("; ai\taj\tak\tfunc\tr\tk\n")
 
@@ -243,10 +244,17 @@ def _write_angles(openff_sys: System, top_file: IO):
 
 
 def _write_dihedrals(openff_sys: System, top_file: IO):
+    if (
+        "ProperTorsions" not in openff_sys.handlers.keys()
+        and "ImproperTorsions" not in openff_sys.handlers.keys()
+    ):
+        return
+
     top_file.write("[ dihedrals ]\n")
     top_file.write(";    i      j      k      l   func\n")
 
     proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
+    improper_torsion_handler = openff_sys.handlers["ImproperTorsions"]
 
     for torsion_key, key in proper_torsion_handler.slot_map.items():
         torsion, idx = torsion_key.split("_")
@@ -258,7 +266,7 @@ def _write_dihedrals(openff_sys: System, top_file: IO):
         phase = params["phase"].to(unit.degree).magnitude
         idivf = int(params["idivf"])
         top_file.write(
-            "{0:7d} {1:7d} {2:7d} {3:7d} {4:6d} {5:18.8e} {6:18.8e} {7:18.8e}".format(
+            "{0:7d} {1:7d} {2:7d} {3:7d} {4:6d} {5:18.8e} {6:18.8e} {7:18.8e}\n".format(
                 indices[0] + 1,
                 indices[1] + 1,
                 indices[2] + 1,
