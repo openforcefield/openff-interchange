@@ -244,11 +244,9 @@ def _write_angles(openff_sys: System, top_file: IO):
 
 
 def _write_dihedrals(openff_sys: System, top_file: IO):
-    if (
-        "ProperTorsions" not in openff_sys.handlers.keys()
-        and "ImproperTorsions" not in openff_sys.handlers.keys()
-    ):
-        return
+    if "ProperTorsions" not in openff_sys.handlers.keys():
+        if "ImproperTorsions" not in openff_sys.handlers.keys():
+            return
 
     top_file.write("[ dihedrals ]\n")
     top_file.write(";    i      j      k      l   func\n")
@@ -272,6 +270,28 @@ def _write_dihedrals(openff_sys: System, top_file: IO):
                 indices[2] + 1,
                 indices[3] + 1,
                 1,
+                phase,
+                k / idivf,
+                periodicity,
+            )
+        )
+
+    for torsion_key, key in improper_torsion_handler.slot_map.items():
+        torsion, idx = torsion_key.split("_")
+        indices = eval(torsion)
+        params = proper_torsion_handler.potentials[key].parameters
+
+        k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
+        periodicity = int(params["periodicity"])
+        phase = params["phase"].to(unit.degree).magnitude
+        idivf = int(params["idivf"])
+        top_file.write(
+            "{0:7d} {1:7d} {2:7d} {3:7d} {4:6d} {5:18.8e} {6:18.8e} {7:18.8e}\n".format(
+                indices[0] + 1,
+                indices[1] + 1,
+                indices[2] + 1,
+                indices[3] + 1,
+                4,
                 phase,
                 k / idivf,
                 periodicity,
