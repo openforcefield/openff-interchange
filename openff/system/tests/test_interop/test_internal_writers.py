@@ -1,6 +1,7 @@
 import tempfile
 
 import numpy as np
+import pytest
 from intermol.gromacs import energies as gmx_energy
 from openff.toolkit.topology import Molecule
 from openff.toolkit.utils.utils import temporary_cd
@@ -11,8 +12,18 @@ from openff.system.stubs import ForceField
 from openff.system.tests.utils import compare_energies
 
 
-def test_internal_gromacs_writers():
-    mol = Molecule.from_smiles("C")
+@pytest.mark.parametrize(
+    "mol",
+    [
+        "C",
+        # "CC",  # Adds a proper torsion term(s)
+        # "OC=O",  # Simplest molecule with a multi-term torsion
+        # "CCOC",  # This hits t86, which has a non-1.0 idivf
+        # "C1COC(=O)O1",  # This adds an improper, i2
+    ],
+)
+def test_internal_gromacs_writers(mol):
+    mol = Molecule.from_smiles(mol)
     mol.generate_conformers(n_conformers=1)
     top = mol.to_topology()
     parsley = ForceField("openff-1.0.0.offxml")

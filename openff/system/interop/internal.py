@@ -222,9 +222,32 @@ def _write_angles(openff_sys: System, top_file: IO):
 
 
 def _write_dihedrals(openff_sys: System, top_file: IO):
-    assert openff_sys is not None
-    assert top_file is not None
-    pass
+    top_file.write("[ dihedrals ]\n")
+    top_file.write(";    i      j      k      l   func\n")
+
+    proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
+
+    for torsion_key, key in proper_torsion_handler.slot_map.items():
+        torsion, idx = torsion_key.split("_")
+        indices = eval(torsion)
+        params = proper_torsion_handler.potentials[key].parameters
+
+        k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
+        periodicity = int(params["periodicity"])
+        phase = params["phase"].to(unit.degree).magnitude
+        idivf = int(params["idivf"])
+        top_file.write(
+            "{0:7d} {1:7d} {2:7d} {3:7d} {4:6d} {5:18.8e} {6:18.8e} {7:18.8e}".format(
+                indices[0] + 1,
+                indices[1] + 1,
+                indices[2] + 1,
+                indices[3] + 1,
+                1,
+                phase,
+                k / idivf,
+                periodicity,
+            )
+        )
 
 
 def _write_system(openff_sys: System, top_file: IO):
