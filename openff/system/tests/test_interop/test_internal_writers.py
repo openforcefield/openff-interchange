@@ -12,14 +12,11 @@ from openff.system.stubs import ForceField
 from openff.system.tests.utils import compare_energies
 
 
+# TODO: Add CC, OC=O, CCOC, C1COC(=O)O1, more
 @pytest.mark.parametrize(
     "mol",
     [
         "C",
-        # "CC",  # Adds a proper torsion term(s)
-        # "OC=O",  # Simplest molecule with a multi-term torsion
-        # "CCOC",  # This hits t86, which has a non-1.0 idivf
-        # "C1COC(=O)O1",  # This adds an improper, i2
     ],
 )
 def test_internal_gromacs_writers(mol):
@@ -54,7 +51,13 @@ def test_internal_gromacs_writers(mol):
                 mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
             )
 
-            compare_energies(pmd_energy, internal_energy)
+            try:
+                compare_energies(pmd_energy, internal_energy)
+            except Exception:
+                import os
+
+                os.system("cp * /Users/mwt/software/openff-system/tmp/")
+                raise Exception
 
 
 def compare_gro_files(file1: str, file2: str):
@@ -63,3 +66,29 @@ def compare_gro_files(file1: str, file2: str):
         with open(file2, "r") as f2:
             # Ignore first two lines and last line
             assert f1.readlines()[2:-1] == f2.readlines()[2:-1]
+
+
+def test_sanity_grompp():
+    """Basic test to ensure that a topology can be processed without errors"""
+    mol = Molecule.from_smiles("CC")
+    mol.generate_conformers(n_conformers=1)
+    top = mol.to_topology()
+
+    parsley = ForceField("openff-1.0.0.offxml")
+    off_sys = parsley.create_openff_system(top)
+
+    off_sys.box = [4, 4, 4] * np.eye(3)
+    off_sys.positions = mol.conformers[0] / omm_unit.angstrom
+
+    off_sys.to_gro("out.gro", writer="internal")
+    off_sys.to_top("out.top", writer="internal")
+
+    ener, _ = gmx_energy(
+        top="out.top",
+        gro="out.gro",
+        mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
+    )
+
+    # Just check that nothing is read as NaN
+    for num in ener.values():
+        assert not np.isnan(num / num.unit)
