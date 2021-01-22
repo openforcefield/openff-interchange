@@ -280,7 +280,7 @@ def _write_dihedrals(openff_sys: System, top_file: IO):
     for torsion_key, key in improper_torsion_handler.slot_map.items():
         torsion, idx = torsion_key.split("_")
         indices = eval(torsion)
-        params = proper_torsion_handler.potentials[key].parameters
+        params = improper_torsion_handler.potentials[key].parameters
 
         k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
         periodicity = int(params["periodicity"])
@@ -306,7 +306,7 @@ def _write_system(openff_sys: System, top_file: IO):
     top_file.write("; name \n")
     top_file.write("System name\n\n")
 
-    top_file.write("[ molecules ]")
+    top_file.write("[ molecules ]\n")
     top_file.write("; Compound\tnmols\n")
     top_file.write("FOO\t1\n")
 
