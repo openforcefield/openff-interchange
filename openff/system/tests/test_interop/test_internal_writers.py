@@ -63,7 +63,7 @@ def test_internal_gromacs_writers(mol):
                 mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
             )
 
-            compare_energies(reference_energy, internal_energy, atol=1e-3)
+            compare_energies(reference_energy, internal_energy, atol=1e-2)
 
 
 def compare_gro_files(file1: str, file2: str):
