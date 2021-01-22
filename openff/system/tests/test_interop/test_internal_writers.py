@@ -98,9 +98,9 @@ def test_sanity_grompp():
     #  atomtype name differences that currently force -maxwarn 7
     import os
 
-    exit_code = os.system(
-        "gmx grompp -f ../InterMol/intermol/tests/gromacs/grompp.mdp "
-        "-c out.gro -p out.top -maxwarn 7"
-    )
+    from pkg_resources import resource_filename
+
+    mdp_file = resource_filename("intermol", "tests/gromacs/grompp.mdp")
+    exit_code = os.system(f"gmx grompp -f {mdp_file} -c out.gro -p out.top -maxwarn 7")
 
     assert exit_code == 0
