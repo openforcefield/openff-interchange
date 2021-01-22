@@ -130,9 +130,10 @@ def _write_atomtypes(openff_sys: System, top_file: IO) -> Dict:
         sigma = parameters["sigma"].to(unit.nanometer).magnitude  # type: ignore
         epsilon = parameters["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude  # type: ignore
         top_file.write(
-            "{0:<11s} {1:5s} {2:6d} {3:18.8f} {4:18.8f} {5:5s} {6:18.8e} {7:18.8e}".format(
+            # "{0:<11s} {1:5s} {2:6d} {3:18.8f} {4:18.8f} {5:5s} {6:18.8e} {7:18.8e}".format(
+            "{0:<11s} {1:6d} {2:18.8f} {3:18.8f} {4:5s} {5:18.8e} {6:18.8e}".format(
                 atom_type,  # atom type
-                "XX",  # atom "bonding type", i.e. bond class
+                # "XX",  # atom "bonding type", i.e. bond class
                 atom.atomic_number,
                 pmd.periodic_table.Mass[element],
                 0.0,  # charge, overriden later in [ atoms ]

@@ -1,6 +1,7 @@
 import tempfile
 
 import numpy as np
+import parmed as pmd
 import pytest
 from intermol.gromacs import energies as gmx_energy
 from openff.toolkit.topology import Molecule
@@ -8,6 +9,7 @@ from openff.toolkit.utils.utils import temporary_cd
 from pkg_resources import resource_filename
 from simtk import unit as omm_unit
 
+from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.utils import compare_energies
 
@@ -21,13 +23,22 @@ from openff.system.tests.utils import compare_energies
 )
 def test_internal_gromacs_writers(mol):
     mol = Molecule.from_smiles(mol)
+    mol.name = "FOO"
     mol.generate_conformers(n_conformers=1)
     top = mol.to_topology()
-    parsley = ForceField("openff-1.0.0.offxml")
+    parsley = ForceField("openff_unconstrained-1.0.0.offxml")
     out = parsley.create_openff_system(top)
 
     out.box = [4, 4, 4] * np.eye(3)
     out.positions = mol.conformers[0] / omm_unit.nanometer
+
+    openmm_sys = parsley.create_openmm_system(top)
+    struct = pmd.openmm.load_topology(
+        topology=top.to_openmm(),
+        system=openmm_sys,
+        xyz=out.positions.to(unit.angstrom),
+    )
+    struct.box = [40, 40, 40, 90, 90, 90]
 
     with tempfile.TemporaryDirectory() as off_tempdir:
         with temporary_cd(off_tempdir):
@@ -36,12 +47,13 @@ def test_internal_gromacs_writers(mol):
 
             compare_gro_files("internal.gro", "parmed.gro")
 
+            struct.save("reference.top")
+            struct.save("reference.gro")
             out.to_top("internal.top", writer="internal")
-            out.to_top("parmed.top", writer="parmed")
 
-            pmd_energy, _ = gmx_energy(
-                top="parmed.top",
-                gro="parmed.gro",
+            reference_energy, _ = gmx_energy(
+                top="reference.top",
+                gro="reference.gro",
                 mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
             )
 
@@ -51,13 +63,7 @@ def test_internal_gromacs_writers(mol):
                 mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
             )
 
-            try:
-                compare_energies(pmd_energy, internal_energy)
-            except Exception:
-                import os
-
-                os.system("cp * /Users/mwt/software/openff-system/tmp/")
-                raise Exception
+            compare_energies(reference_energy, internal_energy, atol=1e-3)
 
 
 def compare_gro_files(file1: str, file2: str):
