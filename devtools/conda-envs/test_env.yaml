@@ -15,5 +15,5 @@ dependencies:
   - pytest-cov
   - codecov
   - nbval
-  - mypy
+  - mypy =0.790
   - unyt
