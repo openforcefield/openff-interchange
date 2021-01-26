@@ -34,7 +34,7 @@ def top_from_smiles(
     return top
 
 
-def compare_energies(ener1, ener2):
+def compare_energies(ener1, ener2, atol=1e-8):
     """Compare two GROMACS energy dicts from InterMol"""
 
     assert sorted(ener1.keys()) == sorted(ener2.keys()), (
@@ -42,7 +42,14 @@ def compare_energies(ener1, ener2):
         sorted(ener2.keys()),
     )
 
-    flaky_keys = ["Temperature", "Kinetic En.", "Total Energy"]
+    flaky_keys = [
+        "Temperature",
+        "Kinetic En.",
+        "Total Energy",
+        "Pressure",
+        "Vir-XX",
+        "Vir-YY",
+    ]
     raise_exception = False
     failed_runs = []
     for key in ener1.keys():
@@ -52,6 +59,7 @@ def compare_energies(ener1, ener2):
             assert np.isclose(
                 ener1[key] / ener1[key].unit,
                 ener2[key] / ener2[key].unit,
+                atol=atol,
             )
         except AssertionError:
             raise_exception = True

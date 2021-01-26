@@ -1,13 +1,14 @@
 name: test
 channels:
   - conda-forge
+  - bioconda
 dependencies:
     # Base depends
   - python
   - pip
   - pydantic
   - pint
-  - openmm >=7.5
+  - openmm
   - openff-toolkit
   - jax
     # Testing
@@ -17,3 +18,5 @@ dependencies:
   - nbval
   - mypy =0.790
   - unyt
+  - intermol
+  - gromacs

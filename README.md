@@ -15,7 +15,7 @@ an object storing parametrized data.
 
 ```python3
 # Use the OpenFF Toolkit to generate a minimal chemical topology
-from openforcefield.topology import Molecule, Topology
+from openff.toolkit.topology import Molecule, Topology
 top = Molecule.from_smiles("C").to_topology()
 
 # Load Parsley

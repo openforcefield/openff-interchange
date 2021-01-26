@@ -62,7 +62,7 @@ jobs:
     - name: Run unit tests
       shell: bash -l {0}
       run: |
-        pytest -v $COV openff/system/tests/ --ignore=openff/system/tests/integration_tests/
+        pytest -v $COV openff/system/tests/
 
     - name: Run example notebooks
       shell: bash -l {0}
