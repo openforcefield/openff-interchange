@@ -11,6 +11,7 @@ dependencies:
   - openmm
   - openff-toolkit
   - jax
+  - ele
     # Testing
   - pytest
   - pytest-cov
