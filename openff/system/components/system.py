@@ -2,10 +2,10 @@ from pathlib import Path
 from typing import Dict, Optional, Union
 
 import numpy as np
-from openff.toolkit.topology.topology import Topology
 from pydantic import validator
 
 from openff.system.components.potentials import PotentialHandler
+from openff.system.components.topology import MMTopology
 from openff.system.interop.openmm import to_openmm
 from openff.system.interop.parmed import to_parmed
 from openff.system.types import ArrayQuantity, DefaultModel
@@ -19,7 +19,7 @@ class System(DefaultModel):
     """
 
     handlers: Dict[str, PotentialHandler] = dict()
-    topology: Optional[Topology] = None
+    topology: Optional[MMTopology] = None
     box: ArrayQuantity["nanometer"] = None
     positions: ArrayQuantity["nanometer"] = None
 

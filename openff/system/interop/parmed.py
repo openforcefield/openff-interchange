@@ -21,19 +21,18 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     else:
         has_electrostatics = False
 
-    for topology_molecule in off_system.topology.topology_molecules:
-        for atom in topology_molecule.atoms:
-            atomic_number = atom.atomic_number
-            element = pmd.periodic_table.Element[atomic_number]
-            mass = pmd.periodic_table.Mass[element]
-            structure.add_atom(
-                pmd.Atom(
-                    atomic_number=atomic_number,
-                    mass=mass,
-                ),
-                resname="FOO",
-                resnum=0,
-            )
+    for atom in off_system.topology.atoms:
+        atomic_number = atom.atomic_number
+        element = pmd.periodic_table.Element[atomic_number]
+        mass = pmd.periodic_table.Mass[element]
+        structure.add_atom(
+            pmd.Atom(
+                atomic_number=atomic_number,
+                mass=mass,
+            ),
+            resname="FOO",
+            resnum=0,
+        )
 
     if "Bonds" in off_system.handlers.keys():
         bond_handler = off_system.handlers["Bonds"]

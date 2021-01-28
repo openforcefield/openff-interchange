@@ -23,6 +23,7 @@ from openff.system.components.smirnoff import (
     SMIRNOFFvdWHandler,
 )
 from openff.system.components.system import System
+from openff.system.components.topology import MMTopology
 
 
 def to_openff_system(
@@ -63,7 +64,7 @@ def to_openff_system(
     else:
         sys_out.box = box
 
-    sys_out.topology = topology
+    sys_out.topology = MMTopology.from_toolkit_topology(topology)
 
     return sys_out
 
