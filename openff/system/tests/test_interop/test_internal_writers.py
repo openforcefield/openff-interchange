@@ -6,10 +6,10 @@ import pytest
 from intermol.gromacs import energies as gmx_energy
 from openff.toolkit.topology import Molecule
 from openff.toolkit.utils.utils import temporary_cd
+from openff.units import unit
 from pkg_resources import resource_filename
 from simtk import unit as omm_unit
 
-from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.utils import compare_energies
 

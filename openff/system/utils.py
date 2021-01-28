@@ -4,11 +4,10 @@ from typing import List
 
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.utils import unit_to_string
+from openff.units import unit
 from pkg_resources import resource_filename
 from simtk import openmm
 from simtk import unit as omm_unit
-
-from openff.system import unit
 
 
 def pint_to_simtk(quantity):

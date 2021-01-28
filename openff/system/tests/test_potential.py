@@ -2,9 +2,9 @@ import pydantic
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
+from openff.units import unit
 from simtk import unit as omm_unit
 
-from openff.system import unit
 from openff.system.components.potentials import PotentialHandler
 from openff.system.tests.base_test import BaseTest
 

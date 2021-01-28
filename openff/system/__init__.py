@@ -1,8 +1,4 @@
-import pint
-
 from openff.system._version import get_versions  # type: ignore
-
-unit = pint.UnitRegistry()
 
 # Handle versioneer
 versions = get_versions()

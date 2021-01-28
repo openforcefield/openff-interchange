@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.units import unit
 from simtk import unit as simtk_unit
 
-from openff.system import unit
 from openff.system.tests.base_test import BaseTest
 from openff.system.utils import (
     compare_forcefields,

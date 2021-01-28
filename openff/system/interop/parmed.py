@@ -2,8 +2,7 @@ from typing import Any, Dict
 
 import numpy as np
 import parmed as pmd
-
-from openff.system import unit
+from openff.units import unit
 
 kcal_mol = unit.Unit("kilocalories / mol")
 kcal_mol_a2 = unit.Unit("kilocalories / mol / angstrom ** 2")

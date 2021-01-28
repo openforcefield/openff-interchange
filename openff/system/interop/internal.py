@@ -3,8 +3,8 @@ from typing import IO, Dict
 
 import ele
 import numpy as np
+from openff.units import unit
 
-from openff.system import unit
 from openff.system.components.system import System
 
 

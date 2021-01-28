@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
+from openff.units import unit
 
-from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.utils import top_from_smiles

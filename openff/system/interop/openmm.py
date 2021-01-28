@@ -1,6 +1,6 @@
+from openff.units import unit as off_unit
 from simtk import openmm, unit
 
-from openff.system import unit as off_unit
 from openff.system.exceptions import UnsupportedCutoffMethodError
 from openff.system.interop.parmed import _lj_params_from_potential
 

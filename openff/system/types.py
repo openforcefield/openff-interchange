@@ -3,10 +3,9 @@ from typing import TYPE_CHECKING, Any, Dict
 
 import numpy as np
 import unyt
+from openff.units import unit
 from pydantic import BaseModel
 from simtk import unit as omm_unit
-
-from openff.system import unit
 
 
 class _FloatQuantityMeta(type):
