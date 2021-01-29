@@ -54,6 +54,11 @@ jobs:
       run: |
         python setup.py develop --no-deps
 
+    - name: Install OpenFF Units
+      shell: bash -l {0}
+      run: |
+        pip install git+git://github.com/mattwthompson/openff-units.git
+
     - name: Run mypy
       shell: bash -l {0}
       run: |
