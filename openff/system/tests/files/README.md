@@ -14,3 +14,6 @@ Documenting how some of these files were generated
   - The 1-4 scaling term in the Electrostatics handler is hard-coded to 0.83333 to replicate a bug in the OpenFF Toolkit
     - See https://github.com/openforcefield/opennff-toolkit/issues/408
     - Once this bug is fixed, a mainline force field loaded from the entry point should be used
+
+`water-dimer.pdb`:
+  - Taken from the `openmm-tests` repo: https://github.com/choderalab/openmm-tests/blob/5a7d3b7bee753a384c98f4b6f8bb1460c371935c/energy-continuity/water-dimer.pdb
