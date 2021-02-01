@@ -123,7 +123,7 @@ class ArrayQuantityMeta(type):
 
 
 if TYPE_CHECKING:
-    ArrayQuantity = np.array
+    ArrayQuantity = np.ndarray
 else:
 
     class ArrayQuantity(float, metaclass=ArrayQuantityMeta):

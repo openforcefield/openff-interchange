@@ -22,7 +22,7 @@ def openff_openmm_pmd_gmx(
     prefix: str,
 ) -> None:
     """Pipeline to write GROMACS files from and OpenMM system through ParmEd"""
-    topology.box_vectors = box.to(unit.nanometer).magnitude * omm_unit.nanometer
+    topology.box_vectors = box.to(unit.nanometer).magnitude * omm_unit.nanometer  # type: ignore
     omm_sys = forcefield.create_openmm_system(topology)
 
     struct = pmd.openmm.load_topology(
