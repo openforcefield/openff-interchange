@@ -238,7 +238,7 @@ def _write_bonds(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
     top_mol = openff_sys.topology._reference_molecule_to_topology_molecules[ref_mol][0]  # type: ignore
 
     for bond in top_mol.bonds:
-        indices = tuple(a.topology_atom_index for a in bond.atoms)
+        indices = tuple(sorted(a.topology_atom_index for a in bond.atoms))
         indices_as_str = str(indices)
         if indices_as_str in bond_handler.slot_map.keys():
             key = bond_handler.slot_map[indices_as_str]
