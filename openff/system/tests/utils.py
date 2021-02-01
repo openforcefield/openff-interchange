@@ -50,7 +50,7 @@ def compare_energies(ener1, ener2, atol=1e-8):
         "Vir-XX",
         "Vir-YY",
     ]
-    raise_exception = False
+
     failed_runs = []
     for key in ener1.keys():
         if key in flaky_keys:
@@ -62,8 +62,7 @@ def compare_energies(ener1, ener2, atol=1e-8):
                 atol=atol,
             )
         except AssertionError:
-            raise_exception = True
             failed_runs.append([key, ener1[key], ener2[key]])
 
-    if raise_exception:
+    if len(failed_runs) > 0:
         raise InterMolEnergyComparisonError(failed_runs)

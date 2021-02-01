@@ -20,6 +20,8 @@ from openff.system.tests.utils import compare_energies
     [
         "C",
         "CC",
+        # "OC=O",  # ParmEd conversion untrustworthy, see #91
+        "CCOC",
         "C1COC(=O)O1",
     ],
 )
@@ -132,6 +134,6 @@ def test_water_dimer():
     from pkg_resources import resource_filename
 
     mdp_file = resource_filename("intermol", "tests/gromacs/grompp.mdp")
-    exit_code = os.system(f"gmx grompp -f {mdp_file} -c out.gro -p out.top -maxwarn 6")
+    exit_code = os.system(f"gmx grompp -f {mdp_file} -c out.gro -p out.top -maxwarn 7")
 
     assert exit_code == 0

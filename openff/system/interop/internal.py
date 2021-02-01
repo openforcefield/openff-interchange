@@ -223,11 +223,11 @@ def _write_valence(
     """Write the [ bonds ], [ angles ], and [ dihedrals ] sections"""
     _write_bonds(top_file, openff_sys, mol_data["reference_molecule"])
     _write_angles(top_file, openff_sys, mol_data["reference_molecule"])
-    # _write_dihedrals(openff_sys, top_file)
+    _write_dihedrals(top_file, openff_sys, mol_data["reference_molecule"])
 
 
 def _write_bonds(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
-    if "Bonds" not in openff_sys.handlers.keys():
+    if len(openff_sys.handlers["Bonds"].potentials) == 0:
         return
 
     top_file.write("[ bonds ]\n")
@@ -264,7 +264,7 @@ def _write_bonds(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
 
 
 def _write_angles(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
-    if "Angles" not in openff_sys.handlers.keys():
+    if len(openff_sys.handlers["Angles"].potentials) == 0:
         return
 
     top_file.write("[ angles ]\n")
@@ -300,20 +300,30 @@ def _write_angles(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
     top_file.write("\n\n")
 
 
-def _write_dihedrals(openff_sys: System, top_file: IO):
-    if "ProperTorsions" not in openff_sys.handlers.keys():
-        if "ImproperTorsions" not in openff_sys.handlers.keys():
+def _write_dihedrals(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
+    if len(openff_sys.handlers["ProperTorsions"].potentials) == 0:
+        if len(openff_sys.handlers["ImproperTorsions"].potentials) == 0:
             return
 
     top_file.write("[ dihedrals ]\n")
     top_file.write(";    i      j      k      l   func\n")
 
+    top_mol = openff_sys.topology._reference_molecule_to_topology_molecules[ref_mol][0]  # type: ignore
+
     proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
     improper_torsion_handler = openff_sys.handlers["ImproperTorsions"]
 
-    for torsion_key, key in proper_torsion_handler.slot_map.items():
-        torsion, idx = torsion_key.split("_")
-        indices = eval(torsion)
+    for proper in top_mol.propers:
+        indices = tuple(a.topology_atom_index for a in proper)
+        indices_as_str = str(indices)
+        for torsion_key, key in proper_torsion_handler.slot_map.items():
+            if indices_as_str == torsion_key.split("_")[0]:
+                key = proper_torsion_handler.slot_map[torsion_key]
+                break
+        else:
+            # Expect all torsions in the topology to have assigned parameters
+            raise Exception
+
         params = proper_torsion_handler.potentials[key].parameters
 
         k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
@@ -333,9 +343,18 @@ def _write_dihedrals(openff_sys: System, top_file: IO):
             )
         )
 
-    for torsion_key, key in improper_torsion_handler.slot_map.items():
-        torsion, idx = torsion_key.split("_")
-        indices = eval(torsion)
+    for improper in top_mol.impropers:
+
+        indices = tuple(a.topology_atom_index for a in improper)
+        indices_as_str = str(indices)
+        for torsion_key, key in improper_torsion_handler.slot_map.items():
+            if indices_as_str == torsion_key.split("_")[0]:
+                key = improper_torsion_handler.slot_map[torsion_key]
+                break
+        else:
+            # Do not expect all torsions in the topology to have assigned parameters
+            continue
+
         params = improper_torsion_handler.potentials[key].parameters
 
         k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
