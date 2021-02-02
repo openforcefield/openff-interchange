@@ -19,7 +19,7 @@ from openff.toolkit.topology import Molecule, Topology
 top = Molecule.from_smiles("C").to_topology()
 
 # Load Parsley
-from openff.system.stubs import ForceField # Primarily wraps the ForceField class from the OpenFF Toolkit
+from openff.system.stubs import ForceField  # Primarily wraps the ForceField class from the OpenFF Toolkit
 parsley = ForceField("openff-1.0.0.offxml")
 
 # Create an OpenFF System
@@ -30,8 +30,12 @@ import numpy as np
 off_sys.box = [4, 4, 4] * np.eye(3)
 off_sys.positions = np.random.rand(15).reshape((5, 3))  # Repalce with valid data
 
-# Convert the OpenFF System to an OpenMM System
+# Convert the OpenFF System to an OpenMM System ...
 omm_sys = off_sys.to_openmm()
+
+# ... or write to GROMACS files (partial support)
+off_sys.to_gro("out.gro", writer="internal")
+off_sys.to_top("top.gro", writer="internal")
 ```
 
 Future releases will include support for conversion to other file formats such as those used by AMBER and GROMACS.
