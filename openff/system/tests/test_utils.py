@@ -1,18 +1,17 @@
 import numpy as np
 import pytest
-from openforcefield.typing.engines.smirnoff import ForceField
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from simtk import unit as simtk_unit
 
-from .. import unit
-from ..utils import (
+from openff.system import unit
+from openff.system.tests.base_test import BaseTest
+from openff.system.utils import (
     compare_forcefields,
-    compare_sympy_expr,
     get_partial_charges_from_openmm_system,
     pint_to_simtk,
     simtk_to_pint,
     unwrap_list_of_pint_quantities,
 )
-from .base_test import BaseTest
 
 simtk_quantitites = [
     4.0 * simtk_unit.nanometer,
@@ -53,19 +52,6 @@ def test_pint_to_simtk():
         pint_to_simtk(None)
 
 
-@pytest.mark.parametrize(
-    "expr1,expr2,result",
-    [
-        ("x+1", "x+1", True),
-        ("x+1", "x**2+1", False),
-        ("0.5*k*(th-th0)**2", "k*(th-th0)**2", False),
-        ("k*(1+cos(n*th-th0))", "k*(1+cos(n*th-th0))", True),
-    ],
-)
-def test_compare_sympy_expr(expr1, expr2, result):
-    assert compare_sympy_expr(expr1, expr2) == result
-
-
 class TestUtils(BaseTest):
     def test_compare_forcefields(self, parsley):
         parsley_name = "openff-1.0.0.offxml"
@@ -86,6 +72,7 @@ class TestOpenMM(BaseTest):
         omm_system = argon_ff.create_openmm_system(argon_top)
         partial_charges = get_partial_charges_from_openmm_system(omm_system)
 
-        assert isinstance(partial_charges, unit.Quantity)
-        assert partial_charges.units == unit.elementary_charge
-        assert np.allclose(partial_charges.magnitude, np.zeros(4))
+        # assert isinstance(partial_charges, unit.Quantity)
+        # assert partial_charges.units == unit.elementary_charge
+        assert isinstance(partial_charges, list)
+        assert np.allclose(partial_charges, np.zeros(4))  # .magnitude

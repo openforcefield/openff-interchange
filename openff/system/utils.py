@@ -2,15 +2,13 @@ import pathlib
 from collections import OrderedDict
 from typing import List
 
-import sympy
-from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.utils import unit_to_string
+from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.toolkit.utils import unit_to_string
 from pkg_resources import resource_filename
 from simtk import openmm
-from simtk import unit as simtk_unit
+from simtk import unit as omm_unit
 
-from . import unit
-from .types import UnitArray
+from openff.system import unit
 
 
 def pint_to_simtk(quantity):
@@ -26,29 +24,21 @@ def simtk_to_pint(simtk_quantity):
     as part of the OpenFF Evaluator, Copyright (c) 2019 Open Force Field Consortium.
     """
     if isinstance(simtk_quantity, List):
-        simtk_quantity = simtk_unit.Quantity(simtk_quantity)
+        simtk_quantity = omm_unit.Quantity(simtk_quantity)
     openmm_unit = simtk_quantity.unit
     openmm_value = simtk_quantity.value_in_unit(openmm_unit)
 
     target_unit = unit_to_string(openmm_unit)
     target_unit = unit.Unit(target_unit)
 
-    return UnitArray(openmm_value, units=target_unit)
+    return openmm_value * target_unit
 
 
 def unwrap_list_of_pint_quantities(quantities):
     assert set(val.units for val in quantities) == {quantities[0].units}
     parsed_unit = quantities[0].units
     vals = [val.magnitude for val in quantities]
-    return UnitArray(vals, units=parsed_unit)
-
-
-def compare_sympy_expr(expr1, expr2):
-    """Checks if two expression-likes are equivalent."""
-    expr1 = sympy.sympify(expr1)
-    expr2 = sympy.sympify(expr2)
-
-    return sympy.simplify(expr1 - expr2) == 0
+    return vals * parsed_unit
 
 
 def get_test_file_path(test_file):
@@ -75,10 +65,12 @@ def get_partial_charges_from_openmm_system(omm_system):
     n_particles = omm_system.getNumParticles()
     force = get_nonbonded_force_from_openmm_system(omm_system)
     # TODO: don't assume the partial charge will always be parameter 0
+    # partial_charges = [simtk_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)]
     partial_charges = [
-        simtk_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)
+        force.getParticleParameters(idx)[0] / omm_unit.elementary_charge
+        for idx in range(n_particles)
     ]
-    partial_charges = unit.Quantity.from_list(partial_charges)
+
     return partial_charges
 
 
@@ -96,18 +88,6 @@ def compare_forcefields(ff1, ff2):
     ff2 = _check_forcefield_dict(ff2)
 
     assert ff1 == ff2
-
-
-def eval_expr(pot, ref):
-    """Hack to evaluate a potential expression given that it is fully specified"""
-    variables = list(pot.independent_variables) + list(pot.parameters.keys())
-    variables = [sympy.symbols(var) for var in variables]
-    values = [ref] + list(pot.parameters.values())
-
-    for var in variables:
-        sympy.symbols(var)
-
-    return sympy.sympify(pot.expression).subs(dict(zip(variables, values)))
 
 
 try:

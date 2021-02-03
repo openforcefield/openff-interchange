@@ -1,12 +1,11 @@
 import pytest
-from openforcefield.topology import Molecule, Topology
-from openforcefield.utils import get_data_file_path
-from simtk.openmm.app import PDBFile
+from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.utils import get_data_file_path
+from simtk import openmm
 
 from openff.system.components.system import System
-
-from ..utils import get_test_file_path
-from .base_test import BaseTest
+from openff.system.tests.base_test import BaseTest
+from openff.system.utils import get_test_file_path
 
 
 class TestFromOpenMM(BaseTest):
@@ -14,7 +13,7 @@ class TestFromOpenMM(BaseTest):
     def test_from_openmm_pdbfile(self, argon_ff, argon_top):
         # TODO: Host files like this here instead of grabbing from the toolkit
         pdb_file_path = get_test_file_path("10-argons.pdb")
-        pdbfile = PDBFile(pdb_file_path)
+        pdbfile = openmm.app.PDBFile(pdb_file_path)
 
         System(
             topology=argon_top,
@@ -56,7 +55,7 @@ class TestFromOpenMM(BaseTest):
         These use PDB files already prepared in the toolkit because PDB files are a pain.
         """
         pdb_file_path = get_data_file_path("systems/packmol_boxes/" + pdb_path)
-        pdbfile = PDBFile(pdb_file_path)
+        pdbfile = openmm.app.PDBFile(pdb_file_path)
         Topology.from_openmm(
             pdbfile.topology,
             unique_molecules=unique_molecules,

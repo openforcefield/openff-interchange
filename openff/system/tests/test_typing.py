@@ -1,21 +1,4 @@
-# import numpy as np
-# import pytest
-#
-# from openff.system.components.smirnoff import (
-#     SUPPORTED_HANDLER_MAPPING,
-#     SMIRNOFFAngleHandler,
-#     SMIRNOFFBondHandler,
-#     SMIRNOFFvdWHandler,
-# )
-# from openff.system.component
-from openff.system.stubs import ForceField
-
-#
-# from ..utils import (
-#     get_partial_charges_from_openmm_system,
-#     unwrap_list_of_pint_quantities,
-# )
-from .base_test import BaseTest
+from openff.system.tests.base_test import BaseTest
 
 
 class TestSMIRNOFFTyping(BaseTest):
@@ -40,7 +23,7 @@ class TestSMIRNOFFTyping(BaseTest):
         expected = ["Angles", "Bonds", "vdW"]
         assert sorted(ammonia_sys.handlers.keys()) == sorted(expected)
 
-        for handler_name, handler in ammonia_sys.handlers.items():
+        for handler in ammonia_sys.handlers.values():
             assert len([*handler.potentials.items()]) > 0
 
 

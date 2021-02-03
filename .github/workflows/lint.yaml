@@ -2,9 +2,13 @@ name: lint
 
 on:
   push:
-    paths:
-      - 'openff/**.py'
-      - 'setup.cfg'
+    branches:
+      - "master"
+      - "maintenance/.+"
+  pull_request:
+    branches:
+      - "master"
+      - "maintenance/.+"
 
 jobs:
 
@@ -15,16 +19,16 @@ jobs:
     steps:
 
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2.1.4
+      - uses: actions/setup-python@v2.2.1
         with:
-          python-version: '3.7'
+          python-version: '3.8'
       - name: Install the package
         run: |
           python setup.py develop --no-deps
 
       - name: Install linters
         run: |
-          pip install black isort flake8
+          pip install black isort flake8 flake8-bugbear flake8-absolute-import
 
       - name: Run black
         run: |

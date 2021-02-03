@@ -1,19 +1,25 @@
 from typing import Dict, Set
 
-from openforcefield.topology.topology import Topology
-from openforcefield.typing.engines.smirnoff.forcefield import ForceField
-from openforcefield.typing.engines.smirnoff.parameters import (
+from openff.toolkit.topology.topology import Topology
+from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
+from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
     ConstraintHandler,
+    ImproperTorsionHandler,
     ProperTorsionHandler,
     vdWHandler,
 )
 from pydantic import BaseModel
+from simtk import unit as omm_unit
 
 from openff.system import unit
 from openff.system.components.potentials import Potential, PotentialHandler
-from openff.system.utils import get_partial_charges_from_openmm_system, simtk_to_pint
+from openff.system.utils import get_partial_charges_from_openmm_system
+
+kcal_mol = omm_unit.kilocalorie_per_mole
+kcal_mol_angstroms = kcal_mol / omm_unit.angstrom ** 2
+kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 
 class SMIRNOFFConstraintHandler(PotentialHandler):
@@ -90,8 +96,8 @@ class SMIRNOFFBondHandler(PotentialHandler):
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             potential = Potential(
                 parameters={
-                    "k": simtk_to_pint(parameter_type.k),
-                    "length": simtk_to_pint(parameter_type.length),
+                    "k": parameter_type.k,
+                    "length": parameter_type.length,
                 },
             )
             self.potentials[smirks] = potential
@@ -130,8 +136,8 @@ class SMIRNOFFAngleHandler(PotentialHandler):
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             potential = Potential(
                 parameters={
-                    "k": simtk_to_pint(parameter_type.k),
-                    "angle": simtk_to_pint(parameter_type.angle),
+                    "k": parameter_type.k,
+                    "angle": parameter_type.angle,
                 },
             )
             self.potentials[smirks] = potential
@@ -155,8 +161,11 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
         """
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
-            key = str(key)
-            self.slot_map[key] = val.parameter_type.smirks
+            n_terms = len(val.parameter_type.k)
+            for n in range(n_terms):
+                # This (later) assumes that `_` is disallowed in SMIRKS ...
+                identifier = str(key) + f"_{n}"
+                self.slot_map[identifier] = val.parameter_type.smirks + f"_{n}"
 
     def store_potentials(self, parameter_handler: ProperTorsionHandler) -> None:
         """
@@ -164,20 +173,78 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
         identifiers and their associated Potential objects
 
         """
-        for smirks in self.slot_map.values():
+        for key in self.slot_map.values():
             # ParameterHandler.get_parameter returns a list, although this
             # should only ever be length 1
+            smirks, n = key.split("_")
+            n = int(n)
+            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
+            # n_terms = len(parameter_type.k)
+            identifier = key
+            parameters = {
+                "k": parameter_type.k[n],
+                "periodicity": parameter_type.periodicity[n] * unit.dimensionless,
+                "phase": parameter_type.phase[n],
+                "idivf": parameter_type.idivf[n] * unit.dimensionless,
+            }
+            potential = Potential(parameters=parameters)
+            self.potentials[identifier] = potential
+
+
+class SMIRNOFFImproperTorsionHandler(PotentialHandler):
+
+    name: str = "ImproperTorsions"
+    expression: str = "k*(1+cos(periodicity*theta-phase))"
+    independent_variables: Set[str] = {"theta"}
+    slot_map: Dict[str, str] = dict()
+    potentials: Dict[str, Potential] = dict()
+
+    def store_matches(
+        self, parameter_handler: ImproperTorsionHandler, topology: Topology
+    ) -> None:
+        """
+        Populate self.slot_map with key-val pairs of slots
+        and unique potential identifiers
+
+        """
+        matches = parameter_handler.find_matches(topology)
+        for key, val in matches.items():
+            parameter_handler._assert_correct_connectivity(
+                val,
+                [
+                    (0, 1),
+                    (1, 2),
+                    (1, 3),
+                ],
+            )
+            n_terms = len(val.parameter_type.k)
+            for n in range(n_terms):
+                # This (later) assumes that `_` is disallowed in SMIRKS ...
+                identifier = str(key) + f"_{n}"
+                self.slot_map[identifier] = val.parameter_type.smirks + f"_{n}"
+
+    def store_potentials(self, parameter_handler: ImproperTorsionHandler) -> None:
+        """
+        Populate self.potentials with key-val pairs of unique potential
+        identifiers and their associated Potential objects
+
+        """
+        for key in self.slot_map.values():
+            # ParameterHandler.get_parameter returns a list, although this
+            # should only ever be length 1
+            smirks = key.split("_")[0]
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             n_terms = len(parameter_type.k)
-            potential = Potential(
-                parameters={
-                    "k": [simtk_to_pint(val) for val in parameter_type.k],
-                    "periodicity": parameter_type.periodicity,
-                    "phase": [simtk_to_pint(val) for val in parameter_type.phase],
-                    "n_terms": n_terms,
-                },
-            )
-            self.potentials[smirks] = potential
+            for n in range(n_terms):
+                identifier = key
+                parameters = {
+                    "k": parameter_type.k[n],
+                    "periodicity": parameter_type.periodicity[n] * unit.dimensionless,
+                    "phase": parameter_type.phase[n],
+                    "idivf": 3.0 * unit.dimensionless,
+                }
+                potential = Potential(parameters=parameters)
+                self.potentials[identifier] = potential
 
 
 class SMIRNOFFvdWHandler(PotentialHandler):
@@ -185,6 +252,8 @@ class SMIRNOFFvdWHandler(PotentialHandler):
     name: str = "vdW"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     independent_variables: Set[str] = {"r"}
+    method: str = "Cutoff"
+    cutoff: float = 9.0
     slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
     scale_13: float = 0.0
@@ -212,21 +281,24 @@ class SMIRNOFFvdWHandler(PotentialHandler):
         identifiers and their associated Potential objects
 
         """
+        self.method = parameter_handler.method
+        self.cutoff = parameter_handler.cutoff / omm_unit.angstrom
+
         for smirks in self.slot_map.values():
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             try:
                 potential = Potential(
                     parameters={
-                        "sigma": simtk_to_pint(parameter_type.sigma),
-                        "epsilon": simtk_to_pint(parameter_type.epsilon),
+                        "sigma": parameter_type.sigma,
+                        "epsilon": parameter_type.epsilon,
                     },
                 )
             except AttributeError:
-                # Handle rmin_half pending https://github.com/openforcefield/openforcefield/pull/750
+                # Handle rmin_half pending https://github.com/openforcefield/openff-toolkit/pull/750
                 potential = Potential(
                     parameters={
-                        "sigma": simtk_to_pint(parameter_type.rmin_half / 2 ** (1 / 6)),
-                        "epsilon": simtk_to_pint(parameter_type.epsilon),
+                        "sigma": parameter_type.sigma,
+                        "epsilon": parameter_type.epsilon,
                     },
                 )
             self.potentials[smirks] = potential
@@ -237,7 +309,8 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
     name: str = "Electrostatics"
     expression: str = "coul"
     independent_variables: Set[str] = {"r"}
-    charge_map: Dict[tuple, unit.Quantity] = dict()
+    method: str = "PME"
+    charge_map: Dict[str, float] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.8333333333
     scale_15: float = 1.0
@@ -252,12 +325,14 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
         and unique potential identifiers
 
         """
+        self.method = forcefield["Electrostatics"].method
+
         partial_charges = get_partial_charges_from_openmm_system(
             forcefield.create_openmm_system(topology=topology)
         )
 
         for i, charge in enumerate(partial_charges):
-            self.charge_map[(i,)] = partial_charges[i]
+            self.charge_map[str((i,))] = charge * unit.elementary_charge
 
     class Config:
         arbitrary_types_allowed = True

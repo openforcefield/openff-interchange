@@ -1,12 +1,12 @@
 import pydantic
 import pytest
-from openforcefield.topology import Molecule, Topology
-from openforcefield.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
+from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
 from simtk import unit as omm_unit
 
+from openff.system import unit
 from openff.system.components.potentials import PotentialHandler
 from openff.system.tests.base_test import BaseTest
-from openff.system.utils import simtk_to_pint
 
 
 class TestBondPotentialHandler(BaseTest):
@@ -41,9 +41,9 @@ class TestBondPotentialHandler(BaseTest):
         bond_potentials = forcefield["Bonds"].create_potential(top)
 
         pot = bond_potentials.potentials[bond_potentials.slot_map["(0, 1)"]]
-        kcal_ang2_mol = omm_unit.kilocalorie_per_mole / omm_unit.angstrom ** 2
 
-        assert pot.parameters["k"] == simtk_to_pint(1.5 * kcal_ang2_mol)
+        kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
+        assert pot.parameters["k"].to(kcal_mol_a2).magnitude == pytest.approx(1.5)
 
     def test_angle_potential_handler(self):
         top = Topology.from_molecules(Molecule.from_smiles("CCC"))
@@ -51,7 +51,7 @@ class TestBondPotentialHandler(BaseTest):
         angle_handler = AngleHandler(version=0.3)
         angle_parameter = AngleHandler.AngleType(
             smirks="[*:1]~[*:2]~[*:3]",
-            k=2.5 * omm_unit.kilocalorie_per_mole / omm_unit.degree ** 2,
+            k=2.5 * omm_unit.kilocalorie_per_mole / omm_unit.radian ** 2,
             angle=100 * omm_unit.degree,
             id="b1000",
         )
@@ -64,6 +64,6 @@ class TestBondPotentialHandler(BaseTest):
         angle_potentials = forcefield["Angles"].create_potential(top)
 
         pot = angle_potentials.potentials[angle_potentials.slot_map["(0, 1, 2)"]]
-        kcal_deg2_mol = omm_unit.kilocalorie_per_mole / omm_unit.degree ** 2
 
-        assert pot.parameters["k"] == simtk_to_pint(2.5 * kcal_deg2_mol)
+        kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
+        assert pot.parameters["k"].to(kcal_mol_rad2).magnitude == pytest.approx(2.5)

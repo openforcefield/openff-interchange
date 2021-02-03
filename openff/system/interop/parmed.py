@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Dict
 
 import numpy as np
 import parmed as pmd
@@ -6,6 +6,8 @@ import parmed as pmd
 from openff.system import unit
 
 kcal_mol = unit.Unit("kilocalories / mol")
+kcal_mol_a2 = unit.Unit("kilocalories / mol / angstrom ** 2")
+kcal_mol_rad2 = unit.Unit("kilocalories / mol / rad ** 2")
 
 
 def to_parmed(off_system: Any) -> pmd.Structure:
@@ -35,15 +37,15 @@ def to_parmed(off_system: Any) -> pmd.Structure:
 
     if "Bonds" in off_system.handlers.keys():
         bond_handler = off_system.handlers["Bonds"]
-        bond_map = dict()
+        bond_map: Dict = dict()
         for bond_slot, smirks in bond_handler.slot_map.items():
             idx_1, idx_2 = eval(bond_slot)
             try:
                 bond_type = bond_map[smirks]
             except KeyError:
                 pot = bond_handler.potentials[smirks]
-                k = pot.parameters["k"].m / 2
-                length = pot.parameters["length"].m
+                k = pot.parameters["k"].to(kcal_mol_a2).magnitude / 2
+                length = pot.parameters["length"].to(unit.angstrom).magnitude
                 bond_type = pmd.BondType(k=k, req=length)
                 bond_map[smirks] = bond_type
                 del pot, k, length
@@ -64,8 +66,8 @@ def to_parmed(off_system: Any) -> pmd.Structure:
             idx_1, idx_2, idx_3 = eval(angle)
             pot = angle_term.potentials[smirks]
             # TODO: Look at cost of redundant conversions, to ensure correct units of .m
-            k = pot.parameters["k"].magnitude / 2  # kcal/mol/rad**2
-            theta = pot.parameters["angle"].magnitude  # degree
+            k = pot.parameters["k"].to(kcal_mol_rad2).magnitude / 2
+            theta = pot.parameters["angle"].to(unit.degree).magnitude
             # TODO: Look up if AngleType already exists in struct
             angle_type = pmd.AngleType(k=k, theteq=theta)
             structure.angles.append(
@@ -172,12 +174,10 @@ def to_parmed(off_system: Any) -> pmd.Structure:
 
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         if has_electrostatics:
-            partial_charge = electrostatics_handler.charge_map[(pmd_idx,)]
-            partial_charge_unitless = partial_charge.to(
-                unit.elementary_charge
-            ).magnitude
-            pmd_atom.charge = float(partial_charge_unitless)
-            pmd_atom.atom_type.charge = float(partial_charge_unitless)
+            partial_charge = electrostatics_handler.charge_map[str((pmd_idx,))]
+            unitless_ = partial_charge.to(unit.elementary_charge).magnitude
+            pmd_atom.charge = float(unitless_)
+            pmd_atom.atom_type.charge = float(unitless_)
         else:
             pmd_atom.charge = 0
 
@@ -185,19 +185,21 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     for res in structure.residues:
         res.name = "FOO"
 
-    structure.positions = off_system.positions.to(unit.angstrom).m
+    structure.positions = off_system.positions.to(unit.angstrom).magnitude
 
     return structure
 
 
-def _convert_box(box: unit.Quantity, structure: pmd.Structure) -> None:
+# def _convert_box(box: unit.Quantity, structure: pmd.Structure) -> None:
+def _convert_box(box, structure: pmd.Structure) -> None:
     # TODO: Convert box vectors to box lengths + angles
     if box is None:
-        structure.box = [0, 0, 0, 90, 90, 90]
+        lengths = [0, 0, 0]
     else:
-        lengths = box.to(unit("angstrom")).diagonal().magnitude
-        angles = 3 * [90]
-        structure.box = np.hstack([lengths, angles])
+        # TODO: Handle non-rectangular boxes
+        lengths = box.diagonal().to(unit("angstrom")).magnitude
+    angles = 3 * [90]
+    structure.box = np.hstack([lengths, angles])
 
 
 def _lj_params_from_potential(potential):
