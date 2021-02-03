@@ -39,10 +39,8 @@ Each `PotentialHandler` subclass must specify an string-like `expression` that e
 | MUST | MAY |  MUST NOT |
 |---|---|---|
 | Encode an energy evaluation method | Encode either an algebraic expression or tabluar data |
-| Also encode the necessary data to evaluate the functional form |
-| Import from some common base class
-| Include methods to expose parameter sources
-| Include methods to expose differentiable representations of data
+| Encode the necessary data to evaluate the functional form |
+| Import from `PotentialHandler`
 
 ### Chemical topology
 
@@ -50,13 +48,11 @@ The [OpenFF Topology](https://open-forcefield-toolkit.readthedocs.io/en/0.7.2/ap
 
 | MUST | MAY |  MUST NOT |
 |---|---|---|
-| | | |
-| Atoms with elements | Metadata of cheminformatics methods | Force field data |
-| Bonds | Bond constraints
-| | Fractional bond orders
-| Iterators for other valences | Residue/chain/segments
-| Periodicity boolean | Box vectors
-| | | |
+| Include particles with masses | Include atoms with elements
+| | Include virtual or coarse-grained particles
+| Include all existing bonds | Include constraints, fractional bond orders,
+| | Include arbitrary metadata (cheminformatics tags, residue/chain/segments)
+| | | Specify periodicity or box vectors
 
 ### Positions
 
@@ -64,7 +60,11 @@ Positions of all particles are stored in a unit-bearing Nx3 matrix. Here, partic
 
 | MUST | MAY |  MUST NOT |
 |---|---|---|
-| Unit-tagged Nx3 array of atomic positions | Unit-tagged virtual site potitions | Positions with implicit or ambiguous units
+| Include an array of particle positions | Include virtual particles
+| Have shape `(N, 3)` where `N` is the total number of particles (atoms and virtual particles) in the topology
+| Tag positions with any unit of length dimensionality | Include positions without units (which will be tagged with the units of the object model)
+
+Third-party libraries, i.e. [`mBuild`](https://mbuild.mosdef.org/en/stable/) or [`PACKMOL`](http://m3g.iqm.unicamp.br/packmol/home.shtml), can be used to  can be used to modify the positions of particles. A modified array can be re-attched to a system using a setter, which handles input validation.
 
 ### Box vectors
 
@@ -74,7 +74,8 @@ Box vectors are optional. In order to represent non-periodic (i.e. vacuum) syste
 
 | MUST | MAY |  MUST NOT |
 |---|---|---|
-| Unit-tagged 3x3 array of atomic positions | `None` to encode non-periodicity | Positions with implicit or ambiguous units
+| Be a 3x3 array of atomic positions | Be `None` to encode non-periodicity | Positions with implicit or ambiguous units
+| Tag vectors with any unit of length dimensionality | Include vectors without units (which will be tagged with the units of the object model)
 
 ## Interoperability
 
