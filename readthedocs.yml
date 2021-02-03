@@ -1,0 +1,12 @@
+build:
+  image: latest
+
+python:
+  version: 3.8
+  setup_py_install: true
+
+formats:
+    - pdf
+
+conda:
+  file: docs/environment.yml
