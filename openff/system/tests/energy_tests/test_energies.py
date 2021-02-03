@@ -43,9 +43,9 @@ def test_energies():
 
     # TODO: Tighten differences
     # np.testing doesn't work on Quantity
-    assert (
-        omm_energies["HarmonicBondForce"] - gmx_energies["Bond"]
-    ) / unit.kilojoule_per_mole < 1e-2
-    assert (
-        omm_energies["HarmonicAngleForce"] - gmx_energies["Angle"]
-    ) / unit.kilojoule_per_mole < 2e-1
+
+    bond_diff = omm_energies["HarmonicBondForce"] - gmx_energies["Bond"]
+    assert abs(bond_diff) < 2e-2
+
+    angle_diff = omm_energies["HarmonicAngleForce"] - gmx_energies["Angle"]
+    assert abs(angle_diff) < 2e-2
