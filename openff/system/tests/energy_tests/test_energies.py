@@ -45,7 +45,7 @@ def test_energies():
     # np.testing doesn't work on Quantity
 
     bond_diff = omm_energies["HarmonicBondForce"] - gmx_energies["Bond"]
-    assert abs(bond_diff) < 2e-2
+    assert abs(bond_diff / unit.kilojoules_per_mole) < 2e-2
 
     angle_diff = omm_energies["HarmonicAngleForce"] - gmx_energies["Angle"]
-    assert abs(angle_diff) < 2e-2
+    assert abs(angle_diff / unit.kilojoules_per_mole) < 2e-1
