@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.utils import top_from_smiles
@@ -13,8 +14,9 @@ class TestParmedConversion(BaseTest):
 
     def test_box(self, argon_ff, argon_top, box):
         off_sys = argon_ff.create_openff_system(topology=argon_top, box=box)
-        # UnitArray(...)
-        off_sys.positions = np.zeros(shape=(argon_top.n_topology_atoms, 3))
+        off_sys.positions = (
+            np.zeros(shape=(argon_top.n_topology_atoms, 3)) * unit.angstrom
+        )
         struct = off_sys.to_parmed()
 
         assert np.allclose(
@@ -24,7 +26,6 @@ class TestParmedConversion(BaseTest):
 
     def test_basic_conversion_argon(self, argon_ff, argon_top, box):
         off_sys = argon_ff.create_openff_system(argon_top, box=box)
-        # UnitArray(...)
         off_sys.positions = np.zeros(shape=(argon_top.n_topology_atoms, 3))
         struct = off_sys.to_parmed()
 
@@ -55,10 +56,10 @@ class TestParmedConversion(BaseTest):
         angle_k = struct.angles[0].type.k
         theteq = struct.angles[0].type.theteq
 
-        assert sigma0 == pytest.approx(1.6998347542117673)
+        assert sigma0 == pytest.approx(3.3996695084235347)
         assert epsilon0 == pytest.approx(0.1094)
 
-        assert sigma1 == pytest.approx(1.3247663938746845)
+        assert sigma1 == pytest.approx(2.649532787749369)
         assert epsilon1 == pytest.approx(0.0157)
 
         assert bond_k == pytest.approx(379.04658864565)

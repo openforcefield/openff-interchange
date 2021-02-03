@@ -5,7 +5,7 @@
 
 Jupyter notebooks demonstrating use cases.
 
-  * `SMIRNOFF_simulation.ipynb` (broken): Runs an MD simulation from a PDB file and `openff-1.0.0` ("Parsley"), mirroring a similar example in the Open Force Field Toolkit (`openforcefield`)
+  * `SMIRNOFF_simulation.ipynb` (broken): Runs an MD simulation from a PDB file and `openff-1.0.0` ("Parsley"), mirroring a similar example in the Open Force Field Toolkit (`openff.toolkit`)
   * `smirnoff_argon.ipynb`: Loads a simple Argon topology and inspects some internal data.
   * `smirnoff_ethanol.ipynb`: Similar to above but with a more chemically complex system.
   * `optimize-with-jax.ipynb`: Run a minimal parameter optimization using JAX.

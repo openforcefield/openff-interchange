@@ -1,20 +1,17 @@
 """
 Monkeypatching external classes with custom functionality
 """
-from typing import Optional, Union
-
-from openforcefield.topology.topology import Topology
-from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.typing.engines.smirnoff.parameters import (
+import numpy as np
+from openff.toolkit.topology.topology import Topology
+from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
     ConstraintHandler,
-    ElectrostaticsHandler,
     ImproperTorsionHandler,
     ProperTorsionHandler,
     vdWHandler,
 )
-from simtk import unit as omm_unit
 
 from openff.system.components.smirnoff import (
     SMIRNOFFAngleHandler,
@@ -26,14 +23,12 @@ from openff.system.components.smirnoff import (
     SMIRNOFFvdWHandler,
 )
 from openff.system.components.system import System
-from openff.system.exceptions import SMIRNOFFHandlerNotImplementedError
-from openff.system.types import UnitArray
 
 
 def to_openff_system(
     self,
     topology: Topology,
-    box: Optional[Union[omm_unit.Quantity, UnitArray]] = None,
+    box=None,
     **kwargs,
 ) -> System:
     """
@@ -42,24 +37,31 @@ def to_openff_system(
     """
     sys_out = System()
 
-    for parameter_handler in mapping.keys():
-        if parameter_handler._TAGNAME not in supported_handlers:
-            raise SMIRNOFFHandlerNotImplementedError
-        if parameter_handler._TAGNAME not in self.registered_parameter_handlers:
+    _check_supported_handlers(self)
+
+    for parameter_handler in self.registered_parameter_handlers:
+        if parameter_handler in {"ToolkitAM1BCC", "LibraryCharges"}:
             continue
-        handler = self[parameter_handler._TAGNAME].create_potential(topology=topology)
-        sys_out.handlers.update({parameter_handler._TAGNAME: handler})
+        elif parameter_handler == "Electrostatics":
+            potential_handler = create_charges(
+                forcefield=self,
+                topology=topology,
+            )
+        else:
+            potential_handler = self[parameter_handler].create_potential(
+                topology=topology
+            )
+        sys_out.handlers.update({parameter_handler: potential_handler})
 
-    if "Electrostatics" in self.registered_parameter_handlers:
-        charges = self["Electrostatics"].create_potential(
-            forcefield=self, topology=topology
-        )
-        sys_out.handlers.update({"Electrostatics": charges})
+    # `box` argument is only overriden if passed `None` and the input topology
+    # has box vectors
+    if box is None and topology.box_vectors is not None:
+        from simtk import unit
 
-    if box is None:
-        sys_out.box = sys_out.validate_box(topology.box_vectors)
+        # getDefaultPeriodicBoxVectors() / unit.nanometer is a tuple
+        sys_out.box = np.asarray(topology.box_vectors / unit.nanometer)
     else:
-        sys_out.box = sys_out.validate_box(box)
+        sys_out.box = box
 
     sys_out.topology = topology
 
@@ -164,16 +166,40 @@ def create_vdw_potential_handler(
 
 
 def create_charges(
-    self, forcefield: ForceField, topology: Topology
+    forcefield: ForceField, topology: Topology
 ) -> SMIRNOFFElectrostaticsHandler:
     handler = SMIRNOFFElectrostaticsHandler(
-        scale_13=self.scale13,
-        scale_14=self.scale14,
-        scale_15=self.scale15,
+        scale_13=forcefield["Electrostatics"].scale13,
+        scale_14=forcefield["Electrostatics"].scale14,
+        scale_15=forcefield["Electrostatics"].scale15,
     )
     handler.store_charges(forcefield=forcefield, topology=topology)
 
     return handler
+
+
+def _check_supported_handlers(forcefield: ForceField):
+    supported_handlers = {
+        "Constraints",
+        "Bonds",
+        "Angles",
+        "ProperTorsions",
+        "ImproperTorsions",
+        "vdW",
+        "Electrostatics",
+    }
+
+    unsupported = list()
+    for handler in forcefield.registered_parameter_handlers:
+        if handler in {"ToolkitAM1BCC", "LibraryCharges"}:
+            continue
+        if handler not in supported_handlers:
+            unsupported.append(handler)
+
+    if unsupported:
+        from openff.system.exceptions import SMIRNOFFHandlersNotImplementedError
+
+        raise SMIRNOFFHandlersNotImplementedError(unsupported)
 
 
 mapping = {
@@ -185,21 +211,10 @@ mapping = {
     vdWHandler: SMIRNOFFvdWHandler,
 }
 
-supported_handlers = {
-    "Constraints",
-    "Bonds",
-    "Angles",
-    "ProperTorsions",
-    "ImproperTorsions",
-    "vdW",
-    "Electrostatics",
-}
-
 ConstraintHandler.create_potential = create_constraint_handler
 BondHandler.create_potential = create_bond_potential_handler
 AngleHandler.create_potential = create_angle_potential_handler
 ProperTorsionHandler.create_potential = create_proper_torsion_potential_handler
 ImproperTorsionHandler.create_potential = create_improper_torsion_potential_handler
 vdWHandler.create_potential = create_vdw_potential_handler
-ElectrostaticsHandler.create_potential = create_charges
 ForceField.create_openff_system = to_openff_system

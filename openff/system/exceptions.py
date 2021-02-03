@@ -1,17 +1,20 @@
-class SMIRNOFFHandlerNotImplementedError(Exception):
+class SMIRNOFFHandlersNotImplementedError(Exception):
     """
-    Exception for when of the SMIRNOFF specification that are not implemented
-    here are found
+    Exception for when some parameter handlers in the SMIRNOFF specification
+    are not implemented here
     """
 
     def __init__(self, *args):
         if args:
-            self.name = args[0]
+            if isinstance(args[0], str):
+                self.names = [args[0]]
+            elif isinstance(args[0], list):
+                self.names = args[0]
 
     def __str__(self):
-        msg = "SMIRNOFF parameter not implemented here. "
-        if self.name:
-            msg += f"Tried to parse ParameterHandler of name {self.name}"
+        msg = "SMIRNOFF parameters not implemented here: "
+        for name in self.names:
+            msg += f"\t{name}"
         return msg
 
 
@@ -72,4 +75,33 @@ class UnsupportedCutoffMethodError(BaseException):
 class UnsupportedParameterError(ValueError):
     """
     Exception for parameters having unsupported values, i.e. non-1.0 idivf
+    """
+
+
+class UnsupportedExportError(BaseException):
+    """
+    Exception for attempting to write to an unsupported file format
+    """
+
+    def __init__(self, *args):
+        if args:
+            self.file_ext = args[0]
+
+    def __str__(self):
+        if self.file_ext:
+            msg = f"Writing file format {self.file_ext} not supported."
+        else:
+            msg = "Writing unknown file format"
+        return msg
+
+
+class MissingBoxError(BaseException):
+    """
+    Exception for when box vectors are needed but missing
+    """
+
+
+class MissingPositionsError(BaseException):
+    """
+    Exception for when positions are needed but missing
     """
