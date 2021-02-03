@@ -1,0 +1,10 @@
+python
+pip
+pydantic
+pint
+sympy
+qcelemental
+jax
+sympy
+pint
+myst-parser
