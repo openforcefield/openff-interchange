@@ -1,5 +1,6 @@
 from typing import Dict
 
+import numpy as np
 from simtk import openmm, unit
 
 
@@ -7,6 +8,7 @@ def get_openmm_energies(
     omm_sys: openmm.System,
     positions,
     box_vectors,
+    round_positions=None,
 ) -> Dict:
     force_names = {force.__class__.__name__ for force in omm_sys.getForces()}
     group_to_force = {i: force_name for i, force_name in enumerate(force_names)}
@@ -18,8 +20,13 @@ def get_openmm_energies(
 
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context = openmm.Context(omm_sys, integrator)
-    context.setPositions(positions)
     context.setPeriodicBoxVectors(*box_vectors)
+
+    if round_positions is not None:
+        rounded = np.round(positions, round_positions)
+        context.setPositions(rounded)
+    else:
+        context.setPositions(positions)
 
     force_groups = {force.getForceGroup() for force in context.getSystem().getForces()}
 

@@ -39,13 +39,13 @@ def test_energies():
                 mdp=mdp_file,
             )
 
-    omm_energies = get_openmm_energies(omm_sys, positions, box)
+    omm_energies = get_openmm_energies(omm_sys, positions, box, round_positions=3)
 
     # TODO: Tighten differences
     # np.testing doesn't work on Quantity
 
     bond_diff = omm_energies["HarmonicBondForce"] - gmx_energies["Bond"]
-    assert abs(bond_diff / unit.kilojoules_per_mole) < 2e-2
+    assert abs(bond_diff / unit.kilojoules_per_mole) < 1e-3
 
     angle_diff = omm_energies["HarmonicAngleForce"] - gmx_energies["Angle"]
-    assert abs(angle_diff / unit.kilojoules_per_mole) < 2e-1
+    assert abs(angle_diff / unit.kilojoules_per_mole) < 1e-3
