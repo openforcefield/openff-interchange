@@ -13,9 +13,10 @@ from openff.system.types import ArrayQuantity, DefaultModel
 
 class System(DefaultModel):
     """
-    A fake system meant only to demonstrate how `PotentialHandler`s are
-    meant to be structured
+    A molecular system object.
 
+    .. warning :: This object is in an early and experimental state and unsuitable for production.**
+    .. warning :: This API is experimental and subject to change.
     """
 
     handlers: Dict[str, PotentialHandler] = dict()
