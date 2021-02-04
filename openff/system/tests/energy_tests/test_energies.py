@@ -52,3 +52,13 @@ def test_energies():
 
     torsion_diff = omm_energies["PeriodicTorsionForce"] - gmx_energies["Proper Dih."]
     assert abs(torsion_diff / unit.kilojoules_per_mole) < 1e-3
+
+    # TODO
+    # gmx_nonbonded = (
+    #     gmx_energies["LJ (SR)"]
+    #     + gmx_energies["Disper. corr."]
+    #     + gmx_energies["Coulomb (SR)"]
+    #     + gmx_energies["Coul. recip."]
+    # )
+    # nonbonded_diff = omm_energies["NonbondedForce"] - gmx_nonbonded
+    # assert abs(nonbonded_diff / unit.kilojoules_per_mole) < 1e-3
