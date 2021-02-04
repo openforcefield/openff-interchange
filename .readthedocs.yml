@@ -10,7 +10,9 @@ sphinx:
 
 python:
   version: 3.8
-  setup_py_install: true
+  install:
+    - method: setuptools
+      path: .
 
 conda:
   environment: docs/environment.yml
