@@ -313,36 +313,32 @@ def _write_dihedrals(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
     proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
     improper_torsion_handler = openff_sys.handlers["ImproperTorsions"]
 
+    # TODO: Ensure number of torsions written matches what is expected
     for proper in top_mol.propers:
         indices = tuple(a.topology_atom_index for a in proper)
         indices_as_str = str(indices)
         for torsion_key, key in proper_torsion_handler.slot_map.items():
             if indices_as_str == torsion_key.split("_")[0]:
-                key = proper_torsion_handler.slot_map[torsion_key]
-                break
-        else:
-            # Expect all torsions in the topology to have assigned parameters
-            raise Exception
+                params = proper_torsion_handler.potentials[key].parameters
 
-        params = proper_torsion_handler.potentials[key].parameters
+                k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
+                periodicity = int(params["periodicity"])
+                phase = params["phase"].to(unit.degree).magnitude
+                idivf = int(params["idivf"])
+                top_file.write(
+                    "{0:7d} {1:7d} {2:7d} {3:7d} {4:6d} {5:18.8e} {6:18.8e} {7:7d}\n".format(
+                        indices[0] + 1,
+                        indices[1] + 1,
+                        indices[2] + 1,
+                        indices[3] + 1,
+                        1,
+                        phase,
+                        k / idivf,
+                        periodicity,
+                    )
+                )
 
-        k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
-        periodicity = int(params["periodicity"])
-        phase = params["phase"].to(unit.degree).magnitude
-        idivf = int(params["idivf"])
-        top_file.write(
-            "{0:7d} {1:7d} {2:7d} {3:7d} {4:6d} {5:18.8e} {6:18.8e} {7:18.8e}\n".format(
-                indices[0] + 1,
-                indices[1] + 1,
-                indices[2] + 1,
-                indices[3] + 1,
-                1,
-                phase,
-                k / idivf,
-                periodicity,
-            )
-        )
-
+    # TODO: Ensure number of torsions written matches what is expected
     for improper in top_mol.impropers:
 
         indices = tuple(a.topology_atom_index for a in improper)
@@ -350,29 +346,24 @@ def _write_dihedrals(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
         for torsion_key, key in improper_torsion_handler.slot_map.items():
             if indices_as_str == torsion_key.split("_")[0]:
                 key = improper_torsion_handler.slot_map[torsion_key]
-                break
-        else:
-            # Do not expect all torsions in the topology to have assigned parameters
-            continue
+                params = improper_torsion_handler.potentials[key].parameters
 
-        params = improper_torsion_handler.potentials[key].parameters
-
-        k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
-        periodicity = int(params["periodicity"])
-        phase = params["phase"].to(unit.degree).magnitude
-        idivf = int(params["idivf"])
-        top_file.write(
-            "{0:7d} {1:7d} {2:7d} {3:7d} {4:6d} {5:18.8e} {6:18.8e} {7:18.8e}\n".format(
-                indices[0] + 1,
-                indices[1] + 1,
-                indices[2] + 1,
-                indices[3] + 1,
-                4,
-                phase,
-                k / idivf,
-                periodicity,
-            )
-        )
+                k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
+                periodicity = int(params["periodicity"])
+                phase = params["phase"].to(unit.degree).magnitude
+                idivf = int(params["idivf"])
+                top_file.write(
+                    "{0:7d} {1:7d} {2:7d} {3:7d} {4:6d} {5:18.8e} {6:18.8e} {7:18.8e}\n".format(
+                        indices[0] + 1,
+                        indices[1] + 1,
+                        indices[2] + 1,
+                        indices[3] + 1,
+                        4,
+                        phase,
+                        k / idivf,
+                        periodicity,
+                    )
+                )
 
 
 def _write_system(top_file: IO, molecule_map: Dict):

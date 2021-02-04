@@ -49,3 +49,6 @@ def test_energies():
 
     angle_diff = omm_energies["HarmonicAngleForce"] - gmx_energies["Angle"]
     assert abs(angle_diff / unit.kilojoules_per_mole) < 1e-3
+
+    torsion_diff = omm_energies["PeriodicTorsionForce"] - gmx_energies["Proper Dih."]
+    assert abs(torsion_diff / unit.kilojoules_per_mole) < 1e-3
