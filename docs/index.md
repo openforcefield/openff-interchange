@@ -26,5 +26,7 @@ using/openmm.md
 maxdepth: 2
 caption: API Reference
 ---
-api.md
+openff.system.rst
+openff.system.components.rst
+openff.system.interop.rst
 ```
