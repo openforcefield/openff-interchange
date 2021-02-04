@@ -46,9 +46,11 @@ def get_gromacs_energies(
 
     # Run grompp.
     grompp_bin.extend(
-        ["-f", mdp, "-c", gro, "-p", top, "-o", tpr, "-po", mdout, "-maxwarn", "21"]
+        ["-f", mdp, "-c", gro, "-p", top, "-o", tpr, "-po", mdout, "-maxwarn", "10000"]
     )
-    run_subprocess(grompp_bin, "gromacs", stdout_path, stderr_path)
+    grompp = run_subprocess(grompp_bin, "gromacs", stdout_path, stderr_path)
+    if grompp.returncode != 0:
+        raise Exception
 
     # Run single-point calculation with mdrun.
     mdrun_bin.extend(
@@ -69,7 +71,9 @@ def get_gromacs_energies(
             log,
         ]
     )
-    run_subprocess(mdrun_bin, "gromacs", stdout_path, stderr_path)
+    mdrun = run_subprocess(mdrun_bin, "gromacs", stdout_path, stderr_path)
+    if mdrun.returncode != 0:
+        raise Exception
 
     # Extract energies using g_energy
     select = " ".join(map(str, range(1, 20))) + " 0 "
