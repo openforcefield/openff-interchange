@@ -1,21 +1,37 @@
 import os
+import tempfile
 
 from intermol.gromacs import _group_energy_terms, binaries
 from intermol.utils import run_subprocess
+from openff.toolkit.utils.utils import temporary_cd
+from pkg_resources import resource_filename
+
+from openff.system.components.system import System
+
+
+def get_gromacs_energies(off_sys: System, writer: str = "internal"):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with temporary_cd(tmpdir):
+            off_sys.to_gro("out.gro", writer=writer)
+            off_sys.to_top("out.top", writer=writer)
+            gmx_energies, _ = run_gmx_energy(
+                top="out.top",
+                gro="out.gro",
+            )
+
+    return gmx_energies
+
 
 GMX_PATH = ""
 
 
-def get_gromacs_energies(
-    top, gro, mdp, gmx_path=GMX_PATH, grosuff="", grompp_check=False
-):
+def run_gmx_energy(top, gro, gmx_path=GMX_PATH, grosuff="", grompp_check=False):
     """Compute single-point energies using GROMACS.
 
     Args:
         top (str):
         gro (str):
         mdp (str):
-        gmx_path (str):
         grosuff (str):
         grompp_check (bool):
 
@@ -27,7 +43,8 @@ def get_gromacs_energies(
         This is copied from the InterMol source code, modified to allow
         for larger values of -maxwarn
     """
-    mdp = os.path.abspath(mdp)
+
+    mdp_file = resource_filename("intermol", "tests/gromacs/grompp.mdp")
 
     directory, _ = os.path.split(os.path.abspath(top))
 
@@ -45,9 +62,8 @@ def get_gromacs_energies(
     grompp_bin, mdrun_bin, genergy_bin = binaries(gmx_path, grosuff)
 
     # Run grompp.
-    grompp_bin.extend(
-        ["-f", mdp, "-c", gro, "-p", top, "-o", tpr, "-po", mdout, "-maxwarn", "10000"]
-    )
+    grompp_bin.extend(["-f", mdp_file, "-c", gro, "-p", top])
+    grompp_bin.extend(["-o", tpr, "-po", mdout, "-maxwarn", "1000"])
     grompp = run_subprocess(grompp_bin, "gromacs", stdout_path, stderr_path)
     if grompp.returncode != 0:
         raise Exception
@@ -61,16 +77,9 @@ def get_gromacs_energies(
             tpr,
             "-o",
             traj,
-            "-cpo",
-            state,
-            "-c",
-            conf,
-            "-e",
-            ener,
-            "-g",
-            log,
         ]
     )
+    mdrun_bin.extend(["-cpo", state, "-c", conf, "-e", ener, "-g", log])
     mdrun = run_subprocess(mdrun_bin, "gromacs", stdout_path, stderr_path)
     if mdrun.returncode != 0:
         raise Exception
