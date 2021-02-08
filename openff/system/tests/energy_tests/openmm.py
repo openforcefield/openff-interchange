@@ -3,13 +3,16 @@ from typing import Dict
 import numpy as np
 from simtk import openmm, unit
 
+from openff.system.components.system import System
+
 
 def get_openmm_energies(
-    omm_sys: openmm.System,
-    positions,
-    box_vectors,
+    off_sys: System,
     round_positions=None,
 ) -> Dict:
+
+    omm_sys: openmm.System = off_sys.to_openmm()
+
     force_names = {force.__class__.__name__ for force in omm_sys.getForces()}
     group_to_force = {i: force_name for i, force_name in enumerate(force_names)}
     force_to_group = {force_name: i for i, force_name in group_to_force.items()}
@@ -20,8 +23,11 @@ def get_openmm_energies(
 
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context = openmm.Context(omm_sys, integrator)
+
+    box_vectors = off_sys.box.magnitude * unit.nanometer
     context.setPeriodicBoxVectors(*box_vectors)
 
+    positions = off_sys.positions.magnitude * unit.nanometer
     if round_positions is not None:
         rounded = np.round(positions, round_positions)
         context.setPositions(rounded)

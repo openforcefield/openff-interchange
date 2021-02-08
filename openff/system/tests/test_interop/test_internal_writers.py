@@ -11,6 +11,7 @@ from simtk import unit as omm_unit
 
 from openff.system import unit
 from openff.system.stubs import ForceField
+from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
 from openff.system.tests.utils import compare_energies
 
 
@@ -126,14 +127,7 @@ def test_water_dimer():
     openff_sys = parsley.create_openff_system(top)
     openff_sys.positions = positions
     openff_sys.box = [10, 10, 10] * unit.nanometer
-    openff_sys.to_gro("out.gro", writer="internal")
-    openff_sys.to_top("out.top", writer="internal")
 
-    import os
+    gmx_energies = get_gromacs_energies(openff_sys, writer="internal")
 
-    from pkg_resources import resource_filename
-
-    mdp_file = resource_filename("intermol", "tests/gromacs/grompp.mdp")
-    exit_code = os.system(f"gmx grompp -f {mdp_file} -c out.gro -p out.top -maxwarn 7")
-
-    assert exit_code == 0
+    assert gmx_energies is not None
