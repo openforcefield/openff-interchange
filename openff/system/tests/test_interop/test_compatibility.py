@@ -23,7 +23,6 @@ def test_nonbonded_compatibility():
         off_sys.to_openmm()
 
     off_sys.box = box
-    off_sys.positions = positions
 
     off_sys.handlers["Electrostatics"].method = "reaction-field"
 
@@ -31,3 +30,14 @@ def test_nonbonded_compatibility():
         NotImplementedError, match="Electrostatics method not supported"
     ):
         off_sys.to_openmm()
+
+    off_sys.handlers["Electrostatics"].method = "PME"
+
+    with pytest.raises(Exception):
+        off_sys.to_gro("out.gro", writer="internal")
+
+    off_sys.positions = positions
+
+    # Ensure nothing obvious was mangled
+    off_sys.to_top("out.top", writer="internal")
+    off_sys.to_gro("out.gro", writer="internal")

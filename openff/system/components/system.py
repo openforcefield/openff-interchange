@@ -38,6 +38,10 @@ class System(DefaultModel):
 
     def to_gro(self, file_path: Union[Path, str], writer="parmed"):
         """Export this system to a .gro file using ParmEd"""
+
+        if self.positions is None:
+            raise Exception
+
         # TODO: Enum-style class for handling writer arg?
         if writer == "parmed":
             from openff.system.interop.external import ParmEdWrapper
