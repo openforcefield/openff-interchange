@@ -12,7 +12,7 @@ from simtk import unit as omm_unit
 from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
-from openff.system.tests.utils import compare_energies
+from openff.system.tests.energy_tests.utils import compare_gromacs
 
 
 # TODO: Add OC=O
@@ -23,7 +23,7 @@ from openff.system.tests.utils import compare_energies
         "CC",
         # "OC=O",  # ParmEd conversion untrustworthy, see #91
         "CCOC",
-        "C1COC(=O)O1",
+        "C1COC(=O)O1",  # TODO: These dihedrals are off by ~3 kJ/mol
     ],
 )
 def test_internal_gromacs_writers(mol):
@@ -69,7 +69,7 @@ def test_internal_gromacs_writers(mol):
                 mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
             )
 
-            compare_energies(reference_energy, internal_energy, atol=1e-2)
+            compare_gromacs(reference_energy, internal_energy)
 
 
 def compare_gro_files(file1: str, file2: str):
