@@ -69,3 +69,20 @@ class System(DefaultModel):
     def to_parmed(self):
         """Export this sytem to a ParmEd Structure"""
         return to_parmed(self)
+
+    def _get_nonbonded_methods(self):
+        nonbonded_ = {
+            "electrostatics_method": self.handlers["Electrostatics"].method,
+            "vdw_method": self.handlers["vdW"].method,
+            "periodic_topology": self.box is not None,
+        }
+
+        return nonbonded_
+
+    def _check_nonbonded_compatibility(self):
+        from openff.system.interop.compatibility.nonbonded import (
+            check_nonbonded_compatibility,
+        )
+
+        nonbonded_ = self._get_nonbonded_methods()
+        return check_nonbonded_compatibility(nonbonded_)
