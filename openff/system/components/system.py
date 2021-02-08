@@ -61,6 +61,11 @@ class System(DefaultModel):
 
             internal.to_top(self, file_path)
 
+    def to_openmm(self):
+        """Export this sytem to an OpenMM System"""
+        assert self._check_nonbonded_compatibility()
+        return to_openmm(self)
 
-System.to_parmed = to_parmed
-System.to_openmm = to_openmm
+    def to_parmed(self):
+        """Export this sytem to a ParmEd Structure"""
+        return to_parmed(self)
