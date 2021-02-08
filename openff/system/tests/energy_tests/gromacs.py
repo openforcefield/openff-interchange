@@ -63,7 +63,7 @@ def run_gmx_energy(top, gro, gmx_path=GMX_PATH, grosuff="", grompp_check=False):
 
     # Run grompp.
     grompp_bin.extend(["-f", mdp_file, "-c", gro, "-p", top])
-    grompp_bin.extend(["-o", tpr, "-po", mdout, "-maxwarn", "1000"])
+    grompp_bin.extend(["-o", tpr, "-po", mdout, "-maxwarn", "2"])
     grompp = run_subprocess(grompp_bin, "gromacs", stdout_path, stderr_path)
     if grompp.returncode != 0:
         raise Exception
