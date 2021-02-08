@@ -104,7 +104,7 @@ def test_sanity_grompp():
     from pkg_resources import resource_filename
 
     mdp_file = resource_filename("intermol", "tests/gromacs/grompp.mdp")
-    exit_code = os.system(f"gmx grompp -f {mdp_file} -c out.gro -p out.top -maxwarn 8")
+    exit_code = os.system(f"gmx grompp -f {mdp_file} -c out.gro -p out.top -maxwarn 1")
 
     assert exit_code == 0
 
