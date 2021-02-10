@@ -16,13 +16,29 @@ def get_gromacs_energies(
         with temporary_cd(tmpdir):
             off_sys.to_gro("out.gro", writer=writer)
             off_sys.to_top("out.top", writer=writer)
-            gmx_energies, _ = run_gmx_energy(
+            gmx_energies, energy_file = run_gmx_energy(
                 top="out.top",
                 gro="out.gro",
                 simple=simple,
             )
 
-    return gmx_energies
+            keys_to_drop = [
+                "Kinetic En.",
+                "Temperature",
+                "Pres. DC",
+                "Pressure",
+                "Vir-XX",
+                "Vir-YY",
+                "Vir-ZZ",
+                "Vir-YX",
+                "Vir-XY",
+                "Vir-YZ",
+                "Vir-XZ",
+            ]
+            for key in keys_to_drop:
+                if key in gmx_energies.keys():
+                    gmx_energies.pop(key)
+            return gmx_energies, energy_file
 
 
 GMX_PATH = ""
