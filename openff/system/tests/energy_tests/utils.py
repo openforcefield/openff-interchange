@@ -17,6 +17,10 @@ def compare_gromacs_openmm(gmx_energies: Dict, omm_energies: Dict):
     torsion_diff = omm_energies["PeriodicTorsionForce"] - gmx_energies["Proper Dih."]
     assert abs(torsion_diff / omm_unit.kilojoules_per_mole) < 5e-3
 
+    gmx_nonbonded = _get_gmx_energy_nonbonded(gmx_energies)
+    nonbonded_diff = omm_energies["NonbondedForce"] - gmx_nonbonded
+    assert abs(nonbonded_diff / omm_unit.kilojoules_per_mole) < 1e-3
+
 
 def compare_gromacs(energies1: Dict, energies2: Dict):
     # TODO: Tighten differences
@@ -34,3 +38,15 @@ def compare_gromacs(energies1: Dict, energies2: Dict):
         assert "Proper Dih." in energies2.keys()
         torsion_diff = energies1["Proper Dih."] - energies2["Proper Dih."]
         assert abs(torsion_diff / omm_unit.kilojoules_per_mole) < 5e-3
+
+
+def _get_gmx_energy_nonbonded(gmx_energies: Dict):
+    """Get the total nonbonded energy from a set of GROMACS energies"""
+    gmx_nonbonded = 0 * gmx_energies["Potential"].unit
+    for key in ["LJ (SR)", "Coulomb (SR)", "Coul. recip.", "Disper. corr."]:
+        try:
+            gmx_nonbonded += gmx_energies[key]
+        except KeyError:
+            pass
+
+    return gmx_nonbonded

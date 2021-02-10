@@ -18,7 +18,7 @@ def test_energies():
 
     off_sys = parsley.create_openff_system(top)
 
-    box = [4, 4, 4] * np.eye(3)
+    box = [6, 6, 6] * np.eye(3)
     off_sys.box = box
 
     compound = mb.load("CCO", smiles=True)
@@ -28,7 +28,7 @@ def test_energies():
     positions = packed_box.xyz * unit.nanometer
     off_sys.positions = positions
 
-    gmx_energies = get_gromacs_energies(off_sys)
-    omm_energies = get_openmm_energies(off_sys, round_positions=3)
+    gmx_energies = get_gromacs_energies(off_sys, simple=True)
+    omm_energies = get_openmm_energies(off_sys, round_positions=3, simple=True)
 
     compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)

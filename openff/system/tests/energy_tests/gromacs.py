@@ -9,7 +9,9 @@ from pkg_resources import resource_filename
 from openff.system.components.system import System
 
 
-def get_gromacs_energies(off_sys: System, writer: str = "internal"):
+def get_gromacs_energies(
+    off_sys: System, writer: str = "internal", simple: bool = False
+):
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             off_sys.to_gro("out.gro", writer=writer)
@@ -17,6 +19,7 @@ def get_gromacs_energies(off_sys: System, writer: str = "internal"):
             gmx_energies, _ = run_gmx_energy(
                 top="out.top",
                 gro="out.gro",
+                simple=simple,
             )
 
     return gmx_energies
@@ -25,7 +28,9 @@ def get_gromacs_energies(off_sys: System, writer: str = "internal"):
 GMX_PATH = ""
 
 
-def run_gmx_energy(top, gro, gmx_path=GMX_PATH, grosuff="", grompp_check=False):
+def run_gmx_energy(
+    top, gro, gmx_path=GMX_PATH, grosuff="", simple: bool = False, grompp_check=False
+):
     """Compute single-point energies using GROMACS.
 
     Args:
@@ -44,7 +49,10 @@ def run_gmx_energy(top, gro, gmx_path=GMX_PATH, grosuff="", grompp_check=False):
         for larger values of -maxwarn
     """
 
-    mdp_file = resource_filename("intermol", "tests/gromacs/grompp.mdp")
+    if simple:
+        mdp_file = resource_filename("intermol", "tests/gromacs/grompp_vacuum.mdp")
+    else:
+        mdp_file = resource_filename("intermol", "tests/gromacs/grompp.mdp")
 
     directory, _ = os.path.split(os.path.abspath(top))
 
@@ -69,16 +77,7 @@ def run_gmx_energy(top, gro, gmx_path=GMX_PATH, grosuff="", grompp_check=False):
         raise Exception
 
     # Run single-point calculation with mdrun.
-    mdrun_bin.extend(
-        [
-            "-nt",
-            "1",
-            "-s",
-            tpr,
-            "-o",
-            traj,
-        ]
-    )
+    mdrun_bin.extend(["-nt", "1", "-s", tpr, "-o", traj])
     mdrun_bin.extend(["-cpo", state, "-c", conf, "-e", ener, "-g", log])
     mdrun = run_subprocess(mdrun_bin, "gromacs", stdout_path, stderr_path)
     if mdrun.returncode != 0:

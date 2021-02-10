@@ -9,9 +9,21 @@ from openff.system.components.system import System
 def get_openmm_energies(
     off_sys: System,
     round_positions=None,
+    simple: bool = False,
 ) -> Dict:
 
     omm_sys: openmm.System = off_sys.to_openmm()
+
+    if simple:
+        nonbond_force = [
+            f for f in omm_sys.getForces() if isinstance(f, openmm.NonbondedForce)
+        ][0]
+
+        nonbond_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
+        nonbond_force.setCutoffDistance(2.0 * unit.nanometer)
+        nonbond_force.setReactionFieldDielectric(1.0)
+        nonbond_force.setUseDispersionCorrection(False)
+        nonbond_force.setUseSwitchingFunction(False)
 
     force_names = {force.__class__.__name__ for force in omm_sys.getForces()}
     group_to_force = {i: force_name for i, force_name in enumerate(force_names)}
