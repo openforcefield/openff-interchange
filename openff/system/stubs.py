@@ -19,6 +19,7 @@ from openff.system.components.smirnoff import (
     SMIRNOFFConstraintHandler,
     SMIRNOFFElectrostaticsHandler,
     SMIRNOFFImproperTorsionHandler,
+    SMIRNOFFLibraryChargeHandler,
     SMIRNOFFProperTorsionHandler,
     SMIRNOFFvdWHandler,
 )
@@ -52,6 +53,16 @@ def to_openff_system(
                 topology=topology
             )
         sys_out.handlers.update({parameter_handler: potential_handler})
+
+    if "LibraryCharges" in self.registered_parameter_handlers:
+        library_charge_handler = SMIRNOFFLibraryChargeHandler()
+        library_charge_handler.store_matches(
+            parameter_handler=self["LibraryCharges"], topology=topology
+        )
+        library_charge_handler.store_potentials(
+            parameter_handler=self["LibraryCharges"]
+        )
+        sys_out.handlers.update({"LibraryCharges": library_charge_handler})
 
     # `box` argument is only overriden if passed `None` and the input topology
     # has box vectors
@@ -187,11 +198,12 @@ def _check_supported_handlers(forcefield: ForceField):
         "ImproperTorsions",
         "vdW",
         "Electrostatics",
+        "LibraryCharges",
     }
 
     unsupported = list()
     for handler in forcefield.registered_parameter_handlers:
-        if handler in {"ToolkitAM1BCC", "LibraryCharges"}:
+        if handler in {"ToolkitAM1BCC"}:
             continue
         if handler not in supported_handlers:
             unsupported.append(handler)

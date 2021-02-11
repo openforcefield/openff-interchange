@@ -7,6 +7,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondHandler,
     ConstraintHandler,
     ImproperTorsionHandler,
+    LibraryChargeHandler,
     ProperTorsionHandler,
     vdWHandler,
 )
@@ -337,6 +338,34 @@ class SMIRNOFFElectrostaticsHandler(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         validate_assignment = True
+
+
+class SMIRNOFFLibraryChargeHandler(SMIRNOFFElectrostaticsHandler):
+
+    name: str = "LibraryCharges"
+    slot_map: Dict[str, str] = dict()
+    potentials: Dict[str, Potential] = dict()
+
+    def store_matches(
+        self,
+        parameter_handler: LibraryChargeHandler,
+        topology: Topology,
+    ) -> None:
+        matches = parameter_handler.find_matches(topology)
+        for key, val in matches.items():
+            key = str(key)
+            self.slot_map[key] = val.parameter_type.smirks
+
+    def store_potentials(self, parameter_handler: LibraryChargeHandler) -> None:
+        if self.potentials:
+            self.potentials = dict()
+        for smirks in self.slot_map.values():
+            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
+            charges_unitless = [val._value for val in parameter_type.charge]
+            potential = Potential(
+                parameters={"charges": charges_unitless * unit.elementary_charge},
+            )
+            self.potentials[smirks] = potential
 
 
 SUPPORTED_HANDLER_MAPPING = {
