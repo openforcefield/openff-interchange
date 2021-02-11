@@ -14,12 +14,15 @@ def compare_gromacs_openmm(gmx_energies: Dict, omm_energies: Dict):
     angle_diff = omm_energies["HarmonicAngleForce"] - gmx_energies["Angle"]
     assert abs(angle_diff / omm_unit.kilojoules_per_mole) < 5e-3
 
-    torsion_diff = omm_energies["PeriodicTorsionForce"] - gmx_energies["Proper Dih."]
-    assert abs(torsion_diff / omm_unit.kilojoules_per_mole) < 5e-3
+    if "Proper Dih." in gmx_energies.keys():
+        torsion_diff = (
+            omm_energies["PeriodicTorsionForce"] - gmx_energies["Proper Dih."]
+        )
+        assert abs(torsion_diff / omm_unit.kilojoules_per_mole) < 5e-3
 
     gmx_nonbonded = _get_gmx_energy_nonbonded(gmx_energies)
     nonbonded_diff = omm_energies["NonbondedForce"] - gmx_nonbonded
-    assert abs(nonbonded_diff / omm_unit.kilojoules_per_mole) < 1e-3
+    assert abs(nonbonded_diff / omm_unit.kilojoules_per_mole) < 1e-2
 
 
 def compare_gromacs(energies1: Dict, energies2: Dict):
