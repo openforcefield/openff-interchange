@@ -38,6 +38,10 @@ class System(DefaultModel):
 
     def to_gro(self, file_path: Union[Path, str], writer="parmed"):
         """Export this system to a .gro file using ParmEd"""
+
+        if self.positions is None:
+            raise Exception
+
         # TODO: Enum-style class for handling writer arg?
         if writer == "parmed":
             from openff.system.interop.external import ParmEdWrapper
@@ -61,6 +65,28 @@ class System(DefaultModel):
 
             internal.to_top(self, file_path)
 
+    def to_openmm(self):
+        """Export this sytem to an OpenMM System"""
+        assert self._check_nonbonded_compatibility()
+        return to_openmm(self)
 
-System.to_parmed = to_parmed
-System.to_openmm = to_openmm
+    def to_parmed(self):
+        """Export this sytem to a ParmEd Structure"""
+        return to_parmed(self)
+
+    def _get_nonbonded_methods(self):
+        nonbonded_ = {
+            "electrostatics_method": self.handlers["Electrostatics"].method,
+            "vdw_method": self.handlers["vdW"].method,
+            "periodic_topology": self.box is not None,
+        }
+
+        return nonbonded_
+
+    def _check_nonbonded_compatibility(self):
+        from openff.system.interop.compatibility.nonbonded import (
+            check_nonbonded_compatibility,
+        )
+
+        nonbonded_ = self._get_nonbonded_methods()
+        return check_nonbonded_compatibility(nonbonded_)

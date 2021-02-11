@@ -10,9 +10,11 @@ from openff.system.tests.energy_tests.utils import compare_gromacs_openmm
 
 
 def test_energies():
-    mol = Molecule.from_smiles("CCO")
+    n_mols = 50
+    mol = Molecule.from_smiles("C")
+    mol.generate_conformers(n_conformers=1)
     mol.name = "FOO"
-    top = Topology.from_molecules(50 * [mol])
+    top = Topology.from_molecules(n_mols * [mol])
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
@@ -21,14 +23,18 @@ def test_energies():
     box = [4, 4, 4] * np.eye(3)
     off_sys.box = box
 
-    compound = mb.load("CCO", smiles=True)
+    mol.to_file("out.xyz", file_format="xyz")
+    compound = mb.load("out.xyz")
     packed_box = mb.fill_box(
-        compound=compound, n_compounds=[50], box=mb.Box(box.diagonal())
+        compound=compound,
+        n_compounds=[n_mols],
+        box=mb.Box(box.diagonal()),
     )
+
     positions = packed_box.xyz * unit.nanometer
     off_sys.positions = positions
 
-    gmx_energies = get_gromacs_energies(off_sys)
+    gmx_energies, _ = get_gromacs_energies(off_sys)
     omm_energies = get_openmm_energies(off_sys, round_positions=3)
 
     compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)
