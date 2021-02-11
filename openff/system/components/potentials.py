@@ -4,7 +4,7 @@ from openff.toolkit.utils.utils import requires_package
 from pydantic import validator
 
 from openff.system.exceptions import InvalidExpressionError
-from openff.system.types import DefaultModel, FloatQuantity
+from openff.system.types import ArrayQuantity, DefaultModel, FloatQuantity
 
 
 class Potential(DefaultModel):
@@ -16,7 +16,10 @@ class Potential(DefaultModel):
     @validator("parameters")
     def validate_parameters(cls, v):
         for key, val in v.items():
-            v[key] = FloatQuantity.validate_type(val)
+            if isinstance(val, list):
+                v[key] = ArrayQuantity.validate_type(val)
+            else:
+                v[key] = FloatQuantity.validate_type(val)
         return v
 
 
