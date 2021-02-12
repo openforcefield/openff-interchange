@@ -111,20 +111,20 @@ def test_sanity_grompp():
 
 def test_water_dimer():
     """Test that a water dimer can be written and the files can be grommp'd"""
-    parsley = ForceField("openff_unconstrained-1.0.0.offxml")
+    from openff.system.utils import get_test_file_path
+
+    tip3p = ForceField(get_test_file_path("tip3p.offxml"))
     water = Molecule.from_smiles("O")
     top = Topology.from_molecules(2 * [water])
 
     from simtk import openmm
     from simtk import unit as omm_unit
 
-    from openff.system.utils import get_test_file_path
-
     pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
 
     positions = np.array(pdbfile.positions / omm_unit.nanometer) * unit.nanometer
 
-    openff_sys = parsley.create_openff_system(top)
+    openff_sys = tip3p.create_openff_system(top)
     openff_sys.positions = positions
     openff_sys.box = [10, 10, 10] * unit.nanometer
 
