@@ -240,7 +240,7 @@ def _write_valence(
 
 
 def _write_bonds(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
-    if len(openff_sys.handlers["Bonds"].potentials) == 0:
+    if "Bonds" not in openff_sys.handlers.keys():
         return
 
     top_file.write("[ bonds ]\n")
@@ -277,7 +277,7 @@ def _write_bonds(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
 
 
 def _write_angles(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
-    if len(openff_sys.handlers["Angles"].potentials) == 0:
+    if "Angles" not in openff_sys.handlers.keys():
         return
 
     top_file.write("[ angles ]\n")
@@ -314,8 +314,8 @@ def _write_angles(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
 
 
 def _write_dihedrals(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
-    if len(openff_sys.handlers["ProperTorsions"].potentials) == 0:
-        if len(openff_sys.handlers["ImproperTorsions"].potentials) == 0:
+    if "ProperTorsions" not in openff_sys.handlers.keys():
+        if "ImproperTorsions" not in openff_sys.handlers.keys():
             return
 
     top_file.write("[ dihedrals ]\n")
