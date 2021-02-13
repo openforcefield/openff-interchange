@@ -105,3 +105,9 @@ class MissingPositionsError(BaseException):
     """
     Exception for when positions are needed but missing
     """
+
+
+class MissingParametersError(BaseException):
+    """
+    Exception for when parameters are needed but missing
+    """

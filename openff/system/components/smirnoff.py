@@ -48,7 +48,11 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
             key = str(key)
             self.slot_map[key] = val.parameter_type.smirks
 
-    def store_constraints(self, parameter_handler: ConstraintHandler) -> None:
+    def store_constraints(
+        self,
+        parameter_handler: ConstraintHandler,
+        bond_handler: BondHandler = None,
+    ) -> None:
         """
         Populate self.constraints with key-val pairs of unique potential
         identifiers and their associated Potential objects
@@ -59,9 +63,26 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
         if self.constraints:
             self.constraints = dict()
         for smirks in self.slot_map.values():
-            # Simply store _if_ this slot is to be constrained;
-            # let the details be dealt with by the interoperability layer
-            self.constraints[smirks] = True
+            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
+            if parameter_type.distance:
+                distance = parameter_type.distance
+            else:
+                if not bond_handler:
+                    from openff.system.exceptions import MissingParametersError
+
+                    raise MissingParametersError(
+                        f"Constraint with SMIRKS pattern {smirks} found with no distance "
+                        "specified, and no corresponding bond parameters were found. The distance "
+                        "of this constraint is not specified."
+                    )
+                bond_parameter = bond_handler.get_parameter({"smirks": smirks})[0]
+                distance = bond_parameter.length
+            potential = Potential(
+                parameters={
+                    "distance": distance,
+                }
+            )
+            self.constraints[smirks] = potential
 
 
 class SMIRNOFFBondHandler(PotentialHandler):

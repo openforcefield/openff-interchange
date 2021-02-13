@@ -38,3 +38,27 @@ def test_energies():
     omm_energies = get_openmm_energies(off_sys, round_positions=3)
 
     compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)
+
+
+def test_water_dimer():
+    from openff.system.utils import get_test_file_path
+
+    tip3p = ForceField(get_test_file_path("tip3p.offxml"))
+    water = Molecule.from_smiles("O")
+    top = Topology.from_molecules(2 * [water])
+
+    from simtk import openmm
+    from simtk import unit as omm_unit
+
+    pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
+
+    positions = np.array(pdbfile.positions / omm_unit.nanometer) * unit.nanometer
+
+    openff_sys = tip3p.create_openff_system(top)
+    openff_sys.positions = positions
+    openff_sys.box = [10, 10, 10] * unit.nanometer
+
+    gmx_energies, _ = get_gromacs_energies(openff_sys)
+    omm_energies = get_openmm_energies(openff_sys, round_positions=3)
+
+    compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)

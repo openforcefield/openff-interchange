@@ -48,21 +48,30 @@ def to_openff_system(
                 forcefield=self,
                 topology=topology,
             )
+        elif parameter_handler == "Constraints":
+            bond_handler = (
+                self["Bonds"] if "Bonds" in self.registered_parameter_handlers else None
+            )
+            potential_handler = create_constraint_handler(
+                topology=topology,
+                bond_handler=bond_handler,
+            )
         else:
             potential_handler = self[parameter_handler].create_potential(
                 topology=topology
             )
         sys_out.handlers.update({parameter_handler: potential_handler})
 
-    if "LibraryCharges" in self.registered_parameter_handlers:
-        library_charge_handler = SMIRNOFFLibraryChargeHandler()
-        library_charge_handler.store_matches(
-            parameter_handler=self["LibraryCharges"], topology=topology
-        )
-        library_charge_handler.store_potentials(
-            parameter_handler=self["LibraryCharges"]
-        )
-        sys_out.handlers.update({"LibraryCharges": library_charge_handler})
+    if "Electrostatics" not in self.registered_parameter_handlers:
+        if "LibraryCharges" in self.registered_parameter_handlers:
+            library_charge_handler = SMIRNOFFLibraryChargeHandler()
+            library_charge_handler.store_matches(
+                parameter_handler=self["LibraryCharges"], topology=topology
+            )
+            library_charge_handler.store_potentials(
+                parameter_handler=self["LibraryCharges"]
+            )
+            sys_out.handlers.update({"LibraryCharges": library_charge_handler})
 
     # `box` argument is only overriden if passed `None` and the input topology
     # has box vectors
@@ -82,6 +91,7 @@ def to_openff_system(
 def create_constraint_handler(
     self,
     topology: Topology,
+    bond_handler=None,
     **kwargs,
 ) -> SMIRNOFFConstraintHandler:
     """
@@ -90,7 +100,7 @@ def create_constraint_handler(
     """
     handler = SMIRNOFFConstraintHandler()
     handler.store_matches(parameter_handler=self, topology=topology)
-    handler.store_constraints(parameter_handler=self)
+    handler.store_constraints(parameter_handler=self, bond_handler=bond_handler)
 
     return handler
 

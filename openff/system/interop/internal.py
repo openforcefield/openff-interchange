@@ -3,7 +3,7 @@ from typing import IO, Dict
 
 import ele
 import numpy as np
-from openff.toolkit.topology import FrozenMolecule, Topology
+from openff.toolkit.topology import FrozenMolecule, Molecule, Topology
 
 from openff.system import unit
 from openff.system.components.system import System
@@ -76,6 +76,12 @@ def to_top(openff_sys: System, file_path: Path):
         # TODO: Write [ nonbond_params ] section
         molecule_map = _build_molecule_map(openff_sys.topology)
         for mol_name, mol_data in molecule_map.items():
+            # If the molecule is water ...
+            if mol_data["reference_molecule"].is_isomorphic_with(
+                Molecule.from_smiles("O")
+            ):
+                # ... do special water stuff
+                pass
             _write_moleculetype(top_file, mol_name)
             _write_atoms(top_file, mol_name, mol_data, openff_sys, typemap)
             _write_valence(top_file, mol_name, mol_data, openff_sys, typemap)
