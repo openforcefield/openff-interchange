@@ -1,10 +1,12 @@
 from typing import Dict, List, Set, Union
 
+from openff.toolkit.topology.topology import Topology
+from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.toolkit.utils.utils import requires_package
 from pydantic import validator
 
 from openff.system.exceptions import InvalidExpressionError
-from openff.system.types import DefaultModel, FloatQuantity
+from openff.system.types import ArrayQuantity, DefaultModel, FloatQuantity
 
 
 class Potential(DefaultModel):
@@ -16,7 +18,10 @@ class Potential(DefaultModel):
     @validator("parameters")
     def validate_parameters(cls, v):
         for key, val in v.items():
-            v[key] = FloatQuantity.validate_type(val)
+            if isinstance(val, list):
+                v[key] = ArrayQuantity.validate_type(val)
+            else:
+                v[key] = FloatQuantity.validate_type(val)
         return v
 
 
@@ -38,10 +43,14 @@ class PotentialHandler(DefaultModel):
         else:
             raise InvalidExpressionError
 
-    def store_matches(self):
+    def store_matches(
+        self,
+        parameter_handler: ParameterHandler,
+        topology: Topology,
+    ) -> None:
         raise NotImplementedError
 
-    def store_potentials(self):
+    def store_potentials(self, parameter_handler: ParameterHandler) -> None:
         raise NotImplementedError
 
     @requires_package("jax")

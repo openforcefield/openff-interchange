@@ -50,7 +50,10 @@ class TestConstraints(BaseTest):
         assert "(0, 2)" in constraints.slot_map.keys()  # C-H bond
         assert len(constraints.slot_map.keys()) == 6  # number of C-H bonds
         assert len({constraints.slot_map.values()}) == 1  # always True
-        assert constraints.constraints[constraints.slot_map["(0, 2)"]] is True
+        assert (
+            "distance"
+            in constraints.constraints[constraints.slot_map["(0, 2)"]].parameters
+        )
 
     def test_force_field_no_constraints(self, parsley_unconstrained):
         """Test that a force field _without_ a Constraints tag does not add a
@@ -94,8 +97,15 @@ class TestConstraints(BaseTest):
             topology=top,
         )
 
+        from openff.system.components.smirnoff import SMIRNOFFBondHandler
+
+        bond_handler = SMIRNOFFBondHandler()
+        bond_handler.store_matches(parameter_handler=parsley["Bonds"], topology=top)
+        bond_handler.store_potentials(parameter_handler=parsley["Bonds"])
+
         constrained.handlers["Constraints"].store_constraints(
             parameter_handler=parsley["Constraints"],
+            bond_handler=bond_handler,
         )
 
         assert len(constrained.handlers["Constraints"].slot_map.keys()) == 7

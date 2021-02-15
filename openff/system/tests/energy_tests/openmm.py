@@ -14,6 +14,20 @@ def get_openmm_energies(
 
     omm_sys: openmm.System = off_sys.to_openmm()
 
+    omm_energies = _get_openmm_energies(
+        omm_sys=omm_sys,
+        box_vectors=off_sys.box,
+        positions=off_sys.positions,
+        round_positions=round_positions,
+        simple=simple,
+    )
+
+    return omm_energies
+
+
+def _get_openmm_energies(
+    omm_sys, box_vectors, positions, round_positions=None, simple=False
+):
     if simple:
         nonbond_force = [
             f for f in omm_sys.getForces() if isinstance(f, openmm.NonbondedForce)
@@ -36,10 +50,11 @@ def get_openmm_energies(
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context = openmm.Context(omm_sys, integrator)
 
-    box_vectors = off_sys.box.magnitude * unit.nanometer  # type: ignore
+    box_vectors = box_vectors.magnitude * unit.nanometer
     context.setPeriodicBoxVectors(*box_vectors)
 
-    positions = off_sys.positions.magnitude * unit.nanometer  # type: ignore
+    positions = positions.magnitude * unit.nanometer
+
     if round_positions is not None:
         rounded = np.round(positions, round_positions)
         context.setPositions(rounded)

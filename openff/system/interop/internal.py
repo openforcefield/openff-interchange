@@ -3,7 +3,7 @@ from typing import IO, Dict, Union
 
 import ele
 import numpy as np
-from openff.toolkit.topology import FrozenMolecule, Topology
+from openff.toolkit.topology import FrozenMolecule, Molecule, Topology
 
 from openff.system import unit
 from openff.system.components.system import System
@@ -30,7 +30,7 @@ def to_gro(openff_sys: System, file_path: Union[Path, str]):
         for idx, atom in enumerate(openff_sys.topology.topology_atoms):  # type: ignore
             element_symbol = ele.element_from_atomic_number(atom.atomic_number).symbol
             # TODO: Make sure these are in nanometers
-            pos = openff_sys.positions[idx].to(unit.nanometer).magnitude  # type:ignore
+            pos = openff_sys.positions[idx].to(unit.nanometer).magnitude
             gro.write(
                 # If writing velocities:
                 # "\n%5d%-5s%5s%5d%8.3f%8.3f%8.3f%8.4f%8.4f%8.4f" % (
@@ -86,6 +86,12 @@ def to_top(openff_sys: System, file_path: Union[Path, str]):
         # TODO: Write [ nonbond_params ] section
         molecule_map = _build_molecule_map(openff_sys.topology)
         for mol_name, mol_data in molecule_map.items():
+            # If the molecule is water ...
+            if mol_data["reference_molecule"].is_isomorphic_with(
+                Molecule.from_smiles("O")
+            ):
+                # ... do special water stuff
+                pass
             _write_moleculetype(top_file, mol_name)
             _write_atoms(top_file, mol_name, mol_data, openff_sys, typemap)
             _write_valence(top_file, mol_name, mol_data, openff_sys, typemap)
@@ -171,8 +177,8 @@ def _write_atomtypes(openff_sys: System, top_file: IO, typemap: Dict) -> Dict:
         atom = openff_sys.topology.atom(atom_idx)  # type: ignore
         element = ele.element_from_atomic_number(atom.atomic_number)
         parameters = _get_lj_parameters(openff_sys, atom_idx)
-        sigma = parameters["sigma"].to(unit.nanometer).magnitude  # type: ignore
-        epsilon = parameters["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude  # type: ignore
+        sigma = parameters["sigma"].to(unit.nanometer).magnitude
+        epsilon = parameters["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude
         top_file.write(
             # "{0:<11s} {1:5s} {2:6d} {3:18.8f} {4:18.8f} {5:5s} {6:18.8e} {7:18.8e}".format(
             "{:<11s} {:6d} {:18.8f} {:18.8f} {:5s} {:18.8e} {:18.8e}".format(
@@ -244,7 +250,7 @@ def _write_valence(
 
 
 def _write_bonds(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
-    if len(openff_sys.handlers["Bonds"].potentials) == 0:
+    if "Bonds" not in openff_sys.handlers.keys():
         return
 
     top_file.write("[ bonds ]\n")
@@ -281,7 +287,7 @@ def _write_bonds(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
 
 
 def _write_angles(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
-    if len(openff_sys.handlers["Angles"].potentials) == 0:
+    if "Angles" not in openff_sys.handlers.keys():
         return
 
     top_file.write("[ angles ]\n")
@@ -318,8 +324,8 @@ def _write_angles(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
 
 
 def _write_dihedrals(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
-    if len(openff_sys.handlers["ProperTorsions"].potentials) == 0:
-        if len(openff_sys.handlers["ImproperTorsions"].potentials) == 0:
+    if "ProperTorsions" not in openff_sys.handlers.keys():
+        if "ImproperTorsions" not in openff_sys.handlers.keys():
             return
 
     top_file.write("[ dihedrals ]\n")

@@ -54,7 +54,11 @@ def _process_bond_forces(openff_sys, openmm_sys):
     harmonic_bond_force = openmm.HarmonicBondForce()
     openmm_sys.addForce(harmonic_bond_force)
 
-    bond_handler = openff_sys.handlers["Bonds"]
+    try:
+        bond_handler = openff_sys.handlers["Bonds"]
+    except KeyError:
+        return
+
     for bond, key in bond_handler.slot_map.items():
         indices = eval(bond)
         params = bond_handler.potentials[key].parameters
@@ -74,7 +78,11 @@ def _process_angle_forces(openff_sys, openmm_sys):
     harmonic_angle_force = openmm.HarmonicAngleForce()
     openmm_sys.addForce(harmonic_angle_force)
 
-    angle_handler = openff_sys.handlers["Angles"]
+    try:
+        angle_handler = openff_sys.handlers["Angles"]
+    except KeyError:
+        return
+
     for angle, key in angle_handler.slot_map.items():
         indices = eval(angle)
         params = angle_handler.potentials[key].parameters
@@ -98,7 +106,10 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
     torsion_force = openmm.PeriodicTorsionForce()
     openmm_sys.addForce(torsion_force)
 
-    proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
+    try:
+        proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
+    except KeyError:
+        return
 
     for torsion_key, key in proper_torsion_handler.slot_map.items():
         torsion, idx = torsion_key.split("_")
@@ -125,7 +136,7 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys):
     """Process the Impropers section of an OpenFF System into corresponding
     forces within an openmm.PeriodicTorsionForce"""
     if "ImproperTorsions" not in openff_sys.handlers.keys():
-        raise Exception
+        return
 
     for force in openmm_sys.getForces():
         if type(force) == openmm.PeriodicTorsionForce:

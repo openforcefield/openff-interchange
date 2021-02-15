@@ -17,3 +17,8 @@ Documenting how some of these files were generated
 
 `water-dimer.pdb`:
   - Taken from the `openmm-tests` repo: https://github.com/choderalab/openmm-tests/blob/5a7d3b7bee753a384c98f4b6f8bb1460c371935c/energy-continuity/water-dimer.pdb
+
+`tip3p.offxml`:
+  - Taken from the toolkit, but with a default-looking `<Electrostatics>` tag added.
+    - https://github.com/openforcefield/openff-toolkit/blob/d0b768a6d2cd0297b34aab3618197604b81d6e03/openff/toolkit/data/test_forcefields/tip3p.offxml
+    - See https://github.com/openforcefield/openff-toolkit/issues/716

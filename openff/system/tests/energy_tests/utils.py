@@ -8,11 +8,13 @@ def compare_gromacs_openmm(gmx_energies: Dict, omm_energies: Dict):
     # TODO: Nonbonded components
     # np.testing doesn't work on Quantity
 
-    bond_diff = omm_energies["HarmonicBondForce"] - gmx_energies["Bond"]
-    assert abs(bond_diff / omm_unit.kilojoules_per_mole) < 5e-3
+    if "Bond" in gmx_energies.keys():
+        bond_diff = omm_energies["HarmonicBondForce"] - gmx_energies["Bond"]
+        assert abs(bond_diff / omm_unit.kilojoules_per_mole) < 5e-3
 
-    angle_diff = omm_energies["HarmonicAngleForce"] - gmx_energies["Angle"]
-    assert abs(angle_diff / omm_unit.kilojoules_per_mole) < 5e-3
+    if "Angle" in gmx_energies.keys():
+        angle_diff = omm_energies["HarmonicAngleForce"] - gmx_energies["Angle"]
+        assert abs(angle_diff / omm_unit.kilojoules_per_mole) < 5e-3
 
     if "Proper Dih." in gmx_energies.keys():
         torsion_diff = (
@@ -22,7 +24,7 @@ def compare_gromacs_openmm(gmx_energies: Dict, omm_energies: Dict):
 
     gmx_nonbonded = _get_gmx_energy_nonbonded(gmx_energies)
     nonbonded_diff = omm_energies["NonbondedForce"] - gmx_nonbonded
-    assert abs(nonbonded_diff / omm_unit.kilojoules_per_mole) < 1e-2
+    assert abs(nonbonded_diff / omm_unit.kilojoules_per_mole) < 1e-2, nonbonded_diff
 
 
 def compare_gromacs(energies1: Dict, energies2: Dict):
@@ -41,6 +43,14 @@ def compare_gromacs(energies1: Dict, energies2: Dict):
         assert "Proper Dih." in energies2.keys()
         torsion_diff = energies1["Proper Dih."] - energies2["Proper Dih."]
         assert abs(torsion_diff / omm_unit.kilojoules_per_mole) < 5e-3
+
+
+def compare_openmm(energies1: Dict, energies2: Dict):
+    for key, val in energies1.items():
+        if energies1[key]._value == 0.0:
+            continue
+        energy_diff = val - energies2[key]
+        assert abs(energy_diff / val.unit) < 5e-3, energy_diff
 
 
 def _get_gmx_energy_nonbonded(gmx_energies: Dict):

@@ -19,6 +19,7 @@ from openff.system.components.smirnoff import (
     SMIRNOFFConstraintHandler,
     SMIRNOFFElectrostaticsHandler,
     SMIRNOFFImproperTorsionHandler,
+    SMIRNOFFLibraryChargeHandler,
     SMIRNOFFProperTorsionHandler,
     SMIRNOFFvdWHandler,
 )
@@ -40,7 +41,7 @@ def to_openff_system(
     _check_supported_handlers(self)
 
     for parameter_handler in self.registered_parameter_handlers:
-        if parameter_handler in {"ToolkitAM1BCC", "LibraryCharges"}:
+        if parameter_handler in {"ToolkitAM1BCC", "LibraryCharges", "Constraints"}:
             continue
         elif parameter_handler == "Electrostatics":
             potential_handler = create_charges(
@@ -52,6 +53,26 @@ def to_openff_system(
                 topology=topology
             )
         sys_out.handlers.update({parameter_handler: potential_handler})
+
+    if "Constraints" in self.registered_parameter_handlers:
+        constraint_handler = self["Constraints"].create_potential(
+            topology=topology,
+            bond_handler=sys_out.handlers["Bonds"]
+            if "Bonds" in sys_out.handlers
+            else None,
+        )
+        sys_out.handlers.update({"Constraints": constraint_handler})
+
+    if "Electrostatics" not in self.registered_parameter_handlers:
+        if "LibraryCharges" in self.registered_parameter_handlers:
+            library_charge_handler = SMIRNOFFLibraryChargeHandler()
+            library_charge_handler.store_matches(
+                parameter_handler=self["LibraryCharges"], topology=topology
+            )
+            library_charge_handler.store_potentials(
+                parameter_handler=self["LibraryCharges"]
+            )
+            sys_out.handlers.update({"LibraryCharges": library_charge_handler})
 
     # `box` argument is only overriden if passed `None` and the input topology
     # has box vectors
@@ -71,6 +92,7 @@ def to_openff_system(
 def create_constraint_handler(
     self,
     topology: Topology,
+    bond_handler=None,
     **kwargs,
 ) -> SMIRNOFFConstraintHandler:
     """
@@ -79,7 +101,7 @@ def create_constraint_handler(
     """
     handler = SMIRNOFFConstraintHandler()
     handler.store_matches(parameter_handler=self, topology=topology)
-    handler.store_constraints(parameter_handler=self)
+    handler.store_constraints(parameter_handler=self, bond_handler=bond_handler)
 
     return handler
 
@@ -187,11 +209,12 @@ def _check_supported_handlers(forcefield: ForceField):
         "ImproperTorsions",
         "vdW",
         "Electrostatics",
+        "LibraryCharges",
     }
 
     unsupported = list()
     for handler in forcefield.registered_parameter_handlers:
-        if handler in {"ToolkitAM1BCC", "LibraryCharges"}:
+        if handler in {"ToolkitAM1BCC"}:
             continue
         if handler not in supported_handlers:
             unsupported.append(handler)
