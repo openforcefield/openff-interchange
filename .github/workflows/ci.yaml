@@ -57,7 +57,7 @@ jobs:
     - name: Run mypy
       shell: bash -l {0}
       run: |
-        mypy openff --namespace-packages
+        mypy --show-error-codes --namespace-packages -p "openff.system"
 
     - name: Run unit tests
       shell: bash -l {0}
