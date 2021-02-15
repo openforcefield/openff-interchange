@@ -21,8 +21,8 @@ class System(DefaultModel):
 
     handlers: Dict[str, PotentialHandler] = dict()
     topology: Optional[Topology] = None
-    box: ArrayQuantity["nanometer"] = None
-    positions: ArrayQuantity["nanometer"] = None
+    box: ArrayQuantity["nanometer"] = None  # type: ignore
+    positions: ArrayQuantity["nanometer"] = None  # type: ignore
 
     @validator("box")
     def validate_box(cls, val):
