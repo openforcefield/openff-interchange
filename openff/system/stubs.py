@@ -52,7 +52,7 @@ def to_openff_system(
             bond_handler = (
                 self["Bonds"] if "Bonds" in self.registered_parameter_handlers else None
             )
-            potential_handler = create_constraint_handler(
+            potential_handler = self["Constraints"].create_constraint_handler(
                 topology=topology,
                 bond_handler=bond_handler,
             )

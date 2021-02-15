@@ -50,10 +50,10 @@ def _get_openmm_energies(
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context = openmm.Context(omm_sys, integrator)
 
-    box_vectors = box_vectors.magnitude * unit.nanometer  # type: ignore
+    box_vectors = box_vectors.magnitude * unit.nanometer
     context.setPeriodicBoxVectors(*box_vectors)
 
-    positions = positions.magnitude * unit.nanometer  # type: ignore
+    positions = positions.magnitude * unit.nanometer
 
     if round_positions is not None:
         rounded = np.round(positions, round_positions)

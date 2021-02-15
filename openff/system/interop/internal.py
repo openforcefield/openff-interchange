@@ -30,7 +30,7 @@ def to_gro(openff_sys: System, file_path: Union[Path, str]):
         for idx, atom in enumerate(openff_sys.topology.topology_atoms):  # type: ignore
             element_symbol = ele.element_from_atomic_number(atom.atomic_number).symbol
             # TODO: Make sure these are in nanometers
-            pos = openff_sys.positions[idx].to(unit.nanometer).magnitude  # type:ignore
+            pos = openff_sys.positions[idx].to(unit.nanometer).magnitude
             gro.write(
                 # If writing velocities:
                 # "\n%5d%-5s%5s%5d%8.3f%8.3f%8.3f%8.4f%8.4f%8.4f" % (
@@ -177,8 +177,8 @@ def _write_atomtypes(openff_sys: System, top_file: IO, typemap: Dict) -> Dict:
         atom = openff_sys.topology.atom(atom_idx)  # type: ignore
         element = ele.element_from_atomic_number(atom.atomic_number)
         parameters = _get_lj_parameters(openff_sys, atom_idx)
-        sigma = parameters["sigma"].to(unit.nanometer).magnitude  # type: ignore
-        epsilon = parameters["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude  # type: ignore
+        sigma = parameters["sigma"].to(unit.nanometer).magnitude
+        epsilon = parameters["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude
         top_file.write(
             # "{0:<11s} {1:5s} {2:6d} {3:18.8f} {4:18.8f} {5:5s} {6:18.8e} {7:18.8e}".format(
             "{:<11s} {:6d} {:18.8f} {:18.8f} {:5s} {:18.8e} {:18.8e}".format(

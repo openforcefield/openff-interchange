@@ -1,5 +1,7 @@
 from typing import Dict, List, Set, Union
 
+from openff.toolkit.topology.topology import Topology
+from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.toolkit.utils.utils import requires_package
 from pydantic import validator
 
@@ -41,10 +43,14 @@ class PotentialHandler(DefaultModel):
         else:
             raise InvalidExpressionError
 
-    def store_matches(self):
+    def store_matches(
+        self,
+        parameter_handler: ParameterHandler,
+        topology: Topology,
+    ) -> None:
         raise NotImplementedError
 
-    def store_potentials(self):
+    def store_potentials(self, parameter_handler: ParameterHandler) -> None:
         raise NotImplementedError
 
     @requires_package("jax")
