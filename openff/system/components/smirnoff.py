@@ -22,68 +22,6 @@ kcal_mol_angstroms = kcal_mol / omm_unit.angstrom ** 2
 kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 
-class SMIRNOFFConstraintHandler(PotentialHandler):
-
-    name: str = "Constraints"
-    expression: str = ""
-    independent_variables: Set[str] = {""}
-    slot_map: Dict[str, str] = dict()
-    constraints: Dict[
-        str, bool
-    ] = dict()  # should this be named potentials for consistency?
-
-    def store_matches(
-        self, parameter_handler: ConstraintHandler, topology: Topology
-    ) -> None:
-        """
-        Populate self.slot_map with key-val pairs of slots
-        and unique potential identifiers
-
-        """
-        if self.slot_map:
-            self.slot_map = dict()
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            key = str(key)
-            self.slot_map[key] = val.parameter_type.smirks
-
-    def store_constraints(
-        self,
-        parameter_handler: ConstraintHandler,
-        bond_handler: BondHandler = None,
-    ) -> None:
-        """
-        Populate self.constraints with key-val pairs of unique potential
-        identifiers and their associated Potential objects
-
-        TODO: Raname to store_potentials potentials for consistency?
-
-        """
-        if self.constraints:
-            self.constraints = dict()
-        for smirks in self.slot_map.values():
-            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
-            if parameter_type.distance:
-                distance = parameter_type.distance
-            else:
-                if not bond_handler:
-                    from openff.system.exceptions import MissingParametersError
-
-                    raise MissingParametersError(
-                        f"Constraint with SMIRKS pattern {smirks} found with no distance "
-                        "specified, and no corresponding bond parameters were found. The distance "
-                        "of this constraint is not specified."
-                    )
-                bond_parameter = bond_handler.get_parameter({"smirks": smirks})[0]
-                distance = bond_parameter.length
-            potential = Potential(
-                parameters={
-                    "distance": distance,
-                }
-            )
-            self.constraints[smirks] = potential  # type: ignore[assignment]
-
-
 class SMIRNOFFBondHandler(PotentialHandler):
 
     name: str = "Bonds"
@@ -122,6 +60,70 @@ class SMIRNOFFBondHandler(PotentialHandler):
                 },
             )
             self.potentials[smirks] = potential
+
+
+class SMIRNOFFConstraintHandler(PotentialHandler):
+
+    name: str = "Constraints"
+    expression: str = ""
+    independent_variables: Set[str] = {""}
+    slot_map: Dict[str, str] = dict()
+    constraints: Dict[
+        str, bool
+    ] = dict()  # should this be named potentials for consistency?
+
+    def store_matches(
+        self, parameter_handler: ConstraintHandler, topology: Topology
+    ) -> None:
+        """
+        Populate self.slot_map with key-val pairs of slots
+        and unique potential identifiers
+
+        """
+        if self.slot_map:
+            self.slot_map = dict()
+        matches = parameter_handler.find_matches(topology)
+        for key, val in matches.items():
+            key = str(key)
+            self.slot_map[key] = val.parameter_type.smirks
+
+    def store_constraints(
+        self,
+        parameter_handler: ConstraintHandler,
+        bond_handler: SMIRNOFFBondHandler = None,
+    ) -> None:
+        """
+        Populate self.constraints with key-val pairs of unique potential
+        identifiers and their associated Potential objects
+
+        TODO: Raname to store_potentials potentials for consistency?
+
+        """
+        if self.constraints:
+            self.constraints = dict()
+        for key, smirks in self.slot_map.items():
+            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
+            if parameter_type.distance:
+                distance = parameter_type.distance
+            else:
+                if not bond_handler:
+                    from openff.system.exceptions import MissingParametersError
+
+                    raise MissingParametersError(
+                        f"Constraint with SMIRKS pattern {smirks} found with no distance "
+                        "specified, and no corresponding bond parameters were found. The distance "
+                        "of this constraint is not specified."
+                    )
+                # Look up by atom indices because constraint and bond SMIRKS may not match
+                bond_key = bond_handler.slot_map[key]
+                bond_parameter = bond_handler.potentials[bond_key].parameters
+                distance = bond_parameter["length"]
+            potential = Potential(
+                parameters={
+                    "distance": distance,
+                }
+            )
+            self.constraints[smirks] = potential  # type: ignore[assignment]
 
 
 class SMIRNOFFAngleHandler(PotentialHandler):

@@ -41,26 +41,27 @@ def to_openff_system(
     _check_supported_handlers(self)
 
     for parameter_handler in self.registered_parameter_handlers:
-        if parameter_handler in {"ToolkitAM1BCC", "LibraryCharges"}:
+        if parameter_handler in {"ToolkitAM1BCC", "LibraryCharges", "Constraints"}:
             continue
         elif parameter_handler == "Electrostatics":
             potential_handler = create_charges(
                 forcefield=self,
                 topology=topology,
             )
-        elif parameter_handler == "Constraints":
-            bond_handler = (
-                self["Bonds"] if "Bonds" in self.registered_parameter_handlers else None
-            )
-            potential_handler = self["Constraints"].create_constraint_handler(
-                topology=topology,
-                bond_handler=bond_handler,
-            )
         else:
             potential_handler = self[parameter_handler].create_potential(
                 topology=topology
             )
         sys_out.handlers.update({parameter_handler: potential_handler})
+
+    if "Constraints" in self.registered_parameter_handlers:
+        constraint_handler = self["Constraints"].create_potential(
+            topology=topology,
+            bond_handler=sys_out.handlers["Bonds"]
+            if "Bonds" in sys_out.handlers
+            else None,
+        )
+        sys_out.handlers.update({"Constraints": constraint_handler})
 
     if "Electrostatics" not in self.registered_parameter_handlers:
         if "LibraryCharges" in self.registered_parameter_handlers:
