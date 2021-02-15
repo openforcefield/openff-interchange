@@ -32,7 +32,7 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
         str, bool
     ] = dict()  # should this be named potentials for consistency?
 
-    def store_matches(
+    def store_matches(  # type: ignore[override]
         self, parameter_handler: ConstraintHandler, topology: Topology
     ) -> None:
         """
@@ -71,7 +71,7 @@ class SMIRNOFFBondHandler(PotentialHandler):
     slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
 
-    def store_matches(self, parameter_handler: BondHandler, topology: Topology) -> None:
+    def store_matches(self, parameter_handler: BondHandler, topology: Topology) -> None:  # type: ignore
         """
         Populate self.slot_map with key-val pairs of slots
         and unique potential identifiers
@@ -84,7 +84,7 @@ class SMIRNOFFBondHandler(PotentialHandler):
             key = str(key)
             self.slot_map[key] = val.parameter_type.smirks
 
-    def store_potentials(self, parameter_handler: BondHandler) -> None:
+    def store_potentials(self, parameter_handler: BondHandler) -> None:  # type: ignore
         """
         Populate self.potentials with key-val pairs of unique potential
         identifiers and their associated Potential objects
@@ -111,7 +111,7 @@ class SMIRNOFFAngleHandler(PotentialHandler):
     slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
 
-    def store_matches(
+    def store_matches(  # type: ignore[override]
         self, parameter_handler: AngleHandler, topology: Topology
     ) -> None:
         """
@@ -124,7 +124,7 @@ class SMIRNOFFAngleHandler(PotentialHandler):
             key = str(key)
             self.slot_map[key] = val.parameter_type.smirks
 
-    def store_potentials(self, parameter_handler: AngleHandler) -> None:
+    def store_potentials(self, parameter_handler: AngleHandler) -> None:  # type: ignore[override]
         """
         Populate self.potentials with key-val pairs of unique potential
         identifiers and their associated Potential objects
@@ -151,7 +151,7 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
     slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
 
-    def store_matches(
+    def store_matches(  # type: ignore[override]
         self, parameter_handler: ProperTorsionHandler, topology: Topology
     ) -> None:
         """
@@ -167,7 +167,7 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
                 identifier = str(key) + f"_{n}"
                 self.slot_map[identifier] = val.parameter_type.smirks + f"_{n}"
 
-    def store_potentials(self, parameter_handler: ProperTorsionHandler) -> None:
+    def store_potentials(self, parameter_handler: ProperTorsionHandler) -> None:  # type: ignore[override]
         """
         Populate self.potentials with key-val pairs of unique potential
         identifiers and their associated Potential objects
@@ -176,8 +176,8 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
         for key in self.slot_map.values():
             # ParameterHandler.get_parameter returns a list, although this
             # should only ever be length 1
-            smirks, n = key.split("_")
-            n = int(n)
+            smirks, n_ = key.split("_")
+            n = int(n_)
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             # n_terms = len(parameter_type.k)
             identifier = key
@@ -199,7 +199,7 @@ class SMIRNOFFImproperTorsionHandler(PotentialHandler):
     slot_map: Dict[str, str] = dict()
     potentials: Dict[str, Potential] = dict()
 
-    def store_matches(
+    def store_matches(  # type: ignore[override]
         self, parameter_handler: ImproperTorsionHandler, topology: Topology
     ) -> None:
         """
@@ -223,7 +223,7 @@ class SMIRNOFFImproperTorsionHandler(PotentialHandler):
                 identifier = str(key) + f"_{n}"
                 self.slot_map[identifier] = val.parameter_type.smirks + f"_{n}"
 
-    def store_potentials(self, parameter_handler: ImproperTorsionHandler) -> None:
+    def store_potentials(self, parameter_handler: ImproperTorsionHandler) -> None:  # type: ignore[override]
         """
         Populate self.potentials with key-val pairs of unique potential
         identifiers and their associated Potential objects
@@ -260,7 +260,7 @@ class SMIRNOFFvdWHandler(PotentialHandler):
     scale_14: float = 0.5
     scale_15: float = 1.0
 
-    def store_matches(
+    def store_matches(  # type: ignore[override]
         self,
         parameter_handler: vdWHandler,
         topology: Topology,
@@ -275,7 +275,7 @@ class SMIRNOFFvdWHandler(PotentialHandler):
             key = str(key)
             self.slot_map[key] = val.parameter_type.smirks
 
-    def store_potentials(self, parameter_handler: vdWHandler) -> None:
+    def store_potentials(self, parameter_handler: vdWHandler) -> None:  # type: ignore[override]
         """
         Populate self.potentials with key-val pairs of unique potential
         identifiers and their associated Potential objects
