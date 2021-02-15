@@ -45,6 +45,14 @@ def compare_gromacs(energies1: Dict, energies2: Dict):
         assert abs(torsion_diff / omm_unit.kilojoules_per_mole) < 5e-3
 
 
+def compare_openmm(energies1: Dict, energies2: Dict):
+    for key, val in energies1.items():
+        if energies1[key]._value == 0.0:
+            continue
+        energy_diff = val - energies2[key]
+        assert abs(energy_diff / val.unit) < 5e-3, energy_diff
+
+
 def _get_gmx_energy_nonbonded(gmx_energies: Dict):
     """Get the total nonbonded energy from a set of GROMACS energies"""
     gmx_nonbonded = 0 * gmx_energies["Potential"].unit

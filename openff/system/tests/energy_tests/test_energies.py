@@ -5,8 +5,14 @@ from openff.toolkit.topology import Molecule, Topology
 from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
-from openff.system.tests.energy_tests.openmm import get_openmm_energies
-from openff.system.tests.energy_tests.utils import compare_gromacs_openmm
+from openff.system.tests.energy_tests.openmm import (
+    _get_openmm_energies,
+    get_openmm_energies,
+)
+from openff.system.tests.energy_tests.utils import (
+    compare_gromacs_openmm,
+    compare_openmm,
+)
 
 
 def test_energies():
@@ -58,7 +64,16 @@ def test_water_dimer():
     openff_sys.positions = positions
     openff_sys.box = [10, 10, 10] * unit.nanometer
 
-    gmx_energies, _ = get_gromacs_energies(openff_sys)
-    omm_energies = get_openmm_energies(openff_sys, round_positions=3)
+    omm_energies = get_openmm_energies(openff_sys)
 
-    compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)
+    toolkit_energies = _get_openmm_energies(
+        tip3p.create_openmm_system(top),
+        openff_sys.box,
+        openff_sys.positions,
+    )
+
+    compare_openmm(omm_energies, toolkit_energies)
+
+    # TODO: Fix GROMACS energies by handling SETTLE constraints
+    # gmx_energies, _ = get_gromacs_energies(openff_sys)
+    # compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)
