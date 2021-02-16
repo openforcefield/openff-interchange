@@ -76,3 +76,21 @@ class TestOpenMM(BaseTest):
         # assert partial_charges.units == unit.elementary_charge
         assert isinstance(partial_charges, list)
         assert np.allclose(partial_charges, np.zeros(4))  # .magnitude
+
+
+def test_requires_package():
+    """Test the @requires_package decorator"""
+    from openff.toolkit.utils.utils import MissingDependencyError, requires_package
+
+    @requires_package("numpy")
+    def fn_installed():
+        pass
+
+    fn_installed()
+
+    @requires_package("foobar")
+    def fn_missing():
+        pass
+
+    with pytest.raises(MissingDependencyError, match="foobar"):
+        fn_missing()

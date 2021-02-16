@@ -34,18 +34,19 @@ class ToolkitTopologyConformersNotFoundError(Exception):
             msg += f"The molecule lacking a conformer is {self.mol}"
 
 
-class JAXNotInstalledError(ImportError):
+class MissingDependencyError:
     """
-    Exception for when JAX is called, but not installed
+    Exception for when an optional dependency is needed but not installed
+
     """
 
-    def __str__(self):
-        msg = (
-            "\nThis function requires JAX, which was not found to be installed."
-            "\nInstall it with `conda install jax -c conda-forge` or"
-            "\n`pip install --upgrade pip && pip install --upgrade jax jaxlib`."
+    def __init__(self, package_name):
+        self.msg = (
+            f"Missing dependency {package_name}. Try installing it "
+            f"with\n\n$ conda install {package_name} -c conda-forge"
         )
-        return msg
+
+        super().__init__(self.msg)
 
 
 class InvalidBoxError(TypeError):
