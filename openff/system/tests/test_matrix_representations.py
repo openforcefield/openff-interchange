@@ -2,10 +2,11 @@ import numpy as np
 import pytest
 
 from openff.system.tests.base_test import BaseTest
-from openff.system.utils import get_test_file_path, requires_package
+from openff.system.tests.utils import requires_pkg
+from openff.system.utils import get_test_file_path
 
 
-@requires_package
+@requires_pkg("jax")
 class TestMatrixRepresentations(BaseTest):
     @pytest.mark.parametrize(
         "handler_name,n_ff_terms,n_sys_terms",

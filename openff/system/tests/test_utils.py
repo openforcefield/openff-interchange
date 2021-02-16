@@ -4,11 +4,13 @@ from openff.toolkit.typing.engines.smirnoff import ForceField
 from simtk import unit as simtk_unit
 
 from openff.system import unit
+from openff.system.exceptions import MissingDependencyError
 from openff.system.tests.base_test import BaseTest
 from openff.system.utils import (
     compare_forcefields,
     get_partial_charges_from_openmm_system,
     pint_to_simtk,
+    requires_package,
     simtk_to_pint,
     unwrap_list_of_pint_quantities,
 )
@@ -80,9 +82,8 @@ class TestOpenMM(BaseTest):
 
 def test_requires_package():
     """Test the @requires_package decorator"""
-    from openff.toolkit.utils.utils import MissingDependencyError, requires_package
 
-    @requires_package("numpy")
+    @requires_package("re")
     def fn_installed():
         pass
 

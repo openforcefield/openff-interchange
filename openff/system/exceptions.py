@@ -34,7 +34,7 @@ class ToolkitTopologyConformersNotFoundError(Exception):
             msg += f"The molecule lacking a conformer is {self.mol}"
 
 
-class MissingDependencyError:
+class MissingDependencyError(BaseException):
     """
     Exception for when an optional dependency is needed but not installed
 
