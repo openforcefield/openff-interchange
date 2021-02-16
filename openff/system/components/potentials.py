@@ -2,11 +2,11 @@ from typing import Dict, List, Set, Union
 
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
-from openff.toolkit.utils.utils import requires_package
 from pydantic import validator
 
 from openff.system.exceptions import InvalidExpressionError
 from openff.system.types import ArrayQuantity, DefaultModel, FloatQuantity
+from openff.system.utils import requires_package
 
 
 class Potential(DefaultModel):
