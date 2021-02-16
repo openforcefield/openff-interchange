@@ -35,7 +35,7 @@ def simtk_to_pint(simtk_quantity):
 
 
 def unwrap_list_of_pint_quantities(quantities):
-    assert set(val.units for val in quantities) == {quantities[0].units}
+    assert {val.units for val in quantities} == {quantities[0].units}
     parsed_unit = quantities[0].units
     vals = [val.magnitude for val in quantities]
     return vals * parsed_unit
