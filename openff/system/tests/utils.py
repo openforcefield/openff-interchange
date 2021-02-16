@@ -1,8 +1,40 @@
+import importlib
+
 import numpy as np
-from openforcefield.topology import Molecule, Topology
+import pytest
+from openff.toolkit.topology import Molecule, Topology
 from simtk import unit
 
 from openff.system.exceptions import InterMolEnergyComparisonError
+
+
+def requires_pkg(pkg_name, reason=None):
+    """
+    Helper function to generate a skipif decorator for any package.
+
+    Parameters
+    ----------
+    pkg_name : str
+        The name of the package that is required for a test(s)
+    reason : str, optional
+        Explanation of why the skipped it to be tested
+
+    Returns
+    -------
+    requires_pkg : _pytest.mark.structures.MarkDecorator
+        A pytest decorator that will skip tests if the package is not available
+    """
+    if not reason:
+        reason = f"Package {pkg_name} is required, but was not found."
+    try:
+        importlib.import_module(pkg_name)
+        mark = pytest.mark.skipif(
+            False,
+            reason="blank decorator, should never be printed",
+        )
+    except ImportError:
+        mark = pytest.mark.skip(reason=reason)
+    return mark
 
 
 def top_from_smiles(
@@ -21,7 +53,7 @@ def top_from_smiles(
 
     Returns
     -------
-    top : openforcefield.topology.Topology
+    top : opennff.toolkit.topology.Topology
         A single-molecule, gas phase-like topology
 
     """
@@ -34,7 +66,7 @@ def top_from_smiles(
     return top
 
 
-def compare_energies(ener1, ener2):
+def compare_energies(ener1, ener2, atol=1e-8):
     """Compare two GROMACS energy dicts from InterMol"""
 
     assert sorted(ener1.keys()) == sorted(ener2.keys()), (
@@ -42,8 +74,15 @@ def compare_energies(ener1, ener2):
         sorted(ener2.keys()),
     )
 
-    flaky_keys = ["Temperature", "Kinetic En.", "Total Energy"]
-    raise_exception = False
+    flaky_keys = [
+        "Temperature",
+        "Kinetic En.",
+        "Total Energy",
+        "Pressure",
+        "Vir-XX",
+        "Vir-YY",
+    ]
+
     failed_runs = []
     for key in ener1.keys():
         if key in flaky_keys:
@@ -52,10 +91,10 @@ def compare_energies(ener1, ener2):
             assert np.isclose(
                 ener1[key] / ener1[key].unit,
                 ener2[key] / ener2[key].unit,
+                atol=atol,
             )
         except AssertionError:
-            raise_exception = True
             failed_runs.append([key, ener1[key], ener2[key]])
 
-    if raise_exception:
+    if len(failed_runs) > 0:
         raise InterMolEnergyComparisonError(failed_runs)

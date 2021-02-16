@@ -1,5 +1,6 @@
 from simtk import openmm, unit
 
+from openff.system import unit as off_unit
 from openff.system.exceptions import UnsupportedCutoffMethodError
 from openff.system.interop.parmed import _lj_params_from_potential
 
@@ -13,14 +14,27 @@ kj_rad = kj_mol / unit.radian ** 2
 
 
 def to_openmm(openff_sys) -> openmm.System:
-    """Convert an OpenFF System to a ParmEd Structure"""
+    """Convert an OpenFF System to a ParmEd Structure
+
+    Parameters
+    ----------
+    openff_sys : openff.system.System
+        An OpenFF System object
+
+    Returns
+    -------
+    openmm_sys : openmm.System
+        The corresponding OpenMM System object
+
+    """
 
     openmm_sys = openmm.System()
 
     # OpenFF box stored implicitly as nm, and that happens to be what
     # OpenMM casts box vectors to if provided only an np.ndarray
     if openff_sys.box is not None:
-        openmm_sys.setDefaultPeriodicBoxVectors(*openff_sys.box)
+        box = openff_sys.box.to(off_unit.nanometer).magnitude
+        openmm_sys.setDefaultPeriodicBoxVectors(*box)
 
     # Add particles (both atoms and virtual sites) with appropriate masses
     for atom in openff_sys.topology.topology_particles:
@@ -28,8 +42,7 @@ def to_openmm(openff_sys) -> openmm.System:
 
     _process_nonbonded_forces(openff_sys, openmm_sys)
     _process_proper_torsion_forces(openff_sys, openmm_sys)
-    if len(openff_sys.handlers["ImproperTorsions"].slot_map) > 0:
-        _process_improper_torsion_forces(openff_sys, openmm_sys)
+    _process_improper_torsion_forces(openff_sys, openmm_sys)
     _process_angle_forces(openff_sys, openmm_sys)
     _process_bond_forces(openff_sys, openmm_sys)
 
@@ -37,15 +50,20 @@ def to_openmm(openff_sys) -> openmm.System:
 
 
 def _process_bond_forces(openff_sys, openmm_sys):
+    """Process the Bonds section of an OpenFF System into a corresponding openmm.HarmonicBondForce"""
     harmonic_bond_force = openmm.HarmonicBondForce()
     openmm_sys.addForce(harmonic_bond_force)
 
-    bond_handler = openff_sys.handlers["Bonds"]
+    try:
+        bond_handler = openff_sys.handlers["Bonds"]
+    except KeyError:
+        return
+
     for bond, key in bond_handler.slot_map.items():
         indices = eval(bond)
         params = bond_handler.potentials[key].parameters
-        k = params["k"] * kcal_ang / kj_nm
-        length = params["length"] * unit.angstrom / unit.nanometer
+        k = params["k"].to(off_unit.Unit(str(kcal_ang))).magnitude * kcal_ang / kj_nm
+        length = params["length"].to(off_unit.nanometer).magnitude
 
         harmonic_bond_force.addBond(
             particle1=indices[0],
@@ -56,15 +74,22 @@ def _process_bond_forces(openff_sys, openmm_sys):
 
 
 def _process_angle_forces(openff_sys, openmm_sys):
+    """Process the Angles section of an OpenFF System into a corresponding openmm.HarmonicAngleForce"""
     harmonic_angle_force = openmm.HarmonicAngleForce()
     openmm_sys.addForce(harmonic_angle_force)
 
-    angle_handler = openff_sys.handlers["Angles"]
+    try:
+        angle_handler = openff_sys.handlers["Angles"]
+    except KeyError:
+        return
+
     for angle, key in angle_handler.slot_map.items():
         indices = eval(angle)
         params = angle_handler.potentials[key].parameters
-        k = params["k"] * kcal_rad / kj_rad
-        angle = params["angle"] * unit.degree
+        k = params["k"].to(off_unit.Unit(str(kcal_rad))).magnitude
+        k = k * kcal_rad / kj_rad
+        angle = params["angle"].to(off_unit.degree).magnitude
+        angle = angle * unit.degree / unit.radian
 
         harmonic_angle_force.addAngle(
             particle1=indices[0],
@@ -76,22 +101,27 @@ def _process_angle_forces(openff_sys, openmm_sys):
 
 
 def _process_proper_torsion_forces(openff_sys, openmm_sys):
-    proper_torsion_force = openmm.PeriodicTorsionForce()
-    openmm_sys.addForce(proper_torsion_force)
+    """Process the Propers section of an OpenFF System into corresponding
+    forces within an openmm.PeriodicTorsionForce"""
+    torsion_force = openmm.PeriodicTorsionForce()
+    openmm_sys.addForce(torsion_force)
 
-    torsion_handler = openff_sys.handlers["ProperTorsions"]
-    idivf = torsion_handler.idivf
+    try:
+        proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
+    except KeyError:
+        return
 
-    for torsion_key, key in torsion_handler.slot_map.items():
+    for torsion_key, key in proper_torsion_handler.slot_map.items():
         torsion, idx = torsion_key.split("_")
         indices = eval(torsion)
-        params = torsion_handler.potentials[key].parameters
+        params = proper_torsion_handler.potentials[key].parameters
 
-        k = params["k"] * kcal_mol / kj_mol
+        k = params["k"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
         periodicity = int(params["periodicity"])
-        phase = params["phase"] * unit.degree
-
-        proper_torsion_force.addTorsion(
+        phase = params["phase"].to(off_unit.degree).magnitude
+        phase = phase * unit.degree / unit.radian
+        idivf = int(params["idivf"])
+        torsion_force.addTorsion(
             indices[0],
             indices[1],
             indices[2],
@@ -103,10 +133,50 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
 
 
 def _process_improper_torsion_forces(openff_sys, openmm_sys):
-    raise NotImplementedError
+    """Process the Impropers section of an OpenFF System into corresponding
+    forces within an openmm.PeriodicTorsionForce"""
+    if "ImproperTorsions" not in openff_sys.handlers.keys():
+        return
+
+    for force in openmm_sys.getForces():
+        if type(force) == openmm.PeriodicTorsionForce:
+            torsion_force = force
+            break
+    else:
+        # TODO: Support case of no propers but some impropers?
+        raise Exception
+
+    improper_torsion_handler = openff_sys.handlers["ImproperTorsions"]
+
+    for torsion_key, key in improper_torsion_handler.slot_map.items():
+        torsion, idx = torsion_key.split("_")
+        indices = eval(torsion)
+        params = improper_torsion_handler.potentials[key].parameters
+
+        k = params["k"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        periodicity = int(params["periodicity"])
+        phase = params["phase"].to(off_unit.degree).magnitude
+        phase = phase * unit.degree / unit.radian
+        idivf = int(params["idivf"])
+
+        other_atoms = [indices[0], indices[2], indices[3]]
+        for p in [
+            (other_atoms[i], other_atoms[j], other_atoms[k])
+            for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]
+        ]:
+            torsion_force.addTorsion(
+                indices[1],
+                p[0],
+                p[1],
+                p[2],
+                periodicity,
+                phase,
+                k / idivf,
+            )
 
 
 def _process_nonbonded_forces(openff_sys, openmm_sys):
+    """Process the vdW and Electrostatics sections of an OpenFF System into a corresponding openmm.NonbondedForce"""
     # Store the pairings, not just the supported methods for each
     supported_cutoff_methods = [["cutoff", "pme"]]
 
@@ -128,22 +198,23 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
     for _ in openff_sys.topology.topology_particles:
         non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
-    if vdw_handler.method == "cutoff":
-        if openff_sys.box is None:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-        else:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
-            non_bonded_force.setUseDispersionCorrection(True)
-            non_bonded_force.setCutoffDistance(vdw_cutoff)
+    if openff_sys.box is None:
+        non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+    else:
+        non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
+        non_bonded_force.setUseDispersionCorrection(True)
+        non_bonded_force.setCutoffDistance(vdw_cutoff)
 
     for vdw_atom, vdw_smirks in vdw_handler.slot_map.items():
         atom_idx = eval(vdw_atom)[0]
 
         partial_charge = electrostatics_handler.charge_map[vdw_atom]
+        partial_charge = (partial_charge / off_unit.elementary_charge).magnitude
         vdw_potential = vdw_handler.potentials[vdw_smirks]
+        # these are floats, implicitly angstrom and kcal/mol
         sigma, epsilon = _lj_params_from_potential(vdw_potential)
-        sigma = sigma * unit.angstrom
-        epsilon = epsilon * kcal_mol
+        sigma = sigma * unit.angstrom / unit.nanometer
+        epsilon = epsilon * unit.kilocalorie_per_mole / unit.kilojoule_per_mole
 
         non_bonded_force.setParticleParameters(atom_idx, partial_charge, sigma, epsilon)
 
@@ -168,9 +239,18 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
 
             bond_particle_indices.append((top_index_1, top_index_2))
 
-    # OpenMM thinks these exceptions were already added
     non_bonded_force.createExceptionsFromBonds(
         bond_particle_indices,
         electrostatics_handler.scale_14,
         vdw_handler.scale_14,
     )
+
+    non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
+    non_bonded_force.setCutoffDistance(9.0 * unit.angstrom)
+    non_bonded_force.setEwaldErrorTolerance(1.0e-4)
+
+    # It's not clear why this needs to happen here, but it cannot be set above
+    # and satisfy vdW/Electrostatics methods Cutoff and PME; see create_force
+    # and postprocess_system methods in toolkit
+    if openff_sys.box is None:
+        non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)

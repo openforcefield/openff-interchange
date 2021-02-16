@@ -1,16 +1,16 @@
+import functools
 import pathlib
 from collections import OrderedDict
 from typing import List
 
-import sympy
-from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.utils import unit_to_string
+from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.toolkit.utils import unit_to_string
 from pkg_resources import resource_filename
 from simtk import openmm
 from simtk import unit as omm_unit
 
 from openff.system import unit
-from openff.system.types import UnitArray
+from openff.system.exceptions import MissingDependencyError
 
 
 def pint_to_simtk(quantity):
@@ -33,22 +33,14 @@ def simtk_to_pint(simtk_quantity):
     target_unit = unit_to_string(openmm_unit)
     target_unit = unit.Unit(target_unit)
 
-    return UnitArray(openmm_value, units=target_unit)
+    return openmm_value * target_unit
 
 
 def unwrap_list_of_pint_quantities(quantities):
-    assert set(val.units for val in quantities) == {quantities[0].units}
+    assert {val.units for val in quantities} == {quantities[0].units}
     parsed_unit = quantities[0].units
     vals = [val.magnitude for val in quantities]
-    return UnitArray(vals, units=parsed_unit)
-
-
-def compare_sympy_expr(expr1, expr2):
-    """Checks if two expression-likes are equivalent."""
-    expr1 = sympy.sympify(expr1)
-    expr2 = sympy.sympify(expr2)
-
-    return sympy.simplify(expr1 - expr2) == 0
+    return vals * parsed_unit
 
 
 def get_test_file_path(test_file):
@@ -100,22 +92,21 @@ def compare_forcefields(ff1, ff2):
     assert ff1 == ff2
 
 
-def eval_expr(pot, ref):
-    """Hack to evaluate a potential expression given that it is fully specified"""
-    variables = list(pot.independent_variables) + list(pot.parameters.keys())
-    variables = [sympy.symbols(var) for var in variables]
-    values = [ref] + list(pot.parameters.values())
+def requires_package(package_name):
+    def inner_decorator(function):
+        @functools.wraps(function)
+        def wrapper(*args, **kwargs):
+            import importlib
 
-    for var in variables:
-        sympy.symbols(var)
+            try:
+                importlib.import_module(package_name)
+            except ImportError:
+                raise MissingDependencyError(package_name)
+            except Exception as e:
+                raise e
 
-    return sympy.sympify(pot.expression).subs(dict(zip(variables, values)))
+            return function(*args, **kwargs)
 
+        return wrapper
 
-try:
-    import jax
-
-    jax.__version__
-    jax_available = True
-except ImportError:
-    jax_available = False
+    return inner_decorator

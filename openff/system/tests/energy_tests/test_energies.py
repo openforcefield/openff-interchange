@@ -1,0 +1,79 @@
+import mbuild as mb
+import numpy as np
+from openff.toolkit.topology import Molecule, Topology
+
+from openff.system import unit
+from openff.system.stubs import ForceField
+from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+from openff.system.tests.energy_tests.openmm import (
+    _get_openmm_energies,
+    get_openmm_energies,
+)
+from openff.system.tests.energy_tests.utils import (
+    compare_gromacs_openmm,
+    compare_openmm,
+)
+
+
+def test_energies():
+    n_mols = 50
+    mol = Molecule.from_smiles("C")
+    mol.generate_conformers(n_conformers=1)
+    mol.name = "FOO"
+    top = Topology.from_molecules(n_mols * [mol])
+
+    parsley = ForceField("openff_unconstrained-1.0.0.offxml")
+
+    off_sys = parsley.create_openff_system(top)
+
+    box = [4, 4, 4] * np.eye(3)
+    off_sys.box = box
+
+    mol.to_file("out.xyz", file_format="xyz")
+    compound = mb.load("out.xyz")
+    packed_box = mb.fill_box(
+        compound=compound,
+        n_compounds=[n_mols],
+        box=mb.Box(box.diagonal()),
+    )
+
+    positions = packed_box.xyz * unit.nanometer
+    off_sys.positions = positions
+
+    gmx_energies, _ = get_gromacs_energies(off_sys)
+    omm_energies = get_openmm_energies(off_sys, round_positions=3)
+
+    compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)
+
+
+def test_water_dimer():
+    from openff.system.utils import get_test_file_path
+
+    tip3p = ForceField(get_test_file_path("tip3p.offxml"))
+    water = Molecule.from_smiles("O")
+    top = Topology.from_molecules(2 * [water])
+
+    from simtk import openmm
+    from simtk import unit as omm_unit
+
+    pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
+
+    positions = np.array(pdbfile.positions / omm_unit.nanometer) * unit.nanometer
+
+    openff_sys = tip3p.create_openff_system(top)
+    openff_sys.positions = positions
+    openff_sys.box = [10, 10, 10] * unit.nanometer
+
+    omm_energies = get_openmm_energies(openff_sys)
+
+    toolkit_energies = _get_openmm_energies(
+        tip3p.create_openmm_system(top),
+        openff_sys.box,
+        openff_sys.positions,
+    )
+
+    compare_openmm(omm_energies, toolkit_energies)
+
+    # TODO: Fix GROMACS energies by handling SETTLE constraints
+    # gmx_energies, _ = get_gromacs_energies(openff_sys)
+    # compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)

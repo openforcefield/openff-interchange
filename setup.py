@@ -21,7 +21,7 @@ except:
 
 setup(
     # Self-descriptive entries which should always be present
-    name='system',
+    name='openff-system',
     author='Open Force Field Initiative',
     author_email='matt.thompson@openforcefield.org',
     description=short_description[0],

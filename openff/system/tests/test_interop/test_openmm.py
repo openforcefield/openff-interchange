@@ -1,80 +1,57 @@
 import numpy as np
 import pytest
-from openforcefield.topology import Molecule, Topology
-from simtk import openmm, unit
+from openff.toolkit.tests.utils import compare_system_energies
+from openff.toolkit.topology import Molecule, Topology
+from simtk import unit
 
 from openff.system.stubs import ForceField
+from openff.system.utils import get_test_file_path
 
 
-@pytest.mark.parametrize("mol,n_mols", [("C", 1), ("CC", 1), ("C", 2), ("CC", 2)])
+@pytest.mark.parametrize("n_mols", [1, 2])
+@pytest.mark.parametrize(
+    "mol",
+    [
+        "C",
+        "CC",  # Adds a proper torsion term(s)
+        "OC=O",  # Simplest molecule with a multi-term torsion
+        "CCOC",  # This hits t86, which has a non-1.0 idivf
+        "C1COC(=O)O1",  # This adds an improper, i2
+    ],
+)
 def test_from_openmm_single_mols(mol, n_mols):
     """
     Test that ForceField.create_openmm_system and System.to_openmm produce
     objects with similar energies
 
     TODO: Tighten tolerances
-
+    TODO: Test periodic and non-periodic
     """
 
-    parsley = ForceField("openff_unconstrained-1.0.0.offxml")
+    parsley = ForceField(get_test_file_path("parsley.offxml"))
 
     mol = Molecule.from_smiles(mol)
     mol.generate_conformers(n_conformers=1)
     top = Topology.from_molecules(n_mols * [mol])
-    top.box_vectors = np.asarray([4, 4, 4]) * unit.nanometer
+    mol.conformers[0] -= np.min(mol.conformers) * unit.angstrom
+
+    top.box_vectors = np.eye(3) * np.asarray([10, 10, 10]) * unit.nanometer
 
     if n_mols == 1:
         positions = mol.conformers[0]
     elif n_mols == 2:
         positions = np.vstack(
-            [mol.conformers[0], mol.conformers[0] + 2 * unit.nanometer]
+            [mol.conformers[0], mol.conformers[0] + 3 * unit.nanometer]
         )
+        positions = positions * unit.angstrom
 
-    toolkit_energy = _get_energy_from_openmm_system(
-        openmm_sys=parsley.create_openmm_system(top),
-        openmm_top=top.to_openmm(),
+    toolkit_system = parsley.create_openmm_system(top)
+
+    native_system = parsley.create_openff_system(topology=top).to_openmm()
+
+    compare_system_energies(
+        system1=toolkit_system,
+        system2=native_system,
         positions=positions,
+        box_vectors=top.box_vectors,
     )
-
-    system_energy = _get_energy_from_openmm_system(
-        openmm_sys=parsley.create_openff_system(top).to_openmm(),
-        openmm_top=top.to_openmm(),
-        positions=positions,
-    )
-
-    np.testing.assert_allclose(
-        toolkit_energy / unit.kilojoule_per_mole,
-        system_energy / unit.kilojoule_per_mole,
-        rtol=1e-4,
-        atol=1e-4,
-    )
-
-
-def test_unsupported_handler():
-    """Test raising NotImplementedError when converting a system with data
-    not currently supported in System.to_openmm()"""
-
-    parsley = ForceField("openff_unconstrained-1.0.0.offxml")
-
-    mol = Molecule.from_smiles("Cc1ccccc1")
-    mol.generate_conformers(n_conformers=1)
-    top = Topology.from_molecules(mol)
-
-    with pytest.raises(NotImplementedError):
-        # TODO: Catch this at openff_sys.to_openmm, not upstream
-        parsley.create_openff_system(top)
-
-
-def _get_energy_from_openmm_system(openmm_sys, openmm_top, positions):
-    integrator = openmm.VerletIntegrator(1 * unit.femtoseconds)
-
-    platform = openmm.Platform.getPlatformByName("Reference")
-    simulation = openmm.app.Simulation(openmm_top, openmm_sys, integrator, platform)
-    simulation.context.setPositions(positions)
-
-    state = simulation.context.getState(getEnergy=True)
-    energy = state.getPotentialEnergy()
-
-    del integrator, platform, simulation, state
-
-    return energy

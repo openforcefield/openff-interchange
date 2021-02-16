@@ -1,24 +1,24 @@
 name: test
 channels:
   - conda-forge
-  - omnia
-
+  - bioconda
 dependencies:
     # Base depends
   - python
   - pip
   - pydantic
   - pint
-  - sympy
-  - qcelemental
-  - jax  # TODO: Make this optional?
-
+  - openmm
+  - openff-toolkit
+  - jax
+  - ele
     # Testing
   - pytest
   - pytest-cov
   - codecov
-  - sympy
-  - pint
-  - openmm >= 7.5
-  - openforcefield >=0.7.2
   - nbval
+  - mypy
+  - unyt
+  - intermol
+  - gromacs
+  - mbuild

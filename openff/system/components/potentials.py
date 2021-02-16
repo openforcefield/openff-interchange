@@ -1,22 +1,31 @@
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Set, Union
 
-import jax.numpy as jnp
-from pydantic import BaseModel, validator
+from openff.toolkit.topology.topology import Topology
+from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
+from pydantic import validator
 
 from openff.system.exceptions import InvalidExpressionError
+from openff.system.types import ArrayQuantity, DefaultModel, FloatQuantity
+from openff.system.utils import requires_package
 
 
-class Potential(BaseModel):
+class Potential(DefaultModel):
     """Base class for storing applied parameters"""
 
-    parameters: Dict[str, Optional[Union[List, float]]] = dict()
+    # ... Dict[str, FloatQuantity] = dict()
+    parameters: Dict = dict()
 
-    class Config:
-        arbitrary_types_allowed = True
-        validate_assignment = True
+    @validator("parameters")
+    def validate_parameters(cls, v):
+        for key, val in v.items():
+            if isinstance(val, list):
+                v[key] = ArrayQuantity.validate_type(val)
+            else:
+                v[key] = FloatQuantity.validate_type(val)
+        return v
 
 
-class PotentialHandler(BaseModel):
+class PotentialHandler(DefaultModel):
     """Base class for storing parametrized force field data"""
 
     name: str
@@ -34,25 +43,31 @@ class PotentialHandler(BaseModel):
         else:
             raise InvalidExpressionError
 
-    class Config:
-        arbitrary_types_allowed = True
-        validate_assignment = True
-
-    def store_matches(self):
+    def store_matches(
+        self,
+        parameter_handler: ParameterHandler,
+        topology: Topology,
+    ) -> None:
         raise NotImplementedError
 
-    def store_potentials(self):
+    def store_potentials(self, parameter_handler: ParameterHandler) -> None:
         raise NotImplementedError
 
+    @requires_package("jax")
     def get_force_field_parameters(self):
+        import jax
+
         params: list = list()
         for potential in self.potentials.values():
-            row = [val for val in potential.parameters.values()]  # val.magnitude
+            row = [val.magnitude for val in potential.parameters.values()]
             params.append(row)
 
-        return jnp.array(params)
+        return jax.numpy.array(params)
 
+    @requires_package("jax")
     def get_system_parameters(self, p=None):
+        import jax
+
         if p is None:
             p = self.get_force_field_parameters()
         mapping = self.get_mapping()
@@ -61,7 +76,7 @@ class PotentialHandler(BaseModel):
         for key in self.slot_map.keys():
             q.append(p[mapping[self.slot_map[key]]])
 
-        return jnp.array(q)
+        return jax.numpy.array(q)
 
     def get_mapping(self) -> Dict:
         mapping: Dict = dict()

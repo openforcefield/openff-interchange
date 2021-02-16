@@ -1,0 +1,17 @@
+name: openff-system-docs
+channels:
+  - conda-forge
+dependencies:
+  # Base depends
+  - python
+  - pip
+  - pydantic
+  - pint
+  - openmm
+  - openff-toolkit
+  - jax
+  - ele
+  # readthedocs dependencies
+  - myst-parser
+  - numpydoc
+  - sphinx_rtd_theme

@@ -1,5 +1,8 @@
-from openforcefield.topology import Molecule, Topology
+import pytest
+from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.utils import get_data_file_path
 
+from openff.system.exceptions import SMIRNOFFHandlersNotImplementedError
 from openff.system.tests.base_test import BaseTest
 
 
@@ -19,6 +22,16 @@ class TestStubs(BaseTest):
         assert "ProperTorsions" in out.handlers.keys()
         assert "vdW" in out.handlers.keys()
 
+    def test_unsupported_handler(self):
+        from openff.system.stubs import ForceField
+
+        gbsa_ff = ForceField(get_data_file_path("test_forcefields/GBSA_HCT-1.0.offxml"))
+
+        with pytest.raises(
+            SMIRNOFFHandlersNotImplementedError, match=r"SMIRNOFF parameters not.*GBSA"
+        ):
+            gbsa_ff.create_openff_system(topology=None)
+
 
 class TestConstraints(BaseTest):
     """Test the handling of SMIRNOFF constraints"""
@@ -37,7 +50,10 @@ class TestConstraints(BaseTest):
         assert "(0, 2)" in constraints.slot_map.keys()  # C-H bond
         assert len(constraints.slot_map.keys()) == 6  # number of C-H bonds
         assert len({constraints.slot_map.values()}) == 1  # always True
-        assert constraints.constraints[constraints.slot_map["(0, 2)"]] is True
+        assert (
+            "distance"
+            in constraints.constraints[constraints.slot_map["(0, 2)"]].parameters
+        )
 
     def test_force_field_no_constraints(self, parsley_unconstrained):
         """Test that a force field _without_ a Constraints tag does not add a
@@ -81,8 +97,28 @@ class TestConstraints(BaseTest):
             topology=top,
         )
 
+        from openff.system.components.smirnoff import SMIRNOFFBondHandler
+
+        bond_handler = SMIRNOFFBondHandler()
+        bond_handler.store_matches(parameter_handler=parsley["Bonds"], topology=top)
+        bond_handler.store_potentials(parameter_handler=parsley["Bonds"])
+
         constrained.handlers["Constraints"].store_constraints(
             parameter_handler=parsley["Constraints"],
+            bond_handler=bond_handler,
         )
 
         assert len(constrained.handlers["Constraints"].slot_map.keys()) == 7
+
+
+class TestElectrostatics(BaseTest):
+    def test_library_charge_assignment(self):
+        from openff.system.stubs import ForceField
+
+        forcefield = ForceField("openff-1.3.0.offxml")
+
+        top = Topology.from_molecules(
+            [Molecule.from_smiles(smi) for smi in ["[Na+]", "[Cl-]"]]
+        )
+
+        forcefield.create_openff_system(top)
