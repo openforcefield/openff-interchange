@@ -91,8 +91,8 @@ def compare_energies(ener1, ener2, atol=1e-8):
             continue
         try:
             assert np.isclose(
-                ener1[key] / ener1[key].omm_unit,
-                ener2[key] / ener2[key].omm_unit,
+                ener1[key] / ener1[key].unit,
+                ener2[key] / ener2[key].unit,
                 atol=atol,
             )
         except AssertionError:
