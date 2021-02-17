@@ -1,7 +1,9 @@
 import numpy as np
 from openff.toolkit.topology import Molecule, Topology
-from simtk import unit
+from simtk import openmm
+from simtk import unit as omm_unit
 
+from openff.system.components.system import System
 from openff.system.exceptions import InterMolEnergyComparisonError
 
 
@@ -30,7 +32,7 @@ def top_from_smiles(
     top = Topology.from_molecules(n_molecules * [mol])
     # Add dummy box vectors
     # TODO: Revisit if/after Topology.is_periodic
-    top.box_vectors = np.eye(3) * 10 * unit.nanometer
+    top.box_vectors = np.eye(3) * 10 * omm_unit.nanometer
     return top
 
 
@@ -57,8 +59,8 @@ def compare_energies(ener1, ener2, atol=1e-8):
             continue
         try:
             assert np.isclose(
-                ener1[key] / ener1[key].unit,
-                ener2[key] / ener2[key].unit,
+                ener1[key] / ener1[key].omm_unit,
+                ener2[key] / ener2[key].omm_unit,
                 atol=atol,
             )
         except AssertionError:
@@ -66,3 +68,25 @@ def compare_energies(ener1, ener2, atol=1e-8):
 
     if len(failed_runs) > 0:
         raise InterMolEnergyComparisonError(failed_runs)
+
+
+def _get_charges_from_openmm_system(omm_sys: openmm.System):
+    for force in omm_sys.getForces():
+        if type(force) == openmm.NonbondedForce:
+            break
+    for idx in range(omm_sys.getNumParticles()):
+        param = force.getParticleParameters(idx)
+        yield param[0] / omm_unit.elementary_charge
+
+
+def _get_charges_from_openff_system(off_sys: System):
+    charges_ = [*off_sys.handlers["Electrostatics"].charges.values()]  # type: ignore[attr-defined]
+    charges = np.asarray([charge.magnitude for charge in charges_])
+    return charges
+
+
+def compare_charges_omm_off(omm_sys: openmm.System, off_sys: System) -> None:
+    omm_charges = np.asarray([*_get_charges_from_openmm_system(omm_sys)])
+    off_charges = _get_charges_from_openff_system(off_sys)
+
+    np.testing.assert_equal(omm_charges, off_charges)
