@@ -1,3 +1,4 @@
+import functools
 import pathlib
 from collections import OrderedDict
 from typing import List
@@ -9,6 +10,7 @@ from simtk import openmm
 from simtk import unit as omm_unit
 
 from openff.system import unit
+from openff.system.exceptions import MissingDependencyError
 
 
 def pint_to_simtk(quantity):
@@ -35,7 +37,7 @@ def simtk_to_pint(simtk_quantity):
 
 
 def unwrap_list_of_pint_quantities(quantities):
-    assert set(val.units for val in quantities) == {quantities[0].units}
+    assert {val.units for val in quantities} == {quantities[0].units}
     parsed_unit = quantities[0].units
     vals = [val.magnitude for val in quantities]
     return vals * parsed_unit
@@ -90,10 +92,21 @@ def compare_forcefields(ff1, ff2):
     assert ff1 == ff2
 
 
-try:
-    import jax
+def requires_package(package_name):
+    def inner_decorator(function):
+        @functools.wraps(function)
+        def wrapper(*args, **kwargs):
+            import importlib
 
-    jax.__version__
-    jax_available = True
-except ImportError:
-    jax_available = False
+            try:
+                importlib.import_module(package_name)
+            except ImportError:
+                raise MissingDependencyError(package_name)
+            except Exception as e:
+                raise e
+
+            return function(*args, **kwargs)
+
+        return wrapper
+
+    return inner_decorator

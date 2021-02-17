@@ -74,8 +74,8 @@ def test_internal_gromacs_writers(mol):
 
 def compare_gro_files(file1: str, file2: str):
     """Helper function to compare the contents of two GRO files"""
-    with open(file1, "r") as f1:
-        with open(file2, "r") as f2:
+    with open(file1) as f1:
+        with open(file2) as f2:
             # Ignore first two lines and last line
             for line1, line2 in zip(f1.readlines()[2:-1], f2.readlines()[2:-1]):
                 # Ignore atom type column

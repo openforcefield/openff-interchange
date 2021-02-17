@@ -1,10 +1,42 @@
+import importlib
+
 import numpy as np
+import pytest
 from openff.toolkit.topology import Molecule, Topology
 from simtk import openmm
 from simtk import unit as omm_unit
 
 from openff.system.components.system import System
 from openff.system.exceptions import InterMolEnergyComparisonError
+
+
+def requires_pkg(pkg_name, reason=None):
+    """
+    Helper function to generate a skipif decorator for any package.
+
+    Parameters
+    ----------
+    pkg_name : str
+        The name of the package that is required for a test(s)
+    reason : str, optional
+        Explanation of why the skipped it to be tested
+
+    Returns
+    -------
+    requires_pkg : _pytest.mark.structures.MarkDecorator
+        A pytest decorator that will skip tests if the package is not available
+    """
+    if not reason:
+        reason = f"Package {pkg_name} is required, but was not found."
+    try:
+        importlib.import_module(pkg_name)
+        mark = pytest.mark.skipif(
+            False,
+            reason="blank decorator, should never be printed",
+        )
+    except ImportError:
+        mark = pytest.mark.skip(reason=reason)
+    return mark
 
 
 def top_from_smiles(
