@@ -4,7 +4,7 @@ from openff.toolkit.utils import get_data_file_path
 
 from openff.system.exceptions import SMIRNOFFHandlersNotImplementedError
 from openff.system.tests.base_test import BaseTest
-from openff.system.tests.utils import compare_charges_omm_off
+from openff.system.tests.utils import compare_charges_omm_off, requires_pkg
 
 
 class TestStubs(BaseTest):
@@ -127,6 +127,7 @@ class TestChargeAssignment(BaseTest):
 
         compare_charges_omm_off(reference, new)
 
+    @requires_pkg("openff.recharge")
     def test_charge_increment_assignment(self, parsley):
         from openff.recharge.charges.bcc import original_am1bcc_corrections
         from openff.recharge.smirnoff import to_smirnoff

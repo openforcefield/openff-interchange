@@ -36,6 +36,12 @@ jobs:
         environment-file: devtools/conda-envs/test_env.yaml
         auto-activate-base: false
 
+    - name: Install development version of OpenFF Recharge
+      shell: bash -l {0}
+      run: |
+        mamba install --only-deps openff-recharge -c conda-forge -c omnia
+        python -m pip install git+https://github.com/openforcefield/openff-recharge.git@target-c-f-packages
+
     - name: Additional info about the build
       shell: bash
       run: |
