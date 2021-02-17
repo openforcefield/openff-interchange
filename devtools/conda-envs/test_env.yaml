@@ -22,3 +22,4 @@ dependencies:
   - intermol
   - gromacs
   - mbuild
+  - foyer
