@@ -451,8 +451,14 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
 
         self.cache[partial_charge_method] = charges
 
-    def apply_charge_increments(self):
-        pass
+    def apply_charge_increments(
+        self, charge_increments: SMIRNOFFChargeIncrementHandler
+    ):
+        for idx, key in charge_increments.slot_map.items():
+            ids = eval(idx)
+            charges = charge_increments.potentials[key].parameters["charge_increments"]
+            for i, id_ in enumerate(ids):
+                self.charges[str((id_,))] += charges[i]
 
     def apply_library_charges(self, library_charges: SMIRNOFFLibraryChargeHandler):
         charge_assignments = dict()
@@ -464,11 +470,3 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
         for top_idx, charge in charge_assignments.items():
             key = str((top_idx,))
             self.charges[key] = charge
-
-
-SUPPORTED_HANDLER_MAPPING = {
-    "Constriants": SMIRNOFFConstraintHandler,
-    "Bonds": SMIRNOFFBondHandler,
-    "Angles": SMIRNOFFAngleHandler,
-    "vdW": SMIRNOFFvdWHandler,
-}

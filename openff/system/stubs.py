@@ -17,6 +17,7 @@ from openff.system.components.smirnoff import (
     ElectrostaticsMetaHandler,
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
+    SMIRNOFFChargeIncrementHandler,
     SMIRNOFFConstraintHandler,
     SMIRNOFFImproperTorsionHandler,
     SMIRNOFFLibraryChargeHandler,
@@ -45,6 +46,7 @@ def to_openff_system(
             "Electrostatics",
             "ToolkitAM1BCC",
             "LibraryCharges",
+            "ChargeIncrementModel",
             "Constraints",
         }:
             continue
@@ -80,10 +82,25 @@ def to_openff_system(
             library_charges.store_matches(self["LibraryCharges"], topology)
             library_charges.store_potentials(self["LibraryCharges"])
             sys_out.handlers.update({"LibraryCharges": electrostatics})  # type: ignore[dict-item]
+
             electrostatics.apply_library_charges(library_charges)
 
         if "ChargeIncrementModel" in self.registered_parameter_handlers:
-            raise NotImplementedError
+            charge_increments = SMIRNOFFChargeIncrementHandler()
+            charge_increments.store_matches(self["ChargeIncrementModel"], topology)
+            charge_increments.store_potentials(self["ChargeIncrementModel"])
+            sys_out.handlers.update({"LibraryCharges": electrostatics})  # type: ignore[dict-item]
+
+            if charge_increments.partial_charge_method not in electrostatics.cache:
+                electrostatics.cache_charges(
+                    partial_charge_method=charge_increments.partial_charge_method,
+                    topology=topology,
+                )
+            electrostatics.charges = electrostatics.cache[
+                charge_increments.partial_charge_method
+            ]
+
+            electrostatics.apply_charge_increments(charge_increments)
 
         sys_out.handlers.update({"Electrostatics": electrostatics})  # type: ignore[dict-item]
     # if "Electrostatics" not in self.registered_parameter_handlers:
@@ -220,6 +237,7 @@ def _check_supported_handlers(forcefield: ForceField):
         "vdW",
         "Electrostatics",
         "LibraryCharges",
+        "ChargeIncrementModel",
     }
 
     unsupported = list()
