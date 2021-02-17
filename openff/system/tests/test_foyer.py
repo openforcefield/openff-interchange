@@ -9,8 +9,8 @@ class TestFoyer(BaseTest):
 
     @pytest.fixture(scope='session')
     def oplsaa_system_ethane(self):
-        import foyer
-        from foyer.tests.utils import get_fn
+        import foyer  # type: ignore
+        from foyer.tests.utils import get_fn  # type: ignore
         oplsaa = foyer.Forcefield(name='oplsaa')
         pmd_ethane = pmd.load_file(get_fn('ethane.mol2'), structure=True)
         system = from_foyer(

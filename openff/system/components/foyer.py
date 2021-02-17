@@ -4,7 +4,7 @@ from typing import Dict, Set, Any, Tuple
 
 import parmed as pmd
 
-from foyer import Forcefield
+from foyer import Forcefield  # type: ignore
 
 from openff.toolkit.topology import Topology
 from openff.system import unit as u
@@ -57,7 +57,7 @@ class FoyerAtomTypes(PotentialHandler):
     name: str = "Atoms"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     independent_variables: Set[str] = {"r"}
-    slot_map: Dict[int, str] = dict()
+    slot_map: Dict[int, str] = dict()  # type: ignore
     potentials: Dict[str, Potential] = dict()
 
     def store_matches(
@@ -75,7 +75,7 @@ class FoyerAtomTypes(PotentialHandler):
             self.slot_map[key] = val["atomtype"]
 
     def store_potentials(self, forcefield) -> None:
-        from simtk.openmm.app.forcefield import NonbondedGenerator
+        from simtk.openmm.app.forcefield import NonbondedGenerator  # type: ignore
         non_bonded_forces_gen = _get_openmm_force_gen(forcefield, NonbondedGenerator)
 
         if non_bonded_forces_gen:
@@ -96,7 +96,7 @@ class FoyerAtomTypes(PotentialHandler):
                         'in the forcefield'
                     )
 
-                self.potentials[atom_idx] = Potential(
+                self.potentials[self.slot_map[atom_idx]] = Potential(
                     parameters=params
                 )
         else:
@@ -110,8 +110,8 @@ class FoyerBondHandler(PotentialHandler):
     name: str = "Bonds"
     expression: str = "1/2 * k * (r - length) ** 2"
     independent_variables: Set[str] = {"r"}
-    slot_map: Dict[Tuple[int, int], Tuple[str, str]] = dict()
-    potentials: Dict[Tuple[int, int], Potential] = dict()
+    slot_map: Dict[Tuple[int, int], Tuple[str, str]] = dict()  # type: ignore
+    potentials: Dict[Tuple[int, int], Potential] = dict()  # type: ignore
 
     def store_matches(self,
                       structure: pmd.Structure,
@@ -124,7 +124,7 @@ class FoyerBondHandler(PotentialHandler):
                 (atom_slots[atom_1_idx], atom_slots[atom_2_idx])
 
     def store_potentials(self, forcefield: Forcefield) -> None:
-        from simtk.openmm.app.forcefield import HarmonicBondGenerator
+        from simtk.openmm.app.forcefield import HarmonicBondGenerator  # type: ignore
         harmonic_bond_forces_gen = _get_openmm_force_gen(forcefield, HarmonicBondGenerator)
         bonds_for_atom_types = harmonic_bond_forces_gen.bondsForAtomType
 
