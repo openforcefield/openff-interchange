@@ -19,6 +19,7 @@ from openff.system.components.smirnoff import (
     SMIRNOFFBondHandler,
     SMIRNOFFConstraintHandler,
     SMIRNOFFImproperTorsionHandler,
+    SMIRNOFFLibraryChargeHandler,
     SMIRNOFFProperTorsionHandler,
     SMIRNOFFvdWHandler,
 )
@@ -74,13 +75,17 @@ def to_openff_system(
             )
             electrostatics.charges = electrostatics.cache["am1bcc"]
 
-        sys_out.handlers.update({"Electrostatics": electrostatics})  # type: ignore[dict-item]
-
         if "LibraryCharges" in self.registered_parameter_handlers:
-            raise NotImplementedError
+            library_charges = SMIRNOFFLibraryChargeHandler()
+            library_charges.store_matches(self["LibraryCharges"], topology)
+            library_charges.store_potentials(self["LibraryCharges"])
+            sys_out.handlers.update({"LibraryCharges": electrostatics})  # type: ignore[dict-item]
+            electrostatics.apply_library_charges(library_charges)
+
         if "ChargeIncrementModel" in self.registered_parameter_handlers:
             raise NotImplementedError
 
+        sys_out.handlers.update({"Electrostatics": electrostatics})  # type: ignore[dict-item]
     # if "Electrostatics" not in self.registered_parameter_handlers:
     #     if "LibraryCharges" in self.registered_parameter_handlers:
     #         library_charge_handler = SMIRNOFFLibraryChargeHandler()

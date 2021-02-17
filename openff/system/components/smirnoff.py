@@ -360,40 +360,6 @@ class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
             self.charge_map[str((i,))] = charge * unit.elementary_charge
 
 
-class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
-
-    name: str = "Electrostatics"
-    charges: Dict = dict()  # type
-    cache: Dict = dict()  # Dict[str: Dict[str, FloatQuantity["elementary_charge"]]]
-
-    def cache_charges(self, partial_charge_method: str, topology: Topology):
-
-        charges: Dict[str, FloatQuantity] = dict()
-
-        for ref_mol in topology.reference_molecules:
-            ref_mol.assign_partial_charges(partial_charge_method=partial_charge_method)
-
-            for top_mol in topology._reference_molecule_to_topology_molecules[ref_mol]:
-                for topology_particle in top_mol.atoms:
-                    ref_mol_particle_index = (
-                        topology_particle.atom.molecule_particle_index
-                    )
-                    topology_particle_index = topology_particle.topology_particle_index
-                    partial_charge = ref_mol._partial_charges[ref_mol_particle_index]
-                    partial_charge = partial_charge / omm_unit.elementary_charge
-                    partial_charge = partial_charge * unit.elementary_charge
-                    idx = str((topology_particle_index,))
-                    charges[idx] = partial_charge
-
-        self.cache[partial_charge_method] = charges
-
-    def apply_charge_increments(self):
-        pass
-
-    def apply_library_charges(self):
-        pass
-
-
 class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
     SMIRNOFFElectrostaticsMetadataMixin,
     PotentialHandler,
@@ -456,6 +422,48 @@ class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
                 },
             )
             self.potentials[smirks] = potential
+
+
+class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
+
+    name: str = "Electrostatics"
+    charges: Dict = dict()  # type
+    cache: Dict = dict()  # Dict[str: Dict[str, FloatQuantity["elementary_charge"]]]
+
+    def cache_charges(self, partial_charge_method: str, topology: Topology):
+
+        charges: Dict[str, FloatQuantity] = dict()
+
+        for ref_mol in topology.reference_molecules:
+            ref_mol.assign_partial_charges(partial_charge_method=partial_charge_method)
+
+            for top_mol in topology._reference_molecule_to_topology_molecules[ref_mol]:
+                for topology_particle in top_mol.atoms:
+                    ref_mol_particle_index = (
+                        topology_particle.atom.molecule_particle_index
+                    )
+                    topology_particle_index = topology_particle.topology_particle_index
+                    partial_charge = ref_mol._partial_charges[ref_mol_particle_index]
+                    partial_charge = partial_charge / omm_unit.elementary_charge
+                    partial_charge = partial_charge * unit.elementary_charge
+                    idx = str((topology_particle_index,))
+                    charges[idx] = partial_charge
+
+        self.cache[partial_charge_method] = charges
+
+    def apply_charge_increments(self):
+        pass
+
+    def apply_library_charges(self, library_charges: SMIRNOFFLibraryChargeHandler):
+        charge_assignments = dict()
+        for topology_indices, key in library_charges.slot_map.items():
+            charges = library_charges.potentials[key].parameters["charges"]
+            for charge_idx, top_idx in enumerate(eval(topology_indices)):
+                charge_assignments[top_idx] = charges[charge_idx]
+
+        for top_idx, charge in charge_assignments.items():
+            key = str((top_idx,))
+            self.charges[key] = charge
 
 
 SUPPORTED_HANDLER_MAPPING = {

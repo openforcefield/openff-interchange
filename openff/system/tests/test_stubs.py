@@ -116,6 +116,7 @@ class TestElectrostatics(BaseTest):
         from openff.system.stubs import ForceField
 
         forcefield = ForceField("openff-1.3.0.offxml")
+        forcefield.deregister_parameter_handler("ToolkitAM1BCC")
 
         top = Topology.from_molecules(
             [Molecule.from_smiles(smi) for smi in ["[Na+]", "[Cl-]"]]
