@@ -1,15 +1,13 @@
 from copy import copy
-from typing import Dict, Set, Any, Tuple
-
+from typing import Any, Dict, Set, Tuple
 
 import parmed as pmd
-
 from foyer import Forcefield  # type: ignore
-
 from openff.toolkit.topology import Topology
+
 from openff.system import unit as u
-from openff.system.components.system import System
 from openff.system.components.potentials import Potential, PotentialHandler
+from openff.system.components.system import System
 from openff.system.exceptions import MissingParametersError
 
 

@@ -1,5 +1,5 @@
-import pytest
 import parmed as pmd
+import pytest
 
 from openff.system.components.foyer import from_foyer
 from openff.system.tests.base_test import BaseTest
