@@ -5,6 +5,7 @@ from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
+    ChargeIncrementModelHandler,
     ConstraintHandler,
     ImproperTorsionHandler,
     LibraryChargeHandler,
@@ -15,6 +16,7 @@ from simtk import unit as omm_unit
 
 from openff.system import unit
 from openff.system.components.potentials import Potential, PotentialHandler
+from openff.system.types import DefaultModel, FloatQuantity
 from openff.system.utils import get_partial_charges_from_openmm_system
 
 kcal_mol = omm_unit.kilocalorie_per_mole
@@ -327,12 +329,12 @@ class SMIRNOFFvdWHandler(PotentialHandler):
             self.potentials[smirks] = potential
 
 
-class SMIRNOFFElectrostaticsHandler(PotentialHandler):
+class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
 
     name: str = "Electrostatics"
+    method: str = "PME"
     expression: str = "coul"
     independent_variables: Set[str] = {"r"}
-    method: str = "PME"
     charge_map: Dict[str, float] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.8333333333
@@ -357,12 +359,45 @@ class SMIRNOFFElectrostaticsHandler(PotentialHandler):
         for i, charge in enumerate(partial_charges):
             self.charge_map[str((i,))] = charge * unit.elementary_charge
 
-    class Config:
-        arbitrary_types_allowed = True
-        validate_assignment = True
+
+class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
+
+    name: str = "Electrostatics"
+    charges: Dict = dict()  # type
+    cache: Dict = dict()  # Dict[str: Dict[str, FloatQuantity["elementary_charge"]]]
+
+    def cache_charges(self, partial_charge_method: str, topology: Topology):
+
+        charges: Dict[str, FloatQuantity] = dict()
+
+        for ref_mol in topology.reference_molecules:
+            ref_mol.assign_partial_charges(partial_charge_method=partial_charge_method)
+
+            for top_mol in topology._reference_molecule_to_topology_molecules[ref_mol]:
+                for topology_particle in top_mol.atoms:
+                    ref_mol_particle_index = (
+                        topology_particle.atom.molecule_particle_index
+                    )
+                    topology_particle_index = topology_particle.topology_particle_index
+                    partial_charge = ref_mol._partial_charges[ref_mol_particle_index]
+                    partial_charge = partial_charge / omm_unit.elementary_charge
+                    partial_charge = partial_charge * unit.elementary_charge
+                    idx = str((topology_particle_index,))
+                    charges[idx] = partial_charge
+
+        self.cache[partial_charge_method] = charges
+
+    def apply_charge_increments(self):
+        pass
+
+    def apply_library_charges(self):
+        pass
 
 
-class SMIRNOFFLibraryChargeHandler(SMIRNOFFElectrostaticsHandler):
+class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
+    SMIRNOFFElectrostaticsMetadataMixin,
+    PotentialHandler,
+):
 
     name: str = "LibraryCharges"
     slot_map: Dict[str, str] = dict()
@@ -386,6 +421,39 @@ class SMIRNOFFLibraryChargeHandler(SMIRNOFFElectrostaticsHandler):
             charges_unitless = [val._value for val in parameter_type.charge]
             potential = Potential(
                 parameters={"charges": charges_unitless * unit.elementary_charge},
+            )
+            self.potentials[smirks] = potential
+
+
+class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
+    SMIRNOFFElectrostaticsMetadataMixin,
+    PotentialHandler,
+):
+
+    name: str = "ChargeIncrements"
+    partial_charge_method: str = "AM1-Mulliken"
+    potentials: Dict[str, Potential] = dict()
+
+    def store_matches(
+        self,
+        parameter_handler: ChargeIncrementModelHandler,
+        topology: Topology,
+    ) -> None:
+        matches = parameter_handler.find_matches(topology)
+        for key, val in matches.items():
+            key = str(key)
+            self.slot_map[key] = val.parameter_type.smirks
+
+    def store_potentials(self, parameter_handler: ChargeIncrementModelHandler) -> None:
+        if self.potentials:
+            self.potentials = dict()
+        for smirks in self.slot_map.values():
+            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
+            charges_unitless = [val._value for val in parameter_type.charge_increment]
+            potential = Potential(
+                parameters={
+                    "charge_increments": charges_unitless * unit.elementary_charge
+                },
             )
             self.potentials[smirks] = potential
 

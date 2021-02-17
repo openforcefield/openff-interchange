@@ -14,12 +14,11 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 
 from openff.system.components.smirnoff import (
+    ElectrostaticsMetaHandler,
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
     SMIRNOFFConstraintHandler,
-    SMIRNOFFElectrostaticsHandler,
     SMIRNOFFImproperTorsionHandler,
-    SMIRNOFFLibraryChargeHandler,
     SMIRNOFFProperTorsionHandler,
     SMIRNOFFvdWHandler,
 )
@@ -41,13 +40,13 @@ def to_openff_system(
     _check_supported_handlers(self)
 
     for parameter_handler in self.registered_parameter_handlers:
-        if parameter_handler in {"ToolkitAM1BCC", "LibraryCharges", "Constraints"}:
+        if parameter_handler in {
+            "Electrostatics",
+            "ToolkitAM1BCC",
+            "LibraryCharges",
+            "Constraints",
+        }:
             continue
-        elif parameter_handler == "Electrostatics":
-            potential_handler = create_charges(
-                forcefield=self,
-                topology=topology,
-            )
         else:
             potential_handler = self[parameter_handler].create_potential(
                 topology=topology
@@ -63,16 +62,32 @@ def to_openff_system(
         )
         sys_out.handlers.update({"Constraints": constraint_handler})
 
-    if "Electrostatics" not in self.registered_parameter_handlers:
-        if "LibraryCharges" in self.registered_parameter_handlers:
-            library_charge_handler = SMIRNOFFLibraryChargeHandler()
-            library_charge_handler.store_matches(
-                parameter_handler=self["LibraryCharges"], topology=topology
-            )
-            library_charge_handler.store_potentials(
-                parameter_handler=self["LibraryCharges"]
-            )
-            sys_out.handlers.update({"LibraryCharges": library_charge_handler})
+    electrostatics = ElectrostaticsMetaHandler(
+        scale_13=self["Electrostatics"].scale13,
+        scale_14=self["Electrostatics"].scale14,
+        scale_15=self["Electrostatics"].scale15,
+    )
+    if "ToolkitAM1BCC" in self.registered_parameter_handlers:
+        electrostatics.cache_charges(partial_charge_method="am1bcc", topology=topology)
+        electrostatics.charges = electrostatics.cache["am1bcc"]
+
+    sys_out.handlers.update({"Electrostatics": electrostatics})  # type: ignore[dict-item]
+
+    if "LibraryCharges" in self.registered_parameter_handlers:
+        raise NotImplementedError
+    if "ChargeIncrementModel" in self.registered_parameter_handlers:
+        raise NotImplementedError
+
+    # if "Electrostatics" not in self.registered_parameter_handlers:
+    #     if "LibraryCharges" in self.registered_parameter_handlers:
+    #         library_charge_handler = SMIRNOFFLibraryChargeHandler()
+    #         library_charge_handler.store_matches(
+    #             parameter_handler=self["LibraryCharges"], topology=topology
+    #         )
+    #         library_charge_handler.store_potentials(
+    #             parameter_handler=self["LibraryCharges"]
+    #         )
+    #         sys_out.handlers.update({"LibraryCharges": library_charge_handler})
 
     # `box` argument is only overriden if passed `None` and the input topology
     # has box vectors
@@ -183,19 +198,6 @@ def create_vdw_potential_handler(
     )
     handler.store_matches(parameter_handler=self, topology=topology)
     handler.store_potentials(parameter_handler=self)
-
-    return handler
-
-
-def create_charges(
-    forcefield: ForceField, topology: Topology
-) -> SMIRNOFFElectrostaticsHandler:
-    handler = SMIRNOFFElectrostaticsHandler(
-        scale_13=forcefield["Electrostatics"].scale13,
-        scale_14=forcefield["Electrostatics"].scale14,
-        scale_15=forcefield["Electrostatics"].scale15,
-    )
-    handler.store_charges(forcefield=forcefield, topology=topology)
 
     return handler
 
