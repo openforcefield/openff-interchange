@@ -62,21 +62,24 @@ def to_openff_system(
         )
         sys_out.handlers.update({"Constraints": constraint_handler})
 
-    electrostatics = ElectrostaticsMetaHandler(
-        scale_13=self["Electrostatics"].scale13,
-        scale_14=self["Electrostatics"].scale14,
-        scale_15=self["Electrostatics"].scale15,
-    )
-    if "ToolkitAM1BCC" in self.registered_parameter_handlers:
-        electrostatics.cache_charges(partial_charge_method="am1bcc", topology=topology)
-        electrostatics.charges = electrostatics.cache["am1bcc"]
+    if "Electrostatics" in self.registered_parameter_handlers:
+        electrostatics = ElectrostaticsMetaHandler(
+            scale_13=self["Electrostatics"].scale13,
+            scale_14=self["Electrostatics"].scale14,
+            scale_15=self["Electrostatics"].scale15,
+        )
+        if "ToolkitAM1BCC" in self.registered_parameter_handlers:
+            electrostatics.cache_charges(
+                partial_charge_method="am1bcc", topology=topology
+            )
+            electrostatics.charges = electrostatics.cache["am1bcc"]
 
-    sys_out.handlers.update({"Electrostatics": electrostatics})  # type: ignore[dict-item]
+        sys_out.handlers.update({"Electrostatics": electrostatics})  # type: ignore[dict-item]
 
-    if "LibraryCharges" in self.registered_parameter_handlers:
-        raise NotImplementedError
-    if "ChargeIncrementModel" in self.registered_parameter_handlers:
-        raise NotImplementedError
+        if "LibraryCharges" in self.registered_parameter_handlers:
+            raise NotImplementedError
+        if "ChargeIncrementModel" in self.registered_parameter_handlers:
+            raise NotImplementedError
 
     # if "Electrostatics" not in self.registered_parameter_handlers:
     #     if "LibraryCharges" in self.registered_parameter_handlers:

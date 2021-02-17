@@ -223,7 +223,7 @@ def _write_atoms(
         element = ele.element_from_atomic_number(atom.atomic_number)
         mass = element.mass
         charge = (
-            off_sys.handlers["Electrostatics"].charge_map[str((atom_idx,))].magnitude  # type: ignore
+            off_sys.handlers["Electrostatics"].charges[str((atom_idx,))].magnitude  # type: ignore
         )
         top_file.write(
             "{:6d} {:18s} {:6d} {:8s} {:8s} {:6d} "

@@ -208,7 +208,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
     for vdw_atom, vdw_smirks in vdw_handler.slot_map.items():
         atom_idx = eval(vdw_atom)[0]
 
-        partial_charge = electrostatics_handler.charge_map[vdw_atom]
+        partial_charge = electrostatics_handler.charges[vdw_atom]
         partial_charge = (partial_charge / off_unit.elementary_charge).magnitude
         vdw_potential = vdw_handler.potentials[vdw_smirks]
         # these are floats, implicitly angstrom and kcal/mol
