@@ -89,6 +89,41 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
     )
 
 
+def test_packmol_boxes():
+    # TODO: Isolate a set of systems here instead of using toolkit data
+    from openff.toolkit.utils import get_data_file_path
+    from simtk.openmm.app import PDBFile
+
+    pdb_file_path = get_data_file_path(
+        "systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"
+    )
+    pdbfile = PDBFile(pdb_file_path)
+
+    ethanol = Molecule.from_smiles("CCO")
+    cyclohexane = Molecule.from_smiles("C1CCCCC1")
+    omm_topology = pdbfile.topology
+    off_topology = Topology.from_openmm(
+        omm_topology, unique_molecules=[ethanol, cyclohexane]
+    )
+
+    parsley = ForceField("openff-1.0.0.offxml")
+
+    off_sys = parsley.create_openff_system(off_topology)
+    off_sys.box = [*pdbfile.topology.getPeriodicBoxVectors()]
+    off_sys.positions = [*pdbfile.positions]
+
+    sys_from_toolkit = parsley.create_openmm_system(off_topology)
+
+    energies = get_openmm_energies(off_sys)
+    reference = _get_openmm_energies(
+        sys_from_toolkit,
+        off_sys.box,
+        off_sys.positions,
+    )
+
+    compare_openmm(energies, reference, custom_tolerances={"HarmonicBondForce": 1.0})
+
+
 def test_water_dimer():
     from openff.system.utils import get_test_file_path
 

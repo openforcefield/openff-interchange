@@ -21,7 +21,8 @@ def compare_gromacs_openmm(
         "Nonbonded": 1e-3,
     }
 
-    tolerances.update(custom_tolerances)
+    if custom_tolerances is not None:
+        tolerances.update(custom_tolerances)
 
     if "Bond" in gmx_energies.keys():
         bond_diff = omm_energies["HarmonicBondForce"] - gmx_energies["Bond"]
@@ -62,7 +63,8 @@ def compare_gromacs(
         "Nonbonded": 1e-3,
     }
 
-    tolerances.update(custom_tolerances)
+    if custom_tolerances is not None:
+        tolerances.update(custom_tolerances)
 
     # Probably limited by ParmEd's rounding of bond parameters
     bond_diff = energies1["Bond"] - energies2["Bond"]
@@ -79,12 +81,26 @@ def compare_gromacs(
     # TODO: Fix constraints and other issues around GROMACS non-bonded energies
 
 
-def compare_openmm(energies1: Dict, energies2: Dict):
-    for key, val in energies1.items():
-        if energies1[key]._value == 0.0:
+def compare_openmm(
+    energies1: Dict,
+    energies2: Dict,
+    custom_tolerances: Dict[str, float] = None,
+):
+    tolerances = {
+        "HarmonicBondForce": 1e-3,
+        "HarmonicAngleForce": 1e-3,
+        "PeriodicTorsionForce": 1e-3,
+        "NonbondedForce": 1e-3,
+    }
+
+    if custom_tolerances is not None:
+        tolerances.update(custom_tolerances)
+
+    for key in energies1:
+        if energies1[key]._value == 0.0 or energies2[key]._value == 0.0:
             continue
-        energy_diff = val - energies2[key]
-        if abs(energy_diff / val.unit) > 5e-3:
+        energy_diff = energies1[key] - energies1[key]
+        if abs(energy_diff / energy_diff.unit) > tolerances[key]:
             if key == "NonbondedForce":
                 raise NonbondedEnergyError(energy_diff)
             else:
