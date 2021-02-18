@@ -61,6 +61,12 @@ class InterMolEnergyComparisonError(AssertionError):
     """
 
 
+class NonbondedEnergyError(AssertionError):
+    """
+    Exception for when non-bonded energies computed from different objects differ
+    """
+
+
 class InvalidExpressionError(ValueError):
     """
     Exception for when an expression cannot safely be interpreted
