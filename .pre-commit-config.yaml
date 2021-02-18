@@ -1,0 +1,35 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.4.0
+  hooks:
+  - id: check-yaml
+  - id: end-of-file-fixer
+  - id: trailing-whitespace
+- repo: https://github.com/psf/black
+  rev: 20.8b1
+  hooks:
+  - id: black
+    files: ^openff
+    args: [--check]
+- repo: https://github.com/timothycrosley/isort
+  rev: 5.7.0
+  hooks:
+  - id: isort
+    files: ^openff
+    args: [--check]
+- repo: https://gitlab.com/PyCQA/flake8
+  rev: 3.8.4
+  hooks:
+  - id: flake8
+    files: ^openff
+    additional_dependencies: [
+        'flake8-bugbear',
+        'flake8-absolute-import',
+    ]
+- repo: https://github.com/asottile/pyupgrade
+  rev: v2.10.0
+  hooks:
+  - id: pyupgrade
+    files: ^openff/system/
+    exclude: openff/system/_version.py|setup.py
+    args: [--py37-plus]
