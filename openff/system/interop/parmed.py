@@ -174,7 +174,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
 
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         if has_electrostatics:
-            partial_charge = electrostatics_handler.charge_map[str((pmd_idx,))]
+            partial_charge = electrostatics_handler.charges[str((pmd_idx,))]
             unitless_ = partial_charge.to(unit.elementary_charge).magnitude
             pmd_atom.charge = float(unitless_)
             pmd_atom.atom_type.charge = float(unitless_)
