@@ -21,7 +21,7 @@ Style is enforced with automated linters that run in CI. See `.github/workflows/
 
 ### Type-checking
 
-Type hints are **optional** but encouraged. Many optional flags are passed to `mypy`; check the action for a recommended invocation.
+Type hints are **optional** but encouraged. Many optional flags are passed to `mypy`; check the action for a recommended invocation. Check `setup.cfg` for some configuration, mostly ignoring libraries that do not have support for type-checking.
 
 ### Pre-commit
 
