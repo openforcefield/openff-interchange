@@ -91,15 +91,19 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
     )
 
 
-def test_packmol_boxes():
+@pytest.mark.parametrize(
+    "toolkit_file_path",
+    [
+        "systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb",
+        "systems/test_systems/1_cyclohexane_1_ethanol.pdb",
+    ],
+)
+def test_packmol_boxes(toolkit_file_path):
     # TODO: Isolate a set of systems here instead of using toolkit data
     from openff.toolkit.utils import get_data_file_path
     from simtk.openmm.app import PDBFile
 
-    pdb_file_path = get_data_file_path(
-        # "systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"
-        "systems/test_systems/1_cyclohexane_1_ethanol.pdb",
-    )
+    pdb_file_path = get_data_file_path(toolkit_file_path)
     pdbfile = PDBFile(pdb_file_path)
 
     ethanol = Molecule.from_smiles("CCO")
@@ -136,10 +140,17 @@ def test_packmol_boxes():
     # Compare GROMACS writer and OpenMM export
     gmx_energies, _ = get_gromacs_energies(off_sys)
 
+    omm_energies_rounded = get_openmm_energies(off_sys, round_positions=3)
+
     compare_gromacs_openmm(
-        omm_energies=omm_energies,
+        omm_energies=omm_energies_rounded,
         gmx_energies=gmx_energies,
-        custom_tolerances={"Nonbonded": 2e-4},
+        custom_tolerances={
+            "Bond": 0.5,
+            "Angle": 2.0,
+            "Nonbonded": 2e-4,
+            "Torsion": 1.0,
+        },
     )
 
 
