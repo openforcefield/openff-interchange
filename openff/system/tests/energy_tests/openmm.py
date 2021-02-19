@@ -1,20 +1,19 @@
-from typing import Dict
-
 import numpy as np
 from simtk import openmm, unit
 
 from openff.system.components.system import System
+from openff.system.tests.energy_tests.report import EnergyReport
 
 
 def get_openmm_energies(
     off_sys: System,
     round_positions=None,
     simple: bool = False,
-) -> Dict:
+) -> EnergyReport:
 
     omm_sys: openmm.System = off_sys.to_openmm()
 
-    omm_energies = _get_openmm_energies(
+    return _get_openmm_energies(
         omm_sys=omm_sys,
         box_vectors=off_sys.box,
         positions=off_sys.positions,
@@ -22,12 +21,14 @@ def get_openmm_energies(
         simple=simple,
     )
 
-    return omm_energies
-
 
 def _get_openmm_energies(
-    omm_sys, box_vectors, positions, round_positions=None, simple=False
-):
+    omm_sys: openmm.System,
+    box_vectors,
+    positions,
+    round_positions=None,
+    simple=False,
+) -> EnergyReport:
     if simple:
         nonbond_force = [
             f for f in omm_sys.getForces() if isinstance(f, openmm.NonbondedForce)
@@ -73,4 +74,15 @@ def _get_openmm_energies(
     del context
     del integrator
 
-    return omm_energies
+    report = EnergyReport()
+
+    report.energies.update(
+        {
+            "Bond": omm_energies["HarmonicBondForce"],
+            "Angle": omm_energies["HarmonicAngleForce"],
+            "Torsion": omm_energies["PeriodicTorsionForce"],
+            "Nonbonded": omm_energies["NonbondedForce"],
+        }
+    )
+
+    return report

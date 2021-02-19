@@ -1,5 +1,6 @@
 import os
 import tempfile
+from typing import Dict
 
 from intermol.gromacs import _group_energy_terms, binaries
 from intermol.utils import run_subprocess
@@ -7,11 +8,12 @@ from openff.toolkit.utils.utils import temporary_cd
 from pkg_resources import resource_filename
 
 from openff.system.components.system import System
+from openff.system.tests.energy_tests.report import EnergyReport
 
 
 def get_gromacs_energies(
     off_sys: System, writer: str = "internal", simple: bool = False
-):
+) -> EnergyReport:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             off_sys.to_gro("out.gro", writer=writer)
@@ -38,7 +40,19 @@ def get_gromacs_energies(
             for key in keys_to_drop:
                 if key in gmx_energies.keys():
                     gmx_energies.pop(key)
-            return gmx_energies, energy_file
+
+    report = EnergyReport()
+
+    report.energies.update(
+        {
+            "Bond": gmx_energies["Bond"],
+            "Angle": gmx_energies["Angle"],
+            "Torsion": gmx_energies["Proper Dih."],
+            "Nonbonded": _get_gmx_energy_nonbonded(gmx_energies),
+        }
+    )
+
+    return report
 
 
 GMX_PATH = ""
@@ -105,3 +119,15 @@ def run_gmx_energy(
     run_subprocess(genergy_bin, "gromacs", stdout_path, stderr_path, stdin=select)
 
     return _group_energy_terms(ener_xvg)
+
+
+def _get_gmx_energy_nonbonded(gmx_energies: Dict):
+    """Get the total nonbonded energy from a set of GROMACS energies"""
+    gmx_nonbonded = 0 * gmx_energies["Potential"].unit
+    for key in ["LJ (SR)", "Coulomb (SR)", "Coul. recip.", "Disper. corr."]:
+        try:
+            gmx_nonbonded += gmx_energies[key]
+        except KeyError:
+            pass
+
+    return gmx_nonbonded
