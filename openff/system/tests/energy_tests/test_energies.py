@@ -101,10 +101,9 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
 def test_packmol_boxes(toolkit_file_path):
     # TODO: Isolate a set of systems here instead of using toolkit data
     from openff.toolkit.utils import get_data_file_path
-    from simtk.openmm.app import PDBFile
 
     pdb_file_path = get_data_file_path(toolkit_file_path)
-    pdbfile = PDBFile(pdb_file_path)
+    pdbfile = openmm.app.PDBFile(pdb_file_path)  # type: ignore
 
     ethanol = Molecule.from_smiles("CCO")
     cyclohexane = Molecule.from_smiles("C1CCCCC1")
@@ -161,7 +160,7 @@ def test_water_dimer():
     water = Molecule.from_smiles("O")
     top = Topology.from_molecules(2 * [water])
 
-    pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
+    pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))  # type: ignore
 
     positions = np.array(pdbfile.positions / omm_unit.nanometer) * unit.nanometer
 
