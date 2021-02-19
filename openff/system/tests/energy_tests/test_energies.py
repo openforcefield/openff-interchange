@@ -87,7 +87,7 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
     compare_gromacs_openmm(
         omm_energies=omm_energies,
         gmx_energies=gmx_energies,
-        custom_tolerances={"Nonbonded": 1e-3 * n_mol},
+        custom_tolerances={"Bond": 1e-5 * n_mol, "Nonbonded": 1e-3 * n_mol},
     )
 
 
