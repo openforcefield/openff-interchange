@@ -2,6 +2,8 @@ import mbuild as mb
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
+from simtk import openmm
+from simtk import unit as omm_unit
 
 from openff.system import unit
 from openff.system.exceptions import NonbondedEnergyError
@@ -95,7 +97,8 @@ def test_packmol_boxes():
     from simtk.openmm.app import PDBFile
 
     pdb_file_path = get_data_file_path(
-        "systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"
+        # "systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"
+        "systems/test_systems/1_cyclohexane_1_ethanol.pdb",
     )
     pdbfile = PDBFile(pdb_file_path)
 
@@ -109,19 +112,35 @@ def test_packmol_boxes():
     parsley = ForceField("openff-1.0.0.offxml")
 
     off_sys = parsley.create_openff_system(off_topology)
-    off_sys.box = [*pdbfile.topology.getPeriodicBoxVectors()]
-    off_sys.positions = [*pdbfile.positions]
+
+    off_sys.box = np.asarray(
+        pdbfile.topology.getPeriodicBoxVectors() / omm_unit.nanometer,
+    )
+    off_sys.positions = np.asarray(
+        pdbfile.positions / omm_unit.nanometer,
+    )
 
     sys_from_toolkit = parsley.create_openmm_system(off_topology)
 
-    energies = get_openmm_energies(off_sys)
+    omm_energies = get_openmm_energies(off_sys)
     reference = _get_openmm_energies(
         sys_from_toolkit,
         off_sys.box,
         off_sys.positions,
     )
 
-    compare_openmm(energies, reference, custom_tolerances={"HarmonicBondForce": 1.0})
+    compare_openmm(
+        omm_energies, reference, custom_tolerances={"HarmonicBondForce": 1.0}
+    )
+
+    # Compare GROMACS writer and OpenMM export
+    gmx_energies, _ = get_gromacs_energies(off_sys)
+
+    compare_gromacs_openmm(
+        omm_energies=omm_energies,
+        gmx_energies=gmx_energies,
+        custom_tolerances={"Nonbonded": 2e-4},
+    )
 
 
 def test_water_dimer():
@@ -130,9 +149,6 @@ def test_water_dimer():
     tip3p = ForceField(get_test_file_path("tip3p.offxml"))
     water = Molecule.from_smiles("O")
     top = Topology.from_molecules(2 * [water])
-
-    from simtk import openmm
-    from simtk import unit as omm_unit
 
     pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
 

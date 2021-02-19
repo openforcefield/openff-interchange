@@ -217,13 +217,16 @@ def _write_atoms(
 
     ref_mol = mol_data["reference_molecule"]
     top_mol = off_sys.topology._reference_molecule_to_topology_molecules[ref_mol][0]  # type: ignore
+
+    offset = top_mol.atom_start_topology_index
+
     for atom_idx, atom in enumerate(top_mol.atoms):
-        # atom in enumerate(ref_mol.atoms):  # type: ignore
-        atom_type = typemap[atom_idx]
+        atom_top_idx = atom_idx + offset
+        atom_type = typemap[atom_top_idx]
         element = ele.element_from_atomic_number(atom.atomic_number)
         mass = element.mass
         charge = (
-            off_sys.handlers["Electrostatics"].charges[str((atom_idx,))].magnitude  # type: ignore
+            off_sys.handlers["Electrostatics"].charges[str((atom_top_idx,))].magnitude  # type: ignore
         )
         top_file.write(
             "{:6d} {:18s} {:6d} {:8s} {:8s} {:6d} "
@@ -260,13 +263,19 @@ def _write_bonds(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
 
     top_mol = openff_sys.topology._reference_molecule_to_topology_molecules[ref_mol][0]  # type: ignore
 
+    offset = top_mol.atom_start_topology_index
+
     for bond in top_mol.bonds:
+        # These are "topology indices"
         indices = tuple(sorted(a.topology_atom_index for a in bond.atoms))
         indices_as_str = str(indices)
         if indices_as_str in bond_handler.slot_map.keys():
             key = bond_handler.slot_map[indices_as_str]
         else:
             raise Exception("probably should have found parameters here ...")
+
+        # "reference" indices
+        ref_indices = [idx - offset for idx in indices]
 
         params = bond_handler.potentials[key].parameters
 
@@ -275,8 +284,8 @@ def _write_bonds(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
 
         top_file.write(
             "{:7d} {:7d} {:4s} {:18.8e} {:18.8e}\n".format(
-                indices[0] + 1,  # atom i
-                indices[1] + 1,  # atom j
+                ref_indices[0] + 1,  # atom i
+                ref_indices[1] + 1,  # atom j
                 str(1),  # bond type (functional form)
                 length,
                 k,
@@ -295,6 +304,8 @@ def _write_angles(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
 
     top_mol = openff_sys.topology._reference_molecule_to_topology_molecules[ref_mol][0]  # type: ignore
 
+    offset = top_mol.atom_start_topology_index
+
     angle_handler = openff_sys.handlers["Angles"]
 
     for angle in top_mol.angles:
@@ -305,15 +316,18 @@ def _write_angles(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
         else:
             raise Exception
 
+        # "reference" indices
+        ref_indices = [idx - offset for idx in indices]
+
         params = angle_handler.potentials[key].parameters
         k = params["k"].to(unit.Unit("kilojoule / mole / radian ** 2")).magnitude
         theta = params["angle"].to(unit.degree).magnitude
 
         top_file.write(
             "{:7d} {:7d} {:7d} {:4s} {:18.8e} {:18.8e}\n".format(
-                indices[0] + 1,  # atom i
-                indices[1] + 1,  # atom j
-                indices[2] + 1,  # atom k
+                ref_indices[0] + 1,  # atom i
+                ref_indices[1] + 1,  # atom j
+                ref_indices[2] + 1,  # atom k
                 str(1),  # angle type (functional form)
                 theta,
                 k,
@@ -333,6 +347,8 @@ def _write_dihedrals(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
 
     top_mol = openff_sys.topology._reference_molecule_to_topology_molecules[ref_mol][0]  # type: ignore
 
+    offset = top_mol.atom_start_topology_index
+
     proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
     improper_torsion_handler = openff_sys.handlers["ImproperTorsions"]
 
@@ -344,16 +360,19 @@ def _write_dihedrals(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
             if indices_as_str == torsion_key.split("_")[0]:
                 params = proper_torsion_handler.potentials[key].parameters
 
+                # "reference" indices
+                ref_indices = [idx - offset for idx in indices]
+
                 k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
                 periodicity = int(params["periodicity"])
                 phase = params["phase"].to(unit.degree).magnitude
                 idivf = int(params["idivf"])
                 top_file.write(
                     "{:7d} {:7d} {:7d} {:7d} {:6d} {:18.8e} {:18.8e} {:7d}\n".format(
-                        indices[0] + 1,
-                        indices[1] + 1,
-                        indices[2] + 1,
-                        indices[3] + 1,
+                        ref_indices[0] + 1,
+                        ref_indices[1] + 1,
+                        ref_indices[2] + 1,
+                        ref_indices[3] + 1,
                         1,
                         phase,
                         k / idivf,
@@ -402,7 +421,7 @@ def _write_system(top_file: IO, molecule_map: Dict):
         mol_data,
     ) in molecule_map.items():
         n_mols = mol_data["n_mols"]
-        top_file.write(f"{mol_name}\t{n_mols}")
+        top_file.write(f"{mol_name}\t{n_mols}\n")
 
     top_file.write("\n")
 
