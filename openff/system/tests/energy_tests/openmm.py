@@ -8,7 +8,7 @@ from openff.system.tests.energy_tests.report import EnergyReport
 def get_openmm_energies(
     off_sys: System,
     round_positions=None,
-    simple: bool = False,
+    hard_cutoff: bool = False,
 ) -> EnergyReport:
 
     omm_sys: openmm.System = off_sys.to_openmm()
@@ -18,8 +18,31 @@ def get_openmm_energies(
         box_vectors=off_sys.box,
         positions=off_sys.positions,
         round_positions=round_positions,
-        simple=simple,
+        hard_cutoff=hard_cutoff,
     )
+
+
+def set_nonbonded_method(
+    omm_sys: openmm.System,
+) -> openmm.System:
+    nonbond_force = _get_nonbonded_force(omm_sys)
+    nonbond_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
+
+    nonbond_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
+    nonbond_force.setCutoffDistance(0.9 * unit.nanometer)
+    nonbond_force.setReactionFieldDielectric(1.0)
+    nonbond_force.setUseDispersionCorrection(False)
+    nonbond_force.setUseSwitchingFunction(False)
+
+    return omm_sys
+
+
+def _get_nonbonded_force(
+    omm_sys: openmm.System,
+) -> openmm.NonbondedForce:
+    for force in omm_sys.getForces():
+        if type(force) == openmm.NonbondedForce:
+            return force
 
 
 def _get_openmm_energies(
@@ -27,18 +50,11 @@ def _get_openmm_energies(
     box_vectors,
     positions,
     round_positions=None,
-    simple=False,
+    hard_cutoff=False,
 ) -> EnergyReport:
-    if simple:
-        nonbond_force = [
-            f for f in omm_sys.getForces() if isinstance(f, openmm.NonbondedForce)
-        ][0]
 
-        nonbond_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
-        nonbond_force.setCutoffDistance(2.0 * unit.nanometer)
-        nonbond_force.setReactionFieldDielectric(1.0)
-        nonbond_force.setUseDispersionCorrection(False)
-        nonbond_force.setUseSwitchingFunction(False)
+    if hard_cutoff:
+        omm_sys = set_nonbonded_method(omm_sys)
 
     force_names = {force.__class__.__name__ for force in omm_sys.getForces()}
     group_to_force = {i: force_name for i, force_name in enumerate(force_names)}

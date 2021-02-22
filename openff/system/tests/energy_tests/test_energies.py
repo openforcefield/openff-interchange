@@ -134,7 +134,8 @@ def test_packmol_boxes(toolkit_file_path, known_error):
     )
 
     compare_openmm(
-        omm_energies, reference, custom_tolerances={"HarmonicBondForce": 1.0}
+        omm_energies,
+        reference,  # custom_tolerances={"HarmonicBondForce": 1.0}
     )
 
     # Compare GROMACS writer and OpenMM export
