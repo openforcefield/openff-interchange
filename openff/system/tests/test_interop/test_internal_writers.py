@@ -3,16 +3,17 @@ import tempfile
 import numpy as np
 import parmed as pmd
 import pytest
-from intermol.gromacs import energies as gmx_energy
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils.utils import temporary_cd
-from pkg_resources import resource_filename
 from simtk import unit as omm_unit
 
 from openff.system import unit
 from openff.system.stubs import ForceField
-from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
-from openff.system.tests.energy_tests.utils import compare_gromacs
+from openff.system.tests.energy_tests.gromacs import (
+    get_gromacs_energies,
+    get_mdp_file,
+    run_gmx_energy,
+)
 
 
 # TODO: Add OC=O
@@ -57,19 +58,22 @@ def test_internal_gromacs_writers(mol):
             compare_gro_files("internal.gro", "reference.gro")
             # TODO: Also compare to out.to_gro("parmed.gro", writer="parmed")
 
-            reference_energy, _ = gmx_energy(
-                top="reference.top",
-                gro="reference.gro",
-                mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
+            reference_energy = run_gmx_energy(
+                top_file="reference.top",
+                gro_file="reference.gro",
+                mdp_file=get_mdp_file("default"),
             )
 
-            internal_energy, _ = gmx_energy(
-                top="internal.top",
-                gro="internal.gro",
-                mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
+            internal_energy = run_gmx_energy(
+                top_file="internal.top",
+                gro_file="internal.gro",
+                mdp_file=get_mdp_file("default"),
             )
 
-            compare_gromacs(reference_energy, internal_energy)
+            reference_energy.compare(
+                internal_energy,
+                custom_tolerances={"Bond": 2e-2 * omm_unit.kilojoule_per_mole},
+            )
 
 
 def compare_gro_files(file1: str, file2: str):

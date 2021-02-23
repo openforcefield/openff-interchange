@@ -1,9 +1,8 @@
 from typing import Dict
 
-from openff.system.types import DefaultModel
+from simtk import unit as omm_unit
 
-# TODO: Use FloatQuantity, not float
-#  kj_mol = unit.Unit("kilojoule / mole")
+from openff.system.types import DefaultModel
 
 
 class EnergyError(BaseException):
@@ -20,6 +19,7 @@ class MissingEnergyError(BaseException):
 
 class EnergyReport(DefaultModel):
 
+    # TODO: Use FloatQuantity, not float
     energies: Dict[str, float] = {
         "Bond": None,
         "Angle": None,
@@ -27,15 +27,18 @@ class EnergyReport(DefaultModel):
         "Nonbonded": None,
     }
 
-    # TODO: Expose tolerances
-    def compare(self, other):
+    # TODO: Better way of exposing tolerances
+    def compare(self, other, custom_tolerances=None):
 
         tolerances: Dict[str, float] = {
-            "Bond": 1e-3,
-            "Angle": 1e-3,
-            "Torsion": 1e-3,
-            "Nonbonded": 1e-3,
+            "Bond": 1e-3 * omm_unit.kilojoule_per_mole,
+            "Angle": 1e-3 * omm_unit.kilojoule_per_mole,
+            "Torsion": 1e-3 * omm_unit.kilojoule_per_mole,
+            "Nonbonded": 1e-3 * omm_unit.kilojoule_per_mole,
         }
+
+        if custom_tolerances is not None:
+            tolerances.update(custom_tolerances)
 
         for key in self.energies:
 
@@ -49,4 +52,4 @@ class EnergyReport(DefaultModel):
 
             diff = self.energies[key] - other.energies[key]
             if abs(diff) > tolerances[key]:
-                raise EnergyError(key, diff)
+                raise EnergyError(key, diff, tolerances[key])

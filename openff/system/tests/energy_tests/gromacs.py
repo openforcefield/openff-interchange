@@ -5,6 +5,7 @@ from typing import Dict
 
 from intermol.gromacs import _group_energy_terms
 from openff.toolkit.utils.utils import temporary_cd
+from simtk import unit as omm_unit
 
 from openff.system.components.system import System
 from openff.system.tests.energy_tests.report import EnergyReport
@@ -28,45 +29,12 @@ def get_gromacs_energies(
         with temporary_cd(tmpdir):
             off_sys.to_gro("out.gro", writer=writer)
             off_sys.to_top("out.top", writer=writer)
-            gmx_energies = run_gmx_energy(
+            return run_gmx_energy(
                 top_file="out.top",
                 gro_file="out.gro",
                 mdp_file=get_mdp_file("default"),
                 maxwarn=2,
             )
-
-            keys_to_drop = [
-                "Kinetic En.",
-                "Temperature",
-                "Pres. DC",
-                "Pressure",
-                "Vir-XX",
-                "Vir-YY",
-                "Vir-ZZ",
-                "Vir-YX",
-                "Vir-XY",
-                "Vir-YZ",
-                "Vir-XZ",
-            ]
-            for key in keys_to_drop:
-                if key in gmx_energies.keys():
-                    gmx_energies.pop(key)
-
-    report = EnergyReport()
-
-    report.energies.update(
-        {
-            "Bond": gmx_energies["Bond"],
-            "Angle": gmx_energies["Angle"],
-            "Torsion": gmx_energies["Proper Dih."],
-            "Nonbonded": _get_gmx_energy_nonbonded(gmx_energies),
-        }
-    )
-
-    return report
-
-
-GMX_PATH = ""
 
 
 def run_gmx_energy(
@@ -129,7 +97,7 @@ def run_gmx_energy(
 
 def _get_gmx_energy_nonbonded(gmx_energies: Dict):
     """Get the total nonbonded energy from a set of GROMACS energies"""
-    gmx_nonbonded = 0.0  # 0.0 * gmx_energies["Potential"].unit
+    gmx_nonbonded = 0.0 * omm_unit.kilojoule_per_mole
     for key in ["LJ (SR)", "Coulomb (SR)", "Coul. recip.", "Disper. corr."]:
         try:
             gmx_nonbonded += gmx_energies[key]
@@ -140,19 +108,39 @@ def _get_gmx_energy_nonbonded(gmx_energies: Dict):
 
 
 def _parse_gmx_energy(xvg_path):
-    from simtk import unit
-
-    kj_mol = unit.kilojoule_per_mole
-
     energies, _ = _group_energy_terms(xvg_path)
-
-    # If need to strip units
-    for key in energies:
-        energies[key] = energies[key] / kj_mol
 
     # GROMACS may not populate all keys
     for required_key in ["Bond", "Angle", "Proper Dih."]:
         if required_key not in energies:
-            energies[required_key] = 0.0
+            energies[required_key] = 0.0 * omm_unit.kilojoule_per_mole
 
-    return energies
+    keys_to_drop = [
+        "Kinetic En.",
+        "Temperature",
+        "Pres. DC",
+        "Pressure",
+        "Vir-XX",
+        "Vir-YY",
+        "Vir-ZZ",
+        "Vir-YX",
+        "Vir-XY",
+        "Vir-YZ",
+        "Vir-XZ",
+    ]
+    for key in keys_to_drop:
+        if key in energies.keys():
+            energies.pop(key)
+
+    report = EnergyReport()
+
+    report.energies.update(
+        {
+            "Bond": energies["Bond"],
+            "Angle": energies["Angle"],
+            "Torsion": energies["Proper Dih."],
+            "Nonbonded": _get_gmx_energy_nonbonded(energies),
+        }
+    )
+
+    return report

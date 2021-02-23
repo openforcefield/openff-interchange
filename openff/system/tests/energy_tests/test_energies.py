@@ -13,10 +13,6 @@ from openff.system.tests.energy_tests.openmm import (
     _get_openmm_energies,
     get_openmm_energies,
 )
-from openff.system.tests.energy_tests.utils import (
-    compare_gromacs_openmm,
-    compare_openmm,
-)
 
 
 @pytest.mark.parametrize("constrained", [False])  # [True, False]
@@ -63,9 +59,10 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
     )
 
     try:
-        compare_openmm(omm_energies, reference_energies)
+        omm_energies.compare(reference_energies)
     except NonbondedEnergyError:
-        # If nonbonded energies differ, at least ensure that the non-bonded parameters on each particle match
+        # If nonbonded energies differ, at least ensure that the nonbonded
+        # parameters on each particle match
         from openff.system.tests.utils import (
             _get_charges_from_openmm_system,
             _get_lj_params_from_openmm_system,
@@ -84,14 +81,13 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
     # Compare GROMACS writer and OpenMM export
     gmx_energies = get_gromacs_energies(off_sys)
 
-    gmx_energies.compare(omm_energies)
-
-
-#       compare_gromacs_openmm(
-#           omm_energies=omm_energies,
-#           gmx_energies=gmx_energies,
-#           custom_tolerances={"Bond": 1e-5 * n_mol, "Nonbonded": 1e-3 * n_mol},
-#       )
+    gmx_energies.compare(
+        omm_energies,
+        custom_tolerances={
+            "Bond": 1e-5 * n_mol * omm_unit.kilojoule_per_mole,
+            "Nonbonded": 1e-3 * n_mol * omm_unit.kilojoule_per_mole,
+        },
+    )
 
 
 @pytest.mark.parametrize(
@@ -116,7 +112,7 @@ def test_packmol_boxes(toolkit_file_path, known_error):
         omm_topology, unique_molecules=[ethanol, cyclohexane]
     )
 
-    parsley = ForceField("openff-1.0.0.offxml")
+    parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
     off_sys = parsley.create_openff_system(off_topology)
 
@@ -136,24 +132,23 @@ def test_packmol_boxes(toolkit_file_path, known_error):
         off_sys.positions,
     )
 
-    compare_openmm(
-        omm_energies,
-        reference,  # custom_tolerances={"HarmonicBondForce": 1.0}
-    )
+    omm_energies.compare(reference)
+    # custom_tolerances={"HarmonicBondForce": 1.0}
 
     # Compare GROMACS writer and OpenMM export
     gmx_energies = get_gromacs_energies(off_sys)
 
     omm_energies_rounded = get_openmm_energies(off_sys, round_positions=3)
 
-    compare_gromacs_openmm(
-        omm_energies=omm_energies_rounded,
-        gmx_energies=gmx_energies,
+    known_error = known_error * omm_unit.kilojoule_per_mole
+
+    omm_energies_rounded.compare(
+        other=gmx_energies,
         custom_tolerances={
-            "Bond": 0.5,
-            "Angle": 2.0,
+            "Bond": 0.5 * omm_unit.kilojoule_per_mole,
+            "Angle": 2.0 * omm_unit.kilojoule_per_mole,
+            "Torsion": 1.0 * omm_unit.kilojoule_per_mole,
             "Nonbonded": 1.05 * known_error,  # Hardcoded around failure
-            "Torsion": 1.0,
         },
     )
 
@@ -181,7 +176,7 @@ def test_water_dimer():
         openff_sys.positions,
     )
 
-    compare_openmm(omm_energies, toolkit_energies)
+    omm_energies.compare(toolkit_energies)
 
     # TODO: Fix GROMACS energies by handling SETTLE constraints
     # gmx_energies, _ = get_gromacs_energies(openff_sys)
