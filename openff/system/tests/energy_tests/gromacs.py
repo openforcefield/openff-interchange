@@ -1,107 +1,146 @@
-import os
+import subprocess
 import tempfile
+from pathlib import Path
+from typing import Dict, Union
 
-from intermol.gromacs import _group_energy_terms, binaries
-from intermol.utils import run_subprocess
+from intermol.gromacs import _group_energy_terms
 from openff.toolkit.utils.utils import temporary_cd
-from pkg_resources import resource_filename
+from simtk import unit as omm_unit
 
 from openff.system.components.system import System
+from openff.system.tests.energy_tests.report import EnergyReport
+from openff.system.utils import get_test_file_path
+
+
+def get_mdp_file(key: str) -> Path:
+    mapping = {
+        "default": "default.mdp",
+        "cutoff": "cutoff.mdp",
+    }
+
+    return get_test_file_path(f"mdp/{mapping[key]}")
 
 
 def get_gromacs_energies(
-    off_sys: System, writer: str = "internal", simple: bool = False
-):
+    off_sys: System,
+    writer: str = "internal",
+) -> EnergyReport:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             off_sys.to_gro("out.gro", writer=writer)
             off_sys.to_top("out.top", writer=writer)
-            gmx_energies, energy_file = run_gmx_energy(
-                top="out.top",
-                gro="out.gro",
-                simple=simple,
+            return run_gmx_energy(
+                top_file="out.top",
+                gro_file="out.gro",
+                mdp_file=get_mdp_file("default"),
+                maxwarn=2,
             )
-
-            keys_to_drop = [
-                "Kinetic En.",
-                "Temperature",
-                "Pres. DC",
-                "Pressure",
-                "Vir-XX",
-                "Vir-YY",
-                "Vir-ZZ",
-                "Vir-YX",
-                "Vir-XY",
-                "Vir-YZ",
-                "Vir-XZ",
-            ]
-            for key in keys_to_drop:
-                if key in gmx_energies.keys():
-                    gmx_energies.pop(key)
-            return gmx_energies, energy_file
-
-
-GMX_PATH = ""
 
 
 def run_gmx_energy(
-    top, gro, gmx_path=GMX_PATH, grosuff="", simple: bool = False, grompp_check=False
+    top_file: Union[Path, str],
+    gro_file: Union[Path, str],
+    mdp_file: Union[Path, str],
+    maxwarn: int = 1,
 ):
-    """Compute single-point energies using GROMACS.
 
-    Args:
-        top (str):
-        gro (str):
-        mdp (str):
-        grosuff (str):
-        grompp_check (bool):
+    grompp_cmd = f"gmx grompp --maxwarn {maxwarn} -o out.tpr"
+    grompp_cmd += f" -f {mdp_file} -c {gro_file} -p {top_file}"
 
-    Returns:
-        e_out:
-        ener_xvg:
+    grompp = subprocess.Popen(
+        grompp_cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
 
-    Note:
-        This is copied from the InterMol source code, modified to allow
-        for larger values of -maxwarn
-    """
+    _, err = grompp.communicate()
 
-    if simple:
-        mdp_file = resource_filename("intermol", "tests/gromacs/grompp_vacuum.mdp")
-    else:
-        mdp_file = resource_filename("intermol", "tests/gromacs/grompp.mdp")
-
-    directory, _ = os.path.split(os.path.abspath(top))
-
-    tpr = os.path.join(directory, "topol.tpr")
-    ener = os.path.join(directory, "ener.edr")
-    ener_xvg = os.path.join(directory, "energy.xvg")
-    conf = os.path.join(directory, "confout.gro")
-    mdout = os.path.join(directory, "mdout.mdp")
-    state = os.path.join(directory, "state.cpt")
-    traj = os.path.join(directory, "traj.trr")
-    log = os.path.join(directory, "md.log")
-    stdout_path = os.path.join(directory, "gromacs_stdout.txt")
-    stderr_path = os.path.join(directory, "gromacs_stderr.txt")
-
-    grompp_bin, mdrun_bin, genergy_bin = binaries(gmx_path, grosuff)
-
-    # Run grompp.
-    grompp_bin.extend(["-f", mdp_file, "-c", gro, "-p", top])
-    grompp_bin.extend(["-o", tpr, "-po", mdout, "-maxwarn", "2"])
-    grompp = run_subprocess(grompp_bin, "gromacs", stdout_path, stderr_path)
-    if grompp.returncode != 0:
+    if grompp.returncode:
         raise Exception
 
-    # Run single-point calculation with mdrun.
-    mdrun_bin.extend(["-nt", "1", "-s", tpr, "-o", traj])
-    mdrun_bin.extend(["-cpo", state, "-c", conf, "-e", ener, "-g", log])
-    mdrun = run_subprocess(mdrun_bin, "gromacs", stdout_path, stderr_path)
-    if mdrun.returncode != 0:
+    mdrun_cmd = "gmx mdrun -deffnm out"
+
+    mdrun = subprocess.Popen(
+        mdrun_cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
+    _, err = mdrun.communicate()
+
+    if mdrun.returncode:
         raise Exception
 
-    # Extract energies using g_energy
-    select = " ".join(map(str, range(1, 20))) + " 0 "
-    genergy_bin.extend(["-f", ener, "-o", ener_xvg, "-dp"])
-    run_subprocess(genergy_bin, "gromacs", stdout_path, stderr_path, stdin=select)
+    energy_cmd = "gmx energy -f out.edr -o out.xvg"
+    stdin = " ".join(map(str, range(1, 20))) + " 0 "
 
-    return _group_energy_terms(ener_xvg)
+    energy = subprocess.Popen(
+        energy_cmd,
+        shell=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
+    _, err = energy.communicate(input=stdin)
+
+    if energy.returncode:
+        raise Exception
+
+    return _parse_gmx_energy("out.xvg")
+
+
+def _get_gmx_energy_nonbonded(gmx_energies: Dict):
+    """Get the total nonbonded energy from a set of GROMACS energies"""
+    gmx_nonbonded = 0.0 * omm_unit.kilojoule_per_mole
+    for key in ["LJ (SR)", "Coulomb (SR)", "Coul. recip.", "Disper. corr."]:
+        try:
+            gmx_nonbonded += gmx_energies[key]
+        except KeyError:
+            pass
+
+    return gmx_nonbonded
+
+
+def _parse_gmx_energy(xvg_path):
+    energies, _ = _group_energy_terms(xvg_path)
+
+    # GROMACS may not populate all keys
+    for required_key in ["Bond", "Angle", "Proper Dih."]:
+        if required_key not in energies:
+            energies[required_key] = 0.0 * omm_unit.kilojoule_per_mole
+
+    keys_to_drop = [
+        "Kinetic En.",
+        "Temperature",
+        "Pres. DC",
+        "Pressure",
+        "Vir-XX",
+        "Vir-YY",
+        "Vir-ZZ",
+        "Vir-YX",
+        "Vir-XY",
+        "Vir-YZ",
+        "Vir-XZ",
+    ]
+    for key in keys_to_drop:
+        if key in energies.keys():
+            energies.pop(key)
+
+    report = EnergyReport()
+
+    report.energies.update(
+        {
+            "Bond": energies["Bond"],
+            "Angle": energies["Angle"],
+            "Torsion": energies["Proper Dih."],
+            "Nonbonded": _get_gmx_energy_nonbonded(energies),
+        }
+    )
+
+    return report
