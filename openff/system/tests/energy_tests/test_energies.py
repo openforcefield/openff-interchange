@@ -6,13 +6,13 @@ from simtk import openmm
 from simtk import unit as omm_unit
 
 from openff.system import unit
-from openff.system.exceptions import NonbondedEnergyError
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
 from openff.system.tests.energy_tests.openmm import (
     _get_openmm_energies,
     get_openmm_energies,
 )
+from openff.system.tests.energy_tests.report import EnergyError
 
 
 @pytest.mark.parametrize("constrained", [False])  # [True, False]
@@ -49,24 +49,28 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
         off_sys.box = box
 
     # Compare directly to toolkit's reference implementation
-    omm_energies = get_openmm_energies(off_sys, round_positions=3)
+    omm_energies = get_openmm_energies(off_sys, round_positions=3, hard_cutoff=True)
     omm_reference = parsley.create_openmm_system(top)
     reference_energies = _get_openmm_energies(
         omm_sys=omm_reference,
         box_vectors=off_sys.box,
         positions=off_sys.positions,
         round_positions=3,
+        hard_cutoff=True,
     )
 
     try:
         omm_energies.compare(reference_energies)
-    except NonbondedEnergyError:
-        # If nonbonded energies differ, at least ensure that the nonbonded
-        # parameters on each particle match
-        from openff.system.tests.utils import (
-            _get_charges_from_openmm_system,
-            _get_lj_params_from_openmm_system,
-        )
+    except EnergyError as e:
+        if "Nonbonded" in str(e):
+            # If nonbonded energies differ, at least ensure that the nonbonded
+            # parameters on each particle match
+            from openff.system.tests.utils import (
+                _get_charges_from_openmm_system,
+                _get_lj_params_from_openmm_system,
+            )
+        else:
+            raise e
 
         omm_sys = off_sys.to_openmm()
         np.testing.assert_equal(
@@ -125,11 +129,12 @@ def test_packmol_boxes(toolkit_file_path, known_error):
 
     sys_from_toolkit = parsley.create_openmm_system(off_topology)
 
-    omm_energies = get_openmm_energies(off_sys)
+    omm_energies = get_openmm_energies(off_sys, hard_cutoff=True)
     reference = _get_openmm_energies(
         sys_from_toolkit,
         off_sys.box,
         off_sys.positions,
+        hard_cutoff=True,
     )
 
     omm_energies.compare(reference)
@@ -138,7 +143,9 @@ def test_packmol_boxes(toolkit_file_path, known_error):
     # Compare GROMACS writer and OpenMM export
     gmx_energies = get_gromacs_energies(off_sys)
 
-    omm_energies_rounded = get_openmm_energies(off_sys, round_positions=3)
+    omm_energies_rounded = get_openmm_energies(
+        off_sys, round_positions=3, hard_cutoff=True
+    )
 
     known_error = known_error * omm_unit.kilojoule_per_mole
 

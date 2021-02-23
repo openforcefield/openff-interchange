@@ -27,24 +27,15 @@ def get_openmm_energies(
 def set_nonbonded_method(
     omm_sys: openmm.System,
 ) -> openmm.System:
-    nonbond_force = _get_nonbonded_force(omm_sys)
-    nonbond_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
-
-    nonbond_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
-    nonbond_force.setCutoffDistance(0.9 * unit.nanometer)
-    nonbond_force.setReactionFieldDielectric(1.0)
-    nonbond_force.setUseDispersionCorrection(False)
-    nonbond_force.setUseSwitchingFunction(False)
-
-    return omm_sys
-
-
-def _get_nonbonded_force(
-    omm_sys: openmm.System,
-) -> openmm.NonbondedForce:
     for force in omm_sys.getForces():
         if type(force) == openmm.NonbondedForce:
-            return force
+            force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
+            force.setCutoffDistance(0.9 * unit.nanometer)
+            force.setReactionFieldDielectric(1.0)
+            force.setUseDispersionCorrection(False)
+            force.setUseSwitchingFunction(False)
+
+    return omm_sys
 
 
 def _get_openmm_energies(

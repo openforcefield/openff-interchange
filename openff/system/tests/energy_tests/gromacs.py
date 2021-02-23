@@ -32,7 +32,7 @@ def get_gromacs_energies(
             return run_gmx_energy(
                 top_file="out.top",
                 gro_file="out.gro",
-                mdp_file=get_mdp_file("default"),
+                mdp_file=get_mdp_file("cutoff"),
                 maxwarn=2,
             )
 
@@ -58,6 +58,7 @@ def run_gmx_energy(
     _, err = grompp.communicate()
 
     if grompp.returncode:
+        print(err)
         raise Exception
 
     mdrun_cmd = "gmx mdrun -deffnm out"
