@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from simtk import unit as omm_unit
 
@@ -20,7 +20,7 @@ class MissingEnergyError(BaseException):
 class EnergyReport(DefaultModel):
 
     # TODO: Use FloatQuantity, not float
-    energies: Dict[str, float] = {
+    energies: Dict[str, Optional[omm_unit.Quantity]] = {
         "Bond": None,
         "Angle": None,
         "Torsion": None,

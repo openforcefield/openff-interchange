@@ -1,7 +1,7 @@
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Union
 
 from intermol.gromacs import _group_energy_terms
 from openff.toolkit.utils.utils import temporary_cd
@@ -38,9 +38,9 @@ def get_gromacs_energies(
 
 
 def run_gmx_energy(
-    top_file: Path,
-    gro_file: Path,
-    mdp_file: Path,
+    top_file: Union[Path, str],
+    gro_file: Union[Path, str],
+    mdp_file: Union[Path, str],
     maxwarn: int = 1,
 ):
 
