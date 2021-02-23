@@ -4,6 +4,8 @@ from simtk import openmm, unit
 from openff.system.components.system import System
 from openff.system.tests.energy_tests.report import EnergyReport
 
+kj_mol = unit.kilojoule_per_mole
+
 
 def get_openmm_energies(
     off_sys: System,
@@ -87,6 +89,16 @@ def _get_openmm_energies(
         omm_energies[group_to_force[force_group]] = state.getPotentialEnergy()
         del state
 
+    # Fill in missing keys if system does not have all typical forces
+    for required_key in [
+        "HarmonicBondForce",
+        "HarmonicAngleForce",
+        "PeriodicTorsionForce",
+        "NonbondedForce",
+    ]:
+        if required_key not in omm_energies:
+            omm_energies[required_key] = 0.0 * kj_mol
+
     del context
     del integrator
 
@@ -94,10 +106,10 @@ def _get_openmm_energies(
 
     report.energies.update(
         {
-            "Bond": omm_energies["HarmonicBondForce"],
-            "Angle": omm_energies["HarmonicAngleForce"],
-            "Torsion": omm_energies["PeriodicTorsionForce"],
-            "Nonbonded": omm_energies["NonbondedForce"],
+            "Bond": omm_energies["HarmonicBondForce"] / kj_mol,
+            "Angle": omm_energies["HarmonicAngleForce"] / kj_mol,
+            "Torsion": omm_energies["PeriodicTorsionForce"] / kj_mol,
+            "Nonbonded": omm_energies["NonbondedForce"] / kj_mol,
         }
     )
 

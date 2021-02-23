@@ -21,16 +21,18 @@ def get_mdp_file(key: str) -> Path:
 
 
 def get_gromacs_energies(
-    off_sys: System, writer: str = "internal", simple: bool = False
+    off_sys: System,
+    writer: str = "internal",
 ) -> EnergyReport:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             off_sys.to_gro("out.gro", writer=writer)
             off_sys.to_top("out.top", writer=writer)
-            gmx_energies, energy_file = run_gmx_energy(
-                top="out.top",
-                gro="out.gro",
-                simple=simple,
+            gmx_energies = run_gmx_energy(
+                top_file="out.top",
+                gro_file="out.gro",
+                mdp_file=get_mdp_file("default"),
+                maxwarn=2,
             )
 
             keys_to_drop = [
@@ -87,12 +89,12 @@ def run_gmx_energy(
 
     _, err = grompp.communicate()
 
-    if err:
+    if grompp.returncode:
         raise Exception
 
     mdrun_cmd = "gmx mdrun -deffnm out"
 
-    proc = subprocess.Popen(
+    mdrun = subprocess.Popen(
         mdrun_cmd,
         shell=True,
         stdout=subprocess.PIPE,
@@ -100,34 +102,34 @@ def run_gmx_energy(
         universal_newlines=True,
     )
 
-    _, err = proc.communicate()
+    _, err = mdrun.communicate()
 
-    if err:
+    if mdrun.returncode:
         raise Exception
 
     energy_cmd = "gmx energy -f out.edr -o out.xvg"
-    sdtin = " ".join(map(str, range(1, 20))) + " 0 "
+    stdin = " ".join(map(str, range(1, 20))) + " 0 "
 
     energy = subprocess.Popen(
         energy_cmd,
         shell=True,
-        stdin=sdtin,
+        stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,
     )
 
-    _, err = energy.communicate()
+    _, err = energy.communicate(input=stdin)
 
-    if err:
+    if energy.returncode:
         raise Exception
 
-    return _group_energy_terms("out.xvg")
+    return _parse_gmx_energy("out.xvg")
 
 
 def _get_gmx_energy_nonbonded(gmx_energies: Dict):
     """Get the total nonbonded energy from a set of GROMACS energies"""
-    gmx_nonbonded = 0 * gmx_energies["Potential"].unit
+    gmx_nonbonded = 0.0  # 0.0 * gmx_energies["Potential"].unit
     for key in ["LJ (SR)", "Coulomb (SR)", "Coul. recip.", "Disper. corr."]:
         try:
             gmx_nonbonded += gmx_energies[key]
@@ -135,3 +137,22 @@ def _get_gmx_energy_nonbonded(gmx_energies: Dict):
             pass
 
     return gmx_nonbonded
+
+
+def _parse_gmx_energy(xvg_path):
+    from simtk import unit
+
+    kj_mol = unit.kilojoule_per_mole
+
+    energies, _ = _group_energy_terms(xvg_path)
+
+    # If need to strip units
+    for key in energies:
+        energies[key] = energies[key] / kj_mol
+
+    # GROMACS may not populate all keys
+    for required_key in ["Bond", "Angle", "Proper Dih."]:
+        if required_key not in energies:
+            energies[required_key] = 0.0
+
+    return energies

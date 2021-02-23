@@ -38,6 +38,10 @@ class EnergyReport(DefaultModel):
         }
 
         for key in self.energies:
+
+            if key == "Nonbonded":
+                continue
+
             if self.energies[key] is None and other.energies[key] is None:
                 continue
             if self.energies[key] is None and other.energies[key] is None:

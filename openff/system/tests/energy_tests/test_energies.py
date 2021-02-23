@@ -82,13 +82,16 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
         )
 
     # Compare GROMACS writer and OpenMM export
-    gmx_energies, _ = get_gromacs_energies(off_sys)
+    gmx_energies = get_gromacs_energies(off_sys)
 
-    compare_gromacs_openmm(
-        omm_energies=omm_energies,
-        gmx_energies=gmx_energies,
-        custom_tolerances={"Bond": 1e-5 * n_mol, "Nonbonded": 1e-3 * n_mol},
-    )
+    gmx_energies.compare(omm_energies)
+
+
+#       compare_gromacs_openmm(
+#           omm_energies=omm_energies,
+#           gmx_energies=gmx_energies,
+#           custom_tolerances={"Bond": 1e-5 * n_mol, "Nonbonded": 1e-3 * n_mol},
+#       )
 
 
 @pytest.mark.parametrize(
@@ -139,7 +142,7 @@ def test_packmol_boxes(toolkit_file_path, known_error):
     )
 
     # Compare GROMACS writer and OpenMM export
-    gmx_energies, _ = get_gromacs_energies(off_sys)
+    gmx_energies = get_gromacs_energies(off_sys)
 
     omm_energies_rounded = get_openmm_energies(off_sys, round_positions=3)
 
