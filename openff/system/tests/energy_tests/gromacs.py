@@ -24,6 +24,7 @@ def get_mdp_file(key: str) -> Path:
 def get_gromacs_energies(
     off_sys: System,
     writer: str = "internal",
+    electrostatics=True,
 ) -> EnergyReport:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
@@ -32,8 +33,9 @@ def get_gromacs_energies(
             return run_gmx_energy(
                 top_file="out.top",
                 gro_file="out.gro",
-                mdp_file=get_mdp_file("default"),
+                mdp_file=get_mdp_file("cutoff"),
                 maxwarn=2,
+                electrostatics=electrostatics,
             )
 
 
@@ -42,6 +44,7 @@ def run_gmx_energy(
     gro_file: Union[Path, str],
     mdp_file: Union[Path, str],
     maxwarn: int = 1,
+    electrostatics=True,
 ):
 
     grompp_cmd = f"gmx grompp --maxwarn {maxwarn} -o out.tpr"
@@ -58,6 +61,7 @@ def run_gmx_energy(
     _, err = grompp.communicate()
 
     if grompp.returncode:
+        print(err)
         raise Exception
 
     mdrun_cmd = "gmx mdrun -deffnm out"
@@ -92,7 +96,7 @@ def run_gmx_energy(
     if energy.returncode:
         raise Exception
 
-    return _parse_gmx_energy("out.xvg")
+    return _parse_gmx_energy("out.xvg", electrostatics=electrostatics)
 
 
 def _get_gmx_energy_nonbonded(gmx_energies: Dict):
@@ -107,7 +111,7 @@ def _get_gmx_energy_nonbonded(gmx_energies: Dict):
     return gmx_nonbonded
 
 
-def _parse_gmx_energy(xvg_path):
+def _parse_gmx_energy(xvg_path, electrostatics=True):
     energies, _ = _group_energy_terms(xvg_path)
 
     # GROMACS may not populate all keys
@@ -139,8 +143,20 @@ def _parse_gmx_energy(xvg_path):
             "Bond": energies["Bond"],
             "Angle": energies["Angle"],
             "Torsion": energies["Proper Dih."],
-            "Nonbonded": _get_gmx_energy_nonbonded(energies),
         }
     )
+
+    if electrostatics is True:
+        report.energies.update(
+            {
+                "Nonbonded": _get_gmx_energy_nonbonded(energies),
+            }
+        )
+    elif electrostatics is False:
+        report.energies.update(
+            {
+                "Nonbonded": energies["LJ (SR)"],
+            }
+        )
 
     return report

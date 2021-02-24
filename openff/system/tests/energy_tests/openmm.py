@@ -10,7 +10,8 @@ kj_mol = unit.kilojoule_per_mole
 def get_openmm_energies(
     off_sys: System,
     round_positions=None,
-    hard_cutoff: bool = False,
+    hard_cutoff: bool = True,
+    electrostatics: bool = True,
 ) -> EnergyReport:
 
     omm_sys: openmm.System = off_sys.to_openmm()
@@ -21,30 +22,41 @@ def get_openmm_energies(
         positions=off_sys.positions,
         round_positions=round_positions,
         hard_cutoff=hard_cutoff,
+        electrostatics=electrostatics,
     )
 
 
 def set_nonbonded_method(
     omm_sys: openmm.System,
+    key: str,
+    electrostatics: bool = True,
 ) -> openmm.System:
-    nonbond_force = _get_nonbonded_force(omm_sys)
-    nonbond_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
 
-    nonbond_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
-    nonbond_force.setCutoffDistance(0.9 * unit.nanometer)
-    nonbond_force.setReactionFieldDielectric(1.0)
-    nonbond_force.setUseDispersionCorrection(False)
-    nonbond_force.setUseSwitchingFunction(False)
+    if key == "cutoff":
+        for force in omm_sys.getForces():
+            if type(force) == openmm.NonbondedForce:
+                force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
+                force.setCutoffDistance(0.9 * unit.nanometer)
+                force.setReactionFieldDielectric(1.0)
+                force.setUseDispersionCorrection(False)
+                force.setUseSwitchingFunction(False)
+                if not electrostatics:
+                    for i in range(force.getNumParticles()):
+                        params = force.getParticleParameters(i)
+                        force.setParticleParameters(
+                            i,
+                            0,
+                            params[1],
+                            params[2],
+                        )
+
+    elif key == "PME":
+        for force in omm_sys.getForces():
+            if type(force) == openmm.NonbondedForce:
+                force.setNonbondedMethod(openmm.NonbondedForce.PME)
+                force.setEwaldErrorTolerance(1e-6)
 
     return omm_sys
-
-
-def _get_nonbonded_force(
-    omm_sys: openmm.System,
-) -> openmm.NonbondedForce:
-    for force in omm_sys.getForces():
-        if type(force) == openmm.NonbondedForce:
-            return force
 
 
 def _get_openmm_energies(
@@ -53,10 +65,13 @@ def _get_openmm_energies(
     positions,
     round_positions=None,
     hard_cutoff=False,
+    electrostatics: bool = True,
 ) -> EnergyReport:
 
     if hard_cutoff:
-        omm_sys = set_nonbonded_method(omm_sys)
+        omm_sys = set_nonbonded_method(omm_sys, "cutoff", electrostatics=electrostatics)
+    else:
+        omm_sys = set_nonbonded_method(omm_sys, "PME")
 
     force_names = {force.__class__.__name__ for force in omm_sys.getForces()}
     group_to_force = {i: force_name for i, force_name in enumerate(force_names)}

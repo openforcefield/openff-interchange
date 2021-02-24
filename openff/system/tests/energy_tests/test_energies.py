@@ -6,13 +6,13 @@ from simtk import openmm
 from simtk import unit as omm_unit
 
 from openff.system import unit
-from openff.system.exceptions import NonbondedEnergyError
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
 from openff.system.tests.energy_tests.openmm import (
     _get_openmm_energies,
     get_openmm_energies,
 )
+from openff.system.tests.energy_tests.report import EnergyError
 
 
 @pytest.mark.parametrize("constrained", [False])  # [True, False]
@@ -49,24 +49,31 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
         off_sys.box = box
 
     # Compare directly to toolkit's reference implementation
-    omm_energies = get_openmm_energies(off_sys, round_positions=3)
+    omm_energies = get_openmm_energies(
+        off_sys, round_positions=3, hard_cutoff=True, electrostatics=False
+    )
     omm_reference = parsley.create_openmm_system(top)
     reference_energies = _get_openmm_energies(
         omm_sys=omm_reference,
         box_vectors=off_sys.box,
         positions=off_sys.positions,
         round_positions=3,
+        hard_cutoff=True,
+        electrostatics=False,
     )
 
     try:
         omm_energies.compare(reference_energies)
-    except NonbondedEnergyError:
-        # If nonbonded energies differ, at least ensure that the nonbonded
-        # parameters on each particle match
-        from openff.system.tests.utils import (
-            _get_charges_from_openmm_system,
-            _get_lj_params_from_openmm_system,
-        )
+    except EnergyError as e:
+        if "Nonbonded" in str(e):
+            # If nonbonded energies differ, at least ensure that the nonbonded
+            # parameters on each particle match
+            from openff.system.tests.utils import (
+                _get_charges_from_openmm_system,
+                _get_lj_params_from_openmm_system,
+            )
+        else:
+            raise e
 
         omm_sys = off_sys.to_openmm()
         np.testing.assert_equal(
@@ -79,25 +86,68 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
         )
 
     # Compare GROMACS writer and OpenMM export
-    gmx_energies = get_gromacs_energies(off_sys)
+    gmx_energies = get_gromacs_energies(off_sys, electrostatics=False)
 
     gmx_energies.compare(
         omm_energies,
         custom_tolerances={
-            "Bond": 1e-5 * n_mol * omm_unit.kilojoule_per_mole,
+            "Bond": 2e-5 * n_mol * omm_unit.kilojoule_per_mole,
             "Nonbonded": 1e-3 * n_mol * omm_unit.kilojoule_per_mole,
         },
     )
 
 
+@pytest.mark.parametrize("n_mol", [10, 100])
+def test_argon(n_mol):
+    from openff.system.utils import get_test_file_path
+
+    ar_ff = ForceField(get_test_file_path("argon.offxml"))
+
+    mol = Molecule.from_smiles("[#18]")
+    mol.add_conformer(np.array([[0, 0, 0]]) * omm_unit.angstrom)
+    mol.name = "FOO"
+    top = Topology.from_molecules(n_mol * [mol])
+
+    off_sys = ar_ff.create_openff_system(top)
+
+    mol.to_file("out.xyz", file_format="xyz")
+    compound: mb.Compound = mb.load("out.xyz")
+    packed_box: mb.Compound = mb.fill_box(
+        compound=compound,
+        n_compounds=[n_mol],
+        box=mb.Box([4, 4, 4]),
+    )
+
+    positions = packed_box.xyz * unit.nanometer
+    positions = np.round(positions, 3)
+    off_sys.positions = positions
+
+    box = np.asarray(packed_box.box.lengths) * unit.nanometer
+    off_sys.box = box
+
+    omm_energies = get_openmm_energies(
+        off_sys, round_positions=3, hard_cutoff=True, electrostatics=False
+    )
+    gmx_energies = get_gromacs_energies(
+        off_sys, writer="internal", electrostatics=False
+    )
+
+    omm_energies.compare(
+        gmx_energies,
+        custom_tolerances={
+            "Nonbonded": 2e-5 * omm_unit.kilojoule_per_mole,
+        },
+    )
+
+
 @pytest.mark.parametrize(
-    "toolkit_file_path,known_error",
+    "toolkit_file_path",
     [
-        ("systems/test_systems/1_cyclohexane_1_ethanol.pdb", 18.165),
-        ("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb", 3123.5),
+        # ("systems/test_systems/1_cyclohexane_1_ethanol.pdb", 18.165),
+        "systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb",
     ],
 )
-def test_packmol_boxes(toolkit_file_path, known_error):
+def test_packmol_boxes(toolkit_file_path):
     # TODO: Isolate a set of systems here instead of using toolkit data
     # TODO: Fix nonbonded energy differences
     from openff.toolkit.utils import get_data_file_path
@@ -125,30 +175,40 @@ def test_packmol_boxes(toolkit_file_path, known_error):
 
     sys_from_toolkit = parsley.create_openmm_system(off_topology)
 
-    omm_energies = get_openmm_energies(off_sys)
+    omm_energies = get_openmm_energies(off_sys, hard_cutoff=True, electrostatics=False)
     reference = _get_openmm_energies(
         sys_from_toolkit,
         off_sys.box,
         off_sys.positions,
+        hard_cutoff=True,
+        electrostatics=False,
     )
 
-    omm_energies.compare(reference)
+    omm_energies.compare(
+        reference,
+        custom_tolerances={
+            "Nonbonded": 2e-2 * omm_unit.kilojoule_per_mole,
+        },
+    )
+
     # custom_tolerances={"HarmonicBondForce": 1.0}
 
     # Compare GROMACS writer and OpenMM export
-    gmx_energies = get_gromacs_energies(off_sys)
+    gmx_energies = get_gromacs_energies(off_sys, electrostatics=False)
 
-    omm_energies_rounded = get_openmm_energies(off_sys, round_positions=3)
-
-    known_error = known_error * omm_unit.kilojoule_per_mole
+    omm_energies_rounded = get_openmm_energies(
+        off_sys,
+        round_positions=3,
+        hard_cutoff=True,
+        electrostatics=False,
+    )
 
     omm_energies_rounded.compare(
         other=gmx_energies,
         custom_tolerances={
-            "Bond": 0.5 * omm_unit.kilojoule_per_mole,
-            "Angle": 2.0 * omm_unit.kilojoule_per_mole,
-            "Torsion": 1.0 * omm_unit.kilojoule_per_mole,
-            "Nonbonded": 1.05 * known_error,  # Hardcoded around failure
+            "Angle": 1e-2 * omm_unit.kilojoule_per_mole,
+            "Torsion": 1e-2 * omm_unit.kilojoule_per_mole,
+            "Nonbonded": 3200 * omm_unit.kilojoule_per_mole,
         },
     )
 
@@ -168,12 +228,18 @@ def test_water_dimer():
     openff_sys.positions = positions
     openff_sys.box = [10, 10, 10] * unit.nanometer
 
-    omm_energies = get_openmm_energies(openff_sys)
+    omm_energies = get_openmm_energies(
+        openff_sys,
+        hard_cutoff=True,
+        electrostatics=False,
+    )
 
     toolkit_energies = _get_openmm_energies(
         tip3p.create_openmm_system(top),
         openff_sys.box,
         openff_sys.positions,
+        hard_cutoff=True,
+        electrostatics=False,
     )
 
     omm_energies.compare(toolkit_energies)
