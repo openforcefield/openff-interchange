@@ -97,6 +97,49 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
     )
 
 
+@pytest.mark.parametrize("n_mol", [10, 100])
+def test_argon(n_mol):
+    from openff.system.utils import get_test_file_path
+
+    ar_ff = ForceField(get_test_file_path("argon.offxml"))
+
+    mol = Molecule.from_smiles("[#18]")
+    mol.add_conformer(np.array([[0, 0, 0]]) * omm_unit.angstrom)
+    mol.name = "FOO"
+    top = Topology.from_molecules(n_mol * [mol])
+
+    off_sys = ar_ff.create_openff_system(top)
+
+    mol.to_file("out.xyz", file_format="xyz")
+    compound: mb.Compound = mb.load("out.xyz")
+    packed_box: mb.Compound = mb.fill_box(
+        compound=compound,
+        n_compounds=[n_mol],
+        box=mb.Box([4, 4, 4]),
+    )
+
+    positions = packed_box.xyz * unit.nanometer
+    positions = np.round(positions, 3)
+    off_sys.positions = positions
+
+    box = np.asarray(packed_box.box.lengths) * unit.nanometer
+    off_sys.box = box
+
+    omm_energies = get_openmm_energies(
+        off_sys, round_positions=3, hard_cutoff=True, electrostatics=False
+    )
+    gmx_energies = get_gromacs_energies(
+        off_sys, writer="internal", electrostatics=False
+    )
+
+    omm_energies.compare(
+        gmx_energies,
+        custom_tolerances={
+            "Nonbonded": 2e-5 * omm_unit.kilojoule_per_mole,
+        },
+    )
+
+
 @pytest.mark.parametrize(
     "toolkit_file_path",
     [
