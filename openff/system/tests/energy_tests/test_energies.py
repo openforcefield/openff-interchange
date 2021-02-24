@@ -91,7 +91,7 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
     gmx_energies.compare(
         omm_energies,
         custom_tolerances={
-            "Bond": 1e-5 * n_mol * omm_unit.kilojoule_per_mole,
+            "Bond": 2e-5 * n_mol * omm_unit.kilojoule_per_mole,
             "Nonbonded": 1e-3 * n_mol * omm_unit.kilojoule_per_mole,
         },
     )
