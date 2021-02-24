@@ -55,7 +55,7 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 raise ValueError(f"Could not validate data of type {type(val)}")
 
 
-def _from_omm_quantity(val):
+def _from_omm_quantity(val: omm_unit.Quantity):
     """Helper function to convert float or array quantities tagged with SimTK/OpenMM units to
     a Pint-compatible quantity"""
     unit_ = val.unit
@@ -73,7 +73,7 @@ def _from_omm_quantity(val):
         )
 
 
-def _from_unyt_quantity(val):
+def _from_unyt_quantity(val: unyt.unyt_array):
     """Helper function to convert unyt arrays to Pint quantities"""
     quantity = val.to_pint()
     # Ensure a float-like quantity is a float, not a scalar array

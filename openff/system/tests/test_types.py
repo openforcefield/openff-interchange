@@ -205,3 +205,14 @@ class TestQuantityTypes:
 
         with pytest.raises(ValidationError, match="1 validation error for Model"):
             m.lengths = 1 * unit.watt
+
+
+def test_from_omm_quantity():
+    from openff.system.types import _from_omm_quantity
+
+    from_list = _from_omm_quantity([1, 0] * omm_unit.second)
+    from_array = _from_omm_quantity(np.asarray([1, 0]) * omm_unit.second)
+    assert all(from_array == from_list)
+
+    with pytest.raises(ValueError):
+        _from_omm_quantity(True * omm_unit.femtosecond)
