@@ -13,7 +13,9 @@ class TestSMIRNOFFTyping(BaseTest):
     ):
 
         argon_sys = argon_ff.create_openff_system(argon_top)
-        assert [*argon_sys.handlers.keys()] == ["vdW"]
+        assert "vdW" in argon_sys.handlers
+        assert "Electrostatics" in argon_sys.handlers
+        assert "LibraryCharges" in argon_sys.handlers
 
         found_smirks = argon_sys.handlers["vdW"].slot_map.values()
         assert all([smirks == "[#18:1]" for smirks in found_smirks])
