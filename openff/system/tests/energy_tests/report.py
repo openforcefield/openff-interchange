@@ -40,6 +40,8 @@ class EnergyReport(DefaultModel):
         if custom_tolerances is not None:
             tolerances.update(custom_tolerances)
 
+        error = dict()
+
         for key in self.energies:
 
             if self.energies[key] is None and other.energies[key] is None:
@@ -49,4 +51,10 @@ class EnergyReport(DefaultModel):
 
             diff = self.energies[key] - other.energies[key]
             if abs(diff) > tolerances[key]:
-                raise EnergyError(key, diff, tolerances[key])
+                raise EnergyError(
+                    key, diff, tolerances[key], self.energies[key], other.energies[key]
+                )
+
+            error[key] = diff
+
+        return error

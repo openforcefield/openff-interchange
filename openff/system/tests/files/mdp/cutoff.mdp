@@ -20,7 +20,7 @@ ns_type                  = grid
 ; Periodic boundary conditions: xyz or no =
 pbc                      = xyz
 ; nblist cut-off         =
-rlist                    = 2.0
+rlist                    = 0.9
 
 ; OUTPUT CONTROL OPTIONS
 ; Output frequency for coords (x), velocities (v) and forces (f)
