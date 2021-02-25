@@ -16,6 +16,7 @@ def get_mdp_file(key: str) -> Path:
     mapping = {
         "default": "default.mdp",
         "cutoff": "cutoff.mdp",
+        "cutoff_hbonds": "cutoff_hbonds.mdp",
     }
 
     return get_test_file_path(f"mdp/{mapping[key]}")
@@ -23,6 +24,7 @@ def get_mdp_file(key: str) -> Path:
 
 def get_gromacs_energies(
     off_sys: System,
+    mdp: str = "cutoff",
     writer: str = "internal",
     electrostatics=True,
 ) -> EnergyReport:
@@ -33,7 +35,7 @@ def get_gromacs_energies(
             return run_gmx_energy(
                 top_file="out.top",
                 gro_file="out.gro",
-                mdp_file=get_mdp_file("cutoff"),
+                mdp_file=get_mdp_file(mdp),
                 maxwarn=2,
                 electrostatics=electrostatics,
             )
