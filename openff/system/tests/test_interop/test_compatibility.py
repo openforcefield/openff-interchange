@@ -3,6 +3,7 @@ import pytest
 from openff.toolkit.topology import Molecule
 from simtk import unit as omm_unit
 
+from openff.system.exceptions import MissingPositionsError
 from openff.system.stubs import ForceField
 
 
@@ -19,9 +20,6 @@ def test_nonbonded_compatibility():
 
     off_sys = parsley.create_openff_system(top)
 
-    with pytest.raises(AssertionError):
-        off_sys.to_openmm()
-
     off_sys.box = box
 
     off_sys.handlers["Electrostatics"].method = "reaction-field"
@@ -33,7 +31,7 @@ def test_nonbonded_compatibility():
 
     off_sys.handlers["Electrostatics"].method = "PME"
 
-    with pytest.raises(Exception):
+    with pytest.raises(MissingPositionsError):
         off_sys.to_gro("out.gro", writer="internal")
 
     off_sys.positions = positions

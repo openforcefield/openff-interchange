@@ -1,7 +1,10 @@
 from simtk import openmm, unit
 
 from openff.system import unit as off_unit
-from openff.system.exceptions import UnsupportedCutoffMethodError
+from openff.system.exceptions import (
+    InternalInconsistencyError,
+    UnsupportedCutoffMethodError,
+)
 from openff.system.interop.parmed import _lj_params_from_potential
 
 kcal_mol = unit.kilocalorie_per_mole
@@ -171,7 +174,7 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys):
             break
     else:
         # TODO: Support case of no propers but some impropers?
-        raise Exception
+        raise InternalInconsistencyError
 
     improper_torsion_handler = openff_sys.handlers["ImproperTorsions"]
 

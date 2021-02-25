@@ -6,6 +6,7 @@ from openff.toolkit.topology.topology import Topology
 from pydantic import validator
 
 from openff.system.components.potentials import PotentialHandler
+from openff.system.exceptions import InvalidBoxError, MissingPositionsError
 from openff.system.interop.openmm import to_openmm
 from openff.system.interop.parmed import to_parmed
 from openff.system.types import ArrayQuantity, DefaultModel
@@ -34,13 +35,13 @@ class System(DefaultModel):
             val = val * np.eye(3)
             return val
         else:
-            raise ValueError  # InvalidBoxError
+            raise InvalidBoxError
 
     def to_gro(self, file_path: Union[Path, str], writer="parmed"):
         """Export this system to a .gro file using ParmEd"""
 
         if self.positions is None:
-            raise Exception
+            raise MissingPositionsError
 
         # TODO: Enum-style class for handling writer arg?
         if writer == "parmed":
@@ -67,7 +68,7 @@ class System(DefaultModel):
 
     def to_openmm(self):
         """Export this sytem to an OpenMM System"""
-        assert self._check_nonbonded_compatibility()
+        self._check_nonbonded_compatibility()
         return to_openmm(self)
 
     def to_parmed(self):

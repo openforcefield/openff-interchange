@@ -7,6 +7,11 @@ from pydantic import BaseModel
 from simtk import unit as omm_unit
 
 from openff.system import unit
+from openff.system.exceptions import (
+    MissingUnitError,
+    UnitValidationError,
+    UnsupportedExportError,
+)
 
 
 class _FloatQuantityMeta(type):
@@ -25,13 +30,15 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
         if unit_ is Any:
             if isinstance(val, (float, int)):
                 # TODO: Can this exception be raised with knowledge of the field it's in?
-                raise ValueError(f"Value {val} needs to be tagged with a unit")
+                raise MissingUnitError(f"Value {val} needs to be tagged with a unit")
             elif isinstance(val, unit.Quantity):
                 return unit.Quantity(val)
             elif isinstance(val, omm_unit.Quantity):
                 return _from_omm_quantity(val)
             else:
-                raise ValueError(f"Could not validate data of type {type(val)}")
+                raise UnitValidationError(
+                    f"Could not validate data of type {type(val)}"
+                )
         else:
             unit_ = unit(unit_)
             if isinstance(val, unit.Quantity):
@@ -52,7 +59,9 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 # could do custom deserialization here?
                 return unit.Quantity(val).to(unit_)
             else:
-                raise ValueError(f"Could not validate data of type {type(val)}")
+                raise UnitValidationError(
+                    f"Could not validate data of type {type(val)}"
+                )
 
 
 def _from_omm_quantity(val: omm_unit.Quantity):
@@ -67,7 +76,7 @@ def _from_omm_quantity(val: omm_unit.Quantity):
         array = np.asarray(val_)
         return array * unit.Unit(str(unit_))
     else:
-        raise ValueError(
+        raise UnitValidationError(
             "Found a simtk.unit.Unit wrapped around something other than a float-like "
             f"or np.ndarray-like. Found a unit wrapped around type {type(val_)}."
         )
@@ -95,7 +104,7 @@ class QuantityEncoder(json.JSONEncoder):
             else:
                 # This shouldn't ever be hit if our object models
                 # behave in ways we expect?
-                raise Exception(
+                raise UnsupportedExportError(
                     f"trying to serialize unsupported type {type(obj.magnitude)}"
                 )
             return {
@@ -146,14 +155,18 @@ else:
             if unit_ is Any:
                 if isinstance(val, (list, np.ndarray)):
                     # TODO: Can this exception be raised with knowledge of the field it's in?
-                    raise ValueError(f"Value {val} needs to be tagged with a unit")
+                    raise MissingUnitError(
+                        f"Value {val} needs to be tagged with a unit"
+                    )
                 elif isinstance(val, unit.Quantity):
                     # Redundant cast? Maybe this handles pint vs openff.system.unit?
                     return unit.Quantity(val)
                 elif isinstance(val, omm_unit.Quantity):
                     return _from_omm_quantity(val)
                 else:
-                    raise ValueError(f"Could not validate data of type {type(val)}")
+                    raise UnitValidationError(
+                        f"Could not validate data of type {type(val)}"
+                    )
             else:
                 unit_ = unit(unit_)
                 if isinstance(val, unit.Quantity):
@@ -177,7 +190,9 @@ else:
                     raise NotImplementedError
                     #  return unit.Quantity(val).to(unit_)
                 else:
-                    raise ValueError(f"Could not validate data of type {type(val)}")
+                    raise UnitValidationError(
+                        f"Could not validate data of type {type(val)}"
+                    )
 
 
 class DefaultModel(BaseModel):
