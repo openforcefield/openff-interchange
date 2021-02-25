@@ -15,7 +15,7 @@ from openff.system.tests.energy_tests.openmm import (
 from openff.system.tests.energy_tests.report import EnergyError
 
 
-@pytest.mark.parametrize("constrained", [False])  # [True, False]
+@pytest.mark.parametrize("constrained", [True, False])
 @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
 @pytest.mark.parametrize("n_mol", [1, 10, 100])
 def test_energies_single_mol(constrained, n_mol, mol_smi):
@@ -85,15 +85,27 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
             np.asarray([*_get_lj_params_from_openmm_system(omm_reference)]),
         )
 
+    mdp = "cutoff_hbonds" if constrained else "cutoff"
     # Compare GROMACS writer and OpenMM export
-    gmx_energies = get_gromacs_energies(off_sys, electrostatics=False)
+    gmx_energies = get_gromacs_energies(off_sys, mdp=mdp, electrostatics=False)
+
+    custom_tolerances = {
+        "Bond": 2e-5 * n_mol * omm_unit.kilojoule_per_mole,
+        "Nonbonded": 1e-3 * n_mol * omm_unit.kilojoule_per_mole,
+    }
+    if constrained:
+        # GROMACS might use the initial bond lengths, not the equilibrium bond lengths,
+        # in the initial configuration, making angles differ slightly
+        custom_tolerances.update(
+            {
+                "Angle": 5e-2 * n_mol * omm_unit.kilojoule_per_mole,
+                "Nonbonded": 2.0 * n_mol * omm_unit.kilojoule_per_mole,
+            }
+        )
 
     gmx_energies.compare(
         omm_energies,
-        custom_tolerances={
-            "Bond": 2e-5 * n_mol * omm_unit.kilojoule_per_mole,
-            "Nonbonded": 1e-3 * n_mol * omm_unit.kilojoule_per_mole,
-        },
+        custom_tolerances=custom_tolerances,
     )
 
 
