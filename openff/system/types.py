@@ -55,16 +55,25 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 raise ValueError(f"Could not validate data of type {type(val)}")
 
 
-def _from_omm_quantity(val):
-    """Helper function to convert float quantities tagged with SimTK/OpenMM units to
+def _from_omm_quantity(val: omm_unit.Quantity):
+    """Helper function to convert float or array quantities tagged with SimTK/OpenMM units to
     a Pint-compatible quantity"""
-    assert type(val.value_in_unit(val.unit)) in {float, int}
     unit_ = val.unit
-    quantity_ = val.value_in_unit(unit_)
-    return quantity_ * unit.Unit(str(unit_))
+    val_ = val.value_in_unit(unit_)
+    if type(val_) in {float, int}:
+        unit_ = val.unit
+        return val_ * unit.Unit(str(unit_))
+    elif type(val_) in {list, np.ndarray}:
+        array = np.asarray(val_)
+        return array * unit.Unit(str(unit_))
+    else:
+        raise ValueError(
+            "Found a simtk.unit.Unit wrapped around something other than a float-like "
+            f"or np.ndarray-like. Found a unit wrapped around type {type(val_)}."
+        )
 
 
-def _from_unyt_quantity(val):
+def _from_unyt_quantity(val: unyt.unyt_array):
     """Helper function to convert unyt arrays to Pint quantities"""
     quantity = val.to_pint()
     # Ensure a float-like quantity is a float, not a scalar array
@@ -141,6 +150,8 @@ else:
                 elif isinstance(val, unit.Quantity):
                     # Redundant cast? Maybe this handles pint vs openff.system.unit?
                     return unit.Quantity(val)
+                elif isinstance(val, omm_unit.Quantity):
+                    return _from_omm_quantity(val)
                 else:
                     raise ValueError(f"Could not validate data of type {type(val)}")
             else:
@@ -148,6 +159,8 @@ else:
                 if isinstance(val, unit.Quantity):
                     assert unit_.dimensionality == val.dimensionality
                     return val.to(unit_)
+                elif isinstance(val, omm_unit.Quantity):
+                    return _from_omm_quantity(val)
                 elif isinstance(val, (np.ndarray, list)):
                     # Must check for unyt_array, not unyt_quantity, which is a subclass
                     if isinstance(val, unyt.unyt_array):
