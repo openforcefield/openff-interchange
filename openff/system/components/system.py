@@ -90,3 +90,22 @@ class System(DefaultModel):
 
         nonbonded_ = self._get_nonbonded_methods()
         return check_nonbonded_compatibility(nonbonded_)
+
+    def __getitem__(self, item: str):
+        """Syntax sugar for looking up potential handlers or other components"""
+        if type(item) != str:
+            raise LookupError(
+                "Only str arguments can be currently be used for lookups.\n"
+                f"Found item {item} of type {type(item)}"
+            )
+        if item == "positions":
+            return self.positions
+        elif item in {"box", "box_vectors"}:
+            return self.box
+        elif item in self.handlers:
+            return self.handlers[item]
+        else:
+            raise LookupError(
+                f"Could not find component {item}. This object has the following "
+                f"potential handlers registered:\n\t{[*self.handlers.keys()]}"
+            )
