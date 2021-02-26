@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from simtk import unit as omm_unit
 
 from openff.system import unit
+from openff.system.exceptions import UnitValidationError
 from openff.system.types import ArrayQuantity, DefaultModel, FloatQuantity
 
 
@@ -53,7 +54,8 @@ class TestQuantityTypes:
             a: FloatQuantity["atomic_mass_constant"]
 
         with pytest.raises(
-            ValueError, match=r"Could not validate data of type .*[bool|list].*"
+            ValidationError,
+            match=r"Could not validate data of type .*[bool|list].*",
         ):
             Model(a=val)
 
@@ -102,7 +104,7 @@ class TestQuantityTypes:
             a: ArrayQuantity["atomic_mass_constant"]
 
         with pytest.raises(
-            ValueError, match=r"Could not validate data of type .*[bool|int].*"
+            ValidationError, match=r"Could not validate data of type .*[bool|int].*"
         ):
             Model(a=val)
 
@@ -214,5 +216,5 @@ def test_from_omm_quantity():
     from_array = _from_omm_quantity(np.asarray([1, 0]) * omm_unit.second)
     assert all(from_array == from_list)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(UnitValidationError):
         _from_omm_quantity(True * omm_unit.femtosecond)

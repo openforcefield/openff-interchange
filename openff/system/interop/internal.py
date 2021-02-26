@@ -7,6 +7,7 @@ from openff.toolkit.topology import FrozenMolecule, Molecule, Topology
 
 from openff.system import unit
 from openff.system.components.system import System
+from openff.system.exceptions import InternalInconsistencyError
 
 
 def to_gro(openff_sys: System, file_path: Union[Path, str]):
@@ -274,7 +275,7 @@ def _write_bonds(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
         if indices_as_str in bond_handler.slot_map.keys():
             key = bond_handler.slot_map[indices_as_str]
         else:
-            raise Exception("probably should have found parameters here ...")
+            raise InternalInconsistencyError("Failed to find parameters")
 
         # "reference" indices
         ref_indices = [idx - offset for idx in indices]
@@ -316,7 +317,7 @@ def _write_angles(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
         if indices_as_str in angle_handler.slot_map.keys():
             key = angle_handler.slot_map[indices_as_str]
         else:
-            raise Exception
+            raise InternalInconsistencyError("Failed to find parameters")
 
         # "reference" indices
         ref_indices = [idx - offset for idx in indices]
