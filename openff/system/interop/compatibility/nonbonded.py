@@ -34,7 +34,9 @@ def check_nonbonded_compatibility(methods):
     """Check nonbonded methods against known allowed and disallowed
     combinations of nonbonded methods"""
     if methods["electrostatics_method"] in {"reaction-field"}:
-        raise NotImplementedError("Electrostatics method not supported")
+        raise NonbondedCompatibilityError(
+            "Electrostatics method reaction-field is not supported"
+        )
     if methods in ALLOWED:
         return
     elif methods in DISALLOWED:
