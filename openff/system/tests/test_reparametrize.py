@@ -13,7 +13,12 @@ def test_full_reparametrize():
     mol.generate_conformers(n_conformers=1)
 
     parsley = ForceField("openff-1.0.0.offxml")
-    s99 = ForceField("smirnoff99frosst-1.1.0.offxml")
+    try:
+        s99 = ForceField("smirnoff99frosst-1.1.0.offxml")
+    except OSError:
+        # Drop when below PR is in a release (0.9.2)
+        # https://github.com/openforcefield/openff-toolkit/pull/816
+        s99 = ForceField("smirnoff99Frosst-1.1.0.offxml")
 
     original = parsley.create_openff_system(top)
     reference = s99.create_openff_system(top)
