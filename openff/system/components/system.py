@@ -6,9 +6,14 @@ from openff.toolkit.topology.topology import Topology
 from pydantic import validator
 
 from openff.system.components.potentials import PotentialHandler
-from openff.system.exceptions import InvalidBoxError, MissingPositionsError
+from openff.system.exceptions import (
+    HandlerNotFoundError,
+    InvalidBoxError,
+    MissingPositionsError,
+)
 from openff.system.interop.openmm import to_openmm
 from openff.system.interop.parmed import to_parmed
+from openff.system.stubs import ForceField
 from openff.system.types import ArrayQuantity, DefaultModel
 
 
@@ -36,6 +41,17 @@ class System(DefaultModel):
             return val
         else:
             raise InvalidBoxError
+
+    def reparametrize(self, other_force_field: ForceField, handler_name: str):
+        if handler_name not in self.handlers:
+            raise HandlerNotFoundError
+
+        del self.handlers[handler_name]
+
+        new_handler = other_force_field[handler_name].create_potential(
+            topology=self.topology
+        )
+        self.handlers[handler_name] = new_handler
 
     def to_gro(self, file_path: Union[Path, str], writer="parmed"):
         """Export this system to a .gro file using ParmEd"""

@@ -49,6 +49,12 @@ class MissingDependencyError(BaseException):
         super().__init__(self.msg)
 
 
+class HandlerNotFoundError(ValueError):
+    """
+    Exception for when a handler is not found during a lookup
+    """
+
+
 class InvalidBoxError(ValueError):
     """
     Generic exception for errors reading box data
