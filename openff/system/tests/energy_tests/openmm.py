@@ -1,6 +1,7 @@
 import numpy as np
 from simtk import openmm, unit
 
+from openff.system import unit as off_unit
 from openff.system.components.system import System
 from openff.system.tests.energy_tests.report import EnergyReport
 
@@ -84,10 +85,10 @@ def _get_openmm_energies(
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context = openmm.Context(omm_sys, integrator)
 
-    box_vectors = box_vectors.magnitude * unit.nanometer
+    box_vectors = box_vectors.to(off_unit.nanometer).magnitude * unit.nanometer
     context.setPeriodicBoxVectors(*box_vectors)
 
-    positions = positions.magnitude * unit.nanometer
+    positions = positions.to(off_unit.nanometer).magnitude * unit.nanometer
 
     if round_positions is not None:
         rounded = np.round(positions, round_positions)
