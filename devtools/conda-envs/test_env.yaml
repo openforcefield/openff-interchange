@@ -21,4 +21,5 @@ dependencies:
   - unyt
   - intermol
   - gromacs
+  - lammps
   - mbuild
