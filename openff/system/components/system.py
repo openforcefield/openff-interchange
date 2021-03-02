@@ -50,9 +50,9 @@ class System(DefaultModel):
             ParmEdWrapper().to_file(self, file_path)
 
         elif writer == "internal":
-            from openff.system.interop import internal
+            from openff.system.interop.internal.gromacs import to_gro
 
-            internal.to_gro(self, file_path)
+            to_gro(self, file_path)
 
     def to_top(self, file_path: Union[Path, str], writer="parmed"):
         """Export this system to a .top file using ParmEd"""
@@ -62,9 +62,9 @@ class System(DefaultModel):
             ParmEdWrapper().to_file(self, file_path)
 
         elif writer == "internal":
-            from openff.system.interop import internal
+            from openff.system.interop.internal.gromacs import to_top
 
-            internal.to_top(self, file_path)
+            to_top(self, file_path)
 
     def to_openmm(self):
         """Export this sytem to an OpenMM System"""
