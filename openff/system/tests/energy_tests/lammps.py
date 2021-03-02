@@ -46,6 +46,7 @@ def _parse_lammps_log(file_in) -> List[float]:
         for line in fi.readlines():
             if tag:
                 data = [float(val) for val in line.split()]
+                tag = False
             if line.startswith("E_bond"):
                 tag = True
 
