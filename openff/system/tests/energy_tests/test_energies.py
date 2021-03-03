@@ -8,6 +8,7 @@ from simtk import unit as omm_unit
 from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+from openff.system.tests.energy_tests.lammps import get_lammps_energies
 from openff.system.tests.energy_tests.openmm import (
     _get_openmm_energies,
     get_openmm_energies,
@@ -143,6 +144,9 @@ def test_argon(n_mol):
     gmx_energies = get_gromacs_energies(
         off_sys, writer="internal", electrostatics=False
     )
+    lmp_energies = get_lammps_energies(off_sys)
+
+    omm_energies.compare(lmp_energies)
 
     omm_energies.compare(
         gmx_energies,

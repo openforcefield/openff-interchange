@@ -70,13 +70,23 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
 
         lmp_file.write("\nMasses\n\n")
 
-        for atom_idx, atom in enumerate(openff_sys.topology.topology_atoms):  # type: ignore[union-attr]
-            mass = atom.atom.mass / omm_unit.dalton
-            lmp_file.write("{:d}\t{:.8g}".format(atom_idx + 1, mass))
+        vdw_handler = openff_sys["vdW"]
+        atom_type_map = dict(enumerate(vdw_handler.potentials))
+        slot_map_inv = dict({v: k for k, v in vdw_handler.slot_map.items()})
+
+        for atom_type_idx, smirks in atom_type_map.items():
+            # Find just one topology atom matching this SMIRKS by vdW
+            matched_atom_idx = eval(slot_map_inv[smirks])[0]
+            matched_atom = openff_sys.topology.atom(matched_atom_idx)  # type: ignore
+            mass = matched_atom.atom.mass.value_in_unit(omm_unit.dalton)
+
+            lmp_file.write("{:d}\t{:.8g}\n".format(atom_type_idx + 1, mass))
 
         lmp_file.write("\n\n")
 
-        atom_type_map = _write_pair_coeffs(lmp_file=lmp_file, openff_sys=openff_sys)
+        _write_pair_coeffs(
+            lmp_file=lmp_file, openff_sys=openff_sys, atom_type_map=atom_type_map
+        )
 
         if n_bonds > 0:
             _write_bond_coeffs(lmp_file=lmp_file, openff_sys=openff_sys)
@@ -90,11 +100,10 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
         )
 
 
-def _write_pair_coeffs(lmp_file: IO, openff_sys: System) -> Dict:
+def _write_pair_coeffs(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
     lmp_file.write("Pair Coeffs\n\n")
 
     vdw_handler = openff_sys["vdW"]
-    atom_type_map = dict(enumerate(vdw_handler.potentials))
 
     for atom_type_idx, smirks in atom_type_map.items():
         params = vdw_handler.potentials[smirks].parameters
