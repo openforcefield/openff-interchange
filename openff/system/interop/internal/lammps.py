@@ -110,8 +110,10 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
         _write_atoms(
             lmp_file=lmp_file, openff_sys=openff_sys, atom_type_map=atom_type_map
         )
-        _write_bonds(lmp_file=lmp_file, openff_sys=openff_sys)
-        _write_angles(lmp_file=lmp_file, openff_sys=openff_sys)
+        if n_bonds > 0:
+            _write_bonds(lmp_file=lmp_file, openff_sys=openff_sys)
+        if n_angles > 0:
+            _write_angles(lmp_file=lmp_file, openff_sys=openff_sys)
 
 
 def _write_pair_coeffs(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
