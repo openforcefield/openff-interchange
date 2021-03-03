@@ -155,3 +155,9 @@ class GMXRunError(BaseException):
     """
     Exception for when a GROMACS subprocess fails.
     """
+
+
+class LAMMPSRunError(BaseException):
+    """
+    Exception for when a LAMMPS subprocess fails.
+    """

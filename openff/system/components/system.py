@@ -6,7 +6,11 @@ from openff.toolkit.topology.topology import Topology
 from pydantic import validator
 
 from openff.system.components.potentials import PotentialHandler
-from openff.system.exceptions import InvalidBoxError, MissingPositionsError
+from openff.system.exceptions import (
+    InvalidBoxError,
+    MissingPositionsError,
+    UnsupportedExportError,
+)
 from openff.system.interop.openmm import to_openmm
 from openff.system.interop.parmed import to_parmed
 from openff.system.types import ArrayQuantity, DefaultModel
@@ -50,9 +54,9 @@ class System(DefaultModel):
             ParmEdWrapper().to_file(self, file_path)
 
         elif writer == "internal":
-            from openff.system.interop import internal
+            from openff.system.interop.internal.gromacs import to_gro
 
-            internal.to_gro(self, file_path)
+            to_gro(self, file_path)
 
     def to_top(self, file_path: Union[Path, str], writer="parmed"):
         """Export this system to a .top file using ParmEd"""
@@ -62,9 +66,17 @@ class System(DefaultModel):
             ParmEdWrapper().to_file(self, file_path)
 
         elif writer == "internal":
-            from openff.system.interop import internal
+            from openff.system.interop.internal.gromacs import to_top
 
-            internal.to_top(self, file_path)
+            to_top(self, file_path)
+
+    def to_lammps(self, file_path: Union[Path, str], writer="internal"):
+        if writer != "internal":
+            raise UnsupportedExportError
+
+        from openff.system.interop.internal.lammps import to_lammps
+
+        to_lammps(self, file_path)
 
     def to_openmm(self):
         """Export this sytem to an OpenMM System"""

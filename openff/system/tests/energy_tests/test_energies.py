@@ -8,6 +8,7 @@ from simtk import unit as omm_unit
 from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+from openff.system.tests.energy_tests.lammps import get_lammps_energies
 from openff.system.tests.energy_tests.openmm import (
     _get_openmm_energies,
     get_openmm_energies,
@@ -108,6 +109,19 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
         custom_tolerances=custom_tolerances,
     )
 
+    if not constrained:
+        other_energies = get_openmm_energies(
+            off_sys,
+            round_positions=7,
+            hard_cutoff=True,
+            electrostatics=True,
+        )
+        lmp_energies = get_lammps_energies(off_sys)
+        custom_tolerances = {
+            "Nonbonded": 0.5 * n_mol * omm_unit.kilojoule_per_mole,
+        }
+        lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
+
 
 @pytest.mark.parametrize("n_mol", [10, 100])
 def test_argon(n_mol):
@@ -143,6 +157,9 @@ def test_argon(n_mol):
     gmx_energies = get_gromacs_energies(
         off_sys, writer="internal", electrostatics=False
     )
+    lmp_energies = get_lammps_energies(off_sys)
+
+    omm_energies.compare(lmp_energies)
 
     omm_energies.compare(
         gmx_energies,
@@ -165,7 +182,7 @@ def test_packmol_boxes(toolkit_file_path):
     from openff.toolkit.utils import get_data_file_path
 
     pdb_file_path = get_data_file_path(toolkit_file_path)
-    pdbfile = openmm.app.PDBFile(pdb_file_path)  # type: ignore
+    pdbfile = openmm.app.PDBFile(pdb_file_path)
 
     ethanol = Molecule.from_smiles("CCO")
     cyclohexane = Molecule.from_smiles("C1CCCCC1")
@@ -232,7 +249,7 @@ def test_water_dimer():
     water = Molecule.from_smiles("O")
     top = Topology.from_molecules(2 * [water])
 
-    pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))  # type: ignore
+    pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
 
     positions = np.array(pdbfile.positions / omm_unit.nanometer) * unit.nanometer
 
