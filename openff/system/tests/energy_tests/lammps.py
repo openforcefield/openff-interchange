@@ -14,9 +14,7 @@ def get_lammps_energies(
     electrostatics=True,
 ) -> EnergyReport:
 
-    from openff.system.interop.internal.lammps import to_lammps
-
-    to_lammps(off_sys, "out.lmp")
+    off_sys.to_lammps("out.lmp")
     _write_lammps_input(off_sys=off_sys, file_name="tmp.in")
 
     run_cmd = "lmp_serial -i tmp.in"

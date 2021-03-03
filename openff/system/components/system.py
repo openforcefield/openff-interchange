@@ -6,7 +6,11 @@ from openff.toolkit.topology.topology import Topology
 from pydantic import validator
 
 from openff.system.components.potentials import PotentialHandler
-from openff.system.exceptions import InvalidBoxError, MissingPositionsError
+from openff.system.exceptions import (
+    InvalidBoxError,
+    MissingPositionsError,
+    UnsupportedExportError,
+)
 from openff.system.interop.openmm import to_openmm
 from openff.system.interop.parmed import to_parmed
 from openff.system.types import ArrayQuantity, DefaultModel
@@ -65,6 +69,14 @@ class System(DefaultModel):
             from openff.system.interop.internal.gromacs import to_top
 
             to_top(self, file_path)
+
+    def to_lammps(self, file_path: Union[Path, str], writer="internal"):
+        if writer != "internal":
+            raise UnsupportedExportError
+
+        from openff.system.interop.internal.lammps import to_lammps
+
+        to_lammps(self, file_path)
 
     def to_openmm(self):
         """Export this sytem to an OpenMM System"""
