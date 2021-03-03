@@ -165,7 +165,7 @@ def test_packmol_boxes(toolkit_file_path):
     from openff.toolkit.utils import get_data_file_path
 
     pdb_file_path = get_data_file_path(toolkit_file_path)
-    pdbfile = openmm.app.PDBFile(pdb_file_path)  # type: ignore
+    pdbfile = openmm.app.PDBFile(pdb_file_path)
 
     ethanol = Molecule.from_smiles("CCO")
     cyclohexane = Molecule.from_smiles("C1CCCCC1")
@@ -232,7 +232,7 @@ def test_water_dimer():
     water = Molecule.from_smiles("O")
     top = Topology.from_molecules(2 * [water])
 
-    pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))  # type: ignore
+    pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
 
     positions = np.array(pdbfile.positions / omm_unit.nanometer) * unit.nanometer
 
