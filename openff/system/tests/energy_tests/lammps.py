@@ -69,6 +69,11 @@ def _write_lammps_input(off_sys: System, file_name="test.in"):
             "units real\n" "atom_style full\n" "\n" "dimension 3\nboundary p p p\n\n"
         )
 
+        if "Bonds" in off_sys.handlers:
+            fo.write("bond_style hybrid harmonic\n")
+        if "Angles" in off_sys.handlers:
+            fo.write("angle_style hybrid harmonic\n")
+
         vdw_hander = off_sys.handlers["vdW"]
         electrostatics_handler = off_sys.handlers["Electrostatics"]
 
@@ -76,11 +81,6 @@ def _write_lammps_input(off_sys: System, file_name="test.in"):
         vdw_cutoff = vdw_hander.cutoff  # type: ignore[attr-defined]
         # TODO: Handle separate cutoffs
         coul_cutoff = vdw_cutoff
-
-        fo.write(
-            f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n"
-            "pair_modify mix arithmetic\n\n"
-        )
 
         fo.write(
             "special_bonds lj {} {} {} coul {} {} {}\n\n".format(
@@ -91,6 +91,11 @@ def _write_lammps_input(off_sys: System, file_name="test.in"):
                 electrostatics_handler.scale_13,  # type: ignore[attr-defined]
                 electrostatics_handler.scale_14,  # type: ignore[attr-defined]
             )
+        )
+
+        fo.write(
+            f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n"
+            "pair_modify mix arithmetic\n\n"
         )
 
         fo.write("read_data out.lmp\n\n")

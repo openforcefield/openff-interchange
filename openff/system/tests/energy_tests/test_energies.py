@@ -109,6 +109,19 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
         custom_tolerances=custom_tolerances,
     )
 
+    if not constrained:
+        other_energies = get_openmm_energies(
+            off_sys,
+            round_positions=7,
+            hard_cutoff=True,
+            electrostatics=True,
+        )
+        lmp_energies = get_lammps_energies(off_sys)
+        custom_tolerances = {
+            "Nonbonded": 0.5 * n_mol * omm_unit.kilojoule_per_mole,
+        }
+        lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
+
 
 @pytest.mark.parametrize("n_mol", [10, 100])
 def test_argon(n_mol):
