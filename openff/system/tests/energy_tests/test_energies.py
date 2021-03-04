@@ -7,7 +7,11 @@ from simtk import unit as omm_unit
 
 from openff.system import unit
 from openff.system.stubs import ForceField
-from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+from openff.system.tests.energy_tests.gromacs import (
+    get_gromacs_energies,
+    get_mdp_file,
+    run_gmx_energy,
+)
 from openff.system.tests.energy_tests.lammps import get_lammps_energies
 from openff.system.tests.energy_tests.openmm import (
     _get_openmm_energies,
@@ -276,3 +280,34 @@ def test_water_dimer():
     # TODO: Fix GROMACS energies by handling SETTLE constraints
     # gmx_energies, _ = get_gromacs_energies(openff_sys)
     # compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)
+
+
+def test_process_rb_torsions():
+    """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
+
+    import foyer
+
+    oplsaa = foyer.Forcefield(name="oplsaa")
+
+    ethanol = Molecule.from_smiles("CCO")
+    ethanol.generate_conformers(n_conformers=1)
+    ethanol.generate_unique_atom_names()
+
+    # Run this OFFMol through MoSDeF infrastructure and OPLS-AA
+    from openff.system.tests.energy_tests.utils import offmol_to_compound
+
+    my_compound = offmol_to_compound(ethanol)
+    my_compound.box = mb.Box(lengths=[4, 4, 4])
+
+    oplsaa = foyer.Forcefield(name="oplsaa")
+    struct = oplsaa.apply(my_compound)
+
+    struct.save("eth.top", overwrite=True)
+    struct.save("eth.gro", overwrite=True)
+
+    # Get single-point energies using GROMACS
+    oplsaa_energies = run_gmx_energy(
+        top_file="eth.top", gro_file="eth.gro", mdp_file=get_mdp_file("default")
+    )
+
+    assert oplsaa_energies.energies["Torsion"]._value != 0.0
