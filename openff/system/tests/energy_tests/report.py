@@ -2,7 +2,7 @@ from typing import Dict, Optional
 
 from simtk import unit as omm_unit
 
-from openff.system.types import DefaultModel
+from openff.system.models import DefaultModel
 
 
 class EnergyError(BaseException):
