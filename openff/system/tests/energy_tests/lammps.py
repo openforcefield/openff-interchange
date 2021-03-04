@@ -67,12 +67,15 @@ def _write_lammps_input(off_sys: System, file_name="test.in"):
             "units real\n" "atom_style full\n" "\n" "dimension 3\nboundary p p p\n\n"
         )
 
-        if len(off_sys["Bonds"].potentials):
-            fo.write("bond_style hybrid harmonic\n")
-        if len(off_sys["Angles"].potentials):
-            fo.write("angle_style hybrid harmonic\n")
-        if len(off_sys["ProperTorsions"].potentials):
-            fo.write("dihedral_style hybrid fourier\n")
+        if "Bonds" in off_sys.handlers:
+            if len(off_sys["Bonds"].potentials):
+                fo.write("bond_style hybrid harmonic\n")
+        if "Angles" in off_sys.handlers:
+            if len(off_sys["Angles"].potentials):
+                fo.write("angle_style hybrid harmonic\n")
+        if "ProperTorsions" in off_sys.handlers:
+            if len(off_sys["ProperTorsions"].potentials):
+                fo.write("dihedral_style hybrid fourier\n")
 
         vdw_hander = off_sys.handlers["vdW"]
         electrostatics_handler = off_sys.handlers["Electrostatics"]
