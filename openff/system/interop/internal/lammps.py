@@ -104,7 +104,10 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
             _write_bond_coeffs(lmp_file=lmp_file, openff_sys=openff_sys)
         if n_angles > 0:
             _write_angle_coeffs(lmp_file=lmp_file, openff_sys=openff_sys)
-        if n_propers > 0 or n_impropers > 0:
+        if n_propers > 0:
+            _write_proper_coeffs(lmp_file=lmp_file, openff_sys=openff_sys)
+        if n_impropers > 0:
+            # _write_improper_coeffs(lmp_file=lmp_file, openff_sys=openff_sys)
             pass
 
         _write_atoms(
@@ -114,6 +117,11 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
             _write_bonds(lmp_file=lmp_file, openff_sys=openff_sys)
         if n_angles > 0:
             _write_angles(lmp_file=lmp_file, openff_sys=openff_sys)
+        if n_propers > 0:
+            _write_propers(lmp_file=lmp_file, openff_sys=openff_sys)
+        if n_impropers > 0:
+            # _write_impropers(lmp_file=lmp_file, openff_sys=openff_sys)
+            pass
 
 
 def _write_pair_coeffs(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
@@ -133,10 +141,8 @@ def _write_pair_coeffs(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
 
     lmp_file.write("\n")
 
-    return atom_type_map
 
-
-def _write_bond_coeffs(lmp_file: IO, openff_sys: System) -> Dict:
+def _write_bond_coeffs(lmp_file: IO, openff_sys: System):
     lmp_file.write("Bond Coeffs\n\n")
 
     bond_handler = openff_sys.handlers["Bonds"]
@@ -149,14 +155,12 @@ def _write_bond_coeffs(lmp_file: IO, openff_sys: System) -> Dict:
         k = k * 0.5  # Account for LAMMPS wrapping 1/2 into k
         length = params["length"].to(unit.angstrom).magnitude
 
-        lmp_file.write(f"{bond_type_idx+1:d} harmonic\t{k:.16g}\t{length:.16g}")
+        lmp_file.write(f"{bond_type_idx+1:d} harmonic\t{k:.16g}\t{length:.16g}\n")
 
     lmp_file.write("\n")
 
-    return bond_type_map
 
-
-def _write_angle_coeffs(lmp_file: IO, openff_sys: System) -> Dict:
+def _write_angle_coeffs(lmp_file: IO, openff_sys: System):
     lmp_file.write("\nAngle Coeffs\n\n")
 
     angle_handler = openff_sys.handlers["Angles"]
@@ -169,11 +173,29 @@ def _write_angle_coeffs(lmp_file: IO, openff_sys: System) -> Dict:
         k = k * 0.5  # Account for LAMMPS wrapping 1/2 into k
         theta = params["angle"].to(unit.degree).magnitude
 
-        lmp_file.write(f"{angle_type_idx+1:d} harmonic\t{k:.16g}\t{theta:.16g}")
+        lmp_file.write(f"{angle_type_idx+1:d} harmonic\t{k:.16g}\t{theta:.16g}\n")
 
     lmp_file.write("\n")
 
-    return angle_type_map
+
+def _write_proper_coeffs(lmp_file: IO, openff_sys: System):
+    lmp_file.write("\nDihedral Coeffs\n\n")
+
+    proper_handler = openff_sys.handlers["ProperTorsions"]
+    proper_type_map = dict(enumerate(proper_handler.potentials))
+
+    for proper_type_idx, smirks in proper_type_map.items():
+        params = proper_handler.potentials[smirks].parameters
+
+        k = params["k"].to(unit.Unit("kilocalorie / mole / radian ** 2")).magnitude
+        n = int(params["periodicity"])
+        phase = params["phase"].to(unit.degree).magnitude
+
+        lmp_file.write(
+            f"{proper_type_idx+1:d} fourier 1\t{k:.16g}\t{n:d}\t{phase:.16g}\n"
+        )
+
+    lmp_file.write("\n")
 
 
 def _write_atoms(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
@@ -256,3 +278,32 @@ def _write_angles(lmp_file: IO, openff_sys: System):
                 indices[2] + 1,
             )
         )
+
+
+def _write_propers(lmp_file: IO, openff_sys: System):
+    lmp_file.write("\nDihedrals\n\n")
+
+    proper_handler = openff_sys["ProperTorsions"]
+    proper_type_map = dict(enumerate(proper_handler.potentials))
+
+    proper_type_map_inv = dict({v: k for k, v in proper_type_map.items()})
+
+    for proper_idx, proper in enumerate(openff_sys.topology.propers):  # type: ignore[union-attr]
+        # These are "topology indices"
+        indices = tuple(a.topology_atom_index for a in proper)
+        indices_as_str = str(indices)
+        for torsion_key, smirks_ in proper_handler.slot_map.items():
+            if indices_as_str == torsion_key.split("_")[0]:
+
+                proper_type_idx = proper_type_map_inv[smirks_]
+
+                lmp_file.write(
+                    "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
+                        proper_idx + 1,
+                        proper_type_idx + 1,
+                        indices[0] + 1,
+                        indices[1] + 1,
+                        indices[2] + 1,
+                        indices[3] + 1,
+                    )
+                )
