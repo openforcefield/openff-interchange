@@ -107,7 +107,8 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
         """
         if self.constraints:
             self.constraints = dict()
-        for key, smirks in self.slot_map.items():
+        for top_key, pot_key in self.slot_map.items():
+            smirks = pot_key.id
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             if parameter_type.distance:
                 distance = parameter_type.distance
@@ -121,7 +122,7 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
                         "of this constraint is not specified."
                     )
                 # Look up by atom indices because constraint and bond SMIRKS may not match
-                bond_key = bond_handler.slot_map[key]
+                bond_key = bond_handler.slot_map[top_key]
                 bond_parameter = bond_handler.potentials[bond_key].parameters
                 distance = bond_parameter["length"]
             potential = Potential(
@@ -129,7 +130,7 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
                     "distance": distance,
                 }
             )
-            self.constraints[smirks] = potential  # type: ignore[assignment]
+            self.constraints[pot_key] = potential  # type: ignore[assignment]
 
 
 class SMIRNOFFAngleHandler(PotentialHandler):
@@ -380,8 +381,8 @@ class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
     ) -> None:
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
-            key = str(key)
-            self.slot_map[key] = val.parameter_type.smirks
+            top_key = TopologyKey(atom_indices=(key,))
+            self.slot_map[top_key] = val.parameter_type.smirks
 
     def store_potentials(self, parameter_handler: LibraryChargeHandler) -> None:
         if self.potentials:
@@ -438,7 +439,7 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
 
     def cache_charges(self, partial_charge_method: str, topology: Topology):
 
-        charges: Dict[str, FloatQuantity] = dict()
+        charges: Dict[TopologyKey, FloatQuantity] = dict()
 
         for ref_mol in topology.reference_molecules:
             ref_mol.assign_partial_charges(partial_charge_method=partial_charge_method)
@@ -452,8 +453,8 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
                     partial_charge = ref_mol._partial_charges[ref_mol_particle_index]
                     partial_charge = partial_charge / omm_unit.elementary_charge
                     partial_charge = partial_charge * unit.elementary_charge
-                    idx = str((topology_particle_index,))
-                    charges[idx] = partial_charge
+                    top_key = TopologyKey(atom_indices=(topology_particle_index,))
+                    charges[top_key] = partial_charge
 
         self.cache[partial_charge_method] = charges
 
@@ -466,7 +467,7 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
                 "charge_increments"
             ]
             for i, id_ in enumerate(ids):
-                atom_key = TopologyKey(atom_indices=(id_))
+                atom_key = TopologyKey(atom_indices=(id_,))
                 self.charges[atom_key] += charges[i]
 
     def apply_library_charges(self, library_charges: SMIRNOFFLibraryChargeHandler):
