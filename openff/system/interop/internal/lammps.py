@@ -192,8 +192,9 @@ def _write_atoms(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
 
         molecule_idx = molecule_map_inv[atom.topology_molecule]
 
-        vdw_smirks = vdw_hander.slot_map[TopologyKey(atom_indices=(atom_idx,))].id
-        atom_type = atom_type_map_inv[vdw_smirks]
+        top_key = TopologyKey(atom_indices=(atom_idx,))
+        pot_key = vdw_hander.slot_map[top_key]
+        atom_type = atom_type_map_inv[pot_key]
 
         top_key = TopologyKey(atom_indices=(atom_idx,))
         charge = electrostatics_handler.charges[top_key].magnitude  # type: ignore[attr-defined]
@@ -222,8 +223,9 @@ def _write_bonds(lmp_file: IO, openff_sys: System):
     for bond_idx, bond in enumerate(openff_sys.topology.topology_bonds):  # type: ignore[union-attr]
         # These are "topology indices"
         indices = tuple(sorted(a.topology_atom_index for a in bond.atoms))
-        smirks = bond_handler.slot_map[str(indices)]
-        bond_type = bond_type_map_inv[smirks]
+        top_key = TopologyKey(atom_indices=indices)
+        pot_key = bond_handler.slot_map[top_key]
+        bond_type = bond_type_map_inv[pot_key]
 
         lmp_file.write(
             "{:d}\t{:d}\t{:d}\t{:d}\n".format(
@@ -246,8 +248,9 @@ def _write_angles(lmp_file: IO, openff_sys: System):
     for angle_idx, angle in enumerate(openff_sys.topology.angles):  # type: ignore[union-attr]
         # These are "topology indices"
         indices = tuple(a.topology_atom_index for a in angle)
-        smirks = angle_handler.slot_map[str(tuple(indices))]
-        angle_type = angle_type_map_inv[smirks]
+        top_key = TopologyKey(atom_indices=indices)
+        pot_key = angle_handler.slot_map[top_key]
+        angle_type = angle_type_map_inv[pot_key]
 
         lmp_file.write(
             "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(

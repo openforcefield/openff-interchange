@@ -381,8 +381,9 @@ class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
     ) -> None:
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
-            top_key = TopologyKey(atom_indices=(key,))
-            self.slot_map[top_key] = val.parameter_type.smirks
+            top_key = TopologyKey(atom_indices=key)
+            pot_key = PotentialKey(id=val.parameter_type.smirks)
+            self.slot_map[top_key] = pot_key
 
     def store_potentials(self, parameter_handler: LibraryChargeHandler) -> None:
         if self.potentials:
@@ -413,8 +414,9 @@ class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
     ) -> None:
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
-            key = str(key)
-            self.slot_map[key] = val.parameter_type.smirks
+            top_key = TopologyKey(atom_indices=key)
+            pot_key = PotentialKey(id=val.parameter_type.smirks)
+            self.slot_map[top_key] = pot_key
 
     def store_potentials(self, parameter_handler: ChargeIncrementModelHandler) -> None:
         if self.potentials:
