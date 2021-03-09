@@ -1,14 +1,13 @@
 from copy import copy
-from typing import Any, Dict, Set, Tuple
+from typing import Dict, Set, Tuple
 
 import parmed as pmd
-from foyer import Forcefield  # type: ignore
+from foyer import Forcefield
 from openff.toolkit.topology import Topology
 
 from openff.system import unit as u
 from openff.system.components.potentials import Potential, PotentialHandler
 from openff.system.components.system import System
-from openff.system.exceptions import MissingParametersError
 
 
 def _copy_params(
@@ -21,10 +20,6 @@ def _copy_params(
         for unit_item, units in param_units.items():
             params_copy[unit_item] = params_copy[unit_item] * units
     return params_copy
-
-
-def _get_openmm_force_gen(ff: Forcefield, gen_type: type) -> Any:
-    return list(filter(lambda x: isinstance(x, gen_type), ff.getGenerators())).pop()
 
 
 def _topology_from_parmed(structure: pmd.Structure) -> Topology:
@@ -65,32 +60,19 @@ class FoyerAtomTypes(PotentialHandler):
         for key, val in type_map.items():
             self.slot_map[key] = val["atomtype"]
 
-    def store_potentials(self, forcefield) -> None:
-        from simtk.openmm.app.forcefield import NonbondedGenerator  # type: ignore
-
-        non_bonded_forces_gen = _get_openmm_force_gen(forcefield, NonbondedGenerator)
-
-        if non_bonded_forces_gen:
-            nonbonded_params = non_bonded_forces_gen.params.paramsForType
-
-            for atom_idx in self.slot_map:
-                try:
-                    params = _copy_params(
-                        nonbonded_params[self.slot_map[atom_idx]],
-                        "charge",
-                        param_units={"epsilon": u.kcal / u.mol, "sigma": u.nm},
-                    )
-                except KeyError:
-                    raise MissingParametersError(
-                        f"Missing parameters for atomtype {self.slot_map[atom_idx]}"
-                        "in the forcefield"
-                    )
-
-                self.potentials[self.slot_map[atom_idx]] = Potential(parameters=params)
-        else:
-            raise MissingParametersError(
-                "The forcefield is missing NonBondedForces Parameters"
+    def store_potentials(self, forcefield: Forcefield) -> None:
+        for atom_idx in self.slot_map:
+            atom_params = forcefield.get_parameters(
+                'atoms',
+                key=[self.slot_map[atom_idx]]
             )
+            params = _copy_params(
+                atom_params,
+                "charge",
+                param_units={"epsilon": u.kcal / u.mol, "sigma": u.nm},
+            )
+
+            self.potentials[self.slot_map[atom_idx]] = Potential(parameters=params)
 
 
 class FoyerBondHandler(PotentialHandler):
@@ -114,39 +96,69 @@ class FoyerBondHandler(PotentialHandler):
             )
 
     def store_potentials(self, forcefield: Forcefield) -> None:
-        from simtk.openmm.app.forcefield import HarmonicBondGenerator  # type: ignore
-
-        harmonic_bond_forces_gen = _get_openmm_force_gen(
-            forcefield, HarmonicBondGenerator
-        )
-        bonds_for_atom_types = harmonic_bond_forces_gen.bondsForAtomType
-
+        """Store potential for foyer bonds"""
         for (atom_1_idx, atom_2_idx), (
             atom_1_type,
             atom_2_type,
         ) in self.slot_map.items():
-            for i in bonds_for_atom_types[atom_1_type]:
-                types1 = harmonic_bond_forces_gen.types1[i]
-                types2 = harmonic_bond_forces_gen.types2[i]
+            bond_params = forcefield.get_parameters(
+                'bonds',
+                key=[atom_1_type, atom_2_type]
+            )
 
-                # Replicated from
-                # https://github.com/openmm/openmm/blob/b49b82efb5a253a7c891ca084b3370e181de2ea3/wrappers/python/simtk/openmm/app/forcefield.py#L1960-L1983
+            bond_params = _copy_params(
+                bond_params,
+                param_units={
+                    'k': u.kcal / u.mol / u.nm ** 2,
+                    'length': u.nm
+                }
+            )
 
-                if (atom_1_type in types1 and atom_2_type in types2) or (
-                    atom_1_type in types2 and atom_2_type in types1
-                ):
-                    params = {
-                        "k": harmonic_bond_forces_gen.k[i] * u.kcal / u.mol / u.nm ** 2,
-                        "length": harmonic_bond_forces_gen.length[i] * u.nm,
-                    }
+            self.potentials[(atom_1_idx, atom_2_idx)] = Potential(
+                parameters=bond_params
+            )
 
-                    self.potentials[(atom_1_idx, atom_2_idx)] = Potential(
-                        parameters=params
-                    )
-                    break
 
-            if not self.potentials.get((atom_1_idx, atom_2_idx)):
-                raise MissingParametersError(
-                    f"Could not find parameters for the Bond between "
-                    f"atoms {atom_1_type}-{atom_2_type}"
-                )
+class FoyerAngleHandler(PotentialHandler):
+    name: str = "Angle"
+    expression: str = "0.5 * k * (theta-theta_eq)**2"
+    independent_variables: Set[str] = {"r"}
+    slot_map: Dict[Tuple[int, int, int], Tuple[str, str, str]] = dict()  # type: ignore
+    potentials: Dict[Tuple[int, int, int], Potential] = dict()  # type: ignore
+
+    def store_matches(
+        self, structure: pmd.Structure, atom_slots: Dict[str, str]
+    ) -> None:
+        for bond in structure.angles:
+            atom_1_idx = bond.atom1.idx
+            atom_2_idx = bond.atom2.idx
+            atom_3_idx = bond.atom3.idx
+
+            self.slot_map[(atom_1_idx, atom_2_idx, atom_3_idx)] = (
+                atom_slots[atom_1_idx],
+                atom_slots[atom_2_idx],
+                atom_slots[atom_3_idx]
+            )
+
+    def store_potentials(self, forcefield: Forcefield) -> None:
+        for (atom_1_idx, atom_2_idx, atom_3_idx), (
+            atom_1_type,
+            atom_2_type,
+            atom_3_type
+        ) in self.slot_map.items():
+            angle_params = forcefield.get_parameters(
+                'angles',
+                key=[atom_1_type, atom_2_type, atom_3_type]
+            )
+
+            angle_params = _copy_params(
+                {'k': angle_params['k'], 'theta_eq': angle_params['theta']},
+                param_units={
+                    'k': u.kcal / u.mol / u.nm ** 2,
+                    'theta': u.dimensionless
+                }
+            )
+
+            self.potentials[(atom_1_idx, atom_2_idx, atom_3_idx)] = Potential(
+                parameters=angle_params
+            )
