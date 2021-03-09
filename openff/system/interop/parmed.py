@@ -4,6 +4,7 @@ import numpy as np
 import parmed as pmd
 
 from openff.system import unit
+from openff.system.models import TopologyKey
 
 kcal_mol = unit.Unit("kilocalories / mol")
 kcal_mol_a2 = unit.Unit("kilocalories / mol / angstrom ** 2")
@@ -38,16 +39,16 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     if "Bonds" in off_system.handlers.keys():
         bond_handler = off_system.handlers["Bonds"]
         bond_map: Dict = dict()
-        for bond_slot, smirks in bond_handler.slot_map.items():
-            idx_1, idx_2 = eval(bond_slot)
+        for top_key, pot_key in bond_handler.slot_map.items():
+            idx_1, idx_2 = top_key.atom_indices
             try:
-                bond_type = bond_map[smirks]
+                bond_type = bond_map[pot_key]
             except KeyError:
-                pot = bond_handler.potentials[smirks]
+                pot = bond_handler.potentials[pot_key]
                 k = pot.parameters["k"].to(kcal_mol_a2).magnitude / 2
                 length = pot.parameters["length"].to(unit.angstrom).magnitude
                 bond_type = pmd.BondType(k=k, req=length)
-                bond_map[smirks] = bond_type
+                bond_map[pot_key] = bond_type
                 del pot, k, length
             if bond_type not in structure.bond_types:
                 structure.bond_types.append(bond_type)
@@ -58,13 +59,13 @@ def to_parmed(off_system: Any) -> pmd.Structure:
                     type=bond_type,
                 )
             )
-            del bond_type, idx_1, idx_2, smirks, bond_slot
+            del bond_type, idx_1, idx_2, pot_key, top_key
 
     if "Angles" in off_system.handlers.keys():
         angle_term = off_system.handlers["Angles"]
-        for angle, smirks in angle_term.slot_map.items():
-            idx_1, idx_2, idx_3 = eval(angle)
-            pot = angle_term.potentials[smirks]
+        for top_key, pot_key in angle_term.slot_map.items():
+            idx_1, idx_2, idx_3 = top_key.atom_indices
+            pot = angle_term.potentials[pot_key]
             # TODO: Look at cost of redundant conversions, to ensure correct units of .m
             k = pot.parameters["k"].to(kcal_mol_rad2).magnitude / 2
             theta = pot.parameters["angle"].to(unit.degree).magnitude
@@ -91,9 +92,9 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     vdw_handler = off_system.handlers["vdW"]
     if "ProperTorsions" in off_system.handlers.keys():
         proper_term = off_system.handlers["ProperTorsions"]
-        for proper, smirks in proper_term.slot_map.items():
-            idx_1, idx_2, idx_3, idx_4 = eval(proper)
-            pot = proper_term.potentials[smirks]
+        for top_key, pot_key in proper_term.slot_map.items():
+            idx_1, idx_2, idx_3, idx_4 = top_key.atom_indices
+            pot = proper_term.potentials[pot_key]
             for n in range(pot.parameters["n_terms"]):
                 k = pot.parameters["k"][n].to(kcal_mol).magnitude
                 periodicity = pot.parameters["periodicity"][n]
@@ -115,8 +116,10 @@ def to_parmed(off_system: Any) -> pmd.Structure:
                     )
                 )
                 structure.dihedral_types.append(dihedral_type)
-                vdw1 = vdw_handler.potentials[vdw_handler.slot_map[str((idx_1,))]]
-                vdw4 = vdw_handler.potentials[vdw_handler.slot_map[str((idx_4,))]]
+                key1 = TopologyKey(atom_indices=(idx_1,))
+                key4 = TopologyKey(atom_indices=(idx_4,))
+                vdw1 = vdw_handler.potentials[vdw_handler.slot_map[key1]]
+                vdw4 = vdw_handler.potentials[vdw_handler.slot_map[key4]]
                 sig1, eps1 = _lj_params_from_potential(vdw1)
                 sig4, eps4 = _lj_params_from_potential(vdw4)
                 sig = (sig1 + sig4) * 0.5
@@ -155,7 +158,8 @@ def to_parmed(off_system: Any) -> pmd.Structure:
 
     vdw_handler = off_system.handlers["vdW"]
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
-        smirks = vdw_handler.slot_map[str((pmd_idx,))]
+        top_key = TopologyKey(atom_indices=(pmd_idx,))
+        smirks = vdw_handler.slot_map[top_key]
         potential = vdw_handler.potentials[smirks]
         element = pmd.periodic_table.Element[pmd_atom.element]
         sigma, epsilon = _lj_params_from_potential(potential)
@@ -174,7 +178,8 @@ def to_parmed(off_system: Any) -> pmd.Structure:
 
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         if has_electrostatics:
-            partial_charge = electrostatics_handler.charge_map[str((pmd_idx,))]
+            top_key = TopologyKey(atom_indices=(pmd_idx,))
+            partial_charge = electrostatics_handler.charges[top_key]
             unitless_ = partial_charge.to(unit.elementary_charge).magnitude
             pmd_atom.charge = float(unitless_)
             pmd_atom.atom_type.charge = float(unitless_)

@@ -49,7 +49,7 @@ class MissingDependencyError(BaseException):
         super().__init__(self.msg)
 
 
-class InvalidBoxError(TypeError):
+class InvalidBoxError(ValueError):
     """
     Generic exception for errors reading box data
     """
@@ -58,6 +58,12 @@ class InvalidBoxError(TypeError):
 class InterMolEnergyComparisonError(AssertionError):
     """
     Exception for when energies derived from InterMol do not match
+    """
+
+
+class NonbondedEnergyError(AssertionError):
+    """
+    Exception for when non-bonded energies computed from different objects differ
     """
 
 
@@ -111,4 +117,47 @@ class MissingPositionsError(BaseException):
 class MissingParametersError(BaseException):
     """
     Exception for when parameters are needed but missing
+    """
+
+
+class MissingUnitError(ValueError):
+    """
+    Exception for data missing a unit tag
+    """
+
+
+class UnitValidationError(ValueError):
+    """
+    Exception for bad behavior when validating unit-tagged data
+    """
+
+
+class NonbondedCompatibilityError(BaseException):
+    """
+    Exception for unsupported combination of nonbonded methods
+    """
+
+
+class MissingNonbondedCompatibilityError(BaseException):
+    """
+    Exception for uncovered combination of nonbonded methods
+    """
+
+
+class InternalInconsistencyError(BaseException):
+    """
+    Fallback exception for bad behavior. These should not be reached but
+    are raised to safeguard against problematic edge cases silently passing.
+    """
+
+
+class GMXRunError(BaseException):
+    """
+    Exception for when a GROMACS subprocess fails.
+    """
+
+
+class LAMMPSRunError(BaseException):
+    """
+    Exception for when a LAMMPS subprocess fails.
     """

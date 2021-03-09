@@ -1,3 +1,8 @@
+from openff.system.exceptions import (
+    MissingNonbondedCompatibilityError,
+    NonbondedCompatibilityError,
+)
+
 ALLOWED = [
     {
         "electrostatics_method": "PME",
@@ -5,7 +10,12 @@ ALLOWED = [
         "periodic_topology": True,
     },
     {
-        "electrostatics_method": "Coulomb",
+        "electrostatics_method": "PME",
+        "vdw_method": "cutoff",
+        "periodic_topology": False,
+    },
+    {
+        "electrostatics_method": "cutoff",
         "vdw_method": "cutoff",
         "periodic_topology": True,
     },
@@ -13,7 +23,7 @@ ALLOWED = [
 
 DISALLOWED = [
     {
-        "electrostatics_method": "PME",
+        "electrostatics_method": "Coulomb",
         "vdw_method": "cutoff",
         "periodic_topology": False,
     },
@@ -24,10 +34,12 @@ def check_nonbonded_compatibility(methods):
     """Check nonbonded methods against known allowed and disallowed
     combinations of nonbonded methods"""
     if methods["electrostatics_method"] in {"reaction-field"}:
-        raise NotImplementedError("Electrostatics method not supported")
+        raise NonbondedCompatibilityError(
+            "Electrostatics method reaction-field is not supported"
+        )
     if methods in ALLOWED:
-        return True
+        return
     elif methods in DISALLOWED:
-        return False
+        raise NonbondedCompatibilityError(methods)
     else:
-        raise Exception
+        raise MissingNonbondedCompatibilityError(methods)

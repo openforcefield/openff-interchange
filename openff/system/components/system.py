@@ -6,9 +6,15 @@ from openff.toolkit.topology.topology import Topology
 from pydantic import validator
 
 from openff.system.components.potentials import PotentialHandler
+from openff.system.exceptions import (
+    InvalidBoxError,
+    MissingPositionsError,
+    UnsupportedExportError,
+)
 from openff.system.interop.openmm import to_openmm
 from openff.system.interop.parmed import to_parmed
-from openff.system.types import ArrayQuantity, DefaultModel
+from openff.system.models import DefaultModel
+from openff.system.types import ArrayQuantity
 
 
 class System(DefaultModel):
@@ -34,13 +40,13 @@ class System(DefaultModel):
             val = val * np.eye(3)
             return val
         else:
-            raise ValueError  # InvalidBoxError
+            raise InvalidBoxError
 
     def to_gro(self, file_path: Union[Path, str], writer="parmed"):
         """Export this system to a .gro file using ParmEd"""
 
         if self.positions is None:
-            raise Exception
+            raise MissingPositionsError
 
         # TODO: Enum-style class for handling writer arg?
         if writer == "parmed":
@@ -49,9 +55,9 @@ class System(DefaultModel):
             ParmEdWrapper().to_file(self, file_path)
 
         elif writer == "internal":
-            from openff.system.interop import internal
+            from openff.system.interop.internal.gromacs import to_gro
 
-            internal.to_gro(self, file_path)
+            to_gro(self, file_path)
 
     def to_top(self, file_path: Union[Path, str], writer="parmed"):
         """Export this system to a .top file using ParmEd"""
@@ -61,13 +67,21 @@ class System(DefaultModel):
             ParmEdWrapper().to_file(self, file_path)
 
         elif writer == "internal":
-            from openff.system.interop import internal
+            from openff.system.interop.internal.gromacs import to_top
 
-            internal.to_top(self, file_path)
+            to_top(self, file_path)
+
+    def to_lammps(self, file_path: Union[Path, str], writer="internal"):
+        if writer != "internal":
+            raise UnsupportedExportError
+
+        from openff.system.interop.internal.lammps import to_lammps
+
+        to_lammps(self, file_path)
 
     def to_openmm(self):
         """Export this sytem to an OpenMM System"""
-        assert self._check_nonbonded_compatibility()
+        self._check_nonbonded_compatibility()
         return to_openmm(self)
 
     def to_parmed(self):
@@ -90,3 +104,22 @@ class System(DefaultModel):
 
         nonbonded_ = self._get_nonbonded_methods()
         return check_nonbonded_compatibility(nonbonded_)
+
+    def __getitem__(self, item: str):
+        """Syntax sugar for looking up potential handlers or other components"""
+        if type(item) != str:
+            raise LookupError(
+                "Only str arguments can be currently be used for lookups.\n"
+                f"Found item {item} of type {type(item)}"
+            )
+        if item == "positions":
+            return self.positions
+        elif item in {"box", "box_vectors"}:
+            return self.box
+        elif item in self.handlers:
+            return self.handlers[item]
+        else:
+            raise LookupError(
+                f"Could not find component {item}. This object has the following "
+                f"potential handlers registered:\n\t{[*self.handlers.keys()]}"
+            )
