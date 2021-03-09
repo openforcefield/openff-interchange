@@ -63,8 +63,7 @@ class FoyerAtomTypes(PotentialHandler):
     def store_potentials(self, forcefield: Forcefield) -> None:
         for atom_idx in self.slot_map:
             atom_params = forcefield.get_parameters(
-                'atoms',
-                key=[self.slot_map[atom_idx]]
+                "atoms", key=[self.slot_map[atom_idx]]
             )
             params = _copy_params(
                 atom_params,
@@ -102,16 +101,12 @@ class FoyerBondHandler(PotentialHandler):
             atom_2_type,
         ) in self.slot_map.items():
             bond_params = forcefield.get_parameters(
-                'bonds',
-                key=[atom_1_type, atom_2_type]
+                "bonds", key=[atom_1_type, atom_2_type]
             )
 
             bond_params = _copy_params(
                 bond_params,
-                param_units={
-                    'k': u.kcal / u.mol / u.nm ** 2,
-                    'length': u.nm
-                }
+                param_units={"k": u.kcal / u.mol / u.nm ** 2, "length": u.nm},
             )
 
             self.potentials[(atom_1_idx, atom_2_idx)] = Potential(
@@ -137,26 +132,22 @@ class FoyerAngleHandler(PotentialHandler):
             self.slot_map[(atom_1_idx, atom_2_idx, atom_3_idx)] = (
                 atom_slots[atom_1_idx],
                 atom_slots[atom_2_idx],
-                atom_slots[atom_3_idx]
+                atom_slots[atom_3_idx],
             )
 
     def store_potentials(self, forcefield: Forcefield) -> None:
         for (atom_1_idx, atom_2_idx, atom_3_idx), (
             atom_1_type,
             atom_2_type,
-            atom_3_type
+            atom_3_type,
         ) in self.slot_map.items():
             angle_params = forcefield.get_parameters(
-                'angles',
-                key=[atom_1_type, atom_2_type, atom_3_type]
+                "angles", key=[atom_1_type, atom_2_type, atom_3_type]
             )
 
             angle_params = _copy_params(
-                {'k': angle_params['k'], 'theta_eq': angle_params['theta']},
-                param_units={
-                    'k': u.kcal / u.mol / u.nm ** 2,
-                    'theta': u.dimensionless
-                }
+                {"k": angle_params["k"], "theta_eq": angle_params["theta"]},
+                param_units={"k": u.kcal / u.mol / u.nm ** 2, "theta": u.dimensionless},
             )
 
             self.potentials[(atom_1_idx, atom_2_idx, atom_3_idx)] = Potential(
