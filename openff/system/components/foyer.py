@@ -1,5 +1,6 @@
+from abc import abstractmethod
 from copy import copy
-from typing import Dict, Set, Tuple
+from typing import Any, Dict, Set, Tuple
 
 import parmed as pmd
 from foyer import Forcefield
@@ -30,11 +31,7 @@ def from_foyer(structure: pmd.Structure, ff: Forcefield, **kwargs) -> System:
     """Create an openFF system object from a parmed structure by applying a foyer Forcefield"""
     system = System()
     system.topology = _topology_from_parmed(structure)
-    foyer_atom_handler = FoyerAtomTypes()
-    foyer_bond_handler = FoyerBondHandler()
-    system.handlers["FoyerAtomHandler"] = foyer_atom_handler
-    system.handlers["FoyerBondHandler"] = foyer_bond_handler
-
+    # ToDo: Register handlers while creating the system
     return system
 
 
@@ -83,7 +80,7 @@ class FoyerBondHandler(PotentialHandler):
     potentials: Dict[Tuple[int, int], Potential] = dict()  # type: ignore
 
     def store_matches(
-        self, structure: pmd.Structure, atom_slots: Dict[str, str]
+        self, structure: pmd.Structure, atom_slots: Dict[int, str]
     ) -> None:
         for bond in structure.bonds:
             atom_1_idx = bond.atom1.idx
@@ -115,14 +112,14 @@ class FoyerBondHandler(PotentialHandler):
 
 
 class FoyerAngleHandler(PotentialHandler):
-    name: str = "Angle"
+    name: str = "Angles"
     expression: str = "0.5 * k * (theta-theta_eq)**2"
-    independent_variables: Set[str] = {"r"}
+    independent_variables: Set[str] = {"theta"}
     slot_map: Dict[Tuple[int, int, int], Tuple[str, str, str]] = dict()  # type: ignore
     potentials: Dict[Tuple[int, int, int], Potential] = dict()  # type: ignore
 
     def store_matches(
-        self, structure: pmd.Structure, atom_slots: Dict[str, str]
+        self, structure: pmd.Structure, atom_slots: Dict[int, str]
     ) -> None:
         for bond in structure.angles:
             atom_1_idx = bond.atom1.idx
@@ -156,3 +153,105 @@ class FoyerAngleHandler(PotentialHandler):
             self.potentials[(atom_1_idx, atom_2_idx, atom_3_idx)] = Potential(
                 parameters=angle_params
             )
+
+
+class FoyerDihedralHandler(PotentialHandler):
+    name: str = "PeriodicProper"
+    expression: str = "k * (1 + cos(n * phi - phi_eq))"
+    independent_variables: Set[str] = {"phi"}
+    slot_map: Dict[Tuple[int, int, int, int], Tuple[str, str, str, str]] = dict()  # type: ignore
+    potentials: Dict[Tuple[int, int, int, int], Potential] = dict()  # type: ignore
+    foyer_param_group: str = "periodic_propers"
+    parmed_attr: str = "dihedrals"
+
+    def store_matches(
+        self, structure: pmd.Structure, atom_slots: Dict[int, str]
+    ) -> None:
+        for dihedral in getattr(structure, self.parmed_attr):
+            atom_1_idx = dihedral.atom1.idx
+            atom_2_idx = dihedral.atom2.idx
+            atom_3_idx = dihedral.atom3.idx
+            atom_4_idx = dihedral.atom4.idx
+
+            self.slot_map[(atom_1_idx, atom_2_idx, atom_3_idx, atom_4_idx)] = (
+                atom_slots[atom_1_idx],
+                atom_slots[atom_2_idx],
+                atom_slots[atom_3_idx],
+                atom_slots[atom_4_idx],
+            )
+
+    def store_potentials(self, forcefield: Forcefield) -> None:
+        for atoms, atom_types in self.slot_map.items():
+            foyer_params = forcefield.get_parameters(
+                self.foyer_param_group, key=list(atom_types)
+            )
+
+            foyer_params = self.assign_units_to_params(foyer_params)
+
+            self.potentials[atoms] = Potential(parameters=foyer_params)
+
+    @abstractmethod
+    def assign_units_to_params(self, foyer_params: Dict[str, Any]) -> Dict[str, Any]:
+        raise NotImplementedError
+
+
+class FoyerPeriodicProperHandler(FoyerDihedralHandler):
+    name: str = "PeriodicProper"
+    expression: str = "k * (1 + cos(n * phi - phi_eq))"
+    independent_variables: Set[str] = {"phi"}
+    foyer_param_group: str = "periodic_propers"
+    parmed_attr: str = "dihedrals"
+
+    def assign_units_to_params(self, foyer_params: Dict[str, Any]) -> Dict[str, Any]:
+        periodic_params = _copy_params(
+            {
+                "k": foyer_params["k"],
+                "n": foyer_params["periodicity"],
+                "phi": foyer_params["phase"],
+            },
+            param_units={
+                "k": u.kcal / u.mol / u.nm ** 2,
+                "phi": u.dimensionless,
+                "n": u.dimensionless,
+            },
+        )
+        return periodic_params
+
+
+class FoyerPeriodicImproperHandler(FoyerPeriodicProperHandler):
+    name: str = "PeriodicImproper"
+    foyer_param_group: str = "periodic_impropers"
+    parmed_attr: str = "impropers"
+
+
+class FoyerRBProperHandler(FoyerDihedralHandler):
+    name: str = "RBPropers"
+    expression: str = (
+        "c0 * cos(phi)**0 + c1 * cos(phi)**1 + "
+        "c2 * cos(phi)**2 + c3 * cos(phi)**3 + "
+        "c4 * cos(phi)**4 + c5 * cos(phi)**5"
+    )
+    independent_variables: Set[str] = {"phi"}
+    foyer_param_group: str = "rb_propers"
+    parmed_attr: str = "propers"
+
+    def assign_units_to_params(self, foyer_params: Dict[str, Any]) -> Dict[str, Any]:
+        rb_params = _copy_params(
+            foyer_params,
+            param_units={
+                "c0": u.dimensionless,
+                "c1": u.dimensionless,
+                "c2": u.dimensionless,
+                "c3": u.dimensionless,
+                "c4": u.dimensionless,
+                "c5": u.dimensionless,
+            },
+        )
+
+        return rb_params
+
+
+class FoyerRBImproperHandler(FoyerRBProperHandler):
+    name: str = "RBImpropers"
+    foyer_param_group: str = "rb_impropers"
+    parmed_attr: str = "impropers"
