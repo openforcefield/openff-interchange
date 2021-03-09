@@ -147,7 +147,10 @@ class FoyerAngleHandler(PotentialHandler):
 
             angle_params = _copy_params(
                 {"k": angle_params["k"], "theta_eq": angle_params["theta"]},
-                param_units={"k": u.kcal / u.mol / u.nm ** 2, "theta": u.dimensionless},
+                param_units={
+                    "k": u.kcal / u.mol / u.nm ** 2,
+                    "theta_eq": u.dimensionless,
+                },
             )
 
             self.potentials[(atom_1_idx, atom_2_idx, atom_3_idx)] = Potential(
