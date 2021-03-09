@@ -8,7 +8,8 @@ from simtk import unit as omm_unit
 
 from openff.system import unit
 from openff.system.exceptions import UnitValidationError
-from openff.system.types import ArrayQuantity, DefaultModel, FloatQuantity
+from openff.system.models import DefaultModel
+from openff.system.types import ArrayQuantity, FloatQuantity
 
 
 class TestQuantityTypes:

@@ -5,7 +5,8 @@ from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from pydantic import validator
 
 from openff.system.exceptions import InvalidExpressionError
-from openff.system.types import ArrayQuantity, DefaultModel, FloatQuantity
+from openff.system.models import DefaultModel, PotentialKey, TopologyKey
+from openff.system.types import ArrayQuantity, FloatQuantity
 from openff.system.utils import requires_package
 
 
@@ -31,8 +32,8 @@ class PotentialHandler(DefaultModel):
     name: str
     expression: str
     independent_variables: Union[str, Set[str]]
-    slot_map: Dict[str, str] = dict()
-    potentials: Dict[str, Potential] = dict()
+    slot_map: Dict[TopologyKey, PotentialKey] = dict()
+    potentials: Dict[PotentialKey, Potential] = dict()
 
     # Pydantic silently casts some types (int, float, Decimal) to str
     # in models that expect str; this may be updates, see #1098

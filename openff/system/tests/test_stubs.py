@@ -3,6 +3,7 @@ from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
 
 from openff.system.exceptions import SMIRNOFFHandlersNotImplementedError
+from openff.system.models import TopologyKey
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.utils import compare_charges_omm_off, requires_pkg
 
@@ -47,13 +48,15 @@ class TestConstraints(BaseTest):
 
         assert "Constraints" in sys_out.handlers.keys()
         constraints = sys_out.handlers["Constraints"]
-        assert "(0, 1)" not in constraints.slot_map.keys()  # C-C bond
-        assert "(0, 2)" in constraints.slot_map.keys()  # C-H bond
+        c_c_bond = TopologyKey(atom_indices=(0, 1))  # C-C bond
+        assert c_c_bond not in constraints.slot_map.keys()
+        c_h_bond = TopologyKey(atom_indices=(0, 2))  # C-H bond
+        assert c_h_bond in constraints.slot_map.keys()
         assert len(constraints.slot_map.keys()) == 6  # number of C-H bonds
         assert len({constraints.slot_map.values()}) == 1  # always True
         assert (
             "distance"
-            in constraints.constraints[constraints.slot_map["(0, 2)"]].parameters
+            in constraints.constraints[constraints.slot_map[c_h_bond]].parameters
         )
 
     def test_force_field_no_constraints(self, parsley_unconstrained):
