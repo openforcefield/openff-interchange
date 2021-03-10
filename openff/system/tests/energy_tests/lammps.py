@@ -15,7 +15,11 @@ def get_lammps_energies(
 ) -> EnergyReport:
 
     off_sys.to_lammps("out.lmp")
-    _write_lammps_input(off_sys=off_sys, file_name="tmp.in")
+    _write_lammps_input(
+        off_sys=off_sys,
+        file_name="tmp.in",
+        electrostatics=electrostatics,
+    )
 
     run_cmd = "lmp_serial -i tmp.in"
 
@@ -60,7 +64,11 @@ def _parse_lammps_log(file_in) -> List[float]:
     return data
 
 
-def _write_lammps_input(off_sys: System, file_name="test.in"):
+def _write_lammps_input(
+    off_sys: System,
+    file_name="test.in",
+    electrostatics=False,
+):
 
     with open(file_name, "w") as fo:
         fo.write(
@@ -96,13 +104,13 @@ def _write_lammps_input(off_sys: System, file_name="test.in"):
             )
         )
 
-        fo.write(
-            f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n"
-            "pair_modify mix arithmetic\n\n"
-        )
+        if electrostatics:
+            fo.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")
+        else:
+            fo.write(f"pair_style lj/cut {vdw_cutoff}\n")
 
+        fo.write("pair_modify mix arithmetic\n\n")
         fo.write("read_data out.lmp\n\n")
-
         fo.write(
             "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n"
             "run 0\n"

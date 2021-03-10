@@ -276,3 +276,7 @@ def test_water_dimer():
     # TODO: Fix GROMACS energies by handling SETTLE constraints
     # gmx_energies, _ = get_gromacs_energies(openff_sys)
     # compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)
+
+    lmp_energies = get_lammps_energies(openff_sys, electrostatics=False)
+
+    lmp_energies.compare(omm_energies)
