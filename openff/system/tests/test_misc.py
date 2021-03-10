@@ -41,7 +41,7 @@ def test_mbuild_conversion_generate_conformers():
 
 def test_mbuild_conversion_first_conformer_used():
     """Test that only the first conformer in an OFFMol is used"""
-    offmol = Molecule.from_smiles("CC(=O)OC1=CC=CC=C1C(=O)O")
+    offmol = Molecule.from_smiles("C1=CC=C(C=C1)C2=CC=C(C=C2)C3=CC=CC=C3")
     offmol.generate_conformers(n_conformers=3)
 
     comp = offmol_to_compound(offmol)
