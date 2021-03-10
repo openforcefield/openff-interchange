@@ -59,9 +59,9 @@ def _process_constraints(openff_sys, openmm_sys):
     except KeyError:
         return
 
-    for constrained_slot, constraint_key in constraint_handler.slot_map.items():
-        indices = eval(constrained_slot)
-        params = constraint_handler.constraints[constraint_key].parameters
+    for top_key, pot_key in constraint_handler.slot_map.items():
+        indices = top_key.atom_indices
+        params = constraint_handler.constraints[pot_key].parameters
         distance = params["distance"]
         distance_omm = distance.to(distance.units).magnitude * unit.angstrom
 
@@ -84,14 +84,14 @@ def _process_bond_forces(openff_sys, openmm_sys):
     except KeyError:
         has_constraint_handler = False
 
-    for bond, key in bond_handler.slot_map.items():
+    for top_key, pot_key in bond_handler.slot_map.items():
         if has_constraint_handler:
             # If this bond show up in the constraints ...
-            if bond in constraint_handler.slot_map:
+            if top_key in constraint_handler.slot_map:
                 # ... don't add it as an interacting bond
                 continue
-        indices = eval(bond)
-        params = bond_handler.potentials[key].parameters
+        indices = top_key.atom_indices
+        params = bond_handler.potentials[pot_key].parameters
         k = params["k"].to(off_unit.Unit(str(kcal_ang))).magnitude * kcal_ang / kj_nm
         length = params["length"].to(off_unit.nanometer).magnitude
 
@@ -113,9 +113,9 @@ def _process_angle_forces(openff_sys, openmm_sys):
     except KeyError:
         return
 
-    for angle, key in angle_handler.slot_map.items():
-        indices = eval(angle)
-        params = angle_handler.potentials[key].parameters
+    for top_key, pot_key in angle_handler.slot_map.items():
+        indices = top_key.atom_indices
+        params = angle_handler.potentials[pot_key].parameters
         k = params["k"].to(off_unit.Unit(str(kcal_rad))).magnitude
         k = k * kcal_rad / kj_rad
         angle = params["angle"].to(off_unit.degree).magnitude
@@ -141,10 +141,9 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
     except KeyError:
         return
 
-    for torsion_key, key in proper_torsion_handler.slot_map.items():
-        torsion, idx = torsion_key.split("_")
-        indices = eval(torsion)
-        params = proper_torsion_handler.potentials[key].parameters
+    for top_key, pot_key in proper_torsion_handler.slot_map.items():
+        indices = top_key.atom_indices
+        params = proper_torsion_handler.potentials[pot_key].parameters
 
         k = params["k"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
         periodicity = int(params["periodicity"])
@@ -178,10 +177,9 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys):
 
     improper_torsion_handler = openff_sys.handlers["ImproperTorsions"]
 
-    for torsion_key, key in improper_torsion_handler.slot_map.items():
-        torsion, idx = torsion_key.split("_")
-        indices = eval(torsion)
-        params = improper_torsion_handler.potentials[key].parameters
+    for top_key, pot_key in improper_torsion_handler.slot_map.items():
+        indices = top_key.atom_indices
+        params = improper_torsion_handler.potentials[pot_key].parameters
 
         k = params["k"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
         periodicity = int(params["periodicity"])
@@ -235,12 +233,12 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
         non_bonded_force.setUseDispersionCorrection(True)
         non_bonded_force.setCutoffDistance(vdw_cutoff)
 
-    for vdw_atom, vdw_smirks in vdw_handler.slot_map.items():
-        atom_idx = eval(vdw_atom)[0]
+    for top_key, pot_key in vdw_handler.slot_map.items():
+        atom_idx = top_key.atom_indices[0]
 
-        partial_charge = electrostatics_handler.charges[vdw_atom]
+        partial_charge = electrostatics_handler.charges[top_key]
         partial_charge = (partial_charge / off_unit.elementary_charge).magnitude
-        vdw_potential = vdw_handler.potentials[vdw_smirks]
+        vdw_potential = vdw_handler.potentials[pot_key]
         # these are floats, implicitly angstrom and kcal/mol
         sigma, epsilon = _lj_params_from_potential(vdw_potential)
         sigma = sigma * unit.angstrom / unit.nanometer

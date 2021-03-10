@@ -116,6 +116,7 @@ def _get_gmx_energy_nonbonded(gmx_energies: Dict):
 def _parse_gmx_energy(xvg_path, electrostatics=True):
     energies, _ = _group_energy_terms(xvg_path)
 
+    # TODO: Better way of filling in missing fields
     # GROMACS may not populate all keys
     for required_key in ["Bond", "Angle", "Proper Dih."]:
         if required_key not in energies:
@@ -147,6 +148,9 @@ def _parse_gmx_energy(xvg_path, electrostatics=True):
             "Torsion": energies["Proper Dih."],
         }
     )
+
+    if "Ryckaert-Bell." in energies:
+        report.energies["Torsion"] += energies["Ryckaert-Bell."]
 
     if electrostatics is True:
         report.energies.update(

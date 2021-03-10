@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Any, Dict
 
 import numpy as np
 import unyt
-from pydantic import BaseModel
 from simtk import unit as omm_unit
 
 from openff.system import unit
@@ -193,13 +192,3 @@ else:
                     raise UnitValidationError(
                         f"Could not validate data of type {type(val)}"
                     )
-
-
-class DefaultModel(BaseModel):
-    class Config:
-        json_encoders = {
-            unit.Quantity: custom_quantity_encoder,
-        }
-        json_loads = json_loader
-        validate_assignment = True
-        arbitrary_types_allowed = True

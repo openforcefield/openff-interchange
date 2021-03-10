@@ -13,7 +13,8 @@ from openff.system.exceptions import (
 )
 from openff.system.interop.openmm import to_openmm
 from openff.system.interop.parmed import to_parmed
-from openff.system.types import ArrayQuantity, DefaultModel
+from openff.system.models import DefaultModel
+from openff.system.types import ArrayQuantity
 
 
 class System(DefaultModel):

@@ -7,7 +7,7 @@ from openff.toolkit.topology import FrozenMolecule, Molecule, Topology
 
 from openff.system import unit
 from openff.system.components.system import System
-from openff.system.exceptions import InternalInconsistencyError
+from openff.system.models import TopologyKey
 
 
 def to_gro(openff_sys: System, file_path: Union[Path, str]):
@@ -228,8 +228,9 @@ def _write_atoms(
         atom_type = typemap[atom_top_idx]
         element = ele.element_from_atomic_number(atom.atomic_number)
         mass = element.mass
+        top_key = TopologyKey(atom_indices=(atom_top_idx,))
         charge = (
-            off_sys.handlers["Electrostatics"].charges[str((atom_top_idx,))].magnitude  # type: ignore
+            off_sys.handlers["Electrostatics"].charges[top_key].magnitude  # type: ignore
         )
         top_file.write(
             "{:6d} {:18s} {:6d} {:8s} {:8s} {:6d} "
@@ -271,16 +272,14 @@ def _write_bonds(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
     for bond in top_mol.bonds:
         # These are "topology indices"
         indices = tuple(sorted(a.topology_atom_index for a in bond.atoms))
-        indices_as_str = str(indices)
-        if indices_as_str in bond_handler.slot_map.keys():
-            key = bond_handler.slot_map[indices_as_str]
-        else:
-            raise InternalInconsistencyError("Failed to find parameters")
+        for top_key in bond_handler.slot_map:
+            if top_key.atom_indices == indices:
+                pot_key = bond_handler.slot_map[top_key]
 
         # "reference" indices
         ref_indices = [idx - offset for idx in indices]
 
-        params = bond_handler.potentials[key].parameters
+        params = bond_handler.potentials[pot_key].parameters
 
         k = params["k"].to(unit.Unit("kilojoule / mole / nanometer ** 2")).magnitude
         length = params["length"].to(unit.nanometer).magnitude
@@ -294,6 +293,8 @@ def _write_bonds(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
                 k,
             )
         )
+
+        del pot_key
 
     top_file.write("\n\n")
 
@@ -313,16 +314,14 @@ def _write_angles(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
 
     for angle in top_mol.angles:
         indices = tuple(a.topology_atom_index for a in angle)
-        indices_as_str = str(indices)
-        if indices_as_str in angle_handler.slot_map.keys():
-            key = angle_handler.slot_map[indices_as_str]
-        else:
-            raise InternalInconsistencyError("Failed to find parameters")
+        for top_key in angle_handler.slot_map:
+            if top_key.atom_indices == indices:
+                pot_key = angle_handler.slot_map[top_key]
 
         # "reference" indices
         ref_indices = [idx - offset for idx in indices]
 
-        params = angle_handler.potentials[key].parameters
+        params = angle_handler.potentials[pot_key].parameters
         k = params["k"].to(unit.Unit("kilojoule / mole / radian ** 2")).magnitude
         theta = params["angle"].to(unit.degree).magnitude
 
@@ -358,10 +357,10 @@ def _write_dihedrals(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
     # TODO: Ensure number of torsions written matches what is expected
     for proper in top_mol.propers:
         indices = tuple(a.topology_atom_index for a in proper)
-        indices_as_str = str(indices)
-        for torsion_key, key in proper_torsion_handler.slot_map.items():
-            if indices_as_str == torsion_key.split("_")[0]:
-                params = proper_torsion_handler.potentials[key].parameters
+        for top_key in proper_torsion_handler.slot_map:
+            if top_key.atom_indices == indices:
+                pot_key = proper_torsion_handler.slot_map[top_key]
+                params = proper_torsion_handler.potentials[pot_key].parameters
 
                 # "reference" indices
                 ref_indices = [idx - offset for idx in indices]
@@ -387,10 +386,9 @@ def _write_dihedrals(top_file: IO, openff_sys: System, ref_mol: FrozenMolecule):
     for improper in top_mol.impropers:
 
         indices = tuple(a.topology_atom_index for a in improper)
-        indices_as_str = str(indices)
-        for torsion_key, key in improper_torsion_handler.slot_map.items():
-            if indices_as_str == torsion_key.split("_")[0]:
-                key = improper_torsion_handler.slot_map[torsion_key]
+        for top_key in improper_torsion_handler.slot_map:
+            if indices == top_key.atom_indices:
+                key = improper_torsion_handler.slot_map[top_key]
                 params = improper_torsion_handler.potentials[key].parameters
 
                 k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
@@ -431,7 +429,8 @@ def _write_system(top_file: IO, molecule_map: Dict):
 
 def _get_lj_parameters(openff_sys: System, atom_idx: int) -> Dict:
     vdw_hander = openff_sys.handlers["vdW"]
-    identifier = vdw_hander.slot_map[str((atom_idx,))]
+    atom_key = TopologyKey(atom_indices=(atom_idx,))
+    identifier = vdw_hander.slot_map[atom_key]
     potential = vdw_hander.potentials[identifier]
     parameters = potential.parameters
 
