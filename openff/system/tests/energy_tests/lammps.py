@@ -1,6 +1,7 @@
 import subprocess
 from typing import List
 
+import numpy as np
 from simtk import unit as omm_unit
 
 from openff.system.components.system import System
@@ -10,9 +11,13 @@ from openff.system.tests.energy_tests.report import EnergyReport
 
 def get_lammps_energies(
     off_sys: System,
+    round_positions=None,
     writer: str = "internal",
     electrostatics=True,
 ) -> EnergyReport:
+
+    if round_positions is not None:
+        off_sys.positions = np.round(off_sys.positions, round_positions)
 
     off_sys.to_lammps("out.lmp")
     _write_lammps_input(
@@ -76,14 +81,17 @@ def _write_lammps_input(
         )
 
         if "Bonds" in off_sys.handlers:
-            if len(off_sys["Bonds"].potentials):
+            if len(off_sys["Bonds"].potentials) > 0:
                 fo.write("bond_style hybrid harmonic\n")
         if "Angles" in off_sys.handlers:
-            if len(off_sys["Angles"].potentials):
+            if len(off_sys["Angles"].potentials) > 0:
                 fo.write("angle_style hybrid harmonic\n")
         if "ProperTorsions" in off_sys.handlers:
-            if len(off_sys["ProperTorsions"].potentials):
+            if len(off_sys["ProperTorsions"].potentials) > 0:
                 fo.write("dihedral_style hybrid fourier\n")
+        if "ImproperTorsions" in off_sys.handlers:
+            if len(off_sys["ImproperTorsions"].potentials) > 0:
+                fo.write("improper_style hybrid cvff \n")
 
         vdw_hander = off_sys.handlers["vdW"]
         electrostatics_handler = off_sys.handlers["Electrostatics"]
