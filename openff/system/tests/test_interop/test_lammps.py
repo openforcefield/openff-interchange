@@ -70,5 +70,6 @@ def test_to_lammps_single_mols(mol, n_mols):
         reference,
         custom_tolerances={
             "Nonbonded": 999 * omm_unit.kilojoule_per_mole,
+            "Torsion": 0.005 * omm_unit.kilojoule_per_mole,
         },
     )
