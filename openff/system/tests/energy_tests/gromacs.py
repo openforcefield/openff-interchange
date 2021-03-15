@@ -165,4 +165,7 @@ def _parse_gmx_energy(xvg_path, electrostatics=True):
             }
         )
 
+    if "Buck.ham (SR)" in energies:
+        report.energies["Nonbonded"] += energies["Buck.ham (SR)"]
+
     return report

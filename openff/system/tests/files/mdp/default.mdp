@@ -22,7 +22,7 @@ rlist                    = 0.9
 
 ; OPTIONS FOR ELECTROSTATICS AND VDW =
 ; Method for doing electrostatics =
-cutoff-scheme            = verlet
+cutoff-scheme            = group; verlet
 coulombtype              = PME
 coulomb-modifier         = None
 rcoulomb                 = 0.9

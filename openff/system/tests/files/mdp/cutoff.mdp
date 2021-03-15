@@ -37,7 +37,7 @@ compressed-x-precision   = 1000
 
 ; OPTIONS FOR ELECTROSTATICS AND VDW =
 ; Method for doing electrostatics =
-cutoff-scheme            = verlet
+cutoff-scheme            = group ; verlet
 coulombtype              = Cut-off
 rcoulomb                 = 0.9
 coulomb-modifier         = None

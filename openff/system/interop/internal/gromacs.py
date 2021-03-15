@@ -7,6 +7,7 @@ from openff.toolkit.topology import FrozenMolecule, Molecule, Topology
 
 from openff.system import unit
 from openff.system.components.system import System
+from openff.system.exceptions import UnsupportedExportError
 from openff.system.models import TopologyKey
 
 
@@ -131,6 +132,16 @@ def _write_top_defaults(openff_sys: System, top_file: IO):
     """Write [ defaults ] section"""
     top_file.write("[ defaults ]\n")
     top_file.write("; nbfunc\tcomb-rule\tgen-pairs\tfudgeLJ\tfudgeQQ\n")
+
+    if "vdW" in openff_sys.handlers:
+        nbfunc = 1
+        scale_lj = openff_sys["vdW"].scale_14
+        gen_pairs = "yes"
+    elif "Buckingham-6" in openff_sys.handlers:
+        nbfunc = 2
+        gen_pairs = "no"
+        scale_lj = openff_sys["Buckingham-6"].scale_14
+
     top_file.write(
         "{:6d}\t{:6s}\t{:6s} {:8.6f} {:8.6f}\n\n".format(
             # self.system.nonbonded_function,
@@ -138,10 +149,10 @@ def _write_top_defaults(openff_sys: System, top_file: IO):
             # self.system.genpairs,
             # self.system.lj_correction,
             # self.system.coulomb_correction,
-            1,
+            nbfunc,
             str(2),
-            "yes",
-            openff_sys.handlers["vdW"].scale_14,  # type: ignore
+            gen_pairs,
+            scale_lj,
             openff_sys.handlers["Electrostatics"].scale_14,  # type: ignore
         )
     )
@@ -169,8 +180,24 @@ def _build_typemap(openff_sys: System) -> Dict:
     return typemap
 
 
-def _write_atomtypes(openff_sys: System, top_file: IO, typemap: Dict) -> Dict:
+def _write_atomtypes(openff_sys: System, top_file: IO, typemap: Dict):
     """Write [ atomtypes ] section"""
+
+    if "vdW" in openff_sys.handlers:
+        if "Buckingham-6" in openff_sys.handlers:
+            raise UnsupportedExportError(
+                "Cannot mix 12-6 and Buckingham potentials in GROMACS"
+            )
+        else:
+            _write_atomtypes_lj(openff_sys, top_file, typemap)
+    else:
+        if "Buckingham-6" in openff_sys.handlers:
+            _write_atomtypes_buck(openff_sys, top_file, typemap)
+        else:
+            raise UnsupportedExportError("No vdW interactions found")
+
+
+def _write_atomtypes_lj(openff_sys: System, top_file: IO, typemap: Dict):
 
     top_file.write("[ atomtypes ]\n")
     top_file.write(
@@ -197,7 +224,36 @@ def _write_atomtypes(openff_sys: System, top_file: IO, typemap: Dict) -> Dict:
         )
         top_file.write("\n")
 
-    return typemap
+
+def _write_atomtypes_buck(openff_sys: System, top_file: IO, typemap: Dict):
+
+    top_file.write("[ atomtypes ]\n")
+    top_file.write(
+        ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n"
+    )
+
+    for atom_idx, atom_type in typemap.items():
+        atom = openff_sys.topology.atom(atom_idx)  # type: ignore
+        element = ele.element_from_atomic_number(atom.atomic_number)
+        parameters = _get_buck_parameters(openff_sys, atom_idx)
+        a = parameters["A"].to(unit.Unit("kilojoule / mol")).magnitude
+        b = parameters["B"].to(1 / unit.nanometer).magnitude
+        c = parameters["C"].to(unit.Unit("kilojoule / mol * nanometer ** 6")).magnitude
+
+        top_file.write(
+            "{:<11s} {:6d} {:.16g} {:.16g} {:5s} {:.16g} {:.16g} {:.16g}".format(
+                atom_type,  # atom type
+                # "XX",  # atom "bonding type", i.e. bond class
+                atom.atomic_number,
+                element.mass,
+                0.0,  # charge, overriden later in [ atoms ]
+                "A",  # ptype
+                a,
+                b,
+                c,
+            )
+        )
+        top_file.write("\n")
 
 
 def _write_moleculetype(top_file: IO, mol_name: str, nrexcl: int = 3):
@@ -432,6 +488,16 @@ def _get_lj_parameters(openff_sys: System, atom_idx: int) -> Dict:
     atom_key = TopologyKey(atom_indices=(atom_idx,))
     identifier = vdw_hander.slot_map[atom_key]
     potential = vdw_hander.potentials[identifier]
+    parameters = potential.parameters
+
+    return parameters
+
+
+def _get_buck_parameters(openff_sys: System, atom_idx: int) -> Dict:
+    buck_hander = openff_sys.handlers["Buckingham-6"]
+    atom_key = TopologyKey(atom_indices=(atom_idx,))
+    identifier = buck_hander.slot_map[atom_key]
+    potential = buck_hander.potentials[identifier]
     parameters = potential.parameters
 
     return parameters
