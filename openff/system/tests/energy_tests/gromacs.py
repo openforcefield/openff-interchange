@@ -18,6 +18,7 @@ def get_mdp_file(key: str) -> Path:
         "default": "default.mdp",
         "cutoff": "cutoff.mdp",
         "cutoff_hbonds": "cutoff_hbonds.mdp",
+        "cutoff_buck": "cutoff_buck.mdp",
     }
 
     return get_test_file_path(f"mdp/{mapping[key]}")

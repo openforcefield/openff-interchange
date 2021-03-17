@@ -7,6 +7,7 @@ from pydantic import validator
 
 from openff.system.components.potentials import PotentialHandler
 from openff.system.exceptions import (
+    InternalInconsistencyError,
     InvalidBoxError,
     MissingPositionsError,
     UnsupportedExportError,
@@ -89,9 +90,16 @@ class System(DefaultModel):
         return to_parmed(self)
 
     def _get_nonbonded_methods(self):
+        if "vdW" in self.handlers:
+            nonbonded_handler = "vdW"
+        elif "Buckingham-6" in self.handlers:
+            nonbonded_handler = "Buckingham-6"
+        else:
+            raise InternalInconsistencyError("Found no non-bonded handlers")
+
         nonbonded_ = {
             "electrostatics_method": self.handlers["Electrostatics"].method,
-            "vdw_method": self.handlers["vdW"].method,
+            "vdw_method": self.handlers[nonbonded_handler].method,
             "periodic_topology": self.box is not None,
         }
 

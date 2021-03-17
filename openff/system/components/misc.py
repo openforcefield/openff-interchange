@@ -8,7 +8,7 @@ class BuckinghamvdWHandler(PotentialHandler):
     name = "Buckingham-6"
     expression = "A * exp(-B *r) - C * r ** -6"
     independent_variables: Set[str] = {"r"}
-    method: str = "Cutoff"
+    method: str = "cutoff"
     cutoff: float = 9.0
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()

@@ -37,14 +37,14 @@ compressed-x-precision   = 1000
 
 ; OPTIONS FOR ELECTROSTATICS AND VDW =
 ; Method for doing electrostatics =
-cutoff-scheme            = verlet
+cutoff-scheme            = group
 coulombtype              = Cut-off
 rcoulomb                 = 0.9
 coulomb-modifier         = None
 ; Dielectric constant (DC) for cut-off or DC of reaction field =
 epsilon-r                = 1
 ; Method for doing Van der Waals =
-vdw-type                 = cutoff
+vdw-type                 = cutoff ; verlet
 vdw-modifier             = None
 ; cut-off lengths        =
 rvdw                     = 0.9
