@@ -2,7 +2,7 @@ from typing import Dict, List, Set, Union
 
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
-from pydantic import validator
+from pydantic import PrivateAttr, validator
 
 from openff.system.exceptions import InvalidExpressionError
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
@@ -24,6 +24,40 @@ class Potential(DefaultModel):
             else:
                 v[key] = FloatQuantity.validate_type(val)
         return v
+
+
+class WrappedPotential(DefaultModel):
+    """Model storing other Potential model(s) inside inner data"""
+
+    class InnerData(DefaultModel):
+        data: Dict[float, Potential]
+
+    _inner_data: InnerData = PrivateAttr()
+
+    def __init__(self, data):
+        if isinstance(data, Potential):
+            self._inner_data = self.InnerData(data={1.0: data})
+        elif isinstance(data, dict):
+            self._inner_data = self.InnerData(data=data)
+
+    @property
+    def parameters(self):
+        keys = {
+            pot
+            for pot in self._inner_data.data.values()
+            for pot in pot.parameters.keys()
+        }
+
+        params = dict()
+        for key in keys:
+            sum_ = 0.0
+            for coeff, pot in self._inner_data.data.items():
+                sum_ += coeff * pot.parameters[key]
+            params.update({key: sum_})
+        return params
+
+    def __repr__(self):
+        return str(self._inner_data.data)
 
 
 class PotentialHandler(DefaultModel):
