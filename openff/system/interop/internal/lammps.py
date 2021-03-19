@@ -1,16 +1,18 @@
 from pathlib import Path
-from typing import IO, Dict, Union
+from typing import IO, TYPE_CHECKING, Dict, Union
 
 import numpy as np
 from simtk import unit as omm_unit
 
 from openff.system import unit
-from openff.system.components.system import System
 from openff.system.exceptions import UnsupportedExportError
 from openff.system.models import TopologyKey
 
+if TYPE_CHECKING:
+    from openff.system.components.system import System
 
-def to_lammps(openff_sys: System, file_path: Union[Path, str]):
+
+def to_lammps(openff_sys: "System", file_path: Union[Path, str]):
 
     if isinstance(file_path, str):
         path = Path(file_path)
@@ -124,7 +126,7 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
             _write_impropers(lmp_file=lmp_file, openff_sys=openff_sys)
 
 
-def _write_pair_coeffs(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
+def _write_pair_coeffs(lmp_file: IO, openff_sys: "System", atom_type_map: Dict):
     lmp_file.write("Pair Coeffs\n\n")
 
     vdw_handler = openff_sys["vdW"]
@@ -142,7 +144,7 @@ def _write_pair_coeffs(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
     lmp_file.write("\n")
 
 
-def _write_bond_coeffs(lmp_file: IO, openff_sys: System):
+def _write_bond_coeffs(lmp_file: IO, openff_sys: "System"):
     lmp_file.write("Bond Coeffs\n\n")
 
     bond_handler = openff_sys.handlers["Bonds"]
@@ -160,7 +162,7 @@ def _write_bond_coeffs(lmp_file: IO, openff_sys: System):
     lmp_file.write("\n")
 
 
-def _write_angle_coeffs(lmp_file: IO, openff_sys: System):
+def _write_angle_coeffs(lmp_file: IO, openff_sys: "System"):
     lmp_file.write("\nAngle Coeffs\n\n")
 
     angle_handler = openff_sys.handlers["Angles"]
@@ -178,7 +180,7 @@ def _write_angle_coeffs(lmp_file: IO, openff_sys: System):
     lmp_file.write("\n")
 
 
-def _write_proper_coeffs(lmp_file: IO, openff_sys: System):
+def _write_proper_coeffs(lmp_file: IO, openff_sys: "System"):
     lmp_file.write("\nDihedral Coeffs\n\n")
 
     proper_handler = openff_sys.handlers["ProperTorsions"]
@@ -200,7 +202,7 @@ def _write_proper_coeffs(lmp_file: IO, openff_sys: System):
     lmp_file.write("\n")
 
 
-def _write_improper_coeffs(lmp_file: IO, openff_sys: System):
+def _write_improper_coeffs(lmp_file: IO, openff_sys: "System"):
     lmp_file.write("\nImproper Coeffs\n\n")
 
     improper_handler = openff_sys.handlers["ImproperTorsions"]
@@ -231,7 +233,7 @@ def _write_improper_coeffs(lmp_file: IO, openff_sys: System):
     lmp_file.write("\n")
 
 
-def _write_atoms(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
+def _write_atoms(lmp_file: IO, openff_sys: "System", atom_type_map: Dict):
     lmp_file.write("\nAtoms\n\n")
 
     molecule_map = dict(enumerate(openff_sys.topology.topology_molecules))  # type: ignore[union-attr]
@@ -266,7 +268,7 @@ def _write_atoms(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
         )
 
 
-def _write_bonds(lmp_file: IO, openff_sys: System):
+def _write_bonds(lmp_file: IO, openff_sys: "System"):
     lmp_file.write("\nBonds\n\n")
 
     bond_handler = openff_sys["Bonds"]
@@ -291,7 +293,7 @@ def _write_bonds(lmp_file: IO, openff_sys: System):
         )
 
 
-def _write_angles(lmp_file: IO, openff_sys: System):
+def _write_angles(lmp_file: IO, openff_sys: "System"):
     lmp_file.write("\nAngles\n\n")
 
     angle_handler = openff_sys["Angles"]
@@ -317,7 +319,7 @@ def _write_angles(lmp_file: IO, openff_sys: System):
         )
 
 
-def _write_propers(lmp_file: IO, openff_sys: System):
+def _write_propers(lmp_file: IO, openff_sys: "System"):
     lmp_file.write("\nDihedrals\n\n")
 
     proper_handler = openff_sys["ProperTorsions"]
@@ -345,7 +347,7 @@ def _write_propers(lmp_file: IO, openff_sys: System):
                 )
 
 
-def _write_impropers(lmp_file: IO, openff_sys: System):
+def _write_impropers(lmp_file: IO, openff_sys: "System"):
     lmp_file.write("\nImpropers\n\n")
 
     improper_handler = openff_sys["ImproperTorsions"]

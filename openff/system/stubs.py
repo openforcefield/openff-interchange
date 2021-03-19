@@ -1,8 +1,9 @@
 """
 Monkeypatching external classes with custom functionality
 """
+from typing import TYPE_CHECKING
+
 import numpy as np
-from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
@@ -26,10 +27,13 @@ from openff.system.components.smirnoff import (
 )
 from openff.system.components.system import System
 
+if TYPE_CHECKING:
+    from openff.toolkit.topology.topology import Topology
+
 
 def to_openff_system(
     self,
-    topology: Topology,
+    topology: "Topology",
     box=None,
     **kwargs,
 ) -> System:
@@ -131,7 +135,7 @@ def to_openff_system(
 
 def create_constraint_handler(
     self,
-    topology: Topology,
+    topology: "Topology",
     bond_handler=None,
     **kwargs,
 ) -> SMIRNOFFConstraintHandler:
@@ -148,7 +152,7 @@ def create_constraint_handler(
 
 def create_bond_potential_handler(
     self,
-    topology: Topology,
+    topology: "Topology",
     **kwargs,
 ) -> SMIRNOFFBondHandler:
     """
@@ -164,7 +168,7 @@ def create_bond_potential_handler(
 
 def create_angle_potential_handler(
     self,
-    topology: Topology,
+    topology: "Topology",
     **kwargs,
 ) -> SMIRNOFFAngleHandler:
     """
@@ -180,7 +184,7 @@ def create_angle_potential_handler(
 
 def create_proper_torsion_potential_handler(
     self,
-    topology: Topology,
+    topology: "Topology",
     **kwargs,
 ) -> SMIRNOFFProperTorsionHandler:
     """
@@ -195,7 +199,7 @@ def create_proper_torsion_potential_handler(
 
 def create_improper_torsion_potential_handler(
     self,
-    topology: Topology,
+    topology: "Topology",
     **kwargs,
 ) -> SMIRNOFFImproperTorsionHandler:
     """
@@ -210,7 +214,7 @@ def create_improper_torsion_potential_handler(
 
 def create_vdw_potential_handler(
     self,
-    topology: Topology,
+    topology: "Topology",
     **kwargs,
 ) -> SMIRNOFFvdWHandler:
     """

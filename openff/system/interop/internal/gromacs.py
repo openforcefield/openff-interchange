@@ -3,13 +3,16 @@ from typing import IO, TYPE_CHECKING, Dict, Union
 
 import ele
 import numpy as np
-from openff.toolkit.topology import FrozenMolecule, Molecule, Topology
+from openff.toolkit.topology import Molecule
 
 from openff.system import unit
 from openff.system.exceptions import UnsupportedExportError
 from openff.system.models import TopologyKey
 
 if TYPE_CHECKING:
+    from openff.toolkit.topology.molecule import FrozenMolecule
+    from openff.toolkit.topology.topology import Topology
+
     from openff.system.components.system import System
 
 
@@ -314,7 +317,7 @@ def _write_valence(
     _write_dihedrals(top_file, openff_sys, mol_data["reference_molecule"])
 
 
-def _write_bonds(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule):
+def _write_bonds(top_file: IO, openff_sys: "System", ref_mol: "FrozenMolecule"):
     if "Bonds" not in openff_sys.handlers.keys():
         return
 
@@ -357,7 +360,7 @@ def _write_bonds(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule):
     top_file.write("\n\n")
 
 
-def _write_angles(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule):
+def _write_angles(top_file: IO, openff_sys: "System", ref_mol: "FrozenMolecule"):
     if "Angles" not in openff_sys.handlers.keys():
         return
 
@@ -397,7 +400,7 @@ def _write_angles(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule):
     top_file.write("\n\n")
 
 
-def _write_dihedrals(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule):
+def _write_dihedrals(top_file: IO, openff_sys: "System", ref_mol: "FrozenMolecule"):
     if "ProperTorsions" not in openff_sys.handlers.keys():
         if "ImproperTorsions" not in openff_sys.handlers.keys():
             return

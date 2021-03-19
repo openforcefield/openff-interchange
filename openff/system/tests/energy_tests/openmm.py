@@ -1,14 +1,18 @@
+from typing import TYPE_CHECKING
+
 import numpy as np
 from simtk import openmm, unit
 
-from openff.system.components.system import System
 from openff.system.tests.energy_tests.report import EnergyReport
+
+if TYPE_CHECKING:
+    from openff.system.components.system import System
 
 kj_mol = unit.kilojoule_per_mole
 
 
 def get_openmm_energies(
-    off_sys: System,
+    off_sys: "System",
     round_positions=None,
     hard_cutoff: bool = True,
     electrostatics: bool = True,

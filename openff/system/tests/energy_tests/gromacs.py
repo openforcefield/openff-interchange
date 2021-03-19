@@ -1,16 +1,18 @@
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 from intermol.gromacs import _group_energy_terms
 from openff.toolkit.utils.utils import temporary_cd
 from simtk import unit as omm_unit
 
-from openff.system.components.system import System
 from openff.system.exceptions import GMXRunError
 from openff.system.tests.energy_tests.report import EnergyReport
 from openff.system.utils import get_test_file_path
+
+if TYPE_CHECKING:
+    from openff.system.components.system import System
 
 
 def get_mdp_file(key: str) -> Path:
@@ -25,7 +27,7 @@ def get_mdp_file(key: str) -> Path:
 
 
 def get_gromacs_energies(
-    off_sys: System,
+    off_sys: "System",
     mdp: str = "cutoff",
     writer: str = "internal",
     electrostatics=True,

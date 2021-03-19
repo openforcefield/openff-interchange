@@ -1,16 +1,18 @@
 import subprocess
-from typing import List
+from typing import TYPE_CHECKING, List
 
 import numpy as np
 from simtk import unit as omm_unit
 
-from openff.system.components.system import System
 from openff.system.exceptions import LAMMPSRunError
 from openff.system.tests.energy_tests.report import EnergyReport
 
+if TYPE_CHECKING:
+    from openff.system.components.system import System
+
 
 def get_lammps_energies(
-    off_sys: System,
+    off_sys: "System",
     round_positions=None,
     writer: str = "internal",
     electrostatics=True,
@@ -70,7 +72,7 @@ def _parse_lammps_log(file_in) -> List[float]:
 
 
 def _write_lammps_input(
-    off_sys: System,
+    off_sys: "System",
     file_name="test.in",
     electrostatics=False,
 ):

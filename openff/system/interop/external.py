@@ -1,12 +1,14 @@
 from pathlib import Path
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
-from openff.system.components.system import System
 from openff.system.exceptions import (
     MissingBoxError,
     MissingPositionsError,
     UnsupportedExportError,
 )
+
+if TYPE_CHECKING:
+    from openff.system.components.system import System
 
 
 class InteroperabilityWrapper:
@@ -24,7 +26,7 @@ class ParmEdWrapper(InteroperabilityWrapper):
     def __init__(self):
         self._write_formats = [".gro", ".top"]
 
-    def to_file(self, openff_sys: System, file_path: Union[str, Path]):
+    def to_file(self, openff_sys: "System", file_path: Union[str, Path]):
         """
         Convert an OpenFF System to a ParmEd Structure and write it to a file
 
