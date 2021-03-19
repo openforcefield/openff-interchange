@@ -67,7 +67,7 @@ class PotentialHandler(DefaultModel):
     expression: str
     independent_variables: Union[str, Set[str]]
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
+    potentials: Dict[PotentialKey, Union[Potential, WrappedPotential]] = dict()
 
     # Pydantic silently casts some types (int, float, Decimal) to str
     # in models that expect str; this may be updates, see #1098

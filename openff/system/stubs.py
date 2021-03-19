@@ -157,7 +157,7 @@ def create_bond_potential_handler(
     """
     handler = SMIRNOFFBondHandler()
     handler.store_matches(parameter_handler=self, topology=topology)
-    handler.store_potentials(parameter_handler=self)
+    handler.store_potentials(parameter_handler=self, topology=topology)
 
     return handler
 

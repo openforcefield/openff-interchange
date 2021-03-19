@@ -1,7 +1,9 @@
-from typing import Dict, Set
+from typing import TYPE_CHECKING, Dict, Set
 
-from openff.toolkit.topology.topology import Topology
-from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
+if TYPE_CHECKING:
+    from openff.toolkit.topology.topology import Topology
+    from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
+
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -15,7 +17,11 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from simtk import unit as omm_unit
 
 from openff.system import unit
-from openff.system.components.potentials import Potential, PotentialHandler
+from openff.system.components.potentials import (
+    Potential,
+    PotentialHandler,
+    WrappedPotential,
+)
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import FloatQuantity
 from openff.system.utils import get_partial_charges_from_openmm_system
@@ -31,9 +37,10 @@ class SMIRNOFFBondHandler(PotentialHandler):
     expression: str = "1/2 * k * (r - length) ** 2"
     independent_variables: Set[str] = {"r"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
 
-    def store_matches(self, parameter_handler: BondHandler, topology: Topology) -> None:
+    def store_matches(
+        self, parameter_handler: BondHandler, topology: Topology = None
+    ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
         and unique potential identifiers
@@ -47,7 +54,9 @@ class SMIRNOFFBondHandler(PotentialHandler):
             potential_key = PotentialKey(id=val.parameter_type.smirks)
             self.slot_map[topology_key] = potential_key
 
-    def store_potentials(self, parameter_handler: BondHandler) -> None:
+    def store_potentials(  # type: ignore[override]
+        self, parameter_handler: BondHandler, topology: Topology
+    ) -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
         identifiers and their associated Potential objects
@@ -55,16 +64,42 @@ class SMIRNOFFBondHandler(PotentialHandler):
         """
         if self.potentials:
             self.potentials = dict()
-        for potential_key in self.slot_map.values():
-            smirks = potential_key.id
+        for top_key, pot_key in self.slot_map.items():
+            smirks = pot_key.id
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
-            potential = Potential(
-                parameters={
-                    "k": parameter_type.k,
-                    "length": parameter_type.length,
-                },
-            )
-            self.potentials[potential_key] = potential
+            if parameter_type.k_bondorder or parameter_type.length_bondorder:
+                top_bond = topology.get_bond_between(*top_key.atom_indices)
+                fractional_bond_order = top_bond.bond.fractional_bond_order
+                if parameter_type.k_bondorder:
+                    data = parameter_type.k_bondorder
+                else:
+                    data = parameter_type.length_bondorder
+                coeffs = _get_interpolation_coeffs(
+                    fractional_bond_order=fractional_bond_order,
+                    data=data,
+                )
+                pots = []
+                map_keys = [*data.keys()]
+                for map_key in map_keys:
+                    pots.append(
+                        Potential(
+                            parameters={
+                                "k": parameter_type.k_bondorder[map_key],
+                                "length": parameter_type.length_bondorder[map_keys],
+                            }
+                        )
+                    )
+                potential = WrappedPotential(
+                    {coeff: pot for coeff, pot in zip(coeffs, pots)}
+                )
+            else:
+                potential = Potential(  # type: ignore[assignment]
+                    parameters={
+                        "k": parameter_type.k,
+                        "length": parameter_type.length,
+                    },
+                )
+            self.potentials[pot_key] = potential
 
 
 class SMIRNOFFConstraintHandler(PotentialHandler):
@@ -139,7 +174,6 @@ class SMIRNOFFAngleHandler(PotentialHandler):
     expression: str = "1/2 * k * (angle - theta)"
     independent_variables: Set[str] = {"theta"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
 
     def store_matches(
         self, parameter_handler: AngleHandler, topology: Topology
@@ -181,7 +215,6 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
     expression: str = "k*(1+cos(periodicity*theta-phase))"
     independent_variables: Set[str] = {"theta"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
 
     def store_matches(
         self, parameter_handler: ProperTorsionHandler, topology: Topology
@@ -227,7 +260,6 @@ class SMIRNOFFImproperTorsionHandler(PotentialHandler):
     expression: str = "k*(1+cos(periodicity*theta-phase))"
     independent_variables: Set[str] = {"theta"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
 
     def store_matches(
         self, parameter_handler: ImproperTorsionHandler, topology: Topology
@@ -282,7 +314,6 @@ class SMIRNOFFvdWHandler(PotentialHandler):
     method: str = "Cutoff"
     cutoff: float = 9.0
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.5
     scale_15: float = 1.0
@@ -372,7 +403,6 @@ class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
 
     name: str = "LibraryCharges"
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
 
     def store_matches(
         self,
@@ -405,7 +435,6 @@ class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
 
     name: str = "ChargeIncrements"
     partial_charge_method: str = "AM1-Mulliken"
-    potentials: Dict[PotentialKey, Potential] = dict()
 
     def store_matches(
         self,
@@ -480,3 +509,12 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
             for i, id_ in enumerate(ids):
                 atom_key = TopologyKey(atom_indices=(id_,))
                 self.charges[atom_key] = charges[i]
+
+
+def _get_interpolation_coeffs(fractional_bond_order, data):
+    x1, x2 = data.keys()
+    y1, y2 = data.values()
+    coeff1 = (fractional_bond_order - x1) / (x2 - x1)
+    coeff2 = (x2 - fractional_bond_order) / (x2 - x1)
+
+    return coeff1, coeff2
