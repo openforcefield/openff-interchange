@@ -1,7 +1,10 @@
 import pytest
 from openff.toolkit.topology import Molecule, Topology
+from simtk import openmm
 
+from openff.system import unit
 from openff.system.exceptions import MissingBondOrdersError
+from openff.system.models import TopologyKey
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
 
@@ -37,8 +40,21 @@ class TestSMIRNOFFTyping(BaseTest):
 
 class TestParameterInterpolation(BaseTest):
     def test_bond_order_interpolation(self):
-        from openff.toolkit.tests.test_forcefield import xml_ff_bo
-
+        xml_ff_bo = """<?xml version='1.0' encoding='ASCII'?>
+        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+          <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg"
+            fractional_bondorder_interpolation="linear">
+            <Bond
+              smirks="[#6X4:1]~[#8X2:2]"
+              id="bbo1"
+              k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
+              k_bondorder2="500.0 * kilocalories_per_mole/angstrom**2"
+              length_bondorder1="1.4 * angstrom"
+              length_bondorder2="1.3 * angstrom"
+              />
+          </Bonds>
+        </SMIRNOFF>
+        """
         forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
 
         mol = Molecule.from_smiles("CCO")
@@ -46,6 +62,17 @@ class TestParameterInterpolation(BaseTest):
 
         with pytest.raises(MissingBondOrdersError):
             forcefield.create_openff_system(mol.to_topology())
+
+        mol.assign_fractional_bond_orders()
+        mol.bonds[0].fractional_bond_order = 1.2
+        mol.bonds[1].fractional_bond_order = 1.5
+
+        out = forcefield.create_openff_system(mol.to_topology())
+        print(out["Bonds"].potentials)
+
+        assert out["Bonds"].potentials[
+            out["Bonds"].slot_map[TopologyKey(atom_indices=(1, 2))]
+        ].parameters["k"] == 300 * unit.Unit("kilocalories / mol / angstrom ** 2")
 
 
 #    def test_more_map_functions(self, parsley, cyclohexane_top):

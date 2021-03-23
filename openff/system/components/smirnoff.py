@@ -80,15 +80,9 @@ class SMIRNOFFBondHandler(PotentialHandler):
         for top_key, pot_key in self.slot_map.items():
             smirks = pot_key.id
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
-            if parameter_type.k_bondorder or parameter_type.length_bondorder:
-                interpolation = True
-            if interpolation:
-                top_bond = topology.get_bond_between(*top_key.atom_indices)
+            if pot_key.bond_order:
+                top_bond = topology.get_bond_between(*top_key.atom_indices)  # type: ignore[union-attr]
                 fractional_bond_order = top_bond.bond.fractional_bond_order
-                if not fractional_bond_order:
-                    raise MissingBondOrdersError(
-                        "Interpolation currently requires bond orders pre-specified"
-                    )
                 if parameter_type.k_bondorder:
                     data = parameter_type.k_bondorder
                 else:
