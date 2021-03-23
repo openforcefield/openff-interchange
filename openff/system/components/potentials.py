@@ -25,33 +25,34 @@ class Potential(DefaultModel):
                 v[key] = FloatQuantity.validate_type(val)
         return v
 
+    def __hash__(self):
+        return hash(tuple(self.parameters.values()))
+
 
 class WrappedPotential(DefaultModel):
     """Model storing other Potential model(s) inside inner data"""
 
     class InnerData(DefaultModel):
-        data: Dict[float, Potential]
+        data: Dict[Potential, float]
 
     _inner_data: InnerData = PrivateAttr()
 
     def __init__(self, data):
         if isinstance(data, Potential):
-            self._inner_data = self.InnerData(data={1.0: data})
+            self._inner_data = self.InnerData(data={data: 1.0})
         elif isinstance(data, dict):
             self._inner_data = self.InnerData(data=data)
 
     @property
     def parameters(self):
         keys = {
-            pot
-            for pot in self._inner_data.data.values()
-            for pot in pot.parameters.keys()
+            pot for pot in self._inner_data.data.keys() for pot in pot.parameters.keys()
         }
 
         params = dict()
         for key in keys:
             sum_ = 0.0
-            for coeff, pot in self._inner_data.data.items():
+            for pot, coeff in self._inner_data.data.items():
                 sum_ += coeff * pot.parameters[key]
             params.update({key: sum_})
         return params

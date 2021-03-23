@@ -1,3 +1,8 @@
+import pytest
+from openff.toolkit.topology import Molecule, Topology
+
+from openff.system.exceptions import MissingBondOrdersError
+from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
 
 
@@ -30,7 +35,19 @@ class TestSMIRNOFFTyping(BaseTest):
             assert len([*handler.potentials.items()]) > 0
 
 
-#
+class TestParameterInterpolation(BaseTest):
+    def test_bond_order_interpolation(self):
+        from openff.toolkit.tests.test_forcefield import xml_ff_bo
+
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+
+        mol = Molecule.from_smiles("CCO")
+        mol.generate_conformers(n_conformers=1)
+
+        with pytest.raises(MissingBondOrdersError):
+            forcefield.create_openff_system(mol.to_topology())
+
+
 #    def test_more_map_functions(self, parsley, cyclohexane_top):
 #        # TODO: Better way of testing individual handlers
 #

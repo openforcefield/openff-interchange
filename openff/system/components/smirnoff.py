@@ -1,9 +1,7 @@
-from typing import TYPE_CHECKING, Dict, Set
+from typing import Dict, Set
 
-if TYPE_CHECKING:
-    from openff.toolkit.topology.topology import Topology
-    from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
-
+from openff.toolkit.topology.topology import Topology
+from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -22,6 +20,7 @@ from openff.system.components.potentials import (
     PotentialHandler,
     WrappedPotential,
 )
+from openff.system.exceptions import MissingBondOrdersError, MissingParametersError
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import FloatQuantity
 from openff.system.utils import get_partial_charges_from_openmm_system
@@ -50,12 +49,26 @@ class SMIRNOFFBondHandler(PotentialHandler):
             self.slot_map = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
+            param = val.parameter_type
             topology_key = TopologyKey(atom_indices=key)
-            potential_key = PotentialKey(id=val.parameter_type.smirks)
+            if param.k_bondorder or param.length_bondorder:
+                top_bond = topology.get_bond_between(*key)  # type: ignore[union-attr]
+                fractional_bond_order = top_bond.bond.fractional_bond_order
+                if not fractional_bond_order:
+                    raise MissingBondOrdersError(
+                        "Interpolation currently requires bond orders pre-specified"
+                    )
+                potential_key = PotentialKey(
+                    id=val.parameter_type.smirks, bond_order=fractional_bond_order
+                )
+            else:
+                potential_key = PotentialKey(id=val.parameter_type.smirks)
             self.slot_map[topology_key] = potential_key
 
-    def store_potentials(  # type: ignore[override]
-        self, parameter_handler: BondHandler, topology: Topology
+    def store_potentials(
+        self,
+        parameter_handler: BondHandler,
+        topology: Topology = None,
     ) -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
@@ -68,8 +81,14 @@ class SMIRNOFFBondHandler(PotentialHandler):
             smirks = pot_key.id
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
             if parameter_type.k_bondorder or parameter_type.length_bondorder:
+                interpolation = True
+            if interpolation:
                 top_bond = topology.get_bond_between(*top_key.atom_indices)
                 fractional_bond_order = top_bond.bond.fractional_bond_order
+                if not fractional_bond_order:
+                    raise MissingBondOrdersError(
+                        "Interpolation currently requires bond orders pre-specified"
+                    )
                 if parameter_type.k_bondorder:
                     data = parameter_type.k_bondorder
                 else:
@@ -85,12 +104,12 @@ class SMIRNOFFBondHandler(PotentialHandler):
                         Potential(
                             parameters={
                                 "k": parameter_type.k_bondorder[map_key],
-                                "length": parameter_type.length_bondorder[map_keys],
+                                "length": parameter_type.length_bondorder[map_key],
                             }
                         )
                     )
                 potential = WrappedPotential(
-                    {coeff: pot for coeff, pot in zip(coeffs, pots)}
+                    {pot: coeff for pot, coeff in zip(pots, coeffs)}
                 )
             else:
                 potential = Potential(  # type: ignore[assignment]
@@ -149,8 +168,6 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
                 distance = parameter_type.distance
             else:
                 if not bond_handler:
-                    from openff.system.exceptions import MissingParametersError
-
                     raise MissingParametersError(
                         f"Constraint with SMIRKS pattern {smirks} found with no distance "
                         "specified, and no corresponding bond parameters were found. The distance "
