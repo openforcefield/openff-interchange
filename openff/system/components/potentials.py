@@ -1,4 +1,4 @@
-from typing import Dict, List, Set, Union
+from typing import Dict, List, Optional, Set, Union
 
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
@@ -15,6 +15,7 @@ class Potential(DefaultModel):
 
     # ... Dict[str, FloatQuantity] = dict()
     parameters: Dict = dict()
+    map_key: Optional[int] = None
 
     @validator("parameters")
     def validate_parameters(cls, v):
@@ -95,8 +96,14 @@ class PotentialHandler(DefaultModel):
 
         params: list = list()
         for potential in self.potentials.values():
-            row = [val.magnitude for val in potential.parameters.values()]
-            params.append(row)
+            if isinstance(potential, Potential):
+                params.append([val.magnitude for val in potential.parameters.values()])
+            elif isinstance(potential, WrappedPotential):
+                for inner_pot in potential._inner_data.data.keys():
+                    if inner_pot not in params:
+                        params.append(
+                            [val.magnitude for val in inner_pot.parameters.values()]
+                        )
 
         return jax.numpy.array(params)
 
@@ -109,17 +116,32 @@ class PotentialHandler(DefaultModel):
         mapping = self.get_mapping()
         q: List = list()
 
-        for key in self.slot_map.keys():
-            q.append(p[mapping[self.slot_map[key]]])
+        for val in self.slot_map.values():
+            if val.bond_order:
+                p_ = p[0] * 0.0
+                for inner_pot, coeff in self.potentials[val]._inner_data.data.items():
+                    p_ += p[mapping[inner_pot]] * coeff
+                q.append(p_)
+            else:
+                q.append(p[mapping[self.potentials[val]]])
 
         return jax.numpy.array(q)
 
     def get_mapping(self) -> Dict:
         mapping: Dict = dict()
-        for idx, key in enumerate(self.potentials.keys()):
+        idx = 0
+        for key, pot in self.potentials.items():
             for p in self.slot_map.values():
                 if key == p:
-                    mapping.update({key: idx})
+                    if isinstance(pot, Potential):
+                        if pot not in mapping:
+                            mapping.update({pot: idx})
+                            idx += 1
+                    elif isinstance(pot, WrappedPotential):
+                        for inner_pot in pot._inner_data.data:
+                            if inner_pot not in mapping:
+                                mapping.update({inner_pot: idx})
+                                idx += 1
 
         return mapping
 

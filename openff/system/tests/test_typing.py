@@ -1,6 +1,6 @@
+import numpy as np
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from simtk import openmm
+from openff.toolkit.topology import Molecule
 
 from openff.system import unit
 from openff.system.exceptions import MissingBondOrdersError
@@ -39,23 +39,26 @@ class TestSMIRNOFFTyping(BaseTest):
 
 
 class TestParameterInterpolation(BaseTest):
+    xml_ff_bo = """<?xml version='1.0' encoding='ASCII'?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+      <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg"
+        fractional_bondorder_interpolation="linear">
+        <Bond
+          smirks="[#6X4:1]~[#8X2:2]"
+          id="bbo1"
+          k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
+          k_bondorder2="500.0 * kilocalories_per_mole/angstrom**2"
+          length_bondorder1="1.4 * angstrom"
+          length_bondorder2="1.3 * angstrom"
+          />
+      </Bonds>
+    </SMIRNOFF>
+    """
+
     def test_bond_order_interpolation(self):
-        xml_ff_bo = """<?xml version='1.0' encoding='ASCII'?>
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg"
-            fractional_bondorder_interpolation="linear">
-            <Bond
-              smirks="[#6X4:1]~[#8X2:2]"
-              id="bbo1"
-              k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
-              k_bondorder2="500.0 * kilocalories_per_mole/angstrom**2"
-              length_bondorder1="1.4 * angstrom"
-              length_bondorder2="1.3 * angstrom"
-              />
-          </Bonds>
-        </SMIRNOFF>
-        """
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+        forcefield = ForceField(
+            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
+        )
 
         mol = Molecule.from_smiles("CCO")
         mol.generate_conformers(n_conformers=1)
@@ -64,15 +67,45 @@ class TestParameterInterpolation(BaseTest):
             forcefield.create_openff_system(mol.to_topology())
 
         mol.assign_fractional_bond_orders()
-        mol.bonds[0].fractional_bond_order = 1.2
         mol.bonds[1].fractional_bond_order = 1.5
 
         out = forcefield.create_openff_system(mol.to_topology())
-        print(out["Bonds"].potentials)
 
         assert out["Bonds"].potentials[
             out["Bonds"].slot_map[TopologyKey(atom_indices=(1, 2))]
         ].parameters["k"] == 300 * unit.Unit("kilocalories / mol / angstrom ** 2")
+
+    def test_bond_order_interpolation_similar_bonds(self):
+        """Test that key mappings do not get confused when two bonds having similar SMIRKS matches
+        have different bond orders"""
+        forcefield = ForceField(
+            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
+        )
+
+        # TODO: Construct manually to avoid relying on atom ordering
+        mol = Molecule.from_smiles("C(CCO)O")
+        mol.generate_conformers(n_conformers=1)
+
+        mol.bonds[2].fractional_bond_order = 1.5
+        mol.bonds[3].fractional_bond_order = 1.2
+
+        out = forcefield.create_openff_system(mol.to_topology())
+
+        bond1_top_key = TopologyKey(atom_indices=(2, 3))
+        bond1_pot_key = out["Bonds"].slot_map[bond1_top_key]
+
+        bond2_top_key = TopologyKey(atom_indices=(0, 4))
+        bond2_pot_key = out["Bonds"].slot_map[bond2_top_key]
+
+        assert np.allclose(
+            out["Bonds"].potentials[bond1_pot_key].parameters["k"],
+            300.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
+        )
+
+        assert np.allclose(
+            out["Bonds"].potentials[bond2_pot_key].parameters["k"],
+            180.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
+        )
 
 
 #    def test_more_map_functions(self, parsley, cyclohexane_top):

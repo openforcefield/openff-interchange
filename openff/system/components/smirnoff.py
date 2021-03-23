@@ -99,7 +99,8 @@ class SMIRNOFFBondHandler(PotentialHandler):
                             parameters={
                                 "k": parameter_type.k_bondorder[map_key],
                                 "length": parameter_type.length_bondorder[map_key],
-                            }
+                            },
+                            map_key=map_key,
                         )
                     )
                 potential = WrappedPotential(
@@ -524,8 +525,7 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
 
 def _get_interpolation_coeffs(fractional_bond_order, data):
     x1, x2 = data.keys()
-    y1, y2 = data.values()
-    coeff1 = (fractional_bond_order - x1) / (x2 - x1)
-    coeff2 = (x2 - fractional_bond_order) / (x2 - x1)
+    coeff1 = (x2 - fractional_bond_order) / (x2 - x1)
+    coeff2 = (fractional_bond_order - x1) / (x2 - x1)
 
     return coeff1, coeff2
