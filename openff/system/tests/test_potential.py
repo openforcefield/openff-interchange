@@ -34,7 +34,7 @@ class TestWrappedPotential(BaseTest):
             parameters={"k": bt.k_bondorder[2], "length": bt.length_bondorder[2]}
         )
 
-        interp_pot = WrappedPotential(data={0.2: pot1, 0.8: pot2})
+        interp_pot = WrappedPotential(data={pot1: 0.2, pot2: 0.8})
         assert interp_pot.parameters == {
             "k": 180 * unit.Unit("kilocalorie / angstrom ** 2 / mole"),
             "length": 1.32 * unit.angstrom,
