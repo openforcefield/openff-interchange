@@ -281,6 +281,10 @@ def test_water_dimer():
     # gmx_energies, _ = get_gromacs_energies(openff_sys)
     # compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)
 
+    lmp_energies = get_lammps_energies(openff_sys, electrostatics=False)
+
+    lmp_energies.compare(omm_energies)
+
 
 def test_process_rb_torsions():
     """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""

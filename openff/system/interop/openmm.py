@@ -6,6 +6,7 @@ from openff.system.exceptions import (
     UnsupportedCutoffMethodError,
 )
 from openff.system.interop.parmed import _lj_params_from_potential
+from openff.system.utils import pint_to_simtk
 
 kcal_mol = unit.kilocalorie_per_mole
 kcal_ang = kcal_mol / unit.angstrom ** 2
@@ -208,43 +209,80 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
     # Store the pairings, not just the supported methods for each
     supported_cutoff_methods = [["cutoff", "pme"]]
 
-    vdw_handler = openff_sys.handlers["vdW"]
-    if vdw_handler.method not in [val[0] for val in supported_cutoff_methods]:
-        raise UnsupportedCutoffMethodError()
+    if "vdW" in openff_sys.handlers:
+        vdw_handler = openff_sys.handlers["vdW"]
+        if vdw_handler.method not in [val[0] for val in supported_cutoff_methods]:
+            raise UnsupportedCutoffMethodError()
 
-    vdw_cutoff = vdw_handler.cutoff * unit.angstrom
+        vdw_cutoff = vdw_handler.cutoff * unit.angstrom
 
-    electrostatics_handler = openff_sys.handlers["Electrostatics"]  # Split this out
-    if electrostatics_handler.method.lower() not in [
-        v[1] for v in supported_cutoff_methods
-    ]:
-        raise UnsupportedCutoffMethodError()
+        electrostatics_handler = openff_sys.handlers["Electrostatics"]  # Split this out
+        if electrostatics_handler.method.lower() not in [
+            v[1] for v in supported_cutoff_methods
+        ]:
+            raise UnsupportedCutoffMethodError()
 
-    non_bonded_force = openmm.NonbondedForce()
-    openmm_sys.addForce(non_bonded_force)
+        non_bonded_force = openmm.NonbondedForce()
+        openmm_sys.addForce(non_bonded_force)
 
-    for _ in openff_sys.topology.topology_particles:
-        non_bonded_force.addParticle(0.0, 1.0, 0.0)
+        for _ in openff_sys.topology.topology_particles:
+            non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
-    if openff_sys.box is None:
-        non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-    else:
-        non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
-        non_bonded_force.setUseDispersionCorrection(True)
-        non_bonded_force.setCutoffDistance(vdw_cutoff)
+        if openff_sys.box is None:
+            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+        else:
+            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
+            non_bonded_force.setUseDispersionCorrection(True)
+            non_bonded_force.setCutoffDistance(vdw_cutoff)
 
-    for top_key, pot_key in vdw_handler.slot_map.items():
-        atom_idx = top_key.atom_indices[0]
+        for top_key, pot_key in vdw_handler.slot_map.items():
+            atom_idx = top_key.atom_indices[0]
 
-        partial_charge = electrostatics_handler.charges[top_key]
-        partial_charge = (partial_charge / off_unit.elementary_charge).magnitude
-        vdw_potential = vdw_handler.potentials[pot_key]
-        # these are floats, implicitly angstrom and kcal/mol
-        sigma, epsilon = _lj_params_from_potential(vdw_potential)
-        sigma = sigma * unit.angstrom / unit.nanometer
-        epsilon = epsilon * unit.kilocalorie_per_mole / unit.kilojoule_per_mole
+            partial_charge = electrostatics_handler.charges[top_key]
+            partial_charge = (partial_charge / off_unit.elementary_charge).magnitude
+            vdw_potential = vdw_handler.potentials[pot_key]
+            # these are floats, implicitly angstrom and kcal/mol
+            sigma, epsilon = _lj_params_from_potential(vdw_potential)
+            sigma = sigma * unit.angstrom / unit.nanometer
+            epsilon = epsilon * unit.kilocalorie_per_mole / unit.kilojoule_per_mole
 
-        non_bonded_force.setParticleParameters(atom_idx, partial_charge, sigma, epsilon)
+            non_bonded_force.setParticleParameters(
+                atom_idx, partial_charge, sigma, epsilon
+            )
+
+    elif "Buckingham-6" in openff_sys.handlers:
+        buck_handler = openff_sys.handlers["Buckingham-6"]
+
+        non_bonded_force = openmm.CustomNonbondedForce(
+            "A * exp(-B * r) - C * r ^ -6; A = sqrt(A1 * A2); B = 2 / (1 / B1 + 1 / B2); C = sqrt(C1 * C2)"
+        )
+        non_bonded_force.addPerParticleParameter("A")
+        non_bonded_force.addPerParticleParameter("B")
+        non_bonded_force.addPerParticleParameter("C")
+        openmm_sys.addForce(non_bonded_force)
+
+        for _ in openff_sys.topology.topology_particles:
+            non_bonded_force.addParticle([0.0, 0.0, 0.0])
+
+        if openff_sys.box is None:
+            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+        else:
+            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
+            non_bonded_force.setCutoffDistance(buck_handler.cutoff * unit.angstrom)
+
+        for top_key, pot_key in buck_handler.slot_map.items():
+            atom_idx = top_key.atom_indices[0]
+
+            # TODO: Add electrostatics
+            params = buck_handler.potentials[pot_key].parameters
+            a = pint_to_simtk(params["A"])
+            b = pint_to_simtk(params["B"])
+            c = pint_to_simtk(params["C"])
+            non_bonded_force.setParticleParameters(atom_idx, [a, b, c])
+
+        return
+
+    # TODO: Figure out all of this post-processing with CustomNonbondedForce
 
     # from vdWHandler.postprocess_system
     bond_particle_indices = []

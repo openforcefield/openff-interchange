@@ -6,6 +6,7 @@ from simtk import unit as omm_unit
 
 from openff.system import unit
 from openff.system.components.system import System
+from openff.system.exceptions import UnsupportedExportError
 from openff.system.models import TopologyKey
 
 
@@ -105,8 +106,10 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
             _write_bond_coeffs(lmp_file=lmp_file, openff_sys=openff_sys)
         if n_angles > 0:
             _write_angle_coeffs(lmp_file=lmp_file, openff_sys=openff_sys)
-        if n_propers > 0 or n_impropers > 0:
-            pass
+        if n_propers > 0:
+            _write_proper_coeffs(lmp_file=lmp_file, openff_sys=openff_sys)
+        if n_impropers > 0:
+            _write_improper_coeffs(lmp_file=lmp_file, openff_sys=openff_sys)
 
         _write_atoms(
             lmp_file=lmp_file, openff_sys=openff_sys, atom_type_map=atom_type_map
@@ -115,6 +118,10 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
             _write_bonds(lmp_file=lmp_file, openff_sys=openff_sys)
         if n_angles > 0:
             _write_angles(lmp_file=lmp_file, openff_sys=openff_sys)
+        if n_propers > 0:
+            _write_propers(lmp_file=lmp_file, openff_sys=openff_sys)
+        if n_impropers > 0:
+            _write_impropers(lmp_file=lmp_file, openff_sys=openff_sys)
 
 
 def _write_pair_coeffs(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
@@ -134,10 +141,8 @@ def _write_pair_coeffs(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
 
     lmp_file.write("\n")
 
-    return atom_type_map
 
-
-def _write_bond_coeffs(lmp_file: IO, openff_sys: System) -> Dict:
+def _write_bond_coeffs(lmp_file: IO, openff_sys: System):
     lmp_file.write("Bond Coeffs\n\n")
 
     bond_handler = openff_sys.handlers["Bonds"]
@@ -150,14 +155,12 @@ def _write_bond_coeffs(lmp_file: IO, openff_sys: System) -> Dict:
         k = k * 0.5  # Account for LAMMPS wrapping 1/2 into k
         length = params["length"].to(unit.angstrom).magnitude
 
-        lmp_file.write(f"{bond_type_idx+1:d} harmonic\t{k:.16g}\t{length:.16g}")
+        lmp_file.write(f"{bond_type_idx+1:d} harmonic\t{k:.16g}\t{length:.16g}\n")
 
     lmp_file.write("\n")
 
-    return bond_type_map
 
-
-def _write_angle_coeffs(lmp_file: IO, openff_sys: System) -> Dict:
+def _write_angle_coeffs(lmp_file: IO, openff_sys: System):
     lmp_file.write("\nAngle Coeffs\n\n")
 
     angle_handler = openff_sys.handlers["Angles"]
@@ -170,11 +173,62 @@ def _write_angle_coeffs(lmp_file: IO, openff_sys: System) -> Dict:
         k = k * 0.5  # Account for LAMMPS wrapping 1/2 into k
         theta = params["angle"].to(unit.degree).magnitude
 
-        lmp_file.write(f"{angle_type_idx+1:d} harmonic\t{k:.16g}\t{theta:.16g}")
+        lmp_file.write(f"{angle_type_idx+1:d} harmonic\t{k:.16g}\t{theta:.16g}\n")
 
     lmp_file.write("\n")
 
-    return angle_type_map
+
+def _write_proper_coeffs(lmp_file: IO, openff_sys: System):
+    lmp_file.write("\nDihedral Coeffs\n\n")
+
+    proper_handler = openff_sys.handlers["ProperTorsions"]
+    proper_type_map = dict(enumerate(proper_handler.potentials))
+
+    for proper_type_idx, smirks in proper_type_map.items():
+        params = proper_handler.potentials[smirks].parameters
+
+        k = params["k"].to(unit.Unit("kilocalorie / mole")).magnitude
+        n = int(params["periodicity"])
+        phase = params["phase"].to(unit.degree).magnitude
+        idivf = int(params["idivf"])
+        k = k / idivf
+
+        lmp_file.write(
+            f"{proper_type_idx+1:d} fourier 1\t{k:.16g}\t{n:d}\t{phase:.16g}\n"
+        )
+
+    lmp_file.write("\n")
+
+
+def _write_improper_coeffs(lmp_file: IO, openff_sys: System):
+    lmp_file.write("\nImproper Coeffs\n\n")
+
+    improper_handler = openff_sys.handlers["ImproperTorsions"]
+    improper_type_map = dict(enumerate(improper_handler.potentials))
+
+    for improper_type_idx, smirks in improper_type_map.items():
+        params = improper_handler.potentials[smirks].parameters
+
+        k = params["k"].to(unit.Unit("kilocalorie / mole")).magnitude
+        n = int(params["periodicity"])
+        phase = params["phase"].to(unit.degree).magnitude
+        idivf = int(params["idivf"])
+        k = k / idivf
+
+        if (phase != 180) or (n != 2):
+            raise UnsupportedExportError(
+                "Improper exports to LAMMPS are funky and not well-supported "
+                "at the moment, see PR #126"
+            )
+
+        # See https://lammps.sandia.gov/doc/improper_fourier.html
+        # cos(n * x - pi) == - cos(n * x)
+        # k * (1 + cos(n * phi - pi / 2)) == k * (1 - cos(n * phi))
+        d = -1
+
+        lmp_file.write(f"{improper_type_idx+1:d} cvff {k:.16g}\t{d:d}\t{n:.16g}\n")
+
+    lmp_file.write("\n")
 
 
 def _write_atoms(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
@@ -261,3 +315,59 @@ def _write_angles(lmp_file: IO, openff_sys: System):
                 indices[2] + 1,
             )
         )
+
+
+def _write_propers(lmp_file: IO, openff_sys: System):
+    lmp_file.write("\nDihedrals\n\n")
+
+    proper_handler = openff_sys["ProperTorsions"]
+    proper_type_map = dict(enumerate(proper_handler.potentials))
+
+    proper_type_map_inv = dict({v: k for k, v in proper_type_map.items()})
+
+    for proper_idx, proper in enumerate(openff_sys.topology.propers):  # type: ignore[union-attr]
+        # These are "topology indices"
+        indices = tuple(a.topology_atom_index for a in proper)
+        for top_key, pot_key in proper_handler.slot_map.items():
+            if indices == top_key.atom_indices:
+
+                proper_type_idx = proper_type_map_inv[pot_key]
+
+                lmp_file.write(
+                    "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
+                        proper_idx + 1,
+                        proper_type_idx + 1,
+                        indices[0] + 1,
+                        indices[1] + 1,
+                        indices[2] + 1,
+                        indices[3] + 1,
+                    )
+                )
+
+
+def _write_impropers(lmp_file: IO, openff_sys: System):
+    lmp_file.write("\nImpropers\n\n")
+
+    improper_handler = openff_sys["ImproperTorsions"]
+    improper_type_map = dict(enumerate(improper_handler.potentials))
+
+    improper_type_map_inv = dict({v: k for k, v in improper_type_map.items()})
+
+    for improper_idx, improper in enumerate(openff_sys.topology.impropers):  # type: ignore[union-attr]
+        # These are "topology indices"
+        indices = tuple(a.topology_atom_index for a in improper)
+        for top_key, pot_key in improper_handler.slot_map.items():
+            if indices == top_key.atom_indices:
+
+                improper_type_idx = improper_type_map_inv[pot_key]
+
+                lmp_file.write(
+                    "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
+                        improper_idx + 1,
+                        improper_type_idx + 1,
+                        indices[0] + 1,
+                        indices[1] + 1,
+                        indices[2] + 1,
+                        indices[3] + 1,
+                    )
+                )
