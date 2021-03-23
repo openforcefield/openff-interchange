@@ -40,7 +40,28 @@ def from_foyer(structure: pmd.Structure, ff: Forcefield, **kwargs) -> System:
     """Create an openFF system object from a parmed structure by applying a foyer Forcefield"""
     system = System()
     system.topology = _topology_from_parmed(structure)
-    # ToDo: Register handlers while creating the system
+    system.handlers["FoyerVDWHandler"] = FoyerAtomTypes()
+    system.handlers["FoyerBondHandler"] = FoyerBondHandler()
+    system.handlers["FoyerAngleHandler"] = FoyerAngleHandler()
+    system.handlers["FoyerPeriodicProperHandler"] = FoyerPeriodicProperHandler()
+    system.handlers["FoyerPeriodicImproperHandler"] = FoyerPeriodicImproperHandler()
+    system.handlers["FoyerRBProperHandler"] = FoyerRBProperHandler()
+    system.handlers["FoyerRBImproperHandler"] = FoyerRBImproperHandler()
+
+    system.handlers["FoyerVDWHandler"].store_matches(forcefield=ff, structure=structure)
+
+    system.handlers["FoyerVDWHandler"].store_potentials(
+        forcefield=ff,
+    )
+
+    atom_slots = system.handlers["FoyerVDWHandler"].slot_map
+
+    for handler_name, handler in system.handlers.items():
+        if handler_name != "FoyerVDWHandler":
+            handler.store_matches(structure, atom_slots)
+
+            handler.store_potentials(ff)
+
     return system
 
 
@@ -48,7 +69,7 @@ class FoyerAtomTypes(PotentialHandler):
     name: str = "Atoms"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     independent_variables: Set[str] = {"r"}
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()  # type: ignore
+    slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
 
     def store_matches(
@@ -74,7 +95,7 @@ class FoyerAtomTypes(PotentialHandler):
             params = _copy_params(
                 atom_params,
                 "charge",
-                param_units={"epsilon": u.kcal / u.mol, "sigma": u.nm},
+                param_units={"epsilon": u.kJ / u.mol, "sigma": u.nm},
             )
 
             self.potentials[self.slot_map[top_key]] = Potential(parameters=params)
@@ -84,8 +105,8 @@ class FoyerBondHandler(PotentialHandler):
     name: str = "Bonds"
     expression: str = "1/2 * k * (r - length) ** 2"
     independent_variables: Set[str] = {"r"}
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()  # type: ignore
-    potentials: Dict[PotentialKey, Potential] = dict()  # type: ignore
+    slot_map: Dict[TopologyKey, PotentialKey] = dict()
+    potentials: Dict[PotentialKey, Potential] = dict()
 
     def store_matches(
         self, structure: pmd.Structure, atom_slots: Dict[TopologyKey, PotentialKey]
@@ -108,12 +129,12 @@ class FoyerBondHandler(PotentialHandler):
         """Store potential for foyer bonds"""
         for _, pot_key in self.slot_map.items():
             bond_params = forcefield.get_parameters(
-                "bonds", key=POTENTIAL_KEY_SEPARATOR.split(pot_key.id)
+                "bonds", key=pot_key.id.split(POTENTIAL_KEY_SEPARATOR)
             )
 
             bond_params = _copy_params(
                 bond_params,
-                param_units={"k": u.kcal / u.mol / u.nm ** 2, "length": u.nm},
+                param_units={"k": u.kJ / u.mol / u.nm ** 2, "length": u.nm},
             )
 
             self.potentials[pot_key] = Potential(parameters=bond_params)
@@ -121,18 +142,20 @@ class FoyerBondHandler(PotentialHandler):
 
 class FoyerAngleHandler(PotentialHandler):
     name: str = "Angles"
-    expression: str = "0.5 * k * (theta-theta_eq)**2"
+    expression: str = "0.5 * k * (theta-angle)**2"
     independent_variables: Set[str] = {"theta"}
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()  # type: ignore
-    potentials: Dict[PotentialKey, Potential] = dict()  # type: ignore
+    slot_map: Dict[TopologyKey, PotentialKey] = dict()
+    potentials: Dict[PotentialKey, Potential] = dict()
 
     def store_matches(
-        self, structure: pmd.Structure, atom_slots: Dict[int, str]
+        self, structure: pmd.Structure, atom_slots: Dict[TopologyKey, PotentialKey]
     ) -> None:
-        for bond in structure.angles:
-            atom_1_idx = bond.atom1.idx
-            atom_2_idx = bond.atom2.idx
-            atom_3_idx = bond.atom3.idx
+        for angle in structure.angles:
+            print(angle)
+            atom_1_idx = angle.atom1.idx
+            atom_2_idx = angle.atom2.idx
+            atom_3_idx = angle.atom3.idx
+            print(angle)
 
             top_key = TopologyKey(atom_indices=(atom_1_idx, atom_2_idx, atom_3_idx))
 
@@ -149,14 +172,14 @@ class FoyerAngleHandler(PotentialHandler):
     def store_potentials(self, forcefield: Forcefield) -> None:
         for _, pot_key in self.slot_map.items():
             angle_params = forcefield.get_parameters(
-                "angles", key=POTENTIAL_KEY_SEPARATOR.split(pot_key.id)
+                "angles", key=pot_key.id.split(POTENTIAL_KEY_SEPARATOR)
             )
 
             angle_params = _copy_params(
-                {"k": angle_params["k"], "theta_eq": angle_params["theta"]},
+                {"k": angle_params["k"], "angle": angle_params["theta"]},
                 param_units={
-                    "k": u.kcal / u.mol / u.nm ** 2,
-                    "theta_eq": u.dimensionless,
+                    "k": u.kJ / u.mol / u.nm ** 2,
+                    "angle": u.dimensionless,
                 },
             )
 
@@ -167,8 +190,8 @@ class FoyerDihedralHandler(PotentialHandler):
     name: str = "PeriodicProper"
     expression: str = "k * (1 + cos(n * phi - phi_eq))"
     independent_variables: Set[str] = {"phi"}
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()  # type: ignore
-    potentials: Dict[PotentialKey, Potential] = dict()  # type: ignore
+    slot_map: Dict[TopologyKey, PotentialKey] = dict()
+    potentials: Dict[PotentialKey, Potential] = dict()
     foyer_param_group: str = "periodic_propers"
     parmed_attr: str = "dihedrals"
 
@@ -204,7 +227,7 @@ class FoyerDihedralHandler(PotentialHandler):
     def store_potentials(self, forcefield: Forcefield) -> None:
         for _, pot_key in self.slot_map.items():
             foyer_params = forcefield.get_parameters(
-                self.foyer_param_group, key=POTENTIAL_KEY_SEPARATOR.split(pot_key.id)
+                self.foyer_param_group, key=pot_key.id.split(POTENTIAL_KEY_SEPARATOR)
             )
 
             foyer_params = self.assign_units_to_params(foyer_params)
@@ -218,7 +241,7 @@ class FoyerDihedralHandler(PotentialHandler):
 
 class FoyerPeriodicProperHandler(FoyerDihedralHandler):
     name: str = "PeriodicProper"
-    expression: str = "k * (1 + cos(n * phi - phi_eq))"
+    expression: str = "k * (1 + cos(periodicity * phi - phase))"
     independent_variables: Set[str] = {"phi"}
     foyer_param_group: str = "periodic_propers"
     parmed_attr: str = "dihedrals"
@@ -227,13 +250,13 @@ class FoyerPeriodicProperHandler(FoyerDihedralHandler):
         periodic_params = _copy_params(
             {
                 "k": foyer_params["k"],
-                "n": foyer_params["periodicity"],
-                "phi": foyer_params["phase"],
+                "periodicity": foyer_params["periodicity"],
+                "phase": foyer_params["phase"],
             },
             param_units={
-                "k": u.kcal / u.mol / u.nm ** 2,
-                "phi": u.dimensionless,
-                "n": u.dimensionless,
+                "k": u.kJ / u.mol / u.nm ** 2,
+                "phase": u.dimensionless,
+                "periodicity": u.dimensionless,
             },
         )
         return periodic_params
@@ -254,18 +277,18 @@ class FoyerRBProperHandler(FoyerDihedralHandler):
     )
     independent_variables: Set[str] = {"phi"}
     foyer_param_group: str = "rb_propers"
-    parmed_attr: str = "propers"
+    parmed_attr: str = "dihedrals"
 
     def assign_units_to_params(self, foyer_params: Dict[str, Any]) -> Dict[str, Any]:
         rb_params = _copy_params(
             foyer_params,
             param_units={
-                "c0": u.dimensionless,
-                "c1": u.dimensionless,
-                "c2": u.dimensionless,
-                "c3": u.dimensionless,
-                "c4": u.dimensionless,
-                "c5": u.dimensionless,
+                "c0": u.KJ / u.mol,
+                "c1": u.KJ / u.mol,
+                "c2": u.KJ / u.mol,
+                "c3": u.KJ / u.mol,
+                "c4": u.KJ / u.mol,
+                "c5": u.KJ / u.mol,
             },
         )
 

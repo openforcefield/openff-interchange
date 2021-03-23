@@ -1,4 +1,3 @@
-import parmed as pmd
 import pytest
 
 from openff.system.components.foyer import from_foyer
@@ -9,15 +8,18 @@ class TestFoyer(BaseTest):
     @pytest.fixture(scope="session")
     def oplsaa_system_ethane(self):
         import foyer
-        from foyer.tests.utils import get_fn
+        from mbuild.conversion import to_parmed
+        from mbuild.lib.molecules import Ethane
 
         oplsaa = foyer.Forcefield(name="oplsaa")
-        pmd_ethane = pmd.load_file(get_fn("ethane.mol2"), structure=True)
+        pmd_ethane = to_parmed(Ethane())
         system = from_foyer(structure=pmd_ethane, ff=oplsaa)
         return system
 
     def test_from_foyer_system_atom_handlers(self, oplsaa_system_ethane):
-        assert oplsaa_system_ethane.handlers.get("FoyerAtomHandler")
+        vdw_handler = oplsaa_system_ethane.handlers.get("FoyerVDWHandler")
+        assert len(vdw_handler.potentials) == 2
 
     def test_from_foyer_system_bond_handlers(self, oplsaa_system_ethane):
-        assert oplsaa_system_ethane.handlers.get("FoyerBondHandler")
+        bond_handler = oplsaa_system_ethane.handlers.get("FoyerBondHandler")
+        assert len(bond_handler.potentials) == 2
