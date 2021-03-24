@@ -131,4 +131,7 @@ def _get_openmm_energies(
     if "CustomNonbondedForce" in omm_energies:
         report.energies["Nonbonded"] += omm_energies["CustomNonbondedForce"]
 
+    if "RBTorsionForce" in omm_energies:
+        report.energies["Torsion"] += omm_energies["RBTorsionForce"]
+
     return report
