@@ -46,7 +46,7 @@ def test_ethanol_opls():
     out.handlers.update({"RBTorsions": rb_torsions})
     out.handlers.pop("ProperTorsions")
 
-    gmx = get_openmm_energies(out).energies["Torsion"]
+    gmx = get_openmm_energies(out, round_positions=3).energies["Torsion"]
     omm = get_gromacs_energies(out).energies["Torsion"]
 
     assert (gmx - omm).value_in_unit(omm_unit.kilojoule_per_mole) < 1e-3
