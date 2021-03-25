@@ -43,7 +43,7 @@ class System(DefaultModel):
         else:
             raise InvalidBoxError
 
-    def to_gro(self, file_path: Union[Path, str], writer="parmed"):
+    def to_gro(self, file_path: Union[Path, str], writer="parmed", decimal: int = 8):
         """Export this system to a .gro file using ParmEd"""
 
         if self.positions is None:
@@ -58,7 +58,7 @@ class System(DefaultModel):
         elif writer == "internal":
             from openff.system.interop.internal.gromacs import to_gro
 
-            to_gro(self, file_path)
+            to_gro(self, file_path, decimal=decimal)
 
     def to_top(self, file_path: Union[Path, str], writer="parmed"):
         """Export this system to a .top file using ParmEd"""

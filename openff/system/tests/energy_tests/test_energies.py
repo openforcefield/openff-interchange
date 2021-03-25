@@ -55,14 +55,14 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
 
     # Compare directly to toolkit's reference implementation
     omm_energies = get_openmm_energies(
-        off_sys, round_positions=3, hard_cutoff=True, electrostatics=False
+        off_sys, round_positions=8, hard_cutoff=True, electrostatics=False
     )
     omm_reference = parsley.create_openmm_system(top)
     reference_energies = _get_openmm_energies(
         omm_sys=omm_reference,
         box_vectors=off_sys.box,
         positions=off_sys.positions,
-        round_positions=3,
+        round_positions=8,
         hard_cutoff=True,
         electrostatics=False,
     )
@@ -116,7 +116,7 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
     if not constrained:
         other_energies = get_openmm_energies(
             off_sys,
-            round_positions=7,
+            round_positions=8,
             hard_cutoff=True,
             electrostatics=True,
         )
@@ -156,7 +156,7 @@ def test_argon(n_mol):
     off_sys.box = box
 
     omm_energies = get_openmm_energies(
-        off_sys, round_positions=3, hard_cutoff=True, electrostatics=False
+        off_sys, round_positions=8, hard_cutoff=True, electrostatics=False
     )
     gmx_energies = get_gromacs_energies(
         off_sys, writer="internal", electrostatics=False
@@ -231,7 +231,7 @@ def test_packmol_boxes(toolkit_file_path):
 
     omm_energies_rounded = get_openmm_energies(
         off_sys,
-        round_positions=3,
+        round_positions=8,
         hard_cutoff=True,
         electrostatics=False,
     )
