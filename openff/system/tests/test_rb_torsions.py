@@ -6,7 +6,11 @@ from openff.system.components.misc import RBTorsionHandler
 from openff.system.components.potentials import Potential
 from openff.system.models import PotentialKey, TopologyKey
 from openff.system.stubs import ForceField
-from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+from openff.system.tests.energy_tests.gromacs import (
+    get_gromacs_energies,
+    get_mdp_file,
+    run_gmx_energy,
+)
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 
 kj_mol = unit.Unit("kilojoule / mol")
@@ -32,7 +36,7 @@ def test_ethanol_opls():
     # https://github.com/mosdef-hub/foyer/blob/7816bf53a127502520a18d76c81510f96adfdbed/foyer/forcefields/xml/oplsaa.xml#L2585
     pot = Potential(
         parameters={
-            "c0": 1.6276 * kj_mol,
+            "c0": 0.6276 * kj_mol,
             "c1": 1.8828 * kj_mol,
             "c2": 0.0 * kj_mol,
             "c3": -2.5104 * kj_mol,
@@ -50,3 +54,29 @@ def test_ethanol_opls():
     omm = get_gromacs_energies(out).energies["Torsion"]
 
     assert (gmx - omm).value_in_unit(omm_unit.kilojoule_per_mole) < 1e-3
+
+    # Given that these force constants are copied from Foyer's OPLS-AA file,
+    # compare to processing through the current MoSDeF pipeline
+    try:
+        import foyer
+        import mbuild
+    except ModuleNotFoundError:
+        return
+
+    comp = mbuild.load("CC", smiles=True)
+    comp.xyz = mol.conformers[0].value_in_unit(omm_unit.nanometer)
+    ff = foyer.Forcefield(name="oplsaa")
+    from_foyer = ff.apply(comp)
+    from_foyer.box = [40, 40, 40, 90, 90, 90]
+    from_foyer.save("from_foyer.top")
+    from_foyer.save("from_foyer.gro")
+
+    rb_torsion_energy_from_foyer = run_gmx_energy(
+        top_file="from_foyer.top",
+        gro_file="from_foyer.gro",
+        mdp_file=get_mdp_file("default"),
+    ).energies["Torsion"]
+
+    assert (omm - rb_torsion_energy_from_foyer).value_in_unit(
+        omm_unit.kilojoule_per_mole
+    ) < 1e-3
