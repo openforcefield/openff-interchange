@@ -398,9 +398,10 @@ def _write_angles(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule):
 
 
 def _write_dihedrals(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule):
-    if "ProperTorsions" not in openff_sys.handlers.keys():
-        if "ImproperTorsions" not in openff_sys.handlers.keys():
-            return
+    if "ProperTorsions" not in openff_sys.handlers:
+        if "RBTorsions" not in openff_sys.handlers:
+            if "ImproperTorsions" not in openff_sys.handlers:
+                return
 
     top_file.write("[ dihedrals ]\n")
     top_file.write(";    i      j      k      l   func\n")
@@ -409,62 +410,108 @@ def _write_dihedrals(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule
 
     offset = top_mol.atom_start_topology_index
 
-    proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
-    improper_torsion_handler = openff_sys.handlers["ImproperTorsions"]
+    rb_torsion_handler = (
+        openff_sys.handlers["RBTorsions"] if "RBTorsions" in openff_sys.handlers else []
+    )
+    proper_torsion_handler = (
+        openff_sys.handlers["ProperTorsions"]
+        if "ProperTorsions" in openff_sys.handlers
+        else []
+    )
+    improper_torsion_handler = (
+        openff_sys.handlers["ImproperTorsions"]
+        if "ImproperTorsions" in openff_sys.handlers
+        else []
+    )
 
     # TODO: Ensure number of torsions written matches what is expected
     for proper in top_mol.propers:
-        indices = tuple(a.topology_atom_index for a in proper)
-        for top_key in proper_torsion_handler.slot_map:
-            if top_key.atom_indices == indices:
-                pot_key = proper_torsion_handler.slot_map[top_key]
-                params = proper_torsion_handler.potentials[pot_key].parameters
+        if proper_torsion_handler:
+            for top_key in proper_torsion_handler.slot_map:  # type: ignore[attr-defined]
+                indices = tuple(a.topology_atom_index for a in proper)
+                if top_key.atom_indices == indices:
+                    pot_key = proper_torsion_handler.slot_map[top_key]  # type: ignore[attr-defined]
+                    params = proper_torsion_handler.potentials[pot_key].parameters  # type: ignore[attr-defined]
 
-                # "reference" indices
-                ref_indices = [idx - offset for idx in indices]
+                    # "reference" indices
+                    ref_indices = [idx - offset for idx in indices]
 
-                k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
-                periodicity = int(params["periodicity"])
-                phase = params["phase"].to(unit.degree).magnitude
-                idivf = int(params["idivf"])
-                top_file.write(
-                    "{:7d} {:7d} {:7d} {:7d} {:6d} {:16g} {:16g} {:7d}\n".format(
-                        ref_indices[0] + 1,
-                        ref_indices[1] + 1,
-                        ref_indices[2] + 1,
-                        ref_indices[3] + 1,
-                        1,
-                        phase,
-                        k / idivf,
-                        periodicity,
+                    k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
+                    periodicity = int(params["periodicity"])
+                    phase = params["phase"].to(unit.degree).magnitude
+                    idivf = int(params["idivf"])
+                    top_file.write(
+                        "{:7d} {:7d} {:7d} {:7d} {:6d} {:16g} {:16g} {:7d}\n".format(
+                            ref_indices[0] + 1,
+                            ref_indices[1] + 1,
+                            ref_indices[2] + 1,
+                            ref_indices[3] + 1,
+                            1,
+                            phase,
+                            k / idivf,
+                            periodicity,
+                        )
                     )
-                )
+        # This should be `if` if a single quartet can be subject to both proper and RB torsions
+        elif rb_torsion_handler:
+            for top_key in rb_torsion_handler.slot_map:  # type: ignore[attr-defined]
+                indices = tuple(a.topology_atom_index for a in proper)
+                if top_key.atom_indices == indices:
+                    pot_key = rb_torsion_handler.slot_map[top_key]  # type: ignore[attr-defined]
+                    params = rb_torsion_handler.potentials[pot_key].parameters  # type: ignore[attr-defined]
+
+                    # "reference" indices
+                    ref_indices = [idx - offset for idx in indices]
+
+                    c0 = params["c0"].to(unit.Unit("kilojoule / mol")).magnitude
+                    c1 = params["c1"].to(unit.Unit("kilojoule / mol")).magnitude
+                    c2 = params["c2"].to(unit.Unit("kilojoule / mol")).magnitude
+                    c3 = params["c3"].to(unit.Unit("kilojoule / mol")).magnitude
+                    c4 = params["c4"].to(unit.Unit("kilojoule / mol")).magnitude
+                    c5 = params["c5"].to(unit.Unit("kilojoule / mol")).magnitude
+
+                    top_file.write(
+                        "{:7d} {:7d} {:7d} {:7d} {:6d} "
+                        "{:16g} {:16g} {:16g} {:16g} {:16g} {:16g} \n".format(
+                            ref_indices[0] + 1,
+                            ref_indices[1] + 1,
+                            ref_indices[2] + 1,
+                            ref_indices[3] + 1,
+                            3,
+                            c0,
+                            c1,
+                            c2,
+                            c3,
+                            c4,
+                            c5,
+                        )
+                    )
 
     # TODO: Ensure number of torsions written matches what is expected
     for improper in top_mol.impropers:
+        if improper_torsion_handler:
+            for top_key in improper_torsion_handler.slot_map:  # type: ignore[attr-defined]
+                indices = tuple(a.topology_atom_index for a in improper)
+                if indices == top_key.atom_indices:
+                    key = improper_torsion_handler.slot_map[top_key]  # type: ignore[attr-defined]
+                    params = improper_torsion_handler.potentials[key].parameters  # type: ignore[attr-defined]
 
-        indices = tuple(a.topology_atom_index for a in improper)
-        for top_key in improper_torsion_handler.slot_map:
-            if indices == top_key.atom_indices:
-                key = improper_torsion_handler.slot_map[top_key]
-                params = improper_torsion_handler.potentials[key].parameters
-
-                k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
-                periodicity = int(params["periodicity"])
-                phase = params["phase"].to(unit.degree).magnitude
-                idivf = int(params["idivf"])
-                top_file.write(
-                    "{:7d} {:7d} {:7d} {:7d} {:6d} {:.16g} {:.16g} {:.16g}\n".format(
-                        indices[0] + 1,
-                        indices[1] + 1,
-                        indices[2] + 1,
-                        indices[3] + 1,
-                        4,
-                        phase,
-                        k / idivf,
-                        periodicity,
+                    k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
+                    periodicity = int(params["periodicity"])
+                    phase = params["phase"].to(unit.degree).magnitude
+                    idivf = int(params["idivf"])
+                    top_file.write(
+                        "{:7d} {:7d} {:7d} {:7d} {:6d} {:.16g} {:.16g} {:.16g}\n".format(
+                            indices[0] + 1,
+                            indices[1] + 1,
+                            indices[2] + 1,
+                            indices[3] + 1,
+                            4,
+                            phase,
+                            k / idivf,
+                            periodicity,
+                        )
                     )
-                )
 
 
 def _write_system(top_file: IO, molecule_map: Dict):
