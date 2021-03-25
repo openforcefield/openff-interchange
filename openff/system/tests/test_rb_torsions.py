@@ -1,3 +1,4 @@
+import numpy as np
 from openff.toolkit.topology.molecule import Molecule
 from simtk import unit as omm_unit
 
@@ -24,6 +25,7 @@ def test_ethanol_opls():
     out = parsley.create_openff_system(top)
     out.box = [4, 4, 4]
     out.positions = mol.conformers[0]
+    out.positions = np.round(out.positions, 2)
 
     rb_torsions = RBTorsionHandler()
     smirks = "[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]"
