@@ -5,6 +5,7 @@ import numpy as np
 from openff.toolkit.topology.topology import Topology
 from pydantic import validator
 
+from openff.system.components.misc import OFFBioTop
 from openff.system.components.potentials import PotentialHandler
 from openff.system.exceptions import (
     InternalInconsistencyError,
@@ -27,7 +28,7 @@ class System(DefaultModel):
     """
 
     handlers: Dict[str, PotentialHandler] = dict()
-    topology: Optional[Topology] = None
+    topology: Optional[Union[Topology, OFFBioTop]] = None
     box: ArrayQuantity["nanometer"] = None  # type: ignore
     positions: ArrayQuantity["nanometer"] = None  # type: ignore
 
