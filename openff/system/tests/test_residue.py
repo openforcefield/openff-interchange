@@ -5,14 +5,13 @@ from simtk.openmm import app
 from openff.system.components.misc import OFFBioTop
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
+from openff.system.utils import get_test_file_path
 
 
 def test_residues():
-    pdb = app.PDBFile("/Users/mwt/Downloads/ALA_GLY/ALA_GLY.pdb")
-    mol = Molecule.from_file(
-        "/Users/mwt/Downloads/ALA_GLY/ALA_GLY.sdf", file_format="sdf"
-    )
-    traj = md.load("/Users/mwt/Downloads/ALA_GLY/ALA_GLY.pdb")
+    pdb = app.PDBFile(get_test_file_path("ALA_GLY/ALA_GLY.pdb"))
+    traj = md.load(get_test_file_path("ALA_GLY/ALA_GLY.pdb"))
+    mol = Molecule(get_test_file_path("ALA_GLY/ALA_GLY.sdf"), file_format="sdf")
 
     top = OFFBioTop.from_openmm(pdb.topology, unique_molecules=[mol])
     top.mdtop = traj.top

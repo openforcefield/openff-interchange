@@ -1,13 +1,13 @@
 Documenting how some of these files were generated
 
+
 `10_ar.pdb`:
-  -
-  ```python3
+  - ```python3
     >>> import mbuild as mb
     >>> ar = mb.Compound(name='Ar')
     >>> mol = mb.fill_box(ar, 10, box=[2, 2, 2])
     >>> mol.to_parmed().save('10_ar.pdb')
-  ```
+    ```
 
 `parsley.offxml`:
   - This file is a based on a copy of `openff_unconstrained-1.0.0.offxml` (1/4/21)
@@ -22,3 +22,6 @@ Documenting how some of these files were generated
   - Taken from the toolkit, but with a default-looking `<Electrostatics>` tag added.
     - https://github.com/openforcefield/openff-toolkit/blob/d0b768a6d2cd0297b34aab3618197604b81d6e03/openff/toolkit/data/test_forcefields/tip3p.offxml
     - See https://github.com/openforcefield/openff-toolkit/issues/716
+
+`ALA_GLY/ALA_GLY.*`
+  - These files were prepared by Jeff Wagner
