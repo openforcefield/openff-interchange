@@ -1,5 +1,7 @@
 from typing import Dict, Set
 
+from openff.toolkit.topology import Topology
+
 from openff.system.components.potentials import Potential, PotentialHandler
 from openff.system.models import PotentialKey, TopologyKey
 
@@ -27,3 +29,9 @@ class RBTorsionHandler(PotentialHandler):
     independent_variables: Set[str] = {"C0", "C1", "C2", "C3", "C4", "C5"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
+
+
+class OFFBioTop(Topology):
+    def __init__(self, mdtop=None, *args, **kwargs):
+        self.mdtop = mdtop
+        super().__init__(*args, **kwargs)
