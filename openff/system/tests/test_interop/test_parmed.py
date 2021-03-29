@@ -35,7 +35,7 @@ class TestParmedConversion(BaseTest):
 
         assert np.allclose(struct.box, np.array([40, 40, 40, 90, 90, 90]))
 
-    def test_basic_conversion(self, box):
+    def test_basic_conversion_params(self, box):
         top = top_from_smiles("C")
         parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
@@ -67,5 +67,19 @@ class TestParmedConversion(BaseTest):
 
         assert angle_k == pytest.approx(37.143507635885)
         assert theteq == pytest.approx(107.5991506326)
+
+        assert np.allclose(struct.box, np.array([40, 40, 40, 90, 90, 90]))
+
+    def test_basic_conversion_ammonia(self, ammonia_ff, ammonia_top, box):
+        off_sys = ammonia_ff.create_openff_system(ammonia_top, box=box)
+        off_sys.positions = np.zeros(shape=(ammonia_top.n_topology_atoms, 3))
+        struct = off_sys.to_parmed()
+        import ipdb
+
+        ipdb.set_trace()
+
+        # As partial sanity check, see if it they save without error
+        struct.save("x.top", combine="all")
+        struct.save("x.gro", combine="all")
 
         assert np.allclose(struct.box, np.array([40, 40, 40, 90, 90, 90]))
