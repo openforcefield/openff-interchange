@@ -33,11 +33,12 @@ class TestFromOpenMM(BaseTest):
             pdbfile.getPositions().value_in_unit(nm),
         )
 
-        get_openmm_energies(out).compare(
+        get_openmm_energies(out, hard_cutoff=True).compare(
             _get_openmm_energies(
                 omm_sys=argon_ff.create_openmm_system(top),
                 box_vectors=pdbfile.topology.getPeriodicBoxVectors(),
                 positions=pdbfile.getPositions(),
+                hard_cutoff=True,
             )
         )
 
