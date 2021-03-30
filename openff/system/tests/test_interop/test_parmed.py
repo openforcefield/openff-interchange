@@ -74,9 +74,6 @@ class TestParmedConversion(BaseTest):
         off_sys = ammonia_ff.create_openff_system(ammonia_top, box=box)
         off_sys.positions = np.zeros(shape=(ammonia_top.n_topology_atoms, 3))
         struct = off_sys.to_parmed()
-        import ipdb
-
-        ipdb.set_trace()
 
         # As partial sanity check, see if it they save without error
         struct.save("x.top", combine="all")
