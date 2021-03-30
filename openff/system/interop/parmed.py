@@ -1,17 +1,22 @@
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Dict
 
 import numpy as np
 import parmed as pmd
 
 from openff.system import unit
-from openff.system.models import TopologyKey
+from openff.system.components.potentials import Potential
+from openff.system.models import PotentialKey, TopologyKey
+
+if TYPE_CHECKING:
+    from openff.system.components.system import System
+
 
 kcal_mol = unit.Unit("kilocalories / mol")
 kcal_mol_a2 = unit.Unit("kilocalories / mol / angstrom ** 2")
 kcal_mol_rad2 = unit.Unit("kilocalories / mol / rad ** 2")
 
 
-def to_parmed(off_system: Any) -> pmd.Structure:
+def to_parmed(off_system: "System") -> pmd.Structure:
     """Convert an OpenFF System to a ParmEd Structure"""
     structure = pmd.Structure()
     _convert_box(off_system.box, structure)
@@ -22,7 +27,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     else:
         has_electrostatics = False
 
-    for topology_molecule in off_system.topology.topology_molecules:
+    for topology_molecule in off_system.topology.topology_molecules:  # type: ignore[union-attr]
         for atom in topology_molecule.atoms:
             atomic_number = atom.atomic_number
             element = pmd.periodic_table.Element[atomic_number]
@@ -84,9 +89,9 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     # ParmEd treats 1-4 scaling factors at the level of each DihedralType,
     # whereas SMIRNOFF captures them at the level of the non-bonded handler,
     # so they need to be stored here for processing dihedrals
-    vdw_14 = off_system.handlers["vdW"].scale_14
+    vdw_14 = off_system.handlers["vdW"].scale_14  # type: ignore[attr-defined]
     if has_electrostatics:
-        coul_14 = off_system.handlers["Electrostatics"].scale_14
+        coul_14 = off_system.handlers["Electrostatics"].scale_14  # type: ignore[attr-defined]
     else:
         coul_14 = 1.0
     vdw_handler = off_system.handlers["vdW"]
@@ -179,7 +184,7 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         if has_electrostatics:
             top_key = TopologyKey(atom_indices=(pmd_idx,))
-            partial_charge = electrostatics_handler.charges[top_key]
+            partial_charge = electrostatics_handler.charges[top_key]  # type: ignore[attr-defined]
             unitless_ = partial_charge.to(unit.elementary_charge).magnitude
             pmd_atom.charge = float(unitless_)
             pmd_atom.atom_type.charge = float(unitless_)
@@ -190,9 +195,102 @@ def to_parmed(off_system: Any) -> pmd.Structure:
     for res in structure.residues:
         res.name = "FOO"
 
-    structure.positions = off_system.positions.to(unit.angstrom).magnitude
+    structure.positions = off_system.positions.to(unit.angstrom).magnitude  # type: ignore[attr-defined]
+    for idx, pos in enumerate(structure.positions):
+        structure.atoms[idx].xx = pos._value[0]._value
+        structure.atoms[idx].xy = pos._value[1]._value
+        structure.atoms[idx].xz = pos._value[2]._value
 
     return structure
+
+
+def from_parmed(cls) -> "System":
+
+    from openff.system.components.system import System
+
+    out = System()
+
+    if cls.positions:
+        out.positions = np.asarray(cls.positions) * unit.angstrom
+
+    if any(cls.box[3:] != 3 * [90.0]):
+        from openff.system.exceptions import UnsupportedBoxError
+
+        raise UnsupportedBoxError(
+            f"Found box with angles {cls.box[3:]}. Only"
+            "rectangular boxes are currently supported."
+        )
+
+    out.box = cls.box[:3] * unit.angstrom
+
+    from openff.toolkit.topology import Molecule, Topology
+
+    top = Topology()
+
+    for res in cls.residues:
+        mol = Molecule()
+        mol.name = res.name
+        for atom in res.atoms:
+            mol.add_atom(
+                atomic_number=atom.atomic_number, formal_charge=0, is_aromatic=False
+            )
+            for bond in atom.bonds:
+                try:
+                    mol.add_bond(
+                        atom1=bond.atom1,
+                        atom2=bond.atom1,
+                        bond_order=bond.order,
+                    )
+                # TODO: Use a custom exception after
+                # https://github.com/openforcefield/openff-toolkit/issues/771
+                except Exception:
+                    pass
+
+        top.add_molecule(mol)
+
+    out.topology = top
+
+    from openff.system.components.smirnoff import (
+        ElectrostaticsMetaHandler,
+        SMIRNOFFBondHandler,
+        SMIRNOFFvdWHandler,
+    )
+
+    vdw_handler = SMIRNOFFvdWHandler()
+    coul_handler = ElectrostaticsMetaHandler()
+
+    for atom in cls.atoms:
+        atom_idx = atom.idx
+        sigma = atom.sigma * unit.angstrom
+        epsilon = atom.epsilon * kcal_mol
+        charge = atom.charge * unit.elementary_charge
+        top_key = TopologyKey(atom_indices=(atom_idx,))
+        pot_key = PotentialKey(id=str(atom_idx))
+        pot = Potential(parameters={"sigma": sigma, "epsilon": epsilon})
+
+        vdw_handler.slot_map.update({top_key: pot_key})
+        vdw_handler.potentials.update({pot_key: pot})
+
+        coul_handler.charges.update({top_key: charge})
+
+    bond_handler = SMIRNOFFBondHandler()
+
+    for bond in cls.bonds:
+        atom1 = bond.atom1
+        atom2 = bond.atom2
+        k = bond.type.k * kcal_mol_a2
+        length = bond.type.req * unit.angstrom
+        top_key = TopologyKey(atom_indices=(atom1.idx, atom2.idx))
+        pot_key = PotentialKey(id=f"{atom1.idx}-{atom2.idx}")
+        pot = Potential(parameters={"k": k, "length": length})
+
+        bond_handler.slot_map.update({top_key: pot_key})
+        bond_handler.potentials.update({pot_key: pot})
+
+    out.handlers.update({"vdW": vdw_handler})
+    out.handlers.update({"Electrostatics": coul_handler})  # type: ignore[dict-item]
+    out.handlers.update({"Bonds": bond_handler})
+    return out
 
 
 # def _convert_box(box: unit.Quantity, structure: pmd.Structure) -> None:
