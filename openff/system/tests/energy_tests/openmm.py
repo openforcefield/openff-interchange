@@ -84,10 +84,15 @@ def _get_openmm_energies(
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context = openmm.Context(omm_sys, integrator)
 
-    box_vectors = box_vectors.magnitude * unit.nanometer
+    if not isinstance(box_vectors, unit.Quantity):
+        box_vectors = box_vectors.magnitude * unit.nanometer
     context.setPeriodicBoxVectors(*box_vectors)
 
-    positions = positions.magnitude * unit.nanometer
+    if isinstance(positions, unit.Quantity):
+        # Convert list of Vec3 into a NumPy array
+        positions = np.asarray(positions.value_in_unit(unit.nanometer)) * unit.nanometer
+    else:
+        positions = positions.magnitude * unit.nanometer
 
     if round_positions is not None:
         rounded = np.round(positions, round_positions)
@@ -130,5 +135,8 @@ def _get_openmm_energies(
 
     if "CustomNonbondedForce" in omm_energies:
         report.energies["Nonbonded"] += omm_energies["CustomNonbondedForce"]
+
+    if "RBTorsionForce" in omm_energies:
+        report.energies["Torsion"] += omm_energies["RBTorsionForce"]
 
     return report

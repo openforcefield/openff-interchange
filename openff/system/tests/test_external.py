@@ -1,35 +1,46 @@
+import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
 from simtk import openmm
+from simtk.unit import nanometer as nm
 
-from openff.system.components.system import System
+from openff.system import unit
 from openff.system.tests.base_test import BaseTest
+from openff.system.tests.energy_tests.openmm import (
+    _get_openmm_energies,
+    get_openmm_energies,
+)
 from openff.system.utils import get_test_file_path
 
 
 class TestFromOpenMM(BaseTest):
-    @pytest.mark.skip
     def test_from_openmm_pdbfile(self, argon_ff, argon_top):
-        # TODO: Host files like this here instead of grabbing from the toolkit
         pdb_file_path = get_test_file_path("10-argons.pdb")
         pdbfile = openmm.app.PDBFile(pdb_file_path)
 
-        System(
-            topology=argon_top,
-            forcefield=argon_ff,
-            positions=pdbfile.positions,
-            box=pdbfile.topology.getPeriodicBoxVectors(),
+        mol = Molecule.from_smiles("[#18]")
+        top = Topology.from_openmm(pdbfile.topology, unique_molecules=[mol])
+        box = pdbfile.topology.getPeriodicBoxVectors()
+        box = box.value_in_unit(nm) * unit.nanometer
+
+        out = argon_ff.create_openff_system(top)
+        out.box = box
+        out.positions = pdbfile.getPositions()
+
+        assert np.allclose(
+            out.positions.to(unit.nanometer).magnitude,
+            pdbfile.getPositions().value_in_unit(nm),
         )
 
-        # proto_system = ProtoSystem(
-        # topology=argon_top,
-        # positions=pdbfile.positions,
-        # box=pdbfile.topology.getPeriodicBoxVectors(),
-        # )
-
-        # assert np.allclose(argon_system.positions, proto_system.positions)
-        # assert np.allclose(argon_system.box, proto_system.box)
+        get_openmm_energies(out, hard_cutoff=True).compare(
+            _get_openmm_energies(
+                omm_sys=argon_ff.create_openmm_system(top),
+                box_vectors=pdbfile.topology.getPeriodicBoxVectors(),
+                positions=pdbfile.getPositions(),
+                hard_cutoff=True,
+            )
+        )
 
     @pytest.fixture
     def unique_molecules(self):

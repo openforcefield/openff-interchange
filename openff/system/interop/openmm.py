@@ -1,10 +1,7 @@
 from simtk import openmm, unit
 
 from openff.system import unit as off_unit
-from openff.system.exceptions import (
-    InternalInconsistencyError,
-    UnsupportedCutoffMethodError,
-)
+from openff.system.exceptions import UnsupportedCutoffMethodError
 from openff.system.interop.parmed import _lj_params_from_potential
 from openff.system.utils import pint_to_simtk
 
@@ -45,7 +42,7 @@ def to_openmm(openff_sys) -> openmm.System:
         openmm_sys.addParticle(atom.atom.mass)
 
     _process_nonbonded_forces(openff_sys, openmm_sys)
-    _process_proper_torsion_forces(openff_sys, openmm_sys)
+    _process_torsion_forces(openff_sys, openmm_sys)
     _process_improper_torsion_forces(openff_sys, openmm_sys)
     _process_angle_forces(openff_sys, openmm_sys)
     _process_bond_forces(openff_sys, openmm_sys)
@@ -131,16 +128,20 @@ def _process_angle_forces(openff_sys, openmm_sys):
         )
 
 
+def _process_torsion_forces(openff_sys, openmm_sys):
+    if "ProperTorsions" in openff_sys.handlers:
+        _process_proper_torsion_forces(openff_sys, openmm_sys)
+    if "RBTorsions" in openff_sys.handlers:
+        _process_rb_torsion_forces(openff_sys, openmm_sys)
+
+
 def _process_proper_torsion_forces(openff_sys, openmm_sys):
     """Process the Propers section of an OpenFF System into corresponding
     forces within an openmm.PeriodicTorsionForce"""
     torsion_force = openmm.PeriodicTorsionForce()
     openmm_sys.addForce(torsion_force)
 
-    try:
-        proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
-    except KeyError:
-        return
+    proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
 
     for top_key, pot_key in proper_torsion_handler.slot_map.items():
         indices = top_key.atom_indices
@@ -162,6 +163,37 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
         )
 
 
+def _process_rb_torsion_forces(openff_sys, openmm_sys):
+    """Process Ryckaert-Bellemans torsions"""
+    rb_force = openmm.RBTorsionForce()
+    openmm_sys.addForce(rb_force)
+
+    rb_torsion_handler = openff_sys.handlers["RBTorsions"]
+
+    for top_key, pot_key in rb_torsion_handler.slot_map.items():
+        indices = top_key.atom_indices
+        params = rb_torsion_handler.potentials[pot_key].parameters
+
+        c0 = params["c0"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        c1 = params["c1"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        c2 = params["c2"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        c3 = params["c3"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        c4 = params["c4"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        c5 = params["c5"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        rb_force.addTorsion(
+            indices[0],
+            indices[1],
+            indices[2],
+            indices[3],
+            c0,
+            c1,
+            c2,
+            c3,
+            c4,
+            c5,
+        )
+
+
 def _process_improper_torsion_forces(openff_sys, openmm_sys):
     """Process the Impropers section of an OpenFF System into corresponding
     forces within an openmm.PeriodicTorsionForce"""
@@ -173,8 +205,7 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys):
             torsion_force = force
             break
     else:
-        # TODO: Support case of no propers but some impropers?
-        raise InternalInconsistencyError
+        torsion_force = openmm.PeriodicTorsionForce()
 
     improper_torsion_handler = openff_sys.handlers["ImproperTorsions"]
 

@@ -36,7 +36,8 @@ def test_internal_gromacs_writers(mol):
     out = parsley.create_openff_system(top)
 
     out.box = [4, 4, 4] * np.eye(3)
-    out.positions = mol.conformers[0] / omm_unit.nanometer
+    out.positions = mol.conformers[0]
+    out.positions = np.round(out.positions, 2)
 
     openmm_sys = parsley.create_openmm_system(top)
     struct = pmd.openmm.load_topology(
@@ -53,7 +54,7 @@ def test_internal_gromacs_writers(mol):
             struct.save("reference.gro")
 
             out.to_top("internal.top", writer="internal")
-            out.to_gro("internal.gro", writer="internal")
+            out.to_gro("internal.gro", writer="internal", decimal=3)
 
             compare_gro_files("internal.gro", "reference.gro")
             # TODO: Also compare to out.to_gro("parmed.gro", writer="parmed")
