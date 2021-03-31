@@ -1,4 +1,7 @@
+import foyer
 import pytest
+from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.utils import get_data_file_path
 
 from openff.system.components.foyer import from_foyer
 from openff.system.tests.base_test import BaseTest
@@ -6,20 +9,13 @@ from openff.system.tests.base_test import BaseTest
 
 class TestFoyer(BaseTest):
     @pytest.fixture(scope="session")
-    def oplsaa_system_ethane(self):
-        import foyer
-        from mbuild.conversion import to_parmed
-        from mbuild.lib.molecules import Ethane
-
+    def oplsaa_system_ethanol(self):
+        molecule = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
+        top = Topology.from_molecules(molecule)
         oplsaa = foyer.Forcefield(name="oplsaa")
-        pmd_ethane = to_parmed(Ethane())
-        system = from_foyer(structure=pmd_ethane, ff=oplsaa)
+        system = from_foyer(topology=top, ff=oplsaa)
         return system
 
-    def test_from_foyer_system_atom_handlers(self, oplsaa_system_ethane):
-        vdw_handler = oplsaa_system_ethane.handlers.get("FoyerVDWHandler")
-        assert len(vdw_handler.potentials) == 2
-
-    def test_from_foyer_system_bond_handlers(self, oplsaa_system_ethane):
-        bond_handler = oplsaa_system_ethane.handlers.get("FoyerBondHandler")
-        assert len(bond_handler.potentials) == 2
+    def test_handlers(self, oplsaa_system_ethanol):
+        for _, handler in oplsaa_system_ethanol.handlers.items():
+            assert handler

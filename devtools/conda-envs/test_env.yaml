@@ -25,8 +25,4 @@ dependencies:
   - lammps
   - mbuild
   - parmed
-  - networkx
-  - lark-parser
-  - lxml
-  - pip:
-      - git+https://github.com/umesh-timalsina/foyer@381-ff-parameters-utilities#egg=foyer
+  - foyer

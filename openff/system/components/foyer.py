@@ -1,9 +1,11 @@
 from abc import abstractmethod
 from copy import copy
-from typing import Any, Dict, Set
+from typing import Dict, Set, Type
 
-import parmed as pmd
+from ele import element_from_atomic_number
 from foyer import Forcefield
+from foyer.exceptions import MissingForceError, MissingParametersError
+from foyer.topology_graph import TopologyGraph
 from openff.toolkit.topology import Topology
 
 from openff.system import unit as u
@@ -15,9 +17,31 @@ from openff.system.models import PotentialKey, TopologyKey
 POTENTIAL_KEY_SEPARATOR = "-"
 
 
+@classmethod  # type: ignore
+def from_off_topology(cls, off_topology: Topology) -> TopologyGraph:
+    top_graph = cls()
+    for top_atom in off_topology.topology_atoms:
+        atom = top_atom.atom
+        element = element_from_atomic_number(atom.atomic_number)
+        top_graph.add_atom(
+            name=atom.name,
+            index=top_atom.topology_atom_index,
+            atomic_number=element.atomic_number,
+            element=element.symbol,
+        )
+    for top_bond in off_topology.topology_bonds:
+        atoms_indices = [atom.topology_atom_index for atom in top_bond.atoms]
+        top_graph.add_bond(atoms_indices[0], atoms_indices[1])
+    return top_graph
+
+
+TopologyGraph.from_off_topology = from_off_topology
+
+
 def _copy_params(
     params: Dict[str, float], *drop_keys: str, param_units: Dict = None
 ) -> Dict:
+    """copy parameters from a dictionary"""
     params_copy = copy(params)
     for drop_key in drop_keys:
         params_copy.pop(drop_key, None)
@@ -28,45 +52,44 @@ def _copy_params(
 
 
 def _get_potential_key_id(atom_slots: Dict[TopologyKey, PotentialKey], idx):
+    """From a dictionary of TopologyKey: PotentialKey, get the PotentialKey id"""
     top_key = TopologyKey(atom_indices=(idx,))
     return atom_slots[top_key].id
 
 
-def _topology_from_parmed(structure: pmd.Structure) -> Topology:
-    """ToDo: Create a openFF Topology from a parmed structure"""
-
-
-def from_foyer(structure: pmd.Structure, ff: Forcefield, **kwargs) -> System:
-    """Create an openFF system object from a parmed structure by applying a foyer Forcefield"""
+def from_foyer(topology: Topology, ff: Forcefield, **kwargs) -> System:
     system = System()
-    system.topology = _topology_from_parmed(structure)
-    system.handlers["FoyerVDWHandler"] = FoyerAtomTypes()
-    system.handlers["FoyerBondHandler"] = FoyerBondHandler()
-    system.handlers["FoyerAngleHandler"] = FoyerAngleHandler()
-    system.handlers["FoyerPeriodicProperHandler"] = FoyerPeriodicProperHandler()
-    system.handlers["FoyerPeriodicImproperHandler"] = FoyerPeriodicImproperHandler()
-    system.handlers["FoyerRBProperHandler"] = FoyerRBProperHandler()
-    system.handlers["FoyerRBImproperHandler"] = FoyerRBImproperHandler()
+    system.topology = topology
 
-    system.handlers["FoyerVDWHandler"].store_matches(forcefield=ff, structure=structure)
+    for name, Handler in get_handlers_callable().items():
+        system.handlers[name] = Handler()
 
-    system.handlers["FoyerVDWHandler"].store_potentials(
-        forcefield=ff,
-    )
+    system.handlers["vdw"].store_matches(ff, topology=topology)
+    system.handlers["vdw"].store_potentials(forcefield=ff)  # type: ignore
 
-    atom_slots = system.handlers["FoyerVDWHandler"].slot_map
-
-    for handler_name, handler in system.handlers.items():
-        if handler_name != "FoyerVDWHandler":
-            handler.store_matches(structure, atom_slots)
-
+    atom_slots = system.handlers["vdw"].slot_map
+    for name, handler in system.handlers.items():
+        if name != "vdw":
+            handler.store_matches(atom_slots, topology=topology)
             handler.store_potentials(ff)
 
     return system
 
 
-class FoyerAtomTypes(PotentialHandler):
-    name: str = "Atoms"
+def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
+    return {
+        "vdw": FoyerVDWHandler,
+        "harmonic_bonds": FoyerHarmonicBondHandler,
+        "harmonic_angles": FoyerHarmonicAngleHandler,
+        "rb_propers": FoyerRBProperHandler,
+        "rb_impropers": FoyerRBImproperHandler,
+        "periodic_propers": FoyerPeriodicProperHandler,
+        "periodic_impropers": FoyerPeriodicImproperHandler,
+    }
+
+
+class FoyerVDWHandler(PotentialHandler):
+    name: str = "atoms"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     independent_variables: Set[str] = {"r"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
@@ -75,14 +98,11 @@ class FoyerAtomTypes(PotentialHandler):
     def store_matches(
         self,
         forcefield: Forcefield,
-        structure: pmd.Structure,
+        topology: Topology,
     ) -> None:
-        """
-        Populate self.slot_map with key-val pairs of slots
-        and unique potential identifiers
-
-        """
-        type_map = forcefield.run_atomtyping(structure)
+        """Populate slotmap with key-val pairs of slots and unique potential Identifiers"""
+        top_graph = TopologyGraph.from_off_topology(topology)
+        type_map = forcefield.run_atomtyping(top_graph, use_residue_map=False)
         for key, val in type_map.items():
             top_key = TopologyKey(atom_indices=(key,))
             self.slot_map[top_key] = PotentialKey(id=val["atomtype"])
@@ -90,212 +110,139 @@ class FoyerAtomTypes(PotentialHandler):
     def store_potentials(self, forcefield: Forcefield) -> None:
         for top_key in self.slot_map:
             atom_params = forcefield.get_parameters(
-                "atoms", key=[self.slot_map[top_key].id]
+                self.name, key=self.slot_map[top_key].id
             )
-            params = _copy_params(
+
+            atom_params = _copy_params(
                 atom_params,
                 "charge",
                 param_units={"epsilon": u.kJ / u.mol, "sigma": u.nm},
             )
 
-            self.potentials[self.slot_map[top_key]] = Potential(parameters=params)
+            self.potentials[self.slot_map[top_key]] = Potential(parameters=atom_params)
 
 
-class FoyerBondHandler(PotentialHandler):
-    name: str = "Bonds"
+class FoyerConnectedAtomsHandler(PotentialHandler):
+    connection_attribute: str = ""
+    raise_on_missing_params = True
+
+    def store_matches(
+        self,
+        atom_slots: Dict[TopologyKey, PotentialKey],
+        topology: Topology,
+    ) -> None:
+        for connection in getattr(topology, self.connection_attribute):
+            try:
+                atoms_iterable = connection.atoms
+            except AttributeError:
+                atoms_iterable = connection
+            atoms_indices = tuple(atom.topology_atom_index for atom in atoms_iterable)
+            top_key = TopologyKey(atom_indices=atoms_indices)
+
+            pot_key_ids = tuple(
+                _get_potential_key_id(atom_slots, idx) for idx in atoms_indices
+            )
+
+            self.slot_map[top_key] = PotentialKey(
+                id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids)
+            )
+
+    def store_potentials(self, forcefield: Forcefield) -> None:
+        for _, pot_key in self.slot_map.items():
+            try:
+                params = forcefield.get_parameters(
+                    self.name, key=pot_key.id.split(POTENTIAL_KEY_SEPARATOR)
+                )
+                params = self.get_params_with_units(params)
+                self.potentials[pot_key] = Potential(parameters=params)
+            except MissingForceError:
+                # Here, we can safely assume that the ForceGenerator is Missing
+                pass
+            except MissingParametersError as e:
+                if self.raise_on_missing_params:
+                    raise e
+                else:
+                    pass
+
+    @abstractmethod
+    def get_params_with_units(self, params):
+        raise NotImplementedError
+
+
+class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
+    name: str = "harmonic_bonds"
     expression: str = "1/2 * k * (r - length) ** 2"
     independent_variables: Set[str] = {"r"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
+    connection_attribute = "topology_bonds"
 
-    def store_matches(
-        self, structure: pmd.Structure, atom_slots: Dict[TopologyKey, PotentialKey]
-    ) -> None:
-        for bond in structure.bonds:
-            atom_1_idx = bond.atom1.idx
-            atom_2_idx = bond.atom2.idx
-            top_key = TopologyKey(atom_indices=(atom_1_idx, atom_2_idx))
-
-            atom_1_potential_key_id = _get_potential_key_id(atom_slots, atom_1_idx)
-            atom_2_potential_key_id = _get_potential_key_id(atom_slots, atom_2_idx)
-
-            self.slot_map[top_key] = PotentialKey(
-                id=POTENTIAL_KEY_SEPARATOR.join(
-                    (atom_1_potential_key_id, atom_2_potential_key_id)
-                )
-            )
-
-    def store_potentials(self, forcefield: Forcefield) -> None:
-        """Store potential for foyer bonds"""
-        for _, pot_key in self.slot_map.items():
-            bond_params = forcefield.get_parameters(
-                "bonds", key=pot_key.id.split(POTENTIAL_KEY_SEPARATOR)
-            )
-
-            bond_params = _copy_params(
-                bond_params,
-                param_units={"k": u.kJ / u.mol / u.nm ** 2, "length": u.nm},
-            )
-
-            self.potentials[pot_key] = Potential(parameters=bond_params)
+    def get_params_with_units(self, params):
+        return _copy_params(
+            params, param_units={"k": u.kJ / u.mol / u.nm ** 2, "length": u.nm}
+        )
 
 
-class FoyerAngleHandler(PotentialHandler):
-    name: str = "Angles"
+class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
+    name: str = "harmonic_angles"
     expression: str = "0.5 * k * (theta-angle)**2"
     independent_variables: Set[str] = {"theta"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
+    connection_attribute: str = "angles"
 
-    def store_matches(
-        self, structure: pmd.Structure, atom_slots: Dict[TopologyKey, PotentialKey]
-    ) -> None:
-        for angle in structure.angles:
-            print(angle)
-            atom_1_idx = angle.atom1.idx
-            atom_2_idx = angle.atom2.idx
-            atom_3_idx = angle.atom3.idx
-            print(angle)
-
-            top_key = TopologyKey(atom_indices=(atom_1_idx, atom_2_idx, atom_3_idx))
-
-            atom_1_pot_key_id = _get_potential_key_id(atom_slots, atom_1_idx)
-            atom_2_pot_key_id = _get_potential_key_id(atom_slots, atom_2_idx)
-            atom_3_pot_key_id = _get_potential_key_id(atom_slots, atom_3_idx)
-
-            self.slot_map[top_key] = PotentialKey(
-                id=POTENTIAL_KEY_SEPARATOR.join(
-                    (atom_1_pot_key_id, atom_2_pot_key_id, atom_3_pot_key_id)
-                )
-            )
-
-    def store_potentials(self, forcefield: Forcefield) -> None:
-        for _, pot_key in self.slot_map.items():
-            angle_params = forcefield.get_parameters(
-                "angles", key=pot_key.id.split(POTENTIAL_KEY_SEPARATOR)
-            )
-
-            angle_params = _copy_params(
-                {"k": angle_params["k"], "angle": angle_params["theta"]},
-                param_units={
-                    "k": u.kJ / u.mol / u.nm ** 2,
-                    "angle": u.dimensionless,
-                },
-            )
-
-            self.potentials[pot_key] = Potential(parameters=angle_params)
+    def get_params_with_units(self, params):
+        return _copy_params(
+            {"k": params["k"], "angle": params["theta"]},
+            param_units={
+                "k": u.kJ / u.mol / u.nm ** 2,
+                "angle": u.dimensionless,
+            },
+        )
 
 
-class FoyerDihedralHandler(PotentialHandler):
-    name: str = "PeriodicProper"
-    expression: str = "k * (1 + cos(n * phi - phi_eq))"
+class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
+    name: str = "rb_propers"
+    expression: str = (
+        "C0 * cos(phi)**0 + C1 * cos(phi)**1 + "
+        "C2 * cos(phi)**2 + C3 * cos(phi)**3 + "
+        "C4 * cos(phi)**4 + C5 * cos(phi)**5"
+    )
     independent_variables: Set[str] = {"phi"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
-    foyer_param_group: str = "periodic_propers"
-    parmed_attr: str = "dihedrals"
+    connection_attribute: str = "propers"
+    raise_on_missing_params: bool = False
 
-    def store_matches(
-        self, structure: pmd.Structure, atom_slots: Dict[TopologyKey, PotentialKey]
-    ) -> None:
-        for dihedral in getattr(structure, self.parmed_attr):
-            atom_1_idx = dihedral.atom1.idx
-            atom_2_idx = dihedral.atom2.idx
-            atom_3_idx = dihedral.atom3.idx
-            atom_4_idx = dihedral.atom4.idx
-
-            top_key = TopologyKey(
-                atom_indices=(atom_1_idx, atom_2_idx, atom_3_idx, atom_4_idx)
-            )
-
-            atom_1_pot_key_id = _get_potential_key_id(atom_slots, atom_1_idx)
-            atom_2_pot_key_id = _get_potential_key_id(atom_slots, atom_2_idx)
-            atom_3_pot_key_id = _get_potential_key_id(atom_slots, atom_3_idx)
-            atom_4_pot_key_id = _get_potential_key_id(atom_slots, atom_4_idx)
-
-            self.slot_map[top_key] = PotentialKey(
-                id=POTENTIAL_KEY_SEPARATOR.join(
-                    (
-                        atom_1_pot_key_id,
-                        atom_2_pot_key_id,
-                        atom_3_pot_key_id,
-                        atom_4_pot_key_id,
-                    )
-                )
-            )
-
-    def store_potentials(self, forcefield: Forcefield) -> None:
-        for _, pot_key in self.slot_map.items():
-            foyer_params = forcefield.get_parameters(
-                self.foyer_param_group, key=pot_key.id.split(POTENTIAL_KEY_SEPARATOR)
-            )
-
-            foyer_params = self.assign_units_to_params(foyer_params)
-
-            self.potentials[pot_key] = Potential(parameters=foyer_params)
-
-    @abstractmethod
-    def assign_units_to_params(self, foyer_params: Dict[str, Any]) -> Dict[str, Any]:
-        raise NotImplementedError
+    def get_params_with_units(self, params):
+        rb_params = {k.upper(): v for k, v in params.items()}
+        param_units = {k: u.kJ / u.mol for k in rb_params}
+        return _copy_params(rb_params, param_units=param_units)
 
 
-class FoyerPeriodicProperHandler(FoyerDihedralHandler):
-    name: str = "PeriodicProper"
+class FoyerRBImproperHandler(FoyerRBProperHandler):
+    name: str = "rb_impropers"
+    connection_attribute: str = "impropers"
+
+
+class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler):
+    name: str = "periodic_propers"
     expression: str = "k * (1 + cos(periodicity * phi - phase))"
     independent_variables: Set[str] = {"phi"}
-    foyer_param_group: str = "periodic_propers"
-    parmed_attr: str = "dihedrals"
+    connection_attribute: str = "propers"
+    raise_on_missing_params: bool = False
 
-    def assign_units_to_params(self, foyer_params: Dict[str, Any]) -> Dict[str, Any]:
-        periodic_params = _copy_params(
-            {
-                "k": foyer_params["k"],
-                "periodicity": foyer_params["periodicity"],
-                "phase": foyer_params["phase"],
-            },
+    def get_params_with_units(self, params):
+        return _copy_params(
+            params,
             param_units={
                 "k": u.kJ / u.mol / u.nm ** 2,
                 "phase": u.dimensionless,
                 "periodicity": u.dimensionless,
             },
         )
-        return periodic_params
 
 
 class FoyerPeriodicImproperHandler(FoyerPeriodicProperHandler):
-    name: str = "PeriodicImproper"
-    foyer_param_group: str = "periodic_impropers"
-    parmed_attr: str = "impropers"
-
-
-class FoyerRBProperHandler(FoyerDihedralHandler):
-    name: str = "RBPropers"
-    expression: str = (
-        "c0 * cos(phi)**0 + c1 * cos(phi)**1 + "
-        "c2 * cos(phi)**2 + c3 * cos(phi)**3 + "
-        "c4 * cos(phi)**4 + c5 * cos(phi)**5"
-    )
-    independent_variables: Set[str] = {"phi"}
-    foyer_param_group: str = "rb_propers"
-    parmed_attr: str = "dihedrals"
-
-    def assign_units_to_params(self, foyer_params: Dict[str, Any]) -> Dict[str, Any]:
-        rb_params = _copy_params(
-            foyer_params,
-            param_units={
-                "c0": u.KJ / u.mol,
-                "c1": u.KJ / u.mol,
-                "c2": u.KJ / u.mol,
-                "c3": u.KJ / u.mol,
-                "c4": u.KJ / u.mol,
-                "c5": u.KJ / u.mol,
-            },
-        )
-
-        return rb_params
-
-
-class FoyerRBImproperHandler(FoyerRBProperHandler):
-    name: str = "RBImpropers"
-    foyer_param_group: str = "rb_impropers"
-    parmed_attr: str = "impropers"
+    name: str = "periodic_impropers"
+    connection_attribute: str = "impropers"
