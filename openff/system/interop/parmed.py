@@ -197,9 +197,9 @@ def to_parmed(off_system: "System") -> pmd.Structure:
 
     structure.positions = off_system.positions.to(unit.angstrom).magnitude  # type: ignore[attr-defined]
     for idx, pos in enumerate(structure.positions):
-        structure.atoms[idx].xx = pos._value[0]._value
-        structure.atoms[idx].xy = pos._value[1]._value
-        structure.atoms[idx].xz = pos._value[2]._value
+        structure.atoms[idx].xx = pos._value[0]
+        structure.atoms[idx].xy = pos._value[1]
+        structure.atoms[idx].xz = pos._value[2]
 
     return structure
 
@@ -211,7 +211,7 @@ def from_parmed(cls) -> "System":
     out = System()
 
     if cls.positions:
-        out.positions = np.asarray(cls.positions) * unit.angstrom
+        out.positions = np.asarray(cls.positions._value) * unit.angstrom
 
     if any(cls.box[3:] != 3 * [90.0]):
         from openff.system.exceptions import UnsupportedBoxError
@@ -290,6 +290,7 @@ def from_parmed(cls) -> "System":
     out.handlers.update({"vdW": vdw_handler})
     out.handlers.update({"Electrostatics": coul_handler})  # type: ignore[dict-item]
     out.handlers.update({"Bonds": bond_handler})
+
     return out
 
 
