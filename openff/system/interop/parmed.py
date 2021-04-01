@@ -99,48 +99,56 @@ def to_parmed(off_system: "System") -> pmd.Structure:
         coul_14 = 1.0
     vdw_handler = off_system.handlers["vdW"]
     if "ProperTorsions" in off_system.handlers.keys():
-        proper_term = off_system.handlers["ProperTorsions"]
-        for top_key, pot_key in proper_term.slot_map.items():
+        proper_torsion_handler = off_system.handlers["ProperTorsions"]
+        proper_type_map: Dict = dict()
+        for pot_key, pot in proper_torsion_handler.potentials.items():
+            k = pot.parameters["k"].to(kcal_mol).magnitude
+            periodicity = pot.parameters["periodicity"]
+            phase = pot.parameters["phase"].magnitude
+            proper_type = pmd.DihedralType(
+                phi_k=k,
+                per=periodicity,
+                phase=phase,
+                scnb=1 / vdw_14,
+                scee=1 / coul_14,
+            )
+            proper_type_map[pot_key] = proper_type
+            structure.dihedral_types.append(proper_type)
+
+        for top_key, pot_key in proper_torsion_handler.slot_map.items():
             idx_1, idx_2, idx_3, idx_4 = top_key.atom_indices
-            pot = proper_term.potentials[pot_key]
-            for n in range(pot.parameters["n_terms"]):
-                k = pot.parameters["k"][n].to(kcal_mol).magnitude
-                periodicity = pot.parameters["periodicity"][n]
-                phase = pot.parameters["phase"][n].magnitude
-                dihedral_type = pmd.DihedralType(
-                    phi_k=k,
-                    per=periodicity,
-                    phase=phase,
-                    scnb=1 / vdw_14,
-                    scee=1 / coul_14,
+            dihedral_type = proper_type_map[pot_key]
+            structure.dihedrals.append(
+                pmd.Dihedral(
+                    atom1=structure.atoms[idx_1],
+                    atom2=structure.atoms[idx_2],
+                    atom3=structure.atoms[idx_3],
+                    atom4=structure.atoms[idx_4],
+                    type=dihedral_type,
                 )
-                structure.dihedrals.append(
-                    pmd.Dihedral(
-                        atom1=structure.atoms[idx_1],
-                        atom2=structure.atoms[idx_2],
-                        atom3=structure.atoms[idx_3],
-                        atom4=structure.atoms[idx_4],
-                        type=dihedral_type,
-                    )
+            )
+            structure.dihedral_types.append(dihedral_type)
+
+            key1 = TopologyKey(atom_indices=(idx_1,))
+            key4 = TopologyKey(atom_indices=(idx_4,))
+            vdw1 = vdw_handler.potentials[vdw_handler.slot_map[key1]]
+            vdw4 = vdw_handler.potentials[vdw_handler.slot_map[key4]]
+            sig1, eps1 = _lj_params_from_potential(vdw1)
+            sig4, eps4 = _lj_params_from_potential(vdw4)
+            sig = (sig1 + sig4) * 0.5
+            eps = (eps1 * eps4) ** 0.5
+            nbtype = pmd.NonbondedExceptionType(
+                rmin=sig * 2 ** (1 / 6), epsilon=eps * vdw_14, chgscale=coul_14
+            )
+            structure.adjusts.append(
+                pmd.NonbondedException(
+                    structure.atoms[idx_1], structure.atoms[idx_4], type=nbtype
                 )
-                structure.dihedral_types.append(dihedral_type)
-                key1 = TopologyKey(atom_indices=(idx_1,))
-                key4 = TopologyKey(atom_indices=(idx_4,))
-                vdw1 = vdw_handler.potentials[vdw_handler.slot_map[key1]]
-                vdw4 = vdw_handler.potentials[vdw_handler.slot_map[key4]]
-                sig1, eps1 = _lj_params_from_potential(vdw1)
-                sig4, eps4 = _lj_params_from_potential(vdw4)
-                sig = (sig1 + sig4) * 0.5
-                eps = (eps1 * eps4) ** 0.5
-                nbtype = pmd.NonbondedExceptionType(
-                    rmin=sig * 2 ** (1 / 6), epsilon=eps * vdw_14, chgscale=coul_14
-                )
-                structure.adjusts.append(
-                    pmd.NonbondedException(
-                        structure.atoms[idx_1], structure.atoms[idx_4], type=nbtype
-                    )
-                )
-                structure.adjust_types.append(nbtype)
+            )
+            structure.adjust_types.append(nbtype)
+
+    structure.dihedral_types.claim()
+    structure.adjust_types.claim()
 
     #    if False:  # "ImroperTorsions" in off_system.term_collection.terms:
     #        improper_term = off_system.term_collection.terms["ImproperTorsions"]
@@ -262,6 +270,7 @@ def from_parmed(cls) -> "System":
         ElectrostaticsMetaHandler,
         SMIRNOFFAngleHandler,
         SMIRNOFFBondHandler,
+        SMIRNOFFProperTorsionHandler,
         SMIRNOFFvdWHandler,
     )
 
@@ -309,16 +318,43 @@ def from_parmed(cls) -> "System":
         k = angle.type.k * kcal_mol_rad2
         theta = angle.type.theteq * unit.degree
         top_key = TopologyKey(atom_indices=(atom1.idx, atom2.idx, atom3.idx))
-        pot_key = PotentialKey(id=f"{atom1.idx}-{atom2.idx}")
+        pot_key = PotentialKey(id=f"{atom1.idx}-{atom2.idx}-{atom3.idx}")
         pot = Potential(parameters={"k": k * 2, "angle": theta})
 
         angle_handler.slot_map.update({top_key: pot_key})
         angle_handler.potentials.update({pot_key: pot})
 
-    out.handlers.update({"vdW": vdw_handler})
+    proper_torsion_handler = SMIRNOFFProperTorsionHandler()
+
+    for dihedral in cls.dihedrals:
+        atom1 = dihedral.atom1
+        atom2 = dihedral.atom2
+        atom3 = dihedral.atom3
+        atom4 = dihedral.atom4
+        k = dihedral.type.phi_k * kcal_mol_rad2
+        periodicity = dihedral.type.per * unit.dimensionless
+        phase = dihedral.type.phase * unit.degree
+        top_key = TopologyKey(
+            atom_indices=(atom1.idx, atom2.idx, atom3.idx, atom4.idx),
+            mult=1,
+        )
+        pot_key = PotentialKey(
+            id=f"{atom1.idx}-{atom2.idx}-{atom3.idx}-{atom4.idx}",
+            mult=1,
+        )
+        pot = Potential(parameters={"k": k, "periodicity": periodicity, "phase": phase})
+
+        while pot_key in proper_torsion_handler.potentials:
+            pot_key.mult += 1  # type: ignore[operator]
+            top_key.mult += 1  # type: ignore[operator]
+
+        proper_torsion_handler.slot_map.update({top_key: pot_key})
+        proper_torsion_handler.potentials.update({pot_key: pot})
+
     out.handlers.update({"Electrostatics": coul_handler})  # type: ignore[dict-item]
     out.handlers.update({"Bonds": bond_handler})
     out.handlers.update({"Angles": angle_handler})
+    out.handlers.update({"ProperTorsions": proper_torsion_handler})
 
     return out
 
