@@ -43,39 +43,40 @@ def to_parmed(off_system: "System") -> pmd.Structure:
 
     if "Bonds" in off_system.handlers.keys():
         bond_handler = off_system.handlers["Bonds"]
-        bond_map: Dict = dict()
+        bond_type_map: Dict = dict()
+        for pot_key, pot in bond_handler.potentials.items():
+            k = pot.parameters["k"].to(kcal_mol_a2).magnitude / 2
+            length = pot.parameters["length"].to(unit.angstrom).magnitude
+            bond_type = pmd.BondType(k=k, req=length)
+            bond_type_map[pot_key] = bond_type
+            structure.bond_types.append(bond_type)
+
         for top_key, pot_key in bond_handler.slot_map.items():
             idx_1, idx_2 = top_key.atom_indices
-            try:
-                bond_type = bond_map[pot_key]
-            except KeyError:
-                pot = bond_handler.potentials[pot_key]
-                k = pot.parameters["k"].to(kcal_mol_a2).magnitude / 2
-                length = pot.parameters["length"].to(unit.angstrom).magnitude
-                bond_type = pmd.BondType(k=k, req=length)
-                bond_map[pot_key] = bond_type
-                del pot, k, length
-            if bond_type not in structure.bond_types:
-                structure.bond_types.append(bond_type)
-            structure.bonds.append(
-                pmd.Bond(
-                    atom1=structure.atoms[idx_1],
-                    atom2=structure.atoms[idx_2],
-                    type=bond_type,
-                )
+            bond_type = bond_type_map[pot_key]
+            bond = pmd.Bond(
+                atom1=structure.atoms[idx_1],
+                atom2=structure.atoms[idx_2],
+                type=bond_type,
             )
-            del bond_type, idx_1, idx_2, pot_key, top_key
+            structure.bonds.append(bond)
+
+    structure.bond_types.claim()
 
     if "Angles" in off_system.handlers.keys():
-        angle_term = off_system.handlers["Angles"]
-        for top_key, pot_key in angle_term.slot_map.items():
-            idx_1, idx_2, idx_3 = top_key.atom_indices
-            pot = angle_term.potentials[pot_key]
-            # TODO: Look at cost of redundant conversions, to ensure correct units of .m
+        angle_handler = off_system.handlers["Angles"]
+        angle_type_map: Dict = dict()
+        for pot_key, pot in angle_handler.potentials.items():
             k = pot.parameters["k"].to(kcal_mol_rad2).magnitude / 2
             theta = pot.parameters["angle"].to(unit.degree).magnitude
             # TODO: Look up if AngleType already exists in struct
             angle_type = pmd.AngleType(k=k, theteq=theta)
+            angle_type_map[pot_key] = angle_type
+            structure.angle_types.append(angle_type)
+
+        for top_key, pot_key in angle_handler.slot_map.items():
+            idx_1, idx_2, idx_3 = top_key.atom_indices
+            angle_type = angle_type_map[pot_key]
             structure.angles.append(
                 pmd.Angle(
                     atom1=structure.atoms[idx_1],
@@ -85,6 +86,8 @@ def to_parmed(off_system: "System") -> pmd.Structure:
                 )
             )
             structure.angle_types.append(angle_type)
+
+    structure.angle_types.claim()
 
     # ParmEd treats 1-4 scaling factors at the level of each DihedralType,
     # whereas SMIRNOFF captures them at the level of the non-bonded handler,
@@ -234,17 +237,22 @@ def from_parmed(cls) -> "System":
             mol.add_atom(
                 atomic_number=atom.atomic_number, formal_charge=0, is_aromatic=False
             )
+        for atom in res.atoms:
             for bond in atom.bonds:
                 try:
                     mol.add_bond(
-                        atom1=bond.atom1,
-                        atom2=bond.atom1,
-                        bond_order=bond.order,
+                        atom1=bond.atom1.idx,
+                        atom2=bond.atom2.idx,
+                        bond_order=int(bond.order),
+                        is_aromatic=False,
                     )
                 # TODO: Use a custom exception after
                 # https://github.com/openforcefield/openff-toolkit/issues/771
-                except Exception:
-                    pass
+                except Exception as e:
+                    if "Bond already exists" in str(e):
+                        pass
+                    else:
+                        raise e
 
         top.add_molecule(mol)
 
@@ -252,6 +260,7 @@ def from_parmed(cls) -> "System":
 
     from openff.system.components.smirnoff import (
         ElectrostaticsMetaHandler,
+        SMIRNOFFAngleHandler,
         SMIRNOFFBondHandler,
         SMIRNOFFvdWHandler,
     )
@@ -282,7 +291,7 @@ def from_parmed(cls) -> "System":
         length = bond.type.req * unit.angstrom
         top_key = TopologyKey(atom_indices=(atom1.idx, atom2.idx))
         pot_key = PotentialKey(id=f"{atom1.idx}-{atom2.idx}")
-        pot = Potential(parameters={"k": k, "length": length})
+        pot = Potential(parameters={"k": k * 2, "length": length})
 
         bond_handler.slot_map.update({top_key: pot_key})
         bond_handler.potentials.update({pot_key: pot})
@@ -290,6 +299,26 @@ def from_parmed(cls) -> "System":
     out.handlers.update({"vdW": vdw_handler})
     out.handlers.update({"Electrostatics": coul_handler})  # type: ignore[dict-item]
     out.handlers.update({"Bonds": bond_handler})
+
+    angle_handler = SMIRNOFFAngleHandler()
+
+    for angle in cls.angles:
+        atom1 = angle.atom1
+        atom2 = angle.atom2
+        atom3 = angle.atom3
+        k = angle.type.k * kcal_mol_rad2
+        theta = angle.type.theteq * unit.degree
+        top_key = TopologyKey(atom_indices=(atom1.idx, atom2.idx, atom3.idx))
+        pot_key = PotentialKey(id=f"{atom1.idx}-{atom2.idx}")
+        pot = Potential(parameters={"k": k * 2, "angle": theta})
+
+        angle_handler.slot_map.update({top_key: pot_key})
+        angle_handler.potentials.update({pot_key: pot})
+
+    out.handlers.update({"vdW": vdw_handler})
+    out.handlers.update({"Electrostatics": coul_handler})  # type: ignore[dict-item]
+    out.handlers.update({"Bonds": bond_handler})
+    out.handlers.update({"Angles": angle_handler})
 
     return out
 
