@@ -24,5 +24,4 @@ dependencies:
   - gromacs =2019
   - lammps
   - mbuild
-  - parmed
-  - foyer
+  - foyer>=0.8.0
