@@ -4,6 +4,7 @@ from typing import Dict, Set, Type
 
 from ele import element_from_atomic_number
 from foyer import Forcefield
+from foyer.atomtyper import find_atomtypes
 from foyer.exceptions import MissingForceError, MissingParametersError
 from foyer.topology_graph import TopologyGraph
 from openff.toolkit.topology import Topology
@@ -102,7 +103,7 @@ class FoyerVDWHandler(PotentialHandler):
     ) -> None:
         """Populate slotmap with key-val pairs of slots and unique potential Identifiers"""
         top_graph = TopologyGraph.from_off_topology(topology)
-        type_map = forcefield.run_atomtyping(top_graph, use_residue_map=False)
+        type_map = find_atomtypes(top_graph, forcefield=forcefield)
         for key, val in type_map.items():
             top_key = TopologyKey(atom_indices=(key,))
             self.slot_map[top_key] = PotentialKey(id=val["atomtype"])
