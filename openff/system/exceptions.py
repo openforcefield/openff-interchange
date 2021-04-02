@@ -85,6 +85,12 @@ class UnsupportedParameterError(ValueError):
     """
 
 
+class UnsupportedBoxError(ValueError):
+    """
+    Exception for processing an unsupported box, probably non-orthogonal
+    """
+
+
 class UnsupportedExportError(BaseException):
     """
     Exception for attempting to write to an unsupported file format

@@ -58,3 +58,12 @@ class EnergyReport(DefaultModel):
             error[key] = diff
 
         return error
+
+    def __str__(self):
+        return (
+            "Energies:\n\n"
+            f"Bond:     \t\t{self.energies['Bond']}\n"
+            f"Angle:    \t\t{self.energies['Angle']}\n"
+            f"Torsion:  \t\t{self.energies['Torsion']}\n"
+            f"Nonbonded:\t\t{self.energies['Nonbonded']}\n"
+        )
