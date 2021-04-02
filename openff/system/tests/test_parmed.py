@@ -1,7 +1,7 @@
 import parmed as pmd
 from simtk import unit as omm_unit
 
-from openff.system.interop.parmed import from_parmed
+from openff.system.components.system import System
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.energy_tests.gromacs import (
     get_gromacs_energies,
@@ -18,8 +18,8 @@ class TestParmEd(BaseTest):
         original.box = gro.box
         original.positions = gro.positions
 
-        openff_sys = from_parmed(original)
-        roundtrip = openff_sys.to_parmed()
+        openff_sys = System._from_parmed(original)
+        roundtrip = openff_sys._to_parmed()
 
         roundtrip.save("conv.gro", overwrite=True)
         roundtrip.save("conv.top", overwrite=True)

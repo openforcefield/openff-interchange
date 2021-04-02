@@ -44,6 +44,6 @@ class ParmEdWrapper(InteroperabilityWrapper):
         if openff_sys.box is None:
             raise MissingBoxError
 
-        struct = openff_sys.to_parmed()
+        struct = openff_sys._to_parmed()
 
         struct.save(path.as_posix(), overwrite=True)
