@@ -136,17 +136,19 @@ class System(DefaultModel):
 
     def __add__(self, other):
         """Combine two System objects."""
+        self_copy = deepcopy(self)
+
         from openff.system.models import TopologyKey
 
-        atom_offset = self.topology.n_topology_atoms
+        atom_offset = self_copy.topology.n_topology_atoms
 
         other_top = deepcopy(other.topology)
 
         for top_mol in other_top.topology_molecules:
-            self.topology.add_molecule(top_mol.reference_molecule)
+            self_copy.topology.add_molecule(top_mol.reference_molecule)
 
         for handler_name, handler in other.handlers.items():
-            self_handler = self.handlers[handler_name]
+            self_handler = self_copy.handlers[handler_name]
             if handler_name == "Electrostatics":
                 # Deal with electrostatics separately
                 continue
@@ -161,10 +163,17 @@ class System(DefaultModel):
                 self_handler.slot_map.update({new_top_key: pot_key})
                 self_handler.potentials.update({pot_key: handler.potentials[pot_key]})
 
-        new_positions = np.vstack([self.positions, other.positions])
-        self.positions = new_positions
+        for atom_key, charge in other["Electrostatics"].charges.items():
+            new_atom_indices = (atom_key.atom_indices[0] + atom_offset,)
+            new_top_key = TopologyKey(atom_indices=new_atom_indices, mult=atom_key.mult)
+            self_copy["Electrostatics"].charges.update({new_top_key: charge})
 
-        if not np.all(self.box == other.box):
+        new_positions = np.vstack([self_copy.positions, other.positions])
+        self_copy.positions = new_positions
+
+        if not np.all(self_copy.box == other.box):
             raise NotImplementedError(
                 "Combination with unequal box vectors is not curretnly supported"
             )
+
+        return self_copy
