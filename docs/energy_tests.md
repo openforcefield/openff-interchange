@@ -8,7 +8,7 @@ There are also some internal functions that can be used to compute energies from
 
 This example shows many ways of computing single-point energies from a constructed `System` object.
 
-```
+```python3
 import numpy as np
 
 # Create an OpenFF System object from an OpenFF Molecule, Topology, and ForceField
