@@ -270,6 +270,7 @@ def from_parmed(cls) -> "System":
         ElectrostaticsMetaHandler,
         SMIRNOFFAngleHandler,
         SMIRNOFFBondHandler,
+        SMIRNOFFImproperTorsionHandler,
         SMIRNOFFProperTorsionHandler,
         SMIRNOFFvdWHandler,
     )
@@ -325,6 +326,7 @@ def from_parmed(cls) -> "System":
         angle_handler.potentials.update({pot_key: pot})
 
     proper_torsion_handler = SMIRNOFFProperTorsionHandler()
+    improper_torsion_handler = SMIRNOFFImproperTorsionHandler()
 
     for dihedral in cls.dihedrals:
         atom1 = dihedral.atom1
@@ -334,22 +336,48 @@ def from_parmed(cls) -> "System":
         k = dihedral.type.phi_k * kcal_mol_rad2
         periodicity = dihedral.type.per * unit.dimensionless
         phase = dihedral.type.phase * unit.degree
-        top_key = TopologyKey(
-            atom_indices=(atom1.idx, atom2.idx, atom3.idx, atom4.idx),
-            mult=1,
-        )
-        pot_key = PotentialKey(
-            id=f"{atom1.idx}-{atom2.idx}-{atom3.idx}-{atom4.idx}",
-            mult=1,
-        )
-        pot = Potential(parameters={"k": k, "periodicity": periodicity, "phase": phase})
+        if dihedral.improper:
+            # ParmEd stores the central atom _third_ (AMBER style)
+            # SMIRNOFF stores the central atom _second_
+            # https://parmed.github.io/ParmEd/html/topobj/parmed.topologyobjects.Dihedral.html#parmed-topologyobjects-dihedral
+            # https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
+            top_key = TopologyKey(
+                atom_indices=(atom1.idx, atom2.idx, atom2.idx, atom4.idx),
+                mult=1,
+            )
+            pot_key = PotentialKey(
+                id=f"{atom1.idx}-{atom3.idx}-{atom2.idx}-{atom4.idx}",
+                mult=1,
+            )
+            pot = Potential(
+                parameters={"k": k, "periodicity": periodicity, "phase": phase}
+            )
 
-        while pot_key in proper_torsion_handler.potentials:
-            pot_key.mult += 1  # type: ignore[operator]
-            top_key.mult += 1  # type: ignore[operator]
+            while pot_key in improper_torsion_handler.potentials:
+                pot_key.mult += 1  # type: ignore[operator]
+                top_key.mult += 1  # type: ignore[operator]
 
-        proper_torsion_handler.slot_map.update({top_key: pot_key})
-        proper_torsion_handler.potentials.update({pot_key: pot})
+            improper_torsion_handler.slot_map.update({top_key: pot_key})
+            improper_torsion_handler.potentials.update({pot_key: pot})
+        else:
+            top_key = TopologyKey(
+                atom_indices=(atom1.idx, atom2.idx, atom3.idx, atom4.idx),
+                mult=1,
+            )
+            pot_key = PotentialKey(
+                id=f"{atom1.idx}-{atom2.idx}-{atom3.idx}-{atom4.idx}",
+                mult=1,
+            )
+            pot = Potential(
+                parameters={"k": k, "periodicity": periodicity, "phase": phase}
+            )
+
+            while pot_key in proper_torsion_handler.potentials:
+                pot_key.mult += 1  # type: ignore[operator]
+                top_key.mult += 1  # type: ignore[operator]
+
+            proper_torsion_handler.slot_map.update({top_key: pot_key})
+            proper_torsion_handler.potentials.update({pot_key: pot})
 
     out.handlers.update({"Electrostatics": coul_handler})  # type: ignore[dict-item]
     out.handlers.update({"Bonds": bond_handler})

@@ -37,18 +37,18 @@ class TestParmEd(BaseTest):
             mdp_file=get_mdp_file("cutoff_hbonds"),
         )
 
+        # Differences in bond energies appear to be related to ParmEd's rounding
+        # of the force constant and equilibrium bond length
         original_energy.compare(internal_energy)
         internal_energy.compare(
             roundtrip_energy,
             custom_tolerances={
                 "Bond": 0.02 * omm_unit.kilojoule_per_mole,
-                "Torsion": 0.02 * omm_unit.kilojoule_per_mole,
             },
         )
         original_energy.compare(
             roundtrip_energy,
             custom_tolerances={
                 "Bond": 0.02 * omm_unit.kilojoule_per_mole,
-                "Torsion": 0.02 * omm_unit.kilojoule_per_mole,
             },
         )
