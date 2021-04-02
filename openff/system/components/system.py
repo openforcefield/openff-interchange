@@ -1,3 +1,4 @@
+from copy import deepcopy
 from pathlib import Path
 from typing import Dict, Optional, Union
 
@@ -131,4 +132,39 @@ class System(DefaultModel):
             raise LookupError(
                 f"Could not find component {item}. This object has the following "
                 f"potential handlers registered:\n\t{[*self.handlers.keys()]}"
+            )
+
+    def __add__(self, other):
+        """Combine two System objects."""
+        from openff.system.models import TopologyKey
+
+        atom_offset = self.topology.n_topology_atoms
+
+        other_top = deepcopy(other.topology)
+
+        for top_mol in other_top.topology_molecules:
+            self.topology.add_molecule(top_mol.reference_molecule)
+
+        for handler_name, handler in other.handlers.items():
+            self_handler = self.handlers[handler_name]
+            if handler_name == "Electrostatics":
+                # Deal with electrostatics separately
+                continue
+            for top_key, pot_key in handler.slot_map.items():
+                new_atom_indices = tuple(
+                    idx + atom_offset for idx in top_key.atom_indices
+                )
+                new_top_key = TopologyKey(
+                    atom_indices=new_atom_indices,
+                    mult=top_key.mult,
+                )
+                self_handler.slot_map.update({new_top_key: pot_key})
+                self_handler.potentials.update({pot_key: handler.potentials[pot_key]})
+
+        new_positions = np.vstack([self.positions, other.positions])
+        self.positions = new_positions
+
+        if not np.all(self.box == other.box):
+            raise NotImplementedError(
+                "Combination with unequal box vectors is not curretnly supported"
             )
