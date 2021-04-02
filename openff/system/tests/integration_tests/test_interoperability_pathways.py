@@ -54,7 +54,7 @@ def openff_pmd_gmx_indirect(
     # TODO: Update this when better processing of OFFTop positions is supported
     off_sys.positions = off_top_positions
 
-    struct = off_sys.to_parmed()
+    struct = off_sys._to_parmed()
 
     struct.save(prefix + ".gro")
     struct.save(prefix + ".top")
