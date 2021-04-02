@@ -16,7 +16,7 @@ kcal_mol_a2 = unit.Unit("kilocalories / mol / angstrom ** 2")
 kcal_mol_rad2 = unit.Unit("kilocalories / mol / rad ** 2")
 
 
-def to_parmed(off_system: "System") -> pmd.Structure:
+def _to_parmed(off_system: "System") -> pmd.Structure:
     """Convert an OpenFF System to a ParmEd Structure"""
     structure = pmd.Structure()
     _convert_box(off_system.box, structure)
@@ -215,30 +215,27 @@ def to_parmed(off_system: "System") -> pmd.Structure:
     return structure
 
 
-def from_parmed(cls) -> "System":
+def _from_parmed(cls, structure) -> "System":
+    out = cls()
 
-    from openff.system.components.system import System
+    if structure.positions:
+        out.positions = np.asarray(structure.positions._value) * unit.angstrom
 
-    out = System()
-
-    if cls.positions:
-        out.positions = np.asarray(cls.positions._value) * unit.angstrom
-
-    if any(cls.box[3:] != 3 * [90.0]):
+    if any(structure.box[3:] != 3 * [90.0]):
         from openff.system.exceptions import UnsupportedBoxError
 
         raise UnsupportedBoxError(
-            f"Found box with angles {cls.box[3:]}. Only"
+            f"Found box with angles {structure.box[3:]}. Only"
             "rectangular boxes are currently supported."
         )
 
-    out.box = cls.box[:3] * unit.angstrom
+    out.box = structure.box[:3] * unit.angstrom
 
     from openff.toolkit.topology import Molecule, Topology
 
     top = Topology()
 
-    for res in cls.residues:
+    for res in structure.residues:
         mol = Molecule()
         mol.name = res.name
         for atom in res.atoms:
@@ -278,7 +275,7 @@ def from_parmed(cls) -> "System":
     vdw_handler = SMIRNOFFvdWHandler()
     coul_handler = ElectrostaticsMetaHandler()
 
-    for atom in cls.atoms:
+    for atom in structure.atoms:
         atom_idx = atom.idx
         sigma = atom.sigma * unit.angstrom
         epsilon = atom.epsilon * kcal_mol
@@ -294,7 +291,7 @@ def from_parmed(cls) -> "System":
 
     bond_handler = SMIRNOFFBondHandler()
 
-    for bond in cls.bonds:
+    for bond in structure.bonds:
         atom1 = bond.atom1
         atom2 = bond.atom2
         k = bond.type.k * kcal_mol_a2
@@ -312,7 +309,7 @@ def from_parmed(cls) -> "System":
 
     angle_handler = SMIRNOFFAngleHandler()
 
-    for angle in cls.angles:
+    for angle in structure.angles:
         atom1 = angle.atom1
         atom2 = angle.atom2
         atom3 = angle.atom3
@@ -328,7 +325,7 @@ def from_parmed(cls) -> "System":
     proper_torsion_handler = SMIRNOFFProperTorsionHandler()
     improper_torsion_handler = SMIRNOFFImproperTorsionHandler()
 
-    for dihedral in cls.dihedrals:
+    for dihedral in structure.dihedrals:
         atom1 = dihedral.atom1
         atom2 = dihedral.atom2
         atom3 = dihedral.atom3
