@@ -279,7 +279,7 @@ class SMIRNOFFvdWHandler(PotentialHandler):
     name: str = "vdW"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     independent_variables: Set[str] = {"r"}
-    method: str = "Cutoff"
+    method: str = "cutoff"
     cutoff: float = 9.0
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()

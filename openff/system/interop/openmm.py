@@ -174,12 +174,12 @@ def _process_rb_torsion_forces(openff_sys, openmm_sys):
         indices = top_key.atom_indices
         params = rb_torsion_handler.potentials[pot_key].parameters
 
-        c0 = params["c0"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
-        c1 = params["c1"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
-        c2 = params["c2"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
-        c3 = params["c3"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
-        c4 = params["c4"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
-        c5 = params["c5"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        c0 = params["C0"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        c1 = params["C1"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        c2 = params["C2"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        c3 = params["C3"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        c4 = params["C4"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        c5 = params["C5"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
         rb_force.addTorsion(
             indices[0],
             indices[1],

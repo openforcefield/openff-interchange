@@ -105,6 +105,8 @@ class FoyerVDWHandler(PotentialHandler):
     scale_13: float = 0.0
     scale_14: float = 0.5  # TODO: Replace with Foyer API point?
     scale_15: float = 1.0
+    method: str = "cutoff"
+    cutoff: float = 9.0
 
     def store_matches(
         self,
@@ -190,7 +192,9 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
                 self.potentials[pot_key] = Potential(parameters=params)
             except MissingForceError:
                 # Here, we can safely assume that the ForceGenerator is Missing
-                pass
+                self.slot_map = {}
+                self.potentials = {}
+                return
             except MissingParametersError as e:
                 if self.raise_on_missing_params:
                     raise e
@@ -228,7 +232,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
         return _copy_params(
             {"k": params["k"], "angle": params["theta"]},
             param_units={
-                "k": u.kJ / u.mol / u.nm ** 2,
+                "k": u.kJ / u.mol / u.radian ** 2,
                 "angle": u.dimensionless,
             },
         )
