@@ -14,6 +14,7 @@ class TestFoyer(BaseTest):
     @pytest.fixture(scope="session")
     def oplsaa_system_ethanol(self):
         molecule = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
+        molecule.name = "ETH"
         top = Topology.from_molecules(molecule)
         oplsaa = foyer.Forcefield(name="oplsaa")
         system = from_foyer(topology=top, ff=oplsaa)
@@ -29,4 +30,7 @@ class TestFoyer(BaseTest):
         gmx_energies = get_gromacs_energies(oplsaa_system_ethanol)
         omm_energies = get_openmm_energies(oplsaa_system_ethanol)
 
-        gmx_energies.compare(omm_energies)
+        gmx_energies.compare(
+            omm_energies,
+            custom_tolerances={"Nonbonded": 40.0 * omm_unit.kilojoule_per_mole},
+        )
