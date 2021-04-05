@@ -65,12 +65,18 @@ def from_foyer(topology: Topology, ff: Forcefield, **kwargs) -> System:
     for name, Handler in get_handlers_callable().items():
         system.handlers[name] = Handler()
 
-    system.handlers["vdw"].store_matches(ff, topology=topology)
-    system.handlers["vdw"].store_potentials(forcefield=ff)  # type: ignore
+    system.handlers["vdW"].store_matches(ff, topology=topology)
+    system.handlers["vdW"].store_potentials(forcefield=ff)  # type: ignore
 
-    atom_slots = system.handlers["vdw"].slot_map
+    atom_slots = system.handlers["vdW"].slot_map
+
+    system.handlers["Electrostatics"].store_charges(  # type: ignore[attr-defined]
+        atom_slots=atom_slots,
+        forcefield=ff,
+    )
+
     for name, handler in system.handlers.items():
-        if name != "vdw":
+        if name not in ["vdW", "Electrostatics"]:
             handler.store_matches(atom_slots, topology=topology)
             handler.store_potentials(ff)
 
@@ -79,13 +85,14 @@ def from_foyer(topology: Topology, ff: Forcefield, **kwargs) -> System:
 
 def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
     return {
-        "vdw": FoyerVDWHandler,
-        "harmonic_bonds": FoyerHarmonicBondHandler,
-        "harmonic_angles": FoyerHarmonicAngleHandler,
-        "rb_propers": FoyerRBProperHandler,
-        "rb_impropers": FoyerRBImproperHandler,
-        "periodic_propers": FoyerPeriodicProperHandler,
-        "periodic_impropers": FoyerPeriodicImproperHandler,
+        "vdW": FoyerVDWHandler,
+        "Electrostatics": FoyerElectrostaticsHandler,
+        "Bonds": FoyerHarmonicBondHandler,
+        "Angles": FoyerHarmonicAngleHandler,
+        "RBTorsions": FoyerRBProperHandler,
+        "RBImpropers": FoyerRBImproperHandler,
+        "ProperTorsions": FoyerPeriodicProperHandler,
+        "ImproperTorsions": FoyerPeriodicImproperHandler,
     }
 
 
@@ -95,6 +102,9 @@ class FoyerVDWHandler(PotentialHandler):
     independent_variables: Set[str] = {"r"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
+    scale_13: float = 0.0
+    scale_14: float = 0.5  # TODO: Replace with Foyer API point?
+    scale_15: float = 1.0
 
     def store_matches(
         self,
@@ -121,6 +131,28 @@ class FoyerVDWHandler(PotentialHandler):
             )
 
             self.potentials[self.slot_map[top_key]] = Potential(parameters=atom_params)
+
+
+class FoyerElectrostaticsHandler(PotentialHandler):
+    name: str = "Electrostatics"
+    method: str = "PME"
+    expression: str = "coul"
+    independent_variables: Set[str] = {"r"}
+    charges: Dict[TopologyKey, float] = dict()
+    scale_13: float = 0.0
+    scale_14: float = 0.5  # TODO: Replace with Foyer API point?
+    scale_15: float = 1.0
+
+    def store_charges(
+        self,
+        atom_slots: Dict[TopologyKey, PotentialKey],
+        forcefield: Forcefield,
+    ):
+        for top_key, pot_key in atom_slots.items():
+            foyer_params = forcefield.get_parameters("atoms", pot_key.id)
+            charge = foyer_params["charge"]
+            charge = charge * u.elementary_charge
+            self.charges[top_key] = charge
 
 
 class FoyerConnectedAtomsHandler(PotentialHandler):
