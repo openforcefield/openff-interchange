@@ -26,6 +26,9 @@ class TestFoyer(BaseTest):
         for _, handler in oplsaa_system_ethanol.handlers.items():
             assert handler
 
+        assert oplsaa_system_ethanol["vdW"].scale_14 == 0.5
+        assert oplsaa_system_ethanol["Electrostatics"].scale_14 == 0.5
+
     def test_ethanol_energies(self, oplsaa_system_ethanol):
         gmx_energies = get_gromacs_energies(oplsaa_system_ethanol)
         omm_energies = get_openmm_energies(oplsaa_system_ethanol)

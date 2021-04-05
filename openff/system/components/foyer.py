@@ -75,6 +75,13 @@ def from_foyer(topology: Topology, ff: Forcefield, **kwargs) -> System:
         forcefield=ff,
     )
 
+    # TODO: Replace with API points after https://github.com/mosdef-hub/foyer/issues/397:
+    from simtk.openmm.app.forcefield import NonbondedGenerator  # type: ignore
+
+    nonbonded_generator = ff.get_generator(ff, gen_type=NonbondedGenerator)
+    system.handlers["vdW"].scale_14 = nonbonded_generator.lj14scale  # type: ignore[attr-defined]
+    system.handlers["Electrostatics"].scale_14 = nonbonded_generator.coulomb14scale  # type: ignore[attr-defined]
+
     for name, handler in system.handlers.items():
         if name not in ["vdW", "Electrostatics"]:
             handler.store_matches(atom_slots, topology=topology)
