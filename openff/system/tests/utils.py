@@ -108,7 +108,7 @@ def _get_charges_from_openmm_system(omm_sys: openmm.System):
             break
     for idx in range(omm_sys.getNumParticles()):
         param = force.getParticleParameters(idx)
-        yield param[0] / omm_unit.elementary_charge
+        yield param[0].value_in_unit(omm_unit.elementary_charge)
 
 
 def _get_sigma_from_nonbonded_force(
@@ -116,7 +116,7 @@ def _get_sigma_from_nonbonded_force(
 ):
     for idx in range(n_particles):
         param = nonbond_force.getParticleParameters(idx)
-        yield param[1] / omm_unit.nanometer
+        yield param[1].value_in_unit(omm_unit.nanometer)
 
 
 def _get_epsilon_from_nonbonded_force(
@@ -124,7 +124,7 @@ def _get_epsilon_from_nonbonded_force(
 ):
     for idx in range(n_particles):
         param = nonbond_force.getParticleParameters(idx)
-        yield param[2] / omm_unit.kilojoule_per_mole
+        yield param[2].value_in_unit(omm_unit.kilojoule_per_mole)
 
 
 def _get_lj_params_from_openmm_system(omm_sys: openmm.System):

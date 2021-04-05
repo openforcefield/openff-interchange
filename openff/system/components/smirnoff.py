@@ -310,7 +310,7 @@ class SMIRNOFFvdWHandler(PotentialHandler):
 
         """
         self.method = parameter_handler.method
-        self.cutoff = parameter_handler.cutoff / omm_unit.angstrom
+        self.cutoff = parameter_handler.cutoff.value_in_unit(omm_unit.angstrom)
 
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
@@ -453,7 +453,9 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
                     )
                     topology_particle_index = topology_particle.topology_particle_index
                     partial_charge = ref_mol._partial_charges[ref_mol_particle_index]
-                    partial_charge = partial_charge / omm_unit.elementary_charge
+                    partial_charge = partial_charge.value_in_unit(
+                        omm_unit.elementary_charge
+                    )
                     partial_charge = partial_charge * unit.elementary_charge
                     top_key = TopologyKey(atom_indices=(topology_particle_index,))
                     charges[top_key] = partial_charge
