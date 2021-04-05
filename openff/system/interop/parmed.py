@@ -137,6 +137,8 @@ def _to_parmed(off_system: "System") -> pmd.Structure:
             sig4, eps4 = _lj_params_from_potential(vdw4)
             sig = (sig1 + sig4) * 0.5
             eps = (eps1 * eps4) ** 0.5
+            sig = sig.m_as(unit.angstrom)
+            eps = eps.m_as(kcal_mol)
             nbtype = pmd.NonbondedExceptionType(
                 rmin=sig * 2 ** (1 / 6), epsilon=eps * vdw_14, chgscale=coul_14
             )
@@ -179,6 +181,8 @@ def _to_parmed(off_system: "System") -> pmd.Structure:
         potential = vdw_handler.potentials[smirks]
         element = pmd.periodic_table.Element[pmd_atom.element]
         sigma, epsilon = _lj_params_from_potential(potential)
+        sigma = sigma.m_as(unit.angstrom)
+        epsilon = epsilon.m_as(kcal_mol)
 
         atom_type = pmd.AtomType(
             name=element + str(pmd_idx + 1),
@@ -397,7 +401,7 @@ def _convert_box(box, structure: pmd.Structure) -> None:
 
 
 def _lj_params_from_potential(potential):
-    sigma = potential.parameters["sigma"].to(unit.angstrom).magnitude
-    epsilon = potential.parameters["epsilon"].to(kcal_mol).magnitude
+    sigma = potential.parameters["sigma"]
+    epsilon = potential.parameters["epsilon"]
 
     return sigma, epsilon

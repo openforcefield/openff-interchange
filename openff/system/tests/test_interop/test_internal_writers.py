@@ -97,7 +97,7 @@ def test_sanity_grompp():
     off_sys = parsley.create_openff_system(top)
 
     off_sys.box = [4, 4, 4] * np.eye(3)
-    off_sys.positions = mol.conformers[0] / omm_unit.angstrom
+    off_sys.positions = mol.conformers[0]
 
     off_sys.to_gro("out.gro", writer="internal")
     off_sys.to_top("out.top", writer="internal")
@@ -122,12 +122,11 @@ def test_water_dimer():
     water = Molecule.from_smiles("O")
     top = Topology.from_molecules(2 * [water])
 
-    from simtk import openmm
-    from simtk import unit as omm_unit
+    from simtk.openmm import app
 
-    pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
+    pdbfile = app.PDBFile(get_test_file_path("water-dimer.pdb"))
 
-    positions = np.array(pdbfile.positions / omm_unit.nanometer) * unit.nanometer
+    positions = pdbfile.positions
 
     openff_sys = tip3p.create_openff_system(top)
     openff_sys.positions = positions
