@@ -114,7 +114,7 @@ def _run_gmx_energy(
     if grompp.returncode:
         raise GMXRunError(err)
 
-    mdrun_cmd = "gmx mdrun -deffnm out"
+    mdrun_cmd = "gmx mdrun -s out.tpr -e out.edr"
 
     mdrun = subprocess.Popen(
         mdrun_cmd,
