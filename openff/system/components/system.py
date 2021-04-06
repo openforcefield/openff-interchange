@@ -5,14 +5,15 @@ import numpy as np
 from openff.toolkit.topology.topology import Topology
 from pydantic import validator
 
+from openff.system.components.misc import OFFBioTop
 from openff.system.components.potentials import PotentialHandler
 from openff.system.exceptions import (
+    InternalInconsistencyError,
     InvalidBoxError,
     MissingPositionsError,
     UnsupportedExportError,
 )
 from openff.system.interop.openmm import to_openmm
-from openff.system.interop.parmed import to_parmed
 from openff.system.models import DefaultModel
 from openff.system.types import ArrayQuantity
 
@@ -26,7 +27,7 @@ class System(DefaultModel):
     """
 
     handlers: Dict[str, PotentialHandler] = dict()
-    topology: Optional[Topology] = None
+    topology: Optional[Union[Topology, OFFBioTop]] = None
     box: ArrayQuantity["nanometer"] = None  # type: ignore
     positions: ArrayQuantity["nanometer"] = None  # type: ignore
 
@@ -42,7 +43,7 @@ class System(DefaultModel):
         else:
             raise InvalidBoxError
 
-    def to_gro(self, file_path: Union[Path, str], writer="parmed"):
+    def to_gro(self, file_path: Union[Path, str], writer="parmed", decimal: int = 8):
         """Export this system to a .gro file using ParmEd"""
 
         if self.positions is None:
@@ -57,7 +58,7 @@ class System(DefaultModel):
         elif writer == "internal":
             from openff.system.interop.internal.gromacs import to_gro
 
-            to_gro(self, file_path)
+            to_gro(self, file_path, decimal=decimal)
 
     def to_top(self, file_path: Union[Path, str], writer="parmed"):
         """Export this system to a .top file using ParmEd"""
@@ -84,14 +85,29 @@ class System(DefaultModel):
         self._check_nonbonded_compatibility()
         return to_openmm(self)
 
-    def to_parmed(self):
-        """Export this sytem to a ParmEd Structure"""
-        return to_parmed(self)
+    def _to_parmed(self):
+        """Export this system to a ParmEd Structure"""
+        from openff.system.interop.parmed import _to_parmed
+
+        return _to_parmed(self)
+
+    @classmethod
+    def _from_parmed(cls, structure):
+        from openff.system.interop.parmed import _from_parmed
+
+        return _from_parmed(cls, structure)
 
     def _get_nonbonded_methods(self):
+        if "vdW" in self.handlers:
+            nonbonded_handler = "vdW"
+        elif "Buckingham-6" in self.handlers:
+            nonbonded_handler = "Buckingham-6"
+        else:
+            raise InternalInconsistencyError("Found no non-bonded handlers")
+
         nonbonded_ = {
             "electrostatics_method": self.handlers["Electrostatics"].method,
-            "vdw_method": self.handlers["vdW"].method,
+            "vdw_method": self.handlers[nonbonded_handler].method,
             "periodic_topology": self.box is not None,
         }
 

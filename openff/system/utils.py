@@ -15,7 +15,14 @@ from openff.system.exceptions import MissingDependencyError
 
 def pint_to_simtk(quantity):
     """Convert a pint Quantity to an OpenMM unit."""
-    raise NotImplementedError()
+    if str(quantity.units) == "kilojoule / mole":
+        return quantity.m * omm_unit.kilojoule_per_mole
+    if str(quantity.units) == "1 / nanometer":
+        return quantity.m / omm_unit.nanometer
+    if str(quantity.units) == "kilojoule * nanometer ** 6 / mole":
+        return quantity.m * omm_unit.nanometer ** 6 / omm_unit.kilojoule_per_mole
+    else:
+        raise NotImplementedError(f"caught units {str(quantity.units)}")
 
 
 def simtk_to_pint(simtk_quantity):

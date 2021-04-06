@@ -10,9 +10,9 @@ from simtk import unit as omm_unit
 from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import (
+    _get_mdp_file,
+    _run_gmx_energy,
     get_gromacs_energies,
-    get_mdp_file,
-    run_gmx_energy,
 )
 
 
@@ -36,7 +36,8 @@ def test_internal_gromacs_writers(mol):
     out = parsley.create_openff_system(top)
 
     out.box = [4, 4, 4] * np.eye(3)
-    out.positions = mol.conformers[0] / omm_unit.nanometer
+    out.positions = mol.conformers[0]
+    out.positions = np.round(out.positions, 2)
 
     openmm_sys = parsley.create_openmm_system(top)
     struct = pmd.openmm.load_topology(
@@ -53,21 +54,21 @@ def test_internal_gromacs_writers(mol):
             struct.save("reference.gro")
 
             out.to_top("internal.top", writer="internal")
-            out.to_gro("internal.gro", writer="internal")
+            out.to_gro("internal.gro", writer="internal", decimal=3)
 
             compare_gro_files("internal.gro", "reference.gro")
             # TODO: Also compare to out.to_gro("parmed.gro", writer="parmed")
 
-            reference_energy = run_gmx_energy(
+            reference_energy = _run_gmx_energy(
                 top_file="reference.top",
                 gro_file="reference.gro",
-                mdp_file=get_mdp_file("default"),
+                mdp_file=_get_mdp_file("default"),
             )
 
-            internal_energy = run_gmx_energy(
+            internal_energy = _run_gmx_energy(
                 top_file="internal.top",
                 gro_file="internal.gro",
-                mdp_file=get_mdp_file("default"),
+                mdp_file=_get_mdp_file("default"),
             )
 
             reference_energy.compare(
@@ -96,7 +97,7 @@ def test_sanity_grompp():
     off_sys = parsley.create_openff_system(top)
 
     off_sys.box = [4, 4, 4] * np.eye(3)
-    off_sys.positions = mol.conformers[0] / omm_unit.angstrom
+    off_sys.positions = mol.conformers[0]
 
     off_sys.to_gro("out.gro", writer="internal")
     off_sys.to_top("out.top", writer="internal")
@@ -121,12 +122,11 @@ def test_water_dimer():
     water = Molecule.from_smiles("O")
     top = Topology.from_molecules(2 * [water])
 
-    from simtk import openmm
-    from simtk import unit as omm_unit
+    from simtk.openmm import app
 
-    pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
+    pdbfile = app.PDBFile(get_test_file_path("water-dimer.pdb"))
 
-    positions = np.array(pdbfile.positions / omm_unit.nanometer) * unit.nanometer
+    positions = pdbfile.positions
 
     openff_sys = tip3p.create_openff_system(top)
     openff_sys.positions = positions

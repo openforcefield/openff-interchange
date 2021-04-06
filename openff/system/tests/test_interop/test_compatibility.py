@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule
-from simtk import unit as omm_unit
 
 from openff.system.exceptions import (
     MissingNonbondedCompatibilityError,
@@ -17,7 +16,7 @@ def test_nonbonded_compatibility():
     mol.generate_conformers(n_conformers=1)
 
     top = mol.to_topology()
-    positions = mol.conformers[0].in_units_of(omm_unit.nanometer) / omm_unit.nanometer
+    positions = mol.conformers[0]
     box = [4, 4, 4] * np.eye(3)
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")

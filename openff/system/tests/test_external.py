@@ -1,35 +1,47 @@
+import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
 from simtk import openmm
+from simtk.unit import nanometer as nm
 
-from openff.system.components.system import System
+from openff.system import unit
+from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
+from openff.system.tests.energy_tests.openmm import (
+    _get_openmm_energies,
+    get_openmm_energies,
+)
 from openff.system.utils import get_test_file_path
 
 
 class TestFromOpenMM(BaseTest):
-    @pytest.mark.skip
     def test_from_openmm_pdbfile(self, argon_ff, argon_top):
-        # TODO: Host files like this here instead of grabbing from the toolkit
         pdb_file_path = get_test_file_path("10-argons.pdb")
         pdbfile = openmm.app.PDBFile(pdb_file_path)
 
-        System(
-            topology=argon_top,
-            forcefield=argon_ff,
-            positions=pdbfile.positions,
-            box=pdbfile.topology.getPeriodicBoxVectors(),
+        mol = Molecule.from_smiles("[#18]")
+        top = Topology.from_openmm(pdbfile.topology, unique_molecules=[mol])
+        box = pdbfile.topology.getPeriodicBoxVectors()
+        box = box.value_in_unit(nm) * unit.nanometer
+
+        out = argon_ff.create_openff_system(top)
+        out.box = box
+        out.positions = pdbfile.getPositions()
+
+        assert np.allclose(
+            out.positions.to(unit.nanometer).magnitude,
+            pdbfile.getPositions().value_in_unit(nm),
         )
 
-        # proto_system = ProtoSystem(
-        # topology=argon_top,
-        # positions=pdbfile.positions,
-        # box=pdbfile.topology.getPeriodicBoxVectors(),
-        # )
-
-        # assert np.allclose(argon_system.positions, proto_system.positions)
-        # assert np.allclose(argon_system.box, proto_system.box)
+        get_openmm_energies(out, hard_cutoff=True).compare(
+            _get_openmm_energies(
+                omm_sys=argon_ff.create_openmm_system(top),
+                box_vectors=pdbfile.topology.getPeriodicBoxVectors(),
+                positions=pdbfile.getPositions(),
+                hard_cutoff=True,
+            )
+        )
 
     @pytest.fixture
     def unique_molecules(self):
@@ -47,27 +59,37 @@ class TestFromOpenMM(BaseTest):
             ("propane_methane_butanol_0.2_0.3_0.5.pdb"),
         ],
     )
-    @pytest.mark.skip
     def test_from_toolkit_packmol_boxes(self, pdb_path, unique_molecules):
         """
         Test loading some pre-prepared PACKMOL-generated systems.
 
         These use PDB files already prepared in the toolkit because PDB files are a pain.
         """
+        ff = ForceField("openff-1.0.0.offxml")
+
         pdb_file_path = get_data_file_path("systems/packmol_boxes/" + pdb_path)
         pdbfile = openmm.app.PDBFile(pdb_file_path)
-        Topology.from_openmm(
+        top = Topology.from_openmm(
             pdbfile.topology,
             unique_molecules=unique_molecules,
         )
-        # proto_system = ProtoSystem(
-        #     topology=off_top,
-        #     positions=pdbfile.positions,
-        #     box=pdbfile.topology.getPeriodicBoxVectors(),
-        # )
+        box = pdbfile.topology.getPeriodicBoxVectors()
+        box = box.value_in_unit(nm) * unit.nanometer
 
-        # assert np.allclose(proto_system.positions, simtk_to_pint(pdbfile.positions))
-        # assert np.allclose(
-        #     proto_system.box,
-        #     simtk_to_pint(pdbfile.topology.getPeriodicBoxVectors()),
-        # )
+        out = ff.create_openff_system(top)
+        out.box = box
+        out.positions = pdbfile.getPositions()
+
+        assert np.allclose(
+            out.positions.to(unit.nanometer).magnitude,
+            pdbfile.getPositions().value_in_unit(nm),
+        )
+
+        get_openmm_energies(out, hard_cutoff=True).compare(
+            _get_openmm_energies(
+                omm_sys=ff.create_openmm_system(top),
+                box_vectors=pdbfile.topology.getPeriodicBoxVectors(),
+                positions=pdbfile.getPositions(),
+                hard_cutoff=True,
+            )
+        )
