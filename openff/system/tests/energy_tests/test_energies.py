@@ -8,9 +8,9 @@ from simtk import unit as omm_unit
 from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import (
+    _get_mdp_file,
+    _run_gmx_energy,
     get_gromacs_energies,
-    get_mdp_file,
-    run_gmx_energy,
 )
 from openff.system.tests.energy_tests.lammps import get_lammps_energies
 from openff.system.tests.energy_tests.openmm import (
@@ -308,8 +308,8 @@ def test_process_rb_torsions():
     struct.save("eth.gro", overwrite=True)
 
     # Get single-point energies using GROMACS
-    oplsaa_energies = run_gmx_energy(
-        top_file="eth.top", gro_file="eth.gro", mdp_file=get_mdp_file("default")
+    oplsaa_energies = _run_gmx_energy(
+        top_file="eth.top", gro_file="eth.gro", mdp_file=_get_mdp_file("default")
     )
 
     assert oplsaa_energies.energies["Torsion"]._value != 0.0

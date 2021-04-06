@@ -18,6 +18,7 @@ class MissingEnergyError(BaseException):
 
 
 class EnergyReport(DefaultModel):
+    """A lightweight class containing single-point energies as computed by energy tests."""
 
     # TODO: Use FloatQuantity, not float
     energies: Dict[str, Optional[omm_unit.Quantity]] = {
@@ -28,8 +29,22 @@ class EnergyReport(DefaultModel):
     }
 
     # TODO: Better way of exposing tolerances
-    def compare(self, other, custom_tolerances=None):
+    def compare(self, other: "EnergyReport", custom_tolerances=None):
+        """
+        Compare this `EnergyReport` to another `EnergyReport`. Energies are grouped into
+        four categories (bond, angle, torsion, and nonbonded) with default tolerances for
+        each set to 1e-3 kJ/mol.
 
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        other: EnergyReport
+            The other `EnergyReport` to compare energies against
+        custom_tolerances: dict of str: `simtk.unit.Quantity`, optional
+            Custom energy tolerances to use to use in comparisons.
+
+        """
         tolerances: Dict[str, float] = {
             "Bond": 1e-3 * omm_unit.kilojoule_per_mole,
             "Angle": 1e-3 * omm_unit.kilojoule_per_mole,
@@ -49,7 +64,7 @@ class EnergyReport(DefaultModel):
             if self.energies[key] is None and other.energies[key] is None:
                 raise MissingEnergyError
 
-            diff = self.energies[key] - other.energies[key]
+            diff = self.energies[key] - other.energies[key]  # type: ignore[operator]
             if abs(diff) > tolerances[key]:
                 raise EnergyError(
                     key, diff, tolerances[key], self.energies[key], other.energies[key]

@@ -8,9 +8,9 @@ from openff.system.components.potentials import Potential
 from openff.system.models import PotentialKey, TopologyKey
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import (
+    _get_mdp_file,
+    _run_gmx_energy,
     get_gromacs_energies,
-    get_mdp_file,
-    run_gmx_energy,
 )
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 
@@ -73,10 +73,10 @@ def test_ethanol_opls():
     from_foyer.save("from_foyer.top")
     from_foyer.save("from_foyer.gro")
 
-    rb_torsion_energy_from_foyer = run_gmx_energy(
+    rb_torsion_energy_from_foyer = _run_gmx_energy(
         top_file="from_foyer.top",
         gro_file="from_foyer.gro",
-        mdp_file=get_mdp_file("default"),
+        mdp_file=_get_mdp_file("default"),
     ).energies["Torsion"]
 
     assert (omm - rb_torsion_energy_from_foyer).value_in_unit(

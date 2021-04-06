@@ -10,9 +10,9 @@ from simtk import unit as omm_unit
 from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import (
+    _get_mdp_file,
+    _run_gmx_energy,
     get_gromacs_energies,
-    get_mdp_file,
-    run_gmx_energy,
 )
 
 
@@ -59,16 +59,16 @@ def test_internal_gromacs_writers(mol):
             compare_gro_files("internal.gro", "reference.gro")
             # TODO: Also compare to out.to_gro("parmed.gro", writer="parmed")
 
-            reference_energy = run_gmx_energy(
+            reference_energy = _run_gmx_energy(
                 top_file="reference.top",
                 gro_file="reference.gro",
-                mdp_file=get_mdp_file("default"),
+                mdp_file=_get_mdp_file("default"),
             )
 
-            internal_energy = run_gmx_energy(
+            internal_energy = _run_gmx_energy(
                 top_file="internal.top",
                 gro_file="internal.gro",
-                mdp_file=get_mdp_file("default"),
+                mdp_file=_get_mdp_file("default"),
             )
 
             reference_energy.compare(
