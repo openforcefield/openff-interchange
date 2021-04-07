@@ -163,6 +163,24 @@ class GMXRunError(BaseException):
     """
 
 
+class GMXGromppError(GMXRunError):
+    """
+    Exception for when `gmx grompp` fails.
+    """
+
+
+class GMXMdrunError(GMXRunError):
+    """
+    Exception for when `gmx mdrun` fails.
+    """
+
+
+class GMXEnergyError(GMXRunError):
+    """
+    Exception for when `gmx energy` fails.
+    """
+
+
 class LAMMPSRunError(BaseException):
     """
     Exception for when a LAMMPS subprocess fails.

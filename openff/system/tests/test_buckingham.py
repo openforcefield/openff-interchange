@@ -1,5 +1,6 @@
 from math import exp
 
+import pytest
 from openff.toolkit.topology import Molecule, Topology
 from scipy.constants import Avogadro
 
@@ -7,7 +8,9 @@ from openff.system import unit
 from openff.system.components.misc import BuckinghamvdWHandler
 from openff.system.components.potentials import Potential
 from openff.system.components.smirnoff import ElectrostaticsMetaHandler
+from openff.system.exceptions import GMXMdrunError
 from openff.system.models import PotentialKey, TopologyKey
+from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.utils import simtk_to_pint
 
@@ -57,7 +60,7 @@ def test_argon_buck():
     resid = simtk_to_pint(omm_energies.energies["Nonbonded"]) - by_hand
     assert resid < 1e-5 * unit.kilojoule / unit.mol
 
-    # TODO: Add back GROMACS energies once GROMACS supports Buckingham potentials
-    # from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
-    # gmx_energies = get_gromacs_energies(out, mdp="cutoff_buck")
-    # gmx_energies.compare(omm_energies)
+    # TODO: Add back comparison to GROMACS energies once GROMACS 2020+
+    # supports Buckingham potentials
+    with pytest.raises(GMXMdrunError):
+        get_gromacs_energies(out, mdp="cutoff_buck")
