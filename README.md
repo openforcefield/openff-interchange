@@ -35,7 +35,7 @@ omm_sys = off_sys.to_openmm()
 
 # ... or write to GROMACS files (partial support)
 off_sys.to_gro("out.gro", writer="internal")
-off_sys.to_top("top.gro", writer="internal")
+off_sys.to_top("out.top", writer="internal")
 ```
 
 Future releases will include support for conversion to other file formats such as those used by AMBER and GROMACS.

@@ -8,7 +8,7 @@ from openff.toolkit.utils.utils import temporary_cd
 from simtk import unit as omm_unit
 
 from openff.system.components.system import System
-from openff.system.exceptions import GMXRunError
+from openff.system.exceptions import GMXEnergyError, GMXGromppError, GMXMdrunError
 from openff.system.tests.energy_tests.report import EnergyReport
 from openff.system.utils import get_test_file_path
 
@@ -112,9 +112,9 @@ def _run_gmx_energy(
     _, err = grompp.communicate()
 
     if grompp.returncode:
-        raise GMXRunError(err)
+        raise GMXGromppError(err)
 
-    mdrun_cmd = "gmx mdrun -deffnm out"
+    mdrun_cmd = "gmx mdrun -s out.tpr -e out.edr"
 
     mdrun = subprocess.Popen(
         mdrun_cmd,
@@ -127,7 +127,7 @@ def _run_gmx_energy(
     _, err = mdrun.communicate()
 
     if mdrun.returncode:
-        raise GMXRunError(err)
+        raise GMXMdrunError(err)
 
     energy_cmd = "gmx energy -f out.edr -o out.xvg"
     stdin = " ".join(map(str, range(1, 20))) + " 0 "
@@ -144,7 +144,7 @@ def _run_gmx_energy(
     _, err = energy.communicate(input=stdin)
 
     if energy.returncode:
-        raise GMXRunError(err)
+        raise GMXEnergyError(err)
 
     report = _parse_gmx_energy("out.xvg", electrostatics=electrostatics)
 
