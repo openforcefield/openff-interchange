@@ -43,11 +43,13 @@ class System(DefaultModel):
         else:
             raise InvalidBoxError
 
-    def to_gro(self, file_path: Union[Path, str], writer="parmed", decimal: int = 8):
+    def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 8):
         """Export this system to a .gro file using ParmEd"""
 
         if self.positions is None:
-            raise MissingPositionsError
+            raise MissingPositionsError(
+                "Positions are required to write a `.gro` file but found None."
+            )
 
         # TODO: Enum-style class for handling writer arg?
         if writer == "parmed":
