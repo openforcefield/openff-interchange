@@ -1,7 +1,9 @@
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
+import mdtraj as md
 import numpy as np
 import parmed as pmd
+from simtk import openmm
 
 from openff.system import unit
 from openff.system.components.potentials import Potential
@@ -240,17 +242,36 @@ def _from_parmed(cls, structure) -> "System":
 
         out.box = structure.box[:3] * unit.angstrom
 
-    from openff.toolkit.topology import Molecule, Topology
+    from openff.toolkit.topology import Molecule
 
-    top = Topology()
+    from openff.system.components.misc import OFFBioTop
+
+    mdtop: md.Topology = md.Topology()
+
+    main_chain = md.core.topology.Chain(index=0, topology=mdtop)
+    top = OFFBioTop(mdtop=None)
 
     for res in structure.residues:
         mol = Molecule()
         mol.name = res.name
+
+        this_res = md.core.topology.Residue(
+            name=res.name,
+            index=res.idx,
+            chain=main_chain,
+            resSeq=0,
+        )
+
         for atom in res.atoms:
             mol.add_atom(
                 atomic_number=atom.atomic_number, formal_charge=0, is_aromatic=False
             )
+            mdtop.add_atom(
+                name=atom.name,
+                element=md.element.Element.getByAtomicNumber(atom.element),
+                residue=this_res,
+            )
+
         for atom in res.atoms:
             for bond in atom.bonds:
                 try:
@@ -267,8 +288,22 @@ def _from_parmed(cls, structure) -> "System":
                         pass
                     else:
                         raise e
+                mdtop.add_bond(
+                    atom1=mdtop.atom(bond.atom1.idx),
+                    atom2=mdtop.atom(bond.atom2.idx),
+                    order=int(bond.order) if bond.order is not None else None,
+                )
 
         top.add_molecule(mol)
+        main_chain._residues.append(this_res)
+
+    mdtop._chains.append(main_chain)
+
+    if hasattr(structure, "topology"):
+        if isinstance(structure.topology, openmm.app.Topology):
+            top.mdtop = md.Topology.from_openmm(structure.topology)
+    else:
+        raise Exception
 
     out.topology = top
 
