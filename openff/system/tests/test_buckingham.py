@@ -8,12 +8,12 @@ from openff.system.components.misc import BuckinghamvdWHandler
 from openff.system.components.potentials import Potential
 from openff.system.components.smirnoff import ElectrostaticsMetaHandler
 from openff.system.models import PotentialKey, TopologyKey
-from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.utils import simtk_to_pint
 
 
 def test_argon_buck():
+    """Test that Buckingham potentials are supported and can be exported"""
     mol = Molecule.from_smiles("[#18]")
     top = Topology.from_molecules([mol, mol])
 
@@ -51,11 +51,13 @@ def test_argon_buck():
     out.to_gro("out.gro", writer="internal")
     out.to_top("out.top", writer="internal")
 
-    gmx_energies = get_gromacs_energies(out, mdp="cutoff_buck")
     omm_energies = get_openmm_energies(out)
     by_hand = A * exp(-B * r) - C * r ** -6
 
-    gmx_energies.compare(omm_energies)
-
-    resid = simtk_to_pint(gmx_energies.energies["Nonbonded"]) - by_hand
+    resid = simtk_to_pint(omm_energies.energies["Nonbonded"]) - by_hand
     assert resid < 1e-5 * unit.kilojoule / unit.mol
+
+    # TODO: Add back GROMACS energies once GROMACS supports Buckingham potentials
+    # from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+    # gmx_energies = get_gromacs_energies(out, mdp="cutoff_buck")
+    # gmx_energies.compare(omm_energies)
