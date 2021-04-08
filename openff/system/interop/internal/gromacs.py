@@ -449,7 +449,7 @@ def _write_dihedrals(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule
                     k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
                     periodicity = int(params["periodicity"])
                     phase = params["phase"].to(unit.degree).magnitude
-                    idivf = int(params["idivf"])
+                    idivf = int(params["idivf"]) if "idivf" in params else 1
                     top_file.write(
                         "{:7d} {:7d} {:7d} {:7d} {:6d} {:16g} {:16g} {:7d}\n".format(
                             ref_indices[0] + 1,

@@ -14,7 +14,6 @@ from openff.system.exceptions import (
     UnsupportedExportError,
 )
 from openff.system.interop.openmm import to_openmm
-from openff.system.interop.parmed import to_parmed
 from openff.system.models import DefaultModel
 from openff.system.types import ArrayQuantity
 
@@ -86,9 +85,17 @@ class System(DefaultModel):
         self._check_nonbonded_compatibility()
         return to_openmm(self)
 
-    def to_parmed(self):
-        """Export this sytem to a ParmEd Structure"""
-        return to_parmed(self)
+    def _to_parmed(self):
+        """Export this system to a ParmEd Structure"""
+        from openff.system.interop.parmed import _to_parmed
+
+        return _to_parmed(self)
+
+    @classmethod
+    def _from_parmed(cls, structure):
+        from openff.system.interop.parmed import _from_parmed
+
+        return _from_parmed(cls, structure)
 
     def _get_nonbonded_methods(self):
         if "vdW" in self.handlers:

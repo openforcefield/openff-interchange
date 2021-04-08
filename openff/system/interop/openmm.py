@@ -34,7 +34,7 @@ def to_openmm(openff_sys) -> openmm.System:
     # OpenFF box stored implicitly as nm, and that happens to be what
     # OpenMM casts box vectors to if provided only an np.ndarray
     if openff_sys.box is not None:
-        box = openff_sys.box.to(off_unit.nanometer).magnitude
+        box = openff_sys.box.m_as(off_unit.nanometer)
         openmm_sys.setDefaultPeriodicBoxVectors(*box)
 
     # Add particles (both atoms and virtual sites) with appropriate masses
@@ -61,7 +61,7 @@ def _process_constraints(openff_sys, openmm_sys):
         indices = top_key.atom_indices
         params = constraint_handler.constraints[pot_key].parameters
         distance = params["distance"]
-        distance_omm = distance.to(distance.units).magnitude * unit.angstrom
+        distance_omm = distance.m_as(off_unit.nanometer)
 
         openmm_sys.addConstraint(indices[0], indices[1], distance_omm)
 
@@ -90,8 +90,10 @@ def _process_bond_forces(openff_sys, openmm_sys):
                 continue
         indices = top_key.atom_indices
         params = bond_handler.potentials[pot_key].parameters
-        k = params["k"].to(off_unit.Unit(str(kcal_ang))).magnitude * kcal_ang / kj_nm
-        length = params["length"].to(off_unit.nanometer).magnitude
+        k = params["k"].m_as(
+            off_unit.kilojoule / off_unit.nanometer ** 2 / off_unit.mol
+        )
+        length = params["length"].m_as(off_unit.nanometer)
 
         harmonic_bond_force.addBond(
             particle1=indices[0],
@@ -114,10 +116,8 @@ def _process_angle_forces(openff_sys, openmm_sys):
     for top_key, pot_key in angle_handler.slot_map.items():
         indices = top_key.atom_indices
         params = angle_handler.potentials[pot_key].parameters
-        k = params["k"].to(off_unit.Unit(str(kcal_rad))).magnitude
-        k = k * kcal_rad / kj_rad
-        angle = params["angle"].to(off_unit.degree).magnitude
-        angle = angle * unit.degree / unit.radian
+        k = params["k"].m_as(off_unit.kilojoule / off_unit.rad / off_unit.mol)
+        angle = params["angle"].m_as(off_unit.radian)
 
         harmonic_angle_force.addAngle(
             particle1=indices[0],
@@ -147,10 +147,9 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
         indices = top_key.atom_indices
         params = proper_torsion_handler.potentials[pot_key].parameters
 
-        k = params["k"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        k = params["k"].m_as(off_unit.kilojoule / off_unit.mol)
         periodicity = int(params["periodicity"])
-        phase = params["phase"].to(off_unit.degree).magnitude
-        phase = phase * unit.degree / unit.radian
+        phase = params["phase"].m_as(off_unit.radian)
         idivf = int(params["idivf"])
         torsion_force.addTorsion(
             indices[0],
@@ -174,12 +173,13 @@ def _process_rb_torsion_forces(openff_sys, openmm_sys):
         indices = top_key.atom_indices
         params = rb_torsion_handler.potentials[pot_key].parameters
 
-        c0 = params["C0"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
-        c1 = params["C1"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
-        c2 = params["C2"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
-        c3 = params["C3"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
-        c4 = params["C4"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
-        c5 = params["C5"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        c0 = params["C0"].m_as(off_unit.kilojoule / off_unit.mol)
+        c1 = params["C1"].m_as(off_unit.kilojoule / off_unit.mol)
+        c2 = params["C2"].m_as(off_unit.kilojoule / off_unit.mol)
+        c3 = params["C3"].m_as(off_unit.kilojoule / off_unit.mol)
+        c4 = params["C4"].m_as(off_unit.kilojoule / off_unit.mol)
+        c5 = params["C5"].m_as(off_unit.kilojoule / off_unit.mol)
+
         rb_force.addTorsion(
             indices[0],
             indices[1],
@@ -213,10 +213,9 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys):
         indices = top_key.atom_indices
         params = improper_torsion_handler.potentials[pot_key].parameters
 
-        k = params["k"].to(off_unit.Unit(str(kcal_mol))).magnitude * kcal_mol / kj_mol
+        k = params["k"].m_as(off_unit.kilojoule / off_unit.mol)
         periodicity = int(params["periodicity"])
-        phase = params["phase"].to(off_unit.degree).magnitude
-        phase = phase * unit.degree / unit.radian
+        phase = params["phase"].m_as(off_unit.radian)
         idivf = int(params["idivf"])
 
         other_atoms = [indices[0], indices[2], indices[3]]
@@ -270,12 +269,12 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
             atom_idx = top_key.atom_indices[0]
 
             partial_charge = electrostatics_handler.charges[top_key]
-            partial_charge = (partial_charge / off_unit.elementary_charge).magnitude
+            partial_charge = partial_charge.m_as(off_unit.elementary_charge)
             vdw_potential = vdw_handler.potentials[pot_key]
             # these are floats, implicitly angstrom and kcal/mol
             sigma, epsilon = _lj_params_from_potential(vdw_potential)
-            sigma = sigma * unit.angstrom / unit.nanometer
-            epsilon = epsilon * unit.kilocalorie_per_mole / unit.kilojoule_per_mole
+            sigma = sigma.m_as(off_unit.nanometer)
+            epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
 
             non_bonded_force.setParticleParameters(
                 atom_idx, partial_charge, sigma, epsilon

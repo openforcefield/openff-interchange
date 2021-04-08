@@ -8,9 +8,9 @@ from simtk import unit as omm_unit
 from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import (
+    _get_mdp_file,
+    _run_gmx_energy,
     get_gromacs_energies,
-    get_mdp_file,
-    run_gmx_energy,
 )
 from openff.system.tests.energy_tests.lammps import get_lammps_energies
 from openff.system.tests.energy_tests.openmm import (
@@ -200,11 +200,9 @@ def test_packmol_boxes(toolkit_file_path):
     off_sys = parsley.create_openff_system(off_topology)
 
     off_sys.box = np.asarray(
-        pdbfile.topology.getPeriodicBoxVectors() / omm_unit.nanometer,
+        pdbfile.topology.getPeriodicBoxVectors().value_in_unit(omm_unit.nanometer)
     )
-    off_sys.positions = np.asarray(
-        pdbfile.positions / omm_unit.nanometer,
-    )
+    off_sys.positions = pdbfile.positions
 
     sys_from_toolkit = parsley.create_openmm_system(off_topology)
 
@@ -255,7 +253,7 @@ def test_water_dimer():
 
     pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
 
-    positions = np.array(pdbfile.positions / omm_unit.nanometer) * unit.nanometer
+    positions = pdbfile.positions
 
     openff_sys = tip3p.create_openff_system(top)
     openff_sys.positions = positions
@@ -310,8 +308,8 @@ def test_process_rb_torsions():
     struct.save("eth.gro", overwrite=True)
 
     # Get single-point energies using GROMACS
-    oplsaa_energies = run_gmx_energy(
-        top_file="eth.top", gro_file="eth.gro", mdp_file=get_mdp_file("default")
+    oplsaa_energies = _run_gmx_energy(
+        top_file="eth.top", gro_file="eth.gro", mdp_file=_get_mdp_file("default")
     )
 
     assert oplsaa_energies.energies["Torsion"]._value != 0.0

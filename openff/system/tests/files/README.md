@@ -24,4 +24,5 @@ Documenting how some of these files were generated
     - See https://github.com/openforcefield/openff-toolkit/issues/716
 
 `ALA_GLY/ALA_GLY.*`
-  - These files were prepared by Jeff Wagner
+  - The SDF and PDB files files were prepared by Jeff Wagner
+  - The .gro and .top files were prepared by internal exporters 3/26/21

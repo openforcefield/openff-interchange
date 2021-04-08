@@ -50,11 +50,11 @@ def openff_pmd_gmx_indirect(
     off_sys.box = box
 
     ref_mol = topology.topology_molecules[0].reference_molecule
-    off_top_positions = ref_mol.conformers[0] / omm_unit.nanometer * unit.nanometer
+    off_top_positions = ref_mol.conformers[0]
     # TODO: Update this when better processing of OFFTop positions is supported
     off_sys.positions = off_top_positions
 
-    struct = off_sys.to_parmed()
+    struct = off_sys._to_parmed()
 
     struct.save(prefix + ".gro")
     struct.save(prefix + ".top")
@@ -70,7 +70,7 @@ def openff_pmd_gmx_direct(
     off_sys.box = box
 
     ref_mol = topology.topology_molecules[0].reference_molecule
-    off_top_positions = ref_mol.conformers[0] / omm_unit.nanometer * unit.nanometer
+    off_top_positions = ref_mol.conformers[0]
     # TODO: Update this when better processing of OFFTop positions is supported
     off_sys.positions = off_top_positions
 
