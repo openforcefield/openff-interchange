@@ -146,6 +146,8 @@ def create_constraint_handler(
     return handler
 
 
+# These functions should all be reduced down to one, possibly with some creative
+# use of functools
 def create_bond_potential_handler(
     self,
     topology: Topology,

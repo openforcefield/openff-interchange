@@ -38,12 +38,12 @@ def test_ethanol_opls():
     # https://github.com/mosdef-hub/foyer/blob/7816bf53a127502520a18d76c81510f96adfdbed/foyer/forcefields/xml/oplsaa.xml#L2585
     pot = Potential(
         parameters={
-            "c0": 0.6276 * kj_mol,
-            "c1": 1.8828 * kj_mol,
-            "c2": 0.0 * kj_mol,
-            "c3": -2.5104 * kj_mol,
-            "c4": 0.0 * kj_mol,
-            "c5": 0.0 * kj_mol,
+            "C0": 0.6276 * kj_mol,
+            "C1": 1.8828 * kj_mol,
+            "C2": 0.0 * kj_mol,
+            "C3": -2.5104 * kj_mol,
+            "C4": 0.0 * kj_mol,
+            "C5": 0.0 * kj_mol,
         }
     )
 

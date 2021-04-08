@@ -463,7 +463,7 @@ def _write_dihedrals(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule
                         )
                     )
         # This should be `if` if a single quartet can be subject to both proper and RB torsions
-        elif rb_torsion_handler:
+        if rb_torsion_handler:
             for top_key in rb_torsion_handler.slot_map:  # type: ignore[attr-defined]
                 indices = tuple(a.topology_atom_index for a in proper)
                 if top_key.atom_indices == indices:
@@ -473,12 +473,12 @@ def _write_dihedrals(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule
                     # "reference" indices
                     ref_indices = [idx - offset for idx in indices]
 
-                    c0 = params["c0"].to(unit.Unit("kilojoule / mol")).magnitude
-                    c1 = params["c1"].to(unit.Unit("kilojoule / mol")).magnitude
-                    c2 = params["c2"].to(unit.Unit("kilojoule / mol")).magnitude
-                    c3 = params["c3"].to(unit.Unit("kilojoule / mol")).magnitude
-                    c4 = params["c4"].to(unit.Unit("kilojoule / mol")).magnitude
-                    c5 = params["c5"].to(unit.Unit("kilojoule / mol")).magnitude
+                    c0 = params["C0"].to(unit.Unit("kilojoule / mol")).magnitude
+                    c1 = params["C1"].to(unit.Unit("kilojoule / mol")).magnitude
+                    c2 = params["C2"].to(unit.Unit("kilojoule / mol")).magnitude
+                    c3 = params["C3"].to(unit.Unit("kilojoule / mol")).magnitude
+                    c4 = params["C4"].to(unit.Unit("kilojoule / mol")).magnitude
+                    c5 = params["C5"].to(unit.Unit("kilojoule / mol")).magnitude
 
                     top_file.write(
                         "{:7d} {:7d} {:7d} {:7d} {:6d} "
