@@ -102,16 +102,7 @@ def test_sanity_grompp():
     off_sys.to_gro("out.gro", writer="internal")
     off_sys.to_top("out.top", writer="internal")
 
-    # TODO: Replace with intermol.gromacs.gmx_energy call after resolving
-    #  atomtype name differences that currently force -maxwarn 7
-    import os
-
-    from pkg_resources import resource_filename
-
-    mdp_file = resource_filename("intermol", "tests/gromacs/grompp.mdp")
-    exit_code = os.system(f"gmx grompp -f {mdp_file} -c out.gro -p out.top -maxwarn 1")
-
-    assert exit_code == 0
+    get_gromacs_energies(off_sys)
 
 
 def test_water_dimer():
