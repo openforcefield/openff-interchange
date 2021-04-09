@@ -83,9 +83,29 @@ class System(DefaultModel):
         to_lammps(self, file_path)
 
     def to_openmm(self):
-        """Export this sytem to an OpenMM System"""
+        """Export this system to an OpenMM System"""
         self._check_nonbonded_compatibility()
         return to_openmm(self)
+
+    def to_prmtop(self, file_path: Union[Path, str], writer="parmed"):
+        """Export this system to an Amber .prmtop file"""
+        if writer == "parmed":
+            from openff.system.interop.external import ParmEdWrapper
+
+            ParmEdWrapper().to_file(self, file_path)
+
+        else:
+            raise UnsupportedExportError
+
+    def to_crd(self, file_path: Union[Path, str], writer="parmed"):
+        """Export this system to an Amber .crd file"""
+        if writer == "parmed":
+            from openff.system.interop.external import ParmEdWrapper
+
+            ParmEdWrapper().to_file(self, file_path)
+
+        else:
+            raise UnsupportedExportError
 
     def _to_parmed(self):
         """Export this system to a ParmEd Structure"""
