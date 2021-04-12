@@ -1,9 +1,9 @@
 import numpy as np
 from parmed.amber import readparm
+from pmdtest.utils import get_fn as get_pmd_fn
 
 from openff.system import unit
 from openff.system.components.system import System
-from pmdtest.utils import get_fn as get_pmd_fn
 
 
 class TestParmEdAmber:
