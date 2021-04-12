@@ -6,7 +6,7 @@ from openff.system.components.system import System
 from pmdtest.utils import get_fn as get_pmd_fn
 
 
-class TestParmedAmber:
+class TestParmEdAmber:
     def test_load_prmtop(self):
         struct = readparm.LoadParm(get_pmd_fn("trx.prmtop"))
         other_struct = readparm.AmberParm(get_pmd_fn("trx.prmtop"))
@@ -23,4 +23,13 @@ class TestParmedAmber:
         prmtop_converted = System._from_parmed(struct)
         np.testing.assert_allclose(
             prmtop_converted.box, np.eye(3) * 2.0 * unit.nanometer
+        )
+
+    def test_read_box_parm7(self):
+        top = readparm.LoadParm(get_pmd_fn("solv2.parm7"))
+        out = System._from_parmed(top)
+        # pmd.load_file(get_pmd_fn("solv2.rst7")))
+        # top = readparm.LoadParm(get_pmd_fn("solv2.parm7"), xyz=coords.coordinates)
+        np.testing.assert_allclose(
+            np.diag(out.box.m_as(unit.angstrom)), top.parm_data["BOX_DIMENSIONS"][1:]
         )
