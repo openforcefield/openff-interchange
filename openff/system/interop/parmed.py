@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING, Dict, Optional, Union
 import mdtraj as md
 import numpy as np
 import parmed as pmd
+from openff.toolkit.topology.molecule import FrozenMolecule
+from openff.toolkit.topology.topology import TopologyMolecule
 from simtk import openmm
 
 from openff.system import unit
@@ -216,11 +218,13 @@ def _to_parmed(off_system: "System") -> pmd.Structure:
     for res in structure.residues:
         res.name = "FOO"
 
-    structure.positions = off_system.positions.to(unit.angstrom).magnitude  # type: ignore[attr-defined]
-    for idx, pos in enumerate(structure.positions):
-        structure.atoms[idx].xx = pos._value[0]
-        structure.atoms[idx].xy = pos._value[1]
-        structure.atoms[idx].xz = pos._value[2]
+    if off_system.positions:
+        structure.positions = off_system.positions.to(unit.angstrom).magnitude  # type: ignore[attr-defined]
+
+        for idx, pos in enumerate(structure.positions):
+            structure.atoms[idx].xx = pos._value[0]
+            structure.atoms[idx].xy = pos._value[1]
+            structure.atoms[idx].xz = pos._value[2]
 
     return structure
 
@@ -251,10 +255,16 @@ def _from_parmed(cls, structure) -> "System":
     main_chain = md.core.topology.Chain(index=0, topology=mdtop)
     top = OFFBioTop(mdtop=None)
 
-    for res in structure.residues:
-        mol = Molecule()
-        mol.name = res.name
+    # There is no way to tell if ParmEd residues are connected (cannot be processed
+    # as separate OFFMols) or disconnected (can be). For now, will have to accept the
+    # inefficiency of putting everything into on OFFMol ...
 
+    mol = Molecule()
+    mol.name = structure.name
+
+    for res in structure.residues:
+        # ... however, MDTraj's Topology class only stores residues, not molecules,
+        # so this should roughly match up with ParmEd
         this_res = md.core.topology.Residue(
             name=res.name,
             index=res.idx,
@@ -272,6 +282,9 @@ def _from_parmed(cls, structure) -> "System":
                 residue=this_res,
             )
 
+        main_chain._residues.append(this_res)
+
+    for res in structure.residues:
         for atom in res.atoms:
             for bond in atom.bonds:
                 try:
@@ -294,8 +307,14 @@ def _from_parmed(cls, structure) -> "System":
                     order=int(bond.order) if bond.order is not None else None,
                 )
 
-        top.add_molecule(mol)
-        main_chain._residues.append(this_res)
+    # Topology.add_molecule requires a safe .to_smiles() call, so instead
+    # do a dangerous molecule addition
+    ref_mol = FrozenMolecule(mol)
+    # This doesn't work because molecule hashing requires valid SMILES
+    # top._reference_molecule_to_topology_molecules[ref_mol] = []
+    top_mol = TopologyMolecule(reference_molecule=ref_mol, topology=top)
+    top._topology_molecules.append(top_mol)
+    # top._reference_molecule_to_topology_molecules[ref_mol].append(top_mol)
 
     mdtop._chains.append(main_chain)
 
