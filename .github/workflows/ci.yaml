@@ -65,6 +65,7 @@ jobs:
       shell: bash -l {0}
       run: |
         git clone https://github.com/parmed/tests
+        cp -r tests/pmdtest/ .
 
     - name: Run mypy
       shell: bash -l {0}
@@ -74,12 +75,12 @@ jobs:
     - name: Run unit tests
       shell: bash -l {0}
       run: |
-        pytest -v $COV openff/system/tests/
+        python -m pytest -v $COV openff/system/tests/
 
     - name: Run example notebooks
       shell: bash -l {0}
       run: |
-        pytest -v $COV examples/ --nbval-lax
+        python -m pytest -v $COV examples/ --nbval-lax
 
     - name: Codecov
       uses: codecov/codecov-action@v1
