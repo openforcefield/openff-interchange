@@ -13,13 +13,13 @@ repos:
     files: ^openff
     args: [--check]
 - repo: https://github.com/timothycrosley/isort
-  rev: 5.7.0
+  rev: 5.8.0
   hooks:
   - id: isort
     files: ^openff
     args: [--check]
 - repo: https://gitlab.com/PyCQA/flake8
-  rev: 3.8.4
+  rev: 3.9.0
   hooks:
   - id: flake8
     files: ^openff
@@ -28,7 +28,7 @@ repos:
         'flake8-absolute-import',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.10.0
+  rev: v2.12.0
   hooks:
   - id: pyupgrade
     files: ^openff/system/

@@ -61,15 +61,15 @@ jobs:
       run: |
         python setup.py develop --no-deps
 
-    - name: Run mypy
-      shell: bash -l {0}
-      run: |
-        mypy --show-error-codes --namespace-packages -p "openff.system"
-
     - name: Clone ParmEd tests
       shell: bash -l {0}
       run: |
         git clone https://github.com/parmed/tests
+
+    - name: Run mypy
+      shell: bash -l {0}
+      run: |
+        mypy --show-error-codes --namespace-packages -p "openff.system"
 
     - name: Run unit tests
       shell: bash -l {0}
