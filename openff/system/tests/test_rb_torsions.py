@@ -1,5 +1,6 @@
 import numpy as np
 from openff.toolkit.topology.molecule import Molecule
+from openff.units import unit
 from simtk import unit as omm_unit
 
 from openff.system.components.misc import RBTorsionHandler
@@ -12,7 +13,6 @@ from openff.system.tests.energy_tests.gromacs import (
     get_gromacs_energies,
 )
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
-from openff.system.units import unit
 
 kj_mol = unit.Unit("kilojoule / mol")
 
