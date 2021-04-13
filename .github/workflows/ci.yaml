@@ -71,7 +71,7 @@ jobs:
       run: |
         git clone https://github.com/parmed/tests
         cp -r tests/pmdtest/ .
-        echo '$HOME/test' >> $GITHUB_PATH
+        echo $(pwd) >> $GITHUB_PATH
 
     - name: Run mypy
       shell: bash -l {0}
