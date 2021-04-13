@@ -34,7 +34,7 @@ jobs:
         run: |
           black openff --check
 
-      - name: Run black
+      - name: Run isort
         run: |
           isort --check-only openff
 

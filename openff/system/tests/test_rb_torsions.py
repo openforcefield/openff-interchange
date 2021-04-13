@@ -1,8 +1,8 @@
 import numpy as np
 from openff.toolkit.topology.molecule import Molecule
+from openff.units import unit
 from simtk import unit as omm_unit
 
-from openff.system import unit
 from openff.system.components.misc import RBTorsionHandler
 from openff.system.components.potentials import Potential
 from openff.system.models import PotentialKey, TopologyKey

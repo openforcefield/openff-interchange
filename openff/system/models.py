@@ -1,8 +1,8 @@
 from typing import Optional, Sequence
 
+from openff.units import unit
 from pydantic import BaseModel, Field
 
-from openff.system import unit
 from openff.system.types import custom_quantity_encoder, json_loader
 
 

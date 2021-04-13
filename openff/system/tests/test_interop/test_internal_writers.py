@@ -5,9 +5,9 @@ import parmed as pmd
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils.utils import temporary_cd
-from simtk import unit as omm_unit
+from openff.units import unit
+from simtk import unit as simtk_unit
 
-from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import (
     _get_mdp_file,
@@ -73,7 +73,7 @@ def test_internal_gromacs_writers(mol):
 
             reference_energy.compare(
                 internal_energy,
-                custom_tolerances={"Bond": 2e-2 * omm_unit.kilojoule_per_mole},
+                custom_tolerances={"Bond": 2e-2 * simtk_unit.kilojoule_per_mole},
             )
 
 
@@ -102,16 +102,7 @@ def test_sanity_grompp():
     off_sys.to_gro("out.gro", writer="internal")
     off_sys.to_top("out.top", writer="internal")
 
-    # TODO: Replace with intermol.gromacs.gmx_energy call after resolving
-    #  atomtype name differences that currently force -maxwarn 7
-    import os
-
-    from pkg_resources import resource_filename
-
-    mdp_file = resource_filename("intermol", "tests/gromacs/grompp.mdp")
-    exit_code = os.system(f"gmx grompp -f {mdp_file} -c out.gro -p out.top -maxwarn 1")
-
-    assert exit_code == 0
+    get_gromacs_energies(off_sys)
 
 
 def test_water_dimer():

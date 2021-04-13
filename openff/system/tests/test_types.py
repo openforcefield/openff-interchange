@@ -3,10 +3,10 @@ import json
 import numpy as np
 import pytest
 import unyt
+from openff.units import unit
 from pydantic import ValidationError
 from simtk import unit as omm_unit
 
-from openff.system import unit
 from openff.system.exceptions import UnitValidationError
 from openff.system.models import DefaultModel
 from openff.system.types import ArrayQuantity, FloatQuantity
@@ -19,29 +19,29 @@ class TestQuantityTypes:
             charge: FloatQuantity["elementary_charge"]
             foo: FloatQuantity
             bar: FloatQuantity["degree"]
-            baz: FloatQuantity["angstrom"]
+            baz: FloatQuantity["nanometer"]
 
         a = Atom(
             mass=4,
             charge=0 * unit.elementary_charge,
             foo=2.0 * unit.nanometer,
             bar="90.0 degree",
-            baz=0.4 * omm_unit.angstrom,
+            baz=0.4 * omm_unit.nanometer,
         )
 
         assert a.mass == 4 * unit.atomic_mass_constant
         assert a.charge == 0 * unit.elementary_charge
         assert a.foo == 2.0 * unit.nanometer
         assert a.bar == 90 * unit.degree
-        assert a.baz == 0.4 * unit.angstrom
+        assert a.baz == 0.4 * unit.nanometer
 
         # TODO: Update with custom deserialization to == a.dict()
         assert json.loads(a.json()) == {
-            "mass": '{"val": 4, "unit": "atomic_mass_constant"}',
-            "charge": '{"val": 0, "unit": "elementary_charge"}',
-            "foo": '{"val": 2.0, "unit": "nanometer"}',
-            "bar": '{"val": 90.0, "unit": "degree"}',
-            "baz": '{"val": 0.4, "unit": "angstrom"}',
+            "mass": '{"val": 4, "unit": "m_u"}',
+            "charge": '{"val": 0, "unit": "e"}',
+            "foo": '{"val": 2.0, "unit": "nm"}',
+            "bar": '{"val": 90.0, "unit": "deg"}',
+            "baz": '{"val": 0.4, "unit": "nm"}',
         }
 
         parsed = Atom.parse_raw(a.json())
@@ -79,12 +79,12 @@ class TestQuantityTypes:
         )
 
         assert json.loads(m.json()) == {
-            "masses": '{"val": [16, 1, 1], "unit": "atomic_mass_constant"}',
-            "charges": '{"val": [-1.0, 0.5, 0.5], "unit": "elementary_charge"}',
-            "other": '{"val": [2.0, 2.0], "unit": "second"}',
-            "foo": '{"val": [2.0, -2.0, 0.0], "unit": "nanometer"}',
-            "bar": '{"val": [0, 90, 180], "unit": "degree"}',
-            "baz": '{"val": [3, 2, 1], "unit": "second"}',
+            "masses": '{"val": [16, 1, 1], "unit": "m_u"}',
+            "charges": '{"val": [-1.0, 0.5, 0.5], "unit": "e"}',
+            "other": '{"val": [2.0, 2.0], "unit": "s"}',
+            "foo": '{"val": [2.0, -2.0, 0.0], "unit": "nm"}',
+            "bar": '{"val": [0, 90, 180], "unit": "deg"}',
+            "baz": '{"val": [3, 2, 1], "unit": "s"}',
         }
 
         parsed = Molecule.parse_raw(m.json())
@@ -153,8 +153,8 @@ class TestQuantityTypes:
         )
 
         assert json.loads(m.json()) == {
-            "scalar_data": '{"val": 1.0, "unit": "meter"}',
-            "array_data": '{"val": [-1, 0], "unit": "second"}',
+            "scalar_data": '{"val": 1.0, "unit": "m"}',
+            "array_data": '{"val": [-1, 0], "unit": "s"}',
             "name": "foo",
         }
 
@@ -193,21 +193,21 @@ class TestQuantityTypes:
     def test_model_mutability(self):
         class Model(DefaultModel):
             time: FloatQuantity["second"]
-            lengths: ArrayQuantity["foot"]
+            lengths: ArrayQuantity["nanometer"]
 
-        m = Model(time=10 * unit.second, lengths=[3, 4] * unit.foot)
+        m = Model(time=10 * unit.second, lengths=[0.3, 0.5] * unit.nanometer)
 
         m.time = 0.5 * unit.minute
-        m.lengths = [2, 1] * unit.yard
+        m.lengths = [4.0, 1.0] * unit.angstrom
 
         assert m.time == 30 * unit.second
-        assert (m.lengths == [6, 3] * unit.foot).all()
+        assert (np.isclose(m.lengths, [0.4, 0.1] * unit.nanometer)).all()
 
         with pytest.raises(ValidationError, match="1 validation error for Model"):
             m.time = 1 * unit.gram
 
         with pytest.raises(ValidationError, match="1 validation error for Model"):
-            m.lengths = 1 * unit.watt
+            m.lengths = 1 * unit.joule
 
 
 def test_from_omm_quantity():

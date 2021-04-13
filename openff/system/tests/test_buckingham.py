@@ -2,9 +2,10 @@ from math import exp
 
 import pytest
 from openff.toolkit.topology import Molecule, Topology
+from openff.units import unit
 from scipy.constants import Avogadro
+from simtk import unit as simtk_unit
 
-from openff.system import unit
 from openff.system.components.misc import BuckinghamvdWHandler
 from openff.system.components.potentials import Potential
 from openff.system.components.smirnoff import ElectrostaticsMetaHandler
@@ -20,13 +21,18 @@ def test_argon_buck():
     mol = Molecule.from_smiles("[#18]")
     top = Topology.from_molecules([mol, mol])
 
-    A = 1.69e-8 * unit.Unit("erg / mol") * Avogadro
-    B = 1 / (0.273 * unit.angstrom)
-    C = 102e-12 * unit.Unit("erg / mol") * unit.angstrom ** 6 * Avogadro
+    # Go through SimTK units because OpenFF Units registry does not have
+    # the erg/dyne units that the Sklog Wiki uses
+    # http://www.sklogwiki.org/SklogWiki/index.php/Argon#Buckingham_potential
+    A = 1.69e-8 * simtk_unit.erg / simtk_unit.mole * Avogadro
+    B = 1 / (0.273 * simtk_unit.angstrom)
+    C = 102e-12 * simtk_unit.erg / simtk_unit.mole * simtk_unit.angstrom ** 6 * Avogadro
 
-    A = A.to(unit.Unit("kilojoule/mol"))
-    B = B.to(unit.Unit("1 / nanometer"))
-    C = C.to(unit.Unit("kilojoule / mol * nanometer ** 6"))
+    A = simtk_to_pint(A.in_units_of(simtk_unit.kilojoule_per_mole))
+    B = simtk_to_pint(B)
+    C = simtk_to_pint(
+        C.in_units_of(simtk_unit.kilojoule_per_mole * simtk_unit.angstrom ** 6)
+    )
 
     r = 0.3 * unit.nanometer
 

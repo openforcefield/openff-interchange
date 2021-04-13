@@ -43,11 +43,13 @@ class System(DefaultModel):
         else:
             raise InvalidBoxError
 
-    def to_gro(self, file_path: Union[Path, str], writer="parmed", decimal: int = 8):
+    def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 8):
         """Export this system to a .gro file using ParmEd"""
 
         if self.positions is None:
-            raise MissingPositionsError
+            raise MissingPositionsError(
+                "Positions are required to write a `.gro` file but found None."
+            )
 
         # TODO: Enum-style class for handling writer arg?
         if writer == "parmed":
@@ -81,9 +83,29 @@ class System(DefaultModel):
         to_lammps(self, file_path)
 
     def to_openmm(self):
-        """Export this sytem to an OpenMM System"""
+        """Export this system to an OpenMM System"""
         self._check_nonbonded_compatibility()
         return to_openmm(self)
+
+    def to_prmtop(self, file_path: Union[Path, str], writer="parmed"):
+        """Export this system to an Amber .prmtop file"""
+        if writer == "parmed":
+            from openff.system.interop.external import ParmEdWrapper
+
+            ParmEdWrapper().to_file(self, file_path)
+
+        else:
+            raise UnsupportedExportError
+
+    def to_crd(self, file_path: Union[Path, str], writer="parmed"):
+        """Export this system to an Amber .crd file"""
+        if writer == "parmed":
+            from openff.system.interop.external import ParmEdWrapper
+
+            ParmEdWrapper().to_file(self, file_path)
+
+        else:
+            raise UnsupportedExportError
 
     def _to_parmed(self):
         """Export this system to a ParmEd Structure"""

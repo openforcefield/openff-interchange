@@ -1,3 +1,4 @@
+import mdtraj as md
 import parmed as pmd
 from simtk import unit as omm_unit
 
@@ -19,6 +20,17 @@ class TestParmEd(BaseTest):
         original.positions = gro.positions
 
         openff_sys = System._from_parmed(original)
+        openff_sys.topology.mdtop = md.Topology.from_openmm(gro.topology)
+
+        #  Some sanity checks, including that residues are stored ...
+        assert openff_sys.topology._topology_molecules[0].n_atoms == 29
+        assert openff_sys.topology.n_topology_molecules == 1
+        assert openff_sys.topology.mdtop.n_residues == 4
+
+        # ... and written out
+        openff_sys.to_gro("has_residues.gro", writer="internal")
+        assert len(pmd.load_file("has_residues.gro").residues) == 4
+
         roundtrip = openff_sys._to_parmed()
 
         roundtrip.save("conv.gro", overwrite=True)

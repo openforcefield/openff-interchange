@@ -157,6 +157,12 @@ class InternalInconsistencyError(BaseException):
     """
 
 
+class SanderError(BaseException):
+    """
+    Exception for when a sander subprocess fails.
+    """
+
+
 class GMXRunError(BaseException):
     """
     Exception for when a GROMACS subprocess fails.
