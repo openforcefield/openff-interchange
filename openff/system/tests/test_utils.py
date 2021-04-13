@@ -4,11 +4,13 @@ from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from simtk import unit as simtk_unit
 
+from openff.system.exceptions import MissingDependencyError
 from openff.system.tests.base_test import BaseTest
 from openff.system.utils import (
     compare_forcefields,
     get_partial_charges_from_openmm_system,
     pint_to_simtk,
+    requires_package,
     simtk_to_pint,
     unwrap_list_of_pint_quantities,
 )
@@ -48,8 +50,8 @@ def test_simtk_list_of_quantities_to_pint():
 
 def test_pint_to_simtk():
     """Test conversion from pint Quantity to SimTK Quantity."""
-    with pytest.raises(NotImplementedError):
-        pint_to_simtk(None)
+    q = 5.0 / unit.nanometer
+    assert pint_to_simtk(q) == 0.5 / simtk_unit.angstrom
 
 
 class TestUtils(BaseTest):
@@ -76,3 +78,20 @@ class TestOpenMM(BaseTest):
         # assert partial_charges.units == unit.elementary_charge
         assert isinstance(partial_charges, list)
         assert np.allclose(partial_charges, np.zeros(4))  # .magnitude
+
+
+def test_requires_package():
+    """Test the @requires_package decorator"""
+
+    @requires_package("re")
+    def fn_installed():
+        pass
+
+    fn_installed()
+
+    @requires_package("foobar")
+    def fn_missing():
+        pass
+
+    with pytest.raises(MissingDependencyError, match="foobar"):
+        fn_missing()

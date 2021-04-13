@@ -3,7 +3,9 @@ from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
 
 from openff.system.exceptions import SMIRNOFFHandlersNotImplementedError
+from openff.system.models import TopologyKey
 from openff.system.tests.base_test import BaseTest
+from openff.system.tests.utils import compare_charges_omm_off, requires_pkg
 
 
 class TestStubs(BaseTest):
@@ -46,11 +48,16 @@ class TestConstraints(BaseTest):
 
         assert "Constraints" in sys_out.handlers.keys()
         constraints = sys_out.handlers["Constraints"]
-        assert "(0, 1)" not in constraints.slot_map.keys()  # C-C bond
-        assert "(0, 2)" in constraints.slot_map.keys()  # C-H bond
+        c_c_bond = TopologyKey(atom_indices=(0, 1))  # C-C bond
+        assert c_c_bond not in constraints.slot_map.keys()
+        c_h_bond = TopologyKey(atom_indices=(0, 2))  # C-H bond
+        assert c_h_bond in constraints.slot_map.keys()
         assert len(constraints.slot_map.keys()) == 6  # number of C-H bonds
         assert len({constraints.slot_map.values()}) == 1  # always True
-        assert constraints.constraints[constraints.slot_map["(0, 2)"]] is True
+        assert (
+            "distance"
+            in constraints.constraints[constraints.slot_map[c_h_bond]].parameters
+        )
 
     def test_force_field_no_constraints(self, parsley_unconstrained):
         """Test that a force field _without_ a Constraints tag does not add a
@@ -94,21 +101,70 @@ class TestConstraints(BaseTest):
             topology=top,
         )
 
+        from openff.system.components.smirnoff import SMIRNOFFBondHandler
+
+        bond_handler = SMIRNOFFBondHandler()
+        bond_handler.store_matches(parameter_handler=parsley["Bonds"], topology=top)
+        bond_handler.store_potentials(parameter_handler=parsley["Bonds"])
+
         constrained.handlers["Constraints"].store_constraints(
             parameter_handler=parsley["Constraints"],
+            bond_handler=bond_handler,
         )
 
         assert len(constrained.handlers["Constraints"].slot_map.keys()) == 7
 
 
-class TestElectrostatics(BaseTest):
+class TestChargeAssignment(BaseTest):
+    def test_default_am1bcc_charge_assignment(self, parsley):
+        top = Topology.from_molecules(
+            [
+                Molecule.from_smiles("C"),
+                Molecule.from_smiles("C=C"),
+                Molecule.from_smiles("CCO"),
+            ]
+        )
+
+        reference = parsley.create_openmm_system(top)
+        new = parsley.create_openff_system(top)
+
+        compare_charges_omm_off(reference, new)
+
+    @requires_pkg("openff.recharge")
+    def test_charge_increment_assignment(self, parsley):
+        from openff.recharge.charges.bcc import original_am1bcc_corrections
+        from openff.recharge.smirnoff import to_smirnoff
+
+        top = Topology.from_molecules(
+            [
+                Molecule.from_smiles("C"),
+                Molecule.from_smiles("C=C"),
+                Molecule.from_smiles("CCO"),
+            ]
+        )
+
+        recharge_bccs = to_smirnoff(original_am1bcc_corrections())
+        recharge_bccs.partial_charge_method = "AM1-Mulliken"
+
+        parsley.deregister_parameter_handler("ToolkitAM1BCC")
+        parsley.register_parameter_handler(recharge_bccs)
+
+        reference = parsley.create_openmm_system(top)
+        new = parsley.create_openff_system(top)
+
+        compare_charges_omm_off(reference, new)
+
     def test_library_charge_assignment(self):
         from openff.system.stubs import ForceField
 
         forcefield = ForceField("openff-1.3.0.offxml")
+        forcefield.deregister_parameter_handler("ToolkitAM1BCC")
 
         top = Topology.from_molecules(
             [Molecule.from_smiles(smi) for smi in ["[Na+]", "[Cl-]"]]
         )
 
-        forcefield.create_openff_system(top)
+        reference = forcefield.create_openmm_system(top)
+        new = forcefield.create_openff_system(top)
+
+        compare_charges_omm_off(reference, new)

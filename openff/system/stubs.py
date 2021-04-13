@@ -14,11 +14,13 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 
 from openff.system.components.smirnoff import (
+    ElectrostaticsMetaHandler,
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
+    SMIRNOFFChargeIncrementHandler,
     SMIRNOFFConstraintHandler,
-    SMIRNOFFElectrostaticsHandler,
     SMIRNOFFImproperTorsionHandler,
+    SMIRNOFFLibraryChargeHandler,
     SMIRNOFFProperTorsionHandler,
     SMIRNOFFvdWHandler,
 )
@@ -40,18 +42,77 @@ def to_openff_system(
     _check_supported_handlers(self)
 
     for parameter_handler in self.registered_parameter_handlers:
-        if parameter_handler in {"ToolkitAM1BCC", "LibraryCharges"}:
+        if parameter_handler in {
+            "Electrostatics",
+            "ToolkitAM1BCC",
+            "LibraryCharges",
+            "ChargeIncrementModel",
+            "Constraints",
+        }:
             continue
-        elif parameter_handler == "Electrostatics":
-            potential_handler = create_charges(
-                forcefield=self,
-                topology=topology,
-            )
         else:
             potential_handler = self[parameter_handler].create_potential(
                 topology=topology
             )
         sys_out.handlers.update({parameter_handler: potential_handler})
+
+    if "Constraints" in self.registered_parameter_handlers:
+        constraint_handler = self["Constraints"].create_potential(
+            topology=topology,
+            bond_handler=sys_out.handlers["Bonds"]
+            if "Bonds" in sys_out.handlers
+            else None,
+        )
+        sys_out.handlers.update({"Constraints": constraint_handler})
+
+    if "Electrostatics" in self.registered_parameter_handlers:
+        electrostatics = ElectrostaticsMetaHandler(
+            scale_13=self["Electrostatics"].scale13,
+            scale_14=self["Electrostatics"].scale14,
+            scale_15=self["Electrostatics"].scale15,
+        )
+        if "ToolkitAM1BCC" in self.registered_parameter_handlers:
+            electrostatics.cache_charges(
+                partial_charge_method="am1bcc", topology=topology
+            )
+            electrostatics.charges = electrostatics.cache["am1bcc"]
+
+        if "LibraryCharges" in self.registered_parameter_handlers:
+            library_charges = SMIRNOFFLibraryChargeHandler()
+            library_charges.store_matches(self["LibraryCharges"], topology)
+            library_charges.store_potentials(self["LibraryCharges"])
+            sys_out.handlers.update({"LibraryCharges": electrostatics})  # type: ignore[dict-item]
+
+            electrostatics.apply_library_charges(library_charges)
+
+        if "ChargeIncrementModel" in self.registered_parameter_handlers:
+            charge_increments = SMIRNOFFChargeIncrementHandler()
+            charge_increments.store_matches(self["ChargeIncrementModel"], topology)
+            charge_increments.store_potentials(self["ChargeIncrementModel"])
+            sys_out.handlers.update({"LibraryCharges": electrostatics})  # type: ignore[dict-item]
+
+            if charge_increments.partial_charge_method not in electrostatics.cache:
+                electrostatics.cache_charges(
+                    partial_charge_method=charge_increments.partial_charge_method,
+                    topology=topology,
+                )
+            electrostatics.charges = electrostatics.cache[
+                charge_increments.partial_charge_method
+            ]
+
+            electrostatics.apply_charge_increments(charge_increments)
+
+        sys_out.handlers.update({"Electrostatics": electrostatics})  # type: ignore[dict-item]
+    # if "Electrostatics" not in self.registered_parameter_handlers:
+    #     if "LibraryCharges" in self.registered_parameter_handlers:
+    #         library_charge_handler = SMIRNOFFLibraryChargeHandler()
+    #         library_charge_handler.store_matches(
+    #             parameter_handler=self["LibraryCharges"], topology=topology
+    #         )
+    #         library_charge_handler.store_potentials(
+    #             parameter_handler=self["LibraryCharges"]
+    #         )
+    #         sys_out.handlers.update({"LibraryCharges": library_charge_handler})
 
     # `box` argument is only overriden if passed `None` and the input topology
     # has box vectors
@@ -71,6 +132,7 @@ def to_openff_system(
 def create_constraint_handler(
     self,
     topology: Topology,
+    bond_handler=None,
     **kwargs,
 ) -> SMIRNOFFConstraintHandler:
     """
@@ -79,11 +141,13 @@ def create_constraint_handler(
     """
     handler = SMIRNOFFConstraintHandler()
     handler.store_matches(parameter_handler=self, topology=topology)
-    handler.store_constraints(parameter_handler=self)
+    handler.store_constraints(parameter_handler=self, bond_handler=bond_handler)
 
     return handler
 
 
+# These functions should all be reduced down to one, possibly with some creative
+# use of functools
 def create_bond_potential_handler(
     self,
     topology: Topology,
@@ -165,19 +229,6 @@ def create_vdw_potential_handler(
     return handler
 
 
-def create_charges(
-    forcefield: ForceField, topology: Topology
-) -> SMIRNOFFElectrostaticsHandler:
-    handler = SMIRNOFFElectrostaticsHandler(
-        scale_13=forcefield["Electrostatics"].scale13,
-        scale_14=forcefield["Electrostatics"].scale14,
-        scale_15=forcefield["Electrostatics"].scale15,
-    )
-    handler.store_charges(forcefield=forcefield, topology=topology)
-
-    return handler
-
-
 def _check_supported_handlers(forcefield: ForceField):
     supported_handlers = {
         "Constraints",
@@ -187,11 +238,13 @@ def _check_supported_handlers(forcefield: ForceField):
         "ImproperTorsions",
         "vdW",
         "Electrostatics",
+        "LibraryCharges",
+        "ChargeIncrementModel",
     }
 
     unsupported = list()
     for handler in forcefield.registered_parameter_handlers:
-        if handler in {"ToolkitAM1BCC", "LibraryCharges"}:
+        if handler in {"ToolkitAM1BCC"}:
             continue
         if handler not in supported_handlers:
             unsupported.append(handler)

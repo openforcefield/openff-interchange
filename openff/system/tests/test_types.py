@@ -7,7 +7,9 @@ from openff.units import unit
 from pydantic import ValidationError
 from simtk import unit as omm_unit
 
-from openff.system.types import ArrayQuantity, DefaultModel, FloatQuantity
+from openff.system.exceptions import UnitValidationError
+from openff.system.models import DefaultModel
+from openff.system.types import ArrayQuantity, FloatQuantity
 
 
 class TestQuantityTypes:
@@ -53,7 +55,8 @@ class TestQuantityTypes:
             a: FloatQuantity["atomic_mass_constant"]
 
         with pytest.raises(
-            ValueError, match=r"Could not validate data of type .*[bool|list].*"
+            ValidationError,
+            match=r"Could not validate data of type .*[bool|list].*",
         ):
             Model(a=val)
 
@@ -61,6 +64,7 @@ class TestQuantityTypes:
         class Molecule(DefaultModel):
             masses: ArrayQuantity["atomic_mass_constant"]
             charges: ArrayQuantity["elementary_charge"]
+            other: ArrayQuantity
             foo: ArrayQuantity
             bar: ArrayQuantity["degree"]
             baz: ArrayQuantity["second"]
@@ -68,17 +72,19 @@ class TestQuantityTypes:
         m = Molecule(
             masses=[16, 1, 1],
             charges=np.asarray([-1, 0.5, 0.5]),
+            other=[2.0, 2.0] * omm_unit.second,
             foo=np.array([2.0, -2.0, 0.0]) * unit.nanometer,
             bar=[0, 90, 180],
             baz=np.array([3, 2, 1]).tobytes(),
         )
 
         assert json.loads(m.json()) == {
-            "masses": '{"val": [16, 1, 1], "unit": "m_u"}',
-            "charges": '{"val": [-1.0, 0.5, 0.5], "unit": "e"}',
-            "foo": '{"val": [2.0, -2.0, 0.0], "unit": "nm"}',
-            "bar": '{"val": [0, 90, 180], "unit": "deg"}',
-            "baz": '{"val": [3, 2, 1], "unit": "s"}',
+            "masses": '{"val": [16, 1, 1], "unit": "atomic_mass_constant"}',
+            "charges": '{"val": [-1.0, 0.5, 0.5], "unit": "elementary_charge"}',
+            "other": '{"val": [2.0, 2.0], "unit": "second"}',
+            "foo": '{"val": [2.0, -2.0, 0.0], "unit": "nanometer"}',
+            "bar": '{"val": [0, 90, 180], "unit": "degree"}',
+            "baz": '{"val": [3, 2, 1], "unit": "second"}',
         }
 
         parsed = Molecule.parse_raw(m.json())
@@ -99,7 +105,7 @@ class TestQuantityTypes:
             a: ArrayQuantity["atomic_mass_constant"]
 
         with pytest.raises(
-            ValueError, match=r"Could not validate data of type .*[bool|int].*"
+            ValidationError, match=r"Could not validate data of type .*[bool|int].*"
         ):
             Model(a=val)
 
@@ -119,6 +125,22 @@ class TestQuantityTypes:
         assert type(subject.age.m) == float
         assert type(subject.height.m) == float
         assert type(subject.doses.m) == np.ndarray
+
+    def test_setters(self):
+        class SimpleModel(DefaultModel):
+            data: ArrayQuantity["second"]
+
+        reference = SimpleModel(data=[3, 2, 1])
+        model = SimpleModel(**reference.dict())
+
+        for new_data in [
+            [3, 2, 1] * unit.second,
+            [3, 2, 1] * omm_unit.second,
+            np.asarray([3, 2, 1]) * omm_unit.second,
+            [3, 2, 1] * unyt.second,
+        ]:
+            model.data = new_data
+            assert all(model.data == reference.data)
 
     def test_float_and_quantity_type(self):
         class MixedModel(DefaultModel):
@@ -185,4 +207,15 @@ class TestQuantityTypes:
             m.time = 1 * unit.gram
 
         with pytest.raises(ValidationError, match="1 validation error for Model"):
-            m.lengths = 1 * unit.hour
+            m.lengths = 1 * unit.watt
+
+
+def test_from_omm_quantity():
+    from openff.system.types import _from_omm_quantity
+
+    from_list = _from_omm_quantity([1, 0] * omm_unit.second)
+    from_array = _from_omm_quantity(np.asarray([1, 0]) * omm_unit.second)
+    assert all(from_array == from_list)
+
+    with pytest.raises(UnitValidationError):
+        _from_omm_quantity(True * omm_unit.femtosecond)

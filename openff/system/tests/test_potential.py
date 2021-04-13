@@ -6,6 +6,7 @@ from openff.units import unit
 from simtk import unit as omm_unit
 
 from openff.system.components.potentials import PotentialHandler
+from openff.system.models import TopologyKey
 from openff.system.tests.base_test import BaseTest
 
 
@@ -40,7 +41,8 @@ class TestBondPotentialHandler(BaseTest):
         forcefield.register_parameter_handler(bond_handler)
         bond_potentials = forcefield["Bonds"].create_potential(top)
 
-        pot = bond_potentials.potentials[bond_potentials.slot_map["(0, 1)"]]
+        top_key = TopologyKey(atom_indices=(0, 1))
+        pot = bond_potentials.potentials[bond_potentials.slot_map[top_key]]
 
         kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
         assert pot.parameters["k"].to(kcal_mol_a2).magnitude == pytest.approx(1.5)
@@ -63,7 +65,8 @@ class TestBondPotentialHandler(BaseTest):
         forcefield.register_parameter_handler(angle_handler)
         angle_potentials = forcefield["Angles"].create_potential(top)
 
-        pot = angle_potentials.potentials[angle_potentials.slot_map["(0, 1, 2)"]]
+        top_key = TopologyKey(atom_indices=(0, 1, 2))
+        pot = angle_potentials.potentials[angle_potentials.slot_map[top_key]]
 
         kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
         assert pot.parameters["k"].to(kcal_mol_rad2).magnitude == pytest.approx(2.5)

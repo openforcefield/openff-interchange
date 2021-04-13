@@ -13,11 +13,12 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
         os: [macOS-latest, ubuntu-latest]
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.7, 3.8, 3.9]
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
@@ -35,6 +36,12 @@ jobs:
         channel-priority: true
         environment-file: devtools/conda-envs/test_env.yaml
         auto-activate-base: false
+
+    - name: Install development version of OpenFF Recharge
+      shell: bash -l {0}
+      run: |
+        mamba install --only-deps openff-recharge -c conda-forge -c omnia
+        python -m pip install git+https://github.com/openforcefield/openff-recharge.git
 
     - name: Additional info about the build
       shell: bash
@@ -62,7 +69,7 @@ jobs:
     - name: Run mypy
       shell: bash -l {0}
       run: |
-        mypy openff --namespace-packages
+        mypy --show-error-codes --namespace-packages -p "openff.system"
 
     - name: Run unit tests
       shell: bash -l {0}

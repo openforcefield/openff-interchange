@@ -46,14 +46,14 @@ def to_gro(openff_sys: System, file_path: Path):
         # Check for rectangular
         if (box == np.diag(np.diagonal(box))).all():
             for i in range(3):
-                gro.write("{0:11.7f}".format(box[i, i]))
+                gro.write("{:11.7f}".format(box[i, i]))
         else:
             for i in range(3):
-                gro.write("{0:11.7f}".format(box[i, i]))
+                gro.write("{:11.7f}".format(box[i, i]))
             for i in range(3):
                 for j in range(3):
                     if i != j:
-                        gro.write("{0:11.7f}".format(box[i, j]))
+                        gro.write("{:11.7f}".format(box[i, j]))
 
         gro.write("\n")
 
@@ -84,7 +84,7 @@ def _write_top_defaults(openff_sys: System, top_file: IO):
     top_file.write("[ defaults ]\n")
     top_file.write("; nbfunc\tcomb-rule\tgen-pairs\tfudgeLJ\tfudgeQQ\n")
     top_file.write(
-        "{0:6d}\t{1:6s}\t{2:6s} {3:8.6f} {4:8.6f}\n\n".format(
+        "{:6d}\t{:6s}\t{:6s} {:8.6f} {:8.6f}\n\n".format(
             # self.system.nonbonded_function,
             # self.lookup_gromacs_combination_rules[self.system.combination_rule],
             # self.system.genpairs,
@@ -130,7 +130,7 @@ def _write_atomtypes(openff_sys: System, top_file: IO) -> Dict:
         epsilon = parameters["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude  # type: ignore
         top_file.write(
             # "{0:<11s} {1:5s} {2:6d} {3:18.8f} {4:18.8f} {5:5s} {6:18.8e} {7:18.8e}".format(
-            "{0:<11s} {1:6d} {2:18.8f} {3:18.8f} {4:5s} {5:18.8e} {6:18.8e}".format(
+            "{:<11s} {:6d} {:18.8f} {:18.8f} {:5s} {:18.8e} {:18.8e}".format(
                 atom_type,  # atom type
                 # "XX",  # atom "bonding type", i.e. bond class
                 atom.atomic_number,
@@ -167,8 +167,8 @@ def _write_atoms(openff_sys: System, top_file: IO, typemap: Dict):
             openff_sys.handlers["Electrostatics"].charge_map[str((atom_idx,))].magnitude  # type: ignore
         )
         top_file.write(
-            "{0:6d} {1:18s} {2:6d} {3:8s} {4:8s} {5:6d} "
-            "{6:18.8f} {7:18.8f}\n".format(
+            "{:6d} {:18s} {:6d} {:8s} {:8s} {:6d} "
+            "{:18.8f} {:18.8f}\n".format(
                 atom_idx + 1,
                 atom_type,
                 1,  # residue_name,
@@ -203,7 +203,7 @@ def _write_bonds(openff_sys: System, top_file: IO):
         length = params["length"].to(unit.nanometer).magnitude
 
         top_file.write(
-            "{0:7d} {1:7d} {2:4s} {3:18.8e} {4:18.8e}\n".format(
+            "{:7d} {:7d} {:4s} {:18.8e} {:18.8e}\n".format(
                 indices[0] + 1,  # atom i
                 indices[1] + 1,  # atom j
                 str(1),  # bond type (functional form)
@@ -230,7 +230,7 @@ def _write_angles(openff_sys: System, top_file: IO):
         theta = params["angle"].to(unit.degree).magnitude
 
         top_file.write(
-            "{0:7d} {1:7d} {2:7d} {3:4s} {4:18.8e} {5:18.8e}\n".format(
+            "{:7d} {:7d} {:7d} {:4s} {:18.8e} {:18.8e}\n".format(
                 indices[0] + 1,  # atom i
                 indices[1] + 1,  # atom j
                 indices[2] + 1,  # atom k
@@ -264,7 +264,7 @@ def _write_dihedrals(openff_sys: System, top_file: IO):
         phase = params["phase"].to(unit.degree).magnitude
         idivf = int(params["idivf"])
         top_file.write(
-            "{0:7d} {1:7d} {2:7d} {3:7d} {4:6d} {5:18.8e} {6:18.8e} {7:18.8e}\n".format(
+            "{:7d} {:7d} {:7d} {:7d} {:6d} {:18.8e} {:18.8e} {:18.8e}\n".format(
                 indices[0] + 1,
                 indices[1] + 1,
                 indices[2] + 1,
@@ -286,7 +286,7 @@ def _write_dihedrals(openff_sys: System, top_file: IO):
         phase = params["phase"].to(unit.degree).magnitude
         idivf = int(params["idivf"])
         top_file.write(
-            "{0:7d} {1:7d} {2:7d} {3:7d} {4:6d} {5:18.8e} {6:18.8e} {7:18.8e}\n".format(
+            "{:7d} {:7d} {:7d} {:7d} {:6d} {:18.8e} {:18.8e} {:18.8e}\n".format(
                 indices[0] + 1,
                 indices[1] + 1,
                 indices[2] + 1,

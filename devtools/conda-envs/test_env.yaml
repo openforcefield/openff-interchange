@@ -11,13 +11,17 @@ dependencies:
   - openmm
   - openff-toolkit
   - jax
+  - mdtraj
   - ele
     # Testing
   - pytest
   - pytest-cov
   - codecov
   - nbval
-  - mypy =0.790
+  - mypy
   - unyt
   - intermol
-  - gromacs
+  - gromacs >=2021
+  - lammps
+  - mbuild
+  - foyer>=0.8.0

@@ -34,21 +34,22 @@ class ToolkitTopologyConformersNotFoundError(Exception):
             msg += f"The molecule lacking a conformer is {self.mol}"
 
 
-class JAXNotInstalledError(ImportError):
+class MissingDependencyError(BaseException):
     """
-    Exception for when JAX is called, but not installed
+    Exception for when an optional dependency is needed but not installed
+
     """
 
-    def __str__(self):
-        msg = (
-            "\nThis function requires JAX, which was not found to be installed."
-            "\nInstall it with `conda install jax -c conda-forge` or"
-            "\n`pip install --upgrade pip && pip install --upgrade jax jaxlib`."
+    def __init__(self, package_name):
+        self.msg = (
+            f"Missing dependency {package_name}. Try installing it "
+            f"with\n\n$ conda install {package_name} -c conda-forge"
         )
-        return msg
+
+        super().__init__(self.msg)
 
 
-class InvalidBoxError(TypeError):
+class InvalidBoxError(ValueError):
     """
     Generic exception for errors reading box data
     """
@@ -57,6 +58,12 @@ class InvalidBoxError(TypeError):
 class InterMolEnergyComparisonError(AssertionError):
     """
     Exception for when energies derived from InterMol do not match
+    """
+
+
+class NonbondedEnergyError(AssertionError):
+    """
+    Exception for when non-bonded energies computed from different objects differ
     """
 
 
@@ -75,6 +82,12 @@ class UnsupportedCutoffMethodError(BaseException):
 class UnsupportedParameterError(ValueError):
     """
     Exception for parameters having unsupported values, i.e. non-1.0 idivf
+    """
+
+
+class UnsupportedBoxError(ValueError):
+    """
+    Exception for processing an unsupported box, probably non-orthogonal
     """
 
 
@@ -104,4 +117,71 @@ class MissingBoxError(BaseException):
 class MissingPositionsError(BaseException):
     """
     Exception for when positions are needed but missing
+    """
+
+
+class MissingParametersError(BaseException):
+    """
+    Exception for when parameters are needed but missing
+    """
+
+
+class MissingUnitError(ValueError):
+    """
+    Exception for data missing a unit tag
+    """
+
+
+class UnitValidationError(ValueError):
+    """
+    Exception for bad behavior when validating unit-tagged data
+    """
+
+
+class NonbondedCompatibilityError(BaseException):
+    """
+    Exception for unsupported combination of nonbonded methods
+    """
+
+
+class MissingNonbondedCompatibilityError(BaseException):
+    """
+    Exception for uncovered combination of nonbonded methods
+    """
+
+
+class InternalInconsistencyError(BaseException):
+    """
+    Fallback exception for bad behavior. These should not be reached but
+    are raised to safeguard against problematic edge cases silently passing.
+    """
+
+
+class GMXRunError(BaseException):
+    """
+    Exception for when a GROMACS subprocess fails.
+    """
+
+
+class GMXGromppError(GMXRunError):
+    """
+    Exception for when `gmx grompp` fails.
+    """
+
+
+class GMXMdrunError(GMXRunError):
+    """
+    Exception for when `gmx mdrun` fails.
+    """
+
+
+class GMXEnergyError(GMXRunError):
+    """
+    Exception for when `gmx energy` fails.
+    """
+
+
+class LAMMPSRunError(BaseException):
+    """
+    Exception for when a LAMMPS subprocess fails.
     """

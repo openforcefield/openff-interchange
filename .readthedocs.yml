@@ -1,0 +1,18 @@
+# .readthedocs.yml
+
+version: 2
+
+build:
+  image: latest
+
+sphinx:
+  configuration: docs/conf.py
+
+python:
+  version: 3.8
+  install:
+    - method: setuptools
+      path: .
+
+conda:
+  environment: docs/environment.yml
