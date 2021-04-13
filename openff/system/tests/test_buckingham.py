@@ -2,9 +2,9 @@ from math import exp
 
 import pytest
 from openff.toolkit.topology import Molecule, Topology
+from openff.units import unit
 from scipy.constants import Avogadro
 
-from openff.system import unit
 from openff.system.components.misc import BuckinghamvdWHandler
 from openff.system.components.potentials import Potential
 from openff.system.components.smirnoff import ElectrostaticsMetaHandler

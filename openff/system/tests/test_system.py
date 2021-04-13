@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule
 
-from openff.system import unit
 from openff.system.stubs import ForceField
+from openff.system.units import unit
 
 
 def test_getitem():

@@ -4,8 +4,8 @@ from typing import IO, TYPE_CHECKING, Dict, Union
 import ele
 import numpy as np
 from openff.toolkit.topology import FrozenMolecule, Molecule, Topology
+from openff.units import unit
 
-from openff.system import unit
 from openff.system.exceptions import UnsupportedExportError
 from openff.system.models import TopologyKey
 

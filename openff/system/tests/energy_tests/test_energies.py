@@ -2,10 +2,10 @@ import mbuild as mb
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
+from openff.units import unit
 from simtk import openmm
 from simtk import unit as omm_unit
 
-from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import (
     _get_mdp_file,

@@ -2,9 +2,9 @@ from pathlib import Path
 from typing import IO, Dict, Union
 
 import numpy as np
+from openff.units import unit
 from simtk import unit as omm_unit
 
-from openff.system import unit
 from openff.system.components.system import System
 from openff.system.exceptions import UnsupportedExportError
 from openff.system.models import TopologyKey
