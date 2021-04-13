@@ -79,12 +79,12 @@ class TestQuantityTypes:
         )
 
         assert json.loads(m.json()) == {
-            "masses": '{"val": [16, 1, 1], "unit": "atomic_mass_constant"}',
-            "charges": '{"val": [-1.0, 0.5, 0.5], "unit": "elementary_charge"}',
-            "other": '{"val": [2.0, 2.0], "unit": "second"}',
-            "foo": '{"val": [2.0, -2.0, 0.0], "unit": "nanometer"}',
-            "bar": '{"val": [0, 90, 180], "unit": "degree"}',
-            "baz": '{"val": [3, 2, 1], "unit": "second"}',
+            "masses": '{"val": [16, 1, 1], "unit": "m_u"}',
+            "charges": '{"val": [-1.0, 0.5, 0.5], "unit": "e"}',
+            "other": '{"val": [2.0, 2.0], "unit": "s"}',
+            "foo": '{"val": [2.0, -2.0, 0.0], "unit": "nm"}',
+            "bar": '{"val": [0, 90, 180], "unit": "deg"}',
+            "baz": '{"val": [3, 2, 1], "unit": "s"}',
         }
 
         parsed = Molecule.parse_raw(m.json())
@@ -207,7 +207,7 @@ class TestQuantityTypes:
             m.time = 1 * unit.gram
 
         with pytest.raises(ValidationError, match="1 validation error for Model"):
-            m.lengths = 1 * unit.watt
+            m.lengths = 1 * unit.joule
 
 
 def test_from_omm_quantity():
