@@ -22,7 +22,9 @@ class TestParmEd(BaseTest):
         openff_sys = System._from_parmed(original)
         openff_sys.topology.mdtop = md.Topology.from_openmm(gro.topology)
 
-        #  Check that residues are stored ...
+        #  Some sanity checks, including that residues are stored ...
+        assert openff_sys.topology._topology_molecules[0].n_atoms == 29
+        assert openff_sys.topology.n_topology_molecules == 1
         assert openff_sys.topology.mdtop.n_residues == 4
 
         # ... and written out

@@ -217,7 +217,7 @@ def _to_parmed(off_system: "System") -> pmd.Structure:
     for res in structure.residues:
         res.name = "FOO"
 
-    if off_system.positions:
+    if off_system.positions is not None:
         structure.positions = off_system.positions.to(unit.angstrom).magnitude  # type: ignore[attr-defined]
 
         for idx, pos in enumerate(structure.positions):
@@ -259,7 +259,7 @@ def _from_parmed(cls, structure) -> "System":
     # inefficiency of putting everything into on OFFMol ...
 
     mol = Molecule()
-    mol.name = structure.name
+    mol.name = getattr(structure, "name", "Mol")
 
     for res in structure.residues:
         # ... however, MDTraj's Topology class only stores residues, not molecules,
@@ -311,10 +311,11 @@ def _from_parmed(cls, structure) -> "System":
     ref_mol = FrozenMolecule(mol)
     # This doesn't work because molecule hashing requires valid SMILES
     # top._reference_molecule_to_topology_molecules[ref_mol] = []
+    # so just tack it on for now
+    top._reference_mm_molecule = ref_mol
     top_mol = TopologyMolecule(reference_molecule=ref_mol, topology=top)
     top._topology_molecules.append(top_mol)
     # top._reference_molecule_to_topology_molecules[ref_mol].append(top_mol)
-
     mdtop._chains.append(main_chain)
 
     if hasattr(structure, "topology"):

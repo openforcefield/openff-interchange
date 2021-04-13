@@ -104,6 +104,8 @@ def to_top(openff_sys: "System", file_path: Union[Path, str]):
         molecule_map = _build_molecule_map(openff_sys.topology)
         for mol_name, mol_data in molecule_map.items():
             # If the molecule is water ...
+            if isinstance(mol_data["reference_molecule"], FrozenMolecule):
+                pass
             if mol_data["reference_molecule"].is_isomorphic_with(
                 Molecule.from_smiles("O")
             ):
@@ -119,20 +121,31 @@ def to_top(openff_sys: "System", file_path: Union[Path, str]):
 def _build_molecule_map(topology: "Topology") -> Dict:
     molecule_mapping = dict()
     counter = 0
-    for ref_mol in topology.reference_molecules:
-        if ref_mol.name == "":
-            molecule_name = "MOL" + str(counter)
-            counter += 1
-        else:
-            molecule_name = ref_mol.name
-        num_ref_molecule = len(
-            topology._reference_molecule_to_topology_molecules[ref_mol]
-        )
+    if topology.n_reference_molecules > 0:
+        for ref_mol in topology.reference_molecules:
+            if ref_mol.name == "":
+                molecule_name = "MOL" + str(counter)
+                counter += 1
+            else:
+                molecule_name = ref_mol.name
+            num_ref_molecule = len(
+                topology._reference_molecule_to_topology_molecules[ref_mol]
+            )
+            molecule_mapping.update(
+                {
+                    molecule_name: {
+                        "reference_molecule": ref_mol,
+                        "n_mols": num_ref_molecule,
+                    }
+                }
+            )
+    else:
+        # Handle case of _reference_mm_molecule hack
         molecule_mapping.update(
             {
-                molecule_name: {
-                    "reference_molecule": ref_mol,
-                    "n_mols": num_ref_molecule,
+                topology._reference_mm_molecule.name: {
+                    "reference_molecule": topology._reference_mm_molecule,
+                    "n_mols": 1,
                 }
             }
         )
@@ -216,8 +229,15 @@ def _write_atomtypes_lj(openff_sys: "System", top_file: IO, typemap: Dict):
         ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n"
     )
 
+    use_mm_molecule = openff_sys.topology.n_reference_molecules == 0
+
     for atom_idx, atom_type in typemap.items():
-        atom = openff_sys.topology.atom(atom_idx)  # type: ignore
+        # TODO: Directly look up topology.atom(atom_idx) once it can store
+        # reference molecules with invalid SMILES
+        if use_mm_molecule:
+            atom = openff_sys.topology._reference_mm_molecule.atoms[atom_idx]  # type: ignore
+        else:
+            atom = openff_sys.topology.atom(atom_idx)  # type: ignore
         element = ele.element_from_atomic_number(atom.atomic_number)
         parameters = _get_lj_parameters(openff_sys, atom_idx)
         sigma = parameters["sigma"].to(unit.nanometer).magnitude
@@ -287,7 +307,12 @@ def _write_atoms(
     top_file.write(";num, type, resnum, resname, atomname, cgnr, q, m\n")
 
     ref_mol = mol_data["reference_molecule"]
-    top_mol = off_sys.topology._reference_molecule_to_topology_molecules[ref_mol][0]  # type: ignore
+    if isinstance(ref_mol, Molecule):
+        top_mol = off_sys.topology._topology_molecules[ref_mol][0]  # type: ignore
+    elif isinstance(ref_mol, FrozenMolecule):
+        top_mol = off_sys.topology._topology_molecules[0]  # type: ignore[union-attr]
+    else:
+        raise UnsupportedExportError("Found a non-Molecule-like reference molecule")
 
     offset = top_mol.atom_start_topology_index
 
@@ -333,7 +358,10 @@ def _write_bonds(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule):
 
     bond_handler = openff_sys.handlers["Bonds"]
 
-    top_mol = openff_sys.topology._reference_molecule_to_topology_molecules[ref_mol][0]  # type: ignore
+    if openff_sys.topology._reference_molecule_to_topology_molecules:  # type: ignore[union-attr]
+        top_mol = openff_sys.topology._reference_molecule_to_topology_molecules[ref_mol][0]  # type: ignore
+    else:
+        top_mol = openff_sys.topology._topology_molecules[0]  # type: ignore[union-attr]
 
     offset = top_mol.atom_start_topology_index
 
@@ -374,7 +402,10 @@ def _write_angles(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule):
     top_file.write("[ angles ]\n")
     top_file.write("; ai\taj\tak\tfunc\tr\tk\n")
 
-    top_mol = openff_sys.topology._reference_molecule_to_topology_molecules[ref_mol][0]  # type: ignore
+    if openff_sys.topology._reference_molecule_to_topology_molecules:  # type: ignore[union-attr]
+        top_mol = openff_sys.topology._reference_molecule_to_topology_molecules[ref_mol][0]  # type: ignore
+    else:
+        top_mol = openff_sys.topology._topology_molecules[0]  # type: ignore[union-attr]
 
     offset = top_mol.atom_start_topology_index
 
@@ -416,7 +447,10 @@ def _write_dihedrals(top_file: IO, openff_sys: "System", ref_mol: FrozenMolecule
     top_file.write("[ dihedrals ]\n")
     top_file.write(";    i      j      k      l   func\n")
 
-    top_mol = openff_sys.topology._reference_molecule_to_topology_molecules[ref_mol][0]  # type: ignore
+    if openff_sys.topology._reference_molecule_to_topology_molecules:  # type: ignore[union-attr]
+        top_mol = openff_sys.topology._reference_molecule_to_topology_molecules[ref_mol][0]  # type: ignore
+    else:
+        top_mol = openff_sys.topology._topology_molecules[0]  # type: ignore[union-attr]
 
     offset = top_mol.atom_start_topology_index
 
