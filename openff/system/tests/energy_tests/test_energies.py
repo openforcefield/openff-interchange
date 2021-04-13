@@ -175,6 +175,7 @@ def test_argon(n_mol):
     )
 
 
+@pytest.mark.skip("Skip until residues are matched between gro and top")
 @pytest.mark.parametrize(
     "toolkit_file_path",
     [

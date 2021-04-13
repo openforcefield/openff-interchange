@@ -229,7 +229,7 @@ def _write_atomtypes_lj(openff_sys: "System", top_file: IO, typemap: Dict):
         ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n"
     )
 
-    use_mm_molecule = openff_sys.topology.n_reference_molecules == 0
+    use_mm_molecule = openff_sys.topology.n_reference_molecules == 0  # type: ignore
 
     for atom_idx, atom_type in typemap.items():
         # TODO: Directly look up topology.atom(atom_idx) once it can store
