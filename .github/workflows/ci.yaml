@@ -67,6 +67,7 @@ jobs:
         pip install git+git://github.com/mattwthompson/openff-units.git
 
     - name: Clone ParmEd tests
+      if: ${{ matrix.os == 'ubuntu-latest' }}
       shell: bash -l {0}
       run: |
         git clone https://github.com/parmed/tests
@@ -81,7 +82,13 @@ jobs:
     - name: Run unit tests
       shell: bash -l {0}
       run: |
-        python -m pytest -v $COV openff/system/tests/
+        python -m pytest -v $COV openff/system/tests/ --ignore=openff/system/tests/parmed/
+
+    - name: Run ParmEd tests
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      shell: bash -l {0}
+      run: |
+        python -m pytest -v $COV openff/system/tests/parmed
 
     - name: Run example notebooks
       shell: bash -l {0}
