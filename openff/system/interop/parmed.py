@@ -5,9 +5,9 @@ import numpy as np
 import parmed as pmd
 from openff.toolkit.topology.molecule import FrozenMolecule
 from openff.toolkit.topology.topology import TopologyMolecule
+from openff.units import unit
 from simtk import openmm
 
-from openff.system import unit
 from openff.system.components.potentials import Potential
 from openff.system.models import PotentialKey, TopologyKey
 
@@ -17,7 +17,6 @@ if TYPE_CHECKING:
         SMIRNOFFProperTorsionHandler,
     )
     from openff.system.components.system import System
-
 
 kcal_mol = unit.Unit("kilocalories / mol")
 kcal_mol_a2 = unit.Unit("kilocalories / mol / angstrom ** 2")

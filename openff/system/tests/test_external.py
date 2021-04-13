@@ -2,10 +2,10 @@ import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
+from openff.units import unit
 from simtk import openmm
 from simtk.unit import nanometer as nm
 
-from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.energy_tests.openmm import (

@@ -1,6 +1,6 @@
+from openff.units import unit as off_unit
 from simtk import openmm, unit
 
-from openff.system import unit as off_unit
 from openff.system.components.potentials import Potential
 from openff.system.exceptions import UnsupportedCutoffMethodError
 from openff.system.interop.parmed import _lj_params_from_potential
@@ -175,12 +175,13 @@ def _process_rb_torsion_forces(openff_sys, openmm_sys):
         indices = top_key.atom_indices
         params = rb_torsion_handler.potentials[pot_key].parameters
 
-        c0 = params["c0"].m_as(off_unit.kilojoule / off_unit.mol)
-        c1 = params["c1"].m_as(off_unit.kilojoule / off_unit.mol)
-        c2 = params["c2"].m_as(off_unit.kilojoule / off_unit.mol)
-        c3 = params["c3"].m_as(off_unit.kilojoule / off_unit.mol)
-        c4 = params["c4"].m_as(off_unit.kilojoule / off_unit.mol)
-        c5 = params["c5"].m_as(off_unit.kilojoule / off_unit.mol)
+        c0 = params["C0"].m_as(off_unit.kilojoule / off_unit.mol)
+        c1 = params["C1"].m_as(off_unit.kilojoule / off_unit.mol)
+        c2 = params["C2"].m_as(off_unit.kilojoule / off_unit.mol)
+        c3 = params["C3"].m_as(off_unit.kilojoule / off_unit.mol)
+        c4 = params["C4"].m_as(off_unit.kilojoule / off_unit.mol)
+        c5 = params["C5"].m_as(off_unit.kilojoule / off_unit.mol)
+
         rb_force.addTorsion(
             indices[0],
             indices[1],

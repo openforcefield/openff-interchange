@@ -5,9 +5,9 @@ import parmed as pmd
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils.utils import temporary_cd
-from simtk import unit as omm_unit
+from openff.units import unit
+from simtk import unit as simtk_unit
 
-from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import (
     _get_mdp_file,
@@ -73,7 +73,7 @@ def test_internal_gromacs_writers(mol):
 
             reference_energy.compare(
                 internal_energy,
-                custom_tolerances={"Bond": 2e-2 * omm_unit.kilojoule_per_mole},
+                custom_tolerances={"Bond": 2e-2 * simtk_unit.kilojoule_per_mole},
             )
 
 

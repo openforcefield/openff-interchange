@@ -12,9 +12,9 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ProperTorsionHandler,
     vdWHandler,
 )
+from openff.units import unit
 from simtk import unit as omm_unit
 
-from openff.system import unit
 from openff.system.components.potentials import Potential, PotentialHandler
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import FloatQuantity
