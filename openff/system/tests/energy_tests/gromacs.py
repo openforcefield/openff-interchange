@@ -151,19 +151,38 @@ def _run_gmx_energy(
     return report
 
 
-def _get_gmx_energy_nonbonded(gmx_energies: Dict):
+def _get_gmx_energy_nonbonded(gmx_energies: Dict, electrostatics: bool):
     """Get the total nonbonded energy from a set of GROMACS energies."""
     gmx_nonbonded = 0.0 * omm_unit.kilojoule_per_mole
-    for key in ["LJ (SR)", "Coulomb (SR)", "Coul. recip.", "Disper. corr."]:
+    for key in ["LJ (SR)", "Disper. corr.", "Buck.ham (SR)"]:
         try:
             gmx_nonbonded += gmx_energies[key]
         except KeyError:
             pass
 
+    if electrostatics:
+        for key in ["Coulomb (SR)", "Coul. recip."]:
+            try:
+                gmx_nonbonded += gmx_energies[key]
+            except KeyError:
+                pass
+
     return gmx_nonbonded
 
 
-def _parse_gmx_energy(xvg_path, electrostatics=True):
+def _get_gmx_energy_torsion(gmx_energies: Dict):
+    """Canonicalize torsion energies from a set of GROMACS energies."""
+    gmx_torsion = 0.0 * omm_unit.kilojoule_per_mole
+    for key in ["Torsion", "Ryckaert-Bell."]:
+        try:
+            gmx_torsion += gmx_energies[key]
+        except KeyError:
+            pass
+
+    return gmx_torsion
+
+
+def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
     """Parse an `.xvg` file written by `gmx energy`."""
     energies, _ = _group_energy_terms(xvg_path)
 
@@ -192,31 +211,15 @@ def _parse_gmx_energy(xvg_path, electrostatics=True):
 
     report = EnergyReport()
 
-    report.energies.update(
+    report.update_energies(
         {
             "Bond": energies["Bond"],
             "Angle": energies["Angle"],
-            "Torsion": energies["Proper Dih."],
+            "Torsion": _get_gmx_energy_torsion(energies),
+            "Nonbonded": _get_gmx_energy_nonbonded(
+                energies, electrostatics=electrostatics
+            ),
         }
     )
-
-    if "Ryckaert-Bell." in energies:
-        report.energies["Torsion"] += energies["Ryckaert-Bell."]
-
-    if electrostatics is True:
-        report.energies.update(
-            {
-                "Nonbonded": _get_gmx_energy_nonbonded(energies),
-            }
-        )
-    elif electrostatics is False:
-        report.energies.update(
-            {
-                "Nonbonded": energies["LJ (SR)"],
-            }
-        )
-
-    if "Buck.ham (SR)" in energies:
-        report.energies["Nonbonded"] += energies["Buck.ham (SR)"]
 
     return report

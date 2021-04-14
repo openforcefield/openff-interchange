@@ -1,9 +1,11 @@
 from openff.toolkit.topology import Molecule
-from simtk import unit as omm_unit
+from openff.units import unit
 
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.amber import get_amber_energies
 from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+
+kj_mol = unit.kilojoule / unit.mol
 
 
 def test_amber_energy():
@@ -23,9 +25,9 @@ def test_amber_energy():
     omm_energies.compare(
         amb_energies,
         custom_tolerances={
-            "Bond": 3.6 * omm_unit.kilojoule_per_mole,
-            "Angle": 0.2 * omm_unit.kilojoule_per_mole,
-            "Torsion": 1.9 * omm_unit.kilojoule_per_mole,
-            "Nonbonded": 34.9 * omm_unit.kilojoule_per_mole,
+            "Bond": 3.6 * kj_mol,
+            "Angle": 0.2 * kj_mol,
+            "Torsion": 1.9 * kj_mol,
+            "Nonbonded": 34.9 * kj_mol,
         },
     )

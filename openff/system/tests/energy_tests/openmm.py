@@ -1,3 +1,5 @@
+from typing import Dict
+
 import numpy as np
 from simtk import openmm, unit
 
@@ -155,19 +157,35 @@ def _get_openmm_energies(
 
     report = EnergyReport()
 
-    report.energies.update(
+    report.update_energies(
         {
             "Bond": omm_energies["HarmonicBondForce"],
             "Angle": omm_energies["HarmonicAngleForce"],
-            "Torsion": omm_energies["PeriodicTorsionForce"],
-            "Nonbonded": omm_energies["NonbondedForce"],
+            "Torsion": _canonicalize_torsion_energies(omm_energies),
+            "Nonbonded": _canonicalize_nonbonded_energies(omm_energies),
         }
     )
 
-    if "CustomNonbondedForce" in omm_energies:
-        report.energies["Nonbonded"] += omm_energies["CustomNonbondedForce"]
-
-    if "RBTorsionForce" in omm_energies:
-        report.energies["Torsion"] += omm_energies["RBTorsionForce"]
-
     return report
+
+
+def _canonicalize_nonbonded_energies(energies: Dict):
+    omm_nonbonded = 0.0 * kj_mol
+    for key in ["NonbondedForce", "CustomNonbondedForce"]:
+        try:
+            omm_nonbonded += energies[key]
+        except KeyError:
+            pass
+
+    return omm_nonbonded
+
+
+def _canonicalize_torsion_energies(energies: Dict):
+    omm_torsion = 0.0 * kj_mol
+    for key in ["PeriodicTorsionForce", "RBTorsionForce"]:
+        try:
+            omm_torsion += energies[key]
+        except KeyError:
+            pass
+
+    return omm_torsion

@@ -316,4 +316,4 @@ def test_process_rb_torsions():
         top_file="eth.top", gro_file="eth.gro", mdp_file=_get_mdp_file("default")
     )
 
-    assert oplsaa_energies.energies["Torsion"]._value != 0.0
+    assert oplsaa_energies.energies["Torsion"].m != 0.0
