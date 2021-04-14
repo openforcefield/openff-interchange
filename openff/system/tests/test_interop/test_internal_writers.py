@@ -17,6 +17,7 @@ from openff.system.tests.energy_tests.gromacs import (
 
 
 # TODO: Add OC=O
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "mol",
     [
@@ -87,6 +88,7 @@ def compare_gro_files(file1: str, file2: str):
                 assert line1[:10] + line1[15:] == line2[:10] + line2[15:]
 
 
+@pytest.mark.slow
 def test_sanity_grompp():
     """Basic test to ensure that a topology can be processed without errors"""
     mol = Molecule.from_smiles("CC")
@@ -105,6 +107,7 @@ def test_sanity_grompp():
     get_gromacs_energies(off_sys)
 
 
+@pytest.mark.slow
 def test_water_dimer():
     """Test that a water dimer can be written and the files can be grommp'd"""
     from openff.system.utils import get_test_file_path

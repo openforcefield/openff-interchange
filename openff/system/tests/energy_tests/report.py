@@ -1,8 +1,12 @@
 from typing import Dict, Optional
 
-from simtk import unit as omm_unit
+from openff.units import unit
+from pydantic import validator
 
 from openff.system.models import DefaultModel
+from openff.system.types import FloatQuantity
+
+kj_mol = unit.kilojoule / unit.mol
 
 
 class EnergyError(BaseException):
@@ -21,12 +25,22 @@ class EnergyReport(DefaultModel):
     """A lightweight class containing single-point energies as computed by energy tests."""
 
     # TODO: Use FloatQuantity, not float
-    energies: Dict[str, Optional[omm_unit.Quantity]] = {
+    energies: Dict[str, Optional[FloatQuantity]] = {
         "Bond": None,
         "Angle": None,
         "Torsion": None,
         "Nonbonded": None,
     }
+
+    @validator("energies")
+    def validate_energies(cls, v):
+        for key, val in v.items():
+            if not isinstance(val, unit.Quantity):
+                v[key] = FloatQuantity.validate_type(val)
+        return v
+
+    def update_energies(self, new_energies):
+        self.energies.update(self.validate_energies(new_energies))
 
     # TODO: Better way of exposing tolerances
     def compare(self, other: "EnergyReport", custom_tolerances=None):
@@ -41,20 +55,21 @@ class EnergyReport(DefaultModel):
         ----------
         other: EnergyReport
             The other `EnergyReport` to compare energies against
-        custom_tolerances: dict of str: `simtk.unit.Quantity`, optional
+        custom_tolerances: dict of str: `FloatQuantity`, optional
             Custom energy tolerances to use to use in comparisons.
 
         """
-        tolerances: Dict[str, float] = {
-            "Bond": 1e-3 * omm_unit.kilojoule_per_mole,
-            "Angle": 1e-3 * omm_unit.kilojoule_per_mole,
-            "Torsion": 1e-3 * omm_unit.kilojoule_per_mole,
-            "Nonbonded": 1e-3 * omm_unit.kilojoule_per_mole,
+        tolerances: Dict[str, FloatQuantity] = {
+            "Bond": 1e-3 * kj_mol,
+            "Angle": 1e-3 * kj_mol,
+            "Torsion": 1e-3 * kj_mol,
+            "Nonbonded": 1e-3 * kj_mol,
         }
 
         if custom_tolerances is not None:
             tolerances.update(custom_tolerances)
 
+        tolerances = self.validate_energies(tolerances)
         error = dict()
 
         for key in self.energies:

@@ -77,6 +77,7 @@ def openff_pmd_gmx_direct(
     off_sys.to_top(prefix + ".top")
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("smiles", ["C"])
 def test_parmed_openmm(tmpdir, smiles):
     tmpdir.chdir()

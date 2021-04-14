@@ -2,7 +2,8 @@ import foyer
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
-from simtk import unit as omm_unit
+from openff.units import unit
+from simtk import unit as simtk_unit
 
 from openff.system.components.foyer import from_foyer
 from openff.system.tests.base_test import BaseTest
@@ -18,7 +19,7 @@ class TestFoyer(BaseTest):
         top = Topology.from_molecules(molecule)
         oplsaa = foyer.Forcefield(name="oplsaa")
         system = from_foyer(topology=top, ff=oplsaa)
-        system.positions = molecule.conformers[0].value_in_unit(omm_unit.nanometer)
+        system.positions = molecule.conformers[0].value_in_unit(simtk_unit.nanometer)
         system.box = [4, 4, 4]
         return system
 
@@ -29,11 +30,12 @@ class TestFoyer(BaseTest):
         assert oplsaa_system_ethanol["vdW"].scale_14 == 0.5
         assert oplsaa_system_ethanol["Electrostatics"].scale_14 == 0.5
 
+    @pytest.mark.slow
     def test_ethanol_energies(self, oplsaa_system_ethanol):
         gmx_energies = get_gromacs_energies(oplsaa_system_ethanol)
         omm_energies = get_openmm_energies(oplsaa_system_ethanol)
 
         gmx_energies.compare(
             omm_energies,
-            custom_tolerances={"Nonbonded": 40.0 * omm_unit.kilojoule_per_mole},
+            custom_tolerances={"Nonbonded": 40.0 * unit.kilojoule / unit.mole},
         )

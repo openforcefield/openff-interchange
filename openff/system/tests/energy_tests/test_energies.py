@@ -22,6 +22,7 @@ from openff.system.tests.energy_tests.openmm import (
 from openff.system.tests.energy_tests.report import EnergyError
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("constrained", [True, False])
 @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
 @pytest.mark.parametrize("n_mol", [1, 10, 100])
@@ -129,6 +130,7 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
         lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("n_mol", [10, 100])
 def test_argon(n_mol):
     from openff.system.utils import get_test_file_path
@@ -248,6 +250,7 @@ def test_packmol_boxes(toolkit_file_path):
     )
 
 
+@pytest.mark.slow
 def test_water_dimer():
     from openff.system.utils import get_test_file_path
 
@@ -288,6 +291,7 @@ def test_water_dimer():
     lmp_energies.compare(omm_energies)
 
 
+@pytest.mark.slow
 def test_process_rb_torsions():
     """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
 
@@ -316,4 +320,4 @@ def test_process_rb_torsions():
         top_file="eth.top", gro_file="eth.gro", mdp_file=_get_mdp_file("default")
     )
 
-    assert oplsaa_energies.energies["Torsion"]._value != 0.0
+    assert oplsaa_energies.energies["Torsion"].m != 0.0

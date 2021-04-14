@@ -116,6 +116,7 @@ class TestConstraints(BaseTest):
 
 
 class TestChargeAssignment(BaseTest):
+    @pytest.mark.slow
     def test_default_am1bcc_charge_assignment(self, parsley):
         top = Topology.from_molecules(
             [
