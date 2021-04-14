@@ -1,3 +1,4 @@
+import pytest
 from openff.toolkit.topology import Molecule
 from simtk import unit as omm_unit
 
@@ -6,6 +7,7 @@ from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 
 
+@pytest.mark.slow
 def test_openmm_roundtrip():
     mol = Molecule.from_smiles("CCO")
     mol.generate_conformers(n_conformers=1)

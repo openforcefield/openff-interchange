@@ -20,7 +20,7 @@ kj_mol = unit.Unit("kilojoule / mol")
 
 
 class TestRBTorsions(BaseTest):
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="class")
     def ethanol_with_rb_torsions(self):
         mol = Molecule.from_smiles("CC")
         mol.generate_conformers(n_conformers=1)
@@ -60,6 +60,7 @@ class TestRBTorsions(BaseTest):
 
         return out
 
+    @pytest.mark.slow
     def test_rb_torsions(self, ethanol_with_rb_torsions):
         gmx = get_openmm_energies(ethanol_with_rb_torsions, round_positions=3).energies[
             "Torsion"
@@ -68,6 +69,7 @@ class TestRBTorsions(BaseTest):
 
         assert (gmx - omm).m_as(kj_mol) < 1e-6
 
+    @pytest.mark.slow
     @requires_pkg("foyer")
     @requires_pkg("mbuild")
     def test_rb_torsions_vs_foyer(self, ethanol_with_rb_torsions):

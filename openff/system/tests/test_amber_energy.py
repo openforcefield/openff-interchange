@@ -1,3 +1,4 @@
+import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import unit
 
@@ -8,6 +9,7 @@ from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
 kj_mol = unit.kilojoule / unit.mol
 
 
+@pytest.mark.slow
 def test_amber_energy():
     """Basic test to see if the amber energy driver is functional"""
     mol = Molecule.from_smiles("CCO")

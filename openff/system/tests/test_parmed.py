@@ -1,5 +1,6 @@
 import mdtraj as md
 import parmed as pmd
+import pytest
 from simtk import unit as omm_unit
 
 from openff.system.components.system import System
@@ -13,6 +14,7 @@ from openff.system.utils import get_test_file_path
 
 
 class TestParmEd(BaseTest):
+    @pytest.mark.slow
     def test_parmed_roundtrip(self):
         original = pmd.load_file(get_test_file_path("ALA_GLY/ALA_GLY.top"))
         gro = pmd.load_file(get_test_file_path("ALA_GLY/ALA_GLY.gro"))

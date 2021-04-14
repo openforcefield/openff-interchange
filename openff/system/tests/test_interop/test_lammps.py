@@ -11,6 +11,7 @@ from openff.system.tests.energy_tests.lammps import (
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("n_mols", [1, 2])
 @pytest.mark.parametrize(
     "mol",
