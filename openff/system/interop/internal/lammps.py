@@ -3,7 +3,6 @@ from typing import IO, Dict, Union
 
 import numpy as np
 from openff.units import unit
-from simtk import unit as omm_unit
 
 from openff.system.components.system import System
 from openff.system.exceptions import UnsupportedExportError
@@ -17,7 +16,7 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
     if isinstance(file_path, Path):
         path = file_path
 
-    n_atoms = openff_sys.topology.n_topology_atoms  # type: ignore[union-attr]
+    n_atoms = openff_sys.topology.mdtop.n_atoms  # type: ignore[union-attr]
     if "Bonds" in openff_sys.handlers:
         n_bonds = len(openff_sys["Bonds"].slot_map.keys())
     else:
@@ -91,10 +90,10 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
         for atom_type_idx, smirks in atom_type_map.items():
             # Find just one topology atom matching this SMIRKS by vdW
             matched_atom_idx = slot_map_inv[smirks].atom_indices[0]
-            matched_atom = openff_sys.topology.atom(matched_atom_idx)  # type: ignore
-            mass = matched_atom.atom.mass.value_in_unit(omm_unit.dalton)
+            matched_atom = openff_sys.topology.mdtop.atom(matched_atom_idx)  # type: ignore
+            mass = matched_atom.element.mass
 
-            lmp_file.write("{:d}\t{:.8g}\n".format(atom_type_idx + 1, mass))
+            lmp_file.write(f"{atom_type_idx + 1:d}\t{mass:.8g}\n")
 
         lmp_file.write("\n\n")
 
@@ -135,9 +134,7 @@ def _write_pair_coeffs(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
         sigma = params["sigma"].to(unit.angstrom).magnitude
         epsilon = params["epsilon"].to(unit.Unit("kilocalorie / mole")).magnitude
 
-        lmp_file.write(
-            "{:d}\t{:.8g}\t{:.8g}\n".format(atom_type_idx + 1, epsilon, sigma)
-        )
+        lmp_file.write(f"{atom_type_idx + 1:d}\t{epsilon:.8g}\t{sigma:.8g}\n")
 
     lmp_file.write("\n")
 
@@ -234,28 +231,24 @@ def _write_improper_coeffs(lmp_file: IO, openff_sys: System):
 def _write_atoms(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
     lmp_file.write("\nAtoms\n\n")
 
-    molecule_map = dict(enumerate(openff_sys.topology.topology_molecules))  # type: ignore[union-attr]
-    molecule_map_inv = dict({v: k for k, v in molecule_map.items()})
-
     atom_type_map_inv = dict({v: k for k, v in atom_type_map.items()})
 
     electrostatics_handler = openff_sys.handlers["Electrostatics"]
     vdw_hander = openff_sys.handlers["vdW"]
 
-    for atom_idx, atom in enumerate(openff_sys.topology.topology_atoms):  # type: ignore[union-attr]
+    for atom in openff_sys.topology.mdtop.atoms:  # type: ignore[union-attr]
 
-        molecule_idx = molecule_map_inv[atom.topology_molecule]
+        molecule_idx = atom.residue.index
 
-        top_key = TopologyKey(atom_indices=(atom_idx,))
+        top_key = TopologyKey(atom_indices=(atom.index,))
         pot_key = vdw_hander.slot_map[top_key]
         atom_type = atom_type_map_inv[pot_key]
 
-        top_key = TopologyKey(atom_indices=(atom_idx,))
         charge = electrostatics_handler.charges[top_key].magnitude  # type: ignore[attr-defined]
-        pos = openff_sys.positions[atom_idx].to(unit.angstrom).magnitude
+        pos = openff_sys.positions[atom.index].to(unit.angstrom).magnitude
         lmp_file.write(
             "{:d}\t{:d}\t{:d}\t{:.8g}\t{:.8g}\t{:.8g}\t{:.8g}\n".format(
-                atom_idx + 1,
+                atom.index + 1,
                 molecule_idx + 1,
                 atom_type + 1,
                 charge,

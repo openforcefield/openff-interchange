@@ -1,10 +1,11 @@
 import pydantic
 import pytest
-from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
 from openff.units import unit
 from simtk import unit as omm_unit
 
+from openff.system.components.misc import OFFBioTop
 from openff.system.components.potentials import PotentialHandler
 from openff.system.models import TopologyKey
 from openff.system.tests.base_test import BaseTest
@@ -24,7 +25,7 @@ class TestBondPotentialHandler(BaseTest):
             PotentialHandler(name="foo", expression=1, independent_variables="x")
 
     def test_bond_potential_handler(self):
-        top = Topology.from_molecules(Molecule.from_smiles("O=O"))
+        top = OFFBioTop.from_molecules(Molecule.from_smiles("O=O"))
 
         bond_handler = BondHandler(version=0.3)
         bond_parameter = BondHandler.BondType(
@@ -48,7 +49,7 @@ class TestBondPotentialHandler(BaseTest):
         assert pot.parameters["k"].to(kcal_mol_a2).magnitude == pytest.approx(1.5)
 
     def test_angle_potential_handler(self):
-        top = Topology.from_molecules(Molecule.from_smiles("CCC"))
+        top = OFFBioTop.from_molecules(Molecule.from_smiles("CCC"))
 
         angle_handler = AngleHandler(version=0.3)
         angle_parameter = AngleHandler.AngleType(

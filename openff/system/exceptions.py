@@ -55,6 +55,12 @@ class InvalidBoxError(ValueError):
     """
 
 
+class InvalidTopologyError(ValueError):
+    """
+    Generic exception for errors reading chemical topology data
+    """
+
+
 class InterMolEnergyComparisonError(AssertionError):
     """
     Exception for when energies derived from InterMol do not match

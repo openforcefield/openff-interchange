@@ -2,10 +2,11 @@ import importlib
 
 import numpy as np
 import pytest
-from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.topology import Molecule
 from simtk import openmm
 from simtk import unit as omm_unit
 
+from openff.system.components.misc import OFFBioTop
 from openff.system.components.system import System
 from openff.system.exceptions import InterMolEnergyComparisonError
 
@@ -42,7 +43,7 @@ def requires_pkg(pkg_name, reason=None):
 def top_from_smiles(
     smiles: str,
     n_molecules: int = 1,
-) -> Topology:
+) -> OFFBioTop:
     """Create a gas phase OpenFF Topology from a single-molecule SMILES
 
     Parameters
@@ -55,13 +56,13 @@ def top_from_smiles(
 
     Returns
     -------
-    top : opennff.toolkit.topology.Topology
+    top : opennff.system.components.misc.OFFBioTop
         A single-molecule, gas phase-like topology
 
     """
     mol = Molecule.from_smiles(smiles)
     mol.generate_conformers(n_conformers=1)
-    top = Topology.from_molecules(n_molecules * [mol])
+    top = OFFBioTop.from_molecules(n_molecules * [mol])
     # Add dummy box vectors
     # TODO: Revisit if/after Topology.is_periodic
     top.box_vectors = np.eye(3) * 10 * omm_unit.nanometer

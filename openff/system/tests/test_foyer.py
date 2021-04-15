@@ -1,11 +1,13 @@
 import foyer
+import mdtraj as md
 import pytest
-from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.topology import Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from simtk import unit as simtk_unit
 
 from openff.system.components.foyer import from_foyer
+from openff.system.components.misc import OFFBioTop
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
@@ -16,7 +18,8 @@ class TestFoyer(BaseTest):
     def oplsaa_system_ethanol(self):
         molecule = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
         molecule.name = "ETH"
-        top = Topology.from_molecules(molecule)
+        top = OFFBioTop.from_molecules(molecule)
+        top.mdtop = md.Topology.from_openmm(top.to_openmm())
         oplsaa = foyer.Forcefield(name="oplsaa")
         system = from_foyer(topology=top, ff=oplsaa)
         system.positions = molecule.conformers[0].value_in_unit(simtk_unit.nanometer)

@@ -1,6 +1,5 @@
-from typing import Dict, List, Set, Union
+from typing import TYPE_CHECKING, Dict, List, Set, Union
 
-from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from pydantic import validator
 
@@ -8,6 +7,9 @@ from openff.system.exceptions import InvalidExpressionError
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import ArrayQuantity, FloatQuantity
 from openff.system.utils import requires_package
+
+if TYPE_CHECKING:
+    from openff.system.components.misc import OFFBioTop
 
 
 class Potential(DefaultModel):
@@ -47,7 +49,7 @@ class PotentialHandler(DefaultModel):
     def store_matches(
         self,
         parameter_handler: ParameterHandler,
-        topology: Topology,
+        topology: "OFFBioTop",
     ) -> None:
         raise NotImplementedError
 

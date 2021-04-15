@@ -1,11 +1,13 @@
+import mdtraj as md
 import numpy as np
 import pytest
-from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.topology import Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from simtk import openmm
 from simtk.unit import nanometer as nm
 
+from openff.system.components.misc import OFFBioTop
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.energy_tests.openmm import (
@@ -22,7 +24,8 @@ class TestFromOpenMM(BaseTest):
         pdbfile = openmm.app.PDBFile(pdb_file_path)
 
         mol = Molecule.from_smiles("[#18]")
-        top = Topology.from_openmm(pdbfile.topology, unique_molecules=[mol])
+        top = OFFBioTop.from_openmm(pdbfile.topology, unique_molecules=[mol])
+        top.mdtop = md.Topology.from_openmm(top.to_openmm())
         box = pdbfile.topology.getPeriodicBoxVectors()
         box = box.value_in_unit(nm) * unit.nanometer
 
@@ -71,10 +74,11 @@ class TestFromOpenMM(BaseTest):
 
         pdb_file_path = get_data_file_path("systems/packmol_boxes/" + pdb_path)
         pdbfile = openmm.app.PDBFile(pdb_file_path)
-        top = Topology.from_openmm(
+        top = OFFBioTop.from_openmm(
             pdbfile.topology,
             unique_molecules=unique_molecules,
         )
+        top.mdtop = md.Topology.from_openmm(top.to_openmm())
         box = pdbfile.topology.getPeriodicBoxVectors()
         box = box.value_in_unit(nm) * unit.nanometer
 

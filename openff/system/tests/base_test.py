@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 from openff.toolkit.topology.molecule import Molecule
-from openff.toolkit.topology.topology import Topology
 
+from openff.system.components.misc import OFFBioTop
 from openff.system.stubs import ForceField
 from openff.system.tests.utils import top_from_smiles
 from openff.system.utils import get_test_file_path
@@ -34,7 +34,7 @@ class BaseTest:
         """Fixture that builds a simple ammonia topology"""
         mol = Molecule.from_smiles("N")
 
-        return Topology.from_molecules(4 * [mol])
+        return OFFBioTop.from_molecules(4 * [mol])
 
     @pytest.fixture
     def ethanol_top(self):
