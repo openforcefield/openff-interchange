@@ -1,3 +1,4 @@
+import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology.molecule import Molecule
@@ -33,8 +34,9 @@ class BaseTest:
     def ammonia_top(self):
         """Fixture that builds a simple ammonia topology"""
         mol = Molecule.from_smiles("N")
-
-        return OFFBioTop.from_molecules(4 * [mol])
+        top = OFFBioTop.from_molecules(4 * [mol])
+        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        return top
 
     @pytest.fixture
     def ethanol_top(self):

@@ -267,9 +267,12 @@ def _write_bonds(lmp_file: IO, openff_sys: System):
 
     bond_type_map_inv = dict({v: k for k, v in bond_type_map.items()})
 
-    for bond_idx, bond in enumerate(openff_sys.topology.topology_bonds):  # type: ignore[union-attr]
+    for bond_idx, bond in enumerate(openff_sys.topology.mdtop.bonds):  # type: ignore[union-attr]
         # These are "topology indices"
-        indices = tuple(sorted(a.topology_atom_index for a in bond.atoms))
+        indices = (
+            bond.atom1.index,
+            bond.atom2.index,
+        )
         top_key = TopologyKey(atom_indices=indices)
         pot_key = bond_handler.slot_map[top_key]
         bond_type = bond_type_map_inv[pot_key]
@@ -285,6 +288,10 @@ def _write_bonds(lmp_file: IO, openff_sys: System):
 
 
 def _write_angles(lmp_file: IO, openff_sys: System):
+    from openff.system.components.misc import _iterate_angles, _store_bond_partners
+
+    _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
+
     lmp_file.write("\nAngles\n\n")
 
     angle_handler = openff_sys["Angles"]
@@ -292,9 +299,9 @@ def _write_angles(lmp_file: IO, openff_sys: System):
 
     angle_type_map_inv = dict({v: k for k, v in angle_type_map.items()})
 
-    for angle_idx, angle in enumerate(openff_sys.topology.angles):  # type: ignore[union-attr]
+    for angle_idx, angle in enumerate(_iterate_angles(openff_sys.topology.mdtop)):  # type: ignore[union-attr]
         # These are "topology indices"
-        indices = tuple(a.topology_atom_index for a in angle)
+        indices = tuple(a.index for a in angle)
         top_key = TopologyKey(atom_indices=indices)
         pot_key = angle_handler.slot_map[top_key]
         angle_type = angle_type_map_inv[pot_key]
@@ -311,6 +318,10 @@ def _write_angles(lmp_file: IO, openff_sys: System):
 
 
 def _write_propers(lmp_file: IO, openff_sys: System):
+    from openff.system.components.misc import _iterate_propers, _store_bond_partners
+
+    _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
+
     lmp_file.write("\nDihedrals\n\n")
 
     proper_handler = openff_sys["ProperTorsions"]
@@ -318,9 +329,9 @@ def _write_propers(lmp_file: IO, openff_sys: System):
 
     proper_type_map_inv = dict({v: k for k, v in proper_type_map.items()})
 
-    for proper_idx, proper in enumerate(openff_sys.topology.propers):  # type: ignore[union-attr]
+    for proper_idx, proper in enumerate(_iterate_propers(openff_sys.topology.mdtop)):  # type: ignore[union-attr]
         # These are "topology indices"
-        indices = tuple(a.topology_atom_index for a in proper)
+        indices = tuple(a.index for a in proper)
         for top_key, pot_key in proper_handler.slot_map.items():
             if indices == top_key.atom_indices:
 
@@ -339,6 +350,10 @@ def _write_propers(lmp_file: IO, openff_sys: System):
 
 
 def _write_impropers(lmp_file: IO, openff_sys: System):
+    from openff.system.components.misc import _iterate_impropers, _store_bond_partners
+
+    _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
+
     lmp_file.write("\nImpropers\n\n")
 
     improper_handler = openff_sys["ImproperTorsions"]
@@ -346,9 +361,9 @@ def _write_impropers(lmp_file: IO, openff_sys: System):
 
     improper_type_map_inv = dict({v: k for k, v in improper_type_map.items()})
 
-    for improper_idx, improper in enumerate(openff_sys.topology.impropers):  # type: ignore[union-attr]
+    for improper_idx, improper in enumerate(_iterate_impropers(openff_sys.topology.mdtop)):  # type: ignore[union-attr]
         # These are "topology indices"
-        indices = tuple(a.topology_atom_index for a in improper)
+        indices = tuple(a.index for a in improper)
         for top_key, pot_key in improper_handler.slot_map.items():
             if indices == top_key.atom_indices:
 

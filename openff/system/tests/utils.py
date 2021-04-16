@@ -1,5 +1,6 @@
 import importlib
 
+import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule
@@ -63,6 +64,7 @@ def top_from_smiles(
     mol = Molecule.from_smiles(smiles)
     mol.generate_conformers(n_conformers=1)
     top = OFFBioTop.from_molecules(n_molecules * [mol])
+    top.mdtop = md.Topology.from_openmm(top.to_openmm())
     # Add dummy box vectors
     # TODO: Revisit if/after Topology.is_periodic
     top.box_vectors = np.eye(3) * 10 * omm_unit.nanometer

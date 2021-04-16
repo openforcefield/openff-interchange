@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import IO, TYPE_CHECKING, Dict, Union
 
 import ele
-import mdtraj as md
 import numpy as np
 from openff.units import unit
 
@@ -95,16 +94,12 @@ def to_top(openff_sys: "System", file_path: Union[Path, str]):
         typemap = _build_typemap(openff_sys)
         _write_atomtypes(openff_sys, top_file, typemap)
         # TODO: Write [ nonbond_params ] section
-        # top: "OFFBioTop" = openff_sys.topology  # type: ignore[assignment]
-        # molecule_map = _build_molecule_map(top)
 
-        for res in openff_sys.topology.mdtop.residues:  # type: ignore[union-attr]
-            # for mol_name, mol_data in molecule_map.items():
-            # TODO: If the molecule is water, do special water stuff
-            _write_moleculetype(top_file, str(res))
-            _write_atoms(top_file, res, openff_sys, typemap)
-            _write_valence(top_file, res, openff_sys, typemap)
-            # _write_valence(openff_sys, top_file)
+        # TODO: De-duplicate based on molecules
+        # TODO: Handle special case of water
+        _write_moleculetype(top_file)
+        _write_atoms(top_file, openff_sys, typemap)
+        _write_valence(top_file, openff_sys)
         _write_system(top_file, openff_sys)
 
 
@@ -236,45 +231,40 @@ def _write_atomtypes_buck(openff_sys: "System", top_file: IO, typemap: Dict):
         top_file.write("\n")
 
 
-def _write_moleculetype(top_file: IO, mol_name: str, nrexcl: int = 3):
+def _write_moleculetype(top_file: IO):
     """Write the [ moleculetype ] section"""
     top_file.write("[ moleculetype ]\n")
     top_file.write("; Name\tnrexcl\n")
-    top_file.write(f"{mol_name}\t{nrexcl}\n\n")
+    top_file.write("MOL\t3\n\n")
 
 
 def _write_atoms(
     top_file: IO,
-    res: md.core.topology.Residue,
-    off_sys: "System",
+    openff_sys: "System",
     typemap: Dict,
 ):
     """Write the [ atoms ] section for a molecule"""
     top_file.write("[ atoms ]\n")
     top_file.write(";num, type, resnum, resname, atomname, cgnr, q, m\n")
 
-    offset = res.atom(0).index
-
-    for atom in res.atoms:
+    for atom in openff_sys.topology.mdtop.atoms:  # type: ignore
         atom_idx = atom.index
-        atom_idx_in_res = atom.index - offset
-        element_symbol = atom.element.symbol
         mass = atom.element.mass
         atom_type = typemap[atom.index]
         res_idx = atom.residue.index
         res_name = str(atom.residue)
         top_key = TopologyKey(atom_indices=(atom_idx,))
         charge = (
-            off_sys.handlers["Electrostatics"].charges[top_key].magnitude  # type: ignore
+            openff_sys.handlers["Electrostatics"].charges[top_key].magnitude  # type: ignore
         )
         top_file.write(
             "{:6d} {:18s} {:6d} {:8s} {:8s} {:6d} "
             "{:18.8f} {:18.8f}\n".format(
-                atom_idx_in_res + 1,
+                atom_idx + 1,
                 atom_type,
                 res_idx + 1,
                 res_name,
-                element_symbol,
+                atom_type,
                 atom_idx + 1,
                 charge,
                 mass,
@@ -284,17 +274,15 @@ def _write_atoms(
 
 def _write_valence(
     top_file: IO,
-    res: md.core.topology.Residue,
     openff_sys: "System",
-    typemap: Dict,
 ):
     """Write the [ bonds ], [ angles ], and [ dihedrals ] sections"""
-    _write_bonds(top_file, res, openff_sys, typemap)
-    _write_angles(top_file, res, openff_sys, typemap)
-    # _write_dihedrals(top_file, openff_sys, mol_data["reference_molecule"])
+    _write_bonds(top_file, openff_sys)
+    _write_angles(top_file, openff_sys)
+    _write_dihedrals(top_file, openff_sys)
 
 
-def _write_bonds(top_file: IO, res, openff_sys: "System", typemap):
+def _write_bonds(top_file: IO, openff_sys: "System"):
     if "Bonds" not in openff_sys.handlers.keys():
         return
 
@@ -303,21 +291,12 @@ def _write_bonds(top_file: IO, res, openff_sys: "System", typemap):
 
     bond_handler = openff_sys.handlers["Bonds"]
 
-    offset = res.atom(0).index
-
     for bond in openff_sys.topology.mdtop.bonds:  # type: ignore[union-attr]
-        if bond.atom1 not in res.atoms:
-            continue
-        if bond.atom2 in res.atoms:
-            continue
 
         indices = tuple(sorted((bond.atom1.index, bond.atom2.index)))
         for top_key in bond_handler.slot_map:
             if top_key.atom_indices == indices:
                 pot_key = bond_handler.slot_map[top_key]
-
-        # atom indices within the residue
-        ref_indices = [idx - offset for idx in indices]
 
         params = bond_handler.potentials[pot_key].parameters
 
@@ -326,8 +305,8 @@ def _write_bonds(top_file: IO, res, openff_sys: "System", typemap):
 
         top_file.write(
             "{:7d} {:7d} {:4s} {:.16g} {:.16g}\n".format(
-                ref_indices[0] + 1,  # atom i
-                ref_indices[1] + 1,  # atom j
+                indices[0] + 1,  # atom i
+                indices[1] + 1,  # atom j
                 str(1),  # bond type (functional form)
                 length,
                 k,
@@ -339,7 +318,7 @@ def _write_bonds(top_file: IO, res, openff_sys: "System", typemap):
     top_file.write("\n\n")
 
 
-def _write_angles(top_file: IO, res, openff_sys: "System", typemap):
+def _write_angles(top_file: IO, openff_sys: "System"):
     if "Angles" not in openff_sys.handlers.keys():
         return
 
@@ -352,16 +331,7 @@ def _write_angles(top_file: IO, res, openff_sys: "System", typemap):
 
     angle_handler = openff_sys.handlers["Angles"]
 
-    offset = res.atom(0).index
-
     for angle in _iterate_angles(openff_sys.topology.mdtop):  # type: ignore[union-attr]
-        if angle[0] not in res.atoms:
-            continue
-        if angle[1] not in res.atoms:
-            continue
-        if angle[2] not in res.atoms:
-            continue
-
         indices = (
             angle[0].index,
             angle[1].index,
@@ -371,18 +341,15 @@ def _write_angles(top_file: IO, res, openff_sys: "System", typemap):
             if top_key.atom_indices == indices:
                 pot_key = angle_handler.slot_map[top_key]
 
-        # atom indices within the residue
-        ref_indices = [idx - offset for idx in indices]
-
         params = angle_handler.potentials[pot_key].parameters
         k = params["k"].m_as(unit.Unit("kilojoule / mole / radian ** 2"))
         theta = params["angle"].to(unit.degree).magnitude
 
         top_file.write(
             "{:7d} {:7d} {:7d} {:4s} {:.16g} {:.16g}\n".format(
-                ref_indices[0] + 1,  # atom i
-                ref_indices[1] + 1,  # atom j
-                ref_indices[2] + 1,  # atom k
+                indices[0] + 1,  # atom i
+                indices[1] + 1,  # atom j
+                indices[2] + 1,  # atom k
                 str(1),  # angle type (functional form)
                 theta,
                 k,
@@ -392,7 +359,7 @@ def _write_angles(top_file: IO, res, openff_sys: "System", typemap):
     top_file.write("\n\n")
 
 
-def _write_dihedrals(top_file: IO, res, openff_sys: "System", typemap):
+def _write_dihedrals(top_file: IO, openff_sys: "System"):
     if "ProperTorsions" not in openff_sys.handlers:
         if "RBTorsions" not in openff_sys.handlers:
             if "ImproperTorsions" not in openff_sys.handlers:
@@ -409,8 +376,6 @@ def _write_dihedrals(top_file: IO, res, openff_sys: "System", typemap):
     top_file.write("[ dihedrals ]\n")
     top_file.write(";    i      j      k      l   func\n")
 
-    offset = res.atom(0).index
-
     rb_torsion_handler = openff_sys.handlers.get("RBTorsions", [])  # type: ignore
     proper_torsion_handler = openff_sys.handlers.get("ProperTorsions", [])  # type: ignore
     improper_torsion_handler = openff_sys.handlers.get("ImproperTorsions", [])  # type: ignore
@@ -424,19 +389,16 @@ def _write_dihedrals(top_file: IO, res, openff_sys: "System", typemap):
                     pot_key = proper_torsion_handler.slot_map[top_key]  # type: ignore
                     params = proper_torsion_handler.potentials[pot_key].parameters  # type: ignore
 
-                    # "reference" indices
-                    ref_indices = [idx - offset for idx in indices]
-
                     k = params["k"].to(unit.Unit("kilojoule / mol")).magnitude
                     periodicity = int(params["periodicity"])
                     phase = params["phase"].to(unit.degree).magnitude
                     idivf = int(params["idivf"]) if "idivf" in params else 1
                     top_file.write(
                         "{:7d} {:7d} {:7d} {:7d} {:6d} {:16g} {:16g} {:7d}\n".format(
-                            ref_indices[0] + 1,
-                            ref_indices[1] + 1,
-                            ref_indices[2] + 1,
-                            ref_indices[3] + 1,
+                            indices[0] + 1,
+                            indices[1] + 1,
+                            indices[2] + 1,
+                            indices[3] + 1,
                             1,
                             phase,
                             k / idivf,
@@ -446,13 +408,10 @@ def _write_dihedrals(top_file: IO, res, openff_sys: "System", typemap):
         # This should be `if` if a single quartet can be subject to both proper and RB torsions
         if rb_torsion_handler:
             for top_key in rb_torsion_handler.slot_map:  # type: ignore
-                indices = tuple(a.topology_atom_index for a in proper)
+                indices = tuple(a.index for a in proper)
                 if top_key.atom_indices == indices:
                     pot_key = rb_torsion_handler.slot_map[top_key]  # type: ignore
                     params = rb_torsion_handler.potentials[pot_key].parameters  # type: ignore
-
-                    # "reference" indices
-                    ref_indices = [idx - offset for idx in indices]
 
                     c0 = params["C0"].to(unit.Unit("kilojoule / mol")).magnitude
                     c1 = params["C1"].to(unit.Unit("kilojoule / mol")).magnitude
@@ -464,10 +423,10 @@ def _write_dihedrals(top_file: IO, res, openff_sys: "System", typemap):
                     top_file.write(
                         "{:7d} {:7d} {:7d} {:7d} {:6d} "
                         "{:16g} {:16g} {:16g} {:16g} {:16g} {:16g} \n".format(
-                            ref_indices[0] + 1,
-                            ref_indices[1] + 1,
-                            ref_indices[2] + 1,
-                            ref_indices[3] + 1,
+                            indices[0] + 1,
+                            indices[1] + 1,
+                            indices[2] + 1,
+                            indices[3] + 1,
                             3,
                             c0,
                             c1,
@@ -513,8 +472,8 @@ def _write_system(top_file: IO, openff_sys: "System"):
 
     top_file.write("[ molecules ]\n")
     top_file.write("; Compound\tnmols\n")
-    for res in openff_sys.topology.mdtop.residues:  # type: ignore
-        top_file.write(f"{str(res)}\t{1}\n")
+    # TODO: Write molecules separately
+    top_file.write("MOL\t1")
 
     top_file.write("\n")
 
