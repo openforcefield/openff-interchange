@@ -251,7 +251,10 @@ def _from_parmed(cls, structure) -> "System":
         top = OFFBioTop(mdtop=mdtop)
         out.topology = top
     else:
-        raise Exception
+        # TODO: Remove this case
+        # This code should not be reached, since a pathway
+        # OpenFF -> OpenMM -> MDTraj already exists
+
         mdtop = md.Topology()
 
         main_chain = md.core.topology.Chain(index=0, topology=mdtop)
