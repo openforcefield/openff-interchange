@@ -1,9 +1,11 @@
 from copy import deepcopy
 
+import mdtraj as md
 import numpy as np
 from openff.toolkit.topology import Molecule
+from openff.units import unit
 
-from openff.system import unit
+from openff.system.components.misc import OFFBioTop
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
@@ -14,7 +16,8 @@ class TestSystemCombination(BaseTest):
         """Test basic use of System.__add__() based on the README example"""
         mol = Molecule.from_smiles("C")
         mol.generate_conformers(n_conformers=1)
-        top = mol.to_topology()
+        top = OFFBioTop.from_molecules([mol])
+        top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
         parsley = ForceField("openff_unconstrained-1.0.0.offxml")
         openff_sys = parsley.create_openff_system(top)

@@ -176,7 +176,7 @@ class System(DefaultModel):
 
         self_copy = deepcopy(self)
 
-        atom_offset = self_copy.topology.n_topology_atoms
+        atom_offset = self_copy.topology.mdtop.n_atoms
 
         other_top = deepcopy(other.topology)
 
