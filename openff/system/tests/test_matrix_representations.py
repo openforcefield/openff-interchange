@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from openff.system.components.misc import OFFBioTop
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.utils import requires_pkg
 from openff.system.utils import get_test_file_path

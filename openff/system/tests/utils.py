@@ -1,11 +1,13 @@
 import importlib
 
+import mdtraj as md
 import numpy as np
 import pytest
-from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.topology import Molecule
 from simtk import openmm
 from simtk import unit as omm_unit
 
+from openff.system.components.misc import OFFBioTop
 from openff.system.components.system import System
 from openff.system.exceptions import InterMolEnergyComparisonError
 
@@ -42,7 +44,7 @@ def requires_pkg(pkg_name, reason=None):
 def top_from_smiles(
     smiles: str,
     n_molecules: int = 1,
-) -> Topology:
+) -> OFFBioTop:
     """Create a gas phase OpenFF Topology from a single-molecule SMILES
 
     Parameters
@@ -55,13 +57,14 @@ def top_from_smiles(
 
     Returns
     -------
-    top : opennff.toolkit.topology.Topology
+    top : opennff.system.components.misc.OFFBioTop
         A single-molecule, gas phase-like topology
 
     """
     mol = Molecule.from_smiles(smiles)
     mol.generate_conformers(n_conformers=1)
-    top = Topology.from_molecules(n_molecules * [mol])
+    top = OFFBioTop.from_molecules(n_molecules * [mol])
+    top.mdtop = md.Topology.from_openmm(top.to_openmm())
     # Add dummy box vectors
     # TODO: Revisit if/after Topology.is_periodic
     top.box_vectors = np.eye(3) * 10 * omm_unit.nanometer
@@ -108,7 +111,7 @@ def _get_charges_from_openmm_system(omm_sys: openmm.System):
             break
     for idx in range(omm_sys.getNumParticles()):
         param = force.getParticleParameters(idx)
-        yield param[0] / omm_unit.elementary_charge
+        yield param[0].value_in_unit(omm_unit.elementary_charge)
 
 
 def _get_sigma_from_nonbonded_force(
@@ -116,7 +119,7 @@ def _get_sigma_from_nonbonded_force(
 ):
     for idx in range(n_particles):
         param = nonbond_force.getParticleParameters(idx)
-        yield param[1] / omm_unit.nanometer
+        yield param[1].value_in_unit(omm_unit.nanometer)
 
 
 def _get_epsilon_from_nonbonded_force(
@@ -124,7 +127,7 @@ def _get_epsilon_from_nonbonded_force(
 ):
     for idx in range(n_particles):
         param = nonbond_force.getParticleParameters(idx)
-        yield param[2] / omm_unit.kilojoule_per_mole
+        yield param[2].value_in_unit(omm_unit.kilojoule_per_mole)
 
 
 def _get_lj_params_from_openmm_system(omm_sys: openmm.System):

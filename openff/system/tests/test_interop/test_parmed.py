@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
+from openff.units import unit
 
-from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.utils import top_from_smiles
@@ -17,7 +17,7 @@ class TestParmedConversion(BaseTest):
         off_sys.positions = (
             np.zeros(shape=(argon_top.n_topology_atoms, 3)) * unit.angstrom
         )
-        struct = off_sys.to_parmed()
+        struct = off_sys._to_parmed()
 
         assert np.allclose(
             struct.box[:3],
@@ -27,7 +27,7 @@ class TestParmedConversion(BaseTest):
     def test_basic_conversion_argon(self, argon_ff, argon_top, box):
         off_sys = argon_ff.create_openff_system(argon_top, box=box)
         off_sys.positions = np.zeros(shape=(argon_top.n_topology_atoms, 3))
-        struct = off_sys.to_parmed()
+        struct = off_sys._to_parmed()
 
         # As partial sanity check, see if it they save without error
         struct.save("x.top", combine="all")
@@ -35,14 +35,14 @@ class TestParmedConversion(BaseTest):
 
         assert np.allclose(struct.box, np.array([40, 40, 40, 90, 90, 90]))
 
-    def test_basic_conversion(self, box):
+    def test_basic_conversion_params(self, box):
         top = top_from_smiles("C")
         parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
         off_sys = parsley.create_openff_system(topology=top, box=box)
         # UnitArray(...)
         off_sys.positions = np.zeros(shape=(top.n_topology_atoms, 3))
-        struct = off_sys.to_parmed()
+        struct = off_sys._to_parmed()
 
         sigma0 = struct.atoms[0].atom_type.sigma
         epsilon0 = struct.atoms[0].atom_type.epsilon
@@ -67,5 +67,16 @@ class TestParmedConversion(BaseTest):
 
         assert angle_k == pytest.approx(37.143507635885)
         assert theteq == pytest.approx(107.5991506326)
+
+        assert np.allclose(struct.box, np.array([40, 40, 40, 90, 90, 90]))
+
+    def test_basic_conversion_ammonia(self, ammonia_ff, ammonia_top, box):
+        off_sys = ammonia_ff.create_openff_system(ammonia_top, box=box)
+        off_sys.positions = np.zeros(shape=(ammonia_top.n_topology_atoms, 3))
+        struct = off_sys._to_parmed()
+
+        # As partial sanity check, see if it they save without error
+        struct.save("x.top", combine="all")
+        struct.save("x.gro", combine="all")
 
         assert np.allclose(struct.box, np.array([40, 40, 40, 90, 90, 90]))

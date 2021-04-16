@@ -11,6 +11,7 @@ dependencies:
   - openmm
   - openff-toolkit
   - jax
+  - mdtraj
   - ele
     # Testing
   - pytest
@@ -20,7 +21,7 @@ dependencies:
   - mypy
   - unyt
   - intermol
-  - gromacs
+  - gromacs >=2021
   - lammps
   - mbuild
-  - foyer
+  - foyer>=0.8.0

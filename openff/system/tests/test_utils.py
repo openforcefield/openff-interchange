@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.units import unit
 from simtk import unit as simtk_unit
 
-from openff.system import unit
 from openff.system.exceptions import MissingDependencyError
 from openff.system.tests.base_test import BaseTest
 from openff.system.utils import (
@@ -50,8 +50,8 @@ def test_simtk_list_of_quantities_to_pint():
 
 def test_pint_to_simtk():
     """Test conversion from pint Quantity to SimTK Quantity."""
-    with pytest.raises(NotImplementedError):
-        pint_to_simtk(None)
+    q = 5.0 / unit.nanometer
+    assert pint_to_simtk(q) == 0.5 / simtk_unit.angstrom
 
 
 class TestUtils(BaseTest):
