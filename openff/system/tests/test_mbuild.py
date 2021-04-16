@@ -1,8 +1,8 @@
 import numpy as np
 from openff.toolkit.topology import Molecule, Topology
-from simtk import unit
+from simtk import unit as simtk_unit
 
-from openff.system.misc import offmol_to_compound, offtop_to_compound
+from openff.system.components.mbuild import offmol_to_compound, offtop_to_compound
 
 
 def test_basic_mol_to_compound():
@@ -16,7 +16,7 @@ def test_basic_mol_to_compound():
     assert comp.n_bonds == offmol.n_bonds
 
     np.testing.assert_equal(
-        offmol.conformers[0].value_in_unit(unit.nanometer),
+        offmol.conformers[0].value_in_unit(simtk_unit.nanometer),
         comp.xyz,
     )
 
@@ -34,7 +34,7 @@ def test_mbuild_conversion_generate_conformers():
     expected_conf = offmol.conformers[0]
 
     np.testing.assert_equal(
-        expected_conf.value_in_unit(unit.nanometer),
+        expected_conf.value_in_unit(simtk_unit.nanometer),
         comp.xyz,
     )
 
@@ -42,24 +42,24 @@ def test_mbuild_conversion_generate_conformers():
 def test_mbuild_conversion_first_conformer_used():
     """Test that only the first conformer in an OFFMol is used"""
     offmol = Molecule.from_smiles("C1=CC=C(C=C1)C2=CC=C(C=C2)C3=CC=CC=C3")
-    offmol.generate_conformers(n_conformers=3)
+    offmol.generate_conformers(n_conformers=3, rms_cutoff=0.0 * simtk_unit.angstrom)
 
     comp = offmol_to_compound(offmol)
 
     np.testing.assert_equal(
-        offmol.conformers[0].value_in_unit(unit.nanometer),
+        offmol.conformers[0].value_in_unit(simtk_unit.nanometer),
         comp.xyz,
     )
 
     with np.testing.assert_raises(AssertionError):
         np.testing.assert_equal(
-            offmol.conformers[1].value_in_unit(unit.nanometer),
+            offmol.conformers[1].value_in_unit(simtk_unit.nanometer),
             comp.xyz,
         )
 
     with np.testing.assert_raises(AssertionError):
         np.testing.assert_equal(
-            offmol.conformers[2].value_in_unit(unit.nanometer),
+            offmol.conformers[2].value_in_unit(simtk_unit.nanometer),
             comp.xyz,
         )
 
