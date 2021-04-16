@@ -1,3 +1,4 @@
+import warnings
 from copy import deepcopy
 from pathlib import Path
 from typing import Dict, Optional, Union
@@ -135,10 +136,17 @@ class System(DefaultModel):
             )
 
     def __add__(self, other):
-        """Combine two System objects."""
-        self_copy = deepcopy(self)
+        """Combine two System objects. This method is unstable and likely unsafe."""
+        import mdtraj as md
 
         from openff.system.models import TopologyKey
+
+        warnings.warn(
+            "System combination is experimental and likely to produce strange results. "
+            "Use with caution!"
+        )
+
+        self_copy = deepcopy(self)
 
         atom_offset = self_copy.topology.n_topology_atoms
 
@@ -146,6 +154,10 @@ class System(DefaultModel):
 
         for top_mol in other_top.topology_molecules:
             self_copy.topology.add_molecule(top_mol.reference_molecule)
+
+        self_copy.topology.mdtop = md.Topology.from_openmm(
+            self_copy.topology.to_openmm()
+        )
 
         for handler_name, handler in other.handlers.items():
             self_handler = self_copy.handlers[handler_name]
