@@ -21,7 +21,7 @@ dependencies:
   - mypy
   - unyt
   - intermol
-  - gromacs =2019
+  - gromacs >=2021
   - lammps
   - mbuild
-  - foyer
+  - foyer>=0.8.0

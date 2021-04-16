@@ -5,18 +5,19 @@ import parmed as pmd
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils.utils import temporary_cd
-from simtk import unit as omm_unit
+from openff.units import unit
+from simtk import unit as simtk_unit
 
-from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import (
+    _get_mdp_file,
+    _run_gmx_energy,
     get_gromacs_energies,
-    get_mdp_file,
-    run_gmx_energy,
 )
 
 
 # TODO: Add OC=O
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "mol",
     [
@@ -59,21 +60,21 @@ def test_internal_gromacs_writers(mol):
             compare_gro_files("internal.gro", "reference.gro")
             # TODO: Also compare to out.to_gro("parmed.gro", writer="parmed")
 
-            reference_energy = run_gmx_energy(
+            reference_energy = _run_gmx_energy(
                 top_file="reference.top",
                 gro_file="reference.gro",
-                mdp_file=get_mdp_file("default"),
+                mdp_file=_get_mdp_file("default"),
             )
 
-            internal_energy = run_gmx_energy(
+            internal_energy = _run_gmx_energy(
                 top_file="internal.top",
                 gro_file="internal.gro",
-                mdp_file=get_mdp_file("default"),
+                mdp_file=_get_mdp_file("default"),
             )
 
             reference_energy.compare(
                 internal_energy,
-                custom_tolerances={"Bond": 2e-2 * omm_unit.kilojoule_per_mole},
+                custom_tolerances={"Bond": 2e-2 * simtk_unit.kilojoule_per_mole},
             )
 
 
@@ -87,6 +88,7 @@ def compare_gro_files(file1: str, file2: str):
                 assert line1[:10] + line1[15:] == line2[:10] + line2[15:]
 
 
+@pytest.mark.slow
 def test_sanity_grompp():
     """Basic test to ensure that a topology can be processed without errors"""
     mol = Molecule.from_smiles("CC")
@@ -97,23 +99,15 @@ def test_sanity_grompp():
     off_sys = parsley.create_openff_system(top)
 
     off_sys.box = [4, 4, 4] * np.eye(3)
-    off_sys.positions = mol.conformers[0] / omm_unit.angstrom
+    off_sys.positions = mol.conformers[0]
 
     off_sys.to_gro("out.gro", writer="internal")
     off_sys.to_top("out.top", writer="internal")
 
-    # TODO: Replace with intermol.gromacs.gmx_energy call after resolving
-    #  atomtype name differences that currently force -maxwarn 7
-    import os
-
-    from pkg_resources import resource_filename
-
-    mdp_file = resource_filename("intermol", "tests/gromacs/grompp.mdp")
-    exit_code = os.system(f"gmx grompp -f {mdp_file} -c out.gro -p out.top -maxwarn 1")
-
-    assert exit_code == 0
+    get_gromacs_energies(off_sys)
 
 
+@pytest.mark.slow
 def test_water_dimer():
     """Test that a water dimer can be written and the files can be grommp'd"""
     from openff.system.utils import get_test_file_path
@@ -122,12 +116,11 @@ def test_water_dimer():
     water = Molecule.from_smiles("O")
     top = Topology.from_molecules(2 * [water])
 
-    from simtk import openmm
-    from simtk import unit as omm_unit
+    from simtk.openmm import app
 
-    pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
+    pdbfile = app.PDBFile(get_test_file_path("water-dimer.pdb"))
 
-    positions = np.array(pdbfile.positions / omm_unit.nanometer) * unit.nanometer
+    positions = pdbfile.positions
 
     openff_sys = tip3p.create_openff_system(top)
     openff_sys.positions = positions

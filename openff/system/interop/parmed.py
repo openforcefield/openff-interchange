@@ -1,22 +1,28 @@
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
+import mdtraj as md
 import numpy as np
 import parmed as pmd
+from openff.toolkit.topology.molecule import FrozenMolecule
+from openff.toolkit.topology.topology import TopologyMolecule
+from openff.units import unit
 
-from openff.system import unit
 from openff.system.components.potentials import Potential
 from openff.system.models import PotentialKey, TopologyKey
 
 if TYPE_CHECKING:
+    from openff.system.components.smirnoff import (
+        SMIRNOFFImproperTorsionHandler,
+        SMIRNOFFProperTorsionHandler,
+    )
     from openff.system.components.system import System
-
 
 kcal_mol = unit.Unit("kilocalories / mol")
 kcal_mol_a2 = unit.Unit("kilocalories / mol / angstrom ** 2")
 kcal_mol_rad2 = unit.Unit("kilocalories / mol / rad ** 2")
 
 
-def to_parmed(off_system: "System") -> pmd.Structure:
+def _to_parmed(off_system: "System") -> pmd.Structure:
     """Convert an OpenFF System to a ParmEd Structure"""
     structure = pmd.Structure()
     _convert_box(off_system.box, structure)
@@ -27,19 +33,17 @@ def to_parmed(off_system: "System") -> pmd.Structure:
     else:
         has_electrostatics = False
 
-    for topology_molecule in off_system.topology.topology_molecules:  # type: ignore[union-attr]
-        for atom in topology_molecule.atoms:
-            atomic_number = atom.atomic_number
-            element = pmd.periodic_table.Element[atomic_number]
-            mass = pmd.periodic_table.Mass[element]
-            structure.add_atom(
-                pmd.Atom(
-                    atomic_number=atomic_number,
-                    mass=mass,
-                ),
-                resname="FOO",
-                resnum=0,
-            )
+    for atom in off_system.topology.mdtop.atoms:  # type: ignore[union-attr]
+        atomic_number = atom.element.atomic_number
+        mass = atom.element.mass
+        structure.add_atom(
+            pmd.Atom(
+                atomic_number=atomic_number,
+                mass=mass,
+            ),
+            resname=atom.residue.name,
+            resnum=atom.residue.index,
+        )
 
     if "Bonds" in off_system.handlers.keys():
         bond_handler = off_system.handlers["Bonds"]
@@ -137,6 +141,8 @@ def to_parmed(off_system: "System") -> pmd.Structure:
             sig4, eps4 = _lj_params_from_potential(vdw4)
             sig = (sig1 + sig4) * 0.5
             eps = (eps1 * eps4) ** 0.5
+            sig = sig.m_as(unit.angstrom)
+            eps = eps.m_as(kcal_mol)
             nbtype = pmd.NonbondedExceptionType(
                 rmin=sig * 2 ** (1 / 6), epsilon=eps * vdw_14, chgscale=coul_14
             )
@@ -179,6 +185,8 @@ def to_parmed(off_system: "System") -> pmd.Structure:
         potential = vdw_handler.potentials[smirks]
         element = pmd.periodic_table.Element[pmd_atom.element]
         sigma, epsilon = _lj_params_from_potential(potential)
+        sigma = sigma.m_as(unit.angstrom)
+        epsilon = epsilon.m_as(kcal_mol)
 
         atom_type = pmd.AtomType(
             name=element + str(pmd_idx + 1),
@@ -206,63 +214,115 @@ def to_parmed(off_system: "System") -> pmd.Structure:
     for res in structure.residues:
         res.name = "FOO"
 
-    structure.positions = off_system.positions.to(unit.angstrom).magnitude  # type: ignore[attr-defined]
-    for idx, pos in enumerate(structure.positions):
-        structure.atoms[idx].xx = pos._value[0]
-        structure.atoms[idx].xy = pos._value[1]
-        structure.atoms[idx].xz = pos._value[2]
+    if off_system.positions is not None:
+        structure.positions = off_system.positions.to(unit.angstrom).magnitude  # type: ignore[attr-defined]
+
+        for idx, pos in enumerate(structure.positions):
+            structure.atoms[idx].xx = pos._value[0]
+            structure.atoms[idx].xy = pos._value[1]
+            structure.atoms[idx].xz = pos._value[2]
 
     return structure
 
 
-def from_parmed(cls) -> "System":
+def _from_parmed(cls, structure) -> "System":
+    out = cls()
 
-    from openff.system.components.system import System
+    if structure.positions:
+        out.positions = np.asarray(structure.positions._value) * unit.angstrom
 
-    out = System()
+    if structure.box is not None:
+        if any(structure.box[3:] != 3 * [90.0]):
+            from openff.system.exceptions import UnsupportedBoxError
 
-    if cls.positions:
-        out.positions = np.asarray(cls.positions._value) * unit.angstrom
-
-    if any(cls.box[3:] != 3 * [90.0]):
-        from openff.system.exceptions import UnsupportedBoxError
-
-        raise UnsupportedBoxError(
-            f"Found box with angles {cls.box[3:]}. Only"
-            "rectangular boxes are currently supported."
-        )
-
-    out.box = cls.box[:3] * unit.angstrom
-
-    from openff.toolkit.topology import Molecule, Topology
-
-    top = Topology()
-
-    for res in cls.residues:
-        mol = Molecule()
-        mol.name = res.name
-        for atom in res.atoms:
-            mol.add_atom(
-                atomic_number=atom.atomic_number, formal_charge=0, is_aromatic=False
+            raise UnsupportedBoxError(
+                f"Found box with angles {structure.box[3:]}. Only"
+                "rectangular boxes are currently supported."
             )
-        for atom in res.atoms:
-            for bond in atom.bonds:
-                try:
-                    mol.add_bond(
-                        atom1=bond.atom1.idx,
-                        atom2=bond.atom2.idx,
-                        bond_order=int(bond.order),
-                        is_aromatic=False,
-                    )
-                # TODO: Use a custom exception after
-                # https://github.com/openforcefield/openff-toolkit/issues/771
-                except Exception as e:
-                    if "Bond already exists" in str(e):
-                        pass
-                    else:
-                        raise e
 
-        top.add_molecule(mol)
+        out.box = structure.box[:3] * unit.angstrom
+
+    from openff.toolkit.topology import Molecule
+
+    from openff.system.components.misc import OFFBioTop
+
+    if structure.topology is not None:
+        mdtop = md.Topology.from_openmm(structure.topology)
+        top = OFFBioTop(mdtop=mdtop)
+        out.topology = top
+    else:
+        # TODO: Remove this case
+        # This code should not be reached, since a pathway
+        # OpenFF -> OpenMM -> MDTraj already exists
+
+        mdtop = md.Topology()
+
+        main_chain = md.core.topology.Chain(index=0, topology=mdtop)
+        top = OFFBioTop(mdtop=None)
+
+        # There is no way to tell if ParmEd residues are connected (cannot be processed
+        # as separate OFFMols) or disconnected (can be). For now, will have to accept the
+        # inefficiency of putting everything into on OFFMol ...
+
+        mol = Molecule()
+        mol.name = getattr(structure, "name", "Mol")
+
+        for res in structure.residues:
+            # ... however, MDTraj's Topology class only stores residues, not molecules,
+            # so this should roughly match up with ParmEd
+            this_res = md.core.topology.Residue(
+                name=res.name,
+                index=res.idx,
+                chain=main_chain,
+                resSeq=0,
+            )
+
+            for atom in res.atoms:
+                mol.add_atom(
+                    atomic_number=atom.atomic_number, formal_charge=0, is_aromatic=False
+                )
+                mdtop.add_atom(
+                    name=atom.name,
+                    element=md.element.Element.getByAtomicNumber(atom.element),
+                    residue=this_res,
+                )
+
+            main_chain._residues.append(this_res)
+
+        for res in structure.residues:
+            for atom in res.atoms:
+                for bond in atom.bonds:
+                    try:
+                        mol.add_bond(
+                            atom1=bond.atom1.idx,
+                            atom2=bond.atom2.idx,
+                            bond_order=int(bond.order),
+                            is_aromatic=False,
+                        )
+                    # TODO: Use a custom exception after
+                    # https://github.com/openforcefield/openff-toolkit/issues/771
+                    except Exception as e:
+                        if "Bond already exists" in str(e):
+                            pass
+                        else:
+                            raise e
+                    mdtop.add_bond(
+                        atom1=mdtop.atom(bond.atom1.idx),
+                        atom2=mdtop.atom(bond.atom2.idx),
+                        order=int(bond.order) if bond.order is not None else None,
+                    )
+
+        # Topology.add_molecule requires a safe .to_smiles() call, so instead
+        # do a dangerous molecule addition
+        ref_mol = FrozenMolecule(mol)
+        # This doesn't work because molecule hashing requires valid SMILES
+        # top._reference_molecule_to_topology_molecules[ref_mol] = []
+        # so just tack it on for now
+        top._reference_mm_molecule = ref_mol
+        top_mol = TopologyMolecule(reference_molecule=ref_mol, topology=top)
+        top._topology_molecules.append(top_mol)
+        # top._reference_molecule_to_topology_molecules[ref_mol].append(top_mol)
+        mdtop._chains.append(main_chain)
 
     out.topology = top
 
@@ -278,7 +338,7 @@ def from_parmed(cls) -> "System":
     vdw_handler = SMIRNOFFvdWHandler()
     coul_handler = ElectrostaticsMetaHandler()
 
-    for atom in cls.atoms:
+    for atom in structure.atoms:
         atom_idx = atom.idx
         sigma = atom.sigma * unit.angstrom
         epsilon = atom.epsilon * kcal_mol
@@ -294,7 +354,7 @@ def from_parmed(cls) -> "System":
 
     bond_handler = SMIRNOFFBondHandler()
 
-    for bond in cls.bonds:
+    for bond in structure.bonds:
         atom1 = bond.atom1
         atom2 = bond.atom2
         k = bond.type.k * kcal_mol_a2
@@ -312,7 +372,7 @@ def from_parmed(cls) -> "System":
 
     angle_handler = SMIRNOFFAngleHandler()
 
-    for angle in cls.angles:
+    for angle in structure.angles:
         atom1 = angle.atom1
         atom2 = angle.atom2
         atom3 = angle.atom3
@@ -328,56 +388,29 @@ def from_parmed(cls) -> "System":
     proper_torsion_handler = SMIRNOFFProperTorsionHandler()
     improper_torsion_handler = SMIRNOFFImproperTorsionHandler()
 
-    for dihedral in cls.dihedrals:
-        atom1 = dihedral.atom1
-        atom2 = dihedral.atom2
-        atom3 = dihedral.atom3
-        atom4 = dihedral.atom4
-        k = dihedral.type.phi_k * kcal_mol_rad2
-        periodicity = dihedral.type.per * unit.dimensionless
-        phase = dihedral.type.phase * unit.degree
-        if dihedral.improper:
-            # ParmEd stores the central atom _third_ (AMBER style)
-            # SMIRNOFF stores the central atom _second_
-            # https://parmed.github.io/ParmEd/html/topobj/parmed.topologyobjects.Dihedral.html#parmed-topologyobjects-dihedral
-            # https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
-            top_key = TopologyKey(
-                atom_indices=(atom1.idx, atom2.idx, atom2.idx, atom4.idx),
-                mult=1,
-            )
-            pot_key = PotentialKey(
-                id=f"{atom1.idx}-{atom3.idx}-{atom2.idx}-{atom4.idx}",
-                mult=1,
-            )
-            pot = Potential(
-                parameters={"k": k, "periodicity": periodicity, "phase": phase}
-            )
-
-            while pot_key in improper_torsion_handler.potentials:
-                pot_key.mult += 1  # type: ignore[operator]
-                top_key.mult += 1  # type: ignore[operator]
-
-            improper_torsion_handler.slot_map.update({top_key: pot_key})
-            improper_torsion_handler.potentials.update({pot_key: pot})
-        else:
-            top_key = TopologyKey(
-                atom_indices=(atom1.idx, atom2.idx, atom3.idx, atom4.idx),
-                mult=1,
-            )
-            pot_key = PotentialKey(
-                id=f"{atom1.idx}-{atom2.idx}-{atom3.idx}-{atom4.idx}",
-                mult=1,
-            )
-            pot = Potential(
-                parameters={"k": k, "periodicity": periodicity, "phase": phase}
-            )
-
-            while pot_key in proper_torsion_handler.potentials:
-                pot_key.mult += 1  # type: ignore[operator]
-                top_key.mult += 1  # type: ignore[operator]
-
-            proper_torsion_handler.slot_map.update({top_key: pot_key})
-            proper_torsion_handler.potentials.update({pot_key: pot})
+    for dihedral in structure.dihedrals:
+        if isinstance(dihedral.type, pmd.DihedralType):
+            if dihedral.improper:
+                _process_single_dihedral(
+                    dihedral, dihedral.type, improper_torsion_handler, 0
+                )
+            else:
+                _process_single_dihedral(
+                    dihedral, dihedral.type, proper_torsion_handler, 0
+                )
+        elif isinstance(dihedral.type, pmd.DihedralTypeList):
+            for dih_idx, dihedral_type in enumerate(dihedral.type):
+                if dihedral.improper:
+                    _process_single_dihedral(
+                        dihedral, dihedral_type, improper_torsion_handler, dih_idx
+                    )
+                else:
+                    _process_single_dihedral(
+                        dihedral,
+                        dihedral_type,
+                        proper_torsion_handler,
+                        dih_idx,
+                    )
 
     out.handlers.update({"Electrostatics": coul_handler})  # type: ignore[dict-item]
     out.handlers.update({"Bonds": bond_handler})
@@ -400,7 +433,60 @@ def _convert_box(box, structure: pmd.Structure) -> None:
 
 
 def _lj_params_from_potential(potential):
-    sigma = potential.parameters["sigma"].to(unit.angstrom).magnitude
-    epsilon = potential.parameters["epsilon"].to(kcal_mol).magnitude
+    sigma = potential.parameters["sigma"]
+    epsilon = potential.parameters["epsilon"]
 
     return sigma, epsilon
+
+
+def _process_single_dihedral(
+    dihedral: pmd.Dihedral,
+    dihedral_type: pmd.DihedralType,
+    handler: Union["SMIRNOFFImproperTorsionHandler", "SMIRNOFFProperTorsionHandler"],
+    mult: Optional[int] = None,
+):
+    atom1 = dihedral.atom1
+    atom2 = dihedral.atom2
+    atom3 = dihedral.atom3
+    atom4 = dihedral.atom4
+
+    k = dihedral_type.phi_k * kcal_mol_rad2
+    periodicity = dihedral_type.per * unit.dimensionless
+    phase = dihedral_type.phase * unit.degree
+    if dihedral.improper:
+        # ParmEd stores the central atom _third_ (AMBER style)
+        # SMIRNOFF stores the central atom _second_
+        # https://parmed.github.io/ParmEd/html/topobj/parmed.topologyobjects.Dihedral.html#parmed-topologyobjects-dihedral
+        # https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
+        top_key = TopologyKey(
+            atom_indices=(atom1.idx, atom2.idx, atom2.idx, atom4.idx),
+            mult=mult,
+        )
+        pot_key = PotentialKey(
+            id=f"{atom1.idx}-{atom3.idx}-{atom2.idx}-{atom4.idx}",
+            mult=mult,
+        )
+        pot = Potential(parameters={"k": k, "periodicity": periodicity, "phase": phase})
+
+        if pot_key in handler.potentials:
+            raise Exception("fudging dihedral indices")
+
+        handler.slot_map.update({top_key: pot_key})
+        handler.potentials.update({pot_key: pot})
+    else:
+        top_key = TopologyKey(
+            atom_indices=(atom1.idx, atom2.idx, atom3.idx, atom4.idx),
+            mult=1,
+        )
+        pot_key = PotentialKey(
+            id=f"{atom1.idx}-{atom2.idx}-{atom3.idx}-{atom4.idx}",
+            mult=1,
+        )
+        pot = Potential(parameters={"k": k, "periodicity": periodicity, "phase": phase})
+
+        while pot_key in handler.potentials:
+            pot_key.mult += 1  # type: ignore[operator]
+            top_key.mult += 1  # type: ignore[operator]
+
+        handler.slot_map.update({top_key: pot_key})
+        handler.potentials.update({pot_key: pot})

@@ -5,22 +5,29 @@ from typing import List
 
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.utils import unit_to_string
+from openff.units import unit
 from pkg_resources import resource_filename
 from simtk import openmm
 from simtk import unit as omm_unit
 
-from openff.system import unit
 from openff.system.exceptions import MissingDependencyError
 
 
 def pint_to_simtk(quantity):
     """Convert a pint Quantity to an OpenMM unit."""
-    if str(quantity.units) == "kilojoule / mole":
+    if str(quantity.units) in ["kilojoule / mole", "kJ / mol"]:
         return quantity.m * omm_unit.kilojoule_per_mole
-    if str(quantity.units) == "1 / nanometer":
+    if str(quantity.units) == "1 / nm":
         return quantity.m / omm_unit.nanometer
-    if str(quantity.units) == "kilojoule * nanometer ** 6 / mole":
+    if str(quantity.units) == "1 / Å":
+        return quantity.m / omm_unit.angstrom
+    if str(quantity.units) in [
+        "kilojoule * nanometer ** 6 / mole",
+        "nanometer ** 6 * kilojoule / mole",
+    ]:
         return quantity.m * omm_unit.nanometer ** 6 / omm_unit.kilojoule_per_mole
+    if str(quantity.units) == "kJ * Å ** 6 / mol":
+        return quantity.m * omm_unit.angstrom ** 6 / omm_unit.kilojoule_per_mole
     else:
         raise NotImplementedError(f"caught units {str(quantity.units)}")
 

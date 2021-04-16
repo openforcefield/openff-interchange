@@ -61,6 +61,18 @@ jobs:
       run: |
         python setup.py develop --no-deps
 
+    - name: Install OpenFF Units
+      shell: bash -l {0}
+      run: |
+        pip install git+git://github.com/mattwthompson/openff-units.git
+
+    - name: Clone ParmEd tests
+      shell: bash -l {0}
+      run: |
+        git clone https://github.com/parmed/tests
+        cp -r tests/pmdtest .
+        echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
+
     - name: Run mypy
       shell: bash -l {0}
       run: |
@@ -69,12 +81,17 @@ jobs:
     - name: Run unit tests
       shell: bash -l {0}
       run: |
-        pytest -v $COV openff/system/tests/
+        python -m pytest -v $COV openff/system/tests/ --ignore=openff/system/tests/parmed/
+
+    - name: Run ParmEd tests
+      shell: bash -l {0}
+      run: |
+        python -m pytest -v $COV openff/system/tests/parmed
 
     - name: Run example notebooks
       shell: bash -l {0}
       run: |
-        pytest -v $COV examples/ --nbval-lax
+        python -m pytest -v $COV examples/ --nbval-lax
 
     - name: Codecov
       uses: codecov/codecov-action@v1

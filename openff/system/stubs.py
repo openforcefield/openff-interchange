@@ -1,6 +1,7 @@
 """
 Monkeypatching external classes with custom functionality
 """
+import mdtraj as md
 import numpy as np
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
@@ -13,6 +14,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 
+from openff.system.components.misc import OFFBioTop
 from openff.system.components.smirnoff import (
     ElectrostaticsMetaHandler,
     SMIRNOFFAngleHandler,
@@ -25,11 +27,12 @@ from openff.system.components.smirnoff import (
     SMIRNOFFvdWHandler,
 )
 from openff.system.components.system import System
+from openff.system.exceptions import InvalidTopologyError
 
 
 def to_openff_system(
     self,
-    topology: Topology,
+    topology: OFFBioTop,
     box=None,
     **kwargs,
 ) -> System:
@@ -40,6 +43,17 @@ def to_openff_system(
     sys_out = System()
 
     _check_supported_handlers(self)
+
+    if isinstance(topology, OFFBioTop):
+        sys_out.topology = topology
+    elif isinstance(topology, Topology):
+        sys_out.topology = OFFBioTop(topology)
+        sys_out.topology.mdtop = md.Topology.from_openmm(topology.to_openmm())
+    else:
+        raise InvalidTopologyError(
+            "Could not process topology argument, expected Topology or OFFBioTop. "
+            f"Found object of type {type(topology)}."
+        )
 
     for parameter_handler in self.registered_parameter_handlers:
         if parameter_handler in {
@@ -124,8 +138,6 @@ def to_openff_system(
     else:
         sys_out.box = box
 
-    sys_out.topology = topology
-
     return sys_out
 
 
@@ -146,6 +158,8 @@ def create_constraint_handler(
     return handler
 
 
+# These functions should all be reduced down to one, possibly with some creative
+# use of functools
 def create_bond_potential_handler(
     self,
     topology: Topology,

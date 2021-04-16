@@ -55,6 +55,12 @@ class InvalidBoxError(ValueError):
     """
 
 
+class InvalidTopologyError(ValueError):
+    """
+    Generic exception for errors reading chemical topology data
+    """
+
+
 class InterMolEnergyComparisonError(AssertionError):
     """
     Exception for when energies derived from InterMol do not match
@@ -157,9 +163,33 @@ class InternalInconsistencyError(BaseException):
     """
 
 
+class SanderError(BaseException):
+    """
+    Exception for when a sander subprocess fails.
+    """
+
+
 class GMXRunError(BaseException):
     """
     Exception for when a GROMACS subprocess fails.
+    """
+
+
+class GMXGromppError(GMXRunError):
+    """
+    Exception for when `gmx grompp` fails.
+    """
+
+
+class GMXMdrunError(GMXRunError):
+    """
+    Exception for when `gmx mdrun` fails.
+    """
+
+
+class GMXEnergyError(GMXRunError):
+    """
+    Exception for when `gmx energy` fails.
     """
 
 

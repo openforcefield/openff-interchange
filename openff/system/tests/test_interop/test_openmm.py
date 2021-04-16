@@ -8,6 +8,7 @@ from openff.system.stubs import ForceField
 from openff.system.utils import get_test_file_path
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("n_mols", [1, 2])
 @pytest.mark.parametrize(
     "mol",

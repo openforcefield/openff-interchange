@@ -15,6 +15,33 @@ def get_lammps_energies(
     writer: str = "internal",
     electrostatics=True,
 ) -> EnergyReport:
+    """
+    Given an OpenFF System object, return single-point energies as computed by LAMMPS.
+
+    .. warning :: This API is experimental and subject to change.
+
+    .. todo :: Split out _running_ LAMMPS into a separate internal function
+
+    Parameters
+    ----------
+    off_sys : openff.system.components.system.System
+        An OpenFF System object to compute the single-point energy of
+    round_positions : int, optional
+        The number of decimal places, in nanometers, to round positions. This can be useful when
+        comparing to i.e. GROMACS energies, in which positions may be rounded.
+    writer : str, default="internal"
+        A string key identifying the backend to be used to write LAMMPS files. The
+        default value of `"internal"` results in this package's exporters being used.
+    electrostatics : bool, default=True
+        A boolean indicating whether or not electrostatics should be included in the energy
+        calculation.
+
+    Returns
+    -------
+    report : EnergyReport
+        An `EnergyReport` object containing the single-point energies.
+
+    """
 
     if round_positions is not None:
         off_sys.positions = np.round(off_sys.positions, round_positions)
@@ -57,6 +84,7 @@ def get_lammps_energies(
 
 
 def _parse_lammps_log(file_in) -> List[float]:
+    """Parse a LAMMPS log file for energy components."""
     tag = False
     with open(file_in) as fi:
         for line in fi.readlines():
@@ -74,7 +102,7 @@ def _write_lammps_input(
     file_name="test.in",
     electrostatics=False,
 ):
-
+    """Write a LAMMPS input file for running single-point energies."""
     with open(file_name, "w") as fo:
         fo.write(
             "units real\n" "atom_style full\n" "\n" "dimension 3\nboundary p p p\n\n"

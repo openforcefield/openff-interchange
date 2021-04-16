@@ -1,4 +1,5 @@
 import mdtraj as md
+import pytest
 from openff.toolkit.topology import Molecule
 from simtk.openmm import app
 
@@ -8,6 +9,7 @@ from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.utils import get_test_file_path
 
 
+@pytest.mark.slow
 def test_residues():
     pdb = app.PDBFile(get_test_file_path("ALA_GLY/ALA_GLY.pdb"))
     traj = md.load(get_test_file_path("ALA_GLY/ALA_GLY.pdb"))

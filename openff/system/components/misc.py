@@ -35,3 +35,54 @@ class OFFBioTop(Topology):
     def __init__(self, mdtop=None, *args, **kwargs):
         self.mdtop = mdtop
         super().__init__(*args, **kwargs)
+
+
+def _store_bond_partners(mdtop):
+    for atom in mdtop.atoms:
+        atom._bond_partners = []
+    for bond in mdtop.bonds:
+        bond.atom1._bond_partners.append(bond.atom2)
+        bond.atom2._bond_partners.append(bond.atom1)
+
+
+def _iterate_angles(mdtop):
+    for atom1 in mdtop.atoms:
+        for atom2 in atom1._bond_partners:
+            for atom3 in atom2._bond_partners:
+                if atom1 == atom3:
+                    continue
+                if atom1.index < atom3.index:
+                    yield (atom1, atom2, atom3)
+                else:
+                    # Do no duplicate
+                    pass  # yield (atom3, atom2, atom1)
+
+
+def _iterate_propers(mdtop):
+    for atom1 in mdtop.atoms:
+        for atom2 in atom1._bond_partners:
+            for atom3 in atom2._bond_partners:
+                if atom1 == atom3:
+                    continue
+                for atom4 in atom3._bond_partners:
+                    if atom4 in (atom1, atom2):
+                        continue
+
+                    if atom1.index < atom4.index:
+                        yield (atom1, atom2, atom3, atom4)
+                    else:
+                        # Do no duplicate
+                        pass  # yield (atom4, atom3, atom2, atom1)
+
+
+def _iterate_impropers(mdtop):
+    for atom1 in mdtop.atoms:
+        for atom2 in atom1._bond_partners:
+            for atom3 in atom2._bond_partners:
+                if atom1 == atom3:
+                    continue
+                for atom4 in atom2._bond_partners:
+                    if atom4 in (atom3, atom1):
+                        continue
+
+                    yield (atom1, atom2, atom3, atom4)

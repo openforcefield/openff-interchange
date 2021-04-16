@@ -1,16 +1,18 @@
 import mbuild as mb
+import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
+from openff.units import unit
 from simtk import openmm
 from simtk import unit as omm_unit
 
-from openff.system import unit
+from openff.system.components.misc import OFFBioTop
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import (
+    _get_mdp_file,
+    _run_gmx_energy,
     get_gromacs_energies,
-    get_mdp_file,
-    run_gmx_energy,
 )
 from openff.system.tests.energy_tests.lammps import get_lammps_energies
 from openff.system.tests.energy_tests.openmm import (
@@ -20,6 +22,7 @@ from openff.system.tests.energy_tests.openmm import (
 from openff.system.tests.energy_tests.report import EnergyError
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("constrained", [True, False])
 @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
 @pytest.mark.parametrize("n_mol", [1, 10, 100])
@@ -127,6 +130,7 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
         lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("n_mol", [10, 100])
 def test_argon(n_mol):
     from openff.system.utils import get_test_file_path
@@ -173,6 +177,7 @@ def test_argon(n_mol):
     )
 
 
+@pytest.mark.skip("Skip until residues are matched between gro and top")
 @pytest.mark.parametrize(
     "toolkit_file_path",
     [
@@ -191,20 +196,19 @@ def test_packmol_boxes(toolkit_file_path):
     ethanol = Molecule.from_smiles("CCO")
     cyclohexane = Molecule.from_smiles("C1CCCCC1")
     omm_topology = pdbfile.topology
-    off_topology = Topology.from_openmm(
+    off_topology = OFFBioTop.from_openmm(
         omm_topology, unique_molecules=[ethanol, cyclohexane]
     )
+    off_topology.mdtop = md.Topology.from_openmm(omm_topology)
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
     off_sys = parsley.create_openff_system(off_topology)
 
     off_sys.box = np.asarray(
-        pdbfile.topology.getPeriodicBoxVectors() / omm_unit.nanometer,
+        pdbfile.topology.getPeriodicBoxVectors().value_in_unit(omm_unit.nanometer)
     )
-    off_sys.positions = np.asarray(
-        pdbfile.positions / omm_unit.nanometer,
-    )
+    off_sys.positions = pdbfile.positions
 
     sys_from_toolkit = parsley.create_openmm_system(off_topology)
 
@@ -246,16 +250,18 @@ def test_packmol_boxes(toolkit_file_path):
     )
 
 
+@pytest.mark.slow
 def test_water_dimer():
     from openff.system.utils import get_test_file_path
 
     tip3p = ForceField(get_test_file_path("tip3p.offxml"))
     water = Molecule.from_smiles("O")
     top = Topology.from_molecules(2 * [water])
+    top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
     pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
 
-    positions = np.array(pdbfile.positions / omm_unit.nanometer) * unit.nanometer
+    positions = pdbfile.positions
 
     openff_sys = tip3p.create_openff_system(top)
     openff_sys.positions = positions
@@ -286,6 +292,7 @@ def test_water_dimer():
     lmp_energies.compare(omm_energies)
 
 
+@pytest.mark.slow
 def test_process_rb_torsions():
     """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
 
@@ -310,8 +317,8 @@ def test_process_rb_torsions():
     struct.save("eth.gro", overwrite=True)
 
     # Get single-point energies using GROMACS
-    oplsaa_energies = run_gmx_energy(
-        top_file="eth.top", gro_file="eth.gro", mdp_file=get_mdp_file("default")
+    oplsaa_energies = _run_gmx_energy(
+        top_file="eth.top", gro_file="eth.gro", mdp_file=_get_mdp_file("default")
     )
 
-    assert oplsaa_energies.energies["Torsion"]._value != 0.0
+    assert oplsaa_energies.energies["Torsion"].m != 0.0
