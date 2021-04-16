@@ -1,9 +1,16 @@
+import mdtraj as md
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
 
-from openff.system.exceptions import SMIRNOFFHandlersNotImplementedError
+from openff.system.components.misc import OFFBioTop
+from openff.system.components.system import System
+from openff.system.exceptions import (
+    InvalidTopologyError,
+    SMIRNOFFHandlersNotImplementedError,
+)
 from openff.system.models import TopologyKey
+from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.utils import compare_charges_omm_off, requires_pkg
 
@@ -12,7 +19,7 @@ class TestStubs(BaseTest):
     """Test the functionality of the stubs.py module"""
 
     def test_from_parsley(self, parsley):
-        top = Topology.from_molecules(
+        top = OFFBioTop.from_molecules(
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")]
         )
 
@@ -24,15 +31,26 @@ class TestStubs(BaseTest):
         assert "ProperTorsions" in out.handlers.keys()
         assert "vdW" in out.handlers.keys()
 
-    def test_unsupported_handler(self):
-        from openff.system.stubs import ForceField
+        assert type(out.topology) == OFFBioTop
+        assert type(out.topology) != Topology
+        assert isinstance(out.topology, Topology)
 
+    def test_unsupported_handler(self):
         gbsa_ff = ForceField(get_data_file_path("test_forcefields/GBSA_HCT-1.0.offxml"))
 
         with pytest.raises(
             SMIRNOFFHandlersNotImplementedError, match=r"SMIRNOFF parameters not.*GBSA"
         ):
             gbsa_ff.create_openff_system(topology=None)
+
+    def test_unsupported_topology(self, parsley, ethanol_top):
+        mdtop = md.Topology.from_openmm(ethanol_top.to_openmm())
+
+        with pytest.raises(InvalidTopologyError, match="mdtraj.core.*Topology"):
+            parsley.create_openff_system(topology=mdtop)
+
+        with pytest.raises(InvalidTopologyError, match="simtk.*app.*Topology"):
+            parsley.create_openff_system(topology=ethanol_top.to_openmm())
 
 
 class TestConstraints(BaseTest):
@@ -156,8 +174,6 @@ class TestChargeAssignment(BaseTest):
         compare_charges_omm_off(reference, new)
 
     def test_library_charge_assignment(self):
-        from openff.system.stubs import ForceField
-
         forcefield = ForceField("openff-1.3.0.offxml")
         forcefield.deregister_parameter_handler("ToolkitAM1BCC")
 

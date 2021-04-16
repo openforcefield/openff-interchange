@@ -1,13 +1,12 @@
 from abc import abstractmethod
 from copy import copy
-from typing import Dict, Set, Type
+from typing import TYPE_CHECKING, Dict, Set, Type
 
 from ele import element_from_atomic_number
 from foyer import Forcefield
 from foyer.atomtyper import find_atomtypes
 from foyer.exceptions import MissingForceError, MissingParametersError
 from foyer.topology_graph import TopologyGraph
-from openff.toolkit.topology import Topology
 from openff.units import unit
 
 from openff.system.components.potentials import Potential, PotentialHandler
@@ -17,9 +16,12 @@ from openff.system.models import PotentialKey, TopologyKey
 # Is this the safest way to achieve PotentialKey id separation?
 POTENTIAL_KEY_SEPARATOR = "-"
 
+if TYPE_CHECKING:
+    from openff.system.components.misc import OFFBioTop
+
 
 @classmethod  # type: ignore
-def from_off_topology(cls, off_topology: Topology) -> TopologyGraph:
+def from_off_topology(cls, off_topology: "OFFBioTop") -> TopologyGraph:
     top_graph = cls()
     for top_atom in off_topology.topology_atoms:
         atom = top_atom.atom
@@ -58,7 +60,7 @@ def _get_potential_key_id(atom_slots: Dict[TopologyKey, PotentialKey], idx):
     return atom_slots[top_key].id
 
 
-def from_foyer(topology: Topology, ff: Forcefield, **kwargs) -> System:
+def from_foyer(topology: "OFFBioTop", ff: Forcefield, **kwargs) -> System:
     system = System()
     system.topology = topology
 
@@ -118,7 +120,7 @@ class FoyerVDWHandler(PotentialHandler):
     def store_matches(
         self,
         forcefield: Forcefield,
-        topology: Topology,
+        topology: "OFFBioTop",
     ) -> None:
         """Populate slotmap with key-val pairs of slots and unique potential Identifiers"""
         top_graph = TopologyGraph.from_off_topology(topology)
@@ -171,7 +173,7 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
     def store_matches(
         self,
         atom_slots: Dict[TopologyKey, PotentialKey],
-        topology: Topology,
+        topology: "OFFBioTop",
     ) -> None:
         for connection in getattr(topology, self.connection_attribute):
             try:

@@ -1,3 +1,4 @@
+import mdtraj as md
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import unit
@@ -15,6 +16,7 @@ def test_amber_energy():
     mol = Molecule.from_smiles("CCO")
     mol.generate_conformers(n_conformers=1)
     top = mol.to_topology()
+    top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
     off_sys = parsley.create_openff_system(top)

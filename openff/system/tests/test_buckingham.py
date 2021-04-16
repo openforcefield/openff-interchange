@@ -1,12 +1,13 @@
 from math import exp
 
+import mdtraj as md
 import pytest
-from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.topology import Molecule
 from openff.units import unit
 from scipy.constants import Avogadro
 from simtk import unit as simtk_unit
 
-from openff.system.components.misc import BuckinghamvdWHandler
+from openff.system.components.misc import BuckinghamvdWHandler, OFFBioTop
 from openff.system.components.potentials import Potential
 from openff.system.components.smirnoff import ElectrostaticsMetaHandler
 from openff.system.exceptions import GMXMdrunError
@@ -19,7 +20,8 @@ from openff.system.utils import simtk_to_pint
 def test_argon_buck():
     """Test that Buckingham potentials are supported and can be exported"""
     mol = Molecule.from_smiles("[#18]")
-    top = Topology.from_molecules([mol, mol])
+    top = OFFBioTop.from_molecules([mol, mol])
+    top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
     # Go through SimTK units because OpenFF Units registry does not have
     # the erg/dyne units that the Sklog Wiki uses
@@ -42,8 +44,8 @@ def test_argon_buck():
     pot_key = PotentialKey(id="[#18]")
     pot = Potential(parameters={"A": A, "B": B, "C": C})
 
-    for top_atom in top.topology_atoms:
-        top_key = TopologyKey(atom_indices=(top_atom.topology_atom_index,))
+    for atom in top.mdtop.atoms:
+        top_key = TopologyKey(atom_indices=(atom.index,))
         buck.slot_map.update({top_key: pot_key})
         coul.charges.update({top_key: 0 * unit.elementary_charge})
 

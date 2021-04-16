@@ -6,7 +6,6 @@ import parmed as pmd
 from openff.toolkit.topology.molecule import FrozenMolecule
 from openff.toolkit.topology.topology import TopologyMolecule
 from openff.units import unit
-from simtk import openmm
 
 from openff.system.components.potentials import Potential
 from openff.system.models import PotentialKey, TopologyKey
@@ -34,19 +33,17 @@ def _to_parmed(off_system: "System") -> pmd.Structure:
     else:
         has_electrostatics = False
 
-    for topology_molecule in off_system.topology.topology_molecules:  # type: ignore[union-attr]
-        for atom in topology_molecule.atoms:
-            atomic_number = atom.atomic_number
-            element = pmd.periodic_table.Element[atomic_number]
-            mass = pmd.periodic_table.Mass[element]
-            structure.add_atom(
-                pmd.Atom(
-                    atomic_number=atomic_number,
-                    mass=mass,
-                ),
-                resname="FOO",
-                resnum=0,
-            )
+    for atom in off_system.topology.mdtop.atoms:  # type: ignore[union-attr]
+        atomic_number = atom.element.atomic_number
+        mass = atom.element.mass
+        structure.add_atom(
+            pmd.Atom(
+                atomic_number=atomic_number,
+                mass=mass,
+            ),
+            resname=atom.residue.name,
+            resnum=atom.residue.index,
+        )
 
     if "Bonds" in off_system.handlers.keys():
         bond_handler = off_system.handlers["Bonds"]
@@ -249,80 +246,83 @@ def _from_parmed(cls, structure) -> "System":
 
     from openff.system.components.misc import OFFBioTop
 
-    mdtop: md.Topology = md.Topology()
+    if structure.topology is not None:
+        mdtop = md.Topology.from_openmm(structure.topology)
+        top = OFFBioTop(mdtop=mdtop)
+        out.topology = top
+    else:
+        # TODO: Remove this case
+        # This code should not be reached, since a pathway
+        # OpenFF -> OpenMM -> MDTraj already exists
 
-    main_chain = md.core.topology.Chain(index=0, topology=mdtop)
-    top = OFFBioTop(mdtop=None)
+        mdtop = md.Topology()
 
-    # There is no way to tell if ParmEd residues are connected (cannot be processed
-    # as separate OFFMols) or disconnected (can be). For now, will have to accept the
-    # inefficiency of putting everything into on OFFMol ...
+        main_chain = md.core.topology.Chain(index=0, topology=mdtop)
+        top = OFFBioTop(mdtop=None)
 
-    mol = Molecule()
-    mol.name = getattr(structure, "name", "Mol")
+        # There is no way to tell if ParmEd residues are connected (cannot be processed
+        # as separate OFFMols) or disconnected (can be). For now, will have to accept the
+        # inefficiency of putting everything into on OFFMol ...
 
-    for res in structure.residues:
-        # ... however, MDTraj's Topology class only stores residues, not molecules,
-        # so this should roughly match up with ParmEd
-        this_res = md.core.topology.Residue(
-            name=res.name,
-            index=res.idx,
-            chain=main_chain,
-            resSeq=0,
-        )
+        mol = Molecule()
+        mol.name = getattr(structure, "name", "Mol")
 
-        for atom in res.atoms:
-            mol.add_atom(
-                atomic_number=atom.atomic_number, formal_charge=0, is_aromatic=False
+        for res in structure.residues:
+            # ... however, MDTraj's Topology class only stores residues, not molecules,
+            # so this should roughly match up with ParmEd
+            this_res = md.core.topology.Residue(
+                name=res.name,
+                index=res.idx,
+                chain=main_chain,
+                resSeq=0,
             )
-            mdtop.add_atom(
-                name=atom.name,
-                element=md.element.Element.getByAtomicNumber(atom.element),
-                residue=this_res,
-            )
 
-        main_chain._residues.append(this_res)
-
-    for res in structure.residues:
-        for atom in res.atoms:
-            for bond in atom.bonds:
-                try:
-                    mol.add_bond(
-                        atom1=bond.atom1.idx,
-                        atom2=bond.atom2.idx,
-                        bond_order=int(bond.order),
-                        is_aromatic=False,
-                    )
-                # TODO: Use a custom exception after
-                # https://github.com/openforcefield/openff-toolkit/issues/771
-                except Exception as e:
-                    if "Bond already exists" in str(e):
-                        pass
-                    else:
-                        raise e
-                mdtop.add_bond(
-                    atom1=mdtop.atom(bond.atom1.idx),
-                    atom2=mdtop.atom(bond.atom2.idx),
-                    order=int(bond.order) if bond.order is not None else None,
+            for atom in res.atoms:
+                mol.add_atom(
+                    atomic_number=atom.atomic_number, formal_charge=0, is_aromatic=False
+                )
+                mdtop.add_atom(
+                    name=atom.name,
+                    element=md.element.Element.getByAtomicNumber(atom.element),
+                    residue=this_res,
                 )
 
-    # Topology.add_molecule requires a safe .to_smiles() call, so instead
-    # do a dangerous molecule addition
-    ref_mol = FrozenMolecule(mol)
-    # This doesn't work because molecule hashing requires valid SMILES
-    # top._reference_molecule_to_topology_molecules[ref_mol] = []
-    # so just tack it on for now
-    top._reference_mm_molecule = ref_mol
-    top_mol = TopologyMolecule(reference_molecule=ref_mol, topology=top)
-    top._topology_molecules.append(top_mol)
-    # top._reference_molecule_to_topology_molecules[ref_mol].append(top_mol)
-    mdtop._chains.append(main_chain)
+            main_chain._residues.append(this_res)
 
-    if hasattr(structure, "topology"):
-        if isinstance(structure.topology, openmm.app.Topology):
-            top.mdtop = md.Topology.from_openmm(structure.topology)
-    else:
-        raise Exception
+        for res in structure.residues:
+            for atom in res.atoms:
+                for bond in atom.bonds:
+                    try:
+                        mol.add_bond(
+                            atom1=bond.atom1.idx,
+                            atom2=bond.atom2.idx,
+                            bond_order=int(bond.order),
+                            is_aromatic=False,
+                        )
+                    # TODO: Use a custom exception after
+                    # https://github.com/openforcefield/openff-toolkit/issues/771
+                    except Exception as e:
+                        if "Bond already exists" in str(e):
+                            pass
+                        else:
+                            raise e
+                    mdtop.add_bond(
+                        atom1=mdtop.atom(bond.atom1.idx),
+                        atom2=mdtop.atom(bond.atom2.idx),
+                        order=int(bond.order) if bond.order is not None else None,
+                    )
+
+        # Topology.add_molecule requires a safe .to_smiles() call, so instead
+        # do a dangerous molecule addition
+        ref_mol = FrozenMolecule(mol)
+        # This doesn't work because molecule hashing requires valid SMILES
+        # top._reference_molecule_to_topology_molecules[ref_mol] = []
+        # so just tack it on for now
+        top._reference_mm_molecule = ref_mol
+        top_mol = TopologyMolecule(reference_molecule=ref_mol, topology=top)
+        top._topology_molecules.append(top_mol)
+        # top._reference_molecule_to_topology_molecules[ref_mol].append(top_mol)
+        mdtop._chains.append(main_chain)
 
     out.topology = top
 

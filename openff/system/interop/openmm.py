@@ -39,9 +39,10 @@ def to_openmm(openff_sys) -> openmm.System:
         box = openff_sys.box.m_as(off_unit.nanometer)
         openmm_sys.setDefaultPeriodicBoxVectors(*box)
 
-    # Add particles (both atoms and virtual sites) with appropriate masses
-    for atom in openff_sys.topology.topology_particles:
-        openmm_sys.addParticle(atom.atom.mass)
+    # Add particles with appropriate masses
+    # TODO: Add virtual particles
+    for atom in openff_sys.topology.mdtop.atoms:
+        openmm_sys.addParticle(atom.element.mass)
 
     _process_nonbonded_forces(openff_sys, openmm_sys)
     _process_torsion_forces(openff_sys, openmm_sys)
@@ -257,7 +258,8 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
         non_bonded_force = openmm.NonbondedForce()
         openmm_sys.addForce(non_bonded_force)
 
-        for _ in openff_sys.topology.topology_particles:
+        # TODO: Add virtual particles
+        for _ in openff_sys.topology.mdtop.atoms:
             non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
         if openff_sys.box is None:
@@ -293,7 +295,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
         non_bonded_force.addPerParticleParameter("C")
         openmm_sys.addForce(non_bonded_force)
 
-        for _ in openff_sys.topology.topology_particles:
+        for _ in openff_sys.topology.mdtop.atoms:
             non_bonded_force.addParticle([0.0, 0.0, 0.0])
 
         if openff_sys.box is None:
@@ -316,26 +318,11 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
 
     # TODO: Figure out all of this post-processing with CustomNonbondedForce
 
-    # from vdWHandler.postprocess_system
+    # from vdWHandler.postprocess_system, modified to work on an md.Topology
     bond_particle_indices = []
 
-    for topology_molecule in openff_sys.topology.topology_molecules:
-
-        top_mol_particle_start_index = topology_molecule.atom_start_topology_index
-
-        for topology_bond in topology_molecule.bonds:
-
-            top_index_1 = topology_molecule._ref_to_top_index[
-                topology_bond.bond.atom1_index
-            ]
-            top_index_2 = topology_molecule._ref_to_top_index[
-                topology_bond.bond.atom2_index
-            ]
-
-            top_index_1 += top_mol_particle_start_index
-            top_index_2 += top_mol_particle_start_index
-
-            bond_particle_indices.append((top_index_1, top_index_2))
+    for bond in openff_sys.topology.mdtop.bonds:
+        bond_particle_indices.append((bond.atom1.index, bond.atom2.index))
 
     non_bonded_force.createExceptionsFromBonds(
         bond_particle_indices,

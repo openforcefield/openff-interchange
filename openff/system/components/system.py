@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Dict, Optional, Union
 
 import numpy as np
-from openff.toolkit.topology.topology import Topology
 from pydantic import validator
 
 from openff.system.components.misc import OFFBioTop
@@ -27,7 +26,7 @@ class System(DefaultModel):
     """
 
     handlers: Dict[str, PotentialHandler] = dict()
-    topology: Optional[Union[Topology, OFFBioTop]] = None
+    topology: Optional[OFFBioTop] = None
     box: ArrayQuantity["nanometer"] = None  # type: ignore
     positions: ArrayQuantity["nanometer"] = None  # type: ignore
 

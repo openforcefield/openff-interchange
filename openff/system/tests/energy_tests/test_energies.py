@@ -257,6 +257,7 @@ def test_water_dimer():
     tip3p = ForceField(get_test_file_path("tip3p.offxml"))
     water = Molecule.from_smiles("O")
     top = Topology.from_molecules(2 * [water])
+    top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
     pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
 
