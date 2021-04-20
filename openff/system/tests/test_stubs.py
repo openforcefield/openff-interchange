@@ -2,9 +2,9 @@ import mdtraj as md
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
+from openff.utilities.testing import skip_if_missing
 
 from openff.system.components.misc import OFFBioTop
-from openff.system.components.system import System
 from openff.system.exceptions import (
     InvalidTopologyError,
     SMIRNOFFHandlersNotImplementedError,
@@ -12,7 +12,7 @@ from openff.system.exceptions import (
 from openff.system.models import TopologyKey
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
-from openff.system.tests.utils import compare_charges_omm_off, requires_pkg
+from openff.system.tests.utils import compare_charges_omm_off
 
 
 class TestStubs(BaseTest):
@@ -149,7 +149,7 @@ class TestChargeAssignment(BaseTest):
 
         compare_charges_omm_off(reference, new)
 
-    @requires_pkg("openff.recharge")
+    @skip_if_missing("openff.recharge")
     def test_charge_increment_assignment(self, parsley):
         from openff.recharge.charges.bcc import original_am1bcc_corrections
         from openff.recharge.smirnoff import to_smirnoff

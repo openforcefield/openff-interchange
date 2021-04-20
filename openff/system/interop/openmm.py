@@ -1,11 +1,12 @@
 from openff.units import unit as off_unit
+from openff.units.utils import from_simtk
 from simtk import openmm, unit
 
 from openff.system.components.potentials import Potential
 from openff.system.exceptions import UnsupportedCutoffMethodError
 from openff.system.interop.parmed import _lj_params_from_potential
 from openff.system.models import PotentialKey, TopologyKey
-from openff.system.utils import pint_to_simtk, simtk_to_pint
+from openff.system.utils import pint_to_simtk
 
 kcal_mol = unit.kilocalorie_per_mole
 kcal_ang = kcal_mol / unit.angstrom ** 2
@@ -399,13 +400,13 @@ def _convert_nonbonded_force(force):
         pot_key = PotentialKey(id="idx")
         pot = Potential(
             parameters={
-                "sigma": simtk_to_pint(sigma),
-                "epsilon": simtk_to_pint(epsilon),
+                "sigma": from_simtk(sigma),
+                "epsilon": from_simtk(epsilon),
             }
         )
         vdw_handler.slot_map.update({top_key: pot_key})
         vdw_handler.potentials.update({pot_key: pot})
-        electrostatics.charges.update({top_key: simtk_to_pint(charge)})
+        electrostatics.charges.update({top_key: from_simtk(charge)})
 
     return vdw_handler, electrostatics
 
@@ -421,9 +422,7 @@ def _convert_harmonic_bond_force(force):
         atom1, atom2, length, k = force.getBondParameters(idx)
         top_key = TopologyKey(atom_indices=(atom1, atom2))
         pot_key = PotentialKey(id=f"{atom1}-{atom2}")
-        pot = Potential(
-            parameters={"length": simtk_to_pint(length), "k": simtk_to_pint(k)}
-        )
+        pot = Potential(parameters={"length": from_simtk(length), "k": from_simtk(k)})
 
         bond_handler.slot_map.update({top_key: pot_key})
         bond_handler.potentials.update({pot_key: pot})
@@ -442,9 +441,7 @@ def _convert_harmonic_angle_force(force):
         atom1, atom2, atom3, angle, k = force.getAngleParameters(idx)
         top_key = TopologyKey(atom_indices=(atom1, atom2, atom3))
         pot_key = PotentialKey(id=f"{atom1}-{atom2}-{atom3}")
-        pot = Potential(
-            parameters={"angle": simtk_to_pint(angle), "k": simtk_to_pint(k)}
-        )
+        pot = Potential(parameters={"angle": from_simtk(angle), "k": from_simtk(k)})
 
         angle_handler.slot_map.update({top_key: pot_key})
         angle_handler.potentials.update({pot_key: pot})
@@ -472,8 +469,8 @@ def _convert_periodic_torsion_force(force):
         pot = Potential(
             parameters={
                 "periodicity": int(per) * unit.dimensionless,
-                "phase": simtk_to_pint(phase),
-                "k": simtk_to_pint(k),
+                "phase": from_simtk(phase),
+                "k": from_simtk(k),
                 "idivf": 1 * unit.dimensionless,
             }
         )
