@@ -29,7 +29,8 @@ class EnergyReport(DefaultModel):
         "Bond": None,
         "Angle": None,
         "Torsion": None,
-        "Nonbonded": None,
+        "vdW": None,
+        "Electrostatics": None,
     }
 
     @validator("energies")
@@ -63,7 +64,8 @@ class EnergyReport(DefaultModel):
             "Bond": 1e-3 * kj_mol,
             "Angle": 1e-3 * kj_mol,
             "Torsion": 1e-3 * kj_mol,
-            "Nonbonded": 1e-3 * kj_mol,
+            "vdW": 1e-3 * kj_mol,
+            "Electrostatics": 1e-3 * kj_mol,
         }
 
         if custom_tolerances is not None:
@@ -79,10 +81,50 @@ class EnergyReport(DefaultModel):
             if self.energies[key] is None and other.energies[key] is None:
                 raise MissingEnergyError
 
-            diff = self.energies[key] - other.energies[key]  # type: ignore[operator]
-            if abs(diff) > tolerances[key]:
+            # TODO: Remove this when OpenMM's NonbondedForce is split out
+            if key == "Nonbonded":
+                if "Nonbonded" in other.energies:
+                    this_nonbonded = self.energies["Nonbonded"]
+                    other_nonbonded = other.energies["Nonbonded"]
+                else:
+                    this_nonbonded = self.energies["Nonbonded"]
+                    other_nonbonded = (
+                        other.energies["vdW"] + other.energies["Electrostatics"]
+                    )
+            elif key in ["vdW", "Electrostatics"] and key not in other.energies:
+                this_nonbonded = self.energies["vdW"] + self.energies["Electrostatics"]
+                other_nonbonded = other.energies["Nonbonded"]
+            else:
+                diff = self.energies[key] - other.energies[key]  # type: ignore[operator]
+                tolerance = tolerances[key]
+
+                if abs(diff) > tolerance:
+                    raise EnergyError(
+                        key,
+                        diff,
+                        tolerance,
+                        self.energies[key],
+                        other.energies[key],
+                    )
+
+                continue
+
+            diff = this_nonbonded - other_nonbonded
+            try:
+                tolerance = tolerances[key]
+            except KeyError as e:
+                if "Nonbonded" in str(e):
+                    tolerance = tolerances["vdW"] + tolerances["Electrostatics"]
+                else:
+                    raise e
+
+            if abs(diff) > tolerance:
                 raise EnergyError(
-                    key, diff, tolerances[key], self.energies[key], other.energies[key]
+                    "Nonbonded",
+                    diff,
+                    tolerance,
+                    this_nonbonded,
+                    other_nonbonded,
                 )
 
             error[key] = diff
@@ -92,8 +134,9 @@ class EnergyReport(DefaultModel):
     def __str__(self):
         return (
             "Energies:\n\n"
-            f"Bond:     \t\t{self.energies['Bond']}\n"
-            f"Angle:    \t\t{self.energies['Angle']}\n"
-            f"Torsion:  \t\t{self.energies['Torsion']}\n"
-            f"Nonbonded:\t\t{self.energies['Nonbonded']}\n"
+            f"Bond:          \t\t{self.energies['Bond']}\n"
+            f"Angle:         \t\t{self.energies['Angle']}\n"
+            f"Torsion:       \t\t{self.energies['Torsion']}\n"
+            f"vdW:           \t\t{self.energies['vdW']}\n"
+            f"Electrostatics:\t\t{self.energies['Electrostatics']}\n"
         )

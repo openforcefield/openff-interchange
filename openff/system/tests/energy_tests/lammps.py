@@ -76,7 +76,8 @@ def get_lammps_energies(
             "Bond": parsed_energies[0],
             "Angle": parsed_energies[1],
             "Torsion": parsed_energies[2] + parsed_energies[3],
-            "Nonbonded": parsed_energies[4],
+            "vdW": parsed_energies[5] + parsed_energies[8],
+            "Electrostatics": parsed_energies[6] + parsed_energies[7],
         }
     )
 

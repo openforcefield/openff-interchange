@@ -151,23 +151,29 @@ def _run_gmx_energy(
     return report
 
 
-def _get_gmx_energy_nonbonded(gmx_energies: Dict, electrostatics: bool):
+def _get_gmx_energy_vdw(gmx_energies: Dict):
     """Get the total nonbonded energy from a set of GROMACS energies."""
-    gmx_nonbonded = 0.0 * omm_unit.kilojoule_per_mole
+    gmx_vdw = 0.0 * omm_unit.kilojoule_per_mole
     for key in ["LJ (SR)", "Disper. corr.", "Buck.ham (SR)"]:
         try:
-            gmx_nonbonded += gmx_energies[key]
+            gmx_vdw += gmx_energies[key]
         except KeyError:
             pass
 
-    if electrostatics:
-        for key in ["Coulomb (SR)", "Coul. recip."]:
-            try:
-                gmx_nonbonded += gmx_energies[key]
-            except KeyError:
-                pass
+    return gmx_vdw
 
-    return gmx_nonbonded
+
+def _get_gmx_energy_coul(gmx_energies: Dict, electrostatics: bool = True):
+    gmx_coul = 0.0 * omm_unit.kilojoule_per_mole
+    if not electrostatics:
+        return gmx_coul
+    for key in ["Coulomb (SR)", "Coul. recip."]:
+        try:
+            gmx_coul += gmx_energies[key]
+        except KeyError:
+            pass
+
+    return gmx_coul
 
 
 def _get_gmx_energy_torsion(gmx_energies: Dict):
@@ -216,7 +222,8 @@ def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
             "Bond": energies["Bond"],
             "Angle": energies["Angle"],
             "Torsion": _get_gmx_energy_torsion(energies),
-            "Nonbonded": _get_gmx_energy_nonbonded(
+            "vdW": _get_gmx_energy_vdw(energies),
+            "Electrostatics": _get_gmx_energy_coul(
                 energies, electrostatics=electrostatics
             ),
         }

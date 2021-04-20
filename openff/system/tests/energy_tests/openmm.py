@@ -166,6 +166,9 @@ def _get_openmm_energies(
         }
     )
 
+    report.energies.pop("vdW")
+    report.energies.pop("Electrostatics")
+
     return report
 
 

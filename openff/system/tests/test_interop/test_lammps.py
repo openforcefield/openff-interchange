@@ -57,23 +57,26 @@ def test_to_lammps_single_mols(mol, n_mols):
     openff_sys.box = top.box_vectors
 
     reference = get_openmm_energies(
-        off_sys=openff_sys, round_positions=3, electrostatics=False
+        off_sys=openff_sys,
+        round_positions=3,
     )
 
     lmp_energies = get_lammps_energies(
-        off_sys=openff_sys, round_positions=3, electrostatics=False
+        off_sys=openff_sys,
+        round_positions=3,
     )
 
     _write_lammps_input(
         off_sys=openff_sys,
         file_name="tmp.in",
-        electrostatics=False,
     )
 
     lmp_energies.compare(
         reference,
         custom_tolerances={
-            "Nonbonded": 999 * omm_unit.kilojoule_per_mole,
+            "Nonbonded": 100 * omm_unit.kilojoule_per_mole,
+            "Electrostatics": 100 * omm_unit.kilojoule_per_mole,
+            "vdW": 100 * omm_unit.kilojoule_per_mole,
             "Torsion": 0.005 * omm_unit.kilojoule_per_mole,
         },
     )

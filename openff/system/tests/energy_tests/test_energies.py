@@ -73,7 +73,7 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
     try:
         omm_energies.compare(reference_energies)
     except EnergyError as e:
-        if "Nonbonded" in str(e):
+        if "Electrostatics" in str(e):
             # If nonbonded energies differ, at least ensure that the nonbonded
             # parameters on each particle match
             from openff.system.tests.utils import (
@@ -95,11 +95,13 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
 
     mdp = "cutoff_hbonds" if constrained else "cutoff"
     # Compare GROMACS writer and OpenMM export
-    gmx_energies = get_gromacs_energies(off_sys, mdp=mdp, electrostatics=False)
+    gmx_energies = get_gromacs_energies(off_sys, mdp=mdp)
 
     custom_tolerances = {
         "Bond": 2e-5 * n_mol * omm_unit.kilojoule_per_mole,
-        "Nonbonded": 1e-3 * n_mol * omm_unit.kilojoule_per_mole,
+        "Electrostatics": 20 * n_mol * omm_unit.kilojoule_per_mole,
+        "vdW": 20 * n_mol * omm_unit.kilojoule_per_mole,
+        "Nonbonded": 20 * n_mol * omm_unit.kilojoule_per_mole,
     }
     if constrained:
         # GROMACS might use the initial bond lengths, not the equilibrium bond lengths,
@@ -107,7 +109,6 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
         custom_tolerances.update(
             {
                 "Angle": 5e-2 * n_mol * omm_unit.kilojoule_per_mole,
-                "Nonbonded": 2.0 * n_mol * omm_unit.kilojoule_per_mole,
             }
         )
 
@@ -125,7 +126,8 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
         )
         lmp_energies = get_lammps_energies(off_sys)
         custom_tolerances = {
-            "Nonbonded": 0.5 * n_mol * omm_unit.kilojoule_per_mole,
+            "vdW": 5.0 * n_mol * omm_unit.kilojoule_per_mole,
+            "Electrostatics": 5.0 * n_mol * omm_unit.kilojoule_per_mole,
         }
         lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
 
@@ -172,7 +174,7 @@ def test_argon(n_mol):
     omm_energies.compare(
         gmx_energies,
         custom_tolerances={
-            "Nonbonded": 2e-5 * omm_unit.kilojoule_per_mole,
+            "Electrostatics": 2e-5 * omm_unit.kilojoule_per_mole,
         },
     )
 
@@ -224,7 +226,7 @@ def test_packmol_boxes(toolkit_file_path):
     omm_energies.compare(
         reference,
         custom_tolerances={
-            "Nonbonded": 2e-2 * omm_unit.kilojoule_per_mole,
+            "Electrostatics": 2e-2 * omm_unit.kilojoule_per_mole,
         },
     )
 
@@ -245,7 +247,7 @@ def test_packmol_boxes(toolkit_file_path):
         custom_tolerances={
             "Angle": 1e-2 * omm_unit.kilojoule_per_mole,
             "Torsion": 1e-2 * omm_unit.kilojoule_per_mole,
-            "Nonbonded": 3200 * omm_unit.kilojoule_per_mole,
+            "Electrostatics": 3200 * omm_unit.kilojoule_per_mole,
         },
     )
 
