@@ -4,6 +4,7 @@ import mdtraj as md
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import unit
+from openff.units.utils import from_simtk
 from scipy.constants import Avogadro
 from simtk import unit as simtk_unit
 
@@ -14,7 +15,6 @@ from openff.system.exceptions import GMXMdrunError
 from openff.system.models import PotentialKey, TopologyKey
 from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
-from openff.system.utils import simtk_to_pint
 
 
 def test_argon_buck():
@@ -30,9 +30,9 @@ def test_argon_buck():
     B = 1 / (0.273 * simtk_unit.angstrom)
     C = 102e-12 * simtk_unit.erg / simtk_unit.mole * simtk_unit.angstrom ** 6 * Avogadro
 
-    A = simtk_to_pint(A.in_units_of(simtk_unit.kilojoule_per_mole))
-    B = simtk_to_pint(B)
-    C = simtk_to_pint(
+    A = from_simtk(A.in_units_of(simtk_unit.kilojoule_per_mole))
+    B = from_simtk(B)
+    C = from_simtk(
         C.in_units_of(simtk_unit.kilojoule_per_mole * simtk_unit.angstrom ** 6)
     )
 

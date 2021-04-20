@@ -1,12 +1,12 @@
 from typing import TYPE_CHECKING, Dict, List, Set, Union
 
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
+from openff.utilities.utils import requires_package
 from pydantic import validator
 
 from openff.system.exceptions import InvalidExpressionError
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import ArrayQuantity, FloatQuantity
-from openff.system.utils import requires_package
 
 if TYPE_CHECKING:
     from openff.system.components.misc import OFFBioTop

@@ -1,17 +1,14 @@
 import numpy as np
-import pytest
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
+from openff.units.utils import from_simtk
 from simtk import unit as simtk_unit
 
-from openff.system.exceptions import MissingDependencyError
 from openff.system.tests.base_test import BaseTest
 from openff.system.utils import (
     compare_forcefields,
     get_partial_charges_from_openmm_system,
     pint_to_simtk,
-    requires_package,
-    simtk_to_pint,
     unwrap_list_of_pint_quantities,
 )
 
@@ -28,24 +25,13 @@ pint_quantities = [
 ]
 
 
-@pytest.mark.parametrize(
-    "simtk_quantity,pint_quantity",
-    [(s, p) for s, p in zip(simtk_quantitites, pint_quantities)],
-)
-def test_simtk_to_pint(simtk_quantity, pint_quantity):
-    """Test conversion from SimTK Quantity to pint Quantity."""
-    converted_pint_quantity = simtk_to_pint(simtk_quantity)
-
-    assert pint_quantity == converted_pint_quantity
-
-
 def test_simtk_list_of_quantities_to_pint():
     """Test conversion from Quantity lists, lists of Quantity"""
     list_of_quantities = [val * simtk_unit.meter for val in range(10)]
     quantity_list = simtk_unit.meter * [val for val in range(10)]
 
     assert list_of_quantities != quantity_list
-    assert all(simtk_to_pint(list_of_quantities) == simtk_to_pint(quantity_list))
+    assert all(from_simtk(list_of_quantities) == from_simtk(quantity_list))
 
 
 def test_pint_to_simtk():
@@ -78,20 +64,3 @@ class TestOpenMM(BaseTest):
         # assert partial_charges.units == unit.elementary_charge
         assert isinstance(partial_charges, list)
         assert np.allclose(partial_charges, np.zeros(4))  # .magnitude
-
-
-def test_requires_package():
-    """Test the @requires_package decorator"""
-
-    @requires_package("re")
-    def fn_installed():
-        pass
-
-    fn_installed()
-
-    @requires_package("foobar")
-    def fn_missing():
-        pass
-
-    with pytest.raises(MissingDependencyError, match="foobar"):
-        fn_missing()
