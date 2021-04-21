@@ -288,8 +288,8 @@ class SMIRNOFFvdWHandler(PotentialHandler):
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     independent_variables: Set[str] = {"r"}
     method: str = "cutoff"
-    cutoff: FloatQuantity["angstrom"] = 9.0  # type: ignore
-    switch_width: FloatQuantity["angstrom"] = 1.0  # type: ignore
+    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
+    switch_width: FloatQuantity["angstrom"] = 1.0 * unit.angstrom  # type: ignore
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
     scale_13: float = 0.0
