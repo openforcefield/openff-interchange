@@ -76,7 +76,7 @@ def _write_mdp_file(openff_sys: "System"):
             else:
                 raise UnsupportedExportError(f"vdW method {vdw_method} not supported")
             mdp_file.write(f"rvdw = {vdw_cutoff}\n")
-            if vdw_handler.switch_width is not None:
+            if getattr(vdw_handler, "switch_width", None) is not None:
                 mdp_file.write("vdw-modifier = potential-switch\n")
                 switch_distance = vdw_handler.cutoff - vdw_handler.switch_width
                 switch_distance = switch_distance.m_as(unit.nanometer)  # type: ignore

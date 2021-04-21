@@ -133,7 +133,7 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("n_mol", [10, 100])
+@pytest.mark.parametrize("n_mol", [50, 100, 200])
 def test_argon(n_mol):
     from openff.system.utils import get_test_file_path
 
@@ -151,7 +151,7 @@ def test_argon(n_mol):
     packed_box: mb.Compound = mb.fill_box(
         compound=compound,
         n_compounds=[n_mol],
-        box=mb.Box([4, 4, 4]),
+        box=mb.Box([2, 2, 2]),
     )
 
     positions = packed_box.xyz * unit.nanometer
@@ -171,11 +171,9 @@ def test_argon(n_mol):
 
     omm_energies.compare(lmp_energies)
 
-    omm_energies.compare(
-        gmx_energies,
-        custom_tolerances={
-            "Electrostatics": 2e-5 * omm_unit.kilojoule_per_mole,
-        },
+    gmx_energies.compare(
+        lmp_energies,
+        custom_tolerances={"vdW": n_mol * 1e-6 * omm_unit.kilojoule_per_mole},
     )
 
 

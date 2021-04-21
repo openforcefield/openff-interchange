@@ -40,6 +40,17 @@ class EnergyReport(DefaultModel):
                 v[key] = FloatQuantity.validate_type(val)
         return v
 
+    def __getitem__(self, item: str):
+        if type(item) != str:
+            raise LookupError(
+                "Only str arguments can be currently be used for lookups.\n"
+                f"Found item {item} of type {type(item)}"
+            )
+        if item in self.energies.keys():
+            return self.energies[item]
+        else:
+            return None
+
     def update_energies(self, new_energies):
         self.energies.update(self.validate_energies(new_energies))
 
@@ -132,9 +143,10 @@ class EnergyReport(DefaultModel):
     def __str__(self):
         return (
             "Energies:\n\n"
-            f"Bond:          \t\t{self.energies['Bond']}\n"
-            f"Angle:         \t\t{self.energies['Angle']}\n"
-            f"Torsion:       \t\t{self.energies['Torsion']}\n"
-            f"vdW:           \t\t{self.energies['vdW']}\n"
-            f"Electrostatics:\t\t{self.energies['Electrostatics']}\n"
+            f"Bond:          \t\t{self['Bond']}\n"
+            f"Angle:         \t\t{self['Angle']}\n"
+            f"Torsion:       \t\t{self['Torsion']}\n"
+            f"Nonbonded:     \t\t{self['Nonbonded']}\n"
+            f"vdW:           \t\t{self['vdW']}\n"
+            f"Electrostatics:\t\t{self['Electrostatics']}\n"
         )

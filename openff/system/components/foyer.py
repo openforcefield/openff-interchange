@@ -154,6 +154,7 @@ class FoyerElectrostaticsHandler(PotentialHandler):
     scale_13: float = 0.0
     scale_14: float = 0.5  # TODO: Replace with Foyer API point?
     scale_15: float = 1.0
+    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
 
     def store_charges(
         self,
