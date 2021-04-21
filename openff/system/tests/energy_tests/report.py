@@ -88,11 +88,9 @@ class EnergyReport(DefaultModel):
                     other_nonbonded = other.energies["Nonbonded"]
                 else:
                     this_nonbonded = self.energies["Nonbonded"]
-                    other_nonbonded = (
-                        other.energies["vdW"] + other.energies["Electrostatics"]
-                    )
+                    other_nonbonded = other.energies["vdW"] + other.energies["Electrostatics"]  # type: ignore
             elif key in ["vdW", "Electrostatics"] and key not in other.energies:
-                this_nonbonded = self.energies["vdW"] + self.energies["Electrostatics"]
+                this_nonbonded = self.energies["vdW"] + self.energies["Electrostatics"]  # type: ignore
                 other_nonbonded = other.energies["Nonbonded"]
             else:
                 diff = self.energies[key] - other.energies[key]  # type: ignore[operator]
@@ -109,12 +107,12 @@ class EnergyReport(DefaultModel):
 
                 continue
 
-            diff = this_nonbonded - other_nonbonded
+            diff = this_nonbonded - other_nonbonded  # type: ignore
             try:
                 tolerance = tolerances[key]
             except KeyError as e:
                 if "Nonbonded" in str(e):
-                    tolerance = tolerances["vdW"] + tolerances["Electrostatics"]
+                    tolerance = tolerances["vdW"] + tolerances["Electrostatics"]  # type: ignore
                 else:
                     raise e
 

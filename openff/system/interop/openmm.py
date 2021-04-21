@@ -248,7 +248,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
         if vdw_handler.method not in [val[0] for val in supported_cutoff_methods]:
             raise UnsupportedCutoffMethodError()
 
-        vdw_cutoff = vdw_handler.cutoff * unit.angstrom
+        vdw_cutoff = vdw_handler.cutoff.m_as(off_unit.angstrom) * unit.angstrom
 
         electrostatics_handler = openff_sys.handlers["Electrostatics"]  # Split this out
         if electrostatics_handler.method.lower() not in [

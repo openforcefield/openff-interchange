@@ -1,6 +1,7 @@
 nsteps                   = 0
 nstenergy                = 1000
 pbc                      = xyz
+continuation             = yes
 
 cutoff-scheme            = verlet
 coulombtype              = Cut-off
@@ -8,11 +9,7 @@ rcoulomb                 = 0.9
 rvdw                     = 0.9
 vdw-type                 = cutoff
 vdw-modifier             = None
-; Apply long range dispersion corrections for Energy and Pressure =
+
 DispCorr                 = No
 
-; OPTIONS FOR BONDS     =
 constraints              = none
-
-; GENERATE VELOCITIES FOR STARTUP RUN =
-continuation             = yes

@@ -2,6 +2,7 @@ import subprocess
 from typing import List
 
 import numpy as np
+from openff.units import unit
 from simtk import unit as omm_unit
 
 from openff.system.components.system import System
@@ -127,6 +128,7 @@ def _write_lammps_input(
 
         # TODO: Ensure units
         vdw_cutoff = vdw_hander.cutoff  # type: ignore[attr-defined]
+        vdw_cutoff = vdw_cutoff.m_as(unit.angstrom)
         # TODO: Handle separate cutoffs
         coul_cutoff = vdw_cutoff
 
