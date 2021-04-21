@@ -1,19 +1,100 @@
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 from intermol.gromacs import _group_energy_terms
 from openff.toolkit.utils.utils import temporary_cd
+from openff.units import unit
 from simtk import unit as omm_unit
 
-from openff.system.components.system import System
-from openff.system.exceptions import GMXEnergyError, GMXGromppError, GMXMdrunError
+from openff.system.exceptions import (
+    GMXEnergyError,
+    GMXGromppError,
+    GMXMdrunError,
+    UnsupportedExportError,
+)
 from openff.system.tests.energy_tests.report import EnergyReport
 from openff.system.utils import get_test_file_path
 
+if TYPE_CHECKING:
+    from openff.system.components.smirnoff import SMIRNOFFvdWHandler
+    from openff.system.components.system import System
 
-def _get_mdp_file(key: str) -> Path:
+MDP_HEADER = """
+nsteps                   = 0
+nstenergy                = 1000
+continuation             = yes
+cutoff-scheme            = verlet
+
+"""
+_ = """
+pbc                      = xyz
+coulombtype              = Cut-off
+rcoulomb                 = 0.9
+vdwtype                 = cutoff
+rvdw                     = 0.9
+vdw-modifier             = None
+DispCorr                 = No
+constraints              = none
+"""
+
+
+def _write_mdp_file(openff_sys: "System"):
+    with open("auto_generated.mdp", "w") as mdp_file:
+        mdp_file.write(MDP_HEADER)
+
+        if openff_sys.box is not None:
+            mdp_file.write("pbc = xyz\n")
+
+        if "Electrostatics" in openff_sys.handlers:
+            coul_handler = openff_sys.handlers["Electrostatics"]
+            coul_method = coul_handler.method  # type: ignore[attr-defined]
+            coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
+            if coul_method == "Cut-off":
+                mdp_file.write("coulombtype = Cut-off\n")
+                mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
+            elif coul_method == "PME":
+                mdp_file.write("coulombtype = PME\n")
+                mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
+            elif coul_method == "reaction-field":
+                mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
+                mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
+            else:
+                raise UnsupportedExportError(
+                    f"Electrostatics method {coul_method} not supported"
+                )
+
+        if "vdW" in openff_sys.handlers:
+            vdw_handler: "SMIRNOFFvdWHandler" = openff_sys.handlers["vdW"]  # type: ignore
+            vdw_method = vdw_handler.method.lower().replace("-", "")  # type: ignore
+            vdw_cutoff = vdw_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
+            if vdw_method == "cutoff":
+                mdp_file.write("vdwtype = cutoff\n")
+            elif vdw_method == "PME":
+                mdp_file.write("vdwtype = PME\n")
+            else:
+                raise UnsupportedExportError(f"vdW method {vdw_method} not supported")
+            mdp_file.write(f"rvdw = {vdw_cutoff}\n")
+            if vdw_handler.switch_width is not None:
+                mdp_file.write("vdw-modifier = potential-switch\n")
+                switch_distance = vdw_handler.cutoff - vdw_handler.switch_width
+                switch_distance = switch_distance.m_as(unit.nanometer)  # type: ignore
+                mdp_file.write(f"rvdw-switch = {switch_distance}\n")
+
+        if "Constraints" not in openff_sys.handlers:
+            mdp_file.write("constraints = none\n")
+        else:
+            if len(openff_sys.handlers["Constraints"].slot_map) == 0:
+                mdp_file.write("constraints = none\n")
+            else:
+                raise UnsupportedExportError("Parsing of constraints not implemented")
+
+
+def _get_mdp_file(key: str = "auto") -> str:
+    if key == "auto":
+        return "auto_generated.mdp"
+
     mapping = {
         "default": "default.mdp",
         "cutoff": "cutoff.mdp",
@@ -25,7 +106,7 @@ def _get_mdp_file(key: str) -> Path:
 
 
 def get_gromacs_energies(
-    off_sys: System,
+    off_sys: "System",
     mdp: str = "cutoff",
     writer: str = "internal",
     electrostatics=True,
@@ -58,6 +139,8 @@ def get_gromacs_energies(
         with temporary_cd(tmpdir):
             off_sys.to_gro("out.gro", writer=writer)
             off_sys.to_top("out.top", writer=writer)
+            if mdp == "auto":
+                _write_mdp_file(off_sys)
             report = _run_gmx_energy(
                 top_file="out.top",
                 gro_file="out.gro",

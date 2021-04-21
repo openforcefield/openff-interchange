@@ -84,6 +84,8 @@ def to_openff_system(
             scale_13=self["Electrostatics"].scale13,
             scale_14=self["Electrostatics"].scale14,
             scale_15=self["Electrostatics"].scale15,
+            method=self["Electrostatics"].method,
+            cutoff=self["Electrostatics"].cutoff,
         )
         if "ToolkitAM1BCC" in self.registered_parameter_handlers:
             electrostatics.cache_charges(

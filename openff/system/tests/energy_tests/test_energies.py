@@ -93,7 +93,7 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
             np.asarray([*_get_lj_params_from_openmm_system(omm_reference)]),
         )
 
-    mdp = "cutoff_hbonds" if constrained else "cutoff"
+    mdp = "cutoff_hbonds" if constrained else "auto"
     # Compare GROMACS writer and OpenMM export
     gmx_energies = get_gromacs_energies(off_sys, mdp=mdp)
 

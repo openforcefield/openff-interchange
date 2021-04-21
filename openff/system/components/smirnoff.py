@@ -352,8 +352,9 @@ class SMIRNOFFvdWHandler(PotentialHandler):
 class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
 
     name: str = "Electrostatics"
-    method: str = "PME"
     expression: str = "coul"
+    method: str = "PME"
+    cutoff: FloatQuantity["angstrom"] = 9.0  # type: ignore
     independent_variables: Set[str] = {"r"}
     charge_map: Dict[TopologyKey, float] = dict()
     scale_13: float = 0.0
