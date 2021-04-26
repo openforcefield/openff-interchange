@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Dict, Union
+from typing import IO, TYPE_CHECKING, Dict, Set, Tuple, Union
 
 import ele
 import numpy as np
@@ -284,9 +284,9 @@ def _write_atoms(
     _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
 
     # Use a set to de-duplicate
-    pairs = {*_iterate_pairs(openff_sys.topology.mdtop)}
+    pairs: Set[Tuple] = {*_iterate_pairs(openff_sys.topology.mdtop)}  # type: ignore
     for pair in pairs:
-        indices = tuple(a.index for a in pair)
+        indices = [a.index for a in pair]
         indices = sorted(indices)
         top_file.write(
             "{:7d} {:7d} {:6d}\n".format(
