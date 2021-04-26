@@ -51,7 +51,7 @@ def _write_mdp_file(openff_sys: "System"):
             coul_handler = openff_sys.handlers["Electrostatics"]
             coul_method = coul_handler.method  # type: ignore[attr-defined]
             coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
-            if coul_method == "Cut-off":
+            if coul_method in ["Cut-off", "cutoff"]:
                 mdp_file.write("coulombtype = Cut-off\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
             elif coul_method == "PME":
@@ -237,7 +237,7 @@ def _run_gmx_energy(
 def _get_gmx_energy_vdw(gmx_energies: Dict):
     """Get the total nonbonded energy from a set of GROMACS energies."""
     gmx_vdw = 0.0 * omm_unit.kilojoule_per_mole
-    for key in ["LJ (SR)", "Disper. corr.", "Buck.ham (SR)"]:
+    for key in ["LJ (SR)", "LJ-14", "Disper. corr.", "Buck.ham (SR)"]:
         try:
             gmx_vdw += gmx_energies[key]
         except KeyError:
@@ -250,7 +250,7 @@ def _get_gmx_energy_coul(gmx_energies: Dict, electrostatics: bool = True):
     gmx_coul = 0.0 * omm_unit.kilojoule_per_mole
     if not electrostatics:
         return gmx_coul
-    for key in ["Coulomb (SR)", "Coul. recip."]:
+    for key in ["Coulomb (SR)", "Coul. recip.", "Coulomb-14"]:
         try:
             gmx_coul += gmx_energies[key]
         except KeyError:

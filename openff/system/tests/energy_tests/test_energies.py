@@ -151,7 +151,7 @@ def test_argon(n_mol):
     packed_box: mb.Compound = mb.fill_box(
         compound=compound,
         n_compounds=[n_mol],
-        box=mb.Box([2, 2, 2]),
+        box=mb.Box([2.5, 2.5, 2.5]),
     )
 
     positions = packed_box.xyz * unit.nanometer
@@ -160,16 +160,22 @@ def test_argon(n_mol):
 
     box = np.asarray(packed_box.box.lengths) * unit.nanometer
     off_sys.box = box
+    off_sys["vdW"].method = "cutoff"
 
     omm_energies = get_openmm_energies(
-        off_sys, round_positions=8, hard_cutoff=True, electrostatics=False
+        off_sys,
+        round_positions=8,
     )
     gmx_energies = get_gromacs_energies(
-        off_sys, writer="internal", electrostatics=False
+        off_sys,
+        writer="internal",
     )
     lmp_energies = get_lammps_energies(off_sys)
 
-    omm_energies.compare(lmp_energies)
+    omm_energies.compare(
+        gmx_energies,
+        custom_tolerances={"vdW": n_mol * 5e-7 * omm_unit.kilojoule_per_mole},
+    )
 
     gmx_energies.compare(
         lmp_energies,
@@ -322,3 +328,32 @@ def test_process_rb_torsions():
     )
 
     assert oplsaa_energies.energies["Torsion"].m != 0.0
+
+
+def test_gmx_14_energies_exist():
+    # TODO: Make sure 1-4 energies are accurate, not just existent
+
+    # Use a molecule with only one 1-4 interaction, and
+    # make it between heavy atoms because H-H 1-4 are weak
+    mol = Molecule.from_smiles("ClC#CCl")
+    mol.name = "HPER"
+    mol.generate_conformers(n_conformers=1)
+
+    parsley = ForceField("openff-1.0.0.offxml")
+
+    out = parsley.create_openff_system(topology=mol.to_topology())
+    out.positions = mol.conformers[0]
+
+    # Put this molecule in a large box with cut-off electrostatics
+    # to prevent it from interacting with images of itself
+    out.box = [40, 40, 40]
+    out["Electrostatics"].method = "cutoff"
+
+    gmx_energies = get_gromacs_energies(out)
+
+    # The only possible non-bonded interactions should be from 1-4 intramolecular interactions
+    assert gmx_energies.energies["vdW"].m != 0.0
+    assert gmx_energies.energies["Electrostatics"].m != 0.0
+
+    # TODO: It would be best to save the 1-4 interactions, split off into vdW and Electrostatics
+    # in the energies. This might be tricky/intractable to do for engines that are not GROMACS

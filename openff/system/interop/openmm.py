@@ -240,20 +240,15 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys):
 
 def _process_nonbonded_forces(openff_sys, openmm_sys):
     """Process the vdW and Electrostatics sections of an OpenFF System into a corresponding openmm.NonbondedForce"""
-    # Store the pairings, not just the supported methods for each
-    supported_cutoff_methods = [["cutoff", "pme"]]
-
     if "vdW" in openff_sys.handlers:
         vdw_handler = openff_sys.handlers["vdW"]
-        if vdw_handler.method not in [val[0] for val in supported_cutoff_methods]:
+        if vdw_handler.method not in ["cutoff"]:
             raise UnsupportedCutoffMethodError()
 
         vdw_cutoff = vdw_handler.cutoff.m_as(off_unit.angstrom) * unit.angstrom
 
         electrostatics_handler = openff_sys.handlers["Electrostatics"]  # Split this out
-        if electrostatics_handler.method.lower() not in [
-            v[1] for v in supported_cutoff_methods
-        ]:
+        if electrostatics_handler.method.lower() not in ["pme", "cutoff"]:
             raise UnsupportedCutoffMethodError()
 
         non_bonded_force = openmm.NonbondedForce()
