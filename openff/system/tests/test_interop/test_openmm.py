@@ -36,7 +36,7 @@ def test_from_openmm_single_mols(mol, n_mols):
     top = Topology.from_molecules(n_mols * [mol])
     mol.conformers[0] -= np.min(mol.conformers) * unit.angstrom
 
-    top.box_vectors = np.eye(3) * np.asarray([10, 10, 10]) * unit.nanometer
+    top.box_vectors = np.eye(3) * np.asarray([15, 15, 15]) * unit.nanometer
 
     if n_mols == 1:
         positions = mol.conformers[0]
@@ -55,4 +55,5 @@ def test_from_openmm_single_mols(mol, n_mols):
         system2=native_system,
         positions=positions,
         box_vectors=top.box_vectors,
+        atol=1e-5,
     )

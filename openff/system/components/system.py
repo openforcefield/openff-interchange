@@ -85,7 +85,6 @@ class System(DefaultModel):
 
     def to_openmm(self):
         """Export this system to an OpenMM System"""
-        self._check_nonbonded_compatibility()
         return to_openmm(self)
 
     def to_prmtop(self, file_path: Union[Path, str], writer="parmed"):
@@ -135,14 +134,6 @@ class System(DefaultModel):
         }
 
         return nonbonded_
-
-    def _check_nonbonded_compatibility(self):
-        from openff.system.interop.compatibility.nonbonded import (
-            check_nonbonded_compatibility,
-        )
-
-        nonbonded_ = self._get_nonbonded_methods()
-        return check_nonbonded_compatibility(nonbonded_)
 
     def __getitem__(self, item: str):
         """Syntax sugar for looking up potential handlers or other components"""
