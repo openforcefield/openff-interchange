@@ -36,7 +36,9 @@ def test_internal_gromacs_writers(mol):
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
     out = parsley.create_openff_system(top)
 
-    out.box = [4, 4, 4] * np.eye(3)
+    out["vdW"].method = "cutoff"
+    out["Electrostatics"].method = "cutoff"
+    out.box = [10, 10, 10]
     out.positions = mol.conformers[0]
     out.positions = np.round(out.positions, 2)
 
@@ -46,7 +48,7 @@ def test_internal_gromacs_writers(mol):
         system=openmm_sys,
         xyz=out.positions.to(unit.angstrom),
     )
-    struct.box = [40, 40, 40, 90, 90, 90]
+    struct.box = [100, 100, 100, 90, 90, 90]
 
     with tempfile.TemporaryDirectory() as off_tempdir:
         with temporary_cd(off_tempdir):
@@ -74,7 +76,10 @@ def test_internal_gromacs_writers(mol):
 
             reference_energy.compare(
                 internal_energy,
-                custom_tolerances={"Bond": 2e-2 * simtk_unit.kilojoule_per_mole},
+                custom_tolerances={
+                    "Bond": 2e-2 * simtk_unit.kilojoule_per_mole,
+                    "Nonbonded": 1.5e-6 * simtk_unit.kilojoule_per_mole,
+                },
             )
 
 

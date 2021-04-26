@@ -8,6 +8,7 @@ from openff.units import unit
 from openff.system.components.misc import (
     _iterate_angles,
     _iterate_impropers,
+    _iterate_pairs,
     _iterate_propers,
     _store_bond_partners,
 )
@@ -282,12 +283,15 @@ def _write_atoms(
 
     _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
 
-    for proper in _iterate_propers(openff_sys.topology.mdtop):  # type: ignore[union-attr]
-        indices = tuple(a.index for a in proper)
+    # Use a set to de-duplicate
+    pairs = {*_iterate_pairs(openff_sys.topology.mdtop)}
+    for pair in pairs:
+        indices = tuple(a.index for a in pair)
+        indices = sorted(indices)
         top_file.write(
             "{:7d} {:7d} {:6d}\n".format(
                 indices[0] + 1,
-                indices[3] + 1,
+                indices[1] + 1,
                 1,
             )
         )
