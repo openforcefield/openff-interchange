@@ -321,6 +321,8 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
             c = pint_to_simtk(params["C"])
             non_bonded_force.setParticleParameters(atom_idx, [a, b, c])
 
+        return
+
     # TODO: Figure out all of this post-processing with CustomNonbondedForce
 
     # from vdWHandler.postprocess_system, modified to work on an md.Topology

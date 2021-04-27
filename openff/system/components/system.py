@@ -51,7 +51,7 @@ class System(DefaultModel):
             raise MissingPositionsError(
                 "Positions are required to write a `.gro` file but found None."
             )
-        elif np.allclose(self.positions.m, 0):
+        elif np.allclose(self.positions, 0):
             import warnings
 
             warnings.warn(
