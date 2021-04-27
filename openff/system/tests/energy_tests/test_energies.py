@@ -5,7 +5,7 @@ import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.units import unit
 from simtk import openmm
-from simtk import unit as omm_unit
+from simtk import unit as simtk_unit
 
 from openff.system.components.misc import OFFBioTop
 from openff.system.stubs import ForceField
@@ -19,18 +19,17 @@ from openff.system.tests.energy_tests.openmm import (
     _get_openmm_energies,
     get_openmm_energies,
 )
-from openff.system.tests.energy_tests.report import EnergyError
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("constrained", [True, False])
 @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
-@pytest.mark.parametrize("n_mol", [1, 10, 100])
-def test_energies_single_mol(constrained, n_mol, mol_smi):
+def test_energies_single_mol(constrained, mol_smi):
     mol = Molecule.from_smiles(mol_smi)
     mol.generate_conformers(n_conformers=1)
     mol.name = "FOO"
-    top = Topology.from_molecules(n_mol * [mol])
+    top = mol.to_topology()
+    top.box_vectors = None  # [10, 10, 10] * simtk_unit.nanometer
 
     if constrained:
         parsley = ForceField("openff-1.0.0.offxml")
@@ -39,78 +38,40 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
 
     off_sys = parsley.create_openff_system(top)
 
+    off_sys.handlers["Electrostatics"].method = "cutoff"
+
     mol.to_file("out.xyz", file_format="xyz")
     compound: mb.Compound = mb.load("out.xyz")
     packed_box: mb.Compound = mb.fill_box(
-        compound=compound,
-        n_compounds=[n_mol],
-        density=500,  # kg/m^3
+        compound=compound, n_compounds=1, box=mb.Box(lengths=[10, 10, 10])
     )
 
     positions = packed_box.xyz * unit.nanometer
     off_sys.positions = positions
 
-    box = np.asarray(packed_box.box.lengths) * unit.nanometer
-    if np.any(box < 4 * unit.nanometer):
-        off_sys.box = np.array([4, 4, 4]) * unit.nanometer
-    else:
-        off_sys.box = box
-
     # Compare directly to toolkit's reference implementation
-    omm_energies = get_openmm_energies(
-        off_sys, round_positions=8, hard_cutoff=True, electrostatics=False
-    )
+    omm_energies = get_openmm_energies(off_sys, round_positions=8)
     omm_reference = parsley.create_openmm_system(top)
     reference_energies = _get_openmm_energies(
         omm_sys=omm_reference,
         box_vectors=off_sys.box,
         positions=off_sys.positions,
         round_positions=8,
-        hard_cutoff=True,
-        electrostatics=False,
     )
 
-    try:
-        omm_energies.compare(reference_energies)
-    except EnergyError as e:
-        if "Electrostatics" in str(e):
-            # If nonbonded energies differ, at least ensure that the nonbonded
-            # parameters on each particle match
-            from openff.system.tests.utils import (
-                _get_charges_from_openmm_system,
-                _get_lj_params_from_openmm_system,
-            )
-        else:
-            raise e
-
-        omm_sys = off_sys.to_openmm()
-        np.testing.assert_equal(
-            np.asarray([*_get_charges_from_openmm_system(omm_sys)]),
-            np.asarray([*_get_charges_from_openmm_system(omm_reference)]),
-        )
-        np.testing.assert_equal(
-            np.asarray([*_get_lj_params_from_openmm_system(omm_sys)]),
-            np.asarray([*_get_lj_params_from_openmm_system(omm_reference)]),
-        )
+    omm_energies.compare(reference_energies)
 
     mdp = "cutoff_hbonds" if constrained else "auto"
     # Compare GROMACS writer and OpenMM export
     gmx_energies = get_gromacs_energies(off_sys, mdp=mdp)
 
     custom_tolerances = {
-        "Bond": 2e-5 * n_mol * omm_unit.kilojoule_per_mole,
-        "Electrostatics": 20 * n_mol * omm_unit.kilojoule_per_mole,
-        "vdW": 20 * n_mol * omm_unit.kilojoule_per_mole,
-        "Nonbonded": 20 * n_mol * omm_unit.kilojoule_per_mole,
+        "Bond": 2e-5 * simtk_unit.kilojoule_per_mole,
+        "Electrostatics": 2 * simtk_unit.kilojoule_per_mole,
+        "vdW": 2 * simtk_unit.kilojoule_per_mole,
+        "Nonbonded": 2 * simtk_unit.kilojoule_per_mole,
+        "Angle": 1e-5 * simtk_unit.kilojoule_per_mole,
     }
-    if constrained:
-        # GROMACS might use the initial bond lengths, not the equilibrium bond lengths,
-        # in the initial configuration, making angles differ slightly
-        custom_tolerances.update(
-            {
-                "Angle": 5e-2 * n_mol * omm_unit.kilojoule_per_mole,
-            }
-        )
 
     gmx_energies.compare(
         omm_energies,
@@ -126,8 +87,8 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
         )
         lmp_energies = get_lammps_energies(off_sys)
         custom_tolerances = {
-            "vdW": 5.0 * n_mol * omm_unit.kilojoule_per_mole,
-            "Electrostatics": 5.0 * n_mol * omm_unit.kilojoule_per_mole,
+            "vdW": 5.0 * simtk_unit.kilojoule_per_mole,
+            "Electrostatics": 5.0 * simtk_unit.kilojoule_per_mole,
         }
         lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
 
@@ -140,7 +101,7 @@ def test_argon(n_mol):
     ar_ff = ForceField(get_test_file_path("argon.offxml"))
 
     mol = Molecule.from_smiles("[#18]")
-    mol.add_conformer(np.array([[0, 0, 0]]) * omm_unit.angstrom)
+    mol.add_conformer(np.array([[0, 0, 0]]) * simtk_unit.angstrom)
     mol.name = "FOO"
     top = Topology.from_molecules(n_mol * [mol])
 
@@ -174,12 +135,12 @@ def test_argon(n_mol):
 
     omm_energies.compare(
         gmx_energies,
-        custom_tolerances={"vdW": n_mol * 5e-7 * omm_unit.kilojoule_per_mole},
+        custom_tolerances={"vdW": n_mol * 5e-7 * simtk_unit.kilojoule_per_mole},
     )
 
     gmx_energies.compare(
         lmp_energies,
-        custom_tolerances={"vdW": n_mol * 1e-6 * omm_unit.kilojoule_per_mole},
+        custom_tolerances={"vdW": n_mol * 1e-6 * simtk_unit.kilojoule_per_mole},
     )
 
 
@@ -212,7 +173,7 @@ def test_packmol_boxes(toolkit_file_path):
     off_sys = parsley.create_openff_system(off_topology)
 
     off_sys.box = np.asarray(
-        pdbfile.topology.getPeriodicBoxVectors().value_in_unit(omm_unit.nanometer)
+        pdbfile.topology.getPeriodicBoxVectors().value_in_unit(simtk_unit.nanometer)
     )
     off_sys.positions = pdbfile.positions
 
@@ -230,7 +191,7 @@ def test_packmol_boxes(toolkit_file_path):
     omm_energies.compare(
         reference,
         custom_tolerances={
-            "Electrostatics": 2e-2 * omm_unit.kilojoule_per_mole,
+            "Electrostatics": 2e-2 * simtk_unit.kilojoule_per_mole,
         },
     )
 
@@ -249,9 +210,9 @@ def test_packmol_boxes(toolkit_file_path):
     omm_energies_rounded.compare(
         other=gmx_energies,
         custom_tolerances={
-            "Angle": 1e-2 * omm_unit.kilojoule_per_mole,
-            "Torsion": 1e-2 * omm_unit.kilojoule_per_mole,
-            "Electrostatics": 3200 * omm_unit.kilojoule_per_mole,
+            "Angle": 1e-2 * simtk_unit.kilojoule_per_mole,
+            "Torsion": 1e-2 * simtk_unit.kilojoule_per_mole,
+            "Electrostatics": 3200 * simtk_unit.kilojoule_per_mole,
         },
     )
 

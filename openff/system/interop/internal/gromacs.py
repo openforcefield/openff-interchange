@@ -63,8 +63,11 @@ def to_gro(openff_sys: "System", file_path: Union[Path, str], decimal=8):
                 )
             )
 
-        # TODO: Ensure nanometers
-        box = openff_sys.box.to(unit.nanometer).magnitude  # type: ignore
+        if openff_sys.box is None:
+            box = 11 * np.eye(3)
+        else:
+            box = openff_sys.box.to(unit.nanometer).magnitude  # type: ignore
+
         # Check for rectangular
         if (box == np.diag(np.diagonal(box))).all():
             for i in range(3):

@@ -246,6 +246,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
             raise UnsupportedCutoffMethodError()
 
         vdw_cutoff = vdw_handler.cutoff.m_as(off_unit.angstrom) * unit.angstrom
+        vdw_method = vdw_handler.method.lower()
 
         electrostatics_handler = openff_sys.handlers["Electrostatics"]  # Split this out
         if electrostatics_handler.method.lower() not in ["pme", "cutoff"]:
@@ -307,6 +308,8 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
         else:
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
             non_bonded_force.setCutoffDistance(buck_handler.cutoff * unit.angstrom)
+            vdw_cutoff = buck_handler.cutoff
+            vdw_method = buck_handler.method.lower()
 
         for top_key, pot_key in buck_handler.slot_map.items():
             atom_idx = top_key.atom_indices[0]
@@ -317,8 +320,6 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
             b = pint_to_simtk(params["B"])
             c = pint_to_simtk(params["C"])
             non_bonded_force.setParticleParameters(atom_idx, [a, b, c])
-
-        return
 
     # TODO: Figure out all of this post-processing with CustomNonbondedForce
 
@@ -334,15 +335,23 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
         vdw_handler.scale_14,
     )
 
+    electrostatics_cutoff = (
+        electrostatics_handler.cutoff.m_as(off_unit.angstrom) * unit.angstrom
+    )
+    if electrostatics_cutoff != vdw_cutoff:
+        raise Exception(electrostatics_handler.cutoff, vdw_cutoff)
+    electrostatics_method = electrostatics_handler.method.lower()
+
     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
-    non_bonded_force.setCutoffDistance(9.0 * unit.angstrom)
-    non_bonded_force.setEwaldErrorTolerance(1.0e-4)
+    non_bonded_force.setCutoffDistance(vdw_cutoff)
+    non_bonded_force.setEwaldErrorTolerance(1.0e-6)
 
     # It's not clear why this needs to happen here, but it cannot be set above
     # and satisfy vdW/Electrostatics methods Cutoff and PME; see create_force
     # and postprocess_system methods in toolkit
-    if openff_sys.box is None:
+    if openff_sys.box is None or "cutoff" in [electrostatics_method, vdw_method]:
         non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+        # non_bonded_force.setCutoffDistance(1.0 * unit.nanometer)
 
 
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
