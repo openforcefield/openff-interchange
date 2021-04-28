@@ -51,6 +51,7 @@ def _write_mdp_file(openff_sys: "System"):
             coul_handler = openff_sys.handlers["Electrostatics"]
             coul_method = coul_handler.method  # type: ignore[attr-defined]
             coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
+            coul_cutoff = round(coul_cutoff, 6)
             if coul_method in ["Cut-off", "cutoff"]:
                 mdp_file.write("coulombtype = Cut-off\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
@@ -69,6 +70,7 @@ def _write_mdp_file(openff_sys: "System"):
             vdw_handler: "SMIRNOFFvdWHandler" = openff_sys.handlers["vdW"]  # type: ignore
             vdw_method = vdw_handler.method.lower().replace("-", "")  # type: ignore
             vdw_cutoff = vdw_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
+            vdw_cutoff = round(vdw_cutoff, 6)
             if vdw_method == "cutoff":
                 mdp_file.write("vdwtype = cutoff\n")
             elif vdw_method == "PME":

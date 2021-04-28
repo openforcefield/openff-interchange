@@ -112,7 +112,7 @@ def test_argon(n_mol):
     packed_box: mb.Compound = mb.fill_box(
         compound=compound,
         n_compounds=[n_mol],
-        box=mb.Box([2.5, 2.5, 2.5]),
+        density=100,
     )
 
     positions = packed_box.xyz * unit.nanometer
@@ -121,26 +121,29 @@ def test_argon(n_mol):
 
     box = np.asarray(packed_box.box.lengths) * unit.nanometer
     off_sys.box = box
-    off_sys["vdW"].method = "cutoff"
+    # off_sys["vdW"].method = "cutoff"
 
     omm_energies = get_openmm_energies(
         off_sys,
-        round_positions=8,
+        round_positions=3,
     )
+
     gmx_energies = get_gromacs_energies(
         off_sys,
+        mdp="auto",
         writer="internal",
     )
+
     lmp_energies = get_lammps_energies(off_sys)
 
     omm_energies.compare(
         gmx_energies,
-        custom_tolerances={"vdW": n_mol * 5e-7 * simtk_unit.kilojoule_per_mole},
+        custom_tolerances={"vdW": n_mol * 2e-3 * simtk_unit.kilojoule_per_mole},
     )
 
     gmx_energies.compare(
         lmp_energies,
-        custom_tolerances={"vdW": n_mol * 1e-6 * simtk_unit.kilojoule_per_mole},
+        custom_tolerances={"vdW": n_mol * 2e-3 * simtk_unit.kilojoule_per_mole},
     )
 
 
