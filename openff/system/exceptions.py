@@ -66,7 +66,13 @@ class InvalidExpressionError(ValueError):
 
 class UnsupportedCutoffMethodError(BaseException):
     """
-    Exception for incompatibilities in cutoff methods
+    Exception for a cutoff method that is invalid or not supported by an engine
+    """
+
+
+class UnimplementedCutoffMethodError(BaseException):
+    """
+    Exception for a cutoff method that should be supported but it not yet implemented
     """
 
 

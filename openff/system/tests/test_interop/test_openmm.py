@@ -1,11 +1,161 @@
 import numpy as np
 import pytest
-from openff.toolkit.tests.utils import compare_system_energies
+from openff.toolkit.tests.test_forcefield import create_ethanol
+from openff.toolkit.tests.utils import compare_system_energies, get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
-from simtk import unit
+from simtk import openmm, unit
 
+from openff.system.exceptions import (
+    UnimplementedCutoffMethodError,
+    UnsupportedCutoffMethodError,
+)
 from openff.system.stubs import ForceField
 from openff.system.utils import get_test_file_path
+
+nonbonded_resolution_matrix = [
+    {
+        "vdw_method": "cutoff",
+        "electrostatics_method": "PME",
+        "periodic": True,
+        "result": openmm.NonbondedForce.PME,
+    },
+    {
+        "vdw_method": "cutoff",
+        "electrostatics_method": "PME",
+        "periodic": False,
+        "result": UnsupportedCutoffMethodError,
+    },
+    {
+        "vdw_method": "PME",
+        "electrostatics_method": "PME",
+        "periodic": True,
+        "result": UnsupportedCutoffMethodError,
+    },
+    {
+        "vdw_method": "PME",
+        "electrostatics_method": "PME",
+        "periodic": False,
+        "result": UnsupportedCutoffMethodError,
+    },
+    {
+        "vdw_method": "cutoff",
+        "electrostatics_method": "reaction-field",
+        "periodic": True,
+        "result": UnimplementedCutoffMethodError,
+    },
+    {
+        "vdw_method": "cutoff",
+        "electrostatics_method": "reaction-field",
+        "periodic": False,
+        "result": UnsupportedCutoffMethodError,
+    },
+]
+"""\
+    {
+        "vdw_method": "cutoff",
+        "electrostatics_method": "PME",
+        "has_periodic_box": False,
+        "omm_force": openmm.NonbondedForce.NoCutoff,
+        "exception": None,
+        "exception_match": "",
+    },
+    {
+        "vdw_method": "PME",
+        "electrostatics_method": "Coulomb",
+        "has_periodic_box": True,
+        "omm_force": None,
+        "exception": IncompatibleParameterError,
+        "exception_match": "",
+    },
+    {
+        "vdw_method": "PME",
+        "electrostatics_method": "Coulomb",
+        "has_periodic_box": False,
+        "omm_force": openmm.NonbondedForce.NoCutoff,
+        "exception": None,
+        "exception_match": "",
+    },
+    {
+        "vdw_method": "PME",
+        "electrostatics_method": "reaction-field",
+        "has_periodic_box": True,
+        "omm_force": None,
+        "exception": IncompatibleParameterError,
+        "exception_match": "reaction-field",
+    },
+    {
+        "vdw_method": "PME",
+        "electrostatics_method": "reaction-field",
+        "has_periodic_box": False,
+        "omm_force": None,
+        "exception": SMIRNOFFSpecError,
+        "exception_match": "reaction-field",
+    },
+    {
+        "vdw_method": "PME",
+        "electrostatics_method": "PME",
+        "has_periodic_box": True,
+        "omm_force": openmm.NonbondedForce.LJPME,
+        "exception": None,
+        "exception_match": "",
+    },
+    {
+        "vdw_method": "PME",
+        "electrostatics_method": "PME",
+        "has_periodic_box": False,
+        "omm_force": openmm.NonbondedForce.NoCutoff,
+        "exception": None,
+        "exception_match": "",
+    },
+]
+"""
+
+
+@pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
+def test_openmm_nonbonded_methods(inputs):
+    """See test_nonbonded_method_resolution in openff/toolkit/tests/test_forcefield.py"""
+    from simtk.openmm import app
+
+    vdw_method = inputs["vdw_method"]
+    electrostatics_method = inputs["electrostatics_method"]
+    periodic = inputs["periodic"]
+    result = inputs["result"]
+
+    molecules = [create_ethanol()]
+    forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+
+    pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
+    topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
+    if not periodic:
+        topology.box_vectors = None
+
+    if type(result) == int:
+        nonbonded_method = result
+        # The method is validated and may raise an exception if it's not supported.
+        forcefield.get_parameter_handler("vdW", {}).method = vdw_method
+        forcefield.get_parameter_handler(
+            "Electrostatics", {}
+        ).method = electrostatics_method
+        openff_system = forcefield.create_openff_system(topology)
+        openmm_system = openff_system.to_openmm()
+        for force in openmm_system.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                assert force.getNonbondedMethod() == nonbonded_method
+                break
+        else:
+            raise Exception
+    elif issubclass(result, (BaseException, Exception)):
+        exception = result
+        with pytest.raises(exception):
+            forcefield.get_parameter_handler("vdW", {}).method = vdw_method
+            forcefield.get_parameter_handler(
+                "Electrostatics", {}
+            ).method = electrostatics_method
+            openff_system = forcefield.create_openff_system(topology)
+            openff_system.to_openmm()
+    else:
+        raise Exception("uh oh")
 
 
 @pytest.mark.slow

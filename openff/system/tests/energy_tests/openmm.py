@@ -85,7 +85,7 @@ def _set_nonbonded_method(
         for force in omm_sys.getForces():
             if type(force) == openmm.NonbondedForce:
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                force.setEwaldErrorTolerance(1e-6)
+                force.setEwaldErrorTolerance(1e-4)
 
     return omm_sys
 

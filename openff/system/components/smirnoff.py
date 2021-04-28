@@ -297,10 +297,10 @@ class SMIRNOFFvdWHandler(PotentialHandler):
     scale_15: float = 1.0
 
     @validator("method")
-    def validate_method(cls, v):
+    def validate_vdw_method(cls, v):
         v_ = v.lower().replace("-", "")
-        if v_ != "cutoff":
-            raise UnsupportedCutoffMethodError(f"vdW cutoff method {v} not supported")
+        if v_ not in ["cutoff", "pme"]:
+            raise UnsupportedCutoffMethodError(f"vdW method {v} not supported")
         return v
 
     def store_matches(
@@ -360,6 +360,15 @@ class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
     scale_13: float = 0.0
     scale_14: float = 0.8333333333
     scale_15: float = 1.0
+
+    @validator("method")
+    def validate_electrostatics_method(cls, v):
+        v_ = v.lower().replace("-", "")
+        if v_ not in ["cutoff", "pme", "reactionfield"]:
+            raise UnsupportedCutoffMethodError(
+                f"Electrostatics method {v} not supported"
+            )
+        return v
 
     def store_charges(
         self,

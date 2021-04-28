@@ -4,7 +4,10 @@ from openff.units.utils import from_simtk
 from simtk import openmm, unit
 
 from openff.system.components.potentials import Potential
-from openff.system.exceptions import UnsupportedCutoffMethodError
+from openff.system.exceptions import (
+    UnimplementedCutoffMethodError,
+    UnsupportedCutoffMethodError,
+)
 from openff.system.interop.parmed import _lj_params_from_potential
 from openff.system.models import PotentialKey, TopologyKey
 from openff.system.utils import pint_to_simtk
@@ -250,7 +253,18 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
         vdw_method = vdw_handler.method.lower()
 
         electrostatics_handler = openff_sys.handlers["Electrostatics"]  # Split this out
-        if electrostatics_handler.method.lower() not in ["pme", "cutoff"]:
+        electrostatics_method = electrostatics_handler.method.lower()
+        if electrostatics_method == "reaction-field":
+            if openff_sys.box is None:
+                # TODO: Should this state be prevented from happening?
+                raise UnsupportedCutoffMethodError(
+                    f"Electrostatics method {electrostatics_method} is not valid for a non-periodic system."
+                )
+            else:
+                raise UnimplementedCutoffMethodError(
+                    f"Electrostatics method {electrostatics_method} is not yet implemented."
+                )
+        if electrostatics_method not in ["pme", "cutoff"]:
             raise UnsupportedCutoffMethodError()
 
         non_bonded_force = openmm.NonbondedForce()
@@ -343,7 +357,6 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
     )
     if electrostatics_cutoff != vdw_cutoff:
         raise Exception(electrostatics_handler.cutoff, vdw_cutoff)
-    electrostatics_method = electrostatics_handler.method.lower()
 
     has_electrostatics = False
     if "Electrostatics" in openff_sys.handlers.keys():
@@ -356,7 +369,11 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
     # and satisfy vdW/Electrostatics methods Cutoff and PME; see create_force
     # and postprocess_system methods in toolkit
     if openff_sys.box is None:
-        if electrostatics_method == "cutoff" or vdw_method == "cutoff":
+        if electrostatics_method == "pme":
+            raise UnsupportedCutoffMethodError(
+                f"Electrostatics method {electrostatics_method} is not valid with a periodic topoogy"
+            )
+        elif electrostatics_method == "cutoff" and vdw_method == "cutoff":
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffNonPeriodic)
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
             # non_bonded_force.setCutoffDistance(1.0 * unit.nanometer)
@@ -436,6 +453,9 @@ def _convert_nonbonded_force(force):
         vdw_handler.slot_map.update({top_key: pot_key})
         vdw_handler.potentials.update({pot_key: pot})
         electrostatics.charges.update({top_key: from_simtk(charge)})
+
+    vdw_handler.cutoff = force.getCutoffDistance()
+    electrostatics.cutoff = force.getCutoffDistance()
 
     return vdw_handler, electrostatics
 
