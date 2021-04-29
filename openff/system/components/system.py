@@ -52,8 +52,6 @@ class System(DefaultModel):
                 "Positions are required to write a `.gro` file but found None."
             )
         elif np.allclose(self.positions, 0):
-            import warnings
-
             warnings.warn(
                 "Positions seem to all be zero. Result coordinate file may be non-physical.",
                 UserWarning,

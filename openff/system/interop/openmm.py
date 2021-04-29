@@ -323,8 +323,6 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
         else:
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
             non_bonded_force.setCutoffDistance(buck_handler.cutoff * unit.angstrom)
-            vdw_cutoff = buck_handler.cutoff
-            vdw_method = buck_handler.method.lower()
 
         for top_key, pot_key in buck_handler.slot_map.items():
             atom_idx = top_key.atom_indices[0]

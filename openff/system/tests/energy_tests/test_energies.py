@@ -21,6 +21,7 @@ from openff.system.tests.energy_tests.openmm import (
 )
 
 
+@pytest.mark.xfail
 @pytest.mark.slow
 @pytest.mark.parametrize("constrained", [True, False])
 @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
