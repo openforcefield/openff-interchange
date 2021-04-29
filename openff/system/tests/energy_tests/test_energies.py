@@ -70,7 +70,7 @@ def test_energies_single_mol(constrained, mol_smi):
         "Electrostatics": 2 * simtk_unit.kilojoule_per_mole,
         "vdW": 2 * simtk_unit.kilojoule_per_mole,
         "Nonbonded": 2 * simtk_unit.kilojoule_per_mole,
-        "Angle": 1e-5 * simtk_unit.kilojoule_per_mole,
+        "Angle": 1e-4 * simtk_unit.kilojoule_per_mole,
     }
 
     gmx_energies.compare(

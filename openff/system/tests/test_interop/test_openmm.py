@@ -3,12 +3,10 @@ import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol
 from openff.toolkit.tests.utils import compare_system_energies, get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff import SMIRNOFFSpecError
 from simtk import openmm, unit
 
-from openff.system.exceptions import (
-    UnimplementedCutoffMethodError,
-    UnsupportedCutoffMethodError,
-)
+from openff.system.exceptions import UnsupportedCutoffMethodError
 from openff.system.stubs import ForceField
 from openff.system.utils import get_test_file_path
 
@@ -41,13 +39,13 @@ nonbonded_resolution_matrix = [
         "vdw_method": "cutoff",
         "electrostatics_method": "reaction-field",
         "periodic": True,
-        "result": UnimplementedCutoffMethodError,
+        "result": SMIRNOFFSpecError,  # UnimplementedCutoffMethodError,
     },
     {
         "vdw_method": "cutoff",
         "electrostatics_method": "reaction-field",
         "periodic": False,
-        "result": UnsupportedCutoffMethodError,
+        "result": SMIRNOFFSpecError,  # UnimplementedCutoffMethodError,
     },
 ]
 """\
