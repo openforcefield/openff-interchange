@@ -33,7 +33,7 @@ def unwrap_list_of_pint_quantities(quantities):
     return vals * parsed_unit
 
 
-def get_test_file_path(test_file):
+def get_test_file_path(test_file) -> str:
     """Given a filename in the collection of data files, return its full path"""
     dir_path = resource_filename("openff.system", "tests/files/")
     test_file_path = pathlib.Path(dir_path).joinpath(test_file)

@@ -7,7 +7,7 @@ repos:
   - id: trailing-whitespace
     exclude: '\.(pdb|gro|top)$'
 - repo: https://github.com/psf/black
-  rev: 20.8b1
+  rev: 21.4b0
   hooks:
   - id: black
     files: ^openff
@@ -19,7 +19,7 @@ repos:
     files: ^openff
     args: [--check]
 - repo: https://gitlab.com/PyCQA/flake8
-  rev: 3.9.0
+  rev: 3.9.1
   hooks:
   - id: flake8
     files: ^openff
@@ -28,7 +28,7 @@ repos:
         'flake8-absolute-import',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.12.0
+  rev: v2.13.0
   hooks:
   - id: pyupgrade
     files: ^openff/system/

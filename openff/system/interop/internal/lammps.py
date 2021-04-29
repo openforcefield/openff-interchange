@@ -64,7 +64,10 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
         x_min, y_min, z_min = np.min(
             openff_sys.positions.to(unit.angstrom), axis=0  # type: ignore[attr-defined]
         ).magnitude
-        L_x, L_y, L_z = np.diag(openff_sys.box.to(unit.angstrom).magnitude)  # type: ignore[attr-defined]
+        if openff_sys.box is None:
+            L_x, L_y, L_z = 100, 100, 100
+        else:
+            L_x, L_y, L_z = np.diag(openff_sys.box.to(unit.angstrom).magnitude)  # type: ignore[attr-defined]
 
         lmp_file.write(
             "{:.10g} {:.10g} xlo xhi\n"

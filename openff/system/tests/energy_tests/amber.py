@@ -103,20 +103,33 @@ def _run_sander(
             "Bond": energies["BOND"],
             "Angle": energies["ANGLE"],
             "Torsion": energies["DIHED"],
-            "Nonbonded": _get_amber_energy_nonbonded(energies),
+            "vdW": _get_amber_energy_vdw(energies),
+            "Electrostatics": _get_amber_energy_coul(energies),
         }
     )
 
     return energy_report
 
 
-def _get_amber_energy_nonbonded(amber_energies: Dict):
+def _get_amber_energy_vdw(amber_energies: Dict):
     """Get the total nonbonded energy from a set of Amber energies."""
-    amber_nonbonded = 0.0 * omm_unit.kilojoule_per_mole
-    for key in ["VDWAALS", "EEL", "1-4 VDW", "1-4 EEL"]:
+    amber_vdw = 0.0 * omm_unit.kilojoule_per_mole
+    for key in ["VDWAALS", "1-4 VDW"]:
         try:
-            amber_nonbonded += amber_energies[key]
+            amber_vdw += amber_energies[key]
         except KeyError:
             pass
 
-    return amber_nonbonded
+    return amber_vdw
+
+
+def _get_amber_energy_coul(amber_energies: Dict):
+    """Get the total nonbonded energy from a set of Amber energies."""
+    amber_coul = 0.0 * omm_unit.kilojoule_per_mole
+    for key in ["EEL", "1-4 EEL"]:
+        try:
+            amber_coul += amber_energies[key]
+        except KeyError:
+            pass
+
+    return amber_coul

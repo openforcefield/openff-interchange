@@ -12,7 +12,7 @@ kj_mol = unit.kilojoule_per_mole
 def get_openmm_energies(
     off_sys: System,
     round_positions=None,
-    hard_cutoff: bool = True,
+    hard_cutoff: bool = False,
     electrostatics: bool = True,
 ) -> EnergyReport:
     """
@@ -85,7 +85,7 @@ def _set_nonbonded_method(
         for force in omm_sys.getForces():
             if type(force) == openmm.NonbondedForce:
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                force.setEwaldErrorTolerance(1e-6)
+                force.setEwaldErrorTolerance(1e-4)
 
     return omm_sys
 
@@ -117,9 +117,10 @@ def _get_openmm_energies(
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context = openmm.Context(omm_sys, integrator)
 
-    if not isinstance(box_vectors, unit.Quantity):
-        box_vectors = box_vectors.magnitude * unit.nanometer
-    context.setPeriodicBoxVectors(*box_vectors)
+    if box_vectors is not None:
+        if not isinstance(box_vectors, unit.Quantity):
+            box_vectors = box_vectors.magnitude * unit.nanometer
+        context.setPeriodicBoxVectors(*box_vectors)
 
     if isinstance(positions, unit.Quantity):
         # Convert list of Vec3 into a NumPy array
@@ -165,6 +166,9 @@ def _get_openmm_energies(
             "Nonbonded": _canonicalize_nonbonded_energies(omm_energies),
         }
     )
+
+    report.energies.pop("vdW")
+    report.energies.pop("Electrostatics")
 
     return report
 

@@ -12,6 +12,7 @@ from openff.units import unit
 from openff.system.components.potentials import Potential, PotentialHandler
 from openff.system.components.system import System
 from openff.system.models import PotentialKey, TopologyKey
+from openff.system.types import FloatQuantity
 
 # Is this the safest way to achieve PotentialKey id separation?
 POTENTIAL_KEY_SEPARATOR = "-"
@@ -115,7 +116,7 @@ class FoyerVDWHandler(PotentialHandler):
     scale_14: float = 0.5  # TODO: Replace with Foyer API point?
     scale_15: float = 1.0
     method: str = "cutoff"
-    cutoff: float = 9.0
+    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
 
     def store_matches(
         self,
@@ -153,6 +154,7 @@ class FoyerElectrostaticsHandler(PotentialHandler):
     scale_13: float = 0.0
     scale_14: float = 0.5  # TODO: Replace with Foyer API point?
     scale_15: float = 1.0
+    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
 
     def store_charges(
         self,

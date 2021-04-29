@@ -40,5 +40,8 @@ class TestFoyer(BaseTest):
 
         gmx_energies.compare(
             omm_energies,
-            custom_tolerances={"Nonbonded": 40.0 * unit.kilojoule / unit.mole},
+            custom_tolerances={
+                "vdW": 12.0 * unit.kilojoule / unit.mole,
+                "Electrostatics": 12.0 * unit.kilojoule / unit.mole,
+            },
         )

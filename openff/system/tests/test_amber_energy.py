@@ -32,6 +32,7 @@ def test_amber_energy():
             "Bond": 3.6 * kj_mol,
             "Angle": 0.2 * kj_mol,
             "Torsion": 1.9 * kj_mol,
-            "Nonbonded": 34.9 * kj_mol,
+            "vdW": 1.5 * kj_mol,
+            "Electrostatics": 36.5 * kj_mol,
         },
     )

@@ -12,10 +12,12 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 from openff.units import unit
+from pydantic import validator
 from simtk import unit as omm_unit
 
 from openff.system.components.misc import OFFBioTop
 from openff.system.components.potentials import Potential, PotentialHandler
+from openff.system.exceptions import UnsupportedCutoffMethodError
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import FloatQuantity
 from openff.system.utils import get_partial_charges_from_openmm_system
@@ -286,12 +288,20 @@ class SMIRNOFFvdWHandler(PotentialHandler):
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     independent_variables: Set[str] = {"r"}
     method: str = "cutoff"
-    cutoff: float = 9.0
+    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
+    switch_width: FloatQuantity["angstrom"] = 1.0 * unit.angstrom  # type: ignore
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.5
     scale_15: float = 1.0
+
+    @validator("method")
+    def validate_vdw_method(cls, v):
+        v_ = v.lower().replace("-", "")
+        if v_ not in ["cutoff", "pme"]:
+            raise UnsupportedCutoffMethodError(f"vdW method {v} not supported")
+        return v
 
     def store_matches(
         self,
@@ -342,13 +352,23 @@ class SMIRNOFFvdWHandler(PotentialHandler):
 class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
 
     name: str = "Electrostatics"
-    method: str = "PME"
     expression: str = "coul"
+    method: str = "PME"
+    cutoff: FloatQuantity["angstrom"] = 9.0  # type: ignore
     independent_variables: Set[str] = {"r"}
     charge_map: Dict[TopologyKey, float] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.8333333333
     scale_15: float = 1.0
+
+    @validator("method")
+    def validate_electrostatics_method(cls, v):
+        v_ = v.lower().replace("-", "")
+        if v_ not in ["cutoff", "pme", "reactionfield"]:
+            raise UnsupportedCutoffMethodError(
+                f"Electrostatics method {v} not supported"
+            )
+        return v
 
     def store_charges(
         self,

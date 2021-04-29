@@ -86,3 +86,27 @@ def _iterate_impropers(mdtop):
                         continue
 
                     yield (atom1, atom2, atom3, atom4)
+
+
+def _iterate_pairs(mdtop):
+    for bond in mdtop.bonds:
+        atom_i = bond.atom1
+        atom_j = bond.atom2
+        for atom_i_partner in atom_i._bond_partners:
+            for atom_j_partner in atom_j._bond_partners:
+                if atom_i_partner == atom_j_partner:
+                    continue
+
+                if atom_i_partner in atom_j_partner._bond_partners:
+                    continue
+
+                if atom_j_partner in atom_i_partner._bond_partners:
+                    continue
+
+                if {*atom_i_partner._bond_partners}.intersection(
+                    {*atom_j_partner._bond_partners}
+                ):
+                    continue
+
+                else:
+                    yield (atom_i_partner, atom_j_partner)

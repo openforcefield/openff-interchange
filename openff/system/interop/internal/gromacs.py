@@ -1,10 +1,17 @@
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Dict, Union
+from typing import IO, TYPE_CHECKING, Dict, Set, Tuple, Union
 
 import ele
 import numpy as np
 from openff.units import unit
 
+from openff.system.components.misc import (
+    _iterate_angles,
+    _iterate_impropers,
+    _iterate_pairs,
+    _iterate_propers,
+    _store_bond_partners,
+)
 from openff.system.exceptions import UnsupportedExportError
 from openff.system.models import TopologyKey
 
@@ -56,8 +63,11 @@ def to_gro(openff_sys: "System", file_path: Union[Path, str], decimal=8):
                 )
             )
 
-        # TODO: Ensure nanometers
-        box = openff_sys.box.to(unit.nanometer).magnitude  # type: ignore
+        if openff_sys.box is None:
+            box = 11 * np.eye(3)
+        else:
+            box = openff_sys.box.to(unit.nanometer).magnitude  # type: ignore
+
         # Check for rectangular
         if (box == np.diag(np.diagonal(box))).all():
             for i in range(3):
@@ -243,7 +253,7 @@ def _write_atoms(
     openff_sys: "System",
     typemap: Dict,
 ):
-    """Write the [ atoms ] section for a molecule"""
+    """Write the [ atoms ] and [ pairs ] sections for a molecule"""
     top_file.write("[ atoms ]\n")
     top_file.write(";num, type, resnum, resname, atomname, cgnr, q, m\n")
 
@@ -268,6 +278,24 @@ def _write_atoms(
                 atom_idx + 1,
                 charge,
                 mass,
+            )
+        )
+
+    top_file.write("[ pairs ]\n")
+    top_file.write("; ai\taj\tfunct\n")
+
+    _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
+
+    # Use a set to de-duplicate
+    pairs: Set[Tuple] = {*_iterate_pairs(openff_sys.topology.mdtop)}  # type: ignore
+    for pair in pairs:
+        indices = [a.index for a in pair]
+        indices = sorted(indices)
+        top_file.write(
+            "{:7d} {:7d} {:6d}\n".format(
+                indices[0] + 1,
+                indices[1] + 1,
+                1,
             )
         )
 
@@ -322,8 +350,6 @@ def _write_angles(top_file: IO, openff_sys: "System"):
     if "Angles" not in openff_sys.handlers.keys():
         return
 
-    from openff.system.components.misc import _iterate_angles, _store_bond_partners
-
     _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
 
     top_file.write("[ angles ]\n")
@@ -364,12 +390,6 @@ def _write_dihedrals(top_file: IO, openff_sys: "System"):
         if "RBTorsions" not in openff_sys.handlers:
             if "ImproperTorsions" not in openff_sys.handlers:
                 return
-
-    from openff.system.components.misc import (
-        _iterate_impropers,
-        _iterate_propers,
-        _store_bond_partners,
-    )
 
     _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
 

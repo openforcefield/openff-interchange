@@ -84,6 +84,8 @@ def to_openff_system(
             scale_13=self["Electrostatics"].scale13,
             scale_14=self["Electrostatics"].scale14,
             scale_15=self["Electrostatics"].scale15,
+            method=self["Electrostatics"].method,
+            cutoff=self["Electrostatics"].cutoff,
         )
         if "ToolkitAM1BCC" in self.registered_parameter_handlers:
             electrostatics.cache_charges(
@@ -234,6 +236,9 @@ def create_vdw_potential_handler(
         scale_13=self.scale13,
         scale_14=self.scale14,
         scale_15=self.scale15,
+        cutoff=self.cutoff,
+        method=self.method,
+        switch_width=self.switch_width,
     )
     handler.store_matches(parameter_handler=self, topology=topology)
     handler.store_potentials(parameter_handler=self)
