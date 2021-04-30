@@ -6,6 +6,7 @@ from openff.toolkit.topology import Molecule, Topology
 from openff.units import unit
 from simtk import openmm
 from simtk import unit as simtk_unit
+from simtk.openmm import app
 
 from openff.system.components.misc import OFFBioTop
 from openff.system.stubs import ForceField
@@ -95,56 +96,43 @@ def test_energies_single_mol(constrained, mol_smi):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("n_mol", [50, 100, 200])
-def test_argon(n_mol):
+def test_liquid_argon():
     from openff.system.utils import get_test_file_path
+
+    argon = Molecule.from_smiles("[#18]")
+    pdbfile = app.PDBFile(get_test_file_path("packed-argon.pdb"))
+
+    top = Topology.from_openmm(pdbfile.topology, unique_molecules=[argon])
 
     ar_ff = ForceField(get_test_file_path("argon.offxml"))
 
-    mol = Molecule.from_smiles("[#18]")
-    mol.add_conformer(np.array([[0, 0, 0]]) * simtk_unit.angstrom)
-    mol.name = "FOO"
-    top = Topology.from_molecules(n_mol * [mol])
-
-    off_sys = ar_ff.create_openff_system(top)
-
-    mol.to_file("out.xyz", file_format="xyz")
-    compound: mb.Compound = mb.load("out.xyz")
-    packed_box: mb.Compound = mb.fill_box(
-        compound=compound,
-        n_compounds=[n_mol],
-        density=100,
-    )
-
-    positions = packed_box.xyz * unit.nanometer
-    positions = np.round(positions, 3)
-    off_sys.positions = positions
-
-    box = np.asarray(packed_box.box.lengths) * unit.nanometer
-    off_sys.box = box
-    # off_sys["vdW"].method = "cutoff"
+    out = ar_ff.create_openff_system(top)
+    out.positions = pdbfile.positions
 
     omm_energies = get_openmm_energies(
-        off_sys,
-        round_positions=3,
+        out,
     )
 
     gmx_energies = get_gromacs_energies(
-        off_sys,
+        out,
         mdp="auto",
         writer="internal",
     )
 
-    lmp_energies = get_lammps_energies(off_sys)
+    lmp_energies = get_lammps_energies(out)
 
     omm_energies.compare(
         gmx_energies,
-        custom_tolerances={"vdW": n_mol * 2e-3 * simtk_unit.kilojoule_per_mole},
+        custom_tolerances={
+            "vdW": 0.008 * simtk_unit.kilojoule_per_mole,
+        },
     )
 
-    gmx_energies.compare(
+    omm_energies.compare(
         lmp_energies,
-        custom_tolerances={"vdW": n_mol * 2e-3 * simtk_unit.kilojoule_per_mole},
+        custom_tolerances={
+            "vdW": 11 * simtk_unit.kilojoule_per_mole,
+        },
     )
 
 

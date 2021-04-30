@@ -27,6 +27,7 @@ nstenergy                = 1000
 continuation             = yes
 cutoff-scheme            = verlet
 
+DispCorr                 = Ener
 """
 _ = """
 pbc                      = xyz
@@ -51,7 +52,7 @@ def _write_mdp_file(openff_sys: "System"):
             coul_handler = openff_sys.handlers["Electrostatics"]
             coul_method = coul_handler.method  # type: ignore[attr-defined]
             coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
-            coul_cutoff = round(coul_cutoff, 6)
+            coul_cutoff = round(coul_cutoff, 4)
             if coul_method in ["Cut-off", "cutoff"]:
                 mdp_file.write("coulombtype = Cut-off\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
@@ -70,7 +71,7 @@ def _write_mdp_file(openff_sys: "System"):
             vdw_handler: "SMIRNOFFvdWHandler" = openff_sys.handlers["vdW"]  # type: ignore
             vdw_method = vdw_handler.method.lower().replace("-", "")  # type: ignore
             vdw_cutoff = vdw_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
-            vdw_cutoff = round(vdw_cutoff, 6)
+            vdw_cutoff = round(vdw_cutoff, 4)
             if vdw_method == "cutoff":
                 mdp_file.write("vdwtype = cutoff\n")
             elif vdw_method == "PME":
@@ -79,7 +80,7 @@ def _write_mdp_file(openff_sys: "System"):
                 raise UnsupportedExportError(f"vdW method {vdw_method} not supported")
             mdp_file.write(f"rvdw = {vdw_cutoff}\n")
             if getattr(vdw_handler, "switch_width", None) is not None:
-                mdp_file.write("vdw-modifier = potential-switch\n")
+                mdp_file.write("vdw-modifier = Potential-switch\n")
                 switch_distance = vdw_handler.cutoff - vdw_handler.switch_width
                 switch_distance = switch_distance.m_as(unit.nanometer)  # type: ignore
                 mdp_file.write(f"rvdw-switch = {switch_distance}\n")
@@ -109,7 +110,7 @@ def _get_mdp_file(key: str = "auto") -> str:
 
 def get_gromacs_energies(
     off_sys: "System",
-    mdp: str = "cutoff",
+    mdp: str = "auto",
     writer: str = "internal",
     electrostatics=True,
 ) -> EnergyReport:
