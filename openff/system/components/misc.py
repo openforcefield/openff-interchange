@@ -110,3 +110,16 @@ def _iterate_pairs(mdtop):
 
                 else:
                     yield (atom_i_partner, atom_j_partner)
+
+
+def _get_num_h_bonds(mdtop):
+    """Get the number of (covalent) bonds containing a hydrogen atom"""
+    from mdtraj.core.element import hydrogen
+
+    n_bonds_containing_hydrogen = 0
+
+    for bond in mdtop.bonds:
+        if hydrogen in (bond.atom1.element, bond.atom2.element):
+            n_bonds_containing_hydrogen += 1
+
+    return n_bonds_containing_hydrogen

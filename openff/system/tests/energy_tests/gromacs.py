@@ -87,11 +87,26 @@ def _write_mdp_file(openff_sys: "System"):
 
         if "Constraints" not in openff_sys.handlers:
             mdp_file.write("constraints = none\n")
+        elif "Bonds" not in openff_sys.handlers:
+            mdp_file.write("constraints = none\n")
+        # TODO: Add support for constraining angles but no bonds?
         else:
-            if len(openff_sys.handlers["Constraints"].slot_map) == 0:
+            num_constraints = len(openff_sys["Constraints"].slot_map)
+            if num_constraints == 0:
                 mdp_file.write("constraints = none\n")
             else:
-                raise UnsupportedExportError("Parsing of constraints not implemented")
+                from openff.system.components.misc import _get_num_h_bonds
+
+                num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)
+                num_bonds = len(openff_sys["Bonds"].slot_map)
+                num_angles = len(openff_sys["Angles"].slot_map)
+
+                if num_constraints == len(openff_sys["Bonds"].slot_map):
+                    mdp_file.write("constraints = all-bonds\n")
+                elif num_constraints == num_h_bonds:
+                    mdp_file.write("constraints = h-bonds\n")
+                elif num_constraints == (num_bonds + num_angles):
+                    mdp_file.write("constraints = all-angles\n")
 
 
 def _get_mdp_file(key: str = "auto") -> str:
