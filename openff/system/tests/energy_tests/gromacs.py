@@ -97,7 +97,7 @@ def _write_mdp_file(openff_sys: "System"):
             else:
                 from openff.system.components.misc import _get_num_h_bonds
 
-                num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)
+                num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)  # type: ignore[union-attr]
                 num_bonds = len(openff_sys["Bonds"].slot_map)
                 num_angles = len(openff_sys["Angles"].slot_map)
 
