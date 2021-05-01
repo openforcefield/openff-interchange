@@ -27,6 +27,7 @@ nstenergy                = 1000
 continuation             = yes
 cutoff-scheme            = verlet
 
+DispCorr                 = Ener
 """
 _ = """
 pbc                      = xyz
@@ -51,7 +52,7 @@ def _write_mdp_file(openff_sys: "System"):
             coul_handler = openff_sys.handlers["Electrostatics"]
             coul_method = coul_handler.method  # type: ignore[attr-defined]
             coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
-            coul_cutoff = round(coul_cutoff, 6)
+            coul_cutoff = round(coul_cutoff, 4)
             if coul_method in ["Cut-off", "cutoff"]:
                 mdp_file.write("coulombtype = Cut-off\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
@@ -70,7 +71,7 @@ def _write_mdp_file(openff_sys: "System"):
             vdw_handler: "SMIRNOFFvdWHandler" = openff_sys.handlers["vdW"]  # type: ignore
             vdw_method = vdw_handler.method.lower().replace("-", "")  # type: ignore
             vdw_cutoff = vdw_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
-            vdw_cutoff = round(vdw_cutoff, 6)
+            vdw_cutoff = round(vdw_cutoff, 4)
             if vdw_method == "cutoff":
                 mdp_file.write("vdwtype = cutoff\n")
             elif vdw_method == "PME":
@@ -79,18 +80,33 @@ def _write_mdp_file(openff_sys: "System"):
                 raise UnsupportedExportError(f"vdW method {vdw_method} not supported")
             mdp_file.write(f"rvdw = {vdw_cutoff}\n")
             if getattr(vdw_handler, "switch_width", None) is not None:
-                mdp_file.write("vdw-modifier = potential-switch\n")
+                mdp_file.write("vdw-modifier = Potential-switch\n")
                 switch_distance = vdw_handler.cutoff - vdw_handler.switch_width
                 switch_distance = switch_distance.m_as(unit.nanometer)  # type: ignore
                 mdp_file.write(f"rvdw-switch = {switch_distance}\n")
 
         if "Constraints" not in openff_sys.handlers:
             mdp_file.write("constraints = none\n")
+        elif "Bonds" not in openff_sys.handlers:
+            mdp_file.write("constraints = none\n")
+        # TODO: Add support for constraining angles but no bonds?
         else:
-            if len(openff_sys.handlers["Constraints"].slot_map) == 0:
+            num_constraints = len(openff_sys["Constraints"].slot_map)
+            if num_constraints == 0:
                 mdp_file.write("constraints = none\n")
             else:
-                raise UnsupportedExportError("Parsing of constraints not implemented")
+                from openff.system.components.misc import _get_num_h_bonds
+
+                num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)  # type: ignore[union-attr]
+                num_bonds = len(openff_sys["Bonds"].slot_map)
+                num_angles = len(openff_sys["Angles"].slot_map)
+
+                if num_constraints == len(openff_sys["Bonds"].slot_map):
+                    mdp_file.write("constraints = all-bonds\n")
+                elif num_constraints == num_h_bonds:
+                    mdp_file.write("constraints = h-bonds\n")
+                elif num_constraints == (num_bonds + num_angles):
+                    mdp_file.write("constraints = all-angles\n")
 
 
 def _get_mdp_file(key: str = "auto") -> str:
@@ -109,7 +125,7 @@ def _get_mdp_file(key: str = "auto") -> str:
 
 def get_gromacs_energies(
     off_sys: "System",
-    mdp: str = "cutoff",
+    mdp: str = "auto",
     writer: str = "internal",
     electrostatics=True,
 ) -> EnergyReport:

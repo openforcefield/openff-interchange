@@ -26,3 +26,17 @@ Documenting how some of these files were generated
 `ALA_GLY/ALA_GLY.*`
   - The SDF and PDB files files were prepared by Jeff Wagner
   - The .gro and .top files were prepared by internal exporters 3/26/21
+
+`packed-argon.pdb`
+  - Generated via mBuild and ParmEd
+  - ```
+    import mbuild as mb
+    argon = mb.Compound(name='Ar')
+    packed_box = mb.fill_box(
+        compound=[argon],
+        box=mb.Box(lengths=[3, 3, 3]),  # nm
+        density=1417,  # kg/m3
+    )
+    struct = packed_box.to_parmed(residues=['Ar'])
+    struct.save('packed-argon.pdb')
+    ```

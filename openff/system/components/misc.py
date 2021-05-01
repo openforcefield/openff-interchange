@@ -1,5 +1,6 @@
 from typing import Dict, Set
 
+import mdtraj as md
 from openff.toolkit.topology import Topology
 
 from openff.system.components.potentials import Potential, PotentialHandler
@@ -110,3 +111,14 @@ def _iterate_pairs(mdtop):
 
                 else:
                     yield (atom_i_partner, atom_j_partner)
+
+
+def _get_num_h_bonds(mdtop):
+    """Get the number of (covalent) bonds containing a hydrogen atom"""
+    n_bonds_containing_hydrogen = 0
+
+    for bond in mdtop.bonds:
+        if md.element.hydrogen in (bond.atom1.element, bond.atom2.element):
+            n_bonds_containing_hydrogen += 1
+
+    return n_bonds_containing_hydrogen
