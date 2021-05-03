@@ -129,6 +129,7 @@ def _write_lammps_input(
         # TODO: Ensure units
         vdw_cutoff = vdw_hander.cutoff  # type: ignore[attr-defined]
         vdw_cutoff = vdw_cutoff.m_as(unit.angstrom)
+
         # TODO: Handle separate cutoffs
         coul_cutoff = vdw_cutoff
 
@@ -148,7 +149,7 @@ def _write_lammps_input(
         else:
             fo.write(f"pair_style lj/cut {vdw_cutoff}\n")
 
-        fo.write("pair_modify mix arithmetic\n\n")
+        fo.write("pair_modify mix arithmetic tail yes\n\n")
         fo.write("read_data out.lmp\n\n")
         fo.write(
             "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n"

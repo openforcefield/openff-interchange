@@ -281,13 +281,16 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
             # non_bonded_force.setUseDispersionCorrection(True)
             non_bonded_force.setCutoffDistance(vdw_cutoff)
             if getattr(vdw_handler, "switch_width", None) is not None:
-                switching_distance = vdw_handler.cutoff - vdw_handler.switch_width
-                switching_distance = (
-                    switching_distance.m_as(off_unit.angstrom) * unit.angstrom
-                )
+                if vdw_handler.switch_width == 0.0:
+                    non_bonded_force.setUseSwitchingFunction(False)
+                else:
+                    switching_distance = vdw_handler.cutoff - vdw_handler.switch_width
+                    switching_distance = (
+                        switching_distance.m_as(off_unit.angstrom) * unit.angstrom
+                    )
 
-                non_bonded_force.setUseSwitchingFunction(True)
-                non_bonded_force.setSwitchingDistance(switching_distance)
+                    non_bonded_force.setUseSwitchingFunction(True)
+                    non_bonded_force.setSwitchingDistance(switching_distance)
 
         for top_key, pot_key in vdw_handler.slot_map.items():
             atom_idx = top_key.atom_indices[0]

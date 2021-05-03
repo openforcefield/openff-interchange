@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import mbuild as mb
 import mdtraj as md
 import numpy as np
@@ -104,22 +106,18 @@ def test_liquid_argon():
 
     top = Topology.from_openmm(pdbfile.topology, unique_molecules=[argon])
 
-    ar_ff = ForceField(get_test_file_path("argon.offxml"))
+    argon_ff = ForceField(get_test_file_path("argon.offxml"))
 
-    out = ar_ff.create_openff_system(top)
+    out = argon_ff.create_openff_system(top)
     out.positions = pdbfile.positions
 
-    omm_energies = get_openmm_energies(
-        out,
-    )
+    omm_energies = get_openmm_energies(out)
 
     gmx_energies = get_gromacs_energies(
         out,
         mdp="auto",
         writer="internal",
     )
-
-    lmp_energies = get_lammps_energies(out)
 
     omm_energies.compare(
         gmx_energies,
@@ -128,10 +126,18 @@ def test_liquid_argon():
         },
     )
 
+    argon_ff_no_switch = deepcopy(argon_ff)
+    argon_ff_no_switch["vdW"].switch_width *= 0
+
+    out_no_switch = argon_ff_no_switch.create_openff_system(top)
+    out_no_switch.positions = pdbfile.positions
+
+    lmp_energies = get_lammps_energies(out_no_switch)
+
     omm_energies.compare(
         lmp_energies,
         custom_tolerances={
-            "vdW": 11 * simtk_unit.kilojoule_per_mole,
+            "vdW": 10.5 * simtk_unit.kilojoule_per_mole,
         },
     )
 

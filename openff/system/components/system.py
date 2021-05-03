@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, Optional, Union
 
 import numpy as np
-from pydantic import validator
+from pydantic import Field, validator
 
 from openff.system.components.misc import OFFBioTop
 from openff.system.components.potentials import PotentialHandler
@@ -23,14 +23,14 @@ class System(DefaultModel):
     """
     A molecular system object.
 
-    .. warning :: This object is in an early and experimental state and unsuitable for production.**
+    .. warning :: This object is in an early and experimental state and unsuitable for production.
     .. warning :: This API is experimental and subject to change.
     """
 
     handlers: Dict[str, PotentialHandler] = dict()
-    topology: Optional[OFFBioTop] = None
-    box: ArrayQuantity["nanometer"] = None  # type: ignore
-    positions: ArrayQuantity["nanometer"] = None  # type: ignore
+    topology: Optional[OFFBioTop] = Field(None)
+    box: ArrayQuantity["nanometer"] = Field(None)
+    positions: ArrayQuantity["nanometer"] = Field(None)
 
     @validator("box")
     def validate_box(cls, val):
@@ -140,6 +140,20 @@ class System(DefaultModel):
 
         return nonbonded_
 
+    # TODO: Does this cause any strange behaviors with Pydantic?
+    # Taken from https://stackoverflow.com/a/4017638/4248961
+    aliases = {"box_vectors": "x", "coordinates": "positions", "top": "topology"}
+
+    def __setattr__(self, name, value):
+        name = self.aliases.get(name, name)
+        object.__setattr__(self, name, value)
+
+    def __getattr__(self, name):
+        if name == "aliases":
+            raise AttributeError
+        name = self.aliases.get(name, name)
+        return object.__getattribute__(self, name)
+
     def __getitem__(self, item: str):
         """Syntax sugar for looking up potential handlers or other components"""
         if type(item) != str:
@@ -213,3 +227,13 @@ class System(DefaultModel):
             )
 
         return self_copy
+
+    def __repr__(self):
+        periodic = self.box is not None
+        try:
+            n_atoms = self.topology.mdtop.n_atoms
+        except AttributeError:
+            n_atoms = "unknown number of"
+        except NameError:
+            n_atoms = self.topology.n_topology_atoms
+        return f"System with {n_atoms} atoms, {'' if periodic else 'non-'}periodic topology"
