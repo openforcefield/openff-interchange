@@ -6,6 +6,7 @@ from openff.toolkit.topology import Molecule
 from openff.units import unit
 
 from openff.system.components.misc import OFFBioTop
+from openff.system.components.system import System
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
@@ -26,7 +27,8 @@ class TestSystemCombination(BaseTest):
         openff_sys.positions = mol.conformers[0]._value / 10.0
 
         # Copy and translate atoms by [1, 1, 1]
-        other = deepcopy(openff_sys)
+        other = System()
+        other._inner_data = deepcopy(openff_sys._inner_data)
         other.positions += 1.0 * unit.nanometer
 
         combined = openff_sys + other
