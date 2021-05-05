@@ -64,20 +64,24 @@ def to_openff_system(
             "Constraints",
         }:
             continue
+        elif parameter_handler == "Bonds":
+            if "Constraints" in self.registered_parameter_handlers:
+                constraint_handler = self["Constraints"]
+            else:
+                constraint_handler = None
+            constraint_handler
+            bond_handler, constraint_handler = self["Bonds"].create_potential(
+                topology=topology,
+                constraint_handler=constraint_handler,
+            )
+            sys_out.handlers.update({"Bonds": bond_handler})
+            if constraint_handler is not None:
+                sys_out.handlers.update({"Constraints": constraint_handler})
         else:
             potential_handler = self[parameter_handler].create_potential(
                 topology=topology
             )
-        sys_out.handlers.update({parameter_handler: potential_handler})
-
-    if "Constraints" in self.registered_parameter_handlers:
-        constraint_handler = self["Constraints"].create_potential(
-            topology=topology,
-            bond_handler=sys_out.handlers["Bonds"]
-            if "Bonds" in sys_out.handlers
-            else None,
-        )
-        sys_out.handlers.update({"Constraints": constraint_handler})
+            sys_out.handlers.update({parameter_handler: potential_handler})
 
     if "Electrostatics" in self.registered_parameter_handlers:
         electrostatics = ElectrostaticsMetaHandler(
@@ -143,39 +147,33 @@ def to_openff_system(
     return sys_out
 
 
-def create_constraint_handler(
-    self,
-    topology: Topology,
-    bond_handler=None,
-    **kwargs,
-) -> SMIRNOFFConstraintHandler:
-    """
-    A method, patched onto ConstraintHandler, that creates a corresponding SMIRNOFFConstraintHandler
-
-    """
-    handler = SMIRNOFFConstraintHandler()
-    handler.store_matches(parameter_handler=self, topology=topology)
-    handler.store_constraints(parameter_handler=self, bond_handler=bond_handler)
-
-    return handler
-
-
 # These functions should all be reduced down to one, possibly with some creative
 # use of functools
 def create_bond_potential_handler(
     self,
     topology: Topology,
+    constraint_handler=None,
     **kwargs,
 ) -> SMIRNOFFBondHandler:
     """
     A method, patched onto BondHandler, that creates a corresponding SMIRNOFFBondHandler
 
     """
-    handler = SMIRNOFFBondHandler()
-    handler.store_matches(parameter_handler=self, topology=topology)
-    handler.store_potentials(parameter_handler=self)
+    bond_handler = SMIRNOFFBondHandler()
+    bond_handler.store_matches(parameter_handler=self, topology=topology)
+    bond_handler.store_potentials(parameter_handler=self)
 
-    return handler
+    if constraint_handler:
+        constraints = SMIRNOFFConstraintHandler()
+        constraints.store_constraints(
+            parameter_handler=constraint_handler,
+            topology=topology,
+            bond_handler=bond_handler,
+        )
+    else:
+        constraints = None
+
+    return bond_handler, constraints
 
 
 def create_angle_potential_handler(
@@ -281,7 +279,6 @@ mapping = {
     vdWHandler: SMIRNOFFvdWHandler,
 }
 
-ConstraintHandler.create_potential = create_constraint_handler
 BondHandler.create_potential = create_bond_potential_handler
 AngleHandler.create_potential = create_angle_potential_handler
 ProperTorsionHandler.create_potential = create_proper_torsion_potential_handler
