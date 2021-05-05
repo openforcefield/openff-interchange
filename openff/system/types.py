@@ -49,9 +49,9 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 # (could be inconsistent with data model - heteregenous but compatible units)
                 # return val
             elif isinstance(val, simtk_unit.Quantity):
-                return _from_omm_quantity(val)
+                return _from_omm_quantity(val).to(unit_)
             elif isinstance(val, unyt.unyt_quantity):
-                return _from_unyt_quantity(val)
+                return _from_unyt_quantity(val).to(unit_)
             elif isinstance(val, (float, int)) and not isinstance(val, bool):
                 return val * unit_
             elif isinstance(val, str):
@@ -172,11 +172,11 @@ else:
                     assert unit_.dimensionality == val.dimensionality
                     return val.to(unit_)
                 elif isinstance(val, simtk_unit.Quantity):
-                    return _from_omm_quantity(val)
+                    return _from_omm_quantity(val).to(unit_)
                 elif isinstance(val, (np.ndarray, list)):
                     # Must check for unyt_array, not unyt_quantity, which is a subclass
                     if isinstance(val, unyt.unyt_array):
-                        return _from_unyt_quantity(val)
+                        return _from_unyt_quantity(val).to(unit_)
                     else:
                         return val * unit_
                 elif isinstance(val, bytes):
