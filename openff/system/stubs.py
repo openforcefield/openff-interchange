@@ -1,6 +1,8 @@
 """
 Monkeypatching external classes with custom functionality
 """
+from typing import Optional, Tuple, Union
+
 import mdtraj as md
 import numpy as np
 from openff.toolkit.topology.topology import Topology
@@ -152,9 +154,9 @@ def to_openff_system(
 def create_bond_potential_handler(
     self,
     topology: Topology,
-    constraint_handler=None,
+    constraint_handler=Optional[SMIRNOFFConstraintHandler],
     **kwargs,
-) -> SMIRNOFFBondHandler:
+) -> Tuple[SMIRNOFFBondHandler, Union[SMIRNOFFConstraintHandler, None]]:
     """
     A method, patched onto BondHandler, that creates a corresponding SMIRNOFFBondHandler
 
@@ -171,7 +173,7 @@ def create_bond_potential_handler(
             bond_handler=bond_handler,
         )
     else:
-        constraints = None
+        constraints = None  # type: ignore[assignment]
 
     return bond_handler, constraints
 
