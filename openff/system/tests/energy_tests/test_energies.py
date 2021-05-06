@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.units import unit
+from openff.utilities.testing import skip_if_missing
 from simtk import openmm
 from simtk import unit as simtk_unit
 from simtk.openmm import app
@@ -257,6 +258,7 @@ def test_water_dimer():
     lmp_energies.compare(omm_energies)
 
 
+@skip_if_missing("foyer")
 @pytest.mark.slow
 def test_process_rb_torsions():
     """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""

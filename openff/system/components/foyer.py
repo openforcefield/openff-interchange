@@ -3,43 +3,45 @@ from copy import copy
 from typing import TYPE_CHECKING, Dict, Set, Type
 
 from ele import element_from_atomic_number
-from foyer import Forcefield
-from foyer.atomtyper import find_atomtypes
-from foyer.exceptions import MissingForceError, MissingParametersError
-from foyer.topology_graph import TopologyGraph
 from openff.units import unit
+from openff.utilities.utils import has_pkg, requires_package
 
 from openff.system.components.potentials import Potential, PotentialHandler
 from openff.system.components.system import System
 from openff.system.models import PotentialKey, TopologyKey
 from openff.system.types import FloatQuantity
 
+if TYPE_CHECKING:
+    from foyer.forcefield import Forcefield
+    from foyer.topology_graph import TopologyGraph
+
+    from openff.system.components.misc import OFFBioTop
+
 # Is this the safest way to achieve PotentialKey id separation?
 POTENTIAL_KEY_SEPARATOR = "-"
 
-if TYPE_CHECKING:
-    from openff.system.components.misc import OFFBioTop
 
+if has_pkg("foyer"):
+    from foyer.topology_graph import TopologyGraph  # noqa
 
-@classmethod  # type: ignore
-def from_off_topology(cls, off_topology: "OFFBioTop") -> TopologyGraph:
-    top_graph = cls()
-    for top_atom in off_topology.topology_atoms:
-        atom = top_atom.atom
-        element = element_from_atomic_number(atom.atomic_number)
-        top_graph.add_atom(
-            name=atom.name,
-            index=top_atom.topology_atom_index,
-            atomic_number=element.atomic_number,
-            element=element.symbol,
-        )
-    for top_bond in off_topology.topology_bonds:
-        atoms_indices = [atom.topology_atom_index for atom in top_bond.atoms]
-        top_graph.add_bond(atoms_indices[0], atoms_indices[1])
-    return top_graph
+    @classmethod  # type: ignore
+    def from_off_topology(cls, off_topology: "OFFBioTop") -> "TopologyGraph":
+        top_graph = cls()
+        for top_atom in off_topology.topology_atoms:
+            atom = top_atom.atom
+            element = element_from_atomic_number(atom.atomic_number)
+            top_graph.add_atom(
+                name=atom.name,
+                index=top_atom.topology_atom_index,
+                atomic_number=element.atomic_number,
+                element=element.symbol,
+            )
+        for top_bond in off_topology.topology_bonds:
+            atoms_indices = [atom.topology_atom_index for atom in top_bond.atoms]
+            top_graph.add_bond(atoms_indices[0], atoms_indices[1])
+        return top_graph
 
-
-TopologyGraph.from_off_topology = from_off_topology
+    TopologyGraph.from_off_topology = from_off_topology
 
 
 def _copy_params(
@@ -61,7 +63,8 @@ def _get_potential_key_id(atom_slots: Dict[TopologyKey, PotentialKey], idx):
     return atom_slots[top_key].id
 
 
-def from_foyer(topology: "OFFBioTop", ff: Forcefield, **kwargs) -> System:
+@requires_package("foyer")
+def from_foyer(topology: "OFFBioTop", ff: "Forcefield", **kwargs) -> System:
     system = System()
     system.topology = topology
 
@@ -120,17 +123,19 @@ class FoyerVDWHandler(PotentialHandler):
 
     def store_matches(
         self,
-        forcefield: Forcefield,
+        forcefield: "Forcefield",
         topology: "OFFBioTop",
     ) -> None:
         """Populate slotmap with key-val pairs of slots and unique potential Identifiers"""
+        from foyer.atomtyper import find_atomtypes
+
         top_graph = TopologyGraph.from_off_topology(topology)
         type_map = find_atomtypes(top_graph, forcefield=forcefield)
         for key, val in type_map.items():
             top_key = TopologyKey(atom_indices=(key,))
             self.slot_map[top_key] = PotentialKey(id=val["atomtype"])
 
-    def store_potentials(self, forcefield: Forcefield) -> None:
+    def store_potentials(self, forcefield: "Forcefield") -> None:
         for top_key in self.slot_map:
             atom_params = forcefield.get_parameters(
                 self.name, key=self.slot_map[top_key].id
@@ -159,7 +164,7 @@ class FoyerElectrostaticsHandler(PotentialHandler):
     def store_charges(
         self,
         atom_slots: Dict[TopologyKey, PotentialKey],
-        forcefield: Forcefield,
+        forcefield: "Forcefield",
     ):
         for top_key, pot_key in atom_slots.items():
             foyer_params = forcefield.get_parameters("atoms", pot_key.id)
@@ -193,7 +198,9 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids)
             )
 
-    def store_potentials(self, forcefield: Forcefield) -> None:
+    def store_potentials(self, forcefield: "Forcefield") -> None:
+        from foyer.exceptions import MissingForceError, MissingParametersError
+
         for _, pot_key in self.slot_map.items():
             try:
                 params = forcefield.get_parameters(

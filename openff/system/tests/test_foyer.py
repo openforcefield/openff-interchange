@@ -1,18 +1,24 @@
-import foyer
 import mdtraj as md
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
+from openff.utilities.testing import skip_if_missing
+from openff.utilities.utils import has_pkg
 from simtk import unit as simtk_unit
 
-from openff.system.components.foyer import from_foyer
 from openff.system.components.misc import OFFBioTop
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 
+if has_pkg("foyer"):
+    import foyer
 
+    from openff.system.components.foyer import from_foyer
+
+
+@skip_if_missing("foyer")
 class TestFoyer(BaseTest):
     @pytest.fixture(scope="session")
     def oplsaa_system_ethanol(self):

@@ -1,9 +1,15 @@
-import mbuild as mb
+from typing import TYPE_CHECKING
+
 from openff.toolkit.topology import Molecule, Topology
+from openff.utilities.utils import has_pkg, requires_package
 from simtk import unit
 
+if has_pkg("mbuild") or TYPE_CHECKING:
+    import mbuild as mb
 
-def offmol_to_compound(off_mol: Molecule) -> mb.Compound:
+
+@requires_package("mbuild")
+def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
 
     if not off_mol.has_unique_atom_names:
         off_mol.generate_unique_atom_names()
@@ -26,7 +32,8 @@ def offmol_to_compound(off_mol: Molecule) -> mb.Compound:
     return comp
 
 
-def offtop_to_compound(off_top: Topology) -> mb.Compound:
+@requires_package("mbuild")
+def offtop_to_compound(off_top: "Topology") -> "mb.Compound":
 
     sub_comps = []
 
