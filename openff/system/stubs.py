@@ -154,7 +154,7 @@ def to_openff_system(
 def create_bond_potential_handler(
     self,
     topology: Topology,
-    constraint_handler=Optional[SMIRNOFFConstraintHandler],
+    constraint_handler: Optional[SMIRNOFFConstraintHandler] = None,
     **kwargs,
 ) -> Tuple[SMIRNOFFBondHandler, Union[SMIRNOFFConstraintHandler, None]]:
     """

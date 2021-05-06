@@ -40,7 +40,7 @@ class TestBondPotentialHandler(BaseTest):
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(bond_handler)
-        bond_potentials = forcefield["Bonds"].create_potential(top)
+        bond_potentials, _ = forcefield["Bonds"].create_potential(top)
 
         top_key = TopologyKey(atom_indices=(0, 1))
         pot = bond_potentials.potentials[bond_potentials.slot_map[top_key]]
