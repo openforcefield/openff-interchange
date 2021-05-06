@@ -17,7 +17,10 @@ class TestMatrixRepresentations(BaseTest):
     ):
         import jax
 
-        handler = parsley[handler_name].create_potential(topology=ethanol_top)
+        if handler_name == "Bonds":
+            handler, _ = parsley["Bonds"].create_potential(topology=ethanol_top)
+        else:
+            handler = parsley[handler_name].create_potential(topology=ethanol_top)
 
         p = handler.get_force_field_parameters()
 
