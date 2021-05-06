@@ -9,7 +9,6 @@ from simtk import unit as simtk_unit
 
 from openff.system.components.misc import OFFBioTop
 from openff.system.tests.base_test import BaseTest
-from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 
 if has_pkg("foyer"):
@@ -39,8 +38,11 @@ class TestFoyer(BaseTest):
         assert oplsaa_system_ethanol["vdW"].scale_14 == 0.5
         assert oplsaa_system_ethanol["Electrostatics"].scale_14 == 0.5
 
+    @skip_if_missing("gromacs")
     @pytest.mark.slow
     def test_ethanol_energies(self, oplsaa_system_ethanol):
+        from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+
         gmx_energies = get_gromacs_energies(oplsaa_system_ethanol)
         omm_energies = get_openmm_energies(oplsaa_system_ethanol)
 

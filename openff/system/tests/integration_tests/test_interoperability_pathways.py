@@ -10,6 +10,7 @@ from simtk import unit as omm_unit
 
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import _get_mdp_file, _run_gmx_energy
+from openff.system.tests.energy_tests.test_energies import needs_gmx
 from openff.system.types import ArrayQuantity
 
 
@@ -77,6 +78,7 @@ def openff_pmd_gmx_direct(
     off_sys.to_top(prefix + ".top")
 
 
+@needs_gmx
 @pytest.mark.slow
 @pytest.mark.parametrize("smiles", ["C"])
 def test_parmed_openmm(tmpdir, smiles):

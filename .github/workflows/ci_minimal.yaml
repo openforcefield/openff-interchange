@@ -1,4 +1,4 @@
-name: CI
+name: minimal_tests
 
 on:
   push:
@@ -21,7 +21,6 @@ jobs:
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
-      COV: --cov=openff/system --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
     - uses: actions/checkout@v2
@@ -68,4 +67,4 @@ jobs:
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v $COV openff/system/tests/ --ignore=openff/system/tests/parmed/
+        python -m pytest -v openff/system/tests/ --ignore=openff/system/tests/parmed/

@@ -12,6 +12,7 @@ kj_mol = unit.kilojoule / unit.mol
 
 
 @skip_if_missing("intermol")
+@skip_if_missing("gromacs")
 @pytest.mark.slow
 def test_amber_energy():
     """Basic test to see if the amber energy driver is functional"""
@@ -28,6 +29,7 @@ def test_amber_energy():
 
     omm_energies = get_gromacs_energies(off_sys, mdp="cutoff_hbonds")
     amb_energies = get_amber_energies(off_sys)
+
     omm_energies.compare(
         amb_energies,
         custom_tolerances={

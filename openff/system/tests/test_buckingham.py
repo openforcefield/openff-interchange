@@ -5,6 +5,7 @@ import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import unit
 from openff.units.utils import from_simtk
+from openff.utilities.testing import skip_if_missing
 from scipy.constants import Avogadro
 from simtk import unit as simtk_unit
 
@@ -13,12 +14,14 @@ from openff.system.components.potentials import Potential
 from openff.system.components.smirnoff import ElectrostaticsMetaHandler
 from openff.system.exceptions import GMXMdrunError
 from openff.system.models import PotentialKey, TopologyKey
-from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 
 
+@skip_if_missing("gromacs")
 def test_argon_buck():
     """Test that Buckingham potentials are supported and can be exported"""
+    from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+
     mol = Molecule.from_smiles("[#18]")
     top = OFFBioTop.from_molecules([mol, mol])
     top.mdtop = md.Topology.from_openmm(top.to_openmm())
