@@ -2,8 +2,8 @@ import json
 
 import numpy as np
 import pytest
-import unyt
 from openff.units import unit
+from openff.utilities.testing import skip_if_missing
 from pydantic import ValidationError
 from simtk import unit as omm_unit
 
@@ -109,7 +109,10 @@ class TestQuantityTypes:
         ):
             Model(a=val)
 
+    @skip_if_missing("unyt")
     def test_unyt_quantities(self):
+        import unyt
+
         class Subject(DefaultModel):
             age: FloatQuantity["year"]
             height: FloatQuantity["centimeter"]
@@ -126,7 +129,10 @@ class TestQuantityTypes:
         assert type(subject.height.m) == float
         assert type(subject.doses.m) == np.ndarray
 
+    @skip_if_missing("unyt")
     def test_setters(self):
+        import unyt
+
         class SimpleModel(DefaultModel):
             data: ArrayQuantity["second"]
 

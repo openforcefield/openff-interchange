@@ -3,10 +3,8 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Union
 
-from intermol.gromacs import _group_energy_terms
 from openff.toolkit.utils.utils import temporary_cd
 from openff.units import unit
-from simtk import unit as omm_unit
 
 from openff.system.exceptions import (
     GMXEnergyError,
@@ -20,6 +18,9 @@ from openff.system.utils import get_test_file_path
 if TYPE_CHECKING:
     from openff.system.components.smirnoff import SMIRNOFFvdWHandler
     from openff.system.components.system import System
+
+
+kj_mol = unit.kilojoule / unit.mol
 
 MDP_HEADER = """
 nsteps                   = 0
@@ -254,7 +255,7 @@ def _run_gmx_energy(
 
 def _get_gmx_energy_vdw(gmx_energies: Dict):
     """Get the total nonbonded energy from a set of GROMACS energies."""
-    gmx_vdw = 0.0 * omm_unit.kilojoule_per_mole
+    gmx_vdw = 0.0 * kj_mol
     for key in ["LJ (SR)", "LJ-14", "Disper. corr.", "Buck.ham (SR)"]:
         try:
             gmx_vdw += gmx_energies[key]
@@ -265,7 +266,7 @@ def _get_gmx_energy_vdw(gmx_energies: Dict):
 
 
 def _get_gmx_energy_coul(gmx_energies: Dict, electrostatics: bool = True):
-    gmx_coul = 0.0 * omm_unit.kilojoule_per_mole
+    gmx_coul = 0.0 * kj_mol
     if not electrostatics:
         return gmx_coul
     for key in ["Coulomb (SR)", "Coul. recip.", "Coulomb-14"]:
@@ -279,7 +280,7 @@ def _get_gmx_energy_coul(gmx_energies: Dict, electrostatics: bool = True):
 
 def _get_gmx_energy_torsion(gmx_energies: Dict):
     """Canonicalize torsion energies from a set of GROMACS energies."""
-    gmx_torsion = 0.0 * omm_unit.kilojoule_per_mole
+    gmx_torsion = 0.0 * kj_mol
     for key in ["Torsion", "Ryckaert-Bell."]:
         try:
             gmx_torsion += gmx_energies[key]
@@ -291,13 +292,24 @@ def _get_gmx_energy_torsion(gmx_energies: Dict):
 
 def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
     """Parse an `.xvg` file written by `gmx energy`."""
-    energies, _ = _group_energy_terms(xvg_path)
+    energy_terms = []
+    with open(xvg_path) as file:
+        for line in file:
+            if line.startswith("#"):
+                continue
+            elif line.startswith("@"):
+                if line[:3] == "@ s":
+                    energy_terms.append(line.split('"')[1])
+            else:
+                energies = [float(val) for val in line.split()]
+
+    energies = dict(zip(energy_terms, energies * kj_mol))
 
     # TODO: Better way of filling in missing fields
     # GROMACS may not populate all keys
     for required_key in ["Bond", "Angle", "Proper Dih."]:
         if required_key not in energies:
-            energies[required_key] = 0.0 * omm_unit.kilojoule_per_mole
+            energies[required_key] = 0.0 * kj_mol
 
     keys_to_drop = [
         "Kinetic En.",

@@ -2,8 +2,8 @@ import json
 from typing import TYPE_CHECKING, Any, Dict
 
 import numpy as np
-import unyt
 from openff.units import unit
+from openff.utilities.utils import has_pkg, requires_package
 from simtk import unit as simtk_unit
 
 from openff.system.exceptions import (
@@ -11,6 +11,9 @@ from openff.system.exceptions import (
     UnitValidationError,
     UnsupportedExportError,
 )
+
+if TYPE_CHECKING:
+    import unyt
 
 
 class _FloatQuantityMeta(type):
@@ -50,8 +53,9 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 # return val
             elif isinstance(val, simtk_unit.Quantity):
                 return _from_omm_quantity(val).to(unit_)
-            elif isinstance(val, unyt.unyt_quantity):
-                return _from_unyt_quantity(val).to(unit_)
+            elif has_pkg("unyt"):
+                if isinstance(val, unyt.unyt_quantity):
+                    return _from_unyt_quantity(val).to(unit_)
             elif isinstance(val, (float, int)) and not isinstance(val, bool):
                 return val * unit_
             elif isinstance(val, str):
@@ -81,7 +85,8 @@ def _from_omm_quantity(val: simtk_unit.Quantity):
         )
 
 
-def _from_unyt_quantity(val: unyt.unyt_array):
+@requires_package("unyt")
+def _from_unyt_quantity(val: "unyt.unyt_array"):
     """Helper function to convert unyt arrays to Pint quantities"""
     quantity = val.to_pint()
     # Ensure a float-like quantity is a float, not a scalar array
@@ -175,8 +180,9 @@ else:
                     return _from_omm_quantity(val).to(unit_)
                 elif isinstance(val, (np.ndarray, list)):
                     # Must check for unyt_array, not unyt_quantity, which is a subclass
-                    if isinstance(val, unyt.unyt_array):
-                        return _from_unyt_quantity(val).to(unit_)
+                    if has_pkg("unyt"):
+                        if isinstance(val, unyt.unyt_array):
+                            return _from_unyt_quantity(val).to(unit_)
                     else:
                         return val * unit_
                 elif isinstance(val, bytes):

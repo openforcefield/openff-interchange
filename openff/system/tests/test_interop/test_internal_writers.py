@@ -6,17 +6,14 @@ import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils.utils import temporary_cd
 from openff.units import unit
+from openff.utilities.testing import skip_if_missing
 from simtk import unit as simtk_unit
 
 from openff.system.stubs import ForceField
-from openff.system.tests.energy_tests.gromacs import (
-    _get_mdp_file,
-    _run_gmx_energy,
-    get_gromacs_energies,
-)
 
 
 # TODO: Add OC=O
+@skip_if_missing("intermol")
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "mol",
@@ -29,6 +26,8 @@ from openff.system.tests.energy_tests.gromacs import (
     ],
 )
 def test_internal_gromacs_writers(mol):
+    from openff.system.tests.energy_tests.gromacs import _get_mdp_file, _run_gmx_energy
+
     mol = Molecule.from_smiles(mol)
     mol.name = "FOO"
     mol.generate_conformers(n_conformers=1)
@@ -93,9 +92,12 @@ def compare_gro_files(file1: str, file2: str):
                 assert line1[:10] + line1[15:] == line2[:10] + line2[15:]
 
 
+@skip_if_missing("intermol")
 @pytest.mark.slow
 def test_sanity_grompp():
     """Basic test to ensure that a topology can be processed without errors"""
+    from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+
     mol = Molecule.from_smiles("CC")
     mol.generate_conformers(n_conformers=1)
     top = mol.to_topology()
@@ -112,9 +114,11 @@ def test_sanity_grompp():
     get_gromacs_energies(off_sys)
 
 
+@skip_if_missing("intermol")
 @pytest.mark.slow
 def test_water_dimer():
     """Test that a water dimer can be written and the files can be grommp'd"""
+    from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
     from openff.system.utils import get_test_file_path
 
     tip3p = ForceField(get_test_file_path("tip3p.offxml"))

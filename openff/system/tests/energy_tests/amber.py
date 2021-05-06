@@ -3,8 +3,8 @@ import tempfile
 from pathlib import Path
 from typing import Dict, Union
 
-from intermol.amber import _group_energy_terms
 from openff.toolkit.utils.utils import temporary_cd
+from openff.utilities.utils import requires_package
 from simtk import unit as omm_unit
 
 from openff.system.components.system import System
@@ -54,6 +54,7 @@ def get_amber_energies(
             return report
 
 
+@requires_package("intermol")
 def _run_sander(
     inpcrd_file: Union[Path, str],
     prmtop_file: Union[Path, str],
@@ -78,6 +79,8 @@ def _run_sander(
         An `EnergyReport` object containing the single-point energies.
 
     """
+    from intermol.amber import _group_energy_terms
+
     in_file = get_test_file_path("min.in")
     sander_cmd = (
         f"sander -i {in_file} -c {inpcrd_file} -p {prmtop_file} -o out.mdout -O"
