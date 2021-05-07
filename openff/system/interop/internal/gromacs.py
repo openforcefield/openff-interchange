@@ -325,6 +325,8 @@ def _write_bonds(top_file: IO, openff_sys: "System"):
         for top_key in bond_handler.slot_map:
             if top_key.atom_indices == indices:
                 pot_key = bond_handler.slot_map[top_key]
+            elif top_key.atom_indices == indices[::-1]:
+                pot_key = bond_handler.slot_map[top_key]
 
         params = bond_handler.potentials[pot_key].parameters
 
