@@ -2,8 +2,8 @@ import json
 
 import numpy as np
 import pytest
-import unyt
 from openff.units import unit
+from openff.utilities.testing import skip_if_missing
 from pydantic import ValidationError
 from simtk import unit as omm_unit
 
@@ -99,6 +99,21 @@ class TestQuantityTypes:
             except ValueError:
                 assert all(getattr(m, key) == getattr(parsed, key))
 
+    def test_array_quantity_tuples(self):
+        """Test that nested tuples are processed. This is relevant for how OpenMM stores
+        periodic box vectors as a tuple of tuples."""
+
+        class BoxModel(DefaultModel):
+            box_vectors: ArrayQuantity["nanometer"]
+
+        as_tuple = ((4, 0, 0), (0, 4, 0), (0, 0, 4)) * omm_unit.nanometer
+        as_array = np.eye(3) * 4 * omm_unit.nanometer
+
+        assert np.allclose(
+            BoxModel(box_vectors=as_tuple).box_vectors,
+            BoxModel(box_vectors=as_array).box_vectors,
+        )
+
     @pytest.mark.parametrize("val", [True, 1])
     def test_bad_array_quantity_type(self, val):
         class Model(DefaultModel):
@@ -109,7 +124,10 @@ class TestQuantityTypes:
         ):
             Model(a=val)
 
+    @skip_if_missing("unyt")
     def test_unyt_quantities(self):
+        import unyt
+
         class Subject(DefaultModel):
             age: FloatQuantity["year"]
             height: FloatQuantity["centimeter"]
@@ -126,7 +144,10 @@ class TestQuantityTypes:
         assert type(subject.height.m) == float
         assert type(subject.doses.m) == np.ndarray
 
+    @skip_if_missing("unyt")
     def test_setters(self):
+        import unyt
+
         class SimpleModel(DefaultModel):
             data: ArrayQuantity["second"]
 

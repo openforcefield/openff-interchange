@@ -3,20 +3,23 @@ import pytest
 from openff.toolkit.topology.molecule import Molecule
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from openff.utilities.utils import has_pkg
 
 from openff.system.components.misc import RBTorsionHandler
 from openff.system.components.potentials import Potential
 from openff.system.models import PotentialKey, TopologyKey
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
-from openff.system.tests.energy_tests.gromacs import (
-    _get_mdp_file,
-    _run_gmx_energy,
-    get_gromacs_energies,
-)
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 
 kj_mol = unit.Unit("kilojoule / mol")
+
+if has_pkg("gromacs"):
+    from openff.system.tests.energy_tests.gromacs import (
+        _get_mdp_file,
+        _run_gmx_energy,
+        get_gromacs_energies,
+    )
 
 
 class TestRBTorsions(BaseTest):
@@ -60,18 +63,20 @@ class TestRBTorsions(BaseTest):
 
         return out
 
+    @skip_if_missing("gromacs")
     @pytest.mark.slow
     def test_rb_torsions(self, ethanol_with_rb_torsions):
-        gmx = get_openmm_energies(ethanol_with_rb_torsions, round_positions=3).energies[
+        omm = get_openmm_energies(ethanol_with_rb_torsions, round_positions=3).energies[
             "Torsion"
         ]
-        omm = get_gromacs_energies(ethanol_with_rb_torsions).energies["Torsion"]
+        gmx = get_gromacs_energies(ethanol_with_rb_torsions).energies["Torsion"]
 
         assert (gmx - omm).m_as(kj_mol) < 1e-6
 
     @pytest.mark.slow
     @skip_if_missing("foyer")
     @skip_if_missing("mbuild")
+    @skip_if_missing("gromacs")
     def test_rb_torsions_vs_foyer(self, ethanol_with_rb_torsions):
         # Given that these force constants are copied from Foyer's OPLS-AA file,
         # compare to processing through the current MoSDeF pipeline

@@ -308,7 +308,7 @@ class SMIRNOFFvdWHandler(PotentialHandler):
 
         """
         self.method = parameter_handler.method
-        self.cutoff = parameter_handler.cutoff.value_in_unit(omm_unit.angstrom)
+        self.cutoff = parameter_handler.cutoff
 
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
