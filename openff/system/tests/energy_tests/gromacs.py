@@ -56,6 +56,7 @@ def _write_mdp_file(openff_sys: "System"):
             coul_cutoff = round(coul_cutoff, 4)
             if coul_method in ["Cut-off", "cutoff"]:
                 mdp_file.write("coulombtype = Cut-off\n")
+                mdp_file.write("coulomb-modifier = None\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
             elif coul_method == "PME":
                 mdp_file.write("coulombtype = PME\n")
@@ -128,7 +129,6 @@ def get_gromacs_energies(
     off_sys: "System",
     mdp: str = "auto",
     writer: str = "internal",
-    electrostatics=True,
 ) -> EnergyReport:
     """
     Given an OpenFF System object, return single-point energies as computed by GROMACS.
@@ -165,7 +165,6 @@ def get_gromacs_energies(
                 gro_file="out.gro",
                 mdp_file=_get_mdp_file(mdp),
                 maxwarn=2,
-                electrostatics=electrostatics,
             )
             return report
 
@@ -175,7 +174,6 @@ def _run_gmx_energy(
     gro_file: Union[Path, str],
     mdp_file: Union[Path, str],
     maxwarn: int = 1,
-    electrostatics=True,
 ):
     """
     Given GROMACS files, return single-point energies as computed by GROMACS.
@@ -248,7 +246,7 @@ def _run_gmx_energy(
     if energy.returncode:
         raise GMXEnergyError(err)
 
-    report = _parse_gmx_energy("out.xvg", electrostatics=electrostatics)
+    report = _parse_gmx_energy("out.xvg")
 
     return report
 
@@ -265,10 +263,8 @@ def _get_gmx_energy_vdw(gmx_energies: Dict):
     return gmx_vdw
 
 
-def _get_gmx_energy_coul(gmx_energies: Dict, electrostatics: bool = True):
+def _get_gmx_energy_coul(gmx_energies: Dict):
     gmx_coul = 0.0 * kj_mol
-    if not electrostatics:
-        return gmx_coul
     for key in ["Coulomb (SR)", "Coul. recip.", "Coulomb-14"]:
         try:
             gmx_coul += gmx_energies[key]
@@ -290,7 +286,7 @@ def _get_gmx_energy_torsion(gmx_energies: Dict):
     return gmx_torsion
 
 
-def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
+def _parse_gmx_energy(xvg_path: str):
     """Parse an `.xvg` file written by `gmx energy`."""
     energy_terms = []
     with open(xvg_path) as file:
@@ -301,7 +297,7 @@ def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
                 if line[:3] == "@ s":
                     energy_terms.append(line.split('"')[1])
             else:
-                energies = [float(val) for val in line.split()]
+                energies = [float(val) for val in line.split()[1:]]
 
     energies = dict(zip(energy_terms, energies * kj_mol))
 
@@ -336,9 +332,7 @@ def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
             "Angle": energies["Angle"],
             "Torsion": _get_gmx_energy_torsion(energies),
             "vdW": _get_gmx_energy_vdw(energies),
-            "Electrostatics": _get_gmx_energy_coul(
-                energies, electrostatics=electrostatics
-            ),
+            "Electrostatics": _get_gmx_energy_coul(energies),
         }
     )
 

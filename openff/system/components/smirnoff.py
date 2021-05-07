@@ -346,7 +346,7 @@ class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
     @validator("method")
     def validate_electrostatics_method(cls, v):
         v_ = v.lower().replace("-", "")
-        if v_ not in ["cutoff", "pme", "reactionfield"]:
+        if v_ not in ["full", "cutoff", "pme", "reactionfield"]:
             raise UnsupportedCutoffMethodError(
                 f"Electrostatics method {v} not supported"
             )
