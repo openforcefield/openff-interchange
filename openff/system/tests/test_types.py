@@ -99,6 +99,21 @@ class TestQuantityTypes:
             except ValueError:
                 assert all(getattr(m, key) == getattr(parsed, key))
 
+    def test_array_quantity_tuples(self):
+        """Test that nested tuples are processed. This is relevant for how OpenMM stores
+        periodic box vectors as a tuple of tuples."""
+
+        class BoxModel(DefaultModel):
+            box_vectors: ArrayQuantity["nanometer"]
+
+        as_tuple = ((4, 0, 0), (0, 4, 0), (0, 0, 4)) * omm_unit.nanometer
+        as_array = np.eye(3) * 4 * omm_unit.nanometer
+
+        assert np.allclose(
+            BoxModel(box_vectors=as_tuple).box_vectors,
+            BoxModel(box_vectors=as_array).box_vectors,
+        )
+
     @pytest.mark.parametrize("val", [True, 1])
     def test_bad_array_quantity_type(self, val):
         class Model(DefaultModel):

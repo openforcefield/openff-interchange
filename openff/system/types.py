@@ -12,7 +12,7 @@ from openff.system.exceptions import (
     UnsupportedExportError,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING or has_pkg("unyt"):
     import unyt
 
 
@@ -51,20 +51,17 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 # could return here, without converting
                 # (could be inconsistent with data model - heteregenous but compatible units)
                 # return val
-            elif isinstance(val, simtk_unit.Quantity):
+            if isinstance(val, simtk_unit.Quantity):
                 return _from_omm_quantity(val).to(unit_)
-            elif has_pkg("unyt"):
+            if has_pkg("unyt"):
                 if isinstance(val, unyt.unyt_quantity):
                     return _from_unyt_quantity(val).to(unit_)
-            elif isinstance(val, (float, int)) and not isinstance(val, bool):
+            if isinstance(val, (float, int)) and not isinstance(val, bool):
                 return val * unit_
-            elif isinstance(val, str):
+            if isinstance(val, str):
                 # could do custom deserialization here?
                 return unit.Quantity(val).to(unit_)
-            else:
-                raise UnitValidationError(
-                    f"Could not validate data of type {type(val)}"
-                )
+            raise UnitValidationError(f"Could not validate data of type {type(val)}")
 
 
 def _from_omm_quantity(val: simtk_unit.Quantity):
@@ -75,7 +72,7 @@ def _from_omm_quantity(val: simtk_unit.Quantity):
     if type(val_) in {float, int}:
         unit_ = val.unit
         return val_ * unit.Unit(str(unit_))
-    elif type(val_) in {list, np.ndarray}:
+    elif type(val_) in {tuple, list, np.ndarray}:
         array = np.asarray(val_)
         return array * unit.Unit(str(unit_))
     else:
@@ -176,25 +173,26 @@ else:
                 if isinstance(val, unit.Quantity):
                     assert unit_.dimensionality == val.dimensionality
                     return val.to(unit_)
-                elif isinstance(val, simtk_unit.Quantity):
+                if isinstance(val, simtk_unit.Quantity):
                     return _from_omm_quantity(val).to(unit_)
-                elif isinstance(val, (np.ndarray, list)):
-                    # Must check for unyt_array, not unyt_quantity, which is a subclass
+                if isinstance(val, (np.ndarray, list)):
                     if has_pkg("unyt"):
+                        # Must check for unyt_array, not unyt_quantity, which is a subclass
                         if isinstance(val, unyt.unyt_array):
                             return _from_unyt_quantity(val).to(unit_)
+                        else:
+                            return val * unit_
                     else:
                         return val * unit_
-                elif isinstance(val, bytes):
+                if isinstance(val, bytes):
                     # Define outside loop
                     dt = np.dtype(int)
                     dt.newbyteorder("<")
                     return np.frombuffer(val, dtype=dt) * unit_
-                elif isinstance(val, str):
+                if isinstance(val, str):
                     # could do custom deserialization here?
                     raise NotImplementedError
                     #  return unit.Quantity(val).to(unit_)
-                else:
-                    raise UnitValidationError(
-                        f"Could not validate data of type {type(val)}"
-                    )
+                raise UnitValidationError(
+                    f"Could not validate data of type {type(val)}"
+                )
