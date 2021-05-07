@@ -5,9 +5,9 @@ import parmed as pmd
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils.utils import temporary_cd
-from simtk import unit as omm_unit
+from openff.units import unit
+from simtk import unit as simtk_unit
 
-from openff.system import unit
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import (
     _get_mdp_file,
@@ -17,6 +17,7 @@ from openff.system.tests.energy_tests.gromacs import (
 
 
 # TODO: Add OC=O
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "mol",
     [
@@ -35,7 +36,9 @@ def test_internal_gromacs_writers(mol):
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
     out = parsley.create_openff_system(top)
 
-    out.box = [4, 4, 4] * np.eye(3)
+    out["vdW"].method = "cutoff"
+    out["Electrostatics"].method = "cutoff"
+    out.box = [10, 10, 10]
     out.positions = mol.conformers[0]
     out.positions = np.round(out.positions, 2)
 
@@ -45,7 +48,7 @@ def test_internal_gromacs_writers(mol):
         system=openmm_sys,
         xyz=out.positions.to(unit.angstrom),
     )
-    struct.box = [40, 40, 40, 90, 90, 90]
+    struct.box = [100, 100, 100, 90, 90, 90]
 
     with tempfile.TemporaryDirectory() as off_tempdir:
         with temporary_cd(off_tempdir):
@@ -73,7 +76,10 @@ def test_internal_gromacs_writers(mol):
 
             reference_energy.compare(
                 internal_energy,
-                custom_tolerances={"Bond": 2e-2 * omm_unit.kilojoule_per_mole},
+                custom_tolerances={
+                    "Bond": 2e-2 * simtk_unit.kilojoule_per_mole,
+                    "Nonbonded": 1.5e-6 * simtk_unit.kilojoule_per_mole,
+                },
             )
 
 
@@ -87,6 +93,7 @@ def compare_gro_files(file1: str, file2: str):
                 assert line1[:10] + line1[15:] == line2[:10] + line2[15:]
 
 
+@pytest.mark.slow
 def test_sanity_grompp():
     """Basic test to ensure that a topology can be processed without errors"""
     mol = Molecule.from_smiles("CC")
@@ -102,18 +109,10 @@ def test_sanity_grompp():
     off_sys.to_gro("out.gro", writer="internal")
     off_sys.to_top("out.top", writer="internal")
 
-    # TODO: Replace with intermol.gromacs.gmx_energy call after resolving
-    #  atomtype name differences that currently force -maxwarn 7
-    import os
-
-    from pkg_resources import resource_filename
-
-    mdp_file = resource_filename("intermol", "tests/gromacs/grompp.mdp")
-    exit_code = os.system(f"gmx grompp -f {mdp_file} -c out.gro -p out.top -maxwarn 1")
-
-    assert exit_code == 0
+    get_gromacs_energies(off_sys)
 
 
+@pytest.mark.slow
 def test_water_dimer():
     """Test that a water dimer can be written and the files can be grommp'd"""
     from openff.system.utils import get_test_file_path

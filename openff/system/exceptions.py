@@ -34,24 +34,15 @@ class ToolkitTopologyConformersNotFoundError(Exception):
             msg += f"The molecule lacking a conformer is {self.mol}"
 
 
-class MissingDependencyError(BaseException):
-    """
-    Exception for when an optional dependency is needed but not installed
-
-    """
-
-    def __init__(self, package_name):
-        self.msg = (
-            f"Missing dependency {package_name}. Try installing it "
-            f"with\n\n$ conda install {package_name} -c conda-forge"
-        )
-
-        super().__init__(self.msg)
-
-
 class InvalidBoxError(ValueError):
     """
     Generic exception for errors reading box data
+    """
+
+
+class InvalidTopologyError(ValueError):
+    """
+    Generic exception for errors reading chemical topology data
     """
 
 
@@ -75,7 +66,13 @@ class InvalidExpressionError(ValueError):
 
 class UnsupportedCutoffMethodError(BaseException):
     """
-    Exception for incompatibilities in cutoff methods
+    Exception for a cutoff method that is invalid or not supported by an engine
+    """
+
+
+class UnimplementedCutoffMethodError(BaseException):
+    """
+    Exception for a cutoff method that should be supported but it not yet implemented
     """
 
 
@@ -154,6 +151,12 @@ class InternalInconsistencyError(BaseException):
     """
     Fallback exception for bad behavior. These should not be reached but
     are raised to safeguard against problematic edge cases silently passing.
+    """
+
+
+class SanderError(BaseException):
+    """
+    Exception for when a sander subprocess fails.
     """
 
 

@@ -1,25 +1,28 @@
 from abc import abstractmethod
 from copy import copy
-from typing import Dict, Set, Type
+from typing import TYPE_CHECKING, Dict, Set, Type
 
 from ele import element_from_atomic_number
 from foyer import Forcefield
 from foyer.atomtyper import find_atomtypes
 from foyer.exceptions import MissingForceError, MissingParametersError
 from foyer.topology_graph import TopologyGraph
-from openff.toolkit.topology import Topology
+from openff.units import unit
 
-from openff.system import unit as u
 from openff.system.components.potentials import Potential, PotentialHandler
 from openff.system.components.system import System
 from openff.system.models import PotentialKey, TopologyKey
+from openff.system.types import FloatQuantity
 
 # Is this the safest way to achieve PotentialKey id separation?
 POTENTIAL_KEY_SEPARATOR = "-"
 
+if TYPE_CHECKING:
+    from openff.system.components.misc import OFFBioTop
+
 
 @classmethod  # type: ignore
-def from_off_topology(cls, off_topology: Topology) -> TopologyGraph:
+def from_off_topology(cls, off_topology: "OFFBioTop") -> TopologyGraph:
     top_graph = cls()
     for top_atom in off_topology.topology_atoms:
         atom = top_atom.atom
@@ -58,7 +61,7 @@ def _get_potential_key_id(atom_slots: Dict[TopologyKey, PotentialKey], idx):
     return atom_slots[top_key].id
 
 
-def from_foyer(topology: Topology, ff: Forcefield, **kwargs) -> System:
+def from_foyer(topology: "OFFBioTop", ff: Forcefield, **kwargs) -> System:
     system = System()
     system.topology = topology
 
@@ -113,12 +116,12 @@ class FoyerVDWHandler(PotentialHandler):
     scale_14: float = 0.5  # TODO: Replace with Foyer API point?
     scale_15: float = 1.0
     method: str = "cutoff"
-    cutoff: float = 9.0
+    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
 
     def store_matches(
         self,
         forcefield: Forcefield,
-        topology: Topology,
+        topology: "OFFBioTop",
     ) -> None:
         """Populate slotmap with key-val pairs of slots and unique potential Identifiers"""
         top_graph = TopologyGraph.from_off_topology(topology)
@@ -136,7 +139,7 @@ class FoyerVDWHandler(PotentialHandler):
             atom_params = _copy_params(
                 atom_params,
                 "charge",
-                param_units={"epsilon": u.kJ / u.mol, "sigma": u.nm},
+                param_units={"epsilon": unit.kJ / unit.mol, "sigma": unit.nm},
             )
 
             self.potentials[self.slot_map[top_key]] = Potential(parameters=atom_params)
@@ -151,6 +154,7 @@ class FoyerElectrostaticsHandler(PotentialHandler):
     scale_13: float = 0.0
     scale_14: float = 0.5  # TODO: Replace with Foyer API point?
     scale_15: float = 1.0
+    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
 
     def store_charges(
         self,
@@ -160,7 +164,7 @@ class FoyerElectrostaticsHandler(PotentialHandler):
         for top_key, pot_key in atom_slots.items():
             foyer_params = forcefield.get_parameters("atoms", pot_key.id)
             charge = foyer_params["charge"]
-            charge = charge * u.elementary_charge
+            charge = charge * unit.elementary_charge
             self.charges[top_key] = charge
 
 
@@ -171,7 +175,7 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
     def store_matches(
         self,
         atom_slots: Dict[TopologyKey, PotentialKey],
-        topology: Topology,
+        topology: "OFFBioTop",
     ) -> None:
         for connection in getattr(topology, self.connection_attribute):
             try:
@@ -223,7 +227,8 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
 
     def get_params_with_units(self, params):
         return _copy_params(
-            params, param_units={"k": u.kJ / u.mol / u.nm ** 2, "length": u.nm}
+            params,
+            param_units={"k": unit.kJ / unit.mol / unit.nm ** 2, "length": unit.nm},
         )
 
 
@@ -239,8 +244,8 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
         return _copy_params(
             {"k": params["k"], "angle": params["theta"]},
             param_units={
-                "k": u.kJ / u.mol / u.radian ** 2,
-                "angle": u.dimensionless,
+                "k": unit.kJ / unit.mol / unit.radian ** 2,
+                "angle": unit.dimensionless,
             },
         )
 
@@ -260,7 +265,7 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
 
     def get_params_with_units(self, params):
         rb_params = {k.upper(): v for k, v in params.items()}
-        param_units = {k: u.kJ / u.mol for k in rb_params}
+        param_units = {k: unit.kJ / unit.mol for k in rb_params}
         return _copy_params(rb_params, param_units=param_units)
 
 
@@ -280,9 +285,9 @@ class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler):
         return _copy_params(
             params,
             param_units={
-                "k": u.kJ / u.mol / u.nm ** 2,
-                "phase": u.dimensionless,
-                "periodicity": u.dimensionless,
+                "k": unit.kJ / unit.mol / unit.nm ** 2,
+                "phase": unit.dimensionless,
+                "periodicity": unit.dimensionless,
             },
         )
 

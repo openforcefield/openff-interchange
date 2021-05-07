@@ -1,12 +1,12 @@
 import numpy as np
 import pytest
+from openff.utilities.testing import skip_if_missing
 
 from openff.system.tests.base_test import BaseTest
-from openff.system.tests.utils import requires_pkg
 from openff.system.utils import get_test_file_path
 
 
-@requires_pkg("jax")
+@skip_if_missing("jax")
 class TestMatrixRepresentations(BaseTest):
     @pytest.mark.parametrize(
         "handler_name,n_ff_terms,n_sys_terms",
@@ -17,9 +17,10 @@ class TestMatrixRepresentations(BaseTest):
     ):
         import jax
 
-        from openff.system.stubs import ForceField
-
-        handler = parsley[handler_name].create_potential(topology=ethanol_top)
+        if handler_name == "Bonds":
+            handler, _ = parsley["Bonds"].create_potential(topology=ethanol_top)
+        else:
+            handler = parsley[handler_name].create_potential(topology=ethanol_top)
 
         p = handler.get_force_field_parameters()
 

@@ -1,4 +1,6 @@
+import mdtraj as md
 import parmed as pmd
+import pytest
 from simtk import unit as omm_unit
 
 from openff.system.components.system import System
@@ -12,6 +14,8 @@ from openff.system.utils import get_test_file_path
 
 
 class TestParmEd(BaseTest):
+    @pytest.mark.slow
+    @pytest.mark.xfail
     def test_parmed_roundtrip(self):
         original = pmd.load_file(get_test_file_path("ALA_GLY/ALA_GLY.top"))
         gro = pmd.load_file(get_test_file_path("ALA_GLY/ALA_GLY.gro"))
@@ -19,6 +23,17 @@ class TestParmEd(BaseTest):
         original.positions = gro.positions
 
         openff_sys = System._from_parmed(original)
+        openff_sys.topology.mdtop = md.Topology.from_openmm(gro.topology)
+
+        #  Some sanity checks, including that residues are stored ...
+        assert openff_sys.topology.mdtop.n_atoms == 29
+        # TODO: Assert number of topology molecules after refactor
+        assert openff_sys.topology.mdtop.n_residues == 4
+
+        # ... and written out
+        openff_sys.to_gro("has_residues.gro", writer="internal")
+        assert len(pmd.load_file("has_residues.gro").residues) == 4
+
         roundtrip = openff_sys._to_parmed()
 
         roundtrip.save("conv.gro", overwrite=True)

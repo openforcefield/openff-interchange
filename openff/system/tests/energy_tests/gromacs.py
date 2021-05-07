@@ -1,19 +1,118 @@
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 from intermol.gromacs import _group_energy_terms
 from openff.toolkit.utils.utils import temporary_cd
+from openff.units import unit
 from simtk import unit as omm_unit
 
-from openff.system.components.system import System
-from openff.system.exceptions import GMXEnergyError, GMXGromppError, GMXMdrunError
+from openff.system.exceptions import (
+    GMXEnergyError,
+    GMXGromppError,
+    GMXMdrunError,
+    UnsupportedExportError,
+)
 from openff.system.tests.energy_tests.report import EnergyReport
 from openff.system.utils import get_test_file_path
 
+if TYPE_CHECKING:
+    from openff.system.components.smirnoff import SMIRNOFFvdWHandler
+    from openff.system.components.system import System
 
-def _get_mdp_file(key: str) -> Path:
+MDP_HEADER = """
+nsteps                   = 0
+nstenergy                = 1000
+continuation             = yes
+cutoff-scheme            = verlet
+
+DispCorr                 = Ener
+"""
+_ = """
+pbc                      = xyz
+coulombtype              = Cut-off
+rcoulomb                 = 0.9
+vdwtype                 = cutoff
+rvdw                     = 0.9
+vdw-modifier             = None
+DispCorr                 = No
+constraints              = none
+"""
+
+
+def _write_mdp_file(openff_sys: "System"):
+    with open("auto_generated.mdp", "w") as mdp_file:
+        mdp_file.write(MDP_HEADER)
+
+        if openff_sys.box is not None:
+            mdp_file.write("pbc = xyz\n")
+
+        if "Electrostatics" in openff_sys.handlers:
+            coul_handler = openff_sys.handlers["Electrostatics"]
+            coul_method = coul_handler.method  # type: ignore[attr-defined]
+            coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
+            coul_cutoff = round(coul_cutoff, 4)
+            if coul_method in ["Cut-off", "cutoff"]:
+                mdp_file.write("coulombtype = Cut-off\n")
+                mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
+            elif coul_method == "PME":
+                mdp_file.write("coulombtype = PME\n")
+                mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
+            elif coul_method == "reaction-field":
+                mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
+                mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
+            else:
+                raise UnsupportedExportError(
+                    f"Electrostatics method {coul_method} not supported"
+                )
+
+        if "vdW" in openff_sys.handlers:
+            vdw_handler: "SMIRNOFFvdWHandler" = openff_sys.handlers["vdW"]  # type: ignore
+            vdw_method = vdw_handler.method.lower().replace("-", "")  # type: ignore
+            vdw_cutoff = vdw_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
+            vdw_cutoff = round(vdw_cutoff, 4)
+            if vdw_method == "cutoff":
+                mdp_file.write("vdwtype = cutoff\n")
+            elif vdw_method == "PME":
+                mdp_file.write("vdwtype = PME\n")
+            else:
+                raise UnsupportedExportError(f"vdW method {vdw_method} not supported")
+            mdp_file.write(f"rvdw = {vdw_cutoff}\n")
+            if getattr(vdw_handler, "switch_width", None) is not None:
+                mdp_file.write("vdw-modifier = Potential-switch\n")
+                switch_distance = vdw_handler.cutoff - vdw_handler.switch_width
+                switch_distance = switch_distance.m_as(unit.nanometer)  # type: ignore
+                mdp_file.write(f"rvdw-switch = {switch_distance}\n")
+
+        if "Constraints" not in openff_sys.handlers:
+            mdp_file.write("constraints = none\n")
+        elif "Bonds" not in openff_sys.handlers:
+            mdp_file.write("constraints = none\n")
+        # TODO: Add support for constraining angles but no bonds?
+        else:
+            num_constraints = len(openff_sys["Constraints"].slot_map)
+            if num_constraints == 0:
+                mdp_file.write("constraints = none\n")
+            else:
+                from openff.system.components.misc import _get_num_h_bonds
+
+                num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)  # type: ignore[union-attr]
+                num_bonds = len(openff_sys["Bonds"].slot_map)
+                num_angles = len(openff_sys["Angles"].slot_map)
+
+                if num_constraints == len(openff_sys["Bonds"].slot_map):
+                    mdp_file.write("constraints = all-bonds\n")
+                elif num_constraints == num_h_bonds:
+                    mdp_file.write("constraints = h-bonds\n")
+                elif num_constraints == (num_bonds + num_angles):
+                    mdp_file.write("constraints = all-angles\n")
+
+
+def _get_mdp_file(key: str = "auto") -> str:
+    if key == "auto":
+        return "auto_generated.mdp"
+
     mapping = {
         "default": "default.mdp",
         "cutoff": "cutoff.mdp",
@@ -25,8 +124,8 @@ def _get_mdp_file(key: str) -> Path:
 
 
 def get_gromacs_energies(
-    off_sys: System,
-    mdp: str = "cutoff",
+    off_sys: "System",
+    mdp: str = "auto",
     writer: str = "internal",
     electrostatics=True,
 ) -> EnergyReport:
@@ -58,6 +157,8 @@ def get_gromacs_energies(
         with temporary_cd(tmpdir):
             off_sys.to_gro("out.gro", writer=writer)
             off_sys.to_top("out.top", writer=writer)
+            if mdp == "auto":
+                _write_mdp_file(off_sys)
             report = _run_gmx_energy(
                 top_file="out.top",
                 gro_file="out.gro",
@@ -114,7 +215,7 @@ def _run_gmx_energy(
     if grompp.returncode:
         raise GMXGromppError(err)
 
-    mdrun_cmd = "gmx mdrun -s out.tpr -e out.edr"
+    mdrun_cmd = "gmx mdrun -s out.tpr -e out.edr -ntmpi 1"
 
     mdrun = subprocess.Popen(
         mdrun_cmd,
@@ -151,19 +252,44 @@ def _run_gmx_energy(
     return report
 
 
-def _get_gmx_energy_nonbonded(gmx_energies: Dict):
+def _get_gmx_energy_vdw(gmx_energies: Dict):
     """Get the total nonbonded energy from a set of GROMACS energies."""
-    gmx_nonbonded = 0.0 * omm_unit.kilojoule_per_mole
-    for key in ["LJ (SR)", "Coulomb (SR)", "Coul. recip.", "Disper. corr."]:
+    gmx_vdw = 0.0 * omm_unit.kilojoule_per_mole
+    for key in ["LJ (SR)", "LJ-14", "Disper. corr.", "Buck.ham (SR)"]:
         try:
-            gmx_nonbonded += gmx_energies[key]
+            gmx_vdw += gmx_energies[key]
         except KeyError:
             pass
 
-    return gmx_nonbonded
+    return gmx_vdw
 
 
-def _parse_gmx_energy(xvg_path, electrostatics=True):
+def _get_gmx_energy_coul(gmx_energies: Dict, electrostatics: bool = True):
+    gmx_coul = 0.0 * omm_unit.kilojoule_per_mole
+    if not electrostatics:
+        return gmx_coul
+    for key in ["Coulomb (SR)", "Coul. recip.", "Coulomb-14"]:
+        try:
+            gmx_coul += gmx_energies[key]
+        except KeyError:
+            pass
+
+    return gmx_coul
+
+
+def _get_gmx_energy_torsion(gmx_energies: Dict):
+    """Canonicalize torsion energies from a set of GROMACS energies."""
+    gmx_torsion = 0.0 * omm_unit.kilojoule_per_mole
+    for key in ["Torsion", "Ryckaert-Bell."]:
+        try:
+            gmx_torsion += gmx_energies[key]
+        except KeyError:
+            pass
+
+    return gmx_torsion
+
+
+def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
     """Parse an `.xvg` file written by `gmx energy`."""
     energies, _ = _group_energy_terms(xvg_path)
 
@@ -192,31 +318,16 @@ def _parse_gmx_energy(xvg_path, electrostatics=True):
 
     report = EnergyReport()
 
-    report.energies.update(
+    report.update_energies(
         {
             "Bond": energies["Bond"],
             "Angle": energies["Angle"],
-            "Torsion": energies["Proper Dih."],
+            "Torsion": _get_gmx_energy_torsion(energies),
+            "vdW": _get_gmx_energy_vdw(energies),
+            "Electrostatics": _get_gmx_energy_coul(
+                energies, electrostatics=electrostatics
+            ),
         }
     )
-
-    if "Ryckaert-Bell." in energies:
-        report.energies["Torsion"] += energies["Ryckaert-Bell."]
-
-    if electrostatics is True:
-        report.energies.update(
-            {
-                "Nonbonded": _get_gmx_energy_nonbonded(energies),
-            }
-        )
-    elif electrostatics is False:
-        report.energies.update(
-            {
-                "Nonbonded": energies["LJ (SR)"],
-            }
-        )
-
-    if "Buck.ham (SR)" in energies:
-        report.energies["Nonbonded"] += energies["Buck.ham (SR)"]
 
     return report

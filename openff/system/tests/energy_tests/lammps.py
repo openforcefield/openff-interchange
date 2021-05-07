@@ -2,6 +2,7 @@ import subprocess
 from typing import List
 
 import numpy as np
+from openff.units import unit
 from simtk import unit as omm_unit
 
 from openff.system.components.system import System
@@ -76,7 +77,8 @@ def get_lammps_energies(
             "Bond": parsed_energies[0],
             "Angle": parsed_energies[1],
             "Torsion": parsed_energies[2] + parsed_energies[3],
-            "Nonbonded": parsed_energies[4],
+            "vdW": parsed_energies[5] + parsed_energies[8],
+            "Electrostatics": parsed_energies[6] + parsed_energies[7],
         }
     )
 
@@ -126,6 +128,8 @@ def _write_lammps_input(
 
         # TODO: Ensure units
         vdw_cutoff = vdw_hander.cutoff  # type: ignore[attr-defined]
+        vdw_cutoff = vdw_cutoff.m_as(unit.angstrom)
+
         # TODO: Handle separate cutoffs
         coul_cutoff = vdw_cutoff
 
@@ -145,7 +149,7 @@ def _write_lammps_input(
         else:
             fo.write(f"pair_style lj/cut {vdw_cutoff}\n")
 
-        fo.write("pair_modify mix arithmetic\n\n")
+        fo.write("pair_modify mix arithmetic tail yes\n\n")
         fo.write("read_data out.lmp\n\n")
         fo.write(
             "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n"

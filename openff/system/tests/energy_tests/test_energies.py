@@ -1,11 +1,16 @@
+from copy import deepcopy
+
 import mbuild as mb
+import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
+from openff.units import unit
 from simtk import openmm
-from simtk import unit as omm_unit
+from simtk import unit as simtk_unit
+from simtk.openmm import app
 
-from openff.system import unit
+from openff.system.components.misc import OFFBioTop
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import (
     _get_mdp_file,
@@ -17,17 +22,18 @@ from openff.system.tests.energy_tests.openmm import (
     _get_openmm_energies,
     get_openmm_energies,
 )
-from openff.system.tests.energy_tests.report import EnergyError
 
 
+@pytest.mark.xfail
+@pytest.mark.slow
 @pytest.mark.parametrize("constrained", [True, False])
 @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
-@pytest.mark.parametrize("n_mol", [1, 10, 100])
-def test_energies_single_mol(constrained, n_mol, mol_smi):
+def test_energies_single_mol(constrained, mol_smi):
     mol = Molecule.from_smiles(mol_smi)
     mol.generate_conformers(n_conformers=1)
     mol.name = "FOO"
-    top = Topology.from_molecules(n_mol * [mol])
+    top = mol.to_topology()
+    top.box_vectors = None  # [10, 10, 10] * simtk_unit.nanometer
 
     if constrained:
         parsley = ForceField("openff-1.0.0.offxml")
@@ -36,77 +42,40 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
 
     off_sys = parsley.create_openff_system(top)
 
+    off_sys.handlers["Electrostatics"].method = "cutoff"
+
     mol.to_file("out.xyz", file_format="xyz")
     compound: mb.Compound = mb.load("out.xyz")
     packed_box: mb.Compound = mb.fill_box(
-        compound=compound,
-        n_compounds=[n_mol],
-        density=500,  # kg/m^3
+        compound=compound, n_compounds=1, box=mb.Box(lengths=[10, 10, 10])
     )
 
     positions = packed_box.xyz * unit.nanometer
     off_sys.positions = positions
 
-    box = np.asarray(packed_box.box.lengths) * unit.nanometer
-    if np.any(box < 4 * unit.nanometer):
-        off_sys.box = np.array([4, 4, 4]) * unit.nanometer
-    else:
-        off_sys.box = box
-
     # Compare directly to toolkit's reference implementation
-    omm_energies = get_openmm_energies(
-        off_sys, round_positions=8, hard_cutoff=True, electrostatics=False
-    )
+    omm_energies = get_openmm_energies(off_sys, round_positions=8)
     omm_reference = parsley.create_openmm_system(top)
     reference_energies = _get_openmm_energies(
         omm_sys=omm_reference,
         box_vectors=off_sys.box,
         positions=off_sys.positions,
         round_positions=8,
-        hard_cutoff=True,
-        electrostatics=False,
     )
 
-    try:
-        omm_energies.compare(reference_energies)
-    except EnergyError as e:
-        if "Nonbonded" in str(e):
-            # If nonbonded energies differ, at least ensure that the nonbonded
-            # parameters on each particle match
-            from openff.system.tests.utils import (
-                _get_charges_from_openmm_system,
-                _get_lj_params_from_openmm_system,
-            )
-        else:
-            raise e
+    omm_energies.compare(reference_energies)
 
-        omm_sys = off_sys.to_openmm()
-        np.testing.assert_equal(
-            np.asarray([*_get_charges_from_openmm_system(omm_sys)]),
-            np.asarray([*_get_charges_from_openmm_system(omm_reference)]),
-        )
-        np.testing.assert_equal(
-            np.asarray([*_get_lj_params_from_openmm_system(omm_sys)]),
-            np.asarray([*_get_lj_params_from_openmm_system(omm_reference)]),
-        )
-
-    mdp = "cutoff_hbonds" if constrained else "cutoff"
+    mdp = "cutoff_hbonds" if constrained else "auto"
     # Compare GROMACS writer and OpenMM export
-    gmx_energies = get_gromacs_energies(off_sys, mdp=mdp, electrostatics=False)
+    gmx_energies = get_gromacs_energies(off_sys, mdp=mdp)
 
     custom_tolerances = {
-        "Bond": 2e-5 * n_mol * omm_unit.kilojoule_per_mole,
-        "Nonbonded": 1e-3 * n_mol * omm_unit.kilojoule_per_mole,
+        "Bond": 2e-5 * simtk_unit.kilojoule_per_mole,
+        "Electrostatics": 2 * simtk_unit.kilojoule_per_mole,
+        "vdW": 2 * simtk_unit.kilojoule_per_mole,
+        "Nonbonded": 2 * simtk_unit.kilojoule_per_mole,
+        "Angle": 1e-4 * simtk_unit.kilojoule_per_mole,
     }
-    if constrained:
-        # GROMACS might use the initial bond lengths, not the equilibrium bond lengths,
-        # in the initial configuration, making angles differ slightly
-        custom_tolerances.update(
-            {
-                "Angle": 5e-2 * n_mol * omm_unit.kilojoule_per_mole,
-                "Nonbonded": 2.0 * n_mol * omm_unit.kilojoule_per_mole,
-            }
-        )
 
     gmx_energies.compare(
         omm_energies,
@@ -122,57 +91,58 @@ def test_energies_single_mol(constrained, n_mol, mol_smi):
         )
         lmp_energies = get_lammps_energies(off_sys)
         custom_tolerances = {
-            "Nonbonded": 0.5 * n_mol * omm_unit.kilojoule_per_mole,
+            "vdW": 5.0 * simtk_unit.kilojoule_per_mole,
+            "Electrostatics": 5.0 * simtk_unit.kilojoule_per_mole,
         }
         lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
 
 
-@pytest.mark.parametrize("n_mol", [10, 100])
-def test_argon(n_mol):
+@pytest.mark.slow
+def test_liquid_argon():
     from openff.system.utils import get_test_file_path
 
-    ar_ff = ForceField(get_test_file_path("argon.offxml"))
+    argon = Molecule.from_smiles("[#18]")
+    pdbfile = app.PDBFile(get_test_file_path("packed-argon.pdb"))
 
-    mol = Molecule.from_smiles("[#18]")
-    mol.add_conformer(np.array([[0, 0, 0]]) * omm_unit.angstrom)
-    mol.name = "FOO"
-    top = Topology.from_molecules(n_mol * [mol])
+    top = Topology.from_openmm(pdbfile.topology, unique_molecules=[argon])
 
-    off_sys = ar_ff.create_openff_system(top)
+    argon_ff = ForceField(get_test_file_path("argon.offxml"))
 
-    mol.to_file("out.xyz", file_format="xyz")
-    compound: mb.Compound = mb.load("out.xyz")
-    packed_box: mb.Compound = mb.fill_box(
-        compound=compound,
-        n_compounds=[n_mol],
-        box=mb.Box([4, 4, 4]),
-    )
+    out = argon_ff.create_openff_system(top)
+    out.positions = pdbfile.positions
 
-    positions = packed_box.xyz * unit.nanometer
-    positions = np.round(positions, 3)
-    off_sys.positions = positions
+    omm_energies = get_openmm_energies(out)
 
-    box = np.asarray(packed_box.box.lengths) * unit.nanometer
-    off_sys.box = box
-
-    omm_energies = get_openmm_energies(
-        off_sys, round_positions=8, hard_cutoff=True, electrostatics=False
-    )
     gmx_energies = get_gromacs_energies(
-        off_sys, writer="internal", electrostatics=False
+        out,
+        mdp="auto",
+        writer="internal",
     )
-    lmp_energies = get_lammps_energies(off_sys)
-
-    omm_energies.compare(lmp_energies)
 
     omm_energies.compare(
         gmx_energies,
         custom_tolerances={
-            "Nonbonded": 2e-5 * omm_unit.kilojoule_per_mole,
+            "vdW": 0.008 * simtk_unit.kilojoule_per_mole,
+        },
+    )
+
+    argon_ff_no_switch = deepcopy(argon_ff)
+    argon_ff_no_switch["vdW"].switch_width *= 0
+
+    out_no_switch = argon_ff_no_switch.create_openff_system(top)
+    out_no_switch.positions = pdbfile.positions
+
+    lmp_energies = get_lammps_energies(out_no_switch)
+
+    omm_energies.compare(
+        lmp_energies,
+        custom_tolerances={
+            "vdW": 10.5 * simtk_unit.kilojoule_per_mole,
         },
     )
 
 
+@pytest.mark.skip("Skip until residues are matched between gro and top")
 @pytest.mark.parametrize(
     "toolkit_file_path",
     [
@@ -191,16 +161,17 @@ def test_packmol_boxes(toolkit_file_path):
     ethanol = Molecule.from_smiles("CCO")
     cyclohexane = Molecule.from_smiles("C1CCCCC1")
     omm_topology = pdbfile.topology
-    off_topology = Topology.from_openmm(
+    off_topology = OFFBioTop.from_openmm(
         omm_topology, unique_molecules=[ethanol, cyclohexane]
     )
+    off_topology.mdtop = md.Topology.from_openmm(omm_topology)
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
     off_sys = parsley.create_openff_system(off_topology)
 
     off_sys.box = np.asarray(
-        pdbfile.topology.getPeriodicBoxVectors().value_in_unit(omm_unit.nanometer)
+        pdbfile.topology.getPeriodicBoxVectors().value_in_unit(simtk_unit.nanometer)
     )
     off_sys.positions = pdbfile.positions
 
@@ -218,7 +189,7 @@ def test_packmol_boxes(toolkit_file_path):
     omm_energies.compare(
         reference,
         custom_tolerances={
-            "Nonbonded": 2e-2 * omm_unit.kilojoule_per_mole,
+            "Electrostatics": 2e-2 * simtk_unit.kilojoule_per_mole,
         },
     )
 
@@ -237,19 +208,21 @@ def test_packmol_boxes(toolkit_file_path):
     omm_energies_rounded.compare(
         other=gmx_energies,
         custom_tolerances={
-            "Angle": 1e-2 * omm_unit.kilojoule_per_mole,
-            "Torsion": 1e-2 * omm_unit.kilojoule_per_mole,
-            "Nonbonded": 3200 * omm_unit.kilojoule_per_mole,
+            "Angle": 1e-2 * simtk_unit.kilojoule_per_mole,
+            "Torsion": 1e-2 * simtk_unit.kilojoule_per_mole,
+            "Electrostatics": 3200 * simtk_unit.kilojoule_per_mole,
         },
     )
 
 
+@pytest.mark.slow
 def test_water_dimer():
     from openff.system.utils import get_test_file_path
 
     tip3p = ForceField(get_test_file_path("tip3p.offxml"))
     water = Molecule.from_smiles("O")
     top = Topology.from_molecules(2 * [water])
+    top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
     pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
 
@@ -284,6 +257,7 @@ def test_water_dimer():
     lmp_energies.compare(omm_energies)
 
 
+@pytest.mark.slow
 def test_process_rb_torsions():
     """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
 
@@ -312,4 +286,33 @@ def test_process_rb_torsions():
         top_file="eth.top", gro_file="eth.gro", mdp_file=_get_mdp_file("default")
     )
 
-    assert oplsaa_energies.energies["Torsion"]._value != 0.0
+    assert oplsaa_energies.energies["Torsion"].m != 0.0
+
+
+def test_gmx_14_energies_exist():
+    # TODO: Make sure 1-4 energies are accurate, not just existent
+
+    # Use a molecule with only one 1-4 interaction, and
+    # make it between heavy atoms because H-H 1-4 are weak
+    mol = Molecule.from_smiles("ClC#CCl")
+    mol.name = "HPER"
+    mol.generate_conformers(n_conformers=1)
+
+    parsley = ForceField("openff-1.0.0.offxml")
+
+    out = parsley.create_openff_system(topology=mol.to_topology())
+    out.positions = mol.conformers[0]
+
+    # Put this molecule in a large box with cut-off electrostatics
+    # to prevent it from interacting with images of itself
+    out.box = [40, 40, 40]
+    out["Electrostatics"].method = "cutoff"
+
+    gmx_energies = get_gromacs_energies(out)
+
+    # The only possible non-bonded interactions should be from 1-4 intramolecular interactions
+    assert gmx_energies.energies["vdW"].m != 0.0
+    assert gmx_energies.energies["Electrostatics"].m != 0.0
+
+    # TODO: It would be best to save the 1-4 interactions, split off into vdW and Electrostatics
+    # in the energies. This might be tricky/intractable to do for engines that are not GROMACS

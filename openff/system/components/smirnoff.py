@@ -1,6 +1,5 @@
 from typing import Dict, Set
 
-from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
@@ -12,10 +11,13 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ProperTorsionHandler,
     vdWHandler,
 )
+from openff.units import unit
+from pydantic import validator
 from simtk import unit as omm_unit
 
-from openff.system import unit
+from openff.system.components.misc import OFFBioTop
 from openff.system.components.potentials import Potential, PotentialHandler
+from openff.system.exceptions import UnsupportedCutoffMethodError
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import FloatQuantity
 from openff.system.utils import get_partial_charges_from_openmm_system
@@ -33,7 +35,9 @@ class SMIRNOFFBondHandler(PotentialHandler):
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
 
-    def store_matches(self, parameter_handler: BondHandler, topology: Topology) -> None:
+    def store_matches(
+        self, parameter_handler: BondHandler, topology: OFFBioTop
+    ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
         and unique potential identifiers
@@ -77,42 +81,26 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
         PotentialKey, bool
     ] = dict()  # should this be named potentials for consistency?
 
-    def store_matches(
-        self, parameter_handler: ConstraintHandler, topology: Topology
-    ) -> None:
-        """
-        Populate self.slot_map with key-val pairs of slots
-        and unique potential identifiers
-
-        """
-        if self.slot_map:
-            self.slot_map = dict()
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            topology_key = TopologyKey(atom_indices=key)
-            potential_key = PotentialKey(id=val.parameter_type.smirks)
-            self.slot_map[topology_key] = potential_key
-
     def store_constraints(
         self,
         parameter_handler: ConstraintHandler,
+        topology: OFFBioTop,
         bond_handler: SMIRNOFFBondHandler = None,
     ) -> None:
-        """
-        Populate self.constraints with key-val pairs of unique potential
-        identifiers and their associated Potential objects
 
-        TODO: Raname to store_potentials potentials for consistency?
-
-        """
-        if self.constraints:
-            self.constraints = dict()
-        for top_key, pot_key in self.slot_map.items():
-            smirks = pot_key.id
-            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
-            if parameter_type.distance:
-                distance = parameter_type.distance
+        if self.slot_map:
+            self.slot_map = dict()
+        matches = parameter_handler.find_matches(topology)
+        for key, match in matches.items():
+            topology_key = TopologyKey(atom_indices=key)
+            smirks = match.parameter_type.smirks
+            distance = match.parameter_type.distance
+            if distance is not None:
+                # This constraint parameter is fully specified
+                potential_key = PotentialKey(id=smirks)
+                distance = match.parameter_type.distance
             else:
+                # This constraint parameter depends on the BondHandler
                 if not bond_handler:
                     from openff.system.exceptions import MissingParametersError
 
@@ -121,16 +109,16 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
                         "specified, and no corresponding bond parameters were found. The distance "
                         "of this constraint is not specified."
                     )
-                # Look up by atom indices because constraint and bond SMIRKS may not match
-                bond_key = bond_handler.slot_map[top_key]
-                bond_parameter = bond_handler.potentials[bond_key].parameters
-                distance = bond_parameter["length"]
+                # so use the same PotentialKey instance as the BondHandler
+                potential_key = bond_handler.slot_map[topology_key]
+                self.slot_map[topology_key] = potential_key
+                distance = bond_handler.potentials[potential_key].parameters["length"]
             potential = Potential(
                 parameters={
                     "distance": distance,
                 }
             )
-            self.constraints[pot_key] = potential  # type: ignore[assignment]
+            self.constraints[potential_key] = potential  # type: ignore[assignment]
 
 
 class SMIRNOFFAngleHandler(PotentialHandler):
@@ -142,7 +130,9 @@ class SMIRNOFFAngleHandler(PotentialHandler):
     potentials: Dict[PotentialKey, Potential] = dict()
 
     def store_matches(
-        self, parameter_handler: AngleHandler, topology: Topology
+        self,
+        parameter_handler: AngleHandler,
+        topology: OFFBioTop,
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
@@ -184,7 +174,7 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
     potentials: Dict[PotentialKey, Potential] = dict()
 
     def store_matches(
-        self, parameter_handler: ProperTorsionHandler, topology: Topology
+        self, parameter_handler: ProperTorsionHandler, topology: OFFBioTop
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
@@ -230,7 +220,7 @@ class SMIRNOFFImproperTorsionHandler(PotentialHandler):
     potentials: Dict[PotentialKey, Potential] = dict()
 
     def store_matches(
-        self, parameter_handler: ImproperTorsionHandler, topology: Topology
+        self, parameter_handler: ImproperTorsionHandler, topology: OFFBioTop
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
@@ -280,17 +270,25 @@ class SMIRNOFFvdWHandler(PotentialHandler):
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     independent_variables: Set[str] = {"r"}
     method: str = "cutoff"
-    cutoff: float = 9.0
+    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
+    switch_width: FloatQuantity["angstrom"] = 1.0 * unit.angstrom  # type: ignore
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.5
     scale_15: float = 1.0
 
+    @validator("method")
+    def validate_vdw_method(cls, v):
+        v_ = v.lower().replace("-", "")
+        if v_ not in ["cutoff", "pme"]:
+            raise UnsupportedCutoffMethodError(f"vdW method {v} not supported")
+        return v
+
     def store_matches(
         self,
         parameter_handler: vdWHandler,
-        topology: Topology,
+        topology: OFFBioTop,
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
@@ -336,18 +334,28 @@ class SMIRNOFFvdWHandler(PotentialHandler):
 class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
 
     name: str = "Electrostatics"
-    method: str = "PME"
     expression: str = "coul"
+    method: str = "PME"
+    cutoff: FloatQuantity["angstrom"] = 9.0  # type: ignore
     independent_variables: Set[str] = {"r"}
     charge_map: Dict[TopologyKey, float] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.8333333333
     scale_15: float = 1.0
 
+    @validator("method")
+    def validate_electrostatics_method(cls, v):
+        v_ = v.lower().replace("-", "")
+        if v_ not in ["cutoff", "pme", "reactionfield"]:
+            raise UnsupportedCutoffMethodError(
+                f"Electrostatics method {v} not supported"
+            )
+        return v
+
     def store_charges(
         self,
         forcefield: ForceField,
-        topology: Topology,
+        topology: OFFBioTop,
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
@@ -377,7 +385,7 @@ class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
     def store_matches(
         self,
         parameter_handler: LibraryChargeHandler,
-        topology: Topology,
+        topology: OFFBioTop,
     ) -> None:
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
@@ -410,7 +418,7 @@ class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
     def store_matches(
         self,
         parameter_handler: ChargeIncrementModelHandler,
-        topology: Topology,
+        topology: OFFBioTop,
     ) -> None:
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
@@ -439,7 +447,7 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
     charges: Dict = dict()  # type
     cache: Dict = dict()  # Dict[str: Dict[str, FloatQuantity["elementary_charge"]]]
 
-    def cache_charges(self, partial_charge_method: str, topology: Topology):
+    def cache_charges(self, partial_charge_method: str, topology: OFFBioTop):
 
         charges: Dict[TopologyKey, FloatQuantity] = dict()
 

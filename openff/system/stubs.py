@@ -1,6 +1,9 @@
 """
 Monkeypatching external classes with custom functionality
 """
+from typing import Optional, Tuple, Union
+
+import mdtraj as md
 import numpy as np
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
@@ -13,6 +16,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 
+from openff.system.components.misc import OFFBioTop
 from openff.system.components.smirnoff import (
     ElectrostaticsMetaHandler,
     SMIRNOFFAngleHandler,
@@ -25,11 +29,12 @@ from openff.system.components.smirnoff import (
     SMIRNOFFvdWHandler,
 )
 from openff.system.components.system import System
+from openff.system.exceptions import InvalidTopologyError
 
 
 def to_openff_system(
     self,
-    topology: Topology,
+    topology: OFFBioTop,
     box=None,
     **kwargs,
 ) -> System:
@@ -41,6 +46,17 @@ def to_openff_system(
 
     _check_supported_handlers(self)
 
+    if isinstance(topology, OFFBioTop):
+        sys_out.topology = topology
+    elif isinstance(topology, Topology):
+        sys_out.topology = OFFBioTop(topology)
+        sys_out.topology.mdtop = md.Topology.from_openmm(topology.to_openmm())
+    else:
+        raise InvalidTopologyError(
+            "Could not process topology argument, expected Topology or OFFBioTop. "
+            f"Found object of type {type(topology)}."
+        )
+
     for parameter_handler in self.registered_parameter_handlers:
         if parameter_handler in {
             "Electrostatics",
@@ -50,26 +66,32 @@ def to_openff_system(
             "Constraints",
         }:
             continue
+        elif parameter_handler == "Bonds":
+            if "Constraints" in self.registered_parameter_handlers:
+                constraint_handler = self["Constraints"]
+            else:
+                constraint_handler = None
+            constraint_handler
+            bond_handler, constraint_handler = self["Bonds"].create_potential(
+                topology=topology,
+                constraint_handler=constraint_handler,
+            )
+            sys_out.handlers.update({"Bonds": bond_handler})
+            if constraint_handler is not None:
+                sys_out.handlers.update({"Constraints": constraint_handler})
         else:
             potential_handler = self[parameter_handler].create_potential(
                 topology=topology
             )
-        sys_out.handlers.update({parameter_handler: potential_handler})
-
-    if "Constraints" in self.registered_parameter_handlers:
-        constraint_handler = self["Constraints"].create_potential(
-            topology=topology,
-            bond_handler=sys_out.handlers["Bonds"]
-            if "Bonds" in sys_out.handlers
-            else None,
-        )
-        sys_out.handlers.update({"Constraints": constraint_handler})
+            sys_out.handlers.update({parameter_handler: potential_handler})
 
     if "Electrostatics" in self.registered_parameter_handlers:
         electrostatics = ElectrostaticsMetaHandler(
             scale_13=self["Electrostatics"].scale13,
             scale_14=self["Electrostatics"].scale14,
             scale_15=self["Electrostatics"].scale15,
+            method=self["Electrostatics"].method,
+            cutoff=self["Electrostatics"].cutoff,
         )
         if "ToolkitAM1BCC" in self.registered_parameter_handlers:
             electrostatics.cache_charges(
@@ -124,26 +146,7 @@ def to_openff_system(
     else:
         sys_out.box = box
 
-    sys_out.topology = topology
-
     return sys_out
-
-
-def create_constraint_handler(
-    self,
-    topology: Topology,
-    bond_handler=None,
-    **kwargs,
-) -> SMIRNOFFConstraintHandler:
-    """
-    A method, patched onto ConstraintHandler, that creates a corresponding SMIRNOFFConstraintHandler
-
-    """
-    handler = SMIRNOFFConstraintHandler()
-    handler.store_matches(parameter_handler=self, topology=topology)
-    handler.store_constraints(parameter_handler=self, bond_handler=bond_handler)
-
-    return handler
 
 
 # These functions should all be reduced down to one, possibly with some creative
@@ -151,17 +154,28 @@ def create_constraint_handler(
 def create_bond_potential_handler(
     self,
     topology: Topology,
+    constraint_handler: Optional[SMIRNOFFConstraintHandler] = None,
     **kwargs,
-) -> SMIRNOFFBondHandler:
+) -> Tuple[SMIRNOFFBondHandler, Union[SMIRNOFFConstraintHandler, None]]:
     """
     A method, patched onto BondHandler, that creates a corresponding SMIRNOFFBondHandler
 
     """
-    handler = SMIRNOFFBondHandler()
-    handler.store_matches(parameter_handler=self, topology=topology)
-    handler.store_potentials(parameter_handler=self)
+    bond_handler = SMIRNOFFBondHandler()
+    bond_handler.store_matches(parameter_handler=self, topology=topology)
+    bond_handler.store_potentials(parameter_handler=self)
 
-    return handler
+    if constraint_handler:
+        constraints = SMIRNOFFConstraintHandler()
+        constraints.store_constraints(
+            parameter_handler=constraint_handler,
+            topology=topology,
+            bond_handler=bond_handler,
+        )
+    else:
+        constraints = None  # type: ignore[assignment]
+
+    return bond_handler, constraints
 
 
 def create_angle_potential_handler(
@@ -222,6 +236,9 @@ def create_vdw_potential_handler(
         scale_13=self.scale13,
         scale_14=self.scale14,
         scale_15=self.scale15,
+        cutoff=self.cutoff,
+        method=self.method,
+        switch_width=self.switch_width,
     )
     handler.store_matches(parameter_handler=self, topology=topology)
     handler.store_potentials(parameter_handler=self)
@@ -264,7 +281,6 @@ mapping = {
     vdWHandler: SMIRNOFFvdWHandler,
 }
 
-ConstraintHandler.create_potential = create_constraint_handler
 BondHandler.create_potential = create_bond_potential_handler
 AngleHandler.create_potential = create_angle_potential_handler
 ProperTorsionHandler.create_potential = create_proper_torsion_potential_handler

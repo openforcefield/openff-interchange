@@ -1,18 +1,25 @@
+import mdtraj as md
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
+from openff.utilities.testing import skip_if_missing
 
-from openff.system.exceptions import SMIRNOFFHandlersNotImplementedError
+from openff.system.components.misc import OFFBioTop
+from openff.system.exceptions import (
+    InvalidTopologyError,
+    SMIRNOFFHandlersNotImplementedError,
+)
 from openff.system.models import TopologyKey
+from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
-from openff.system.tests.utils import compare_charges_omm_off, requires_pkg
+from openff.system.tests.utils import compare_charges_omm_off
 
 
 class TestStubs(BaseTest):
     """Test the functionality of the stubs.py module"""
 
     def test_from_parsley(self, parsley):
-        top = Topology.from_molecules(
+        top = OFFBioTop.from_molecules(
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")]
         )
 
@@ -24,15 +31,26 @@ class TestStubs(BaseTest):
         assert "ProperTorsions" in out.handlers.keys()
         assert "vdW" in out.handlers.keys()
 
-    def test_unsupported_handler(self):
-        from openff.system.stubs import ForceField
+        assert type(out.topology) == OFFBioTop
+        assert type(out.topology) != Topology
+        assert isinstance(out.topology, Topology)
 
+    def test_unsupported_handler(self):
         gbsa_ff = ForceField(get_data_file_path("test_forcefields/GBSA_HCT-1.0.offxml"))
 
         with pytest.raises(
             SMIRNOFFHandlersNotImplementedError, match=r"SMIRNOFF parameters not.*GBSA"
         ):
             gbsa_ff.create_openff_system(topology=None)
+
+    def test_unsupported_topology(self, parsley, ethanol_top):
+        mdtop = md.Topology.from_openmm(ethanol_top.to_openmm())
+
+        with pytest.raises(InvalidTopologyError, match="mdtraj.core.*Topology"):
+            parsley.create_openff_system(topology=mdtop)
+
+        with pytest.raises(InvalidTopologyError, match="simtk.*app.*Topology"):
+            parsley.create_openff_system(topology=ethanol_top.to_openmm())
 
 
 class TestConstraints(BaseTest):
@@ -83,6 +101,7 @@ class TestConstraints(BaseTest):
         assert constraints.slot_map == dict()
         assert constraints.constraints == dict()
 
+    @pytest.mark.skip(reason="Needs to be updated to be a part of SMIRNOFFBondHandler")
     def test_constraint_reassignment(self, parsley):
         """Test that constraints already existing in a parametrized system
         can be updated against new force field data"""
@@ -116,6 +135,7 @@ class TestConstraints(BaseTest):
 
 
 class TestChargeAssignment(BaseTest):
+    @pytest.mark.slow
     def test_default_am1bcc_charge_assignment(self, parsley):
         top = Topology.from_molecules(
             [
@@ -130,7 +150,7 @@ class TestChargeAssignment(BaseTest):
 
         compare_charges_omm_off(reference, new)
 
-    @requires_pkg("openff.recharge")
+    @skip_if_missing("openff.recharge")
     def test_charge_increment_assignment(self, parsley):
         from openff.recharge.charges.bcc import original_am1bcc_corrections
         from openff.recharge.smirnoff import to_smirnoff
@@ -155,8 +175,6 @@ class TestChargeAssignment(BaseTest):
         compare_charges_omm_off(reference, new)
 
     def test_library_charge_assignment(self):
-        from openff.system.stubs import ForceField
-
         forcefield = ForceField("openff-1.3.0.offxml")
         forcefield.deregister_parameter_handler("ToolkitAM1BCC")
 

@@ -1,3 +1,5 @@
+from typing import Dict
+
 import numpy as np
 from simtk import openmm, unit
 
@@ -10,7 +12,7 @@ kj_mol = unit.kilojoule_per_mole
 def get_openmm_energies(
     off_sys: System,
     round_positions=None,
-    hard_cutoff: bool = True,
+    hard_cutoff: bool = False,
     electrostatics: bool = True,
 ) -> EnergyReport:
     """
@@ -83,7 +85,7 @@ def _set_nonbonded_method(
         for force in omm_sys.getForces():
             if type(force) == openmm.NonbondedForce:
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                force.setEwaldErrorTolerance(1e-6)
+                force.setEwaldErrorTolerance(1e-4)
 
     return omm_sys
 
@@ -115,9 +117,10 @@ def _get_openmm_energies(
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context = openmm.Context(omm_sys, integrator)
 
-    if not isinstance(box_vectors, unit.Quantity):
-        box_vectors = box_vectors.magnitude * unit.nanometer
-    context.setPeriodicBoxVectors(*box_vectors)
+    if box_vectors is not None:
+        if not isinstance(box_vectors, unit.Quantity):
+            box_vectors = box_vectors.magnitude * unit.nanometer
+        context.setPeriodicBoxVectors(*box_vectors)
 
     if isinstance(positions, unit.Quantity):
         # Convert list of Vec3 into a NumPy array
@@ -155,19 +158,38 @@ def _get_openmm_energies(
 
     report = EnergyReport()
 
-    report.energies.update(
+    report.update_energies(
         {
             "Bond": omm_energies["HarmonicBondForce"],
             "Angle": omm_energies["HarmonicAngleForce"],
-            "Torsion": omm_energies["PeriodicTorsionForce"],
-            "Nonbonded": omm_energies["NonbondedForce"],
+            "Torsion": _canonicalize_torsion_energies(omm_energies),
+            "Nonbonded": _canonicalize_nonbonded_energies(omm_energies),
         }
     )
 
-    if "CustomNonbondedForce" in omm_energies:
-        report.energies["Nonbonded"] += omm_energies["CustomNonbondedForce"]
-
-    if "RBTorsionForce" in omm_energies:
-        report.energies["Torsion"] += omm_energies["RBTorsionForce"]
+    report.energies.pop("vdW")
+    report.energies.pop("Electrostatics")
 
     return report
+
+
+def _canonicalize_nonbonded_energies(energies: Dict):
+    omm_nonbonded = 0.0 * kj_mol
+    for key in ["NonbondedForce", "CustomNonbondedForce"]:
+        try:
+            omm_nonbonded += energies[key]
+        except KeyError:
+            pass
+
+    return omm_nonbonded
+
+
+def _canonicalize_torsion_energies(energies: Dict):
+    omm_torsion = 0.0 * kj_mol
+    for key in ["PeriodicTorsionForce", "RBTorsionForce"]:
+        try:
+            omm_torsion += energies[key]
+        except KeyError:
+            pass
+
+    return omm_torsion

@@ -3,15 +3,13 @@ import tempfile
 import numpy as np
 import parmed as pmd
 import pytest
-from intermol.gromacs import energies as gmx_energy
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils.utils import temporary_cd
-from pkg_resources import resource_filename
+from openff.units import unit
 from simtk import unit as omm_unit
 
-from openff.system import unit
 from openff.system.stubs import ForceField
-from openff.system.tests.utils import compare_energies
+from openff.system.tests.energy_tests.gromacs import _get_mdp_file, _run_gmx_energy
 from openff.system.types import ArrayQuantity
 
 
@@ -73,11 +71,13 @@ def openff_pmd_gmx_direct(
     off_top_positions = ref_mol.conformers[0]
     # TODO: Update this when better processing of OFFTop positions is supported
     off_sys.positions = off_top_positions
+    off_sys.positions = np.round(off_sys.positions, 3)
 
     off_sys.to_gro(prefix + ".gro")
     off_sys.to_top(prefix + ".top")
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("smiles", ["C"])
 def test_parmed_openmm(tmpdir, smiles):
     tmpdir.chdir()
@@ -97,10 +97,10 @@ def test_parmed_openmm(tmpdir, smiles):
                 prefix="via_openmm",
             )
 
-            ener1, ener1_file = gmx_energy(
-                top="via_openmm.top",
-                gro="via_openmm.gro",
-                mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
+            ener1 = _run_gmx_energy(
+                top_file="via_openmm.top",
+                gro_file="via_openmm.gro",
+                mdp_file=_get_mdp_file("cutoff"),
             )
 
     with tempfile.TemporaryDirectory() as off_tempdir:
@@ -112,13 +112,13 @@ def test_parmed_openmm(tmpdir, smiles):
                 prefix="via_conversion",
             )
 
-            ener2, ener2_file = gmx_energy(
-                top="via_conversion.top",
-                gro="via_conversion.gro",
-                mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
+            ener2 = _run_gmx_energy(
+                top_file="via_conversion.top",
+                gro_file="via_conversion.gro",
+                mdp_file=_get_mdp_file("cutoff"),
             )
 
-    compare_energies(ener1, ener2)
+    ener1.compare(ener2)
 
     with tempfile.TemporaryDirectory() as off_tempdir:
         with temporary_cd(off_tempdir):
@@ -129,10 +129,16 @@ def test_parmed_openmm(tmpdir, smiles):
                 prefix="via_call",
             )
 
-            ener3, ener3_file = gmx_energy(
-                top="via_call.top",
-                gro="via_call.gro",
-                mdp=resource_filename("intermol", "tests/gromacs/grompp.mdp"),
+            ener3 = _run_gmx_energy(
+                top_file="via_call.top",
+                gro_file="via_call.gro",
+                mdp_file=_get_mdp_file("cutoff"),
             )
 
-    compare_energies(ener2, ener3)
+    ener2.compare(
+        ener3,
+        custom_tolerances={
+            "Bond": 1.0 * omm_unit.kilojoule_per_mole,
+            "Angle": 0.22 * omm_unit.kilojoule_per_mole,
+        },
+    )

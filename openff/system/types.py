@@ -3,9 +3,9 @@ from typing import TYPE_CHECKING, Any, Dict
 
 import numpy as np
 import unyt
-from simtk import unit as omm_unit
+from openff.units import unit
+from simtk import unit as simtk_unit
 
-from openff.system import unit
 from openff.system.exceptions import (
     MissingUnitError,
     UnitValidationError,
@@ -32,7 +32,7 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 raise MissingUnitError(f"Value {val} needs to be tagged with a unit")
             elif isinstance(val, unit.Quantity):
                 return unit.Quantity(val)
-            elif isinstance(val, omm_unit.Quantity):
+            elif isinstance(val, simtk_unit.Quantity):
                 return _from_omm_quantity(val)
             else:
                 raise UnitValidationError(
@@ -48,10 +48,10 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 # could return here, without converting
                 # (could be inconsistent with data model - heteregenous but compatible units)
                 # return val
-            elif isinstance(val, omm_unit.Quantity):
-                return _from_omm_quantity(val)
+            elif isinstance(val, simtk_unit.Quantity):
+                return _from_omm_quantity(val).to(unit_)
             elif isinstance(val, unyt.unyt_quantity):
-                return _from_unyt_quantity(val)
+                return _from_unyt_quantity(val).to(unit_)
             elif isinstance(val, (float, int)) and not isinstance(val, bool):
                 return val * unit_
             elif isinstance(val, str):
@@ -63,7 +63,7 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 )
 
 
-def _from_omm_quantity(val: omm_unit.Quantity):
+def _from_omm_quantity(val: simtk_unit.Quantity):
     """Helper function to convert float or array quantities tagged with SimTK/OpenMM units to
     a Pint-compatible quantity"""
     unit_ = val.unit
@@ -160,7 +160,7 @@ else:
                 elif isinstance(val, unit.Quantity):
                     # Redundant cast? Maybe this handles pint vs openff.system.unit?
                     return unit.Quantity(val)
-                elif isinstance(val, omm_unit.Quantity):
+                elif isinstance(val, simtk_unit.Quantity):
                     return _from_omm_quantity(val)
                 else:
                     raise UnitValidationError(
@@ -171,12 +171,12 @@ else:
                 if isinstance(val, unit.Quantity):
                     assert unit_.dimensionality == val.dimensionality
                     return val.to(unit_)
-                elif isinstance(val, omm_unit.Quantity):
-                    return _from_omm_quantity(val)
+                elif isinstance(val, simtk_unit.Quantity):
+                    return _from_omm_quantity(val).to(unit_)
                 elif isinstance(val, (np.ndarray, list)):
                     # Must check for unyt_array, not unyt_quantity, which is a subclass
                     if isinstance(val, unyt.unyt_array):
-                        return _from_unyt_quantity(val)
+                        return _from_unyt_quantity(val).to(unit_)
                     else:
                         return val * unit_
                 elif isinstance(val, bytes):

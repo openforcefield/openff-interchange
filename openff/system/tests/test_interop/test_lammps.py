@@ -1,8 +1,10 @@
+import mdtraj as md
 import numpy as np
 import pytest
-from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.topology import Molecule
 from simtk import unit as omm_unit
 
+from openff.system.components.misc import OFFBioTop
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.lammps import (
     _write_lammps_input,
@@ -11,6 +13,7 @@ from openff.system.tests.energy_tests.lammps import (
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("n_mols", [1, 2])
 @pytest.mark.parametrize(
     "mol",
@@ -35,7 +38,8 @@ def test_to_lammps_single_mols(mol, n_mols):
 
     mol = Molecule.from_smiles(mol)
     mol.generate_conformers(n_conformers=1)
-    top = Topology.from_molecules(n_mols * [mol])
+    top = OFFBioTop.from_molecules(n_mols * [mol])
+    top.mdtop = md.Topology.from_openmm(top.to_openmm())
     mol.conformers[0] -= np.min(mol.conformers) * omm_unit.angstrom
 
     top.box_vectors = np.eye(3) * np.asarray([10, 10, 10]) * omm_unit.nanometer
@@ -53,23 +57,26 @@ def test_to_lammps_single_mols(mol, n_mols):
     openff_sys.box = top.box_vectors
 
     reference = get_openmm_energies(
-        off_sys=openff_sys, round_positions=3, electrostatics=False
+        off_sys=openff_sys,
+        round_positions=3,
     )
 
     lmp_energies = get_lammps_energies(
-        off_sys=openff_sys, round_positions=3, electrostatics=False
+        off_sys=openff_sys,
+        round_positions=3,
     )
 
     _write_lammps_input(
         off_sys=openff_sys,
         file_name="tmp.in",
-        electrostatics=False,
     )
 
     lmp_energies.compare(
         reference,
         custom_tolerances={
-            "Nonbonded": 999 * omm_unit.kilojoule_per_mole,
+            "Nonbonded": 100 * omm_unit.kilojoule_per_mole,
+            "Electrostatics": 100 * omm_unit.kilojoule_per_mole,
+            "vdW": 100 * omm_unit.kilojoule_per_mole,
             "Torsion": 0.005 * omm_unit.kilojoule_per_mole,
         },
     )
