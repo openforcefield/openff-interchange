@@ -12,7 +12,9 @@ from openff.system.exceptions import (
 from openff.system.models import TopologyKey
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest
+from openff.system.tests.energy_tests.test_energies import needs_gmx
 from openff.system.tests.utils import compare_charges_omm_off
+from openff.system.utils import get_test_file_path
 
 
 class TestStubs(BaseTest):
@@ -51,6 +53,30 @@ class TestStubs(BaseTest):
 
         with pytest.raises(InvalidTopologyError, match="simtk.*app.*Topology"):
             parsley.create_openff_system(topology=ethanol_top.to_openmm())
+
+    @needs_gmx
+    @skip_if_missing("foyer")
+    def test_atom_ordering(self):
+        """Test that atom indices in bonds are ordered consistently between the slot map and topology"""
+        import foyer
+        import mdtraj as md
+
+        from openff.system.components.foyer import from_foyer
+        from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+
+        oplsaa = foyer.forcefields.load_OPLSAA()
+        from openff.toolkit.topology import Molecule
+
+        from openff.system.components.misc import OFFBioTop
+
+        benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
+        biotop = OFFBioTop.from_molecules(benzene)
+        biotop.mdtop = md.Topology.from_openmm(biotop.to_openmm())
+        out = from_foyer(ff=oplsaa, topology=biotop)
+        out.box = [4, 4, 4]
+        out.positions = benzene.conformers[0]
+
+        get_gromacs_energies(out)
 
 
 class TestConstraints(BaseTest):
