@@ -124,7 +124,7 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
 class SMIRNOFFAngleHandler(PotentialHandler):
 
     name: str = "Angles"
-    expression: str = "1/2 * k * (angle - theta)"
+    expression: str = "1/2 * k * (theta - angle) ** 2"
     independent_variables: Set[str] = {"theta"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
