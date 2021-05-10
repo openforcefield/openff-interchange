@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING, Dict, Optional, Union
 
 import mdtraj as md
 import numpy as np
-import parmed as pmd
 from openff.toolkit.topology.molecule import FrozenMolecule
 from openff.toolkit.topology.topology import TopologyMolecule
 from openff.units import unit
@@ -11,6 +10,9 @@ from openff.system.components.potentials import Potential
 from openff.system.models import PotentialKey, TopologyKey
 
 if TYPE_CHECKING:
+
+    import parmed as pmd
+
     from openff.system.components.smirnoff import (
         SMIRNOFFImproperTorsionHandler,
         SMIRNOFFProperTorsionHandler,
@@ -22,8 +24,10 @@ kcal_mol_a2 = unit.Unit("kilocalories / mol / angstrom ** 2")
 kcal_mol_rad2 = unit.Unit("kilocalories / mol / rad ** 2")
 
 
-def _to_parmed(off_system: "System") -> pmd.Structure:
+def _to_parmed(off_system: "System") -> "pmd.Structure":
     """Convert an OpenFF System to a ParmEd Structure"""
+    import parmed as pmd
+
     structure = pmd.Structure()
     _convert_box(off_system.box, structure)
 
@@ -226,6 +230,8 @@ def _to_parmed(off_system: "System") -> pmd.Structure:
 
 
 def _from_parmed(cls, structure) -> "System":
+    import parmed as pmd
+
     out = cls()
 
     if structure.positions:
@@ -421,7 +427,7 @@ def _from_parmed(cls, structure) -> "System":
 
 
 # def _convert_box(box: unit.Quantity, structure: pmd.Structure) -> None:
-def _convert_box(box, structure: pmd.Structure) -> None:
+def _convert_box(box, structure: "pmd.Structure") -> None:
     # TODO: Convert box vectors to box lengths + angles
     if box is None:
         lengths = [0, 0, 0]
@@ -440,8 +446,8 @@ def _lj_params_from_potential(potential):
 
 
 def _process_single_dihedral(
-    dihedral: pmd.Dihedral,
-    dihedral_type: pmd.DihedralType,
+    dihedral: "pmd.Dihedral",
+    dihedral_type: "pmd.DihedralType",
     handler: Union["SMIRNOFFImproperTorsionHandler", "SMIRNOFFProperTorsionHandler"],
     mult: Optional[int] = None,
 ):
