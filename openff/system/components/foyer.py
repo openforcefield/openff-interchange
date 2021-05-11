@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from foyer.forcefield import Forcefield
     from foyer.topology_graph import TopologyGraph
 
-    from openff.system.components.misc import OFFBioTop
+    from openff.system.components.mdtraj import OFFBioTop
 
 # Is this the safest way to achieve PotentialKey id separation?
 POTENTIAL_KEY_SEPARATOR = "-"
@@ -296,3 +296,15 @@ class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler):
 class FoyerPeriodicImproperHandler(FoyerPeriodicProperHandler):
     type: str = "periodic_impropers"
     connection_attribute: str = "impropers"
+
+
+class RBTorsionHandler(PotentialHandler):
+    name = "Ryckaert-Bellemans"
+    expression = (
+        "C0 + C1 * (cos(phi - 180)) "
+        "C2 * (cos(phi - 180)) ** 2 + C3 * (cos(phi - 180)) ** 3 "
+        "C4 * (cos(phi - 180)) ** 4 + C5 * (cos(phi - 180)) ** 5 "
+    )
+    # independent_variables: Set[str] = {"C0", "C1", "C2", "C3", "C4", "C5"}
+    slot_map: Dict[TopologyKey, PotentialKey] = dict()
+    potentials: Dict[PotentialKey, Potential] = dict()

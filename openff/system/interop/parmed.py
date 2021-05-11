@@ -250,7 +250,7 @@ def _from_parmed(cls, structure) -> "System":
 
     from openff.toolkit.topology import Molecule
 
-    from openff.system.components.misc import OFFBioTop
+    from openff.system.components.mdtraj import OFFBioTop
 
     if structure.topology is not None:
         mdtop = md.Topology.from_openmm(structure.topology)

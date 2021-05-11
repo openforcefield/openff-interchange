@@ -4,7 +4,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import AngleHandler, Bond
 from openff.units import unit
 from simtk import unit as omm_unit
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.potentials import PotentialHandler
 from openff.system.models import TopologyKey
 from openff.system.tests.base_test import BaseTest

@@ -16,7 +16,7 @@ from openff.units import unit
 from pydantic import validator
 from simtk import unit as omm_unit
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.potentials import Potential, PotentialHandler
 from openff.system.exceptions import UnsupportedCutoffMethodError
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey

@@ -9,7 +9,7 @@ from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import ArrayQuantity, FloatQuantity
 
 if TYPE_CHECKING:
-    from openff.system.components.misc import OFFBioTop
+    from openff.system.components.mdtraj import OFFBioTop
 
 
 class Potential(DefaultModel):

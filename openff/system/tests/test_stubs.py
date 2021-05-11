@@ -4,7 +4,7 @@ from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
 from openff.utilities.testing import skip_if_missing
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.exceptions import (
     InvalidTopologyError,
     SMIRNOFFHandlersNotImplementedError,

@@ -413,7 +413,7 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
     if topology:
         import mdtraj as md
 
-        from openff.system.components.misc import OFFBioTop
+        from openff.system.components.mdtraj import OFFBioTop
 
         mdtop = md.Topology.from_openmm(topology)
         top = OFFBioTop.from_openmm(topology)

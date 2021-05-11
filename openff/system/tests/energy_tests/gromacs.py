@@ -96,7 +96,7 @@ def _write_mdp_file(openff_sys: "System"):
             if num_constraints == 0:
                 mdp_file.write("constraints = none\n")
             else:
-                from openff.system.components.misc import _get_num_h_bonds
+                from openff.system.components.mdtraj import _get_num_h_bonds
 
                 num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)  # type: ignore[union-attr]
                 num_bonds = len(openff_sys["Bonds"].slot_map)

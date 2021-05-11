@@ -11,7 +11,7 @@ from simtk import openmm
 from simtk import unit as simtk_unit
 from simtk.openmm import app
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.openmm import (
     _get_openmm_energies,

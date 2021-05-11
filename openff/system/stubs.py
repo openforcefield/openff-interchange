@@ -15,7 +15,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.smirnoff import (
     ElectrostaticsMetaHandler,
     SMIRNOFFAngleHandler,
