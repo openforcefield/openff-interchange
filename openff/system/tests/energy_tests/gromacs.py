@@ -51,10 +51,10 @@ def _write_mdp_file(openff_sys: "System"):
 
         if "Electrostatics" in openff_sys.handlers:
             coul_handler = openff_sys.handlers["Electrostatics"]
-            coul_method = coul_handler.method  # type: ignore[attr-defined]
+            coul_method = coul_handler.method.lower().replace("-", "")  # type: ignore[attr-defined]
             coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
             coul_cutoff = round(coul_cutoff, 4)
-            if coul_method in ["Cut-off", "cutoff"]:
+            if coul_method == "cutoff":
                 mdp_file.write("coulombtype = Cut-off\n")
                 mdp_file.write("coulomb-modifier = None\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
