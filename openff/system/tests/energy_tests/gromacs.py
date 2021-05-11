@@ -58,10 +58,10 @@ def _write_mdp_file(openff_sys: "System"):
                 mdp_file.write("coulombtype = Cut-off\n")
                 mdp_file.write("coulomb-modifier = None\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
-            elif coul_method == "PME":
+            elif coul_method == "pme":
                 mdp_file.write("coulombtype = PME\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
-            elif coul_method == "reaction-field":
+            elif coul_method == "reactionfield":
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
             else:
@@ -76,7 +76,7 @@ def _write_mdp_file(openff_sys: "System"):
             vdw_cutoff = round(vdw_cutoff, 4)
             if vdw_method == "cutoff":
                 mdp_file.write("vdwtype = cutoff\n")
-            elif vdw_method == "PME":
+            elif vdw_method == "pme":
                 mdp_file.write("vdwtype = PME\n")
             else:
                 raise UnsupportedExportError(f"vdW method {vdw_method} not supported")
