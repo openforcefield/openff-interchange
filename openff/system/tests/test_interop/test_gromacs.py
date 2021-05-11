@@ -4,9 +4,11 @@ from openff.toolkit.topology import Molecule
 from openff.system.components.misc import OFFBioTop
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+from openff.system.tests.energy_tests.test_energies import needs_gmx
 from openff.system.utils import get_test_file_path
 
 
+@needs_gmx
 def test_residue_names_in_gro_file():
     """Test that residue names > 5 characters don't break .gro file output"""
     benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
