@@ -30,6 +30,15 @@ from openff.system.components.smirnoff import (
 from openff.system.components.system import System
 from openff.system.exceptions import InvalidTopologyError
 
+_MAPPING = {
+    ConstraintHandler: SMIRNOFFConstraintHandler,
+    BondHandler: SMIRNOFFBondHandler,
+    AngleHandler: SMIRNOFFAngleHandler,
+    ProperTorsionHandler: SMIRNOFFProperTorsionHandler,
+    ImproperTorsionHandler: SMIRNOFFImproperTorsionHandler,
+    vdWHandler: SMIRNOFFvdWHandler,
+}
+
 
 def to_openff_system(
     self,
@@ -267,15 +276,6 @@ def _check_supported_handlers(forcefield: ForceField):
 
         raise SMIRNOFFHandlersNotImplementedError(unsupported)
 
-
-mapping = {
-    ConstraintHandler: SMIRNOFFConstraintHandler,
-    BondHandler: SMIRNOFFBondHandler,
-    AngleHandler: SMIRNOFFAngleHandler,
-    ProperTorsionHandler: SMIRNOFFProperTorsionHandler,
-    ImproperTorsionHandler: SMIRNOFFImproperTorsionHandler,
-    vdWHandler: SMIRNOFFvdWHandler,
-}
 
 BondHandler.create_potential = create_bond_potential_handler
 AngleHandler.create_potential = create_angle_potential_handler

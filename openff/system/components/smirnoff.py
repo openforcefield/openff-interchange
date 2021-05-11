@@ -8,6 +8,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ConstraintHandler,
     ImproperTorsionHandler,
     LibraryChargeHandler,
+    ParameterHandler,
     ProperTorsionHandler,
     vdWHandler,
 )
@@ -30,14 +31,8 @@ kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 class SMIRNOFFPotentialHandler(PotentialHandler):
     pass
 
-
-class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
-
-    type: Literal["Bonds"] = "Bonds"
-    expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
-
     def store_matches(
-        self, parameter_handler: BondHandler, topology: OFFBioTop
+        self, parameter_handler: ParameterHandler, topology: OFFBioTop
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
@@ -51,6 +46,12 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
             topology_key = TopologyKey(atom_indices=key)
             potential_key = PotentialKey(id=val.parameter_type.smirks)
             self.slot_map[topology_key] = potential_key
+
+
+class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
+
+    type: Literal["Bonds"] = "Bonds"
+    expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
 
     def store_potentials(self, parameter_handler: BondHandler) -> None:
         """
@@ -125,22 +126,6 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
 
     type: Literal["Angles"] = "Angles"
     expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
-
-    def store_matches(
-        self,
-        parameter_handler: AngleHandler,
-        topology: OFFBioTop,
-    ) -> None:
-        """
-        Populate self.slot_map with key-val pairs of slots
-        and unique potential identifiers
-
-        """
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            topology_key = TopologyKey(atom_indices=key)
-            potential_key = PotentialKey(id=val.parameter_type.smirks)
-            self.slot_map[topology_key] = potential_key
 
     def store_potentials(self, parameter_handler: AngleHandler) -> None:
         """
@@ -279,22 +264,6 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
             raise UnsupportedCutoffMethodError(f"vdW method {v} not supported")
         return v
 
-    def store_matches(
-        self,
-        parameter_handler: vdWHandler,
-        topology: OFFBioTop,
-    ) -> None:
-        """
-        Populate self.slot_map with key-val pairs of slots
-        and unique potential identifiers
-
-        """
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            topology_key = TopologyKey(atom_indices=key)
-            potential_key = PotentialKey(id=val.parameter_type.smirks)
-            self.slot_map[topology_key] = potential_key
-
     def store_potentials(self, parameter_handler: vdWHandler) -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
@@ -373,17 +342,6 @@ class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
 
     type: str = "LibraryCharges"
 
-    def store_matches(
-        self,
-        parameter_handler: LibraryChargeHandler,
-        topology: OFFBioTop,
-    ) -> None:
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            top_key = TopologyKey(atom_indices=key)
-            pot_key = PotentialKey(id=val.parameter_type.smirks)
-            self.slot_map[top_key] = pot_key
-
     def store_potentials(self, parameter_handler: LibraryChargeHandler) -> None:
         if self.potentials:
             self.potentials = dict()
@@ -405,17 +363,6 @@ class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
     type: str = "ChargeIncrements"
     partial_charge_method: str = "AM1-Mulliken"
     potentials: Dict[PotentialKey, Potential] = dict()
-
-    def store_matches(
-        self,
-        parameter_handler: ChargeIncrementModelHandler,
-        topology: OFFBioTop,
-    ) -> None:
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            top_key = TopologyKey(atom_indices=key)
-            pot_key = PotentialKey(id=val.parameter_type.smirks)
-            self.slot_map[top_key] = pot_key
 
     def store_potentials(self, parameter_handler: ChargeIncrementModelHandler) -> None:
         if self.potentials:
