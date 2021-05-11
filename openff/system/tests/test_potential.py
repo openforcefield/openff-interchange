@@ -1,4 +1,3 @@
-import pydantic
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
@@ -14,15 +13,11 @@ from openff.system.tests.base_test import BaseTest
 class TestBondPotentialHandler(BaseTest):
     def test_dummy_potential_handler(self):
         handler = PotentialHandler(
-            name="foo", expression="m*x+b", independent_variables="x"
+            type="foo",
+            expression="m*x+b",
         )
+        assert handler.type == "foo"
         assert handler.expression == "m*x+b"
-
-        # Pydantic silently casts some types (int, float, Decimal) to str
-        # in models that expect str; this test checks that the validator's
-        # pre=True argument works;
-        with pytest.raises(pydantic.ValidationError):
-            PotentialHandler(name="foo", expression=1, independent_variables="x")
 
     def test_bond_potential_handler(self):
         top = OFFBioTop.from_molecules(Molecule.from_smiles("O=O"))

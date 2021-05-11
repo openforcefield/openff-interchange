@@ -1,4 +1,4 @@
-from typing import Dict, Set
+from typing import Dict, Literal
 
 import mdtraj as md
 from openff.toolkit.topology import Topology
@@ -8,9 +8,8 @@ from openff.system.models import PotentialKey, TopologyKey
 
 
 class BuckinghamvdWHandler(PotentialHandler):
-    name = "Buckingham-6"
-    expression = "A * exp(-B *r) - C * r ** -6"
-    independent_variables: Set[str] = {"r"}
+    type: Literal["Buckingham-6"] = "Buckingham-6"
+    expression: Literal["a*exp(-b*r)-c*r**-6"] = "a*exp(-b*r)-c*r**-6"
     method: str = "cutoff"
     cutoff: float = 9.0
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
@@ -27,7 +26,7 @@ class RBTorsionHandler(PotentialHandler):
         "C2 * (cos(phi - 180)) ** 2 + C3 * (cos(phi - 180)) ** 3 "
         "C4 * (cos(phi - 180)) ** 4 + C5 * (cos(phi - 180)) ** 5 "
     )
-    independent_variables: Set[str] = {"C0", "C1", "C2", "C3", "C4", "C5"}
+    # independent_variables: Set[str] = {"C0", "C1", "C2", "C3", "C4", "C5"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
 

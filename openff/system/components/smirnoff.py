@@ -1,4 +1,4 @@
-from typing import Dict, Set
+from typing import Dict, Literal
 
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -27,13 +27,14 @@ kcal_mol_angstroms = kcal_mol / omm_unit.angstrom ** 2
 kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 
-class SMIRNOFFBondHandler(PotentialHandler):
+class SMIRNOFFPotentialHandler(PotentialHandler):
+    pass
 
-    name: str = "Bonds"
-    expression: str = "1/2 * k * (r - length) ** 2"
-    independent_variables: Set[str] = {"r"}
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
+
+class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
+
+    type: Literal["Bonds"] = "Bonds"
+    expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
 
     def store_matches(
         self, parameter_handler: BondHandler, topology: OFFBioTop
@@ -71,11 +72,10 @@ class SMIRNOFFBondHandler(PotentialHandler):
             self.potentials[potential_key] = potential
 
 
-class SMIRNOFFConstraintHandler(PotentialHandler):
+class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
 
-    name: str = "Constraints"
-    expression: str = ""
-    independent_variables: Set[str] = {""}
+    type: Literal["Constraints"] = "Constraints"
+    expression: Literal[""] = ""
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     constraints: Dict[
         PotentialKey, bool
@@ -121,13 +121,10 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
             self.constraints[potential_key] = potential  # type: ignore[assignment]
 
 
-class SMIRNOFFAngleHandler(PotentialHandler):
+class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
 
-    name: str = "Angles"
-    expression: str = "1/2 * k * (theta - angle) ** 2"
-    independent_variables: Set[str] = {"theta"}
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
+    type: Literal["Angles"] = "Angles"
+    expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
 
     def store_matches(
         self,
@@ -165,13 +162,12 @@ class SMIRNOFFAngleHandler(PotentialHandler):
             self.potentials[potential_key] = potential
 
 
-class SMIRNOFFProperTorsionHandler(PotentialHandler):
+class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
 
-    name: str = "ProperTorsions"
-    expression: str = "k*(1+cos(periodicity*theta-phase))"
-    independent_variables: Set[str] = {"theta"}
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
+    type: Literal["ProperTorsions"] = "ProperTorsions"
+    expression: Literal[
+        "k*(1+cos(periodicity*theta-phase))"
+    ] = "k*(1+cos(periodicity*theta-phase))"
 
     def store_matches(
         self, parameter_handler: ProperTorsionHandler, topology: OFFBioTop
@@ -211,13 +207,12 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
             self.potentials[potential_key] = potential
 
 
-class SMIRNOFFImproperTorsionHandler(PotentialHandler):
+class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
 
-    name: str = "ImproperTorsions"
-    expression: str = "k*(1+cos(periodicity*theta-phase))"
-    independent_variables: Set[str] = {"theta"}
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
+    type: Literal["ImproperTorsions"] = "ImproperTorsions"
+    expression: Literal[
+        "k*(1+cos(periodicity*theta-phase))"
+    ] = "k*(1+cos(periodicity*theta-phase))"
 
     def store_matches(
         self, parameter_handler: ImproperTorsionHandler, topology: OFFBioTop
@@ -264,16 +259,15 @@ class SMIRNOFFImproperTorsionHandler(PotentialHandler):
             self.potentials[potential_key] = potential
 
 
-class SMIRNOFFvdWHandler(PotentialHandler):
+class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
 
-    name: str = "vdW"
-    expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
-    independent_variables: Set[str] = {"r"}
+    type: Literal["vdW"] = "vdW"
+    expression: Literal[
+        "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
+    ] = "4*epsilon*((sigma/r)**12-(sigma/r)**6"
     method: str = "cutoff"
     cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
     switch_width: FloatQuantity["angstrom"] = 1.0 * unit.angstrom  # type: ignore
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.5
     scale_15: float = 1.0
@@ -333,11 +327,10 @@ class SMIRNOFFvdWHandler(PotentialHandler):
 
 class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
 
-    name: str = "Electrostatics"
+    type: str = "Electrostatics"
     expression: str = "coul"
     method: str = "PME"
     cutoff: FloatQuantity["angstrom"] = 9.0  # type: ignore
-    independent_variables: Set[str] = {"r"}
     charge_map: Dict[TopologyKey, float] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.8333333333
@@ -378,9 +371,7 @@ class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
     PotentialHandler,
 ):
 
-    name: str = "LibraryCharges"
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
+    type: str = "LibraryCharges"
 
     def store_matches(
         self,
@@ -411,7 +402,7 @@ class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
     PotentialHandler,
 ):
 
-    name: str = "ChargeIncrements"
+    type: str = "ChargeIncrements"
     partial_charge_method: str = "AM1-Mulliken"
     potentials: Dict[PotentialKey, Potential] = dict()
 
@@ -443,7 +434,7 @@ class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
 
 class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
 
-    name: str = "Electrostatics"
+    type: str = "Electrostatics"
     charges: Dict = dict()  # type
     cache: Dict = dict()  # Dict[str: Dict[str, FloatQuantity["elementary_charge"]]]
 
