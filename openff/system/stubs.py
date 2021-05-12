@@ -98,7 +98,7 @@ def to_openff_system(
             scale_13=self["Electrostatics"].scale13,
             scale_14=self["Electrostatics"].scale14,
             scale_15=self["Electrostatics"].scale15,
-            method=self["Electrostatics"].method,
+            method=self["Electrostatics"].method.lower(),
             cutoff=self["Electrostatics"].cutoff,
         )
         if "ToolkitAM1BCC" in self.registered_parameter_handlers:
@@ -242,7 +242,7 @@ def create_vdw_potential_handler(
         scale_14=self.scale14,
         scale_15=self.scale15,
         cutoff=self.cutoff,
-        method=self.method,
+        method=self.method.lower(),
         switch_width=self.switch_width,
     )
     handler.store_matches(parameter_handler=self, topology=topology)

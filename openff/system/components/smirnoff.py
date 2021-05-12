@@ -13,13 +13,12 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 from openff.units import unit
-from pydantic import validator
+from pydantic import Field
 from simtk import unit as omm_unit
 from typing_extensions import Literal
 
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.potentials import Potential, PotentialHandler
-from openff.system.exceptions import UnsupportedCutoffMethodError
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import FloatQuantity
 from openff.system.utils import get_partial_charges_from_openmm_system
@@ -255,19 +254,28 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
     expression: Literal[
         "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     ] = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
-    method: str = "cutoff"
-    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
-    switch_width: FloatQuantity["angstrom"] = 1.0 * unit.angstrom  # type: ignore
-    scale_13: float = 0.0
-    scale_14: float = 0.5
-    scale_15: float = 1.0
-
-    @validator("method")
-    def validate_vdw_method(cls, v):
-        v_ = v.lower().replace("-", "")
-        if v_ not in ["cutoff", "pme"]:
-            raise UnsupportedCutoffMethodError(f"vdW method {v} not supported")
-        return v
+    method: Literal["cutoff", "pme"] = Field("cutoff")
+    cutoff: FloatQuantity["angstrom"] = Field(  # type: ignore
+        9.0 * unit.angstrom,
+        description="The distance at which vdW interactions are truncated",
+    )
+    switch_width: FloatQuantity["angstrom"] = Field(  # type: ignore
+        1.0 * unit.angstrom,  # type: ignore
+        description="The width over which the switching function is applied",
+    )
+    scale_13: float = Field(
+        0.0, description="The scaling factor applied to 1-3 interactions"
+    )
+    scale_14: float = Field(
+        0.5, description="The scaling factor applied to 1-4 interactions"
+    )
+    scale_15: float = Field(
+        1.0, description="The scaling factor applied to 1-5 interactions"
+    )
+    mixing_rule: Literal["Lorentz-Berthelot"] = Field(
+        "Lorentz-Berthelot",
+        description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
+    )
 
     def store_potentials(self, parameter_handler: vdWHandler) -> None:
         """
@@ -275,7 +283,7 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
         identifiers and their associated Potential objects
 
         """
-        self.method = parameter_handler.method
+        self.method = parameter_handler.method.lower()
         self.cutoff = parameter_handler.cutoff
 
         for potential_key in self.slot_map.values():
@@ -303,21 +311,18 @@ class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
 
     type: str = "Electrostatics"
     expression: str = "coul"
-    method: str = "PME"
+    method: Literal["pme", "cuotff", "reaction-field"]
     cutoff: FloatQuantity["angstrom"] = 9.0  # type: ignore
     charge_map: Dict[TopologyKey, float] = dict()
-    scale_13: float = 0.0
-    scale_14: float = 0.8333333333
-    scale_15: float = 1.0
-
-    @validator("method")
-    def validate_electrostatics_method(cls, v):
-        v_ = v.lower().replace("-", "")
-        if v_ not in ["cutoff", "pme", "reactionfield"]:
-            raise UnsupportedCutoffMethodError(
-                f"Electrostatics method {v} not supported"
-            )
-        return v
+    scale_13: float = Field(
+        0.0, description="The scaling factor applied to 1-3 interactions"
+    )
+    scale_14: float = Field(
+        0.8333333333, description="The scaling factor applied to 1-4 interactions"
+    )
+    scale_15: float = Field(
+        1.0, description="The scaling factor applied to 1-5 interactions"
+    )
 
     def store_charges(
         self,
@@ -341,11 +346,14 @@ class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
 
 
 class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
-    SMIRNOFFElectrostaticsMetadataMixin,
+    # SMIRNOFFElectrostaticsMetadataMixin,
     SMIRNOFFPotentialHandler,
 ):
 
     type: str = "LibraryCharges"
+    # TODO: This should be specified by a parent class and not required (or event allowed)
+    # to be specified here
+    expression: str = "coul"
 
     def store_potentials(self, parameter_handler: LibraryChargeHandler) -> None:
         if self.potentials:
@@ -386,7 +394,9 @@ class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
 
 class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
 
-    type: str = "Electrostatics"
+    type: Literal["Electrostatics"] = "Electrostatics"
+    expression: Literal["coul"] = "coul"
+    method: Literal["cutoff", "pme"] = "pme"
     charges: Dict = dict()  # type
     cache: Dict = dict()  # Dict[str: Dict[str, FloatQuantity["elementary_charge"]]]
 
@@ -423,7 +433,7 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
             ]
             for i, id_ in enumerate(ids):
                 atom_key = TopologyKey(atom_indices=(id_,))
-                self.charges[atom_key] += charges[i]
+                self.charges[atom_key] += charges[i]  # type: ignore
 
     def apply_library_charges(self, library_charges: SMIRNOFFLibraryChargeHandler):
         for top_key, pot_key in library_charges.slot_map.items():
@@ -432,4 +442,4 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
             # Need to ensure this iterator follows ordering in force field
             for i, id_ in enumerate(ids):
                 atom_key = TopologyKey(atom_indices=(id_,))
-                self.charges[atom_key] = charges[i]
+                self.charges[atom_key] = charges[i]  # type: ignore
