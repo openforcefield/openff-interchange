@@ -1,3 +1,4 @@
+
 import glob
 
 import foyer
@@ -7,9 +8,10 @@ import parmed as pmd
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import unit
+from openff.utilities.testing import skip_if_missing
+from openff.utilities.utils import has_pkg
 from simtk import unit as simtk_unit
 
-from openff.system.components.foyer import from_foyer
 from openff.system.components.misc import OFFBioTop
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.energy_tests.gromacs import (
@@ -20,7 +22,13 @@ from openff.system.tests.energy_tests.gromacs import (
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.utils import get_test_files_dir_path
 
+if has_pkg("foyer"):
+    import foyer
 
+    from openff.system.components.foyer import from_foyer
+
+
+@skip_if_missing("foyer")
 class TestFoyer(BaseTest):
     @pytest.fixture(scope="session")
     def oplsaa(self):
@@ -77,8 +85,11 @@ class TestFoyer(BaseTest):
         assert oplsaa_system_ethanol["vdW"].scale_14 == 0.5
         assert oplsaa_system_ethanol["Electrostatics"].scale_14 == 0.5
 
+    @skip_if_missing("gromacs")
     @pytest.mark.slow
     def test_ethanol_energies(self, oplsaa_system_ethanol):
+        from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+
         gmx_energies = get_gromacs_energies(oplsaa_system_ethanol)
         omm_energies = get_openmm_energies(oplsaa_system_ethanol)
 

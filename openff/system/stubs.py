@@ -4,7 +4,6 @@ Monkeypatching external classes with custom functionality
 from typing import Optional, Tuple, Union
 
 import mdtraj as md
-import numpy as np
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -139,10 +138,7 @@ def to_openff_system(
     # `box` argument is only overriden if passed `None` and the input topology
     # has box vectors
     if box is None and topology.box_vectors is not None:
-        from simtk import unit
-
-        # getDefaultPeriodicBoxVectors() / unit.nanometer is a tuple
-        sys_out.box = np.asarray(topology.box_vectors / unit.nanometer)
+        sys_out.box = topology.box_vectors
     else:
         sys_out.box = box
 

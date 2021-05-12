@@ -124,7 +124,7 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
 class SMIRNOFFAngleHandler(PotentialHandler):
 
     name: str = "Angles"
-    expression: str = "1/2 * k * (angle - theta)"
+    expression: str = "1/2 * k * (theta - angle) ** 2"
     independent_variables: Set[str] = {"theta"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
@@ -308,7 +308,7 @@ class SMIRNOFFvdWHandler(PotentialHandler):
 
         """
         self.method = parameter_handler.method
-        self.cutoff = parameter_handler.cutoff.value_in_unit(omm_unit.angstrom)
+        self.cutoff = parameter_handler.cutoff
 
         for potential_key in self.slot_map.values():
             smirks = potential_key.id

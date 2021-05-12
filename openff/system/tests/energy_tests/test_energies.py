@@ -1,34 +1,49 @@
 from copy import deepcopy
 
-import mbuild as mb
 import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.units import unit
+from openff.utilities.testing import skip_if_missing
+from openff.utilities.utils import has_executable
 from simtk import openmm
 from simtk import unit as simtk_unit
 from simtk.openmm import app
 
 from openff.system.components.misc import OFFBioTop
 from openff.system.stubs import ForceField
-from openff.system.tests.energy_tests.gromacs import (
-    _get_mdp_file,
-    _run_gmx_energy,
-    get_gromacs_energies,
-)
-from openff.system.tests.energy_tests.lammps import get_lammps_energies
 from openff.system.tests.energy_tests.openmm import (
     _get_openmm_energies,
     get_openmm_energies,
 )
 
+HAS_GROMACS = any(has_executable(e) for e in ["gmx", "gmx_d"])
+HAS_LAMMPS = any(has_executable(e) for e in ["lammps", "lmp_mpi", "lmp_serial"])
 
+if HAS_GROMACS:
+    from openff.system.tests.energy_tests.gromacs import (
+        _get_mdp_file,
+        _run_gmx_energy,
+        get_gromacs_energies,
+    )
+if HAS_LAMMPS:
+    from openff.system.tests.energy_tests.lammps import get_lammps_energies
+
+needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
+needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs GROMACS")
+
+
+@skip_if_missing("mbuild")
+@needs_gmx
+@needs_lmp
 @pytest.mark.xfail
 @pytest.mark.slow
 @pytest.mark.parametrize("constrained", [True, False])
 @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
 def test_energies_single_mol(constrained, mol_smi):
+    import mbuild as mb
+
     mol = Molecule.from_smiles(mol_smi)
     mol.generate_conformers(n_conformers=1)
     mol.name = "FOO"
@@ -97,6 +112,8 @@ def test_energies_single_mol(constrained, mol_smi):
         lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
 
 
+@needs_gmx
+@needs_lmp
 @pytest.mark.slow
 def test_liquid_argon():
     from openff.system.utils import get_test_file_path
@@ -142,6 +159,7 @@ def test_liquid_argon():
     )
 
 
+@needs_gmx
 @pytest.mark.skip("Skip until residues are matched between gro and top")
 @pytest.mark.parametrize(
     "toolkit_file_path",
@@ -215,6 +233,7 @@ def test_packmol_boxes(toolkit_file_path):
     )
 
 
+@needs_lmp
 @pytest.mark.slow
 def test_water_dimer():
     from openff.system.utils import get_test_file_path
@@ -257,11 +276,15 @@ def test_water_dimer():
     lmp_energies.compare(omm_energies)
 
 
+@needs_gmx
+@skip_if_missing("foyer")
+@skip_if_missing("mbuild")
 @pytest.mark.slow
 def test_process_rb_torsions():
     """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
 
     import foyer
+    import mbuild as mb
 
     oplsaa = foyer.Forcefield(name="oplsaa")
 
@@ -289,6 +312,7 @@ def test_process_rb_torsions():
     assert oplsaa_energies.energies["Torsion"].m != 0.0
 
 
+@needs_gmx
 def test_gmx_14_energies_exist():
     # TODO: Make sure 1-4 energies are accurate, not just existent
 
