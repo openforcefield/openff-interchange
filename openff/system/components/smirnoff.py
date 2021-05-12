@@ -1,4 +1,4 @@
-from typing import Dict, Literal
+from typing import Dict
 
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -15,6 +15,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from openff.units import unit
 from pydantic import validator
 from simtk import unit as omm_unit
+from typing_extensions import Literal
 
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.potentials import Potential, PotentialHandler
@@ -29,8 +30,6 @@ kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 
 class SMIRNOFFPotentialHandler(PotentialHandler):
-    pass
-
     def store_matches(
         self, parameter_handler: ParameterHandler, topology: OFFBioTop
     ) -> None:
@@ -40,6 +39,8 @@ class SMIRNOFFPotentialHandler(PotentialHandler):
 
         """
         if self.slot_map:
+            # TODO: Should the slot_map always be reset, or should we be able to partially
+            # update it? Also Note the duplicated code in the child classes
             self.slot_map = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
@@ -162,6 +163,8 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
         and unique potential identifiers
 
         """
+        if self.slot_map:
+            self.slot_map = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             n_terms = len(val.parameter_type.k)
@@ -207,6 +210,8 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
         and unique potential identifiers
 
         """
+        if self.slot_map:
+            self.slot_map = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             parameter_handler._assert_correct_connectivity(
@@ -249,7 +254,7 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
     type: Literal["vdW"] = "vdW"
     expression: Literal[
         "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
-    ] = "4*epsilon*((sigma/r)**12-(sigma/r)**6"
+    ] = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     method: str = "cutoff"
     cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
     switch_width: FloatQuantity["angstrom"] = 1.0 * unit.angstrom  # type: ignore
@@ -337,7 +342,7 @@ class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
 
 class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
     SMIRNOFFElectrostaticsMetadataMixin,
-    PotentialHandler,
+    SMIRNOFFPotentialHandler,
 ):
 
     type: str = "LibraryCharges"
@@ -357,7 +362,7 @@ class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
 
 class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
     SMIRNOFFElectrostaticsMetadataMixin,
-    PotentialHandler,
+    SMIRNOFFPotentialHandler,
 ):
 
     type: str = "ChargeIncrements"

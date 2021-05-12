@@ -13,6 +13,10 @@ dependencies:
   - jax
   - mdtraj
   - ele
+
+    # Python <3.8
+  - typing-extensions
+
     # Testing
   - pytest
   - pytest-cov
