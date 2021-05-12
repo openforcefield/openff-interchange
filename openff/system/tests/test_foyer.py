@@ -1,7 +1,6 @@
-
 import glob
+from pathlib import Path
 
-import foyer
 import mdtraj as md
 import numpy as np
 import parmed as pmd
@@ -20,6 +19,7 @@ from openff.system.tests.energy_tests.gromacs import (
     get_gromacs_energies,
 )
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
+from openff.system.tests.energy_tests.test_energies import needs_gmx
 from openff.system.utils import get_test_files_dir_path
 
 if has_pkg("foyer"):
@@ -54,9 +54,18 @@ class TestFoyer(BaseTest):
     def get_systems(self, oplsaa):
         def systems_from_path(molecule_path):
             molecule_or_molecules = Molecule.from_file(molecule_path)
+            mol_name = Path(molecule_path).stem[0:4].upper()
+
+            if isinstance(molecule_or_molecules, list):
+                for idx, mol in enumerate(molecule_or_molecules):
+                    mol.name = f"{mol_name}_{idx}"
+            else:
+                molecule_or_molecules.name = mol_name
+
             off_bio_top = OFFBioTop.from_molecules(molecule_or_molecules)
             off_bio_top.mdtop = md.Topology.from_openmm(off_bio_top.to_openmm())
             openff_system = from_foyer(off_bio_top, oplsaa)
+
             if isinstance(molecule_or_molecules, list):
                 openff_system.positions = np.vstack(
                     tuple(
@@ -68,6 +77,7 @@ class TestFoyer(BaseTest):
                 openff_system.positions = molecule_or_molecules.conformers[
                     0
                 ].value_in_unit(simtk_unit.nanometer)
+
             openff_system.box = [4, 4, 4]
 
             parmed_struct = pmd.openmm.load_topology(off_bio_top.to_openmm())
@@ -85,7 +95,7 @@ class TestFoyer(BaseTest):
         assert oplsaa_system_ethanol["vdW"].scale_14 == 0.5
         assert oplsaa_system_ethanol["Electrostatics"].scale_14 == 0.5
 
-    @skip_if_missing("gromacs")
+    @needs_gmx
     @pytest.mark.slow
     def test_ethanol_energies(self, oplsaa_system_ethanol):
         from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
@@ -101,11 +111,12 @@ class TestFoyer(BaseTest):
             },
         )
 
-    @pytest.mark.slow
+    @needs_gmx
     @pytest.mark.parametrize(
         argnames="molecule_path",
         argvalues=glob.glob(get_test_files_dir_path("foyer_test_molecules") + "/*.sdf"),
     )
+    @pytest.mark.slow
     def test_system_energies(self, molecule_path, get_systems, oplsaa):
         openff_system, pmd_structure = get_systems(molecule_path)
         parameterized_pmd_structure = oplsaa.apply(pmd_structure)
