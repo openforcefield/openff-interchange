@@ -309,9 +309,9 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
 
 class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
 
-    type: str = "Electrostatics"
-    expression: str = "coul"
-    method: Literal["pme", "cuotff", "reaction-field"]
+    type: Literal["Electrostatics"] = "Electrostatics"
+    expression: Literal["coul"] = "coul"
+    method: Literal["pme", "cutoff", "reaction-field"]
     cutoff: FloatQuantity["angstrom"] = 9.0  # type: ignore
     charge_map: Dict[TopologyKey, float] = dict()
     scale_13: float = Field(
@@ -346,14 +346,13 @@ class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
 
 
 class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
-    # SMIRNOFFElectrostaticsMetadataMixin,
     SMIRNOFFPotentialHandler,
 ):
 
-    type: str = "LibraryCharges"
+    type: Literal["LibraryCharges"] = "LibraryCharges"
     # TODO: This should be specified by a parent class and not required (or event allowed)
     # to be specified here
-    expression: str = "coul"
+    expression: Literal["coul"] = "coul"
 
     def store_potentials(self, parameter_handler: LibraryChargeHandler) -> None:
         if self.potentials:
@@ -369,11 +368,13 @@ class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
 
 
 class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
-    SMIRNOFFElectrostaticsMetadataMixin,
     SMIRNOFFPotentialHandler,
 ):
 
-    type: str = "ChargeIncrements"
+    type: Literal["ChargeIncrements"] = "ChargeIncrements"
+    # TODO: This should be specified by a parent class and not required (or event allowed)
+    # to be specified here
+    expression: Literal["coul"] = "coul"
     partial_charge_method: str = "AM1-Mulliken"
     potentials: Dict[PotentialKey, Potential] = dict()
 
@@ -394,9 +395,7 @@ class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
 
 class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
 
-    type: Literal["Electrostatics"] = "Electrostatics"
-    expression: Literal["coul"] = "coul"
-    method: Literal["cutoff", "pme"] = "pme"
+    method: Literal["pme", "cutoff", "reaction-field"]
     charges: Dict = dict()  # type
     cache: Dict = dict()  # Dict[str: Dict[str, FloatQuantity["elementary_charge"]]]
 
