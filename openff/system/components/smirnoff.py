@@ -122,7 +122,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
             constraints.store_constraints(  # type: ignore[union-attr]
                 parameter_handler=constraint_handler,
                 topology=topology,
-                bond_handler=bond_handler,
+                bond_handler=handler,
             )
         else:
             constraints = None
