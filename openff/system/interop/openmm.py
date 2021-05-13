@@ -437,7 +437,7 @@ def _convert_nonbonded_force(force):
     )
 
     vdw_handler = SMIRNOFFvdWHandler()
-    electrostatics = ElectrostaticsMetaHandler()
+    electrostatics = ElectrostaticsMetaHandler(method="pme")
 
     n_parametrized_particles = force.getNumParticles()
 
@@ -457,6 +457,17 @@ def _convert_nonbonded_force(force):
 
     vdw_handler.cutoff = force.getCutoffDistance()
     electrostatics.cutoff = force.getCutoffDistance()
+
+    if force.getNonbondedMethod() == openmm.NonbondedForce.PME:
+        electrostatics.method = "pme"
+    elif force.getNonbondedMethod() in {
+        openmm.NonbondedForce.CutoffPeriodic,
+        openmm.NonbondedForce.CutoffNonPeriodic,
+    }:
+        # TODO: Store reaction-field dielectric
+        electrostatics.method = "reactionfield"
+    elif force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff:
+        raise Exception("NonbondedMethod NoCutoff is not supported")
 
     return vdw_handler, electrostatics
 
