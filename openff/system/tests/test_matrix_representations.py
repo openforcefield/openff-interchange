@@ -2,7 +2,11 @@ import numpy as np
 import pytest
 from openff.utilities.testing import skip_if_missing
 
-from openff.system.components.smirnoff import SMIRNOFFAngleHandler, SMIRNOFFBondHandler
+from openff.system.components.smirnoff import (
+    SMIRNOFFAngleHandler,
+    SMIRNOFFBondHandler,
+    SMIRNOFFvdWHandler,
+)
 from openff.system.tests.base_test import BaseTest
 from openff.system.utils import get_test_file_path
 
@@ -26,11 +30,14 @@ class TestMatrixRepresentations(BaseTest):
             )
         elif handler_name == "Angles":
             handler = SMIRNOFFAngleHandler.from_toolkit(
-                parameter_handler=parsley["Angles"],
+                parameter_handler=parsley[handler_name],
                 topology=ethanol_top,
             )
-        else:
-            handler = parsley[handler_name].create_potential(topology=ethanol_top)
+        elif handler_name == "vdW":
+            handler = SMIRNOFFvdWHandler._from_toolkit(
+                parameter_handler=parsley[handler_name],
+                topology=ethanol_top,
+            )
 
         p = handler.get_force_field_parameters()
 

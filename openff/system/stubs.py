@@ -1,8 +1,6 @@
 """
 Monkeypatching external classes with custom functionality
 """
-from typing import Optional, Tuple, Union
-
 import mdtraj as md
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
@@ -79,13 +77,14 @@ def to_openff_system(
                 constraint_handler = self["Constraints"]
             else:
                 constraint_handler = None
-            bond_handler, constraint_handler = self["Bonds"].create_potential(
+            potential_handler, constraints = SMIRNOFFBondHandler.from_toolkit(
+                bond_handler=self["Bonds"],
                 topology=topology,
                 constraint_handler=constraint_handler,
             )
-            sys_out.handlers.update({"Bonds": bond_handler})
+            sys_out.handlers.update({"Bonds": potential_handler})
             if constraint_handler is not None:
-                sys_out.handlers.update({"Constraints": constraint_handler})
+                sys_out.handlers.update({"Constraints": constraints})
         elif parameter_handler_name in {
             "Angles",
             "ProperTorsions",
@@ -93,8 +92,13 @@ def to_openff_system(
         }:
             parameter_handler = self[parameter_handler_name]
             POTENTIAL_HANDLER_CLASS = _MAPPING[parameter_handler.__class__]
-            potential_handler = POTENTIAL_HANDLER_CLASS.from_toolkit(
+            potential_handler = POTENTIAL_HANDLER_CLASS.from_toolkit(  # type: ignore
                 parameter_handler=parameter_handler, topology=topology
+            )
+            sys_out.handlers.update({parameter_handler_name: potential_handler})
+        elif parameter_handler_name == "vdW":
+            potential_handler = SMIRNOFFvdWHandler._from_toolkit(  # type: ignore[assignment]
+                parameter_handler=self["vdW"], topology=topology
             )
             sys_out.handlers.update({parameter_handler_name: potential_handler})
         else:
@@ -164,87 +168,6 @@ def to_openff_system(
     return sys_out
 
 
-# These functions should all be reduced down to one, possibly with some creative
-# use of functools
-def create_bond_potential_handler(
-    self,
-    topology: Topology,
-    constraint_handler: Optional[SMIRNOFFConstraintHandler] = None,
-    **kwargs,
-) -> Tuple[SMIRNOFFBondHandler, Union[SMIRNOFFConstraintHandler, None]]:
-    """
-    A method, patched onto BondHandler, that creates a corresponding SMIRNOFFBondHandler
-
-    """
-    bond_handler = SMIRNOFFBondHandler()
-    bond_handler.store_matches(parameter_handler=self, topology=topology)
-    bond_handler.store_potentials(parameter_handler=self)
-
-    if constraint_handler:
-        constraints = SMIRNOFFConstraintHandler()
-        constraints.store_constraints(
-            parameter_handler=constraint_handler,
-            topology=topology,
-            bond_handler=bond_handler,
-        )
-    else:
-        constraints = None  # type: ignore[assignment]
-
-    return bond_handler, constraints
-
-
-def create_proper_torsion_potential_handler(
-    self,
-    topology: Topology,
-    **kwargs,
-) -> SMIRNOFFProperTorsionHandler:
-    """
-    A method, patched onto ProperTorsionHandler, that creates a corresponding SMIRNOFFProperTorsionHandler
-    """
-    handler = SMIRNOFFProperTorsionHandler()
-    handler.store_matches(parameter_handler=self, topology=topology)
-    handler.store_potentials(parameter_handler=self)
-
-    return handler
-
-
-def create_improper_torsion_potential_handler(
-    self,
-    topology: Topology,
-    **kwargs,
-) -> SMIRNOFFImproperTorsionHandler:
-    """
-    A method, patched onto ImproperTorsionHandler, that creates a corresponding SMIRNOFFImproperTorsionHandler
-    """
-    handler = SMIRNOFFImproperTorsionHandler()
-    handler.store_matches(parameter_handler=self, topology=topology)
-    handler.store_potentials(parameter_handler=self)
-
-    return handler
-
-
-def create_vdw_potential_handler(
-    self,
-    topology: Topology,
-    **kwargs,
-) -> SMIRNOFFvdWHandler:
-    """
-    A method, patched onto BondHandler, that creates a corresponding SMIRNOFFBondHandler
-    """
-    handler = SMIRNOFFvdWHandler(
-        scale_13=self.scale13,
-        scale_14=self.scale14,
-        scale_15=self.scale15,
-        cutoff=self.cutoff,
-        method=self.method.lower(),
-        switch_width=self.switch_width,
-    )
-    handler.store_matches(parameter_handler=self, topology=topology)
-    handler.store_potentials(parameter_handler=self)
-
-    return handler
-
-
 def _check_supported_handlers(forcefield: ForceField):
     supported_handlers = {
         "Constraints",
@@ -271,6 +194,4 @@ def _check_supported_handlers(forcefield: ForceField):
         raise SMIRNOFFHandlersNotImplementedError(unsupported)
 
 
-BondHandler.create_potential = create_bond_potential_handler
-vdWHandler.create_potential = create_vdw_potential_handler
 ForceField.create_openff_system = to_openff_system

@@ -66,7 +66,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler):
         topology: "Topology",
     ) -> T:
         """
-        Create a SMIRNOFFAngleHandler from toolkit data.
+        Create a SMIRNOFFPotentialHandler from toolkit data.
 
         """
         handler = cls()
@@ -101,12 +101,12 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
             self.potentials[potential_key] = potential
 
     @classmethod
-    def from_toolkit(
+    def from_toolkit(  # type: ignore[override]
         cls: Type[T],
-        topology: "Topology",
         bond_handler: "BondHandler",
+        topology: "Topology",
         constraint_handler: Optional[T] = None,
-    ) -> Tuple[T, Optional[T]]:
+    ) -> Tuple[T, Optional["SMIRNOFFConstraintHandler"]]:
         """
         Create a SMIRNOFFBondHandler from toolkit data.
 
@@ -116,14 +116,16 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         handler.store_potentials(parameter_handler=bond_handler)
 
         if constraint_handler:
-            constraints = SMIRNOFFConstraintHandler()
-            constraints.store_constraints(
+            constraints: Optional[
+                "SMIRNOFFConstraintHandler"
+            ] = SMIRNOFFConstraintHandler()
+            constraints.store_constraints(  # type: ignore[union-attr]
                 parameter_handler=constraint_handler,
                 topology=topology,
                 bond_handler=bond_handler,
             )
         else:
-            constraints = None  # type: ignore[assignment]
+            constraints = None
 
         return handler, constraints
 
@@ -406,6 +408,29 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
                     },
                 )
             self.potentials[potential_key] = potential
+
+    @classmethod
+    def _from_toolkit(
+        cls: Type[T],
+        parameter_handler: "vdWHandler",
+        topology: "Topology",
+    ) -> "SMIRNOFFvdWHandler":
+        """
+        Create a SMIRNOFFvdWHandler from toolkit data.
+
+        """
+        handler = SMIRNOFFvdWHandler(
+            scale_13=parameter_handler.scale13,
+            scale_14=parameter_handler.scale14,
+            scale_15=parameter_handler.scale15,
+            cutoff=parameter_handler.cutoff,
+            method=parameter_handler.method.lower(),
+            switch_width=parameter_handler.switch_width,
+        )
+        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
+        handler.store_potentials(parameter_handler=parameter_handler)
+
+        return handler
 
 
 class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
