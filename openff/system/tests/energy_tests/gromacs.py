@@ -54,13 +54,13 @@ def _write_mdp_file(openff_sys: "System"):
             coul_method = coul_handler.method  # type: ignore[attr-defined]
             coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
             coul_cutoff = round(coul_cutoff, 4)
-            if coul_method in ["Cut-off", "cutoff"]:
+            if coul_method == "cutoff":
                 mdp_file.write("coulombtype = Cut-off\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
-            elif coul_method == "PME":
+            elif coul_method == "pme":
                 mdp_file.write("coulombtype = PME\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
-            elif coul_method == "reaction-field":
+            elif coul_method == "reactionfield":
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
             else:
@@ -75,7 +75,7 @@ def _write_mdp_file(openff_sys: "System"):
             vdw_cutoff = round(vdw_cutoff, 4)
             if vdw_method == "cutoff":
                 mdp_file.write("vdwtype = cutoff\n")
-            elif vdw_method == "PME":
+            elif vdw_method == "pme":
                 mdp_file.write("vdwtype = PME\n")
             else:
                 raise UnsupportedExportError(f"vdW method {vdw_method} not supported")
@@ -96,7 +96,7 @@ def _write_mdp_file(openff_sys: "System"):
             if num_constraints == 0:
                 mdp_file.write("constraints = none\n")
             else:
-                from openff.system.components.misc import _get_num_h_bonds
+                from openff.system.components.mdtraj import _get_num_h_bonds
 
                 num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)  # type: ignore[union-attr]
                 num_bonds = len(openff_sys["Bonds"].slot_map)

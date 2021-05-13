@@ -5,7 +5,7 @@ import numpy as np
 from openff.toolkit.topology import Molecule
 from openff.units import unit
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.system import System
 from openff.system.stubs import ForceField
 from openff.system.tests.base_test import BaseTest

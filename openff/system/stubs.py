@@ -15,7 +15,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.smirnoff import (
     ElectrostaticsMetaHandler,
     SMIRNOFFAngleHandler,
@@ -29,6 +29,15 @@ from openff.system.components.smirnoff import (
 )
 from openff.system.components.system import System
 from openff.system.exceptions import InvalidTopologyError
+
+_MAPPING = {
+    ConstraintHandler: SMIRNOFFConstraintHandler,
+    BondHandler: SMIRNOFFBondHandler,
+    AngleHandler: SMIRNOFFAngleHandler,
+    ProperTorsionHandler: SMIRNOFFProperTorsionHandler,
+    ImproperTorsionHandler: SMIRNOFFImproperTorsionHandler,
+    vdWHandler: SMIRNOFFvdWHandler,
+}
 
 
 def to_openff_system(
@@ -89,7 +98,7 @@ def to_openff_system(
             scale_13=self["Electrostatics"].scale13,
             scale_14=self["Electrostatics"].scale14,
             scale_15=self["Electrostatics"].scale15,
-            method=self["Electrostatics"].method,
+            method=self["Electrostatics"].method.lower(),
             cutoff=self["Electrostatics"].cutoff,
         )
         if "ToolkitAM1BCC" in self.registered_parameter_handlers:
@@ -233,7 +242,7 @@ def create_vdw_potential_handler(
         scale_14=self.scale14,
         scale_15=self.scale15,
         cutoff=self.cutoff,
-        method=self.method,
+        method=self.method.lower(),
         switch_width=self.switch_width,
     )
     handler.store_matches(parameter_handler=self, topology=topology)
@@ -267,15 +276,6 @@ def _check_supported_handlers(forcefield: ForceField):
 
         raise SMIRNOFFHandlersNotImplementedError(unsupported)
 
-
-mapping = {
-    ConstraintHandler: SMIRNOFFConstraintHandler,
-    BondHandler: SMIRNOFFBondHandler,
-    AngleHandler: SMIRNOFFAngleHandler,
-    ProperTorsionHandler: SMIRNOFFProperTorsionHandler,
-    ImproperTorsionHandler: SMIRNOFFImproperTorsionHandler,
-    vdWHandler: SMIRNOFFvdWHandler,
-}
 
 BondHandler.create_potential = create_bond_potential_handler
 AngleHandler.create_potential = create_angle_potential_handler

@@ -1,4 +1,4 @@
-from typing import Optional, Sequence
+from typing import Optional, Tuple
 
 from openff.units import unit
 from pydantic import BaseModel, Field
@@ -17,8 +17,7 @@ class DefaultModel(BaseModel):
 
 
 class TopologyKey(DefaultModel):
-    # Should be Tuple[int], see issues #495
-    atom_indices: Sequence[int] = Field(
+    atom_indices: Tuple[int, ...] = Field(
         tuple(), description="The indices of the atoms occupied by this interaction"
     )
     mult: Optional[int] = Field(

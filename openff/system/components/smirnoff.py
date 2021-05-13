@@ -1,4 +1,4 @@
-from typing import Dict, Set
+from typing import Dict
 
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -8,16 +8,17 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ConstraintHandler,
     ImproperTorsionHandler,
     LibraryChargeHandler,
+    ParameterHandler,
     ProperTorsionHandler,
     vdWHandler,
 )
 from openff.units import unit
-from pydantic import validator
+from pydantic import Field
 from simtk import unit as omm_unit
+from typing_extensions import Literal
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.potentials import Potential, PotentialHandler
-from openff.system.exceptions import UnsupportedCutoffMethodError
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import FloatQuantity
 from openff.system.utils import get_partial_charges_from_openmm_system
@@ -27,16 +28,9 @@ kcal_mol_angstroms = kcal_mol / omm_unit.angstrom ** 2
 kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 
-class SMIRNOFFBondHandler(PotentialHandler):
-
-    name: str = "Bonds"
-    expression: str = "1/2 * k * (r - length) ** 2"
-    independent_variables: Set[str] = {"r"}
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
-
+class SMIRNOFFPotentialHandler(PotentialHandler):
     def store_matches(
-        self, parameter_handler: BondHandler, topology: OFFBioTop
+        self, parameter_handler: ParameterHandler, topology: OFFBioTop
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
@@ -44,12 +38,20 @@ class SMIRNOFFBondHandler(PotentialHandler):
 
         """
         if self.slot_map:
+            # TODO: Should the slot_map always be reset, or should we be able to partially
+            # update it? Also Note the duplicated code in the child classes
             self.slot_map = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             topology_key = TopologyKey(atom_indices=key)
             potential_key = PotentialKey(id=val.parameter_type.smirks)
             self.slot_map[topology_key] = potential_key
+
+
+class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
+
+    type: Literal["Bonds"] = "Bonds"
+    expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
 
     def store_potentials(self, parameter_handler: BondHandler) -> None:
         """
@@ -71,11 +73,10 @@ class SMIRNOFFBondHandler(PotentialHandler):
             self.potentials[potential_key] = potential
 
 
-class SMIRNOFFConstraintHandler(PotentialHandler):
+class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
 
-    name: str = "Constraints"
-    expression: str = ""
-    independent_variables: Set[str] = {""}
+    type: Literal["Constraints"] = "Constraints"
+    expression: Literal[""] = ""
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     constraints: Dict[
         PotentialKey, bool
@@ -121,29 +122,10 @@ class SMIRNOFFConstraintHandler(PotentialHandler):
             self.constraints[potential_key] = potential  # type: ignore[assignment]
 
 
-class SMIRNOFFAngleHandler(PotentialHandler):
+class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
 
-    name: str = "Angles"
-    expression: str = "1/2 * k * (theta - angle) ** 2"
-    independent_variables: Set[str] = {"theta"}
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
-
-    def store_matches(
-        self,
-        parameter_handler: AngleHandler,
-        topology: OFFBioTop,
-    ) -> None:
-        """
-        Populate self.slot_map with key-val pairs of slots
-        and unique potential identifiers
-
-        """
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            topology_key = TopologyKey(atom_indices=key)
-            potential_key = PotentialKey(id=val.parameter_type.smirks)
-            self.slot_map[topology_key] = potential_key
+    type: Literal["Angles"] = "Angles"
+    expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
 
     def store_potentials(self, parameter_handler: AngleHandler) -> None:
         """
@@ -165,13 +147,12 @@ class SMIRNOFFAngleHandler(PotentialHandler):
             self.potentials[potential_key] = potential
 
 
-class SMIRNOFFProperTorsionHandler(PotentialHandler):
+class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
 
-    name: str = "ProperTorsions"
-    expression: str = "k*(1+cos(periodicity*theta-phase))"
-    independent_variables: Set[str] = {"theta"}
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
+    type: Literal["ProperTorsions"] = "ProperTorsions"
+    expression: Literal[
+        "k*(1+cos(periodicity*theta-phase))"
+    ] = "k*(1+cos(periodicity*theta-phase))"
 
     def store_matches(
         self, parameter_handler: ProperTorsionHandler, topology: OFFBioTop
@@ -181,6 +162,8 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
         and unique potential identifiers
 
         """
+        if self.slot_map:
+            self.slot_map = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             n_terms = len(val.parameter_type.k)
@@ -211,13 +194,12 @@ class SMIRNOFFProperTorsionHandler(PotentialHandler):
             self.potentials[potential_key] = potential
 
 
-class SMIRNOFFImproperTorsionHandler(PotentialHandler):
+class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
 
-    name: str = "ImproperTorsions"
-    expression: str = "k*(1+cos(periodicity*theta-phase))"
-    independent_variables: Set[str] = {"theta"}
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
+    type: Literal["ImproperTorsions"] = "ImproperTorsions"
+    expression: Literal[
+        "k*(1+cos(periodicity*theta-phase))"
+    ] = "k*(1+cos(periodicity*theta-phase))"
 
     def store_matches(
         self, parameter_handler: ImproperTorsionHandler, topology: OFFBioTop
@@ -227,6 +209,8 @@ class SMIRNOFFImproperTorsionHandler(PotentialHandler):
         and unique potential identifiers
 
         """
+        if self.slot_map:
+            self.slot_map = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             parameter_handler._assert_correct_connectivity(
@@ -264,42 +248,34 @@ class SMIRNOFFImproperTorsionHandler(PotentialHandler):
             self.potentials[potential_key] = potential
 
 
-class SMIRNOFFvdWHandler(PotentialHandler):
+class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
 
-    name: str = "vdW"
-    expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
-    independent_variables: Set[str] = {"r"}
-    method: str = "cutoff"
-    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
-    switch_width: FloatQuantity["angstrom"] = 1.0 * unit.angstrom  # type: ignore
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
-    scale_13: float = 0.0
-    scale_14: float = 0.5
-    scale_15: float = 1.0
-
-    @validator("method")
-    def validate_vdw_method(cls, v):
-        v_ = v.lower().replace("-", "")
-        if v_ not in ["cutoff", "pme"]:
-            raise UnsupportedCutoffMethodError(f"vdW method {v} not supported")
-        return v
-
-    def store_matches(
-        self,
-        parameter_handler: vdWHandler,
-        topology: OFFBioTop,
-    ) -> None:
-        """
-        Populate self.slot_map with key-val pairs of slots
-        and unique potential identifiers
-
-        """
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            topology_key = TopologyKey(atom_indices=key)
-            potential_key = PotentialKey(id=val.parameter_type.smirks)
-            self.slot_map[topology_key] = potential_key
+    type: Literal["vdW"] = "vdW"
+    expression: Literal[
+        "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
+    ] = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
+    method: Literal["cutoff", "pme"] = Field("cutoff")
+    cutoff: FloatQuantity["angstrom"] = Field(  # type: ignore
+        9.0 * unit.angstrom,
+        description="The distance at which vdW interactions are truncated",
+    )
+    switch_width: FloatQuantity["angstrom"] = Field(  # type: ignore
+        1.0 * unit.angstrom,  # type: ignore
+        description="The width over which the switching function is applied",
+    )
+    scale_13: float = Field(
+        0.0, description="The scaling factor applied to 1-3 interactions"
+    )
+    scale_14: float = Field(
+        0.5, description="The scaling factor applied to 1-4 interactions"
+    )
+    scale_15: float = Field(
+        1.0, description="The scaling factor applied to 1-5 interactions"
+    )
+    mixing_rule: Literal["Lorentz-Berthelot"] = Field(
+        "Lorentz-Berthelot",
+        description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
+    )
 
     def store_potentials(self, parameter_handler: vdWHandler) -> None:
         """
@@ -307,7 +283,7 @@ class SMIRNOFFvdWHandler(PotentialHandler):
         identifiers and their associated Potential objects
 
         """
-        self.method = parameter_handler.method
+        self.method = parameter_handler.method.lower()
         self.cutoff = parameter_handler.cutoff
 
         for potential_key in self.slot_map.values():
@@ -333,24 +309,20 @@ class SMIRNOFFvdWHandler(PotentialHandler):
 
 class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
 
-    name: str = "Electrostatics"
-    expression: str = "coul"
-    method: str = "PME"
+    type: Literal["Electrostatics"] = "Electrostatics"
+    expression: Literal["coul"] = "coul"
+    method: Literal["pme", "cutoff", "reaction-field"]
     cutoff: FloatQuantity["angstrom"] = 9.0  # type: ignore
-    independent_variables: Set[str] = {"r"}
     charge_map: Dict[TopologyKey, float] = dict()
-    scale_13: float = 0.0
-    scale_14: float = 0.8333333333
-    scale_15: float = 1.0
-
-    @validator("method")
-    def validate_electrostatics_method(cls, v):
-        v_ = v.lower().replace("-", "")
-        if v_ not in ["cutoff", "pme", "reactionfield"]:
-            raise UnsupportedCutoffMethodError(
-                f"Electrostatics method {v} not supported"
-            )
-        return v
+    scale_13: float = Field(
+        0.0, description="The scaling factor applied to 1-3 interactions"
+    )
+    scale_14: float = Field(
+        0.8333333333, description="The scaling factor applied to 1-4 interactions"
+    )
+    scale_15: float = Field(
+        1.0, description="The scaling factor applied to 1-5 interactions"
+    )
 
     def store_charges(
         self,
@@ -374,24 +346,13 @@ class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
 
 
 class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
-    SMIRNOFFElectrostaticsMetadataMixin,
-    PotentialHandler,
+    SMIRNOFFPotentialHandler,
 ):
 
-    name: str = "LibraryCharges"
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
-
-    def store_matches(
-        self,
-        parameter_handler: LibraryChargeHandler,
-        topology: OFFBioTop,
-    ) -> None:
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            top_key = TopologyKey(atom_indices=key)
-            pot_key = PotentialKey(id=val.parameter_type.smirks)
-            self.slot_map[top_key] = pot_key
+    type: Literal["LibraryCharges"] = "LibraryCharges"
+    # TODO: This should be specified by a parent class and not required (or event allowed)
+    # to be specified here
+    expression: Literal["coul"] = "coul"
 
     def store_potentials(self, parameter_handler: LibraryChargeHandler) -> None:
         if self.potentials:
@@ -407,24 +368,15 @@ class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
 
 
 class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
-    SMIRNOFFElectrostaticsMetadataMixin,
-    PotentialHandler,
+    SMIRNOFFPotentialHandler,
 ):
 
-    name: str = "ChargeIncrements"
+    type: Literal["ChargeIncrements"] = "ChargeIncrements"
+    # TODO: This should be specified by a parent class and not required (or event allowed)
+    # to be specified here
+    expression: Literal["coul"] = "coul"
     partial_charge_method: str = "AM1-Mulliken"
     potentials: Dict[PotentialKey, Potential] = dict()
-
-    def store_matches(
-        self,
-        parameter_handler: ChargeIncrementModelHandler,
-        topology: OFFBioTop,
-    ) -> None:
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            top_key = TopologyKey(atom_indices=key)
-            pot_key = PotentialKey(id=val.parameter_type.smirks)
-            self.slot_map[top_key] = pot_key
 
     def store_potentials(self, parameter_handler: ChargeIncrementModelHandler) -> None:
         if self.potentials:
@@ -443,7 +395,7 @@ class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
 
 class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
 
-    name: str = "Electrostatics"
+    method: Literal["pme", "cutoff", "reaction-field"]
     charges: Dict = dict()  # type
     cache: Dict = dict()  # Dict[str: Dict[str, FloatQuantity["elementary_charge"]]]
 
@@ -480,7 +432,7 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
             ]
             for i, id_ in enumerate(ids):
                 atom_key = TopologyKey(atom_indices=(id_,))
-                self.charges[atom_key] += charges[i]
+                self.charges[atom_key] += charges[i]  # type: ignore
 
     def apply_library_charges(self, library_charges: SMIRNOFFLibraryChargeHandler):
         for top_key, pot_key in library_charges.slot_map.items():
@@ -489,4 +441,4 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
             # Need to ensure this iterator follows ordering in force field
             for i, id_ in enumerate(ids):
                 atom_key = TopologyKey(atom_indices=(id_,))
-                self.charges[atom_key] = charges[i]
+                self.charges[atom_key] = charges[i]  # type: ignore

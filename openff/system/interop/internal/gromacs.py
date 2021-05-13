@@ -5,7 +5,7 @@ import ele
 import numpy as np
 from openff.units import unit
 
-from openff.system.components.misc import (
+from openff.system.components.mdtraj import (
     _iterate_angles,
     _iterate_impropers,
     _iterate_pairs,
