@@ -65,8 +65,8 @@ def to_openff_system(
             f"Found object of type {type(topology)}."
         )
 
-    for parameter_handler in self.registered_parameter_handlers:
-        if parameter_handler in {
+    for parameter_handler_name in self.registered_parameter_handlers:
+        if parameter_handler_name in {
             "Electrostatics",
             "ToolkitAM1BCC",
             "LibraryCharges",
@@ -74,12 +74,11 @@ def to_openff_system(
             "Constraints",
         }:
             continue
-        elif parameter_handler == "Bonds":
+        elif parameter_handler_name == "Bonds":
             if "Constraints" in self.registered_parameter_handlers:
                 constraint_handler = self["Constraints"]
             else:
                 constraint_handler = None
-            constraint_handler
             bond_handler, constraint_handler = self["Bonds"].create_potential(
                 topology=topology,
                 constraint_handler=constraint_handler,
@@ -87,11 +86,22 @@ def to_openff_system(
             sys_out.handlers.update({"Bonds": bond_handler})
             if constraint_handler is not None:
                 sys_out.handlers.update({"Constraints": constraint_handler})
+        elif parameter_handler_name in {
+            "Angles",
+            "ProperTorsions",
+            "ImproperTorsions",
+        }:
+            parameter_handler = self[parameter_handler_name]
+            POTENTIAL_HANDLER_CLASS = _MAPPING[parameter_handler.__class__]
+            potential_handler = POTENTIAL_HANDLER_CLASS.from_toolkit(
+                parameter_handler=parameter_handler, topology=topology
+            )
+            sys_out.handlers.update({parameter_handler_name: potential_handler})
         else:
-            potential_handler = self[parameter_handler].create_potential(
+            potential_handler = self[parameter_handler_name].create_potential(
                 topology=topology
             )
-            sys_out.handlers.update({parameter_handler: potential_handler})
+            sys_out.handlers.update({parameter_handler_name: potential_handler})
 
     if "Electrostatics" in self.registered_parameter_handlers:
         electrostatics = ElectrostaticsMetaHandler(
@@ -183,22 +193,6 @@ def create_bond_potential_handler(
     return bond_handler, constraints
 
 
-def create_angle_potential_handler(
-    self,
-    topology: Topology,
-    **kwargs,
-) -> SMIRNOFFAngleHandler:
-    """
-    A method, patched onto BondHandler, that creates a corresponding SMIRNOFFAngleHandler
-
-    """
-    handler = SMIRNOFFAngleHandler()
-    handler.store_matches(parameter_handler=self, topology=topology)
-    handler.store_potentials(parameter_handler=self)
-
-    return handler
-
-
 def create_proper_torsion_potential_handler(
     self,
     topology: Topology,
@@ -278,8 +272,5 @@ def _check_supported_handlers(forcefield: ForceField):
 
 
 BondHandler.create_potential = create_bond_potential_handler
-AngleHandler.create_potential = create_angle_potential_handler
-ProperTorsionHandler.create_potential = create_proper_torsion_potential_handler
-ImproperTorsionHandler.create_potential = create_improper_torsion_potential_handler
 vdWHandler.create_potential = create_vdw_potential_handler
 ForceField.create_openff_system = to_openff_system

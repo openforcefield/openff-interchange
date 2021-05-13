@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from openff.utilities.testing import skip_if_missing
 
+from openff.system.components.smirnoff import SMIRNOFFAngleHandler, SMIRNOFFBondHandler
 from openff.system.tests.base_test import BaseTest
 from openff.system.utils import get_test_file_path
 
@@ -18,7 +19,16 @@ class TestMatrixRepresentations(BaseTest):
         import jax
 
         if handler_name == "Bonds":
-            handler, _ = parsley["Bonds"].create_potential(topology=ethanol_top)
+            handler, _ = SMIRNOFFBondHandler.from_toolkit(
+                bond_handler=parsley["Bonds"],
+                topology=ethanol_top,
+                constraint_handler=None,
+            )
+        elif handler_name == "Angles":
+            handler = SMIRNOFFAngleHandler.from_toolkit(
+                parameter_handler=parsley["Angles"],
+                topology=ethanol_top,
+            )
         else:
             handler = parsley[handler_name].create_potential(topology=ethanol_top)
 
