@@ -135,7 +135,10 @@ class TestFoyer(BaseTest):
             through_foyer,
             custom_tolerances={
                 "Bond": 1.8 * simtk_unit.kilojoule_per_mole,
-                "Angle": 0.06 * simtk_unit.kilojoule_per_mole,
+                "Angle": 6.00 * simtk_unit.kilojoule_per_mole,
                 "Nonbonded": 30 * simtk_unit.kilojoule_per_mole,
+                "Torsion": 2.0 * simtk_unit.kilojoule_per_mole,
+                "vdW": 0.5 * simtk_unit.kilojoule_per_mole,
+                "Electrostatics": 33.0 * simtk_unit.kilojoule_per_mole,
             },
         )
