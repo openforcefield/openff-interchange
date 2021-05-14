@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Dict, Union
 
 from openff.toolkit.utils.utils import temporary_cd
 from openff.units import unit
+from openff.utilities.utils import requires_package
 
 from openff.system.exceptions import (
-    GMXEnergyError,
     GMXGromppError,
     GMXMdrunError,
     UnsupportedExportError,
@@ -231,24 +231,7 @@ def _run_gmx_energy(
     if mdrun.returncode:
         raise GMXMdrunError(err)
 
-    energy_cmd = "gmx energy -f out.edr -o out.xvg"
-    stdin = " ".join(map(str, range(1, 20))) + " 0 "
-
-    energy = subprocess.Popen(
-        energy_cmd,
-        shell=True,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-
-    _, err = energy.communicate(input=stdin)
-
-    if energy.returncode:
-        raise GMXEnergyError(err)
-
-    report = _parse_gmx_energy("out.xvg", electrostatics=electrostatics)
+    report = _parse_gmx_energy("out.edr", electrostatics=electrostatics)
 
     return report
 
@@ -290,20 +273,17 @@ def _get_gmx_energy_torsion(gmx_energies: Dict):
     return gmx_torsion
 
 
+@requires_package("panedr")
 def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
     """Parse an `.xvg` file written by `gmx energy`."""
-    energy_terms = []
-    with open(xvg_path) as file:
-        for line in file:
-            if line.startswith("#"):
-                continue
-            elif line.startswith("@"):
-                if line[:3] == "@ s":
-                    energy_terms.append(line.split('"')[1])
-            else:
-                energies = [float(val) for val in line.split()]
+    import panedr
 
-    energies = dict(zip(energy_terms, energies * kj_mol))
+    df = panedr.edr_to_df("out.edr")
+    energies = df.to_dict("index")[0.0]
+    energies.pop("Time")
+
+    for key in energies:
+        energies[key] *= kj_mol
 
     # TODO: Better way of filling in missing fields
     # GROMACS may not populate all keys
