@@ -6,6 +6,8 @@ dependencies:
     # Base depends
   - python
   - pip
+  - numpy
+  - pandas
   - pydantic
   - pint
   - openmm
