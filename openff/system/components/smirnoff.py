@@ -1,15 +1,11 @@
-from typing import Dict
+from typing import TYPE_CHECKING, Dict, Optional, Tuple, Type, TypeVar, Union
 
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
-    AngleHandler,
-    BondHandler,
     ChargeIncrementModelHandler,
     ConstraintHandler,
-    ImproperTorsionHandler,
     LibraryChargeHandler,
     ParameterHandler,
-    ProperTorsionHandler,
     vdWHandler,
 )
 from openff.units import unit
@@ -17,7 +13,6 @@ from pydantic import Field
 from simtk import unit as omm_unit
 from typing_extensions import Literal
 
-from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.potentials import Potential, PotentialHandler
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import FloatQuantity
@@ -27,10 +22,27 @@ kcal_mol = omm_unit.kilocalorie_per_mole
 kcal_mol_angstroms = kcal_mol / omm_unit.angstrom ** 2
 kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
+if TYPE_CHECKING:
+    from openff.toolkit.topology.topology import Topology
+    from openff.toolkit.typing.engines.smirnoff.parameters import (
+        AngleHandler,
+        BondHandler,
+        ImproperTorsionHandler,
+        ProperTorsionHandler,
+    )
+
+    from openff.system.components.mdtraj import OFFBioTop
+
+
+T = TypeVar("T", bound="SMIRNOFFPotentialHandler")
+T_ = TypeVar("T_", bound="PotentialHandler")
+
 
 class SMIRNOFFPotentialHandler(PotentialHandler):
     def store_matches(
-        self, parameter_handler: ParameterHandler, topology: OFFBioTop
+        self,
+        parameter_handler: ParameterHandler,
+        topology: Union["Topology", "OFFBioTop"],
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
@@ -47,13 +59,29 @@ class SMIRNOFFPotentialHandler(PotentialHandler):
             potential_key = PotentialKey(id=val.parameter_type.smirks)
             self.slot_map[topology_key] = potential_key
 
+    @classmethod
+    def from_toolkit(
+        cls: Type[T],
+        parameter_handler: T_,
+        topology: "Topology",
+    ) -> T:
+        """
+        Create a SMIRNOFFPotentialHandler from toolkit data.
+
+        """
+        handler = cls()
+        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
+        handler.store_potentials(parameter_handler=parameter_handler)
+
+        return handler
+
 
 class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
     type: Literal["Bonds"] = "Bonds"
     expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
 
-    def store_potentials(self, parameter_handler: BondHandler) -> None:
+    def store_potentials(self, parameter_handler: "BondHandler") -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
         identifiers and their associated Potential objects
@@ -72,6 +100,35 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
             )
             self.potentials[potential_key] = potential
 
+    @classmethod
+    def from_toolkit(  # type: ignore[override]
+        cls: Type[T],
+        bond_handler: "BondHandler",
+        topology: "Topology",
+        constraint_handler: Optional[T] = None,
+    ) -> Tuple[T, Optional["SMIRNOFFConstraintHandler"]]:
+        """
+        Create a SMIRNOFFBondHandler from toolkit data.
+
+        """
+        handler = cls(type="Bonds", expression="k/2*(r-length)**2")
+        handler.store_matches(parameter_handler=bond_handler, topology=topology)
+        handler.store_potentials(parameter_handler=bond_handler)
+
+        if constraint_handler:
+            constraints: Optional[
+                "SMIRNOFFConstraintHandler"
+            ] = SMIRNOFFConstraintHandler()
+            constraints.store_constraints(  # type: ignore[union-attr]
+                parameter_handler=constraint_handler,
+                topology=topology,
+                bond_handler=handler,
+            )
+        else:
+            constraints = None
+
+        return handler, constraints
+
 
 class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
 
@@ -85,7 +142,7 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
     def store_constraints(
         self,
         parameter_handler: ConstraintHandler,
-        topology: OFFBioTop,
+        topology: "OFFBioTop",
         bond_handler: SMIRNOFFBondHandler = None,
     ) -> None:
 
@@ -127,7 +184,7 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
     type: Literal["Angles"] = "Angles"
     expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
 
-    def store_potentials(self, parameter_handler: AngleHandler) -> None:
+    def store_potentials(self, parameter_handler: "AngleHandler") -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
         identifiers and their associated Potential objects
@@ -146,6 +203,22 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
             )
             self.potentials[potential_key] = potential
 
+    @classmethod
+    def from_toolkit(
+        cls: Type[T],
+        parameter_handler: "AngleHandler",
+        topology: "Topology",
+    ) -> T:
+        """
+        Create a SMIRNOFFAngleHandler from toolkit data.
+
+        """
+        handler = cls()
+        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
+        handler.store_potentials(parameter_handler=parameter_handler)
+
+        return handler
+
 
 class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
 
@@ -155,7 +228,9 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
     ] = "k*(1+cos(periodicity*theta-phase))"
 
     def store_matches(
-        self, parameter_handler: ProperTorsionHandler, topology: OFFBioTop
+        self,
+        parameter_handler: "ProperTorsionHandler",
+        topology: "OFFBioTop",
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
@@ -173,7 +248,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
                 potential_key = PotentialKey(id=smirks, mult=n)
                 self.slot_map[topology_key] = potential_key
 
-    def store_potentials(self, parameter_handler: ProperTorsionHandler) -> None:
+    def store_potentials(self, parameter_handler: "ProperTorsionHandler") -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
         identifiers and their associated Potential objects
@@ -193,6 +268,19 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
             potential = Potential(parameters=parameters)
             self.potentials[potential_key] = potential
 
+    @classmethod
+    def _from_toolkit(
+        cls: Type[T],
+        parameter_handler: "ProperTorsionHandler",
+        topology: "Topology",
+    ) -> T:
+
+        handler = cls()
+        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
+        handler.store_potentials(parameter_handler=parameter_handler)
+
+        return handler
+
 
 class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
 
@@ -202,7 +290,7 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
     ] = "k*(1+cos(periodicity*theta-phase))"
 
     def store_matches(
-        self, parameter_handler: ImproperTorsionHandler, topology: OFFBioTop
+        self, parameter_handler: "ImproperTorsionHandler", topology: "OFFBioTop"
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
@@ -228,7 +316,7 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
                 potential_key = PotentialKey(id=smirks, mult=n)
                 self.slot_map[topology_key] = potential_key
 
-    def store_potentials(self, parameter_handler: ImproperTorsionHandler) -> None:
+    def store_potentials(self, parameter_handler: "ImproperTorsionHandler") -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
         identifiers and their associated Potential objects
@@ -246,6 +334,21 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
             }
             potential = Potential(parameters=parameters)
             self.potentials[potential_key] = potential
+
+    @classmethod
+    def _from_toolkit(
+        cls: Type[T],
+        improper_torsion_Handler: "ImproperTorsionHandler",
+        topology: "Topology",
+    ) -> T:
+
+        handler = cls()
+        handler.store_matches(
+            parameter_handler=improper_torsion_Handler, topology=topology
+        )
+        handler.store_potentials(parameter_handler=improper_torsion_Handler)
+
+        return handler
 
 
 class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
@@ -306,6 +409,29 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
                 )
             self.potentials[potential_key] = potential
 
+    @classmethod
+    def _from_toolkit(
+        cls: Type[T],
+        parameter_handler: "vdWHandler",
+        topology: "Topology",
+    ) -> "SMIRNOFFvdWHandler":
+        """
+        Create a SMIRNOFFvdWHandler from toolkit data.
+
+        """
+        handler = SMIRNOFFvdWHandler(
+            scale_13=parameter_handler.scale13,
+            scale_14=parameter_handler.scale14,
+            scale_15=parameter_handler.scale15,
+            cutoff=parameter_handler.cutoff,
+            method=parameter_handler.method.lower(),
+            switch_width=parameter_handler.switch_width,
+        )
+        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
+        handler.store_potentials(parameter_handler=parameter_handler)
+
+        return handler
+
 
 class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
 
@@ -327,7 +453,7 @@ class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
     def store_charges(
         self,
         forcefield: ForceField,
-        topology: OFFBioTop,
+        topology: "OFFBioTop",
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots
@@ -399,7 +525,7 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
     charges: Dict = dict()  # type
     cache: Dict = dict()  # Dict[str: Dict[str, FloatQuantity["elementary_charge"]]]
 
-    def cache_charges(self, partial_charge_method: str, topology: OFFBioTop):
+    def cache_charges(self, partial_charge_method: str, topology: "OFFBioTop"):
 
         charges: Dict[TopologyKey, FloatQuantity] = dict()
 
