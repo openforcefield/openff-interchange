@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Dict, Union
 
 from openff.toolkit.utils.utils import temporary_cd
 from openff.units import unit
+from openff.utilities.utils import requires_package
 
 from openff.system.exceptions import (
-    GMXEnergyError,
     GMXGromppError,
     GMXMdrunError,
     UnsupportedExportError,
@@ -54,13 +54,13 @@ def _write_mdp_file(openff_sys: "System"):
             coul_method = coul_handler.method  # type: ignore[attr-defined]
             coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
             coul_cutoff = round(coul_cutoff, 4)
-            if coul_method in ["Cut-off", "cutoff"]:
+            if coul_method == "cutoff":
                 mdp_file.write("coulombtype = Cut-off\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
-            elif coul_method == "PME":
+            elif coul_method == "pme":
                 mdp_file.write("coulombtype = PME\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
-            elif coul_method == "reaction-field":
+            elif coul_method == "reactionfield":
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
             else:
@@ -75,7 +75,7 @@ def _write_mdp_file(openff_sys: "System"):
             vdw_cutoff = round(vdw_cutoff, 4)
             if vdw_method == "cutoff":
                 mdp_file.write("vdwtype = cutoff\n")
-            elif vdw_method == "PME":
+            elif vdw_method == "pme":
                 mdp_file.write("vdwtype = PME\n")
             else:
                 raise UnsupportedExportError(f"vdW method {vdw_method} not supported")
@@ -96,7 +96,7 @@ def _write_mdp_file(openff_sys: "System"):
             if num_constraints == 0:
                 mdp_file.write("constraints = none\n")
             else:
-                from openff.system.components.misc import _get_num_h_bonds
+                from openff.system.components.mdtraj import _get_num_h_bonds
 
                 num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)  # type: ignore[union-attr]
                 num_bonds = len(openff_sys["Bonds"].slot_map)
@@ -231,24 +231,7 @@ def _run_gmx_energy(
     if mdrun.returncode:
         raise GMXMdrunError(err)
 
-    energy_cmd = "gmx energy -f out.edr -o out.xvg"
-    stdin = " ".join(map(str, range(1, 20))) + " 0 "
-
-    energy = subprocess.Popen(
-        energy_cmd,
-        shell=True,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-
-    _, err = energy.communicate(input=stdin)
-
-    if energy.returncode:
-        raise GMXEnergyError(err)
-
-    report = _parse_gmx_energy("out.xvg", electrostatics=electrostatics)
+    report = _parse_gmx_energy("out.edr", electrostatics=electrostatics)
 
     return report
 
@@ -290,20 +273,17 @@ def _get_gmx_energy_torsion(gmx_energies: Dict):
     return gmx_torsion
 
 
+@requires_package("panedr")
 def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
     """Parse an `.xvg` file written by `gmx energy`."""
-    energy_terms = []
-    with open(xvg_path) as file:
-        for line in file:
-            if line.startswith("#"):
-                continue
-            elif line.startswith("@"):
-                if line[:3] == "@ s":
-                    energy_terms.append(line.split('"')[1])
-            else:
-                energies = [float(val) for val in line.split()]
+    import panedr
 
-    energies = dict(zip(energy_terms, energies * kj_mol))
+    df = panedr.edr_to_df("out.edr")
+    energies = df.to_dict("index")[0.0]
+    energies.pop("Time")
+
+    for key in energies:
+        energies[key] *= kj_mol
 
     # TODO: Better way of filling in missing fields
     # GROMACS may not populate all keys

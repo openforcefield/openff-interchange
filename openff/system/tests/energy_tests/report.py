@@ -1,5 +1,6 @@
 from typing import Dict, Optional
 
+import pandas as pd
 from openff.units import unit
 from pydantic import validator
 
@@ -83,7 +84,7 @@ class EnergyReport(DefaultModel):
             tolerances.update(custom_tolerances)
 
         tolerances = self.validate_energies(tolerances)
-        error = dict()
+        errors = pd.DataFrame()
 
         for key in self.energies:
 
@@ -108,13 +109,16 @@ class EnergyReport(DefaultModel):
                 tolerance = tolerances[key]
 
                 if abs(diff) > tolerance:
-                    raise EnergyError(
-                        key,
-                        diff,
-                        tolerance,
-                        self.energies[key],
-                        other.energies[key],
+                    error = pd.DataFrame.from_dict(
+                        {
+                            "key": [key],
+                            "diff": [diff],
+                            "tol": [tolerance],
+                            "ener1": [self.energies[key]],
+                            "ener2": [other.energies[key]],
+                        }
                     )
+                    errors = errors.append(error)
 
                 continue
 
@@ -128,17 +132,30 @@ class EnergyReport(DefaultModel):
                     raise e
 
             if abs(diff) > tolerance:
-                raise EnergyError(
-                    "Nonbonded",
-                    diff,
-                    tolerance,
-                    this_nonbonded,
-                    other_nonbonded,
+                error = pd.DataFrame.from_dict(
+                    {
+                        "key": ["Nonbonded"],
+                        "diff": [diff],
+                        "tol": [tolerance],
+                        "ener1": [this_nonbonded],
+                        "ener2": [other_nonbonded],
+                    }
                 )
+                errors = errors.append(error)
 
-            error[key] = diff
+        if len(errors) > 0:
+            for col_name in ["diff", "tol", "ener1", "ener2"]:
+                col_mod = [x.m_as(kj_mol) for x in errors[col_name]]
+                errors[col_name] = col_mod
 
-        return error
+            raise EnergyError(
+                "\nSome energy difference(s) exceed tolerances! "
+                "\nAll values are reported in kJ/mol:"
+                "\n" + errors.to_string(index=False)
+            )
+
+        # TODO: Return energy differences even if none are greater than tolerance
+        # This might result in mis-matched keys
 
     def __str__(self):
         return (

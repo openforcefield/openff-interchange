@@ -178,12 +178,6 @@ class GMXMdrunError(GMXRunError):
     """
 
 
-class GMXEnergyError(GMXRunError):
-    """
-    Exception for when `gmx energy` fails.
-    """
-
-
 class LAMMPSRunError(BaseException):
     """
     Exception for when a LAMMPS subprocess fails.

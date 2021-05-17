@@ -24,9 +24,9 @@ jobs:
       COV: --cov=openff/system --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v2.3.4
 
-    - uses: conda-incubator/setup-miniconda@v2
+    - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
         python-version: ${{ matrix.python-version }}
         activate-environment: test
@@ -90,6 +90,7 @@ jobs:
         python -m pytest -v $COV openff/system/tests/ --ignore=openff/system/tests/parmed/
 
     - name: Run ParmEd tests
+      continue-on-error: true
       shell: bash -l {0}
       run: |
         python -m pytest -v $COV openff/system/tests/parmed
@@ -100,7 +101,7 @@ jobs:
         python -m pytest -v $COV examples/ --nbval-lax
 
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v1.5.0
       with:
         file: ./coverage.xml
         fail_ci_if_error: false

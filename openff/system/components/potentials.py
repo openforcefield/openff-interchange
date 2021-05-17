@@ -1,22 +1,21 @@
-from typing import TYPE_CHECKING, Dict, List, Set, Union
+import ast
+from typing import TYPE_CHECKING, Dict, List, Set
 
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.utilities.utils import requires_package
-from pydantic import validator
+from pydantic import Field, validator
 
-from openff.system.exceptions import InvalidExpressionError
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import ArrayQuantity, FloatQuantity
 
 if TYPE_CHECKING:
-    from openff.system.components.misc import OFFBioTop
+    from openff.system.components.mdtraj import OFFBioTop
 
 
 class Potential(DefaultModel):
     """Base class for storing applied parameters"""
 
-    # ... Dict[str, FloatQuantity] = dict()
-    parameters: Dict = dict()
+    parameters: Dict[str, FloatQuantity] = dict()
 
     @validator("parameters")
     def validate_parameters(cls, v):
@@ -31,20 +30,29 @@ class Potential(DefaultModel):
 class PotentialHandler(DefaultModel):
     """Base class for storing parametrized force field data"""
 
-    name: str
-    expression: str
-    independent_variables: Union[str, Set[str]]
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
+    type: str = Field(..., description="The type of potentials this handler stores.")
+    expression: str = Field(
+        ...,
+        description="The analytical expression governing the potentials in this handler.",
+    )
+    slot_map: Dict[TopologyKey, PotentialKey] = Field(
+        dict(),
+        description="A mapping between TopologyKey objects and PotentialKey objects.",
+    )
+    potentials: Dict[PotentialKey, Potential] = Field(
+        dict(),
+        description="A mapping between PotentialKey objects and Potential objects.",
+    )
 
-    # Pydantic silently casts some types (int, float, Decimal) to str
-    # in models that expect str; this may be updates, see #1098
-    @validator("expression", pre=True)
-    def is_valid_expr(cls, val):
-        if isinstance(val, str):
-            return val
-        else:
-            raise InvalidExpressionError
+    @property
+    def independent_variables(self) -> Set[str]:
+        vars_in_potentials = set([*self.potentials.values()][0].parameters.keys())
+        vars_in_expression = {
+            node.id
+            for node in ast.walk(ast.parse(self.expression))
+            if isinstance(node, ast.Name)
+        }
+        return vars_in_expression - vars_in_potentials
 
     def store_matches(
         self,

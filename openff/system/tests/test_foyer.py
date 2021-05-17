@@ -7,7 +7,7 @@ from openff.utilities.testing import skip_if_missing
 from openff.utilities.utils import has_pkg
 from simtk import unit as simtk_unit
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 

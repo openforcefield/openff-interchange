@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from openff.toolkit.topology.molecule import Molecule
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.stubs import ForceField
 from openff.system.tests.utils import top_from_smiles
 from openff.system.utils import get_test_file_path

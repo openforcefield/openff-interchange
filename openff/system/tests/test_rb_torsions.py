@@ -5,7 +5,7 @@ from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from openff.utilities.utils import has_pkg
 
-from openff.system.components.misc import RBTorsionHandler
+from openff.system.components.foyer import RBTorsionHandler
 from openff.system.components.potentials import Potential
 from openff.system.models import PotentialKey, TopologyKey
 from openff.system.stubs import ForceField

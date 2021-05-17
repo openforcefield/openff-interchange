@@ -1,7 +1,7 @@
 import mdtraj as md
 from openff.toolkit.topology import Molecule
 
-from openff.system.components.misc import (
+from openff.system.components.mdtraj import (
     _get_num_h_bonds,
     _iterate_pairs,
     _iterate_propers,

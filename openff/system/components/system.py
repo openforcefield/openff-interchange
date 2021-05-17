@@ -6,7 +6,7 @@ from typing import Dict, Optional, Union
 import numpy as np
 from pydantic import Field, validator
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.potentials import PotentialHandler
 from openff.system.exceptions import (
     InternalInconsistencyError,
