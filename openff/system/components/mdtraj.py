@@ -56,7 +56,8 @@ def _iterate_impropers(mdtop):
                     if atom4 in (atom3, atom1):
                         continue
 
-                    yield (atom1, atom2, atom3, atom4)
+                    # Central atom first
+                    yield (atom2, atom1, atom3, atom4)
 
 
 def _iterate_pairs(mdtop):

@@ -311,10 +311,24 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
             )
             n_terms = len(val.parameter_type.k)
             for n in range(n_terms):
+
                 smirks = val.parameter_type.smirks
-                topology_key = TopologyKey(atom_indices=key, mult=n)
-                potential_key = PotentialKey(id=smirks, mult=n)
-                self.slot_map[topology_key] = potential_key
+                non_central_indices = [key[0], key[2], key[3]]
+
+                for permuted_key in [
+                    (
+                        non_central_indices[i],
+                        non_central_indices[j],
+                        non_central_indices[k],
+                    )
+                    for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]
+                ]:
+
+                    topology_key = TopologyKey(
+                        atom_indices=(key[1], *permuted_key), mult=n
+                    )
+                    potential_key = PotentialKey(id=smirks, mult=n)
+                    self.slot_map[topology_key] = potential_key
 
     def store_potentials(self, parameter_handler: "ImproperTorsionHandler") -> None:
         """
