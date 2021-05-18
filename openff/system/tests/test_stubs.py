@@ -11,7 +11,7 @@ from openff.system.exceptions import (
 )
 from openff.system.models import TopologyKey
 from openff.system.stubs import ForceField
-from openff.system.tests.base_test import BaseTest
+from openff.system.tests import BaseTest
 from openff.system.tests.utils import compare_charges_omm_off
 
 

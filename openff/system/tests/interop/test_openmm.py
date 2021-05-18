@@ -4,10 +4,14 @@ from openff.toolkit.tests.test_forcefield import create_ethanol
 from openff.toolkit.tests.utils import compare_system_energies, get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import SMIRNOFFSpecError
-from simtk import openmm, unit
+from simtk import openmm
+from simtk import unit
+from simtk import unit as omm_unit
 
 from openff.system.exceptions import UnsupportedCutoffMethodError
+from openff.system.interop.openmm import from_openmm
 from openff.system.stubs import ForceField
+from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.utils import get_test_file_path
 
 nonbonded_resolution_matrix = [
@@ -204,4 +208,33 @@ def test_from_openmm_single_mols(mol, n_mols):
         positions=positions,
         box_vectors=top.box_vectors,
         atol=1e-5,
+    )
+
+
+@pytest.mark.slow
+def test_openmm_roundtrip():
+    mol = Molecule.from_smiles("CCO")
+    mol.generate_conformers(n_conformers=1)
+    top = mol.to_topology()
+
+    parsley = ForceField("openff_unconstrained-1.0.0.offxml")
+
+    off_sys = parsley.create_openff_system(top)
+
+    off_sys.box = [4, 4, 4]
+    off_sys.positions = mol.conformers[0].value_in_unit(omm_unit.nanometer)
+
+    omm_sys = off_sys.to_openmm()
+
+    converted = from_openmm(
+        system=omm_sys,
+    )
+
+    converted.topology = off_sys.topology
+    converted.box = off_sys.box
+    converted.positions = off_sys.positions
+
+    get_openmm_energies(off_sys).compare(
+        get_openmm_energies(converted),
+        custom_tolerances={"Nonbonded": 1.5 * omm_unit.kilojoule_per_mole},
     )
