@@ -4,8 +4,8 @@ import numpy as np
 import parmed as pmd
 import pytest
 from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.utils.utils import temporary_cd
 from openff.units import unit
+from openff.utilities import temporary_cd
 from simtk import unit as omm_unit
 
 from openff.system.stubs import ForceField
