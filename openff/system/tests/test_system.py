@@ -73,7 +73,7 @@ class TestFromSMIRNOFF(BaseTest):
         with pytest.raises(InvalidTopologyError, match="mdtraj.core.*Topology"):
             System.from_smirnoff(parsley, mdtop)
 
-        with pytest.raises(InvalidTopologyError, match="simtk.*app.*Topology"):
+        with pytest.raises(InvalidTopologyError, match="mdtraj.*core.*Topology"):
             System.from_smirnoff(parsley, mdtop)
 
     def test_force_field_basic_constraints(self, parsley):
