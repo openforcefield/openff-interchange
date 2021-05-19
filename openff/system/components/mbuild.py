@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING
 
 from openff.toolkit.topology import Molecule, Topology
-from openff.utilities.utils import has_pkg, requires_package
+from openff.utilities.utilities import has_package, requires_package
 from simtk import unit
 
-if has_pkg("mbuild") or TYPE_CHECKING:
+if has_package("mbuild") or TYPE_CHECKING:
     import mbuild as mb
 
 

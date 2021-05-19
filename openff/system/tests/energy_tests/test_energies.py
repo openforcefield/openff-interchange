@@ -6,7 +6,7 @@ import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from openff.utilities.utils import has_executable
+from openff.utilities.utilities import has_executable
 from simtk import openmm
 from simtk import unit as simtk_unit
 from simtk.openmm import app
