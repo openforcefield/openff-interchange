@@ -12,6 +12,7 @@ dependencies:
   - pint
   - openmm
   - openff-toolkit
+  - openff-utilities
   - jax
   - mdtraj
   - ele

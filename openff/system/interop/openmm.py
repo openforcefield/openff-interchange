@@ -1,6 +1,6 @@
 import numpy as np
 from openff.units import unit as off_unit
-from openff.units.utils import from_simtk
+from openff.units.simtk import from_simtk
 from simtk import openmm, unit
 
 from openff.system.components.potentials import Potential

@@ -3,9 +3,8 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Union
 
-from openff.toolkit.utils.utils import temporary_cd
 from openff.units import unit
-from openff.utilities.utils import requires_package
+from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.system.exceptions import (
     GMXGromppError,

@@ -3,8 +3,7 @@ import tempfile
 from pathlib import Path
 from typing import Dict, Union
 
-from openff.toolkit.utils.utils import temporary_cd
-from openff.utilities.utils import requires_package
+from openff.utilities.utilities import requires_package, temporary_cd
 from simtk import unit as omm_unit
 
 from openff.system.components.system import System
