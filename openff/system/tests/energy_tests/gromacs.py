@@ -50,11 +50,12 @@ def _write_mdp_file(openff_sys: "System"):
 
         if "Electrostatics" in openff_sys.handlers:
             coul_handler = openff_sys.handlers["Electrostatics"]
-            coul_method = coul_handler.method  # type: ignore[attr-defined]
+            coul_method = coul_handler.method.lower().replace("-", "")  # type: ignore[attr-defined]
             coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
             coul_cutoff = round(coul_cutoff, 4)
             if coul_method == "cutoff":
                 mdp_file.write("coulombtype = Cut-off\n")
+                mdp_file.write("coulomb-modifier = None\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
             elif coul_method == "pme":
                 mdp_file.write("coulombtype = PME\n")
@@ -127,7 +128,6 @@ def get_gromacs_energies(
     off_sys: "System",
     mdp: str = "auto",
     writer: str = "internal",
-    electrostatics=True,
 ) -> EnergyReport:
     """
     Given an OpenFF System object, return single-point energies as computed by GROMACS.
@@ -143,9 +143,6 @@ def get_gromacs_energies(
     writer : str, default="internal"
         A string key identifying the backend to be used to write GROMACS files. The
         default value of `"internal"` results in this package's exporters being used.
-    electrostatics : bool, default=True
-        A boolean indicating whether or not electrostatics should be included in the energy
-        calculation.
 
     Returns
     -------
@@ -164,7 +161,6 @@ def get_gromacs_energies(
                 gro_file="out.gro",
                 mdp_file=_get_mdp_file(mdp),
                 maxwarn=2,
-                electrostatics=electrostatics,
             )
             return report
 
@@ -174,7 +170,6 @@ def _run_gmx_energy(
     gro_file: Union[Path, str],
     mdp_file: Union[Path, str],
     maxwarn: int = 1,
-    electrostatics=True,
 ):
     """
     Given GROMACS files, return single-point energies as computed by GROMACS.
@@ -189,9 +184,6 @@ def _run_gmx_energy(
         The path to a GROMACS molecular dynamics parameters (`.mdp`) file.
     maxwarn : int, default=1
         The number of warnings to allow when `gmx grompp` is called (via the `-maxwarn` flag).
-    electrostatics : bool, default=True
-        A boolean indicated whether or not electrostatics should be included in the energy
-        calculation.
 
     Returns
     -------
@@ -230,7 +222,7 @@ def _run_gmx_energy(
     if mdrun.returncode:
         raise GMXMdrunError(err)
 
-    report = _parse_gmx_energy("out.edr", electrostatics=electrostatics)
+    report = _parse_gmx_energy("out.edr")
 
     return report
 
@@ -247,10 +239,8 @@ def _get_gmx_energy_vdw(gmx_energies: Dict):
     return gmx_vdw
 
 
-def _get_gmx_energy_coul(gmx_energies: Dict, electrostatics: bool = True):
+def _get_gmx_energy_coul(gmx_energies: Dict):
     gmx_coul = 0.0 * kj_mol
-    if not electrostatics:
-        return gmx_coul
     for key in ["Coulomb (SR)", "Coul. recip.", "Coulomb-14"]:
         try:
             gmx_coul += gmx_energies[key]
@@ -273,11 +263,11 @@ def _get_gmx_energy_torsion(gmx_energies: Dict):
 
 
 @requires_package("panedr")
-def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
+def _parse_gmx_energy(edr_path: str) -> EnergyReport:
     """Parse an `.xvg` file written by `gmx energy`."""
     import panedr
 
-    df = panedr.edr_to_df("out.edr")
+    df = panedr.edr_to_df(edr_path)
     energies = df.to_dict("index")[0.0]
     energies.pop("Time")
 
@@ -315,9 +305,7 @@ def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
             "Angle": energies["Angle"],
             "Torsion": _get_gmx_energy_torsion(energies),
             "vdW": _get_gmx_energy_vdw(energies),
-            "Electrostatics": _get_gmx_energy_coul(
-                energies, electrostatics=electrostatics
-            ),
+            "Electrostatics": _get_gmx_energy_coul(energies),
         }
     )
 

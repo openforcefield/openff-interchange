@@ -18,6 +18,7 @@ from openff.system.tests.energy_tests.openmm import (
     get_openmm_energies,
 )
 from openff.system.tests.energy_tests.report import EnergyError, EnergyReport
+from openff.system.utils import get_test_file_path
 
 HAS_GROMACS = any(has_executable(e) for e in ["gmx", "gmx_d"])
 HAS_LAMMPS = any(has_executable(e) for e in ["lammps", "lmp_mpi", "lmp_serial"])
@@ -143,8 +144,6 @@ def test_energies_single_mol(constrained, mol_smi):
 @needs_lmp
 @pytest.mark.slow
 def test_liquid_argon():
-    from openff.system.utils import get_test_file_path
-
     argon = Molecule.from_smiles("[#18]")
     pdbfile = app.PDBFile(get_test_file_path("packed-argon.pdb"))
 
@@ -263,8 +262,6 @@ def test_packmol_boxes(toolkit_file_path):
 @needs_lmp
 @pytest.mark.slow
 def test_water_dimer():
-    from openff.system.utils import get_test_file_path
-
     tip3p = ForceField(get_test_file_path("tip3p.offxml"))
     water = Molecule.from_smiles("O")
     top = Topology.from_molecules(2 * [water])
@@ -298,9 +295,11 @@ def test_water_dimer():
     # gmx_energies, _ = get_gromacs_energies(openff_sys)
     # compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)
 
-    lmp_energies = get_lammps_energies(openff_sys, electrostatics=False)
+    openff_sys["Electrostatics"].method = "cutoff"
+    omm_energies_cutoff = get_gromacs_energies(openff_sys)
+    lmp_energies = get_lammps_energies(openff_sys)
 
-    lmp_energies.compare(omm_energies)
+    lmp_energies.compare(omm_energies_cutoff)
 
 
 @needs_gmx
@@ -367,3 +366,37 @@ def test_gmx_14_energies_exist():
 
     # TODO: It would be best to save the 1-4 interactions, split off into vdW and Electrostatics
     # in the energies. This might be tricky/intractable to do for engines that are not GROMACS
+
+
+@needs_gmx
+@needs_lmp
+@pytest.mark.xfail
+@pytest.mark.slow
+def test_cutoff_electrostatics():
+    ion_ff = ForceField(get_test_file_path("ions.offxml"))
+    ions = Topology.from_molecules(
+        [
+            Molecule.from_smiles("[#3]"),
+            Molecule.from_smiles("[#17]"),
+        ]
+    )
+    out = ion_ff.create_openff_system(ions)
+    out.box = [4, 4, 4] * unit.nanometer
+
+    gmx = []
+    lmp = []
+
+    for d in np.linspace(0.75, 0.95, 5):
+        positions = np.zeros((2, 3)) * unit.nanometer
+        positions[1, 0] = d * unit.nanometer
+        out.positions = positions
+
+        out["Electrostatics"].method = "cutoff"
+        gmx.append(get_gromacs_energies(out, mdp="auto").energies["Electrostatics"].m)
+        lmp.append(
+            get_lammps_energies(out)
+            .energies["Electrostatics"]
+            .m_as(unit.kilojoule / unit.mol)
+        )
+
+    assert np.sum(np.sqrt(np.square(np.asarray(lmp) - np.asarray(gmx)))) < 1e-3
