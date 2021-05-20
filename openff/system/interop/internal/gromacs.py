@@ -5,7 +5,7 @@ import ele
 import numpy as np
 from openff.units import unit
 
-from openff.system.components.misc import (
+from openff.system.components.mdtraj import (
     _iterate_angles,
     _iterate_impropers,
     _iterate_pairs,
@@ -122,20 +122,33 @@ def _write_top_defaults(openff_sys: "System", top_file: IO):
         nbfunc = 1
         scale_lj = openff_sys["vdW"].scale_14
         gen_pairs = "yes"
+        handler_key = "vdW"
     elif "Buckingham-6" in openff_sys.handlers:
         nbfunc = 2
         gen_pairs = "no"
         scale_lj = openff_sys["Buckingham-6"].scale_14
+        handler_key = "Buckingham-6"
+    else:
+        raise UnsupportedExportError(
+            "Could not find a handler for short-ranged vdW interactions that is compatible "
+            "with GROMACS. Looked for handlers named `vdW` and `Buckingham-6`."
+        )
+
+    mixing_rule = openff_sys[handler_key].mixing_rule
+    if mixing_rule == "lorentz-berthelot":
+        comb_rule = 2
+    elif mixing_rule == "geometric":
+        comb_rule = 3
+    else:
+        raise UnsupportedExportError(
+            f"Mixing rule `{mixing_rule} not compatible with GROMACS and/or not supported "
+            "by current exporter. Supported values are `lorentez-berthelot` and `geometric`."
+        )
 
     top_file.write(
-        "{:6d}\t{:6s}\t{:6s} {:8.6f} {:8.6f}\n\n".format(
-            # self.system.nonbonded_function,
-            # self.lookup_gromacs_combination_rules[self.system.combination_rule],
-            # self.system.genpairs,
-            # self.system.lj_correction,
-            # self.system.coulomb_correction,
+        "{:6d}\t{:6d}\t{:6s} {:8.6f} {:8.6f}\n\n".format(
             nbfunc,
-            str(2),
+            comb_rule,
             gen_pairs,
             scale_lj,
             openff_sys.handlers["Electrostatics"].scale_14,  # type: ignore

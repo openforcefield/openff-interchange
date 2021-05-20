@@ -6,17 +6,18 @@ import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from openff.utilities.utils import has_executable
+from openff.utilities.utilities import has_executable
 from simtk import openmm
 from simtk import unit as simtk_unit
 from simtk.openmm import app
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.openmm import (
     _get_openmm_energies,
     get_openmm_energies,
 )
+from openff.system.tests.energy_tests.report import EnergyError, EnergyReport
 from openff.system.utils import get_test_file_path
 
 HAS_GROMACS = any(has_executable(e) for e in ["gmx", "gmx_d"])
@@ -33,6 +34,32 @@ if HAS_LAMMPS:
 
 needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
 needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs GROMACS")
+
+
+def test_energy_report():
+    """Test that multiple failing energies are captured in the EnergyError"""
+    kj_mol = unit.kilojoule / unit.mol
+    a = EnergyReport(
+        energies={
+            "a": 1 * kj_mol,
+            "_FLAG": 2 * kj_mol,
+            "KEY_": 1.2 * kj_mol,
+        }
+    )
+    b = EnergyReport(
+        energies={
+            "a": -1 * kj_mol,
+            "_FLAG": -2 * kj_mol,
+            "KEY_": -0.1 * kj_mol,
+        }
+    )
+    custom_tolerances = {
+        "a": 1 * kj_mol,
+        "_FLAG": 1 * kj_mol,
+        "KEY_": 1 * kj_mol,
+    }
+    with pytest.raises(EnergyError, match=r"_FLAG[\s\S]*KEY_"):
+        a.compare(b, custom_tolerances=custom_tolerances)
 
 
 @skip_if_missing("mbuild")

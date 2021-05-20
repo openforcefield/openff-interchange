@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any, Dict
 
 import numpy as np
 from openff.units import unit
-from openff.utilities.utils import has_pkg, requires_package
+from openff.utilities.utilities import has_package, requires_package
 from simtk import unit as simtk_unit
 
 from openff.system.exceptions import (
@@ -12,7 +12,7 @@ from openff.system.exceptions import (
     UnsupportedExportError,
 )
 
-if TYPE_CHECKING or has_pkg("unyt"):
+if TYPE_CHECKING or has_package("unyt"):
     import unyt
 
 
@@ -53,7 +53,7 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 # return val
             if isinstance(val, simtk_unit.Quantity):
                 return _from_omm_quantity(val).to(unit_)
-            if has_pkg("unyt"):
+            if has_package("unyt"):
                 if isinstance(val, unyt.unyt_quantity):
                     return _from_unyt_quantity(val).to(unit_)
             if isinstance(val, (float, int)) and not isinstance(val, bool):
@@ -176,7 +176,7 @@ else:
                 if isinstance(val, simtk_unit.Quantity):
                     return _from_omm_quantity(val).to(unit_)
                 if isinstance(val, (np.ndarray, list)):
-                    if has_pkg("unyt"):
+                    if has_package("unyt"):
                         # Must check for unyt_array, not unyt_quantity, which is a subclass
                         if isinstance(val, unyt.unyt_array):
                             return _from_unyt_quantity(val).to(unit_)

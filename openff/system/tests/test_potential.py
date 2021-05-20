@@ -1,12 +1,12 @@
-import pydantic
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
 from openff.units import unit
 from simtk import unit as omm_unit
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.potentials import PotentialHandler
+from openff.system.components.smirnoff import SMIRNOFFAngleHandler, SMIRNOFFBondHandler
 from openff.system.models import TopologyKey
 from openff.system.tests.base_test import BaseTest
 
@@ -14,15 +14,11 @@ from openff.system.tests.base_test import BaseTest
 class TestBondPotentialHandler(BaseTest):
     def test_dummy_potential_handler(self):
         handler = PotentialHandler(
-            name="foo", expression="m*x+b", independent_variables="x"
+            type="foo",
+            expression="m*x+b",
         )
+        assert handler.type == "foo"
         assert handler.expression == "m*x+b"
-
-        # Pydantic silently casts some types (int, float, Decimal) to str
-        # in models that expect str; this test checks that the validator's
-        # pre=True argument works;
-        with pytest.raises(pydantic.ValidationError):
-            PotentialHandler(name="foo", expression=1, independent_variables="x")
 
     def test_bond_potential_handler(self):
         top = OFFBioTop.from_molecules(Molecule.from_smiles("O=O"))
@@ -40,7 +36,10 @@ class TestBondPotentialHandler(BaseTest):
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(bond_handler)
-        bond_potentials, _ = forcefield["Bonds"].create_potential(top)
+        bond_potentials, _ = SMIRNOFFBondHandler.from_toolkit(
+            bond_handler=forcefield["Bonds"],
+            topology=top,
+        )
 
         top_key = TopologyKey(atom_indices=(0, 1))
         pot = bond_potentials.potentials[bond_potentials.slot_map[top_key]]
@@ -64,7 +63,10 @@ class TestBondPotentialHandler(BaseTest):
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(angle_handler)
-        angle_potentials = forcefield["Angles"].create_potential(top)
+        angle_potentials = SMIRNOFFAngleHandler.from_toolkit(
+            parameter_handler=forcefield["Angles"],
+            topology=top,
+        )
 
         top_key = TopologyKey(atom_indices=(0, 1, 2))
         pot = angle_potentials.potentials[angle_potentials.slot_map[top_key]]

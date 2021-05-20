@@ -4,14 +4,14 @@ from openff.toolkit.topology import Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from openff.utilities.utils import has_pkg
+from openff.utilities.utilities import has_package
 from simtk import unit as simtk_unit
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.tests.base_test import BaseTest
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 
-if has_pkg("foyer"):
+if has_package("foyer"):
     import foyer
 
     from openff.system.components.foyer import from_foyer
