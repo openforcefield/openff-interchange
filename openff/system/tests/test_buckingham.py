@@ -4,10 +4,7 @@ import mdtraj as md
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import unit
-from openff.units.simtk import from_simtk
 from openff.utilities.testing import skip_if_missing
-from scipy.constants import Avogadro
-from simtk import unit as simtk_unit
 
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.nonbonded import BuckinghamvdWHandler
@@ -27,23 +24,15 @@ def test_argon_buck():
     top = OFFBioTop.from_molecules([mol, mol])
     top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
-    # Go through SimTK units because OpenFF Units registry does not have
-    # the erg/dyne units that the Sklog Wiki uses
-    # http://www.sklogwiki.org/SklogWiki/index.php/Argon#Buckingham_potential
-    A = 1.69e-8 * simtk_unit.erg / simtk_unit.mole * Avogadro
-    B = 1 / (0.273 * simtk_unit.angstrom)
-    C = 102e-12 * simtk_unit.erg / simtk_unit.mole * simtk_unit.angstrom ** 6 * Avogadro
-
-    A = from_simtk(A.in_units_of(simtk_unit.kilojoule_per_mole))
-    B = from_simtk(B)
-    C = from_simtk(
-        C.in_units_of(simtk_unit.kilojoule_per_mole * simtk_unit.angstrom ** 6)
-    )
+    erg_mol = unit.erg / unit.mol
+    A = 1.69e-8 * erg_mol
+    B = 1 / (0.273 * unit.angstrom)
+    C = 102e-12 * erg_mol * unit.angstrom ** 6
 
     r = 0.3 * unit.nanometer
 
     buck = BuckinghamvdWHandler()
-    coul = ElectrostaticsMetaHandler()  # Just to pass compatibility checks
+    coul = ElectrostaticsMetaHandler(method="pme")
 
     pot_key = PotentialKey(id="[#18]")
     pot = Potential(parameters={"A": A, "B": B, "C": C})
