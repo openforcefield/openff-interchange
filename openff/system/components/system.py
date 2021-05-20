@@ -168,7 +168,7 @@ class System(DefaultModel):
         if isinstance(topology, OFFBioTop):
             sys_out.topology = topology
         elif isinstance(topology, Topology):
-            sys_out.topology = OFFBioTop(topology)
+            sys_out.topology = OFFBioTop(other=topology)
             sys_out.topology.mdtop = md.Topology.from_openmm(topology.to_openmm())
         else:
             raise InvalidTopologyError(

@@ -42,8 +42,9 @@ def test_getitem():
 class TestFromSMIRNOFF(BaseTest):
     """Test the functionality of the stubs.py module"""
 
-    def test_from_parsley(self, parsley):
-        top = OFFBioTop.from_molecules(
+    @pytest.mark.parametrize("topology_type", [OFFBioTop, Topology])
+    def test_from_parsley(self, topology_type, parsley):
+        top = topology_type.from_molecules(
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")]
         )
 
@@ -58,6 +59,8 @@ class TestFromSMIRNOFF(BaseTest):
         assert type(out.topology) == OFFBioTop
         assert type(out.topology) != Topology
         assert isinstance(out.topology, Topology)
+
+        assert len(out.topology.topology_molecules) == 2
 
     def test_unsupported_handler(self):
         gbsa_ff = ForceField(get_data_file_path("test_forcefields/GBSA_HCT-1.0.offxml"))
