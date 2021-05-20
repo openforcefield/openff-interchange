@@ -277,8 +277,12 @@ def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
     """Parse an `.xvg` file written by `gmx energy`."""
     import panedr
 
-    df = panedr.edr_to_df("out.edr")
-    energies = df.to_dict("index")[0.0]
+    if TYPE_CHECKING:
+        from pandas import DataFrame
+
+    df: DataFrame = panedr.edr_to_df("out.edr")
+    energies_dict: Dict = df.to_dict("index")  # type: ignore[assignment]
+    energies = energies_dict[0.0]
     energies.pop("Time")
 
     for key in energies:

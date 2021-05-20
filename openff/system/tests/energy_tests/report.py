@@ -109,15 +109,14 @@ class EnergyReport(DefaultModel):
                 tolerance = tolerances[key]
 
                 if abs(diff) > tolerance:
-                    error = pd.DataFrame.from_dict(
-                        {
-                            "key": [key],
-                            "diff": [diff],
-                            "tol": [tolerance],
-                            "ener1": [self.energies[key]],
-                            "ener2": [other.energies[key]],
-                        }
-                    )
+                    data: Dict = {
+                        "key": [key],
+                        "diff": [diff],
+                        "tol": [tolerance],
+                        "ener1": [self.energies[key]],
+                        "ener2": [other.energies[key]],
+                    }
+                    error = pd.DataFrame.from_dict(data)
                     errors = errors.append(error)
 
                 continue
@@ -127,20 +126,19 @@ class EnergyReport(DefaultModel):
                 tolerance = tolerances[key]
             except KeyError as e:
                 if "Nonbonded" in str(e):
-                    tolerance = tolerances["vdW"] + tolerances["Electrostatics"]  # type: ignore
+                    tolerance = tolerances["vdW"] + tolerances["Electrostatics"]
                 else:
                     raise e
 
             if abs(diff) > tolerance:
-                error = pd.DataFrame.from_dict(
-                    {
-                        "key": ["Nonbonded"],
-                        "diff": [diff],
-                        "tol": [tolerance],
-                        "ener1": [this_nonbonded],
-                        "ener2": [other_nonbonded],
-                    }
-                )
+                data: Dict = {  # type: ignore[no-redef]
+                    "key": ["Nonbonded"],
+                    "diff": [diff],
+                    "tol": [tolerance],
+                    "ener1": [this_nonbonded],
+                    "ener2": [other_nonbonded],
+                }
+                error = pd.DataFrame.from_dict(data)
                 errors = errors.append(error)
 
         if len(errors) > 0:
@@ -151,7 +149,7 @@ class EnergyReport(DefaultModel):
             raise EnergyError(
                 "\nSome energy difference(s) exceed tolerances! "
                 "\nAll values are reported in kJ/mol:"
-                "\n" + errors.to_string(index=False)
+                "\n" + str(errors.to_string(index=False))
             )
 
         # TODO: Return energy differences even if none are greater than tolerance
