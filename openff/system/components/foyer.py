@@ -112,6 +112,7 @@ def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
 class FoyerVDWHandler(PotentialHandler):
     type: str = "atoms"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
+    mixing_rule: str = "geometric"
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
     scale_13: float = 0.0

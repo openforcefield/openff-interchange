@@ -389,8 +389,8 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
     scale_15: float = Field(
         1.0, description="The scaling factor applied to 1-5 interactions"
     )
-    mixing_rule: Literal["Lorentz-Berthelot"] = Field(
-        "Lorentz-Berthelot",
+    mixing_rule: Literal["lorentz-berthelot", "geometric"] = Field(
+        "lorentz-berthelot",
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )
 
@@ -438,6 +438,7 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
             scale_14=parameter_handler.scale14,
             scale_15=parameter_handler.scale15,
             cutoff=parameter_handler.cutoff,
+            mixing_rule=parameter_handler.combining_rules.lower(),
             method=parameter_handler.method.lower(),
             switch_width=parameter_handler.switch_width,
         )

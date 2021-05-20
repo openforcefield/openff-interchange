@@ -318,7 +318,7 @@ class System(DefaultModel):
 
             to_gro(self, file_path, decimal=decimal)
 
-    def to_top(self, file_path: Union[Path, str], writer="parmed"):
+    def to_top(self, file_path: Union[Path, str], writer="internal"):
         """Export this system to a .top file using ParmEd"""
         if writer == "parmed":
             from openff.system.interop.external import ParmEdWrapper
