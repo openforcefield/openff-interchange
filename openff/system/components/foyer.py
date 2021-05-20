@@ -1,10 +1,10 @@
 from abc import abstractmethod
 from copy import copy
-from typing import TYPE_CHECKING, Dict, Set, Type
+from typing import TYPE_CHECKING, Dict, Type
 
 from ele import element_from_atomic_number
 from openff.units import unit
-from openff.utilities.utils import has_pkg, requires_package
+from openff.utilities.utilities import has_package, requires_package
 
 from openff.system.components.potentials import Potential, PotentialHandler
 from openff.system.components.system import System
@@ -15,13 +15,13 @@ if TYPE_CHECKING:
     from foyer.forcefield import Forcefield
     from foyer.topology_graph import TopologyGraph
 
-    from openff.system.components.misc import OFFBioTop
+    from openff.system.components.mdtraj import OFFBioTop
 
 # Is this the safest way to achieve PotentialKey id separation?
 POTENTIAL_KEY_SEPARATOR = "-"
 
 
-if has_pkg("foyer"):
+if has_package("foyer"):
     from foyer.topology_graph import TopologyGraph  # noqa
 
     @classmethod  # type: ignore
@@ -110,9 +110,9 @@ def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
 
 
 class FoyerVDWHandler(PotentialHandler):
-    name: str = "atoms"
+    type: str = "atoms"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
-    independent_variables: Set[str] = {"r"}
+    mixing_rule: str = "geometric"
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
     scale_13: float = 0.0
@@ -138,7 +138,7 @@ class FoyerVDWHandler(PotentialHandler):
     def store_potentials(self, forcefield: "Forcefield") -> None:
         for top_key in self.slot_map:
             atom_params = forcefield.get_parameters(
-                self.name, key=self.slot_map[top_key].id
+                self.type, key=self.slot_map[top_key].id
             )
 
             atom_params = _copy_params(
@@ -151,10 +151,9 @@ class FoyerVDWHandler(PotentialHandler):
 
 
 class FoyerElectrostaticsHandler(PotentialHandler):
-    name: str = "Electrostatics"
+    type: str = "Electrostatics"
     method: str = "PME"
     expression: str = "coul"
-    independent_variables: Set[str] = {"r"}
     charges: Dict[TopologyKey, float] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.5  # TODO: Replace with Foyer API point?
@@ -204,7 +203,7 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
         for _, pot_key in self.slot_map.items():
             try:
                 params = forcefield.get_parameters(
-                    self.name, key=pot_key.id.split(POTENTIAL_KEY_SEPARATOR)
+                    self.type, key=pot_key.id.split(POTENTIAL_KEY_SEPARATOR)
                 )
                 params = self.get_params_with_units(params)
                 self.potentials[pot_key] = Potential(parameters=params)
@@ -225,9 +224,8 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
 
 
 class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
-    name: str = "harmonic_bonds"
+    type: str = "harmonic_bonds"
     expression: str = "1/2 * k * (r - length) ** 2"
-    independent_variables: Set[str] = {"r"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
     connection_attribute = "topology_bonds"
@@ -240,9 +238,8 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
 
 
 class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
-    name: str = "harmonic_angles"
+    type: str = "harmonic_angles"
     expression: str = "0.5 * k * (theta-angle)**2"
-    independent_variables: Set[str] = {"theta"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
     connection_attribute: str = "angles"
@@ -258,13 +255,12 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
 
 
 class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
-    name: str = "rb_propers"
+    type: str = "rb_propers"
     expression: str = (
         "C0 * cos(phi)**0 + C1 * cos(phi)**1 + "
         "C2 * cos(phi)**2 + C3 * cos(phi)**3 + "
         "C4 * cos(phi)**4 + C5 * cos(phi)**5"
     )
-    independent_variables: Set[str] = {"phi"}
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
     connection_attribute: str = "propers"
@@ -277,14 +273,13 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
 
 
 class FoyerRBImproperHandler(FoyerRBProperHandler):
-    name: str = "rb_impropers"
+    type: str = "rb_impropers"
     connection_attribute: str = "impropers"
 
 
 class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler):
-    name: str = "periodic_propers"
+    type: str = "periodic_propers"
     expression: str = "k * (1 + cos(periodicity * phi - phase))"
-    independent_variables: Set[str] = {"phi"}
     connection_attribute: str = "propers"
     raise_on_missing_params: bool = False
 
@@ -300,5 +295,17 @@ class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler):
 
 
 class FoyerPeriodicImproperHandler(FoyerPeriodicProperHandler):
-    name: str = "periodic_impropers"
+    type: str = "periodic_impropers"
     connection_attribute: str = "impropers"
+
+
+class RBTorsionHandler(PotentialHandler):
+    name = "Ryckaert-Bellemans"
+    expression = (
+        "C0 + C1 * (cos(phi - 180)) "
+        "C2 * (cos(phi - 180)) ** 2 + C3 * (cos(phi - 180)) ** 3 "
+        "C4 * (cos(phi - 180)) ** 4 + C5 * (cos(phi - 180)) ** 5 "
+    )
+    # independent_variables: Set[str] = {"C0", "C1", "C2", "C3", "C4", "C5"}
+    slot_map: Dict[TopologyKey, PotentialKey] = dict()
+    potentials: Dict[PotentialKey, Potential] = dict()

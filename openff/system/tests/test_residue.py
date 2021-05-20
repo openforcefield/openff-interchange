@@ -3,7 +3,7 @@ import pytest
 from openff.toolkit.topology import Molecule
 from simtk.openmm import app
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.utils import get_test_file_path

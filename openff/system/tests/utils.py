@@ -4,7 +4,7 @@ from openff.toolkit.topology import Molecule
 from simtk import openmm
 from simtk import unit as omm_unit
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.system import System
 from openff.system.exceptions import InterMolEnergyComparisonError
 
@@ -25,7 +25,7 @@ def top_from_smiles(
 
     Returns
     -------
-    top : opennff.system.components.misc.OFFBioTop
+    top : opennff.system.components.mdtraj.OFFBioTop
         A single-molecule, gas phase-like topology
 
     """

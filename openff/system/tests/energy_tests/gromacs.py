@@ -3,11 +3,10 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Union
 
-from openff.toolkit.utils.utils import temporary_cd
 from openff.units import unit
+from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.system.exceptions import (
-    GMXEnergyError,
     GMXGromppError,
     GMXMdrunError,
     UnsupportedExportError,
@@ -51,16 +50,17 @@ def _write_mdp_file(openff_sys: "System"):
 
         if "Electrostatics" in openff_sys.handlers:
             coul_handler = openff_sys.handlers["Electrostatics"]
-            coul_method = coul_handler.method  # type: ignore[attr-defined]
+            coul_method = coul_handler.method.lower().replace("-", "")  # type: ignore[attr-defined]
             coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
             coul_cutoff = round(coul_cutoff, 4)
-            if coul_method in ["Cut-off", "cutoff"]:
+            if coul_method == "cutoff":
                 mdp_file.write("coulombtype = Cut-off\n")
+                mdp_file.write("coulomb-modifier = None\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
-            elif coul_method == "PME":
+            elif coul_method == "pme":
                 mdp_file.write("coulombtype = PME\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
-            elif coul_method == "reaction-field":
+            elif coul_method == "reactionfield":
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
             else:
@@ -75,7 +75,7 @@ def _write_mdp_file(openff_sys: "System"):
             vdw_cutoff = round(vdw_cutoff, 4)
             if vdw_method == "cutoff":
                 mdp_file.write("vdwtype = cutoff\n")
-            elif vdw_method == "PME":
+            elif vdw_method == "pme":
                 mdp_file.write("vdwtype = PME\n")
             else:
                 raise UnsupportedExportError(f"vdW method {vdw_method} not supported")
@@ -96,7 +96,7 @@ def _write_mdp_file(openff_sys: "System"):
             if num_constraints == 0:
                 mdp_file.write("constraints = none\n")
             else:
-                from openff.system.components.misc import _get_num_h_bonds
+                from openff.system.components.mdtraj import _get_num_h_bonds
 
                 num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)  # type: ignore[union-attr]
                 num_bonds = len(openff_sys["Bonds"].slot_map)
@@ -128,7 +128,6 @@ def get_gromacs_energies(
     off_sys: "System",
     mdp: str = "auto",
     writer: str = "internal",
-    electrostatics=True,
 ) -> EnergyReport:
     """
     Given an OpenFF System object, return single-point energies as computed by GROMACS.
@@ -144,9 +143,6 @@ def get_gromacs_energies(
     writer : str, default="internal"
         A string key identifying the backend to be used to write GROMACS files. The
         default value of `"internal"` results in this package's exporters being used.
-    electrostatics : bool, default=True
-        A boolean indicating whether or not electrostatics should be included in the energy
-        calculation.
 
     Returns
     -------
@@ -165,7 +161,6 @@ def get_gromacs_energies(
                 gro_file="out.gro",
                 mdp_file=_get_mdp_file(mdp),
                 maxwarn=2,
-                electrostatics=electrostatics,
             )
             return report
 
@@ -175,7 +170,6 @@ def _run_gmx_energy(
     gro_file: Union[Path, str],
     mdp_file: Union[Path, str],
     maxwarn: int = 1,
-    electrostatics=True,
 ):
     """
     Given GROMACS files, return single-point energies as computed by GROMACS.
@@ -190,9 +184,6 @@ def _run_gmx_energy(
         The path to a GROMACS molecular dynamics parameters (`.mdp`) file.
     maxwarn : int, default=1
         The number of warnings to allow when `gmx grompp` is called (via the `-maxwarn` flag).
-    electrostatics : bool, default=True
-        A boolean indicated whether or not electrostatics should be included in the energy
-        calculation.
 
     Returns
     -------
@@ -231,24 +222,7 @@ def _run_gmx_energy(
     if mdrun.returncode:
         raise GMXMdrunError(err)
 
-    energy_cmd = "gmx energy -f out.edr -o out.xvg"
-    stdin = " ".join(map(str, range(1, 20))) + " 0 "
-
-    energy = subprocess.Popen(
-        energy_cmd,
-        shell=True,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-
-    _, err = energy.communicate(input=stdin)
-
-    if energy.returncode:
-        raise GMXEnergyError(err)
-
-    report = _parse_gmx_energy("out.xvg", electrostatics=electrostatics)
+    report = _parse_gmx_energy("out.edr")
 
     return report
 
@@ -265,10 +239,8 @@ def _get_gmx_energy_vdw(gmx_energies: Dict):
     return gmx_vdw
 
 
-def _get_gmx_energy_coul(gmx_energies: Dict, electrostatics: bool = True):
+def _get_gmx_energy_coul(gmx_energies: Dict):
     gmx_coul = 0.0 * kj_mol
-    if not electrostatics:
-        return gmx_coul
     for key in ["Coulomb (SR)", "Coul. recip.", "Coulomb-14"]:
         try:
             gmx_coul += gmx_energies[key]
@@ -290,20 +262,17 @@ def _get_gmx_energy_torsion(gmx_energies: Dict):
     return gmx_torsion
 
 
-def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
+@requires_package("panedr")
+def _parse_gmx_energy(edr_path: str) -> EnergyReport:
     """Parse an `.xvg` file written by `gmx energy`."""
-    energy_terms = []
-    with open(xvg_path) as file:
-        for line in file:
-            if line.startswith("#"):
-                continue
-            elif line.startswith("@"):
-                if line[:3] == "@ s":
-                    energy_terms.append(line.split('"')[1])
-            else:
-                energies = [float(val) for val in line.split()]
+    import panedr
 
-    energies = dict(zip(energy_terms, energies * kj_mol))
+    df = panedr.edr_to_df(edr_path)
+    energies = df.to_dict("index")[0.0]
+    energies.pop("Time")
+
+    for key in energies:
+        energies[key] *= kj_mol
 
     # TODO: Better way of filling in missing fields
     # GROMACS may not populate all keys
@@ -336,9 +305,7 @@ def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
             "Angle": energies["Angle"],
             "Torsion": _get_gmx_energy_torsion(energies),
             "vdW": _get_gmx_energy_vdw(energies),
-            "Electrostatics": _get_gmx_energy_coul(
-                energies, electrostatics=electrostatics
-            ),
+            "Electrostatics": _get_gmx_energy_coul(energies),
         }
     )
 

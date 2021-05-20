@@ -4,7 +4,7 @@ import pytest
 from openff.toolkit.topology import Molecule
 from simtk import unit as omm_unit
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.lammps import (
     _write_lammps_input,
@@ -22,9 +22,16 @@ from openff.system.tests.energy_tests.test_energies import needs_lmp
     [
         "C",
         "CC",  # Adds a proper torsion term(s)
-        "OC=O",  # Simplest molecule with a multi-term torsion
+        "C=O",  # Simplest molecule with any improper torsion
+        pytest.param(
+            "OC=O",
+            marks=pytest.mark.xfail(reason="degenerate impropers"),
+        ),  # Simplest molecule with a multi-term torsion
         "CCOC",  # This hits t86, which has a non-1.0 idivf
-        "C1COC(=O)O1",  # This adds an improper, i2
+        pytest.param(
+            "C1COC(=O)O1",
+            marks=pytest.mark.xfail(reason="degenerate impropers"),
+        ),  # This adds an improper, i2
     ],
 )
 def test_to_lammps_single_mols(mol, n_mols):

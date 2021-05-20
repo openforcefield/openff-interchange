@@ -1,4 +1,4 @@
-name: test
+name: openff-system-env
 channels:
   - conda-forge
   - bioconda
@@ -6,13 +6,20 @@ dependencies:
     # Base depends
   - python
   - pip
+  - numpy
+  - pandas
   - pydantic
   - pint
   - openmm
   - openff-toolkit
+  - openff-utilities
   - jax
   - mdtraj
   - ele
+
+    # Python <3.8
+  - typing-extensions
+
     # Testing
   - pytest
   - pytest-cov
@@ -25,3 +32,4 @@ dependencies:
   - lammps
   - mbuild
   - foyer>=0.8.0
+  - panedr
