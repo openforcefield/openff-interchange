@@ -41,7 +41,7 @@ if has_package("foyer"):
             top_graph.add_bond(atoms_indices[0], atoms_indices[1])
         return top_graph
 
-    TopologyGraph.from_off_topology = from_off_topology
+    TopologyGraph.from_off_topology = from_off_topology  # type: ignore[assignment]
 
 
 def _copy_params(
@@ -129,7 +129,7 @@ class FoyerVDWHandler(PotentialHandler):
         """Populate slotmap with key-val pairs of slots and unique potential Identifiers"""
         from foyer.atomtyper import find_atomtypes
 
-        top_graph = TopologyGraph.from_off_topology(topology)
+        top_graph = TopologyGraph.from_off_topology(off_topology=topology)
         type_map = find_atomtypes(top_graph, forcefield=forcefield)
         for key, val in type_map.items():
             top_key = TopologyKey(atom_indices=(key,))
