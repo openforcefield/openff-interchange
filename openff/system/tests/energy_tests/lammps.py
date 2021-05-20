@@ -127,7 +127,7 @@ def _write_lammps_input(
         electrostatics_handler = off_sys.handlers["Electrostatics"]
 
         # TODO: Ensure units
-        vdw_cutoff = vdw_hander.cutoff  # type: ignore[attr-defined]
+        vdw_cutoff = vdw_hander.cutoff
         vdw_cutoff = vdw_cutoff.m_as(unit.angstrom)
 
         # TODO: Handle separate cutoffs
@@ -136,11 +136,11 @@ def _write_lammps_input(
         fo.write(
             "special_bonds lj {} {} {} coul {} {} {}\n\n".format(
                 0.0,  # vdw_hander.scale12,
-                vdw_hander.scale_13,  # type: ignore[attr-defined]
-                vdw_hander.scale_14,  # type: ignore[attr-defined]
+                vdw_hander.scale_13,
+                vdw_hander.scale_14,
                 0.0,  # electrostatics_handler.scale12,
-                electrostatics_handler.scale_13,  # type: ignore[attr-defined]
-                electrostatics_handler.scale_14,  # type: ignore[attr-defined]
+                electrostatics_handler.scale_13,
+                electrostatics_handler.scale_14,
             )
         )
 

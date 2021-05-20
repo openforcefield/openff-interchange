@@ -72,11 +72,11 @@ def from_foyer(topology: "OFFBioTop", ff: "Forcefield", **kwargs) -> System:
         system.handlers[name] = Handler()
 
     system.handlers["vdW"].store_matches(ff, topology=topology)
-    system.handlers["vdW"].store_potentials(forcefield=ff)  # type: ignore
+    system.handlers["vdW"].store_potentials(forcefield=ff)
 
     atom_slots = system.handlers["vdW"].slot_map
 
-    system.handlers["Electrostatics"].store_charges(  # type: ignore[attr-defined]
+    system.handlers["Electrostatics"].store_charges(
         atom_slots=atom_slots,
         forcefield=ff,
     )
@@ -85,8 +85,8 @@ def from_foyer(topology: "OFFBioTop", ff: "Forcefield", **kwargs) -> System:
     from simtk.openmm.app.forcefield import NonbondedGenerator  # type: ignore
 
     nonbonded_generator = ff.get_generator(ff, gen_type=NonbondedGenerator)
-    system.handlers["vdW"].scale_14 = nonbonded_generator.lj14scale  # type: ignore[attr-defined]
-    system.handlers["Electrostatics"].scale_14 = nonbonded_generator.coulomb14scale  # type: ignore[attr-defined]
+    system.handlers["vdW"].scale_14 = nonbonded_generator.lj14scale
+    system.handlers["Electrostatics"].scale_14 = nonbonded_generator.coulomb14scale
 
     for name, handler in system.handlers.items():
         if name not in ["vdW", "Electrostatics"]:

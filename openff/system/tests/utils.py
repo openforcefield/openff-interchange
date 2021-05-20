@@ -32,7 +32,7 @@ def top_from_smiles(
     mol = Molecule.from_smiles(smiles)
     mol.generate_conformers(n_conformers=1)
     top = OFFBioTop.from_molecules(n_molecules * [mol])
-    top.mdtop = md.Topology.from_openmm(top.to_openmm())
+    top.mdtop = md.Topology.from_openmm(top.to_openmm())  # type: ignore[attr-defined]
     # Add dummy box vectors
     # TODO: Revisit if/after Topology.is_periodic
     top.box_vectors = np.eye(3) * 10 * omm_unit.nanometer
@@ -110,7 +110,7 @@ def _get_lj_params_from_openmm_system(omm_sys: openmm.System):
 
 
 def _get_charges_from_openff_system(off_sys: System):
-    charges_ = [*off_sys.handlers["Electrostatics"].charges.values()]  # type: ignore[attr-defined]
+    charges_ = [*off_sys.handlers["Electrostatics"].charges.values()]
     charges = np.asarray([charge.magnitude for charge in charges_])
     return charges
 

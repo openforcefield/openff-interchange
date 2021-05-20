@@ -50,8 +50,8 @@ def _write_mdp_file(openff_sys: "System"):
 
         if "Electrostatics" in openff_sys.handlers:
             coul_handler = openff_sys.handlers["Electrostatics"]
-            coul_method = coul_handler.method  # type: ignore[attr-defined]
-            coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
+            coul_method = coul_handler.method
+            coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)
             coul_cutoff = round(coul_cutoff, 4)
             if coul_method == "cutoff":
                 mdp_file.write("coulombtype = Cut-off\n")
@@ -68,8 +68,8 @@ def _write_mdp_file(openff_sys: "System"):
                 )
 
         if "vdW" in openff_sys.handlers:
-            vdw_handler: "SMIRNOFFvdWHandler" = openff_sys.handlers["vdW"]  # type: ignore
-            vdw_method = vdw_handler.method.lower().replace("-", "")  # type: ignore
+            vdw_handler: "SMIRNOFFvdWHandler" = openff_sys.handlers["vdW"]
+            vdw_method = vdw_handler.method.lower().replace("-", "")
             vdw_cutoff = vdw_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
             vdw_cutoff = round(vdw_cutoff, 4)
             if vdw_method == "cutoff":
@@ -97,7 +97,7 @@ def _write_mdp_file(openff_sys: "System"):
             else:
                 from openff.system.components.mdtraj import _get_num_h_bonds
 
-                num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)  # type: ignore[union-attr]
+                num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)
                 num_bonds = len(openff_sys["Bonds"].slot_map)
                 num_angles = len(openff_sys["Angles"].slot_map)
 

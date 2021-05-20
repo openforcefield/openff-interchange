@@ -1,13 +1,12 @@
-from typing import Optional, List, Any
+from typing import Any, List, Optional
 
 class Particle(object):
     def __init__(self, name: Optional[str]) -> None: ...
 
 class Compound(object):
     def __init__(
-        self, name: str="Compound", subcompounds: Optional[List] = None
+        self, name: str = "Compound", subcompounds: Optional[List] = None
     ) -> None: ...
-
     name: str
     xyz: Any
     def add(
@@ -20,7 +19,5 @@ class Compound(object):
         inherit_box: bool = False,
         reset_rigid_ids: bool = True,
     ) -> None: ...
-
     def add_bond(self, Sequence) -> None: ...
-
     def __getitem__(self, int) -> Compound: ...

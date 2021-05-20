@@ -126,7 +126,7 @@ class EnergyReport(DefaultModel):
                 tolerance = tolerances[key]
             except KeyError as e:
                 if "Nonbonded" in str(e):
-                    tolerance = tolerances["vdW"] + tolerances["Electrostatics"]
+                    tolerance = tolerances["vdW"] + tolerances["Electrostatics"]  # type: ignore[assignment]
                 else:
                     raise e
 
