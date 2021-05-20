@@ -7,6 +7,7 @@ from openff.toolkit.topology.topology import TopologyMolecule
 from openff.units import unit
 
 from openff.system.components.potentials import Potential
+from openff.system.exceptions import UnsupportedBoxError, UnsupportedExportError
 from openff.system.models import PotentialKey, TopologyKey
 
 if TYPE_CHECKING:
@@ -183,6 +184,15 @@ def _to_parmed(off_system: "System") -> "pmd.Structure":
     #            )
 
     vdw_handler = off_system.handlers["vdW"]
+    if vdw_handler.mixing_rule == "lorentz-berthelot":
+        structure.combining_rule = "lorentz"
+    elif vdw_handler.mixing_rule == "geometric":
+        structure.combining_rule = "geometric"
+    else:
+        raise UnsupportedExportError(
+            f"ParmEd likely does not support mixing rule {vdw_handler.mixing_rule}"
+        )
+
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         top_key = TopologyKey(atom_indices=(pmd_idx,))
         smirks = vdw_handler.slot_map[top_key]
@@ -239,8 +249,6 @@ def _from_parmed(cls, structure) -> "System":
 
     if structure.box is not None:
         if any(structure.box[3:] != 3 * [90.0]):
-            from openff.system.exceptions import UnsupportedBoxError
-
             raise UnsupportedBoxError(
                 f"Found box with angles {structure.box[3:]}. Only"
                 "rectangular boxes are currently supported."
@@ -250,7 +258,7 @@ def _from_parmed(cls, structure) -> "System":
 
     from openff.toolkit.topology import Molecule
 
-    from openff.system.components.misc import OFFBioTop
+    from openff.system.components.mdtraj import OFFBioTop
 
     if structure.topology is not None:
         mdtop = md.Topology.from_openmm(structure.topology)

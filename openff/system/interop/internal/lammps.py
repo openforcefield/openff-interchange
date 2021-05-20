@@ -291,7 +291,7 @@ def _write_bonds(lmp_file: IO, openff_sys: System):
 
 
 def _write_angles(lmp_file: IO, openff_sys: System):
-    from openff.system.components.misc import _iterate_angles, _store_bond_partners
+    from openff.system.components.mdtraj import _iterate_angles, _store_bond_partners
 
     _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
 
@@ -321,7 +321,7 @@ def _write_angles(lmp_file: IO, openff_sys: System):
 
 
 def _write_propers(lmp_file: IO, openff_sys: System):
-    from openff.system.components.misc import _iterate_propers, _store_bond_partners
+    from openff.system.components.mdtraj import _iterate_propers, _store_bond_partners
 
     _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
 
@@ -353,7 +353,7 @@ def _write_propers(lmp_file: IO, openff_sys: System):
 
 
 def _write_impropers(lmp_file: IO, openff_sys: System):
-    from openff.system.components.misc import _iterate_impropers, _store_bond_partners
+    from openff.system.components.mdtraj import _iterate_impropers, _store_bond_partners
 
     _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
 

@@ -3,9 +3,9 @@ import pytest
 from openff.toolkit.topology.molecule import Molecule
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from openff.utilities.utils import has_pkg
+from openff.utilities.utilities import has_package
 
-from openff.system.components.misc import RBTorsionHandler
+from openff.system.components.foyer import RBTorsionHandler
 from openff.system.components.potentials import Potential
 from openff.system.models import PotentialKey, TopologyKey
 from openff.system.stubs import ForceField
@@ -14,7 +14,7 @@ from openff.system.tests.energy_tests.openmm import get_openmm_energies
 
 kj_mol = unit.Unit("kilojoule / mol")
 
-if has_pkg("gromacs"):
+if has_package("gromacs"):
     from openff.system.tests.energy_tests.gromacs import (
         _get_mdp_file,
         _run_gmx_energy,
