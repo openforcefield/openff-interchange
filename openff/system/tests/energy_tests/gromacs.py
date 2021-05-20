@@ -143,9 +143,6 @@ def get_gromacs_energies(
     writer : str, default="internal"
         A string key identifying the backend to be used to write GROMACS files. The
         default value of `"internal"` results in this package's exporters being used.
-    electrostatics : bool, default=True
-        A boolean indicating whether or not electrostatics should be included in the energy
-        calculation.
 
     Returns
     -------
@@ -187,9 +184,6 @@ def _run_gmx_energy(
         The path to a GROMACS molecular dynamics parameters (`.mdp`) file.
     maxwarn : int, default=1
         The number of warnings to allow when `gmx grompp` is called (via the `-maxwarn` flag).
-    electrostatics : bool, default=True
-        A boolean indicated whether or not electrostatics should be included in the energy
-        calculation.
 
     Returns
     -------
@@ -269,11 +263,11 @@ def _get_gmx_energy_torsion(gmx_energies: Dict):
 
 
 @requires_package("panedr")
-def _parse_gmx_energy(edr_path: str, electrostatics: bool):
+def _parse_gmx_energy(edr_path: str) -> EnergyReport:
     """Parse an `.xvg` file written by `gmx energy`."""
     import panedr
 
-    df = panedr.edr_to_df("out.edr")
+    df = panedr.edr_to_df(edr_path)
     energies = df.to_dict("index")[0.0]
     energies.pop("Time")
 
