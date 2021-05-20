@@ -4,7 +4,7 @@ These instructions are likely in flux. If something looks out of date or is not 
 
 ## Install dependencies
 
-Until a conda package is live, the core dependencies are listed in `devtools/conda-envs/minimal_env.yaml` and optional dependencies can be found in `devtools/conda-envs/test_env.yaml`.
+Until a conda package is live, the core dependencies are listed in `devtools/conda-envs/test_env.yaml` and optional dependencies can be found in `devtools/conda-envs/minimal_env.yaml`.
 
 Required dependencies:
   - python
@@ -22,7 +22,7 @@ Required dependencies:
 Note that the last two packages are currently unrelreased and must be installed as development builds:
 
 ```shell
-# From inside a conda environment
+# In an activated conda environment
 pip install git+git://github.com/mattwthompson/openff-units.git
 pip install git+git://github.com/mattwthompson/openff-utilities.git
 ```
@@ -40,7 +40,7 @@ Optional/test/dev dependencies:
   - mbuild
   - foyer>=0.8.0
 
-If portions of the API that require optional dependencies are called while some of those dependencies are not available, an informative error message should be provided. requiring an optional dependency is dependtest d
+If portions of the API that require optional dependencies are called while some of those dependencies are not available, an informative error message should be provided.
 
 All packages are assumed to be at their latest version. In particular, compatibility with older versions of the OpenFF Toolkit (i.e. versions 0.9.0 and older) are not guaranteed.
 

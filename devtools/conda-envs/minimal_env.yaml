@@ -1,4 +1,4 @@
-name: test
+name: openff-system-minimal-env
 channels:
   - conda-forge
 dependencies:
