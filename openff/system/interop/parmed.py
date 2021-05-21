@@ -350,7 +350,7 @@ def _from_parmed(cls, structure) -> "System":
     )
 
     vdw_handler = SMIRNOFFvdWHandler()
-    coul_handler = ElectrostaticsMetaHandler()
+    coul_handler = ElectrostaticsMetaHandler(method="pme")
 
     for atom in structure.atoms:
         atom_idx = atom.idx

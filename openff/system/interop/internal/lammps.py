@@ -277,7 +277,12 @@ def _write_bonds(lmp_file: IO, openff_sys: System):
             bond.atom2.index,
         )
         top_key = TopologyKey(atom_indices=indices)
-        pot_key = bond_handler.slot_map[top_key]
+        if top_key in bond_handler.slot_map:
+            pot_key = bond_handler.slot_map[top_key]
+        else:
+            top_key = TopologyKey(atom_indices=indices[::-1])
+            pot_key = bond_handler.slot_map[top_key]
+
         bond_type = bond_type_map_inv[pot_key]
 
         lmp_file.write(

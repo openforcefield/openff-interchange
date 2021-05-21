@@ -14,7 +14,6 @@ def get_lammps_energies(
     off_sys: System,
     round_positions=None,
     writer: str = "internal",
-    electrostatics=True,
 ) -> EnergyReport:
     """
     Given an OpenFF System object, return single-point energies as computed by LAMMPS.
@@ -33,9 +32,6 @@ def get_lammps_energies(
     writer : str, default="internal"
         A string key identifying the backend to be used to write LAMMPS files. The
         default value of `"internal"` results in this package's exporters being used.
-    electrostatics : bool, default=True
-        A boolean indicating whether or not electrostatics should be included in the energy
-        calculation.
 
     Returns
     -------
@@ -51,7 +47,6 @@ def get_lammps_energies(
     _write_lammps_input(
         off_sys=off_sys,
         file_name="tmp.in",
-        electrostatics=electrostatics,
     )
 
     run_cmd = "lmp_serial -i tmp.in"
@@ -102,7 +97,6 @@ def _parse_lammps_log(file_in) -> List[float]:
 def _write_lammps_input(
     off_sys: System,
     file_name="test.in",
-    electrostatics=False,
 ):
     """Write a LAMMPS input file for running single-point energies."""
     with open(file_name, "w") as fo:
@@ -144,10 +138,7 @@ def _write_lammps_input(
             )
         )
 
-        if electrostatics:
-            fo.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")
-        else:
-            fo.write(f"pair_style lj/cut {vdw_cutoff}\n")
+        fo.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")
 
         fo.write("pair_modify mix arithmetic tail yes\n\n")
         fo.write("read_data out.lmp\n\n")

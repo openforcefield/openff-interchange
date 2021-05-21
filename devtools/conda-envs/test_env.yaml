@@ -1,4 +1,4 @@
-name: test
+name: openff-system-env
 channels:
   - conda-forge
   - bioconda

@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macOS-latest, ubuntu-latest]
+        os: [ubuntu-latest]
         python-version: [3.7, 3.8, 3.9]
     env:
       CI_OS: ${{ matrix.os }}
@@ -62,4 +62,4 @@ jobs:
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v openff/system/tests/ --ignore=openff/system/tests/parmed/
+        python -m pytest -v openff/system/tests/ --ignore=openff/system/tests/interop/test_parmed.py
