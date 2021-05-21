@@ -6,8 +6,8 @@ from openff.units import unit
 from simtk import unit as omm_unit
 
 from openff.system.components.system import System
+from openff.system.drivers.report import EnergyReport
 from openff.system.exceptions import LAMMPSRunError
-from openff.system.tests.energy_tests.report import EnergyReport
 
 
 def get_lammps_energies(

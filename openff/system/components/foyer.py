@@ -152,7 +152,7 @@ class FoyerVDWHandler(PotentialHandler):
 
 class FoyerElectrostaticsHandler(PotentialHandler):
     type: str = "Electrostatics"
-    method: str = "PME"
+    method: str = "pme"
     expression: str = "coul"
     charges: Dict[TopologyKey, float] = dict()
     scale_13: float = 0.0

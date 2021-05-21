@@ -1,12 +1,20 @@
 import mdtraj as md
 import numpy as np
+import pytest
 from openff.toolkit.topology import Molecule
+from openff.utilities.utilities import has_executable
 from simtk import openmm
 from simtk import unit as omm_unit
 
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.system import System
 from openff.system.exceptions import InterMolEnergyComparisonError
+
+HAS_GROMACS = any(has_executable(e) for e in ["gmx", "gmx_d"])
+HAS_LAMMPS = any(has_executable(e) for e in ["lammps", "lmp_mpi", "lmp_serial"])
+
+needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
+needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs GROMACS")
 
 
 def top_from_smiles(

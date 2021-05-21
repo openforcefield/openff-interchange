@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Dict, Union
 from openff.units import unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
+from openff.system.drivers.report import EnergyReport
 from openff.system.exceptions import (
     GMXGromppError,
     GMXMdrunError,
     UnsupportedExportError,
 )
-from openff.system.tests.energy_tests.report import EnergyReport
 from openff.system.utils import get_test_file_path
 
 if TYPE_CHECKING:

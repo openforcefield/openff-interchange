@@ -11,9 +11,9 @@ from pydantic import ValidationError
 
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.system import System
+from openff.system.drivers import get_openmm_energies
 from openff.system.exceptions import SMIRNOFFHandlersNotImplementedError
 from openff.system.tests import BaseTest
-from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.tests.energy_tests.test_energies import needs_gmx, needs_lmp
 from openff.system.utils import get_test_file_path
 
@@ -112,9 +112,11 @@ class TestSystem(BaseTest):
         import foyer
 
         from openff.system.components.foyer import from_foyer
-        from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
-        from openff.system.tests.energy_tests.lammps import get_lammps_energies
-        from openff.system.tests.energy_tests.openmm import get_openmm_energies
+        from openff.system.drivers import (
+            get_gromacs_energies,
+            get_lammps_energies,
+            get_openmm_energies,
+        )
 
         oplsaa = foyer.forcefields.load_OPLSAA()
 

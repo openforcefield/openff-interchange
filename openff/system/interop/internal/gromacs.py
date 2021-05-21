@@ -141,7 +141,7 @@ def _write_top_defaults(openff_sys: "System", top_file: IO):
         comb_rule = 2
     elif mixing_rule == "geometric":
         comb_rule = 3
-    elif mixing_rule == "buckingham" and handler_key == "Bukcingham-6":
+    elif mixing_rule == "buckingham" and handler_key == "Buckingham-6":
         # TODO: Not clear what the compatibility is here. `comb-rule` only applies to LJ terms.
         #  The documentation lists the combination rule for Buckingham potentials, but it does not
         #  seem like GROMACS will do this automatically, and needs to be implemented manully via

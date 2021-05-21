@@ -11,13 +11,13 @@ from simtk.openmm import app
 
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.system import System
+from openff.system.drivers import get_openmm_energies
 from openff.system.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
 from openff.system.interop.openmm import from_openmm
 from openff.system.stubs import ForceField
-from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.utils import get_test_file_path
 
 nonbonded_resolution_matrix = [
