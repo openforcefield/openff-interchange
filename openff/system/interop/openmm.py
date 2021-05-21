@@ -423,10 +423,10 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
         from openff.system.components.mdtraj import OFFBioTop
 
         mdtop = md.Topology.from_openmm(topology)
-        top = OFFBioTop.from_openmm(topology)
+        top = OFFBioTop()
         top.mdtop = mdtop
 
-        openff_sys = top
+        openff_sys.topoology = top
 
     if positions:
         openff_sys.positions = positions

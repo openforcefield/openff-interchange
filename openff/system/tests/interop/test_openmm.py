@@ -237,6 +237,7 @@ def test_openmm_roundtrip():
     mol = Molecule.from_smiles("CCO")
     mol.generate_conformers(n_conformers=1)
     top = mol.to_topology()
+    omm_top = top.to_openmm()
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
@@ -248,6 +249,7 @@ def test_openmm_roundtrip():
     omm_sys = off_sys.to_openmm()
 
     converted = from_openmm(
+        topology=omm_top,
         system=omm_sys,
     )
 

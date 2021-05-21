@@ -4,12 +4,14 @@ import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff import ForceField, ParameterHandler
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from pydantic import ValidationError
 
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.system import System
-from openff.system.stubs import ForceField
+from openff.system.exceptions import SMIRNOFFHandlersNotImplementedError
 from openff.system.tests import BaseTest
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.tests.energy_tests.test_energies import needs_gmx, needs_lmp
@@ -35,6 +37,24 @@ def test_getitem():
 
     with pytest.raises(LookupError, match="Could not find"):
         out["CMAPs"]
+
+
+def test_box_setter():
+    tmp = System()
+
+    with pytest.raises(ValidationError):
+        tmp.box = [2, 2, 3, 90, 90, 90]
+
+
+def test_unimplemented_smirnoff_handler():
+    top = Molecule.from_smiles("CC").to_topology()
+    parsley = ForceField("openff-1.0.0.offxml")
+
+    bogus_parameter_handler = ParameterHandler(version=0.3)
+    bogus_parameter_handler._TAGNAME = "bogus"
+    parsley.register_parameter_handler(bogus_parameter_handler)
+    with pytest.raises(SMIRNOFFHandlersNotImplementedError, match="SMIRNOFF.*bogus"):
+        System.from_smirnoff(force_field=parsley, topology=top)
 
 
 class TestSystemCombination(BaseTest):
