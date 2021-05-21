@@ -3,7 +3,7 @@ import pytest
 from openff.toolkit.topology import Molecule
 from openff.utilities.testing import skip_if_missing
 
-from openff.system.components.misc import OFFBioTop
+from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.system import System
 from openff.system.exceptions import UnsupportedExportError
 from openff.system.stubs import ForceField
@@ -45,7 +45,7 @@ class TestGROMACS(BaseTest):
         with pytest.raises(UnsupportedExportError, match="rule `geometric` not compat"):
             openff_sys.to_top("out.top")
 
-    def test_residue_names_in_gro_file():
+    def test_residue_names_in_gro_file(self):
         """Test that residue names > 5 characters don't break .gro file output"""
         benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
         benzene.name = "supercalifragilisticexpialidocious"
