@@ -5,7 +5,8 @@ from openff.toolkit.tests.test_forcefield import create_ethanol
 from openff.toolkit.tests.utils import compare_system_energies, get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import SMIRNOFFSpecError
-from simtk import openmm, unit
+from simtk import openmm
+from simtk import unit as simtk_unit
 from simtk.openmm import app
 
 from openff.system.components.mdtraj import OFFBioTop
@@ -14,7 +15,9 @@ from openff.system.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
+from openff.system.interop.openmm import from_openmm
 from openff.system.stubs import ForceField
+from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.utils import get_test_file_path
 
 nonbonded_resolution_matrix = [
@@ -204,17 +207,17 @@ def test_from_openmm_single_mols(mol, n_mols):
     mol = Molecule.from_smiles(mol)
     mol.generate_conformers(n_conformers=1)
     top = Topology.from_molecules(n_mols * [mol])
-    mol.conformers[0] -= np.min(mol.conformers) * unit.angstrom
+    mol.conformers[0] -= np.min(mol.conformers) * simtk_unit.angstrom
 
-    top.box_vectors = np.eye(3) * np.asarray([15, 15, 15]) * unit.nanometer
+    top.box_vectors = np.eye(3) * np.asarray([15, 15, 15]) * simtk_unit.nanometer
 
     if n_mols == 1:
         positions = mol.conformers[0]
     elif n_mols == 2:
         positions = np.vstack(
-            [mol.conformers[0], mol.conformers[0] + 3 * unit.nanometer]
+            [mol.conformers[0], mol.conformers[0] + 3 * simtk_unit.nanometer]
         )
-        positions = positions * unit.angstrom
+        positions = positions * simtk_unit.angstrom
 
     toolkit_system = parsley.create_openmm_system(top)
 
@@ -226,4 +229,33 @@ def test_from_openmm_single_mols(mol, n_mols):
         positions=positions,
         box_vectors=top.box_vectors,
         atol=1e-5,
+    )
+
+
+@pytest.mark.slow
+def test_openmm_roundtrip():
+    mol = Molecule.from_smiles("CCO")
+    mol.generate_conformers(n_conformers=1)
+    top = mol.to_topology()
+
+    parsley = ForceField("openff_unconstrained-1.0.0.offxml")
+
+    off_sys = parsley.create_openff_system(top)
+
+    off_sys.box = [4, 4, 4]
+    off_sys.positions = mol.conformers[0].value_in_unit(simtk_unit.nanometer)
+
+    omm_sys = off_sys.to_openmm()
+
+    converted = from_openmm(
+        system=omm_sys,
+    )
+
+    converted.topology = off_sys.topology
+    converted.box = off_sys.box
+    converted.positions = off_sys.positions
+
+    get_openmm_energies(off_sys).compare(
+        get_openmm_energies(converted),
+        custom_tolerances={"Nonbonded": 1.5 * simtk_unit.kilojoule_per_mole},
     )
