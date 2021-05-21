@@ -1,14 +1,8 @@
-name: full_tests
+name: nightly tests
 
 on:
-  push:
-    branches:
-      - "master"
-      - "maintenance/.+"
-  pull_request:
-    branches:
-      - "master"
-      - "maintenance/.+"
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
   test:
@@ -16,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [macOS-latest, ubuntu-latest]
         python-version: [3.7, 3.8, 3.9]
     env:
       CI_OS: ${{ matrix.os }}
