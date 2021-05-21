@@ -4,7 +4,7 @@ import mdtraj as md
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import unit
-from openff.units.utils import from_simtk
+from openff.units.simtk import from_simtk
 from openff.utilities.testing import skip_if_missing
 from scipy.constants import Avogadro
 from simtk import unit as simtk_unit

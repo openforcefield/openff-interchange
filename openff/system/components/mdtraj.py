@@ -1,3 +1,5 @@
+import copy
+
 import mdtraj as md
 from openff.toolkit.topology import Topology
 
@@ -6,6 +8,18 @@ class OFFBioTop(Topology):
     def __init__(self, mdtop=None, *args, **kwargs):
         self.mdtop = mdtop
         super().__init__(*args, **kwargs)
+
+    def copy_initializer(self, other: Topology):
+        # TODO: The OFFBioTop cannot use the `other` kwarg until TK 946 is resolved.
+        self._aromaticity_model = other.aromaticity_model
+        self._constrained_atom_pairs = copy.deepcopy(other.constrained_atom_pairs)
+        self._box_vectors = copy.deepcopy(other.box_vectors)
+        # self._reference_molecule_dicts = set()
+        # TODO: Look into weakref and what it does. Having multiple topologies might cause a memory leak.
+        self._reference_molecule_to_topology_molecules = copy.deepcopy(
+            other._reference_molecule_to_topology_molecules
+        )
+        self._topology_molecules = copy.deepcopy(other.topology_molecules)
 
 
 def _store_bond_partners(mdtop):

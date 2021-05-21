@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Dict, Type
 
 from ele import element_from_atomic_number
 from openff.units import unit
-from openff.utilities.utils import has_pkg, requires_package
+from openff.utilities.utilities import has_package, requires_package
 
 from openff.system.components.potentials import Potential, PotentialHandler
 from openff.system.components.system import System
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 POTENTIAL_KEY_SEPARATOR = "-"
 
 
-if has_pkg("foyer"):
+if has_package("foyer"):
     from foyer.topology_graph import TopologyGraph  # noqa
 
     @classmethod  # type: ignore
@@ -112,6 +112,7 @@ def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
 class FoyerVDWHandler(PotentialHandler):
     type: str = "atoms"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
+    mixing_rule: str = "geometric"
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
     scale_13: float = 0.0

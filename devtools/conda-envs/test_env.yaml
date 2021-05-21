@@ -1,4 +1,4 @@
-name: test
+name: openff-system-env
 channels:
   - conda-forge
   - bioconda
@@ -12,6 +12,7 @@ dependencies:
   - pint
   - openmm
   - openff-toolkit
+  - openff-utilities
   - jax
   - mdtraj
   - ele

@@ -48,7 +48,9 @@ def to_gro(openff_sys: "System", file_path: Union[Path, str], decimal=8):
             res = atom.residue
             atom_name = typemap[atom.index]
             residue_idx = (res.index + 1) % 100000
-            residue_name = res.name
+            # TODO: After topology refactor, ensure this matches residue names
+            # in the topology file (unsure if this is necessary?)
+            residue_name = res.name[:5]
             # TODO: Make sure these are in nanometers
             gro.write(
                 f"%5d%-5s%5s%5d%{n+5}.{n}f%{n+5}.{n}f%{n+5}.{n}f\n"
@@ -122,20 +124,33 @@ def _write_top_defaults(openff_sys: "System", top_file: IO):
         nbfunc = 1
         scale_lj = openff_sys["vdW"].scale_14
         gen_pairs = "yes"
+        handler_key = "vdW"
     elif "Buckingham-6" in openff_sys.handlers:
         nbfunc = 2
         gen_pairs = "no"
         scale_lj = openff_sys["Buckingham-6"].scale_14
+        handler_key = "Buckingham-6"
+    else:
+        raise UnsupportedExportError(
+            "Could not find a handler for short-ranged vdW interactions that is compatible "
+            "with GROMACS. Looked for handlers named `vdW` and `Buckingham-6`."
+        )
+
+    mixing_rule = openff_sys[handler_key].mixing_rule
+    if mixing_rule == "lorentz-berthelot":
+        comb_rule = 2
+    elif mixing_rule == "geometric":
+        comb_rule = 3
+    else:
+        raise UnsupportedExportError(
+            f"Mixing rule `{mixing_rule} not compatible with GROMACS and/or not supported "
+            "by current exporter. Supported values are `lorentez-berthelot` and `geometric`."
+        )
 
     top_file.write(
-        "{:6d}\t{:6s}\t{:6s} {:8.6f} {:8.6f}\n\n".format(
-            # self.system.nonbonded_function,
-            # self.lookup_gromacs_combination_rules[self.system.combination_rule],
-            # self.system.genpairs,
-            # self.system.lj_correction,
-            # self.system.coulomb_correction,
+        "{:6d}\t{:6d}\t{:6s} {:8.6f} {:8.6f}\n\n".format(
             nbfunc,
-            str(2),
+            comb_rule,
             gen_pairs,
             scale_lj,
             openff_sys.handlers["Electrostatics"].scale_14,  # type: ignore
@@ -324,6 +339,8 @@ def _write_bonds(top_file: IO, openff_sys: "System"):
         indices = tuple(sorted((bond.atom1.index, bond.atom2.index)))
         for top_key in bond_handler.slot_map:
             if top_key.atom_indices == indices:
+                pot_key = bond_handler.slot_map[top_key]
+            elif top_key.atom_indices == indices[::-1]:
                 pot_key = bond_handler.slot_map[top_key]
 
         params = bond_handler.potentials[pot_key].parameters

@@ -5,8 +5,7 @@ from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from openff.utilities.utils import has_pkg
-from simtk import unit as simtk_unit
+from openff.utilities.utilities import has_package
 
 from openff.system.components.foyer import RBTorsionHandler
 from openff.system.components.mdtraj import OFFBioTop
@@ -16,10 +15,12 @@ from openff.system.stubs import ForceField
 from openff.system.tests import BaseTest
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
 
-if has_pkg("foyer"):
+if has_package("foyer"):
     import foyer
 
     from openff.system.components.foyer import from_foyer
+
+if has_package("gromacs"):
     from openff.system.tests.energy_tests.gromacs import (
         _get_mdp_file,
         _run_gmx_energy,
@@ -39,7 +40,7 @@ class TestFoyer(BaseTest):
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
         oplsaa = foyer.Forcefield(name="oplsaa")
         system = from_foyer(topology=top, ff=oplsaa)
-        system.positions = molecule.conformers[0].value_in_unit(simtk_unit.nanometer)
+        system.positions = molecule.conformers[0]
         system.box = [4, 4, 4]
         return system
 

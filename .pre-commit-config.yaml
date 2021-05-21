@@ -34,3 +34,16 @@ repos:
     files: ^openff/system/
     exclude: openff/system/_version.py|setup.py
     args: [--py37-plus]
+- repo: https://github.com/nbQA-dev/nbQA
+  rev: 0.8.1
+  hooks:
+    - id: nbqa-pyupgrade
+      args:
+        - --nbqa-mutate
+        - --py37-plus
+    - id: nbqa-isort
+      args:
+        - --nbqa-mutate
+    - id: nbqa-black
+      args:
+        - --nbqa-mutate

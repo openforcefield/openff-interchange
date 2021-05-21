@@ -2,7 +2,7 @@ import ast
 from typing import TYPE_CHECKING, Dict, List, Set
 
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
-from openff.utilities.utils import requires_package
+from openff.utilities.utilities import requires_package
 from pydantic import Field, validator
 
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey

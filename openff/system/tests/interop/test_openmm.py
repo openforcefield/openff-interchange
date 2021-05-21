@@ -1,3 +1,4 @@
+import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol
@@ -5,10 +6,15 @@ from openff.toolkit.tests.utils import compare_system_energies, get_data_file_pa
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import SMIRNOFFSpecError
 from simtk import openmm
-from simtk import unit
-from simtk import unit as omm_unit
+from simtk import unit as simtk_unit
+from simtk.openmm import app
 
-from openff.system.exceptions import UnsupportedCutoffMethodError
+from openff.system.components.mdtraj import OFFBioTop
+from openff.system.components.system import System
+from openff.system.exceptions import (
+    UnsupportedCutoffMethodError,
+    UnsupportedExportError,
+)
 from openff.system.interop.openmm import from_openmm
 from openff.system.stubs import ForceField
 from openff.system.tests.energy_tests.openmm import get_openmm_energies
@@ -116,8 +122,6 @@ nonbonded_resolution_matrix = [
 @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
 def test_openmm_nonbonded_methods(inputs):
     """See test_nonbonded_method_resolution in openff/toolkit/tests/test_forcefield.py"""
-    from simtk.openmm import app
-
     vdw_method = inputs["vdw_method"]
     electrostatics_method = inputs["electrostatics_method"]
     periodic = inputs["periodic"]
@@ -139,7 +143,7 @@ def test_openmm_nonbonded_methods(inputs):
         forcefield.get_parameter_handler(
             "Electrostatics", {}
         ).method = electrostatics_method
-        openff_system = forcefield.create_openff_system(topology)
+        openff_system = System.from_smirnoff(force_field=forcefield, topology=topology)
         openmm_system = openff_system.to_openmm()
         for force in openmm_system.getForces():
             if isinstance(force, openmm.NonbondedForce):
@@ -154,10 +158,27 @@ def test_openmm_nonbonded_methods(inputs):
             forcefield.get_parameter_handler(
                 "Electrostatics", {}
             ).method = electrostatics_method
-            openff_system = forcefield.create_openff_system(topology)
+            openff_system = System.from_smirnoff(
+                force_field=forcefield, topology=topology
+            )
             openff_system.to_openmm()
     else:
         raise Exception("uh oh")
+
+
+def test_unsupported_mixing_rule():
+    molecules = [create_ethanol()]
+    pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
+    topology = OFFBioTop.from_openmm(pdbfile.topology, unique_molecules=molecules)
+    topology.mdtop = md.Topology.from_openmm(topology.to_openmm())
+
+    forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+    openff_sys = System.from_smirnoff(force_field=forcefield, topology=topology)
+
+    openff_sys["vdW"].mixing_rule = "geometric"
+
+    with pytest.raises(UnsupportedExportError, match="rule `geometric` not compat"):
+        openff_sys.to_openmm()
 
 
 @pytest.mark.slow
@@ -186,21 +207,21 @@ def test_from_openmm_single_mols(mol, n_mols):
     mol = Molecule.from_smiles(mol)
     mol.generate_conformers(n_conformers=1)
     top = Topology.from_molecules(n_mols * [mol])
-    mol.conformers[0] -= np.min(mol.conformers) * unit.angstrom
+    mol.conformers[0] -= np.min(mol.conformers) * simtk_unit.angstrom
 
-    top.box_vectors = np.eye(3) * np.asarray([15, 15, 15]) * unit.nanometer
+    top.box_vectors = np.eye(3) * np.asarray([15, 15, 15]) * simtk_unit.nanometer
 
     if n_mols == 1:
         positions = mol.conformers[0]
     elif n_mols == 2:
         positions = np.vstack(
-            [mol.conformers[0], mol.conformers[0] + 3 * unit.nanometer]
+            [mol.conformers[0], mol.conformers[0] + 3 * simtk_unit.nanometer]
         )
-        positions = positions * unit.angstrom
+        positions = positions * simtk_unit.angstrom
 
     toolkit_system = parsley.create_openmm_system(top)
 
-    native_system = parsley.create_openff_system(topology=top).to_openmm()
+    native_system = System.from_smirnoff(force_field=parsley, topology=top).to_openmm()
 
     compare_system_energies(
         system1=toolkit_system,
@@ -222,7 +243,7 @@ def test_openmm_roundtrip():
     off_sys = parsley.create_openff_system(top)
 
     off_sys.box = [4, 4, 4]
-    off_sys.positions = mol.conformers[0].value_in_unit(omm_unit.nanometer)
+    off_sys.positions = mol.conformers[0].value_in_unit(simtk_unit.nanometer)
 
     omm_sys = off_sys.to_openmm()
 
@@ -236,5 +257,5 @@ def test_openmm_roundtrip():
 
     get_openmm_energies(off_sys).compare(
         get_openmm_energies(converted),
-        custom_tolerances={"Nonbonded": 1.5 * omm_unit.kilojoule_per_mole},
+        custom_tolerances={"Nonbonded": 1.5 * simtk_unit.kilojoule_per_mole},
     )

@@ -40,3 +40,5 @@ Documenting how some of these files were generated
     struct = packed_box.to_parmed(residues=['Ar'])
     struct.save('packed-argon.pdb')
     ```
+
+`benzene.sdf`

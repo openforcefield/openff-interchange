@@ -1,12 +1,13 @@
 import numpy as np
 from openff.units import unit as off_unit
-from openff.units.utils import from_simtk
+from openff.units.simtk import from_simtk
 from simtk import openmm, unit
 
 from openff.system.components.potentials import Potential
 from openff.system.exceptions import (
     UnimplementedCutoffMethodError,
     UnsupportedCutoffMethodError,
+    UnsupportedExportError,
 )
 from openff.system.interop.parmed import _lj_params_from_potential
 from openff.system.models import PotentialKey, TopologyKey
@@ -248,6 +249,12 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
         vdw_handler = openff_sys.handlers["vdW"]
         if vdw_handler.method not in ["cutoff"]:
             raise UnsupportedCutoffMethodError()
+
+        if vdw_handler.mixing_rule != "lorentz-berthelot":
+            raise UnsupportedExportError(
+                f"Mixing rule `{vdw_handler.mixing_rule}` not compatible with current OpenMM export."
+                "The only supported values is `lorentez-berthelot`."
+            )
 
         vdw_cutoff = vdw_handler.cutoff.m_as(off_unit.angstrom) * unit.angstrom
         vdw_method = vdw_handler.method.lower()
