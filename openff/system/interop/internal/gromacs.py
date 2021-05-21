@@ -141,6 +141,8 @@ def _write_top_defaults(openff_sys: "System", top_file: IO):
         comb_rule = 2
     elif mixing_rule == "geometric":
         comb_rule = 3
+    elif mixing_rule == "buckingham" and handler_key == "Buckingham-6":
+        comb_rule = 2
     else:
         raise UnsupportedExportError(
             f"Mixing rule `{mixing_rule} not compatible with GROMACS and/or not supported "
