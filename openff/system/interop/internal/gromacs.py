@@ -48,7 +48,9 @@ def to_gro(openff_sys: "System", file_path: Union[Path, str], decimal=8):
             res = atom.residue
             atom_name = typemap[atom.index]
             residue_idx = (res.index + 1) % 100000
-            residue_name = res.name
+            # TODO: After topology refactor, ensure this matches residue names
+            # in the topology file (unsure if this is necessary?)
+            residue_name = res.name[:5]
             # TODO: Make sure these are in nanometers
             gro.write(
                 f"%5d%-5s%5s%5d%{n+5}.{n}f%{n+5}.{n}f%{n+5}.{n}f\n"
@@ -337,6 +339,8 @@ def _write_bonds(top_file: IO, openff_sys: "System"):
         indices = tuple(sorted((bond.atom1.index, bond.atom2.index)))
         for top_key in bond_handler.slot_map:
             if top_key.atom_indices == indices:
+                pot_key = bond_handler.slot_map[top_key]
+            elif top_key.atom_indices == indices[::-1]:
                 pot_key = bond_handler.slot_map[top_key]
 
         params = bond_handler.potentials[pot_key].parameters
