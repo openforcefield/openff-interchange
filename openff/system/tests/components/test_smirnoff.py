@@ -2,7 +2,14 @@ import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ImproperTorsionHandler
-from openff.toolkit.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
+from openff.toolkit.typing.engines.smirnoff.parameters import (
+    AngleHandler,
+    BondHandler,
+    ChargeIncrementModelHandler,
+    ElectrostaticsHandler,
+    LibraryChargeHandler,
+    ToolkitAM1BCCHandler,
+)
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from simtk import unit as omm_unit
@@ -12,6 +19,7 @@ from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.smirnoff import (
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
+    SMIRNOFFElectrostaticsHandler,
     SMIRNOFFImproperTorsionHandler,
     SMIRNOFFvdWHandler,
 )
@@ -103,6 +111,72 @@ class TestSMIRNOFFHandlers(BaseTest):
         assert (
             TopologyKey(atom_indices=(0, 3, 1, 2), mult=0) in potential_handler.slot_map
         )
+
+    def test_electrostatics_am1_handler(self):
+
+        top = OFFBioTop.from_molecules(Molecule.from_smiles("C"))
+
+        parameter_handlers = [
+            ElectrostaticsHandler(version=0.3),
+            ToolkitAM1BCCHandler(version=0.3),
+        ]
+
+        potential_handler = SMIRNOFFElectrostaticsHandler.from_toolkit(
+            parameter_handlers, top
+        )
+        potential_handler.partial_charges
+
+        print(potential_handler)
+
+    def test_electrostatics_library_charges(self):
+
+        top = OFFBioTop.from_molecules(Molecule.from_smiles("C"))
+
+        library_charge_handler = LibraryChargeHandler(version=0.3)
+        library_charge_handler.add_parameter(
+            {
+                "smirks": "[#6X4:1]-[#1:2]",
+                "charge1": -0.1 * simtk_unit.elementary_charge,
+                "charge2": 0.025 * simtk_unit.elementary_charge,
+            }
+        )
+
+        parameter_handlers = [
+            ElectrostaticsHandler(version=0.3),
+            library_charge_handler,
+        ]
+
+        potential_handler = SMIRNOFFElectrostaticsHandler.from_toolkit(
+            parameter_handlers, top
+        )
+        potential_handler.partial_charges
+
+        print(potential_handler)
+
+    def test_electrostatics_charge_increments(self):
+
+        top = OFFBioTop.from_molecules(Molecule.from_smiles("Cl[H]"))
+
+        charge_increment_handler = ChargeIncrementModelHandler(version=0.3)
+        charge_increment_handler.add_parameter(
+            {
+                "smirks": "[#17:1]-[#1:2]",
+                "charge_increment1": 0.1 * simtk_unit.elementary_charge,
+                "charge_increment2": -0.1 * simtk_unit.elementary_charge,
+            }
+        )
+
+        parameter_handlers = [
+            ElectrostaticsHandler(version=0.3),
+            charge_increment_handler,
+        ]
+
+        potential_handler = SMIRNOFFElectrostaticsHandler.from_toolkit(
+            parameter_handlers, top
+        )
+        potential_handler.partial_charges
+
+        print(potential_handler)
 
 
 @skip_if_missing("jax")
