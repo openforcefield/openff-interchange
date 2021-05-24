@@ -9,6 +9,7 @@ from simtk import unit as omm_unit
 
 def pint_to_simtk(quantity):
     """Convert a pint Quantity to an OpenMM unit."""
+    # TODO: Move these hacks into openff-units
     if str(quantity.units) in ["kilojoule / mole", "kJ / mol"]:
         return quantity.m * omm_unit.kilojoule_per_mole
     if str(quantity.units) == "1 / nm":
@@ -22,6 +23,10 @@ def pint_to_simtk(quantity):
         return quantity.m * omm_unit.nanometer ** 6 / omm_unit.kilojoule_per_mole
     if str(quantity.units) == "kJ * Å ** 6 / mol":
         return quantity.m * omm_unit.angstrom ** 6 / omm_unit.kilojoule_per_mole
+    if str(quantity.units) == "erg / mol":
+        return quantity.m * omm_unit.erg / omm_unit.mole
+    if str(quantity.units) == "erg * Å ** 6 / mol":
+        return quantity.m * omm_unit.erg * omm_unit.angstrom ** 6 / omm_unit.mole
     else:
         raise NotImplementedError(f"caught units {str(quantity.units)}")
 

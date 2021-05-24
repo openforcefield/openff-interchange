@@ -8,13 +8,13 @@ from pmdtest.utils import get_fn as get_pmd_fn
 from simtk import unit as omm_unit
 
 from openff.system.components.system import System
-from openff.system.stubs import ForceField
-from openff.system.tests import BaseTest
-from openff.system.tests.energy_tests.gromacs import (
+from openff.system.drivers.gromacs import (
     _get_mdp_file,
     _run_gmx_energy,
     get_gromacs_energies,
 )
+from openff.system.stubs import ForceField
+from openff.system.tests import BaseTest
 from openff.system.tests.utils import top_from_smiles
 from openff.system.utils import get_test_file_path
 

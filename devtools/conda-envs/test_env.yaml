@@ -33,3 +33,4 @@ dependencies:
   - mbuild
   - foyer>=0.8.0
   - panedr
+  - pandas-stubs

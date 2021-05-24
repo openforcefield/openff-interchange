@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Dict, Union
 from openff.units import unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
+from openff.system.drivers.report import EnergyReport
 from openff.system.exceptions import (
     GMXGromppError,
     GMXMdrunError,
     UnsupportedExportError,
 )
-from openff.system.tests.energy_tests.report import EnergyReport
 from openff.system.utils import get_test_file_path
 
 if TYPE_CHECKING:
@@ -50,8 +50,8 @@ def _write_mdp_file(openff_sys: "System"):
 
         if "Electrostatics" in openff_sys.handlers:
             coul_handler = openff_sys.handlers["Electrostatics"]
-            coul_method = coul_handler.method.lower().replace("-", "")  # type: ignore[attr-defined]
-            coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
+            coul_method = coul_handler.method
+            coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)
             coul_cutoff = round(coul_cutoff, 4)
             if coul_method == "cutoff":
                 mdp_file.write("coulombtype = Cut-off\n")
@@ -69,8 +69,8 @@ def _write_mdp_file(openff_sys: "System"):
                 )
 
         if "vdW" in openff_sys.handlers:
-            vdw_handler: "SMIRNOFFvdWHandler" = openff_sys.handlers["vdW"]  # type: ignore
-            vdw_method = vdw_handler.method.lower().replace("-", "")  # type: ignore
+            vdw_handler: "SMIRNOFFvdWHandler" = openff_sys.handlers["vdW"]
+            vdw_method = vdw_handler.method.lower().replace("-", "")
             vdw_cutoff = vdw_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
             vdw_cutoff = round(vdw_cutoff, 4)
             if vdw_method == "cutoff":
@@ -98,7 +98,7 @@ def _write_mdp_file(openff_sys: "System"):
             else:
                 from openff.system.components.mdtraj import _get_num_h_bonds
 
-                num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)  # type: ignore[union-attr]
+                num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)
                 num_bonds = len(openff_sys["Bonds"].slot_map)
                 num_angles = len(openff_sys["Angles"].slot_map)
 
@@ -267,8 +267,12 @@ def _parse_gmx_energy(edr_path: str) -> EnergyReport:
     """Parse an `.xvg` file written by `gmx energy`."""
     import panedr
 
-    df = panedr.edr_to_df(edr_path)
-    energies = df.to_dict("index")[0.0]
+    if TYPE_CHECKING:
+        from pandas import DataFrame
+
+    df: DataFrame = panedr.edr_to_df("out.edr")
+    energies_dict: Dict = df.to_dict("index")  # type: ignore[assignment]
+    energies = energies_dict[0.0]
     energies.pop("Time")
 
     for key in energies:

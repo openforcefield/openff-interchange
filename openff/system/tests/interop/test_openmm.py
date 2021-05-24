@@ -11,13 +11,13 @@ from simtk.openmm import app
 
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.system import System
+from openff.system.drivers import get_openmm_energies
 from openff.system.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
 from openff.system.interop.openmm import from_openmm
 from openff.system.stubs import ForceField
-from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.utils import get_test_file_path
 
 nonbonded_resolution_matrix = [
@@ -237,6 +237,7 @@ def test_openmm_roundtrip():
     mol = Molecule.from_smiles("CCO")
     mol.generate_conformers(n_conformers=1)
     top = mol.to_topology()
+    omm_top = top.to_openmm()
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
@@ -248,6 +249,7 @@ def test_openmm_roundtrip():
     omm_sys = off_sys.to_openmm()
 
     converted = from_openmm(
+        topology=omm_top,
         system=omm_sys,
     )
 
