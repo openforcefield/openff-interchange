@@ -3,13 +3,12 @@ import tempfile
 from pathlib import Path
 from typing import Dict, Union
 
-from openff.toolkit.utils.utils import temporary_cd
-from openff.utilities.utils import requires_package
+from openff.utilities.utilities import requires_package, temporary_cd
 from simtk import unit as omm_unit
 
 from openff.system.components.system import System
+from openff.system.drivers.report import EnergyReport
 from openff.system.exceptions import SanderError
-from openff.system.tests.energy_tests.report import EnergyReport
 from openff.system.utils import get_test_file_path
 
 

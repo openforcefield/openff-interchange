@@ -5,12 +5,9 @@ from openff.toolkit.topology import Molecule
 from simtk import unit as omm_unit
 
 from openff.system.components.mdtraj import OFFBioTop
+from openff.system.drivers import get_lammps_energies, get_openmm_energies
+from openff.system.drivers.lammps import _write_lammps_input
 from openff.system.stubs import ForceField
-from openff.system.tests.energy_tests.lammps import (
-    _write_lammps_input,
-    get_lammps_energies,
-)
-from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.tests.energy_tests.test_energies import needs_lmp
 
 

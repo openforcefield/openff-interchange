@@ -3,9 +3,15 @@ import pytest
 from openff.toolkit.topology import Molecule
 from simtk.openmm import app
 
-from openff.system.components.mdtraj import OFFBioTop
+from openff.system.components.mdtraj import (
+    OFFBioTop,
+    _get_num_h_bonds,
+    _iterate_pairs,
+    _iterate_propers,
+    _store_bond_partners,
+)
+from openff.system.drivers import get_openmm_energies
 from openff.system.stubs import ForceField
-from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.utils import get_test_file_path
 
 
@@ -34,3 +40,26 @@ def test_residues():
 
     assert len(top.mdtop.select("resname ALA")) == 10
     assert [*off_sys.topology.mdtop.residues][-1].n_atoms == 6
+
+
+def test_iterate_pairs():
+    mol = Molecule.from_smiles("C1#CC#CC#C1")
+
+    top = mol.to_topology()
+
+    mdtop = md.Topology.from_openmm(top.to_openmm())
+
+    _store_bond_partners(mdtop)
+    pairs = {
+        tuple(sorted((atom1.index, atom2.index)))
+        for atom1, atom2 in _iterate_pairs(mdtop)
+    }
+    assert len(pairs) == 3
+    assert len([*_iterate_propers(mdtop)]) > len(pairs)
+
+
+def test_get_num_h_bonds():
+    mol = Molecule.from_smiles("CCO")
+    top = mol.to_topology()
+    mdtop = md.Topology.from_openmm(top.to_openmm())
+    assert _get_num_h_bonds(mdtop) == 6

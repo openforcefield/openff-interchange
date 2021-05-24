@@ -4,7 +4,7 @@ import numpy as np
 from simtk import openmm, unit
 
 from openff.system.components.system import System
-from openff.system.tests.energy_tests.report import EnergyReport
+from openff.system.drivers.report import EnergyReport
 
 kj_mol = unit.kilojoule_per_mole
 

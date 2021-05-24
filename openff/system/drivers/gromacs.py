@@ -3,16 +3,15 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Union
 
-from openff.toolkit.utils.utils import temporary_cd
 from openff.units import unit
-from openff.utilities.utils import requires_package
+from openff.utilities.utilities import requires_package, temporary_cd
 
+from openff.system.drivers.report import EnergyReport
 from openff.system.exceptions import (
     GMXGromppError,
     GMXMdrunError,
     UnsupportedExportError,
 )
-from openff.system.tests.energy_tests.report import EnergyReport
 from openff.system.utils import get_test_file_path
 
 if TYPE_CHECKING:
@@ -51,11 +50,12 @@ def _write_mdp_file(openff_sys: "System"):
 
         if "Electrostatics" in openff_sys.handlers:
             coul_handler = openff_sys.handlers["Electrostatics"]
-            coul_method = coul_handler.method  # type: ignore[attr-defined]
-            coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
+            coul_method = coul_handler.method
+            coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)
             coul_cutoff = round(coul_cutoff, 4)
             if coul_method == "cutoff":
                 mdp_file.write("coulombtype = Cut-off\n")
+                mdp_file.write("coulomb-modifier = None\n")
                 mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
             elif coul_method == "pme":
                 mdp_file.write("coulombtype = PME\n")
@@ -69,8 +69,8 @@ def _write_mdp_file(openff_sys: "System"):
                 )
 
         if "vdW" in openff_sys.handlers:
-            vdw_handler: "SMIRNOFFvdWHandler" = openff_sys.handlers["vdW"]  # type: ignore
-            vdw_method = vdw_handler.method.lower().replace("-", "")  # type: ignore
+            vdw_handler: "SMIRNOFFvdWHandler" = openff_sys.handlers["vdW"]
+            vdw_method = vdw_handler.method.lower().replace("-", "")
             vdw_cutoff = vdw_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
             vdw_cutoff = round(vdw_cutoff, 4)
             if vdw_method == "cutoff":
@@ -98,7 +98,7 @@ def _write_mdp_file(openff_sys: "System"):
             else:
                 from openff.system.components.mdtraj import _get_num_h_bonds
 
-                num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)  # type: ignore[union-attr]
+                num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)
                 num_bonds = len(openff_sys["Bonds"].slot_map)
                 num_angles = len(openff_sys["Angles"].slot_map)
 
@@ -128,7 +128,6 @@ def get_gromacs_energies(
     off_sys: "System",
     mdp: str = "auto",
     writer: str = "internal",
-    electrostatics=True,
 ) -> EnergyReport:
     """
     Given an OpenFF System object, return single-point energies as computed by GROMACS.
@@ -144,9 +143,6 @@ def get_gromacs_energies(
     writer : str, default="internal"
         A string key identifying the backend to be used to write GROMACS files. The
         default value of `"internal"` results in this package's exporters being used.
-    electrostatics : bool, default=True
-        A boolean indicating whether or not electrostatics should be included in the energy
-        calculation.
 
     Returns
     -------
@@ -165,7 +161,6 @@ def get_gromacs_energies(
                 gro_file="out.gro",
                 mdp_file=_get_mdp_file(mdp),
                 maxwarn=2,
-                electrostatics=electrostatics,
             )
             return report
 
@@ -175,7 +170,6 @@ def _run_gmx_energy(
     gro_file: Union[Path, str],
     mdp_file: Union[Path, str],
     maxwarn: int = 1,
-    electrostatics=True,
 ):
     """
     Given GROMACS files, return single-point energies as computed by GROMACS.
@@ -190,9 +184,6 @@ def _run_gmx_energy(
         The path to a GROMACS molecular dynamics parameters (`.mdp`) file.
     maxwarn : int, default=1
         The number of warnings to allow when `gmx grompp` is called (via the `-maxwarn` flag).
-    electrostatics : bool, default=True
-        A boolean indicated whether or not electrostatics should be included in the energy
-        calculation.
 
     Returns
     -------
@@ -231,7 +222,7 @@ def _run_gmx_energy(
     if mdrun.returncode:
         raise GMXMdrunError(err)
 
-    report = _parse_gmx_energy("out.edr", electrostatics=electrostatics)
+    report = _parse_gmx_energy("out.edr")
 
     return report
 
@@ -248,10 +239,8 @@ def _get_gmx_energy_vdw(gmx_energies: Dict):
     return gmx_vdw
 
 
-def _get_gmx_energy_coul(gmx_energies: Dict, electrostatics: bool = True):
+def _get_gmx_energy_coul(gmx_energies: Dict):
     gmx_coul = 0.0 * kj_mol
-    if not electrostatics:
-        return gmx_coul
     for key in ["Coulomb (SR)", "Coul. recip.", "Coulomb-14"]:
         try:
             gmx_coul += gmx_energies[key]
@@ -274,12 +263,16 @@ def _get_gmx_energy_torsion(gmx_energies: Dict):
 
 
 @requires_package("panedr")
-def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
+def _parse_gmx_energy(edr_path: str) -> EnergyReport:
     """Parse an `.xvg` file written by `gmx energy`."""
     import panedr
 
-    df = panedr.edr_to_df("out.edr")
-    energies = df.to_dict("index")[0.0]
+    if TYPE_CHECKING:
+        from pandas import DataFrame
+
+    df: DataFrame = panedr.edr_to_df("out.edr")
+    energies_dict: Dict = df.to_dict("index")  # type: ignore[assignment]
+    energies = energies_dict[0.0]
     energies.pop("Time")
 
     for key in energies:
@@ -316,9 +309,7 @@ def _parse_gmx_energy(xvg_path: str, electrostatics: bool):
             "Angle": energies["Angle"],
             "Torsion": _get_gmx_energy_torsion(energies),
             "vdW": _get_gmx_energy_vdw(energies),
-            "Electrostatics": _get_gmx_energy_coul(
-                energies, electrostatics=electrostatics
-            ),
+            "Electrostatics": _get_gmx_energy_coul(energies),
         }
     )
 

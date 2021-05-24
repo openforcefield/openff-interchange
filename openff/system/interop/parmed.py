@@ -7,6 +7,7 @@ from openff.toolkit.topology.topology import TopologyMolecule
 from openff.units import unit
 
 from openff.system.components.potentials import Potential
+from openff.system.exceptions import UnsupportedBoxError, UnsupportedExportError
 from openff.system.models import PotentialKey, TopologyKey
 
 if TYPE_CHECKING:
@@ -37,7 +38,7 @@ def _to_parmed(off_system: "System") -> "pmd.Structure":
     else:
         has_electrostatics = False
 
-    for atom in off_system.topology.mdtop.atoms:  # type: ignore[union-attr]
+    for atom in off_system.topology.mdtop.atoms:
         atomic_number = atom.element.atomic_number
         mass = atom.element.mass
         structure.add_atom(
@@ -100,9 +101,9 @@ def _to_parmed(off_system: "System") -> "pmd.Structure":
     # ParmEd treats 1-4 scaling factors at the level of each DihedralType,
     # whereas SMIRNOFF captures them at the level of the non-bonded handler,
     # so they need to be stored here for processing dihedrals
-    vdw_14 = off_system.handlers["vdW"].scale_14  # type: ignore[attr-defined]
+    vdw_14 = off_system.handlers["vdW"].scale_14
     if has_electrostatics:
-        coul_14 = off_system.handlers["Electrostatics"].scale_14  # type: ignore[attr-defined]
+        coul_14 = off_system.handlers["Electrostatics"].scale_14
     else:
         coul_14 = 1.0
     vdw_handler = off_system.handlers["vdW"]
@@ -183,6 +184,15 @@ def _to_parmed(off_system: "System") -> "pmd.Structure":
     #            )
 
     vdw_handler = off_system.handlers["vdW"]
+    if vdw_handler.mixing_rule == "lorentz-berthelot":
+        structure.combining_rule = "lorentz"
+    elif vdw_handler.mixing_rule == "geometric":
+        structure.combining_rule = "geometric"
+    else:
+        raise UnsupportedExportError(
+            f"ParmEd likely does not support mixing rule {vdw_handler.mixing_rule}"
+        )
+
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         top_key = TopologyKey(atom_indices=(pmd_idx,))
         smirks = vdw_handler.slot_map[top_key]
@@ -207,7 +217,7 @@ def _to_parmed(off_system: "System") -> "pmd.Structure":
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         if has_electrostatics:
             top_key = TopologyKey(atom_indices=(pmd_idx,))
-            partial_charge = electrostatics_handler.charges[top_key]  # type: ignore[attr-defined]
+            partial_charge = electrostatics_handler.charges[top_key]
             unitless_ = partial_charge.to(unit.elementary_charge).magnitude
             pmd_atom.charge = float(unitless_)
             pmd_atom.atom_type.charge = float(unitless_)
@@ -219,7 +229,7 @@ def _to_parmed(off_system: "System") -> "pmd.Structure":
         res.name = "FOO"
 
     if off_system.positions is not None:
-        structure.positions = off_system.positions.to(unit.angstrom).magnitude  # type: ignore[attr-defined]
+        structure.positions = off_system.positions.to(unit.angstrom).magnitude
 
         for idx, pos in enumerate(structure.positions):
             structure.atoms[idx].xx = pos._value[0]
@@ -239,8 +249,6 @@ def _from_parmed(cls, structure) -> "System":
 
     if structure.box is not None:
         if any(structure.box[3:] != 3 * [90.0]):
-            from openff.system.exceptions import UnsupportedBoxError
-
             raise UnsupportedBoxError(
                 f"Found box with angles {structure.box[3:]}. Only"
                 "rectangular boxes are currently supported."
@@ -253,7 +261,7 @@ def _from_parmed(cls, structure) -> "System":
     from openff.system.components.mdtraj import OFFBioTop
 
     if structure.topology is not None:
-        mdtop = md.Topology.from_openmm(structure.topology)
+        mdtop = md.Topology.from_openmm(structure.topology)  # type: ignore[attr-defined]
         top = OFFBioTop(mdtop=mdtop)
         out.topology = top
     else:
@@ -261,9 +269,9 @@ def _from_parmed(cls, structure) -> "System":
         # This code should not be reached, since a pathway
         # OpenFF -> OpenMM -> MDTraj already exists
 
-        mdtop = md.Topology()
+        mdtop = md.Topology()  # type: ignore[attr-defined]
 
-        main_chain = md.core.topology.Chain(index=0, topology=mdtop)
+        main_chain = md.core.topology.Chain(index=0, topology=mdtop)  # type: ignore[attr-defined]
         top = OFFBioTop(mdtop=None)
 
         # There is no way to tell if ParmEd residues are connected (cannot be processed
@@ -276,7 +284,7 @@ def _from_parmed(cls, structure) -> "System":
         for res in structure.residues:
             # ... however, MDTraj's Topology class only stores residues, not molecules,
             # so this should roughly match up with ParmEd
-            this_res = md.core.topology.Residue(
+            this_res = md.core.topology.Residue(  # type: ignore[attr-defined]
                 name=res.name,
                 index=res.idx,
                 chain=main_chain,
@@ -289,7 +297,7 @@ def _from_parmed(cls, structure) -> "System":
                 )
                 mdtop.add_atom(
                     name=atom.name,
-                    element=md.element.Element.getByAtomicNumber(atom.element),
+                    element=md.element.Element.getByAtomicNumber(atom.element),  # type: ignore[attr-defined]
                     residue=this_res,
                 )
 
@@ -342,7 +350,7 @@ def _from_parmed(cls, structure) -> "System":
     )
 
     vdw_handler = SMIRNOFFvdWHandler()
-    coul_handler = ElectrostaticsMetaHandler()
+    coul_handler = ElectrostaticsMetaHandler(method="pme")
 
     for atom in structure.atoms:
         atom_idx = atom.idx
@@ -373,7 +381,7 @@ def _from_parmed(cls, structure) -> "System":
         bond_handler.potentials.update({pot_key: pot})
 
     out.handlers.update({"vdW": vdw_handler})
-    out.handlers.update({"Electrostatics": coul_handler})  # type: ignore[dict-item]
+    out.handlers.update({"Electrostatics": coul_handler})
     out.handlers.update({"Bonds": bond_handler})
 
     angle_handler = SMIRNOFFAngleHandler()
@@ -418,7 +426,7 @@ def _from_parmed(cls, structure) -> "System":
                         dih_idx,
                     )
 
-    out.handlers.update({"Electrostatics": coul_handler})  # type: ignore[dict-item]
+    out.handlers.update({"Electrostatics": coul_handler})
     out.handlers.update({"Bonds": bond_handler})
     out.handlers.update({"Angles": angle_handler})
     out.handlers.update({"ProperTorsions": proper_torsion_handler})

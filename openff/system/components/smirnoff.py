@@ -105,27 +105,30 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         cls: Type[T],
         bond_handler: "BondHandler",
         topology: "Topology",
-        constraint_handler: Optional[T] = None,
+        constraint_handler: Optional["SMIRNOFFConstraintHandler"] = None,
     ) -> Tuple[T, Optional["SMIRNOFFConstraintHandler"]]:
         """
         Create a SMIRNOFFBondHandler from toolkit data.
 
         """
-        handler = cls(type="Bonds", expression="k/2*(r-length)**2")
+        # TODO: This method overrides SMIRNOFFPotentialHandler.from_toolkit in order to gobble up
+        # a ConstraintHandler. This seems like a good solution for the interdependence, but is also
+        # not a great practice. A better solution would involve not overriding the method with a
+        # different function signature.
+
+        handler: T = cls(type="Bonds", expression="k/2*(r-length)**2")
         handler.store_matches(parameter_handler=bond_handler, topology=topology)
         handler.store_potentials(parameter_handler=bond_handler)
 
         if constraint_handler:
-            constraints: Optional[
-                "SMIRNOFFConstraintHandler"
-            ] = SMIRNOFFConstraintHandler()
-            constraints.store_constraints(  # type: ignore[union-attr]
+            constraints: SMIRNOFFConstraintHandler = SMIRNOFFConstraintHandler()
+            constraints.store_constraints(
                 parameter_handler=constraint_handler,
                 topology=topology,
                 bond_handler=handler,
             )
         else:
-            constraints = None
+            constraints = None  # type: ignore[assignment]
 
         return handler, constraints
 
@@ -143,7 +146,7 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
         self,
         parameter_handler: ConstraintHandler,
         topology: "OFFBioTop",
-        bond_handler: SMIRNOFFBondHandler = None,
+        bond_handler: T = None,
     ) -> None:
 
         if self.slot_map:
@@ -377,7 +380,7 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
         description="The distance at which vdW interactions are truncated",
     )
     switch_width: FloatQuantity["angstrom"] = Field(  # type: ignore
-        1.0 * unit.angstrom,  # type: ignore
+        1.0 * unit.angstrom,
         description="The width over which the switching function is applied",
     )
     scale_13: float = Field(
@@ -389,8 +392,8 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
     scale_15: float = Field(
         1.0, description="The scaling factor applied to 1-5 interactions"
     )
-    mixing_rule: Literal["Lorentz-Berthelot"] = Field(
-        "Lorentz-Berthelot",
+    mixing_rule: Literal["lorentz-berthelot", "geometric"] = Field(
+        "lorentz-berthelot",
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )
 
@@ -438,6 +441,7 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
             scale_14=parameter_handler.scale14,
             scale_15=parameter_handler.scale15,
             cutoff=parameter_handler.cutoff,
+            mixing_rule=parameter_handler.combining_rules.lower(),
             method=parameter_handler.method.lower(),
             switch_width=parameter_handler.switch_width,
         )
@@ -485,7 +489,7 @@ class SMIRNOFFElectrostaticsMetadataMixin(DefaultModel):
             self.charge_map[topology_key] = charge * unit.elementary_charge
 
 
-class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
+class SMIRNOFFLibraryChargeHandler(
     SMIRNOFFPotentialHandler,
 ):
 
@@ -507,7 +511,7 @@ class SMIRNOFFLibraryChargeHandler(  # type: ignore[misc]
             self.potentials[potential_key] = potential
 
 
-class SMIRNOFFChargeIncrementHandler(  # type: ignore[misc]
+class SMIRNOFFChargeIncrementHandler(
     SMIRNOFFPotentialHandler,
 ):
 

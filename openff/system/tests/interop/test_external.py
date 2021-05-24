@@ -8,12 +8,10 @@ from simtk import openmm
 from simtk.unit import nanometer as nm
 
 from openff.system.components.mdtraj import OFFBioTop
+from openff.system.drivers import get_openmm_energies
+from openff.system.drivers.openmm import _get_openmm_energies
 from openff.system.stubs import ForceField
-from openff.system.tests.base_test import BaseTest
-from openff.system.tests.energy_tests.openmm import (
-    _get_openmm_energies,
-    get_openmm_energies,
-)
+from openff.system.tests import BaseTest
 from openff.system.utils import get_test_file_path
 
 

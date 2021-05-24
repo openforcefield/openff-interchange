@@ -9,6 +9,7 @@ from openff.system.models import PotentialKey, TopologyKey
 class BuckinghamvdWHandler(PotentialHandler):
     type: Literal["Buckingham-6"] = "Buckingham-6"
     expression: Literal["a*exp(-b*r)-c*r**-6"] = "a*exp(-b*r)-c*r**-6"
+    mixing_rule: Literal["buckingham"] = "buckingham"
     method: str = "cutoff"
     cutoff: float = 9.0
     slot_map: Dict[TopologyKey, PotentialKey] = dict()

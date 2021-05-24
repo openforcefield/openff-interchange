@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Dict, Type
 
 from ele import element_from_atomic_number
 from openff.units import unit
-from openff.utilities.utils import has_pkg, requires_package
+from openff.utilities.utilities import has_package, requires_package
 
 from openff.system.components.potentials import Potential, PotentialHandler
 from openff.system.components.system import System
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 POTENTIAL_KEY_SEPARATOR = "-"
 
 
-if has_pkg("foyer"):
+if has_package("foyer"):
     from foyer.topology_graph import TopologyGraph  # noqa
 
     @classmethod  # type: ignore
@@ -41,7 +41,7 @@ if has_pkg("foyer"):
             top_graph.add_bond(atoms_indices[0], atoms_indices[1])
         return top_graph
 
-    TopologyGraph.from_off_topology = from_off_topology
+    TopologyGraph.from_off_topology = from_off_topology  # type: ignore[assignment]
 
 
 def _copy_params(
@@ -72,11 +72,11 @@ def from_foyer(topology: "OFFBioTop", ff: "Forcefield", **kwargs) -> System:
         system.handlers[name] = Handler()
 
     system.handlers["vdW"].store_matches(ff, topology=topology)
-    system.handlers["vdW"].store_potentials(forcefield=ff)  # type: ignore
+    system.handlers["vdW"].store_potentials(forcefield=ff)
 
     atom_slots = system.handlers["vdW"].slot_map
 
-    system.handlers["Electrostatics"].store_charges(  # type: ignore[attr-defined]
+    system.handlers["Electrostatics"].store_charges(
         atom_slots=atom_slots,
         forcefield=ff,
     )
@@ -85,8 +85,8 @@ def from_foyer(topology: "OFFBioTop", ff: "Forcefield", **kwargs) -> System:
     from simtk.openmm.app.forcefield import NonbondedGenerator  # type: ignore
 
     nonbonded_generator = ff.get_generator(ff, gen_type=NonbondedGenerator)
-    system.handlers["vdW"].scale_14 = nonbonded_generator.lj14scale  # type: ignore[attr-defined]
-    system.handlers["Electrostatics"].scale_14 = nonbonded_generator.coulomb14scale  # type: ignore[attr-defined]
+    system.handlers["vdW"].scale_14 = nonbonded_generator.lj14scale
+    system.handlers["Electrostatics"].scale_14 = nonbonded_generator.coulomb14scale
 
     for name, handler in system.handlers.items():
         if name not in ["vdW", "Electrostatics"]:
@@ -112,6 +112,7 @@ def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
 class FoyerVDWHandler(PotentialHandler):
     type: str = "atoms"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
+    mixing_rule: str = "geometric"
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
     potentials: Dict[PotentialKey, Potential] = dict()
     scale_13: float = 0.0
@@ -128,7 +129,7 @@ class FoyerVDWHandler(PotentialHandler):
         """Populate slotmap with key-val pairs of slots and unique potential Identifiers"""
         from foyer.atomtyper import find_atomtypes
 
-        top_graph = TopologyGraph.from_off_topology(topology)
+        top_graph = TopologyGraph.from_off_topology(off_topology=topology)
         type_map = find_atomtypes(top_graph, forcefield=forcefield)
         for key, val in type_map.items():
             top_key = TopologyKey(atom_indices=(key,))
@@ -151,7 +152,7 @@ class FoyerVDWHandler(PotentialHandler):
 
 class FoyerElectrostaticsHandler(PotentialHandler):
     type: str = "Electrostatics"
-    method: str = "PME"
+    method: str = "pme"
     expression: str = "coul"
     charges: Dict[TopologyKey, float] = dict()
     scale_13: float = 0.0

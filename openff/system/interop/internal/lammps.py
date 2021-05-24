@@ -16,7 +16,7 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
     if isinstance(file_path, Path):
         path = file_path
 
-    n_atoms = openff_sys.topology.mdtop.n_atoms  # type: ignore[union-attr]
+    n_atoms = openff_sys.topology.mdtop.n_atoms
     if "Bonds" in openff_sys.handlers:
         n_bonds = len(openff_sys["Bonds"].slot_map.keys())
     else:
@@ -62,12 +62,12 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
         # write types section
 
         x_min, y_min, z_min = np.min(
-            openff_sys.positions.to(unit.angstrom), axis=0  # type: ignore[attr-defined]
+            openff_sys.positions.to(unit.angstrom), axis=0
         ).magnitude
         if openff_sys.box is None:
             L_x, L_y, L_z = 100, 100, 100
         else:
-            L_x, L_y, L_z = np.diag(openff_sys.box.to(unit.angstrom).magnitude)  # type: ignore[attr-defined]
+            L_x, L_y, L_z = np.diag(openff_sys.box.to(unit.angstrom).magnitude)
 
         lmp_file.write(
             "{:.10g} {:.10g} xlo xhi\n"
@@ -93,7 +93,7 @@ def to_lammps(openff_sys: System, file_path: Union[Path, str]):
         for atom_type_idx, smirks in atom_type_map.items():
             # Find just one topology atom matching this SMIRKS by vdW
             matched_atom_idx = slot_map_inv[smirks].atom_indices[0]
-            matched_atom = openff_sys.topology.mdtop.atom(matched_atom_idx)  # type: ignore
+            matched_atom = openff_sys.topology.mdtop.atom(matched_atom_idx)
             mass = matched_atom.element.mass
 
             lmp_file.write(f"{atom_type_idx + 1:d}\t{mass:.8g}\n")
@@ -239,7 +239,7 @@ def _write_atoms(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
     electrostatics_handler = openff_sys.handlers["Electrostatics"]
     vdw_hander = openff_sys.handlers["vdW"]
 
-    for atom in openff_sys.topology.mdtop.atoms:  # type: ignore[union-attr]
+    for atom in openff_sys.topology.mdtop.atoms:
 
         molecule_idx = atom.residue.index
 
@@ -247,7 +247,7 @@ def _write_atoms(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
         pot_key = vdw_hander.slot_map[top_key]
         atom_type = atom_type_map_inv[pot_key]
 
-        charge = electrostatics_handler.charges[top_key].magnitude  # type: ignore[attr-defined]
+        charge = electrostatics_handler.charges[top_key].magnitude
         pos = openff_sys.positions[atom.index].to(unit.angstrom).magnitude
         lmp_file.write(
             "{:d}\t{:d}\t{:d}\t{:.8g}\t{:.8g}\t{:.8g}\t{:.8g}\n".format(
@@ -270,14 +270,19 @@ def _write_bonds(lmp_file: IO, openff_sys: System):
 
     bond_type_map_inv = dict({v: k for k, v in bond_type_map.items()})
 
-    for bond_idx, bond in enumerate(openff_sys.topology.mdtop.bonds):  # type: ignore[union-attr]
+    for bond_idx, bond in enumerate(openff_sys.topology.mdtop.bonds):
         # These are "topology indices"
         indices = (
             bond.atom1.index,
             bond.atom2.index,
         )
         top_key = TopologyKey(atom_indices=indices)
-        pot_key = bond_handler.slot_map[top_key]
+        if top_key in bond_handler.slot_map:
+            pot_key = bond_handler.slot_map[top_key]
+        else:
+            top_key = TopologyKey(atom_indices=indices[::-1])
+            pot_key = bond_handler.slot_map[top_key]
+
         bond_type = bond_type_map_inv[pot_key]
 
         lmp_file.write(
@@ -293,7 +298,7 @@ def _write_bonds(lmp_file: IO, openff_sys: System):
 def _write_angles(lmp_file: IO, openff_sys: System):
     from openff.system.components.mdtraj import _iterate_angles, _store_bond_partners
 
-    _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
+    _store_bond_partners(openff_sys.topology.mdtop)
 
     lmp_file.write("\nAngles\n\n")
 
@@ -302,7 +307,7 @@ def _write_angles(lmp_file: IO, openff_sys: System):
 
     angle_type_map_inv = dict({v: k for k, v in angle_type_map.items()})
 
-    for angle_idx, angle in enumerate(_iterate_angles(openff_sys.topology.mdtop)):  # type: ignore[union-attr]
+    for angle_idx, angle in enumerate(_iterate_angles(openff_sys.topology.mdtop)):
         # These are "topology indices"
         indices = tuple(a.index for a in angle)
         top_key = TopologyKey(atom_indices=indices)
@@ -323,7 +328,7 @@ def _write_angles(lmp_file: IO, openff_sys: System):
 def _write_propers(lmp_file: IO, openff_sys: System):
     from openff.system.components.mdtraj import _iterate_propers, _store_bond_partners
 
-    _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
+    _store_bond_partners(openff_sys.topology.mdtop)
 
     lmp_file.write("\nDihedrals\n\n")
 
@@ -332,7 +337,7 @@ def _write_propers(lmp_file: IO, openff_sys: System):
 
     proper_type_map_inv = dict({v: k for k, v in proper_type_map.items()})
 
-    for proper_idx, proper in enumerate(_iterate_propers(openff_sys.topology.mdtop)):  # type: ignore[union-attr]
+    for proper_idx, proper in enumerate(_iterate_propers(openff_sys.topology.mdtop)):
         # These are "topology indices"
         indices = tuple(a.index for a in proper)
         for top_key, pot_key in proper_handler.slot_map.items():
@@ -355,7 +360,7 @@ def _write_propers(lmp_file: IO, openff_sys: System):
 def _write_impropers(lmp_file: IO, openff_sys: System):
     from openff.system.components.mdtraj import _iterate_impropers, _store_bond_partners
 
-    _store_bond_partners(openff_sys.topology.mdtop)  # type: ignore[union-attr]
+    _store_bond_partners(openff_sys.topology.mdtop)
 
     lmp_file.write("\nImpropers\n\n")
 
@@ -364,7 +369,9 @@ def _write_impropers(lmp_file: IO, openff_sys: System):
 
     improper_type_map_inv = dict({v: k for k, v in improper_type_map.items()})
 
-    for improper_idx, improper in enumerate(_iterate_impropers(openff_sys.topology.mdtop)):  # type: ignore[union-attr]
+    for improper_idx, improper in enumerate(
+        _iterate_impropers(openff_sys.topology.mdtop)
+    ):
         # These are "topology indices"
         indices = tuple(a.index for a in improper)
         for top_key, pot_key in improper_handler.slot_map.items():
