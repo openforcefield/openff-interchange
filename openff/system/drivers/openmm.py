@@ -99,12 +99,14 @@ def _get_openmm_energies(
     electrostatics: bool = True,
 ) -> EnergyReport:
     """Given a prepared `openmm.System`, run a single-point energy calculation."""
+    """\
     if hard_cutoff:
         omm_sys = _set_nonbonded_method(
             omm_sys, "cutoff", electrostatics=electrostatics
         )
     else:
         omm_sys = _set_nonbonded_method(omm_sys, "PME")
+    """
 
     force_names = {force.__class__.__name__ for force in omm_sys.getForces()}
     group_to_force = {i: force_name for i, force_name in enumerate(force_names)}

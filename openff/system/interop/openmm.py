@@ -1,4 +1,3 @@
-import numpy as np
 from openff.units import unit as off_unit
 from openff.units.simtk import from_simtk
 from simtk import openmm, unit
@@ -247,10 +246,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
     """Process the vdW and Electrostatics sections of an OpenFF System into a corresponding openmm.NonbondedForce"""
     if "vdW" in openff_sys.handlers:
         vdw_handler = openff_sys.handlers["vdW"]
-        if vdw_handler.method not in ["cutoff"]:
-            raise UnsupportedCutoffMethodError()
 
         if vdw_handler.mixing_rule != "lorentz-berthelot":
+            # TODO: With a CustomNonbondedForce, geometric can be support
             raise UnsupportedExportError(
                 f"Mixing rule `{vdw_handler.mixing_rule}` not compatible with current OpenMM export."
                 "The only supported values is `lorentez-berthelot`."
@@ -259,8 +257,74 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
         vdw_cutoff = vdw_handler.cutoff.m_as(off_unit.angstrom) * unit.angstrom
         vdw_method = vdw_handler.method.lower()
 
-        electrostatics_handler = openff_sys.handlers["Electrostatics"]  # Split this out
+        vdw_expression = vdw_handler.expression
+        vdw_expression = vdw_expression.replace("**", "^")
+
+        if vdw_handler.mixing_rule == "lorentz-berthelot":
+            mixing_rule_expression = (
+                "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); "
+            )
+        else:
+            # TODO: With a CustomNonbondedForce, geometric can be support
+            raise UnsupportedExportError(
+                f"Mixing rule `{vdw_handler.mixing_rule}` not compatible with current OpenMM export."
+                "The only supported values is `lorentez-berthelot`."
+            )
+
+        vdw_force = openmm.CustomNonbondedForce(
+            vdw_expression + "; " + mixing_rule_expression
+        )
+        openmm_sys.addForce(vdw_force)
+        vdw_force.addPerParticleParameter("sigma")
+        vdw_force.addPerParticleParameter("epsilon")
+
+        # TODO: Add virtual particles
+        for _ in openff_sys.topology.mdtop.atoms:
+            vdw_force.addParticle([1.0, 0.0])
+
+        if vdw_method == "cutoff":
+            if openff_sys.box is None:
+                vdw_force.setNonbondedMethod(openmm.NonbondedForce.CutoffNonPeriodic)
+            else:
+                vdw_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
+            # TODO: setUseDispersionCorrection?
+            vdw_force.setCutoffDistance(vdw_cutoff)
+            if getattr(vdw_handler, "switch_width", None) is not None:
+                if vdw_handler.switch_width == 0.0:
+                    vdw_force.setUseSwitchingFunction(False)
+                else:
+                    switching_distance = vdw_handler.cutoff - vdw_handler.switch_width
+                    if switching_distance.m < 0:
+                        raise UnsupportedCutoffMethodError(
+                            "Found a 'switch_width' greater than the cutoff distance. It's not clear "
+                            "what this means and it's probably invalid. Found "
+                            f"switch_width{vdw_handler.switch_width} and cutoff {vdw_handler.cutoff}"
+                        )
+
+                    switching_distance = (
+                        switching_distance.m_as(off_unit.angstrom) * unit.angstrom
+                    )
+
+                    vdw_force.setUseSwitchingFunction(True)
+                    vdw_force.setSwitchingDistance(switching_distance)
+
+        elif vdw_method == "pme":
+            if openff_sys.box is None:
+                raise UnsupportedCutoffMethodError(
+                    "vdW method pme/ljpme is not valid for non-periodic systems."
+                )
+            else:
+                # TODO: Fully flesh out this implementation - cutoffs, other settings
+                vdw_force.setNonbondedMethod(openmm.NonbondedForce.PME)
+
+        electrostatics_handler = openff_sys.handlers["Electrostatics"]
         electrostatics_method = electrostatics_handler.method.lower()
+        electrostatics_force = openmm.NonbondedForce()
+        openmm_sys.addForce(electrostatics_force)
+
+        for _ in openff_sys.topology.mdtop.atoms:
+            electrostatics_force.addParticle(0.0, 1.0, 0.0)
+
         if electrostatics_method == "reaction-field":
             if openff_sys.box is None:
                 # TODO: Should this state be prevented from happening?
@@ -271,33 +335,17 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
                 raise UnimplementedCutoffMethodError(
                     f"Electrostatics method {electrostatics_method} is not yet implemented."
                 )
-        if electrostatics_method not in ["pme", "cutoff"]:
-            raise UnsupportedCutoffMethodError()
-
-        non_bonded_force = openmm.NonbondedForce()
-        openmm_sys.addForce(non_bonded_force)
-
-        # TODO: Add virtual particles
-        for _ in openff_sys.topology.mdtop.atoms:
-            non_bonded_force.addParticle(0.0, 1.0, 0.0)
-
-        if openff_sys.box is None:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+        elif electrostatics_method == "pme":
+            electrostatics_force.setNonbondedMethod(openmm.NonbondedForce.PME)
+            electrostatics_force.setEwaldErrorTolerance(1.0e-4)
+        elif electrostatics_method == "cutoff":
+            raise UnsupportedCutoffMethodError(
+                "OpenMM does not clearly support cut-off electrostatics with no reaction-field attenuation."
+            )
         else:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
-            # non_bonded_force.setUseDispersionCorrection(True)
-            non_bonded_force.setCutoffDistance(vdw_cutoff)
-            if getattr(vdw_handler, "switch_width", None) is not None:
-                if vdw_handler.switch_width == 0.0:
-                    non_bonded_force.setUseSwitchingFunction(False)
-                else:
-                    switching_distance = vdw_handler.cutoff - vdw_handler.switch_width
-                    switching_distance = (
-                        switching_distance.m_as(off_unit.angstrom) * unit.angstrom
-                    )
-
-                    non_bonded_force.setUseSwitchingFunction(True)
-                    non_bonded_force.setSwitchingDistance(switching_distance)
+            raise UnsupportedCutoffMethodError(
+                f"Electrostatics method {electrostatics_method} not supported"
+            )
 
         for top_key, pot_key in vdw_handler.slot_map.items():
             atom_idx = top_key.atom_indices[0]
@@ -310,8 +358,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
             sigma = sigma.m_as(off_unit.nanometer)
             epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
 
-            non_bonded_force.setParticleParameters(
-                atom_idx, partial_charge, sigma, epsilon
+            vdw_force.setParticleParameters(atom_idx, [sigma, epsilon])
+            electrostatics_force.setParticleParameters(
+                atom_idx, partial_charge, 0.0, 0.0
             )
 
     elif "Buckingham-6" in openff_sys.handlers:
@@ -346,6 +395,71 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
 
         return
 
+    # Attempting to match the value used internally by OpenMM; The source of this value is likely
+    # https://github.com/openmm/openmm/issues/1149#issuecomment-250299854
+    # 1 / * (4pi * eps0) * elementary_charge ** 2 / nanometer ** 2
+    coul_const = 138.935456  # kJ/nm
+
+    # TODO: Split vdW and electrostatics 1-4 into speparate forces
+    # would require knowing which is which, preferably if only given its type (which are the same)
+    """
+    vdw_14_force = openmm.CustomBondForce("4*epsilon*((sigma/r)^12-(sigma/r)^6)")
+    vdw_14_force.addPerBondParameter("sigma")
+    vdw_14_force.addPerBondParameter("epsilon")
+    coul_14_force = openmm.CustomBondForce(f"-1 * {coul_const}*qq/r")
+    coul_14_force.addPerBondParameter("qq")
+
+    openmm_sys.addForce(vdw_14_force)
+    openmm_sys.addForce(coul_14_force)
+    """
+
+    combined_14_force = openmm.CustomBondForce(
+        f"4*epsilon*((sigma/r)^12-(sigma/r)^6)-{coul_const}*qq/r"
+    )
+    combined_14_force.addPerBondParameter("sigma")
+    combined_14_force.addPerBondParameter("epsilon")
+    combined_14_force.addPerBondParameter("qq")
+    openmm_sys.addForce(combined_14_force)
+
+    # Need to create 1-4 exceptions, just to have a baseline for splitting out/modifying
+    # It might be simpler to iterate over 1-4 pairs directly
+    bonds = [(b.atom1.index, b.atom2.index) for b in openff_sys.topology.mdtop.bonds]
+    electrostatics_force.createExceptionsFromBonds(
+        bonds=bonds,
+        coulomb14Scale=electrostatics_handler.scale_14,
+        lj14Scale=vdw_handler.scale_14,
+    )
+
+    for i in range(electrostatics_force.getNumExceptions()):
+        (p1, p2, q, sig, eps) = electrostatics_force.getExceptionParameters(i)
+
+        # If the interactions are both zero, assume this is a 1-2 or 1-3 interaction
+        if q._value == 0 and eps._value == 0:
+            pass
+        else:
+            # Assume this is a 1-4 interaction
+            # Look up the vdW parameters for each particle
+            sig1, eps1 = vdw_force.getParticleParameters(p1)
+            sig2, eps2 = vdw_force.getParticleParameters(p2)
+            q1, _, _ = electrostatics_force.getParticleParameters(p1)
+            q2, _, _ = electrostatics_force.getParticleParameters(p2)
+
+            # manually compute and set the 1-4 interactions
+            sig_14 = (sig1 + sig2) * 0.5
+            eps_14 = (eps1 * eps2) ** 0.5 * vdw_handler.scale_14
+            qq = q1 * q2 * electrostatics_handler.scale_14
+            combined_14_force.addBond(p1, p2, [sig_14, eps_14, qq])
+            """
+            vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
+            coul_14_force.addBond(p1, p2, [qq])
+            """
+        vdw_force.addExclusion(p1, p2)
+        # electrostatics_force.addExclusion(p1, p2)
+        electrostatics_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
+        # vdw_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
+
+
+"""\
     # TODO: Figure out all of this post-processing with CustomNonbondedForce
 
     # from vdWHandler.postprocess_system, modified to work on an md.Topology
@@ -394,6 +508,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
         non_bonded_force.setCutoffDistance(vdw_cutoff)
         non_bonded_force.setEwaldErrorTolerance(1.0e-4)
+"""
 
 
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
