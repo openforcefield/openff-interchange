@@ -414,7 +414,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys):
     """
 
     combined_14_force = openmm.CustomBondForce(
-        f"4*epsilon*((sigma/r)^12-(sigma/r)^6)-{coul_const}*qq/r"
+        f"4*epsilon*((sigma/r)^12-(sigma/r)^6)+{coul_const}*qq/r"
     )
     combined_14_force.addPerBondParameter("sigma")
     combined_14_force.addPerBondParameter("epsilon")
