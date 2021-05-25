@@ -23,7 +23,7 @@ kcal_mol_angstroms = kcal_mol / omm_unit.angstrom ** 2
 kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.topology import Topology
+    from openff.toolkit.topology import Molecule, Topology
     from openff.toolkit.typing.engines.smirnoff.parameters import (
         AngleHandler,
         BondHandler,
@@ -586,3 +586,19 @@ class ElectrostaticsMetaHandler(SMIRNOFFElectrostaticsMetadataMixin):
             for i, id_ in enumerate(ids):
                 atom_key = TopologyKey(atom_indices=(id_,))
                 self.charges[atom_key] = charges[i]  # type: ignore
+
+
+def library_charge_from_molecule(
+    molecule: "Molecule",
+) -> LibraryChargeHandler.LibraryChargeType:
+    if molecule.partial_charges is None:
+        raise ValueError("Input molecule is missing partial charges.")
+
+    smirks = molecule.to_smiles(mapped=True)
+    charges = molecule.partial_charges
+
+    library_charge_type = LibraryChargeHandler.LibraryChargeType(
+        smirks=smirks, charge=charges
+    )
+
+    return library_charge_type

@@ -2,7 +2,11 @@ import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ImproperTorsionHandler
-from openff.toolkit.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
+from openff.toolkit.typing.engines.smirnoff.parameters import (
+    AngleHandler,
+    BondHandler,
+    LibraryChargeHandler,
+)
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from simtk import unit as omm_unit
@@ -14,6 +18,7 @@ from openff.system.components.smirnoff import (
     SMIRNOFFBondHandler,
     SMIRNOFFImproperTorsionHandler,
     SMIRNOFFvdWHandler,
+    library_charge_from_molecule,
 )
 from openff.system.models import TopologyKey
 from openff.system.tests import BaseTest
@@ -103,6 +108,17 @@ class TestSMIRNOFFHandlers(BaseTest):
         assert (
             TopologyKey(atom_indices=(0, 3, 1, 2), mult=0) in potential_handler.slot_map
         )
+
+
+def test_library_charges_from_molecule():
+    mol = Molecule.from_smiles("CCO")
+    mol.partial_charges = np.linspace(-0.4, 0.4, 9) * simtk_unit.elementary_charge
+
+    library_charges = library_charge_from_molecule(mol)
+
+    assert isinstance(library_charges, LibraryChargeHandler.LibraryChargeType)
+    assert library_charges.smirks == mol.to_smiles(mapped=True)
+    assert library_charges.charge == [*mol.partial_charges]
 
 
 @skip_if_missing("jax")
