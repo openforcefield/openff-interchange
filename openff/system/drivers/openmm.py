@@ -178,8 +178,8 @@ def _get_openmm_energies(
 
     report.update_energies(
         {
-            "Bond": omm_energies.get("HarmonicBondForce", 0.0),
-            "Angle": omm_energies.get("HarmonicAngleForce", 0.0),
+            "Bond": omm_energies.get("HarmonicBondForce", 0.0 * kj_mol),
+            "Angle": omm_energies.get("HarmonicAngleForce", 0.0 * kj_mol),
             "Torsion": _canonicalize_torsion_energies(omm_energies),
             "Nonbonded": omm_energies.get(
                 "Nonbonded", _canonicalize_nonbonded_energies(omm_energies)
