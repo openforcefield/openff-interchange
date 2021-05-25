@@ -37,7 +37,6 @@ from openff.system.exceptions import (
     MissingPositionsError,
     UnsupportedExportError,
 )
-from openff.system.interop.openmm import to_openmm
 from openff.system.models import DefaultModel
 from openff.system.types import ArrayQuantity
 
@@ -330,9 +329,11 @@ class System(DefaultModel):
 
         to_lammps(self, file_path)
 
-    def to_openmm(self):
+    def to_openmm(self, combine_nonbonded_forces: bool = False):
         """Export this system to an OpenMM System"""
-        return to_openmm(self)
+        from openff.system.interop.openmm import to_openmm as to_openmm_
+
+        return to_openmm_(self, combine_nonbonded_forces=combine_nonbonded_forces)
 
     def to_prmtop(self, file_path: Union[Path, str], writer="parmed"):
         """Export this system to an Amber .prmtop file"""
