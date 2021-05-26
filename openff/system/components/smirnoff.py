@@ -1,11 +1,15 @@
-from typing import TYPE_CHECKING, Dict, Optional, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
+    AngleHandler,
+    BondHandler,
     ChargeIncrementModelHandler,
     ConstraintHandler,
+    ImproperTorsionHandler,
     LibraryChargeHandler,
     ParameterHandler,
+    ProperTorsionHandler,
     vdWHandler,
 )
 from openff.units import unit
@@ -14,6 +18,7 @@ from simtk import unit as omm_unit
 from typing_extensions import Literal
 
 from openff.system.components.potentials import Potential, PotentialHandler
+from openff.system.exceptions import InvalidParameterHandlerError
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import FloatQuantity
 from openff.system.utils import get_partial_charges_from_openmm_system
@@ -24,12 +29,6 @@ kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.topology import Topology
-    from openff.toolkit.typing.engines.smirnoff.parameters import (
-        AngleHandler,
-        BondHandler,
-        ImproperTorsionHandler,
-        ProperTorsionHandler,
-    )
 
     from openff.system.components.mdtraj import OFFBioTop
 
@@ -39,6 +38,8 @@ T_ = TypeVar("T_", bound="PotentialHandler")
 
 
 class SMIRNOFFPotentialHandler(PotentialHandler):
+    _ALLOWED_PARAMETER_HANDLERS: List[T_]
+
     def store_matches(
         self,
         parameter_handler: ParameterHandler,
@@ -70,6 +71,13 @@ class SMIRNOFFPotentialHandler(PotentialHandler):
 
         """
         handler = cls()
+
+        if type(parameter_handler) not in handler._ALLOWED_PARAMETER_HANDLERS:
+            raise InvalidParameterHandlerError(
+                f"Found parameter handler of type {type(parameter_handler)}, allowed types are "
+                f"{handler._ALLOWED_PARAMETER_HANDLERS}"
+            )
+
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
         handler.store_potentials(parameter_handler=parameter_handler)
 
@@ -80,6 +88,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
     type: Literal["Bonds"] = "Bonds"
     expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
+    _ALLOWED_PARAMETER_HANDLERS: List[Type[T_]] = [BondHandler]
 
     def store_potentials(self, parameter_handler: "BondHandler") -> None:
         """
@@ -141,6 +150,7 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
     constraints: Dict[
         PotentialKey, bool
     ] = dict()  # should this be named potentials for consistency?
+    _ALLOWED_PARAMETER_HANDLERS: List[Type[T_]] = [ConstraintHandler]
 
     def store_constraints(
         self,
@@ -186,6 +196,7 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
 
     type: Literal["Angles"] = "Angles"
     expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
+    _ALLOWED_PARAMETER_HANDLERS: List[Type[T_]] = [AngleHandler]
 
     def store_potentials(self, parameter_handler: "AngleHandler") -> None:
         """
@@ -229,6 +240,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
     expression: Literal[
         "k*(1+cos(periodicity*theta-phase))"
     ] = "k*(1+cos(periodicity*theta-phase))"
+    _ALLOWED_PARAMETER_HANDLERS: List[Type[T_]] = [ProperTorsionHandler]
 
     def store_matches(
         self,
@@ -291,6 +303,7 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
     expression: Literal[
         "k*(1+cos(periodicity*theta-phase))"
     ] = "k*(1+cos(periodicity*theta-phase))"
+    _ALLOWED_PARAMETER_HANDLERS: List[Type[T_]] = [ImproperTorsionHandler]
 
     def store_matches(
         self, parameter_handler: "ImproperTorsionHandler", topology: "OFFBioTop"
@@ -396,6 +409,7 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
         "lorentz-berthelot",
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )
+    _ALLOWED_PARAMETER_HANDLERS: List[Type[T_]] = [vdWHandler]
 
     def store_potentials(self, parameter_handler: vdWHandler) -> None:
         """
@@ -497,6 +511,7 @@ class SMIRNOFFLibraryChargeHandler(
     # TODO: This should be specified by a parent class and not required (or event allowed)
     # to be specified here
     expression: Literal["coul"] = "coul"
+    _ALLOWED_PARAMETER_HANDLERS: List[Type[T_]] = [LibraryChargeHandler]
 
     def store_potentials(self, parameter_handler: LibraryChargeHandler) -> None:
         if self.potentials:
@@ -514,6 +529,7 @@ class SMIRNOFFLibraryChargeHandler(
 class SMIRNOFFChargeIncrementHandler(
     SMIRNOFFPotentialHandler,
 ):
+    _ALLOWED_PARAMETER_HANDLERS: List[Type[T_]] = [ChargeIncrementModelHandler]
 
     type: Literal["ChargeIncrements"] = "ChargeIncrements"
     # TODO: This should be specified by a parent class and not required (or event allowed)

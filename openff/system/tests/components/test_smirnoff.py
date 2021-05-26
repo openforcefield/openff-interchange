@@ -1,6 +1,8 @@
+from typing import Any, List
+
 import numpy as np
 import pytest
-from openff.toolkit.topology import Molecule
+from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ImproperTorsionHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
 from openff.units import unit
@@ -13,11 +15,28 @@ from openff.system.components.smirnoff import (
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
     SMIRNOFFImproperTorsionHandler,
+    SMIRNOFFPotentialHandler,
     SMIRNOFFvdWHandler,
 )
+from openff.system.exceptions import InvalidParameterHandlerError
 from openff.system.models import TopologyKey
 from openff.system.tests import BaseTest
 from openff.system.utils import get_test_file_path
+
+
+class TestSMIRNOFFPotentialHandler(BaseTest):
+    def test_allowed_parameter_handler_types(self):
+        class DummySMIRNOFFHandler(SMIRNOFFPotentialHandler):
+            type = "Bonds"
+            expression = "1+1"
+            _ALLOWED_PARAMETER_HANDLERS: List[Any] = [BondHandler]
+
+        angle_handler = AngleHandler(version=0.3)
+
+        with pytest.raises(InvalidParameterHandlerError):
+            DummySMIRNOFFHandler.from_toolkit(
+                parameter_handler=angle_handler, topology=Topology()
+            )
 
 
 class TestSMIRNOFFHandlers(BaseTest):
