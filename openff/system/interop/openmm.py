@@ -231,20 +231,15 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys):
         phase = params["phase"].m_as(off_unit.radian)
         idivf = int(params["idivf"])
 
-        other_atoms = [indices[0], indices[2], indices[3]]
-        for p in [
-            (other_atoms[i], other_atoms[j], other_atoms[k])
-            for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]
-        ]:
-            torsion_force.addTorsion(
-                indices[1],
-                p[0],
-                p[1],
-                p[2],
-                periodicity,
-                phase,
-                k / idivf,
-            )
+        torsion_force.addTorsion(
+            indices[0],
+            indices[1],
+            indices[2],
+            indices[3],
+            periodicity,
+            phase,
+            k / idivf,
+        )
 
 
 def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=False):
