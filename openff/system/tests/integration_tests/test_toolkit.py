@@ -18,7 +18,7 @@ _box_vectors = simtk_unit.Quantity(
 )
 
 
-@pytest.mark.slot
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "mol",
     Molecule.from_file(get_test_file_path("chosen.smi"), allow_undefined_stereo=True),
@@ -56,7 +56,7 @@ def test_energy_vs_toolkit(mol):
         custom_tolerances={
             "Bond": 1e-6 * kj_mol,
             "Angle": 1e-6 * kj_mol,
-            "Torsion": 1.6e-5 * kj_mol,
+            "Torsion": 4e-5 * kj_mol,
             "Nonbonded": 1e-6 * kj_mol,
         },
     )
