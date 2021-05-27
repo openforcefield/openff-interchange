@@ -57,6 +57,7 @@ def test_unimplemented_smirnoff_handler():
         System.from_smirnoff(force_field=parsley, topology=top)
 
 
+@pytest.mark.slow
 class TestSystemCombination(BaseTest):
     def test_basic_combination(self):
         """Test basic use of System.__add__() based on the README example"""

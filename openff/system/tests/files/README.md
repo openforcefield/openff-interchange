@@ -42,3 +42,7 @@ Documenting how some of these files were generated
     ```
 
 `benzene.sdf`
+
+`chosen.smi`
+  - Meant to serve as a rough coverage test, likely to be replaced by a more curated set
+  - https://github.com/openforcefield/open-forcefield-data/blob/8622f00860c507102a4c8ac9088d9e73bc76857e/Utilize-All-Parameters/selected/chosen.smi
