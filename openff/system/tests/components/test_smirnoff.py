@@ -1,10 +1,12 @@
-from typing import Any, List
-
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ImproperTorsionHandler
-from openff.toolkit.typing.engines.smirnoff.parameters import AngleHandler, BondHandler
+from openff.toolkit.typing.engines.smirnoff.parameters import (
+    AngleHandler,
+    BondHandler,
+    ParameterHandler,
+)
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from simtk import unit as omm_unit
@@ -26,16 +28,39 @@ from openff.system.utils import get_test_file_path
 
 class TestSMIRNOFFPotentialHandler(BaseTest):
     def test_allowed_parameter_handler_types(self):
+        class DummyParameterHandler(ParameterHandler):
+            pass
+
         class DummySMIRNOFFHandler(SMIRNOFFPotentialHandler):
             type = "Bonds"
             expression = "1+1"
-            _ALLOWED_PARAMETER_HANDLERS: List[Any] = [BondHandler]
 
-        angle_handler = AngleHandler(version=0.3)
+            @classmethod
+            def allowed_parameter_handlers(cls):
+                return [DummyParameterHandler]
+
+        dummy_handler = DummySMIRNOFFHandler()
+        angle_Handler = AngleHandler(version=0.3)
+
+        assert DummyParameterHandler in dummy_handler.allowed_parameter_handlers()
+        assert AngleHandler not in dummy_handler.allowed_parameter_handlers()
+        assert (
+            DummyParameterHandler
+            not in SMIRNOFFAngleHandler.allowed_parameter_handlers()
+        )
+
+        dummy_handler = DummyParameterHandler(version=0.3)
 
         with pytest.raises(InvalidParameterHandlerError):
-            DummySMIRNOFFHandler.from_toolkit(
-                parameter_handler=angle_handler, topology=Topology()
+            SMIRNOFFAngleHandler._from_toolkit(
+                parameter_handler=dummy_handler,
+                topology=Topology(),
+            )
+
+        with pytest.raises(InvalidParameterHandlerError):
+            DummySMIRNOFFHandler._from_toolkit(
+                parameter_handler=angle_Handler,
+                topology=Topology(),
             )
 
 
@@ -56,7 +81,7 @@ class TestSMIRNOFFHandlers(BaseTest):
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(bond_handler)
-        bond_potentials, _ = SMIRNOFFBondHandler.from_toolkit(
+        bond_potentials, _ = SMIRNOFFBondHandler._from_toolkit(
             bond_handler=forcefield["Bonds"],
             topology=top,
         )
@@ -83,7 +108,7 @@ class TestSMIRNOFFHandlers(BaseTest):
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(angle_handler)
-        angle_potentials = SMIRNOFFAngleHandler.from_toolkit(
+        angle_potentials = SMIRNOFFAngleHandler._from_toolkit(
             parameter_handler=forcefield["Angles"],
             topology=top,
         )
@@ -136,13 +161,13 @@ class TestMatrixRepresentations(BaseTest):
         import jax
 
         if handler_name == "Bonds":
-            handler, _ = SMIRNOFFBondHandler.from_toolkit(
+            handler, _ = SMIRNOFFBondHandler._from_toolkit(
                 bond_handler=parsley["Bonds"],
                 topology=ethanol_top,
                 constraint_handler=None,
             )
         elif handler_name == "Angles":
-            handler = SMIRNOFFAngleHandler.from_toolkit(
+            handler = SMIRNOFFAngleHandler._from_toolkit(
                 parameter_handler=parsley[handler_name],
                 topology=ethanol_top,
             )
