@@ -54,6 +54,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
         and unique potential identifiers
 
         """
+        parameter_handler_name = getattr(parameter_handler, "_TAGNAME", None)
         if self.slot_map:
             # TODO: Should the slot_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
@@ -61,7 +62,9 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             topology_key = TopologyKey(atom_indices=key)
-            potential_key = PotentialKey(id=val.parameter_type.smirks)
+            potential_key = PotentialKey(
+                id=val.parameter_type.smirks, associated_handler=parameter_handler_name
+            )
             self.slot_map[topology_key] = potential_key
 
     @classmethod
@@ -176,7 +179,9 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
             distance = match.parameter_type.distance
             if distance is not None:
                 # This constraint parameter is fully specified
-                potential_key = PotentialKey(id=smirks)
+                potential_key = PotentialKey(
+                    id=smirks, associated_handler="Constraints"
+                )
                 distance = match.parameter_type.distance
             else:
                 # This constraint parameter depends on the BondHandler
@@ -274,7 +279,9 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
             for n in range(n_terms):
                 smirks = val.parameter_type.smirks
                 topology_key = TopologyKey(atom_indices=key, mult=n)
-                potential_key = PotentialKey(id=smirks, mult=n)
+                potential_key = PotentialKey(
+                    id=smirks, mult=n, associated_handler="ProperTorsions"
+                )
                 self.slot_map[topology_key] = potential_key
 
     def store_potentials(self, parameter_handler: "ProperTorsionHandler") -> None:
@@ -347,7 +354,9 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
                     topology_key = TopologyKey(
                         atom_indices=(key[1], *permuted_key), mult=n
                     )
-                    potential_key = PotentialKey(id=smirks, mult=n)
+                    potential_key = PotentialKey(
+                        id=smirks, mult=n, associated_handler="ImproperTorsions"
+                    )
                     self.slot_map[topology_key] = potential_key
 
     def store_potentials(self, parameter_handler: "ImproperTorsionHandler") -> None:
