@@ -268,6 +268,7 @@ def test_openmm_roundtrip():
     )
 
 
+@pytest.mark.slow
 def test_combine_nonbonded_forces():
 
     mol = Molecule.from_smiles("ClC#CCl")
