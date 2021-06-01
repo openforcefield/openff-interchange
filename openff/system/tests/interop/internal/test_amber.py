@@ -4,9 +4,8 @@ from openff.toolkit.topology import Molecule
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
+from openff.system.drivers import get_amber_energies, get_gromacs_energies
 from openff.system.stubs import ForceField
-from openff.system.tests.energy_tests.amber import get_amber_energies
-from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
 
 kj_mol = unit.kilojoule / unit.mol
 

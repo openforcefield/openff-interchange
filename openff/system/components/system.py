@@ -34,7 +34,6 @@ from openff.system.exceptions import (
     MissingPositionsError,
     UnsupportedExportError,
 )
-from openff.system.interop.openmm import to_openmm
 from openff.system.models import DefaultModel
 from openff.system.types import ArrayQuantity
 
@@ -187,7 +186,7 @@ class System(DefaultModel):
                     constraint_handler = force_field["Constraints"]
                 else:
                     constraint_handler = None
-                potential_handler, constraints = SMIRNOFFBondHandler.from_toolkit(
+                potential_handler, constraints = SMIRNOFFBondHandler._from_toolkit(
                     bond_handler=force_field["Bonds"],
                     topology=topology,
                     constraint_handler=constraint_handler,
@@ -204,15 +203,13 @@ class System(DefaultModel):
                 POTENTIAL_HANDLER_CLASS = _SMIRNOFF_HANDLER_MAPPINGS[
                     parameter_handler.__class__
                 ]
-                potential_handler = POTENTIAL_HANDLER_CLASS.from_toolkit(
-                    # type: ignore
+                potential_handler = POTENTIAL_HANDLER_CLASS._from_toolkit(  # type: ignore[assignment]
                     parameter_handler=parameter_handler,
                     topology=topology,
                 )
                 sys_out.handlers.update({parameter_handler_name: potential_handler})
             elif parameter_handler_name == "vdW":
-                potential_handler = SMIRNOFFvdWHandler._from_toolkit(
-                    # type: ignore[assignment]
+                potential_handler = SMIRNOFFvdWHandler._from_toolkit(  # type: ignore[assignment]
                     parameter_handler=force_field["vdW"],
                     topology=topology,
                 )
@@ -241,9 +238,7 @@ class System(DefaultModel):
                 library_charges = SMIRNOFFLibraryChargeHandler()
                 library_charges.store_matches(force_field["LibraryCharges"], topology)
                 library_charges.store_potentials(force_field["LibraryCharges"])
-                sys_out.handlers.update(
-                    {"LibraryCharges": electrostatics}
-                )  # type: ignore[dict-item]
+                sys_out.handlers.update({"LibraryCharges": electrostatics})
 
                 electrostatics.apply_library_charges(library_charges)
 
@@ -253,9 +248,7 @@ class System(DefaultModel):
                     force_field["ChargeIncrementModel"], topology
                 )
                 charge_increments.store_potentials(force_field["ChargeIncrementModel"])
-                sys_out.handlers.update(
-                    {"LibraryCharges": electrostatics}
-                )  # type: ignore[dict-item]
+                sys_out.handlers.update({"LibraryCharges": electrostatics})
 
                 if charge_increments.partial_charge_method not in electrostatics.cache:
                     electrostatics.cache_charges(
@@ -268,9 +261,7 @@ class System(DefaultModel):
 
                 electrostatics.apply_charge_increments(charge_increments)
 
-            sys_out.handlers.update(
-                {"Electrostatics": electrostatics}
-            )  # type: ignore[dict-item]
+            sys_out.handlers.update({"Electrostatics": electrostatics})
         # if "Electrostatics" not in self.registered_parameter_handlers:
         #     if "LibraryCharges" in self.registered_parameter_handlers:
         #         library_charge_handler = SMIRNOFFLibraryChargeHandler()
@@ -335,9 +326,11 @@ class System(DefaultModel):
 
         to_lammps(self, file_path)
 
-    def to_openmm(self):
+    def to_openmm(self, combine_nonbonded_forces: bool = False):
         """Export this system to an OpenMM System"""
-        return to_openmm(self)
+        from openff.system.interop.openmm import to_openmm as to_openmm_
+
+        return to_openmm_(self, combine_nonbonded_forces=combine_nonbonded_forces)
 
     def to_prmtop(self, file_path: Union[Path, str], writer="parmed"):
         """Export this system to an Amber .prmtop file"""

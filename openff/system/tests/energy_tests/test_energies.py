@@ -6,34 +6,25 @@ import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from openff.utilities.utilities import has_executable
 from simtk import openmm
 from simtk import unit as simtk_unit
 from simtk.openmm import app
 
 from openff.system.components.mdtraj import OFFBioTop
+from openff.system.drivers.openmm import _get_openmm_energies, get_openmm_energies
+from openff.system.drivers.report import EnergyError, EnergyReport
 from openff.system.stubs import ForceField
-from openff.system.tests.energy_tests.openmm import (
-    _get_openmm_energies,
-    get_openmm_energies,
-)
-from openff.system.tests.energy_tests.report import EnergyError, EnergyReport
+from openff.system.tests.utils import HAS_GROMACS, HAS_LAMMPS, needs_gmx, needs_lmp
 from openff.system.utils import get_test_file_path
 
-HAS_GROMACS = any(has_executable(e) for e in ["gmx", "gmx_d"])
-HAS_LAMMPS = any(has_executable(e) for e in ["lammps", "lmp_mpi", "lmp_serial"])
-
 if HAS_GROMACS:
-    from openff.system.tests.energy_tests.gromacs import (
+    from openff.system.drivers.gromacs import (
         _get_mdp_file,
         _run_gmx_energy,
         get_gromacs_energies,
     )
 if HAS_LAMMPS:
-    from openff.system.tests.energy_tests.lammps import get_lammps_energies
-
-needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
-needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs GROMACS")
+    from openff.system.drivers.lammps import get_lammps_energies
 
 
 def test_energy_report():
@@ -319,7 +310,7 @@ def test_process_rb_torsions():
     ethanol.generate_unique_atom_names()
 
     # Run this OFFMol through MoSDeF infrastructure and OPLS-AA
-    from openff.system.tests.energy_tests.utils import offmol_to_compound
+    from openff.system.components.mbuild import offmol_to_compound
 
     my_compound = offmol_to_compound(ethanol)
     my_compound.box = mb.Box(lengths=[4, 4, 4])

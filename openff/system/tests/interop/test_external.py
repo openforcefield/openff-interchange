@@ -8,12 +8,10 @@ from simtk import openmm
 from simtk.unit import nanometer as nm
 
 from openff.system.components.mdtraj import OFFBioTop
+from openff.system.drivers import get_openmm_energies
+from openff.system.drivers.openmm import _get_openmm_energies
 from openff.system.stubs import ForceField
 from openff.system.tests import BaseTest
-from openff.system.tests.energy_tests.openmm import (
-    _get_openmm_energies,
-    get_openmm_energies,
-)
 from openff.system.utils import get_test_file_path
 
 
@@ -91,7 +89,11 @@ class TestFromOpenMM(BaseTest):
             pdbfile.getPositions().value_in_unit(nm),
         )
 
-        get_openmm_energies(out, hard_cutoff=True).compare(
+        get_openmm_energies(
+            out,
+            hard_cutoff=True,
+            combine_nonbonded_forces=True,
+        ).compare(
             _get_openmm_energies(
                 omm_sys=ff.create_openmm_system(top),
                 box_vectors=pdbfile.topology.getPeriodicBoxVectors(),

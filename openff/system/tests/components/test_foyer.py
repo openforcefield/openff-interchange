@@ -10,10 +10,10 @@ from openff.utilities.utilities import has_package
 from openff.system.components.foyer import RBTorsionHandler
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.potentials import Potential
+from openff.system.drivers import get_openmm_energies
 from openff.system.models import PotentialKey, TopologyKey
 from openff.system.stubs import ForceField
 from openff.system.tests import BaseTest
-from openff.system.tests.energy_tests.openmm import get_openmm_energies
 
 if has_package("foyer"):
     import foyer
@@ -21,7 +21,7 @@ if has_package("foyer"):
     from openff.system.components.foyer import from_foyer
 
 if has_package("gromacs"):
-    from openff.system.tests.energy_tests.gromacs import (
+    from openff.system.drivers.gromacs import (
         _get_mdp_file,
         _run_gmx_energy,
         get_gromacs_energies,
@@ -54,7 +54,7 @@ class TestFoyer(BaseTest):
     @skip_if_missing("gromacs")
     @pytest.mark.slow
     def test_ethanol_energies(self, oplsaa_system_ethanol):
-        from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
+        from openff.system.drivers.gromacs import get_gromacs_energies
 
         gmx_energies = get_gromacs_energies(oplsaa_system_ethanol)
         omm_energies = get_openmm_energies(oplsaa_system_ethanol)

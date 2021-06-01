@@ -4,22 +4,27 @@ import functools
 from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
-import numpy
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (
+    AngleHandler,
+    BondHandler,
     ChargeIncrementModelHandler,
     ConstraintHandler,
     ElectrostaticsHandler,
+    ImproperTorsionHandler,
     LibraryChargeHandler,
     ParameterHandler,
+    ProperTorsionHandler,
     vdWHandler,
 )
 from openff.units import unit
+from openff.units.simtk import from_simtk
 from pydantic import Field
 from simtk import unit as omm_unit
 from typing_extensions import Literal
 
 from openff.system.components.potentials import Potential, PotentialHandler
+from openff.system.exceptions import InvalidParameterHandlerError
 from openff.system.models import PotentialKey, TopologyKey
 from openff.system.types import FloatQuantity
 
@@ -29,13 +34,7 @@ kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.topology import Topology
-    from openff.toolkit.typing.engines.smirnoff.parameters import (
-        AngleHandler,
-        BondHandler,
-        ImproperTorsionHandler,
-        ProperTorsionHandler,
-        ToolkitAM1BCCHandler,
-    )
+    from openff.toolkit.typing.engines.smirnoff.parameters import ToolkitAM1BCCHandler
 
     from openff.system.components.mdtraj import OFFBioTop
 
@@ -52,6 +51,10 @@ T_ = TypeVar("T_", bound="PotentialHandler")
 
 
 class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
+    @classmethod
+    @abc.abstractmethod
+    def allowed_parameter_handlers(cls):
+        raise NotImplementedError()
 
     def store_matches(
         self,
@@ -74,7 +77,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
             self.slot_map[topology_key] = potential_key
 
     @classmethod
-    def from_toolkit(
+    def _from_toolkit(
         cls: Type[T],
         parameter_handler: T_,
         topology: "Topology",
@@ -83,6 +86,9 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
         Create a SMIRNOFFPotentialHandler from toolkit data.
 
         """
+        if type(parameter_handler) not in cls.allowed_parameter_handlers():
+            raise InvalidParameterHandlerError
+
         handler = cls()
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
         handler.store_potentials(parameter_handler=parameter_handler)
@@ -94,6 +100,10 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
     type: Literal["Bonds"] = "Bonds"
     expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
+
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [BondHandler]
 
     def store_potentials(self, parameter_handler: "BondHandler") -> None:
         """
@@ -115,31 +125,36 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
             self.potentials[potential_key] = potential
 
     @classmethod
-    def from_toolkit(  # type: ignore[override]
+    def _from_toolkit(  # type: ignore[override]
         cls: Type[T],
         bond_handler: "BondHandler",
         topology: "Topology",
-        constraint_handler: Optional[T] = None,
+        constraint_handler: Optional["SMIRNOFFConstraintHandler"] = None,
     ) -> Tuple[T, Optional["SMIRNOFFConstraintHandler"]]:
         """
         Create a SMIRNOFFBondHandler from toolkit data.
 
         """
-        handler = cls(type="Bonds", expression="k/2*(r-length)**2")
+        # TODO: This method overrides SMIRNOFFPotentialHandler.from_toolkit in order to gobble up
+        # a ConstraintHandler. This seems like a good solution for the interdependence, but is also
+        # not a great practice. A better solution would involve not overriding the method with a
+        # different function signature.
+        if type(bond_handler) not in cls.allowed_parameter_handlers():
+            raise InvalidParameterHandlerError
+
+        handler: T = cls(type="Bonds", expression="k/2*(r-length)**2")
         handler.store_matches(parameter_handler=bond_handler, topology=topology)
         handler.store_potentials(parameter_handler=bond_handler)
 
         if constraint_handler:
-            constraints: Optional[
-                "SMIRNOFFConstraintHandler"
-            ] = SMIRNOFFConstraintHandler()
-            constraints.store_constraints(  # type: ignore[union-attr]
+            constraints: SMIRNOFFConstraintHandler = SMIRNOFFConstraintHandler()
+            constraints.store_constraints(
                 parameter_handler=constraint_handler,
                 topology=topology,
                 bond_handler=handler,
             )
         else:
-            constraints = None
+            constraints = None  # type: ignore[assignment]
 
         return handler, constraints
 
@@ -153,11 +168,15 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
         PotentialKey, bool
     ] = dict()  # should this be named potentials for consistency?
 
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [ConstraintHandler]
+
     def store_constraints(
         self,
         parameter_handler: ConstraintHandler,
         topology: "OFFBioTop",
-        bond_handler: SMIRNOFFBondHandler = None,
+        bond_handler: T = None,
     ) -> None:
 
         if self.slot_map:
@@ -198,6 +217,10 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
     type: Literal["Angles"] = "Angles"
     expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
 
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [AngleHandler]
+
     def store_potentials(self, parameter_handler: "AngleHandler") -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
@@ -218,7 +241,7 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
             self.potentials[potential_key] = potential
 
     @classmethod
-    def from_toolkit(
+    def f_from_toolkit(
         cls: Type[T],
         parameter_handler: "AngleHandler",
         topology: "Topology",
@@ -240,6 +263,10 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
     expression: Literal[
         "k*(1+cos(periodicity*theta-phase))"
     ] = "k*(1+cos(periodicity*theta-phase))"
+
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [ProperTorsionHandler]
 
     def store_matches(
         self,
@@ -282,19 +309,6 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
             potential = Potential(parameters=parameters)
             self.potentials[potential_key] = potential
 
-    @classmethod
-    def _from_toolkit(
-        cls: Type[T],
-        parameter_handler: "ProperTorsionHandler",
-        topology: "Topology",
-    ) -> T:
-
-        handler = cls()
-        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
-        handler.store_potentials(parameter_handler=parameter_handler)
-
-        return handler
-
 
 class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
 
@@ -302,6 +316,10 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
     expression: Literal[
         "k*(1+cos(periodicity*theta-phase))"
     ] = "k*(1+cos(periodicity*theta-phase))"
+
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [ImproperTorsionHandler]
 
     def store_matches(
         self, parameter_handler: "ImproperTorsionHandler", topology: "OFFBioTop"
@@ -363,21 +381,6 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
             potential = Potential(parameters=parameters)
             self.potentials[potential_key] = potential
 
-    @classmethod
-    def _from_toolkit(
-        cls: Type[T],
-        improper_torsion_Handler: "ImproperTorsionHandler",
-        topology: "Topology",
-    ) -> T:
-
-        handler = cls()
-        handler.store_matches(
-            parameter_handler=improper_torsion_Handler, topology=topology
-        )
-        handler.store_potentials(parameter_handler=improper_torsion_Handler)
-
-        return handler
-
 
 class _SMIRNOFFNonbondedHandler(SMIRNOFFPotentialHandler, abc.ABC):
     """The base class for handlers which store nonbonded potentials."""
@@ -387,6 +390,10 @@ class _SMIRNOFFNonbondedHandler(SMIRNOFFPotentialHandler, abc.ABC):
     cutoff: FloatQuantity["angstrom"] = Field(  # type: ignore
         9.0 * unit.angstrom,
         description="The distance at which pairwise interactions are truncated",
+    )
+    switch_width: FloatQuantity["angstrom"] = Field(  # type: ignore
+        1.0 * unit.angstrom,
+        description="The width over which the switching function is applied",
     )
 
     scale_13: float = Field(
@@ -415,10 +422,9 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )
 
-    switch_width: FloatQuantity["angstrom"] = Field(  # type: ignore
-        1.0 * unit.angstrom,  # type: ignore
-        description="The width over which the switching function is applied",
-    )
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [vdWHandler]
 
     def store_potentials(self, parameter_handler: vdWHandler) -> None:
         """
@@ -459,6 +465,10 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         Create a SMIRNOFFvdWHandler from toolkit data.
 
         """
+
+        if type(parameter_handler) not in cls.allowed_parameter_handlers():
+            raise InvalidParameterHandlerError
+
         handler = SMIRNOFFvdWHandler(
             scale_13=parameter_handler.scale13,
             scale_14=parameter_handler.scale14,
@@ -512,10 +522,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 charge = parameter_value.to(unit.elementary_charge).magnitude
                 charges[topology_key.atom_indices[0]] += charge
 
-        return (
-            numpy.array([charges[i] for i in range(len(charges))])
-            * unit.elementary_charge
-        )
+        return from_simtk(charge)
 
     @classmethod
     def charge_precedence(cls) -> List[str]:
@@ -528,15 +535,10 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     @functools.lru_cache
     def _compute_partial_charges(cls, molecule: Molecule, method: str) -> unit.Quantity:
 
-        from simtk import unit as simtk_unit
-
         molecule = copy.deepcopy(molecule)
         molecule.assign_partial_charges(method)
 
-        return (
-            molecule.partial_charges.value_in_unit(simtk_unit.elementary_charge)
-            * unit.elementary_charge
-        )
+        return from_simtk(molecule.partial_charges)
 
     @classmethod
     def _library_charge_to_potentials(
@@ -545,7 +547,6 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         parameter: LibraryChargeHandler.LibraryChargeType,
     ) -> Tuple[Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
         """Maps a matched library charge parameter to a set of potentials."""
-        from simtk import unit as simtk_unit
 
         matches = {}
         potentials = {}
@@ -553,13 +554,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         for i, (atom_index, charge) in enumerate(zip(atom_indices, parameter.charge)):
             topology_key = TopologyKey(atom_indices=(atom_index,))
             potential_key = PotentialKey(id=parameter.smirks, mult=i)
-
-            potential = Potential(
-                parameters={
-                    "charge": charge.value_in_unit(simtk_unit.elementary_charge)
-                    * unit.elementary_charge
-                }
-            )
+            potential = Potential(parameters={"charge": from_simtk(charge)})
 
             matches[topology_key] = potential_key
             potentials[potential_key] = potential
@@ -573,7 +568,6 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         parameter: ChargeIncrementModelHandler.ChargeIncrementType,
     ) -> Tuple[Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
         """Maps a matched charge increment parameter to a set of potentials."""
-        from simtk import unit as simtk_unit
 
         matches = {}
         potentials = {}
@@ -587,12 +581,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             charge_increment = getattr(parameter, f"charge_increment{i + 1}")
 
             potential = Potential(
-                parameters={
-                    "charge_increment": charge_increment.value_in_unit(
-                        simtk_unit.elementary_charge
-                    )
-                    * unit.elementary_charge
-                }
+                parameters={"charge_increment": from_simtk(charge_increment)}
             )
 
             matches[topology_key] = potential_key
@@ -606,8 +595,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         parameter_handler: Union["LibraryChargeHandler", "ChargeIncrementModelHandler"],
         reference_molecule: Molecule,
     ) -> Tuple[Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
-        """Constructs a slot and potential map for a slot based parameter handler.
-        """
+        """Constructs a slot and potential map for a slot based parameter handler."""
         parameter_matches = parameter_handler.find_matches(
             reference_molecule.to_topology()
         )
@@ -646,8 +634,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         parameter_handler: Union["ToolkitAM1BCCHandler", ChargeIncrementModelHandler],
         reference_molecule: Molecule,
     ) -> Tuple[Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
-        """Constructs a slot and potential map for a charge model based parameter handler.
-        """
+        """Constructs a slot and potential map for a charge model based parameter handler."""
 
         reference_molecule = copy.deepcopy(reference_molecule)
         reference_smiles = reference_molecule.to_smiles(

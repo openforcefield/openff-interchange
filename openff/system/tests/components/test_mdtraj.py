@@ -10,8 +10,8 @@ from openff.system.components.mdtraj import (
     _iterate_propers,
     _store_bond_partners,
 )
+from openff.system.drivers import get_openmm_energies
 from openff.system.stubs import ForceField
-from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.utils import get_test_file_path
 
 

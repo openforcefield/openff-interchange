@@ -9,23 +9,17 @@ Until a conda package is live, the core dependencies are listed in `devtools/con
 Required dependencies:
   - python
   - pip
+  - numpy
+  - pandas
   - pydantic
   - pint
   - openmm
   - openff-toolkit
+  - openff-units
+  - openff-utilities
   - jax
   - mdtraj
   - ele
-  - `openff-units`
-  - `openff-utilities`
-
-Note that the last two packages are currently unrelreased and must be installed as development builds:
-
-```shell
-# In an activated conda environment
-pip install git+git://github.com/mattwthompson/openff-units.git
-pip install git+git://github.com/mattwthompson/openff-utilities.git
-```
 
 Optional/test/dev dependencies:
   - pytest
@@ -36,9 +30,10 @@ Optional/test/dev dependencies:
   - unyt
   - intermol
   - gromacs >=2021
+  - panedr
   - lammps
   - mbuild
-  - foyer>=0.8.0
+  - foyer >=0.8.0
 
 If portions of the API that require optional dependencies are called while some of those dependencies are not available, an informative error message should be provided.
 

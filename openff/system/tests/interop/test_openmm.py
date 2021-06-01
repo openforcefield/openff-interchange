@@ -2,7 +2,7 @@ import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol
-from openff.toolkit.tests.utils import compare_system_energies, get_data_file_path
+from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import SMIRNOFFSpecError
 from simtk import openmm
@@ -11,13 +11,13 @@ from simtk.openmm import app
 
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.system import System
+from openff.system.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.system.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
 from openff.system.interop.openmm import from_openmm
 from openff.system.stubs import ForceField
-from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.utils import get_test_file_path
 
 nonbonded_resolution_matrix = [
@@ -37,7 +37,7 @@ nonbonded_resolution_matrix = [
         "vdw_method": "PME",
         "electrostatics_method": "PME",
         "periodic": True,
-        "result": UnsupportedCutoffMethodError,
+        "result": openmm.NonbondedForce.LJPME,
     },
     {
         "vdw_method": "PME",
@@ -144,7 +144,7 @@ def test_openmm_nonbonded_methods(inputs):
             "Electrostatics", {}
         ).method = electrostatics_method
         openff_system = System.from_smirnoff(force_field=forcefield, topology=topology)
-        openmm_system = openff_system.to_openmm()
+        openmm_system = openff_system.to_openmm(combine_nonbonded_forces=True)
         for force in openmm_system.getForces():
             if isinstance(force, openmm.NonbondedForce):
                 assert force.getNonbondedMethod() == nonbonded_method
@@ -161,7 +161,7 @@ def test_openmm_nonbonded_methods(inputs):
             openff_system = System.from_smirnoff(
                 force_field=forcefield, topology=topology
             )
-            openff_system.to_openmm()
+            openff_system.to_openmm(combine_nonbonded_forces=True)
     else:
         raise Exception("uh oh")
 
@@ -177,8 +177,8 @@ def test_unsupported_mixing_rule():
 
     openff_sys["vdW"].mixing_rule = "geometric"
 
-    with pytest.raises(UnsupportedExportError, match="rule `geometric` not compat"):
-        openff_sys.to_openmm()
+    with pytest.raises(UnsupportedExportError, match="default NonbondedForce"):
+        openff_sys.to_openmm(combine_nonbonded_forces=True)
 
 
 @pytest.mark.slow
@@ -223,13 +223,18 @@ def test_from_openmm_single_mols(mol, n_mols):
 
     native_system = System.from_smirnoff(force_field=parsley, topology=top).to_openmm()
 
-    compare_system_energies(
-        system1=toolkit_system,
-        system2=native_system,
+    toolkit_energy = _get_openmm_energies(
+        omm_sys=toolkit_system,
+        box_vectors=toolkit_system.getDefaultPeriodicBoxVectors(),
         positions=positions,
-        box_vectors=top.box_vectors,
-        atol=1e-5,
     )
+    native_energy = _get_openmm_energies(
+        omm_sys=native_system,
+        box_vectors=native_system.getDefaultPeriodicBoxVectors(),
+        positions=positions,
+    )
+
+    toolkit_energy.compare(native_energy)
 
 
 @pytest.mark.slow
@@ -237,6 +242,7 @@ def test_openmm_roundtrip():
     mol = Molecule.from_smiles("CCO")
     mol.generate_conformers(n_conformers=1)
     top = mol.to_topology()
+    omm_top = top.to_openmm()
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
@@ -248,6 +254,7 @@ def test_openmm_roundtrip():
     omm_sys = off_sys.to_openmm()
 
     converted = from_openmm(
+        topology=omm_top,
         system=omm_sys,
     )
 
@@ -258,4 +265,28 @@ def test_openmm_roundtrip():
     get_openmm_energies(off_sys).compare(
         get_openmm_energies(converted),
         custom_tolerances={"Nonbonded": 1.5 * simtk_unit.kilojoule_per_mole},
+    )
+
+
+@pytest.mark.slow
+def test_combine_nonbonded_forces():
+
+    mol = Molecule.from_smiles("ClC#CCl")
+    mol.name = "HPER"
+    mol.generate_conformers(n_conformers=1)
+
+    parsley = ForceField("openff_unconstrained-1.0.0.offxml")
+
+    out = System.from_smirnoff(force_field=parsley, topology=mol.to_topology())
+    out.box = [4, 4, 4]
+    out.positions = mol.conformers[0]
+
+    num_forces_combined = out.to_openmm(combine_nonbonded_forces=True).getNumForces()
+    num_forces_uncombined = out.to_openmm(combine_nonbonded_forces=False).getNumForces()
+
+    # The "new" forces are the split-off vdW forces, the 1-4 vdW, and the 1-4 electrostatics
+    assert num_forces_combined + 3 == num_forces_uncombined
+
+    get_openmm_energies(out, combine_nonbonded_forces=False).compare(
+        get_openmm_energies(out, combine_nonbonded_forces=True),
     )

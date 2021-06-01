@@ -5,21 +5,17 @@ import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
-from openff.units.simtk import from_simtk
 from openff.utilities.testing import skip_if_missing
-from scipy.constants import Avogadro
-from simtk import unit as simtk_unit
 
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.nonbonded import BuckinghamvdWHandler
 from openff.system.components.potentials import Potential
 from openff.system.components.smirnoff import ElectrostaticsMetaHandler
 from openff.system.components.system import System
+from openff.system.drivers import get_gromacs_energies, get_openmm_energies
 from openff.system.exceptions import GMXMdrunError, UnsupportedExportError
 from openff.system.models import PotentialKey, TopologyKey
 from openff.system.tests import BaseTest
-from openff.system.tests.energy_tests.gromacs import get_gromacs_energies
-from openff.system.tests.energy_tests.openmm import get_openmm_energies
 from openff.system.tests.energy_tests.test_energies import needs_gmx
 from openff.system.utils import get_test_file_path
 
@@ -53,6 +49,7 @@ class TestGROMACS(BaseTest):
         with pytest.raises(UnsupportedExportError, match="rule `geometric` not compat"):
             openff_sys.to_top("out.top")
 
+    @pytest.mark.slow
     def test_residue_names_in_gro_file(self):
         """Test that residue names > 5 characters don't break .gro file output"""
         benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
@@ -77,26 +74,16 @@ class TestGROMACS(BaseTest):
         top = OFFBioTop.from_molecules([mol, mol])
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
-        # Go through SimTK units because OpenFF Units registry does not have
-        # the erg/dyne units that the Sklog Wiki uses
         # http://www.sklogwiki.org/SklogWiki/index.php/Argon#Buckingham_potential
-        erg_mol = simtk_unit.erg / simtk_unit.mole * Avogadro
+        erg_mol = unit.erg / unit.mol * float(unit.avogadro_number)
         A = 1.69e-8 * erg_mol
-        B = 1 / (0.273 * simtk_unit.angstrom)
-        C = 102e-12 * erg_mol * simtk_unit.angstrom ** 6
-
-        A = from_simtk(A.in_units_of(simtk_unit.kilojoule_per_mole))
-        B = from_simtk(B)
-        C = from_simtk(
-            C.in_units_of(simtk_unit.kilojoule_per_mole * simtk_unit.angstrom ** 6)
-        )
+        B = 1 / (0.273 * unit.angstrom)
+        C = 102e-12 * erg_mol * unit.angstrom ** 6
 
         r = 0.3 * unit.nanometer
 
         buck = BuckinghamvdWHandler()
-        coul = ElectrostaticsMetaHandler(
-            method="pme"
-        )  # Just to pass compatibility checks
+        coul = ElectrostaticsMetaHandler(method="pme")
 
         pot_key = PotentialKey(id="[#18]")
         pot = Potential(parameters={"A": A, "B": B, "C": C})
