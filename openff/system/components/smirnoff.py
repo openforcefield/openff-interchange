@@ -1,11 +1,16 @@
+import abc
 from typing import TYPE_CHECKING, Dict, Optional, Tuple, Type, TypeVar, Union
 
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
+    AngleHandler,
+    BondHandler,
     ChargeIncrementModelHandler,
     ConstraintHandler,
+    ImproperTorsionHandler,
     LibraryChargeHandler,
     ParameterHandler,
+    ProperTorsionHandler,
     vdWHandler,
 )
 from openff.units import unit
@@ -14,6 +19,7 @@ from simtk import unit as omm_unit
 from typing_extensions import Literal
 
 from openff.system.components.potentials import Potential, PotentialHandler
+from openff.system.exceptions import InvalidParameterHandlerError
 from openff.system.models import DefaultModel, PotentialKey, TopologyKey
 from openff.system.types import FloatQuantity
 from openff.system.utils import get_partial_charges_from_openmm_system
@@ -24,12 +30,6 @@ kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.topology import Topology
-    from openff.toolkit.typing.engines.smirnoff.parameters import (
-        AngleHandler,
-        BondHandler,
-        ImproperTorsionHandler,
-        ProperTorsionHandler,
-    )
 
     from openff.system.components.mdtraj import OFFBioTop
 
@@ -38,7 +38,12 @@ T = TypeVar("T", bound="SMIRNOFFPotentialHandler")
 T_ = TypeVar("T_", bound="PotentialHandler")
 
 
-class SMIRNOFFPotentialHandler(PotentialHandler):
+class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
+    @classmethod
+    @abc.abstractmethod
+    def allowed_parameter_handlers(cls):
+        raise NotImplementedError()
+
     def store_matches(
         self,
         parameter_handler: ParameterHandler,
@@ -60,7 +65,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler):
             self.slot_map[topology_key] = potential_key
 
     @classmethod
-    def from_toolkit(
+    def _from_toolkit(
         cls: Type[T],
         parameter_handler: T_,
         topology: "Topology",
@@ -69,6 +74,9 @@ class SMIRNOFFPotentialHandler(PotentialHandler):
         Create a SMIRNOFFPotentialHandler from toolkit data.
 
         """
+        if type(parameter_handler) not in cls.allowed_parameter_handlers():
+            raise InvalidParameterHandlerError
+
         handler = cls()
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
         handler.store_potentials(parameter_handler=parameter_handler)
@@ -80,6 +88,10 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
     type: Literal["Bonds"] = "Bonds"
     expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
+
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [BondHandler]
 
     def store_potentials(self, parameter_handler: "BondHandler") -> None:
         """
@@ -101,7 +113,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
             self.potentials[potential_key] = potential
 
     @classmethod
-    def from_toolkit(  # type: ignore[override]
+    def _from_toolkit(  # type: ignore[override]
         cls: Type[T],
         bond_handler: "BondHandler",
         topology: "Topology",
@@ -115,6 +127,8 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         # a ConstraintHandler. This seems like a good solution for the interdependence, but is also
         # not a great practice. A better solution would involve not overriding the method with a
         # different function signature.
+        if type(bond_handler) not in cls.allowed_parameter_handlers():
+            raise InvalidParameterHandlerError
 
         handler: T = cls(type="Bonds", expression="k/2*(r-length)**2")
         handler.store_matches(parameter_handler=bond_handler, topology=topology)
@@ -141,6 +155,10 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
     constraints: Dict[
         PotentialKey, bool
     ] = dict()  # should this be named potentials for consistency?
+
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [ConstraintHandler]
 
     def store_constraints(
         self,
@@ -187,6 +205,10 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
     type: Literal["Angles"] = "Angles"
     expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
 
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [AngleHandler]
+
     def store_potentials(self, parameter_handler: "AngleHandler") -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
@@ -207,7 +229,7 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
             self.potentials[potential_key] = potential
 
     @classmethod
-    def from_toolkit(
+    def f_from_toolkit(
         cls: Type[T],
         parameter_handler: "AngleHandler",
         topology: "Topology",
@@ -229,6 +251,10 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
     expression: Literal[
         "k*(1+cos(periodicity*theta-phase))"
     ] = "k*(1+cos(periodicity*theta-phase))"
+
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [ProperTorsionHandler]
 
     def store_matches(
         self,
@@ -271,19 +297,6 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
             potential = Potential(parameters=parameters)
             self.potentials[potential_key] = potential
 
-    @classmethod
-    def _from_toolkit(
-        cls: Type[T],
-        parameter_handler: "ProperTorsionHandler",
-        topology: "Topology",
-    ) -> T:
-
-        handler = cls()
-        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
-        handler.store_potentials(parameter_handler=parameter_handler)
-
-        return handler
-
 
 class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
 
@@ -291,6 +304,10 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
     expression: Literal[
         "k*(1+cos(periodicity*theta-phase))"
     ] = "k*(1+cos(periodicity*theta-phase))"
+
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [ImproperTorsionHandler]
 
     def store_matches(
         self, parameter_handler: "ImproperTorsionHandler", topology: "OFFBioTop"
@@ -352,21 +369,6 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
             potential = Potential(parameters=parameters)
             self.potentials[potential_key] = potential
 
-    @classmethod
-    def _from_toolkit(
-        cls: Type[T],
-        improper_torsion_Handler: "ImproperTorsionHandler",
-        topology: "Topology",
-    ) -> T:
-
-        handler = cls()
-        handler.store_matches(
-            parameter_handler=improper_torsion_Handler, topology=topology
-        )
-        handler.store_potentials(parameter_handler=improper_torsion_Handler)
-
-        return handler
-
 
 class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
 
@@ -396,6 +398,10 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
         "lorentz-berthelot",
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )
+
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [vdWHandler]
 
     def store_potentials(self, parameter_handler: vdWHandler) -> None:
         """
@@ -436,6 +442,10 @@ class SMIRNOFFvdWHandler(SMIRNOFFPotentialHandler):
         Create a SMIRNOFFvdWHandler from toolkit data.
 
         """
+
+        if type(parameter_handler) not in cls.allowed_parameter_handlers():
+            raise InvalidParameterHandlerError
+
         handler = SMIRNOFFvdWHandler(
             scale_13=parameter_handler.scale13,
             scale_14=parameter_handler.scale14,
@@ -498,6 +508,10 @@ class SMIRNOFFLibraryChargeHandler(
     # to be specified here
     expression: Literal["coul"] = "coul"
 
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [LibraryChargeHandler]
+
     def store_potentials(self, parameter_handler: LibraryChargeHandler) -> None:
         if self.potentials:
             self.potentials = dict()
@@ -521,6 +535,10 @@ class SMIRNOFFChargeIncrementHandler(
     expression: Literal["coul"] = "coul"
     partial_charge_method: str = "AM1-Mulliken"
     potentials: Dict[PotentialKey, Potential] = dict()
+
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [ChargeIncrementModelHandler]
 
     def store_potentials(self, parameter_handler: ChargeIncrementModelHandler) -> None:
         if self.potentials:

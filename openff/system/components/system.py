@@ -189,7 +189,7 @@ class System(DefaultModel):
                     constraint_handler = force_field["Constraints"]
                 else:
                     constraint_handler = None
-                potential_handler, constraints = SMIRNOFFBondHandler.from_toolkit(
+                potential_handler, constraints = SMIRNOFFBondHandler._from_toolkit(
                     bond_handler=force_field["Bonds"],
                     topology=topology,
                     constraint_handler=constraint_handler,
@@ -206,7 +206,7 @@ class System(DefaultModel):
                 POTENTIAL_HANDLER_CLASS = _SMIRNOFF_HANDLER_MAPPINGS[
                     parameter_handler.__class__
                 ]
-                potential_handler = POTENTIAL_HANDLER_CLASS.from_toolkit(  # type: ignore[assignment]
+                potential_handler = POTENTIAL_HANDLER_CLASS._from_toolkit(  # type: ignore[assignment]
                     parameter_handler=parameter_handler,
                     topology=topology,
                 )
