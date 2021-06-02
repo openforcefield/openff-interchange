@@ -2,7 +2,7 @@ import abc
 import copy
 import functools
 from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -15,6 +15,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     LibraryChargeHandler,
     ParameterHandler,
     ProperTorsionHandler,
+    ToolkitAM1BCCHandler,
     vdWHandler,
 )
 from openff.units import unit
@@ -34,7 +35,6 @@ kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.topology import Topology
-    from openff.toolkit.typing.engines.smirnoff.parameters import ToolkitAM1BCCHandler
 
     from openff.system.components.mdtraj import OFFBioTop
 
@@ -400,10 +400,6 @@ class _SMIRNOFFNonbondedHandler(SMIRNOFFPotentialHandler, abc.ABC):
         9.0 * unit.angstrom,
         description="The distance at which pairwise interactions are truncated",
     )
-    switch_width: FloatQuantity["angstrom"] = Field(  # type: ignore
-        1.0 * unit.angstrom,
-        description="The width over which the switching function is applied",
-    )
 
     scale_13: float = Field(
         0.0, description="The scaling factor applied to 1-3 interactions"
@@ -429,6 +425,11 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
     mixing_rule: Literal["lorentz-berthelot", "geometric"] = Field(
         "lorentz-berthelot",
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
+    )
+
+    switch_width: FloatQuantity["angstrom"] = Field(  # type: ignore
+        1.0 * unit.angstrom,
+        description="The width over which the switching function is applied",
     )
 
     @classmethod
@@ -478,7 +479,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         if type(parameter_handler) not in cls.allowed_parameter_handlers():
             raise InvalidParameterHandlerError
 
-        handler = SMIRNOFFvdWHandler(
+        handler = cls(
             scale_13=parameter_handler.scale13,
             scale_14=parameter_handler.scale14,
             scale_15=parameter_handler.scale15,
@@ -513,6 +514,15 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
     method: Literal["pme", "cutoff", "reaction-field"] = Field("pme")
 
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [
+            LibraryChargeHandler,
+            ChargeIncrementModelHandler,
+            ToolkitAM1BCCHandler,
+            ElectrostaticsHandler,
+        ]
+
     @property
     def partial_charges(self) -> Dict[TopologyKey, unit.Quantity]:
         """Returns the total partial charge on each particle in the associated system."""
@@ -531,7 +541,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 charge = parameter_value.to(unit.elementary_charge).magnitude
                 charges[topology_key.atom_indices[0]] += charge
 
-        return from_simtk(charge)
+        return charges
 
     @classmethod
     def charge_precedence(cls) -> List[str]:
@@ -539,6 +549,63 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         charges
         """
         return ["LibraryCharges", "ChargeIncrementModel", "ToolkitAM1BCC"]
+
+    @classmethod
+    def _from_toolkit(
+        cls: Type[T],
+        parameter_handler: Any,
+        topology: "Topology",
+    ) -> "SMIRNOFFvdWHandler":
+        """
+        Create a SMIRNOFFElectrostaticsHandler from toolkit data.
+
+        """
+        if isinstance(parameter_handler, list):
+            parameter_handlers = parameter_handler
+        else:
+            parameter_handlers = [parameter_handler]
+
+        toolkit_handler_with_metadata = [
+            p for p in parameter_handlers if type(p) == ElectrostaticsHandler
+        ][0]
+
+        handler = cls(
+            type=toolkit_handler_with_metadata._TAGNAME,
+            scale_13=toolkit_handler_with_metadata.scale13,
+            scale_14=toolkit_handler_with_metadata.scale14,
+            scale_15=toolkit_handler_with_metadata.scale15,
+            cutoff=toolkit_handler_with_metadata.cutoff,
+            method=toolkit_handler_with_metadata.method.lower(),
+        )
+
+        for parameter_handler in parameter_handler:
+            if type(parameter_handler) not in cls.allowed_parameter_handlers():
+                raise InvalidParameterHandlerError
+
+            if type(parameter_handler) == ElectrostaticsHandler:
+                continue
+            elif type(parameter_handler) == ToolkitAM1BCCHandler:
+                for reference_molecule in topology.reference_molecules:
+                    matches, potentials = handler._find_am1_matches(
+                        parameter_handler=parameter_handler,
+                        reference_molecule=reference_molecule,
+                    )
+                    handler.slot_map.update(matches)
+                    handler.potentials.update(potentials)
+
+            elif type(parameter_handler) in [
+                LibraryChargeHandler,
+                ChargeIncrementModelHandler,
+            ]:
+                for reference_molecule in topology.reference_molecules:
+                    matches, potentials = handler._find_slot_matches(
+                        parameter_handler=parameter_handler,
+                        reference_molecule=reference_molecule,
+                    )
+                    handler.slot_map.update(matches)
+                    handler.potentials.update(potentials)
+
+        return handler
 
     @classmethod
     @functools.lru_cache
@@ -562,7 +629,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
         for i, (atom_index, charge) in enumerate(zip(atom_indices, parameter.charge)):
             topology_key = TopologyKey(atom_indices=(atom_index,))
-            potential_key = PotentialKey(id=parameter.smirks, mult=i)
+            potential_key = PotentialKey(
+                id=parameter.smirks, mult=i, associated_handler="LibraryCharges"
+            )
             potential = Potential(parameters={"charge": from_simtk(charge)})
 
             matches[topology_key] = potential_key
@@ -583,7 +652,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
         for i, atom_index in enumerate(atom_indices):
             topology_key = TopologyKey(atom_indices=(atom_index,))
-            potential_key = PotentialKey(id=parameter.smirks, mult=i)
+            potential_key = PotentialKey(
+                id=parameter.smirks, mult=i, associated_handler="ChargeIncrementModel"
+            )
 
             # TODO: Handle the cases where n - 1 charge increments have been defined,
             #       maybe by implementing this in the TK?
@@ -661,7 +732,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
         for i, partial_charge in enumerate(partial_charges):
 
-            potential_key = PotentialKey(id=reference_smiles, mult=i)
+            potential_key = PotentialKey(
+                id=reference_smiles, mult=i, associated_handler="ToolkitAM1BCC"
+            )
             potentials[potential_key] = Potential(parameters={"charge": partial_charge})
 
             matches[TopologyKey(atom_indices=(i,))] = potential_key

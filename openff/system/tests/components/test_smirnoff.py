@@ -166,12 +166,14 @@ class TestSMIRNOFFHandlers(BaseTest):
             ToolkitAM1BCCHandler(version=0.3),
         ]
 
-        potential_handler = SMIRNOFFElectrostaticsHandler.from_toolkit(
+        electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
             parameter_handlers, top
         )
-        potential_handler.partial_charges
 
-        print(potential_handler)
+        np.testing.assert_allclose(
+            [*electrostatics_handler.partial_charges.values()],
+            [-0.1088, 0.0267, 0.0267, 0.0267, 0.0267],
+        )
 
     def test_electrostatics_library_charges(self):
 
@@ -191,16 +193,18 @@ class TestSMIRNOFFHandlers(BaseTest):
             library_charge_handler,
         ]
 
-        potential_handler = SMIRNOFFElectrostaticsHandler.from_toolkit(
+        electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
             parameter_handlers, top
         )
-        potential_handler.partial_charges
 
-        print(potential_handler)
+        np.testing.assert_allclose(
+            [*electrostatics_handler.partial_charges.values()],
+            [-0.1, 0.025, 0.025, 0.025, 0.025],
+        )
 
     def test_electrostatics_charge_increments(self):
 
-        top = OFFBioTop.from_molecules(Molecule.from_smiles("Cl[H]"))
+        top = OFFBioTop.from_molecules(Molecule.from_mapped_smiles("[Cl:1][H:2]"))
 
         charge_increment_handler = ChargeIncrementModelHandler(version=0.3)
         charge_increment_handler.add_parameter(
@@ -216,12 +220,14 @@ class TestSMIRNOFFHandlers(BaseTest):
             charge_increment_handler,
         ]
 
-        potential_handler = SMIRNOFFElectrostaticsHandler.from_toolkit(
+        electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
             parameter_handlers, top
         )
-        potential_handler.partial_charges
 
-        print(potential_handler)
+        np.testing.assert_allclose(
+            [*electrostatics_handler.partial_charges.values()],
+            [0.1, -0.1],
+        )
 
 
 @skip_if_missing("jax")
