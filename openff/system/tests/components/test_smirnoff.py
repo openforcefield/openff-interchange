@@ -111,12 +111,12 @@ class TestSMIRNOFFHandlers(BaseTest):
 
 
 def test_library_charges_from_molecule():
-    mol = Molecule.from_smiles("CCO")
+    mol = Molecule.from_mapped_smiles("[Cl:1][C:2]#[C:3][F:4]")
 
     with pytest.raises(ValueError, match="missing partial"):
         library_charge_from_molecule(mol)
 
-    mol.partial_charges = np.linspace(-0.4, 0.4, 9) * simtk_unit.elementary_charge
+    mol.partial_charges = np.linspace(-0.3, 0.3, 4) * simtk_unit.elementary_charge
 
     library_charges = library_charge_from_molecule(mol)
 
