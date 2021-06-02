@@ -92,7 +92,9 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
 
         top_key = TopologyKey(atom_indices=(0, 1))
-        pot = bond_potentials.potentials[bond_potentials.slot_map[top_key]]
+        pot_key = bond_potentials.slot_map[top_key]
+        assert pot_key.associated_handler == "Bonds"
+        pot = bond_potentials.potentials[pot_key]
 
         kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
         assert pot.parameters["k"].to(kcal_mol_a2).magnitude == pytest.approx(1.5)
@@ -119,7 +121,9 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
 
         top_key = TopologyKey(atom_indices=(0, 1, 2))
-        pot = angle_potentials.potentials[angle_potentials.slot_map[top_key]]
+        pot_key = angle_potentials.slot_map[top_key]
+        assert pot_key.associated_handler == "Angles"
+        pot = angle_potentials.potentials[pot_key]
 
         kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
         assert pot.parameters["k"].to(kcal_mol_rad2).magnitude == pytest.approx(2.5)
