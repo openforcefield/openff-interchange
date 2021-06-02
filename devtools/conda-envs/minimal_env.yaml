@@ -12,6 +12,7 @@ dependencies:
   - openmm
   - openff-toolkit
   - openff-utilities
+  - openff-units
   - jax
   - mdtraj
   - ele

@@ -14,6 +14,7 @@ def get_openmm_energies(
     round_positions=None,
     hard_cutoff: bool = False,
     electrostatics: bool = True,
+    combine_nonbonded_forces: bool = False,
 ) -> EnergyReport:
     """
     Given an OpenFF System object, return single-point energies as computed by OpenMM.
@@ -45,7 +46,9 @@ def get_openmm_energies(
 
     """
 
-    omm_sys: openmm.System = off_sys.to_openmm()
+    omm_sys: openmm.System = off_sys.to_openmm(
+        combine_nonbonded_forces=combine_nonbonded_forces
+    )
 
     return _get_openmm_energies(
         omm_sys=omm_sys,
@@ -99,26 +102,23 @@ def _get_openmm_energies(
     electrostatics: bool = True,
 ) -> EnergyReport:
     """Given a prepared `openmm.System`, run a single-point energy calculation."""
+    """\
     if hard_cutoff:
         omm_sys = _set_nonbonded_method(
             omm_sys, "cutoff", electrostatics=electrostatics
         )
     else:
         omm_sys = _set_nonbonded_method(omm_sys, "PME")
+    """
 
-    force_names = {force.__class__.__name__ for force in omm_sys.getForces()}
-    group_to_force = {i: force_name for i, force_name in enumerate(force_names)}
-    force_to_group = {force_name: i for i, force_name in group_to_force.items()}
-
-    for force in omm_sys.getForces():
-        force_name = force.__class__.__name__
-        force.setForceGroup(force_to_group[force_name])
+    for idx, force in enumerate(omm_sys.getForces()):
+        force.setForceGroup(idx)
 
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context = openmm.Context(omm_sys, integrator)
 
     if box_vectors is not None:
-        if not isinstance(box_vectors, unit.Quantity):
+        if not isinstance(box_vectors, (unit.Quantity, list)):
             box_vectors = box_vectors.magnitude * unit.nanometer
         context.setPeriodicBoxVectors(*box_vectors)
 
@@ -134,14 +134,32 @@ def _get_openmm_energies(
     else:
         context.setPositions(positions)
 
-    force_groups = {force.getForceGroup() for force in context.getSystem().getForces()}
-
+    raw_energies = dict()
     omm_energies = dict()
 
-    for force_group in force_groups:
-        state = context.getState(getEnergy=True, groups={force_group})
-        omm_energies[group_to_force[force_group]] = state.getPotentialEnergy()
+    for idx in range(omm_sys.getNumForces()):
+        state = context.getState(getEnergy=True, groups={idx})
+        raw_energies[idx] = state.getPotentialEnergy()
         del state
+
+    # This assumes that only custom forces will have duplicate instances
+    for key in raw_energies:
+        force = omm_sys.getForce(key)
+        if type(force) == openmm.HarmonicBondForce:
+            omm_energies["HarmonicBondForce"] = raw_energies[key]
+        elif type(force) == openmm.HarmonicAngleForce:
+            omm_energies["HarmonicAngleForce"] = raw_energies[key]
+        elif type(force) == openmm.PeriodicTorsionForce:
+            omm_energies["PeriodicTorsionForce"] = raw_energies[key]
+        elif type(force) in [
+            openmm.NonbondedForce,
+            openmm.CustomNonbondedForce,
+            openmm.CustomBondForce,
+        ]:
+            if "Nonbonded" in omm_energies:
+                omm_energies["Nonbonded"] += raw_energies[key]
+            else:
+                omm_energies["Nonbonded"] = raw_energies[key]
 
     # Fill in missing keys if system does not have all typical forces
     for required_key in [
@@ -150,8 +168,8 @@ def _get_openmm_energies(
         "PeriodicTorsionForce",
         "NonbondedForce",
     ]:
-        if required_key not in omm_energies:
-            omm_energies[required_key] = 0.0 * kj_mol
+        if not any(required_key in val for val in omm_energies):
+            pass  # omm_energies[required_key] = 0.0 * kj_mol
 
     del context
     del integrator
@@ -160,10 +178,12 @@ def _get_openmm_energies(
 
     report.update_energies(
         {
-            "Bond": omm_energies["HarmonicBondForce"],
-            "Angle": omm_energies["HarmonicAngleForce"],
+            "Bond": omm_energies.get("HarmonicBondForce", 0.0 * kj_mol),
+            "Angle": omm_energies.get("HarmonicAngleForce", 0.0 * kj_mol),
             "Torsion": _canonicalize_torsion_energies(omm_energies),
-            "Nonbonded": _canonicalize_nonbonded_energies(omm_energies),
+            "Nonbonded": omm_energies.get(
+                "Nonbonded", _canonicalize_nonbonded_energies(omm_energies)
+            ),
         }
     )
 
@@ -175,7 +195,7 @@ def _get_openmm_energies(
 
 def _canonicalize_nonbonded_energies(energies: Dict):
     omm_nonbonded = 0.0 * kj_mol
-    for key in ["NonbondedForce", "CustomNonbondedForce"]:
+    for key in ["NonbondedForce", "CustomNonbondedForce", "CustomBondForce"]:
         try:
             omm_nonbonded += energies[key]
         except KeyError:

@@ -49,6 +49,7 @@ class TestGROMACS(BaseTest):
         with pytest.raises(UnsupportedExportError, match="rule `geometric` not compat"):
             openff_sys.to_top("out.top")
 
+    @pytest.mark.slow
     def test_residue_names_in_gro_file(self):
         """Test that residue names > 5 characters don't break .gro file output"""
         benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))

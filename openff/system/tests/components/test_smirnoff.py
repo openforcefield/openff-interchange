@@ -1,11 +1,12 @@
 import numpy as np
 import pytest
-from openff.toolkit.topology import Molecule
+from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ImproperTorsionHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
     LibraryChargeHandler,
+    ParameterHandler,
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
@@ -17,12 +18,52 @@ from openff.system.components.smirnoff import (
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
     SMIRNOFFImproperTorsionHandler,
+    SMIRNOFFPotentialHandler,
     SMIRNOFFvdWHandler,
     library_charge_from_molecule,
 )
+from openff.system.exceptions import InvalidParameterHandlerError
 from openff.system.models import TopologyKey
 from openff.system.tests import BaseTest
 from openff.system.utils import get_test_file_path
+
+
+class TestSMIRNOFFPotentialHandler(BaseTest):
+    def test_allowed_parameter_handler_types(self):
+        class DummyParameterHandler(ParameterHandler):
+            pass
+
+        class DummySMIRNOFFHandler(SMIRNOFFPotentialHandler):
+            type = "Bonds"
+            expression = "1+1"
+
+            @classmethod
+            def allowed_parameter_handlers(cls):
+                return [DummyParameterHandler]
+
+        dummy_handler = DummySMIRNOFFHandler()
+        angle_Handler = AngleHandler(version=0.3)
+
+        assert DummyParameterHandler in dummy_handler.allowed_parameter_handlers()
+        assert AngleHandler not in dummy_handler.allowed_parameter_handlers()
+        assert (
+            DummyParameterHandler
+            not in SMIRNOFFAngleHandler.allowed_parameter_handlers()
+        )
+
+        dummy_handler = DummyParameterHandler(version=0.3)
+
+        with pytest.raises(InvalidParameterHandlerError):
+            SMIRNOFFAngleHandler._from_toolkit(
+                parameter_handler=dummy_handler,
+                topology=Topology(),
+            )
+
+        with pytest.raises(InvalidParameterHandlerError):
+            DummySMIRNOFFHandler._from_toolkit(
+                parameter_handler=angle_Handler,
+                topology=Topology(),
+            )
 
 
 class TestSMIRNOFFHandlers(BaseTest):
@@ -42,13 +83,15 @@ class TestSMIRNOFFHandlers(BaseTest):
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(bond_handler)
-        bond_potentials, _ = SMIRNOFFBondHandler.from_toolkit(
+        bond_potentials, _ = SMIRNOFFBondHandler._from_toolkit(
             bond_handler=forcefield["Bonds"],
             topology=top,
         )
 
         top_key = TopologyKey(atom_indices=(0, 1))
-        pot = bond_potentials.potentials[bond_potentials.slot_map[top_key]]
+        pot_key = bond_potentials.slot_map[top_key]
+        assert pot_key.associated_handler == "Bonds"
+        pot = bond_potentials.potentials[pot_key]
 
         kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
         assert pot.parameters["k"].to(kcal_mol_a2).magnitude == pytest.approx(1.5)
@@ -69,13 +112,15 @@ class TestSMIRNOFFHandlers(BaseTest):
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(angle_handler)
-        angle_potentials = SMIRNOFFAngleHandler.from_toolkit(
+        angle_potentials = SMIRNOFFAngleHandler._from_toolkit(
             parameter_handler=forcefield["Angles"],
             topology=top,
         )
 
         top_key = TopologyKey(atom_indices=(0, 1, 2))
-        pot = angle_potentials.potentials[angle_potentials.slot_map[top_key]]
+        pot_key = angle_potentials.slot_map[top_key]
+        assert pot_key.associated_handler == "Angles"
+        pot = angle_potentials.potentials[pot_key]
 
         kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
         assert pot.parameters["k"].to(kcal_mol_rad2).magnitude == pytest.approx(2.5)
@@ -137,13 +182,13 @@ class TestMatrixRepresentations(BaseTest):
         import jax
 
         if handler_name == "Bonds":
-            handler, _ = SMIRNOFFBondHandler.from_toolkit(
+            handler, _ = SMIRNOFFBondHandler._from_toolkit(
                 bond_handler=parsley["Bonds"],
                 topology=ethanol_top,
                 constraint_handler=None,
             )
         elif handler_name == "Angles":
-            handler = SMIRNOFFAngleHandler.from_toolkit(
+            handler = SMIRNOFFAngleHandler._from_toolkit(
                 parameter_handler=parsley[handler_name],
                 topology=ethanol_top,
             )
