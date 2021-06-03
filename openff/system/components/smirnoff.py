@@ -34,7 +34,7 @@ kcal_mol_angstroms = kcal_mol / omm_unit.angstrom ** 2
 kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.topology import Topology
+    from openff.toolkit.topology import Topology
 
     from openff.system.components.mdtraj import OFFBioTop
 
@@ -90,7 +90,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
 
         """
         if type(parameter_handler) not in cls.allowed_parameter_handlers():
-            raise InvalidParameterHandlerError
+            raise InvalidParameterHandlerError(type(parameter_handler))
 
         handler = cls()
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
@@ -876,3 +876,19 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         # This logic is handled by ``store_matches`` as we may need to create potentials
         # to store depending on the handler type.
         pass
+
+
+def library_charge_from_molecule(
+    molecule: "Molecule",
+) -> LibraryChargeHandler.LibraryChargeType:
+    if molecule.partial_charges is None:
+        raise ValueError("Input molecule is missing partial charges.")
+
+    smirks = molecule.to_smiles(mapped=True)
+    charges = molecule.partial_charges
+
+    library_charge_type = LibraryChargeHandler.LibraryChargeType(
+        smirks=smirks, charge=charges
+    )
+
+    return library_charge_type

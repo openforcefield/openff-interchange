@@ -172,16 +172,37 @@ class System(DefaultModel):
                 f"Found object of type {type(topology)}."
             )
 
-        for parameter_handler_name in force_field.registered_parameter_handlers:
-            if parameter_handler_name in {
-                "Electrostatics",
-                "ToolkitAM1BCC",
-                "LibraryCharges",
-                "ChargeIncrementModel",
-                "Constraints",
-            }:
+        parameter_handlers_by_type = {
+            force_field[parameter_handler_name].__class__: force_field[
+                parameter_handler_name
+            ]
+            for parameter_handler_name in force_field.registered_parameter_handlers
+        }
+
+        # TODO: Wrap electrosotatics logic into this loop (#200)
+        for potential_handler_type in [
+            SMIRNOFFAngleHandler,
+            SMIRNOFFBondHandler,
+            SMIRNOFFImproperTorsionHandler,
+            SMIRNOFFProperTorsionHandler,
+            SMIRNOFFvdWHandler,
+        ]:
+
+            parameter_handlers = [
+                parameter_handlers_by_type[allowed_type]
+                for allowed_type in potential_handler_type.allowed_parameter_handlers()
+                if allowed_type in parameter_handlers_by_type
+            ]
+
+            if len(parameter_handlers) == 0:
                 continue
-            elif parameter_handler_name == "Bonds":
+
+            if len(parameter_handlers) == 0:
+                continue
+
+            # TODO: Might be simpler to rework the bond handler to be self-contained and move back
+            # to the constraint handler dealing with the logic (and depending on the bond handler)
+            if potential_handler_type == SMIRNOFFBondHandler:
                 if "Constraints" in force_field.registered_parameter_handlers:
                     constraint_handler = force_field["Constraints"]
                 else:
@@ -194,31 +215,13 @@ class System(DefaultModel):
                 sys_out.handlers.update({"Bonds": potential_handler})
                 if constraint_handler is not None:
                     sys_out.handlers.update({"Constraints": constraints})
-            elif parameter_handler_name in {
-                "Angles",
-                "ProperTorsions",
-                "ImproperTorsions",
-            }:
-                parameter_handler = force_field[parameter_handler_name]
-                POTENTIAL_HANDLER_CLASS = _SMIRNOFF_HANDLER_MAPPINGS[
-                    parameter_handler.__class__
-                ]
-                potential_handler = POTENTIAL_HANDLER_CLASS._from_toolkit(  # type: ignore[assignment]
-                    parameter_handler=parameter_handler,
-                    topology=topology,
-                )
-                sys_out.handlers.update({parameter_handler_name: potential_handler})
-            elif parameter_handler_name == "vdW":
-                potential_handler = SMIRNOFFvdWHandler._from_toolkit(  # type: ignore[assignment]
-                    parameter_handler=force_field["vdW"],
-                    topology=topology,
-                )
-                sys_out.handlers.update({parameter_handler_name: potential_handler})
             else:
-                potential_handler = force_field[
-                    parameter_handler_name
-                ].create_potential(topology=topology)
-                sys_out.handlers.update({parameter_handler_name: potential_handler})
+                potential_handler = potential_handler_type._from_toolkit(  # type: ignore
+                    parameter_handler=parameter_handlers[0],
+                    topology=topology,
+                )
+
+            sys_out.handlers.update({potential_handler.type: potential_handler})
 
         if "Electrostatics" in force_field.registered_parameter_handlers:
             electrostatics = ElectrostaticsMetaHandler(
@@ -262,16 +265,6 @@ class System(DefaultModel):
                 electrostatics.apply_charge_increments(charge_increments)
 
             sys_out.handlers.update({"Electrostatics": electrostatics})
-        # if "Electrostatics" not in self.registered_parameter_handlers:
-        #     if "LibraryCharges" in self.registered_parameter_handlers:
-        #         library_charge_handler = SMIRNOFFLibraryChargeHandler()
-        #         library_charge_handler.store_matches(
-        #             parameter_handler=self["LibraryCharges"], topology=topology
-        #         )
-        #         library_charge_handler.store_potentials(
-        #             parameter_handler=self["LibraryCharges"]
-        #         )
-        #         sys_out.handlers.update({"LibraryCharges": library_charge_handler})
 
         # `box` argument is only overriden if passed `None` and the input topology
         # has box vectors

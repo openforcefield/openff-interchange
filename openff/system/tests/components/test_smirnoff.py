@@ -24,6 +24,7 @@ from openff.system.components.smirnoff import (
     SMIRNOFFImproperTorsionHandler,
     SMIRNOFFPotentialHandler,
     SMIRNOFFvdWHandler,
+    library_charge_from_molecule,
 )
 from openff.system.exceptions import InvalidParameterHandlerError
 from openff.system.models import TopologyKey
@@ -129,7 +130,6 @@ class TestSMIRNOFFHandlers(BaseTest):
         assert pot.parameters["k"].to(kcal_mol_rad2).magnitude == pytest.approx(2.5)
 
     def test_store_improper_torsion_matches(self):
-
         formaldehyde: Molecule = Molecule.from_mapped_smiles("[H:3][C:1]([H:4])=[O:2]")
 
         parameter_handler = ImproperTorsionHandler(version=0.3)
@@ -158,7 +158,6 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
 
     def test_electrostatics_am1_handler(self):
-
         top = OFFBioTop.from_molecules(Molecule.from_smiles("C"))
 
         parameter_handlers = [
@@ -176,7 +175,6 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
 
     def test_electrostatics_library_charges(self):
-
         top = OFFBioTop.from_molecules(Molecule.from_smiles("C"))
 
         library_charge_handler = LibraryChargeHandler(version=0.3)
@@ -203,7 +201,6 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
 
     def test_electrostatics_charge_increments(self):
-
         top = OFFBioTop.from_molecules(Molecule.from_mapped_smiles("[Cl:1][H:2]"))
 
         charge_increment_handler = ChargeIncrementModelHandler(version=0.3)
@@ -230,6 +227,21 @@ class TestSMIRNOFFHandlers(BaseTest):
             [*electrostatics_handler.partial_charges.values()],
             [-0.068, 0.068],
         )
+
+
+def test_library_charges_from_molecule():
+    mol = Molecule.from_mapped_smiles("[Cl:1][C:2]#[C:3][F:4]")
+
+    with pytest.raises(ValueError, match="missing partial"):
+        library_charge_from_molecule(mol)
+
+    mol.partial_charges = np.linspace(-0.3, 0.3, 4) * simtk_unit.elementary_charge
+
+    library_charges = library_charge_from_molecule(mol)
+
+    assert isinstance(library_charges, LibraryChargeHandler.LibraryChargeType)
+    assert library_charges.smirks == mol.to_smiles(mapped=True)
+    assert library_charges.charge == [*mol.partial_charges]
 
 
 @skip_if_missing("jax")
