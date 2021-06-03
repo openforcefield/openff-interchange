@@ -196,7 +196,7 @@ class System(DefaultModel):
                 for allowed_type in potential_handler_type.allowed_parameter_handlers()
                 if allowed_type in parameter_handlers_by_type
             ]
-            
+
             if len(parameter_handlers) == 0:
                 continue
 
