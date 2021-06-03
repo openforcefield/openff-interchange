@@ -524,7 +524,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         ]
 
     @property
-    def partial_charges(self) -> Dict[TopologyKey, unit.Quantity]:
+    def charges(self) -> Dict[TopologyKey, unit.Quantity]:
         """Returns the total partial charge on each particle in the associated system."""
 
         charges = defaultdict(lambda: 0.0)

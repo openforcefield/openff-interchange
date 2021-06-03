@@ -23,6 +23,7 @@ from openff.system.components.smirnoff import (
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
     SMIRNOFFConstraintHandler,
+    SMIRNOFFElectrostaticsHandler,
     SMIRNOFFImproperTorsionHandler,
     SMIRNOFFProperTorsionHandler,
     SMIRNOFFvdWHandler,
@@ -186,6 +187,7 @@ class System(DefaultModel):
             SMIRNOFFImproperTorsionHandler,
             SMIRNOFFProperTorsionHandler,
             SMIRNOFFvdWHandler,
+            SMIRNOFFElectrostaticsHandler,
         ]:
 
             parameter_handlers = [
@@ -193,9 +195,6 @@ class System(DefaultModel):
                 for allowed_type in potential_handler_type.allowed_parameter_handlers()
                 if allowed_type in parameter_handlers_by_type
             ]
-
-            if len(parameter_handlers) == 0:
-                continue
 
             if len(parameter_handlers) == 0:
                 continue
@@ -215,6 +214,11 @@ class System(DefaultModel):
                 sys_out.handlers.update({"Bonds": potential_handler})
                 if constraint_handler is not None:
                     sys_out.handlers.update({"Constraints": constraints})
+            elif potential_handler_type == SMIRNOFFElectrostaticsHandler:
+                potential_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
+                    parameter_handler=parameter_handlers,
+                    topology=topology,
+                )
             else:
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers[0],
@@ -222,49 +226,6 @@ class System(DefaultModel):
                 )
 
             sys_out.handlers.update({potential_handler.type: potential_handler})
-
-        if "Electrostatics" in force_field.registered_parameter_handlers:
-            electrostatics = ElectrostaticsMetaHandler(
-                scale_13=force_field["Electrostatics"].scale13,
-                scale_14=force_field["Electrostatics"].scale14,
-                scale_15=force_field["Electrostatics"].scale15,
-                method=force_field["Electrostatics"].method.lower(),
-                cutoff=force_field["Electrostatics"].cutoff,
-            )
-            if "ToolkitAM1BCC" in force_field.registered_parameter_handlers:
-                electrostatics.cache_charges(
-                    partial_charge_method="am1bcc", topology=topology
-                )
-                electrostatics.charges = electrostatics.cache["am1bcc"]
-
-            if "LibraryCharges" in force_field.registered_parameter_handlers:
-                library_charges = SMIRNOFFLibraryChargeHandler()
-                library_charges.store_matches(force_field["LibraryCharges"], topology)
-                library_charges.store_potentials(force_field["LibraryCharges"])
-                sys_out.handlers.update({"LibraryCharges": electrostatics})
-
-                electrostatics.apply_library_charges(library_charges)
-
-            if "ChargeIncrementModel" in force_field.registered_parameter_handlers:
-                charge_increments = SMIRNOFFChargeIncrementHandler()
-                charge_increments.store_matches(
-                    force_field["ChargeIncrementModel"], topology
-                )
-                charge_increments.store_potentials(force_field["ChargeIncrementModel"])
-                sys_out.handlers.update({"LibraryCharges": electrostatics})
-
-                if charge_increments.partial_charge_method not in electrostatics.cache:
-                    electrostatics.cache_charges(
-                        partial_charge_method=charge_increments.partial_charge_method,
-                        topology=topology,
-                    )
-                electrostatics.charges = electrostatics.cache[
-                    charge_increments.partial_charge_method
-                ]
-
-                electrostatics.apply_charge_increments(charge_increments)
-
-            sys_out.handlers.update({"Electrostatics": electrostatics})
 
         # `box` argument is only overriden if passed `None` and the input topology
         # has box vectors
