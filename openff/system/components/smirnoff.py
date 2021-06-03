@@ -78,7 +78,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
 
         """
         if type(parameter_handler) not in cls.allowed_parameter_handlers():
-            raise InvalidParameterHandlerError
+            raise InvalidParameterHandlerError(type(parameter_handler))
 
         handler = cls()
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
