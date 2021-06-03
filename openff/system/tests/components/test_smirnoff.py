@@ -224,9 +224,11 @@ class TestSMIRNOFFHandlers(BaseTest):
             parameter_handlers, top
         )
 
+        # AM1-Mulliken charges are [-0.168,  0.168], increments are [0.1, -0.1],
+        # sum is [-0.068,  0.068]
         np.testing.assert_allclose(
             [*electrostatics_handler.partial_charges.values()],
-            [0.1, -0.1],
+            [-0.068, 0.068],
         )
 
 

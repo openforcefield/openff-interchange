@@ -578,32 +578,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             method=toolkit_handler_with_metadata.method.lower(),
         )
 
-        for parameter_handler in parameter_handler:
-            if type(parameter_handler) not in cls.allowed_parameter_handlers():
-                raise InvalidParameterHandlerError
-
-            if type(parameter_handler) == ElectrostaticsHandler:
-                continue
-            elif type(parameter_handler) == ToolkitAM1BCCHandler:
-                for reference_molecule in topology.reference_molecules:
-                    matches, potentials = handler._find_am1_matches(
-                        parameter_handler=parameter_handler,
-                        reference_molecule=reference_molecule,
-                    )
-                    handler.slot_map.update(matches)
-                    handler.potentials.update(potentials)
-
-            elif type(parameter_handler) in [
-                LibraryChargeHandler,
-                ChargeIncrementModelHandler,
-            ]:
-                for reference_molecule in topology.reference_molecules:
-                    matches, potentials = handler._find_slot_matches(
-                        parameter_handler=parameter_handler,
-                        reference_molecule=reference_molecule,
-                    )
-                    handler.slot_map.update(matches)
-                    handler.potentials.update(potentials)
+        handler.store_matches(parameter_handlers, topology)
 
         return handler
 
