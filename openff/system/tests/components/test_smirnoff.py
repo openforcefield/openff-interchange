@@ -5,6 +5,7 @@ from openff.toolkit.typing.engines.smirnoff import ImproperTorsionHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
+    LibraryChargeHandler,
     ParameterHandler,
 )
 from openff.units import unit
@@ -19,6 +20,7 @@ from openff.system.components.smirnoff import (
     SMIRNOFFImproperTorsionHandler,
     SMIRNOFFPotentialHandler,
     SMIRNOFFvdWHandler,
+    library_charge_from_molecule,
 )
 from openff.system.exceptions import InvalidParameterHandlerError
 from openff.system.models import TopologyKey
@@ -151,6 +153,21 @@ class TestSMIRNOFFHandlers(BaseTest):
         assert (
             TopologyKey(atom_indices=(0, 3, 1, 2), mult=0) in potential_handler.slot_map
         )
+
+
+def test_library_charges_from_molecule():
+    mol = Molecule.from_mapped_smiles("[Cl:1][C:2]#[C:3][F:4]")
+
+    with pytest.raises(ValueError, match="missing partial"):
+        library_charge_from_molecule(mol)
+
+    mol.partial_charges = np.linspace(-0.3, 0.3, 4) * simtk_unit.elementary_charge
+
+    library_charges = library_charge_from_molecule(mol)
+
+    assert isinstance(library_charges, LibraryChargeHandler.LibraryChargeType)
+    assert library_charges.smirks == mol.to_smiles(mapped=True)
+    assert library_charges.charge == [*mol.partial_charges]
 
 
 @skip_if_missing("jax")
