@@ -190,14 +190,14 @@ class System(DefaultModel):
             SMIRNOFFProperTorsionHandler,
             SMIRNOFFvdWHandler,
         ]:
-            try:
-                parameter_handlers = [
-                    parameter_handlers_by_type[allowed_type]
-                    for allowed_type in potential_handler_type.allowed_parameter_handlers()
-                ]
-            except KeyError:
-                # TODO: Better handle case of this potential_handler_type not being associated
-                # with any registered parameter handlers
+
+            parameter_handlers = [
+                parameter_handlers_by_type[allowed_type]
+                for allowed_type in potential_handler_type.allowed_parameter_handlers()
+                if allowed_type in parameter_handlers_by_type
+            ]
+            
+            if len(parameter_handlers) == 0:
                 continue
 
             if len(parameter_handlers) == 0:
