@@ -1,11 +1,11 @@
 # Static Doc Directory
 
 Add any paths that contain custom static files (such as style sheets) here,
-relative to the `conf.py` file's directory. 
+relative to the `conf.py` file's directory.
 They are copied after the builtin static files,
 so a file named "default.css" will overwrite the builtin "default.css".
 
-The path to this folder is set in the Sphinx `conf.py` file in the line: 
+The path to this folder is set in the Sphinx `conf.py` file in the line:
 ```python
 templates_path = ['_static']
 ```
