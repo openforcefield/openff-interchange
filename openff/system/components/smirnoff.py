@@ -586,7 +586,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         return handler
 
     @classmethod
-    @functools.lru_cache
+    @functools.lru_cache(None)
     def _compute_partial_charges(cls, molecule: Molecule, method: str) -> unit.Quantity:
 
         molecule = copy.deepcopy(molecule)
