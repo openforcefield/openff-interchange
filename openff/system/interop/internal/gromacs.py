@@ -280,6 +280,8 @@ def _write_atoms(
     top_file.write("[ atoms ]\n")
     top_file.write(";num, type, resnum, resname, atomname, cgnr, q, m\n")
 
+    charges = openff_sys.handlers["Electrostatics"].charges
+
     for atom in openff_sys.topology.mdtop.atoms:
         atom_idx = atom.index
         mass = atom.element.mass
@@ -287,7 +289,7 @@ def _write_atoms(
         res_idx = atom.residue.index
         res_name = str(atom.residue)
         top_key = TopologyKey(atom_indices=(atom_idx,))
-        charge = openff_sys.handlers["Electrostatics"].charges[top_key].magnitude
+        charge = charges[top_key].m_as(unit.e)
         top_file.write(
             "{:6d} {:18s} {:6d} {:8s} {:8s} {:6d} "
             "{:18.8f} {:18.8f}\n".format(

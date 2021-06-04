@@ -5,8 +5,11 @@ from openff.toolkit.typing.engines.smirnoff import ImproperTorsionHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
+    ChargeIncrementModelHandler,
+    ElectrostaticsHandler,
     LibraryChargeHandler,
     ParameterHandler,
+    ToolkitAM1BCCHandler,
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
@@ -17,6 +20,7 @@ from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.smirnoff import (
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
+    SMIRNOFFElectrostaticsHandler,
     SMIRNOFFImproperTorsionHandler,
     SMIRNOFFPotentialHandler,
     SMIRNOFFvdWHandler,
@@ -126,7 +130,6 @@ class TestSMIRNOFFHandlers(BaseTest):
         assert pot.parameters["k"].to(kcal_mol_rad2).magnitude == pytest.approx(2.5)
 
     def test_store_improper_torsion_matches(self):
-
         formaldehyde: Molecule = Molecule.from_mapped_smiles("[H:3][C:1]([H:4])=[O:2]")
 
         parameter_handler = ImproperTorsionHandler(version=0.3)
@@ -152,6 +155,77 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
         assert (
             TopologyKey(atom_indices=(0, 3, 1, 2), mult=0) in potential_handler.slot_map
+        )
+
+    def test_electrostatics_am1_handler(self):
+        top = OFFBioTop.from_molecules(Molecule.from_smiles("C"))
+
+        parameter_handlers = [
+            ElectrostaticsHandler(version=0.3),
+            ToolkitAM1BCCHandler(version=0.3),
+        ]
+
+        electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
+            parameter_handlers, top
+        )
+
+        np.testing.assert_allclose(
+            [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
+            [-0.1088, 0.0267, 0.0267, 0.0267, 0.0267],
+        )
+
+    def test_electrostatics_library_charges(self):
+        top = OFFBioTop.from_molecules(Molecule.from_smiles("C"))
+
+        library_charge_handler = LibraryChargeHandler(version=0.3)
+        library_charge_handler.add_parameter(
+            {
+                "smirks": "[#6X4:1]-[#1:2]",
+                "charge1": -0.1 * simtk_unit.elementary_charge,
+                "charge2": 0.025 * simtk_unit.elementary_charge,
+            }
+        )
+
+        parameter_handlers = [
+            ElectrostaticsHandler(version=0.3),
+            library_charge_handler,
+        ]
+
+        electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
+            parameter_handlers, top
+        )
+
+        np.testing.assert_allclose(
+            [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
+            [-0.1, 0.025, 0.025, 0.025, 0.025],
+        )
+
+    def test_electrostatics_charge_increments(self):
+        top = OFFBioTop.from_molecules(Molecule.from_mapped_smiles("[Cl:1][H:2]"))
+
+        charge_increment_handler = ChargeIncrementModelHandler(version=0.3)
+        charge_increment_handler.add_parameter(
+            {
+                "smirks": "[#17:1]-[#1:2]",
+                "charge_increment1": 0.1 * simtk_unit.elementary_charge,
+                "charge_increment2": -0.1 * simtk_unit.elementary_charge,
+            }
+        )
+
+        parameter_handlers = [
+            ElectrostaticsHandler(version=0.3),
+            charge_increment_handler,
+        ]
+
+        electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
+            parameter_handlers, top
+        )
+
+        # AM1-Mulliken charges are [-0.168,  0.168], increments are [0.1, -0.1],
+        # sum is [-0.068,  0.068]
+        np.testing.assert_allclose(
+            [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
+            [-0.068, 0.068],
         )
 
 

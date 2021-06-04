@@ -239,6 +239,8 @@ def _write_atoms(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
     electrostatics_handler = openff_sys.handlers["Electrostatics"]
     vdw_hander = openff_sys.handlers["vdW"]
 
+    charges = electrostatics_handler.charges
+
     for atom in openff_sys.topology.mdtop.atoms:
 
         molecule_idx = atom.residue.index
@@ -247,7 +249,7 @@ def _write_atoms(lmp_file: IO, openff_sys: System, atom_type_map: Dict):
         pot_key = vdw_hander.slot_map[top_key]
         atom_type = atom_type_map_inv[pot_key]
 
-        charge = electrostatics_handler.charges[top_key].magnitude
+        charge = charges[top_key].m_as(unit.e)
         pos = openff_sys.positions[atom.index].to(unit.angstrom).magnitude
         lmp_file.write(
             "{:d}\t{:d}\t{:d}\t{:.8g}\t{:.8g}\t{:.8g}\t{:.8g}\n".format(

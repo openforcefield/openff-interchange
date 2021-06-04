@@ -7,28 +7,14 @@ import mdtraj as md
 import numpy as np
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
-from openff.toolkit.typing.engines.smirnoff.parameters import (
-    AngleHandler,
-    BondHandler,
-    ConstraintHandler,
-    ImproperTorsionHandler,
-    ProperTorsionHandler,
-    vdWHandler,
-)
 from pydantic import Field, validator
 
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.potentials import PotentialHandler
 from openff.system.components.smirnoff import (
-    ElectrostaticsMetaHandler,
-    SMIRNOFFAngleHandler,
+    SMIRNOFF_POTENTIAL_HANDLERS,
     SMIRNOFFBondHandler,
-    SMIRNOFFChargeIncrementHandler,
     SMIRNOFFConstraintHandler,
-    SMIRNOFFImproperTorsionHandler,
-    SMIRNOFFLibraryChargeHandler,
-    SMIRNOFFProperTorsionHandler,
-    SMIRNOFFvdWHandler,
 )
 from openff.system.exceptions import (
     InternalInconsistencyError,
@@ -50,15 +36,6 @@ _SUPPORTED_SMIRNOFF_HANDLERS = {
     "Electrostatics",
     "LibraryCharges",
     "ChargeIncrementModel",
-}
-
-_SMIRNOFF_HANDLER_MAPPINGS = {
-    ConstraintHandler: SMIRNOFFConstraintHandler,
-    BondHandler: SMIRNOFFBondHandler,
-    AngleHandler: SMIRNOFFAngleHandler,
-    ProperTorsionHandler: SMIRNOFFProperTorsionHandler,
-    ImproperTorsionHandler: SMIRNOFFImproperTorsionHandler,
-    vdWHandler: SMIRNOFFvdWHandler,
 }
 
 
@@ -182,14 +159,16 @@ class System(DefaultModel):
             for parameter_handler_name in force_field.registered_parameter_handlers
         }
 
-        # TODO: Wrap electrosotatics logic into this loop (#200)
-        for potential_handler_type in [
-            SMIRNOFFAngleHandler,
-            SMIRNOFFBondHandler,
-            SMIRNOFFImproperTorsionHandler,
-            SMIRNOFFProperTorsionHandler,
-            SMIRNOFFvdWHandler,
-        ]:
+        if len(parameter_handlers_by_type) != len(
+            force_field.registered_parameter_handlers
+        ):
+
+            raise NotImplementedError(
+                "Only force fields that contain one instance of each parameter handler "
+                "type are currently supported."
+            )
+
+        for potential_handler_type in SMIRNOFF_POTENTIAL_HANDLERS:
 
             parameter_handlers = [
                 parameter_handlers_by_type[allowed_type]
@@ -200,11 +179,9 @@ class System(DefaultModel):
             if len(parameter_handlers) == 0:
                 continue
 
-            if len(parameter_handlers) == 0:
-                continue
-
-            # TODO: Might be simpler to rework the bond handler to be self-contained and move back
-            # to the constraint handler dealing with the logic (and depending on the bond handler)
+            # TODO: Might be simpler to rework the bond handler to be self-contained and
+            #       move back to the constraint handler dealing with the logic (and
+            #       depending on the bond handler)
             if potential_handler_type == SMIRNOFFBondHandler:
                 if "Constraints" in force_field.registered_parameter_handlers:
                     constraint_handler = force_field["Constraints"]
@@ -218,6 +195,13 @@ class System(DefaultModel):
                 sys_out.handlers.update({"Bonds": potential_handler})
                 if constraint_handler is not None:
                     sys_out.handlers.update({"Constraints": constraints})
+            elif potential_handler_type == SMIRNOFFConstraintHandler:
+                continue
+            elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
+                potential_handler = potential_handler_type._from_toolkit(
+                    parameter_handler=parameter_handlers,
+                    topology=topology,
+                )
             else:
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers[0],
@@ -225,49 +209,6 @@ class System(DefaultModel):
                 )
 
             sys_out.handlers.update({potential_handler.type: potential_handler})
-
-        if "Electrostatics" in force_field.registered_parameter_handlers:
-            electrostatics = ElectrostaticsMetaHandler(
-                scale_13=force_field["Electrostatics"].scale13,
-                scale_14=force_field["Electrostatics"].scale14,
-                scale_15=force_field["Electrostatics"].scale15,
-                method=force_field["Electrostatics"].method.lower(),
-                cutoff=force_field["Electrostatics"].cutoff,
-            )
-            if "ToolkitAM1BCC" in force_field.registered_parameter_handlers:
-                electrostatics.cache_charges(
-                    partial_charge_method="am1bcc", topology=topology
-                )
-                electrostatics.charges = electrostatics.cache["am1bcc"]
-
-            if "LibraryCharges" in force_field.registered_parameter_handlers:
-                library_charges = SMIRNOFFLibraryChargeHandler()
-                library_charges.store_matches(force_field["LibraryCharges"], topology)
-                library_charges.store_potentials(force_field["LibraryCharges"])
-                sys_out.handlers.update({"LibraryCharges": electrostatics})
-
-                electrostatics.apply_library_charges(library_charges)
-
-            if "ChargeIncrementModel" in force_field.registered_parameter_handlers:
-                charge_increments = SMIRNOFFChargeIncrementHandler()
-                charge_increments.store_matches(
-                    force_field["ChargeIncrementModel"], topology
-                )
-                charge_increments.store_potentials(force_field["ChargeIncrementModel"])
-                sys_out.handlers.update({"LibraryCharges": electrostatics})
-
-                if charge_increments.partial_charge_method not in electrostatics.cache:
-                    electrostatics.cache_charges(
-                        partial_charge_method=charge_increments.partial_charge_method,
-                        topology=topology,
-                    )
-                electrostatics.charges = electrostatics.cache[
-                    charge_increments.partial_charge_method
-                ]
-
-                electrostatics.apply_charge_increments(charge_increments)
-
-            sys_out.handlers.update({"Electrostatics": electrostatics})
 
         # `box` argument is only overriden if passed `None` and the input topology
         # has box vectors
@@ -419,7 +360,7 @@ class System(DefaultModel):
         )
 
         self_copy = System()
-        self_copy._inner_data = self._inner_data
+        self_copy._inner_data = deepcopy(self._inner_data)
 
         atom_offset = self_copy.topology.mdtop.n_atoms
 
@@ -433,11 +374,11 @@ class System(DefaultModel):
         )
 
         for handler_name, handler in other.handlers.items():
+
             self_handler = self_copy.handlers[handler_name]
-            if handler_name == "Electrostatics":
-                # Deal with electrostatics separately
-                continue
+
             for top_key, pot_key in handler.slot_map.items():
+
                 new_atom_indices = tuple(
                     idx + atom_offset for idx in top_key.atom_indices
                 )
@@ -445,13 +386,9 @@ class System(DefaultModel):
                     atom_indices=new_atom_indices,
                     mult=top_key.mult,
                 )
+
                 self_handler.slot_map.update({new_top_key: pot_key})
                 self_handler.potentials.update({pot_key: handler.potentials[pot_key]})
-
-        for atom_key, charge in other["Electrostatics"].charges.items():
-            new_atom_indices = (atom_key.atom_indices[0] + atom_offset,)
-            new_top_key = TopologyKey(atom_indices=new_atom_indices, mult=atom_key.mult)
-            self_copy["Electrostatics"].charges.update({new_top_key: charge})
 
         new_positions = np.vstack([self_copy.positions, other.positions])
         self_copy.positions = new_positions

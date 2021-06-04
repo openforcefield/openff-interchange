@@ -237,6 +237,9 @@ def test_from_openmm_single_mols(mol, n_mols):
     toolkit_energy.compare(native_energy)
 
 
+@pytest.mark.xfail(
+    reason="from_openmm does not correctly import vdW parameters from custom forces."
+)
 @pytest.mark.slow
 def test_openmm_roundtrip():
     mol = Molecule.from_smiles("CCO")
