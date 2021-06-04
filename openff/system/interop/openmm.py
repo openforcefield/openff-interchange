@@ -553,7 +553,7 @@ def _convert_nonbonded_force(force):
     for idx in range(n_parametrized_particles):
         charge, sigma, epsilon = force.getParticleParameters(idx)
         top_key = TopologyKey(atom_indices=(idx,))
-        pot_key = PotentialKey(id="idx")
+        pot_key = PotentialKey(id=f"{idx}")
         pot = Potential(
             parameters={
                 "sigma": from_simtk(sigma),
