@@ -6,12 +6,13 @@ from openff.utilities.testing import skip_if_missing
 
 from openff.system.drivers import get_amber_energies, get_gromacs_energies
 from openff.system.stubs import ForceField
+from openff.system.tests.utils import needs_gmx
 
 kj_mol = unit.kilojoule / unit.mol
 
 
 @skip_if_missing("intermol")
-@skip_if_missing("gromacs")
+@needs_gmx
 @pytest.mark.slow
 def test_amber_energy():
     """Basic test to see if the amber energy driver is functional"""

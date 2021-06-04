@@ -77,7 +77,7 @@ jobs:
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v $COV openff/system/tests/ --ignore=openff/system/tests/interop/test_parmed.py
+        python -m pytest -v $COV openff/system/tests/ --ignore=openff/system/tests/interop/test_parmed.py --runslow
 
     - name: Run ParmEd tests
       continue-on-error: true
