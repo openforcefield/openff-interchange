@@ -287,7 +287,7 @@ def _write_atoms(
         res_idx = atom.residue.index
         res_name = str(atom.residue)
         top_key = TopologyKey(atom_indices=(atom_idx,))
-        charge = openff_sys.handlers["Electrostatics"].charges[top_key.atom_indices[0]]
+        charge = openff_sys.handlers["Electrostatics"].charges[top_key]
         top_file.write(
             "{:6d} {:18s} {:6d} {:8s} {:8s} {:6d} "
             "{:18.8f} {:18.8f}\n".format(

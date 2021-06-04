@@ -527,7 +527,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     def charges(self) -> Dict[TopologyKey, unit.Quantity]:
         """Returns the total partial charge on each particle in the associated system."""
 
-        charges = defaultdict(lambda: 0.0)
+        charges = defaultdict(lambda: 0.0 * unit.e)
 
         for topology_key, potential_key in self.slot_map.items():
 
@@ -538,10 +538,13 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 if parameter_key != "charge" and parameter_key != "charge_increment":
                     raise NotImplementedError()
 
-                charge = parameter_value.to(unit.elementary_charge).magnitude
+                charge = parameter_value
                 charges[topology_key.atom_indices[0]] += charge
 
-        return charges
+        return {
+            TopologyKey(atom_indices=(index,)): charge
+            for index, charge in charges.items()
+        }
 
     @classmethod
     def charge_precedence(cls) -> List[str]:
@@ -555,7 +558,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         cls: Type[T],
         parameter_handler: Any,
         topology: "Topology",
-    ) -> "SMIRNOFFvdWHandler":
+    ) -> "SMIRNOFFElectrostaticsHandler":
         """
         Create a SMIRNOFFElectrostaticsHandler from toolkit data.
 
@@ -892,3 +895,14 @@ def library_charge_from_molecule(
     )
 
     return library_charge_type
+
+
+SMIRNOFF_POTENTIAL_HANDLERS = [
+    SMIRNOFFBondHandler,
+    SMIRNOFFConstraintHandler,
+    SMIRNOFFAngleHandler,
+    SMIRNOFFProperTorsionHandler,
+    SMIRNOFFImproperTorsionHandler,
+    SMIRNOFFvdWHandler,
+    SMIRNOFFElectrostaticsHandler,
+]

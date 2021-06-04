@@ -7,26 +7,14 @@ import mdtraj as md
 import numpy as np
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
-from openff.toolkit.typing.engines.smirnoff.parameters import (
-    AngleHandler,
-    BondHandler,
-    ConstraintHandler,
-    ImproperTorsionHandler,
-    ProperTorsionHandler,
-    vdWHandler,
-)
 from pydantic import Field, validator
 
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.potentials import PotentialHandler
 from openff.system.components.smirnoff import (
-    SMIRNOFFAngleHandler,
+    SMIRNOFF_POTENTIAL_HANDLERS,
     SMIRNOFFBondHandler,
     SMIRNOFFConstraintHandler,
-    SMIRNOFFElectrostaticsHandler,
-    SMIRNOFFImproperTorsionHandler,
-    SMIRNOFFProperTorsionHandler,
-    SMIRNOFFvdWHandler,
 )
 from openff.system.exceptions import (
     InternalInconsistencyError,
@@ -48,15 +36,6 @@ _SUPPORTED_SMIRNOFF_HANDLERS = {
     "Electrostatics",
     "LibraryCharges",
     "ChargeIncrementModel",
-}
-
-_SMIRNOFF_HANDLER_MAPPINGS = {
-    ConstraintHandler: SMIRNOFFConstraintHandler,
-    BondHandler: SMIRNOFFBondHandler,
-    AngleHandler: SMIRNOFFAngleHandler,
-    ProperTorsionHandler: SMIRNOFFProperTorsionHandler,
-    ImproperTorsionHandler: SMIRNOFFImproperTorsionHandler,
-    vdWHandler: SMIRNOFFvdWHandler,
 }
 
 
@@ -180,15 +159,16 @@ class System(DefaultModel):
             for parameter_handler_name in force_field.registered_parameter_handlers
         }
 
-        # TODO: Wrap electrosotatics logic into this loop (#200)
-        for potential_handler_type in [
-            SMIRNOFFAngleHandler,
-            SMIRNOFFBondHandler,
-            SMIRNOFFImproperTorsionHandler,
-            SMIRNOFFProperTorsionHandler,
-            SMIRNOFFvdWHandler,
-            SMIRNOFFElectrostaticsHandler,
-        ]:
+        if len(parameter_handlers_by_type) != len(
+            force_field.registered_parameter_handlers
+        ):
+
+            raise NotImplementedError(
+                "Only force fields that contain one instance of each parameter handler "
+                "type are currently supported."
+            )
+
+        for potential_handler_type in SMIRNOFF_POTENTIAL_HANDLERS:
 
             parameter_handlers = [
                 parameter_handlers_by_type[allowed_type]
@@ -199,8 +179,9 @@ class System(DefaultModel):
             if len(parameter_handlers) == 0:
                 continue
 
-            # TODO: Might be simpler to rework the bond handler to be self-contained and move back
-            # to the constraint handler dealing with the logic (and depending on the bond handler)
+            # TODO: Might be simpler to rework the bond handler to be self-contained and
+            #       move back to the constraint handler dealing with the logic (and
+            #       depending on the bond handler)
             if potential_handler_type == SMIRNOFFBondHandler:
                 if "Constraints" in force_field.registered_parameter_handlers:
                     constraint_handler = force_field["Constraints"]
@@ -214,8 +195,10 @@ class System(DefaultModel):
                 sys_out.handlers.update({"Bonds": potential_handler})
                 if constraint_handler is not None:
                     sys_out.handlers.update({"Constraints": constraints})
-            elif potential_handler_type == SMIRNOFFElectrostaticsHandler:
-                potential_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
+            elif potential_handler_type == SMIRNOFFConstraintHandler:
+                continue
+            elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
+                potential_handler = potential_handler_type._from_toolkit(
                     parameter_handler=parameter_handlers,
                     topology=topology,
                 )
@@ -377,7 +360,7 @@ class System(DefaultModel):
         )
 
         self_copy = System()
-        self_copy._inner_data = self._inner_data
+        self_copy._inner_data = deepcopy(self._inner_data)
 
         atom_offset = self_copy.topology.mdtop.n_atoms
 
@@ -391,11 +374,11 @@ class System(DefaultModel):
         )
 
         for handler_name, handler in other.handlers.items():
+
             self_handler = self_copy.handlers[handler_name]
-            if handler_name == "Electrostatics":
-                # Deal with electrostatics separately
-                continue
+
             for top_key, pot_key in handler.slot_map.items():
+
                 new_atom_indices = tuple(
                     idx + atom_offset for idx in top_key.atom_indices
                 )
@@ -403,13 +386,9 @@ class System(DefaultModel):
                     atom_indices=new_atom_indices,
                     mult=top_key.mult,
                 )
+
                 self_handler.slot_map.update({new_top_key: pot_key})
                 self_handler.potentials.update({pot_key: handler.potentials[pot_key]})
-
-        for atom_key, charge in other["Electrostatics"].charges.items():
-            new_atom_indices = (atom_key.atom_indices[0] + atom_offset,)
-            new_top_key = TopologyKey(atom_indices=new_atom_indices, mult=atom_key.mult)
-            self_copy["Electrostatics"].charges.update({new_top_key: charge})
 
         new_positions = np.vstack([self_copy.positions, other.positions])
         self_copy.positions = new_positions

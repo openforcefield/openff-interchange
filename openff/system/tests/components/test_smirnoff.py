@@ -170,7 +170,7 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
 
         np.testing.assert_allclose(
-            [*electrostatics_handler.charges.values()],
+            [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
             [-0.1088, 0.0267, 0.0267, 0.0267, 0.0267],
         )
 
@@ -196,7 +196,7 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
 
         np.testing.assert_allclose(
-            [*electrostatics_handler.charges.values()],
+            [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
             [-0.1, 0.025, 0.025, 0.025, 0.025],
         )
 
@@ -224,7 +224,7 @@ class TestSMIRNOFFHandlers(BaseTest):
         # AM1-Mulliken charges are [-0.168,  0.168], increments are [0.1, -0.1],
         # sum is [-0.068,  0.068]
         np.testing.assert_allclose(
-            [*electrostatics_handler.charges.values()],
+            [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
             [-0.068, 0.068],
         )
 
