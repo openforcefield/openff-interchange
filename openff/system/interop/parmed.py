@@ -214,10 +214,12 @@ def _to_parmed(off_system: "System") -> "pmd.Structure":
         pmd_atom.type = atom_type.name
         pmd_atom.name = pmd_atom.type
 
+    charges = electrostatics_handler.charges
+
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         if has_electrostatics:
             top_key = TopologyKey(atom_indices=(pmd_idx,))
-            partial_charge = electrostatics_handler.charges[top_key]
+            partial_charge = charges[top_key]
             unitless_ = partial_charge.to(unit.elementary_charge).magnitude
             pmd_atom.charge = float(unitless_)
             pmd_atom.atom_type.charge = float(unitless_)
