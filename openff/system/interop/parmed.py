@@ -343,16 +343,16 @@ def _from_parmed(cls, structure) -> "System":
     out.topology = top
 
     from openff.system.components.smirnoff import (
-        ElectrostaticsMetaHandler,
         SMIRNOFFAngleHandler,
         SMIRNOFFBondHandler,
+        SMIRNOFFElectrostaticsHandler,
         SMIRNOFFImproperTorsionHandler,
         SMIRNOFFProperTorsionHandler,
         SMIRNOFFvdWHandler,
     )
 
     vdw_handler = SMIRNOFFvdWHandler()
-    coul_handler = ElectrostaticsMetaHandler(method="pme")
+    coul_handler = SMIRNOFFElectrostaticsHandler(method="pme")
 
     for atom in structure.atoms:
         atom_idx = atom.idx
@@ -366,7 +366,10 @@ def _from_parmed(cls, structure) -> "System":
         vdw_handler.slot_map.update({top_key: pot_key})
         vdw_handler.potentials.update({pot_key: pot})
 
-        coul_handler.charges.update({top_key: charge})
+        coul_handler.slot_map.update({top_key: pot_key})
+        coul_handler.potentials.update(
+            {pot_key: Potential(parameters={"charge": charge})}
+        )
 
     bond_handler = SMIRNOFFBondHandler()
 

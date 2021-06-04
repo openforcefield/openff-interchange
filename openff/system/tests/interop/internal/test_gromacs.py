@@ -66,10 +66,9 @@ class TestGROMACS(BaseTest):
         # is to see if GROMACS can run them
         get_gromacs_energies(out)
 
-    @pytest.mark.skip
     def test_argon_buck(self):
         """Test that Buckingham potentials are supported and can be exported"""
-        from openff.system.components.smirnoff import ElectrostaticsMetaHandler
+        from openff.system.components.smirnoff import SMIRNOFFElectrostaticsHandler
 
         mol = Molecule.from_smiles("[#18]")
         top = OFFBioTop.from_molecules([mol, mol])
@@ -84,7 +83,7 @@ class TestGROMACS(BaseTest):
         r = 0.3 * unit.nanometer
 
         buck = BuckinghamvdWHandler()
-        coul = ElectrostaticsMetaHandler(method="pme")
+        coul = SMIRNOFFElectrostaticsHandler(method="pme")
 
         pot_key = PotentialKey(id="[#18]")
         pot = Potential(parameters={"A": A, "B": B, "C": C})
@@ -92,7 +91,11 @@ class TestGROMACS(BaseTest):
         for atom in top.mdtop.atoms:
             top_key = TopologyKey(atom_indices=(atom.index,))
             buck.slot_map.update({top_key: pot_key})
-            coul.charges.update({top_key: 0 * unit.elementary_charge})
+
+            coul.slot_map.update({top_key: pot_key})
+            coul.potentials.update(
+                {pot_key: Potential(parameters={"charge": 0 * unit.elementary_charge})}
+            )
 
         buck.potentials[pot_key] = pot
 

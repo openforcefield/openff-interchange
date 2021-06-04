@@ -541,12 +541,12 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
 
 def _convert_nonbonded_force(force):
     from openff.system.components.smirnoff import (
-        ElectrostaticsMetaHandler,
+        SMIRNOFFElectrostaticsHandler,
         SMIRNOFFvdWHandler,
     )
 
     vdw_handler = SMIRNOFFvdWHandler()
-    electrostatics = ElectrostaticsMetaHandler(method="pme")
+    electrostatics = SMIRNOFFElectrostaticsHandler(method="pme")
 
     n_parametrized_particles = force.getNumParticles()
 
@@ -562,7 +562,11 @@ def _convert_nonbonded_force(force):
         )
         vdw_handler.slot_map.update({top_key: pot_key})
         vdw_handler.potentials.update({pot_key: pot})
-        electrostatics.charges.update({top_key: from_simtk(charge)})
+
+        electrostatics.slot_map.update({top_key: pot_key})
+        electrostatics.potentials.update(
+            {pot_key: Potential(parameters={"charge": from_simtk(charge)})}
+        )
 
     vdw_handler.cutoff = force.getCutoffDistance()
     electrostatics.cutoff = force.getCutoffDistance()
