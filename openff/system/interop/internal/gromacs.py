@@ -289,7 +289,7 @@ def _write_atoms(
         res_idx = atom.residue.index
         res_name = str(atom.residue)
         top_key = TopologyKey(atom_indices=(atom_idx,))
-        charge = charges[top_key]
+        charge = charges[top_key].m_as(unit.e)
         top_file.write(
             "{:6d} {:18s} {:6d} {:8s} {:8s} {:6d} "
             "{:18.8f} {:18.8f}\n".format(
