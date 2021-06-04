@@ -654,9 +654,16 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         reference_molecule: Molecule,
     ) -> Tuple[Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
         """Constructs a slot and potential map for a slot based parameter handler."""
-        parameter_matches = parameter_handler.find_matches(
-            reference_molecule.to_topology()
-        )
+
+        # Ideally this would be made redundant by OpenFF TK #971
+        unique_parameter_matches = {
+            tuple(sorted(key)): (key, val)
+            for key, val in parameter_handler.find_matches(
+                reference_molecule.to_topology()
+            ).items()
+        }
+
+        parameter_matches = {key: val for key, val in unique_parameter_matches.values()}
 
         matches, potentials = {}, {}
 

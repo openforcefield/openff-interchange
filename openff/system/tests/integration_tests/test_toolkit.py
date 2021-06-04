@@ -33,6 +33,16 @@ def test_energy_vs_toolkit(mol):
     assert mol.n_conformers > 0
     assert mol.partial_charges is not None
 
+    # Skip molecules that cause hangs due to the toolkit taking an excessive time
+    # to match the library charge SMIRKS.
+    if mol.to_inchikey(fixed_hydrogens=True) in [
+        "MUUSFMCMCWXMEM-UHFFFAOYNA-N",  # CHEMBL1362008
+    ]:
+
+        pytest.skip(
+            "toolkit taking an excessive time to match the library charge SMIRKS"
+        )
+
     # Faster to load once and deepcopy N times than load N times
     parsley = deepcopy(_parsley)
 
