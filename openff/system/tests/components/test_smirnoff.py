@@ -1,12 +1,13 @@
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ImproperTorsionHandler
+from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
+    ImproperTorsionHandler,
     LibraryChargeHandler,
     ParameterHandler,
     ToolkitAM1BCCHandler,
@@ -227,6 +228,39 @@ class TestSMIRNOFFHandlers(BaseTest):
             [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
             [-0.068, 0.068],
         )
+
+
+class TestConstraints:
+    @pytest.mark.parametrize(
+        "constrained,mol,n_constraints",
+        [
+            (True, "C", 4),
+            (False, "C", 0),
+            (True, "CC", 6),
+            (False, "CC", 0),
+        ],
+    )
+    def test_num_constraints(self, constrained, mol, n_constraints):
+        if constrained:
+            force_field = ForceField("openff-1.0.0.offxml")
+        else:
+            force_field = ForceField("openff_unconstrained-1.0.0.offxml")
+
+        bond_handler = force_field["Bonds"]
+        constraint_handler = force_field["Constraints"] if constrained else None
+
+        topology = Molecule.from_smiles(mol).to_topology()
+
+        _, constraints = SMIRNOFFBondHandler._from_toolkit(
+            bond_handler=bond_handler,
+            topology=topology,
+            constraint_handler=constraint_handler,
+        )
+
+        if constrained:
+            assert len(constraints.slot_map) == n_constraints
+        else:
+            assert constraints is None
 
 
 def test_library_charges_from_molecule():
