@@ -300,7 +300,7 @@ class FoyerPeriodicImproperHandler(FoyerPeriodicProperHandler):
 
 
 class RBTorsionHandler(PotentialHandler):
-    name = "Ryckaert-Bellemans"
+    type = "Ryckaert-Bellemans"
     expression = (
         "C0 + C1 * (cos(phi - 180)) "
         "C2 * (cos(phi - 180)) ** 2 + C3 * (cos(phi - 180)) ** 3 "
