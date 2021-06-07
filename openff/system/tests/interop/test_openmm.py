@@ -12,7 +12,6 @@ from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.system import System
 from openff.system.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.system.exceptions import (
-    UnimplementedCutoffMethodError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
@@ -45,6 +44,9 @@ nonbonded_resolution_matrix = [
         "periodic": False,
         "result": UnsupportedCutoffMethodError,
     },
+]
+# Revisit after OpenFF Toolkit >0.9.2 release
+"""
     {
         "vdw_method": "cutoff",
         "electrostatics_method": "reaction-field",
@@ -57,65 +59,6 @@ nonbonded_resolution_matrix = [
         "periodic": False,
         "result": UnimplementedCutoffMethodError,
     },
-]
-"""\
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_method": "PME",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "Coulomb",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": IncompatibleParameterError,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "Coulomb",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "reaction-field",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": IncompatibleParameterError,
-        "exception_match": "reaction-field",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "reaction-field",
-        "has_periodic_box": False,
-        "omm_force": None,
-        "exception": SMIRNOFFSpecError,
-        "exception_match": "reaction-field",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "PME",
-        "has_periodic_box": True,
-        "omm_force": openmm.NonbondedForce.LJPME,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "PME",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
-    },
-]
 """
 
 
