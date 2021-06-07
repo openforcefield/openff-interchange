@@ -4,7 +4,6 @@ import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol
 from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import SMIRNOFFSpecError
 from simtk import openmm
 from simtk import unit as simtk_unit
 from simtk.openmm import app
@@ -13,6 +12,7 @@ from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.system import System
 from openff.system.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.system.exceptions import (
+    UnimplementedCutoffMethodError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
@@ -49,13 +49,13 @@ nonbonded_resolution_matrix = [
         "vdw_method": "cutoff",
         "electrostatics_method": "reaction-field",
         "periodic": True,
-        "result": SMIRNOFFSpecError,  # UnimplementedCutoffMethodError,
+        "result": UnimplementedCutoffMethodError,
     },
     {
         "vdw_method": "cutoff",
         "electrostatics_method": "reaction-field",
         "periodic": False,
-        "result": SMIRNOFFSpecError,  # UnimplementedCutoffMethodError,
+        "result": UnimplementedCutoffMethodError,
     },
 ]
 """\

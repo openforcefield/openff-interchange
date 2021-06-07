@@ -294,7 +294,10 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 else:
                     raise UnsupportedCutoffMethodError
             else:
-                raise NotImplementedError
+                raise UnimplementedCutoffMethodError(
+                    f"Combination of non-bonded cutoff methods {vdw_cutoff=} and "
+                    f"{electrostatics_method=} not currently supported with {combine_nonbonded_forces=}"
+                )
 
         else:
             vdw_expression = vdw_handler.expression
