@@ -2,7 +2,7 @@ import abc
 import copy
 import functools
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Type, TypeVar, Union
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -130,10 +130,9 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def _from_toolkit(  # type: ignore[override]
         cls: Type[T],
-        bond_handler: "BondHandler",
+        parameter_handler: "BondHandler",
         topology: "Topology",
-        constraint_handler: Optional["SMIRNOFFConstraintHandler"] = None,
-    ) -> Tuple[T, Optional["SMIRNOFFConstraintHandler"]]:
+    ) -> T:
         """
         Create a SMIRNOFFBondHandler from toolkit data.
 
@@ -142,24 +141,14 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         # a ConstraintHandler. This seems like a good solution for the interdependence, but is also
         # not a great practice. A better solution would involve not overriding the method with a
         # different function signature.
-        if type(bond_handler) not in cls.allowed_parameter_handlers():
+        if type(parameter_handler) not in cls.allowed_parameter_handlers():
             raise InvalidParameterHandlerError
 
         handler: T = cls(type="Bonds", expression="k/2*(r-length)**2")
-        handler.store_matches(parameter_handler=bond_handler, topology=topology)
-        handler.store_potentials(parameter_handler=bond_handler)
+        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
+        handler.store_potentials(parameter_handler=parameter_handler)
 
-        if constraint_handler:
-            constraints: SMIRNOFFConstraintHandler = SMIRNOFFConstraintHandler()
-            constraints.store_constraints(
-                parameter_handler=constraint_handler,
-                topology=topology,
-                bond_handler=handler,
-            )
-        else:
-            constraints = None  # type: ignore[assignment]
-
-        return handler, constraints
+        return handler
 
 
 class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
@@ -173,19 +162,59 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
 
     @classmethod
     def allowed_parameter_handlers(cls):
-        return [ConstraintHandler]
+        return [BondHandler, ConstraintHandler]
+
+    @classmethod
+    def _from_toolkit(
+        cls: Type[T],
+        parameter_handler: List,
+        topology: "Topology",
+    ) -> T:
+        """
+        Create a SMIRNOFFPotentialHandler from toolkit data.
+
+        """
+        if isinstance(parameter_handler, list):
+            parameter_handlers = parameter_handler
+        else:
+            parameter_handlers = [parameter_handler]
+
+        for parameter_handler in parameter_handlers:
+            if type(parameter_handler) not in cls.allowed_parameter_handlers():
+                raise InvalidParameterHandlerError(type(parameter_handler))
+
+        handler = cls()
+        handler.store_constraints(
+            parameter_handlers=parameter_handlers, topology=topology
+        )
+
+        return handler
 
     def store_constraints(
         self,
-        parameter_handler: ConstraintHandler,
+        parameter_handlers: Any,
         topology: "OFFBioTop",
-        bond_handler: T = None,
     ) -> None:
 
         if self.slot_map:
             self.slot_map = dict()
-        matches = parameter_handler.find_matches(topology)
-        for key, match in matches.items():
+
+        constraint_handler = [
+            p for p in parameter_handlers if type(p) == ConstraintHandler
+        ][0]
+        constraint_matches = constraint_handler.find_matches(topology)
+
+        if any([type(p) == BondHandler for p in parameter_handlers]):
+            bond_handler = [p for p in parameter_handlers if type(p) == BondHandler][0]
+            bonds = SMIRNOFFBondHandler._from_toolkit(
+                parameter_handler=bond_handler,
+                topology=topology,
+            )
+        else:
+            bond_handler = None
+            bonds = None
+
+        for key, match in constraint_matches.items():
             topology_key = TopologyKey(atom_indices=key)
             smirks = match.parameter_type.smirks
             distance = match.parameter_type.distance
@@ -196,8 +225,8 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
                 )
                 distance = match.parameter_type.distance
             else:
-                # This constraint parameter depends on the BondHandler
-                if not bond_handler:
+                # This constraint parameter depends on the BondHandler ...
+                if bond_handler is None:
                     from openff.system.exceptions import MissingParametersError
 
                     raise MissingParametersError(
@@ -205,10 +234,10 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
                         "specified, and no corresponding bond parameters were found. The distance "
                         "of this constraint is not specified."
                     )
-                # so use the same PotentialKey instance as the BondHandler
-                potential_key = bond_handler.slot_map[topology_key]
+                # ... so use the same PotentialKey instance as the BondHandler to look up the distance
+                potential_key = bonds.slot_map[topology_key]
                 self.slot_map[topology_key] = potential_key
-                distance = bond_handler.potentials[potential_key].parameters["length"]
+                distance = bonds.potentials[potential_key].parameters["length"]
             potential = Potential(
                 parameters={
                     "distance": distance,

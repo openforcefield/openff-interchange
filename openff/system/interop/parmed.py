@@ -214,7 +214,8 @@ def _to_parmed(off_system: "System") -> "pmd.Structure":
         pmd_atom.type = atom_type.name
         pmd_atom.name = pmd_atom.type
 
-    charges = electrostatics_handler.charges
+    if has_electrostatics:
+        charges = electrostatics_handler.charges
 
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         if has_electrostatics:

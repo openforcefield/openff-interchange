@@ -1,12 +1,13 @@
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ImproperTorsionHandler
+from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
+    ImproperTorsionHandler,
     LibraryChargeHandler,
     ParameterHandler,
     ToolkitAM1BCCHandler,
@@ -20,6 +21,7 @@ from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.smirnoff import (
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
+    SMIRNOFFConstraintHandler,
     SMIRNOFFElectrostaticsHandler,
     SMIRNOFFImproperTorsionHandler,
     SMIRNOFFPotentialHandler,
@@ -87,8 +89,8 @@ class TestSMIRNOFFHandlers(BaseTest):
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(bond_handler)
-        bond_potentials, _ = SMIRNOFFBondHandler._from_toolkit(
-            bond_handler=forcefield["Bonds"],
+        bond_potentials = SMIRNOFFBondHandler._from_toolkit(
+            parameter_handler=forcefield["Bonds"],
             topology=top,
         )
 
@@ -229,6 +231,32 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
 
 
+class TestConstraints:
+    @pytest.mark.parametrize(
+        "mol,n_constraints",
+        [
+            ("C", 4),
+            ("CC", 6),
+        ],
+    )
+    def test_num_constraints(self, mol, n_constraints):
+        force_field = ForceField("openff-1.0.0.offxml")
+
+        bond_handler = force_field["Bonds"]
+        constraint_handler = force_field["Constraints"]
+
+        topology = Molecule.from_smiles(mol).to_topology()
+
+        constraints = SMIRNOFFConstraintHandler._from_toolkit(
+            parameter_handler=[
+                val for val in [bond_handler, constraint_handler] if val is not None
+            ],
+            topology=topology,
+        )
+
+        assert len(constraints.slot_map) == n_constraints
+
+
 def test_library_charges_from_molecule():
     mol = Molecule.from_mapped_smiles("[Cl:1][C:2]#[C:3][F:4]")
 
@@ -256,10 +284,9 @@ class TestMatrixRepresentations(BaseTest):
         import jax
 
         if handler_name == "Bonds":
-            handler, _ = SMIRNOFFBondHandler._from_toolkit(
-                bond_handler=parsley["Bonds"],
+            handler = SMIRNOFFBondHandler._from_toolkit(
+                parameter_handler=parsley["Bonds"],
                 topology=ethanol_top,
-                constraint_handler=None,
             )
         elif handler_name == "Angles":
             handler = SMIRNOFFAngleHandler._from_toolkit(

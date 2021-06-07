@@ -4,7 +4,6 @@ import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol
 from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import SMIRNOFFSpecError
 from simtk import openmm
 from simtk import unit as simtk_unit
 from simtk.openmm import app
@@ -45,77 +44,21 @@ nonbonded_resolution_matrix = [
         "periodic": False,
         "result": UnsupportedCutoffMethodError,
     },
+]
+# Revisit after OpenFF Toolkit >0.9.2 release
+"""
     {
         "vdw_method": "cutoff",
         "electrostatics_method": "reaction-field",
         "periodic": True,
-        "result": SMIRNOFFSpecError,  # UnimplementedCutoffMethodError,
+        "result": UnimplementedCutoffMethodError,
     },
     {
         "vdw_method": "cutoff",
         "electrostatics_method": "reaction-field",
         "periodic": False,
-        "result": SMIRNOFFSpecError,  # UnimplementedCutoffMethodError,
+        "result": UnimplementedCutoffMethodError,
     },
-]
-"""\
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_method": "PME",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "Coulomb",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": IncompatibleParameterError,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "Coulomb",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "reaction-field",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": IncompatibleParameterError,
-        "exception_match": "reaction-field",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "reaction-field",
-        "has_periodic_box": False,
-        "omm_force": None,
-        "exception": SMIRNOFFSpecError,
-        "exception_match": "reaction-field",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "PME",
-        "has_periodic_box": True,
-        "omm_force": openmm.NonbondedForce.LJPME,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "PME",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
-    },
-]
 """
 
 

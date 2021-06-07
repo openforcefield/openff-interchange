@@ -183,19 +183,28 @@ class System(DefaultModel):
             #       move back to the constraint handler dealing with the logic (and
             #       depending on the bond handler)
             if potential_handler_type == SMIRNOFFBondHandler:
-                if "Constraints" in force_field.registered_parameter_handlers:
-                    constraint_handler = force_field["Constraints"]
-                else:
-                    constraint_handler = None
-                potential_handler, constraints = SMIRNOFFBondHandler._from_toolkit(
-                    bond_handler=force_field["Bonds"],
+                potential_handler = SMIRNOFFBondHandler._from_toolkit(
+                    parameter_handler=force_field["Bonds"],
                     topology=topology,
-                    constraint_handler=constraint_handler,
+                    # constraint_handler=constraint_handler,
                 )
                 sys_out.handlers.update({"Bonds": potential_handler})
-                if constraint_handler is not None:
-                    sys_out.handlers.update({"Constraints": constraints})
             elif potential_handler_type == SMIRNOFFConstraintHandler:
+                bond_handler = force_field._parameter_handlers.get("Bonds", None)
+                constraint_handler = force_field._parameter_handlers.get(
+                    "Constraints", None
+                )
+                if constraint_handler is None:
+                    continue
+                constraints = SMIRNOFFConstraintHandler._from_toolkit(
+                    parameter_handler=[
+                        val
+                        for val in [bond_handler, constraint_handler]
+                        if val is not None
+                    ],
+                    topology=topology,
+                )
+                sys_out.handlers.update({"Constraints": constraints})
                 continue
             elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
                 potential_handler = potential_handler_type._from_toolkit(
@@ -207,7 +216,6 @@ class System(DefaultModel):
                     parameter_handler=parameter_handlers[0],
                     topology=topology,
                 )
-
             sys_out.handlers.update({potential_handler.type: potential_handler})
 
         # `box` argument is only overriden if passed `None` and the input topology
