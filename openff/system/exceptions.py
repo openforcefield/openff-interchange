@@ -34,6 +34,12 @@ class ToolkitTopologyConformersNotFoundError(Exception):
             msg += f"The molecule lacking a conformer is {self.mol}"
 
 
+class InvalidParameterHandlerError(ValueError):
+    """
+    Generic exception for mismatch between expected and found ParameterHandler types
+    """
+
+
 class InvalidBoxError(ValueError):
     """
     Generic exception for errors reading box data

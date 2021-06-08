@@ -38,7 +38,7 @@ def _to_parmed(off_system: "System") -> "pmd.Structure":
     else:
         has_electrostatics = False
 
-    for atom in off_system.topology.mdtop.atoms:  # type: ignore[union-attr]
+    for atom in off_system.topology.mdtop.atoms:
         atomic_number = atom.element.atomic_number
         mass = atom.element.mass
         structure.add_atom(
@@ -101,9 +101,9 @@ def _to_parmed(off_system: "System") -> "pmd.Structure":
     # ParmEd treats 1-4 scaling factors at the level of each DihedralType,
     # whereas SMIRNOFF captures them at the level of the non-bonded handler,
     # so they need to be stored here for processing dihedrals
-    vdw_14 = off_system.handlers["vdW"].scale_14  # type: ignore[attr-defined]
+    vdw_14 = off_system.handlers["vdW"].scale_14
     if has_electrostatics:
-        coul_14 = off_system.handlers["Electrostatics"].scale_14  # type: ignore[attr-defined]
+        coul_14 = off_system.handlers["Electrostatics"].scale_14
     else:
         coul_14 = 1.0
     vdw_handler = off_system.handlers["vdW"]
@@ -214,10 +214,13 @@ def _to_parmed(off_system: "System") -> "pmd.Structure":
         pmd_atom.type = atom_type.name
         pmd_atom.name = pmd_atom.type
 
+    if has_electrostatics:
+        charges = electrostatics_handler.charges
+
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         if has_electrostatics:
             top_key = TopologyKey(atom_indices=(pmd_idx,))
-            partial_charge = electrostatics_handler.charges[top_key]  # type: ignore[attr-defined]
+            partial_charge = charges[top_key]
             unitless_ = partial_charge.to(unit.elementary_charge).magnitude
             pmd_atom.charge = float(unitless_)
             pmd_atom.atom_type.charge = float(unitless_)
@@ -229,7 +232,7 @@ def _to_parmed(off_system: "System") -> "pmd.Structure":
         res.name = "FOO"
 
     if off_system.positions is not None:
-        structure.positions = off_system.positions.to(unit.angstrom).magnitude  # type: ignore[attr-defined]
+        structure.positions = off_system.positions.to(unit.angstrom).magnitude
 
         for idx, pos in enumerate(structure.positions):
             structure.atoms[idx].xx = pos._value[0]
@@ -261,7 +264,7 @@ def _from_parmed(cls, structure) -> "System":
     from openff.system.components.mdtraj import OFFBioTop
 
     if structure.topology is not None:
-        mdtop = md.Topology.from_openmm(structure.topology)
+        mdtop = md.Topology.from_openmm(structure.topology)  # type: ignore[attr-defined]
         top = OFFBioTop(mdtop=mdtop)
         out.topology = top
     else:
@@ -269,9 +272,9 @@ def _from_parmed(cls, structure) -> "System":
         # This code should not be reached, since a pathway
         # OpenFF -> OpenMM -> MDTraj already exists
 
-        mdtop = md.Topology()
+        mdtop = md.Topology()  # type: ignore[attr-defined]
 
-        main_chain = md.core.topology.Chain(index=0, topology=mdtop)
+        main_chain = md.core.topology.Chain(index=0, topology=mdtop)  # type: ignore[attr-defined]
         top = OFFBioTop(mdtop=None)
 
         # There is no way to tell if ParmEd residues are connected (cannot be processed
@@ -284,7 +287,7 @@ def _from_parmed(cls, structure) -> "System":
         for res in structure.residues:
             # ... however, MDTraj's Topology class only stores residues, not molecules,
             # so this should roughly match up with ParmEd
-            this_res = md.core.topology.Residue(
+            this_res = md.core.topology.Residue(  # type: ignore[attr-defined]
                 name=res.name,
                 index=res.idx,
                 chain=main_chain,
@@ -297,7 +300,7 @@ def _from_parmed(cls, structure) -> "System":
                 )
                 mdtop.add_atom(
                     name=atom.name,
-                    element=md.element.Element.getByAtomicNumber(atom.element),
+                    element=md.element.Element.getByAtomicNumber(atom.element),  # type: ignore[attr-defined]
                     residue=this_res,
                 )
 
@@ -341,16 +344,16 @@ def _from_parmed(cls, structure) -> "System":
     out.topology = top
 
     from openff.system.components.smirnoff import (
-        ElectrostaticsMetaHandler,
         SMIRNOFFAngleHandler,
         SMIRNOFFBondHandler,
+        SMIRNOFFElectrostaticsHandler,
         SMIRNOFFImproperTorsionHandler,
         SMIRNOFFProperTorsionHandler,
         SMIRNOFFvdWHandler,
     )
 
     vdw_handler = SMIRNOFFvdWHandler()
-    coul_handler = ElectrostaticsMetaHandler()
+    coul_handler = SMIRNOFFElectrostaticsHandler(method="pme")
 
     for atom in structure.atoms:
         atom_idx = atom.idx
@@ -364,7 +367,10 @@ def _from_parmed(cls, structure) -> "System":
         vdw_handler.slot_map.update({top_key: pot_key})
         vdw_handler.potentials.update({pot_key: pot})
 
-        coul_handler.charges.update({top_key: charge})
+        coul_handler.slot_map.update({top_key: pot_key})
+        coul_handler.potentials.update(
+            {pot_key: Potential(parameters={"charge": charge})}
+        )
 
     bond_handler = SMIRNOFFBondHandler()
 
@@ -381,7 +387,7 @@ def _from_parmed(cls, structure) -> "System":
         bond_handler.potentials.update({pot_key: pot})
 
     out.handlers.update({"vdW": vdw_handler})
-    out.handlers.update({"Electrostatics": coul_handler})  # type: ignore[dict-item]
+    out.handlers.update({"Electrostatics": coul_handler})
     out.handlers.update({"Bonds": bond_handler})
 
     angle_handler = SMIRNOFFAngleHandler()
@@ -426,7 +432,7 @@ def _from_parmed(cls, structure) -> "System":
                         dih_idx,
                     )
 
-    out.handlers.update({"Electrostatics": coul_handler})  # type: ignore[dict-item]
+    out.handlers.update({"Electrostatics": coul_handler})
     out.handlers.update({"Bonds": bond_handler})
     out.handlers.update({"Angles": angle_handler})
     out.handlers.update({"ProperTorsions": proper_torsion_handler})

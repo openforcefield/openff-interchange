@@ -4,7 +4,7 @@ from openff.units import unit
 from openff.units.simtk import from_simtk
 from simtk import unit as simtk_unit
 
-from openff.system.tests.base_test import BaseTest
+from openff.system.tests import BaseTest
 from openff.system.utils import (
     compare_forcefields,
     get_partial_charges_from_openmm_system,

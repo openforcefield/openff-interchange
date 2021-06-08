@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macOS-latest, ubuntu-latest]
+        os: [ubuntu-latest]
         python-version: [3.7, 3.8, 3.9]
     env:
       CI_OS: ${{ matrix.os }}
@@ -60,11 +60,6 @@ jobs:
       run: |
         python setup.py develop --no-deps
 
-    - name: Install OpenFF Units
-      shell: bash -l {0}
-      run: |
-        pip install git+git://github.com/mattwthompson/openff-units.git
-
     - name: Clone ParmEd tests
       shell: bash -l {0}
       run: |
@@ -76,13 +71,13 @@ jobs:
       continue-on-error: true
       shell: bash -l {0}
       run: |
-        mypy --show-error-codes --namespace-packages -p "openff.system"
+        mypy --show-error-codes --warn-unused-configs --warn-unused-ignores --namespace-packages -p "openff.system"
 
     - name: Run unit tests
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v $COV openff/system/tests/ --ignore=openff/system/tests/parmed/
+        python -m pytest -v $COV openff/system/tests/ --ignore=openff/system/tests/interop/test_parmed.py
 
     - name: Run ParmEd tests
       continue-on-error: true

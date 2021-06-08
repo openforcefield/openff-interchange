@@ -1,7 +1,6 @@
-name: test
+name: openff-system-minimal-env
 channels:
   - conda-forge
-  - bioconda
 dependencies:
     # Base depends
   - python
@@ -13,6 +12,7 @@ dependencies:
   - openmm
   - openff-toolkit
   - openff-utilities
+  - openff-units
   - jax
   - mdtraj
   - ele

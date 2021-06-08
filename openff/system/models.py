@@ -36,6 +36,11 @@ class PotentialKey(DefaultModel):
     mult: Optional[int] = Field(
         None, description="The index of this duplicate interaction"
     )
+    associated_handler: Optional[str] = Field(
+        None,
+        description="The type of handler this potential key is associated with, "
+        "i.e. 'Bonds', 'vdW', or 'LibraryCharges",
+    )
 
     def __hash__(self):
         return hash((self.id, self.mult))
