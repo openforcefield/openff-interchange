@@ -7,6 +7,7 @@ import mdtraj as md
 import numpy as np
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.utilities.utilities import requires_package
 from pydantic import Field, validator
 
 from openff.system.components.mdtraj import OFFBioTop
@@ -308,6 +309,37 @@ class System(DefaultModel):
         from openff.system.interop.parmed import _from_parmed
 
         return _from_parmed(cls, structure)
+
+    @classmethod
+    @requires_package("foyer")
+    def from_foyer(cls, topology: "OFFBioTop", ff: "Forcefield", **kwargs) -> "System":
+        from openff.system.components.foyer import get_handlers_callable
+
+        system = cls()
+        system.topology = topology
+
+        for name, Handler in get_handlers_callable().items():
+            system.handlers[name] = Handler()
+
+        system.handlers["vdW"].store_matches(ff, topology=topology)
+        system.handlers["vdW"].store_potentials(forcefield=ff)
+
+        atom_slots = system.handlers["vdW"].slot_map
+
+        system.handlers["Electrostatics"].store_charges(
+            atom_slots=atom_slots,
+            forcefield=ff,
+        )
+
+        system.handlers["vdW"].scale_14 = ff.lj14scale
+        system.handlers["Electrostatics"].scale_14 = ff.coulomb14scale
+
+        for name, handler in system.handlers.items():
+            if name not in ["vdW", "Electrostatics"]:
+                handler.store_matches(atom_slots, topology=topology)
+                handler.store_potentials(ff)
+
+        return system
 
     def _get_nonbonded_methods(self):
         if "vdW" in self.handlers:
