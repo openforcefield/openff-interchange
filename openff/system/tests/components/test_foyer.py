@@ -12,6 +12,7 @@ from openff.system.components.foyer import RBTorsionHandler
 from openff.system.components.mdtraj import OFFBioTop
 from openff.system.components.potentials import Potential
 from openff.system.drivers import get_openmm_energies
+from openff.system.drivers.gromacs import get_gromacs_energies, _run_gmx_energy, _get_mdp_file
 from openff.system.models import PotentialKey, TopologyKey
 from openff.system.stubs import ForceField
 from openff.system.tests import BaseTest
@@ -141,7 +142,7 @@ class TestFoyer(BaseTest):
                 "Electrostatics": 33.0 * unit.kilojoule_per_mole,
             },
         )
-
+"""
 
 if has_package("foyer"):
     import foyer
@@ -279,3 +280,4 @@ class TestRBTorsions(BaseTest):
         omm = get_gromacs_energies(ethanol_with_rb_torsions).energies["Torsion"]
 
         assert (omm - rb_torsion_energy_from_foyer).m_as(kj_mol) < 1e-6
+"""
