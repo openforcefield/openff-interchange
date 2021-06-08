@@ -12,13 +12,13 @@ repos:
   - id: black
     files: ^openff
     args: [--check]
-- repo: https://github.com/timothycrosley/isort
+- repo: https://github.com/PyCQA/isort
   rev: 5.8.0
   hooks:
   - id: isort
     files: ^openff
     args: [--check]
-- repo: https://gitlab.com/PyCQA/flake8
+- repo: https://github.com/PyCQA/flake8
   rev: 3.9.2
   hooks:
   - id: flake8
@@ -35,7 +35,7 @@ repos:
     exclude: openff/system/_version.py|setup.py
     args: [--py37-plus]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 0.10.0
+  rev: 0.11.1
   hooks:
     - id: nbqa-pyupgrade
       args:
