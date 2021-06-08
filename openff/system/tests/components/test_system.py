@@ -112,7 +112,7 @@ class TestSystem(BaseTest):
         """Test that atom indices in bonds are ordered consistently between the slot map and topology"""
         import foyer
 
-        from openff.system.components.foyer import from_foyer
+        from openff.system.components.system import System
         from openff.system.drivers import (
             get_gromacs_energies,
             get_lammps_energies,
@@ -125,7 +125,7 @@ class TestSystem(BaseTest):
         benzene.name = "BENZ"
         biotop = OFFBioTop.from_molecules(benzene)
         biotop.mdtop = md.Topology.from_openmm(biotop.to_openmm())
-        out = from_foyer(ff=oplsaa, topology=biotop)
+        out = System.from_foyer(ff=oplsaa, topology=biotop)
         out.box = [4, 4, 4]
         out.positions = benzene.conformers[0]
 
