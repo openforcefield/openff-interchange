@@ -50,7 +50,7 @@ def get_test_file_path(test_file) -> str:
 
 
 def get_test_files_dir_path(dirname):
-    """Given a filename in the collection of data files, return its full path"""
+    """Given a directory with a collection of test data files, return its full path"""
     dir_path = resource_filename("openff.system", "tests/files/")
     test_dir = pathlib.Path(dir_path).joinpath(dirname)
 
