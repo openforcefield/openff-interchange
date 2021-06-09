@@ -32,6 +32,6 @@ dependencies:
   - gromacs >=2021
   - lammps
   - mbuild
-  - foyer>=0.8.0
+  - foyer>=0.8.1
   - panedr
   - pandas-stubs
