@@ -21,6 +21,7 @@ from openff.system.tests.utils import HAS_GROMACS, needs_gmx
 import glob
 from pathlib import Path
 from openff.system.utils import get_test_files_dir_path
+from simtk import unit as omm_unit
 
 if has_package("foyer"):
     import foyer
@@ -46,7 +47,7 @@ class TestFoyer(BaseTest):
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
         oplsaa = foyer.Forcefield(name="oplsaa")
         system = from_foyer(topology=top, ff=oplsaa)
-        system.positions = molecule.conformers[0].value_in_unit(unit.nanometer)
+        system.positions = molecule.conformers[0].value_in_unit(omm_unit.nanometer)
         system.box = [4, 4, 4]
         return system
 
@@ -69,14 +70,14 @@ class TestFoyer(BaseTest):
             if isinstance(molecule_or_molecules, list):
                 openff_system.positions = np.vstack(
                     tuple(
-                        molecule.conformers[0].value_in_unit(unit.nanometer)
+                        molecule.conformers[0].value_in_unit(omm_unit.nanometer)
                         for molecule in molecule_or_molecules
                     )
                 )
             else:
                 openff_system.positions = molecule_or_molecules.conformers[
                     0
-                ].value_in_unit(unit.nanometer)
+                ].value_in_unit(omm_unit.nanometer)
 
             openff_system.box = [4, 4, 4]
 
@@ -134,12 +135,12 @@ class TestFoyer(BaseTest):
         openff_energy.compare(
             through_foyer,
             custom_tolerances={
-                "Bond": 1.8 * unit.kilojoule_per_mole,
-                "Angle": 6.00 * unit.kilojoule_per_mole,
-                "Nonbonded": 30 * unit.kilojoule_per_mole,
-                "Torsion": 2.0 * unit.kilojoule_per_mole,
-                "vdW": 0.5 * unit.kilojoule_per_mole,
-                "Electrostatics": 33.0 * unit.kilojoule_per_mole,
+                "Bond": 1.8 * unit.kilojoule/unit.mole,
+                "Angle": 6.00 * unit.kilojoule/unit.mole,
+                "Nonbonded": 30 * unit.kilojoule/unit.mole,
+                "Torsion": 2.0 * unit.kilojoule/unit.mole,
+                "vdW": 0.5 * unit.kilojoule/unit.mole,
+                "Electrostatics": 33.0 * unit.kilojoule/unit.mole,
             },
         )
 """
