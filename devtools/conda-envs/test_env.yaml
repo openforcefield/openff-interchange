@@ -24,6 +24,7 @@ dependencies:
     # Testing
   - pytest
   - pytest-cov
+  - pytest-timeout
   - codecov
   - nbval
   - mypy
@@ -35,3 +36,4 @@ dependencies:
   - foyer>=0.8.1
   - panedr
   - pandas-stubs
+  - openff-evaluator
