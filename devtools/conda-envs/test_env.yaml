@@ -1,4 +1,4 @@
-name: openff-system-env
+name: openff-interchange-env
 channels:
   - conda-forge
   - bioconda

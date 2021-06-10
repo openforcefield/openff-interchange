@@ -15,7 +15,7 @@ jobs:
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
-      COV: --cov=openff/system --cov-report=xml --cov-config=setup.cfg --cov-append
+      COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
     - uses: actions/checkout@v2.3.4

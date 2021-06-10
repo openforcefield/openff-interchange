@@ -31,8 +31,8 @@ repos:
   rev: v2.19.1
   hooks:
   - id: pyupgrade
-    files: ^openff/system/
-    exclude: openff/system/_version.py|setup.py
+    files: ^openff/interchange/
+    exclude: openff/interchange/_version.py|setup.py
     args: [--py37-plus]
 - repo: https://github.com/nbQA-dev/nbQA
   rev: 0.11.1

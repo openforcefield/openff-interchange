@@ -1,4 +1,4 @@
-name: openff-system-minimal-env
+name: openff-interchange-minimal-env
 channels:
   - conda-forge
 dependencies:
