@@ -19,7 +19,7 @@ from openff.system.tests.utils import HAS_GROMACS, needs_gmx
 if has_package("foyer"):
     import foyer
 
-    from openff.system.components.foyer import from_foyer
+    from openff.system.components.system import System
 
 if HAS_GROMACS:
     from openff.system.drivers.gromacs import (
@@ -40,7 +40,7 @@ class TestFoyer(BaseTest):
         top = OFFBioTop.from_molecules(molecule)
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
         oplsaa = foyer.Forcefield(name="oplsaa")
-        system = from_foyer(topology=top, ff=oplsaa)
+        system = System.from_foyer(topology=top, ff=oplsaa)
         system.positions = molecule.conformers[0]
         system.box = [4, 4, 4]
         return system

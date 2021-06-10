@@ -2,12 +2,10 @@ from abc import abstractmethod
 from copy import copy
 from typing import TYPE_CHECKING, Dict, Type
 
-from ele import element_from_atomic_number
 from openff.units import unit
-from openff.utilities.utilities import has_package, requires_package
+from openff.utilities.utilities import has_package
 
 from openff.system.components.potentials import Potential, PotentialHandler
-from openff.system.components.system import System
 from openff.system.models import PotentialKey, TopologyKey
 from openff.system.types import FloatQuantity
 
@@ -23,25 +21,6 @@ POTENTIAL_KEY_SEPARATOR = "-"
 
 if has_package("foyer"):
     from foyer.topology_graph import TopologyGraph  # noqa
-
-    @classmethod  # type: ignore
-    def from_off_topology(cls, off_topology: "OFFBioTop") -> "TopologyGraph":
-        top_graph = cls()
-        for top_atom in off_topology.topology_atoms:
-            atom = top_atom.atom
-            element = element_from_atomic_number(atom.atomic_number)
-            top_graph.add_atom(
-                name=atom.name,
-                index=top_atom.topology_atom_index,
-                atomic_number=element.atomic_number,
-                element=element.symbol,
-            )
-        for top_bond in off_topology.topology_bonds:
-            atoms_indices = [atom.topology_atom_index for atom in top_bond.atoms]
-            top_graph.add_bond(atoms_indices[0], atoms_indices[1])
-        return top_graph
-
-    TopologyGraph.from_off_topology = from_off_topology  # type: ignore[assignment]
 
 
 def _copy_params(
@@ -61,39 +40,6 @@ def _get_potential_key_id(atom_slots: Dict[TopologyKey, PotentialKey], idx):
     """From a dictionary of TopologyKey: PotentialKey, get the PotentialKey id"""
     top_key = TopologyKey(atom_indices=(idx,))
     return atom_slots[top_key].id
-
-
-@requires_package("foyer")
-def from_foyer(topology: "OFFBioTop", ff: "Forcefield", **kwargs) -> System:
-    system = System()
-    system.topology = topology
-
-    for name, Handler in get_handlers_callable().items():
-        system.handlers[name] = Handler()
-
-    system.handlers["vdW"].store_matches(ff, topology=topology)
-    system.handlers["vdW"].store_potentials(forcefield=ff)
-
-    atom_slots = system.handlers["vdW"].slot_map
-
-    system.handlers["Electrostatics"].store_charges(
-        atom_slots=atom_slots,
-        forcefield=ff,
-    )
-
-    # TODO: Replace with API points after https://github.com/mosdef-hub/foyer/issues/397:
-    from simtk.openmm.app.forcefield import NonbondedGenerator  # type: ignore
-
-    nonbonded_generator = ff.get_generator(ff, gen_type=NonbondedGenerator)
-    system.handlers["vdW"].scale_14 = nonbonded_generator.lj14scale
-    system.handlers["Electrostatics"].scale_14 = nonbonded_generator.coulomb14scale
-
-    for name, handler in system.handlers.items():
-        if name not in ["vdW", "Electrostatics"]:
-            handler.store_matches(atom_slots, topology=topology)
-            handler.store_potentials(ff)
-
-    return system
 
 
 def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
@@ -129,7 +75,7 @@ class FoyerVDWHandler(PotentialHandler):
         """Populate slotmap with key-val pairs of slots and unique potential Identifiers"""
         from foyer.atomtyper import find_atomtypes
 
-        top_graph = TopologyGraph.from_off_topology(off_topology=topology)
+        top_graph = TopologyGraph.from_openff_topology(openff_topology=topology)
         type_map = find_atomtypes(top_graph, forcefield=forcefield)
         for key, val in type_map.items():
             top_key = TopologyKey(atom_indices=(key,))
