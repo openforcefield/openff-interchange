@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -17,6 +18,7 @@ from openff.utilities.testing import skip_if_missing
 from simtk import unit as omm_unit
 from simtk import unit as simtk_unit
 
+from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.components.smirnoff import (
     SMIRNOFFAngleHandler,
@@ -325,3 +327,41 @@ class TestMatrixRepresentations(BaseTest):
             assert np.allclose(
                 np.sum(param_matrix, axis=1), np.ones(param_matrix.shape[0])
             )
+
+
+class TestSMIRNOFFVirtualSites:
+    def test_store_bond_charge_virtual_sites(self):
+        top = Molecule.from_smiles("CO").to_topology()
+
+        bond_charge_xml = """<?xml version="1.0" encoding="utf-8"?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <VirtualSites version="0.3">
+            <VirtualSite
+                type="BondCharge"
+                name="EP"
+                smirks="[#8:1]~[#1:2]"
+                distance="0.12*angstrom"
+                charge_increment1="0.15*elementary_charge"
+                charge_increment2="0.15*elementary_charge"
+                sigma="0.0*angstrom"
+                epsilon="0.0*kilocalories_per_mole"
+                match="once" >
+            </VirtualSite>
+        </VirtualSites>
+    </SMIRNOFF>
+"""
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            bond_charge_xml,
+        )
+        out = Interchange.from_smirnoff(force_field=forcefield, topology=top)
+        vdw = out["vdW"]
+
+        vdw._from_toolkit_virtual_sites(
+            parameter_handler=forcefield["VirtualSites"], topology=top
+        )
+
+        assert any([len(k.atom_indices) == 2 for k in vdw.slot_map.keys()])
+        assert any(
+            [v.associated_handler == "BondCharge" for v in vdw.slot_map.values()]
+        )

@@ -16,6 +16,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
     ToolkitAM1BCCHandler,
+    VirtualSiteHandler,
     vdWHandler,
 )
 from openff.units import unit
@@ -506,7 +507,10 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         """
 
         if type(parameter_handler) not in cls.allowed_parameter_handlers():
-            raise InvalidParameterHandlerError
+            raise InvalidParameterHandlerError(
+                f"Found parameter handler type {type(parameter_handler)}, which is not "
+                f"supported by potential type {type(cls)}"
+            )
 
         handler = cls(
             scale_13=parameter_handler.scale13,
@@ -521,6 +525,39 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         handler.store_potentials(parameter_handler=parameter_handler)
 
         return handler
+
+    def _from_toolkit_virtual_sites(
+        self,
+        parameter_handler: "VirtualSiteHandler",
+        topology: "Topology",
+    ):
+        """Given an existing SMIRNOFFvdWHandler"""
+        # TODO: Merge this logic into _from_toolkit
+        # TODO: Find a way to get this logic into the electrostatics handerSMIRNOFFmatch
+
+        if not all(
+            isinstance(p, VirtualSiteHandler.VirtualSiteBondChargeType)
+            for p in parameter_handler.parameters
+        ):
+            raise NotImplementedError("All virtual siters must be BondCharge types")
+
+        matches = parameter_handler.find_matches(topology)
+        for atoms, parameter_match in matches.items():
+            top_key = TopologyKey(atom_indices=atoms)
+            virtual_site_type = parameter_match[0].parameter_type
+            pot_key = PotentialKey(
+                id=virtual_site_type.smirks, associated_handler=virtual_site_type.type
+            )
+            pot = Potential(
+                parameters={
+                    "sigma": virtual_site_type.sigma,
+                    "epsilon": virtual_site_type.epsilon,
+                    "distance": virtual_site_type.distance,
+                }
+            )
+
+            self.slot_map.update({top_key: pot_key})
+            self.potentials.update({pot_key: pot})
 
 
 class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
