@@ -21,7 +21,7 @@ jobs:
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
-      COV: --cov=openff/system --cov-report=xml --cov-config=setup.cfg --cov-append
+      COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
     - uses: actions/checkout@v2.3.4
@@ -71,19 +71,19 @@ jobs:
       continue-on-error: true
       shell: bash -l {0}
       run: |
-        mypy --show-error-codes --warn-unused-configs --warn-unused-ignores --namespace-packages -p "openff.system"
+        mypy --show-error-codes --warn-unused-configs --warn-unused-ignores --namespace-packages -p "openff.interchange"
 
     - name: Run unit tests
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v $COV openff/system/tests/ --ignore=openff/system/tests/interop/test_parmed.py
+        python -m pytest -v $COV openff/interchange/tests/ --ignore=openff/interchange/tests/interop/test_parmed.py
 
     - name: Run ParmEd tests
       continue-on-error: true
       shell: bash -l {0}
       run: |
-        python -m pytest -v $COV openff/system/tests/parmed
+        python -m pytest -v $COV openff/interchange/tests/parmed
 
     - name: Run example notebooks
       shell: bash -l {0}
@@ -91,7 +91,7 @@ jobs:
         python -m pytest -v $COV examples/ --nbval-lax
 
     - name: Codecov
-      uses: codecov/codecov-action@v1.5.0
+      uses: codecov/codecov-action@v1.5.2
       with:
         file: ./coverage.xml
         fail_ci_if_error: false

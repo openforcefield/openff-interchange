@@ -9,4 +9,4 @@ path_classifiers:
     - versioneer.py  # Set Versioneer.py to an external "library" (3rd party code)
     - devtools/*
   generated:
-    - openff/system/_version.py
+    - openff/interchange/_version.py

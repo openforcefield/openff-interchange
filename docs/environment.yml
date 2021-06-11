@@ -1,4 +1,4 @@
-name: openff-system-docs
+name: openff-interchange-docs
 channels:
   - conda-forge
 dependencies:

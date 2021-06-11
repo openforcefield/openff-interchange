@@ -1,4 +1,4 @@
-name: openff-system-env
+name: openff-interchange-env
 channels:
   - conda-forge
   - bioconda
@@ -24,6 +24,7 @@ dependencies:
     # Testing
   - pytest
   - pytest-cov
+  - pytest-timeout
   - codecov
   - nbval
   - mypy
@@ -32,6 +33,7 @@ dependencies:
   - gromacs >=2021
   - lammps
   - mbuild
-  - foyer>=0.8.0
+  - foyer>=0.8.1
   - panedr
   - pandas-stubs
+  - openff-evaluator
