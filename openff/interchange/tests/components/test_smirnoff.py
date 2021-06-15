@@ -15,6 +15,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from simtk import openmm
 from simtk import unit as omm_unit
 from simtk import unit as simtk_unit
 
@@ -330,29 +331,27 @@ class TestMatrixRepresentations(BaseTest):
 
 
 class TestSMIRNOFFVirtualSites:
-    def test_store_bond_charge_virtual_sites(self):
-        top = Molecule.from_smiles("CO").to_topology()
+    @pytest.mark.parametrize(
+        "xml,mol",
+        [
+            (
+                "xml_ff_virtual_sites_bondcharge_match_once",
+                "OO",
+            ),
+            (
+                "xml_ff_virtual_sites_bondcharge_match_all",
+                "NN",
+            ),
+        ],
+    )
+    def test_store_bond_charge_virtual_sites(self, xml, mol):
+        from openff.toolkit.tests.test_forcefield import TestForceFieldVirtualSites
 
-        bond_charge_xml = """<?xml version="1.0" encoding="utf-8"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="BondCharge"
-                name="EP"
-                smirks="[#8:1]~[#1:2]"
-                distance="0.12*angstrom"
-                charge_increment1="0.15*elementary_charge"
-                charge_increment2="0.15*elementary_charge"
-                sigma="0.0*angstrom"
-                epsilon="0.0*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-"""
+        top = Molecule.from_smiles(mol).to_topology()
+
         forcefield = ForceField(
             get_data_file_path("test_forcefields/test_forcefield.offxml"),
-            bond_charge_xml,
+            getattr(TestForceFieldVirtualSites, xml),
         )
         out = Interchange.from_smirnoff(force_field=forcefield, topology=top)
         vdw = out["vdW"]
@@ -361,7 +360,25 @@ class TestSMIRNOFFVirtualSites:
             parameter_handler=forcefield["VirtualSites"], topology=top
         )
 
-        assert any([len(k.atom_indices) == 2 for k in vdw.slot_map.keys()])
-        assert any(
-            [v.associated_handler == "BondCharge" for v in vdw.slot_map.values()]
+        assert _get_n_virtual_sites(vdw) == _get_n_virtual_sites_toolkit(
+            force_field=forcefield,
+            topology=top,
         )
+
+
+def _get_n_virtual_sites(vdw_handler: "SMIRNOFFvdWHandler") -> int:
+    return len(
+        [top_key for top_key in vdw_handler.slot_map if len(top_key.atom_indices) > 1]
+    )
+
+
+def _get_n_virtual_sites_toolkit(
+    force_field: "ForceField", topology: "Topology"
+) -> int:
+    n_atoms = topology.n_topology_atoms
+    omm_sys = force_field.create_openmm_system(topology)
+
+    for force in omm_sys.getForces():
+        if type(force) == openmm.NonbondedForce:
+            n_openmm_particles = force.getNumParticles()
+            return n_openmm_particles - n_atoms
