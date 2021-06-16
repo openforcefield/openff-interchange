@@ -22,6 +22,7 @@ from openff.interchange.exceptions import (
     InvalidBoxError,
     InvalidTopologyError,
     MissingPositionsError,
+    SMIRNOFFHandlersNotImplementedError,
     UnsupportedExportError,
 )
 from openff.interchange.models import DefaultModel
@@ -108,17 +109,20 @@ class Interchange(DefaultModel):
 
         unsupported = list()
 
-        for handler in force_field.registered_parameter_handlers:
-            if handler in {"ToolkitAM1BCC"}:
+        for handler_name in force_field.registered_parameter_handlers:
+            if handler_name in {"ToolkitAM1BCC"}:
                 continue
-            if handler not in _SUPPORTED_SMIRNOFF_HANDLERS:
-                unsupported.append(handler)
+            if handler_name not in _SUPPORTED_SMIRNOFF_HANDLERS:
+                unsupported.append(handler_name)
+            if handler_name in {"Bonds", "ProperTorsions"}:
+                handler = force_field[handler_name]
+                if any([p.k_bondorder for p in handler.parameters]):
+                    raise SMIRNOFFHandlersNotImplementedError(
+                        "Bond order interpolation not supported. Found parameters with attribute"
+                        "`k_bondorder` in handler {handler_name}"
+                    )
 
         if unsupported:
-            from openff.interchange.exceptions import (
-                SMIRNOFFHandlersNotImplementedError,
-            )
-
             raise SMIRNOFFHandlersNotImplementedError(unsupported)
 
     @classmethod
