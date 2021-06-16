@@ -37,3 +37,4 @@ dependencies:
   - panedr
   - pandas-stubs
   - openff-evaluator
+  - openff-recharge
