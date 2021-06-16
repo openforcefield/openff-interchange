@@ -536,10 +536,18 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         # TODO: Find a way to get this logic into the electrostatics handerSMIRNOFFmatch
 
         if not all(
-            isinstance(p, VirtualSiteHandler.VirtualSiteBondChargeType)
+            isinstance(
+                p,
+                (
+                    VirtualSiteHandler.VirtualSiteBondChargeType,
+                    VirtualSiteHandler.VirtualSiteMonovalentLonePairType,
+                    VirtualSiteHandler.VirtualSiteDivalentLonePairType,
+                    VirtualSiteHandler.VirtualSiteTrivalentLonePairType,
+                ),
+            )
             for p in parameter_handler.parameters
         ):
-            raise NotImplementedError("All virtual siters must be BondCharge types")
+            raise NotImplementedError("Found unsupported virtual site types")
 
         matches = parameter_handler.find_matches(topology)
         for atoms, parameter_match in matches.items():
@@ -555,6 +563,18 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
                     "distance": virtual_site_type.distance,
                 }
             )
+            if virtual_site_type.type in {"MonovalentLonePair", "DivalentLonePair"}:
+                pot.parameters.update(
+                    {
+                        "outOfPlaneAngle": virtual_site_type.outOfPlaneAngle,
+                    }
+                )
+            if virtual_site_type.type in {"MonovalentLonePair"}:
+                pot.parameters.update(
+                    {
+                        "inPlaneAngle": virtual_site_type.inPlaneAngle,
+                    }
+                )
 
             self.slot_map.update({top_key: pot_key})
             self.potentials.update({pot_key: pot})

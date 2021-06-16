@@ -336,18 +336,44 @@ class TestSMIRNOFFVirtualSites:
         [
             (
                 "xml_ff_virtual_sites_bondcharge_match_once",
-                "OO",
+                "O=O",
+            ),
+            (
+                "xml_ff_virtual_sites_bondcharge_match_once",
+                "N#N",
             ),
             (
                 "xml_ff_virtual_sites_bondcharge_match_all",
-                "NN",
+                "N#N",
+            ),
+            (
+                "xml_ff_virtual_sites_bondcharge_match_once_two_names",
+                "N#N",
+            ),
+            (
+                "xml_ff_virtual_sites_bondcharge_match_once",
+                "CC=O",
+            ),
+            (
+                "xml_ff_virtual_sites_divalent_match_all",
+                "O",
+            ),
+            (
+                "xml_ff_virtual_sites_trivalent_match_once",
+                "N",
             ),
         ],
     )
     def test_store_bond_charge_virtual_sites(self, xml, mol):
-        from openff.toolkit.tests.test_forcefield import TestForceFieldVirtualSites
+        from openff.toolkit.tests.test_forcefield import (
+            TestForceFieldVirtualSites,
+            create_dinitrogen,
+        )
 
-        top = Molecule.from_smiles(mol).to_topology()
+        if mol == "N#N":
+            top = create_dinitrogen().to_topology()
+        else:
+            top = Molecule.from_smiles(mol).to_topology()
 
         forcefield = ForceField(
             get_data_file_path("test_forcefields/test_forcefield.offxml"),
@@ -367,6 +393,8 @@ class TestSMIRNOFFVirtualSites:
 
 
 def _get_n_virtual_sites(vdw_handler: "SMIRNOFFvdWHandler") -> int:
+    """Get the number of TopologyKey objects in a SMIRNOFFvdWHandler that likely
+    correspond to virtual sites"""
     return len(
         [top_key for top_key in vdw_handler.slot_map if len(top_key.atom_indices) > 1]
     )
@@ -375,6 +403,7 @@ def _get_n_virtual_sites(vdw_handler: "SMIRNOFFvdWHandler") -> int:
 def _get_n_virtual_sites_toolkit(
     force_field: "ForceField", topology: "Topology"
 ) -> int:
+    """Get the number of virtual particles created by ForceField.create_openmm_system"""
     n_atoms = topology.n_topology_atoms
     omm_sys = force_field.create_openmm_system(topology)
 
