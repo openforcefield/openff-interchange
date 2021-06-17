@@ -114,13 +114,6 @@ class Interchange(DefaultModel):
                 continue
             if handler_name not in _SUPPORTED_SMIRNOFF_HANDLERS:
                 unsupported.append(handler_name)
-            if handler_name in {"Bonds", "ProperTorsions"}:
-                handler = force_field[handler_name]
-                if any([p.k_bondorder for p in handler.parameters]):
-                    raise SMIRNOFFHandlersNotImplementedError(
-                        "Bond order interpolation not supported. Found parameters with attribute"
-                        "`k_bondorder` in handler {handler_name}"
-                    )
 
         if unsupported:
             raise SMIRNOFFHandlersNotImplementedError(unsupported)
@@ -190,6 +183,7 @@ class Interchange(DefaultModel):
             #       move back to the constraint handler dealing with the logic (and
             #       depending on the bond handler)
             if potential_handler_type == SMIRNOFFBondHandler:
+                SMIRNOFFBondHandler.check_supported_parameters(force_field["Bonds"])
                 potential_handler = SMIRNOFFBondHandler._from_toolkit(
                     parameter_handler=force_field["Bonds"],
                     topology=topology,
@@ -219,6 +213,7 @@ class Interchange(DefaultModel):
                     topology=topology,
                 )
             else:
+                potential_handler_type.check_supported_parameters(parameter_handlers[0])
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers[0],
                     topology=topology,

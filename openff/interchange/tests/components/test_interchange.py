@@ -13,7 +13,10 @@ from pydantic import ValidationError
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
-from openff.interchange.exceptions import SMIRNOFFHandlersNotImplementedError
+from openff.interchange.exceptions import (
+    SMIRNOFFHandlersNotImplementedError,
+    SMIRNOFFParameterAttributeNotImplementedError,
+)
 from openff.interchange.tests import BaseTest
 from openff.interchange.tests.energy_tests.test_energies import needs_gmx, needs_lmp
 from openff.interchange.utils import get_test_file_path
@@ -96,7 +99,9 @@ class TestUnimplementedSMIRNOFFCases(BaseTest):
 
         top = Molecule.from_smiles("CCO").to_topology()
 
-        with pytest.raises(SMIRNOFFHandlersNotImplementedError, match="ond order"):
+        with pytest.raises(
+            SMIRNOFFParameterAttributeNotImplementedError, match="length_bondorder"
+        ):
             Interchange.from_smirnoff(force_field=forcefield, topology=top)
 
     def test_catch_bond_order_interpolation_torsions(self):
@@ -110,8 +115,9 @@ class TestUnimplementedSMIRNOFFCases(BaseTest):
         )
 
         top = Molecule.from_smiles("CCO").to_topology()
-
-        with pytest.raises(SMIRNOFFHandlersNotImplementedError, match="ond order"):
+        with pytest.raises(
+            SMIRNOFFParameterAttributeNotImplementedError, match="k.*_bondorder"
+        ):
             Interchange.from_smirnoff(force_field=forcefield, topology=top)
 
     def test_catch_virtual_sites(self):
