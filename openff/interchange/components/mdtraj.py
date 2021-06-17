@@ -75,6 +75,8 @@ def _iterate_impropers(mdtop):
 
 
 def _iterate_pairs(mdtop):
+    # TODO: Replace this with Topology.nth_degree_neighbors after
+    # OpenFF Toolkit 0.9.3 or later
     for bond in mdtop.bonds:
         atom_i = bond.atom1
         atom_j = bond.atom2
@@ -95,7 +97,10 @@ def _iterate_pairs(mdtop):
                     continue
 
                 else:
-                    yield (atom_i_partner, atom_j_partner)
+                    if atom_i_partner.index > atom_j_partner.index:
+                        yield (atom_j_partner, atom_i_partner)
+                    else:
+                        yield (atom_i_partner, atom_j_partner)
 
 
 def _get_num_h_bonds(mdtop):
