@@ -3,6 +3,7 @@ from copy import deepcopy
 import mdtraj as md
 import numpy as np
 import pytest
+from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, ParameterHandler
 from openff.units import unit
@@ -12,7 +13,10 @@ from pydantic import ValidationError
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
-from openff.interchange.exceptions import SMIRNOFFHandlersNotImplementedError
+from openff.interchange.exceptions import (
+    SMIRNOFFHandlersNotImplementedError,
+    SMIRNOFFParameterAttributeNotImplementedError,
+)
 from openff.interchange.tests import BaseTest
 from openff.interchange.tests.energy_tests.test_energies import needs_gmx, needs_lmp
 from openff.interchange.utils import get_test_file_path
@@ -46,17 +50,6 @@ def test_box_setter():
         tmp.box = [2, 2, 3, 90, 90, 90]
 
 
-def test_unimplemented_smirnoff_handler():
-    top = Molecule.from_smiles("CC").to_topology()
-    parsley = ForceField("openff-1.0.0.offxml")
-
-    bogus_parameter_handler = ParameterHandler(version=0.3)
-    bogus_parameter_handler._TAGNAME = "bogus"
-    parsley.register_parameter_handler(bogus_parameter_handler)
-    with pytest.raises(SMIRNOFFHandlersNotImplementedError, match="SMIRNOFF.*bogus"):
-        Interchange.from_smirnoff(force_field=parsley, topology=top)
-
-
 @pytest.mark.slow
 class TestInterchangeCombination(BaseTest):
     def test_basic_combination(self):
@@ -81,6 +74,64 @@ class TestInterchangeCombination(BaseTest):
 
         # Just see if it can be converted into OpenMM and run
         get_openmm_energies(combined)
+
+
+class TestUnimplementedSMIRNOFFCases(BaseTest):
+    def test_bogus_smirnoff_handler(self):
+        top = Molecule.from_smiles("CC").to_topology()
+        parsley = ForceField("openff-1.0.0.offxml")
+
+        bogus_parameter_handler = ParameterHandler(version=0.3)
+        bogus_parameter_handler._TAGNAME = "bogus"
+        parsley.register_parameter_handler(bogus_parameter_handler)
+        with pytest.raises(
+            SMIRNOFFHandlersNotImplementedError, match="SMIRNOFF.*bogus"
+        ):
+            Interchange.from_smirnoff(force_field=parsley, topology=top)
+
+    def test_catch_bond_order_interpolation_bonds(self):
+        from openff.toolkit.tests.test_forcefield import xml_ff_bo
+
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            xml_ff_bo,
+        )
+
+        top = Molecule.from_smiles("CCO").to_topology()
+
+        with pytest.raises(
+            SMIRNOFFParameterAttributeNotImplementedError, match="length_bondorder"
+        ):
+            Interchange.from_smirnoff(force_field=forcefield, topology=top)
+
+    def test_catch_bond_order_interpolation_torsions(self):
+        from openff.toolkit.tests.test_forcefield import (
+            xml_ff_torsion_bo_standard_supersede,
+        )
+
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            xml_ff_torsion_bo_standard_supersede,
+        )
+
+        top = Molecule.from_smiles("CCO").to_topology()
+        with pytest.raises(
+            SMIRNOFFParameterAttributeNotImplementedError, match="k.*_bondorder"
+        ):
+            Interchange.from_smirnoff(force_field=forcefield, topology=top)
+
+    def test_catch_virtual_sites(self):
+        from openff.toolkit.tests.test_forcefield import TestForceFieldVirtualSites
+
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_monovalent_match_once,
+        )
+
+        top = Molecule.from_smiles("CCO").to_topology()
+
+        with pytest.raises(SMIRNOFFHandlersNotImplementedError, match="VirtualSites"):
+            Interchange.from_smirnoff(force_field=forcefield, topology=top)
 
 
 class TestInterchange(BaseTest):

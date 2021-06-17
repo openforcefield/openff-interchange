@@ -25,7 +25,10 @@ from simtk import unit as omm_unit
 from typing_extensions import Literal
 
 from openff.interchange.components.potentials import Potential, PotentialHandler
-from openff.interchange.exceptions import InvalidParameterHandlerError
+from openff.interchange.exceptions import (
+    InvalidParameterHandlerError,
+    SMIRNOFFParameterAttributeNotImplementedError,
+)
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.types import FloatQuantity
 
@@ -55,6 +58,20 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
     @abc.abstractmethod
     def allowed_parameter_handlers(cls):
         raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def supported_parameters(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def check_supported_parameters(cls, parameter_handler: ParameterHandler):
+        for parameter in parameter_handler.parameters:
+            for parameter_attribute in parameter._get_defined_parameter_attributes():
+                if parameter_attribute not in cls.supported_parameters():
+                    raise SMIRNOFFParameterAttributeNotImplementedError(
+                        parameter_attribute,
+                    )
 
     def store_matches(
         self,
@@ -107,6 +124,10 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def allowed_parameter_handlers(cls):
         return [BondHandler]
+
+    @classmethod
+    def supported_parameters(cls):
+        return ["smirks", "id", "k", "length"]
 
     def store_potentials(self, parameter_handler: "BondHandler") -> None:
         """
@@ -163,6 +184,10 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def allowed_parameter_handlers(cls):
         return [BondHandler, ConstraintHandler]
+
+    @classmethod
+    def supported_parameters(cls):
+        return ["smirks", "id", "k", "length", "distance"]
 
     @classmethod
     def _from_toolkit(
@@ -255,6 +280,10 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
     def allowed_parameter_handlers(cls):
         return [AngleHandler]
 
+    @classmethod
+    def supported_parameters(cls):
+        return ["smirks", "id", "k", "angle"]
+
     def store_potentials(self, parameter_handler: "AngleHandler") -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
@@ -301,6 +330,10 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def allowed_parameter_handlers(cls):
         return [ProperTorsionHandler]
+
+    @classmethod
+    def supported_parameters(cls):
+        return ["smirks", "id", "k", "periodicity", "phase", "idivf"]
 
     def store_matches(
         self,
@@ -356,6 +389,10 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def allowed_parameter_handlers(cls):
         return [ImproperTorsionHandler]
+
+    @classmethod
+    def supported_parameters(cls):
+        return ["smirks", "id", "k", "periodicity", "phase", "idivf"]
 
     def store_matches(
         self, parameter_handler: "ImproperTorsionHandler", topology: "OFFBioTop"
@@ -465,6 +502,10 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
     def allowed_parameter_handlers(cls):
         return [vdWHandler]
 
+    @classmethod
+    def supported_parameters(cls):
+        return ["smirks", "id", "sigma", "epsilon", "rmin_half"]
+
     def store_potentials(self, parameter_handler: vdWHandler) -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
@@ -551,6 +592,10 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             ToolkitAM1BCCHandler,
             ElectrostaticsHandler,
         ]
+
+    @classmethod
+    def supported_parameters(cls):
+        pass
 
     @property
     def charges(self) -> Dict[TopologyKey, unit.Quantity]:

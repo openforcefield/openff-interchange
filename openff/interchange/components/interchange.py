@@ -22,6 +22,7 @@ from openff.interchange.exceptions import (
     InvalidBoxError,
     InvalidTopologyError,
     MissingPositionsError,
+    SMIRNOFFHandlersNotImplementedError,
     UnsupportedExportError,
 )
 from openff.interchange.models import DefaultModel
@@ -108,17 +109,13 @@ class Interchange(DefaultModel):
 
         unsupported = list()
 
-        for handler in force_field.registered_parameter_handlers:
-            if handler in {"ToolkitAM1BCC"}:
+        for handler_name in force_field.registered_parameter_handlers:
+            if handler_name in {"ToolkitAM1BCC"}:
                 continue
-            if handler not in _SUPPORTED_SMIRNOFF_HANDLERS:
-                unsupported.append(handler)
+            if handler_name not in _SUPPORTED_SMIRNOFF_HANDLERS:
+                unsupported.append(handler_name)
 
         if unsupported:
-            from openff.interchange.exceptions import (
-                SMIRNOFFHandlersNotImplementedError,
-            )
-
             raise SMIRNOFFHandlersNotImplementedError(unsupported)
 
     @classmethod
@@ -186,6 +183,7 @@ class Interchange(DefaultModel):
             #       move back to the constraint handler dealing with the logic (and
             #       depending on the bond handler)
             if potential_handler_type == SMIRNOFFBondHandler:
+                SMIRNOFFBondHandler.check_supported_parameters(force_field["Bonds"])
                 potential_handler = SMIRNOFFBondHandler._from_toolkit(
                     parameter_handler=force_field["Bonds"],
                     topology=topology,
@@ -215,6 +213,7 @@ class Interchange(DefaultModel):
                     topology=topology,
                 )
             else:
+                potential_handler_type.check_supported_parameters(parameter_handlers[0])
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers[0],
                     topology=topology,
