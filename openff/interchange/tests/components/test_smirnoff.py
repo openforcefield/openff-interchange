@@ -276,6 +276,68 @@ def test_library_charges_from_molecule():
     assert library_charges.charge == [*mol.partial_charges]
 
 
+class TestBondOrderInterpolation(BaseTest):
+    def test_input_bond_orders_ignored(self):
+        """Test that conformers existing in the topology are not considered in the bond order interpolation
+        part of the parametrization process"""
+        from openff.toolkit.tests.create_molecules import create_ethanol
+        from openff.toolkit.tests.test_forcefield import xml_ff_bo
+
+        mol = create_ethanol()
+        mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
+        mod_mol = Molecule(mol)
+        for bond in mod_mol.bonds:
+            bond.fractional_bond_order += 0.1
+
+        top = Topology.from_molecules(mol)
+        mod_top = Topology.from_molecules(mod_mol)
+
+        forcefield = ForceField("test_forcefields", xml_ff_bo)
+
+        bonds = SMIRNOFFBondHandler._from_toolkit(
+            potential_handler=forcefield["Bonds"], topology=top
+        )
+        bonds_mod = SMIRNOFFBondHandler._from_toolkit(
+            potential_handler=forcefield["Bonds"], topology=mod_top
+        )
+
+        for bond1, bond2 in zip(bonds.slot_map, bonds_mod.slot_map):
+            k1 = bonds.potentials[bond1].parameters["k"]
+            k2 = bonds.potentials[bond2].parameters["k"]
+            assert k1 == k2
+
+    def test_input_conformers_ignored(self):
+        """Test that conformers existing in the topology are not considered in the bond order interpolation
+        part of the parametrization process"""
+        from openff.toolkit.tests.create_molecules import create_ethanol
+        from openff.toolkit.tests.test_forcefield import xml_ff_bo
+
+        mol = create_ethanol()
+        mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
+        mod_mol = Molecule(mol)
+        mod_mol.generate_conformers()
+        tmp = mod_mol._conformers[0][0][0]
+        mod_mol._conformers[0][0][0] = mod_mol._conformers[0][:][0]
+        mod_mol._conformers[0][:][0] = tmp
+
+        top = Topology.from_molecules(mol)
+        mod_top = Topology.from_molecules(mod_mol)
+
+        forcefield = ForceField("test_forcefields", xml_ff_bo)
+
+        bonds = SMIRNOFFBondHandler._from_toolkit(
+            potential_handler=forcefield["Bonds"], topology=top
+        )
+        bonds_mod = SMIRNOFFBondHandler._from_toolkit(
+            potential_handler=forcefield["Bonds"], topology=mod_top
+        )
+
+        for bond1, bond2 in zip(bonds.slot_map, bonds_mod.slot_map):
+            k1 = bonds.potentials[bond1].parameters["k"]
+            k2 = bonds.potentials[bond2].parameters["k"]
+            assert k1 == k2
+
+
 @skip_if_missing("jax")
 class TestMatrixRepresentations(BaseTest):
     @pytest.mark.parametrize(
