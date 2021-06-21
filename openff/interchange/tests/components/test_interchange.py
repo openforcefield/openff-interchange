@@ -14,6 +14,7 @@ from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
+    InvalidTopologyError,
     SMIRNOFFHandlersNotImplementedError,
     SMIRNOFFParameterAttributeNotImplementedError,
 )
@@ -86,6 +87,16 @@ class TestUnimplementedSMIRNOFFCases(BaseTest):
         parsley.register_parameter_handler(bogus_parameter_handler)
         with pytest.raises(
             SMIRNOFFHandlersNotImplementedError, match="SMIRNOFF.*bogus"
+        ):
+            Interchange.from_smirnoff(force_field=parsley, topology=top)
+
+    def test_invalid_topology(self):
+        """Test that InvalidTopologyError is caught when passing an unsupported
+        topology type to Interchange.from_smirnoff"""
+        top = Molecule.from_smiles("CC").to_topology().to_openmm()
+        parsley = ForceField("openff-1.0.0.offxml")
+        with pytest.raises(
+            InvalidTopologyError, match="Could not process topology argument.*openmm.*"
         ):
             Interchange.from_smirnoff(force_field=parsley, topology=top)
 
