@@ -230,7 +230,7 @@ class Interchange(DefaultModel):
         return sys_out
 
     def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 8):
-        """Export this interchange to a .gro file using ParmEd"""
+        """Export this Interchange object to a .gro file"""
 
         if self.positions is None:
             raise MissingPositionsError(
@@ -254,7 +254,7 @@ class Interchange(DefaultModel):
             to_gro(self, file_path, decimal=decimal)
 
     def to_top(self, file_path: Union[Path, str], writer="internal"):
-        """Export this interchange to a .top file using ParmEd"""
+        """Export this interchange to a .top file using"""
         if writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
 
@@ -279,7 +279,7 @@ class Interchange(DefaultModel):
 
         return to_openmm_(self, combine_nonbonded_forces=combine_nonbonded_forces)
 
-    def to_prmtop(self, file_path: Union[Path, str], writer="parmed"):
+    def _to_prmtop(self, file_path: Union[Path, str], writer="parmed"):
         """Export this interchange to an Amber .prmtop file"""
         if writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
@@ -289,7 +289,7 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
-    def to_crd(self, file_path: Union[Path, str], writer="parmed"):
+    def _to_crd(self, file_path: Union[Path, str], writer="parmed"):
         """Export this interchange to an Amber .crd file"""
         if writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
