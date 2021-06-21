@@ -47,6 +47,10 @@ class TestSMIRNOFFPotentialHandler(BaseTest):
             def allowed_parameter_handlers(cls):
                 return [DummyParameterHandler]
 
+            @classmethod
+            def supported_parameters(cls):
+                return list()
+
         dummy_handler = DummySMIRNOFFHandler()
         angle_Handler = AngleHandler(version=0.3)
 

@@ -6,14 +6,15 @@ repos:
   - id: end-of-file-fixer
   - id: trailing-whitespace
     exclude: '\.(pdb|gro|top|sdf)$'
+  - id: debug-statements
 - repo: https://github.com/psf/black
-  rev: 21.5b2
+  rev: 21.6b0
   hooks:
   - id: black
     files: ^openff
     args: [--check]
 - repo: https://github.com/PyCQA/isort
-  rev: 5.8.0
+  rev: 5.9.1
   hooks:
   - id: isort
     files: ^openff
@@ -28,14 +29,14 @@ repos:
         'flake8-absolute-import',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.19.1
+  rev: v2.19.4
   hooks:
   - id: pyupgrade
     files: ^openff/interchange/
     exclude: openff/interchange/_version.py|setup.py
     args: [--py37-plus]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 0.11.1
+  rev: 0.13.0
   hooks:
     - id: nbqa-pyupgrade
       args:
