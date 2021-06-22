@@ -57,11 +57,13 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
     @classmethod
     @abc.abstractmethod
     def allowed_parameter_handlers(cls):
+        """Return a list of allowed types of ParameterHandler classes (toolkit)"""
         raise NotImplementedError()
 
     @classmethod
     @abc.abstractmethod
     def supported_parameters(cls):
+        """Return a list of parameter attributes supported by this handler"""
         raise NotImplementedError()
 
     @classmethod
@@ -662,7 +664,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     @classmethod
     @functools.lru_cache(None)
     def _compute_partial_charges(cls, molecule: Molecule, method: str) -> unit.Quantity:
-
+        """Call out to the toolkit's toolkit wrappers to generate partial charges"""
         molecule = copy.deepcopy(molecule)
         molecule.assign_partial_charges(method)
 
@@ -965,6 +967,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 def library_charge_from_molecule(
     molecule: "Molecule",
 ) -> LibraryChargeHandler.LibraryChargeType:
+    """Given an OpenFF Molecule with charges, generate a corresponding LibraryChargeType"""
     if molecule.partial_charges is None:
         raise ValueError("Input molecule is missing partial charges.")
 
