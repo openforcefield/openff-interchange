@@ -2,7 +2,17 @@ import abc
 import copy
 import functools
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Type, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    DefaultDict,
+    Dict,
+    List,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -149,7 +159,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
             self.potentials[potential_key] = potential
 
     @classmethod
-    def _from_toolkit(  # type: ignore[override]
+    def _from_toolkit(
         cls: Type[T],
         parameter_handler: "BondHandler",
         topology: "Topology",
@@ -190,7 +200,7 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
         return ["smirks", "id", "k", "length", "distance"]
 
     @classmethod
-    def _from_toolkit(
+    def _from_toolkit(  # type: ignore[override]
         cls: Type[T],
         parameter_handler: List,
         topology: "Topology",
@@ -209,7 +219,7 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
                 raise InvalidParameterHandlerError(type(parameter_handler))
 
         handler = cls()
-        handler.store_constraints(
+        handler.store_constraints(  # type: ignore[attr-defined]
             parameter_handlers=parameter_handlers, topology=topology
         )
 
@@ -237,7 +247,7 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
             )
         else:
             bond_handler = None
-            bonds = None
+            bonds = None  # type: ignore[assignment]
 
         for key, match in constraint_matches.items():
             topology_key = TopologyKey(atom_indices=key)
@@ -480,7 +490,7 @@ class _SMIRNOFFNonbondedHandler(SMIRNOFFPotentialHandler, abc.ABC):
 
 class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
 
-    type: Literal["vdW"] = "vdW"
+    type: Literal["vdW"] = "vdW"  # type: ignore[assignment]
 
     expression: Literal[
         "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
@@ -540,7 +550,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         cls: Type[T],
         parameter_handler: "vdWHandler",
         topology: "Topology",
-    ) -> "SMIRNOFFvdWHandler":
+    ) -> T:
         """
         Create a SMIRNOFFvdWHandler from toolkit data.
 
@@ -579,7 +589,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     rather than having each in their own handler.
     """
 
-    type: Literal["Electrostatics"] = "Electrostatics"
+    type: Literal["Electrostatics"] = "Electrostatics"  # type: ignore[assignment]
     expression: Literal["coul"] = "coul"
 
     method: Literal["pme", "cutoff", "reaction-field"] = Field("pme")
@@ -601,7 +611,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     def charges(self) -> Dict[TopologyKey, unit.Quantity]:
         """Returns the total partial charge on each particle in the associated interchange."""
 
-        charges = defaultdict(lambda: 0.0 * unit.e)
+        charges: DefaultDict = defaultdict(lambda: 0.0 * unit.e)
 
         for topology_key, potential_key in self.slot_map.items():
 
@@ -632,7 +642,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         cls: Type[T],
         parameter_handler: Any,
         topology: "Topology",
-    ) -> "SMIRNOFFElectrostaticsHandler":
+    ) -> T:
         """
         Create a SMIRNOFFElectrostaticsHandler from toolkit data.
 
@@ -821,8 +831,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             parameter_handler = parameter_handlers[handler_type]
 
-            slot_matches, slot_potentials = None, {}
-            am1_matches, am1_potentials = None, {}
+            slot_matches, am1_matches = None, None
+            slot_potentials: Dict = {}
+            am1_potentials: Dict = {}
 
             if handler_type in ["LibraryCharges", "ChargeIncrementModel"]:
 
@@ -867,7 +878,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 }
             else:
                 matched_atom_indices = {
-                    index for key in am1_matches for index in key.atom_indices
+                    index for key in am1_matches for index in key.atom_indices  # type: ignore[union-attr]
                 }
 
             if matched_atom_indices != expected_matches:

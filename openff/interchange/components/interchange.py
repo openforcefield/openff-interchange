@@ -1,13 +1,13 @@
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
 import mdtraj as md
 import numpy as np
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
-from openff.utilities.utilities import requires_package
+from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
 
 from openff.interchange.components.mdtraj import OFFBioTop
@@ -27,6 +27,10 @@ from openff.interchange.exceptions import (
 )
 from openff.interchange.models import DefaultModel
 from openff.interchange.types import ArrayQuantity
+
+if TYPE_CHECKING:
+    if has_package("foyer"):
+        from foyer.forcefield import Forcefield as FoyerForcefield
 
 _SUPPORTED_SMIRNOFF_HANDLERS = {
     "Constraints",
@@ -208,7 +212,7 @@ class Interchange(DefaultModel):
                 sys_out.handlers.update({"Constraints": constraints})
                 continue
             elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
-                potential_handler = potential_handler_type._from_toolkit(
+                potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers,
                     topology=topology,
                 )
@@ -314,7 +318,7 @@ class Interchange(DefaultModel):
     @classmethod
     @requires_package("foyer")
     def from_foyer(
-        cls, topology: "OFFBioTop", ff: "Forcefield", **kwargs
+        cls, topology: "OFFBioTop", ff: "FoyerForcefield", **kwargs
     ) -> "Interchange":
         from openff.interchange.components.foyer import get_handlers_callable
 

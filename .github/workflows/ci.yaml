@@ -65,6 +65,9 @@ jobs:
       continue-on-error: true
       shell: bash -l {0}
       run: |
+        cd stubs
+        echo "MYPYPATH=$(pwd)" >> $GITHUB_ENV
+        cd ..
         mypy --show-error-codes --warn-unused-configs --warn-unused-ignores --namespace-packages -p "openff.interchange"
 
     - name: Run unit tests

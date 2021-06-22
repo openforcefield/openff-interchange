@@ -71,8 +71,8 @@ def compare_single_mol_systems(mol, force_field):
 
 
 def compare_condensed_systems(mol, force_field):
-    from openff.evaluator import unit as evaluator_unit
-    from openff.evaluator.utils.packmol import pack_box
+    from openff.evaluator import unit as evaluator_unit  # type: ignore[import]
+    from openff.evaluator.utils.packmol import pack_box  # type: ignore[import]
 
     mass_density = 500 * evaluator_unit.kilogram / evaluator_unit.meter ** 3
 

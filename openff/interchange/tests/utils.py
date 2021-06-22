@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import DefaultDict, Dict, List, Tuple
 
 import mdtraj as md
 import numpy as np
@@ -138,7 +138,7 @@ def compare_charges_omm_off(omm_sys: openmm.System, off_sys: Interchange) -> Non
 
 
 def _create_torsion_dict(torsion_force) -> Dict[Tuple[int], List[Tuple]]:
-    torsions = defaultdict(list)
+    torsions: DefaultDict = defaultdict(list)
 
     for i in range(torsion_force.getNumTorsions()):
         p1, p2, p3, p4, periodicity, phase, k = torsion_force.getTorsionParameters(i)
