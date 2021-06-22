@@ -35,6 +35,11 @@ repos:
     files: ^openff/interchange/
     exclude: openff/interchange/_version.py|setup.py
     args: [--py37-plus]
+- repo: https://github.com/econchick/interrogate
+  rev: 1.4.0
+  hooks:
+    - id: interrogate
+      args: [--quiet, --fail-under=45, openff/interchange]
 - repo: https://github.com/nbQA-dev/nbQA
   rev: 0.13.0
   hooks:
