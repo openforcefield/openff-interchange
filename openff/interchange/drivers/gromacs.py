@@ -128,7 +128,7 @@ def get_gromacs_energies(
     off_sys: "Interchange",
     mdp: str = "auto",
     writer: str = "internal",
-    decimal: int = 8
+    decimal: int = 8,
 ) -> EnergyReport:
     """
     Given an OpenFF Interchange object, return single-point energies as computed by GROMACS.
