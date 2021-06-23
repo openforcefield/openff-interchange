@@ -126,7 +126,7 @@ class Interchange(DefaultModel):
         box=None,
     ) -> "Interchange":
         """Creates a new object by parameterizing a topology using the specified
-        SMIRNOFF force field and
+        SMIRNOFF force field.
 
         Parameters
         ----------
@@ -136,6 +136,27 @@ class Interchange(DefaultModel):
             The topology to parameterize.
         box
             The box vectors associated with the interchange.
+
+        Examples
+        --------
+
+        Generate an Interchange object from a single-molecule (OpenFF) topology and
+        OpenFF 1.0.0 "Parsley"
+
+        >>> from openff.interchange.components.interchange import Interchange
+        >>> from openff.interchange.components.mdtraj import OFFBioTop
+        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit.typing.engines.smirnoff import ForceField
+        >>> import mdtraj as md
+        >>> mol = Molecule.from_smiles("CC")
+        >>> mol.generate_conformers(n_conformers=1)
+        >>> top = OFFBioTop.from_molecules([mol])
+        >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        >>> parsley = ForceField("openff-1.0.0.offxml")
+        >>> interchange = Interchange.from_smirnoff(topology=top, force_field=parsley)
+        >>> interchange
+        Interchange with 8 atoms, non-periodic topology
+
         """
         sys_out = Interchange()
 
@@ -316,6 +337,29 @@ class Interchange(DefaultModel):
     def from_foyer(
         cls, topology: "OFFBioTop", force_field: "Forcefield", **kwargs
     ) -> "Interchange":
+        """Create an Interchange object from a Foyer force field and an OpenFF topology.
+
+        Examples
+        --------
+
+        Generate an Interchange object from a single-molecule (OpenFF) topology and
+        the Foyer implementation of OPLS-AA
+
+        >>> from openff.interchange.components.interchange import Interchange
+        >>> from openff.interchange.components.mdtraj import OFFBioTop
+        >>> from openff.toolkit.topology import Molecule
+        >>> from foyer import Forcefield
+        >>> import mdtraj as md
+        >>> mol = Molecule.from_smiles("CC")
+        >>> mol.generate_conformers(n_conformers=1)
+        >>> top = OFFBioTop.from_molecules([mol])
+        >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        >>> oplsaa = Forcefield(name="oplsaa")
+        >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
+        >>> interchange
+        Interchange with 8 atoms, non-periodic topology
+
+        """
         from openff.interchange.components.foyer import get_handlers_callable
 
         system = cls()
