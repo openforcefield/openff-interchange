@@ -314,7 +314,7 @@ class Interchange(DefaultModel):
     @classmethod
     @requires_package("foyer")
     def from_foyer(
-        cls, topology: "OFFBioTop", ff: "Forcefield", **kwargs
+        cls, topology: "OFFBioTop", force_field: "Forcefield", **kwargs
     ) -> "Interchange":
         from openff.interchange.components.foyer import get_handlers_callable
 
@@ -324,23 +324,23 @@ class Interchange(DefaultModel):
         for name, Handler in get_handlers_callable().items():
             system.handlers[name] = Handler()
 
-        system.handlers["vdW"].store_matches(ff, topology=topology)
-        system.handlers["vdW"].store_potentials(forcefield=ff)
+        system.handlers["vdW"].store_matches(force_field, topology=topology)
+        system.handlers["vdW"].store_potentials(force_field=force_field)
 
         atom_slots = system.handlers["vdW"].slot_map
 
         system.handlers["Electrostatics"].store_charges(
             atom_slots=atom_slots,
-            forcefield=ff,
+            force_field=force_field,
         )
 
-        system.handlers["vdW"].scale_14 = ff.lj14scale
-        system.handlers["Electrostatics"].scale_14 = ff.coulomb14scale
+        system.handlers["vdW"].scale_14 = force_field.lj14scale
+        system.handlers["Electrostatics"].scale_14 = force_field.coulomb14scale
 
         for name, handler in system.handlers.items():
             if name not in ["vdW", "Electrostatics"]:
                 handler.store_matches(atom_slots, topology=topology)
-                handler.store_potentials(ff)
+                handler.store_potentials(force_field)
 
         return system
 
