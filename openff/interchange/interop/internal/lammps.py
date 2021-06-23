@@ -221,12 +221,6 @@ def _write_improper_coeffs(lmp_file: IO, openff_sys: Interchange):
         idivf = int(params["idivf"])
         k = k / idivf
 
-        if (phase != 180) or (n != 2):
-            raise UnsupportedExportError(
-                "Improper exports to LAMMPS are funky and not well-supported "
-                "at the moment, see PR #126"
-            )
-
         # See https://lammps.sandia.gov/doc/improper_cvff.html
         # E_periodic = k * (1 + cos(n * theta - phase))
         # E_cvff = k * (1 + d * cos(n * theta))
