@@ -39,7 +39,7 @@ repos:
   rev: 1.4.0
   hooks:
     - id: interrogate
-      args: [--quiet, --fail-under=45, openff/interchange]
+      args: [--fail-under=45, openff/interchange/]
 - repo: https://github.com/nbQA-dev/nbQA
   rev: 0.13.0
   hooks:
