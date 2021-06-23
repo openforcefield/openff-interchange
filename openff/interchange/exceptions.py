@@ -59,12 +59,6 @@ class InvalidTopologyError(ValueError):
     """
 
 
-class InterMolEnergyComparisonError(AssertionError):
-    """
-    Exception for when energies derived from InterMol do not match
-    """
-
-
 class NonbondedEnergyError(AssertionError):
     """
     Exception for when non-bonded energies computed from different objects differ
