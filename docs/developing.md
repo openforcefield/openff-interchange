@@ -30,7 +30,9 @@ It automatically runs other programs ("hooks") when you run `git commit`. It err
 
 Note that tests (too slow) and type-checking (weird reasons) are not run by `pre-commit`. You should still manually run tests before commiting code.
 
-A sample configuration file (`.pre-commit-config.yaml`) is commited to the repo.
+This project uses `pre-commit ci`, a free service that enforces style on GitHub using the `pre-commit` framework.
+
+The configuration file (`.pre-commit-config.yaml`) is commited to the repo. This file speicies the configuration that `pre-commit.ci` bots will use and also any local installations. Note that because this file is checked out in the repo, all developers therefore use the same pre-commit hooks (as will the `pre-commit.ci` bots).
 
 First, install `pre-commit`
 
@@ -51,3 +53,5 @@ pre-commit autoupdate.
 ```
 
 Hooks will now run automatically before commits. Once installed, it should run in a few seconds.
+
+If hooks are installed locally, all linting checks in CI should pass. If hooks are not installed locally or are significatnly out of date, a `pre-commit.ci` bot may commit directly to a PR to make these fixes.

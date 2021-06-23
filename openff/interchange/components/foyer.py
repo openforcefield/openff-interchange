@@ -43,6 +43,7 @@ def _get_potential_key_id(atom_slots: Dict[TopologyKey, PotentialKey], idx):
 
 
 def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
+    """Map Foyer-style handlers from string identifiers"""
     return {
         "vdW": FoyerVDWHandler,
         "Electrostatics": FoyerElectrostaticsHandler,
@@ -82,6 +83,7 @@ class FoyerVDWHandler(PotentialHandler):
             self.slot_map[top_key] = PotentialKey(id=val["atomtype"])
 
     def store_potentials(self, forcefield: "Forcefield") -> None:
+        """Extract specific force field parameters a Forcefield object"""
         for top_key in self.slot_map:
             atom_params = forcefield.get_parameters(
                 self.type, key=self.slot_map[top_key].id
@@ -111,6 +113,7 @@ class FoyerElectrostaticsHandler(PotentialHandler):
         atom_slots: Dict[TopologyKey, PotentialKey],
         forcefield: "Forcefield",
     ):
+        """Look up fixed charges (a.k.a. library charges) from the force field and store them in self.charges"""
         for top_key, pot_key in atom_slots.items():
             foyer_params = forcefield.get_parameters("atoms", pot_key.id)
             charge = foyer_params["charge"]

@@ -28,6 +28,7 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
 
     @classmethod
     def validate_type(cls, val):
+        """Process a value tagged with units into one tagged with "OpenFF" style units"""
         unit_ = getattr(cls, "__unit__", Any)
         if unit_ is Any:
             if isinstance(val, (float, int)):
@@ -115,6 +116,7 @@ class QuantityEncoder(json.JSONEncoder):
 
 
 def custom_quantity_encoder(v):
+    """Wrapper around json.dumps that uses QuantityEncoder"""
     return json.dumps(v, cls=QuantityEncoder)
 
 
@@ -152,6 +154,7 @@ else:
 
         @classmethod
         def validate_type(cls, val):
+            """Process an array tagged with units into one tagged with "OpenFF" style units"""
             unit_ = getattr(cls, "__unit__", Any)
             if unit_ is Any:
                 if isinstance(val, (list, np.ndarray)):
