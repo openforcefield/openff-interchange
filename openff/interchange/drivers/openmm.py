@@ -60,39 +60,6 @@ def get_openmm_energies(
     )
 
 
-def _set_nonbonded_method(
-    omm_sys: openmm.System,
-    key: str,
-    electrostatics: bool = True,
-) -> openmm.System:
-    """Modify the `openmm.NonbondedForce` in this `openmm.System`."""
-    if key == "cutoff":
-        for force in omm_sys.getForces():
-            if type(force) == openmm.NonbondedForce:
-                force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
-                force.setCutoffDistance(0.9 * unit.nanometer)
-                force.setReactionFieldDielectric(1.0)
-                force.setUseDispersionCorrection(False)
-                force.setUseSwitchingFunction(False)
-                if not electrostatics:
-                    for i in range(force.getNumParticles()):
-                        params = force.getParticleParameters(i)
-                        force.setParticleParameters(
-                            i,
-                            0,
-                            params[1],
-                            params[2],
-                        )
-
-    elif key == "PME":
-        for force in omm_sys.getForces():
-            if type(force) == openmm.NonbondedForce:
-                force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                force.setEwaldErrorTolerance(1e-4)
-
-    return omm_sys
-
-
 def _get_openmm_energies(
     omm_sys: openmm.System,
     box_vectors,

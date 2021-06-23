@@ -11,7 +11,6 @@ from simtk import unit as simtk_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
-from openff.interchange.exceptions import InterMolEnergyComparisonError
 
 HAS_GROMACS = any(has_executable(e) for e in ["gmx", "gmx_d"])
 HAS_LAMMPS = any(has_executable(e) for e in ["lammps", "lmp_mpi", "lmp_serial"])
@@ -54,40 +53,6 @@ def top_from_smiles(
     return top
 
 
-def compare_energies(ener1, ener2, atol=1e-8):
-    """Compare two GROMACS energy dicts from InterMol"""
-
-    assert sorted(ener1.keys()) == sorted(ener2.keys()), (
-        sorted(ener1.keys()),
-        sorted(ener2.keys()),
-    )
-
-    flaky_keys = [
-        "Temperature",
-        "Kinetic En.",
-        "Total Energy",
-        "Pressure",
-        "Vir-XX",
-        "Vir-YY",
-    ]
-
-    failed_runs = []
-    for key in ener1.keys():
-        if key in flaky_keys:
-            continue
-        try:
-            assert np.isclose(
-                ener1[key] / ener1[key].unit,
-                ener2[key] / ener2[key].unit,
-                atol=atol,
-            )
-        except AssertionError:
-            failed_runs.append([key, ener1[key], ener2[key]])
-
-    if len(failed_runs) > 0:
-        raise InterMolEnergyComparisonError(failed_runs)
-
-
 def _get_charges_from_openmm_system(omm_sys: openmm.System):
     for force in omm_sys.getForces():
         if type(force) == openmm.NonbondedForce:
@@ -128,13 +93,6 @@ def _get_charges_from_openff_interchange(off_sys: Interchange):
     charges_ = [*off_sys.handlers["Electrostatics"].charges.values()]
     charges = np.asarray([charge.magnitude for charge in charges_])
     return charges
-
-
-def compare_charges_omm_off(omm_sys: openmm.System, off_sys: Interchange) -> None:
-    omm_charges = np.asarray([*_get_charges_from_openmm_system(omm_sys)])
-    off_charges = _get_charges_from_openff_interchange(off_sys)
-
-    np.testing.assert_equal(omm_charges, off_charges)
 
 
 def _create_torsion_dict(torsion_force) -> Dict[Tuple[int], List[Tuple]]:
