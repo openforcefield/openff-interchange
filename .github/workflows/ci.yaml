@@ -67,11 +67,16 @@ jobs:
       run: |
         mypy --show-error-codes --warn-unused-configs --warn-unused-ignores --namespace-packages -p "openff.interchange"
 
+    - name: Run docexamples
+      shell: bash -l {0}
+      run: |
+        pytest -v --doctest-modules openff/interchange/ --ignore=openff/interchange/tests
+
     - name: Run unit tests
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v --doctest-modules $COV openff/interchange/tests/ --ignore=openff/interchange/tests/interop/test_parmed.py
+        python -m pytest -v $COV openff/interchange/tests/ --ignore=openff/interchange/tests/interop/test_parmed.py
 
     - name: Run ParmEd tests
       continue-on-error: true
