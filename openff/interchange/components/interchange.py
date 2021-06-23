@@ -143,19 +143,21 @@ class Interchange(DefaultModel):
         Generate an Interchange object from a single-molecule (OpenFF) topology and
         OpenFF 1.0.0 "Parsley"
 
-        >>> from openff.interchange.components.interchange import Interchange
-        >>> from openff.interchange.components.mdtraj import OFFBioTop
-        >>> from openff.toolkit.topology import Molecule
-        >>> from openff.toolkit.typing.engines.smirnoff import ForceField
-        >>> import mdtraj as md
-        >>> mol = Molecule.from_smiles("CC")
-        >>> mol.generate_conformers(n_conformers=1)
-        >>> top = OFFBioTop.from_molecules([mol])
-        >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
-        >>> parsley = ForceField("openff-1.0.0.offxml")
-        >>> interchange = Interchange.from_smirnoff(topology=top, force_field=parsley)
-        >>> interchange
-        Interchange with 8 atoms, non-periodic topology
+        .. code-block:: pycon
+
+            >>> from openff.interchange.components.interchange import Interchange
+            >>> from openff.interchange.components.mdtraj import OFFBioTop
+            >>> from openff.toolkit.topology import Molecule
+            >>> from openff.toolkit.typing.engines.smirnoff import ForceField
+            >>> import mdtraj as md
+            >>> mol = Molecule.from_smiles("CC")
+            >>> mol.generate_conformers(n_conformers=1)
+            >>> top = OFFBioTop.from_molecules([mol])
+            >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
+            >>> parsley = ForceField("openff-1.0.0.offxml")
+            >>> interchange = Interchange.from_smirnoff(topology=top, force_field=parsley)
+            >>> interchange
+            Interchange with 8 atoms, non-periodic topology
 
         """
         sys_out = Interchange()
@@ -345,19 +347,21 @@ class Interchange(DefaultModel):
         Generate an Interchange object from a single-molecule (OpenFF) topology and
         the Foyer implementation of OPLS-AA
 
-        >>> from openff.interchange.components.interchange import Interchange
-        >>> from openff.interchange.components.mdtraj import OFFBioTop
-        >>> from openff.toolkit.topology import Molecule
-        >>> from foyer import Forcefield
-        >>> import mdtraj as md
-        >>> mol = Molecule.from_smiles("CC")
-        >>> mol.generate_conformers(n_conformers=1)
-        >>> top = OFFBioTop.from_molecules([mol])
-        >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
-        >>> oplsaa = Forcefield(name="oplsaa")
-        >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
-        >>> interchange
-        Interchange with 8 atoms, non-periodic topology
+        .. code-block:: pycon
+
+            >>> from openff.interchange.components.interchange import Interchange
+            >>> from openff.interchange.components.mdtraj import OFFBioTop
+            >>> from openff.toolkit.topology import Molecule
+            >>> from foyer import Forcefield
+            >>> import mdtraj as md
+            >>> mol = Molecule.from_smiles("CC")
+            >>> mol.generate_conformers(n_conformers=1)
+            >>> top = OFFBioTop.from_molecules([mol])
+            >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
+            >>> oplsaa = Forcefield(name="oplsaa")
+            >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
+            >>> interchange
+            Interchange with 8 atoms, non-periodic topology
 
         """
         from openff.interchange.components.foyer import get_handlers_callable

@@ -15,12 +15,14 @@ def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
     Examples
     --------
 
-    >>> from openff.toolkit.topology import Molecule
-    >>> from openff.interchange.components.mbuild import offmol_to_compound
-    >>> mol = Molecule.from_smiles("CCO")
-    >>> compound = offmol_to_compound(mol)
-    >>> type(compound), compound.n_particles, compound.n_bonds
-    (<class 'mbuild.compound.Compound'>, 9, 8)
+    .. code-block:: pycon
+
+        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.interchange.components.mbuild import offmol_to_compound
+        >>> mol = Molecule.from_smiles("CCO")
+        >>> compound = offmol_to_compound(mol)
+        >>> type(compound), compound.n_particles, compound.n_bonds
+        (<class 'mbuild.compound.Compound'>, 9, 8)
 
     """
     if not off_mol.has_unique_atom_names:
@@ -51,17 +53,18 @@ def offtop_to_compound(off_top: "Topology") -> "mb.Compound":
     Examples
     --------
 
+    .. code-block:: pycon
 
-    >>> from openff.toolkit.topology import Molecule, Topology
-    >>> from openff.interchange.components.mbuild import offtop_to_compound
-    >>> ethanol = Molecule.from_smiles("CCO")
-    >>> ethanol.name = "ETH"
-    >>> methane = Molecule.from_smiles("C")
-    >>> methane.name = "MET"
-    >>> top = Topology.from_molecules([ethanol, ethanol, methane, methane])
-    >>> compound = offtop_to_compound(top)
-    >>> type(compound), len(compound.children), compound.n_particles, compound.n_bonds
-    (<class 'mbuild.compound.Compound'>, 4, 28, 24)
+        >>> from openff.toolkit.topology import Molecule, Topology
+        >>> from openff.interchange.components.mbuild import offtop_to_compound
+        >>> ethanol = Molecule.from_smiles("CCO")
+        >>> ethanol.name = "ETH"
+        >>> methane = Molecule.from_smiles("C")
+        >>> methane.name = "MET"
+        >>> top = Topology.from_molecules([ethanol, ethanol, methane, methane])
+        >>> compound = offtop_to_compound(top)
+        >>> type(compound), len(compound.children), compound.n_particles, compound.n_bonds
+        (<class 'mbuild.compound.Compound'>, 4, 28, 24)
 
     """
     sub_comps = []

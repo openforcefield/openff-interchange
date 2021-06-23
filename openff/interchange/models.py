@@ -33,22 +33,28 @@ class TopologyKey(DefaultModel):
 
     Create a TopologyKey identifying some speicfic angle
 
-    >>> from openff.interchange.models import TopologyKey
-    >>> this_angle = TopologyKey(atom_indices=(2, 1, 3))
-    >>> this_angle
-    TopologyKey(atom_indices=(2, 1, 3), mult=None)
+    .. code-block:: pycon
+
+        >>> from openff.interchange.models import TopologyKey
+        >>> this_angle = TopologyKey(atom_indices=(2, 1, 3))
+        >>> this_angle
+        TopologyKey(atom_indices=(2, 1, 3), mult=None)
 
     Create a TopologyKey indentifying just one atom
 
-    >>> this_atom = TopologyKey(atom_indices=(4,))
-    >>> this_atom
-    TopologyKey(atom_indices=(4,), mult=None)
+    .. code-block:: pycon
+
+        >>> this_atom = TopologyKey(atom_indices=(4,))
+        >>> this_atom
+        TopologyKey(atom_indices=(4,), mult=None)
 
     Layer multiple TopologyKey objects that point to the same torsion
 
-    >>> key1 = TopologyKey(atom_indices=(1, 2, 5, 6), mult=0)
-    >>> key2 = TopologyKey(atom_indices=(1, 2, 5, 6), mult=1)
-    >>> assert key1 != key2
+    .. code-block:: pycon
+
+        >>> key1 = TopologyKey(atom_indices=(1, 2, 5, 6), mult=0)
+        >>> key2 = TopologyKey(atom_indices=(1, 2, 5, 6), mult=1)
+        >>> assert key1 != key2
 
     """
 
@@ -64,7 +70,7 @@ class TopologyKey(DefaultModel):
 
 
 class PotentialKey(DefaultModel):
-    """A unique identifier of a segment of a chemical topology.
+    """A unique identifier of an instance of physical parameters as applied to a segment of a chemical topology.
 
     These refer to a single term in a force field as applied to a single segment of a chemical
     topology, i.e. a single atom or dihedral. For example, a PotentialKey corresponding to a
@@ -77,20 +83,24 @@ class PotentialKey(DefaultModel):
 
     Create a PotentialKey corresponding to the parameter with id `b55` in OpenFF "Parsley" 1.0.0
 
-    >>> from openff.interchange.models import PotentialKey
-    >>> from openff.toolkit.typing.engines.smirnoff import ForceField
-    >>> parsley = ForceField("openff-1.0.0.offxml")
-    >>> param = parsley['Bonds'].get_parameter({"id": 'b55'})[0]
-    >>> bond_55 = PotentialKey(id=param.smirks)
-    >>> bond_55
-    PotentialKey(id='[#16X4,#16X3:1]-[#8X2:2]', mult=None, associated_handler=None)
+    .. code-block:: pycon
+
+        >>> from openff.interchange.models import PotentialKey
+        >>> from openff.toolkit.typing.engines.smirnoff import ForceField
+        >>> parsley = ForceField("openff-1.0.0.offxml")
+        >>> param = parsley["Bonds"].get_parameter({"id": "b55"})[0]
+        >>> bond_55 = PotentialKey(id=param.smirks)
+        >>> bond_55
+        PotentialKey(id='[#16X4,#16X3:1]-[#8X2:2]', mult=None, associated_handler=None)
 
     Create a PotentialKey corresponding to the angle parameters in OPLS-AA defined
     between atom types opls_135, opls_135, and opls_140
 
-    >>> oplsaa_angle = PotentialKey(id='opls_135-opls_135-opls_140')
-    >>> oplsaa_angle
-    PotentialKey(id='opls_135-opls_135-opls_140', mult=None, associated_handler=None)
+    .. code-block:: pycon
+
+        >>> oplsaa_angle = PotentialKey(id="opls_135-opls_135-opls_140")
+        >>> oplsaa_angle
+        PotentialKey(id='opls_135-opls_135-opls_140', mult=None, associated_handler=None)
 
     """
 
