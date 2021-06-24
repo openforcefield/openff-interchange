@@ -512,17 +512,19 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
         for force in system.getForces():
             if isinstance(force, openmm.NonbondedForce):
                 vdw, coul = _convert_nonbonded_force(force)
-                openff_sys.handlers.update({"vdW": vdw})
-                openff_sys.handlers.update({"Electrostatics": coul})
+                openff_sys.add_handler(handler_name="vdW", handler=vdw)
+                openff_sys.add_handler(handler_name="Electrostatics", handler=coul)
             if isinstance(force, openmm.HarmonicBondForce):
                 bond_handler = _convert_harmonic_bond_force(force)
-                openff_sys.handlers.update({"Bonds": bond_handler})
+                openff_sys.add_handler(handler_name="Bonds", handler=bond_handler)
             if isinstance(force, openmm.HarmonicAngleForce):
                 angle_handler = _convert_harmonic_angle_force(force)
-                openff_sys.handlers.update({"Angles": angle_handler})
+                openff_sys.add_handler(handler_name="Angles", handler=angle_handler)
             if isinstance(force, openmm.PeriodicTorsionForce):
                 proper_torsion_handler = _convert_periodic_torsion_force(force)
-                openff_sys.handlers.update({"ProperTorsions": proper_torsion_handler})
+                openff_sys.add_handler(
+                    handler_name="PeriodicTorsions", handler=proper_torsion_handler
+                )
 
     if topology:
         import mdtraj as md

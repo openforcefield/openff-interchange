@@ -1,3 +1,10 @@
+class SMIRNOFFParameterAttributeNotImplementedError(Exception):
+    """
+    Exception for when a parameter attribute is supported by the SMIRNOFF specification
+    but not yet implemented, i.e. k_bondorder for bond order interpolation.
+    """
+
+
 class SMIRNOFFHandlersNotImplementedError(Exception):
     """
     Exception for when some parameter handlers in the SMIRNOFF specification
@@ -49,12 +56,6 @@ class InvalidBoxError(ValueError):
 class InvalidTopologyError(ValueError):
     """
     Generic exception for errors reading chemical topology data
-    """
-
-
-class InterMolEnergyComparisonError(AssertionError):
-    """
-    Exception for when energies derived from InterMol do not match
     """
 
 

@@ -26,7 +26,10 @@ from simtk import unit as omm_unit
 from typing_extensions import Literal
 
 from openff.interchange.components.potentials import Potential, PotentialHandler
-from openff.interchange.exceptions import InvalidParameterHandlerError
+from openff.interchange.exceptions import (
+    InvalidParameterHandlerError,
+    SMIRNOFFParameterAttributeNotImplementedError,
+)
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 from openff.interchange.types import FloatQuantity
 
@@ -55,7 +58,23 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
     @classmethod
     @abc.abstractmethod
     def allowed_parameter_handlers(cls):
+        """Return a list of allowed types of ParameterHandler classes (toolkit)"""
         raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def supported_parameters(cls):
+        """Return a list of parameter attributes supported by this handler"""
+        raise NotImplementedError()
+
+    @classmethod
+    def check_supported_parameters(cls, parameter_handler: ParameterHandler):
+        for parameter in parameter_handler.parameters:
+            for parameter_attribute in parameter._get_defined_parameter_attributes():
+                if parameter_attribute not in cls.supported_parameters():
+                    raise SMIRNOFFParameterAttributeNotImplementedError(
+                        parameter_attribute,
+                    )
 
     def store_matches(
         self,
@@ -108,6 +127,10 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def allowed_parameter_handlers(cls):
         return [BondHandler]
+
+    @classmethod
+    def supported_parameters(cls):
+        return ["smirks", "id", "k", "length"]
 
     def store_potentials(self, parameter_handler: "BondHandler") -> None:
         """
@@ -164,6 +187,10 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def allowed_parameter_handlers(cls):
         return [BondHandler, ConstraintHandler]
+
+    @classmethod
+    def supported_parameters(cls):
+        return ["smirks", "id", "k", "length", "distance"]
 
     @classmethod
     def _from_toolkit(
@@ -256,6 +283,10 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
     def allowed_parameter_handlers(cls):
         return [AngleHandler]
 
+    @classmethod
+    def supported_parameters(cls):
+        return ["smirks", "id", "k", "angle"]
+
     def store_potentials(self, parameter_handler: "AngleHandler") -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
@@ -302,6 +333,10 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def allowed_parameter_handlers(cls):
         return [ProperTorsionHandler]
+
+    @classmethod
+    def supported_parameters(cls):
+        return ["smirks", "id", "k", "periodicity", "phase", "idivf"]
 
     def store_matches(
         self,
@@ -357,6 +392,10 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def allowed_parameter_handlers(cls):
         return [ImproperTorsionHandler]
+
+    @classmethod
+    def supported_parameters(cls):
+        return ["smirks", "id", "k", "periodicity", "phase", "idivf"]
 
     def store_matches(
         self, parameter_handler: "ImproperTorsionHandler", topology: "OFFBioTop"
@@ -465,6 +504,10 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
     @classmethod
     def allowed_parameter_handlers(cls):
         return [vdWHandler]
+
+    @classmethod
+    def supported_parameters(cls):
+        return ["smirks", "id", "sigma", "epsilon", "rmin_half"]
 
     def store_potentials(self, parameter_handler: vdWHandler) -> None:
         """
@@ -611,6 +654,10 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             ElectrostaticsHandler,
         ]
 
+    @classmethod
+    def supported_parameters(cls):
+        pass
+
     @property
     def charges(self) -> Dict[TopologyKey, unit.Quantity]:
         """Returns the total partial charge on each particle in the associated interchange."""
@@ -717,7 +764,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     @classmethod
     @functools.lru_cache(None)
     def _compute_partial_charges(cls, molecule: Molecule, method: str) -> unit.Quantity:
-
+        """Call out to the toolkit's toolkit wrappers to generate partial charges"""
         molecule = copy.deepcopy(molecule)
         molecule.assign_partial_charges(method)
 
@@ -1020,6 +1067,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 def library_charge_from_molecule(
     molecule: "Molecule",
 ) -> LibraryChargeHandler.LibraryChargeType:
+    """Given an OpenFF Molecule with charges, generate a corresponding LibraryChargeType"""
     if molecule.partial_charges is None:
         raise ValueError("Input molecule is missing partial charges.")
 

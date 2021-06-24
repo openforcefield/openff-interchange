@@ -58,6 +58,17 @@ def test_iterate_pairs():
     assert len([*_iterate_propers(mdtop)]) > len(pairs)
 
 
+def test_iterate_pairs_benzene():
+    """Check that bonds in rings are not double-counted with _iterate_pairs.
+    This should be fixed by using Topology.nth_degree_neighbors directly"""
+    benzene = Molecule.from_smiles("c1ccccc1")
+    mdtop = md.Topology.from_openmm(benzene.to_topology().to_openmm())
+
+    _store_bond_partners(mdtop)
+
+    assert len({*_iterate_pairs(mdtop)}) == 21
+
+
 def test_get_num_h_bonds():
     mol = Molecule.from_smiles("CCO")
     top = mol.to_topology()
