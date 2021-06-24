@@ -4,12 +4,12 @@ import numpy as np
 import parmed as pmd
 import pytest
 from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities import temporary_cd
 from simtk import unit as omm_unit
 
 from openff.interchange.drivers.gromacs import _get_mdp_file, _run_gmx_energy
-from openff.interchange.stubs import ForceField
 from openff.interchange.tests.energy_tests.test_energies import needs_gmx
 from openff.interchange.types import ArrayQuantity
 

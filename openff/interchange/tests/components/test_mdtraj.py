@@ -1,6 +1,7 @@
 import mdtraj as md
 import pytest
 from openff.toolkit.topology import Molecule
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from simtk.openmm import app
 
 from openff.interchange.components.mdtraj import (
@@ -11,7 +12,6 @@ from openff.interchange.components.mdtraj import (
     _store_bond_partners,
 )
 from openff.interchange.drivers import get_openmm_energies
-from openff.interchange.stubs import ForceField
 from openff.interchange.utils import get_test_file_path
 
 

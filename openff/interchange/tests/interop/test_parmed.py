@@ -2,6 +2,7 @@ import mdtraj as md
 import numpy as np
 import parmed as pmd
 import pytest
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from parmed.amber import readparm
 from pmdtest.utils import get_fn as get_pmd_fn
@@ -13,7 +14,6 @@ from openff.interchange.drivers.gromacs import (
     _run_gmx_energy,
     get_gromacs_energies,
 )
-from openff.interchange.stubs import ForceField
 from openff.interchange.tests import BaseTest
 from openff.interchange.tests.utils import top_from_smiles
 from openff.interchange.utils import get_test_file_path

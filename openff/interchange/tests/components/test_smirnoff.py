@@ -89,7 +89,7 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
         bond_handler.add_parameter(bond_parameter.to_dict())
 
-        from openff.interchange.stubs import ForceField
+        from openff.toolkit.typing.engines.smirnoff import ForceField
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(bond_handler)

@@ -1,11 +1,11 @@
 import mdtraj as md
 import pytest
 from openff.toolkit.topology import Molecule
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.drivers import get_amber_energies, get_gromacs_energies
-from openff.interchange.stubs import ForceField
 from openff.interchange.tests.utils import needs_gmx
 
 kj_mol = unit.kilojoule / unit.mol

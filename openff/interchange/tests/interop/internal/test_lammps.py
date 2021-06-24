@@ -2,12 +2,12 @@ import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from simtk import unit as omm_unit
 
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.drivers import get_lammps_energies, get_openmm_energies
 from openff.interchange.drivers.lammps import _write_lammps_input
-from openff.interchange.stubs import ForceField
 from openff.interchange.tests.energy_tests.test_energies import needs_lmp
 
 

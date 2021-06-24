@@ -2,6 +2,7 @@ import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from simtk import openmm
@@ -10,7 +11,6 @@ from simtk.unit import nanometer as nm
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
-from openff.interchange.stubs import ForceField
 from openff.interchange.tests import BaseTest
 from openff.interchange.utils import get_test_file_path
 
