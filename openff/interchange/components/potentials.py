@@ -46,6 +46,8 @@ class PotentialHandler(DefaultModel):
 
     @property
     def independent_variables(self) -> Set[str]:
+        """Return a set of independent variables, as str, defined as variables in the
+        expression that are not found in any potentials."""
         vars_in_potentials = set([*self.potentials.values()][0].parameters.keys())
         vars_in_expression = {
             node.id
@@ -66,6 +68,7 @@ class PotentialHandler(DefaultModel):
 
     @requires_package("jax")
     def get_force_field_parameters(self):
+        """Return a flattened representation of the force field parameters"""
         import jax
 
         params: list = list()
@@ -77,6 +80,8 @@ class PotentialHandler(DefaultModel):
 
     @requires_package("jax")
     def get_system_parameters(self, p=None):
+        """Return a flattened representation of system parameters, effectively
+        force field parameters as applied to a chemical topology"""
         import jax
 
         if p is None:

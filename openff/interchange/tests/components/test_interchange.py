@@ -14,6 +14,8 @@ from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
+    InvalidTopologyError,
+    MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
     SMIRNOFFParameterAttributeNotImplementedError,
 )
@@ -52,15 +54,14 @@ def test_box_setter():
 
 @pytest.mark.slow
 class TestInterchangeCombination(BaseTest):
-    def test_basic_combination(self):
+    def test_basic_combination(self, parsley_unconstrained):
         """Test basic use of Interchange.__add__() based on the README example"""
         mol = Molecule.from_smiles("C")
         mol.generate_conformers(n_conformers=1)
         top = OFFBioTop.from_molecules([mol])
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
-        parsley = ForceField("openff_unconstrained-1.0.0.offxml")
-        openff_sys = parsley.create_openff_interchange(top)
+        openff_sys = parsley_unconstrained.create_openff_interchange(top)
 
         openff_sys.box = [4, 4, 4] * np.eye(3)
         openff_sys.positions = mol.conformers[0]._value / 10.0
@@ -77,9 +78,8 @@ class TestInterchangeCombination(BaseTest):
 
 
 class TestUnimplementedSMIRNOFFCases(BaseTest):
-    def test_bogus_smirnoff_handler(self):
+    def test_bogus_smirnoff_handler(self, parsley):
         top = Molecule.from_smiles("CC").to_topology()
-        parsley = ForceField("openff-1.0.0.offxml")
 
         bogus_parameter_handler = ParameterHandler(version=0.3)
         bogus_parameter_handler._TAGNAME = "bogus"
@@ -132,6 +132,29 @@ class TestUnimplementedSMIRNOFFCases(BaseTest):
 
         with pytest.raises(SMIRNOFFHandlersNotImplementedError, match="VirtualSites"):
             Interchange.from_smirnoff(force_field=forcefield, topology=top)
+
+
+class TestBadExports(BaseTest):
+    def test_invalid_topology(self, parsley):
+        """Test that InvalidTopologyError is caught when passing an unsupported
+        topology type to Interchange.from_smirnoff"""
+        top = Molecule.from_smiles("CC").to_topology().to_openmm()
+        with pytest.raises(
+            InvalidTopologyError, match="Could not process topology argument.*openmm.*"
+        ):
+            Interchange.from_smirnoff(force_field=parsley, topology=top)
+
+    def test_gro_file_no_positions(self):
+        no_positions = Interchange()
+        with pytest.raises(MissingPositionsError, match="Positions are req"):
+            no_positions.to_gro("foo.gro")
+
+    def test_gro_file_all_zero_positions(self, parsley):
+        top = Topology.from_molecules(Molecule.from_smiles("CC"))
+        zero_positions = Interchange.from_smirnoff(force_field=parsley, topology=top)
+        zero_positions.positions = np.zeros((top.n_topology_atoms, 3)) * unit.nanometer
+        with pytest.warns(UserWarning, match="seem to all be zero"):
+            zero_positions.to_gro("foo.gro")
 
 
 class TestInterchange(BaseTest):
