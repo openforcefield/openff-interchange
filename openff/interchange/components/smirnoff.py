@@ -27,7 +27,7 @@ from typing_extensions import Literal
 
 from openff.interchange.components.potentials import Potential, PotentialHandler
 from openff.interchange.exceptions import InvalidParameterHandlerError
-from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 from openff.interchange.types import FloatQuantity
 
 kcal_mol = omm_unit.kilocalorie_per_mole
@@ -531,9 +531,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         parameter_handler: "VirtualSiteHandler",
         topology: "Topology",
     ):
-        """Given an existing SMIRNOFFvdWHandler"""
         # TODO: Merge this logic into _from_toolkit
-        # TODO: Find a way to get this logic into the electrostatics handerSMIRNOFFmatch
 
         if not all(
             isinstance(
@@ -551,8 +549,12 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
 
         matches = parameter_handler.find_matches(topology)
         for atoms, parameter_match in matches.items():
-            top_key = TopologyKey(atom_indices=atoms)
             virtual_site_type = parameter_match[0].parameter_type
+            top_key = VirtualSiteKey(
+                atom_indices=atoms,
+                type=virtual_site_type.type,
+                match=virtual_site_type.match,
+            )
             pot_key = PotentialKey(
                 id=virtual_site_type.smirks, associated_handler=virtual_site_type.type
             )
@@ -560,21 +562,21 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
                 parameters={
                     "sigma": virtual_site_type.sigma,
                     "epsilon": virtual_site_type.epsilon,
-                    "distance": virtual_site_type.distance,
+                    # "distance": virtual_site_type.distance,
                 }
             )
-            if virtual_site_type.type in {"MonovalentLonePair", "DivalentLonePair"}:
-                pot.parameters.update(
-                    {
-                        "outOfPlaneAngle": virtual_site_type.outOfPlaneAngle,
-                    }
-                )
-            if virtual_site_type.type in {"MonovalentLonePair"}:
-                pot.parameters.update(
-                    {
-                        "inPlaneAngle": virtual_site_type.inPlaneAngle,
-                    }
-                )
+            # if virtual_site_type.type in {"MonovalentLonePair", "DivalentLonePair"}:
+            #     pot.parameters.update(
+            #         {
+            #             "outOfPlaneAngle": virtual_site_type.outOfPlaneAngle,
+            #         }
+            #     )
+            # if virtual_site_type.type in {"MonovalentLonePair"}:
+            #     pot.parameters.update(
+            #         {
+            #             "inPlaneAngle": virtual_site_type.inPlaneAngle,
+            #         }
+            #     )
 
             self.slot_map.update({top_key: pot_key})
             self.potentials.update({pot_key: pot})
@@ -670,6 +672,47 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         handler.store_matches(parameter_handlers, topology)
 
         return handler
+
+    def _from_toolkit_virtual_sites(
+        self,
+        parameter_handler: "VirtualSiteHandler",
+        topology: "Topology",
+    ):
+        # TODO: Merge this logic into _from_toolkit
+
+        if not all(
+            isinstance(
+                p,
+                (
+                    VirtualSiteHandler.VirtualSiteBondChargeType,
+                    VirtualSiteHandler.VirtualSiteMonovalentLonePairType,
+                    VirtualSiteHandler.VirtualSiteDivalentLonePairType,
+                    VirtualSiteHandler.VirtualSiteTrivalentLonePairType,
+                ),
+            )
+            for p in parameter_handler.parameters
+        ):
+            raise NotImplementedError("Found unsupported virtual site types")
+
+        matches = parameter_handler.find_matches(topology)
+        for atoms, parameter_match in matches.items():
+            virtual_site_type = parameter_match[0].parameter_type
+            top_key = VirtualSiteKey(
+                atom_indices=atoms,
+                type=virtual_site_type.type,
+                match=virtual_site_type.match,
+            )
+            pot_key = PotentialKey(
+                id=virtual_site_type.smirks, associated_handler=virtual_site_type.type
+            )
+            pot = Potential(
+                parameters={
+                    "charge_increment": from_simtk(virtual_site_type.charge_increment),
+                }
+            )
+
+            self.slot_map.update({top_key: pot_key})
+            self.potentials.update({pot_key: pot})
 
     @classmethod
     @functools.lru_cache(None)

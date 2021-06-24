@@ -32,7 +32,7 @@ from openff.interchange.components.smirnoff import (
     library_charge_from_molecule,
 )
 from openff.interchange.exceptions import InvalidParameterHandlerError
-from openff.interchange.models import TopologyKey
+from openff.interchange.models import TopologyKey, VirtualSiteKey
 from openff.interchange.tests import BaseTest
 from openff.interchange.utils import get_test_file_path
 
@@ -338,18 +338,20 @@ class TestSMIRNOFFVirtualSites:
                 "xml_ff_virtual_sites_bondcharge_match_once",
                 "O=O",
             ),
-            (
-                "xml_ff_virtual_sites_bondcharge_match_once",
-                "N#N",
-            ),
+            # TODO: Implement match="once"
+            # (
+            #     "xml_ff_virtual_sites_bondcharge_match_once",
+            #     "N#N",
+            # ),
             (
                 "xml_ff_virtual_sites_bondcharge_match_all",
                 "N#N",
             ),
-            (
-                "xml_ff_virtual_sites_bondcharge_match_once_two_names",
-                "N#N",
-            ),
+            # TODO: Implement match="once" with two names
+            # (
+            #     "xml_ff_virtual_sites_bondcharge_match_once_two_names",
+            #     "N#N",
+            # ),
             (
                 "xml_ff_virtual_sites_bondcharge_match_once",
                 "CC=O",
@@ -391,13 +393,22 @@ class TestSMIRNOFFVirtualSites:
             topology=top,
         )
 
+        coul = out["Electrostatics"]
 
-def _get_n_virtual_sites(vdw_handler: "SMIRNOFFvdWHandler") -> int:
+        coul._from_toolkit_virtual_sites(
+            parameter_handler=forcefield["VirtualSites"], topology=top
+        )
+
+        assert _get_n_virtual_sites(coul) == _get_n_virtual_sites_toolkit(
+            force_field=forcefield,
+            topology=top,
+        )
+
+
+def _get_n_virtual_sites(handler: "SMIRNOFFPotentialHandler") -> int:
     """Get the number of TopologyKey objects in a SMIRNOFFvdWHandler that likely
     correspond to virtual sites"""
-    return len(
-        [top_key for top_key in vdw_handler.slot_map if len(top_key.atom_indices) > 1]
-    )
+    return len([key for key in handler.slot_map if type(key) == VirtualSiteKey])
 
 
 def _get_n_virtual_sites_toolkit(
