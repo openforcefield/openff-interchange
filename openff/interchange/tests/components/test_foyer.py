@@ -6,6 +6,7 @@ import numpy as np
 import parmed as pmd
 import pytest
 from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
 from simtk import unit as omm_unit
@@ -16,7 +17,6 @@ from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.models import PotentialKey, TopologyKey
-from openff.interchange.stubs import ForceField
 from openff.interchange.tests import BaseTest
 from openff.interchange.tests.utils import HAS_GROMACS, needs_gmx
 from openff.interchange.utils import get_test_files_dir_path
@@ -122,13 +122,15 @@ class TestFoyer(BaseTest):
     @needs_gmx
     @pytest.mark.parametrize(
         argnames="molecule_path",
-        argvalues = glob.glob(get_test_files_dir_path("foyer_test_molecules") + "/*.sdf"),
+        argvalues=glob.glob(get_test_files_dir_path("foyer_test_molecules") + "/*.sdf"),
     )
     @pytest.mark.slow
     def test_interchange_energies(self, molecule_path, get_interchanges, oplsaa):
         openff_interchange, pmd_structure = get_interchanges(molecule_path)
         parameterized_pmd_structure = oplsaa.apply(pmd_structure)
-        openff_energy = get_gromacs_energies(openff_interchange, decimal=3, mdp="cutoff_hbonds")
+        openff_energy = get_gromacs_energies(
+            openff_interchange, decimal=3, mdp="cutoff_hbonds"
+        )
         print(openff_interchange.handlers["Bonds"])
         parameterized_pmd_structure.save("from_foyer.gro")
         parameterized_pmd_structure.save("from_foyer.top")
@@ -151,6 +153,7 @@ class TestFoyer(BaseTest):
             },
         )
 
+
 class TestRBTorsions(BaseTest):
     @pytest.fixture(scope="class")
     def ethanol_with_rb_torsions(self):
@@ -158,7 +161,7 @@ class TestRBTorsions(BaseTest):
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
         parsley = ForceField("openff-1.0.0.offxml")
-        out = parsley.create_openff_interchange(top)
+        out = Interchange.from_smirnoff(parsley, top)
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
         out.positions = np.round(out.positions, 2)
@@ -199,7 +202,9 @@ class TestRBTorsions(BaseTest):
         omm = get_openmm_energies(ethanol_with_rb_torsions, round_positions=3).energies[
             "Torsion"
         ]
-        gmx = get_gromacs_energies(ethanol_with_rb_torsions, decimal=3).energies["Torsion"]
+        gmx = get_gromacs_energies(ethanol_with_rb_torsions, decimal=3).energies[
+            "Torsion"
+        ]
 
         assert (gmx - omm).m_as(kj_mol) < 1e-6
 
@@ -228,6 +233,8 @@ class TestRBTorsions(BaseTest):
         ).energies["Torsion"]
 
         # GROMACS vs. OpenMM was already compared, so just use one
-        omm = get_gromacs_energies(ethanol_with_rb_torsions, decimal=3).energies["Torsion"]
+        omm = get_gromacs_energies(ethanol_with_rb_torsions, decimal=3).energies[
+            "Torsion"
+        ]
 
         assert (omm - rb_torsion_energy_from_foyer).m_as(kj_mol) < 1e-6
