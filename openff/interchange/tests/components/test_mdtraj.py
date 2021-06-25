@@ -1,8 +1,10 @@
 import mdtraj as md
 import pytest
 from openff.toolkit.topology import Molecule
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from simtk.openmm import app
 
+from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import (
     OFFBioTop,
     _get_num_h_bonds,
@@ -11,7 +13,6 @@ from openff.interchange.components.mdtraj import (
     _store_bond_partners,
 )
 from openff.interchange.drivers import get_openmm_energies
-from openff.interchange.stubs import ForceField
 from openff.interchange.utils import get_test_file_path
 
 
@@ -29,7 +30,7 @@ def test_residues():
     assert [r.name for r in top.mdtop.residues] == ["ACE", "ALA", "GLY", "NME"]
 
     ff = ForceField("openff-1.3.0.offxml")
-    off_sys = ff.create_openff_interchange(top)
+    off_sys = Interchange.from_smirnoff(ff, top)
 
     # Assign positions and box vectors in order to run MM
     off_sys.positions = pdb.positions

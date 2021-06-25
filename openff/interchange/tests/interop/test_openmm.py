@@ -4,6 +4,7 @@ import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol
 from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from simtk import openmm
 from simtk import unit as simtk_unit
 from simtk.openmm import app
@@ -16,7 +17,6 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
 )
 from openff.interchange.interop.openmm import from_openmm
-from openff.interchange.stubs import ForceField
 from openff.interchange.utils import get_test_file_path
 
 nonbonded_resolution_matrix = [
@@ -196,7 +196,7 @@ def test_openmm_roundtrip():
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
-    off_sys = parsley.create_openff_interchange(top)
+    off_sys = Interchange.from_smirnoff(parsley, top)
 
     off_sys.box = [4, 4, 4]
     off_sys.positions = mol.conformers[0].value_in_unit(simtk_unit.nanometer)

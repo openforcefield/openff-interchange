@@ -2,6 +2,7 @@ import mdtraj as md
 import numpy as np
 import parmed as pmd
 import pytest
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from parmed.amber import readparm
 from pmdtest.utils import get_fn as get_pmd_fn
@@ -13,7 +14,6 @@ from openff.interchange.drivers.gromacs import (
     _run_gmx_energy,
     get_gromacs_energies,
 )
-from openff.interchange.stubs import ForceField
 from openff.interchange.tests import BaseTest
 from openff.interchange.tests.utils import top_from_smiles
 from openff.interchange.utils import get_test_file_path
@@ -25,7 +25,9 @@ class TestParmedConversion(BaseTest):
         return np.array([4.0, 4.0, 4.0])
 
     def test_box(self, argon_ff, argon_top, box):
-        off_sys = argon_ff.create_openff_interchange(topology=argon_top, box=box)
+        off_sys = Interchange.from_smirnoff(
+            force_field=argon_ff, topology=argon_top, box=box
+        )
         off_sys.positions = (
             np.zeros(shape=(argon_top.n_topology_atoms, 3)) * unit.angstrom
         )
@@ -37,7 +39,9 @@ class TestParmedConversion(BaseTest):
         )
 
     def test_basic_conversion_argon(self, argon_ff, argon_top, box):
-        off_sys = argon_ff.create_openff_interchange(argon_top, box=box)
+        off_sys = Interchange.from_smirnoff(
+            force_field=argon_ff, topology=argon_top, box=box
+        )
         off_sys.positions = np.zeros(shape=(argon_top.n_topology_atoms, 3))
         struct = off_sys._to_parmed()
 
@@ -51,7 +55,7 @@ class TestParmedConversion(BaseTest):
         top = top_from_smiles("C")
         parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
-        off_sys = parsley.create_openff_interchange(topology=top, box=box)
+        off_sys = Interchange.from_smirnoff(force_field=parsley, topology=top, box=box)
         # UnitArray(...)
         off_sys.positions = np.zeros(shape=(top.n_topology_atoms, 3))
         struct = off_sys._to_parmed()
@@ -83,7 +87,9 @@ class TestParmedConversion(BaseTest):
         assert np.allclose(struct.box, np.array([40, 40, 40, 90, 90, 90]))
 
     def test_basic_conversion_ammonia(self, ammonia_ff, ammonia_top, box):
-        off_sys = ammonia_ff.create_openff_interchange(ammonia_top, box=box)
+        off_sys = Interchange.from_smirnoff(
+            force_field=ammonia_ff, topology=ammonia_top, box=box
+        )
         off_sys.positions = np.zeros(shape=(ammonia_top.n_topology_atoms, 3))
         struct = off_sys._to_parmed()
 

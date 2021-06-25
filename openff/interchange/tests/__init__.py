@@ -1,9 +1,9 @@
 import mdtraj as md
 import pytest
 from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.typing.engines.smirnoff import ForceField
 
 from openff.interchange.components.mdtraj import OFFBioTop
-from openff.interchange.stubs import ForceField
 from openff.interchange.tests.utils import top_from_smiles
 from openff.interchange.utils import get_test_file_path
 

@@ -1,11 +1,12 @@
 import mdtraj as md
 import pytest
 from openff.toolkit.topology import Molecule
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
+from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers import get_amber_energies, get_gromacs_energies
-from openff.interchange.stubs import ForceField
 from openff.interchange.tests.utils import needs_gmx
 
 kj_mol = unit.kilojoule / unit.mol
@@ -22,7 +23,7 @@ def test_amber_energy():
     top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
-    off_sys = parsley.create_openff_interchange(top)
+    off_sys = Interchange.from_smirnoff(parsley, top)
 
     off_sys.box = [4, 4, 4]
     off_sys.positions = mol.conformers[0]

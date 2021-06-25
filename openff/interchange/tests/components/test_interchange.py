@@ -28,7 +28,7 @@ def test_getitem():
     """Test behavior of Interchange.__getitem__"""
     mol = Molecule.from_smiles("CCO")
     parsley = ForceField("openff-1.0.0.offxml")
-    out = parsley.create_openff_interchange(mol.to_topology())
+    out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
 
     out.box = [4, 4, 4]
 
@@ -61,7 +61,7 @@ class TestInterchangeCombination(BaseTest):
         top = OFFBioTop.from_molecules([mol])
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
-        openff_sys = parsley_unconstrained.create_openff_interchange(top)
+        openff_sys = Interchange.from_smirnoff(parsley_unconstrained, top)
 
         openff_sys.box = [4, 4, 4] * np.eye(3)
         openff_sys.positions = mol.conformers[0]._value / 10.0
@@ -166,7 +166,7 @@ class TestInterchange(BaseTest):
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")]
         )
 
-        out = force_field.create_openff_interchange(top)
+        out = Interchange.from_smirnoff(force_field, top)
 
         assert "Constraints" in out.handlers.keys()
         assert "Bonds" in out.handlers.keys()

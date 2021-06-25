@@ -62,7 +62,7 @@ class TestGROMACS(BaseTest):
 
         # Populate an entire interchange because ...
         force_field = ForceField("openff-1.0.0.offxml")
-        out = force_field.create_openff_interchange(top)
+        out = Interchange.from_smirnoff(force_field, top)
         out.box = [4, 4, 4]
         out.positions = benzene.conformers[0]
 
