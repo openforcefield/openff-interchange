@@ -8,6 +8,7 @@ from openff.units import unit
 from simtk import openmm
 from simtk.unit import nanometer as nm
 
+from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
@@ -27,7 +28,7 @@ class TestFromOpenMM(BaseTest):
         box = pdbfile.topology.getPeriodicBoxVectors()
         box = box.value_in_unit(nm) * unit.nanometer
 
-        out = argon_ff.create_openff_interchange(top)
+        out = Interchange.from_smirnoff(argon_ff, top)
         out.box = box
         out.positions = pdbfile.getPositions()
 
@@ -80,7 +81,7 @@ class TestFromOpenMM(BaseTest):
         box = pdbfile.topology.getPeriodicBoxVectors()
         box = box.value_in_unit(nm) * unit.nanometer
 
-        out = ff.create_openff_interchange(top)
+        out = Interchange.from_smirnoff(ff, top)
         out.box = box
         out.positions = pdbfile.getPositions()
 

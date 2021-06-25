@@ -118,8 +118,6 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
         angle_handler.add_parameter(angle_parameter.to_dict())
 
-        from openff.interchange.stubs import ForceField
-
         forcefield = ForceField()
         forcefield.register_parameter_handler(angle_handler)
         angle_potentials = SMIRNOFFAngleHandler._from_toolkit(

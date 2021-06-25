@@ -79,7 +79,7 @@ class TestRBTorsions(BaseTest):
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
         parsley = ForceField("openff-1.0.0.offxml")
-        out = parsley.create_openff_interchange(top)
+        out = Interchange.from_smirnoff(parsley, top)
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
         out.positions = np.round(out.positions, 2)

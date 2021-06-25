@@ -196,7 +196,7 @@ def test_openmm_roundtrip():
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
-    off_sys = parsley.create_openff_interchange(top)
+    off_sys = Interchange.from_smirnoff(parsley, top)
 
     off_sys.box = [4, 4, 4]
     off_sys.positions = mol.conformers[0].value_in_unit(simtk_unit.nanometer)
