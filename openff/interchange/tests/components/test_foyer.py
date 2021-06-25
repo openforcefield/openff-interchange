@@ -103,6 +103,9 @@ class TestFoyer(BaseTest):
 
     @needs_gmx
     @pytest.mark.slow
+    @pytest.mark.skip(
+        reason="Exporting to OpenMM with geometric mixing rules not yet implemented"
+    )
     def test_ethanol_energies(self, oplsaa_interchange_ethanol):
         from openff.interchange.tests.energy_tests.test_energies import (
             get_gromacs_energies,
@@ -126,12 +129,14 @@ class TestFoyer(BaseTest):
     )
     @pytest.mark.slow
     def test_interchange_energies(self, molecule_path, get_interchanges, oplsaa):
+        if "ethanol" in molecule_path or "adamantane" in molecule_path:
+            pytest.skip("Foyer/ParmEd bug with this molecule")
         openff_interchange, pmd_structure = get_interchanges(molecule_path)
         parameterized_pmd_structure = oplsaa.apply(pmd_structure)
         openff_energy = get_gromacs_energies(
             openff_interchange, decimal=3, mdp="cutoff_hbonds"
         )
-        print(openff_interchange.handlers["Bonds"])
+
         parameterized_pmd_structure.save("from_foyer.gro")
         parameterized_pmd_structure.save("from_foyer.top")
 
@@ -141,13 +146,14 @@ class TestFoyer(BaseTest):
             mdp_file=_get_mdp_file("cutoff_hbonds"),
         )
 
+        # TODO: Revisit after https://github.com/mosdef-hub/foyer/issues/431
         openff_energy.compare(
             through_foyer,
             custom_tolerances={
-                "Bond": 1 * unit.kilojoule / unit.mole,
-                "Angle": 1 * unit.kilojoule / unit.mole,
-                "Nonbonded": 1 * unit.kilojoule / unit.mole,
-                "Torsion": 1 * unit.kilojoule / unit.mole,
+                "Bond": 1e-3 * unit.kilojoule / unit.mole,
+                "Angle": 1e-3 * unit.kilojoule / unit.mole,
+                "Nonbonded": 1e-3 * unit.kilojoule / unit.mole,
+                "Torsion": 1e-3 * unit.kilojoule / unit.mole,
                 "vdW": 5 * unit.kilojoule / unit.mole,
                 "Electrostatics": 1 * unit.kilojoule / unit.mole,
             },
