@@ -13,7 +13,7 @@ from openff.interchange.tests.energy_tests.test_energies import needs_lmp
 
 
 @needs_lmp
-@pytest.mark.slow
+@pytest.mark.slow()
 @pytest.mark.parametrize("n_mols", [1, 2])
 @pytest.mark.parametrize(
     "mol",

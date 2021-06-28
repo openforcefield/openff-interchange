@@ -17,7 +17,7 @@ from openff.interchange.utils import get_test_file_path
 
 
 class TestFromOpenMM(BaseTest):
-    @pytest.mark.slow
+    @pytest.mark.slow()
     def test_from_openmm_pdbfile(self, argon_ff, argon_top):
         pdb_file_path = get_test_file_path("10-argons.pdb")
         pdbfile = openmm.app.PDBFile(pdb_file_path)
@@ -46,14 +46,14 @@ class TestFromOpenMM(BaseTest):
             )
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def unique_molecules(self):
         molecules = ["O", "C1CCCCC1", "C", "CCC", "CCO", "CCCCO"]
         return [Molecule.from_smiles(mol) for mol in molecules]
         # What if, instead ...
         # Molecule.from_iupac(molecules)
 
-    @pytest.mark.slow
+    @pytest.mark.slow()
     @pytest.mark.parametrize(
         "pdb_path",
         [

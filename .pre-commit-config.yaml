@@ -27,6 +27,7 @@ repos:
     additional_dependencies: [
         'flake8-bugbear',
         'flake8-absolute-import',
+        'flake8-pytest-style',
     ]
 - repo: https://github.com/asottile/pyupgrade
   rev: v2.19.4
@@ -41,7 +42,7 @@ repos:
     - id: interrogate
       args: [--fail-under=43, openff/interchange/]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 0.13.0
+  rev: 0.13.1
   hooks:
     - id: nbqa-pyupgrade
       args:

@@ -98,14 +98,14 @@ def test_openmm_nonbonded_methods(inputs):
             raise Exception
     elif issubclass(result, (BaseException, Exception)):
         exception = result
+        forcefield.get_parameter_handler("vdW", {}).method = vdw_method
+        forcefield.get_parameter_handler(
+            "Electrostatics", {}
+        ).method = electrostatics_method
+        openff_interchange = Interchange.from_smirnoff(
+            force_field=forcefield, topology=topology
+        )
         with pytest.raises(exception):
-            forcefield.get_parameter_handler("vdW", {}).method = vdw_method
-            forcefield.get_parameter_handler(
-                "Electrostatics", {}
-            ).method = electrostatics_method
-            openff_interchange = Interchange.from_smirnoff(
-                force_field=forcefield, topology=topology
-            )
             openff_interchange.to_openmm(combine_nonbonded_forces=True)
     else:
         raise Exception("uh oh")
@@ -126,7 +126,7 @@ def test_unsupported_mixing_rule():
         openff_sys.to_openmm(combine_nonbonded_forces=True)
 
 
-@pytest.mark.slow
+@pytest.mark.slow()
 @pytest.mark.parametrize("n_mols", [1, 2])
 @pytest.mark.parametrize(
     "mol",
@@ -187,7 +187,7 @@ def test_from_openmm_single_mols(mol, n_mols):
 @pytest.mark.xfail(
     reason="from_openmm does not correctly import vdW parameters from custom forces."
 )
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_openmm_roundtrip():
     mol = Molecule.from_smiles("CCO")
     mol.generate_conformers(n_conformers=1)
@@ -218,7 +218,7 @@ def test_openmm_roundtrip():
     )
 
 
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_combine_nonbonded_forces():
 
     mol = Molecule.from_smiles("ClC#CCl")

@@ -156,7 +156,7 @@ def compare_condensed_systems(mol, force_field):
 
 @skip_if_missing("openff.evaluator")
 @pytest.mark.timeout(60)
-@pytest.mark.slow
+@pytest.mark.slow()
 @pytest.mark.parametrize(
     "rdmol",
     Chem.SDMolSupplier(get_test_file_path("MiniDrugBankTrimmed.sdf"), sanitize=False),
