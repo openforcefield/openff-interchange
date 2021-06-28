@@ -16,7 +16,7 @@ from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.utils import get_test_file_path
 
 
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_residues():
     pdb = app.PDBFile(get_test_file_path("ALA_GLY/ALA_GLY.pdb"))
     traj = md.load(get_test_file_path("ALA_GLY/ALA_GLY.pdb"))

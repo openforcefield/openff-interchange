@@ -52,7 +52,7 @@ def test_box_setter():
         tmp.box = [2, 2, 3, 90, 90, 90]
 
 
-@pytest.mark.slow
+@pytest.mark.slow()
 class TestInterchangeCombination(BaseTest):
     def test_basic_combination(self, parsley_unconstrained):
         """Test basic use of Interchange.__add__() based on the README example"""
@@ -180,7 +180,7 @@ class TestInterchange(BaseTest):
 
     @needs_gmx
     @needs_lmp
-    @pytest.mark.slow
+    @pytest.mark.slow()
     @skip_if_missing("foyer")
     def test_atom_ordering(self):
         """Test that atom indices in bonds are ordered consistently between the slot map and topology"""

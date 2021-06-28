@@ -99,8 +99,8 @@ class TestParmedConversion(BaseTest):
 
         assert np.allclose(struct.box, np.array([40, 40, 40, 90, 90, 90]))
 
-    @pytest.mark.slow
-    @pytest.mark.xfail
+    @pytest.mark.slow()
+    @pytest.mark.xfail()
     def test_parmed_roundtrip(self):
         original = pmd.load_file(get_test_file_path("ALA_GLY/ALA_GLY.top"))
         gro = pmd.load_file(get_test_file_path("ALA_GLY/ALA_GLY.gro"))
@@ -155,7 +155,7 @@ class TestParmedConversion(BaseTest):
 
 
 class TestParmEdAmber:
-    @pytest.mark.slow
+    @pytest.mark.slow()
     def test_load_prmtop(self):
         struct = readparm.LoadParm(get_pmd_fn("trx.prmtop"))
         other_struct = readparm.AmberParm(get_pmd_fn("trx.prmtop"))
@@ -174,7 +174,7 @@ class TestParmEdAmber:
             prmtop_converted.box, np.eye(3) * 2.0 * unit.nanometer
         )
 
-    @pytest.mark.slow
+    @pytest.mark.slow()
     def test_read_box_parm7(self):
         top = readparm.LoadParm(get_pmd_fn("solv2.parm7"))
         out = Interchange._from_parmed(top)

@@ -57,8 +57,8 @@ def test_energy_report():
 @skip_if_missing("mbuild")
 @needs_gmx
 @needs_lmp
-@pytest.mark.xfail
-@pytest.mark.slow
+@pytest.mark.xfail()
+@pytest.mark.slow()
 @pytest.mark.parametrize("constrained", [True, False])
 @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
 def test_energies_single_mol(constrained, mol_smi):
@@ -134,7 +134,7 @@ def test_energies_single_mol(constrained, mol_smi):
 
 @needs_gmx
 @needs_lmp
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_liquid_argon():
     argon = Molecule.from_smiles("[#18]")
     pdbfile = app.PDBFile(get_test_file_path("packed-argon.pdb"))
@@ -252,7 +252,7 @@ def test_packmol_boxes(toolkit_file_path):
 
 
 @needs_lmp
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_water_dimer():
     tip3p = ForceField(get_test_file_path("tip3p.offxml"))
     water = Molecule.from_smiles("O")
@@ -297,7 +297,7 @@ def test_water_dimer():
 @needs_gmx
 @skip_if_missing("foyer")
 @skip_if_missing("mbuild")
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_process_rb_torsions():
     """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
 
@@ -362,8 +362,8 @@ def test_gmx_14_energies_exist():
 
 @needs_gmx
 @needs_lmp
-@pytest.mark.xfail
-@pytest.mark.slow
+@pytest.mark.xfail()
+@pytest.mark.slow()
 def test_cutoff_electrostatics():
     ion_ff = ForceField(get_test_file_path("ions.offxml"))
     ions = Topology.from_molecules(

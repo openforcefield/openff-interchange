@@ -102,7 +102,7 @@ class TestFoyer(BaseTest):
         assert oplsaa_interchange_ethanol["Electrostatics"].scale_14 == 0.5
 
     @needs_gmx
-    @pytest.mark.slow
+    @pytest.mark.slow()
     @pytest.mark.skip(
         reason="Exporting to OpenMM with geometric mixing rules not yet implemented"
     )
@@ -127,7 +127,7 @@ class TestFoyer(BaseTest):
         argnames="molecule_path",
         argvalues=glob.glob(get_test_files_dir_path("foyer_test_molecules") + "/*.sdf"),
     )
-    @pytest.mark.slow
+    @pytest.mark.slow()
     def test_interchange_energies(self, molecule_path, get_interchanges, oplsaa):
         if "ethanol" in molecule_path or "adamantane" in molecule_path:
             pytest.skip("Foyer/ParmEd bug with this molecule")
@@ -202,7 +202,7 @@ class TestRBTorsions(BaseTest):
         return out
 
     @needs_gmx
-    @pytest.mark.slow
+    @pytest.mark.slow()
     @pytest.mark.skip(reason="Something is broken with RBTorsions in OpenMM export")
     def test_rb_torsions(self, ethanol_with_rb_torsions):
         omm = get_openmm_energies(ethanol_with_rb_torsions, round_positions=3).energies[
@@ -214,7 +214,7 @@ class TestRBTorsions(BaseTest):
 
         assert (gmx - omm).m_as(kj_mol) < 1e-6
 
-    @pytest.mark.slow
+    @pytest.mark.slow()
     @skip_if_missing("foyer")
     @skip_if_missing("mbuild")
     @needs_gmx

@@ -14,7 +14,7 @@ kj_mol = unit.kilojoule / unit.mol
 
 @skip_if_missing("intermol")
 @needs_gmx
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_amber_energy():
     """Basic test to see if the amber energy driver is functional"""
     mol = Molecule.from_smiles("CCO")
