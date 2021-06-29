@@ -15,9 +15,11 @@ installation.md
 ---
 caption: User Guides
 ---
-using/amber.md
 using/gromacs.md
 using/openmm.md
+using/lammps.md
+using/amber.md
+using/charmm.md
 ```
 
 ```{toctree}
