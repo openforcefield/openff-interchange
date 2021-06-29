@@ -89,7 +89,7 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
         bond_handler.add_parameter(bond_parameter.to_dict())
 
-        from openff.interchange.stubs import ForceField
+        from openff.toolkit.typing.engines.smirnoff import ForceField
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(bond_handler)
@@ -117,8 +117,6 @@ class TestSMIRNOFFHandlers(BaseTest):
             id="b1000",
         )
         angle_handler.add_parameter(angle_parameter.to_dict())
-
-        from openff.interchange.stubs import ForceField
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(angle_handler)
@@ -237,7 +235,7 @@ class TestSMIRNOFFHandlers(BaseTest):
 
 class TestConstraints:
     @pytest.mark.parametrize(
-        "mol,n_constraints",
+        ("mol", "n_constraints"),
         [
             ("C", 4),
             ("CC", 6),
@@ -279,7 +277,7 @@ def test_library_charges_from_molecule():
 @skip_if_missing("jax")
 class TestMatrixRepresentations(BaseTest):
     @pytest.mark.parametrize(
-        "handler_name,n_ff_terms,n_sys_terms",
+        ("handler_name", "n_ff_terms", "n_sys_terms"),
         [("vdW", 10, 72), ("Bonds", 8, 64), ("Angles", 6, 104)],
     )
     def test_to_force_field_to_system_parameters(

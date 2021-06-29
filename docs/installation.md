@@ -2,26 +2,18 @@
 
 These instructions are likely in flux. If something looks out of date or is not working, please raise an issue.
 
-## Install dependencies
 
-Until a conda package is live, the core dependencies are listed in `devtools/conda-envs/test_env.yaml` and optional dependencies can be found in `devtools/conda-envs/minimal_env.yaml`.
+## Quick Installation
 
-Required dependencies:
-  - python
-  - pip
-  - numpy
-  - pandas
-  - pydantic
-  - pint
-  - openmm
-  - openff-toolkit
-  - openff-units
-  - openff-utilities
-  - jax
-  - mdtraj
-  - ele
+Install an alpha/beta/RC version with `conda` (or `mamba`) from `conda-forge`:
 
-Optional/test/dev dependencies:
+```shell
+conda install openff-interchange -c conda-forge -c conda-forge/label/openff-interchange_rc
+```
+
+## Optional dependencies
+
+Some libraries or tools are only used for development, testing, or optional features. This includes:
   - pytest
   - pytest-cov
   - codecov
@@ -29,22 +21,16 @@ Optional/test/dev dependencies:
   - mypy
   - unyt
   - intermol
-  - gromacs >=2021
+  - gromacs >=2020
   - panedr
   - lammps
   - mbuild
-  - foyer >=0.8.0
+  - foyer >=0.8.1
 
-If portions of the API that require optional dependencies are called while some of those dependencies are not available, an informative error message should be provided.
+If this list looks out of date, please raise an issue.
 
-All packages are assumed to be at their latest version. In particular, compatibility with older versions of the OpenFF Toolkit (i.e. versions 0.9.0 and older) are not guaranteed.
+If portions of the API that require optional dependencies are called while some of those dependencies are not available, an informative error message should be provided. If one is not provided or is insufficiently informative, please raise an issue.
 
-All packages (with the exceptions of GROMACS via `bioconda`, `openff-units`, and `openff-utilities` described above) are available on `conda-forge` and it assumed that `conda` is used to install them. Most are also available on PyPI via `pip`; while this method of installation is likely to work, it is not currently tested.
+All packages are assumed to be at their latest version. In particular, compatibility with older versions of the OpenFF Toolkit (i.e. versions 0.8.0 and older) are not guaranteed.
 
-## Install the package
-
-Until a conda package is live, the package must be installed locally. After cloning the repo:
-
-```shell
-python -m pip install -e .
-```
+All packages (with the exceptions of GROMACS via `bioconda`) are available on `conda-forge` and it assumed that `conda` is used to install them. Most are also available on PyPI via `pip`; while this method of installation is likely to work, it is not currently tested and therefore no guarantee is made.
