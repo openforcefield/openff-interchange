@@ -2,17 +2,18 @@ import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from simtk import unit as omm_unit
 
+from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.drivers import get_lammps_energies, get_openmm_energies
 from openff.interchange.drivers.lammps import _write_lammps_input
-from openff.interchange.stubs import ForceField
 from openff.interchange.tests.energy_tests.test_energies import needs_lmp
 
 
 @needs_lmp
-@pytest.mark.slow
+@pytest.mark.slow()
 @pytest.mark.parametrize("n_mols", [1, 2])
 @pytest.mark.parametrize(
     "mol",
@@ -58,7 +59,7 @@ def test_to_lammps_single_mols(mol, n_mols):
         )
         positions = positions * omm_unit.angstrom
 
-    openff_sys = parsley.create_openff_interchange(topology=top)
+    openff_sys = Interchange.from_smirnoff(parsley, top)
     openff_sys.positions = positions.value_in_unit(omm_unit.nanometer)
     openff_sys.box = top.box_vectors
 
