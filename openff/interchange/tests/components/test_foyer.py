@@ -51,7 +51,7 @@ class TestFoyer(BaseTest):
         top = OFFBioTop.from_molecules(molecule)
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
         oplsaa = foyer.Forcefield(name="oplsaa")
-        interchange = Interchange.from_foyer(topology=top, ff=oplsaa)
+        interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
         interchange.positions = molecule.conformers[0].value_in_unit(omm_unit.nanometer)
         interchange.box = [4, 4, 4]
         return interchange
