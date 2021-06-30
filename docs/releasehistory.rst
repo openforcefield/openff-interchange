@@ -13,4 +13,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 0.1.0 - Initial Release
 -----------------------
 
-The is an initial release in a pre-alpha phase.
+The is an initial pre-release of the OpenFF Interchange.
+
+See the [documentation](https://openff-interchange.readthedocs.io/en/latest/) for more information.
+
+Please report bugs, request features, or ask questions via the [issue tracker](https://github.com/openforcefield/openff-interchange/issues).
