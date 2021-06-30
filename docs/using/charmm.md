@@ -1,3 +1,3 @@
-## Use with AMBER
+## Use with CHARMM
 
 Under construction!

@@ -49,6 +49,19 @@ def get_test_file_path(test_file) -> str:
         raise FileNotFoundError(f"could not file file {test_file} in path {dir_path}")
 
 
+def get_test_files_dir_path(dirname):
+    """Given a directory with a collection of test data files, return its full path"""
+    dir_path = resource_filename("openff.interchange", "tests/files/")
+    test_dir = pathlib.Path(dir_path).joinpath(dirname)
+
+    if test_dir.is_dir():
+        return test_dir.as_posix()
+    else:
+        raise NotADirectoryError(
+            f"Provided directory {dirname} doesn't exist in {dir_path}"
+        )
+
+
 def get_nonbonded_force_from_openmm_system(omm_system):
     """Get a single NonbondedForce object with an OpenMM System"""
     for force in omm_system.getForces():

@@ -123,7 +123,7 @@ def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
     if "vdW" in openff_sys.handlers:
         nbfunc = 1
         scale_lj = openff_sys["vdW"].scale_14
-        gen_pairs = "yes"
+        gen_pairs = "no"
         handler_key = "vdW"
     elif "Buckingham-6" in openff_sys.handlers:
         nbfunc = 2
@@ -309,16 +309,36 @@ def _write_atoms(
 
     _store_bond_partners(openff_sys.topology.mdtop)
 
+    try:
+        mixing_rule = openff_sys["vdW"].mixing_rule
+        scale_lj = openff_sys["vdW"].scale_14
+    except LookupError:
+        mixing_rule = openff_sys["Buckingham-6"].mixing_rule
+        scale_lj = openff_sys["Buckingham-6"].scale_14
+
     # Use a set to de-duplicate
     pairs: Set[Tuple] = {*_iterate_pairs(openff_sys.topology.mdtop)}
     for pair in pairs:
         indices = [a.index for a in pair]
         indices = sorted(indices)
+        parameters1 = _get_lj_parameters(openff_sys, indices[0])
+        sigma1 = parameters1["sigma"].to(unit.nanometer).magnitude
+        epsilon1 = parameters1["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude
+        parameters2 = _get_lj_parameters(openff_sys, indices[1])
+        sigma2 = parameters2["sigma"].to(unit.nanometer).magnitude
+        epsilon2 = parameters2["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude
+        epsilon_mix = (epsilon1 * epsilon2) ** 0.5
+        if mixing_rule == "lorentz-berthelot":
+            sigma_mix = (sigma1 + sigma2) * 0.5
+        elif mixing_rule == "geometric":
+            sigma_mix = (sigma1 * sigma2) ** 0.5
         top_file.write(
-            "{:7d} {:7d} {:6d}\n".format(
+            "{:7d} {:7d} {:6d} {:16g} {:16g}\n".format(
                 indices[0] + 1,
                 indices[1] + 1,
                 1,
+                sigma_mix,
+                epsilon_mix * scale_lj,
             )
         )
 

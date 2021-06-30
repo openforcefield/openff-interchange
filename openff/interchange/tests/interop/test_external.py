@@ -2,21 +2,22 @@ import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from simtk import openmm
 from simtk.unit import nanometer as nm
 
+from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
-from openff.interchange.stubs import ForceField
 from openff.interchange.tests import BaseTest
 from openff.interchange.utils import get_test_file_path
 
 
 class TestFromOpenMM(BaseTest):
-    @pytest.mark.slow
+    @pytest.mark.slow()
     def test_from_openmm_pdbfile(self, argon_ff, argon_top):
         pdb_file_path = get_test_file_path("10-argons.pdb")
         pdbfile = openmm.app.PDBFile(pdb_file_path)
@@ -27,7 +28,7 @@ class TestFromOpenMM(BaseTest):
         box = pdbfile.topology.getPeriodicBoxVectors()
         box = box.value_in_unit(nm) * unit.nanometer
 
-        out = argon_ff.create_openff_interchange(top)
+        out = Interchange.from_smirnoff(argon_ff, top)
         out.box = box
         out.positions = pdbfile.getPositions()
 
@@ -45,14 +46,14 @@ class TestFromOpenMM(BaseTest):
             )
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def unique_molecules(self):
         molecules = ["O", "C1CCCCC1", "C", "CCC", "CCO", "CCCCO"]
         return [Molecule.from_smiles(mol) for mol in molecules]
         # What if, instead ...
         # Molecule.from_iupac(molecules)
 
-    @pytest.mark.slow
+    @pytest.mark.slow()
     @pytest.mark.parametrize(
         "pdb_path",
         [
@@ -80,7 +81,7 @@ class TestFromOpenMM(BaseTest):
         box = pdbfile.topology.getPeriodicBoxVectors()
         box = box.value_in_unit(nm) * unit.nanometer
 
-        out = ff.create_openff_interchange(top)
+        out = Interchange.from_smirnoff(ff, top)
         out.box = box
         out.positions = pdbfile.getPositions()
 

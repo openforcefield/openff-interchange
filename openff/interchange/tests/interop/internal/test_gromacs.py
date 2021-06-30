@@ -52,7 +52,7 @@ class TestGROMACS(BaseTest):
         with pytest.raises(UnsupportedExportError, match="rule `geometric` not compat"):
             openff_sys.to_top("out.top")
 
-    @pytest.mark.slow
+    @pytest.mark.slow()
     def test_residue_names_in_gro_file(self):
         """Test that residue names > 5 characters don't break .gro file output"""
         benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
@@ -62,7 +62,7 @@ class TestGROMACS(BaseTest):
 
         # Populate an entire interchange because ...
         force_field = ForceField("openff-1.0.0.offxml")
-        out = force_field.create_openff_interchange(top)
+        out = Interchange.from_smirnoff(force_field, top)
         out.box = [4, 4, 4]
         out.positions = benzene.conformers[0]
 
