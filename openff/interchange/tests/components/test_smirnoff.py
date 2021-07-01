@@ -408,6 +408,30 @@ class TestSMIRNOFFVirtualSites:
             topology=top,
         )
 
+    def test_store_trivalent_lone_pair_virtual_site(self):
+        from openff.toolkit.tests.test_forcefield import (
+            create_ammonia,
+            xml_ff_virtual_sites_trivalent_match_once,
+        )
+
+        top = create_ammonia().to_topology()
+
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
+        forcefield = ForceField(file_path, xml_ff_virtual_sites_trivalent_match_once)
+
+        vdw = SMIRNOFFvdWHandler._from_toolkit(
+            parameter_handler=forcefield["vdW"], topology=top
+        )
+
+        vdw._from_toolkit_virtual_sites(
+            parameter_handler=forcefield["VirtualSites"], topology=top
+        )
+
+        assert _get_n_virtual_sites(vdw) == _get_n_virtual_sites_toolkit(
+            force_field=forcefield,
+            topology=top,
+        )
+
 
 def _get_n_virtual_sites(handler: "SMIRNOFFPotentialHandler") -> int:
     """Get the number of TopologyKey objects in a SMIRNOFFvdWHandler that likely
