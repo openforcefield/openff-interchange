@@ -72,6 +72,11 @@ jobs:
       run: |
         mypy --show-error-codes --warn-unused-configs --warn-unused-ignores --namespace-packages -p "openff.interchange"
 
+    - name: Run docexamples
+      shell: bash -l {0}
+      run: |
+        pytest -v --doctest-modules openff/interchange/ --ignore=openff/interchange/tests
+
     - name: Run unit tests
       if: always()
       shell: bash -l {0}

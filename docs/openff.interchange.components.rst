@@ -1,29 +1,29 @@
-openff.system.components package
+openff.interchange.components package
 ================================
 
 Submodules
 ----------
 
-openff.system.components.potentials module
+openff.interchange.components.potentials module
 ------------------------------------------
 
-.. automodule:: openff.system.components.potentials
+.. automodule:: openff.interchange.components.potentials
    :members:
    :undoc-members:
    :show-inheritance:
 
-openff.system.components.smirnoff module
+openff.interchange.components.smirnoff module
 ----------------------------------------
 
-.. automodule:: openff.system.components.smirnoff
+.. automodule:: openff.interchange.components.smirnoff
    :members:
    :undoc-members:
    :show-inheritance:
 
-openff.system.components.system module
+openff.interchange.components.interchange module
 --------------------------------------
 
-.. automodule:: openff.system.components.system
+.. automodule:: openff.interchange.components.interchange
    :members:
    :undoc-members:
    :show-inheritance:
@@ -31,7 +31,7 @@ openff.system.components.system module
 Module contents
 ---------------
 
-.. automodule:: openff.system.components
+.. automodule:: openff.interchange.components
    :members:
    :undoc-members:
    :show-inheritance:

@@ -2,17 +2,18 @@ import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from simtk import unit as omm_unit
 
+from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.drivers import get_lammps_energies, get_openmm_energies
 from openff.interchange.drivers.lammps import _write_lammps_input
-from openff.interchange.stubs import ForceField
 from openff.interchange.tests.energy_tests.test_energies import needs_lmp
 
 
 @needs_lmp
-@pytest.mark.slow
+@pytest.mark.slow()
 @pytest.mark.parametrize("n_mols", [1, 2])
 @pytest.mark.parametrize(
     "mol",
@@ -20,21 +21,14 @@ from openff.interchange.tests.energy_tests.test_energies import needs_lmp
         "C",
         "CC",  # Adds a proper torsion term(s)
         "C=O",  # Simplest molecule with any improper torsion
-        pytest.param(
-            "OC=O",
-            marks=pytest.mark.xfail(reason="degenerate impropers"),
-        ),  # Simplest molecule with a multi-term torsion
+        "OC=O",  # Simplest molecule with a multi-term torsion
         "CCOC",  # This hits t86, which has a non-1.0 idivf
-        pytest.param(
-            "C1COC(=O)O1",
-            marks=pytest.mark.xfail(reason="degenerate impropers"),
-        ),  # This adds an improper, i2
+        "C1COC(=O)O1",  # This adds an improper, i2
     ],
 )
 def test_to_lammps_single_mols(mol, n_mols):
     """
-    Test that ForceField.create_openmm_system and Interchange.to_openmm produce
-    objects with similar energies
+    Test that Interchange.to_openmm Interchange.to_lammps report sufficiently similar energies.
 
     TODO: Tighten tolerances
     TODO: Test periodic and non-periodic
@@ -58,7 +52,7 @@ def test_to_lammps_single_mols(mol, n_mols):
         )
         positions = positions * omm_unit.angstrom
 
-    openff_sys = parsley.create_openff_interchange(topology=top)
+    openff_sys = Interchange.from_smirnoff(parsley, top)
     openff_sys.positions = positions.value_in_unit(omm_unit.nanometer)
     openff_sys.box = top.box_vectors
 
@@ -83,6 +77,6 @@ def test_to_lammps_single_mols(mol, n_mols):
             "Nonbonded": 100 * omm_unit.kilojoule_per_mole,
             "Electrostatics": 100 * omm_unit.kilojoule_per_mole,
             "vdW": 100 * omm_unit.kilojoule_per_mole,
-            "Torsion": 0.005 * omm_unit.kilojoule_per_mole,
+            "Torsion": 3e-5 * omm_unit.kilojoule_per_mole,
         },
     )
