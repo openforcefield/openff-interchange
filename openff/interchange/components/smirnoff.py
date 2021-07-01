@@ -1064,6 +1064,66 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         pass
 
 
+class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
+
+    type: Literal["Bonds"] = "Bonds"
+    expression: Literal[""] = ""
+
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [VirtualSiteHandler]
+
+    @classmethod
+    def supported_parameters(cls):
+        return ["distance", "outOfPlaneAngle", "inPlaneAngle"]
+
+    def store_matches(
+        self,
+        parameter_handler: ParameterHandler,
+        topology: Union["Topology", "OFFBioTop"],
+    ) -> None:
+        """
+        Populate self.slot_map with key-val pairs of slots
+        and unique potential identifiers
+
+        Differs from SMIRNOFFPotentialHandler.store_matches because each key
+        can point to multiple potentials (?); each value in the dict is a
+        list of parametertypes, whereas conventional handlers don't have lists
+        """
+        parameter_handler_name = getattr(parameter_handler, "_TAGNAME", None)
+        if self.slot_map:
+            self.slot_map = dict()
+        matches = parameter_handler.find_matches(topology)
+        for key, val_list in matches.items():
+            for val in val_list:
+                virtual_site_key = VirtualSiteKey(
+                    atom_indices=key,
+                    type=val.parameter_type.type,
+                    match=val.parameter_type.match,
+                )
+                potential_key = PotentialKey(
+                    id=val.parameter_type.smirks,
+                    associated_handler=parameter_handler_name,
+                )
+                self.slot_map[virtual_site_key] = potential_key
+
+    def store_potentials(self, parameter_handler: ParameterHandler) -> None:
+        if self.potentials:
+            self.potentials = dict()
+        for potential_key in self.slot_map.values():
+            smirks = potential_key.id
+            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
+            potential = Potential(
+                parameters={
+                    "distance": parameter_type.distance,
+                },
+            )
+            for attr in ["outOfPlaneAngle", "inPlaneAngle"]:
+                if hasattr(parameter_type, attr):
+                    potential.update({attr: getattr(parameter_type, attr)})
+            self.potentials[potential_key] = potential
+
+
 def library_charge_from_molecule(
     molecule: "Molecule",
 ) -> LibraryChargeHandler.LibraryChargeType:

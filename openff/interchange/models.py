@@ -34,7 +34,7 @@ class VirtualSiteKey(DefaultModel):
     )
     type: str = Field(description="The type of this virtual site")
     match: Literal["once", "all_permutations"] = Field(
-        "The `match` attribute of the associated virtual site type"
+        description="The `match` attribute of the associated virtual site type"
     )
 
     def __hash__(self):
