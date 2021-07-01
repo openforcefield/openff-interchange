@@ -335,7 +335,7 @@ class TestMatrixRepresentations(BaseTest):
 
 class TestSMIRNOFFVirtualSites:
     @pytest.mark.parametrize(
-        "xml,mol",
+        ("xml", "mol"),
         [
             (
                 "xml_ff_virtual_sites_bondcharge_match_once",
