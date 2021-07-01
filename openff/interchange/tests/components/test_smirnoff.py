@@ -29,6 +29,7 @@ from openff.interchange.components.smirnoff import (
     SMIRNOFFImproperTorsionHandler,
     SMIRNOFFPotentialHandler,
     SMIRNOFFvdWHandler,
+    SMIRNOFFVirtualSiteHandler,
     library_charge_from_molecule,
 )
 from openff.interchange.exceptions import InvalidParameterHandlerError
@@ -452,25 +453,39 @@ class TestSMIRNOFFVirtualSites:
             topology=top,
         )
 
+        virtual_site_handler = SMIRNOFFVirtualSiteHandler._from_toolkit(
+            parameter_handler=tip4p["VirtualSites"], topology=top
+        )
+
+        assert len(virtual_site_handler.slot_map) == 1
+        assert len(virtual_site_handler.potentials) == 1
+
     def test_store_tip5p_virtual_site(self):
         from openff.toolkit.tests.test_forcefield import create_water
 
         top = create_water().to_topology()
 
-        tip4p = ForceField(get_test_file_path("tip5p.offxml"))
+        tip5p = ForceField(get_test_file_path("tip5p.offxml"))
 
         vdw = SMIRNOFFvdWHandler._from_toolkit(
-            parameter_handler=tip4p["vdW"], topology=top
+            parameter_handler=tip5p["vdW"], topology=top
         )
 
         vdw._from_toolkit_virtual_sites(
-            parameter_handler=tip4p["VirtualSites"], topology=top
+            parameter_handler=tip5p["VirtualSites"], topology=top
         )
 
         assert _get_n_virtual_sites(vdw) == _get_n_virtual_sites_toolkit(
-            force_field=tip4p,
+            force_field=tip5p,
             topology=top,
         )
+
+        virtual_site_handler = SMIRNOFFVirtualSiteHandler._from_toolkit(
+            parameter_handler=tip5p["VirtualSites"], topology=top
+        )
+
+        assert len(virtual_site_handler.slot_map) == 2
+        assert len(virtual_site_handler.potentials) == 1
 
 
 def _get_n_virtual_sites(handler: "SMIRNOFFPotentialHandler") -> int:

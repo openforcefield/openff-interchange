@@ -1121,7 +1121,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
             )
             for attr in ["outOfPlaneAngle", "inPlaneAngle"]:
                 if hasattr(parameter_type, attr):
-                    potential.update({attr: getattr(parameter_type, attr)})
+                    potential.parameters.update({attr: getattr(parameter_type, attr)})
             self.potentials[potential_key] = potential
 
 

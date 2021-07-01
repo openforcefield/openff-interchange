@@ -19,7 +19,7 @@
       sigma="1.0 * angstrom"
       epsilon="0.0 * kilocalories_per_mole"
       outOfPlaneAngle="54.71384225*degree"
-      match="once">
+      match="all_permutations">
     </VirtualSite>
   </VirtualSites>
   <Constraints version="0.3">
