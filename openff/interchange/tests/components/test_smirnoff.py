@@ -432,6 +432,26 @@ class TestSMIRNOFFVirtualSites:
             topology=top,
         )
 
+    def test_store_tip4p_virtual_site(self):
+        from openff.toolkit.tests.test_forcefield import create_water
+
+        top = create_water().to_topology()
+
+        tip4p = ForceField(get_test_file_path("tip4p.offxml"))
+
+        vdw = SMIRNOFFvdWHandler._from_toolkit(
+            parameter_handler=tip4p["vdW"], topology=top
+        )
+
+        vdw._from_toolkit_virtual_sites(
+            parameter_handler=tip4p["VirtualSites"], topology=top
+        )
+
+        assert _get_n_virtual_sites(vdw) == _get_n_virtual_sites_toolkit(
+            force_field=tip4p,
+            topology=top,
+        )
+
 
 def _get_n_virtual_sites(handler: "SMIRNOFFPotentialHandler") -> int:
     """Get the number of TopologyKey objects in a SMIRNOFFvdWHandler that likely

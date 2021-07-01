@@ -1108,6 +1108,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                 self.slot_map[virtual_site_key] = potential_key
 
     def store_potentials(self, parameter_handler: ParameterHandler) -> None:
+        """Store VirtualSite-specific parameter-like data."""
         if self.potentials:
             self.potentials = dict()
         for potential_key in self.slot_map.values():
