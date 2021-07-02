@@ -4,6 +4,7 @@ import functools
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Type, TypeVar, Union
 
+import numpy as np
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
@@ -1123,6 +1124,57 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                 if hasattr(parameter_type, attr):
                     potential.parameters.update({attr: getattr(parameter_type, attr)})
             self.potentials[potential_key] = potential
+
+    def _get_local_frame_weights(self, virtual_site_key: "VirtualSiteKey"):
+        potential_key = self.slot_map[virtual_site_key]
+        potential = self.potentials[potential_key]
+        if potential.type == "BondCharge":
+            origin_weight = [1.0, 0.0]
+            x_direction = [-1.0, 1.0]
+            y_direction = [-1.0, 1.0]
+        elif potential.type == "MonovalentLonePair":
+            origin_weight = [-1, 0.0, 0.0]
+            x_direction = [-1.0, 1.0, 0.0]
+            y_direction = [-1.0, 0.0, 1.0]
+        elif potential.type == "DivalentLonePair":
+            origin_weight = [0.0, 1.0, 0.0]
+            x_direction = [0.5, -1.0, 0.5]
+            y_direction = [1.0, -1.0, 1.0]
+        elif potential.type == "TrivalentLonePair":
+            origin_weight = [0.0, 1.0, 0.0, 0.0]
+            x_direction = [1 / 3, -1.0, 1 / 3, 1 / 3]
+            y_direction = [1.0, -1.0, 0.0, 0.0]
+
+        return origin_weight, x_direction, y_direction
+
+    def _get_local_frame_position(self, virtual_site_key: "VirtualSiteKey"):
+        potential_key = self.slot_map[virtual_site_key]
+        potential = self.potentials[potential_key]
+        if potential.type == "BondCharge":
+            distance = potential.parameters["distance"].m_as(unit.angstrom)
+            local_frame_position = [-1.0 * distance, 0.0, 0.0]
+        elif potential.type == "MonovalentLonePair":
+            distance = potential.parameters["distance"].m_as(unit.angstrom)
+            theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
+            psi = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
+            local_frame_position = [
+                distance / np.cos(theta) * np.cos(psi),
+                distance / np.sin(theta) * np.cos(psi),
+                distance / np.sin,
+            ]
+        elif potential.type == "DivalentLonePair":
+            distance = potential.parameters["distance"].m_as(unit.angstrom)
+            theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
+            local_frame_position = [
+                -1.0 * distance / np.cos(theta) * np.cos(theta),
+                0.0,
+                distance / np.sin(theta) * np.sin(theta),
+            ]
+        elif potential.type == "TrivalentLonePair":
+            distance = potential.parameters["distance"].m_as(unit.angstrom)
+            local_frame_position = [-1.0 * distance, 0.0, 0.0]
+
+        return local_frame_position
 
 
 def library_charge_from_molecule(
