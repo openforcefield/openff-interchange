@@ -1,7 +1,8 @@
-from typing import Literal, Optional, Tuple
+from typing import Optional, Tuple
 
 from openff.units import unit
 from pydantic import BaseModel, Field
+from typing_extensions import Literal
 
 from openff.interchange.types import custom_quantity_encoder, json_loader
 

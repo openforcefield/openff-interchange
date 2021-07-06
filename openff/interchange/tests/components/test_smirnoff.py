@@ -334,46 +334,50 @@ class TestMatrixRepresentations(BaseTest):
 
 
 class TestSMIRNOFFVirtualSites:
+    from openff.toolkit.tests.test_forcefield import (
+        xml_ff_virtual_sites_bondcharge_match_all,
+        xml_ff_virtual_sites_bondcharge_match_once,
+        xml_ff_virtual_sites_divalent_match_all,
+        xml_ff_virtual_sites_trivalent_match_once,
+    )
+
     @pytest.mark.parametrize(
         ("xml", "mol"),
         [
             (
-                "xml_ff_virtual_sites_bondcharge_match_once",
+                xml_ff_virtual_sites_bondcharge_match_once,
                 "O=O",
             ),
             # TODO: Implement match="once"
             # (
-            #     "xml_ff_virtual_sites_bondcharge_match_once",
+            #     xml_ff_virtual_sites_bondcharge_match_once,
             #     "N#N",
             # ),
             (
-                "xml_ff_virtual_sites_bondcharge_match_all",
+                xml_ff_virtual_sites_bondcharge_match_all,
                 "N#N",
             ),
             # TODO: Implement match="once" with two names
             # (
-            #     "xml_ff_virtual_sites_bondcharge_match_once_two_names",
+            #     xml_ff_virtual_sites_bondcharge_match_once_two_names,
             #     "N#N",
             # ),
             (
-                "xml_ff_virtual_sites_bondcharge_match_once",
+                xml_ff_virtual_sites_bondcharge_match_once,
                 "CC=O",
             ),
             (
-                "xml_ff_virtual_sites_divalent_match_all",
+                xml_ff_virtual_sites_divalent_match_all,
                 "O",
             ),
             (
-                "xml_ff_virtual_sites_trivalent_match_once",
+                xml_ff_virtual_sites_trivalent_match_once,
                 "N",
             ),
         ],
     )
     def test_store_bond_charge_virtual_sites(self, xml, mol):
-        from openff.toolkit.tests.test_forcefield import (
-            TestForceFieldVirtualSites,
-            create_dinitrogen,
-        )
+        from openff.toolkit.tests.test_forcefield import create_dinitrogen
 
         if mol == "N#N":
             top = create_dinitrogen().to_topology()
@@ -382,7 +386,7 @@ class TestSMIRNOFFVirtualSites:
 
         forcefield = ForceField(
             get_data_file_path("test_forcefields/test_forcefield.offxml"),
-            getattr(TestForceFieldVirtualSites, xml),
+            xml,
         )
         out = Interchange.from_smirnoff(force_field=forcefield, topology=top)
         vdw = out["vdW"]
