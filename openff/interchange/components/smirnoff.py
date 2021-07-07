@@ -549,12 +549,17 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         Create a SMIRNOFFvdWHandler from toolkit data.
 
         """
+        if isinstance(parameter_handler, list):
+            parameter_handlers = parameter_handler
+        else:
+            parameter_handlers = [parameter_handler]
 
-        if type(parameter_handler) not in cls.allowed_parameter_handlers():
-            raise InvalidParameterHandlerError(
-                f"Found parameter handler type {type(parameter_handler)}, which is not "
-                f"supported by potential type {type(cls)}"
-            )
+        for parameter_handler in parameter_handlers:
+            if type(parameter_handler) not in cls.allowed_parameter_handlers():
+                raise InvalidParameterHandlerError(
+                    f"Found parameter handler type {type(parameter_handler)}, which is not "
+                    f"supported by potential type {type(cls)}"
+                )
 
         handler = cls(
             scale_13=parameter_handler.scale13,
@@ -569,6 +574,13 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         handler.store_potentials(parameter_handler=parameter_handler)
 
         return handler
+
+    @classmethod
+    def parameter_handler_precedence(cls) -> List[str]:
+        """The order in which parameter handlers take precedence when computing the
+        charges
+        """
+        return ["vdw", "VirtualSites"]
 
     def _from_toolkit_virtual_sites(
         self,
@@ -683,7 +695,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         }
 
     @classmethod
-    def charge_precedence(cls) -> List[str]:
+    def parameter_handler_precedence(cls) -> List[str]:
         """The order in which parameter handlers take precedence when computing the
         charges
         """
@@ -917,7 +929,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
         expected_matches = {i for i in range(reference_molecule.n_atoms)}
 
-        for handler_type in cls.charge_precedence():
+        for handler_type in cls.parameter_handler_precedence():
 
             if handler_type not in parameter_handlers:
                 continue
