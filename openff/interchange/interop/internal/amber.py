@@ -8,6 +8,31 @@ if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
 
 
+def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
+    """
+    Write a .prmtop file. See http://ambermd.org/prmtop.pdf for details.
+
+    """
+    if isinstance(file_path, str):
+        path = Path(file_path)
+    if isinstance(file_path, Path):
+        path = file_path
+
+    with open(path, "w") as prmtop:
+        import datetime
+
+        now = datetime.datetime.now()
+        prmtop.write(
+            "%%VERSION  VERSION_STAMP = V0001.000  DATE = "
+            f"{now.month:02d}/{now.day:02d}/{(now.year % 100):02}  "
+            f"{now.hour:02d}:{now.minute:02d}:{now.second:02d}"
+        )
+
+        from openff.interchange.interop.internal.gromacs import _build_typemap
+
+        typemap = _build_typemap(interchange)  # noqa
+
+
 def to_inpcrd(interchange: "Interchange", file_path: Union[Path, str]):
     """
     Write a .prmtop file. See https://ambermd.org/FileFormats.php#restart for details.
