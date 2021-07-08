@@ -1,21 +1,46 @@
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
+from openff.units import unit
 from openff.utilities.utilities import requires_package, temporary_cd
 from simtk import unit as omm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.exceptions import SanderError
-from openff.interchange.utils import get_test_file_path
+from openff.interchange.exceptions import SanderError, UnsupportedExportError
+
+if TYPE_CHECKING:
+    from openff.interchange.components.smirnoff import SMIRNOFFvdWHandler
+
+
+def _write_in_file(interchange: "Interchange"):
+    with open("auto_generated.in", "w") as input_file:
+        input_file.write(
+            "single-point energy\n" "&cntrl\n" "imin=1,\n" "maxcyc=0,\n" "ntb=1,\n"
+        )
+
+        vdw_handler: "SMIRNOFFvdWHandler" = interchange.handlers["vdW"]
+        vdw_method = vdw_handler.method.lower().replace("-", "")
+        vdw_cutoff = vdw_handler.cutoff.m_as(unit.angstrom)  # type: ignore[attr-defined]
+        vdw_cutoff = round(vdw_cutoff, 4)
+        if vdw_method == "cutoff":
+            input_file.write(f"cut={vdw_cutoff},\n")
+        else:
+            raise UnsupportedExportError(f"vdW method {vdw_method} not supported")
+        if getattr(vdw_handler, "switch_width", None) is not None:
+            switch_distance = vdw_handler.cutoff - vdw_handler.switch_width
+            switch_distance = switch_distance.m_as(unit.angstrom)  # type: ignore
+            switch_distance = round(switch_distance, 4)
+            input_file.write(f"fswitch={switch_distance},\n")
+
+        input_file.write("/\n")
 
 
 def get_amber_energies(
     off_sys: Interchange,
     writer: str = "parmed",
-    electrostatics=True,
 ) -> EnergyReport:
     """
     Given an OpenFF Interchange object, return single-point energies as computed by Amber.
@@ -29,9 +54,6 @@ def get_amber_energies(
     writer : str, default="parmed"
         A string key identifying the backend to be used to write GROMACS files. The
         default value of `"parmed"` results in ParmEd being used as a backend.
-    electrostatics : bool, default=True
-        A boolean indicating whether or not electrostatics should be included in the energy
-        calculation.
 
     Returns
     -------
@@ -42,13 +64,14 @@ def get_amber_energies(
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             struct = off_sys._to_parmed()
-            struct.save("out.inpcrd")
+            struct.save("inpcrd.rst7")
             struct.save("out.prmtop")
             off_sys.to_top("out.top", writer=writer)
+            _write_in_file(interchange=off_sys)
             report = _run_sander(
                 prmtop_file="out.prmtop",
-                inpcrd_file="out.inpcrd",
-                electrostatics=electrostatics,
+                inpcrd_file="inpcrd.rst7",
+                input_file="auto_generated.in",
             )
             return report
 
@@ -57,7 +80,7 @@ def get_amber_energies(
 def _run_sander(
     inpcrd_file: Union[Path, str],
     prmtop_file: Union[Path, str],
-    electrostatics=True,
+    input_file: Union[Path, str],
 ):
     """
     Given Amber files, return single-point energies as computed by Amber.
@@ -68,21 +91,19 @@ def _run_sander(
         The path to an Amber topology (`.prmtop`) file.
     inpcrd_file : str or pathlib.Path
         The path to an Amber coordinate (`.inpcrd`) file.
-    electrostatics : bool, default=True
-        A boolean indicated whether or not electrostatics should be included in the energy
-        calculation.
+    inpcrd_file : str or pathlib.Path
+        The path to an Amber input (`.in`) file.
 
     Returns
-    -------gg
+    -------
     report : EnergyReport
         An `EnergyReport` object containing the single-point energies.
 
     """
     from intermol.amber import _group_energy_terms
 
-    in_file = get_test_file_path("min.in")
     sander_cmd = (
-        f"sander -i {in_file} -c {inpcrd_file} -p {prmtop_file} -o out.mdout -O"
+        f"sander -i {input_file} -c {inpcrd_file} -p {prmtop_file} -o out.mdout -O"
     )
 
     sander = subprocess.Popen(
@@ -96,7 +117,7 @@ def _run_sander(
     _, err = sander.communicate()
 
     if sander.returncode:
-        raise SanderError
+        raise SanderError(err)
 
     energies, _ = _group_energy_terms("mdinfo")
 

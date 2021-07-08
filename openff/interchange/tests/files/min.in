@@ -1,7 +1,7 @@
 recomputing energies with Cartesian restraints
 &cntrl
 imin=1,
-maxcyc = 1,
+maxcyc=0,
 ntb=1,
 cut=9.0
 /
