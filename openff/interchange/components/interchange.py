@@ -312,9 +312,22 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
-    def _to_crd(self, file_path: Union[Path, str], writer="parmed"):
-        """Export this interchange to an Amber .crd file"""
-        if writer == "parmed":
+    def to_psf(self, file_path: Union[Path, str]):
+        """Export this interchange to a CHARMM-style .psf file"""
+        raise UnsupportedExportError
+
+    def to_crd(self, file_path: Union[Path, str]):
+        """Export this interchange to a CHARMM-style .crd file"""
+        raise UnsupportedExportError
+
+    def to_inpcrd(self, file_path: Union[Path, str], writer="internal"):
+        """Export this interchange to an Amber .inpcrd file"""
+        if writer == "internal":
+            from openff.interchange.interop.internal.amber import to_inpcrd
+
+            to_inpcrd(self, file_path)
+
+        elif writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
 
             ParmEdWrapper().to_file(self, file_path)

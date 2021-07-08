@@ -22,7 +22,7 @@ class ParmEdWrapper(InteroperabilityWrapper):
     """Wrapper around ParmEd writers"""
 
     def __init__(self):
-        self._write_formats = [".gro", ".top", ".prmtop", ".crd"]
+        self._write_formats = [".gro", ".top", ".prmtop", ".inpcrd"]
 
     def to_file(self, openff_sys: Interchange, file_path: Union[str, Path]):
         """
@@ -38,7 +38,7 @@ class ParmEdWrapper(InteroperabilityWrapper):
         if file_ext not in self._write_formats:
             raise UnsupportedExportError(file_ext)
 
-        if openff_sys.positions is None and file_ext in [".gro", ".crd"]:
+        if openff_sys.positions is None and file_ext in [".gro", ".inpcrd"]:
             raise MissingPositionsError
 
         if openff_sys.box is None and file_ext in [".gro", ".prmtop"]:
