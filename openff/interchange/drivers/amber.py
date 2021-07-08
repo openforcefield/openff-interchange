@@ -35,6 +35,30 @@ def _write_in_file(interchange: "Interchange"):
             switch_distance = round(switch_distance, 4)
             input_file.write(f"fswitch={switch_distance},\n")
 
+        if "Constraints" not in interchange.handlers:
+            input_file.write("ntc=2,\n")
+        elif "Bonds" not in interchange.handlers:
+            input_file.write("ntc=2,\n")
+        else:
+            num_constraints = len(interchange["Constraints"].slot_map)
+            if num_constraints == 0:
+                input_file.write("ntc=2,\n")
+            else:
+                from openff.interchange.components.mdtraj import _get_num_h_bonds
+
+                num_h_bonds = _get_num_h_bonds(interchange.topology.mdtop)
+                num_bonds = len(interchange["Bonds"].slot_map)
+                num_angles = len(interchange["Angles"].slot_map)
+
+                if num_constraints == len(interchange["Bonds"].slot_map):
+                    input_file.write("ntc=3,\n")
+                elif num_constraints == num_h_bonds:
+                    input_file.write("ntc=3,\n")
+                elif num_constraints == (num_bonds + num_angles):
+                    raise UnsupportedExportError(
+                        "Unclear how to constrain angles with sander"
+                    )
+
         input_file.write("/\n")
 
 
