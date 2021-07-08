@@ -175,7 +175,7 @@ class TestSMIRNOFFHandlers(BaseTest):
 
         np.testing.assert_allclose(
             [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
-            [-0.1088, 0.0267, 0.0267, 0.0267, 0.0267],
+            [-0.10868, 0.02717, 0.02717, 0.02717, 0.02717],
         )
 
     def test_electrostatics_library_charges(self):
@@ -229,7 +229,8 @@ class TestSMIRNOFFHandlers(BaseTest):
         # sum is [-0.068,  0.068]
         np.testing.assert_allclose(
             [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
-            [-0.068, 0.068],
+            [-0.06806, 0.06806],
+            atol=1e-6,
         )
 
 
