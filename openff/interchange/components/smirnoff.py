@@ -1134,7 +1134,9 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
             )
             for attr in ["outOfPlaneAngle", "inPlaneAngle"]:
                 if hasattr(parameter_type, attr):
-                    potential.parameters.update({attr: getattr(parameter_type, attr)})
+                    potential.parameters.update(
+                        {attr: from_simtk(getattr(parameter_type, attr))}
+                    )
             self.potentials[potential_key] = potential
 
     def _get_local_frame_weights(self, virtual_site_key: "VirtualSiteKey"):

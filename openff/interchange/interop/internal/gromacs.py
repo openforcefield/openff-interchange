@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Dict, Set, Tuple, Union
 
@@ -13,7 +14,7 @@ from openff.interchange.components.mdtraj import (
     _store_bond_partners,
 )
 from openff.interchange.exceptions import UnsupportedExportError
-from openff.interchange.models import TopologyKey
+from openff.interchange.models import TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
@@ -464,42 +465,126 @@ def _write_virtual_sites(
 ):
     virtual_site_handler = openff_sys["VirtualSites"]
 
-    if not all(k.type == "BondCharge" for k in virtual_site_handler.slot_map):
+    if not all(
+        k.type in ["BondCharge", "DivalentLonePair"]
+        for k in virtual_site_handler.slot_map
+    ):
         raise NotImplementedError("Only BondCharge virtual sites are implemented")
 
     top_file.write("[ virtual_sites2 ]\n; site  ai  aj  funct   a\n")
-    for virtual_site_key in virtual_site_handler.slot_map:
-        reference_atoms = virtual_site_key.atom_indices
-        if virtual_site_key.type != "BondCharge" or len(reference_atoms) != 2:
-            raise NotImplementedError
 
-        virtual_site_index = virtual_site_map[virtual_site_key]
-        atom1 = reference_atoms[0]
-        atom2 = reference_atoms[1]
-        func = 1
+    started_virtual_sites2 = False
+    started_virtual_sites3 = False
+    # TODO: Cleaner implementation than filter + sort? Maybe split it up into each type
+    # and do them sequentially?
+    for virtual_site_key in sorted(
+        (k for k in virtual_site_handler.slot_map.keys() if type(k) == VirtualSiteKey),
+        key=lambda x: x.type,
+    ):
+        if virtual_site_key.type == "BondCharge":
+            if not started_virtual_sites2:
+                top_file.write("\n[ virtual_sites2 ]\n; site  ai  aj  funct   a\n")
+                started_virtual_sites2 = True
 
-        bond_key = TopologyKey(atom_indices=reference_atoms)
-        bond_length = (
-            openff_sys["Bonds"]
-            .potentials[openff_sys["Bonds"].slot_map[bond_key]]
-            .parameters["length"]
-            .m_as(unit.nanometer)
-        )
+            reference_atoms = virtual_site_key.atom_indices
+            if len(reference_atoms) != 2:
+                raise NotImplementedError
 
-        # import ipdb; ipdb.set_trace()
-        distance = (
-            virtual_site_handler.potentials[
-                virtual_site_handler.slot_map[virtual_site_key]
-            ]
-            .parameters["distance"]
-            .m_as(unit.nanometer)
-        )
+            virtual_site_index = virtual_site_map[virtual_site_key]
+            atom1 = reference_atoms[0]
+            atom2 = reference_atoms[1]
+            func = 1
 
-        a = 1 + distance / bond_length
+            bond_key = TopologyKey(atom_indices=reference_atoms)
+            bond_length = (
+                openff_sys["Bonds"]
+                .potentials[openff_sys["Bonds"].slot_map[bond_key]]
+                .parameters["length"]
+                .m_as(unit.nanometer)
+            )
 
-        top_file.write(f"{virtual_site_index}\t\t{atom1+1}\t{atom2+1}\t{func}\t{a}")
+            distance = (
+                virtual_site_handler.potentials[
+                    virtual_site_handler.slot_map[virtual_site_key]
+                ]
+                .parameters["distance"]
+                .m_as(unit.nanometer)
+            )
 
-    top_file.write("\n\n")
+            a = 1 + distance / bond_length
+
+            top_file.write(
+                f"{virtual_site_index}\t\t{atom1+1}\t{atom2+1}\t{func}\t{a}\n"
+            )
+
+        if virtual_site_key.type == "DivalentLonePair":
+            if not started_virtual_sites3:
+                top_file.write(
+                    "\n[ virtual_sites3 ]\n; site  ai  aj  ak funct   a   b\n"
+                )
+                started_virtual_sites2 = True
+
+            reference_atoms = sorted(virtual_site_key.atom_indices)
+            if len(reference_atoms) != 3:
+                raise NotImplementedError
+
+            virtual_site_index = virtual_site_map[virtual_site_key]
+            atom1 = reference_atoms[0]
+            atom2 = reference_atoms[1]
+            atom3 = reference_atoms[2]
+            func = 1
+
+            bond1_key = TopologyKey(atom_indices=(atom1, atom2))
+            bond1_length = (
+                openff_sys["Bonds"]
+                .potentials[openff_sys["Bonds"].slot_map[bond1_key]]
+                .parameters["length"]
+                .m_as(unit.nanometer)
+            )
+
+            bond2_key = TopologyKey(atom_indices=(atom1, atom3))
+            bond2_length = (
+                openff_sys["Bonds"]
+                .potentials[openff_sys["Bonds"].slot_map[bond2_key]]
+                .parameters["length"]
+                .m_as(unit.nanometer)
+            )
+
+            if bond1_length != bond2_length:
+                raise NotImplementedError
+
+            angle_key = TopologyKey(atom_indices=(atom2, atom1, atom3))
+            angle = (
+                openff_sys["Angles"]
+                .potentials[openff_sys["Angles"].slot_map[angle_key]]
+                .parameters["angle"]
+                .m_as(unit.radian)
+            )
+
+            distance = (
+                virtual_site_handler.potentials[
+                    virtual_site_handler.slot_map[virtual_site_key]
+                ]
+                .parameters["distance"]
+                .m_as(unit.nanometer)
+            )
+
+            out_of_plane_angle = (
+                virtual_site_handler.potentials[
+                    virtual_site_handler.slot_map[virtual_site_key]
+                ]
+                .parameters["outOfPlaneAngle"]
+                .m_as(unit.radian)
+            )
+
+            if out_of_plane_angle != 0:
+                raise NotImplementedError
+
+            a = -1.0 * distance / (math.cos(angle / 2.0) * bond1_length) / 2.0
+
+            top_file.write(
+                f"{virtual_site_index}\t\t{atom1+1}\t{atom2+1}\t{atom3+1}\t{func}\t{a}\t{a}\n"
+            )
 
 
 def _write_valence(
