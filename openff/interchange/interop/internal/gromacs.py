@@ -524,6 +524,8 @@ def _write_virtual_sites(
                 )
                 started_virtual_sites2 = True
 
+            # TODO: Cannot sort here. Atom ordering implies "chirality" of virtual sites,
+            #  i.e. which side of a 5-site water each lone pair particle should go.
             reference_atoms = sorted(virtual_site_key.atom_indices)
             if len(reference_atoms) != 3:
                 raise NotImplementedError
@@ -577,14 +579,27 @@ def _write_virtual_sites(
                 .m_as(unit.radian)
             )
 
-            if out_of_plane_angle != 0:
-                raise NotImplementedError
+            if out_of_plane_angle == 0:
+                func = 1
 
-            a = -1.0 * distance / (math.cos(angle / 2.0) * bond1_length) / 2.0
+                a = -1.0 * distance / (math.cos(angle / 2.0) * bond1_length) / 2.0
 
-            top_file.write(
-                f"{virtual_site_index}\t\t{atom1+1}\t{atom2+1}\t{atom3+1}\t{func}\t{a}\t{a}\n"
-            )
+                top_file.write(
+                    f"{virtual_site_index}\t\t{atom1+1}\t{atom2+1}\t{atom3+1}\t{func}\t{a}\t{a}\n"
+                )
+
+            else:
+                func = 4
+                a = (-1 * distance * math.cos(out_of_plane_angle)) / (
+                    2 * bond1_length * math.cos(angle / 2)
+                )
+                c = (-1 * distance * math.sin(out_of_plane_angle)) / (
+                    bond1_length ** 2 * math.sin(angle)
+                )
+
+                top_file.write(
+                    f"{virtual_site_index}\t\t{atom1+1}\t{atom2+1}\t{atom3+1}\t{func}\t{a}\t{a}\t{c}\n"
+                )
 
 
 def _write_valence(
