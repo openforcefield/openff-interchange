@@ -111,6 +111,9 @@ html_theme_options = {
     # or a tuple of three ints in the range [0, 255] corresponding to
     # a position in RGB space.
     "color_accent": "pale-green",
+    # Content Minification for deployment, prettification for debugging
+    "html_minify": True,
+    "css_minify": True,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
