@@ -199,7 +199,7 @@ class TestInterchange(BaseTest):
         benzene.name = "BENZ"
         biotop = OFFBioTop.from_molecules(benzene)
         biotop.mdtop = md.Topology.from_openmm(biotop.to_openmm())
-        out = Interchange.from_foyer(ff=oplsaa, topology=biotop)
+        out = Interchange.from_foyer(force_field=oplsaa, topology=biotop)
         out.box = [4, 4, 4]
         out.positions = benzene.conformers[0]
 
