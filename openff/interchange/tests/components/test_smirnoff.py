@@ -11,12 +11,14 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     LibraryChargeHandler,
     ParameterHandler,
     ToolkitAM1BCCHandler,
+    UnassignedProperTorsionParameterException,
+    UnassignedValenceParameterException,
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from simtk import unit as omm_unit
 from simtk import unit as simtk_unit
 
+from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.components.smirnoff import (
     SMIRNOFFAngleHandler,
@@ -83,8 +85,8 @@ class TestSMIRNOFFHandlers(BaseTest):
         bond_handler = BondHandler(version=0.3)
         bond_parameter = BondHandler.BondType(
             smirks="[*:1]~[*:2]",
-            k=1.5 * omm_unit.kilocalorie_per_mole / omm_unit.angstrom ** 2,
-            length=1.5 * omm_unit.angstrom,
+            k=1.5 * simtk_unit.kilocalorie_per_mole / simtk_unit.angstrom ** 2,
+            length=1.5 * simtk_unit.angstrom,
             id="b1000",
         )
         bond_handler.add_parameter(bond_parameter.to_dict())
@@ -112,8 +114,8 @@ class TestSMIRNOFFHandlers(BaseTest):
         angle_handler = AngleHandler(version=0.3)
         angle_parameter = AngleHandler.AngleType(
             smirks="[*:1]~[*:2]~[*:3]",
-            k=2.5 * omm_unit.kilocalorie_per_mole / omm_unit.radian ** 2,
-            angle=100 * omm_unit.degree,
+            k=2.5 * simtk_unit.kilocalorie_per_mole / simtk_unit.radian ** 2,
+            angle=100 * simtk_unit.degree,
             id="b1000",
         )
         angle_handler.add_parameter(angle_parameter.to_dict())
@@ -231,6 +233,41 @@ class TestSMIRNOFFHandlers(BaseTest):
             [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
             [-0.068, 0.068],
         )
+
+
+class TestUnassignedParameters(BaseTest):
+    def test_catch_unassigned_bonds(self, parsley, ethanol_top):
+        for param in parsley["Bonds"].parameters:
+            param.smirks = "[#99:1]-[#99:2]"
+
+        parsley.deregister_parameter_handler(parsley["Constraints"])
+
+        with pytest.raises(
+            UnassignedValenceParameterException,
+            match="BondHandler was not able to find par",
+        ):
+            Interchange.from_smirnoff(force_field=parsley, topology=ethanol_top)
+
+    def test_catch_unassigned_angles(self, parsley, ethanol_top):
+        for param in parsley["Angles"].parameters:
+            param.smirks = "[#99:1]-[#99:2]-[#99:3]"
+
+        with pytest.raises(
+            UnassignedValenceParameterException,
+            match="AngleHandler was not able to find par",
+        ):
+            Interchange.from_smirnoff(force_field=parsley, topology=ethanol_top)
+
+    def test_catch_unassigned_torsions(self, parsley, ethanol_top):
+        for param in parsley["ProperTorsions"].parameters:
+            param.smirks = "[#99:1]-[#99:2]-[#99:3]-[#99:4]"
+
+        with pytest.raises(
+            UnassignedProperTorsionParameterException,
+            match="- Topology indices [(]5, 0, 1, 6[)]: "
+            r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
+        ):
+            Interchange.from_smirnoff(force_field=parsley, topology=ethanol_top)
 
 
 class TestConstraints:
