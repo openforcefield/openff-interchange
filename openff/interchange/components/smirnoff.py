@@ -16,6 +16,8 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
     ToolkitAM1BCCHandler,
+    UnassignedProperTorsionParameterException,
+    UnassignedValenceParameterException,
     vdWHandler,
 )
 from openff.units import unit
@@ -98,6 +100,15 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
             )
             self.slot_map[topology_key] = potential_key
 
+        if self.__class__.__name__ in ["SMIRNOFFBondHandler", "SMIRNOFFAngleHandler"]:
+            valence_terms = self.valence_terms(topology)
+
+            parameter_handler._check_all_valence_terms_assigned(
+                assigned_terms=matches,
+                valence_terms=valence_terms,
+                exception_cls=UnassignedValenceParameterException,
+            )
+
     @classmethod
     def _from_toolkit(
         cls: Type[T],
@@ -130,6 +141,10 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def supported_parameters(cls):
         return ["smirks", "id", "k", "length"]
+
+    @classmethod
+    def valence_terms(cls, topology):
+        return [list(b.atoms) for b in topology.topology_bonds]
 
     def store_potentials(self, parameter_handler: "BondHandler") -> None:
         """
@@ -286,6 +301,10 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
     def supported_parameters(cls):
         return ["smirks", "id", "k", "angle"]
 
+    @classmethod
+    def valence_terms(cls, topology):
+        return list(topology.angles)
+
     def store_potentials(self, parameter_handler: "AngleHandler") -> None:
         """
         Populate self.potentials with key-val pairs of unique potential
@@ -359,6 +378,12 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
                     id=smirks, mult=n, associated_handler="ProperTorsions"
                 )
                 self.slot_map[topology_key] = potential_key
+
+        parameter_handler._check_all_valence_terms_assigned(
+            assigned_terms=matches,
+            valence_terms=list(topology.propers),
+            exception_cls=UnassignedProperTorsionParameterException,
+        )
 
     def store_potentials(self, parameter_handler: "ProperTorsionHandler") -> None:
         """
