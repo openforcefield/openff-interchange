@@ -672,7 +672,16 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         pass
 
     @property
-    def charges(self) -> Dict[TopologyKey, unit.Quantity]:
+    def charges(self):
+        return self.get_charges(include_virtual_sites=False)
+
+    @property
+    def charges_with_virtual_sites(self):
+        return self.get_charges(include_virtual_sites=True)
+
+    def get_charges(
+        self, include_virtual_sites=False
+    ) -> Dict[TopologyKey, unit.Quantity]:
         """Returns the total partial charge on each particle in the associated interchange."""
 
         charges = defaultdict(lambda: 0.0 * unit.e)
@@ -683,16 +692,27 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             for parameter_key, parameter_value in potential.parameters.items():
 
-                if parameter_key != "charge" and parameter_key != "charge_increment":
+                if parameter_key == "charge_increments":
+                    charge = -1.0 * np.sum(parameter_value)
+                    # assumes virtual sites can only have charges determined in one step
+                    # also, topology_key is actually a VirtualSiteKey
+                    charges[topology_key] = charge
+                elif parameter_key in ["charge", "charge_increment"]:
+                    charge = parameter_value
+                    charges[topology_key.atom_indices[0]] += charge
+                else:
                     raise NotImplementedError()
 
-                charge = parameter_value
-                charges[topology_key.atom_indices[0]] += charge
+        returned_charges = {}
 
-        return {
-            TopologyKey(atom_indices=(index,)): charge
-            for index, charge in charges.items()
-        }
+        for index, charge in charges.items():
+            if isinstance(index, int):
+                returned_charges[TopologyKey(atom_indices=(index,))] = charge
+            else:
+                if include_virtual_sites:
+                    returned_charges[index] = charge
+
+        return returned_charges
 
     @classmethod
     def parameter_handler_precedence(cls) -> List[str]:
@@ -758,8 +778,28 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         for atom_indices, parameter_match in matches.items():
             virtual_site_type = parameter_match[0].parameter_type
 
+            virtual_site_key = VirtualSiteKey(
+                atom_indices=atom_indices,
+                type=virtual_site_type.type,
+                match=virtual_site_type.match,
+            )
+
+            virtual_site_potential_key = PotentialKey(
+                id=virtual_site_type.smirks,
+                associated_handler="VirtualSiteHandler",
+            )
+
+            virtual_site_potential = Potential(
+                parameters={
+                    "charge_increments": from_simtk(virtual_site_type.charge_increment),
+                }
+            )
+
             matches = {}
             potentials = {}
+
+            self.slot_map.update({virtual_site_key: virtual_site_potential_key})
+            self.potentials.update({virtual_site_potential_key: virtual_site_potential})
 
             for i, atom_index in enumerate(atom_indices):
                 topology_key = TopologyKey(atom_indices=(atom_index,), mult=2)

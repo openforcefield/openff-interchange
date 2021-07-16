@@ -260,11 +260,11 @@ class TestSMIRNOFFHandlers(BaseTest):
         sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * unit.angstrom,
+            distance=1.4 * simtk_unit.angstrom,
             type="BondCharge",
             match="once",
-            charge_increment1=0.2 * unit.elementary_charge,
-            charge_increment2=0.1 * unit.elementary_charge,
+            charge_increment1=0.2 * simtk_unit.elementary_charge,
+            charge_increment2=0.1 * simtk_unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=sigma_type)
@@ -280,18 +280,21 @@ class TestSMIRNOFFHandlers(BaseTest):
         charges = []
         for force in via_toolkit.getForces():
             if type(force) == openmm.NonbondedForce:
-                for i in range(5):
+                for i in range(6):
                     charges.append(force.getParticleParameters(i)[0]._value)
 
         # Final charges are
         #   [0.5, -0.8, 0.1, 0.1, 0.1]
-        # + [0.2, 0.1, 0.0, 0.0, 0.0]
-        # = [0.7, -0.7, 0.1, 0.1, 0.1]
+        # + [0.2, 0.1, 0.0, 0.0, 0.0, -0.3]
+        # = [0.7, -0.7, 0.1, 0.1, 0.1, -0.3]
         np.testing.assert_allclose(
-            charges, [v.m for v in out["Electrostatics"].charges.values()]
+            charges,
+            [v.m for v in out["Electrostatics"].charges_with_virtual_sites.values()],
         )
 
-        # TODO: Also compare the charge assigned to the virtual site
+        np.testing.assert_allclose(
+            charges[:5], [v.m for v in out["Electrostatics"].charges.values()]
+        )
 
 
 class TestConstraints:
