@@ -755,24 +755,33 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             raise NotImplementedError("Found unsupported virtual site types")
 
         matches = parameter_handler.find_matches(topology)
-        for atoms, parameter_match in matches.items():
+        for atom_indices, parameter_match in matches.items():
             virtual_site_type = parameter_match[0].parameter_type
-            top_key = VirtualSiteKey(
-                atom_indices=atoms,
-                type=virtual_site_type.type,
-                match=virtual_site_type.match,
-            )
-            pot_key = PotentialKey(
-                id=virtual_site_type.smirks, associated_handler=virtual_site_type.type
-            )
-            pot = Potential(
-                parameters={
-                    "charge_increment": from_simtk(virtual_site_type.charge_increment),
-                }
-            )
 
-            self.slot_map.update({top_key: pot_key})
-            self.potentials.update({pot_key: pot})
+            matches = {}
+            potentials = {}
+
+            for i, atom_index in enumerate(atom_indices):
+                topology_key = TopologyKey(atom_indices=(atom_index,), mult=2)
+                potential_key = PotentialKey(
+                    id=virtual_site_type.smirks,
+                    mult=i,
+                    associated_handler="VirtualSiteHandler",
+                )
+
+                charge_increment = getattr(
+                    virtual_site_type, f"charge_increment{i + 1}"
+                )
+
+                potential = Potential(
+                    parameters={"charge_increment": from_simtk(charge_increment)}
+                )
+
+                matches[topology_key] = potential_key
+                potentials[potential_key] = potential
+
+        self.slot_map.update(matches)
+        self.potentials.update(potentials)
 
     @classmethod
     @functools.lru_cache(None)
