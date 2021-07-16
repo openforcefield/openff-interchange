@@ -38,6 +38,7 @@ _SUPPORTED_SMIRNOFF_HANDLERS = {
     "Electrostatics",
     "LibraryCharges",
     "ChargeIncrementModel",
+    "VirtualSites",
 }
 
 

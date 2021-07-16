@@ -120,19 +120,6 @@ class TestUnimplementedSMIRNOFFCases(BaseTest):
         ):
             Interchange.from_smirnoff(force_field=forcefield, topology=top)
 
-    def test_catch_virtual_sites(self):
-        from openff.toolkit.tests.test_forcefield import TestForceFieldVirtualSites
-
-        forcefield = ForceField(
-            get_data_file_path("test_forcefields/test_forcefield.offxml"),
-            TestForceFieldVirtualSites.xml_ff_virtual_sites_monovalent_match_once,
-        )
-
-        top = Molecule.from_smiles("CCO").to_topology()
-
-        with pytest.raises(SMIRNOFFHandlersNotImplementedError, match="VirtualSites"):
-            Interchange.from_smirnoff(force_field=forcefield, topology=top)
-
 
 class TestBadExports(BaseTest):
     def test_invalid_topology(self, parsley):

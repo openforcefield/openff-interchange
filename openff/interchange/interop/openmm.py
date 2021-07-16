@@ -60,6 +60,8 @@ def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.Syst
     _process_angle_forces(openff_sys, openmm_sys)
     _process_bond_forces(openff_sys, openmm_sys)
     _process_constraints(openff_sys, openmm_sys)
+    _process_virtual_sites(openff_sys, openmm_sys)
+
     return openmm_sys
 
 
@@ -501,6 +503,67 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             # electrostatics_force.addExclusion(p1, p2)
             electrostatics_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
             # vdw_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
+
+
+def _process_virtual_sites(openff_sys, openmm_sys):
+    try:
+        virtual_site_handler = openff_sys.handlers["VirtualSites"]
+    except KeyError:
+        return
+
+    vdw_handler = openff_sys.handlers["vdW"]
+    coul_handler = openff_sys.handlers["Electrostatics"]
+
+    # TODO: Handle case of split-out non-bonded forces
+    non_bonded_force = [
+        f for f in openmm_sys.getForces() if type(f) == openmm.NonbondedForce
+    ][0]
+
+    for virtual_site_key in virtual_site_handler.slot_map:
+        vdw_key = vdw_handler.slot_map.get(virtual_site_handler)
+        coul_key = coul_handler.slot_map.get(virtual_site_handler)
+        if vdw_key is None and coul_key is None:
+            raise Exception(
+                f"Virtual site {virtual_site_key} is not associated with any "
+                "vdW or electrostatics interactions"
+            )
+
+        if coul_key is not None:
+            coul_parameters = coul_handler.potentials[coul_key].parameters
+            charge = coul_parameters["charge"].m_as(
+                unit.elementary_charge,
+            )
+        if vdw_key is not None:
+            vdw_parameters = vdw_handler.potentials[vdw_key].parameters
+            sigma = vdw_parameters["sigma"].m_as(
+                unit.nanometer,
+            )
+            epsilon = vdw_parameters["epsilon"].m_as(
+                kj_mol,
+            )
+
+        virtual_site_index = openmm_sys.addParticle(mass=0.0)
+
+        (
+            origin_weights,
+            x_direction,
+            y_direction,
+        ) = virtual_site_handler._get_local_frame_weights(virtual_site_key)
+        position = virtual_site_handler._get_local_frame_position(virtual_site_key)
+
+        openmm_virtual_site = openmm.LocalCoordinatesSite(
+            virtual_site_key.atom_indices,
+            origin_weights,
+            x_direction,
+            y_direction,
+            position,
+        )
+
+        openmm_sys.setVirtualSite(virtual_site_index, openmm_virtual_site)
+
+        non_bonded_force.addParticle(charge, sigma, epsilon)
+
+        # TODO: Add virtual site exceptions
 
 
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):

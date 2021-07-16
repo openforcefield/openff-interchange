@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -14,9 +15,11 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from simtk import openmm
 from simtk import unit as omm_unit
 from simtk import unit as simtk_unit
 
+from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.components.smirnoff import (
     SMIRNOFFAngleHandler,
@@ -26,10 +29,11 @@ from openff.interchange.components.smirnoff import (
     SMIRNOFFImproperTorsionHandler,
     SMIRNOFFPotentialHandler,
     SMIRNOFFvdWHandler,
+    SMIRNOFFVirtualSiteHandler,
     library_charge_from_molecule,
 )
 from openff.interchange.exceptions import InvalidParameterHandlerError
-from openff.interchange.models import TopologyKey
+from openff.interchange.models import TopologyKey, VirtualSiteKey
 from openff.interchange.tests import BaseTest
 from openff.interchange.utils import get_test_file_path
 
@@ -327,3 +331,179 @@ class TestMatrixRepresentations(BaseTest):
             assert np.allclose(
                 np.sum(param_matrix, axis=1), np.ones(param_matrix.shape[0])
             )
+
+
+class TestSMIRNOFFVirtualSites:
+    from openff.toolkit.tests.test_forcefield import (
+        xml_ff_virtual_sites_bondcharge_match_all,
+        xml_ff_virtual_sites_bondcharge_match_once,
+        xml_ff_virtual_sites_divalent_match_all,
+        xml_ff_virtual_sites_trivalent_match_once,
+    )
+
+    @pytest.mark.parametrize(
+        ("xml", "mol"),
+        [
+            (
+                xml_ff_virtual_sites_bondcharge_match_once,
+                "O=O",
+            ),
+            # TODO: Implement match="once"
+            # (
+            #     xml_ff_virtual_sites_bondcharge_match_once,
+            #     "N#N",
+            # ),
+            (
+                xml_ff_virtual_sites_bondcharge_match_all,
+                "N#N",
+            ),
+            # TODO: Implement match="once" with two names
+            # (
+            #     xml_ff_virtual_sites_bondcharge_match_once_two_names,
+            #     "N#N",
+            # ),
+            (
+                xml_ff_virtual_sites_bondcharge_match_once,
+                "CC=O",
+            ),
+            (
+                xml_ff_virtual_sites_divalent_match_all,
+                "O",
+            ),
+            (
+                xml_ff_virtual_sites_trivalent_match_once,
+                "N",
+            ),
+        ],
+    )
+    def test_store_bond_charge_virtual_sites(self, xml, mol):
+        from openff.toolkit.tests.test_forcefield import create_dinitrogen
+
+        if mol == "N#N":
+            top = create_dinitrogen().to_topology()
+        else:
+            top = Molecule.from_smiles(mol).to_topology()
+
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            xml,
+        )
+        out = Interchange.from_smirnoff(force_field=forcefield, topology=top)
+        vdw = out["vdW"]
+
+        vdw._from_toolkit_virtual_sites(
+            parameter_handler=forcefield["VirtualSites"], topology=top
+        )
+
+        assert _get_n_virtual_sites(vdw) == _get_n_virtual_sites_toolkit(
+            force_field=forcefield,
+            topology=top,
+        )
+
+        coul = out["Electrostatics"]
+
+        coul._from_toolkit_virtual_sites(
+            parameter_handler=forcefield["VirtualSites"], topology=top
+        )
+
+        assert _get_n_virtual_sites(coul) == _get_n_virtual_sites_toolkit(
+            force_field=forcefield,
+            topology=top,
+        )
+
+    def test_store_trivalent_lone_pair_virtual_site(self):
+        from openff.toolkit.tests.test_forcefield import (
+            create_ammonia,
+            xml_ff_virtual_sites_trivalent_match_once,
+        )
+
+        top = create_ammonia().to_topology()
+
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
+        forcefield = ForceField(file_path, xml_ff_virtual_sites_trivalent_match_once)
+
+        vdw = SMIRNOFFvdWHandler._from_toolkit(
+            parameter_handler=forcefield["vdW"], topology=top
+        )
+
+        vdw._from_toolkit_virtual_sites(
+            parameter_handler=forcefield["VirtualSites"], topology=top
+        )
+
+        assert _get_n_virtual_sites(vdw) == _get_n_virtual_sites_toolkit(
+            force_field=forcefield,
+            topology=top,
+        )
+
+    def test_store_tip4p_virtual_site(self):
+        from openff.toolkit.tests.test_forcefield import create_water
+
+        top = create_water().to_topology()
+
+        tip4p = ForceField(get_test_file_path("tip4p.offxml"))
+
+        vdw = SMIRNOFFvdWHandler._from_toolkit(
+            parameter_handler=tip4p["vdW"], topology=top
+        )
+
+        vdw._from_toolkit_virtual_sites(
+            parameter_handler=tip4p["VirtualSites"], topology=top
+        )
+
+        assert _get_n_virtual_sites(vdw) == _get_n_virtual_sites_toolkit(
+            force_field=tip4p,
+            topology=top,
+        )
+
+        virtual_site_handler = SMIRNOFFVirtualSiteHandler._from_toolkit(
+            parameter_handler=tip4p["VirtualSites"], topology=top
+        )
+
+        assert len(virtual_site_handler.slot_map) == 1
+        assert len(virtual_site_handler.potentials) == 1
+
+    def test_store_tip5p_virtual_site(self):
+        from openff.toolkit.tests.test_forcefield import create_water
+
+        top = create_water().to_topology()
+
+        tip5p = ForceField(get_test_file_path("tip5p.offxml"))
+
+        vdw = SMIRNOFFvdWHandler._from_toolkit(
+            parameter_handler=tip5p["vdW"], topology=top
+        )
+
+        vdw._from_toolkit_virtual_sites(
+            parameter_handler=tip5p["VirtualSites"], topology=top
+        )
+
+        assert _get_n_virtual_sites(vdw) == _get_n_virtual_sites_toolkit(
+            force_field=tip5p,
+            topology=top,
+        )
+
+        virtual_site_handler = SMIRNOFFVirtualSiteHandler._from_toolkit(
+            parameter_handler=tip5p["VirtualSites"], topology=top
+        )
+
+        assert len(virtual_site_handler.slot_map) == 2
+        assert len(virtual_site_handler.potentials) == 1
+
+
+def _get_n_virtual_sites(handler: "SMIRNOFFPotentialHandler") -> int:
+    """Get the number of TopologyKey objects in a SMIRNOFFvdWHandler that likely
+    correspond to virtual sites"""
+    return len([key for key in handler.slot_map if type(key) == VirtualSiteKey])
+
+
+def _get_n_virtual_sites_toolkit(
+    force_field: "ForceField", topology: "Topology"
+) -> int:
+    """Get the number of virtual particles created by ForceField.create_openmm_system"""
+    n_atoms = topology.n_topology_atoms
+    omm_sys = force_field.create_openmm_system(topology)
+
+    for force in omm_sys.getForces():
+        if type(force) == openmm.NonbondedForce:
+            n_openmm_particles = force.getNumParticles()
+            return n_openmm_particles - n_atoms

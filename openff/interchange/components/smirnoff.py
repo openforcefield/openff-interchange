@@ -4,6 +4,7 @@ import functools
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Type, TypeVar, Union
 
+import numpy as np
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
@@ -16,6 +17,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
     ToolkitAM1BCCHandler,
+    VirtualSiteHandler,
     vdWHandler,
 )
 from openff.units import unit
@@ -29,7 +31,7 @@ from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     SMIRNOFFParameterAttributeNotImplementedError,
 )
-from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 from openff.interchange.types import FloatQuantity
 
 kcal_mol = omm_unit.kilocalorie_per_mole
@@ -547,9 +549,17 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         Create a SMIRNOFFvdWHandler from toolkit data.
 
         """
+        if isinstance(parameter_handler, list):
+            parameter_handlers = parameter_handler
+        else:
+            parameter_handlers = [parameter_handler]
 
-        if type(parameter_handler) not in cls.allowed_parameter_handlers():
-            raise InvalidParameterHandlerError
+        for parameter_handler in parameter_handlers:
+            if type(parameter_handler) not in cls.allowed_parameter_handlers():
+                raise InvalidParameterHandlerError(
+                    f"Found parameter handler type {type(parameter_handler)}, which is not "
+                    f"supported by potential type {type(cls)}"
+                )
 
         handler = cls(
             scale_13=parameter_handler.scale13,
@@ -564,6 +574,68 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         handler.store_potentials(parameter_handler=parameter_handler)
 
         return handler
+
+    @classmethod
+    def parameter_handler_precedence(cls) -> List[str]:
+        """The order in which parameter handlers take precedence when computing the
+        charges
+        """
+        return ["vdw", "VirtualSites"]
+
+    def _from_toolkit_virtual_sites(
+        self,
+        parameter_handler: "VirtualSiteHandler",
+        topology: "Topology",
+    ):
+        # TODO: Merge this logic into _from_toolkit
+
+        if not all(
+            isinstance(
+                p,
+                (
+                    VirtualSiteHandler.VirtualSiteBondChargeType,
+                    VirtualSiteHandler.VirtualSiteMonovalentLonePairType,
+                    VirtualSiteHandler.VirtualSiteDivalentLonePairType,
+                    VirtualSiteHandler.VirtualSiteTrivalentLonePairType,
+                ),
+            )
+            for p in parameter_handler.parameters
+        ):
+            raise NotImplementedError("Found unsupported virtual site types")
+
+        matches = parameter_handler.find_matches(topology)
+        for atoms, parameter_match in matches.items():
+            virtual_site_type = parameter_match[0].parameter_type
+            top_key = VirtualSiteKey(
+                atom_indices=atoms,
+                type=virtual_site_type.type,
+                match=virtual_site_type.match,
+            )
+            pot_key = PotentialKey(
+                id=virtual_site_type.smirks, associated_handler=virtual_site_type.type
+            )
+            pot = Potential(
+                parameters={
+                    "sigma": virtual_site_type.sigma,
+                    "epsilon": virtual_site_type.epsilon,
+                    # "distance": virtual_site_type.distance,
+                }
+            )
+            # if virtual_site_type.type in {"MonovalentLonePair", "DivalentLonePair"}:
+            #     pot.parameters.update(
+            #         {
+            #             "outOfPlaneAngle": virtual_site_type.outOfPlaneAngle,
+            #         }
+            #     )
+            # if virtual_site_type.type in {"MonovalentLonePair"}:
+            #     pot.parameters.update(
+            #         {
+            #             "inPlaneAngle": virtual_site_type.inPlaneAngle,
+            #         }
+            #     )
+
+            self.slot_map.update({top_key: pot_key})
+            self.potentials.update({pot_key: pot})
 
 
 class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
@@ -623,7 +695,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         }
 
     @classmethod
-    def charge_precedence(cls) -> List[str]:
+    def parameter_handler_precedence(cls) -> List[str]:
         """The order in which parameter handlers take precedence when computing the
         charges
         """
@@ -660,6 +732,47 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         handler.store_matches(parameter_handlers, topology)
 
         return handler
+
+    def _from_toolkit_virtual_sites(
+        self,
+        parameter_handler: "VirtualSiteHandler",
+        topology: "Topology",
+    ):
+        # TODO: Merge this logic into _from_toolkit
+
+        if not all(
+            isinstance(
+                p,
+                (
+                    VirtualSiteHandler.VirtualSiteBondChargeType,
+                    VirtualSiteHandler.VirtualSiteMonovalentLonePairType,
+                    VirtualSiteHandler.VirtualSiteDivalentLonePairType,
+                    VirtualSiteHandler.VirtualSiteTrivalentLonePairType,
+                ),
+            )
+            for p in parameter_handler.parameters
+        ):
+            raise NotImplementedError("Found unsupported virtual site types")
+
+        matches = parameter_handler.find_matches(topology)
+        for atoms, parameter_match in matches.items():
+            virtual_site_type = parameter_match[0].parameter_type
+            top_key = VirtualSiteKey(
+                atom_indices=atoms,
+                type=virtual_site_type.type,
+                match=virtual_site_type.match,
+            )
+            pot_key = PotentialKey(
+                id=virtual_site_type.smirks, associated_handler=virtual_site_type.type
+            )
+            pot = Potential(
+                parameters={
+                    "charge_increment": from_simtk(virtual_site_type.charge_increment),
+                }
+            )
+
+            self.slot_map.update({top_key: pot_key})
+            self.potentials.update({pot_key: pot})
 
     @classmethod
     @functools.lru_cache(None)
@@ -816,7 +929,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
         expected_matches = {i for i in range(reference_molecule.n_atoms)}
 
-        for handler_type in cls.charge_precedence():
+        for handler_type in cls.parameter_handler_precedence():
 
             if handler_type not in parameter_handlers:
                 continue
@@ -962,6 +1075,118 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         # This logic is handled by ``store_matches`` as we may need to create potentials
         # to store depending on the handler type.
         pass
+
+
+class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
+
+    type: Literal["Bonds"] = "Bonds"
+    expression: Literal[""] = ""
+
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        return [VirtualSiteHandler]
+
+    @classmethod
+    def supported_parameters(cls):
+        return ["distance", "outOfPlaneAngle", "inPlaneAngle"]
+
+    def store_matches(
+        self,
+        parameter_handler: ParameterHandler,
+        topology: Union["Topology", "OFFBioTop"],
+    ) -> None:
+        """
+        Populate self.slot_map with key-val pairs of slots
+        and unique potential identifiers
+
+        Differs from SMIRNOFFPotentialHandler.store_matches because each key
+        can point to multiple potentials (?); each value in the dict is a
+        list of parametertypes, whereas conventional handlers don't have lists
+        """
+        parameter_handler_name = getattr(parameter_handler, "_TAGNAME", None)
+        if self.slot_map:
+            self.slot_map = dict()
+        matches = parameter_handler.find_matches(topology)
+        for key, val_list in matches.items():
+            for val in val_list:
+                virtual_site_key = VirtualSiteKey(
+                    atom_indices=key,
+                    type=val.parameter_type.type,
+                    match=val.parameter_type.match,
+                )
+                potential_key = PotentialKey(
+                    id=val.parameter_type.smirks,
+                    associated_handler=parameter_handler_name,
+                )
+                self.slot_map[virtual_site_key] = potential_key
+
+    def store_potentials(self, parameter_handler: ParameterHandler) -> None:
+        """Store VirtualSite-specific parameter-like data."""
+        if self.potentials:
+            self.potentials = dict()
+        for potential_key in self.slot_map.values():
+            smirks = potential_key.id
+            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
+            potential = Potential(
+                parameters={
+                    "distance": parameter_type.distance,
+                },
+            )
+            for attr in ["outOfPlaneAngle", "inPlaneAngle"]:
+                if hasattr(parameter_type, attr):
+                    potential.parameters.update({attr: getattr(parameter_type, attr)})
+            self.potentials[potential_key] = potential
+
+    def _get_local_frame_weights(self, virtual_site_key: "VirtualSiteKey"):
+        potential_key = self.slot_map[virtual_site_key]
+        potential = self.potentials[potential_key]
+        if potential.type == "BondCharge":
+            origin_weight = [1.0, 0.0]
+            x_direction = [-1.0, 1.0]
+            y_direction = [-1.0, 1.0]
+        elif potential.type == "MonovalentLonePair":
+            origin_weight = [-1, 0.0, 0.0]
+            x_direction = [-1.0, 1.0, 0.0]
+            y_direction = [-1.0, 0.0, 1.0]
+        elif potential.type == "DivalentLonePair":
+            origin_weight = [0.0, 1.0, 0.0]
+            x_direction = [0.5, -1.0, 0.5]
+            y_direction = [1.0, -1.0, 1.0]
+        elif potential.type == "TrivalentLonePair":
+            origin_weight = [0.0, 1.0, 0.0, 0.0]
+            x_direction = [1 / 3, -1.0, 1 / 3, 1 / 3]
+            y_direction = [1.0, -1.0, 0.0, 0.0]
+
+        return origin_weight, x_direction, y_direction
+
+    def _get_local_frame_position(self, virtual_site_key: "VirtualSiteKey"):
+        potential_key = self.slot_map[virtual_site_key]
+        potential = self.potentials[potential_key]
+        if potential.type == "BondCharge":
+            distance = potential.parameters["distance"].m_as(unit.angstrom)
+            local_frame_position = [-1.0 * distance, 0.0, 0.0]
+        elif potential.type == "MonovalentLonePair":
+            distance = potential.parameters["distance"].m_as(unit.angstrom)
+            theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
+            psi = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
+            local_frame_position = [
+                distance / np.cos(theta) * np.cos(psi),
+                distance / np.sin(theta) * np.cos(psi),
+                distance / np.sin,
+            ]
+        elif potential.type == "DivalentLonePair":
+            distance = potential.parameters["distance"].m_as(unit.angstrom)
+            theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
+            local_frame_position = [
+                -1.0 * distance / np.cos(theta) * np.cos(theta),
+                0.0,
+                distance / np.sin(theta) * np.sin(theta),
+            ]
+        elif potential.type == "TrivalentLonePair":
+            distance = potential.parameters["distance"].m_as(unit.angstrom)
+            local_frame_position = [-1.0 * distance, 0.0, 0.0]
+
+        return local_frame_position
 
 
 def library_charge_from_molecule(
