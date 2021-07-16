@@ -471,8 +471,6 @@ def _write_virtual_sites(
     ):
         raise NotImplementedError("Only BondCharge virtual sites are implemented")
 
-    top_file.write("[ virtual_sites2 ]\n; site  ai  aj  funct   a\n")
-
     started_virtual_sites2 = False
     started_virtual_sites3 = False
     # TODO: Cleaner implementation than filter + sort? Maybe split it up into each type
@@ -493,15 +491,7 @@ def _write_virtual_sites(
             virtual_site_index = virtual_site_map[virtual_site_key]
             atom1 = reference_atoms[0]
             atom2 = reference_atoms[1]
-            func = 1
-
-            bond_key = TopologyKey(atom_indices=reference_atoms)
-            bond_length = (
-                openff_sys["Bonds"]
-                .potentials[openff_sys["Bonds"].slot_map[bond_key]]
-                .parameters["length"]
-                .m_as(unit.nanometer)
-            )
+            func = 2
 
             distance = (
                 virtual_site_handler.potentials[
@@ -511,7 +501,7 @@ def _write_virtual_sites(
                 .m_as(unit.nanometer)
             )
 
-            a = 1 + distance / bond_length
+            a = distance
 
             top_file.write(
                 f"{virtual_site_index}\t\t{atom1+1}\t{atom2+1}\t{func}\t{a}\n"
