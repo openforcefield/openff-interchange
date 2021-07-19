@@ -178,6 +178,7 @@ class TestGROMACSVirtualSites(BaseTest):
         import numpy as np
         import parmed as pmd
 
+        out.to_top("sigma.top")
         gmx_top = pmd.load_file("sigma.top")
 
         assert abs(np.sum([p.charge for p in gmx_top.atoms])) < 1e-3
