@@ -224,7 +224,7 @@ def _build_virtual_site_map(interchange: "Interchange") -> Dict:
     virtual_site_topology_index_map = dict()
 
     if "VirtualSites" not in interchange.handlers:
-        return
+        return virtual_site_topology_index_map
 
     n_atoms = interchange.topology.mdtop.n_atoms
 
@@ -463,6 +463,9 @@ def _write_virtual_sites(
     openff_sys: "Interchange",
     virtual_site_map: Dict,
 ):
+    if "VirtualSites" not in openff_sys.handlers:
+        return
+
     virtual_site_handler = openff_sys["VirtualSites"]
 
     if not all(
