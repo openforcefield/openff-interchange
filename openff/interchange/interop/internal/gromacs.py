@@ -137,12 +137,12 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
         # TODO: Handle special case of water
         _write_moleculetype(top_file)
         _write_atoms(top_file, openff_sys, typemap, virtual_site_map)
+        _write_valence(top_file, openff_sys)
         _write_virtual_sites(
             top_file,
             openff_sys,
             virtual_site_map,
         )
-        _write_valence(top_file, openff_sys)
         _write_system(top_file, openff_sys)
 
 
@@ -593,6 +593,16 @@ def _write_virtual_sites(
                 top_file.write(
                     f"{virtual_site_index}\t\t{atom1+1}\t{atom2+1}\t{atom3+1}\t{func}\t{a}\t{a}\t{c}\n"
                 )
+
+    top_file.write("\n[ exclusions ]\n")
+    for virtual_site_key in virtual_site_handler.slot_map:
+        parent_indices = virtual_site_key.atom_indices
+        virtual_site_index = virtual_site_map[virtual_site_key]
+        top_file.write(f"{virtual_site_index}\t")
+        top_file.write("\t".join([str(i + 1) for i in parent_indices]))
+        top_file.write("\n")
+
+    top_file.write("\n")
 
 
 def _write_valence(
