@@ -400,9 +400,9 @@ def _write_atoms(
         res_name = "1"
         charge
         charge_handler = openff_sys.handlers["Electrostatics"]
-        pot_key = charge_handler.slot_map[virtual_site_key]
-        parameters = charge_handler.potentials[pot_key].parameters
-        charge = np.sum(parameters["charge_increment"]).m_as(unit.e)
+        charge = charge_handler.charges_with_virtual_sites[virtual_site_key].m_as(
+            unit.e
+        )
         mass = 0.0
 
         top_file.write(
