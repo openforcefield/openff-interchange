@@ -12,6 +12,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     LibraryChargeHandler,
     ParameterHandler,
     ToolkitAM1BCCHandler,
+    VirtualSiteHandler,
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
@@ -234,6 +235,65 @@ class TestSMIRNOFFHandlers(BaseTest):
         np.testing.assert_allclose(
             [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
             [-0.068, 0.068],
+        )
+
+    def test_charges_with_virtual_site(self, parsley):
+        mol = Molecule.from_smiles("CCl")
+        mol.generate_conformers(n_conformers=1)
+        mol.partial_charges = simtk_unit.elementary_charge * np.array(
+            [0.5, -0.8, 0.1, 0.1, 0.1]
+        )
+
+        parsley = ForceField("openff-1.3.1.offxml")
+        parsley.deregister_parameter_handler(parsley["ToolkitAM1BCC"])
+        parsley.deregister_parameter_handler(parsley["LibraryCharges"])
+
+        library_charge_handler = LibraryChargeHandler(version=0.3)
+
+        library_charge_type = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
+        library_charge_handler.add_parameter(parameter=library_charge_type)
+
+        parsley.register_parameter_handler(library_charge_handler)
+
+        virtual_site_handler = VirtualSiteHandler(version=0.3)
+
+        sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
+            name="EP",
+            smirks="[#6:1]-[#17:2]",
+            distance=1.4 * simtk_unit.angstrom,
+            type="BondCharge",
+            match="once",
+            charge_increment1=0.2 * simtk_unit.elementary_charge,
+            charge_increment2=0.1 * simtk_unit.elementary_charge,
+        )
+
+        virtual_site_handler.add_parameter(parameter=sigma_type)
+        parsley.register_parameter_handler(virtual_site_handler)
+
+        out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
+        out["Electrostatics"]._from_toolkit_virtual_sites(
+            parameter_handler=parsley["VirtualSites"], topology=mol.to_topology()
+        )
+
+        via_toolkit = parsley.create_openmm_system(mol.to_topology())
+
+        charges = []
+        for force in via_toolkit.getForces():
+            if type(force) == openmm.NonbondedForce:
+                for i in range(6):
+                    charges.append(force.getParticleParameters(i)[0]._value)
+
+        # Final charges are
+        #   [0.5, -0.8, 0.1, 0.1, 0.1]
+        # + [0.2, 0.1, 0.0, 0.0, 0.0, -0.3]
+        # = [0.7, -0.7, 0.1, 0.1, 0.1, -0.3]
+        np.testing.assert_allclose(
+            charges,
+            [v.m for v in out["Electrostatics"].charges_with_virtual_sites.values()],
+        )
+
+        np.testing.assert_allclose(
+            charges[:5], [v.m for v in out["Electrostatics"].charges.values()]
         )
 
 
