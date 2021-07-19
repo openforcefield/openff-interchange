@@ -237,6 +237,8 @@ class TestSMIRNOFFHandlers(BaseTest):
             [-0.068, 0.068],
         )
 
+    # TODO: Remove xfail after openff-toolkit 0.10.0
+    @pytest.mark.xfail()
     def test_charges_with_virtual_site(self, parsley):
         mol = Molecule.from_smiles("CCl")
         mol.generate_conformers(n_conformers=1)
