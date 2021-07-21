@@ -1183,7 +1183,9 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
             )
             for attr in ["outOfPlaneAngle", "inPlaneAngle"]:
                 if hasattr(parameter_type, attr):
-                    potential.parameters.update({attr: getattr(parameter_type, attr)})
+                    potential.parameters.update(
+                        {attr: from_simtk(getattr(parameter_type, attr))}
+                    )
             self.potentials[potential_key] = potential
 
     def _get_local_frame_weights(self, virtual_site_key: "VirtualSiteKey"):
@@ -1212,14 +1214,14 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         if virtual_site_key.type == "BondCharge":
             distance = potential.parameters["distance"].m_as(unit.angstrom)
             local_frame_position = [-1.0 * distance, 0.0, 0.0]
-        elif virutal_site_key.type == "MonovalentLonePair":
+        elif virtual_site_key.type == "MonovalentLonePair":
             distance = potential.parameters["distance"].m_as(unit.angstrom)
             theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
             psi = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
             local_frame_position = [
                 distance / np.cos(theta) * np.cos(psi),
                 distance / np.sin(theta) * np.cos(psi),
-                distance / np.sin,
+                distance / np.sin(psi),
             ]
         elif virtual_site_key.type == "DivalentLonePair":
             distance = potential.parameters["distance"].m_as(unit.angstrom)

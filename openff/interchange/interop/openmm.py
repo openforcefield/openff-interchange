@@ -394,6 +394,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         partial_charges = electrostatics_handler.charges_with_virtual_sites
 
         for top_key, pot_key in vdw_handler.slot_map.items():
+            # TODO: Actually process virtual site vdW parameters here
+            if type(top_key) != TopologyKey:
+                continue
             atom_idx = top_key.atom_indices[0]
 
             partial_charge = partial_charges[top_key]
@@ -559,7 +562,10 @@ def _process_virtual_sites(openff_sys, openmm_sys):
 
         non_bonded_force.addParticle(charge, sigma, epsilon)
 
-        # TODO: Add virtual site exceptions
+        for parent_atom_index in virtual_site_key.atom_indices:
+            non_bonded_force.addException(
+                parent_atom_index, virtual_site_index, 0.0, 0.0, 0.0, replace=True
+            )
 
 
 def _create_virtual_site(
@@ -573,6 +579,9 @@ def _create_virtual_site(
     local_frame_position = interchange["VirtualSites"]._get_local_frame_position(
         virtual_site_key
     )
+
+    # TODO: Do the transformation from distance parameter to position
+    # https://github.com/openforcefield/openff-toolkit/blob/bf19ccbd470c2bc15af8916a4f15c4678100765c/openff/toolkit/topology/molecule.py#L599-L619
     return openmm.LocalCoordinatesSite(
         parent_atoms, origin_weight, x_direction, y_direction, local_frame_position
     )
