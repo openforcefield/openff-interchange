@@ -9,6 +9,9 @@ A project (and object) for storing, manipulating, and converting molecular mecha
 caption: Installation
 ---
 installation.md
+getting_started.rst
+developing.md
+releasehistory.rst
 ```
 
 ```{toctree}
@@ -20,6 +23,8 @@ using/openmm.md
 using/lammps.md
 using/amber.md
 using/charmm.md
+
+energy_tests.md
 ```
 
 ```{toctree}
@@ -27,9 +32,6 @@ using/charmm.md
 maxdepth: 2
 caption: API Reference
 ---
-openff.interchange.rst
-openff.interchange.components.rst
-openff.interchange.drivers.rst
-openff.interchange.interop.rst
-openff.interchange.interop.internal.rst
+
+autoapi/openff/interchange/index.rst
 ```
