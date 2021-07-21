@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from openff.units import unit as off_unit
 from openff.units.simtk import from_simtk
 from simtk import openmm, unit
@@ -9,8 +11,11 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
 )
 from openff.interchange.interop.parmed import _lj_params_from_potential
-from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 from openff.interchange.utils import pint_to_simtk
+
+if TYPE_CHECKING:
+    from openff.interchange.components.interchange import Interchange
 
 kcal_mol = unit.kilocalorie_per_mole
 kcal_ang = kcal_mol / unit.angstrom ** 2
@@ -386,7 +391,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                     f"Electrostatics method {electrostatics_method} not supported"
                 )
 
-        partial_charges = electrostatics_handler.charges
+        partial_charges = electrostatics_handler.charges_with_virtual_sites
 
         for top_key, pot_key in vdw_handler.slot_map.items():
             atom_idx = top_key.atom_indices[0]
@@ -520,50 +525,57 @@ def _process_virtual_sites(openff_sys, openmm_sys):
     ][0]
 
     for virtual_site_key in virtual_site_handler.slot_map:
-        vdw_key = vdw_handler.slot_map.get(virtual_site_handler)
-        coul_key = coul_handler.slot_map.get(virtual_site_handler)
+        vdw_key = vdw_handler.slot_map.get(virtual_site_key)
+        coul_key = coul_handler.slot_map.get(virtual_site_key)
         if vdw_key is None and coul_key is None:
             raise Exception(
                 f"Virtual site {virtual_site_key} is not associated with any "
                 "vdW or electrostatics interactions"
             )
 
-        if coul_key is not None:
-            coul_parameters = coul_handler.potentials[coul_key].parameters
-            charge = coul_parameters["charge"].m_as(
-                unit.elementary_charge,
+        if coul_key is None:
+            charge = 0.0
+        else:
+            charge = coul_handler.charges_with_virtual_sites[virtual_site_key].m_as(
+                off_unit.elementary_charge,
             )
-        if vdw_key is not None:
+        if True:  # if vdw_key is None:
+            sigma = 1.0
+            epsilon = 0.0
+        else:
             vdw_parameters = vdw_handler.potentials[vdw_key].parameters
             sigma = vdw_parameters["sigma"].m_as(
-                unit.nanometer,
+                off_unit.nanometer,
             )
             epsilon = vdw_parameters["epsilon"].m_as(
-                kj_mol,
+                from_simtk(kj_mol),
             )
 
         virtual_site_index = openmm_sys.addParticle(mass=0.0)
 
-        (
-            origin_weights,
-            x_direction,
-            y_direction,
-        ) = virtual_site_handler._get_local_frame_weights(virtual_site_key)
-        position = virtual_site_handler._get_local_frame_position(virtual_site_key)
-
-        openmm_virtual_site = openmm.LocalCoordinatesSite(
-            virtual_site_key.atom_indices,
-            origin_weights,
-            x_direction,
-            y_direction,
-            position,
-        )
+        openmm_virtual_site = _create_virtual_site(virtual_site_key, openff_sys)
 
         openmm_sys.setVirtualSite(virtual_site_index, openmm_virtual_site)
 
         non_bonded_force.addParticle(charge, sigma, epsilon)
 
         # TODO: Add virtual site exceptions
+
+
+def _create_virtual_site(
+    virtual_site_key: "VirtualSiteKey",
+    interchange: "Interchange",
+) -> "openmm.LocalCoordinatesSites":
+    parent_atoms = virtual_site_key.atom_indices
+    origin_weight, x_direction, y_direction = interchange[
+        "VirtualSites"
+    ]._get_local_frame_weights(virtual_site_key)
+    local_frame_position = interchange["VirtualSites"]._get_local_frame_position(
+        virtual_site_key
+    )
+    return openmm.LocalCoordinatesSite(
+        parent_atoms, origin_weight, x_direction, y_direction, local_frame_position
+    )
 
 
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):

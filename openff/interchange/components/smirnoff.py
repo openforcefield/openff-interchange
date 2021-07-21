@@ -1187,21 +1187,19 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
             self.potentials[potential_key] = potential
 
     def _get_local_frame_weights(self, virtual_site_key: "VirtualSiteKey"):
-        potential_key = self.slot_map[virtual_site_key]
-        potential = self.potentials[potential_key]
-        if potential.type == "BondCharge":
+        if virtual_site_key.type == "BondCharge":
             origin_weight = [1.0, 0.0]
             x_direction = [-1.0, 1.0]
             y_direction = [-1.0, 1.0]
-        elif potential.type == "MonovalentLonePair":
+        elif virtual_site_key.type == "MonovalentLonePair":
             origin_weight = [-1, 0.0, 0.0]
             x_direction = [-1.0, 1.0, 0.0]
             y_direction = [-1.0, 0.0, 1.0]
-        elif potential.type == "DivalentLonePair":
+        elif virtual_site_key.type == "DivalentLonePair":
             origin_weight = [0.0, 1.0, 0.0]
             x_direction = [0.5, -1.0, 0.5]
             y_direction = [1.0, -1.0, 1.0]
-        elif potential.type == "TrivalentLonePair":
+        elif virtual_site_key.type == "TrivalentLonePair":
             origin_weight = [0.0, 1.0, 0.0, 0.0]
             x_direction = [1 / 3, -1.0, 1 / 3, 1 / 3]
             y_direction = [1.0, -1.0, 0.0, 0.0]
@@ -1211,10 +1209,10 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
     def _get_local_frame_position(self, virtual_site_key: "VirtualSiteKey"):
         potential_key = self.slot_map[virtual_site_key]
         potential = self.potentials[potential_key]
-        if potential.type == "BondCharge":
+        if virtual_site_key.type == "BondCharge":
             distance = potential.parameters["distance"].m_as(unit.angstrom)
             local_frame_position = [-1.0 * distance, 0.0, 0.0]
-        elif potential.type == "MonovalentLonePair":
+        elif virutal_site_key.type == "MonovalentLonePair":
             distance = potential.parameters["distance"].m_as(unit.angstrom)
             theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
             psi = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
@@ -1223,7 +1221,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                 distance / np.sin(theta) * np.cos(psi),
                 distance / np.sin,
             ]
-        elif potential.type == "DivalentLonePair":
+        elif virtual_site_key.type == "DivalentLonePair":
             distance = potential.parameters["distance"].m_as(unit.angstrom)
             theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
             local_frame_position = [
@@ -1231,7 +1229,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                 0.0,
                 distance / np.sin(theta) * np.sin(theta),
             ]
-        elif potential.type == "TrivalentLonePair":
+        elif virtual_site_key.type == "TrivalentLonePair":
             distance = potential.parameters["distance"].m_as(unit.angstrom)
             local_frame_position = [-1.0 * distance, 0.0, 0.0]
 
