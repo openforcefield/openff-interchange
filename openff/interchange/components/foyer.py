@@ -3,11 +3,11 @@ from copy import copy
 from typing import TYPE_CHECKING, Dict, Type
 
 from openff.units import unit
+from openff.utilities.utilities import has_package
 
 from openff.interchange.components.potentials import Potential, PotentialHandler
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.types import FloatQuantity
-from openff.utilities.utilities import has_package
 
 if TYPE_CHECKING:
     from foyer.forcefield import Forcefield
