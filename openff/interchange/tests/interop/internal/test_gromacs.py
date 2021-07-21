@@ -148,6 +148,29 @@ class TestGROMACSVirtualSites(BaseTest):
 
         return parsley
 
+    @pytest.fixture()
+    def parsley_with_monovalent_lone_pair(self, parsley):
+        """Fixture that loads an SMIRNOFF XML for argon"""
+        virtual_site_handler = VirtualSiteHandler(version=0.3)
+
+        carbonyl_type = VirtualSiteHandler.VirtualSiteMonovalentLonePairType(
+            name="EP",
+            smirks="[O:1]=[C:2]-[*:3]",
+            distance=0.3 * simtk_unit.angstrom,
+            type="MonovalentLonePair",
+            match="once",
+            outOfPlaneAngle=0.0 * simtk_unit.degree,
+            inPlaneAngle=120.0 * simtk_unit.degree,
+            charge_increment1=0.05 * simtk_unit.elementary_charge,
+            charge_increment2=0.1 * simtk_unit.elementary_charge,
+            charge_increment3=0.15 * simtk_unit.elementary_charge,
+        )
+
+        virtual_site_handler.add_parameter(parameter=carbonyl_type)
+        parsley.register_parameter_handler(virtual_site_handler)
+
+        return parsley
+
     @skip_if_missing("parmed")
     def test_sigma_hole_example(self, parsley_with_sigma_hole):
         """Test that a single-molecule sigma hole example runs"""
@@ -182,3 +205,32 @@ class TestGROMACSVirtualSites(BaseTest):
         gmx_top = pmd.load_file("sigma.top")
 
         assert abs(np.sum([p.charge for p in gmx_top.atoms])) < 1e-3
+
+    @skip_if_missing("parmed")
+    def test_carbonyl_example(self, parsley_with_monovalent_lone_pair):
+        """Test that a single-molecule DivalentLonePair example runs"""
+        mol = Molecule.from_smiles("C=O")
+        mol.generate_conformers(n_conformers=1)
+
+        out = Interchange.from_smirnoff(
+            force_field=parsley_with_monovalent_lone_pair, topology=mol.to_topology()
+        )
+        out.box = [4, 4, 4]
+        out.positions = mol.conformers[0]
+        out.handlers["VirtualSites"] = SMIRNOFFVirtualSiteHandler._from_toolkit(
+            parameter_handler=parsley_with_monovalent_lone_pair["VirtualSites"],
+            topology=mol.to_topology(),
+        )
+        out["vdW"]._from_toolkit_virtual_sites(
+            parameter_handler=parsley_with_monovalent_lone_pair["VirtualSites"],
+            topology=mol.to_topology(),
+        )
+        out["Electrostatics"]._from_toolkit_virtual_sites(
+            parameter_handler=parsley_with_monovalent_lone_pair["VirtualSites"],
+            topology=mol.to_topology(),
+        )
+
+        # TODO: Sanity-check reported energies
+        get_gromacs_energies(out)
+
+        # ParmEd does not support 3fad, and cannot be used to sanity check charges

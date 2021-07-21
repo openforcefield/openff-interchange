@@ -469,7 +469,7 @@ def _write_virtual_sites(
     virtual_site_handler = openff_sys["VirtualSites"]
 
     if not all(
-        k.type in ["BondCharge", "DivalentLonePair"]
+        k.type in ["BondCharge", "MonovalentLonePair", "DivalentLonePair"]
         for k in virtual_site_handler.slot_map
     ):
         raise NotImplementedError("Only BondCharge virtual sites are implemented")
@@ -510,12 +510,65 @@ def _write_virtual_sites(
                 f"{virtual_site_index}\t\t{atom1+1}\t{atom2+1}\t{func}\t{a}\n"
             )
 
+        if virtual_site_key.type == "MonovalentLonePair":
+            if not started_virtual_sites3:
+                top_file.write(
+                    "\n[ virtual_sites3 ]\n; site  ai  aj  ak funct   a   b\n"
+                )
+                started_virtual_sites3 = True
+
+            reference_atoms = sorted(virtual_site_key.atom_indices)
+            if len(reference_atoms) != 3:
+                raise NotImplementedError
+
+            virtual_site_index = virtual_site_map[virtual_site_key]
+            atom1 = reference_atoms[0]
+            atom2 = reference_atoms[1]
+            atom3 = reference_atoms[2]
+            func = 3  # "3fad"
+
+            out_of_plane_angle = (
+                virtual_site_handler.potentials[
+                    virtual_site_handler.slot_map[virtual_site_key]
+                ]
+                .parameters["outOfPlaneAngle"]
+                .m_as(unit.radian)
+            )
+
+            if out_of_plane_angle != 0.0:
+                raise NotImplementedError(
+                    "Unclear how to do MonovalentLonePair virtual sites with GROMACS"
+                )
+
+            distance = (
+                virtual_site_handler.potentials[
+                    virtual_site_handler.slot_map[virtual_site_key]
+                ]
+                .parameters["distance"]
+                .m_as(unit.nanometer)
+            )
+
+            in_plane_angle = (
+                virtual_site_handler.potentials[
+                    virtual_site_handler.slot_map[virtual_site_key]
+                ]
+                .parameters["inPlaneAngle"]
+                .m_as(unit.degree)
+            )
+
+            in_plane_angle_transformed = 180 - in_plane_angle
+
+            top_file.write(
+                f"{virtual_site_index}\t\t{atom1 + 1}\t{atom2 + 1}\t{atom3 + 1}\t"
+                f"{func}\t{in_plane_angle_transformed}\t{distance}\n"
+            )
+
         if virtual_site_key.type == "DivalentLonePair":
             if not started_virtual_sites3:
                 top_file.write(
                     "\n[ virtual_sites3 ]\n; site  ai  aj  ak funct   a   b\n"
                 )
-                started_virtual_sites2 = True
+                started_virtual_sites3 = True
 
             # TODO: Cannot sort here. Atom ordering implies "chirality" of virtual sites,
             #  i.e. which side of a 5-site water each lone pair particle should go.
