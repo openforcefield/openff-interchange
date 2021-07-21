@@ -94,7 +94,8 @@ def linkcode_resolve(domain, info):
     if not info["module"]:
         return None
 
-    filename = Path(info["module"].replace(".", "/"))
+    repo_root = Path(__file__).parent.parent
+    filename = repo_root / info["module"].replace(".", "/")
     if filename.is_dir():
         filename = filename / "__init__.py"
     else:
