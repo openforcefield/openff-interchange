@@ -10,7 +10,7 @@ dependencies:
   - pandas
   - pydantic
   - pint
-  - openmm >=7.6
+  - openmm =7.6beta
   - openff-toolkit
   - openff-utilities
   - openff-units
