@@ -2,6 +2,7 @@ name: openff-interchange-env
 channels:
   - conda-forge
   - bioconda
+  - conda-forge/label/openmm_rc
 dependencies:
     # Base depends
   - python
@@ -10,7 +11,7 @@ dependencies:
   - pandas
   - pydantic
   - pint
-  - openmm
+  - openmm >=7.6
   - openff-toolkit
   - openff-utilities
   - openff-units
