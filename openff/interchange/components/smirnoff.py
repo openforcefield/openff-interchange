@@ -1194,7 +1194,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
             x_direction = [-1.0, 1.0]
             y_direction = [-1.0, 1.0]
         elif virtual_site_key.type == "MonovalentLonePair":
-            origin_weight = [-1, 0.0, 0.0]
+            origin_weight = [1, 0.0, 0.0]
             x_direction = [-1.0, 1.0, 0.0]
             y_direction = [-1.0, 0.0, 1.0]
         elif virtual_site_key.type == "DivalentLonePair":
@@ -1212,27 +1212,27 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         potential_key = self.slot_map[virtual_site_key]
         potential = self.potentials[potential_key]
         if virtual_site_key.type == "BondCharge":
-            distance = potential.parameters["distance"].m_as(unit.angstrom)
+            distance = potential.parameters["distance"]
             local_frame_position = [-1.0 * distance, 0.0, 0.0]
         elif virtual_site_key.type == "MonovalentLonePair":
-            distance = potential.parameters["distance"].m_as(unit.angstrom)
+            distance = potential.parameters["distance"]
             theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
             psi = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
             local_frame_position = [
-                distance / np.cos(theta) * np.cos(psi),
-                distance / np.sin(theta) * np.cos(psi),
-                distance / np.sin(psi),
+                distance * np.cos(theta) * np.cos(psi),
+                distance * np.sin(theta) * np.cos(psi),
+                distance * np.sin(psi),
             ]
         elif virtual_site_key.type == "DivalentLonePair":
-            distance = potential.parameters["distance"].m_as(unit.angstrom)
+            distance = potential.parameters["distance"]
             theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
             local_frame_position = [
-                -1.0 * distance / np.cos(theta) * np.cos(theta),
+                -1.0 * distance * np.cos(theta),
                 0.0,
-                distance / np.sin(theta) * np.sin(theta),
+                distance * np.sin(theta),
             ]
         elif virtual_site_key.type == "TrivalentLonePair":
-            distance = potential.parameters["distance"].m_as(unit.angstrom)
+            distance = potential.parameters["distance"]
             local_frame_position = [-1.0 * distance, 0.0, 0.0]
 
         return local_frame_position
