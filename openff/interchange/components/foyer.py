@@ -108,6 +108,10 @@ class FoyerElectrostaticsHandler(PotentialHandler):
     scale_15: float = 1.0
     cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
 
+    @property
+    def charges_with_virtual_sites(self):
+        return self.charges
+
     def store_charges(
         self,
         atom_slots: Dict[TopologyKey, PotentialKey],
