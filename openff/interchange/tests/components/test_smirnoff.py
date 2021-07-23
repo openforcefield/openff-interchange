@@ -237,6 +237,8 @@ class TestSMIRNOFFHandlers(BaseTest):
             [-0.068, 0.068],
         )
 
+    # TODO: Remove xfail after openff-toolkit 0.10.0
+    @pytest.mark.xfail()
     def test_charges_with_virtual_site(self, parsley):
         mol = Molecule.from_smiles("CCl")
         mol.generate_conformers(n_conformers=1)
@@ -323,6 +325,8 @@ class TestConstraints:
         assert len(constraints.slot_map) == n_constraints
 
 
+# TODO: Remove xfail after openff-toolkit 0.10.0
+@pytest.mark.xfail()
 def test_library_charges_from_molecule():
     mol = Molecule.from_mapped_smiles("[Cl:1][C:2]#[C:3][F:4]")
 
@@ -394,18 +398,13 @@ class TestMatrixRepresentations(BaseTest):
 
 
 class TestSMIRNOFFVirtualSites:
-    from openff.toolkit.tests.test_forcefield import (
-        xml_ff_virtual_sites_bondcharge_match_all,
-        xml_ff_virtual_sites_bondcharge_match_once,
-        xml_ff_virtual_sites_divalent_match_all,
-        xml_ff_virtual_sites_trivalent_match_once,
-    )
+    from openff.toolkit.tests.test_forcefield import TestForceFieldVirtualSites
 
     @pytest.mark.parametrize(
         ("xml", "mol"),
         [
             (
-                xml_ff_virtual_sites_bondcharge_match_once,
+                TestForceFieldVirtualSites.xml_ff_virtual_sites_bondcharge_match_once,
                 "O=O",
             ),
             # TODO: Implement match="once"
@@ -414,7 +413,7 @@ class TestSMIRNOFFVirtualSites:
             #     "N#N",
             # ),
             (
-                xml_ff_virtual_sites_bondcharge_match_all,
+                TestForceFieldVirtualSites.xml_ff_virtual_sites_bondcharge_match_all,
                 "N#N",
             ),
             # TODO: Implement match="once" with two names
@@ -423,15 +422,15 @@ class TestSMIRNOFFVirtualSites:
             #     "N#N",
             # ),
             (
-                xml_ff_virtual_sites_bondcharge_match_once,
+                TestForceFieldVirtualSites.xml_ff_virtual_sites_bondcharge_match_once,
                 "CC=O",
             ),
             (
-                xml_ff_virtual_sites_divalent_match_all,
+                TestForceFieldVirtualSites.xml_ff_virtual_sites_divalent_match_all,
                 "O",
             ),
             (
-                xml_ff_virtual_sites_trivalent_match_once,
+                TestForceFieldVirtualSites.xml_ff_virtual_sites_trivalent_match_once,
                 "N",
             ),
         ],
@@ -473,14 +472,17 @@ class TestSMIRNOFFVirtualSites:
 
     def test_store_trivalent_lone_pair_virtual_site(self):
         from openff.toolkit.tests.test_forcefield import (
+            TestForceFieldVirtualSites,
             create_ammonia,
-            xml_ff_virtual_sites_trivalent_match_once,
         )
 
         top = create_ammonia().to_topology()
 
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        forcefield = ForceField(file_path, xml_ff_virtual_sites_trivalent_match_once)
+        forcefield = ForceField(
+            file_path,
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_trivalent_match_once,
+        )
 
         vdw = SMIRNOFFvdWHandler._from_toolkit(
             parameter_handler=forcefield["vdW"], topology=top
