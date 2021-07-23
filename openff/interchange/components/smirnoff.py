@@ -1134,6 +1134,12 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
 
     type: Literal["Bonds"] = "Bonds"
     expression: Literal[""] = ""
+    virtual_site_key_topology_index_map: Dict["VirtualSiteKey", int] = Field(
+        dict(),
+        description="A mapping between VirtualSiteKey objects (stored analogously to TopologyKey objects"
+        "in other handlers) and topology indices describing the associated virtual site",
+    )
+    exclusion_policy: Literal["parents"] = "parents"
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -1156,6 +1162,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         can point to multiple potentials (?); each value in the dict is a
         list of parametertypes, whereas conventional handlers don't have lists
         """
+        virtual_site_index = topology.n_topology_atoms
         parameter_handler_name = getattr(parameter_handler, "_TAGNAME", None)
         if self.slot_map:
             self.slot_map = dict()
@@ -1172,6 +1179,10 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                     associated_handler=parameter_handler_name,
                 )
                 self.slot_map[virtual_site_key] = potential_key
+                self.virtual_site_key_topology_index_map[
+                    virtual_site_key
+                ] = virtual_site_index
+                virtual_site_index += 1
 
     def store_potentials(self, parameter_handler: ParameterHandler) -> None:
         """Store VirtualSite-specific parameter-like data."""
