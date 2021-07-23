@@ -273,7 +273,7 @@ class TestOpenMMVirtualSites(BaseTest):
 
         carbonyl_type = VirtualSiteHandler.VirtualSiteMonovalentLonePairType(
             name="EP",
-            smirks="[O:1]=[C:2]-[*:3]",
+            smirks="[O:1]=[C:2]-[C:3]",
             distance=0.3 * simtk_unit.angstrom,
             type="MonovalentLonePair",
             match="once",
@@ -331,7 +331,7 @@ class TestOpenMMVirtualSites(BaseTest):
 
     def test_carbonyl_example(self, parsley_with_monovalent_lone_pair):
         """Test that a single-molecule DivalentLonePair example runs"""
-        mol = Molecule.from_smiles("C=O")
+        mol = Molecule.from_smiles("CC=O")
         mol.generate_conformers(n_conformers=1)
 
         out = Interchange.from_smirnoff(

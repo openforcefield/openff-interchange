@@ -693,6 +693,8 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             for parameter_key, parameter_value in potential.parameters.items():
 
                 if parameter_key == "charge_increments":
+                    if type(topology_key) != VirtualSiteKey:
+                        raise RuntimeError
                     charge = -1.0 * np.sum(parameter_value)
                     # assumes virtual sites can only have charges determined in one step
                     # also, topology_key is actually a VirtualSiteKey
@@ -801,8 +803,10 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             self.slot_map.update({virtual_site_key: virtual_site_potential_key})
             self.potentials.update({virtual_site_potential_key: virtual_site_potential})
 
-            for i, atom_index in enumerate(atom_indices):
-                topology_key = TopologyKey(atom_indices=(atom_index,), mult=2)
+            # TODO: Counter-intuitive that toolkit regression tests pass by using the counter
+            # variable i as if it was the atom index - shouldn't it just use atom_index?
+            for i, atom_index in enumerate(atom_indices):  # noqa
+                topology_key = TopologyKey(atom_indices=(i,), mult=2)
                 potential_key = PotentialKey(
                     id=virtual_site_type.smirks,
                     mult=i,
@@ -1213,27 +1217,27 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         potential = self.potentials[potential_key]
         if virtual_site_key.type == "BondCharge":
             distance = potential.parameters["distance"]
-            local_frame_position = [-1.0 * distance, 0.0, 0.0]
+            local_frame_position = [-1.0, 0.0, 0.0] * distance
         elif virtual_site_key.type == "MonovalentLonePair":
             distance = potential.parameters["distance"]
             theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
             psi = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
             local_frame_position = [
-                distance * np.cos(theta) * np.cos(psi),
-                distance * np.sin(theta) * np.cos(psi),
-                distance * np.sin(psi),
-            ]
+                np.cos(theta) * np.cos(psi),
+                np.sin(theta) * np.cos(psi),
+                np.sin(psi),
+            ] * distance
         elif virtual_site_key.type == "DivalentLonePair":
             distance = potential.parameters["distance"]
             theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
             local_frame_position = [
-                -1.0 * distance * np.cos(theta),
+                -1.0 * np.cos(theta),
                 0.0,
-                distance * np.sin(theta),
-            ]
+                np.sin(theta),
+            ] * distance
         elif virtual_site_key.type == "TrivalentLonePair":
             distance = potential.parameters["distance"]
-            local_frame_position = [-1.0 * distance, 0.0, 0.0]
+            local_frame_position = [-1.0, 0.0, 0.0] * distance
 
         return local_frame_position
 
