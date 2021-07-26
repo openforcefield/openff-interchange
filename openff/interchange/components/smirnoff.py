@@ -33,7 +33,6 @@ from openff.interchange.components.potentials import (
 )
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
-    MissingBondOrdersError,
     MissingParametersError,
     SMIRNOFFParameterAttributeNotImplementedError,
 )
@@ -129,6 +128,11 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
             raise InvalidParameterHandlerError(type(parameter_handler))
 
         handler = cls()
+        if hasattr(handler, "fractional_bond_order_method"):
+            if getattr(parameter_handler, "fractional_bondorder_method", None):
+                handler.fractional_bond_order_method = (
+                    parameter_handler.fractional_bondorder_method
+                )
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
         handler.store_potentials(parameter_handler=parameter_handler)
 
@@ -139,6 +143,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
     type: Literal["Bonds"] = "Bonds"
     expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
+    fractional_bond_order_method: Literal["AM1-Wiberg"] = "AM1-Wiberg"
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -174,8 +179,8 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
                 top_bond = topology.get_bond_between(*key)  # type: ignore[union-attr]
                 fractional_bond_order = top_bond.bond.fractional_bond_order
                 if not fractional_bond_order:
-                    raise MissingBondOrdersError(
-                        "Interpolation currently requires bond orders pre-specified"
+                    raise RuntimeError(
+                        "Bond orders should already be assigned at this point"
                     )
             else:
                 fractional_bond_order = None
@@ -183,7 +188,9 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
                 atom_indices=key, bond_order=fractional_bond_order
             )
             potential_key = PotentialKey(
-                id=val.parameter_type.smirks, associated_handler=parameter_handler_name
+                id=val.parameter_type.smirks,
+                associated_handler=parameter_handler_name,
+                bond_order=fractional_bond_order,
             )
             self.slot_map[topology_key] = potential_key
 
@@ -258,6 +265,26 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
             raise InvalidParameterHandlerError
 
         handler: T = cls(type="Bonds", expression="k/2*(r-length)**2")
+
+        if (
+            any(
+                getattr(p, "k_bondorder", None) is not None
+                for p in parameter_handler.parameters
+            )
+        ) or (
+            any(
+                getattr(p, "length_bondorder", None) is not None
+                for p in parameter_handler.parameters
+            )
+        ):
+            for ref_mol in topology.reference_molecules:
+                # TODO: expose conformer generation and fractional bond order assigment
+                # knobs to user via API
+                ref_mol.generate_conformers(n_conformers=1)
+                ref_mol.assign_fractional_bond_orders(
+                    bond_order_model=handler.fractional_bond_order_method,
+                )
+
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
         handler.store_potentials(parameter_handler=parameter_handler)
 
@@ -420,6 +447,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
     expression: Literal[
         "k*(1+cos(periodicity*theta-phase))"
     ] = "k*(1+cos(periodicity*theta-phase))"
+    fractional_bond_order_method: Literal["AM1-Wiberg"] = "AM1-Wiberg"
 
     @classmethod
     def allowed_parameter_handlers(cls):

@@ -14,6 +14,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     UnassignedProperTorsionParameterException,
     UnassignedValenceParameterException,
 )
+from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from simtk import unit as simtk_unit
@@ -30,10 +31,7 @@ from openff.interchange.components.smirnoff import (
     SMIRNOFFvdWHandler,
     library_charge_from_molecule,
 )
-from openff.interchange.exceptions import (
-    InvalidParameterHandlerError,
-    MissingBondOrdersError,
-)
+from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.models import TopologyKey
 from openff.interchange.tests import BaseTest
 from openff.interchange.utils import get_test_file_path
@@ -319,8 +317,7 @@ class TestBondOrderInterpolation(BaseTest):
     def test_input_bond_orders_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
-        from openff.toolkit.tests.create_molecules import create_ethanol
-        from openff.toolkit.tests.test_forcefield import xml_ff_bo
+        from openff.toolkit.tests.test_forcefield import create_ethanol, xml_ff_bo
 
         mol = create_ethanol()
         mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
@@ -331,49 +328,54 @@ class TestBondOrderInterpolation(BaseTest):
         top = Topology.from_molecules(mol)
         mod_top = Topology.from_molecules(mod_mol)
 
-        forcefield = ForceField("test_forcefields", xml_ff_bo)
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"), xml_ff_bo
+        )
 
         bonds = SMIRNOFFBondHandler._from_toolkit(
-            potential_handler=forcefield["Bonds"], topology=top
+            parameter_handler=forcefield["Bonds"], topology=top
         )
         bonds_mod = SMIRNOFFBondHandler._from_toolkit(
-            potential_handler=forcefield["Bonds"], topology=mod_top
+            parameter_handler=forcefield["Bonds"], topology=mod_top
         )
 
-        for bond1, bond2 in zip(bonds.slot_map, bonds_mod.slot_map):
-            k1 = bonds.potentials[bond1].parameters["k"]
-            k2 = bonds.potentials[bond2].parameters["k"]
+        for pot_key1, pot_key2 in zip(
+            bonds.slot_map.values(), bonds_mod.slot_map.values()
+        ):
+            k1 = bonds.potentials[pot_key1].parameters["k"]
+            k2 = bonds_mod.potentials[pot_key2].parameters["k"]
             assert k1 == k2
 
     def test_input_conformers_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
-        from openff.toolkit.tests.create_molecules import create_ethanol
-        from openff.toolkit.tests.test_forcefield import xml_ff_bo
+        from openff.toolkit.tests.test_forcefield import create_ethanol, xml_ff_bo
 
         mol = create_ethanol()
         mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
         mod_mol = Molecule(mol)
         mod_mol.generate_conformers()
         tmp = mod_mol._conformers[0][0][0]
-        mod_mol._conformers[0][0][0] = mod_mol._conformers[0][:][0]
-        mod_mol._conformers[0][:][0] = tmp
+        mod_mol._conformers[0][0][0] = mod_mol._conformers[0][1][0]
+        mod_mol._conformers[0][1][0] = tmp
 
         top = Topology.from_molecules(mol)
         mod_top = Topology.from_molecules(mod_mol)
 
-        forcefield = ForceField("test_forcefields", xml_ff_bo)
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"), xml_ff_bo
+        )
 
         bonds = SMIRNOFFBondHandler._from_toolkit(
-            potential_handler=forcefield["Bonds"], topology=top
+            parameter_handler=forcefield["Bonds"], topology=top
         )
         bonds_mod = SMIRNOFFBondHandler._from_toolkit(
-            potential_handler=forcefield["Bonds"], topology=mod_top
+            parameter_handler=forcefield["Bonds"], topology=mod_top
         )
 
-        for bond1, bond2 in zip(bonds.slot_map, bonds_mod.slot_map):
-            k1 = bonds.potentials[bond1].parameters["k"]
-            k2 = bonds.potentials[bond2].parameters["k"]
+        for key1, key2 in zip(bonds.potentials, bonds_mod.potentials):
+            k1 = bonds.potentials[key1].parameters["k"]
+            k2 = bonds_mod.potentials[key2].parameters["k"]
             assert k1 == k2
 
 
@@ -449,6 +451,7 @@ class TestParameterInterpolation(BaseTest):
     </SMIRNOFF>
     """
 
+    @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
     def test_bond_order_interpolation(self):
         forcefield = ForceField(
             "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
@@ -457,18 +460,21 @@ class TestParameterInterpolation(BaseTest):
         mol = Molecule.from_smiles("CCO")
         mol.generate_conformers(n_conformers=1)
 
-        with pytest.raises(MissingBondOrdersError):
-            Interchange.from_smirnoff(forcefield, mol.to_topology())
-
-        mol.assign_fractional_bond_orders()
         mol.bonds[1].fractional_bond_order = 1.5
+
+        top = mol.to_topology()
 
         out = Interchange.from_smirnoff(forcefield, mol.to_topology())
 
-        assert out["Bonds"].potentials[
-            out["Bonds"].slot_map[TopologyKey(atom_indices=(1, 2))]
-        ].parameters["k"] == 300 * unit.Unit("kilocalories / mol / angstrom ** 2")
+        top_key = TopologyKey(
+            atom_indices=(1, 2),
+            bond_order=top.get_bond_between(1, 2).bond.fractional_bond_order,
+        )
+        assert out["Bonds"].potentials[out["Bonds"].slot_map[top_key]].parameters[
+            "k"
+        ] == 300 * unit.Unit("kilocalories / mol / angstrom ** 2")
 
+    @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
     def test_bond_order_interpolation_similar_bonds(self):
         """Test that key mappings do not get confused when two bonds having similar SMIRKS matches
         have different bond orders"""

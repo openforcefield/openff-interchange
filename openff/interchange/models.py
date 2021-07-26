@@ -66,8 +66,8 @@ class TopologyKey(DefaultModel):
     )
     bond_order: Optional[float] = Field(
         None,
-        description="If this is a key to a WrappedPotential interpolating multiple parameter(s), "
-        "the bond order determining the coefficients of the wrapped potentials.",
+        description="If this key represents as topology component subject to interpolation "
+        "between multiple parameters(s), the bond order determining the coefficients of the wrapped potentials.",
     )
 
     def __hash__(self):
@@ -120,6 +120,11 @@ class PotentialKey(DefaultModel):
         None,
         description="The type of handler this potential key is associated with, "
         "i.e. 'Bonds', 'vdW', or 'LibraryCharges",
+    )
+    bond_order: Optional[float] = Field(
+        None,
+        description="If this is a key to a WrappedPotential interpolating multiple parameter(s), "
+        "the bond order determining the coefficients of the wrapped potentials.",
     )
 
     def __hash__(self):
