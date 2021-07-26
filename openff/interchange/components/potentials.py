@@ -1,5 +1,5 @@
 import ast
-from typing import TYPE_CHECKING, Dict, List, Optional, Set
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union
 
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.utilities.utilities import requires_package
@@ -75,7 +75,7 @@ class PotentialHandler(DefaultModel):
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )
-    potentials: Dict[PotentialKey, Potential] = Field(
+    potentials: Dict[PotentialKey, Union[Potential, WrappedPotential]] = Field(
         dict(),
         description="A mapping between PotentialKey objects and Potential objects.",
     )

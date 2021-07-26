@@ -30,10 +30,16 @@ from openff.interchange.components.smirnoff import (
     SMIRNOFFvdWHandler,
     library_charge_from_molecule,
 )
-from openff.interchange.exceptions import InvalidParameterHandlerError
+from openff.interchange.exceptions import (
+    InvalidParameterHandlerError,
+    MissingBondOrdersError,
+)
 from openff.interchange.models import TopologyKey
 from openff.interchange.tests import BaseTest
 from openff.interchange.utils import get_test_file_path
+
+kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
+kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
 
 
 class TestSMIRNOFFPotentialHandler(BaseTest):
@@ -105,7 +111,6 @@ class TestSMIRNOFFHandlers(BaseTest):
         assert pot_key.associated_handler == "Bonds"
         pot = bond_potentials.potentials[pot_key]
 
-        kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
         assert pot.parameters["k"].to(kcal_mol_a2).magnitude == pytest.approx(1.5)
 
     def test_angle_potential_handler(self):
@@ -132,7 +137,6 @@ class TestSMIRNOFFHandlers(BaseTest):
         assert pot_key.associated_handler == "Angles"
         pot = angle_potentials.potentials[pot_key]
 
-        kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
         assert pot.parameters["k"].to(kcal_mol_rad2).magnitude == pytest.approx(2.5)
 
     def test_store_improper_torsion_matches(self):
@@ -364,3 +368,81 @@ class TestMatrixRepresentations(BaseTest):
             assert np.allclose(
                 np.sum(param_matrix, axis=1), np.ones(param_matrix.shape[0])
             )
+
+
+class TestParameterInterpolation(BaseTest):
+    xml_ff_bo = """<?xml version='1.0' encoding='ASCII'?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+      <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg"
+        fractional_bondorder_interpolation="linear">
+        <Bond
+          smirks="[#6X4:1]~[#8X2:2]"
+          id="bbo1"
+          k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
+          k_bondorder2="500.0 * kilocalories_per_mole/angstrom**2"
+          length_bondorder1="1.4 * angstrom"
+          length_bondorder2="1.3 * angstrom"
+          />
+      </Bonds>
+    </SMIRNOFF>
+    """
+
+    def test_bond_order_interpolation(self):
+        forcefield = ForceField(
+            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
+        )
+
+        mol = Molecule.from_smiles("CCO")
+        mol.generate_conformers(n_conformers=1)
+
+        with pytest.raises(MissingBondOrdersError):
+            Interchange.from_smirnoff(forcefield, mol.to_topology())
+
+        mol.assign_fractional_bond_orders()
+        mol.bonds[1].fractional_bond_order = 1.5
+
+        out = Interchange.from_smirnoff(forcefield, mol.to_topology())
+
+        assert out["Bonds"].potentials[
+            out["Bonds"].slot_map[TopologyKey(atom_indices=(1, 2))]
+        ].parameters["k"] == 300 * unit.Unit("kilocalories / mol / angstrom ** 2")
+
+    def test_bond_order_interpolation_similar_bonds(self):
+        """Test that key mappings do not get confused when two bonds having similar SMIRKS matches
+        have different bond orders"""
+        forcefield = ForceField(
+            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
+        )
+
+        # TODO: Construct manually to avoid relying on atom ordering
+        mol = Molecule.from_smiles("C(CCO)O")
+        mol.generate_conformers(n_conformers=1)
+
+        mol.bonds[2].fractional_bond_order = 1.5
+        mol.bonds[3].fractional_bond_order = 1.2
+
+        top = mol.to_topology()
+
+        out = Interchange.from_smirnoff(forcefield, top)
+
+        bond1_top_key = TopologyKey(
+            atom_indices=(2, 3),
+            bond_order=top.get_bond_between(2, 3).bond.fractional_bond_order,
+        )
+        bond1_pot_key = out["Bonds"].slot_map[bond1_top_key]
+
+        bond2_top_key = TopologyKey(
+            atom_indices=(0, 4),
+            bond_order=top.get_bond_between(0, 4).bond.fractional_bond_order,
+        )
+        bond2_pot_key = out["Bonds"].slot_map[bond2_top_key]
+
+        assert np.allclose(
+            out["Bonds"].potentials[bond1_pot_key].parameters["k"],
+            300.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
+        )
+
+        assert np.allclose(
+            out["Bonds"].potentials[bond2_pot_key].parameters["k"],
+            180.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
+        )

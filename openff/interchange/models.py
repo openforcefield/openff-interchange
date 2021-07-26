@@ -64,6 +64,11 @@ class TopologyKey(DefaultModel):
     mult: Optional[int] = Field(
         None, description="The index of this duplicate interaction"
     )
+    bond_order: Optional[float] = Field(
+        None,
+        description="If this is a key to a WrappedPotential interpolating multiple parameter(s), "
+        "the bond order determining the coefficients of the wrapped potentials.",
+    )
 
     def __hash__(self):
         return hash((self.atom_indices, self.mult))

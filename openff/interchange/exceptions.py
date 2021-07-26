@@ -132,7 +132,7 @@ class MissingParametersError(BaseException):
 
 class MissingBondOrdersError(BaseException):
     """
-    Exception for when a parameter handler needs fractional bond orders but
+    Exception for when a parameter handler needs fractional bond orders but they are missing
     """
 
 

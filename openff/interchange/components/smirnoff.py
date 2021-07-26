@@ -26,9 +26,15 @@ from pydantic import Field
 from simtk import unit as omm_unit
 from typing_extensions import Literal
 
-from openff.interchange.components.potentials import Potential, PotentialHandler
+from openff.interchange.components.potentials import (
+    Potential,
+    PotentialHandler,
+    WrappedPotential,
+)
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
+    MissingBondOrdersError,
+    MissingParametersError,
     SMIRNOFFParameterAttributeNotImplementedError,
 )
 from openff.interchange.models import PotentialKey, TopologyKey
@@ -140,11 +146,54 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
     @classmethod
     def supported_parameters(cls):
-        return ["smirks", "id", "k", "length"]
+        return ["smirks", "id", "k", "length", "k_bondorder", "length_bondorder"]
 
     @classmethod
     def valence_terms(cls, topology):
         return [list(b.atoms) for b in topology.topology_bonds]
+
+    def store_matches(
+        self,
+        parameter_handler: ParameterHandler,
+        topology: Union["Topology", "OFFBioTop"],
+    ) -> None:
+        """
+        Populate self.slot_map with key-val pairs of slots
+        and unique potential identifiers
+
+        """
+        parameter_handler_name = getattr(parameter_handler, "_TAGNAME", None)
+        if self.slot_map:
+            # TODO: Should the slot_map always be reset, or should we be able to partially
+            # update it? Also Note the duplicated code in the child classes
+            self.slot_map = dict()
+        matches = parameter_handler.find_matches(topology)
+        for key, val in matches.items():
+            param = val.parameter_type
+            if param.k_bondorder or param.length_bondorder:
+                top_bond = topology.get_bond_between(*key)  # type: ignore[union-attr]
+                fractional_bond_order = top_bond.bond.fractional_bond_order
+                if not fractional_bond_order:
+                    raise MissingBondOrdersError(
+                        "Interpolation currently requires bond orders pre-specified"
+                    )
+            else:
+                fractional_bond_order = None
+            topology_key = TopologyKey(
+                atom_indices=key, bond_order=fractional_bond_order
+            )
+            potential_key = PotentialKey(
+                id=val.parameter_type.smirks, associated_handler=parameter_handler_name
+            )
+            self.slot_map[topology_key] = potential_key
+
+        valence_terms = self.valence_terms(topology)
+
+        parameter_handler._check_all_valence_terms_assigned(
+            assigned_terms=matches,
+            valence_terms=valence_terms,
+            exception_cls=UnassignedValenceParameterException,
+        )
 
     def store_potentials(self, parameter_handler: "BondHandler") -> None:
         """
@@ -154,15 +203,41 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         """
         if self.potentials:
             self.potentials = dict()
-        for potential_key in self.slot_map.values():
+        for topology_key, potential_key in self.slot_map.items():
             smirks = potential_key.id
             parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
-            potential = Potential(
-                parameters={
-                    "k": parameter_type.k,
-                    "length": parameter_type.length,
-                },
-            )
+            if topology_key.bond_order:
+                bond_order = topology_key.bond_order
+                if parameter_type.k_bondorder:
+                    data = parameter_type.k_bondorder
+                else:
+                    data = parameter_type.length_bondorder
+                coeffs = _get_interpolation_coeffs(
+                    fractional_bond_order=bond_order,
+                    data=data,
+                )
+                pots = []
+                map_keys = [*data.keys()]
+                for map_key in map_keys:
+                    pots.append(
+                        Potential(
+                            parameters={
+                                "k": parameter_type.k_bondorder[map_key],
+                                "length": parameter_type.length_bondorder[map_key],
+                            },
+                            map_key=map_key,
+                        )
+                    )
+                potential = WrappedPotential(
+                    {pot: coeff for pot, coeff in zip(pots, coeffs)}
+                )
+            else:
+                potential = Potential(  # type: ignore[assignment]
+                    parameters={
+                        "k": parameter_type.k,
+                        "length": parameter_type.length,
+                    },
+                )
             self.potentials[potential_key] = potential
 
     @classmethod
@@ -269,8 +344,6 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
             else:
                 # This constraint parameter depends on the BondHandler ...
                 if bond_handler is None:
-                    from openff.interchange.exceptions import MissingParametersError
-
                     raise MissingParametersError(
                         f"Constraint with SMIRKS pattern {smirks} found with no distance "
                         "specified, and no corresponding bond parameters were found. The distance "
@@ -1004,6 +1077,14 @@ def library_charge_from_molecule(
     )
 
     return library_charge_type
+
+
+def _get_interpolation_coeffs(fractional_bond_order, data):
+    x1, x2 = data.keys()
+    coeff1 = (x2 - fractional_bond_order) / (x2 - x1)
+    coeff2 = (fractional_bond_order - x1) / (x2 - x1)
+
+    return coeff1, coeff2
 
 
 SMIRNOFF_POTENTIAL_HANDLERS = [
