@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'openff-system'
+project = 'openff-interchange'
 copyright = ("2020, Open Force Field Initiative. Project structure based on the "
              "Computational Molecular Science Python Cookiecutter version 1.2")
 author = 'Open Force Field Initiative'
@@ -116,7 +116,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'systemdoc'
+htmlhelp_basename = 'interchangedoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -143,8 +143,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'system.tex', 'openff-system Documentation',
-     'system', 'manual'),
+    (master_doc, 'interchange.tex', 'openff-interchange Documentation',
+     'interchange', 'manual'),
 ]
 
 
@@ -153,7 +153,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'system', 'openff-system Documentation',
+    (master_doc, 'interchange', 'openff-interchange Documentation',
      [author], 1)
 ]
 
@@ -164,8 +164,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'system', 'openff-system Documentation',
-     author, 'system', 'A molecular system object from the Open Force Field Initiative',
+    (master_doc, 'interchange', 'openff-interchange Documentation',
+     author, 'interchange', 'A molecular interchange object from the Open Force Field Initiative',
      'Miscellaneous'),
 ]
 

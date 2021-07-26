@@ -1,0 +1,21 @@
+name: openff-interchange-minimal-env
+channels:
+  - conda-forge
+dependencies:
+    # Base depends
+  - python
+  - pip
+  - numpy
+  - pandas
+  - pydantic
+  - pint
+  - openmm
+  - openff-toolkit
+  - openff-utilities
+  - openff-units
+  - jax
+  - mdtraj
+  - ele
+
+    # Testing
+  - pytest

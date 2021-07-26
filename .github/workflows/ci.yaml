@@ -1,4 +1,4 @@
-name: CI
+name: full_tests
 
 on:
   push:
@@ -13,21 +13,20 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
-        os: [macOS-latest, ubuntu-latest]
+        os: [ubuntu-latest]
         python-version: [3.7, 3.8, 3.9]
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
-      COV: --cov=openff/system --cov-report=xml --cov-config=setup.cfg --cov-append
+      COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v2.3.4
 
-    - uses: conda-incubator/setup-miniconda@v2
+    - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
         python-version: ${{ matrix.python-version }}
         activate-environment: test
@@ -36,12 +35,6 @@ jobs:
         channel-priority: true
         environment-file: devtools/conda-envs/test_env.yaml
         auto-activate-base: false
-
-    - name: Install development version of OpenFF Recharge
-      shell: bash -l {0}
-      run: |
-        mamba install --only-deps openff-recharge -c conda-forge -c omnia
-        python -m pip install git+https://github.com/openforcefield/openff-recharge.git
 
     - name: Additional info about the build
       shell: bash
@@ -61,23 +54,43 @@ jobs:
       run: |
         python setup.py develop --no-deps
 
-    - name: Run mypy
+    - name: Clone ParmEd tests
       shell: bash -l {0}
       run: |
-        mypy --show-error-codes --namespace-packages -p "openff.system"
+        git clone https://github.com/parmed/tests
+        cp -r tests/pmdtest .
+        echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
+
+    - name: Run mypy
+      continue-on-error: true
+      shell: bash -l {0}
+      run: |
+        mypy --show-error-codes --warn-unused-configs --warn-unused-ignores --namespace-packages -p "openff.interchange"
+
+    - name: Run docexamples
+      shell: bash -l {0}
+      run: |
+        pytest -v --doctest-modules openff/interchange/ --ignore=openff/interchange/tests
 
     - name: Run unit tests
+      if: always()
       shell: bash -l {0}
       run: |
-        pytest -v $COV openff/system/tests/
+        python -m pytest -v $COV openff/interchange/tests/ --ignore=openff/interchange/tests/interop/test_parmed.py
+
+    - name: Run ParmEd tests
+      continue-on-error: true
+      shell: bash -l {0}
+      run: |
+        python -m pytest -v $COV openff/interchange/tests/parmed
 
     - name: Run example notebooks
       shell: bash -l {0}
       run: |
-        pytest -v $COV examples/ --nbval-lax
+        python -m pytest -v $COV examples/ --nbval-lax
 
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v2.0.2
       with:
         file: ./coverage.xml
         fail_ci_if_error: false

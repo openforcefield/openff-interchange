@@ -1,4 +1,4 @@
-name: test
+name: openff-interchange-env
 channels:
   - conda-forge
   - bioconda
@@ -6,21 +6,35 @@ dependencies:
     # Base depends
   - python
   - pip
+  - numpy
+  - pandas
   - pydantic
   - pint
   - openmm
   - openff-toolkit
+  - openff-utilities
+  - openff-units
   - jax
+  - mdtraj
   - ele
+
+    # Python <3.8
+  - typing-extensions
+
     # Testing
   - pytest
   - pytest-cov
+  - pytest-timeout
   - codecov
   - nbval
   - mypy
   - unyt
   - intermol
-  - gromacs =2019
+  - gromacs >=2021
   - lammps
   - mbuild
-  - foyer
+  - foyer>=0.8.1
+  - panedr
+  - pandas-stubs
+  - openff-evaluator
+  - openff-recharge

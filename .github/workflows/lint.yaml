@@ -18,8 +18,8 @@ jobs:
 
     steps:
 
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2.2.1
+      - uses: actions/checkout@v2.3.4
+      - uses: actions/setup-python@v2.2.2
         with:
           python-version: '3.8'
       - name: Install the package
@@ -28,13 +28,13 @@ jobs:
 
       - name: Install linters
         run: |
-          pip install black isort flake8 flake8-bugbear flake8-absolute-import
+          pip install black isort flake8 flake8-bugbear flake8-absolute-import flake8-pytest-style
 
       - name: Run black
         run: |
           black openff --check
 
-      - name: Run black
+      - name: Run isort
         run: |
           isort --check-only openff
 

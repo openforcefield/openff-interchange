@@ -1,15 +1,15 @@
-The OpenFF System
-=================
+OpenFF Interchange
+==================
 [//]: # (Badges)
-[![CI Status](https://github.com/openforcefield/openff-system/workflows/ci/badge.svg)](https://github.com/openforcefield/openff-system/actions?query=branch%3Amaster+workflow%3Aci)  [![Codecov coverage](https://img.shields.io/codecov/c/github/openforcefield/openff-system.svg?logo=Codecov&logoColor=white)](https://codecov.io/gh/openforcefield/openff-system) [![LGTM analysis](https://img.shields.io/lgtm/grade/python/g/openforcefield/openff-system.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/openforcefield/openff-system/context:python)
+[![CI Status](https://github.com/openforcefield/openff-interchange/workflows/ci/badge.svg)](https://github.com/openforcefield/openff-interchange/actions?query=branch%3Amaster+workflow%3Aci)  [![Codecov coverage](https://img.shields.io/codecov/c/github/openforcefield/openff-interchange.svg?logo=Codecov&logoColor=white)](https://codecov.io/gh/openforcefield/openff-interchange) [![LGTM analysis](https://img.shields.io/lgtm/grade/python/g/openforcefield/openff-interchange.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/openforcefield/openff-interchange/context:python)
 
-A molecular system object from the Open Force Field Initiative
+A project (and object) for storing, manipulating, and converting molecular mechanics data.
 
 **Please note that this software in an early and experimental state and unsuitable for production.**
 
 #### Getting started
 
-The OpenFF System serves primarily as a container object for parametrized data. It can currently take in force fields
+The OpenFF Iterchange object serves primarily as a container object for parametrized data. It can currently take in force fields
 and chemical topologies via objects in the [OpenFF Toolkit](https://open-forcefield-toolkit.readthedocs.io/) and produce
 an object storing parametrized data.
 
@@ -18,33 +18,34 @@ an object storing parametrized data.
 from openff.toolkit.topology import Molecule, Topology
 top = Molecule.from_smiles("C").to_topology()
 
-# Load Parsley
-from openff.system.stubs import ForceField  # Primarily wraps the ForceField class from the OpenFF Toolkit
+# Load OpenFF 1.0.0 "Parsley"
+from openff.toolkit.typing.engines.smirnoff import ForceField
 parsley = ForceField("openff-1.0.0.offxml")
 
-# Create an OpenFF System
-off_sys = parsley.create_openff_system(top)
+# Create an OpenFF Interchange object
+from openff.interchange.components.interchange import Interchange
+out = Interchange.from_smirnoff(force_field=parsley, topology=top)
 
 # Define box vectors and assign atomic positions
 import numpy as np
-off_sys.box = [4, 4, 4] * np.eye(3)
-off_sys.positions = np.random.rand(15).reshape((5, 3))  # Repalce with valid data
+out.box = [4, 4, 4] * np.eye(3)
+out.positions = np.random.rand(15).reshape((5, 3))  # Repalce with valid data
 
-# Convert the OpenFF System to an OpenMM System ...
-omm_sys = off_sys.to_openmm()
+# Convert the OpenFF Interchnage object to an OpenMM System ...
+omm_sys = out.to_openmm(combine_nonbonded_forces=True)
 
-# ... or write to GROMACS files (partial support)
-off_sys.to_gro("out.gro", writer="internal")
-off_sys.to_top("top.gro", writer="internal")
+# ... or write to GROMACS files
+out.to_gro("out.gro")
+out.to_top("out.top")
 ```
 
-Future releases will include support for conversion to other file formats such as those used by AMBER and GROMACS.
+Future releases will include improved support for other file formats such as those used by AMBER and LAMMPS.
 
-Other examples are available via [binder](https://mybinder.org/v2/gh/openforcefield/openff-system/master?filepath=%2Fexamples%2F), runnable in a web browser without installing anyting on your computer.
+Other examples are available via [binder](https://mybinder.org/v2/gh/openforcefield/openff-interchange/master?filepath=%2Fexamples%2F), runnable in a web browser without installing anyting on your computer.
 
 ### Copyright
 
-Copyright (c) 2020, Open Force Field Initiative
+Copyright (c) 2020-2021, Open Force Field Initiative
 
 
 #### Acknowledgements

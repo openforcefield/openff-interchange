@@ -112,7 +112,7 @@ scratch/
 *.edr
 *.xvg
 *.tpr
-*.mdp
+# *.mdp
 *out.gro
 md.log
 *stderr.txt
