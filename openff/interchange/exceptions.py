@@ -59,12 +59,6 @@ class InvalidTopologyError(ValueError):
     """
 
 
-class InterMolEnergyComparisonError(AssertionError):
-    """
-    Exception for when energies derived from InterMol do not match
-    """
-
-
 class NonbondedEnergyError(AssertionError):
     """
     Exception for when non-bonded energies computed from different objects differ
@@ -133,6 +127,12 @@ class MissingPositionsError(BaseException):
 class MissingParametersError(BaseException):
     """
     Exception for when parameters are needed but missing
+    """
+
+
+class MissingBondOrdersError(BaseException):
+    """
+    Exception for when a parameter handler needs fractional bond orders but they are missing
     """
 
 

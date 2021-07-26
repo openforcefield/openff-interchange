@@ -4,16 +4,17 @@ import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from simtk import openmm
 from simtk import unit as simtk_unit
 from simtk.openmm import app
 
+from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.interchange.drivers.report import EnergyError, EnergyReport
-from openff.interchange.stubs import ForceField
 from openff.interchange.tests.utils import HAS_GROMACS, HAS_LAMMPS, needs_gmx, needs_lmp
 from openff.interchange.utils import get_test_file_path
 
@@ -56,8 +57,8 @@ def test_energy_report():
 @skip_if_missing("mbuild")
 @needs_gmx
 @needs_lmp
-@pytest.mark.xfail
-@pytest.mark.slow
+@pytest.mark.xfail()
+@pytest.mark.slow()
 @pytest.mark.parametrize("constrained", [True, False])
 @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
 def test_energies_single_mol(constrained, mol_smi):
@@ -74,7 +75,7 @@ def test_energies_single_mol(constrained, mol_smi):
     else:
         parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
-    off_sys = parsley.create_openff_interchange(top)
+    off_sys = Interchange.from_smirnoff(parsley, top)
 
     off_sys.handlers["Electrostatics"].method = "cutoff"
 
@@ -133,7 +134,7 @@ def test_energies_single_mol(constrained, mol_smi):
 
 @needs_gmx
 @needs_lmp
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_liquid_argon():
     argon = Molecule.from_smiles("[#18]")
     pdbfile = app.PDBFile(get_test_file_path("packed-argon.pdb"))
@@ -142,7 +143,7 @@ def test_liquid_argon():
 
     argon_ff = ForceField(get_test_file_path("argon.offxml"))
 
-    out = argon_ff.create_openff_interchange(top)
+    out = Interchange.from_smirnoff(argon_ff, top)
     out.positions = pdbfile.positions
 
     omm_energies = get_openmm_energies(out)
@@ -163,7 +164,7 @@ def test_liquid_argon():
     argon_ff_no_switch = deepcopy(argon_ff)
     argon_ff_no_switch["vdW"].switch_width *= 0
 
-    out_no_switch = argon_ff_no_switch.create_openff_interchange(top)
+    out_no_switch = Interchange.from_smirnoff(argon_ff_no_switch, top)
     out_no_switch.positions = pdbfile.positions
 
     lmp_energies = get_lammps_energies(out_no_switch)
@@ -203,7 +204,7 @@ def test_packmol_boxes(toolkit_file_path):
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
-    off_sys = parsley.create_openff_interchange(off_topology)
+    off_sys = Interchange.from_smirnoff(parsley, off_topology)
 
     off_sys.box = np.asarray(
         pdbfile.topology.getPeriodicBoxVectors().value_in_unit(simtk_unit.nanometer)
@@ -251,7 +252,7 @@ def test_packmol_boxes(toolkit_file_path):
 
 
 @needs_lmp
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_water_dimer():
     tip3p = ForceField(get_test_file_path("tip3p.offxml"))
     water = Molecule.from_smiles("O")
@@ -262,7 +263,7 @@ def test_water_dimer():
 
     positions = pdbfile.positions
 
-    openff_sys = tip3p.create_openff_interchange(top)
+    openff_sys = Interchange.from_smirnoff(tip3p, top)
     openff_sys.positions = positions
     openff_sys.box = [10, 10, 10] * unit.nanometer
 
@@ -296,7 +297,7 @@ def test_water_dimer():
 @needs_gmx
 @skip_if_missing("foyer")
 @skip_if_missing("mbuild")
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_process_rb_torsions():
     """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
 
@@ -341,7 +342,7 @@ def test_gmx_14_energies_exist():
 
     parsley = ForceField("openff-1.0.0.offxml")
 
-    out = parsley.create_openff_interchange(topology=mol.to_topology())
+    out = Interchange.from_smirnoff(parsley, mol.to_topology())
     out.positions = mol.conformers[0]
 
     # Put this molecule in a large box with cut-off electrostatics
@@ -361,8 +362,8 @@ def test_gmx_14_energies_exist():
 
 @needs_gmx
 @needs_lmp
-@pytest.mark.xfail
-@pytest.mark.slow
+@pytest.mark.xfail()
+@pytest.mark.slow()
 def test_cutoff_electrostatics():
     ion_ff = ForceField(get_test_file_path("ions.offxml"))
     ions = Topology.from_molecules(
@@ -371,7 +372,7 @@ def test_cutoff_electrostatics():
             Molecule.from_smiles("[#17]"),
         ]
     )
-    out = ion_ff.create_openff_interchange(ions)
+    out = Interchange.from_smirnoff(ion_ff, ions)
     out.box = [4, 4, 4] * unit.nanometer
 
     gmx = []

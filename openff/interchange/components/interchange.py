@@ -126,7 +126,7 @@ class Interchange(DefaultModel):
         box=None,
     ) -> "Interchange":
         """Creates a new object by parameterizing a topology using the specified
-        SMIRNOFF force field and
+        SMIRNOFF force field.
 
         Parameters
         ----------
@@ -136,6 +136,29 @@ class Interchange(DefaultModel):
             The topology to parameterize.
         box
             The box vectors associated with the interchange.
+
+        Examples
+        --------
+
+        Generate an Interchange object from a single-molecule (OpenFF) topology and
+        OpenFF 1.0.0 "Parsley"
+
+        .. code-block:: pycon
+
+            >>> from openff.interchange.components.interchange import Interchange
+            >>> from openff.interchange.components.mdtraj import OFFBioTop
+            >>> from openff.toolkit.topology import Molecule
+            >>> from openff.toolkit.typing.engines.smirnoff import ForceField
+            >>> import mdtraj as md
+            >>> mol = Molecule.from_smiles("CC")
+            >>> mol.generate_conformers(n_conformers=1)
+            >>> top = OFFBioTop.from_molecules([mol])
+            >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
+            >>> parsley = ForceField("openff-1.0.0.offxml")
+            >>> interchange = Interchange.from_smirnoff(topology=top, force_field=parsley)
+            >>> interchange
+            Interchange with 8 atoms, non-periodic topology
+
         """
         sys_out = Interchange()
 
@@ -232,7 +255,7 @@ class Interchange(DefaultModel):
         return sys_out
 
     def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 8):
-        """Export this interchange to a .gro file using ParmEd"""
+        """Export this Interchange object to a .gro file"""
 
         if self.positions is None:
             raise MissingPositionsError(
@@ -256,7 +279,7 @@ class Interchange(DefaultModel):
             to_gro(self, file_path, decimal=decimal)
 
     def to_top(self, file_path: Union[Path, str], writer="internal"):
-        """Export this interchange to a .top file using ParmEd"""
+        """Export this interchange to a .top file using"""
         if writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
 
@@ -281,7 +304,7 @@ class Interchange(DefaultModel):
 
         return to_openmm_(self, combine_nonbonded_forces=combine_nonbonded_forces)
 
-    def to_prmtop(self, file_path: Union[Path, str], writer="parmed"):
+    def _to_prmtop(self, file_path: Union[Path, str], writer="parmed"):
         """Export this interchange to an Amber .prmtop file"""
         if writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
@@ -291,7 +314,7 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
-    def to_crd(self, file_path: Union[Path, str], writer="parmed"):
+    def _to_crd(self, file_path: Union[Path, str], writer="parmed"):
         """Export this interchange to an Amber .crd file"""
         if writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
@@ -316,8 +339,33 @@ class Interchange(DefaultModel):
     @classmethod
     @requires_package("foyer")
     def from_foyer(
-        cls, topology: "OFFBioTop", ff: "Forcefield", **kwargs
+        cls, topology: "OFFBioTop", force_field: "Forcefield", **kwargs
     ) -> "Interchange":
+        """Create an Interchange object from a Foyer force field and an OpenFF topology.
+
+        Examples
+        --------
+
+        Generate an Interchange object from a single-molecule (OpenFF) topology and
+        the Foyer implementation of OPLS-AA
+
+        .. code-block:: pycon
+
+            >>> from openff.interchange.components.interchange import Interchange
+            >>> from openff.interchange.components.mdtraj import OFFBioTop
+            >>> from openff.toolkit.topology import Molecule
+            >>> from foyer import Forcefield
+            >>> import mdtraj as md
+            >>> mol = Molecule.from_smiles("CC")
+            >>> mol.generate_conformers(n_conformers=1)
+            >>> top = OFFBioTop.from_molecules([mol])
+            >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
+            >>> oplsaa = Forcefield(name="oplsaa")
+            >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
+            >>> interchange
+            Interchange with 8 atoms, non-periodic topology
+
+        """
         from openff.interchange.components.foyer import get_handlers_callable
 
         system = cls()
@@ -326,23 +374,23 @@ class Interchange(DefaultModel):
         for name, Handler in get_handlers_callable().items():
             system.handlers[name] = Handler()
 
-        system.handlers["vdW"].store_matches(ff, topology=topology)
-        system.handlers["vdW"].store_potentials(forcefield=ff)
+        system.handlers["vdW"].store_matches(force_field, topology=topology)
+        system.handlers["vdW"].store_potentials(force_field=force_field)
 
         atom_slots = system.handlers["vdW"].slot_map
 
         system.handlers["Electrostatics"].store_charges(
             atom_slots=atom_slots,
-            forcefield=ff,
+            force_field=force_field,
         )
 
-        system.handlers["vdW"].scale_14 = ff.lj14scale
-        system.handlers["Electrostatics"].scale_14 = ff.coulomb14scale
+        system.handlers["vdW"].scale_14 = force_field.lj14scale
+        system.handlers["Electrostatics"].scale_14 = force_field.coulomb14scale
 
         for name, handler in system.handlers.items():
             if name not in ["vdW", "Electrostatics"]:
                 handler.store_matches(atom_slots, topology=topology)
-                handler.store_potentials(ff)
+                handler.store_potentials(force_field)
 
         return system
 

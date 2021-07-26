@@ -1,8 +1,10 @@
 import mdtraj as md
 import pytest
 from openff.toolkit.topology import Molecule
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from simtk.openmm import app
 
+from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import (
     OFFBioTop,
     _get_num_h_bonds,
@@ -11,11 +13,10 @@ from openff.interchange.components.mdtraj import (
     _store_bond_partners,
 )
 from openff.interchange.drivers import get_openmm_energies
-from openff.interchange.stubs import ForceField
 from openff.interchange.utils import get_test_file_path
 
 
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_residues():
     pdb = app.PDBFile(get_test_file_path("ALA_GLY/ALA_GLY.pdb"))
     traj = md.load(get_test_file_path("ALA_GLY/ALA_GLY.pdb"))
@@ -29,7 +30,7 @@ def test_residues():
     assert [r.name for r in top.mdtop.residues] == ["ACE", "ALA", "GLY", "NME"]
 
     ff = ForceField("openff-1.3.0.offxml")
-    off_sys = ff.create_openff_interchange(top)
+    off_sys = Interchange.from_smirnoff(ff, top)
 
     # Assign positions and box vectors in order to run MM
     off_sys.positions = pdb.positions
@@ -56,6 +57,17 @@ def test_iterate_pairs():
     }
     assert len(pairs) == 3
     assert len([*_iterate_propers(mdtop)]) > len(pairs)
+
+
+def test_iterate_pairs_benzene():
+    """Check that bonds in rings are not double-counted with _iterate_pairs.
+    This should be fixed by using Topology.nth_degree_neighbors directly"""
+    benzene = Molecule.from_smiles("c1ccccc1")
+    mdtop = md.Topology.from_openmm(benzene.to_topology().to_openmm())
+
+    _store_bond_partners(mdtop)
+
+    assert len({*_iterate_pairs(mdtop)}) == 21
 
 
 def test_get_num_h_bonds():

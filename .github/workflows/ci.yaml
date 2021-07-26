@@ -67,6 +67,11 @@ jobs:
       run: |
         mypy --show-error-codes --warn-unused-configs --warn-unused-ignores --namespace-packages -p "openff.interchange"
 
+    - name: Run docexamples
+      shell: bash -l {0}
+      run: |
+        pytest -v --doctest-modules openff/interchange/ --ignore=openff/interchange/tests
+
     - name: Run unit tests
       if: always()
       shell: bash -l {0}
@@ -85,7 +90,7 @@ jobs:
         python -m pytest -v $COV examples/ --nbval-lax
 
     - name: Codecov
-      uses: codecov/codecov-action@v1.5.2
+      uses: codecov/codecov-action@v2.0.2
       with:
         file: ./coverage.xml
         fail_ci_if_error: false

@@ -43,6 +43,7 @@ def _get_potential_key_id(atom_slots: Dict[TopologyKey, PotentialKey], idx):
 
 
 def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
+    """Map Foyer-style handlers from string identifiers"""
     return {
         "vdW": FoyerVDWHandler,
         "Electrostatics": FoyerElectrostaticsHandler,
@@ -69,21 +70,22 @@ class FoyerVDWHandler(PotentialHandler):
 
     def store_matches(
         self,
-        forcefield: "Forcefield",
+        force_field: "Forcefield",
         topology: "OFFBioTop",
     ) -> None:
         """Populate slotmap with key-val pairs of slots and unique potential Identifiers"""
         from foyer.atomtyper import find_atomtypes
 
         top_graph = TopologyGraph.from_openff_topology(openff_topology=topology)
-        type_map = find_atomtypes(top_graph, forcefield=forcefield)
+        type_map = find_atomtypes(top_graph, forcefield=force_field)
         for key, val in type_map.items():
             top_key = TopologyKey(atom_indices=(key,))
             self.slot_map[top_key] = PotentialKey(id=val["atomtype"])
 
-    def store_potentials(self, forcefield: "Forcefield") -> None:
+    def store_potentials(self, force_field: "Forcefield") -> None:
+        """Extract specific force field parameters a Forcefield object"""
         for top_key in self.slot_map:
-            atom_params = forcefield.get_parameters(
+            atom_params = force_field.get_parameters(
                 self.type, key=self.slot_map[top_key].id
             )
 
@@ -109,10 +111,11 @@ class FoyerElectrostaticsHandler(PotentialHandler):
     def store_charges(
         self,
         atom_slots: Dict[TopologyKey, PotentialKey],
-        forcefield: "Forcefield",
+        force_field: "Forcefield",
     ):
+        """Look up fixed charges (a.k.a. library charges) from the force field and store them in self.charges"""
         for top_key, pot_key in atom_slots.items():
-            foyer_params = forcefield.get_parameters("atoms", pot_key.id)
+            foyer_params = force_field.get_parameters("atoms", pot_key.id)
             charge = foyer_params["charge"]
             charge = charge * unit.elementary_charge
             self.charges[top_key] = charge
@@ -143,12 +146,12 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids)
             )
 
-    def store_potentials(self, forcefield: "Forcefield") -> None:
+    def store_potentials(self, force_field: "Forcefield") -> None:
         from foyer.exceptions import MissingForceError, MissingParametersError
 
         for _, pot_key in self.slot_map.items():
             try:
-                params = forcefield.get_parameters(
+                params = force_field.get_parameters(
                     self.type, key=pot_key.id.split(POTENTIAL_KEY_SEPARATOR)
                 )
                 params = self.get_params_with_units(params)

@@ -115,7 +115,7 @@ def _write_lammps_input(
                 fo.write("dihedral_style hybrid fourier\n")
         if "ImproperTorsions" in off_sys.handlers:
             if len(off_sys["ImproperTorsions"].potentials) > 0:
-                fo.write("improper_style hybrid cvff \n")
+                fo.write("improper_style cvff\n")
 
         vdw_hander = off_sys.handlers["vdW"]
         electrostatics_handler = off_sys.handlers["Electrostatics"]

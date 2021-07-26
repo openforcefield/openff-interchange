@@ -11,12 +11,14 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     LibraryChargeHandler,
     ParameterHandler,
     ToolkitAM1BCCHandler,
+    UnassignedProperTorsionParameterException,
+    UnassignedValenceParameterException,
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from simtk import unit as omm_unit
 from simtk import unit as simtk_unit
 
+from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.components.smirnoff import (
     SMIRNOFFAngleHandler,
@@ -28,10 +30,16 @@ from openff.interchange.components.smirnoff import (
     SMIRNOFFvdWHandler,
     library_charge_from_molecule,
 )
-from openff.interchange.exceptions import InvalidParameterHandlerError
+from openff.interchange.exceptions import (
+    InvalidParameterHandlerError,
+    MissingBondOrdersError,
+)
 from openff.interchange.models import TopologyKey
 from openff.interchange.tests import BaseTest
 from openff.interchange.utils import get_test_file_path
+
+kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
+kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
 
 
 class TestSMIRNOFFPotentialHandler(BaseTest):
@@ -83,13 +91,13 @@ class TestSMIRNOFFHandlers(BaseTest):
         bond_handler = BondHandler(version=0.3)
         bond_parameter = BondHandler.BondType(
             smirks="[*:1]~[*:2]",
-            k=1.5 * omm_unit.kilocalorie_per_mole / omm_unit.angstrom ** 2,
-            length=1.5 * omm_unit.angstrom,
+            k=1.5 * simtk_unit.kilocalorie_per_mole / simtk_unit.angstrom ** 2,
+            length=1.5 * simtk_unit.angstrom,
             id="b1000",
         )
         bond_handler.add_parameter(bond_parameter.to_dict())
 
-        from openff.interchange.stubs import ForceField
+        from openff.toolkit.typing.engines.smirnoff import ForceField
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(bond_handler)
@@ -103,7 +111,6 @@ class TestSMIRNOFFHandlers(BaseTest):
         assert pot_key.associated_handler == "Bonds"
         pot = bond_potentials.potentials[pot_key]
 
-        kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
         assert pot.parameters["k"].to(kcal_mol_a2).magnitude == pytest.approx(1.5)
 
     def test_angle_potential_handler(self):
@@ -112,13 +119,11 @@ class TestSMIRNOFFHandlers(BaseTest):
         angle_handler = AngleHandler(version=0.3)
         angle_parameter = AngleHandler.AngleType(
             smirks="[*:1]~[*:2]~[*:3]",
-            k=2.5 * omm_unit.kilocalorie_per_mole / omm_unit.radian ** 2,
-            angle=100 * omm_unit.degree,
+            k=2.5 * simtk_unit.kilocalorie_per_mole / simtk_unit.radian ** 2,
+            angle=100 * simtk_unit.degree,
             id="b1000",
         )
         angle_handler.add_parameter(angle_parameter.to_dict())
-
-        from openff.interchange.stubs import ForceField
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(angle_handler)
@@ -132,7 +137,6 @@ class TestSMIRNOFFHandlers(BaseTest):
         assert pot_key.associated_handler == "Angles"
         pot = angle_potentials.potentials[pot_key]
 
-        kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
         assert pot.parameters["k"].to(kcal_mol_rad2).magnitude == pytest.approx(2.5)
 
     def test_store_improper_torsion_matches(self):
@@ -235,9 +239,44 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
 
 
+class TestUnassignedParameters(BaseTest):
+    def test_catch_unassigned_bonds(self, parsley, ethanol_top):
+        for param in parsley["Bonds"].parameters:
+            param.smirks = "[#99:1]-[#99:2]"
+
+        parsley.deregister_parameter_handler(parsley["Constraints"])
+
+        with pytest.raises(
+            UnassignedValenceParameterException,
+            match="BondHandler was not able to find par",
+        ):
+            Interchange.from_smirnoff(force_field=parsley, topology=ethanol_top)
+
+    def test_catch_unassigned_angles(self, parsley, ethanol_top):
+        for param in parsley["Angles"].parameters:
+            param.smirks = "[#99:1]-[#99:2]-[#99:3]"
+
+        with pytest.raises(
+            UnassignedValenceParameterException,
+            match="AngleHandler was not able to find par",
+        ):
+            Interchange.from_smirnoff(force_field=parsley, topology=ethanol_top)
+
+    def test_catch_unassigned_torsions(self, parsley, ethanol_top):
+        for param in parsley["ProperTorsions"].parameters:
+            param.smirks = "[#99:1]-[#99:2]-[#99:3]-[#99:4]"
+
+        with pytest.raises(
+            UnassignedProperTorsionParameterException,
+            match="- Topology indices [(]5, 0, 1, 6[)]: "
+            r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
+        ):
+            Interchange.from_smirnoff(force_field=parsley, topology=ethanol_top)
+
+
 class TestConstraints:
     @pytest.mark.parametrize(
-        "mol,n_constraints",
+        ("mol", "n_constraints"),
         [
             ("C", 4),
             ("CC", 6),
@@ -341,7 +380,7 @@ class TestBondOrderInterpolation(BaseTest):
 @skip_if_missing("jax")
 class TestMatrixRepresentations(BaseTest):
     @pytest.mark.parametrize(
-        "handler_name,n_ff_terms,n_sys_terms",
+        ("handler_name", "n_ff_terms", "n_sys_terms"),
         [("vdW", 10, 72), ("Bonds", 8, 64), ("Angles", 6, 104)],
     )
     def test_to_force_field_to_system_parameters(
@@ -391,3 +430,81 @@ class TestMatrixRepresentations(BaseTest):
             assert np.allclose(
                 np.sum(param_matrix, axis=1), np.ones(param_matrix.shape[0])
             )
+
+
+class TestParameterInterpolation(BaseTest):
+    xml_ff_bo = """<?xml version='1.0' encoding='ASCII'?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+      <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg"
+        fractional_bondorder_interpolation="linear">
+        <Bond
+          smirks="[#6X4:1]~[#8X2:2]"
+          id="bbo1"
+          k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
+          k_bondorder2="500.0 * kilocalories_per_mole/angstrom**2"
+          length_bondorder1="1.4 * angstrom"
+          length_bondorder2="1.3 * angstrom"
+          />
+      </Bonds>
+    </SMIRNOFF>
+    """
+
+    def test_bond_order_interpolation(self):
+        forcefield = ForceField(
+            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
+        )
+
+        mol = Molecule.from_smiles("CCO")
+        mol.generate_conformers(n_conformers=1)
+
+        with pytest.raises(MissingBondOrdersError):
+            Interchange.from_smirnoff(forcefield, mol.to_topology())
+
+        mol.assign_fractional_bond_orders()
+        mol.bonds[1].fractional_bond_order = 1.5
+
+        out = Interchange.from_smirnoff(forcefield, mol.to_topology())
+
+        assert out["Bonds"].potentials[
+            out["Bonds"].slot_map[TopologyKey(atom_indices=(1, 2))]
+        ].parameters["k"] == 300 * unit.Unit("kilocalories / mol / angstrom ** 2")
+
+    def test_bond_order_interpolation_similar_bonds(self):
+        """Test that key mappings do not get confused when two bonds having similar SMIRKS matches
+        have different bond orders"""
+        forcefield = ForceField(
+            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
+        )
+
+        # TODO: Construct manually to avoid relying on atom ordering
+        mol = Molecule.from_smiles("C(CCO)O")
+        mol.generate_conformers(n_conformers=1)
+
+        mol.bonds[2].fractional_bond_order = 1.5
+        mol.bonds[3].fractional_bond_order = 1.2
+
+        top = mol.to_topology()
+
+        out = Interchange.from_smirnoff(forcefield, top)
+
+        bond1_top_key = TopologyKey(
+            atom_indices=(2, 3),
+            bond_order=top.get_bond_between(2, 3).bond.fractional_bond_order,
+        )
+        bond1_pot_key = out["Bonds"].slot_map[bond1_top_key]
+
+        bond2_top_key = TopologyKey(
+            atom_indices=(0, 4),
+            bond_order=top.get_bond_between(0, 4).bond.fractional_bond_order,
+        )
+        bond2_pot_key = out["Bonds"].slot_map[bond2_top_key]
+
+        assert np.allclose(
+            out["Bonds"].potentials[bond1_pot_key].parameters["k"],
+            300.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
+        )
+
+        assert np.allclose(
+            out["Bonds"].potentials[bond2_pot_key].parameters["k"],
+            180.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
+        )
