@@ -13,7 +13,8 @@ from simtk.openmm import app
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
-from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
+from openff.interchange.drivers import get_openmm_energies
+from openff.interchange.drivers.openmm import _get_openmm_energies
 from openff.interchange.drivers.report import EnergyError, EnergyReport
 from openff.interchange.tests.utils import (
     HAS_GROMACS,
@@ -33,10 +34,11 @@ if HAS_GROMACS:
 if HAS_LAMMPS:
     from openff.interchange.drivers.lammps import get_lammps_energies
 
+kj_mol = unit.kilojoule / unit.mol
+
 
 def test_energy_report():
     """Test that multiple failing energies are captured in the EnergyError"""
-    kj_mol = unit.kilojoule / unit.mol
     a = EnergyReport(
         energies={
             "a": 1 * kj_mol,
@@ -496,7 +498,7 @@ def test_interpolated_parameters(smi):
     ).energies["Bond"]
 
     try:
-        assert abs(interchange_bond_energy - toolkit_bond_energy).m < 1e-6
+        assert abs(interchange_bond_energy - toolkit_bond_energy).m_as(kj_mol) < 1e-6
     except AssertionError:
 
         def _get_bond_force(omm_sys):
@@ -509,3 +511,13 @@ def test_interpolated_parameters(smi):
         _compare_bond_forces(
             _get_bond_force(interchange_system), _get_bond_force(toolkit_system)
         )
+
+    gromacs_bond_energy = get_gromacs_energies(out).energies["Bond"]
+    energy_diff = abs(interchange_bond_energy - gromacs_bond_energy).m_as(kj_mol)
+
+    if energy_diff < 1e-6:
+        pass
+    elif energy_diff < 1e-2:
+        pytest.xfail(f"Found energy difference of {energy_diff} kJ/mol")
+    else:
+        pytest.fail(f"Found energy difference of {energy_diff} kJ/mol")
