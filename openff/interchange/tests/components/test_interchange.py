@@ -89,21 +89,6 @@ class TestUnimplementedSMIRNOFFCases(BaseTest):
         ):
             Interchange.from_smirnoff(force_field=parsley, topology=top)
 
-    def test_catch_bond_order_interpolation_bonds(self):
-        from openff.toolkit.tests.test_forcefield import xml_ff_bo
-
-        forcefield = ForceField(
-            get_data_file_path("test_forcefields/test_forcefield.offxml"),
-            xml_ff_bo,
-        )
-
-        top = Molecule.from_smiles("CCO").to_topology()
-
-        with pytest.raises(
-            SMIRNOFFParameterAttributeNotImplementedError, match="length_bondorder"
-        ):
-            Interchange.from_smirnoff(force_field=forcefield, topology=top)
-
     def test_catch_bond_order_interpolation_torsions(self):
         from openff.toolkit.tests.test_forcefield import (
             xml_ff_torsion_bo_standard_supersede,
