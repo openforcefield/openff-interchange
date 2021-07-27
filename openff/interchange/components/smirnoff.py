@@ -133,6 +133,9 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
                 handler.fractional_bond_order_method = (
                     parameter_handler.fractional_bondorder_method
                 )
+                handler.fractional_bond_order_interpolation = (
+                    parameter_handler.fractional_bondorder_interpolation
+                )
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
         handler.store_potentials(parameter_handler=parameter_handler)
 
@@ -144,6 +147,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
     type: Literal["Bonds"] = "Bonds"
     expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
     fractional_bond_order_method: Literal["AM1-Wiberg"] = "AM1-Wiberg"
+    fractional_bond_order_interpolation: Literal["linear"] = "linear"
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -448,6 +452,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
         "k*(1+cos(periodicity*theta-phase))"
     ] = "k*(1+cos(periodicity*theta-phase))"
     fractional_bond_order_method: Literal["AM1-Wiberg"] = "AM1-Wiberg"
+    fractional_bond_order_interpolation: Literal["linear"] = "linear"
 
     @classmethod
     def allowed_parameter_handlers(cls):

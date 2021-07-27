@@ -17,6 +17,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from pydantic import ValidationError
 from simtk import openmm
 from simtk import unit as simtk_unit
 
@@ -316,6 +317,18 @@ def test_library_charges_from_molecule():
 
 
 class TestBondOrderInterpolation(BaseTest):
+    xml_ff_bo_bonds = """<?xml version='1.0' encoding='ASCII'?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+      <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+        <Bond smirks="[#6:1]~[#8:2]" id="bbo1"
+            k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
+            k_bondorder2="1000.0 * kilocalories_per_mole/angstrom**2"
+            length_bondorder1="1.5 * angstrom"
+            length_bondorder2="1.0 * angstrom"/>
+      </Bonds>
+    </SMIRNOFF>
+    """
+
     def test_input_bond_orders_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
@@ -382,19 +395,9 @@ class TestBondOrderInterpolation(BaseTest):
 
     @pytest.mark.slow()
     def test_basic_bond_order_interpolation_energies(self):
-        xml_ff_bo_bonds = """<?xml version='1.0' encoding='ASCII'?>
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-            <Bond smirks="[#6:1]~[#8:2]" id="bbo1"
-                k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
-                k_bondorder2="1000.0 * kilocalories_per_mole/angstrom**2"
-                length_bondorder1="1.5 * angstrom"
-                length_bondorder2="1.0 * angstrom"/>
-          </Bonds>
-        </SMIRNOFF>
-        """
+
         forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml", xml_ff_bo_bonds
+            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo_bonds
         )
 
         mol = Molecule.from_file(get_data_file_path("molecules/CID20742535_anion.sdf"))
@@ -437,6 +440,25 @@ class TestBondOrderInterpolation(BaseTest):
 
         assert np.sum(np.abs(np.asarray(ref_k) - np.asarray(new_k))) < 1e-8
         assert np.sum(np.abs(np.asarray(ref_length) - np.asarray(new_length))) < 1e-10
+
+    def test_fractional_bondorder_invalid_interpolation_method(self):
+        """
+        Ensure that requesting an invalid interpolation method leads to a
+        FractionalBondOrderInterpolationMethodUnsupportedError
+        """
+        mol = Molecule.from_smiles("CCO")
+
+        forcefield = ForceField(
+            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo_bonds
+        )
+        forcefield.get_parameter_handler(
+            "ProperTorsions"
+        )._fractional_bondorder_interpolation = "invalid method name"
+        topology = Topology.from_molecules([mol])
+
+        # TODO: Make this a more descriptive custom exception
+        with pytest.raises(ValidationError):
+            Interchange.from_smirnoff(forcefield, topology)
 
 
 @skip_if_missing("jax")
