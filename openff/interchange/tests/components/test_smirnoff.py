@@ -17,6 +17,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from simtk import openmm
 from simtk import unit as simtk_unit
 
 from openff.interchange.components.interchange import Interchange
@@ -31,6 +32,7 @@ from openff.interchange.components.smirnoff import (
     SMIRNOFFvdWHandler,
     library_charge_from_molecule,
 )
+from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.models import TopologyKey
 from openff.interchange.tests import BaseTest
@@ -377,6 +379,64 @@ class TestBondOrderInterpolation(BaseTest):
             k1 = bonds.potentials[key1].parameters["k"]
             k2 = bonds_mod.potentials[key2].parameters["k"]
             assert k1 == k2
+
+    @pytest.mark.slow()
+    def test_basic_bond_order_interpolation_energies(self):
+        xml_ff_bo_bonds = """<?xml version='1.0' encoding='ASCII'?>
+        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+          <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+            <Bond smirks="[#6:1]~[#8:2]" id="bbo1"
+                k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
+                k_bondorder2="1000.0 * kilocalories_per_mole/angstrom**2"
+                length_bondorder1="1.5 * angstrom"
+                length_bondorder2="1.0 * angstrom"/>
+          </Bonds>
+        </SMIRNOFF>
+        """
+        forcefield = ForceField(
+            "test_forcefields/test_forcefield.offxml", xml_ff_bo_bonds
+        )
+
+        mol = Molecule.from_file(get_data_file_path("molecules/CID20742535_anion.sdf"))
+        mol.generate_conformers(n_conformers=1)
+        top = mol.to_topology()
+
+        out = Interchange.from_smirnoff(forcefield, top)
+        out.box = [4, 4, 4] * unit.nanometer
+        out.positions = mol.conformers[0]
+
+        interchange_bond_energy = get_openmm_energies(
+            out, combine_nonbonded_forces=True
+        ).energies["Bond"]
+        toolkit_bond_energy = _get_openmm_energies(
+            forcefield.create_openmm_system(top),
+            box_vectors=[[4, 0, 0], [0, 4, 0], [0, 0, 4]] * simtk_unit.nanometer,
+            positions=mol.conformers[0],
+        ).energies["Bond"]
+
+        assert abs(interchange_bond_energy - toolkit_bond_energy).m < 1e-2
+
+        new = out.to_openmm(combine_nonbonded_forces=True)
+        ref = forcefield.create_openmm_system(top)
+
+        new_k = []
+        new_length = []
+        for force in new.getForces():
+            if type(force) == openmm.HarmonicBondForce:
+                for i in range(force.getNumBonds()):
+                    new_k.append(force.getBondParameters(i)[3]._value)
+                    new_length.append(force.getBondParameters(i)[2]._value)
+
+        ref_k = []
+        ref_length = []
+        for force in ref.getForces():
+            if type(force) == openmm.HarmonicBondForce:
+                for i in range(force.getNumBonds()):
+                    ref_k.append(force.getBondParameters(i)[3]._value)
+                    ref_length.append(force.getBondParameters(i)[2]._value)
+
+        assert np.sum(np.abs(np.asarray(ref_k) - np.asarray(new_k))) < 1e-8
+        assert np.sum(np.abs(np.asarray(ref_length) - np.asarray(new_length))) < 1e-10
 
 
 @skip_if_missing("jax")
