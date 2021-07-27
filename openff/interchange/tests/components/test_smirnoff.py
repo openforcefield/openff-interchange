@@ -332,7 +332,7 @@ class TestBondOrderInterpolation(BaseTest):
     def test_input_bond_orders_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
-        from openff.toolkit.tests.test_forcefield import create_ethanol, xml_ff_bo
+        from openff.toolkit.tests.test_forcefield import create_ethanol
 
         mol = create_ethanol()
         mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
@@ -344,7 +344,8 @@ class TestBondOrderInterpolation(BaseTest):
         mod_top = Topology.from_molecules(mod_mol)
 
         forcefield = ForceField(
-            get_data_file_path("test_forcefields/test_forcefield.offxml"), xml_ff_bo
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            self.xml_ff_bo_bonds,
         )
 
         bonds = SMIRNOFFBondHandler._from_toolkit(
@@ -364,7 +365,7 @@ class TestBondOrderInterpolation(BaseTest):
     def test_input_conformers_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
-        from openff.toolkit.tests.test_forcefield import create_ethanol, xml_ff_bo
+        from openff.toolkit.tests.test_forcefield import create_ethanol
 
         mol = create_ethanol()
         mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
@@ -378,7 +379,8 @@ class TestBondOrderInterpolation(BaseTest):
         mod_top = Topology.from_molecules(mod_mol)
 
         forcefield = ForceField(
-            get_data_file_path("test_forcefields/test_forcefield.offxml"), xml_ff_bo
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            self.xml_ff_bo_bonds,
         )
 
         bonds = SMIRNOFFBondHandler._from_toolkit(
@@ -397,7 +399,8 @@ class TestBondOrderInterpolation(BaseTest):
     def test_basic_bond_order_interpolation_energies(self):
 
         forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo_bonds
+            "test_forcefields/test_forcefield.offxml",
+            self.xml_ff_bo_bonds,
         )
 
         mol = Molecule.from_file(get_data_file_path("molecules/CID20742535_anion.sdf"))

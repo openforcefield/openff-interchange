@@ -286,7 +286,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
                 # knobs to user via API
                 ref_mol.generate_conformers(n_conformers=1)
                 ref_mol.assign_fractional_bond_orders(
-                    bond_order_model=handler.fractional_bond_order_method,
+                    bond_order_model=handler.fractional_bond_order_method.lower(),
                 )
 
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
