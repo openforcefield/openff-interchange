@@ -27,6 +27,7 @@ dependencies:
   - pytest-timeout
   - codecov
   - nbval
+  - conda
   - mypy
   - unyt
   - intermol
