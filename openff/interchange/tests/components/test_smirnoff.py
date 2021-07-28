@@ -329,6 +329,7 @@ class TestBondOrderInterpolation(BaseTest):
     </SMIRNOFF>
     """
 
+    @pytest.mark.slow()
     def test_input_bond_orders_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
@@ -559,6 +560,7 @@ class TestParameterInterpolation(BaseTest):
             "k"
         ] == 300 * unit.Unit("kilocalories / mol / angstrom ** 2")
 
+    @pytest.mark.slow()
     @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
     def test_bond_order_interpolation_similar_bonds(self):
         """Test that key mappings do not get confused when two bonds having similar SMIRKS matches
