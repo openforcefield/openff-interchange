@@ -38,7 +38,7 @@ class TopologyKey(DefaultModel):
         >>> from openff.interchange.models import TopologyKey
         >>> this_angle = TopologyKey(atom_indices=(2, 1, 3))
         >>> this_angle
-        TopologyKey(atom_indices=(2, 1, 3), mult=None)
+        TopologyKey(atom_indices=(2, 1, 3), mult=None, bond_order=None)
 
     Create a TopologyKey indentifying just one atom
 
@@ -46,7 +46,7 @@ class TopologyKey(DefaultModel):
 
         >>> this_atom = TopologyKey(atom_indices=(4,))
         >>> this_atom
-        TopologyKey(atom_indices=(4,), mult=None)
+        TopologyKey(atom_indices=(4,), mult=None, bond_order=None)
 
     Layer multiple TopologyKey objects that point to the same torsion
 
@@ -63,6 +63,11 @@ class TopologyKey(DefaultModel):
     )
     mult: Optional[int] = Field(
         None, description="The index of this duplicate interaction"
+    )
+    bond_order: Optional[float] = Field(
+        None,
+        description="If this key represents as topology component subject to interpolation "
+        "between multiple parameters(s), the bond order determining the coefficients of the wrapped potentials.",
     )
 
     def __hash__(self):
@@ -91,7 +96,7 @@ class PotentialKey(DefaultModel):
         >>> param = parsley["Bonds"].get_parameter({"id": "b55"})[0]
         >>> bond_55 = PotentialKey(id=param.smirks)
         >>> bond_55
-        PotentialKey(id='[#16X4,#16X3:1]-[#8X2:2]', mult=None, associated_handler=None)
+        PotentialKey(id='[#16X4,#16X3:1]-[#8X2:2]', mult=None, associated_handler=None, bond_order=None)
 
     Create a PotentialKey corresponding to the angle parameters in OPLS-AA defined
     between atom types opls_135, opls_135, and opls_140
@@ -100,7 +105,7 @@ class PotentialKey(DefaultModel):
 
         >>> oplsaa_angle = PotentialKey(id="opls_135-opls_135-opls_140")
         >>> oplsaa_angle
-        PotentialKey(id='opls_135-opls_135-opls_140', mult=None, associated_handler=None)
+        PotentialKey(id='opls_135-opls_135-opls_140', mult=None, associated_handler=None, bond_order=None)
 
     """
 
@@ -115,6 +120,11 @@ class PotentialKey(DefaultModel):
         None,
         description="The type of handler this potential key is associated with, "
         "i.e. 'Bonds', 'vdW', or 'LibraryCharges",
+    )
+    bond_order: Optional[float] = Field(
+        None,
+        description="If this is a key to a WrappedPotential interpolating multiple parameter(s), "
+        "the bond order determining the coefficients of the wrapped potentials.",
     )
 
     def __hash__(self):

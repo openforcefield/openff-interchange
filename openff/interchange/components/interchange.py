@@ -165,7 +165,10 @@ class Interchange(DefaultModel):
         cls._check_supported_handlers(force_field)
 
         if isinstance(topology, OFFBioTop):
-            sys_out.topology = topology
+            # TODO: See if Topology(topology) is fixed
+            # https://github.com/openforcefield/openff-toolkit/issues/946
+            sys_out.topology = deepcopy(topology)
+            sys_out.topology.mdtop = topology.mdtop
         elif isinstance(topology, Topology):
             sys_out.topology = OFFBioTop(other=topology)
             sys_out.topology.mdtop = md.Topology.from_openmm(topology.to_openmm())

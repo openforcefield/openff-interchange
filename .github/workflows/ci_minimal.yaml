@@ -57,4 +57,4 @@ jobs:
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v openff/interchange/tests/ --ignore=openff/interchange/tests/interop/test_parmed.py
+        python -m pytest -v -m "not slow" openff/interchange/tests/ --ignore=openff/interchange/tests/interop/test_parmed.py

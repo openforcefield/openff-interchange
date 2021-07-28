@@ -70,6 +70,7 @@ class TestGROMACS(BaseTest):
         # is to see if GROMACS can run them
         get_gromacs_energies(out)
 
+    @pytest.mark.slow()
     def test_argon_buck(self):
         """Test that Buckingham potentials are supported and can be exported"""
         from openff.interchange.components.smirnoff import SMIRNOFFElectrostaticsHandler

@@ -287,7 +287,12 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                     non_bonded_force.setCutoffDistance(vdw_cutoff)
                     non_bonded_force.setEwaldErrorTolerance(1.0e-4)
                 else:
-                    raise UnsupportedCutoffMethodError
+                    raise UnsupportedCutoffMethodError(
+                        f"Combination of non-bonded cutoff methods {vdw_cutoff} (vdW) and "
+                        f"{electrostatics_method} (Electrostatics) not currently supported with "
+                        f"`combine_nonbonded_forces={combine_nonbonded_forces}` and "
+                        f"`.box={openff_sys.box}`"
+                    )
             elif vdw_method == "pme" and electrostatics_method == "pme":
                 if openff_sys.box is not None:
                     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)

@@ -14,8 +14,11 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     UnassignedProperTorsionParameterException,
     UnassignedValenceParameterException,
 )
+from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from pydantic import ValidationError
+from simtk import openmm
 from simtk import unit as simtk_unit
 
 from openff.interchange.components.interchange import Interchange
@@ -30,10 +33,14 @@ from openff.interchange.components.smirnoff import (
     SMIRNOFFvdWHandler,
     library_charge_from_molecule,
 )
+from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.models import TopologyKey
 from openff.interchange.tests import BaseTest
 from openff.interchange.utils import get_test_file_path
+
+kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
+kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
 
 
 class TestSMIRNOFFPotentialHandler(BaseTest):
@@ -105,7 +112,6 @@ class TestSMIRNOFFHandlers(BaseTest):
         assert pot_key.associated_handler == "Bonds"
         pot = bond_potentials.potentials[pot_key]
 
-        kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
         assert pot.parameters["k"].to(kcal_mol_a2).magnitude == pytest.approx(1.5)
 
     def test_angle_potential_handler(self):
@@ -132,7 +138,6 @@ class TestSMIRNOFFHandlers(BaseTest):
         assert pot_key.associated_handler == "Angles"
         pot = angle_potentials.potentials[pot_key]
 
-        kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
         assert pot.parameters["k"].to(kcal_mol_rad2).magnitude == pytest.approx(2.5)
 
     def test_store_improper_torsion_matches(self):
@@ -311,6 +316,155 @@ def test_library_charges_from_molecule():
     assert library_charges.charge == [*mol.partial_charges]
 
 
+class TestBondOrderInterpolation(BaseTest):
+    xml_ff_bo_bonds = """<?xml version='1.0' encoding='ASCII'?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+      <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+        <Bond smirks="[#6:1]~[#8:2]" id="bbo1"
+            k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
+            k_bondorder2="1000.0 * kilocalories_per_mole/angstrom**2"
+            length_bondorder1="1.5 * angstrom"
+            length_bondorder2="1.0 * angstrom"/>
+      </Bonds>
+    </SMIRNOFF>
+    """
+
+    @pytest.mark.slow()
+    def test_input_bond_orders_ignored(self):
+        """Test that conformers existing in the topology are not considered in the bond order interpolation
+        part of the parametrization process"""
+        from openff.toolkit.tests.test_forcefield import create_ethanol
+
+        mol = create_ethanol()
+        mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
+        mod_mol = Molecule(mol)
+        for bond in mod_mol.bonds:
+            bond.fractional_bond_order += 0.1
+
+        top = Topology.from_molecules(mol)
+        mod_top = Topology.from_molecules(mod_mol)
+
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            self.xml_ff_bo_bonds,
+        )
+
+        bonds = SMIRNOFFBondHandler._from_toolkit(
+            parameter_handler=forcefield["Bonds"], topology=top
+        )
+        bonds_mod = SMIRNOFFBondHandler._from_toolkit(
+            parameter_handler=forcefield["Bonds"], topology=mod_top
+        )
+
+        for pot_key1, pot_key2 in zip(
+            bonds.slot_map.values(), bonds_mod.slot_map.values()
+        ):
+            k1 = bonds.potentials[pot_key1].parameters["k"]
+            k2 = bonds_mod.potentials[pot_key2].parameters["k"]
+            assert k1 == k2
+
+    def test_input_conformers_ignored(self):
+        """Test that conformers existing in the topology are not considered in the bond order interpolation
+        part of the parametrization process"""
+        from openff.toolkit.tests.test_forcefield import create_ethanol
+
+        mol = create_ethanol()
+        mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
+        mod_mol = Molecule(mol)
+        mod_mol.generate_conformers()
+        tmp = mod_mol._conformers[0][0][0]
+        mod_mol._conformers[0][0][0] = mod_mol._conformers[0][1][0]
+        mod_mol._conformers[0][1][0] = tmp
+
+        top = Topology.from_molecules(mol)
+        mod_top = Topology.from_molecules(mod_mol)
+
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            self.xml_ff_bo_bonds,
+        )
+
+        bonds = SMIRNOFFBondHandler._from_toolkit(
+            parameter_handler=forcefield["Bonds"], topology=top
+        )
+        bonds_mod = SMIRNOFFBondHandler._from_toolkit(
+            parameter_handler=forcefield["Bonds"], topology=mod_top
+        )
+
+        for key1, key2 in zip(bonds.potentials, bonds_mod.potentials):
+            k1 = bonds.potentials[key1].parameters["k"]
+            k2 = bonds_mod.potentials[key2].parameters["k"]
+            assert k1 == k2
+
+    @pytest.mark.slow()
+    def test_basic_bond_order_interpolation_energies(self):
+
+        forcefield = ForceField(
+            "test_forcefields/test_forcefield.offxml",
+            self.xml_ff_bo_bonds,
+        )
+
+        mol = Molecule.from_file(get_data_file_path("molecules/CID20742535_anion.sdf"))
+        mol.generate_conformers(n_conformers=1)
+        top = mol.to_topology()
+
+        out = Interchange.from_smirnoff(forcefield, top)
+        out.box = [4, 4, 4] * unit.nanometer
+        out.positions = mol.conformers[0]
+
+        interchange_bond_energy = get_openmm_energies(
+            out, combine_nonbonded_forces=True
+        ).energies["Bond"]
+        toolkit_bond_energy = _get_openmm_energies(
+            forcefield.create_openmm_system(top),
+            box_vectors=[[4, 0, 0], [0, 4, 0], [0, 0, 4]] * simtk_unit.nanometer,
+            positions=mol.conformers[0],
+        ).energies["Bond"]
+
+        assert abs(interchange_bond_energy - toolkit_bond_energy).m < 1e-2
+
+        new = out.to_openmm(combine_nonbonded_forces=True)
+        ref = forcefield.create_openmm_system(top)
+
+        new_k = []
+        new_length = []
+        for force in new.getForces():
+            if type(force) == openmm.HarmonicBondForce:
+                for i in range(force.getNumBonds()):
+                    new_k.append(force.getBondParameters(i)[3]._value)
+                    new_length.append(force.getBondParameters(i)[2]._value)
+
+        ref_k = []
+        ref_length = []
+        for force in ref.getForces():
+            if type(force) == openmm.HarmonicBondForce:
+                for i in range(force.getNumBonds()):
+                    ref_k.append(force.getBondParameters(i)[3]._value)
+                    ref_length.append(force.getBondParameters(i)[2]._value)
+
+        assert np.sum(np.abs(np.asarray(ref_k) - np.asarray(new_k))) < 1e-8
+        assert np.sum(np.abs(np.asarray(ref_length) - np.asarray(new_length))) < 1e-10
+
+    def test_fractional_bondorder_invalid_interpolation_method(self):
+        """
+        Ensure that requesting an invalid interpolation method leads to a
+        FractionalBondOrderInterpolationMethodUnsupportedError
+        """
+        mol = Molecule.from_smiles("CCO")
+
+        forcefield = ForceField(
+            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo_bonds
+        )
+        forcefield.get_parameter_handler(
+            "ProperTorsions"
+        )._fractional_bondorder_interpolation = "invalid method name"
+        topology = Topology.from_molecules([mol])
+
+        # TODO: Make this a more descriptive custom exception
+        with pytest.raises(ValidationError):
+            Interchange.from_smirnoff(forcefield, topology)
+
+
 @skip_if_missing("jax")
 class TestMatrixRepresentations(BaseTest):
     @pytest.mark.parametrize(
@@ -364,3 +518,86 @@ class TestMatrixRepresentations(BaseTest):
             assert np.allclose(
                 np.sum(param_matrix, axis=1), np.ones(param_matrix.shape[0])
             )
+
+
+class TestParameterInterpolation(BaseTest):
+    xml_ff_bo = """<?xml version='1.0' encoding='ASCII'?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+      <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg"
+        fractional_bondorder_interpolation="linear">
+        <Bond
+          smirks="[#6X4:1]~[#8X2:2]"
+          id="bbo1"
+          k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
+          k_bondorder2="500.0 * kilocalories_per_mole/angstrom**2"
+          length_bondorder1="1.4 * angstrom"
+          length_bondorder2="1.3 * angstrom"
+          />
+      </Bonds>
+    </SMIRNOFF>
+    """
+
+    @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
+    def test_bond_order_interpolation(self):
+        forcefield = ForceField(
+            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
+        )
+
+        mol = Molecule.from_smiles("CCO")
+        mol.generate_conformers(n_conformers=1)
+
+        mol.bonds[1].fractional_bond_order = 1.5
+
+        top = mol.to_topology()
+
+        out = Interchange.from_smirnoff(forcefield, mol.to_topology())
+
+        top_key = TopologyKey(
+            atom_indices=(1, 2),
+            bond_order=top.get_bond_between(1, 2).bond.fractional_bond_order,
+        )
+        assert out["Bonds"].potentials[out["Bonds"].slot_map[top_key]].parameters[
+            "k"
+        ] == 300 * unit.Unit("kilocalories / mol / angstrom ** 2")
+
+    @pytest.mark.slow()
+    @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
+    def test_bond_order_interpolation_similar_bonds(self):
+        """Test that key mappings do not get confused when two bonds having similar SMIRKS matches
+        have different bond orders"""
+        forcefield = ForceField(
+            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
+        )
+
+        # TODO: Construct manually to avoid relying on atom ordering
+        mol = Molecule.from_smiles("C(CCO)O")
+        mol.generate_conformers(n_conformers=1)
+
+        mol.bonds[2].fractional_bond_order = 1.5
+        mol.bonds[3].fractional_bond_order = 1.2
+
+        top = mol.to_topology()
+
+        out = Interchange.from_smirnoff(forcefield, top)
+
+        bond1_top_key = TopologyKey(
+            atom_indices=(2, 3),
+            bond_order=top.get_bond_between(2, 3).bond.fractional_bond_order,
+        )
+        bond1_pot_key = out["Bonds"].slot_map[bond1_top_key]
+
+        bond2_top_key = TopologyKey(
+            atom_indices=(0, 4),
+            bond_order=top.get_bond_between(0, 4).bond.fractional_bond_order,
+        )
+        bond2_pot_key = out["Bonds"].slot_map[bond2_top_key]
+
+        assert np.allclose(
+            out["Bonds"].potentials[bond1_pot_key].parameters["k"],
+            300.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
+        )
+
+        assert np.allclose(
+            out["Bonds"].potentials[bond2_pot_key].parameters["k"],
+            180.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
+        )

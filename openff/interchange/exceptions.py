@@ -130,6 +130,12 @@ class MissingParametersError(BaseException):
     """
 
 
+class MissingBondOrdersError(BaseException):
+    """
+    Exception for when a parameter handler needs fractional bond orders but they are missing
+    """
+
+
 class MissingUnitError(ValueError):
     """
     Exception for data missing a unit tag
