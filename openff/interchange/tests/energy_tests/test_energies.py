@@ -482,35 +482,38 @@ def test_interpolated_parameters(smi):
 
     toolkit_system = forcefield.create_openmm_system(top)
 
-    interchange_bond_energy = get_openmm_energies(
-        out, combine_nonbonded_forces=True
-    ).energies["Bond"]
+    for key in ["Bond", "Torsion"]:
+        interchange_energy = get_openmm_energies(
+            out, combine_nonbonded_forces=True
+        ).energies[key]
 
-    toolkit_bond_energy = _get_openmm_energies(
-        toolkit_system,
-        box_vectors=[[4, 0, 0], [0, 4, 0], [0, 0, 4]] * simtk_unit.nanometer,
-        positions=mol.conformers[0],
-    ).energies["Bond"]
+        toolkit_energy = _get_openmm_energies(
+            toolkit_system,
+            box_vectors=[[4, 0, 0], [0, 4, 0], [0, 0, 4]] * simtk_unit.nanometer,
+            positions=mol.conformers[0],
+        ).energies[key]
 
-    toolkit_diff = abs(interchange_bond_energy - toolkit_bond_energy).m_as(kj_mol)
+        toolkit_diff = abs(interchange_energy - toolkit_energy).m_as(kj_mol)
 
-    if toolkit_diff < 1e-6:
-        pass
-    elif toolkit_diff < 1e-2:
-        pytest.xfail(f"Found energy difference of {toolkit_diff} kJ/mol vs. toolkit")
-    else:
-        pytest.fail(f"Found energy difference of {toolkit_diff} kJ/mol vs. toolkit")
+        if toolkit_diff < 1e-6:
+            pass
+        elif toolkit_diff < 1e-2:
+            pytest.xfail(
+                f"Found energy difference of {toolkit_diff} kJ/mol vs. toolkit"
+            )
+        else:
+            pytest.fail(f"Found energy difference of {toolkit_diff} kJ/mol vs. toolkit")
 
-    gromacs_bond_energy = get_gromacs_energies(out).energies["Bond"]
-    energy_diff = abs(interchange_bond_energy - gromacs_bond_energy).m_as(kj_mol)
+        gromacs_energy = get_gromacs_energies(out).energies[key]
+        energy_diff = abs(interchange_energy - gromacs_energy).m_as(kj_mol)
 
-    if energy_diff < 1e-6:
-        pass
-    elif energy_diff < 1e-2:
-        pytest.xfail(
-            f"Found energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports"
-        )
-    else:
-        pytest.fail(
-            f"Found energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports"
-        )
+        if energy_diff < 1e-6:
+            pass
+        elif energy_diff < 1e-2:
+            pytest.xfail(
+                f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports"
+            )
+        else:
+            pytest.fail(
+                f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports"
+            )

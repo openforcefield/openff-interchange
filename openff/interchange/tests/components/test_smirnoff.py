@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from openff.toolkit.tests.test_forcefield import create_ethanol, create_reversed_ethanol
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -601,3 +602,77 @@ class TestParameterInterpolation(BaseTest):
             out["Bonds"].potentials[bond2_pot_key].parameters["k"],
             180.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
         )
+
+    @pytest.mark.parametrize(
+        (
+            "get_molecule",
+            "k_torsion_interpolated",
+            "k_bond_interpolated",
+            "length_bond_interpolated",
+            "central_atoms",
+        ),
+        [
+            (create_ethanol, 4.953856, 44375.504, 0.13770, (1, 2)),
+            (create_reversed_ethanol, 4.953856, 44375.504, 0.13770, (7, 6)),
+        ],
+    )
+    def test_fractional_bondorder_from_molecule(
+        self,
+        get_molecule,
+        k_torsion_interpolated,
+        k_bond_interpolated,
+        length_bond_interpolated,
+        central_atoms,
+    ):
+        """Copied from the toolkit"""
+        mol = get_molecule()
+        forcefield = ForceField(
+            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
+        )
+        topology = Topology.from_molecules(mol)
+
+        out = Interchange.from_smirnoff(forcefield, topology)
+        out.box = [4, 4, 4]
+        omm_system = out.to_openmm(combine_nonbonded_forces=True)
+
+        # Verify that the assigned bond parameters were correctly interpolated
+        off_bond_force = [
+            force
+            for force in omm_system.getForces()
+            if isinstance(force, openmm.HarmonicBondForce)
+        ][0]
+
+        for idx in range(off_bond_force.getNumBonds()):
+            params = off_bond_force.getBondParameters(idx)
+
+            atom1, atom2 = params[0], params[1]
+            atom1_mol, atom2_mol = central_atoms
+
+            if ((atom1 == atom1_mol) and (atom2 == atom2_mol)) or (
+                (atom1 == atom2_mol) and (atom2 == atom1_mol)
+            ):
+                k = params[-1]
+                length = params[-2]
+                np.testing.assert_almost_equal(k / k.unit, k_bond_interpolated)
+                np.testing.assert_almost_equal(
+                    length / length.unit, length_bond_interpolated
+                )
+
+        # Verify that the assigned torsion parameters were correctly interpolated
+        off_torsion_force = [
+            force
+            for force in omm_system.getForces()
+            if isinstance(force, openmm.PeriodicTorsionForce)
+        ][0]
+
+        for idx in range(off_torsion_force.getNumTorsions()):
+            params = off_torsion_force.getTorsionParameters(idx)
+
+            atom2, atom3 = params[1], params[2]
+            atom2_mol, atom3_mol = central_atoms
+
+            if ((atom2 == atom2_mol) and (atom3 == atom3_mol)) or (
+                (atom2 == atom3_mol) and (atom3 == atom2_mol)
+            ):
+                k = params[-1]
+                np.testing.assert_almost_equal(k / k.unit, k_torsion_interpolated)

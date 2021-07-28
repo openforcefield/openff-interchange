@@ -216,13 +216,13 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
             self.potentials = dict()
         for topology_key, potential_key in self.slot_map.items():
             smirks = potential_key.id
-            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
             if topology_key.bond_order:
                 bond_order = topology_key.bond_order
-                if parameter_type.k_bondorder:
-                    data = parameter_type.k_bondorder
+                if parameter.k_bondorder:
+                    data = parameter.k_bondorder
                 else:
-                    data = parameter_type.length_bondorder
+                    data = parameter.length_bondorder
                 coeffs = _get_interpolation_coeffs(
                     fractional_bond_order=bond_order,
                     data=data,
@@ -233,8 +233,8 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
                     pots.append(
                         Potential(
                             parameters={
-                                "k": parameter_type.k_bondorder[map_key],
-                                "length": parameter_type.length_bondorder[map_key],
+                                "k": parameter.k_bondorder[map_key],
+                                "length": parameter.length_bondorder[map_key],
                             },
                             map_key=map_key,
                         )
@@ -245,8 +245,8 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
             else:
                 potential = Potential(  # type: ignore[assignment]
                     parameters={
-                        "k": parameter_type.k,
-                        "length": parameter_type.length,
+                        "k": parameter.k,
+                        "length": parameter.length,
                     },
                 )
             self.potentials[potential_key] = potential
@@ -419,11 +419,11 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
             smirks = potential_key.id
             # ParameterHandler.get_parameter returns a list, although this
             # should only ever be length 1
-            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
             potential = Potential(
                 parameters={
-                    "k": parameter_type.k,
-                    "angle": parameter_type.angle,
+                    "k": parameter.k,
+                    "angle": parameter.angle,
                 },
             )
             self.potentials[potential_key] = potential
@@ -460,7 +460,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
 
     @classmethod
     def supported_parameters(cls):
-        return ["smirks", "id", "k", "periodicity", "phase", "idivf"]
+        return ["smirks", "id", "k", "periodicity", "phase", "idivf", "k_bondorder"]
 
     def store_matches(
         self,
@@ -476,12 +476,28 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
             self.slot_map = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
-            n_terms = len(val.parameter_type.k)
+            param = val.parameter_type
+            n_terms = len(val.parameter_type.phase)
             for n in range(n_terms):
-                smirks = val.parameter_type.smirks
-                topology_key = TopologyKey(atom_indices=key, mult=n)
+                smirks = param.smirks
+                if param.k_bondorder:
+                    # The relevant bond order is that of the _central_ bond in the torsion
+                    top_bond = topology.get_bond_between(key[1], key[2])
+                    fractional_bond_order = top_bond.bond.fractional_bond_order
+                    if not fractional_bond_order:
+                        raise RuntimeError(
+                            "Bond orders should already be assigned at this point"
+                        )
+                else:
+                    fractional_bond_order = None
+                topology_key = TopologyKey(
+                    atom_indices=key, mult=n, bond_order=fractional_bond_order
+                )
                 potential_key = PotentialKey(
-                    id=smirks, mult=n, associated_handler="ProperTorsions"
+                    id=smirks,
+                    mult=n,
+                    associated_handler="ProperTorsions",
+                    bond_order=fractional_bond_order,
                 )
                 self.slot_map[topology_key] = potential_key
 
@@ -497,18 +513,44 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
         identifiers and their associated Potential objects
 
         """
-        for potential_key in self.slot_map.values():
+        for topology_key, potential_key in self.slot_map.items():
             smirks = potential_key.id
             n = potential_key.mult
-            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
-            # n_terms = len(parameter_type.k)
-            parameters = {
-                "k": parameter_type.k[n],
-                "periodicity": parameter_type.periodicity[n] * unit.dimensionless,
-                "phase": parameter_type.phase[n],
-                "idivf": parameter_type.idivf[n] * unit.dimensionless,
-            }
-            potential = Potential(parameters=parameters)
+            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            # n_terms = len(parameter.k)
+            if topology_key.bond_order:
+                bond_order = topology_key.bond_order
+                data = parameter.k_bondorder[n]
+                coeffs = _get_interpolation_coeffs(
+                    fractional_bond_order=bond_order,
+                    data=data,
+                )
+                pots = []
+                map_keys = [*data.keys()]
+                for map_key in map_keys:
+                    parameters = {
+                        "k": parameter.k_bondorder[n][map_key],
+                        "periodicity": parameter.periodicity[n] * unit.dimensionless,
+                        "phase": parameter.phase[n],
+                        "idivf": parameter.idivf[n] * unit.dimensionless,
+                    }
+                    pots.append(
+                        Potential(
+                            parameters=parameters,
+                            map_key=map_key,
+                        )
+                    )
+                potential = WrappedPotential(
+                    {pot: coeff for pot, coeff in zip(pots, coeffs)}
+                )
+            else:
+                parameters = {
+                    "k": parameter.k[n],
+                    "periodicity": parameter.periodicity[n] * unit.dimensionless,
+                    "phase": parameter.phase[n],
+                    "idivf": parameter.idivf[n] * unit.dimensionless,
+                }
+                potential = Potential(parameters=parameters)
             self.potentials[potential_key] = potential
 
 
@@ -579,11 +621,11 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
             n = potential_key.mult
-            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
             parameters = {
-                "k": parameter_type.k[n],
-                "periodicity": parameter_type.periodicity[n] * unit.dimensionless,
-                "phase": parameter_type.phase[n],
+                "k": parameter.k[n],
+                "periodicity": parameter.periodicity[n] * unit.dimensionless,
+                "phase": parameter.phase[n],
                 "idivf": 3.0 * unit.dimensionless,
             }
             potential = Potential(parameters=parameters)
@@ -650,20 +692,20 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
 
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
-            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
             try:
                 potential = Potential(
                     parameters={
-                        "sigma": parameter_type.sigma,
-                        "epsilon": parameter_type.epsilon,
+                        "sigma": parameter.sigma,
+                        "epsilon": parameter.epsilon,
                     },
                 )
             except AttributeError:
                 # Handle rmin_half pending https://github.com/openforcefield/openff-toolkit/pull/750
                 potential = Potential(
                     parameters={
-                        "sigma": parameter_type.sigma,
-                        "epsilon": parameter_type.epsilon,
+                        "sigma": parameter.sigma,
+                        "epsilon": parameter.epsilon,
                     },
                 )
             self.potentials[potential_key] = potential
@@ -876,21 +918,21 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
         for key, val in parameter_matches.items():
 
-            parameter_type = val.parameter_type
+            parameter = val.parameter_type
 
             if isinstance(parameter_handler, LibraryChargeHandler):
 
                 (
                     parameter_matches,
                     parameter_potentials,
-                ) = cls._library_charge_to_potentials(key, parameter_type)
+                ) = cls._library_charge_to_potentials(key, parameter)
 
             elif isinstance(parameter_handler, ChargeIncrementModelHandler):
 
                 (
                     parameter_matches,
                     parameter_potentials,
-                ) = cls._charge_increment_to_potentials(key, parameter_type)
+                ) = cls._charge_increment_to_potentials(key, parameter)
 
             else:
                 raise NotImplementedError()
