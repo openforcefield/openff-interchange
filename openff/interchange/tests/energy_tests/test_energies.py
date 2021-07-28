@@ -16,13 +16,7 @@ from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
 from openff.interchange.drivers.report import EnergyError, EnergyReport
-from openff.interchange.tests.utils import (
-    HAS_GROMACS,
-    HAS_LAMMPS,
-    _compare_bond_forces,
-    needs_gmx,
-    needs_lmp,
-)
+from openff.interchange.tests.utils import HAS_GROMACS, HAS_LAMMPS, needs_gmx, needs_lmp
 from openff.interchange.utils import get_test_file_path
 
 if HAS_GROMACS:
@@ -457,6 +451,7 @@ def test_cutoff_electrostatics():
         "c1ccc(cc1)c2ccc(cc2)N",
     ],
 )
+@needs_gmx
 @pytest.mark.slow()
 def test_interpolated_parameters(smi):
     xml_ff_bo_all_heavy_bonds = """<?xml version='1.0' encoding='ASCII'?>
@@ -497,20 +492,14 @@ def test_interpolated_parameters(smi):
         positions=mol.conformers[0],
     ).energies["Bond"]
 
-    try:
-        assert abs(interchange_bond_energy - toolkit_bond_energy).m_as(kj_mol) < 1e-6
-    except AssertionError:
+    toolkit_diff = abs(interchange_bond_energy - toolkit_bond_energy).m_as(kj_mol)
 
-        def _get_bond_force(omm_sys):
-            for force in omm_sys.getForces():
-                if isinstance(force, openmm.HarmonicBondForce):
-                    return force
-            raise RuntimeError
-
-        interchange_system = out.to_openmm(combine_nonbonded_forces=True)
-        _compare_bond_forces(
-            _get_bond_force(interchange_system), _get_bond_force(toolkit_system)
-        )
+    if toolkit_diff < 1e-6:
+        pass
+    elif toolkit_diff < 1e-2:
+        pytest.xfail(f"Found energy difference of {toolkit_diff} kJ/mol vs. toolkit")
+    else:
+        pytest.fail(f"Found energy difference of {toolkit_diff} kJ/mol vs. toolkit")
 
     gromacs_bond_energy = get_gromacs_energies(out).energies["Bond"]
     energy_diff = abs(interchange_bond_energy - gromacs_bond_energy).m_as(kj_mol)
@@ -518,6 +507,10 @@ def test_interpolated_parameters(smi):
     if energy_diff < 1e-6:
         pass
     elif energy_diff < 1e-2:
-        pytest.xfail(f"Found energy difference of {energy_diff} kJ/mol")
+        pytest.xfail(
+            f"Found energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports"
+        )
     else:
-        pytest.fail(f"Found energy difference of {energy_diff} kJ/mol")
+        pytest.fail(
+            f"Found energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports"
+        )
