@@ -443,8 +443,8 @@ class TestBondOrderInterpolation(BaseTest):
                     ref_k.append(force.getBondParameters(i)[3]._value)
                     ref_length.append(force.getBondParameters(i)[2]._value)
 
-        assert np.sum(np.abs(np.asarray(ref_k) - np.asarray(new_k))) < 1e-8
-        assert np.sum(np.abs(np.asarray(ref_length) - np.asarray(new_length))) < 1e-10
+        np.testing.assert_almost_equal(ref_k, new_k, decimal=4)
+        np.testing.assert_almost_equal(ref_k, new_k, decimal=4)
 
     def test_fractional_bondorder_invalid_interpolation_method(self):
         """
@@ -529,12 +529,18 @@ class TestParameterInterpolation(BaseTest):
         <Bond
           smirks="[#6X4:1]~[#8X2:2]"
           id="bbo1"
-          k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
-          k_bondorder2="500.0 * kilocalories_per_mole/angstrom**2"
+          k_bondorder1="101.0 * kilocalories_per_mole/angstrom**2"
+          k_bondorder2="123.0 * kilocalories_per_mole/angstrom**2"
           length_bondorder1="1.4 * angstrom"
           length_bondorder2="1.3 * angstrom"
           />
       </Bonds>
+      <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
+        <Proper smirks="[*:1]~[#6X3:2]~[#6X3:3]~[*:4]" id="tbo1" periodicity1="2" phase1="0.0 * degree"
+        k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
+        <Proper smirks="[*:1]~[#6X4:2]~[#8X2:3]~[*:4]" id="tbo2" periodicity1="2" phase1="0.0 * degree"
+        k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
+      </ProperTorsions>
     </SMIRNOFF>
     """
 
@@ -612,8 +618,8 @@ class TestParameterInterpolation(BaseTest):
             "central_atoms",
         ),
         [
-            (create_ethanol, 4.953856, 44375.504, 0.13770, (1, 2)),
-            (create_reversed_ethanol, 4.953856, 44375.504, 0.13770, (7, 6)),
+            (create_ethanol, 4.18711406752, 42266.96368, 0.1399906965, (1, 2)),
+            (create_reversed_ethanol, 4.18711406752, 42266.9638, 0.13999096965, (7, 6)),
         ],
     )
     def test_fractional_bondorder_from_molecule(
@@ -624,7 +630,16 @@ class TestParameterInterpolation(BaseTest):
         length_bond_interpolated,
         central_atoms,
     ):
-        """Copied from the toolkit"""
+        """Copied from the toolkit with modified reference constants.
+        Force constant computed by interpolating (k1, k2) = (101, 123) kcal/A**2/mol
+        with bond order 1.00093035 (AmberTools 21.4, Python 3.8, macOS):
+            101 + (123 - 101) * (0.00093035) = 101.0204677 kcal/A**2/mol
+            = 42266.9637 kJ/nm**2/mol
+
+        Same process with bond length (1.4, 1.3) A gives 0.1399906965 nm
+        Same process with torsion k (1.0, 1.8) kcal/mol gives 4.18711406752 kJ/mol
+
+        """
         mol = get_molecule()
         forcefield = ForceField(
             "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
@@ -653,9 +668,14 @@ class TestParameterInterpolation(BaseTest):
             ):
                 k = params[-1]
                 length = params[-2]
-                np.testing.assert_almost_equal(k / k.unit, k_bond_interpolated)
-                np.testing.assert_almost_equal(
-                    length / length.unit, length_bond_interpolated
+                np.testing.assert_allclose(
+                    k / k.unit, k_bond_interpolated, atol=0, rtol=2e-6
+                )
+                np.testing.assert_allclose(
+                    length / length.unit,
+                    length_bond_interpolated,
+                    atol=0,
+                    rtol=2e-6,
                 )
 
         # Verify that the assigned torsion parameters were correctly interpolated
@@ -675,4 +695,6 @@ class TestParameterInterpolation(BaseTest):
                 (atom2 == atom3_mol) and (atom3 == atom2_mol)
             ):
                 k = params[-1]
-                np.testing.assert_almost_equal(k / k.unit, k_torsion_interpolated)
+                np.testing.assert_allclose(
+                    k / k.unit, k_torsion_interpolated, atol=0, rtol=2e-6
+                )
