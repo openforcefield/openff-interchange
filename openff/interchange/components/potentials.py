@@ -114,7 +114,6 @@ class PotentialHandler(DefaultModel):
             f"Could not find parameter in parameter in handler {self.type} "
             f"associated with atoms {atom_indices}"
         )
-        pass
 
     @requires_package("jax")
     def get_force_field_parameters(self):
