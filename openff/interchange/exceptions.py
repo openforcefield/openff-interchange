@@ -124,6 +124,12 @@ class MissingPositionsError(BaseException):
     """
 
 
+class MissingParameterHandlerError(BaseException):
+    """
+    Exception for when a parameter handler is requested but not found
+    """
+
+
 class MissingParametersError(BaseException):
     """
     Exception for when parameters are needed but missing

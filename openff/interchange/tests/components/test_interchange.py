@@ -15,6 +15,8 @@ from openff.interchange.components.mdtraj import OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
     InvalidTopologyError,
+    MissingParameterHandlerError,
+    MissingParametersError,
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
 )
@@ -42,6 +44,25 @@ def test_getitem():
 
     with pytest.raises(LookupError, match="Could not find"):
         out["CMAPs"]
+
+
+def test_get_parameters():
+    mol = Molecule.from_smiles("CCO")
+    parsley = ForceField("openff-1.0.0.offxml")
+    out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
+
+    from_interchange = out._get_parameters("Bonds", (0, 4))
+    from_handler = out["Bonds"]._get_parameters((0, 4))
+
+    assert "k" in from_interchange.keys()
+    assert "length" in from_interchange.keys()
+    assert from_interchange == from_handler
+
+    with pytest.raises(MissingParameterHandlerError, match="Foobar"):
+        out._get_parameters("Foobar", (0, 1))
+
+    with pytest.raises(MissingParametersError, match=r"atoms \(0, 100\)"):
+        out._get_parameters("Bonds", (0, 100))
 
 
 def test_box_setter():
