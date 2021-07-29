@@ -1,19 +1,21 @@
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 from openff.utilities.utilities import requires_package, temporary_cd
 from simtk import unit as omm_unit
 
-from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import SanderError
 from openff.interchange.utils import get_test_file_path
 
+if TYPE_CHECKING:
+    from openff.interchange.components.interchange import Interchange
+
 
 def get_amber_energies(
-    off_sys: Interchange,
+    off_sys: "Interchange",
     writer: str = "parmed",
     electrostatics=True,
 ) -> EnergyReport:

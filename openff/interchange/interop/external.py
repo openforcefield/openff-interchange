@@ -1,12 +1,14 @@
 from pathlib import Path
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
-from openff.interchange.components.interchange import Interchange
 from openff.interchange.exceptions import (
     MissingBoxError,
     MissingPositionsError,
     UnsupportedExportError,
 )
+
+if TYPE_CHECKING:
+    from openff.interchange.components.interchange import Interchange
 
 
 class InteroperabilityWrapper:

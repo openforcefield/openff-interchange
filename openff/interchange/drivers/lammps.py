@@ -1,17 +1,19 @@
 import subprocess
-from typing import List
+from typing import TYPE_CHECKING, List
 
 import numpy as np
 from openff.units import unit
 from simtk import unit as omm_unit
 
-from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import LAMMPSRunError
 
+if TYPE_CHECKING:
+    from openff.interchange.components.interchange import Interchange
+
 
 def get_lammps_energies(
-    off_sys: Interchange,
+    off_sys: "Interchange",
     round_positions=None,
     writer: str = "internal",
 ) -> EnergyReport:
@@ -95,7 +97,7 @@ def _parse_lammps_log(file_in) -> List[float]:
 
 
 def _write_lammps_input(
-    off_sys: Interchange,
+    off_sys: "Interchange",
     file_name="test.in",
 ):
     """Write a LAMMPS input file for running single-point energies."""

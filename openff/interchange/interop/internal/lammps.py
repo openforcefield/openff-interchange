@@ -1,15 +1,17 @@
 from pathlib import Path
-from typing import IO, Dict, Union
+from typing import IO, TYPE_CHECKING, Dict, Union
 
 import numpy as np
 from openff.units import unit
 
-from openff.interchange.components.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.models import TopologyKey
 
+if TYPE_CHECKING:
+    from openff.interchange.components.interchange import Interchange
 
-def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
+
+def to_lammps(openff_sys: "Interchange", file_path: Union[Path, str]):
     """Write an Interchange object to a LAMMPS data file"""
 
     if isinstance(file_path, str):
@@ -127,7 +129,7 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
             _write_impropers(lmp_file=lmp_file, openff_sys=openff_sys)
 
 
-def _write_pair_coeffs(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
+def _write_pair_coeffs(lmp_file: IO, openff_sys: "Interchange", atom_type_map: Dict):
     """Write the Pair Coeffs section of a LAMMPS data file"""
     lmp_file.write("Pair Coeffs\n\n")
 
@@ -144,7 +146,7 @@ def _write_pair_coeffs(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dic
     lmp_file.write("\n")
 
 
-def _write_bond_coeffs(lmp_file: IO, openff_sys: Interchange):
+def _write_bond_coeffs(lmp_file: IO, openff_sys: "Interchange"):
     """Write the Bond Coeffs section of a LAMMPS data file"""
     lmp_file.write("Bond Coeffs\n\n")
 
@@ -163,7 +165,7 @@ def _write_bond_coeffs(lmp_file: IO, openff_sys: Interchange):
     lmp_file.write("\n")
 
 
-def _write_angle_coeffs(lmp_file: IO, openff_sys: Interchange):
+def _write_angle_coeffs(lmp_file: IO, openff_sys: "Interchange"):
     """Write the Angle Coeffs section of a LAMMPS data file"""
     lmp_file.write("\nAngle Coeffs\n\n")
 
@@ -182,7 +184,7 @@ def _write_angle_coeffs(lmp_file: IO, openff_sys: Interchange):
     lmp_file.write("\n")
 
 
-def _write_proper_coeffs(lmp_file: IO, openff_sys: Interchange):
+def _write_proper_coeffs(lmp_file: IO, openff_sys: "Interchange"):
     """Write the Dihedral Coeffs section of a LAMMPS data file"""
     lmp_file.write("\nDihedral Coeffs\n\n")
 
@@ -205,7 +207,7 @@ def _write_proper_coeffs(lmp_file: IO, openff_sys: Interchange):
     lmp_file.write("\n")
 
 
-def _write_improper_coeffs(lmp_file: IO, openff_sys: Interchange):
+def _write_improper_coeffs(lmp_file: IO, openff_sys: "Interchange"):
     """Write the Improper Coeffs section of a LAMMPS data file"""
     lmp_file.write("\nImproper Coeffs\n\n")
 
@@ -255,7 +257,7 @@ def _write_improper_coeffs(lmp_file: IO, openff_sys: Interchange):
     lmp_file.write("\n")
 
 
-def _write_atoms(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
+def _write_atoms(lmp_file: IO, openff_sys: "Interchange", atom_type_map: Dict):
     """Write the Atoms section of a LAMMPS data file"""
     lmp_file.write("\nAtoms\n\n")
 
@@ -289,7 +291,7 @@ def _write_atoms(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
         )
 
 
-def _write_bonds(lmp_file: IO, openff_sys: Interchange):
+def _write_bonds(lmp_file: IO, openff_sys: "Interchange"):
     """Write the Bonds section of a LAMMPS data file"""
     lmp_file.write("\nBonds\n\n")
 
@@ -323,7 +325,7 @@ def _write_bonds(lmp_file: IO, openff_sys: Interchange):
         )
 
 
-def _write_angles(lmp_file: IO, openff_sys: Interchange):
+def _write_angles(lmp_file: IO, openff_sys: "Interchange"):
     """Write the Angles section of a LAMMPS data file"""
     from openff.interchange.components.mdtraj import (
         _iterate_angles,
@@ -357,7 +359,7 @@ def _write_angles(lmp_file: IO, openff_sys: Interchange):
         )
 
 
-def _write_propers(lmp_file: IO, openff_sys: Interchange):
+def _write_propers(lmp_file: IO, openff_sys: "Interchange"):
     """Write the Dihedrals section of a LAMMPS data file"""
     from openff.interchange.components.mdtraj import (
         _iterate_propers,
@@ -393,7 +395,7 @@ def _write_propers(lmp_file: IO, openff_sys: Interchange):
                 )
 
 
-def _write_impropers(lmp_file: IO, openff_sys: Interchange):
+def _write_impropers(lmp_file: IO, openff_sys: "Interchange"):
     """Write the Impropers section of a LAMMPS data file"""
     from openff.interchange.components.mdtraj import (
         _iterate_impropers,

@@ -1,16 +1,18 @@
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 
 import numpy as np
 from simtk import openmm, unit
 
-from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
+
+if TYPE_CHECKING:
+    from openff.interchange.components.interchange import Interchange
 
 kj_mol = unit.kilojoule_per_mole
 
 
 def get_openmm_energies(
-    off_sys: Interchange,
+    off_sys: "Interchange",
     round_positions=None,
     hard_cutoff: bool = False,
     electrostatics: bool = True,

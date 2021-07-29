@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 import mdtraj as md
 import numpy as np
@@ -9,8 +9,10 @@ from openff.utilities.utilities import has_executable
 from simtk import openmm
 from simtk import unit as simtk_unit
 
-from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import OFFBioTop
+
+if TYPE_CHECKING:
+    from openff.interchange.components.interchange import Interchange
 
 HAS_GROMACS = any(has_executable(e) for e in ["gmx", "gmx_d"])
 HAS_LAMMPS = any(has_executable(e) for e in ["lammps", "lmp_mpi", "lmp_serial"])
@@ -89,7 +91,7 @@ def _get_lj_params_from_openmm_system(omm_sys: openmm.System):
     return sigmas, epsilons
 
 
-def _get_charges_from_openff_interchange(off_sys: Interchange):
+def _get_charges_from_openff_interchange(off_sys: "Interchange"):
     charges_ = [*off_sys.handlers["Electrostatics"].charges.values()]
     charges = np.asarray([charge.magnitude for charge in charges_])
     return charges
