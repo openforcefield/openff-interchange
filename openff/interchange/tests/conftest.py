@@ -1,4 +1,8 @@
+"""Custom pytest behavior."""
+
+
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    """Raise an exception if too many tests are skipped while running the entire test suites."""
     # do not error based on number of skipped tests if running "minimal" tests
     if "not slow" not in terminalreporter.config.option.markexpr:
         if "skipped" in terminalreporter.stats:

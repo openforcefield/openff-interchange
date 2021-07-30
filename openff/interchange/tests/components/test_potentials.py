@@ -6,10 +6,10 @@ from openff.interchange.components.potentials import (
     PotentialHandler,
     WrappedPotential,
 )
-from openff.interchange.tests import BaseTest
+from openff.interchange.tests import _BaseTest
 
 
-class TestWrappedPotential(BaseTest):
+class TestWrappedPotential(_BaseTest):
     def test_interpolated_potentials(self):
         """Test the construction of and .parameters getter of WrappedPotential"""
 
@@ -40,7 +40,7 @@ class TestWrappedPotential(BaseTest):
         assert simple.parameters == pot2.parameters
 
 
-class TestPotentialHandlerSubclassing(BaseTest):
+class TestPotentialHandlerSubclassing(_BaseTest):
     def test_dummy_potential_handler(self):
         handler = PotentialHandler(
             type="foo",

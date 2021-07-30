@@ -1,3 +1,4 @@
+"""Interfaces with ParmEd."""
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
 import mdtraj as md
@@ -26,7 +27,7 @@ kcal_mol_rad2 = unit.Unit("kilocalories / mol / rad ** 2")
 
 
 def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
-    """Convert an OpenFF Interchange to a ParmEd Structure"""
+    """Convert an OpenFF Interchange to a ParmEd Structure."""
     import parmed as pmd
 
     structure = pmd.Structure()
@@ -261,11 +262,11 @@ def _from_parmed(cls, structure) -> "Interchange":
 
     from openff.toolkit.topology import Molecule
 
-    from openff.interchange.components.mdtraj import OFFBioTop
+    from openff.interchange.components.mdtraj import _OFFBioTop
 
     if structure.topology is not None:
         mdtop = md.Topology.from_openmm(structure.topology)  # type: ignore[attr-defined]
-        top = OFFBioTop(mdtop=mdtop)
+        top = _OFFBioTop(mdtop=mdtop)
         out.topology = top
     else:
         # TODO: Remove this case
@@ -275,7 +276,7 @@ def _from_parmed(cls, structure) -> "Interchange":
         mdtop = md.Topology()  # type: ignore[attr-defined]
 
         main_chain = md.core.topology.Chain(index=0, topology=mdtop)  # type: ignore[attr-defined]
-        top = OFFBioTop(mdtop=None)
+        top = _OFFBioTop(mdtop=None)
 
         # There is no way to tell if ParmEd residues are connected (cannot be processed
         # as separate OFFMols) or disconnected (can be). For now, will have to accept the

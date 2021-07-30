@@ -1,3 +1,4 @@
+"""Assorted utilities."""
 import pathlib
 from collections import OrderedDict
 
@@ -31,7 +32,7 @@ def pint_to_simtk(quantity):
         raise NotImplementedError(f"caught units {str(quantity.units)}")
 
 
-def unwrap_list_of_pint_quantities(quantities):
+def _unwrap_list_of_pint_quantities(quantities):
     assert {val.units for val in quantities} == {quantities[0].units}
     parsed_unit = quantities[0].units
     vals = [val.magnitude for val in quantities]
@@ -39,7 +40,7 @@ def unwrap_list_of_pint_quantities(quantities):
 
 
 def get_test_file_path(test_file) -> str:
-    """Given a filename in the collection of data files, return its full path"""
+    """Given a filename in the collection of data files, return its full path."""
     dir_path = resource_filename("openff.interchange", "tests/files/")
     test_file_path = pathlib.Path(dir_path).joinpath(test_file)
 
@@ -50,7 +51,7 @@ def get_test_file_path(test_file) -> str:
 
 
 def get_test_files_dir_path(dirname):
-    """Given a directory with a collection of test data files, return its full path"""
+    """Given a directory with a collection of test data files, return its full path."""
     dir_path = resource_filename("openff.interchange", "tests/files/")
     test_dir = pathlib.Path(dir_path).joinpath(dirname)
 
@@ -63,7 +64,7 @@ def get_test_files_dir_path(dirname):
 
 
 def get_nonbonded_force_from_openmm_system(omm_system):
-    """Get a single NonbondedForce object with an OpenMM System"""
+    """Get a single NonbondedForce object with an OpenMM System."""
     for force in omm_system.getForces():
         if type(force) == openmm.NonbondedForce:
             return force
@@ -85,7 +86,7 @@ def get_partial_charges_from_openmm_system(omm_system):
 
 
 def _check_forcefield_dict(forcefield):
-    """Ensure an OpenFF ForceField is represented as a dict and convert it if it is not"""
+    """Ensure an OpenFF ForceField is represented as a dict and convert it if it is not."""
     if isinstance(forcefield, ForceField):
         return forcefield._to_smirnoff_data()
     elif isinstance(forcefield, OrderedDict):
@@ -93,7 +94,7 @@ def _check_forcefield_dict(forcefield):
 
 
 def compare_forcefields(ff1, ff2):
-    """Compare dict representations of OpenFF ForceField objects fore equality"""
+    """Compare dict representations of OpenFF ForceField objects fore equality."""
     ff1 = _check_forcefield_dict(ff1)
     ff2 = _check_forcefield_dict(ff2)
 

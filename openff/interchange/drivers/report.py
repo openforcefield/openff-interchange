@@ -1,25 +1,15 @@
+"""Storing and processing results of energy evaluations."""
 from typing import Dict, Optional
 
 import pandas as pd
 from openff.units import unit
 from pydantic import validator
 
+from openff.interchange.exceptions import EnergyError, MissingEnergyError
 from openff.interchange.models import DefaultModel
 from openff.interchange.types import FloatQuantity
 
 kj_mol = unit.kilojoule / unit.mol
-
-
-class EnergyError(BaseException):
-    """
-    Base class for energies in reports not matching.
-    """
-
-
-class MissingEnergyError(BaseException):
-    """
-    Exception for when one report has a value for an energy group but the other does not.
-    """
 
 
 class EnergyReport(DefaultModel):
@@ -53,14 +43,16 @@ class EnergyReport(DefaultModel):
             return None
 
     def update_energies(self, new_energies):
+        """Update the energies in this report with new value(s)."""
         self.energies.update(self.validate_energies(new_energies))
 
     # TODO: Better way of exposing tolerances
     def compare(self, other: "EnergyReport", custom_tolerances=None):
         """
-        Compare this `EnergyReport` to another `EnergyReport`. Energies are grouped into
-        four categories (bond, angle, torsion, and nonbonded) with default tolerances for
-        each set to 1e-3 kJ/mol.
+        Compare this `EnergyReport` to another `EnergyReport`.
+
+        Energies are grouped into four categories (bond, angle, torsion, and nonbonded) with
+        default tolerances for each set to 1e-3 kJ/mol.
 
         .. warning :: This API is experimental and subject to change.
 
