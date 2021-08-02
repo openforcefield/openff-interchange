@@ -455,8 +455,7 @@ class TestBondOrderInterpolation(BaseTest):
                     ref_k.append(force.getBondParameters(i)[3]._value)
                     ref_length.append(force.getBondParameters(i)[2]._value)
 
-        np.testing.assert_almost_equal(ref_k, new_k, decimal=4)
-        np.testing.assert_almost_equal(ref_k, new_k, decimal=4)
+        np.testing.assert_allclose(ref_k, new_k, rtol=3e-5)
 
     def test_fractional_bondorder_invalid_interpolation_method(self):
         """
