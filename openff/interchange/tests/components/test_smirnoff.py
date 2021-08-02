@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol, create_reversed_ethanol
+from openff.toolkit.tests.utils import requires_openeye
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -620,6 +621,7 @@ class TestParameterInterpolation(BaseTest):
             180.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
         )
 
+    @requires_openeye
     @pytest.mark.parametrize(
         (
             "get_molecule",
