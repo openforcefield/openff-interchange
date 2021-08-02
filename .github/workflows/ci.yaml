@@ -60,17 +60,13 @@ jobs:
         cp -r tests/pmdtest .
         echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
 
-    - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
-      shell: bash
-      env:
-        OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
-      run: |
-        echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
-
-    - name: Check OpenEyeToolkitWrapper
+    - name: License OpenEye
       shell: bash -l {0}
       run: |
-        python -c "from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper; assert OpenEyeToolkitWrapper.is_available()"
+        echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
+        python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
+      env:
+        SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     - name: Run mypy
       continue-on-error: true
