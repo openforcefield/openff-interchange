@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 import pytest
+from openff.toolkit.tests.utils import requires_openeye
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -154,6 +155,7 @@ def compare_condensed_systems(mol, force_field):
             raise e
 
 
+@requires_openeye
 @skip_if_missing("openff.evaluator")
 @pytest.mark.timeout(60)
 @pytest.mark.slow()
@@ -166,7 +168,8 @@ def test_energy_vs_toolkit(rdmol):
     Chem.SanitizeMol(rdmol)
     mol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=True)
 
-    mol.to_inchi()
+    if mol.name in ["DrugBank_6182"]:
+        pytest.xfail("OpenEye stereochemistry assumptions fail")
 
     assert mol.n_conformers > 0
 

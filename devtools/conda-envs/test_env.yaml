@@ -2,6 +2,7 @@ name: openff-interchange-env
 channels:
   - conda-forge
   - bioconda
+  - openeye
 dependencies:
     # Base depends
   - python
@@ -39,3 +40,4 @@ dependencies:
   - pandas-stubs
   - openff-evaluator
   - openff-recharge
+  - openeye-toolkits
