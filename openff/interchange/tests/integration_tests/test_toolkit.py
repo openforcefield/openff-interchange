@@ -166,12 +166,10 @@ def test_energy_vs_toolkit(rdmol):
     Chem.SanitizeMol(rdmol)
     mol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=True)
 
-    if mol.name == "DrugBank_2148":
+    if mol.name in ["DrugBank_2148", "DrugBank_1971"]:
         pytest.xfail(
             "DrugBank_2148 often results in small non-bonded energy differences"
         )
-
-    mol.to_inchi()
 
     assert mol.n_conformers > 0
 

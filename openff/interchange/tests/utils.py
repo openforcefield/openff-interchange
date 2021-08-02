@@ -189,6 +189,7 @@ def _compare_nonbonded_settings(force1, force2):
             "getPMEParametersInContext",
             "getParticleParameterOffset",
             "getParticleParameters",
+            "getForceGroup",
         ]:
             continue
         assert getattr(force1, attr)() == getattr(force2, attr)(), attr
