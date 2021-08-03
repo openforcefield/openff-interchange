@@ -94,7 +94,7 @@ def _check_forcefield_dict(forcefield):
 
 
 def compare_forcefields(ff1, ff2):
-    """Compare dict representations of OpenFF ForceField objects fore equality."""
+    """Compare dict representations of OpenFF ForceField objects for equality."""
     ff1 = _check_forcefield_dict(ff1)
     ff2 = _check_forcefield_dict(ff2)
 

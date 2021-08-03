@@ -300,7 +300,7 @@ class Interchange(DefaultModel):
             to_top(self, file_path)
 
     def to_lammps(self, file_path: Union[Path, str], writer="internal"):
-        """Write this Interchange to a LAMMPS data file."""
+        """Export this Interchange to a LAMMPS data file."""
         if writer != "internal":
             raise UnsupportedExportError
 
