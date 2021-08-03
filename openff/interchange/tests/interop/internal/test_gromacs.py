@@ -9,20 +9,20 @@ from openff.utilities.testing import skip_if_missing
 from simtk import unit as simtk_unit
 
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import OFFBioTop
+from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.nonbonded import BuckinghamvdWHandler
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
 from openff.interchange.models import PotentialKey, TopologyKey
-from openff.interchange.tests import BaseTest
+from openff.interchange.tests import _BaseTest
 from openff.interchange.tests.energy_tests.test_energies import needs_gmx
 from openff.interchange.utils import get_test_file_path
 
 
 @needs_gmx
-class TestGROMACS(BaseTest):
+class TestGROMACS(_BaseTest):
     @skip_if_missing("parmed")
     def test_set_mixing_rule(self, ethanol_top, parsley):
         import parmed as pmd
@@ -59,7 +59,7 @@ class TestGROMACS(BaseTest):
         """Test that residue names > 5 characters don't break .gro file output"""
         benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
         benzene.name = "supercalifragilisticexpialidocious"
-        top = OFFBioTop.from_molecules(benzene)
+        top = _OFFBioTop.from_molecules(benzene)
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
         # Populate an entire interchange because ...
@@ -72,12 +72,13 @@ class TestGROMACS(BaseTest):
         # is to see if GROMACS can run them
         get_gromacs_energies(out)
 
+    @pytest.mark.slow()
     def test_argon_buck(self):
         """Test that Buckingham potentials are supported and can be exported"""
         from openff.interchange.components.smirnoff import SMIRNOFFElectrostaticsHandler
 
         mol = Molecule.from_smiles("[#18]")
-        top = OFFBioTop.from_molecules([mol, mol])
+        top = _OFFBioTop.from_molecules([mol, mol])
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
         # http://www.sklogwiki.org/SklogWiki/index.php/Argon#Buckingham_potential
@@ -127,7 +128,7 @@ class TestGROMACS(BaseTest):
 
 
 @needs_gmx
-class TestGROMACSVirtualSites(BaseTest):
+class TestGROMACSVirtualSites(_BaseTest):
     @pytest.fixture()
     def parsley_with_sigma_hole(self, parsley):
         """Fixture that loads an SMIRNOFF XML for argon"""

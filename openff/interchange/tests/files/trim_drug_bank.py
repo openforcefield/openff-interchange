@@ -1,3 +1,4 @@
+"""Script to generate a subset of MiniDrugBank."""
 from openff.toolkit.topology import Molecule
 from openff.toolkit.utils import get_data_file_path
 from rdkit import Chem

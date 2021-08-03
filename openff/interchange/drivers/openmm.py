@@ -1,3 +1,4 @@
+"""Functions for running energy evluations with OpenMM."""
 from typing import Dict
 
 import numpy as np
@@ -38,6 +39,9 @@ def get_openmm_energies(
     electrostatics : bool, default=True
         A boolean indicating whether or not electrostatics should be included in the energy
         calculation.
+    combine_nonbonded_forces : bool, default=False
+        Whether or not to combine all non-bonded interactions (vdW, short- and long-range
+        ectrostaelectrostatics, and 1-4 interactions) into a single openmm.NonbondedForce.
 
     Returns
     -------
@@ -45,7 +49,6 @@ def get_openmm_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
-
     positions = off_sys.positions
 
     if "VirtualSites" in off_sys.handlers:

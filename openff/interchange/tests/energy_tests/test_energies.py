@@ -12,8 +12,9 @@ from simtk import unit as simtk_unit
 from simtk.openmm import app
 
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import OFFBioTop
-from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
+from openff.interchange.components.mdtraj import _OFFBioTop
+from openff.interchange.drivers import get_openmm_energies
+from openff.interchange.drivers.openmm import _get_openmm_energies
 from openff.interchange.drivers.report import EnergyError, EnergyReport
 from openff.interchange.tests.utils import HAS_GROMACS, HAS_LAMMPS, needs_gmx, needs_lmp
 from openff.interchange.utils import get_test_file_path
@@ -27,10 +28,11 @@ if HAS_GROMACS:
 if HAS_LAMMPS:
     from openff.interchange.drivers.lammps import get_lammps_energies
 
+kj_mol = unit.kilojoule / unit.mol
+
 
 def test_energy_report():
     """Test that multiple failing energies are captured in the EnergyError"""
-    kj_mol = unit.kilojoule / unit.mol
     a = EnergyReport(
         energies={
             "a": 1 * kj_mol,
@@ -197,7 +199,7 @@ def test_packmol_boxes(toolkit_file_path):
     ethanol = Molecule.from_smiles("CCO")
     cyclohexane = Molecule.from_smiles("C1CCCCC1")
     omm_topology = pdbfile.topology
-    off_topology = OFFBioTop.from_openmm(
+    off_topology = _OFFBioTop.from_openmm(
         omm_topology, unique_molecules=[ethanol, cyclohexane]
     )
     off_topology.mdtop = md.Topology.from_openmm(omm_topology)
@@ -392,3 +394,128 @@ def test_cutoff_electrostatics():
         )
 
     assert np.sum(np.sqrt(np.square(np.asarray(lmp) - np.asarray(gmx)))) < 1e-3
+
+
+@pytest.mark.parametrize(
+    "smi",
+    [
+        "C#Cc1ccc(cc1)N",
+        "C=Cc1ccc(cc1)N",
+        "C=Nc1ccc(cc1)N",
+        "CC(=O)Nc1ccc(cc1)N",
+        # "CC(=O)Oc1ccc(cc1)N",
+        "CC(=O)c1ccc(cc1)N",
+        "CC(C)(C)c1ccc(cc1)N",
+        "CN(C)c1ccc(cc1)N",
+        "CNC(=O)c1ccc(cc1)N",
+        # "CNc1ccc(cc1)N", significant energy differences
+        "COC(=O)c1ccc(cc1)N",
+        "COc1ccc(cc1)N",
+        "CS(=O)(=O)Oc1ccc(cc1)N",
+        "CSc1ccc(cc1)N",
+        "C[N+](C)(C)c1ccc(cc1)N",
+        "Cc1ccc(cc1)N",
+        "c1cc(ccc1C#N)N",
+        "c1cc(ccc1C(=O)Cl)N",
+        # "c1cc(ccc1C(=O)N)N", significant energy differences
+        "c1cc(ccc1C(=O)O)N",
+        "c1cc(ccc1C(Br)(Br)Br)N",
+        "c1cc(ccc1C(Cl)(Cl)Cl)N",
+        "c1cc(ccc1C(F)(F)F)N",
+        "c1cc(ccc1C=O)N",
+        "c1cc(ccc1CS(=O)(=O)[O-])N",
+        "c1cc(ccc1N)Br",
+        "c1cc(ccc1N)Cl",
+        "c1cc(ccc1N)F",
+        "c1cc(ccc1N)N",
+        "c1cc(ccc1N)N(=O)=O",
+        "c1cc(ccc1N)N=C=O",
+        "c1cc(ccc1N)N=C=S",
+        # "c1cc(ccc1N)N=[N+]=[N-]", SQM failures
+        "c1cc(ccc1N)NC(=O)N",
+        "c1cc(ccc1N)NO",
+        "c1cc(ccc1N)O",
+        "c1cc(ccc1N)OC#N",
+        # "c1cc(ccc1N)OC(=O)C(F)(F)F",
+        "c1cc(ccc1N)OC(F)(F)F",
+        "c1cc(ccc1N)S",
+        "c1cc(ccc1N)S(=O)(=O)C(F)(F)F",
+        "c1cc(ccc1N)S(=O)(=O)N",
+        "c1cc(ccc1N)SC#N",
+        "c1cc(ccc1N)[N+]#N",
+        "c1cc(ccc1N)[O-]",
+        "c1cc(ccc1N)[S-]",
+        "c1ccc(cc1)Nc2ccc(cc2)N",
+        "c1ccc(cc1)Oc2ccc(cc2)N",
+        "c1ccc(cc1)Sc2ccc(cc2)N",
+        "c1ccc(cc1)c2ccc(cc2)N",
+    ][
+        :8
+    ],  # TODO: Expand the entire molecule set out into a regression tests
+)
+@needs_gmx
+@pytest.mark.slow()
+def test_interpolated_parameters(smi):
+    xml_ff_bo_all_heavy_bonds = """<?xml version='1.0' encoding='ASCII'?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+      <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+        <Bond smirks="[!#1:1]~[!#1:2]" id="bbo1"
+            k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
+            k_bondorder2="1000.0 * kilocalories_per_mole/angstrom**2"
+            length_bondorder1="1.5 * angstrom"
+            length_bondorder2="1.0 * angstrom"/>
+      </Bonds>
+    </SMIRNOFF>
+    """
+
+    mol = Molecule.from_smiles(smi)
+    mol.generate_conformers(n_conformers=1)
+
+    top = mol.to_topology()
+
+    forcefield = ForceField(
+        "test_forcefields/test_forcefield.offxml",
+        xml_ff_bo_all_heavy_bonds,
+    )
+
+    out = Interchange.from_smirnoff(forcefield, top)
+    out.box = [4, 4, 4] * unit.nanometer
+    out.positions = mol.conformers[0]
+
+    toolkit_system = forcefield.create_openmm_system(top)
+
+    for key in ["Bond", "Torsion"]:
+        interchange_energy = get_openmm_energies(
+            out, combine_nonbonded_forces=True
+        ).energies[key]
+
+        toolkit_energy = _get_openmm_energies(
+            toolkit_system,
+            box_vectors=[[4, 0, 0], [0, 4, 0], [0, 0, 4]] * simtk_unit.nanometer,
+            positions=mol.conformers[0],
+        ).energies[key]
+
+        toolkit_diff = abs(interchange_energy - toolkit_energy).m_as(kj_mol)
+
+        if toolkit_diff < 1e-6:
+            pass
+        elif toolkit_diff < 1e-2:
+            pytest.xfail(
+                f"Found energy difference of {toolkit_diff} kJ/mol vs. toolkit"
+            )
+        else:
+            pytest.fail(f"Found energy difference of {toolkit_diff} kJ/mol vs. toolkit")
+
+        gromacs_energy = get_gromacs_energies(out).energies[key]
+        energy_diff = abs(interchange_energy - gromacs_energy).m_as(kj_mol)
+
+        if energy_diff < 1e-6:
+            pass
+        elif energy_diff < 1e-2:
+            pytest.xfail(
+                f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports"
+            )
+        else:
+            pytest.fail(
+                f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports"
+            )

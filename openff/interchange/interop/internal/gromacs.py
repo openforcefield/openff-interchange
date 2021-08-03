@@ -1,3 +1,4 @@
+"""Interfaces with GROMACS."""
 import math
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Dict, Set, Tuple, Union
@@ -22,8 +23,9 @@ if TYPE_CHECKING:
 
 def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
     """
-    Write a .gro file. See
-    https://manual.gromacs.org/documentation/current/reference-manual/file-formats.html#gro
+    Write a GROMACS coordinate (.gro) file.
+
+    See https://manual.gromacs.org/documentation/current/reference-manual/file-formats.html#gro
     for more details, including the recommended C-style one-liners
 
     This code is partially copied from InterMol, see
@@ -112,8 +114,9 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
 
 def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
     """
-    Write a .gro file. See
-    https://manual.gromacs.org/documentation/current/reference-manual/file-formats.html#top
+    Write a GROMACS topology (.top) file.
+
+    See https://manual.gromacs.org/documentation/current/reference-manual/file-formats.html#top
     for more details.
 
     This code is partially copied from InterMol, see
@@ -147,7 +150,7 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
 
 
 def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
-    """Write [ defaults ] section"""
+    """Write [ defaults ] section."""
     top_file.write("[ defaults ]\n")
     top_file.write("; nbfunc\tcomb-rule\tgen-pairs\tfudgeLJ\tfudgeQQ\n")
 
@@ -219,8 +222,9 @@ def _build_typemap(openff_sys: "Interchange") -> Dict:
 
 
 def _build_virtual_site_map(interchange: "Interchange") -> Dict:
-    """Construct a mapping between the VirtualSiteKey objects found in a
-    SMIRNOFFVirtualSiteHandler and particle indices"""
+    """
+    Construct a mapping between the VirtualSiteKey objects found in a SMIRNOFFVirtualSiteHandler and particle indices.
+    """
     virtual_site_topology_index_map = dict()
 
     if "VirtualSites" not in interchange.handlers:
@@ -242,8 +246,7 @@ def _write_atomtypes(
     typemap: Dict,
     virtual_site_map: Dict,
 ):
-    """Write [ atomtypes ] section"""
-
+    """Write [ atomtypes ] section."""
     if "vdW" in openff_sys.handlers:
         if "Buckingham-6" in openff_sys.handlers:
             raise UnsupportedExportError(
@@ -264,7 +267,7 @@ def _write_atomtypes_lj(
     typemap: Dict,
     virtual_site_map: Dict,
 ):
-
+    """Write the [ atomtypes ] section when all atoms use the LJ potential."""
     top_file.write("[ atomtypes ]\n")
     top_file.write(
         ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n"
@@ -317,7 +320,7 @@ def _write_atomtypes_lj(
 
 
 def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict):
-
+    """Write the [ atomtypes ] section when all atoms use the Buckingham-6 potential."""
     top_file.write("[ atomtypes ]\n")
     top_file.write(
         ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n"
@@ -348,7 +351,7 @@ def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict
 
 
 def _write_moleculetype(top_file: IO):
-    """Write the [ moleculetype ] section"""
+    """Write the [ moleculetype ] section."""
     top_file.write("[ moleculetype ]\n")
     top_file.write("; Name\tnrexcl\n")
     top_file.write("MOL\t3\n\n")
@@ -360,7 +363,7 @@ def _write_atoms(
     typemap: Dict,
     virtual_site_map: Dict,
 ):
-    """Write the [ atoms ] and [ pairs ] sections for a molecule"""
+    """Write the [ atoms ] and [ pairs ] sections for a molecule."""
     top_file.write("[ atoms ]\n")
     top_file.write(";num, type, resnum, resname, atomname, cgnr, q, m\n")
 
@@ -662,7 +665,7 @@ def _write_valence(
     top_file: IO,
     openff_sys: "Interchange",
 ):
-    """Write the [ bonds ], [ angles ], and [ dihedrals ] sections"""
+    """Write the [ bonds ], [ angles ], and [ dihedrals ] sections."""
     _write_bonds(top_file, openff_sys)
     _write_angles(top_file, openff_sys)
     _write_dihedrals(top_file, openff_sys)
@@ -845,7 +848,7 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange"):
 
 
 def _write_system(top_file: IO, openff_sys: "Interchange"):
-    """Write the [ system ] section"""
+    """Write the [ system ] section."""
     top_file.write("[ system ]\n")
     top_file.write("; name \n")
     top_file.write("System name\n\n")

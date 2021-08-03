@@ -1,3 +1,4 @@
+"""Models for non-standard non-bonded treatments."""
 from typing import Dict
 
 from typing_extensions import Literal
@@ -7,6 +8,8 @@ from openff.interchange.models import PotentialKey, TopologyKey
 
 
 class BuckinghamvdWHandler(PotentialHandler):
+    """Handler storing Buckingham-style vdW potentials."""
+
     type: Literal["Buckingham-6"] = "Buckingham-6"
     expression: Literal["a*exp(-b*r)-c*r**-6"] = "a*exp(-b*r)-c*r**-6"
     mixing_rule: Literal["buckingham"] = "buckingham"

@@ -1,3 +1,4 @@
+"""Models and utilities for processing Foyer data."""
 from abc import abstractmethod
 from copy import copy
 from typing import TYPE_CHECKING, Dict, Type
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
     from foyer.forcefield import Forcefield
     from foyer.topology_graph import TopologyGraph
 
-    from openff.interchange.components.mdtraj import OFFBioTop
+    from openff.interchange.components.mdtraj import _OFFBioTop
 
 # Is this the safest way to achieve PotentialKey id separation?
 POTENTIAL_KEY_SEPARATOR = "-"
@@ -26,7 +27,7 @@ if has_package("foyer"):
 def _copy_params(
     params: Dict[str, float], *drop_keys: str, param_units: Dict = None
 ) -> Dict:
-    """copy parameters from a dictionary"""
+    """Copy parameters from a dictionary."""
     params_copy = copy(params)
     for drop_key in drop_keys:
         params_copy.pop(drop_key, None)
@@ -37,13 +38,13 @@ def _copy_params(
 
 
 def _get_potential_key_id(atom_slots: Dict[TopologyKey, PotentialKey], idx):
-    """From a dictionary of TopologyKey: PotentialKey, get the PotentialKey id"""
+    """From a dictionary of TopologyKey: PotentialKey, get the PotentialKey id."""
     top_key = TopologyKey(atom_indices=(idx,))
     return atom_slots[top_key].id
 
 
 def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
-    """Map Foyer-style handlers from string identifiers"""
+    """Map Foyer-style handlers from string identifiers."""
     return {
         "vdW": FoyerVDWHandler,
         "Electrostatics": FoyerElectrostaticsHandler,
@@ -57,6 +58,8 @@ def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
 
 
 class FoyerVDWHandler(PotentialHandler):
+    """Handler storing vdW potentials as produced by a Foyer force field."""
+
     type: str = "atoms"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     mixing_rule: str = "geometric"
@@ -71,9 +74,9 @@ class FoyerVDWHandler(PotentialHandler):
     def store_matches(
         self,
         force_field: "Forcefield",
-        topology: "OFFBioTop",
+        topology: "_OFFBioTop",
     ) -> None:
-        """Populate slotmap with key-val pairs of slots and unique potential Identifiers"""
+        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
         from foyer.atomtyper import find_atomtypes
 
         top_graph = TopologyGraph.from_openff_topology(openff_topology=topology)
@@ -83,7 +86,7 @@ class FoyerVDWHandler(PotentialHandler):
             self.slot_map[top_key] = PotentialKey(id=val["atomtype"])
 
     def store_potentials(self, force_field: "Forcefield") -> None:
-        """Extract specific force field parameters a Forcefield object"""
+        """Extract specific force field potentials a Forcefield object."""
         for top_key in self.slot_map:
             atom_params = force_field.get_parameters(
                 self.type, key=self.slot_map[top_key].id
@@ -99,6 +102,8 @@ class FoyerVDWHandler(PotentialHandler):
 
 
 class FoyerElectrostaticsHandler(PotentialHandler):
+    """Handler storing electrostatics potentials as produced by a Foyer force field."""
+
     type: str = "Electrostatics"
     method: str = "pme"
     expression: str = "coul"
@@ -110,6 +115,7 @@ class FoyerElectrostaticsHandler(PotentialHandler):
 
     @property
     def charges_with_virtual_sites(self):
+        """Get the total partial charge on each atom, including virtual sites."""
         return self.charges
 
     def store_charges(
@@ -117,7 +123,7 @@ class FoyerElectrostaticsHandler(PotentialHandler):
         atom_slots: Dict[TopologyKey, PotentialKey],
         force_field: "Forcefield",
     ):
-        """Look up fixed charges (a.k.a. library charges) from the force field and store them in self.charges"""
+        """Look up fixed charges (a.k.a. library charges) from the force field and store them in self.charges."""
         for top_key, pot_key in atom_slots.items():
             foyer_params = force_field.get_parameters("atoms", pot_key.id)
             charge = foyer_params["charge"]
@@ -126,14 +132,17 @@ class FoyerElectrostaticsHandler(PotentialHandler):
 
 
 class FoyerConnectedAtomsHandler(PotentialHandler):
+    """Base class for handlers storing valence potentials produced by a Foyer force field."""
+
     connection_attribute: str = ""
     raise_on_missing_params = True
 
     def store_matches(
         self,
         atom_slots: Dict[TopologyKey, PotentialKey],
-        topology: "OFFBioTop",
+        topology: "_OFFBioTop",
     ) -> None:
+        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for connection in getattr(topology, self.connection_attribute):
             try:
                 atoms_iterable = connection.atoms
@@ -151,6 +160,7 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
             )
 
     def store_potentials(self, force_field: "Forcefield") -> None:
+        """Populate self.potentials with key-val pairs of [PotentialKey, Potential]."""
         from foyer.exceptions import MissingForceError, MissingParametersError
 
         for _, pot_key in self.slot_map.items():
@@ -173,10 +183,13 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
 
     @abstractmethod
     def get_params_with_units(self, params):
+        """Get the parameters of this handler, tagged with units."""
         raise NotImplementedError
 
 
 class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
+    """Handler storing bond potentials as produced by a Foyer force field."""
+
     type: str = "harmonic_bonds"
     expression: str = "1/2 * k * (r - length) ** 2"
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
@@ -184,6 +197,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
     connection_attribute = "topology_bonds"
 
     def get_params_with_units(self, params):
+        """Get the parameters of this handler, tagged with units."""
         return _copy_params(
             params,
             param_units={"k": unit.kJ / unit.mol / unit.nm ** 2, "length": unit.nm},
@@ -191,6 +205,8 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
 
 
 class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
+    """Handler storing angle potentials as produced by a Foyer force field."""
+
     type: str = "harmonic_angles"
     expression: str = "0.5 * k * (theta-angle)**2"
     slot_map: Dict[TopologyKey, PotentialKey] = dict()
@@ -198,6 +214,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
     connection_attribute: str = "angles"
 
     def get_params_with_units(self, params):
+        """Get the parameters of this handler, tagged with units."""
         return _copy_params(
             {"k": params["k"], "angle": params["theta"]},
             param_units={
@@ -208,6 +225,8 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
 
 
 class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
+    """Handler storing Ryckaert-Bellemans proper torsion potentials as produced by a Foyer force field."""
+
     type: str = "rb_propers"
     expression: str = (
         "C0 * cos(phi)**0 + C1 * cos(phi)**1 + "
@@ -220,23 +239,29 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
     raise_on_missing_params: bool = False
 
     def get_params_with_units(self, params):
+        """Get the parameters of this handler, tagged with units."""
         rb_params = {k.upper(): v for k, v in params.items()}
         param_units = {k: unit.kJ / unit.mol for k in rb_params}
         return _copy_params(rb_params, param_units=param_units)
 
 
 class FoyerRBImproperHandler(FoyerRBProperHandler):
+    """Handler storing Ryckaert-Bellemans improper torsion potentials as produced by a Foyer force field."""
+
     type: str = "rb_impropers"
     connection_attribute: str = "impropers"
 
 
 class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler):
+    """Handler storing periodic proper torsion potentials as produced by a Foyer force field."""
+
     type: str = "periodic_propers"
     expression: str = "k * (1 + cos(periodicity * phi - phase))"
     connection_attribute: str = "propers"
     raise_on_missing_params: bool = False
 
     def get_params_with_units(self, params):
+        """Get the parameters of this handler, tagged with units."""
         return _copy_params(
             params,
             param_units={
@@ -248,11 +273,14 @@ class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler):
 
 
 class FoyerPeriodicImproperHandler(FoyerPeriodicProperHandler):
+    """Handler storing periodic improper torsion potentials as produced by a Foyer force field."""
+
     type: str = "periodic_impropers"
     connection_attribute: str = "impropers"
 
 
-class RBTorsionHandler(PotentialHandler):
+class _RBTorsionHandler(PotentialHandler):
+    # TODO: Is this class superceded by FoyerRBProperHandler? Should it be removed?
     type = "Ryckaert-Bellemans"
     expression = (
         "C0 + C1 * (cos(phi - 180)) "
