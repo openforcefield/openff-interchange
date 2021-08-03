@@ -1,4 +1,4 @@
-## Use with LAMMPS
+# Use with LAMMPS
 
 An `Interchange` object can be writtent to a LAMMPS data file with `Interchange.to_lammps()`
 

@@ -9,6 +9,8 @@ dependencies:
   - pint
   - openmm
   - openff-toolkit
+  - openff-units
+  - openff-utilities
   - jax
   - ele
   # readthedocs dependencies
