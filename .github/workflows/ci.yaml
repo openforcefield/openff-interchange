@@ -19,8 +19,7 @@ jobs:
         os: [ubuntu-latest]
         python-version: [3.7, 3.8, 3.9]
     env:
-      CI_OS: ${{ matrix.os }}
-      PYVER: ${{ matrix.python-version }}
+      OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
@@ -60,6 +59,14 @@ jobs:
         git clone https://github.com/parmed/tests
         cp -r tests/pmdtest .
         echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
+
+    - name: License OpenEye
+      shell: bash -l {0}
+      run: |
+        echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
+        python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
+      env:
+        SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     - name: Run mypy
       continue-on-error: true

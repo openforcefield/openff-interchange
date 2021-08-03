@@ -171,7 +171,24 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
         k = params["k"].m_as(off_unit.kilojoule / off_unit.mol)
         periodicity = int(params["periodicity"])
         phase = params["phase"].m_as(off_unit.radian)
-        idivf = int(params["idivf"])
+        # Work around a pint gotcha:
+        # >>> import pint
+        # >>> u = pint.UnitRegistry()
+        # >>> val
+        # <Quantity(1.0, 'dimensionless')>
+        # >>> val.m
+        # 0.9999999999
+        # >>> int(val)
+        # 0
+        # >>> int(round(val, 0))
+        # 1
+        # >>> round(val.m_as(u.dimensionless), 0)
+        # 1.0
+        # >>> round(val, 0).m
+        # 1.0
+        idivf = params["idivf"].m_as(off_unit.dimensionless)
+        if idivf == 0:
+            raise RuntimeError("Found an idivf of 0.")
         torsion_force.addTorsion(
             indices[0],
             indices[1],
