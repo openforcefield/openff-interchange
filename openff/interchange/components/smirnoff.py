@@ -157,7 +157,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
     @classmethod
     def supported_parameters(cls):
-        """Return a list of supported parameter attributes."""
+        """Return a list of supported parameter attribute names."""
         return ["smirks", "id", "k", "length", "k_bondorder", "length_bondorder"]
 
     @classmethod
@@ -313,7 +313,7 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
 
     @classmethod
     def supported_parameters(cls):
-        """Return a list of supported parameter attributes."""
+        """Return a list of supported parameter attribute names."""
         return ["smirks", "id", "k", "length", "distance"]
 
     @classmethod
@@ -469,7 +469,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
 
     @classmethod
     def supported_parameters(cls):
-        """Return a list of supported parameter attributes."""
+        """Return a list of supported parameter attribute names."""
         return ["smirks", "id", "k", "periodicity", "phase", "idivf", "k_bondorder"]
 
     def store_matches(
@@ -577,7 +577,7 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
 
     @classmethod
     def supported_parameters(cls):
-        """Return a list of supported parameter attributes."""
+        """Return a list of supported parameter attribute names."""
         return ["smirks", "id", "k", "periodicity", "phase", "idivf"]
 
     def store_matches(
@@ -782,7 +782,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
     @classmethod
     def supported_parameters(cls):
-        """Return a list of supported parameter attributes."""
+        """Return a list of supported parameter attribute names."""
         pass
 
     @property

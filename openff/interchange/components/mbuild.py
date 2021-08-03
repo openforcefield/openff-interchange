@@ -12,7 +12,7 @@ if has_package("mbuild") or TYPE_CHECKING:
 @requires_package("mbuild")
 def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
     """
-    Covert an OpenFF Molecule into an mBuild Compound.
+    Convert an OpenFF Molecule into an mBuild Compound.
 
     Examples
     --------
@@ -50,7 +50,7 @@ def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
 @requires_package("mbuild")
 def offtop_to_compound(off_top: "Topology") -> "mb.Compound":
     """
-    Covert an OpenFF Topology into an mBuild Compound.
+    Convert an OpenFF Topology into an mBuild Compound.
 
     Examples
     --------

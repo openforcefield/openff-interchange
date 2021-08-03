@@ -179,7 +179,7 @@ class PotentialHandler(DefaultModel):
         return self.get_system_parameters(p=p)
 
     def parametrize_partial(self):
-        """Return parametrize() modified with functools.partial gluing on `mapping`."""
+        """Return a function that will call `self.parametrize()` with arguments specified by `self.mapping`."""
         from functools import partial
 
         return partial(
