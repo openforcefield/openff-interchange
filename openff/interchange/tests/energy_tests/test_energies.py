@@ -12,7 +12,7 @@ from simtk import unit as simtk_unit
 from simtk.openmm import app
 
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import OFFBioTop
+from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
 from openff.interchange.drivers.report import EnergyError, EnergyReport
@@ -199,7 +199,7 @@ def test_packmol_boxes(toolkit_file_path):
     ethanol = Molecule.from_smiles("CCO")
     cyclohexane = Molecule.from_smiles("C1CCCCC1")
     omm_topology = pdbfile.topology
-    off_topology = OFFBioTop.from_openmm(
+    off_topology = _OFFBioTop.from_openmm(
         omm_topology, unique_molecules=[ethanol, cyclohexane]
     )
     off_topology.mdtop = md.Topology.from_openmm(omm_topology)

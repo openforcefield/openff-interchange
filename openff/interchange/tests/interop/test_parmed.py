@@ -14,12 +14,12 @@ from openff.interchange.drivers.gromacs import (
     _run_gmx_energy,
     get_gromacs_energies,
 )
-from openff.interchange.tests import BaseTest
-from openff.interchange.tests.utils import top_from_smiles
+from openff.interchange.tests import _BaseTest
+from openff.interchange.tests.utils import _top_from_smiles
 from openff.interchange.utils import get_test_file_path
 
 
-class TestParmedConversion(BaseTest):
+class TestParmedConversion(_BaseTest):
     @pytest.fixture()
     def box(self):
         return np.array([4.0, 4.0, 4.0])
@@ -52,7 +52,7 @@ class TestParmedConversion(BaseTest):
         assert np.allclose(struct.box, np.array([40, 40, 40, 90, 90, 90]))
 
     def test_basic_conversion_params(self, box):
-        top = top_from_smiles("C")
+        top = _top_from_smiles("C")
         parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
         off_sys = Interchange.from_smirnoff(force_field=parsley, topology=top, box=box)

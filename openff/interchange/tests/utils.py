@@ -1,3 +1,4 @@
+"""Assorted utilities used in testing."""
 from collections import defaultdict
 from typing import Dict, List, Tuple
 
@@ -10,7 +11,7 @@ from simtk import openmm
 from simtk import unit as simtk_unit
 
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import OFFBioTop
+from openff.interchange.components.mdtraj import _OFFBioTop
 
 HAS_GROMACS = any(has_executable(e) for e in ["gmx", "gmx_d"])
 HAS_LAMMPS = any(has_executable(e) for e in ["lammps", "lmp_mpi", "lmp_serial"])
@@ -23,11 +24,12 @@ kj_nm2_mol = simtk_unit.kilojoule_per_mole / simtk_unit.nanometer ** 2
 kj_rad2_mol = simtk_unit.kilojoule_per_mole / simtk_unit.radian ** 2
 
 
-def top_from_smiles(
+def _top_from_smiles(
     smiles: str,
     n_molecules: int = 1,
-) -> OFFBioTop:
-    """Create a gas phase OpenFF Topology from a single-molecule SMILES
+) -> _OFFBioTop:
+    """
+    Create a gas phase OpenFF Topology from a single-molecule SMILES.
 
     Parameters
     ----------
@@ -39,13 +41,13 @@ def top_from_smiles(
 
     Returns
     -------
-    top : opennff.interchange.components.mdtraj.OFFBioTop
+    top : opennff.interchange.components.mdtraj._OFFBioTop
         A single-molecule, gas phase-like topology
 
     """
     mol = Molecule.from_smiles(smiles)
     mol.generate_conformers(n_conformers=1)
-    top = OFFBioTop.from_molecules(n_molecules * [mol])
+    top = _OFFBioTop.from_molecules(n_molecules * [mol])
     top.mdtop = md.Topology.from_openmm(top.to_openmm())  # type: ignore[attr-defined]
     # Add dummy box vectors
     # TODO: Revisit if/after Topology.is_periodic

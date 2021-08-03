@@ -4,12 +4,12 @@ from openff.units import unit
 from openff.units.simtk import from_simtk
 from simtk import unit as simtk_unit
 
-from openff.interchange.tests import BaseTest
+from openff.interchange.tests import _BaseTest
 from openff.interchange.utils import (
+    _unwrap_list_of_pint_quantities,
     compare_forcefields,
     get_partial_charges_from_openmm_system,
     pint_to_simtk,
-    unwrap_list_of_pint_quantities,
 )
 
 simtk_quantitites = [
@@ -40,7 +40,7 @@ def test_pint_to_simtk():
     assert pint_to_simtk(q) == 0.5 / simtk_unit.angstrom
 
 
-class TestUtils(BaseTest):
+class TestUtils(_BaseTest):
     def test_compare_forcefields(self, parsley):
         parsley_name = "openff-1.0.0.offxml"
         compare_forcefields(parsley, parsley)
@@ -52,10 +52,10 @@ class TestUtils(BaseTest):
         wrapped = [1 * unit.m, 1.5 * unit.m]
         unwrapped = [1, 1.5] * unit.m
 
-        assert all(unwrapped == unwrap_list_of_pint_quantities(wrapped))
+        assert all(unwrapped == _unwrap_list_of_pint_quantities(wrapped))
 
 
-class TestOpenMM(BaseTest):
+class TestOpenMM(_BaseTest):
     def test_openmm_partial_charges(self, argon_ff, argon_top):
         omm_system = argon_ff.create_openmm_system(argon_top)
         partial_charges = get_partial_charges_from_openmm_system(omm_system)

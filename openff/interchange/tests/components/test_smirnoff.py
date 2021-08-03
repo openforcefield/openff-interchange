@@ -24,7 +24,7 @@ from simtk import openmm
 from simtk import unit as simtk_unit
 
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import OFFBioTop
+from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.smirnoff import (
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
@@ -38,14 +38,14 @@ from openff.interchange.components.smirnoff import (
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.models import TopologyKey
-from openff.interchange.tests import BaseTest
+from openff.interchange.tests import _BaseTest
 from openff.interchange.utils import get_test_file_path
 
 kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
 kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
 
 
-class TestSMIRNOFFPotentialHandler(BaseTest):
+class TestSMIRNOFFPotentialHandler(_BaseTest):
     def test_allowed_parameter_handler_types(self):
         class DummyParameterHandler(ParameterHandler):
             pass
@@ -87,9 +87,9 @@ class TestSMIRNOFFPotentialHandler(BaseTest):
             )
 
 
-class TestSMIRNOFFHandlers(BaseTest):
+class TestSMIRNOFFHandlers(_BaseTest):
     def test_bond_potential_handler(self):
-        top = OFFBioTop.from_molecules(Molecule.from_smiles("O=O"))
+        top = _OFFBioTop.from_molecules(Molecule.from_smiles("O=O"))
 
         bond_handler = BondHandler(version=0.3)
         bond_parameter = BondHandler.BondType(
@@ -117,7 +117,7 @@ class TestSMIRNOFFHandlers(BaseTest):
         assert pot.parameters["k"].to(kcal_mol_a2).magnitude == pytest.approx(1.5)
 
     def test_angle_potential_handler(self):
-        top = OFFBioTop.from_molecules(Molecule.from_smiles("CCC"))
+        top = _OFFBioTop.from_molecules(Molecule.from_smiles("CCC"))
 
         angle_handler = AngleHandler(version=0.3)
         angle_parameter = AngleHandler.AngleType(
@@ -177,7 +177,7 @@ class TestSMIRNOFFHandlers(BaseTest):
         # Explicitly store these, since results differ RDKit/AmberTools vs. OpenEye
         reference_charges = [c._value for c in molecule.partial_charges]
 
-        top = OFFBioTop.from_molecules(molecule)
+        top = _OFFBioTop.from_molecules(molecule)
 
         parameter_handlers = [
             ElectrostaticsHandler(version=0.3),
@@ -193,7 +193,7 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
 
     def test_electrostatics_library_charges(self):
-        top = OFFBioTop.from_molecules(Molecule.from_smiles("C"))
+        top = _OFFBioTop.from_molecules(Molecule.from_smiles("C"))
 
         library_charge_handler = LibraryChargeHandler(version=0.3)
         library_charge_handler.add_parameter(
@@ -220,7 +220,7 @@ class TestSMIRNOFFHandlers(BaseTest):
 
     def test_electrostatics_charge_increments(self):
         molecule = Molecule.from_mapped_smiles("[Cl:1][H:2]")
-        top = OFFBioTop.from_molecules(molecule)
+        top = _OFFBioTop.from_molecules(molecule)
 
         molecule.assign_partial_charges(partial_charge_method="am1-mulliken")
 
@@ -254,7 +254,7 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
 
 
-class TestUnassignedParameters(BaseTest):
+class TestUnassignedParameters(_BaseTest):
     def test_catch_unassigned_bonds(self, parsley, ethanol_top):
         for param in parsley["Bonds"].parameters:
             param.smirks = "[#99:1]-[#99:2]"
@@ -330,7 +330,7 @@ def test_library_charges_from_molecule():
     assert library_charges.charge == [*mol.partial_charges]
 
 
-class TestBondOrderInterpolation(BaseTest):
+class TestBondOrderInterpolation(_BaseTest):
     xml_ff_bo_bonds = """<?xml version='1.0' encoding='ASCII'?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
       <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
@@ -479,7 +479,7 @@ class TestBondOrderInterpolation(BaseTest):
 
 
 @skip_if_missing("jax")
-class TestMatrixRepresentations(BaseTest):
+class TestMatrixRepresentations(_BaseTest):
     @pytest.mark.parametrize(
         ("handler_name", "n_ff_terms", "n_sys_terms"),
         [("vdW", 10, 72), ("Bonds", 8, 64), ("Angles", 6, 104)],
@@ -533,7 +533,7 @@ class TestMatrixRepresentations(BaseTest):
             )
 
 
-class TestParameterInterpolation(BaseTest):
+class TestParameterInterpolation(_BaseTest):
     xml_ff_bo = """<?xml version='1.0' encoding='ASCII'?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
       <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg"

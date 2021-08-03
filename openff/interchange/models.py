@@ -1,3 +1,4 @@
+"""Custom Pydantic models."""
 from typing import Optional, Tuple
 
 from openff.units import unit
@@ -10,6 +11,8 @@ class DefaultModel(BaseModel):
     """A custom Pydantic model used by other components."""
 
     class Config:
+        """Custom Pydantic configuration."""
+
         json_encoders = {
             unit.Quantity: custom_quantity_encoder,
         }
@@ -19,7 +22,8 @@ class DefaultModel(BaseModel):
 
 
 class TopologyKey(DefaultModel):
-    """A unique identifier of a segment of a chemical topology.
+    """
+    A unique identifier of a segment of a chemical topology.
 
     These refer to a single portion of a chemical graph, i.e. a single valence term,
     (a bond, angle, or dihedral) or a single atom. These target only the information in
@@ -30,7 +34,6 @@ class TopologyKey(DefaultModel):
 
     Examples
     --------
-
     Create a TopologyKey identifying some speicfic angle
 
     .. code-block:: pycon
@@ -75,7 +78,8 @@ class TopologyKey(DefaultModel):
 
 
 class PotentialKey(DefaultModel):
-    """A unique identifier of an instance of physical parameters as applied to a segment of a chemical topology.
+    """
+    A unique identifier of an instance of physical parameters as applied to a segment of a chemical topology.
 
     These refer to a single term in a force field as applied to a single segment of a chemical
     topology, i.e. a single atom or dihedral. For example, a PotentialKey corresponding to a
@@ -85,7 +89,6 @@ class PotentialKey(DefaultModel):
 
     Examples
     --------
-
     Create a PotentialKey corresponding to the parameter with id `b55` in OpenFF "Parsley" 1.0.0
 
     .. code-block:: pycon

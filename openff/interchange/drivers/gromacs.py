@@ -1,3 +1,4 @@
+"""Functions for running energy evluations with GROMACS."""
 import subprocess
 import tempfile
 from pathlib import Path

@@ -1,10 +1,13 @@
+"""Temporary utilities to use an MDTraj Trajectory with an OpenFF Trajectory."""
 import copy
 
 import mdtraj as md
 from openff.toolkit.topology import Topology
 
 
-class OFFBioTop(Topology):
+class _OFFBioTop(Topology):
+    """A subclass of an OpenFF Topology that carries around an MDTraj topology."""
+
     def __init__(self, mdtop=None, *args, **kwargs):
         self.mdtop = mdtop
         super().__init__(*args, **kwargs)
@@ -104,7 +107,7 @@ def _iterate_pairs(mdtop):
 
 
 def _get_num_h_bonds(mdtop):
-    """Get the number of (covalent) bonds containing a hydrogen atom"""
+    """Get the number of (covalent) bonds containing a hydrogen atom."""
     n_bonds_containing_hydrogen = 0
 
     for bond in mdtop.bonds:
