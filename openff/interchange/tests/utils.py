@@ -189,6 +189,7 @@ def _compare_nonbonded_settings(force1, force2):
             "getPMEParametersInContext",
             "getParticleParameterOffset",
             "getParticleParameters",
+            "getForceGroup",
         ]:
             continue
         assert getattr(force1, attr)() == getattr(force2, attr)(), attr
@@ -203,14 +204,14 @@ def _compare_nonbonded_parameters(force1, force2):
         q1, sig1, eps1 = force1.getParticleParameters(i)
         q2, sig2, eps2 = force2.getParticleParameters(i)
         assert (
-            abs(q2 - q1) < 1e-12 * simtk_unit.elementary_charge
-        ), f"charge mismatch in particle {i}"
+            abs(q2 - q1) < 1e-8 * simtk_unit.elementary_charge
+        ), f"charge mismatch in particle {i}: {q1} vs {q2}"
         assert (
             abs(sig2 - sig1) < 1e-12 * simtk_unit.nanometer
-        ), f"sigma mismatch in particle {i}"
+        ), f"sigma mismatch in particle {i}: {sig1} vs {sig2}"
         assert (
             abs(eps2 - eps1) < 1e-12 * simtk_unit.kilojoule_per_mole
-        ), f"epsilon mismatch in particle {i}"
+        ), f"epsilon mismatch in particle {i}: {eps1} vs {eps2}"
 
 
 def _compare_exceptions(force1, force2):

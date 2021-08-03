@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol, create_reversed_ethanol
+from openff.toolkit.tests.utils import requires_openeye
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -170,7 +171,13 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
 
     def test_electrostatics_am1_handler(self):
-        top = OFFBioTop.from_molecules(Molecule.from_smiles("C"))
+        molecule = Molecule.from_smiles("C")
+        molecule.assign_partial_charges(partial_charge_method="am1bcc")
+
+        # Explicitly store these, since results differ RDKit/AmberTools vs. OpenEye
+        reference_charges = [c._value for c in molecule.partial_charges]
+
+        top = OFFBioTop.from_molecules(molecule)
 
         parameter_handlers = [
             ElectrostaticsHandler(version=0.3),
@@ -180,10 +187,9 @@ class TestSMIRNOFFHandlers(BaseTest):
         electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
             parameter_handlers, top
         )
-
         np.testing.assert_allclose(
             [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
-            [-0.1088, 0.0267, 0.0267, 0.0267, 0.0267],
+            reference_charges,
         )
 
     def test_electrostatics_library_charges(self):
@@ -213,7 +219,14 @@ class TestSMIRNOFFHandlers(BaseTest):
         )
 
     def test_electrostatics_charge_increments(self):
-        top = OFFBioTop.from_molecules(Molecule.from_mapped_smiles("[Cl:1][H:2]"))
+        molecule = Molecule.from_mapped_smiles("[Cl:1][H:2]")
+        top = OFFBioTop.from_molecules(molecule)
+
+        molecule.assign_partial_charges(partial_charge_method="am1-mulliken")
+
+        reference_charges = [c._value for c in molecule.partial_charges]
+        reference_charges[0] += 0.1
+        reference_charges[1] -= 0.1
 
         charge_increment_handler = ChargeIncrementModelHandler(version=0.3)
         charge_increment_handler.add_parameter(
@@ -237,7 +250,7 @@ class TestSMIRNOFFHandlers(BaseTest):
         # sum is [-0.068,  0.068]
         np.testing.assert_allclose(
             [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
-            [-0.068, 0.068],
+            reference_charges,
         )
 
 
@@ -443,8 +456,7 @@ class TestBondOrderInterpolation(BaseTest):
                     ref_k.append(force.getBondParameters(i)[3]._value)
                     ref_length.append(force.getBondParameters(i)[2]._value)
 
-        np.testing.assert_almost_equal(ref_k, new_k, decimal=4)
-        np.testing.assert_almost_equal(ref_k, new_k, decimal=4)
+        np.testing.assert_allclose(ref_k, new_k, rtol=3e-5)
 
     def test_fractional_bondorder_invalid_interpolation_method(self):
         """
@@ -609,6 +621,7 @@ class TestParameterInterpolation(BaseTest):
             180.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
         )
 
+    @requires_openeye
     @pytest.mark.parametrize(
         (
             "get_molecule",
@@ -618,8 +631,8 @@ class TestParameterInterpolation(BaseTest):
             "central_atoms",
         ),
         [
-            (create_ethanol, 4.18711406752, 42266.96368, 0.1399906965, (1, 2)),
-            (create_reversed_ethanol, 4.18711406752, 42266.9638, 0.13999096965, (7, 6)),
+            (create_ethanol, 4.16586914, 42208.5402, 0.140054167256, (1, 2)),
+            (create_reversed_ethanol, 4.16564555, 42207.9252, 0.14005483525, (7, 6)),
         ],
     )
     def test_fractional_bondorder_from_molecule(
@@ -638,6 +651,18 @@ class TestParameterInterpolation(BaseTest):
 
         Same process with bond length (1.4, 1.3) A gives 0.1399906965 nm
         Same process with torsion k (1.0, 1.8) kcal/mol gives 4.18711406752 kJ/mol
+
+        Using OpenEye (openeye-toolkits 2021.1.1, Python 3.8, macOS):
+            bond order 0.9945832743790813
+            bond k = 42208.5402 kJ/nm**2/mol
+            bond length = 0.14005416725620918 nm
+            torsion k = 4.16586914 kilojoules kJ/mol
+
+        ... except OpenEye has a different fractional bond order for reversed ethanol
+            bond order 0.9945164749654242
+            bond k = 42207.9252 kJ/nm**2/mol
+            bond length = 0.14005483525034576 nm
+            torsion k = 4.16564555 kJ/mol
 
         """
         mol = get_molecule()
@@ -669,7 +694,10 @@ class TestParameterInterpolation(BaseTest):
                 k = params[-1]
                 length = params[-2]
                 np.testing.assert_allclose(
-                    k / k.unit, k_bond_interpolated, atol=0, rtol=2e-6
+                    k / k.unit,
+                    k_bond_interpolated,
+                    atol=0,
+                    rtol=2e-6,
                 )
                 np.testing.assert_allclose(
                     length / length.unit,
