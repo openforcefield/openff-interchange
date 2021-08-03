@@ -632,7 +632,7 @@ class TestParameterInterpolation(BaseTest):
         ),
         [
             (create_ethanol, 4.16586914, 42208.5402, 0.140054167256, (1, 2)),
-            (create_reversed_ethanol, 4.16586914, 42208.5402, 0.140054167256, (7, 6)),
+            (create_reversed_ethanol, 4.16564555, 42207.9252, 0.14005483525, (7, 6)),
         ],
     )
     def test_fractional_bondorder_from_molecule(
@@ -657,6 +657,12 @@ class TestParameterInterpolation(BaseTest):
             bond k = 42208.5402 kJ/nm**2/mol
             bond length = 0.14005416725620918 nm
             torsion k = 4.16586914 kilojoules kJ/mol
+
+        ... except OpenEye has a different fractional bond order for reversed ethanol
+            bond order 0.9945164749654242
+            bond k = 42207.9252 kJ/nm**2/mol
+            bond length = 0.14005483525034576 nm
+            torsion k = 4.16564555 kJ/mol
 
         """
         mol = get_molecule()
@@ -688,7 +694,10 @@ class TestParameterInterpolation(BaseTest):
                 k = params[-1]
                 length = params[-2]
                 np.testing.assert_allclose(
-                    k / k.unit, k_bond_interpolated, atol=0, rtol=2e-6
+                    k / k.unit,
+                    k_bond_interpolated,
+                    atol=0,
+                    rtol=2e-6,
                 )
                 np.testing.assert_allclose(
                     length / length.unit,
