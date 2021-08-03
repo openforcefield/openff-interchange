@@ -170,9 +170,15 @@ def test_energy_vs_toolkit(rdmol):
 
     if mol.name in ["DrugBank_6182"]:
         pytest.xfail("OpenEye stereochemistry assumptions fail")
-    elif mol.name in ["DrugBank_2148", "DrugBank_1971"]:
+    elif mol.name in [
+        "DrugBank_2148",
+        "DrugBank_1971",
+        "DrugBank_2563",
+        "DrugBank_2585",
+    ]:
         pytest.xfail(
-            "DrugBank_2148 often results in small non-bonded energy differences"
+            "These molecules results in small non-bonded energy differences on CI "
+            "runners, although some behavior is observed on different hardware."
         )
 
     assert mol.n_conformers > 0
