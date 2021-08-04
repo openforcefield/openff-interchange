@@ -45,13 +45,13 @@ release = ""
 # ones.
 extensions = [
     "myst_parser",
-    "sphinx.ext.autosummary",
     "sphinx.ext.autodoc",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
+    "sphinx.ext.autosummary",
 ]
 
 autosummary_generate = True

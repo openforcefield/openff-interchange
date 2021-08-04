@@ -1,5 +1,7 @@
 {{ fullname | escape | underline(line="=")}}
 
+{% set documented_members = [] %}
+
 .. automodule:: {{ fullname }}
 
 {% block modules %}
@@ -11,6 +13,7 @@
    :recursive:
 {% for item in modules %}
    {{ item }}
+   {% set _ = documented_members.append(item) %}
 {%- endfor %}
 {% endif %}
 {% endblock %}
@@ -32,6 +35,7 @@
       :undoc-members:
       :show-inheritance:
       :inherited-members:
+      {% set _ = documented_members.append(item) %}
    {%- endfor %}
 
 {% endif %}
@@ -50,6 +54,7 @@
 
    {% for item in functions %}
    .. autofunction:: {{ item }}
+   {% set _ = documented_members.append(item) %}
    {%- endfor %}
 
 {% endif %}
@@ -67,7 +72,11 @@
 
    {% for item in exceptions %}
    .. autoexception:: {{ item }}
+   {% set _ = documented_members.append(item) %}
    {%- endfor %}
+
+{% endif %}
+{% endblock %}
 
 {% block attributes %}
 {% if attributes %}
@@ -77,10 +86,8 @@
       :nosignatures:
    {% for item in attributes %}
       {{ item }}
+      {%- set _ = documented_members.append(item) -%}
    {%- endfor %}
-
-{% endif %}
-{% endblock %}
 
 {% endif %}
 {% endblock %}
