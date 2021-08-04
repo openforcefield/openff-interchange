@@ -10,7 +10,7 @@ dependencies:
   - pydantic
   - pint
   - openmm
-  - openff-toolkit
+  - openff-toolkit >=0.10.0
   - openff-utilities
   - openff-units
   - jax
@@ -19,3 +19,4 @@ dependencies:
 
     # Testing
   - pytest
+  - conda

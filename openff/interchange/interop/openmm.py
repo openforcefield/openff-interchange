@@ -1,3 +1,4 @@
+"""Interfaces with ParmEd."""
 from openff.units import unit as off_unit
 from openff.units.simtk import from_simtk
 from simtk import openmm, unit
@@ -22,7 +23,8 @@ kj_rad = kj_mol / unit.radian ** 2
 
 
 def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.System:
-    """Convert an OpenFF Interchange to a ParmEd Structure
+    """
+    Convert an Interchange to a ParmEd Structure.
 
     Parameters
     ----------
@@ -38,7 +40,6 @@ def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.Syst
         The corresponding OpenMM System object
 
     """
-
     openmm_sys = openmm.System()
 
     # OpenFF box stored implicitly as nm, and that happens to be what
@@ -64,8 +65,9 @@ def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.Syst
 
 
 def _process_constraints(openff_sys, openmm_sys):
-    """Process the Constraints section of an OpenFF Interchange object
-    into a corresponding constraints in the OpenMM System"""
+    """
+    Process the Constraints section of an Interchange object.
+    """
     try:
         constraint_handler = openff_sys.handlers["Constraints"]
     except KeyError:
@@ -81,7 +83,9 @@ def _process_constraints(openff_sys, openmm_sys):
 
 
 def _process_bond_forces(openff_sys, openmm_sys):
-    """Process the Bonds section of an OpenFF Interchange into a corresponding openmm.HarmonicBondForce"""
+    """
+    Process the Bonds section of an Interchange object.
+    """
     harmonic_bond_force = openmm.HarmonicBondForce()
     openmm_sys.addForce(harmonic_bond_force)
 
@@ -118,7 +122,9 @@ def _process_bond_forces(openff_sys, openmm_sys):
 
 
 def _process_angle_forces(openff_sys, openmm_sys):
-    """Process the Angles section of an OpenFF Interchange into a corresponding openmm.HarmonicAngleForce"""
+    """
+    Process the Angles section of an Interchange object.
+    """
     harmonic_angle_force = openmm.HarmonicAngleForce()
     openmm_sys.addForce(harmonic_angle_force)
 
@@ -150,8 +156,9 @@ def _process_torsion_forces(openff_sys, openmm_sys):
 
 
 def _process_proper_torsion_forces(openff_sys, openmm_sys):
-    """Process the Propers section of an OpenFF Interchange into corresponding
-    forces within an openmm.PeriodicTorsionForce"""
+    """
+    Process the Propers section of an Interchange object.
+    """
     torsion_force = openmm.PeriodicTorsionForce()
     openmm_sys.addForce(torsion_force)
 
@@ -164,7 +171,24 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
         k = params["k"].m_as(off_unit.kilojoule / off_unit.mol)
         periodicity = int(params["periodicity"])
         phase = params["phase"].m_as(off_unit.radian)
-        idivf = int(params["idivf"])
+        # Work around a pint gotcha:
+        # >>> import pint
+        # >>> u = pint.UnitRegistry()
+        # >>> val
+        # <Quantity(1.0, 'dimensionless')>
+        # >>> val.m
+        # 0.9999999999
+        # >>> int(val)
+        # 0
+        # >>> int(round(val, 0))
+        # 1
+        # >>> round(val.m_as(u.dimensionless), 0)
+        # 1.0
+        # >>> round(val, 0).m
+        # 1.0
+        idivf = params["idivf"].m_as(off_unit.dimensionless)
+        if idivf == 0:
+            raise RuntimeError("Found an idivf of 0.")
         torsion_force.addTorsion(
             indices[0],
             indices[1],
@@ -177,7 +201,9 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
 
 
 def _process_rb_torsion_forces(openff_sys, openmm_sys):
-    """Process Ryckaert-Bellemans torsions"""
+    """
+    Process Ryckaert-Bellemans torsions.
+    """
     rb_force = openmm.RBTorsionForce()
     openmm_sys.addForce(rb_force)
 
@@ -209,8 +235,9 @@ def _process_rb_torsion_forces(openff_sys, openmm_sys):
 
 
 def _process_improper_torsion_forces(openff_sys, openmm_sys):
-    """Process the Impropers section of an OpenFF Interchange into corresponding
-    forces within an openmm.PeriodicTorsionForce"""
+    """
+    Process the Impropers section of an Interchange object.
+    """
     if "ImproperTorsions" not in openff_sys.handlers.keys():
         return
 
@@ -244,8 +271,15 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys):
 
 
 def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=False):
-    """Process the vdW and Electrostatics sections of an OpenFF Interchange into a corresponding openmm.NonbondedForce
-    or a collection of other forces (NonbondedForce, CustomNonbondedForce, CustomBondForce)"""
+    """
+    Process the non-bonded handlers in an Interchange into corresponding openmm objects.
+
+    This typically involves processing the vdW and Electrostatics sections of an Interchange object
+    into a corresponding openmm.NonbondedForce (if `combine_nonbonded_forces=True`) or a
+    collection of other forces (NonbondedForce, CustomNonbondedForce, CustomBondForce) if
+    `combine_nonbondoed_forces=False`.
+
+    """
     if "vdW" in openff_sys.handlers:
         vdw_handler = openff_sys.handlers["vdW"]
 
@@ -287,7 +321,12 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                     non_bonded_force.setCutoffDistance(vdw_cutoff)
                     non_bonded_force.setEwaldErrorTolerance(1.0e-4)
                 else:
-                    raise UnsupportedCutoffMethodError
+                    raise UnsupportedCutoffMethodError(
+                        f"Combination of non-bonded cutoff methods {vdw_cutoff} (vdW) and "
+                        f"{electrostatics_method} (Electrostatics) not currently supported with "
+                        f"`combine_nonbonded_forces={combine_nonbonded_forces}` and "
+                        f"`.box={openff_sys.box}`"
+                    )
             elif vdw_method == "pme" and electrostatics_method == "pme":
                 if openff_sys.box is not None:
                     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
@@ -504,6 +543,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
 
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
+    """Create an Interchange object from OpenMM data."""
     from openff.interchange.components.interchange import Interchange
 
     openff_sys = Interchange()
@@ -529,10 +569,10 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
     if topology:
         import mdtraj as md
 
-        from openff.interchange.components.mdtraj import OFFBioTop
+        from openff.interchange.components.mdtraj import _OFFBioTop
 
         mdtop = md.Topology.from_openmm(topology)
-        top = OFFBioTop()
+        top = _OFFBioTop()
         top.mdtop = mdtop
 
         openff_sys.topoology = top
