@@ -52,6 +52,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
     "sphinx.ext.autosummary",
+    "sphinxcontrib.autodoc_pydantic",
 ]
 
 autosummary_generate = True
