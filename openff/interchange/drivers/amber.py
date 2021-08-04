@@ -1,3 +1,4 @@
+"""Functions for running energy evluations with Amber."""
 import subprocess
 import tempfile
 from pathlib import Path
@@ -73,7 +74,7 @@ def _run_sander(
         calculation.
 
     Returns
-    -------gg
+    -------
     report : EnergyReport
         An `EnergyReport` object containing the single-point energies.
 

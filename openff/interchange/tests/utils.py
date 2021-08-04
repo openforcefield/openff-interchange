@@ -1,3 +1,4 @@
+"""Assorted utilities used in testing."""
 from collections import defaultdict
 from typing import DefaultDict, Dict, List, Tuple
 
@@ -10,8 +11,7 @@ from simtk import openmm
 from simtk import unit as simtk_unit
 
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import OFFBioTop
-from openff.interchange.exceptions import InterMolEnergyComparisonError
+from openff.interchange.components.mdtraj import _OFFBioTop
 
 HAS_GROMACS = any(has_executable(e) for e in ["gmx", "gmx_d"])
 HAS_LAMMPS = any(has_executable(e) for e in ["lammps", "lmp_mpi", "lmp_serial"])
@@ -24,11 +24,12 @@ kj_nm2_mol = simtk_unit.kilojoule_per_mole / simtk_unit.nanometer ** 2
 kj_rad2_mol = simtk_unit.kilojoule_per_mole / simtk_unit.radian ** 2
 
 
-def top_from_smiles(
+def _top_from_smiles(
     smiles: str,
     n_molecules: int = 1,
-) -> OFFBioTop:
-    """Create a gas phase OpenFF Topology from a single-molecule SMILES
+) -> _OFFBioTop:
+    """
+    Create a gas phase OpenFF Topology from a single-molecule SMILES.
 
     Parameters
     ----------
@@ -40,52 +41,18 @@ def top_from_smiles(
 
     Returns
     -------
-    top : opennff.interchange.components.mdtraj.OFFBioTop
+    top : opennff.interchange.components.mdtraj._OFFBioTop
         A single-molecule, gas phase-like topology
 
     """
     mol = Molecule.from_smiles(smiles)
     mol.generate_conformers(n_conformers=1)
-    top = OFFBioTop.from_molecules(n_molecules * [mol])
+    top = _OFFBioTop.from_molecules(n_molecules * [mol])
     top.mdtop = md.Topology.from_openmm(top.to_openmm())  # type: ignore[attr-defined]
     # Add dummy box vectors
     # TODO: Revisit if/after Topology.is_periodic
     top.box_vectors = np.eye(3) * 10 * simtk_unit.nanometer
     return top
-
-
-def compare_energies(ener1, ener2, atol=1e-8):
-    """Compare two GROMACS energy dicts from InterMol"""
-
-    assert sorted(ener1.keys()) == sorted(ener2.keys()), (
-        sorted(ener1.keys()),
-        sorted(ener2.keys()),
-    )
-
-    flaky_keys = [
-        "Temperature",
-        "Kinetic En.",
-        "Total Energy",
-        "Pressure",
-        "Vir-XX",
-        "Vir-YY",
-    ]
-
-    failed_runs = []
-    for key in ener1.keys():
-        if key in flaky_keys:
-            continue
-        try:
-            assert np.isclose(
-                ener1[key] / ener1[key].unit,
-                ener2[key] / ener2[key].unit,
-                atol=atol,
-            )
-        except AssertionError:
-            failed_runs.append([key, ener1[key], ener2[key]])
-
-    if len(failed_runs) > 0:
-        raise InterMolEnergyComparisonError(failed_runs)
 
 
 def _get_charges_from_openmm_system(omm_sys: openmm.System):
@@ -128,13 +95,6 @@ def _get_charges_from_openff_interchange(off_sys: Interchange):
     charges_ = [*off_sys.handlers["Electrostatics"].charges.values()]
     charges = np.asarray([charge.magnitude for charge in charges_])
     return charges
-
-
-def compare_charges_omm_off(omm_sys: openmm.System, off_sys: Interchange) -> None:
-    omm_charges = np.asarray([*_get_charges_from_openmm_system(omm_sys)])
-    off_charges = _get_charges_from_openff_interchange(off_sys)
-
-    np.testing.assert_equal(omm_charges, off_charges)
 
 
 def _create_torsion_dict(torsion_force) -> Dict[Tuple[int], List[Tuple]]:
@@ -197,10 +157,12 @@ def _compare_bond_forces(force1, force2):
     bonds2 = _create_bond_dict(force2)
 
     for key in bonds1:
-        assert abs(bonds2[key][0] - bonds1[key][0]) < 1e-15 * simtk_unit.nanometer
-        assert abs(bonds2[key][1] - bonds1[key][1]) < 1e-9 * kj_nm2_mol, abs(
-            bonds2[key][1] - bonds1[key][1]
-        )
+        length_diff = bonds2[key][0] - bonds1[key][0]
+        assert (
+            abs(length_diff) < 1e-15 * simtk_unit.nanometer
+        ), f"Bond lengths differ by {length_diff}"
+        k_diff = bonds2[key][1] - bonds1[key][1]
+        assert abs(k_diff) < 1e-9 * kj_nm2_mol, f"bond k differ by {k_diff}"
 
 
 def _compare_angle_forces(force1, force2):
@@ -210,8 +172,12 @@ def _compare_angle_forces(force1, force2):
     angles2 = _create_angle_dict(force2)
 
     for key in angles1:
-        assert abs(angles2[key][0] - angles1[key][0]) < 1e-15 * simtk_unit.radian
-        assert abs(angles2[key][1] - angles1[key][1]) < 1e-10 * kj_rad2_mol
+        angle_diff = angles2[key][0] - angles1[key][0]
+        assert (
+            abs(angle_diff) < 1e-15 * simtk_unit.radian
+        ), f"angles differ by {angle_diff}"
+        k_diff = angles2[key][1] - angles1[key][1]
+        assert abs(k_diff) < 1e-10 * kj_rad2_mol, f"angle k differ by {k_diff}"
 
 
 def _compare_nonbonded_settings(force1, force2):
@@ -225,31 +191,48 @@ def _compare_nonbonded_settings(force1, force2):
             "getPMEParametersInContext",
             "getParticleParameterOffset",
             "getParticleParameters",
+            "getForceGroup",
         ]:
             continue
         assert getattr(force1, attr)() == getattr(force2, attr)(), attr
 
 
 def _compare_nonbonded_parameters(force1, force2):
-    assert force1.getNumParticles() == force2.getNumParticles()
+    assert (
+        force1.getNumParticles() == force2.getNumParticles()
+    ), "found different number of particles"
 
     for i in range(force1.getNumParticles()):
         q1, sig1, eps1 = force1.getParticleParameters(i)
         q2, sig2, eps2 = force2.getParticleParameters(i)
-        assert abs(q2 - q1) < 1e-12 * simtk_unit.elementary_charge
-        assert abs(sig2 - sig1) < 1e-12 * simtk_unit.nanometer
-        assert abs(eps2 - eps1) < 1e-12 * simtk_unit.kilojoule_per_mole
+        assert (
+            abs(q2 - q1) < 1e-8 * simtk_unit.elementary_charge
+        ), f"charge mismatch in particle {i}: {q1} vs {q2}"
+        assert (
+            abs(sig2 - sig1) < 1e-12 * simtk_unit.nanometer
+        ), f"sigma mismatch in particle {i}: {sig1} vs {sig2}"
+        assert (
+            abs(eps2 - eps1) < 1e-12 * simtk_unit.kilojoule_per_mole
+        ), f"epsilon mismatch in particle {i}: {eps1} vs {eps2}"
 
 
 def _compare_exceptions(force1, force2):
-    assert force1.getNumExceptions() == force2.getNumExceptions()
+    assert (
+        force1.getNumExceptions() == force2.getNumExceptions()
+    ), "found different number of exceptions"
 
     for i in range(force1.getNumExceptions()):
         _, _, q1, sig1, eps1 = force1.getExceptionParameters(i)
         _, _, q2, sig2, eps2 = force2.getExceptionParameters(i)
-        assert abs(q2 - q1) < 1e-12 * simtk_unit.elementary_charge ** 2
-        assert abs(sig2 - sig1) < 1e-12 * simtk_unit.nanometer
-        assert abs(eps2 - eps1) < 1e-12 * simtk_unit.kilojoule_per_mole
+        assert (
+            abs(q2 - q1) < 1e-12 * simtk_unit.elementary_charge ** 2
+        ), f"charge mismatch in exception {i}"
+        assert (
+            abs(sig2 - sig1) < 1e-12 * simtk_unit.nanometer
+        ), f"sigma mismatch in exception {i}"
+        assert (
+            abs(eps2 - eps1) < 1e-12 * simtk_unit.kilojoule_per_mole
+        ), f"epsilon mismatch in exception {i}"
 
 
 def _get_force(openmm_sys: openmm.System, force_type):

@@ -1,14 +1,6 @@
 name: lint
 
-on:
-  push:
-    branches:
-      - "master"
-      - "maintenance/.+"
-  pull_request:
-    branches:
-      - "master"
-      - "maintenance/.+"
+on: [push, pull_request]
 
 jobs:
 
@@ -28,7 +20,7 @@ jobs:
 
       - name: Install linters
         run: |
-          pip install black isort flake8 flake8-bugbear flake8-absolute-import
+          pip install black isort flake8 flake8-bugbear flake8-absolute-import flake8-pytest-style
 
       - name: Run black
         run: |

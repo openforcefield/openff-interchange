@@ -2,21 +2,23 @@ import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol
-from openff.toolkit.tests.utils import get_data_file_path
+from openff.toolkit.tests.utils import compare_system_parameters, get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from simtk import openmm
 from simtk import unit as simtk_unit
 from simtk.openmm import app
 
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import OFFBioTop
+from openff.interchange.components.mdtraj import _OFFBioTop
+from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
 from openff.interchange.interop.openmm import from_openmm
-from openff.interchange.stubs import ForceField
+from openff.interchange.tests import _BaseTest
 from openff.interchange.utils import get_test_file_path
 
 nonbonded_resolution_matrix = [
@@ -98,14 +100,14 @@ def test_openmm_nonbonded_methods(inputs):
             raise Exception
     elif issubclass(result, (BaseException, Exception)):
         exception = result
+        forcefield.get_parameter_handler("vdW", {}).method = vdw_method
+        forcefield.get_parameter_handler(
+            "Electrostatics", {}
+        ).method = electrostatics_method
+        openff_interchange = Interchange.from_smirnoff(
+            force_field=forcefield, topology=topology
+        )
         with pytest.raises(exception):
-            forcefield.get_parameter_handler("vdW", {}).method = vdw_method
-            forcefield.get_parameter_handler(
-                "Electrostatics", {}
-            ).method = electrostatics_method
-            openff_interchange = Interchange.from_smirnoff(
-                force_field=forcefield, topology=topology
-            )
             openff_interchange.to_openmm(combine_nonbonded_forces=True)
     else:
         raise Exception("uh oh")
@@ -114,7 +116,7 @@ def test_openmm_nonbonded_methods(inputs):
 def test_unsupported_mixing_rule():
     molecules = [create_ethanol()]
     pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
-    topology = OFFBioTop.from_openmm(pdbfile.topology, unique_molecules=molecules)
+    topology = _OFFBioTop.from_openmm(pdbfile.topology, unique_molecules=molecules)
     topology.mdtop = md.Topology.from_openmm(topology.to_openmm())
 
     forcefield = ForceField("test_forcefields/test_forcefield.offxml")
@@ -126,7 +128,7 @@ def test_unsupported_mixing_rule():
         openff_sys.to_openmm(combine_nonbonded_forces=True)
 
 
-@pytest.mark.slow
+@pytest.mark.slow()
 @pytest.mark.parametrize("n_mols", [1, 2])
 @pytest.mark.parametrize(
     "mol",
@@ -187,7 +189,7 @@ def test_from_openmm_single_mols(mol, n_mols):
 @pytest.mark.xfail(
     reason="from_openmm does not correctly import vdW parameters from custom forces."
 )
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_openmm_roundtrip():
     mol = Molecule.from_smiles("CCO")
     mol.generate_conformers(n_conformers=1)
@@ -196,7 +198,7 @@ def test_openmm_roundtrip():
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
-    off_sys = parsley.create_openff_interchange(top)
+    off_sys = Interchange.from_smirnoff(parsley, top)
 
     off_sys.box = [4, 4, 4]
     off_sys.positions = mol.conformers[0].value_in_unit(simtk_unit.nanometer)
@@ -218,7 +220,7 @@ def test_openmm_roundtrip():
     )
 
 
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_combine_nonbonded_forces():
 
     mol = Molecule.from_smiles("ClC#CCl")
@@ -240,3 +242,120 @@ def test_combine_nonbonded_forces():
     get_openmm_energies(out, combine_nonbonded_forces=False).compare(
         get_openmm_energies(out, combine_nonbonded_forces=True),
     )
+
+
+class TestOpenMMVirtualSites(_BaseTest):
+    @pytest.fixture()
+    def parsley_with_sigma_hole(self, parsley):
+        """Fixture that loads an SMIRNOFF XML for argon"""
+        # TODO: Move this into BaseTest to that GROMACS and others can access it
+        virtual_site_handler = VirtualSiteHandler(version=0.3)
+
+        sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
+            name="EP",
+            smirks="[#6:1]-[#17:2]",
+            distance=1.4 * simtk_unit.angstrom,
+            type="BondCharge",
+            match="once",
+            charge_increment1=0.1 * simtk_unit.elementary_charge,
+            charge_increment2=0.2 * simtk_unit.elementary_charge,
+        )
+
+        virtual_site_handler.add_parameter(parameter=sigma_type)
+        parsley.register_parameter_handler(virtual_site_handler)
+
+        return parsley
+
+    @pytest.fixture()
+    def parsley_with_monovalent_lone_pair(self, parsley):
+        """Fixture that loads an SMIRNOFF XML for argon"""
+        virtual_site_handler = VirtualSiteHandler(version=0.3)
+
+        carbonyl_type = VirtualSiteHandler.VirtualSiteMonovalentLonePairType(
+            name="EP",
+            smirks="[O:1]=[C:2]-[C:3]",
+            distance=0.3 * simtk_unit.angstrom,
+            type="MonovalentLonePair",
+            match="once",
+            outOfPlaneAngle=0.0 * simtk_unit.degree,
+            inPlaneAngle=120.0 * simtk_unit.degree,
+            charge_increment1=0.05 * simtk_unit.elementary_charge,
+            charge_increment2=0.1 * simtk_unit.elementary_charge,
+            charge_increment3=0.15 * simtk_unit.elementary_charge,
+        )
+
+        virtual_site_handler.add_parameter(parameter=carbonyl_type)
+        parsley.register_parameter_handler(virtual_site_handler)
+
+        return parsley
+
+    def test_sigma_hole_example(self, parsley_with_sigma_hole):
+        """Test that a single-molecule sigma hole example runs"""
+        mol = Molecule.from_smiles("CCl")
+        mol.generate_conformers(n_conformers=1)
+
+        out = Interchange.from_smirnoff(
+            force_field=parsley_with_sigma_hole, topology=mol.to_topology()
+        )
+        out.box = [4, 4, 4]
+        out.positions = mol.conformers[0]
+        out.handlers["VirtualSites"] = SMIRNOFFVirtualSiteHandler._from_toolkit(
+            parameter_handler=parsley_with_sigma_hole["VirtualSites"],
+            topology=mol.to_topology(),
+        )
+        out["vdW"]._from_toolkit_virtual_sites(
+            parameter_handler=parsley_with_sigma_hole["VirtualSites"],
+            topology=mol.to_topology(),
+        )
+        out["Electrostatics"]._from_toolkit_virtual_sites(
+            parameter_handler=parsley_with_sigma_hole["VirtualSites"],
+            topology=mol.to_topology(),
+        )
+
+        # TODO: Sanity-check reported energies
+        get_openmm_energies(out, combine_nonbonded_forces=True)
+
+        compare_system_parameters(
+            out.to_openmm(combine_nonbonded_forces=True),
+            parsley_with_sigma_hole.create_openmm_system(mol.to_topology()),
+        )
+        """
+        import numpy as np
+        import parmed as pmd
+
+        out.to_top("sigma.top")
+        gmx_top = pmd.load_file("sigma.top")
+
+        assert abs(np.sum([p.charge for p in gmx_top.atoms])) < 1e-3
+        """
+
+    def test_carbonyl_example(self, parsley_with_monovalent_lone_pair):
+        """Test that a single-molecule DivalentLonePair example runs"""
+        mol = Molecule.from_smiles("CC=O")
+        mol.generate_conformers(n_conformers=1)
+
+        out = Interchange.from_smirnoff(
+            force_field=parsley_with_monovalent_lone_pair, topology=mol.to_topology()
+        )
+        out.box = [4, 4, 4]
+        out.positions = mol.conformers[0]
+        out.handlers["VirtualSites"] = SMIRNOFFVirtualSiteHandler._from_toolkit(
+            parameter_handler=parsley_with_monovalent_lone_pair["VirtualSites"],
+            topology=mol.to_topology(),
+        )
+        out["vdW"]._from_toolkit_virtual_sites(
+            parameter_handler=parsley_with_monovalent_lone_pair["VirtualSites"],
+            topology=mol.to_topology(),
+        )
+        out["Electrostatics"]._from_toolkit_virtual_sites(
+            parameter_handler=parsley_with_monovalent_lone_pair["VirtualSites"],
+            topology=mol.to_topology(),
+        )
+
+        # TODO: Sanity-check reported energies
+        get_openmm_energies(out, combine_nonbonded_forces=True)
+
+        compare_system_parameters(
+            out.to_openmm(combine_nonbonded_forces=True),
+            parsley_with_monovalent_lone_pair.create_openmm_system(mol.to_topology()),
+        )

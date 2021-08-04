@@ -1,3 +1,4 @@
+"""Functions for running energy evluations with GROMACS."""
 import subprocess
 import tempfile
 from pathlib import Path
@@ -128,6 +129,7 @@ def get_gromacs_energies(
     off_sys: "Interchange",
     mdp: str = "auto",
     writer: str = "internal",
+    decimal: int = 8,
 ) -> EnergyReport:
     """
     Given an OpenFF Interchange object, return single-point energies as computed by GROMACS.
@@ -143,6 +145,8 @@ def get_gromacs_energies(
     writer : str, default="internal"
         A string key identifying the backend to be used to write GROMACS files. The
         default value of `"internal"` results in this package's exporters being used.
+    decimal : int, default=8
+        A decimal precision for the positions in the `.gro` file.
 
     Returns
     -------
@@ -152,7 +156,7 @@ def get_gromacs_energies(
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
-            off_sys.to_gro("out.gro", writer=writer)
+            off_sys.to_gro("out.gro", writer=writer, decimal=decimal)
             off_sys.to_top("out.top", writer=writer)
             if mdp == "auto":
                 _write_mdp_file(off_sys)
@@ -207,7 +211,7 @@ def _run_gmx_energy(
     if grompp.returncode:
         raise GMXGromppError(err)
 
-    mdrun_cmd = "gmx mdrun -s out.tpr -e out.edr"
+    mdrun_cmd = "gmx mdrun -s out.tpr -e out.edr -ntmpi 1"
 
     mdrun = subprocess.Popen(
         mdrun_cmd,
@@ -264,7 +268,7 @@ def _get_gmx_energy_torsion(gmx_energies: Dict):
 
 @requires_package("panedr")
 def _parse_gmx_energy(edr_path: str) -> EnergyReport:
-    """Parse an `.xvg` file written by `gmx energy`."""
+    """Parse an `.edr` file written by `gmx energy`."""
     import panedr
 
     if TYPE_CHECKING:

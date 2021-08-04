@@ -1,3 +1,4 @@
+"""Interfaces with LAMMPS."""
 from pathlib import Path
 from typing import IO, Dict, Union
 
@@ -10,7 +11,7 @@ from openff.interchange.models import TopologyKey
 
 
 def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
-
+    """Write an Interchange object to a LAMMPS data file."""
     if isinstance(file_path, str):
         path = Path(file_path)
     if isinstance(file_path, Path):
@@ -127,6 +128,7 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
 
 
 def _write_pair_coeffs(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
+    """Write the Pair Coeffs section of a LAMMPS data file."""
     lmp_file.write("Pair Coeffs\n\n")
 
     vdw_handler = openff_sys["vdW"]
@@ -143,6 +145,7 @@ def _write_pair_coeffs(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dic
 
 
 def _write_bond_coeffs(lmp_file: IO, openff_sys: Interchange):
+    """Write the Bond Coeffs section of a LAMMPS data file."""
     lmp_file.write("Bond Coeffs\n\n")
 
     bond_handler = openff_sys.handlers["Bonds"]
@@ -161,6 +164,7 @@ def _write_bond_coeffs(lmp_file: IO, openff_sys: Interchange):
 
 
 def _write_angle_coeffs(lmp_file: IO, openff_sys: Interchange):
+    """Write the Angle Coeffs section of a LAMMPS data file."""
     lmp_file.write("\nAngle Coeffs\n\n")
 
     angle_handler = openff_sys.handlers["Angles"]
@@ -179,6 +183,7 @@ def _write_angle_coeffs(lmp_file: IO, openff_sys: Interchange):
 
 
 def _write_proper_coeffs(lmp_file: IO, openff_sys: Interchange):
+    """Write the Dihedral Coeffs section of a LAMMPS data file."""
     lmp_file.write("\nDihedral Coeffs\n\n")
 
     proper_handler = openff_sys.handlers["ProperTorsions"]
@@ -201,6 +206,7 @@ def _write_proper_coeffs(lmp_file: IO, openff_sys: Interchange):
 
 
 def _write_improper_coeffs(lmp_file: IO, openff_sys: Interchange):
+    """Write the Improper Coeffs section of a LAMMPS data file."""
     lmp_file.write("\nImproper Coeffs\n\n")
 
     improper_handler = openff_sys.handlers["ImproperTorsions"]
@@ -215,23 +221,42 @@ def _write_improper_coeffs(lmp_file: IO, openff_sys: Interchange):
         idivf = int(params["idivf"])
         k = k / idivf
 
-        if (phase != 180) or (n != 2):
+        # See https://lammps.sandia.gov/doc/improper_cvff.html
+        # E_periodic = k * (1 + cos(n * theta - phase))
+        # E_cvff = k * (1 + d * cos(n * theta))
+        # k_periodic = k_cvff
+        # if phase = 0,
+        #   d_cvff = 1
+        #   n_periodic = n_cvff
+        # if phase = 180,
+        #   cos(n * x - pi) == - cos(n * x)
+        #   d_cvff = -1
+        #   n_periodic = n_cvff
+        # k * (1 + cos(n * phi - pi / 2)) == k * (1 - cos(n * phi))
+
+        if phase == 0:
+            k_cvff = k
+            d_cvff = 1
+            n_cvff = n
+        elif phase == 180:
+            k_cvff = k
+            d_cvff = -1
+            n_cvff = n
+        else:
             raise UnsupportedExportError(
-                "Improper exports to LAMMPS are funky and not well-supported "
-                "at the moment, see PR #126"
+                "Improper exports to LAMMPS are funky and not well-supported, the only compatibility"
+                "found between periodidic impropers is with improper_style cvff when phase = 0 or 180 degrees"
             )
 
-        # See https://lammps.sandia.gov/doc/improper_fourier.html
-        # cos(n * x - pi) == - cos(n * x)
-        # k * (1 + cos(n * phi - pi / 2)) == k * (1 - cos(n * phi))
-        d = -1
-
-        lmp_file.write(f"{improper_type_idx+1:d} cvff {k:.16g}\t{d:d}\t{n:.16g}\n")
+        lmp_file.write(
+            f"{improper_type_idx+1:d} {k_cvff:.16g}\t{d_cvff:d}\t{n_cvff:.16g}\n"
+        )
 
     lmp_file.write("\n")
 
 
 def _write_atoms(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
+    """Write the Atoms section of a LAMMPS data file."""
     lmp_file.write("\nAtoms\n\n")
 
     atom_type_map_inv = dict({v: k for k, v in atom_type_map.items()})
@@ -265,6 +290,7 @@ def _write_atoms(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
 
 
 def _write_bonds(lmp_file: IO, openff_sys: Interchange):
+    """Write the Bonds section of a LAMMPS data file."""
     lmp_file.write("\nBonds\n\n")
 
     bond_handler = openff_sys["Bonds"]
@@ -298,6 +324,7 @@ def _write_bonds(lmp_file: IO, openff_sys: Interchange):
 
 
 def _write_angles(lmp_file: IO, openff_sys: Interchange):
+    """Write the Angles section of a LAMMPS data file."""
     from openff.interchange.components.mdtraj import (
         _iterate_angles,
         _store_bond_partners,
@@ -331,6 +358,7 @@ def _write_angles(lmp_file: IO, openff_sys: Interchange):
 
 
 def _write_propers(lmp_file: IO, openff_sys: Interchange):
+    """Write the Dihedrals section of a LAMMPS data file."""
     from openff.interchange.components.mdtraj import (
         _iterate_propers,
         _store_bond_partners,
@@ -366,6 +394,7 @@ def _write_propers(lmp_file: IO, openff_sys: Interchange):
 
 
 def _write_impropers(lmp_file: IO, openff_sys: Interchange):
+    """Write the Impropers section of a LAMMPS data file."""
     from openff.interchange.components.mdtraj import (
         _iterate_impropers,
         _store_bond_partners,

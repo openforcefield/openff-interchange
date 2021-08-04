@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 import pytest
+from openff.toolkit.tests.utils import requires_openeye
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -154,9 +155,10 @@ def compare_condensed_systems(mol, force_field):
             raise e
 
 
+@requires_openeye
 @skip_if_missing("openff.evaluator")
 @pytest.mark.timeout(60)
-@pytest.mark.slow
+@pytest.mark.slow()
 @pytest.mark.parametrize(
     "rdmol",
     Chem.SDMolSupplier(get_test_file_path("MiniDrugBankTrimmed.sdf"), sanitize=False),
@@ -166,7 +168,18 @@ def test_energy_vs_toolkit(rdmol):
     Chem.SanitizeMol(rdmol)
     mol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=True)
 
-    mol.to_inchi()
+    if mol.name in ["DrugBank_6182"]:
+        pytest.xfail("OpenEye stereochemistry assumptions fail")
+    elif mol.name in [
+        "DrugBank_2148",
+        "DrugBank_1971",
+        "DrugBank_2563",
+        "DrugBank_2585",
+    ]:
+        pytest.xfail(
+            "These molecules results in small non-bonded energy differences on CI "
+            "runners, although some behavior is observed on different hardware."
+        )
 
     assert mol.n_conformers > 0
 

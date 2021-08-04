@@ -1,3 +1,4 @@
+"""Custom models for dealing with unit-bearing quantities in a Pydantic-compatible manner."""
 import json
 from typing import TYPE_CHECKING, Any, Dict
 
@@ -22,12 +23,15 @@ class _FloatQuantityMeta(type):
 
 
 class FloatQuantity(float, metaclass=_FloatQuantityMeta):
+    """A model for unit-bearing floats."""
+
     @classmethod
     def __get_validators__(cls):
         yield cls.validate_type
 
     @classmethod
     def validate_type(cls, val):
+        """Process a value tagged with units into one tagged with "OpenFF" style units."""
         unit_ = getattr(cls, "__unit__", Any)
         if unit_ is Any:
             if isinstance(val, (float, int)):
@@ -65,8 +69,9 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
 
 
 def _from_omm_quantity(val: simtk_unit.Quantity):
-    """Helper function to convert float or array quantities tagged with SimTK/OpenMM units to
-    a Pint-compatible quantity"""
+    """
+    Convert float or array quantities tagged with SimTK/OpenMM units to a Pint-compatible quantity.
+    """
     unit_ = val.unit
     val_ = val.value_in_unit(unit_)
     if type(val_) in {float, int}:
@@ -84,7 +89,7 @@ def _from_omm_quantity(val: simtk_unit.Quantity):
 
 @requires_package("unyt")
 def _from_unyt_quantity(val: "unyt.unyt_array"):
-    """Helper function to convert unyt arrays to Pint quantities"""
+    """Convert unyt arrays to Pint quantities."""
     quantity = val.to_pint()
     # Ensure a float-like quantity is a float, not a scalar array
     if isinstance(val, unyt.unyt_quantity):
@@ -93,10 +98,13 @@ def _from_unyt_quantity(val: "unyt.unyt_array"):
 
 
 class QuantityEncoder(json.JSONEncoder):
-    """JSON encoder for unit-wrapped floats and np arrays. Should work
-    for both FloatQuantity and ArrayQuantity"""
+    """
+    JSON encoder for unit-wrapped floats and NumPy arrays.
 
-    def default(self, obj):
+    This is intended to operate on FloatQuantity and ArrayQuantity objects.
+    """
+
+    def default(self, obj):  # noqa
         if isinstance(obj, unit.Quantity):
             if isinstance(obj.magnitude, (float, int)):
                 data = obj.magnitude
@@ -115,10 +123,12 @@ class QuantityEncoder(json.JSONEncoder):
 
 
 def custom_quantity_encoder(v):
+    """Wrap json.dump to use QuantityEncoder."""
     return json.dumps(v, cls=QuantityEncoder)
 
 
 def json_loader(data: str) -> dict:
+    """Load JSON containing custom unit-tagged quantities."""
     # TODO: recursively call this function for nested models
     out: Dict = json.loads(data)
     for key, val in out.items():
@@ -136,7 +146,7 @@ def json_loader(data: str) -> dict:
     return out
 
 
-class ArrayQuantityMeta(type):
+class _ArrayQuantityMeta(type):
     def __getitem__(self, t):
         return type("ArrayQuantity", (ArrayQuantity,), {"__unit__": t})
 
@@ -145,13 +155,16 @@ if TYPE_CHECKING:
     ArrayQuantity = np.ndarray
 else:
 
-    class ArrayQuantity(float, metaclass=ArrayQuantityMeta):
+    class ArrayQuantity(float, metaclass=_ArrayQuantityMeta):
+        """A model for unit-bearing arrays."""
+
         @classmethod
         def __get_validators__(cls):
             yield cls.validate_type
 
         @classmethod
         def validate_type(cls, val):
+            """Process an array tagged with units into one tagged with "OpenFF" style units."""
             unit_ = getattr(cls, "__unit__", Any)
             if unit_ is Any:
                 if isinstance(val, (list, np.ndarray)):

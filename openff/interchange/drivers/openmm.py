@@ -1,3 +1,4 @@
+"""Functions for running energy evluations with OpenMM."""
 from typing import Dict
 
 import numpy as np
@@ -38,6 +39,9 @@ def get_openmm_energies(
     electrostatics : bool, default=True
         A boolean indicating whether or not electrostatics should be included in the energy
         calculation.
+    combine_nonbonded_forces : bool, default=False
+        Whether or not to combine all non-bonded interactions (vdW, short- and long-range
+        ectrostaelectrostatics, and 1-4 interactions) into a single openmm.NonbondedForce.
 
     Returns
     -------
@@ -45,6 +49,21 @@ def get_openmm_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
+    positions = off_sys.positions
+
+    if "VirtualSites" in off_sys.handlers:
+        if len(off_sys["VirtualSites"].slot_map) > 0:
+            if not combine_nonbonded_forces:
+                raise NotImplementedError(
+                    "Cannot yet split out NonbondedForce components while virtual sites are present."
+                )
+
+            n_virtual_sites = len(off_sys["VirtualSites"].slot_map)
+
+            # TODO: Actually compute virtual site positions based on initial conformers
+            virtual_site_positions = np.zeros((n_virtual_sites, 3))
+            virtual_site_positions *= off_sys.positions.units
+            positions = np.vstack([positions, virtual_site_positions])
 
     omm_sys: openmm.System = off_sys.to_openmm(
         combine_nonbonded_forces=combine_nonbonded_forces
@@ -53,44 +72,11 @@ def get_openmm_energies(
     return _get_openmm_energies(
         omm_sys=omm_sys,
         box_vectors=off_sys.box,
-        positions=off_sys.positions,
+        positions=positions,
         round_positions=round_positions,
         hard_cutoff=hard_cutoff,
         electrostatics=electrostatics,
     )
-
-
-def _set_nonbonded_method(
-    omm_sys: openmm.System,
-    key: str,
-    electrostatics: bool = True,
-) -> openmm.System:
-    """Modify the `openmm.NonbondedForce` in this `openmm.System`."""
-    if key == "cutoff":
-        for force in omm_sys.getForces():
-            if type(force) == openmm.NonbondedForce:
-                force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
-                force.setCutoffDistance(0.9 * unit.nanometer)
-                force.setReactionFieldDielectric(1.0)
-                force.setUseDispersionCorrection(False)
-                force.setUseSwitchingFunction(False)
-                if not electrostatics:
-                    for i in range(force.getNumParticles()):
-                        params = force.getParticleParameters(i)
-                        force.setParticleParameters(
-                            i,
-                            0,
-                            params[1],
-                            params[2],
-                        )
-
-    elif key == "PME":
-        for force in omm_sys.getForces():
-            if type(force) == openmm.NonbondedForce:
-                force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                force.setEwaldErrorTolerance(1e-4)
-
-    return omm_sys
 
 
 def _get_openmm_energies(

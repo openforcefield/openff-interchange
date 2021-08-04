@@ -1,14 +1,6 @@
 name: full_tests
 
-on:
-  push:
-    branches:
-      - "master"
-      - "maintenance/.+"
-  pull_request:
-    branches:
-      - "master"
-      - "maintenance/.+"
+on: [push, pull_request]
 
 jobs:
   test:
@@ -19,8 +11,7 @@ jobs:
         os: [ubuntu-latest]
         python-version: [3.7, 3.8, 3.9]
     env:
-      CI_OS: ${{ matrix.os }}
-      PYVER: ${{ matrix.python-version }}
+      OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
@@ -68,10 +59,23 @@ jobs:
         echo "MYPYPATH=$(pwd)" >> $GITHUB_ENV
         cd ..
 
+    - name: License OpenEye
+      shell: bash -l {0}
+      run: |
+        echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
+        python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
+      env:
+        SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
+
     - name: Run mypy
       shell: bash -l {0}
       run: |
         mypy --show-error-codes --warn-unused-configs --warn-unused-ignores --namespace-packages -p "openff.interchange"
+
+    - name: Run docexamples
+      shell: bash -l {0}
+      run: |
+        pytest -v --doctest-modules openff/interchange/ --ignore=openff/interchange/tests
 
     - name: Run unit tests
       if: always()
@@ -91,7 +95,7 @@ jobs:
         python -m pytest -v $COV examples/ --nbval-lax
 
     - name: Codecov
-      uses: codecov/codecov-action@v1.5.2
+      uses: codecov/codecov-action@v2.0.2
       with:
         file: ./coverage.xml
         fail_ci_if_error: false

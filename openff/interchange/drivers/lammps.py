@@ -1,3 +1,4 @@
+"""Functions for running energy evluations with LAMMPS."""
 import subprocess
 from typing import List
 
@@ -39,7 +40,6 @@ def get_lammps_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
-
     if round_positions is not None:
         off_sys.positions = np.round(off_sys.positions, round_positions)
 
@@ -115,7 +115,7 @@ def _write_lammps_input(
                 fo.write("dihedral_style hybrid fourier\n")
         if "ImproperTorsions" in off_sys.handlers:
             if len(off_sys["ImproperTorsions"].potentials) > 0:
-                fo.write("improper_style hybrid cvff \n")
+                fo.write("improper_style cvff\n")
 
         vdw_hander = off_sys.handlers["vdW"]
         electrostatics_handler = off_sys.handlers["Electrostatics"]

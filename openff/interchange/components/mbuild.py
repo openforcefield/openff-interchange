@@ -1,3 +1,4 @@
+"""Utilities for processing and interfacing with mBuild models."""
 from typing import TYPE_CHECKING
 
 from openff.toolkit.topology import Molecule, Topology
@@ -10,7 +11,21 @@ if has_package("mbuild") or TYPE_CHECKING:
 
 @requires_package("mbuild")
 def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
+    """
+    Convert an OpenFF Molecule into an mBuild Compound.
 
+    Examples
+    --------
+    .. code-block:: pycon
+
+        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.interchange.components.mbuild import offmol_to_compound
+        >>> mol = Molecule.from_smiles("CCO")
+        >>> compound = offmol_to_compound(mol)
+        >>> type(compound), compound.n_particles, compound.n_bonds
+        (<class 'mbuild.compound.Compound'>, 9, 8)
+
+    """
     if not off_mol.has_unique_atom_names:
         off_mol.generate_unique_atom_names()
 
@@ -34,7 +49,25 @@ def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
 
 @requires_package("mbuild")
 def offtop_to_compound(off_top: "Topology") -> "mb.Compound":
+    """
+    Convert an OpenFF Topology into an mBuild Compound.
 
+    Examples
+    --------
+    .. code-block:: pycon
+
+        >>> from openff.toolkit.topology import Molecule, Topology
+        >>> from openff.interchange.components.mbuild import offtop_to_compound
+        >>> ethanol = Molecule.from_smiles("CCO")
+        >>> ethanol.name = "ETH"
+        >>> methane = Molecule.from_smiles("C")
+        >>> methane.name = "MET"
+        >>> top = Topology.from_molecules([ethanol, ethanol, methane, methane])
+        >>> compound = offtop_to_compound(top)
+        >>> type(compound), len(compound.children), compound.n_particles, compound.n_bonds
+        (<class 'mbuild.compound.Compound'>, 4, 28, 24)
+
+    """
     sub_comps = []
 
     for top_mol in off_top.topology_molecules:
