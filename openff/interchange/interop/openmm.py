@@ -582,7 +582,7 @@ def _process_virtual_sites(openff_sys, openmm_sys):
             charge = coul_handler.charges_with_virtual_sites[virtual_site_key].m_as(
                 off_unit.elementary_charge,
             )
-        if True:  # if vdw_key is None:
+        if vdw_key is None:
             sigma = 1.0
             epsilon = 0.0
         else:
