@@ -17,5 +17,3 @@ dependencies:
   - myst-parser
   - numpydoc
   - sphinx_rtd_theme
-  - pip:
-    - autodoc_pydantic
