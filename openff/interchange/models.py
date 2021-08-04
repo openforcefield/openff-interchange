@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 
 from openff.units import unit
 from pydantic import BaseModel, Field
+from typing_extensions import Literal
 
 from openff.interchange.types import custom_quantity_encoder, json_loader
 
@@ -75,6 +76,21 @@ class TopologyKey(DefaultModel):
 
     def __hash__(self):
         return hash((self.atom_indices, self.mult))
+
+
+class VirtualSiteKey(DefaultModel):
+    """A unique identifier of a virtual site in the scope of a chemical topology."""
+
+    atom_indices: Tuple[int, ...] = Field(
+        tuple(), description="The indices of the atoms that anchor this virtual site"
+    )
+    type: str = Field(description="The type of this virtual site")
+    match: Literal["once", "all_permutations"] = Field(
+        description="The `match` attribute of the associated virtual site type"
+    )
+
+    def __hash__(self):
+        return hash((self.atom_indices, self.type))
 
 
 class PotentialKey(DefaultModel):

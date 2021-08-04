@@ -49,6 +49,22 @@ def get_openmm_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
+    positions = off_sys.positions
+
+    if "VirtualSites" in off_sys.handlers:
+        if len(off_sys["VirtualSites"].slot_map) > 0:
+            if not combine_nonbonded_forces:
+                raise NotImplementedError(
+                    "Cannot yet split out NonbondedForce components while virtual sites are present."
+                )
+
+            n_virtual_sites = len(off_sys["VirtualSites"].slot_map)
+
+            # TODO: Actually compute virtual site positions based on initial conformers
+            virtual_site_positions = np.zeros((n_virtual_sites, 3))
+            virtual_site_positions *= off_sys.positions.units
+            positions = np.vstack([positions, virtual_site_positions])
+
     omm_sys: openmm.System = off_sys.to_openmm(
         combine_nonbonded_forces=combine_nonbonded_forces
     )
@@ -56,7 +72,7 @@ def get_openmm_energies(
     return _get_openmm_energies(
         omm_sys=omm_sys,
         box_vectors=off_sys.box,
-        positions=off_sys.positions,
+        positions=positions,
         round_positions=round_positions,
         hard_cutoff=hard_cutoff,
         electrostatics=electrostatics,

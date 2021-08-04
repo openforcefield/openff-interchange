@@ -1,14 +1,6 @@
 name: full_tests
 
-on:
-  push:
-    branches:
-      - "master"
-      - "maintenance/.+"
-  pull_request:
-    branches:
-      - "master"
-      - "maintenance/.+"
+on: [push, pull_request]
 
 jobs:
   test:

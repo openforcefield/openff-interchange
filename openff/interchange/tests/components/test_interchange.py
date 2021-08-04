@@ -3,7 +3,6 @@ from copy import deepcopy
 import mdtraj as md
 import numpy as np
 import pytest
-from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, ParameterHandler
 from openff.units import unit
@@ -87,21 +86,6 @@ class TestUnimplementedSMIRNOFFCases(_BaseTest):
             SMIRNOFFHandlersNotImplementedError, match="SMIRNOFF.*bogus"
         ):
             Interchange.from_smirnoff(force_field=parsley, topology=top)
-
-    def test_catch_virtual_sites(self):
-        from openff.toolkit.tests.test_forcefield import (
-            xml_ff_virtual_sites_monovalent_match_once,
-        )
-
-        forcefield = ForceField(
-            get_data_file_path("test_forcefields/test_forcefield.offxml"),
-            xml_ff_virtual_sites_monovalent_match_once,
-        )
-
-        top = Molecule.from_smiles("CCO").to_topology()
-
-        with pytest.raises(SMIRNOFFHandlersNotImplementedError, match="VirtualSites"):
-            Interchange.from_smirnoff(force_field=forcefield, topology=top)
 
 
 class TestBadExports(_BaseTest):
