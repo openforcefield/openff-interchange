@@ -65,6 +65,14 @@ autodoc_default_options = {
     "member-order": "bysource",
 }
 
+# autodoc_pydantic settings
+autodoc_pydantic_show_config = False
+autodoc_pydantic_model_show_config = False
+autodoc_pydantic_show_validators = False
+autodoc_pydantic_model_show_validators = False
+autodoc_pydantic_field_show_alias = False
+autodoc_pydantic_model_show_json = False
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
