@@ -591,7 +591,7 @@ def _process_virtual_sites(openff_sys, openmm_sys):
                 off_unit.nanometer,
             )
             epsilon = vdw_parameters["epsilon"].m_as(
-                from_simtk(kj_mol),
+                off_unit.Unit(str(kj_mol)),
             )
 
         virtual_site_index = openmm_sys.addParticle(mass=0.0)
