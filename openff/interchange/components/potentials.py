@@ -1,3 +1,4 @@
+"""Models for storing applied force field parameters."""
 import ast
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union
 
@@ -9,11 +10,11 @@ from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
 from openff.interchange.types import ArrayQuantity, FloatQuantity
 
 if TYPE_CHECKING:
-    from openff.interchange.components.mdtraj import OFFBioTop
+    from openff.interchange.components.mdtraj import _OFFBioTop
 
 
 class Potential(DefaultModel):
-    """Base class for storing applied parameters"""
+    """Base class for storing applied parameters."""
 
     parameters: Dict[str, FloatQuantity] = dict()
     map_key: Optional[int] = None
@@ -32,9 +33,11 @@ class Potential(DefaultModel):
 
 
 class WrappedPotential(DefaultModel):
-    """Model storing other Potential model(s) inside inner data"""
+    """Model storing other Potential model(s) inside inner data."""
 
     class InnerData(DefaultModel):
+        """The potentials being wrapped."""
+
         data: Dict[Potential, float]
 
     _inner_data: InnerData = PrivateAttr()
@@ -47,6 +50,7 @@ class WrappedPotential(DefaultModel):
 
     @property
     def parameters(self):
+        """Get the parameters as represented by the stored potentials and coefficients."""
         keys = {
             pot for pot in self._inner_data.data.keys() for pot in pot.parameters.keys()
         }
@@ -64,7 +68,7 @@ class WrappedPotential(DefaultModel):
 
 
 class PotentialHandler(DefaultModel):
-    """Base class for storing parametrized force field data"""
+    """Base class for storing parametrized force field data."""
 
     type: str = Field(..., description="The type of potentials this handler stores.")
     expression: str = Field(
@@ -82,8 +86,9 @@ class PotentialHandler(DefaultModel):
 
     @property
     def independent_variables(self) -> Set[str]:
-        """Return a set of independent variables, as str, defined as variables in the
-        expression that are not found in any potentials."""
+        """
+        Return a set of variables found in the expression but not in any potentials.
+        """
         vars_in_potentials = set([*self.potentials.values()][0].parameters.keys())
         vars_in_expression = {
             node.id
@@ -95,16 +100,18 @@ class PotentialHandler(DefaultModel):
     def store_matches(
         self,
         parameter_handler: ParameterHandler,
-        topology: "OFFBioTop",
+        topology: "_OFFBioTop",
     ) -> None:
+        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
         raise NotImplementedError
 
     def store_potentials(self, parameter_handler: ParameterHandler) -> None:
+        """Populate self.potentials with key-val pairs of [PotentialKey, Potential]."""
         raise NotImplementedError
 
     @requires_package("jax")
     def get_force_field_parameters(self):
-        """Return a flattened representation of the force field parameters"""
+        """Return a flattened representation of the force field parameters."""
         import jax
 
         params: list = list()
@@ -122,8 +129,11 @@ class PotentialHandler(DefaultModel):
 
     @requires_package("jax")
     def get_system_parameters(self, p=None):
-        """Return a flattened representation of system parameters, effectively
-        force field parameters as applied to a chemical topology"""
+        """
+        Return a flattened representation of system parameters.
+
+        These values are effectively force field parameters as applied to a chemical topology.
+        """
         import jax
 
         if p is None:
@@ -143,6 +153,7 @@ class PotentialHandler(DefaultModel):
         return jax.numpy.array(q)
 
     def get_mapping(self) -> Dict:
+        """Get a mapping between potentials and array indices."""
         mapping: Dict = dict()
         idx = 0
         for key, pot in self.potentials.items():
@@ -161,12 +172,14 @@ class PotentialHandler(DefaultModel):
         return mapping
 
     def parametrize(self, p=None):
+        """Return an array of system parameters, given an array of force field parameters."""
         if p is None:
             p = self.get_force_field_parameters()
 
         return self.get_system_parameters(p=p)
 
     def parametrize_partial(self):
+        """Return a function that will call `self.parametrize()` with arguments specified by `self.mapping`."""
         from functools import partial
 
         return partial(
@@ -175,6 +188,7 @@ class PotentialHandler(DefaultModel):
         )
 
     def get_param_matrix(self):
+        """Get a matrix representing the mapping between force field and system parameters."""
         from functools import partial
 
         import jax

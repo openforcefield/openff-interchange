@@ -12,6 +12,7 @@ from openff.interchange.tests.utils import needs_gmx
 kj_mol = unit.kilojoule / unit.mol
 
 
+@pytest.mark.xfail()
 @skip_if_missing("intermol")
 @needs_gmx
 @pytest.mark.slow()

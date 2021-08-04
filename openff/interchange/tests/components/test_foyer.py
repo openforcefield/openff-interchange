@@ -11,13 +11,13 @@ from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
 from simtk import unit as omm_unit
 
-from openff.interchange.components.foyer import RBTorsionHandler
+from openff.interchange.components.foyer import _RBTorsionHandler
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import OFFBioTop
+from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.models import PotentialKey, TopologyKey
-from openff.interchange.tests import BaseTest
+from openff.interchange.tests import _BaseTest
 from openff.interchange.tests.utils import HAS_GROMACS, needs_gmx
 from openff.interchange.utils import get_test_files_dir_path
 
@@ -35,7 +35,7 @@ kj_mol = unit.Unit("kilojoule / mol")
 
 
 @skip_if_missing("foyer")
-class TestFoyer(BaseTest):
+class TestFoyer(_BaseTest):
     @pytest.fixture(scope="session")
     def oplsaa(self):
         return foyer.forcefields.load_OPLSAA()
@@ -48,7 +48,7 @@ class TestFoyer(BaseTest):
         )
         molecule.name = "ETH"
 
-        top = OFFBioTop.from_molecules(molecule)
+        top = _OFFBioTop.from_molecules(molecule)
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
         oplsaa = foyer.Forcefield(name="oplsaa")
         interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
@@ -68,7 +68,7 @@ class TestFoyer(BaseTest):
             else:
                 molecule_or_molecules.name = mol_name
 
-            off_bio_top = OFFBioTop.from_molecules(molecule_or_molecules)
+            off_bio_top = _OFFBioTop.from_molecules(molecule_or_molecules)
             off_bio_top.mdtop = md.Topology.from_openmm(off_bio_top.to_openmm())
             openff_interchange = Interchange.from_foyer(off_bio_top, oplsaa)
 
@@ -160,7 +160,7 @@ class TestFoyer(BaseTest):
         )
 
 
-class TestRBTorsions(BaseTest):
+class TestRBTorsions(_BaseTest):
     @pytest.fixture(scope="class")
     def ethanol_with_rb_torsions(self):
         mol = Molecule.from_smiles("CC")
@@ -172,7 +172,7 @@ class TestRBTorsions(BaseTest):
         out.positions = mol.conformers[0]
         out.positions = np.round(out.positions, 2)
 
-        rb_torsions = RBTorsionHandler()
+        rb_torsions = _RBTorsionHandler()
         smirks = "[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]"
         pot_key = PotentialKey(id=smirks)
         for proper in top.propers:

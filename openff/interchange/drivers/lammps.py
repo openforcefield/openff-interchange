@@ -1,3 +1,4 @@
+"""Functions for running energy evluations with LAMMPS."""
 import subprocess
 from typing import List
 
@@ -39,7 +40,6 @@ def get_lammps_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
-
     if round_positions is not None:
         off_sys.positions = np.round(off_sys.positions, round_positions)
 

@@ -6,10 +6,10 @@ from simtk.openmm import app
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import (
-    OFFBioTop,
     _get_num_h_bonds,
     _iterate_pairs,
     _iterate_propers,
+    _OFFBioTop,
     _store_bond_partners,
 )
 from openff.interchange.drivers import get_openmm_energies
@@ -22,7 +22,7 @@ def test_residues():
     traj = md.load(get_test_file_path("ALA_GLY/ALA_GLY.pdb"))
     mol = Molecule(get_test_file_path("ALA_GLY/ALA_GLY.sdf"), file_format="sdf")
 
-    top = OFFBioTop.from_openmm(pdb.topology, unique_molecules=[mol])
+    top = _OFFBioTop.from_openmm(pdb.topology, unique_molecules=[mol])
     top.mdtop = traj.top
 
     assert top.n_topology_atoms == 29

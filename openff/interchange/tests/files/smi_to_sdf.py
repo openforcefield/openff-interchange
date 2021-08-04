@@ -1,3 +1,4 @@
+"""Script used to convert molecules.smi to molecules.sdf."""
 from openff.toolkit.topology.molecule import Molecule
 from rdkit import Chem
 

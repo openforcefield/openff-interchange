@@ -1,3 +1,4 @@
+"""A project (and object) for storing, manipulating, and converting molecular mechanics data."""
 from openff.interchange._version import get_versions  # type: ignore
 
 # Handle versioneer

@@ -9,21 +9,21 @@ from simtk import openmm
 from simtk.unit import nanometer as nm
 
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import OFFBioTop
+from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
-from openff.interchange.tests import BaseTest
+from openff.interchange.tests import _BaseTest
 from openff.interchange.utils import get_test_file_path
 
 
-class TestFromOpenMM(BaseTest):
+class TestFromOpenMM(_BaseTest):
     @pytest.mark.slow()
     def test_from_openmm_pdbfile(self, argon_ff, argon_top):
         pdb_file_path = get_test_file_path("10-argons.pdb")
         pdbfile = openmm.app.PDBFile(pdb_file_path)
 
         mol = Molecule.from_smiles("[#18]")
-        top = OFFBioTop.from_openmm(pdbfile.topology, unique_molecules=[mol])
+        top = _OFFBioTop.from_openmm(pdbfile.topology, unique_molecules=[mol])
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
         box = pdbfile.topology.getPeriodicBoxVectors()
         box = box.value_in_unit(nm) * unit.nanometer
@@ -73,7 +73,7 @@ class TestFromOpenMM(BaseTest):
 
         pdb_file_path = get_data_file_path("systems/packmol_boxes/" + pdb_path)
         pdbfile = openmm.app.PDBFile(pdb_file_path)
-        top = OFFBioTop.from_openmm(
+        top = _OFFBioTop.from_openmm(
             pdbfile.topology,
             unique_molecules=unique_molecules,
         )
