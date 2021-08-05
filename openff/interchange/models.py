@@ -75,7 +75,7 @@ class TopologyKey(DefaultModel):
     )
 
     def __hash__(self):
-        return hash((self.atom_indices, self.mult))
+        return hash((self.atom_indices, self.mult, self.bond_order))
 
 
 class VirtualSiteKey(DefaultModel):
@@ -90,7 +90,7 @@ class VirtualSiteKey(DefaultModel):
     )
 
     def __hash__(self):
-        return hash((self.atom_indices, self.type))
+        return hash((self.atom_indices, self.type, self.match))
 
 
 class PotentialKey(DefaultModel):
@@ -147,4 +147,4 @@ class PotentialKey(DefaultModel):
     )
 
     def __hash__(self):
-        return hash((self.id, self.mult))
+        return hash((self.id, self.mult, self.associated_handler, self.bond_order))
