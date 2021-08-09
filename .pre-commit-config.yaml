@@ -12,13 +12,11 @@ repos:
   hooks:
   - id: black
     files: ^openff
-    args: [--check]
 - repo: https://github.com/PyCQA/isort
   rev: 5.9.3
   hooks:
   - id: isort
     files: ^openff
-    args: [--check]
 - repo: https://github.com/PyCQA/flake8
   rev: 3.9.2
   hooks:
