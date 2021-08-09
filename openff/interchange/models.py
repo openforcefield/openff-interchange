@@ -1,13 +1,14 @@
 """Custom Pydantic models."""
 from typing import Optional, Tuple
 
+from openff.units import unit
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
-from openff.units import unit
 
 from openff.interchange.types import custom_quantity_encoder, json_loader
 
-MY_VAR=['list', "of",'things', 'black', "will",  "fix" ]
+MY_VAR = ["list", "of", "things", "black", "will", "fix"]
+
 
 class DefaultModel(BaseModel):
     """A custom Pydantic model used by other components."""
@@ -129,7 +130,7 @@ class PotentialKey(DefaultModel):
 
     """
 
-    id: str=Field(
+    id: str = Field(
         ...,
         description="A unique identifier of this potential, i.e. a SMARTS pattern or an atom type",
     )
