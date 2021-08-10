@@ -37,7 +37,6 @@ jobs:
     - name: Install topology refactor branch
       shell: bash -l {0}
       run: |
-        mamba remove --force openff-toolkit openff-toolkit-base -yq
         pip install git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
 
     - name: Install package
