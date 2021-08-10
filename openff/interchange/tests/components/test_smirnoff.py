@@ -598,12 +598,28 @@ class TestMatrixRepresentations(_BaseTest):
 
 
 class TestSMIRNOFFVirtualSites:
-    from openff.toolkit.tests.test_forcefield import (
-        xml_ff_virtual_sites_bondcharge_match_all,
-        xml_ff_virtual_sites_bondcharge_match_once,
-        xml_ff_virtual_sites_divalent_match_all,
-        xml_ff_virtual_sites_trivalent_match_once,
-    )
+    try:
+        from openff.toolkit.tests.test_forcefield import (
+            xml_ff_virtual_sites_bondcharge_match_all,
+            xml_ff_virtual_sites_bondcharge_match_once,
+            xml_ff_virtual_sites_divalent_match_all,
+            xml_ff_virtual_sites_trivalent_match_once,
+        )
+    except ImportError:
+        from openff.toolkit.tests.test_forcefield import TestForceFieldVirtualSites
+
+        xml_ff_virtual_sites_bondcharge_match_all = (
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_bondcharge_match_all
+        )
+        xml_ff_virtual_sites_bondcharge_match_once = (
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_bondcharge_match_once
+        )
+        xml_ff_virtual_sites_divalent_match_all = (
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_divalent_match_all
+        )
+        xml_ff_virtual_sites_trivalent_match_once = (
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_trivalent_match_once
+        )
 
     @pytest.mark.parametrize(
         ("xml", "mol"),
