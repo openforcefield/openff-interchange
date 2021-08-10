@@ -41,3 +41,4 @@ dependencies:
   - openff-evaluator
   - openff-recharge
   - openeye-toolkits
+  - cached-property
