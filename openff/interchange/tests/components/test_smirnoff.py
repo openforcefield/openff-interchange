@@ -692,10 +692,20 @@ class TestSMIRNOFFVirtualSites:
         )
 
     def test_store_trivalent_lone_pair_virtual_site(self):
-        from openff.toolkit.tests.test_forcefield import (
-            create_ammonia,
-            xml_ff_virtual_sites_trivalent_match_once,
-        )
+        try:
+            from openff.toolkit.tests.test_forcefield import (
+                create_ammonia,
+                xml_ff_virtual_sites_trivalent_match_once,
+            )
+        except ImportError:
+            from openff.toolkit.tests.test_forcefield import (
+                TestForceFieldVirtualSites,
+                create_ammonia,
+            )
+
+            xml_ff_virtual_sites_trivalent_match_once = (
+                TestForceFieldVirtualSites.xml_ff_virtual_sites_trivalent_match_once
+            )
 
         top = create_ammonia().to_topology()
 
