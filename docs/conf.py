@@ -52,6 +52,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
     "sphinx.ext.autosummary",
+    "sphinx.ext.todo",
     # "sphinxcontrib.autodoc_pydantic",
 ]
 
@@ -61,9 +62,13 @@ napoleon_google_docstring = False
 napoleon_use_param = False
 napoleon_use_ivar = True
 
+autodoc_mock_imports = ["pmdtest", "openmm"]
 autodoc_default_options = {
     "member-order": "bysource",
 }
+autodoc_preserve_defaults = True
+autodoc_inherit_docstrings = False
+suppress_warnings = ["autodoc"]
 
 # autodoc_pydantic settings
 # autodoc_pydantic_show_config = False

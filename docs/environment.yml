@@ -7,8 +7,7 @@ dependencies:
   - pip
   - pydantic
   - pint
-  - openmm
-  - openff-toolkit
+  - openff-toolkit-base
   - openff-units
   - openff-utilities
   - jax
