@@ -29,9 +29,9 @@ energy_tests.md
 API Reference
 </span></p></div>
 
-<!-- 
-The autosummary directive renders to rST, 
-so we must use eval-rst here 
+<!--
+The autosummary directive renders to rST,
+so we must use eval-rst here
 -->
 ```{eval-rst}
 .. autosummary::
