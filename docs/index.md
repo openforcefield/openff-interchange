@@ -25,10 +25,18 @@ using/charmm.md
 energy_tests.md
 ```
 
+<div class="toctree-wrapper"><p class="caption" role="heading"><span class="caption-text">
+API Reference
+</span></p></div>
+
+<!-- 
+The autosummary directive renders to rST, 
+so we must use eval-rst here 
+-->
 ```{eval-rst}
 .. autosummary::
-    :caption: API Reference
     :recursive:
+    :caption: API Reference
     :toctree: _autosummary
     :nosignatures:
 
