@@ -21,3 +21,4 @@ dependencies:
   - pytest
   - conda
   - cached-property
+  - cachetools
