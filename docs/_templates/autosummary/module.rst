@@ -11,7 +11,7 @@
 .. autosummary::
    :toctree:
    :recursive:
-{% for item in modules %}
+{% for item in modules if item.split(".") | last != "tests" %}
    {{ item }}
    {% set _ = documented_members.append(item) %}
 {%- endfor %}
