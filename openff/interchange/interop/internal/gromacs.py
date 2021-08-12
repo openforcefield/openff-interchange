@@ -371,10 +371,11 @@ def _write_atoms(
 
     for atom in openff_sys.topology.mdtop.atoms:
         atom_idx = atom.index
-        mass = atom.element.mass
-        atom_type = typemap[atom.index]
-        res_idx = atom.residue.index
-        res_name = str(atom.residue)
+        off_atom = openff_sys.topology.atom(atom_idx)
+        mass = off_atom.element.mass._value
+        atom_type = typemap[atom_idx]
+        res_idx = off_atom.atom.metadata["residue_number"]
+        res_name = off_atom.atom.metadata["residue_name"]
         top_key = TopologyKey(atom_indices=(atom_idx,))
         charge = charges[top_key].m_as(unit.e)
         # TODO: Figure out why charge increments were applied as an array
