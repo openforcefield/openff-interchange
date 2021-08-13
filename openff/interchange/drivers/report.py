@@ -1,4 +1,5 @@
 """Storing and processing results of energy evaluations."""
+import warnings
 from typing import Dict, Optional
 
 import pandas as pd
@@ -146,6 +147,16 @@ class EnergyReport(DefaultModel):
 
         # TODO: Return energy differences even if none are greater than tolerance
         # This might result in mis-matched keys
+
+    def __sub__(self, other):
+        diff = dict()
+        for key in self.energies:
+            if key not in other.energies:
+                warnings.warn(f"Did not find key {key} in second report")
+                continue
+            diff[key] = self.energies[key] - other.energies[key]
+
+        return diff
 
     def __str__(self):
         return (
