@@ -292,7 +292,6 @@ def _write_atomtypes_lj(
                 epsilon,
             )
         )
-        top_file.write("\n")
 
     for virtual_site_key in virtual_site_map:
         atom_type = "VS"
@@ -374,8 +373,13 @@ def _write_atoms(
         off_atom = openff_sys.topology.atom(atom_idx)
         mass = off_atom.element.mass._value
         atom_type = typemap[atom_idx]
-        res_idx = off_atom.atom.metadata["residue_number"]
-        res_name = off_atom.atom.metadata["residue_name"]
+        try:
+            res_idx = off_atom.atom.metadata["residue_number"]
+            res_name = off_atom.atom.metadata["residue_name"]
+        except KeyError:
+            res_idx = "999"
+            res_name = "FOO"
+        res_idx = int(round(float(res_idx), 0))
         top_key = TopologyKey(atom_indices=(atom_idx,))
         charge = charges[top_key].m_as(unit.e)
         # TODO: Figure out why charge increments were applied as an array
