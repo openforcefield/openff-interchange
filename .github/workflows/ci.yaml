@@ -75,7 +75,7 @@ jobs:
     - name: Run docexamples
       shell: bash -l {0}
       run: |
-        pytest -v --doctest-modules openff/interchange/ --ignore=openff/interchange/
+        pytest -v --doctest-modules openff/interchange/ --ignore=openff/interchange/energy_tests --ignore=openff/interchange/unit_tests --ignore=openff/interchange/data --ignore=openff/interchange/interoperability_tests
 
     - name: Run all tests
       if: always()
