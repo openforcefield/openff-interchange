@@ -16,7 +16,12 @@ from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
 from openff.interchange.drivers.report import EnergyError, EnergyReport
-from openff.interchange.tests.utils import HAS_GROMACS, HAS_LAMMPS, needs_gmx, needs_lmp
+from openff.interchange.testing.utils import (
+    HAS_GROMACS,
+    HAS_LAMMPS,
+    needs_gmx,
+    needs_lmp,
+)
 from openff.interchange.utils import get_test_file_path
 
 if HAS_GROMACS:

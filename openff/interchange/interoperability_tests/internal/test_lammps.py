@@ -9,7 +9,7 @@ from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.drivers import get_lammps_energies, get_openmm_energies
 from openff.interchange.drivers.lammps import _write_lammps_input
-from openff.interchange.tests.energy_tests.test_energies import needs_lmp
+from openff.interchange.testing.utils import needs_lmp
 
 
 @needs_lmp

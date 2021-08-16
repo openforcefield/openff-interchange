@@ -18,7 +18,7 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
 )
 from openff.interchange.interop.openmm import from_openmm
-from openff.interchange.tests import _BaseTest
+from openff.interchange.testing import _BaseTest
 from openff.interchange.utils import get_test_file_path
 
 nonbonded_resolution_matrix = [
