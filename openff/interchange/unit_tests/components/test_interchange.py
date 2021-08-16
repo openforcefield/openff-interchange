@@ -17,8 +17,8 @@ from openff.interchange.exceptions import (
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
 )
-from openff.interchange.tests import _BaseTest
-from openff.interchange.tests.energy_tests.test_energies import needs_gmx, needs_lmp
+from openff.interchange.testing import _BaseTest
+from openff.interchange.testing.utils import needs_gmx, needs_lmp
 from openff.interchange.utils import get_test_file_path
 
 

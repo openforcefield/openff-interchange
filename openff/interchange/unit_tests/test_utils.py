@@ -4,7 +4,7 @@ from openff.units import unit
 from openff.units.simtk import from_simtk
 from simtk import unit as simtk_unit
 
-from openff.interchange.tests import _BaseTest
+from openff.interchange.testing import _BaseTest
 from openff.interchange.utils import (
     _unwrap_list_of_pint_quantities,
     compare_forcefields,

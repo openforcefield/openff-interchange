@@ -14,8 +14,8 @@ from openff.interchange.drivers.gromacs import (
     _run_gmx_energy,
     get_gromacs_energies,
 )
-from openff.interchange.tests import _BaseTest
-from openff.interchange.tests.utils import _top_from_smiles
+from openff.interchange.testing import _BaseTest
+from openff.interchange.testing.utils import _top_from_smiles
 from openff.interchange.utils import get_test_file_path
 
 

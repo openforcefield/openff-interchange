@@ -1,6 +1,12 @@
 name: minimal_tests
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 
 jobs:
   test:
@@ -20,12 +26,13 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
         python-version: ${{ matrix.python-version }}
-        activate-environment: test
-        mamba-version: "*"
-        channels: conda-forge,defaults
-        channel-priority: true
         environment-file: devtools/conda-envs/minimal_env.yaml
+        activate-environment: test
         auto-activate-base: false
+        mamba-version: "*"
+        miniforge-version: latest
+        miniforge-variant: Mambaforge
+        use-mamba: true
 
     - name: Additional info about the build
       shell: bash
@@ -49,4 +56,4 @@ jobs:
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v -m "not slow" openff/interchange/tests/ --ignore=openff/interchange/tests/interop/test_parmed.py
+        python -m pytest -v -m "not slow" openff/interchange/unit_tests/

@@ -41,7 +41,7 @@ def _unwrap_list_of_pint_quantities(quantities):
 
 def get_test_file_path(test_file) -> str:
     """Given a filename in the collection of data files, return its full path."""
-    dir_path = resource_filename("openff.interchange", "tests/files/")
+    dir_path = resource_filename("openff.interchange", "data/")
     test_file_path = pathlib.Path(dir_path).joinpath(test_file)
 
     if test_file_path.is_file():
@@ -52,7 +52,7 @@ def get_test_file_path(test_file) -> str:
 
 def get_test_files_dir_path(dirname):
     """Given a directory with a collection of test data files, return its full path."""
-    dir_path = resource_filename("openff.interchange", "tests/files/")
+    dir_path = resource_filename("openff.interchange", "data/")
     test_dir = pathlib.Path(dir_path).joinpath(dirname)
 
     if test_dir.is_dir():
