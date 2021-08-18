@@ -23,12 +23,13 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
         python-version: ${{ matrix.python-version }}
-        activate-environment: test
-        mamba-version: "*"
-        channels: conda-forge,defaults
-        channel-priority: true
         environment-file: devtools/conda-envs/test_env.yaml
+        activate-environment: test
         auto-activate-base: false
+        mamba-version: "*"
+        miniforge-version: latest
+        miniforge-variant: Mambaforge
+        use-mamba: true
 
     - name: Install development version of OpenFF Recharge
       shell: bash -l {0}
@@ -59,12 +60,12 @@ jobs:
       run: |
         pip install git+git://github.com/mattwthompson/openff-units.git
 
-    - name: Clone ParmEd tests
-      shell: bash -l {0}
-      run: |
-        git clone https://github.com/parmed/tests
-        cp -r tests/pmdtest .
-        echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
+#   - name: Clone ParmEd tests
+#     shell: bash -l {0}
+#     run: |
+#       git clone https://github.com/parmed/tests
+#       cp -r tests/pmdtest .
+#       echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
 
     - name: Run mypy
       continue-on-error: true
@@ -72,17 +73,17 @@ jobs:
       run: |
         mypy --show-error-codes --namespace-packages -p "openff.interchange"
 
-    - name: Run unit tests
+    - name: Run all tests
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v $COV openff/interchange/tests/ --ignore=openff/interchange/tests/parmed/
+        python -m pytest -v $COV openff/interchange/ --ignore=openff/interchange/tests/parmed/
 
-    - name: Run ParmEd tests
-      continue-on-error: true
-      shell: bash -l {0}
-      run: |
-        python -m pytest -v $COV openff/interchange/tests/parmed
+#   - name: Run ParmEd tests
+#     continue-on-error: true
+#     shell: bash -l {0}
+#     run: |
+#       python -m pytest -v $COV openff/interchange/tests/parmed
 
     - name: Run example notebooks
       shell: bash -l {0}

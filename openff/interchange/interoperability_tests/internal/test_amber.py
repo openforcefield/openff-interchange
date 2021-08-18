@@ -7,7 +7,7 @@ from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers import get_amber_energies, get_gromacs_energies
-from openff.interchange.tests.utils import needs_gmx
+from openff.interchange.testing.utils import needs_gmx
 
 kj_mol = unit.kilojoule / unit.mol
 

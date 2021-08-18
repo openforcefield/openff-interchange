@@ -11,7 +11,7 @@ from simtk import unit as omm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.gromacs import _get_mdp_file, _run_gmx_energy
-from openff.interchange.tests.energy_tests.test_energies import needs_gmx
+from openff.interchange.testing.utils import needs_gmx
 from openff.interchange.types import ArrayQuantity
 
 
