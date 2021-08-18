@@ -57,11 +57,6 @@ repos:
   hooks:
     - id: nbqa-pyupgrade
       args:
-        - --nbqa-mutate
         - --py37-plus
     - id: nbqa-isort
-      args:
-        - --nbqa-mutate
     - id: nbqa-black
-      args:
-        - --nbqa-mutate
