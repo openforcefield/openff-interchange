@@ -16,7 +16,12 @@ from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
 from openff.interchange.drivers.report import EnergyError, EnergyReport
-from openff.interchange.tests.utils import HAS_GROMACS, HAS_LAMMPS, needs_gmx, needs_lmp
+from openff.interchange.testing.utils import (
+    HAS_GROMACS,
+    HAS_LAMMPS,
+    needs_gmx,
+    needs_lmp,
+)
 from openff.interchange.utils import get_test_file_path
 
 if HAS_GROMACS:
@@ -180,12 +185,17 @@ def test_liquid_argon():
 
 
 @needs_gmx
-@pytest.mark.skip("Skip until residues are matched between gro and top")
 @pytest.mark.parametrize(
     "toolkit_file_path",
     [
-        # ("systems/test_systems/1_cyclohexane_1_ethanol.pdb", 18.165),
+        "systems/test_systems/1_cyclohexane_1_ethanol.pdb",
+        "systems/test_systems/1_ethanol.pdb",
+        "systems/test_systems/1_ethanol_reordered.pdb",
+        # "systems/test_systems/T4_lysozyme_water_ions.pdb",
         "systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb",
+        "systems/packmol_boxes/cyclohexane_water.pdb",
+        "systems/packmol_boxes/ethanol_water.pdb",
+        "systems/packmol_boxes/propane_methane_butanol_0.2_0.3_0.5.pdb",
     ],
 )
 def test_packmol_boxes(toolkit_file_path):
@@ -196,11 +206,20 @@ def test_packmol_boxes(toolkit_file_path):
     pdb_file_path = get_data_file_path(toolkit_file_path)
     pdbfile = openmm.app.PDBFile(pdb_file_path)
 
-    ethanol = Molecule.from_smiles("CCO")
-    cyclohexane = Molecule.from_smiles("C1CCCCC1")
+    unique_molecules = [
+        Molecule.from_smiles(smi)
+        for smi in [
+            "CCO",
+            "CCCCO",
+            "C",
+            "CCC",
+            "C1CCCCC1",
+            "O",
+        ]
+    ]
     omm_topology = pdbfile.topology
     off_topology = _OFFBioTop.from_openmm(
-        omm_topology, unique_molecules=[ethanol, cyclohexane]
+        omm_topology, unique_molecules=unique_molecules
     )
     off_topology.mdtop = md.Topology.from_openmm(omm_topology)
 
@@ -215,7 +234,9 @@ def test_packmol_boxes(toolkit_file_path):
 
     sys_from_toolkit = parsley.create_openmm_system(off_topology)
 
-    omm_energies = get_openmm_energies(off_sys, hard_cutoff=True, electrostatics=False)
+    omm_energies = get_openmm_energies(
+        off_sys, combine_nonbonded_forces=True, hard_cutoff=True, electrostatics=False
+    )
     reference = _get_openmm_energies(
         sys_from_toolkit,
         off_sys.box,
@@ -224,17 +245,29 @@ def test_packmol_boxes(toolkit_file_path):
         electrostatics=False,
     )
 
-    omm_energies.compare(
-        reference,
-        custom_tolerances={
-            "Electrostatics": 2e-2 * simtk_unit.kilojoule_per_mole,
-        },
-    )
+    try:
+        omm_energies.compare(
+            reference,
+            # custom_tolerances={
+            #    "Electrostatics": 2e-4 * simtk_unit.kilojoule_per_mole,
+            # },
+        )
+    except EnergyError as err:
+        if "Torsion" in err.args[0]:
+            from openff.interchange.tests.utils import (
+                _compare_torsion_forces,
+                _get_force,
+            )
+
+            _compare_torsion_forces(
+                _get_force(off_sys.to_openmm, openmm.PeriodicTorsionForce),
+                _get_force(sys_from_toolkit, openmm.PeriodicTorsionForce),
+            )
 
     # custom_tolerances={"HarmonicBondForce": 1.0}
 
     # Compare GROMACS writer and OpenMM export
-    gmx_energies = get_gromacs_energies(off_sys, electrostatics=False)
+    gmx_energies = get_gromacs_energies(off_sys)
 
     omm_energies_rounded = get_openmm_energies(
         off_sys,
@@ -364,7 +397,6 @@ def test_gmx_14_energies_exist():
 
 @needs_gmx
 @needs_lmp
-@pytest.mark.xfail()
 @pytest.mark.slow()
 def test_cutoff_electrostatics():
     ion_ff = ForceField(get_test_file_path("ions.offxml"))

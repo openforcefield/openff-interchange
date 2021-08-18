@@ -17,8 +17,8 @@ from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.models import PotentialKey, TopologyKey
-from openff.interchange.tests import _BaseTest
-from openff.interchange.tests.utils import HAS_GROMACS, needs_gmx
+from openff.interchange.testing import _BaseTest
+from openff.interchange.testing.utils import HAS_GROMACS, needs_gmx
 from openff.interchange.utils import get_test_files_dir_path
 
 if has_package("foyer"):
@@ -107,9 +107,7 @@ class TestFoyer(_BaseTest):
         reason="Exporting to OpenMM with geometric mixing rules not yet implemented"
     )
     def test_ethanol_energies(self, oplsaa_interchange_ethanol):
-        from openff.interchange.tests.energy_tests.test_energies import (
-            get_gromacs_energies,
-        )
+        from openff.interchange.drivers import get_gromacs_energies
 
         gmx_energies = get_gromacs_energies(oplsaa_interchange_ethanol)
         omm_energies = get_openmm_energies(oplsaa_interchange_ethanol)
