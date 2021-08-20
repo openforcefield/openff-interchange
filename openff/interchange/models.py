@@ -1,7 +1,9 @@
+"""Custom Pydantic models."""
 from typing import Optional, Tuple
 
 from openff.units import unit
 from pydantic import BaseModel, Field
+from typing_extensions import Literal
 
 from openff.interchange.types import custom_quantity_encoder, json_loader
 
@@ -10,6 +12,8 @@ class DefaultModel(BaseModel):
     """A custom Pydantic model used by other components."""
 
     class Config:
+        """Custom Pydantic configuration."""
+
         json_encoders = {
             unit.Quantity: custom_quantity_encoder,
         }
@@ -19,7 +23,8 @@ class DefaultModel(BaseModel):
 
 
 class TopologyKey(DefaultModel):
-    """A unique identifier of a segment of a chemical topology.
+    """
+    A unique identifier of a segment of a chemical topology.
 
     These refer to a single portion of a chemical graph, i.e. a single valence term,
     (a bond, angle, or dihedral) or a single atom. These target only the information in
@@ -30,7 +35,6 @@ class TopologyKey(DefaultModel):
 
     Examples
     --------
-
     Create a TopologyKey identifying some speicfic angle
 
     .. code-block:: pycon
@@ -71,11 +75,27 @@ class TopologyKey(DefaultModel):
     )
 
     def __hash__(self):
-        return hash((self.atom_indices, self.mult))
+        return hash((self.atom_indices, self.mult, self.bond_order))
+
+
+class VirtualSiteKey(DefaultModel):
+    """A unique identifier of a virtual site in the scope of a chemical topology."""
+
+    atom_indices: Tuple[int, ...] = Field(
+        tuple(), description="The indices of the atoms that anchor this virtual site"
+    )
+    type: str = Field(description="The type of this virtual site")
+    match: Literal["once", "all_permutations"] = Field(
+        description="The `match` attribute of the associated virtual site type"
+    )
+
+    def __hash__(self):
+        return hash((self.atom_indices, self.type, self.match))
 
 
 class PotentialKey(DefaultModel):
-    """A unique identifier of an instance of physical parameters as applied to a segment of a chemical topology.
+    """
+    A unique identifier of an instance of physical parameters as applied to a segment of a chemical topology.
 
     These refer to a single term in a force field as applied to a single segment of a chemical
     topology, i.e. a single atom or dihedral. For example, a PotentialKey corresponding to a
@@ -85,7 +105,6 @@ class PotentialKey(DefaultModel):
 
     Examples
     --------
-
     Create a PotentialKey corresponding to the parameter with id `b55` in OpenFF "Parsley" 1.0.0
 
     .. code-block:: pycon
@@ -128,4 +147,4 @@ class PotentialKey(DefaultModel):
     )
 
     def __hash__(self):
-        return hash((self.id, self.mult))
+        return hash((self.id, self.mult, self.associated_handler, self.bond_order))
