@@ -129,7 +129,7 @@ class MissingPositionsError(BaseException):
 
 class MissingParameterHandlerError(BaseException):
     """
-    Exception for when a parameter handler is requested but not found
+    Exception for when a parameter handler is requested but not found.
     """
 
 
