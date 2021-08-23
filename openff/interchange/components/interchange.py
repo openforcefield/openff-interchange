@@ -2,7 +2,7 @@
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Tuple, Union
 
 import mdtraj as md
 import numpy as np
@@ -22,6 +22,7 @@ from openff.interchange.exceptions import (
     InternalInconsistencyError,
     InvalidBoxError,
     InvalidTopologyError,
+    MissingParameterHandlerError,
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
     UnsupportedExportError,
@@ -404,6 +405,24 @@ class Interchange(DefaultModel):
                 handler.store_potentials(force_field)
 
         return system
+
+    def _get_parameters(self, handler_name: str, atom_indices: Tuple[int]) -> Dict:
+        """
+        Get parameter values of a specific potential.
+
+        Here, parameters are expected to be uniquely dfined by the name of
+        its associated handler and a tuple of atom indices.
+
+        Note: This method only checks for equality of atom indices and will likely fail on complex cases
+        involved layered parameters with multiple topology keys sharing identical atom indices.
+        """
+        for handler in self.handlers:
+            if handler == handler_name:
+                return self[handler_name]._get_parameters(atom_indices=atom_indices)
+            else:
+                raise MissingParameterHandlerError(
+                    f"Could not find parameter handler of name {handler_name}"
+                )
 
     def _get_nonbonded_methods(self):
         if "vdW" in self.handlers:
