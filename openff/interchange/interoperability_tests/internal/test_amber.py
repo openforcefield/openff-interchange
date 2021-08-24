@@ -3,7 +3,6 @@ import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
-from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers import get_amber_energies, get_gromacs_energies
@@ -12,8 +11,6 @@ from openff.interchange.testing.utils import needs_gmx
 kj_mol = unit.kilojoule / unit.mol
 
 
-@pytest.mark.xfail()
-@skip_if_missing("intermol")
 @needs_gmx
 @pytest.mark.slow()
 def test_amber_energy():

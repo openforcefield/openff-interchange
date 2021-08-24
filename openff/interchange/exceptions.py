@@ -177,7 +177,13 @@ class InternalInconsistencyError(BaseException):
     """
 
 
-class SanderError(BaseException):
+class AmberError(BaseException):
+    """
+    Base exception for handling Amber-related errors.
+    """
+
+
+class SanderError(AmberError):
     """
     Exception for when a sander subprocess fails.
     """

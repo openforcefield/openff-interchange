@@ -4,12 +4,12 @@ import tempfile
 from pathlib import Path
 from typing import Dict, Union
 
-from openff.utilities.utilities import requires_package, temporary_cd
+from openff.utilities.utilities import temporary_cd
 from simtk import unit as omm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.exceptions import SanderError
+from openff.interchange.exceptions import AmberError, SanderError
 from openff.interchange.utils import get_test_file_path
 
 
@@ -54,7 +54,6 @@ def get_amber_energies(
             return report
 
 
-@requires_package("intermol")
 def _run_sander(
     inpcrd_file: Union[Path, str],
     prmtop_file: Union[Path, str],
@@ -79,8 +78,6 @@ def _run_sander(
         An `EnergyReport` object containing the single-point energies.
 
     """
-    from intermol.amber import _group_energy_terms
-
     in_file = get_test_file_path("min.in")
     sander_cmd = (
         f"sander -i {in_file} -c {inpcrd_file} -p {prmtop_file} -o out.mdout -O"
@@ -112,6 +109,49 @@ def _run_sander(
     )
 
     return energy_report
+
+
+def _group_energy_terms(mdout: str):
+    """
+    Parse AMBER output file and group the energy terms in a dict.
+
+    This code is partially copied from InterMol, see
+    https://github.com/shirtsgroup/InterMol/tree/v0.1/intermol/amber/
+    """
+    with open(mdout) as f:
+        all_lines = f.readlines()
+
+    # Find where the energy information starts.
+    for i, line in enumerate(all_lines):
+        if line[0:8] == "   NSTEP":
+            startline = i
+            break
+    else:
+        raise AmberError(
+            "Unable to detect where energy info starts in AMBER "
+            "output file: {}".format(mdout)
+        )
+
+    # Strange ranges for amber file data.
+    ranges = [[1, 24], [26, 49], [51, 77]]
+
+    e_out = dict()
+    potential = 0 * omm_unit.kilocalories_per_mole
+    for line in all_lines[startline + 3 :]:
+        if "=" in line:
+            for i in range(3):
+                r = ranges[i]
+                term = line[r[0] : r[1]]
+                if "=" in term:
+                    energy_type, energy_value = term.split("=")
+                    energy_value = float(energy_value) * omm_unit.kilocalories_per_mole
+                    potential += energy_value
+                    energy_type = energy_type.rstrip()
+                    e_out[energy_type] = energy_value
+        else:
+            break
+    e_out["ENERGY"] = potential
+    return e_out, mdout
 
 
 def _get_amber_energy_vdw(amber_energies: Dict):
