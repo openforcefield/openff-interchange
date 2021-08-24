@@ -40,6 +40,12 @@ def get_amber_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
+    if "Constraints" in off_sys.handlers:
+        if len(off_sys["Constraints"].slot_map) > 0:
+            raise AmberError(
+                "Parsing bond constraints not yet supported in this driver."
+            )
+
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             struct = off_sys._to_parmed()

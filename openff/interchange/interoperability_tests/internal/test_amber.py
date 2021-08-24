@@ -32,10 +32,10 @@ def test_amber_energy():
     omm_energies.compare(
         amb_energies,
         custom_tolerances={
-            "Bond": 3.6 * kj_mol,
+            "Bond": 0.03 * kj_mol,
             "Angle": 0.2 * kj_mol,
-            "Torsion": 1.9 * kj_mol,
-            "vdW": 1.5 * kj_mol,
-            "Electrostatics": 36.5 * kj_mol,
+            "Torsion": 0.02 * kj_mol,
+            "vdW": 0.005 * kj_mol,
+            "Electrostatics": 0.01 * kj_mol,
         },
     )
