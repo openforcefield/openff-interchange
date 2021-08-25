@@ -673,7 +673,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     ] = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
 
-    method: Literal["cutoff", "pme"] = Field("cutoff")
+    method: Literal["cutoff", "pme", "no-cutoff"] = Field("cutoff")
 
     mixing_rule: Literal["lorentz-berthelot", "geometric"] = Field(
         "lorentz-berthelot",
@@ -841,7 +841,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     type: Literal["Electrostatics"] = "Electrostatics"
     expression: Literal["coul"] = "coul"
 
-    method: Literal["pme", "cutoff", "reaction-field"] = Field("pme")
+    method: Literal["pme", "cutoff", "reaction-field", "no-cutoff"] = Field("pme")
 
     @classmethod
     def allowed_parameter_handlers(cls):
