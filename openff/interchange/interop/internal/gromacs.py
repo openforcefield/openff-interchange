@@ -280,10 +280,11 @@ def _write_atomtypes_lj(
         parameters = _get_lj_parameters(openff_sys, atom_idx)
         sigma = parameters["sigma"].to(unit.nanometer).magnitude
         epsilon = parameters["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude
+        # top.write('{0:<11s} {1:5s} {2:6d} {3:18.8f} {4:18.8f} {5:5s}'.format(
         top_file.write(
-            "{:<11s} {:6d} {:.16g} {:.16g} {:5s} {:.16g} {:.16g}\n".format(
+            "{:<11s} {:6s} {:6d} {:.16g} {:.16g} {:5s} {:.16g} {:.16g}\n".format(
                 atom_type,  # atom type
-                # "XX",  # atom "bonding type", i.e. bond class
+                "XX",  # atom "bonding type", i.e. bond class
                 atomic_number,
                 mass,
                 0.0,  # charge, overriden later in [ atoms ]

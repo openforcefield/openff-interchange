@@ -680,10 +680,11 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
             if isinstance(force, openmm.PeriodicTorsionForce):
                 proper_torsion_handler = _convert_periodic_torsion_force(force)
                 openff_sys.add_handler(
-                    handler_name="PeriodicTorsions", handler=proper_torsion_handler
+                    handler_name="ProperTorsions",
+                    handler=proper_torsion_handler,
                 )
 
-    if topology:
+    if topology is not None:
         import mdtraj as md
 
         from openff.interchange.components.mdtraj import _OFFBioTop
@@ -692,12 +693,12 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
         top = _OFFBioTop()
         top.mdtop = mdtop
 
-        openff_sys.topoology = top
+        openff_sys.topology = top
 
-    if positions:
+    if positions is not None:
         openff_sys.positions = positions
 
-    if box_vectors:
+    if box_vectors is not None:
         openff_sys.box = box_vectors
 
     return openff_sys
@@ -710,7 +711,7 @@ def _convert_nonbonded_force(force):
     )
 
     vdw_handler = SMIRNOFFvdWHandler()
-    electrostatics = SMIRNOFFElectrostaticsHandler(method="pme")
+    electrostatics = SMIRNOFFElectrostaticsHandler(scale_14=0.833333, method="pme")
 
     n_parametrized_particles = force.getNumParticles()
 
@@ -732,19 +733,23 @@ def _convert_nonbonded_force(force):
             {pot_key: Potential(parameters={"charge": from_simtk(charge)})}
         )
 
-    vdw_handler.cutoff = force.getCutoffDistance()
-    electrostatics.cutoff = force.getCutoffDistance()
-
     if force.getNonbondedMethod() == openmm.NonbondedForce.PME:
         electrostatics.method = "pme"
+        vdw_handler.method = "cutoff"
     elif force.getNonbondedMethod() in {
         openmm.NonbondedForce.CutoffPeriodic,
         openmm.NonbondedForce.CutoffNonPeriodic,
     }:
         # TODO: Store reaction-field dielectric
         electrostatics.method = "reactionfield"
+        vdw_handler.method = "cutoff"
     elif force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff:
-        raise Exception("NonbondedMethod NoCutoff is not supported")
+        electrostatics.method = "no-cutoff"
+        vdw_handler.method = "no-cutoff"
+
+    if vdw_handler.method == "cutoff":
+        vdw_handler.cutoff = force.getCutoffDistance()
+    electrostatics.cutoff = force.getCutoffDistance()
 
     return vdw_handler, electrostatics
 
