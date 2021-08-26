@@ -144,16 +144,26 @@ class TestParmedConversion(_BaseTest):
 
         # Differences in bond energies appear to be related to ParmEd's rounding
         # of the force constant and equilibrium bond length
-        original_energy.compare(internal_energy)
+        original_energy.compare(
+            internal_energy,
+            custom_tolerances={
+                "vdW": 20.0 * omm_unit.kilojoule_per_mole,
+                "Electrostatics": 600.0 * omm_unit.kilojoule_per_mole,
+            },
+        )
         internal_energy.compare(
             roundtrip_energy,
             custom_tolerances={
+                "vdW": 10.0 * omm_unit.kilojoule_per_mole,
+                "Electrostatics": 300.0 * omm_unit.kilojoule_per_mole,
                 "Bond": 0.02 * omm_unit.kilojoule_per_mole,
             },
         )
         original_energy.compare(
             roundtrip_energy,
             custom_tolerances={
+                "vdW": 30.0 * omm_unit.kilojoule_per_mole,
+                "Electrostatics": 900.0 * omm_unit.kilojoule_per_mole,
                 "Bond": 0.02 * omm_unit.kilojoule_per_mole,
             },
         )

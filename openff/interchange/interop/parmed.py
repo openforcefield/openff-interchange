@@ -358,8 +358,27 @@ def _from_parmed(cls, structure) -> "Interchange":
         SMIRNOFFvdWHandler,
     )
 
-    vdw_handler = SMIRNOFFvdWHandler()
-    coul_handler = SMIRNOFFElectrostaticsHandler(method="pme")
+    _scale_14_coul = {1 / d.scee for d in structure.dihedral_types if d.scee != 0}
+    if len(_scale_14_coul) == 0:
+        scale_14_coul = 0.83333
+    if len(_scale_14_coul) > 1:
+        raise ConversionError(
+            "Found multiple values of the 1-4 scaling factor for electrostatics"
+        )
+    else:
+        scale_14_coul = [*_scale_14_coul][0]
+
+    _scale_14_vdw = {1 / d.scnb for d in structure.dihedral_types if d.scnb != 0}
+    if len(_scale_14_vdw) == 0:
+        scale_14_vdw = 0.5
+    elif len(_scale_14_vdw) > 1:
+        raise ConversionError("Found multiple values of the 1-4 scaling factor for vdw")
+    else:
+        scale_14_vdw = [*_scale_14_vdw][0]
+
+    # TODO: Infer 1-4 scaling factors from exceptions/adjusts/dihedrals/something
+    vdw_handler = SMIRNOFFvdWHandler(scale_14=scale_14_vdw)
+    coul_handler = SMIRNOFFElectrostaticsHandler(scale_14=scale_14_coul, method="pme")
 
     for atom in structure.atoms:
         atom_idx = atom.idx
