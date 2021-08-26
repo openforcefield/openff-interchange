@@ -52,12 +52,12 @@ jobs:
       run: |
         python setup.py develop --no-deps
 
-#   - name: Clone ParmEd tests
-#     shell: bash -l {0}
-#     run: |
-#       git clone https://github.com/parmed/tests
-#       cp -r tests/pmdtest .
-#       echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
+    - name: Clone ParmEd tests
+      shell: bash -l {0}
+      run: |
+        git clone https://github.com/parmed/tests
+        cp -r tests/pmdtest .
+        echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
 
     - name: License OpenEye
       shell: bash -l {0}
@@ -82,7 +82,7 @@ jobs:
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v $COV openff/interchange/ --ignore=openff/interchange/interoperability_tests/test_parmed.py
+        python -m pytest -v $COV openff/interchange/
 
 #    - name: Run ParmEd tests
 #      continue-on-error: true
