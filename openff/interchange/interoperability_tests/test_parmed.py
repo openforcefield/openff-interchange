@@ -200,6 +200,7 @@ class TestParmEdAmber:
         )
 
 
+# TODO: Run this on a system with more molecules?
 def test_mixing_rule_different_energies():
     pdbfile = app.PDBFile(
         get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
@@ -234,7 +235,7 @@ def test_mixing_rule_different_energies():
     diff = geometric - lorentz
 
     for energy_type in ["vdW", "Electrostatics"]:
-        assert abs(diff[energy_type].m) > 1e-3
+        assert abs(diff[energy_type].m) > 5e-4
 
 
 def test_unsupported_mixing_rule():
