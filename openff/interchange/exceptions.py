@@ -115,6 +115,12 @@ class UnsupportedExportError(BaseException):
         return msg
 
 
+class ConversionError(BaseException):
+    """
+    Base exception for error handling during object conversion.
+    """
+
+
 class MissingBoxError(BaseException):
     """
     Exception for when box vectors are needed but missing.
