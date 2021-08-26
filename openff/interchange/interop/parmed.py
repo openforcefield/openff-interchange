@@ -8,7 +8,11 @@ from openff.toolkit.topology.topology import TopologyMolecule
 from openff.units import unit
 
 from openff.interchange.components.potentials import Potential
-from openff.interchange.exceptions import UnsupportedBoxError, UnsupportedExportError
+from openff.interchange.exceptions import (
+    ConversionError,
+    UnsupportedBoxError,
+    UnsupportedExportError,
+)
 from openff.interchange.models import PotentialKey, TopologyKey
 
 if TYPE_CHECKING:
@@ -269,6 +273,7 @@ def _from_parmed(cls, structure) -> "Interchange":
         top = _OFFBioTop(mdtop=mdtop)
         out.topology = top
     else:
+        raise ConversionError("ParmEd Structure missing an topology attribute")
         # TODO: Remove this case
         # This code should not be reached, since a pathway
         # OpenFF -> OpenMM -> MDTraj already exists

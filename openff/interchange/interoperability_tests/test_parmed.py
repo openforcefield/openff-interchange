@@ -106,7 +106,6 @@ class TestParmedConversion(_BaseTest):
         assert np.allclose(struct.box, np.array([40, 40, 40, 90, 90, 90]))
 
     @pytest.mark.slow()
-    @pytest.mark.xfail()
     def test_parmed_roundtrip(self):
         original = pmd.load_file(get_test_file_path("ALA_GLY/ALA_GLY.top"))
         gro = pmd.load_file(get_test_file_path("ALA_GLY/ALA_GLY.gro"))
@@ -231,7 +230,7 @@ def test_mixing_rule_different_energies():
 def test_unsupported_mixing_rule():
     pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
     topology = _OFFBioTop()
-    topology.mdtop = md.Topology.from_openmm(pdbfile.topology.to_openmm())
+    topology.mdtop = md.Topology.from_openmm(pdbfile.topology)
 
     forcefield = ForceField("test_forcefields/test_forcefield.offxml")
     openff_sys = Interchange.from_smirnoff(force_field=forcefield, topology=topology)
