@@ -8,7 +8,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         if "skipped" in terminalreporter.stats:
             num_skipped_tests = len(terminalreporter.stats["skipped"])
             # TODO: Better way of detecting if this run is in "minimal" set
-            from conda.cli.python_api import run_command
+            from conda.cli.python_api import run_command  # type: ignore[import]
 
             if "gromacs" in run_command("list"):
                 if num_skipped_tests > 120:

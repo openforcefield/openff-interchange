@@ -1,6 +1,6 @@
 """Assorted utilities used in testing."""
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import DefaultDict, Dict, List, Tuple
 
 import mdtraj as md
 import numpy as np
@@ -48,7 +48,7 @@ def _top_from_smiles(
     mol = Molecule.from_smiles(smiles)
     mol.generate_conformers(n_conformers=1)
     top = _OFFBioTop.from_molecules(n_molecules * [mol])
-    top.mdtop = md.Topology.from_openmm(top.to_openmm())  # type: ignore[attr-defined]
+    top.mdtop = md.Topology.from_openmm(value=top.to_openmm())
     # Add dummy box vectors
     # TODO: Revisit if/after Topology.is_periodic
     top.box_vectors = np.eye(3) * 10 * simtk_unit.nanometer
@@ -98,7 +98,7 @@ def _get_charges_from_openff_interchange(off_sys: Interchange):
 
 
 def _create_torsion_dict(torsion_force) -> Dict[Tuple[int], List[Tuple]]:
-    torsions = defaultdict(list)
+    torsions: DefaultDict = defaultdict(list)
 
     for i in range(torsion_force.getNumTorsions()):
         p1, p2, p3, p4, periodicity, phase, k = torsion_force.getTorsionParameters(i)

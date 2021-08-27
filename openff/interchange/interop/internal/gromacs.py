@@ -221,11 +221,11 @@ def _build_typemap(openff_sys: "Interchange") -> Dict:
     return typemap
 
 
-def _build_virtual_site_map(interchange: "Interchange") -> Dict:
+def _build_virtual_site_map(interchange: "Interchange") -> Dict[VirtualSiteKey, int]:
     """
     Construct a mapping between the VirtualSiteKey objects found in a SMIRNOFFVirtualSiteHandler and particle indices.
     """
-    virtual_site_topology_index_map = dict()
+    virtual_site_topology_index_map: Dict[VirtualSiteKey, int] = dict()
 
     if "VirtualSites" not in interchange.handlers:
         return virtual_site_topology_index_map
@@ -521,7 +521,7 @@ def _write_virtual_sites(
                 )
                 started_virtual_sites3 = True
 
-            reference_atoms = sorted(virtual_site_key.atom_indices)
+            reference_atoms = tuple(sorted(virtual_site_key.atom_indices))
             if len(reference_atoms) != 3:
                 raise NotImplementedError
 
@@ -576,7 +576,7 @@ def _write_virtual_sites(
 
             # TODO: Cannot sort here. Atom ordering implies "chirality" of virtual sites,
             #  i.e. which side of a 5-site water each lone pair particle should go.
-            reference_atoms = sorted(virtual_site_key.atom_indices)
+            reference_atoms = tuple(sorted(virtual_site_key.atom_indices))
             if len(reference_atoms) != 3:
                 raise NotImplementedError
 

@@ -2,13 +2,13 @@
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union
 
 import mdtraj as md
 import numpy as np
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
-from openff.utilities.utilities import requires_package
+from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
 
 from openff.interchange.components.mdtraj import _OFFBioTop
@@ -29,6 +29,10 @@ from openff.interchange.exceptions import (
 )
 from openff.interchange.models import DefaultModel
 from openff.interchange.types import ArrayQuantity
+
+if TYPE_CHECKING:
+    if has_package("foyer"):
+        from foyer.forcefield import Forcefield as FoyerForcefield
 
 _SUPPORTED_SMIRNOFF_HANDLERS = {
     "Constraints",
@@ -245,7 +249,7 @@ class Interchange(DefaultModel):
                 sys_out.handlers.update({"Constraints": constraints})
                 continue
             elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
-                potential_handler = potential_handler_type._from_toolkit(
+                potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers,
                     topology=topology,
                 )
@@ -351,7 +355,7 @@ class Interchange(DefaultModel):
     @classmethod
     @requires_package("foyer")
     def from_foyer(
-        cls, topology: "_OFFBioTop", force_field: "Forcefield", **kwargs
+        cls, topology: "_OFFBioTop", force_field: "FoyerForcefield", **kwargs
     ) -> "Interchange":
         """
         Create an Interchange object from a Foyer force field and an OpenFF topology.
@@ -419,10 +423,9 @@ class Interchange(DefaultModel):
         for handler in self.handlers:
             if handler == handler_name:
                 return self[handler_name]._get_parameters(atom_indices=atom_indices)
-            else:
-                raise MissingParameterHandlerError(
-                    f"Could not find parameter handler of name {handler_name}"
-                )
+        raise MissingParameterHandlerError(
+            f"Could not find parameter handler of name {handler_name}"
+        )
 
     def _get_nonbonded_methods(self):
         if "vdW" in self.handlers:

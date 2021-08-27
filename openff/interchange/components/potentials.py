@@ -7,7 +7,12 @@ from openff.utilities.utilities import requires_package
 from pydantic import Field, PrivateAttr, validator
 
 from openff.interchange.exceptions import MissingParametersError
-from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
+from openff.interchange.models import (
+    DefaultModel,
+    PotentialKey,
+    TopologyKey,
+    VirtualSiteKey,
+)
 from openff.interchange.types import ArrayQuantity, FloatQuantity
 
 if TYPE_CHECKING:
@@ -76,7 +81,7 @@ class PotentialHandler(DefaultModel):
         ...,
         description="The analytical expression governing the potentials in this handler.",
     )
-    slot_map: Dict[TopologyKey, PotentialKey] = Field(
+    slot_map: Dict[Union[TopologyKey, VirtualSiteKey], PotentialKey] = Field(
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )

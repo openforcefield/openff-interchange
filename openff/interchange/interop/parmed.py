@@ -265,7 +265,7 @@ def _from_parmed(cls, structure) -> "Interchange":
     from openff.interchange.components.mdtraj import _OFFBioTop
 
     if structure.topology is not None:
-        mdtop = md.Topology.from_openmm(structure.topology)  # type: ignore[attr-defined]
+        mdtop = md.Topology.from_openmm(value=structure.topology)
         top = _OFFBioTop(mdtop=mdtop)
         out.topology = top
     else:

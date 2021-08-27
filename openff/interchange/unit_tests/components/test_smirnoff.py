@@ -724,6 +724,8 @@ def _get_n_virtual_sites_toolkit(
             n_openmm_particles = force.getNumParticles()
             return n_openmm_particles - n_atoms
 
+    return 0
+
 
 class TestParameterInterpolation(_BaseTest):
     xml_ff_bo = """<?xml version='1.0' encoding='ASCII'?>
