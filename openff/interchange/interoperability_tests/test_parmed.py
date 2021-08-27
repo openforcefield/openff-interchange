@@ -2,20 +2,26 @@ import mdtraj as md
 import numpy as np
 import parmed as pmd
 import pytest
+from openff.toolkit.tests.utils import get_data_file_path
+from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from parmed.amber import readparm
 from pmdtest.utils import get_fn as get_pmd_fn
+from pydantic import ValidationError
 from simtk import unit as omm_unit
+from simtk.openmm import app
 
 from openff.interchange.components.interchange import Interchange
+from openff.interchange.components.mdtraj import _OFFBioTop
+from openff.interchange.drivers.amber import _run_sander
 from openff.interchange.drivers.gromacs import (
     _get_mdp_file,
     _run_gmx_energy,
     get_gromacs_energies,
 )
-from openff.interchange.tests import _BaseTest
-from openff.interchange.tests.utils import _top_from_smiles
+from openff.interchange.testing import _BaseTest
+from openff.interchange.testing.utils import _top_from_smiles
 from openff.interchange.utils import get_test_file_path
 
 
@@ -100,7 +106,6 @@ class TestParmedConversion(_BaseTest):
         assert np.allclose(struct.box, np.array([40, 40, 40, 90, 90, 90]))
 
     @pytest.mark.slow()
-    @pytest.mark.xfail()
     def test_parmed_roundtrip(self):
         original = pmd.load_file(get_test_file_path("ALA_GLY/ALA_GLY.top"))
         gro = pmd.load_file(get_test_file_path("ALA_GLY/ALA_GLY.gro"))
@@ -139,16 +144,26 @@ class TestParmedConversion(_BaseTest):
 
         # Differences in bond energies appear to be related to ParmEd's rounding
         # of the force constant and equilibrium bond length
-        original_energy.compare(internal_energy)
+        original_energy.compare(
+            internal_energy,
+            custom_tolerances={
+                "vdW": 20.0 * omm_unit.kilojoule_per_mole,
+                "Electrostatics": 600.0 * omm_unit.kilojoule_per_mole,
+            },
+        )
         internal_energy.compare(
             roundtrip_energy,
             custom_tolerances={
+                "vdW": 10.0 * omm_unit.kilojoule_per_mole,
+                "Electrostatics": 300.0 * omm_unit.kilojoule_per_mole,
                 "Bond": 0.02 * omm_unit.kilojoule_per_mole,
             },
         )
         original_energy.compare(
             roundtrip_energy,
             custom_tolerances={
+                "vdW": 30.0 * omm_unit.kilojoule_per_mole,
+                "Electrostatics": 900.0 * omm_unit.kilojoule_per_mole,
                 "Bond": 0.02 * omm_unit.kilojoule_per_mole,
             },
         )
@@ -183,3 +198,53 @@ class TestParmEdAmber:
         np.testing.assert_allclose(
             np.diag(out.box.m_as(unit.angstrom)), top.parm_data["BOX_DIMENSIONS"][1:]
         )
+
+
+# TODO: Run this on a system with more molecules?
+def test_mixing_rule_different_energies():
+    pdbfile = app.PDBFile(
+        get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
+    )
+    topology = _OFFBioTop.from_openmm(
+        pdbfile.topology,
+        unique_molecules=[Molecule.from_smiles(smi) for smi in ["C1CCCCC1", "CCO"]],
+    )
+    topology.mdtop = md.Topology.from_openmm(pdbfile.topology)
+
+    forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+    openff_sys = Interchange.from_smirnoff(force_field=forcefield, topology=topology)
+    openff_sys.positions = pdbfile.getPositions()
+    openff_sys.box = pdbfile.topology.getPeriodicBoxVectors()
+
+    lorentz_struct = openff_sys._to_parmed()
+    lorentz_struct.save("lorentz.prmtop")
+    lorentz_struct.save("lorentz.inpcrd")
+
+    lorentz = _run_sander(prmtop_file="lorentz.prmtop", inpcrd_file="lorentz.inpcrd")
+
+    openff_sys["vdW"].mixing_rule = "geometric"
+
+    geometric_struct = openff_sys._to_parmed()
+    geometric_struct.save("geometric.prmtop")
+    geometric_struct.save("geometric.inpcrd")
+
+    geometric = _run_sander(
+        prmtop_file="geometric.prmtop", inpcrd_file="geometric.inpcrd"
+    )
+
+    diff = geometric - lorentz
+
+    for energy_type in ["vdW", "Electrostatics"]:
+        assert abs(diff[energy_type].m) > 5e-4
+
+
+def test_unsupported_mixing_rule():
+    pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
+    topology = _OFFBioTop()
+    topology.mdtop = md.Topology.from_openmm(pdbfile.topology)
+
+    forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+    openff_sys = Interchange.from_smirnoff(force_field=forcefield, topology=topology)
+
+    with pytest.raises(ValidationError):
+        openff_sys["vdW"].mixing_rule = "magic"

@@ -31,7 +31,6 @@ dependencies:
   - conda
   - mypy
   - unyt
-  - intermol
   - gromacs >=2021
   - lammps
   - mbuild

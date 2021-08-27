@@ -18,7 +18,7 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
 )
 from openff.interchange.interop.openmm import from_openmm
-from openff.interchange.tests import _BaseTest
+from openff.interchange.testing import _BaseTest
 from openff.interchange.utils import get_test_file_path
 
 nonbonded_resolution_matrix = [
@@ -186,12 +186,10 @@ def test_from_openmm_single_mols(mol, n_mols):
     toolkit_energy.compare(native_energy)
 
 
-@pytest.mark.xfail(
-    reason="from_openmm does not correctly import vdW parameters from custom forces."
-)
 @pytest.mark.slow()
-def test_openmm_roundtrip():
-    mol = Molecule.from_smiles("CCO")
+@pytest.mark.parametrize("mol_smi", ["C", "CC", "CCO"])
+def test_openmm_roundtrip(mol_smi):
+    mol = Molecule.from_smiles(mol_smi)
     mol.generate_conformers(n_conformers=1)
     top = mol.to_topology()
     omm_top = top.to_openmm()
@@ -203,20 +201,18 @@ def test_openmm_roundtrip():
     off_sys.box = [4, 4, 4]
     off_sys.positions = mol.conformers[0].value_in_unit(simtk_unit.nanometer)
 
-    omm_sys = off_sys.to_openmm()
+    omm_sys = off_sys.to_openmm(combine_nonbonded_forces=True)
 
     converted = from_openmm(
         topology=omm_top,
         system=omm_sys,
     )
 
-    converted.topology = off_sys.topology
     converted.box = off_sys.box
     converted.positions = off_sys.positions
 
     get_openmm_energies(off_sys).compare(
-        get_openmm_energies(converted),
-        custom_tolerances={"Nonbonded": 1.5 * simtk_unit.kilojoule_per_mole},
+        get_openmm_energies(converted, combine_nonbonded_forces=True),
     )
 
 

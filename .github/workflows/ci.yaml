@@ -1,6 +1,12 @@
 name: full_tests
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 
 jobs:
   test:
@@ -20,12 +26,13 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
         python-version: ${{ matrix.python-version }}
-        activate-environment: test
-        mamba-version: "*"
-        channels: conda-forge,defaults
-        channel-priority: true
         environment-file: devtools/conda-envs/test_env.yaml
+        activate-environment: test
         auto-activate-base: false
+        mamba-version: "*"
+        miniforge-version: latest
+        miniforge-variant: Mambaforge
+        use-mamba: true
 
     - name: Additional info about the build
       shell: bash
@@ -75,19 +82,19 @@ jobs:
     - name: Run docexamples
       shell: bash -l {0}
       run: |
-        pytest -v --doctest-modules openff/interchange/ --ignore=openff/interchange/tests
+        pytest -v --doctest-modules openff/interchange/ --ignore=openff/interchange/energy_tests --ignore=openff/interchange/unit_tests --ignore=openff/interchange/data --ignore=openff/interchange/interoperability_tests
 
-    - name: Run unit tests
+    - name: Run all tests
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v $COV openff/interchange/tests/ --ignore=openff/interchange/tests/interop/test_parmed.py
+        python -m pytest -v $COV openff/interchange/
 
-    - name: Run ParmEd tests
-      continue-on-error: true
-      shell: bash -l {0}
-      run: |
-        python -m pytest -v $COV openff/interchange/tests/parmed
+#    - name: Run ParmEd tests
+#      continue-on-error: true
+#      shell: bash -l {0}
+#      run: |
+#        python -m pytest -v $COV openff/interchange/tests/parmed
 
     - name: Run example notebooks
       shell: bash -l {0}
@@ -95,7 +102,7 @@ jobs:
         python -m pytest -v $COV examples/ --nbval-lax
 
     - name: Codecov
-      uses: codecov/codecov-action@v2.0.2
+      uses: codecov/codecov-action@v2.0.3
       with:
         file: ./coverage.xml
         fail_ci_if_error: false

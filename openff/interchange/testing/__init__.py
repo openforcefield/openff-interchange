@@ -4,7 +4,7 @@ from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 
 from openff.interchange.components.mdtraj import _OFFBioTop
-from openff.interchange.tests.utils import _top_from_smiles
+from openff.interchange.testing.utils import _top_from_smiles
 from openff.interchange.utils import get_test_file_path
 
 
