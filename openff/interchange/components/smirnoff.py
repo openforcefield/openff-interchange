@@ -912,7 +912,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 else:
                     raise NotImplementedError()
 
-        returned_charges = {}
+        returned_charges: Dict[
+            Union[VirtualSiteKey, TopologyKey], unit.Quantity
+        ] = dict()
 
         for index, charge in charges.items():
             if isinstance(index, int):
