@@ -48,7 +48,7 @@ def _top_from_smiles(
     mol = Molecule.from_smiles(smiles)
     mol.generate_conformers(n_conformers=1)
     top = _OFFBioTop.from_molecules(n_molecules * [mol])
-    top.mdtop = md.Topology.from_openmm(top.to_openmm())  # type: ignore[attr-defined]
+    top.mdtop = md.Topology.from_openmm(value=top.to_openmm())
     # Add dummy box vectors
     # TODO: Revisit if/after Topology.is_periodic
     top.box_vectors = np.eye(3) * 10 * simtk_unit.nanometer
