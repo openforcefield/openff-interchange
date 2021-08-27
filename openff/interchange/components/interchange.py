@@ -2,7 +2,7 @@
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union
 
 import mdtraj as md
 import numpy as np
@@ -423,10 +423,9 @@ class Interchange(DefaultModel):
         for handler in self.handlers:
             if handler == handler_name:
                 return self[handler_name]._get_parameters(atom_indices=atom_indices)
-            else:
-                raise MissingParameterHandlerError(
-                    f"Could not find parameter handler of name {handler_name}"
-                )
+        raise MissingParameterHandlerError(
+            f"Could not find parameter handler of name {handler_name}"
+        )
 
     def _get_nonbonded_methods(self):
         if "vdW" in self.handlers:
