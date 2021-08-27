@@ -915,8 +915,11 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         returned_charges = {}
 
         for index, charge in charges.items():
-            if include_virtual_sites:
-                returned_charges[index] = charge
+            if isinstance(index, int):
+                returned_charges[TopologyKey(atom_indices=(index,))] = charge
+            else:
+                if include_virtual_sites:
+                    returned_charges[index] = charge
 
         return returned_charges
 
