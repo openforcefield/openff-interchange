@@ -24,6 +24,13 @@ kj_nm2_mol = simtk_unit.kilojoule_per_mole / simtk_unit.nanometer ** 2
 kj_rad2_mol = simtk_unit.kilojoule_per_mole / simtk_unit.radian ** 2
 
 
+def _compare_charges_omm_off(omm_sys: openmm.System, off_sys: Interchange) -> None:
+    omm_charges = np.asarray([*_get_charges_from_openmm_system(omm_sys)])
+    off_charges = _get_charges_from_openff_interchange(off_sys)
+
+    np.testing.assert_equal(omm_charges, off_charges)
+
+
 def _top_from_smiles(
     smiles: str,
     n_molecules: int = 1,

@@ -39,6 +39,7 @@ from openff.interchange.components.smirnoff import (
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.models import TopologyKey, VirtualSiteKey
 from openff.interchange.testing import _BaseTest
+from openff.interchange.testing.utils import _compare_charges_omm_off
 from openff.interchange.utils import get_test_file_path
 
 kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
@@ -311,6 +312,43 @@ class TestSMIRNOFFHandlers(_BaseTest):
         np.testing.assert_allclose(
             charges[:5], [v.m for v in out["Electrostatics"].charges.values()]
         )
+
+    @skip_if_missing("openff.recharge")
+    def test_charge_increment_assignment(self, parsley):
+        from openff.recharge.charges.bcc import original_am1bcc_corrections
+        from openff.recharge.smirnoff import to_smirnoff
+
+        top = Topology.from_molecules(
+            [
+                Molecule.from_smiles("C"),
+                Molecule.from_smiles("C=C"),
+                Molecule.from_smiles("CCO"),
+            ]
+        )
+
+        recharge_bccs = to_smirnoff(original_am1bcc_corrections())
+        recharge_bccs.partial_charge_method = "AM1-Mulliken"
+
+        parsley.deregister_parameter_handler("ToolkitAM1BCC")
+        parsley.register_parameter_handler(recharge_bccs)
+
+        reference = parsley.create_openmm_system(top)
+        new = Interchange.from_smirnoff(parsley, top)
+
+        _compare_charges_omm_off(reference, new)
+
+    def test_library_charge_assignment(self):
+        forcefield = ForceField("openff-1.3.0.offxml")
+        forcefield.deregister_parameter_handler("ToolkitAM1BCC")
+
+        top = Topology.from_molecules(
+            [Molecule.from_smiles(smi) for smi in ["[Na+]", "[Cl-]"]]
+        )
+
+        reference = forcefield.create_openmm_system(top)
+        new = Interchange.from_smirnoff(forcefield, top)
+
+        _compare_charges_omm_off(reference, new)
 
 
 class TestUnassignedParameters(_BaseTest):
