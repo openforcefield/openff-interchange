@@ -2,21 +2,18 @@ name: openff-interchange-minimal-env
 channels:
   - conda-forge
 dependencies:
-    # Base depends
+  # Core
   - python
   - pip
-  - numpy
-  - pandas
+  - numpy >=1.21
   - pydantic
-  - pint
-  - openmm
+  - openmm ==7.5
+  - mdtraj
+  - ele
+  # OpenFF stack
   - openff-toolkit >=0.10.0
   - openff-utilities
   - openff-units
-  - jax
-  - mdtraj
-  - ele
-
-    # Testing
+  # Testing
   - pytest
   - conda
