@@ -11,7 +11,7 @@
 .. autosummary::
    :toctree:
    :recursive:
-{% for item in modules if item.split(".") | last != "tests" %}
+{% for item in modules if item not in exclude_modules %}
    {{ item }}
    {% set _ = documented_members.append(item) %}
 {%- endfor %}
@@ -91,27 +91,3 @@
 
 {% endif %}
 {% endblock %}
-
-{#
-{% block others %}
-
-{% set others = [] %}
-{% for item in members %}
-   {% if item | first != "_" and not (item in documented_members) %}
-      {% set _ = others.append(item) %}
-   {% endif %}
-{%- endfor %}
-
-{% if others %}
-{{ _('Other Module Members') | escape | underline(line="-") }}
-
-   .. autosummary::
-      :nosignatures:
-      :toctree: other_members
-   {% for item in others %}
-      {{ item }}
-   {%- endfor %}
-
-{% endif %}
-{% endblock %}
-#}

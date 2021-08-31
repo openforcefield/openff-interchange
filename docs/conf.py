@@ -58,6 +58,15 @@ extensions = [
 
 autosummary_generate = True
 autosummary_imported_members = False
+autosummary_context = {
+    # Modules to exclude from API docs
+    "exclude_modules": [
+        "openff.interchange.conftest",
+        "openff.interchange.energy_tests",
+        "openff.interchange.interoperability_tests",
+        "openff.interchange.unit_tests",
+    ],
+}
 napoleon_google_docstring = False
 napoleon_use_param = False
 napoleon_use_ivar = True
