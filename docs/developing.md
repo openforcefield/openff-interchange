@@ -55,3 +55,27 @@ pre-commit autoupdate.
 Hooks will now run automatically before commits. Once installed, it should run in a few seconds.
 
 If hooks are installed locally, all linting checks in CI should pass. If hooks are not installed locally or are significatnly out of date, a `pre-commit.ci` bot may commit directly to a PR to make these fixes.
+
+## Documentation
+
+Interchange is documented with Sphinx and hosted by ReadTheDocs at <https://openff-interchange.readthedocs.io>. The documentation is built and served by ReadTheDocs automatically for every pull request --- please check that your changes are documented appropriately!
+
+Interchange uses Autosummary to automatically document the entire public API from the code's docstrings. Docstrings should be written according to the [NumPy docstring convention](https://numpydoc.readthedocs.io/en/latest/format.html). By default, all modules and members except those beginning with an underscore are included in the API reference. Additional modules such as tests can be excluded from the reference by listing them in the `autosummary_context["exclude_modules"]` variable in `docs/conf.py`.
+
+This is implemented by including a `:recursive:` Autosummary directive in `docs/index.md` and a customised module template `docs/_templates/autosummary/module.rst`. This template produces neatly segmented, complete documentation with a coherent navigation structure.
+
+The remaining parts of the documentation are written in [MyST Markdown](https://myst-parser.readthedocs.io/en/latest/).
+
+### Building the docs locally
+
+Dependencies for building the documentation can be found in `docs/environment.yml`. This is the Conda environment used by ReadTheDocs to build the docs. To build the docs locally, first create the environment, then invoke Sphinx via the makefile:
+
+```shell
+# Create the environment
+conda env create -n interchange-docs -f docs/environment.yml
+# Prepare the current shell session
+conda activate -n interchange-docs
+cd docs
+# Build the docs
+make html
+```

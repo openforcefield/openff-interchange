@@ -1,4 +1,4 @@
-## Use with OpenMM
+# Use with OpenMM
 
 An `Interchange` object can be converted to an `openmm.System` object with
 `Interchange.to_openmm()`.
