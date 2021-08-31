@@ -1,12 +1,18 @@
 """Models for storing applied force field parameters."""
 import ast
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union
 
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.utilities.utilities import requires_package
 from pydantic import Field, PrivateAttr, validator
 
-from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
+from openff.interchange.exceptions import MissingParametersError
+from openff.interchange.models import (
+    DefaultModel,
+    PotentialKey,
+    TopologyKey,
+    VirtualSiteKey,
+)
 from openff.interchange.types import ArrayQuantity, FloatQuantity
 
 if TYPE_CHECKING:
@@ -75,7 +81,7 @@ class PotentialHandler(DefaultModel):
         ...,
         description="The analytical expression governing the potentials in this handler.",
     )
-    slot_map: Dict[TopologyKey, PotentialKey] = Field(
+    slot_map: Dict[Union[TopologyKey, VirtualSiteKey], PotentialKey] = Field(
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )
@@ -108,6 +114,18 @@ class PotentialHandler(DefaultModel):
     def store_potentials(self, parameter_handler: ParameterHandler) -> None:
         """Populate self.potentials with key-val pairs of [PotentialKey, Potential]."""
         raise NotImplementedError
+
+    def _get_parameters(self, atom_indices: Tuple[int]) -> Dict:
+        for topology_key in self.slot_map:
+            if topology_key.atom_indices == atom_indices:
+                potential_key = self.slot_map[topology_key]
+                potential = self.potentials[potential_key]
+                parameters = potential.parameters
+                return parameters
+        raise MissingParametersError(
+            f"Could not find parameter in parameter in handler {self.type} "
+            f"associated with atoms {atom_indices}"
+        )
 
     @requires_package("jax")
     def get_force_field_parameters(self):

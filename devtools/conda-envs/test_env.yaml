@@ -7,11 +7,11 @@ dependencies:
     # Base depends
   - python
   - pip
-  - numpy
+  - numpy >=1.21
   - pandas
   - pydantic
   - pint
-  - openmm
+  - openmm ==7.5
   - openff-toolkit >=0.10.0
   - openff-utilities
   - openff-units
@@ -29,15 +29,18 @@ dependencies:
   - codecov
   - nbval
   - conda
-  - mypy
   - unyt
-  - intermol
   - gromacs >=2021
   - lammps
   - mbuild
   - foyer>=0.8.1
   - panedr
-  - pandas-stubs
   - openff-evaluator
   - openff-recharge
   - openeye-toolkits
+
+  # Typing
+  - mypy
+  - types-setuptools
+  - types-pkg_resources
+  - pandas-stubs

@@ -221,11 +221,11 @@ def _build_typemap(openff_sys: "Interchange") -> Dict:
     return typemap
 
 
-def _build_virtual_site_map(interchange: "Interchange") -> Dict:
+def _build_virtual_site_map(interchange: "Interchange") -> Dict[VirtualSiteKey, int]:
     """
     Construct a mapping between the VirtualSiteKey objects found in a SMIRNOFFVirtualSiteHandler and particle indices.
     """
-    virtual_site_topology_index_map = dict()
+    virtual_site_topology_index_map: Dict[VirtualSiteKey, int] = dict()
 
     if "VirtualSites" not in interchange.handlers:
         return virtual_site_topology_index_map
@@ -280,10 +280,11 @@ def _write_atomtypes_lj(
         parameters = _get_lj_parameters(openff_sys, atom_idx)
         sigma = parameters["sigma"].to(unit.nanometer).magnitude
         epsilon = parameters["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude
+        # top.write('{0:<11s} {1:5s} {2:6d} {3:18.8f} {4:18.8f} {5:5s}'.format(
         top_file.write(
-            "{:<11s} {:6d} {:.16g} {:.16g} {:5s} {:.16g} {:.16g}\n".format(
+            "{:<11s} {:6s} {:6d} {:.16g} {:.16g} {:5s} {:.16g} {:.16g}\n".format(
                 atom_type,  # atom type
-                # "XX",  # atom "bonding type", i.e. bond class
+                "XX",  # atom "bonding type", i.e. bond class
                 atomic_number,
                 mass,
                 0.0,  # charge, overriden later in [ atoms ]
@@ -520,7 +521,7 @@ def _write_virtual_sites(
                 )
                 started_virtual_sites3 = True
 
-            reference_atoms = sorted(virtual_site_key.atom_indices)
+            reference_atoms = tuple(sorted(virtual_site_key.atom_indices))
             if len(reference_atoms) != 3:
                 raise NotImplementedError
 
@@ -575,7 +576,7 @@ def _write_virtual_sites(
 
             # TODO: Cannot sort here. Atom ordering implies "chirality" of virtual sites,
             #  i.e. which side of a 5-site water each lone pair particle should go.
-            reference_atoms = sorted(virtual_site_key.atom_indices)
+            reference_atoms = tuple(sorted(virtual_site_key.atom_indices))
             if len(reference_atoms) != 3:
                 raise NotImplementedError
 

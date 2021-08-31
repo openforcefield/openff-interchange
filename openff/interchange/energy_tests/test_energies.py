@@ -254,7 +254,7 @@ def test_packmol_boxes(toolkit_file_path):
         )
     except EnergyError as err:
         if "Torsion" in err.args[0]:
-            from openff.interchange.tests.utils import (
+            from openff.interchange.tests.utils import (  # type: ignore
                 _compare_torsion_forces,
                 _get_force,
             )

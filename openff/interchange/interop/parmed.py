@@ -3,12 +3,14 @@ from typing import TYPE_CHECKING, Dict, Optional, Union
 
 import mdtraj as md
 import numpy as np
-from openff.toolkit.topology.molecule import FrozenMolecule
-from openff.toolkit.topology.topology import TopologyMolecule
 from openff.units import unit
 
 from openff.interchange.components.potentials import Potential
-from openff.interchange.exceptions import UnsupportedBoxError, UnsupportedExportError
+from openff.interchange.exceptions import (
+    ConversionError,
+    UnsupportedBoxError,
+    UnsupportedExportError,
+)
 from openff.interchange.models import PotentialKey, TopologyKey
 
 if TYPE_CHECKING:
@@ -260,87 +262,14 @@ def _from_parmed(cls, structure) -> "Interchange":
 
         out.box = structure.box[:3] * unit.angstrom
 
-    from openff.toolkit.topology import Molecule
-
     from openff.interchange.components.mdtraj import _OFFBioTop
 
     if structure.topology is not None:
-        mdtop = md.Topology.from_openmm(structure.topology)  # type: ignore[attr-defined]
+        mdtop = md.Topology.from_openmm(value=structure.topology)
         top = _OFFBioTop(mdtop=mdtop)
         out.topology = top
     else:
-        # TODO: Remove this case
-        # This code should not be reached, since a pathway
-        # OpenFF -> OpenMM -> MDTraj already exists
-
-        mdtop = md.Topology()  # type: ignore[attr-defined]
-
-        main_chain = md.core.topology.Chain(index=0, topology=mdtop)  # type: ignore[attr-defined]
-        top = _OFFBioTop(mdtop=None)
-
-        # There is no way to tell if ParmEd residues are connected (cannot be processed
-        # as separate OFFMols) or disconnected (can be). For now, will have to accept the
-        # inefficiency of putting everything into on OFFMol ...
-
-        mol = Molecule()
-        mol.name = getattr(structure, "name", "Mol")
-
-        for res in structure.residues:
-            # ... however, MDTraj's Topology class only stores residues, not molecules,
-            # so this should roughly match up with ParmEd
-            this_res = md.core.topology.Residue(  # type: ignore[attr-defined]
-                name=res.name,
-                index=res.idx,
-                chain=main_chain,
-                resSeq=0,
-            )
-
-            for atom in res.atoms:
-                mol.add_atom(
-                    atomic_number=atom.atomic_number, formal_charge=0, is_aromatic=False
-                )
-                mdtop.add_atom(
-                    name=atom.name,
-                    element=md.element.Element.getByAtomicNumber(atom.element),  # type: ignore[attr-defined]
-                    residue=this_res,
-                )
-
-            main_chain._residues.append(this_res)
-
-        for res in structure.residues:
-            for atom in res.atoms:
-                for bond in atom.bonds:
-                    try:
-                        mol.add_bond(
-                            atom1=bond.atom1.idx,
-                            atom2=bond.atom2.idx,
-                            bond_order=int(bond.order),
-                            is_aromatic=False,
-                        )
-                    # TODO: Use a custom exception after
-                    # https://github.com/openforcefield/openff-toolkit/issues/771
-                    except Exception as e:
-                        if "Bond already exists" in str(e):
-                            pass
-                        else:
-                            raise e
-                    mdtop.add_bond(
-                        atom1=mdtop.atom(bond.atom1.idx),
-                        atom2=mdtop.atom(bond.atom2.idx),
-                        order=int(bond.order) if bond.order is not None else None,
-                    )
-
-        # Topology.add_molecule requires a safe .to_smiles() call, so instead
-        # do a dangerous molecule addition
-        ref_mol = FrozenMolecule(mol)
-        # This doesn't work because molecule hashing requires valid SMILES
-        # top._reference_molecule_to_topology_molecules[ref_mol] = []
-        # so just tack it on for now
-        top._reference_mm_molecule = ref_mol
-        top_mol = TopologyMolecule(reference_molecule=ref_mol, topology=top)
-        top._topology_molecules.append(top_mol)
-        # top._reference_molecule_to_topology_molecules[ref_mol].append(top_mol)
-        mdtop._chains.append(main_chain)
+        raise ConversionError("ParmEd Structure missing an topology attribute")
 
     out.topology = top
 
@@ -353,8 +282,27 @@ def _from_parmed(cls, structure) -> "Interchange":
         SMIRNOFFvdWHandler,
     )
 
-    vdw_handler = SMIRNOFFvdWHandler()
-    coul_handler = SMIRNOFFElectrostaticsHandler(method="pme")
+    _scale_14_coul = {1 / d.scee for d in structure.dihedral_types if d.scee != 0}
+    if len(_scale_14_coul) == 0:
+        scale_14_coul = 0.83333
+    elif len(_scale_14_coul) > 1:
+        raise ConversionError(
+            "Found multiple values of the 1-4 scaling factor for electrostatics"
+        )
+    else:
+        scale_14_coul = [*_scale_14_coul][0]
+
+    _scale_14_vdw = {1 / d.scnb for d in structure.dihedral_types if d.scnb != 0}
+    if len(_scale_14_vdw) == 0:
+        scale_14_vdw = 0.5
+    elif len(_scale_14_vdw) > 1:
+        raise ConversionError("Found multiple values of the 1-4 scaling factor for vdw")
+    else:
+        scale_14_vdw = [*_scale_14_vdw][0]
+
+    # TODO: Infer 1-4 scaling factors from exceptions/adjusts/dihedrals/something
+    vdw_handler = SMIRNOFFvdWHandler(scale_14=scale_14_vdw)
+    coul_handler = SMIRNOFFElectrostaticsHandler(scale_14=scale_14_coul, method="pme")
 
     for atom in structure.atoms:
         atom_idx = atom.idx
