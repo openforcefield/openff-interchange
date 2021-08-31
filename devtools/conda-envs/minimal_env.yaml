@@ -9,7 +9,6 @@ dependencies:
   - pydantic
   - openmm ==7.5
   - mdtraj
-  - ele
   # OpenFF stack
   - openff-toolkit >=0.10.0
   - openff-utilities
