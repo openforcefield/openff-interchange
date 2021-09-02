@@ -132,18 +132,16 @@ class PotentialHandler(DefaultModel):
         """Return a flattened representation of the force field parameters."""
         import jax
 
-        params: list = list()
-        for potential in self.potentials.values():
-            if isinstance(potential, Potential):
-                params.append([val.magnitude for val in potential.parameters.values()])
-            elif isinstance(potential, WrappedPotential):
-                for inner_pot in potential._inner_data.data.keys():
-                    if inner_pot not in params:
-                        params.append(
-                            [val.magnitude for val in inner_pot.parameters.values()]
-                        )
+        # TODO: Handle WrappedPotential
+        if any(
+            isinstance(potential, WrappedPotential)
+            for potential in self.potentials.values()
+        ):
+            raise NotImplementedError
 
-        return jax.numpy.array(params)
+        return jax.numpy.array(
+            [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
+        )
 
     @requires_package("jax")
     def get_system_parameters(self, p=None):
@@ -154,38 +152,32 @@ class PotentialHandler(DefaultModel):
         """
         import jax
 
+        # TODO: Handle WrappedPotential
+        if any(
+            isinstance(potential, WrappedPotential)
+            for potential in self.potentials.values()
+        ):
+            raise NotImplementedError
+
         if p is None:
             p = self.get_force_field_parameters()
         mapping = self.get_mapping()
-        q: List = list()
 
-        for val in self.slot_map.values():
-            if val.bond_order:
-                p_ = p[0] * 0.0
-                for inner_pot, coeff in self.potentials[val]._inner_data.data.items():
-                    p_ += p[mapping[inner_pot]] * coeff
-                q.append(p_)
-            else:
-                q.append(p[mapping[self.potentials[val]]])
+        q: List = list()
+        for potential_key in self.slot_map.values():
+            index = mapping[potential_key]
+            q.append(p[index])
 
         return jax.numpy.array(q)
 
     def get_mapping(self) -> Dict:
         """Get a mapping between potentials and array indices."""
         mapping: Dict = dict()
-        idx = 0
-        for key, pot in self.potentials.items():
-            for p in self.slot_map.values():
-                if key == p:
-                    if isinstance(pot, Potential):
-                        if pot not in mapping:
-                            mapping.update({pot: idx})
-                            idx += 1
-                    elif isinstance(pot, WrappedPotential):
-                        for inner_pot in pot._inner_data.data:
-                            if inner_pot not in mapping:
-                                mapping.update({inner_pot: idx})
-                                idx += 1
+        index = 0
+        for potential_key in self.slot_map.values():
+            if potential_key not in mapping:
+                mapping[potential_key] = index
+                index += 1
 
         return mapping
 
