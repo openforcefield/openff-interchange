@@ -3,7 +3,7 @@ import ast
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union
 
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
-from openff.utilities.utilities import requires_package
+from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, PrivateAttr, validator
 
 from openff.interchange.exceptions import MissingParametersError
@@ -14,6 +14,12 @@ from openff.interchange.models import (
     VirtualSiteKey,
 )
 from openff.interchange.types import ArrayQuantity, FloatQuantity
+
+if has_package("jax"):
+    from jax import numpy
+else:
+    # Known mypy bug/limitation: https://github.com/python/mypy/issues/1153
+    import numpy  # type: ignore[no-redef]
 
 if TYPE_CHECKING:
     from openff.interchange.components.mdtraj import _OFFBioTop
@@ -127,65 +133,70 @@ class PotentialHandler(DefaultModel):
             f"associated with atoms {atom_indices}"
         )
 
-    @requires_package("jax")
     def get_force_field_parameters(self):
         """Return a flattened representation of the force field parameters."""
-        import jax
+        # TODO: Handle WrappedPotential
+        if any(
+            isinstance(potential, WrappedPotential)
+            for potential in self.potentials.values()
+        ):
+            raise NotImplementedError
 
-        params: list = list()
-        for potential in self.potentials.values():
-            if isinstance(potential, Potential):
-                params.append([val.magnitude for val in potential.parameters.values()])
-            elif isinstance(potential, WrappedPotential):
-                for inner_pot in potential._inner_data.data.keys():
-                    if inner_pot not in params:
-                        params.append(
-                            [val.magnitude for val in inner_pot.parameters.values()]
-                        )
+        return numpy.array(
+            [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
+        )
 
-        return jax.numpy.array(params)
+    def set_force_field_parameters(self, new_p):
+        """Set the force field parameters from a flattened representation."""
+        mapping = self.get_mapping()
+        if new_p.shape[0] != len(mapping):
+            raise RuntimeError
 
-    @requires_package("jax")
+        for potential_key, potential_index in self.get_mapping().items():
+            potential = self.potentials[potential_key]
+            if len(new_p[potential_index, :]) != len(potential.parameters):
+                raise RuntimeError
+
+            for parameter_index, parameter_key in enumerate(potential.parameters):
+                parameter_units = potential.parameters[parameter_key].units
+                modified_parameter = new_p[potential_index, parameter_index]
+
+                self.potentials[potential_key].parameters[parameter_key] = (
+                    modified_parameter * parameter_units
+                )
+
     def get_system_parameters(self, p=None):
         """
         Return a flattened representation of system parameters.
 
         These values are effectively force field parameters as applied to a chemical topology.
         """
-        import jax
+        # TODO: Handle WrappedPotential
+        if any(
+            isinstance(potential, WrappedPotential)
+            for potential in self.potentials.values()
+        ):
+            raise NotImplementedError
 
         if p is None:
             p = self.get_force_field_parameters()
         mapping = self.get_mapping()
+
         q: List = list()
+        for potential_key in self.slot_map.values():
+            index = mapping[potential_key]
+            q.append(p[index])
 
-        for val in self.slot_map.values():
-            if val.bond_order:
-                p_ = p[0] * 0.0
-                for inner_pot, coeff in self.potentials[val]._inner_data.data.items():
-                    p_ += p[mapping[inner_pot]] * coeff
-                q.append(p_)
-            else:
-                q.append(p[mapping[self.potentials[val]]])
-
-        return jax.numpy.array(q)
+        return numpy.array(q)
 
     def get_mapping(self) -> Dict:
         """Get a mapping between potentials and array indices."""
         mapping: Dict = dict()
-        idx = 0
-        for key, pot in self.potentials.items():
-            for p in self.slot_map.values():
-                if key == p:
-                    if isinstance(pot, Potential):
-                        if pot not in mapping:
-                            mapping.update({pot: idx})
-                            idx += 1
-                    elif isinstance(pot, WrappedPotential):
-                        for inner_pot in pot._inner_data.data:
-                            if inner_pot not in mapping:
-                                mapping.update({inner_pot: idx})
-                                idx += 1
+        index = 0
+        for potential_key in self.slot_map.values():
+            if potential_key not in mapping:
+                mapping[potential_key] = index
+                index += 1
 
         return mapping
 
@@ -205,6 +216,7 @@ class PotentialHandler(DefaultModel):
             mapping=self.get_mapping(),
         )
 
+    @requires_package("jax")
     def get_param_matrix(self):
         """Get a matrix representing the mapping between force field and system parameters."""
         from functools import partial

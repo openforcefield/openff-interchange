@@ -545,6 +545,21 @@ class TestMatrixRepresentations(_BaseTest):
                 np.sum(param_matrix, axis=1), np.ones(param_matrix.shape[0])
             )
 
+    def test_set_force_field_parameters(self, parsley, ethanol_top):
+        import jax
+
+        bond_handler = SMIRNOFFBondHandler._from_toolkit(
+            parameter_handler=parsley["Bonds"],
+            topology=ethanol_top,
+        )
+
+        original = bond_handler.get_force_field_parameters()
+        modified = original * jax.numpy.array([1.1, 0.5])
+
+        bond_handler.set_force_field_parameters(modified)
+
+        assert (bond_handler.get_force_field_parameters() == modified).all()
+
 
 class TestSMIRNOFFVirtualSites:
     from openff.toolkit.tests.test_forcefield import (
