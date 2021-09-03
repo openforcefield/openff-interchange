@@ -145,6 +145,25 @@ class PotentialHandler(DefaultModel):
             [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
         )
 
+    def set_force_field_parameters(self, new_p):
+        """Set the force field parameters from a flattened representation."""
+        mapping = self.get_mapping()
+        if new_p.shape[0] != len(mapping):
+            raise RuntimeError
+
+        for potential_key, potential_index in self.get_mapping().items():
+            potential = self.potentials[potential_key]
+            if len(new_p[potential_index, :]) != len(potential.parameters):
+                raise RuntimeError
+
+            for parameter_index, parameter_key in enumerate(potential.parameters):
+                parameter_units = potential.parameters[parameter_key].units
+                modified_parameter = new_p[potential_index, parameter_index]
+
+                self.potentials[potential_key].parameters[parameter_key] = (
+                    modified_parameter * parameter_units
+                )
+
     def get_system_parameters(self, p=None):
         """
         Return a flattened representation of system parameters.
