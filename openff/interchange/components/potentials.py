@@ -3,7 +3,7 @@ import ast
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union
 
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
-from openff.utilities.utilities import requires_package
+from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, PrivateAttr, validator
 
 from openff.interchange.exceptions import MissingParametersError
@@ -14,6 +14,11 @@ from openff.interchange.models import (
     VirtualSiteKey,
 )
 from openff.interchange.types import ArrayQuantity, FloatQuantity
+
+if has_package("jax"):
+    from jax import numpy
+else:
+    import numpy
 
 if TYPE_CHECKING:
     from openff.interchange.components.mdtraj import _OFFBioTop
@@ -127,11 +132,8 @@ class PotentialHandler(DefaultModel):
             f"associated with atoms {atom_indices}"
         )
 
-    @requires_package("jax")
     def get_force_field_parameters(self):
         """Return a flattened representation of the force field parameters."""
-        import jax
-
         # TODO: Handle WrappedPotential
         if any(
             isinstance(potential, WrappedPotential)
@@ -139,19 +141,16 @@ class PotentialHandler(DefaultModel):
         ):
             raise NotImplementedError
 
-        return jax.numpy.array(
+        return numpy.array(
             [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
         )
 
-    @requires_package("jax")
     def get_system_parameters(self, p=None):
         """
         Return a flattened representation of system parameters.
 
         These values are effectively force field parameters as applied to a chemical topology.
         """
-        import jax
-
         # TODO: Handle WrappedPotential
         if any(
             isinstance(potential, WrappedPotential)
@@ -168,7 +167,7 @@ class PotentialHandler(DefaultModel):
             index = mapping[potential_key]
             q.append(p[index])
 
-        return jax.numpy.array(q)
+        return numpy.array(q)
 
     def get_mapping(self) -> Dict:
         """Get a mapping between potentials and array indices."""
@@ -197,6 +196,7 @@ class PotentialHandler(DefaultModel):
             mapping=self.get_mapping(),
         )
 
+    @requires_package("jax")
     def get_param_matrix(self):
         """Get a matrix representing the mapping between force field and system parameters."""
         from functools import partial
