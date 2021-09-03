@@ -18,7 +18,8 @@ from openff.interchange.types import ArrayQuantity, FloatQuantity
 if has_package("jax"):
     from jax import numpy
 else:
-    import numpy
+    # Known mypy bug/limitation: https://github.com/python/mypy/issues/1153
+    import numpy  # type: ignore[no-redef]
 
 if TYPE_CHECKING:
     from openff.interchange.components.mdtraj import _OFFBioTop
