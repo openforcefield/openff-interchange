@@ -2,7 +2,7 @@
 from typing import Dict
 
 import numpy as np
-from simtk import openmm, unit
+from openmm import openmm, unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport

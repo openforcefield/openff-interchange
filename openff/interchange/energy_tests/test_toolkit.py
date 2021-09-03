@@ -12,9 +12,9 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from openmm import openmm
+from openmm import unit as openmm_unit
 from rdkit import Chem
-from simtk import openmm
-from simtk import unit as simtk_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.smirnoff import library_charge_from_molecule
@@ -30,8 +30,8 @@ from openff.interchange.utils import get_test_file_path
 
 kj_mol = unit.kilojoule / unit.mol
 _parsley = ForceField("openff-1.0.0.offxml")
-_box_vectors = simtk_unit.Quantity(
-    [[4, 0, 0], [0, 4, 0], [0, 0, 4]], unit=simtk_unit.nanometer
+_box_vectors = openmm_unit.Quantity(
+    [[4, 0, 0], [0, 4, 0], [0, 0, 4]], unit=openmm_unit.nanometer
 )
 
 
@@ -87,7 +87,7 @@ def compare_condensed_systems(mol, force_field):
         print(f"Molecule failed! (conversion from OpenMM)\t{mol.to_inchi()}")
         return
 
-    box_vectors = trj.unitcell_vectors[0] * simtk_unit.nanometer
+    box_vectors = trj.unitcell_vectors[0] * openmm_unit.nanometer
     openff_top.box_vectors = box_vectors
 
     try:
@@ -104,7 +104,7 @@ def compare_condensed_systems(mol, force_field):
         print(f"Molecule failed! (missing valence parameters)\t{mol.to_inchi()}")
         return
 
-    positions = trj.xyz[0] * simtk_unit.nanometer
+    positions = trj.xyz[0] * openmm_unit.nanometer
     toolkit_energy = _get_openmm_energies(
         toolkit_sys,
         box_vectors=box_vectors,

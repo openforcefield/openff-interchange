@@ -7,7 +7,7 @@ from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities import temporary_cd
-from simtk import unit as omm_unit
+from openmm import unit as omm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.gromacs import _get_mdp_file, _run_gmx_energy

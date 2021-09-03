@@ -4,8 +4,8 @@ from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.units import unit
-from simtk import openmm
-from simtk import unit as simtk_unit
+from openmm import openmm
+from openmm import unit as openmm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
@@ -36,7 +36,7 @@ class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
         ).energies["Bond"]
         toolkit_bond_energy = _get_openmm_energies(
             forcefield.create_openmm_system(top),
-            box_vectors=[[4, 0, 0], [0, 4, 0], [0, 0, 4]] * simtk_unit.nanometer,
+            box_vectors=[[4, 0, 0], [0, 4, 0], [0, 0, 4]] * openmm_unit.nanometer,
             positions=mol.conformers[0],
         ).energies["Bond"]
 

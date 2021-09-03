@@ -19,9 +19,9 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from openmm import openmm
+from openmm import unit as openmm_unit
 from pydantic import ValidationError
-from simtk import openmm
-from simtk import unit as simtk_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
@@ -94,8 +94,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         bond_handler = BondHandler(version=0.3)
         bond_parameter = BondHandler.BondType(
             smirks="[*:1]~[*:2]",
-            k=1.5 * simtk_unit.kilocalorie_per_mole / simtk_unit.angstrom ** 2,
-            length=1.5 * simtk_unit.angstrom,
+            k=1.5 * openmm_unit.kilocalorie_per_mole / openmm_unit.angstrom ** 2,
+            length=1.5 * openmm_unit.angstrom,
             id="b1000",
         )
         bond_handler.add_parameter(bond_parameter.to_dict())
@@ -120,8 +120,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         angle_handler = AngleHandler(version=0.3)
         angle_parameter = AngleHandler.AngleType(
             smirks="[*:1]~[*:2]~[*:3]",
-            k=2.5 * simtk_unit.kilocalorie_per_mole / simtk_unit.radian ** 2,
-            angle=100 * simtk_unit.degree,
+            k=2.5 * openmm_unit.kilocalorie_per_mole / openmm_unit.radian ** 2,
+            angle=100 * openmm_unit.degree,
             id="b1000",
         )
         angle_handler.add_parameter(angle_parameter.to_dict())
@@ -148,8 +148,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
             parameter=ImproperTorsionHandler.ImproperTorsionType(
                 smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]",
                 periodicity1=2,
-                phase1=180.0 * simtk_unit.degree,
-                k1=1.1 * simtk_unit.kilocalorie_per_mole,
+                phase1=180.0 * openmm_unit.degree,
+                k1=1.1 * openmm_unit.kilocalorie_per_mole,
             )
         )
 
@@ -197,8 +197,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         library_charge_handler.add_parameter(
             {
                 "smirks": "[#6X4:1]-[#1:2]",
-                "charge1": -0.1 * simtk_unit.elementary_charge,
-                "charge2": 0.025 * simtk_unit.elementary_charge,
+                "charge1": -0.1 * openmm_unit.elementary_charge,
+                "charge2": 0.025 * openmm_unit.elementary_charge,
             }
         )
 
@@ -230,8 +230,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         charge_increment_handler.add_parameter(
             {
                 "smirks": "[#17:1]-[#1:2]",
-                "charge_increment1": 0.1 * simtk_unit.elementary_charge,
-                "charge_increment2": -0.1 * simtk_unit.elementary_charge,
+                "charge_increment1": 0.1 * openmm_unit.elementary_charge,
+                "charge_increment2": -0.1 * openmm_unit.elementary_charge,
             }
         )
 
@@ -256,7 +256,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
     def test_charges_with_virtual_site(self, parsley):
         mol = Molecule.from_smiles("CCl")
         mol.generate_conformers(n_conformers=1)
-        mol.partial_charges = simtk_unit.elementary_charge * np.array(
+        mol.partial_charges = openmm_unit.elementary_charge * np.array(
             [0.5, -0.8, 0.1, 0.1, 0.1]
         )
 
@@ -276,11 +276,11 @@ class TestSMIRNOFFHandlers(_BaseTest):
         sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * simtk_unit.angstrom,
+            distance=1.4 * openmm_unit.angstrom,
             type="BondCharge",
             match="once",
-            charge_increment1=0.2 * simtk_unit.elementary_charge,
-            charge_increment2=0.1 * simtk_unit.elementary_charge,
+            charge_increment1=0.2 * openmm_unit.elementary_charge,
+            charge_increment2=0.1 * openmm_unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=sigma_type)
@@ -382,7 +382,7 @@ def test_library_charges_from_molecule():
     with pytest.raises(ValueError, match="missing partial"):
         library_charge_from_molecule(mol)
 
-    mol.partial_charges = np.linspace(-0.3, 0.3, 4) * simtk_unit.elementary_charge
+    mol.partial_charges = np.linspace(-0.3, 0.3, 4) * openmm_unit.elementary_charge
 
     library_charges = library_charge_from_molecule(mol)
 

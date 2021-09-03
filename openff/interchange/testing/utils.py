@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.utilities.utilities import has_executable
-from simtk import openmm
-from simtk import unit as simtk_unit
+from openmm import openmm
+from openmm import unit as openmm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
@@ -20,8 +20,8 @@ needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
 needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs GROMACS")
 
 
-kj_nm2_mol = simtk_unit.kilojoule_per_mole / simtk_unit.nanometer ** 2
-kj_rad2_mol = simtk_unit.kilojoule_per_mole / simtk_unit.radian ** 2
+kj_nm2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.nanometer ** 2
+kj_rad2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.radian ** 2
 
 
 def _top_from_smiles(
@@ -51,7 +51,7 @@ def _top_from_smiles(
     top.mdtop = md.Topology.from_openmm(value=top.to_openmm())
     # Add dummy box vectors
     # TODO: Revisit if/after Topology.is_periodic
-    top.box_vectors = np.eye(3) * 10 * simtk_unit.nanometer
+    top.box_vectors = np.eye(3) * 10 * openmm_unit.nanometer
     return top
 
 
@@ -61,7 +61,7 @@ def _get_charges_from_openmm_system(omm_sys: openmm.System):
             break
     for idx in range(omm_sys.getNumParticles()):
         param = force.getParticleParameters(idx)
-        yield param[0].value_in_unit(simtk_unit.elementary_charge)
+        yield param[0].value_in_unit(openmm_unit.elementary_charge)
 
 
 def _get_sigma_from_nonbonded_force(
@@ -69,7 +69,7 @@ def _get_sigma_from_nonbonded_force(
 ):
     for idx in range(n_particles):
         param = nonbond_force.getParticleParameters(idx)
-        yield param[1].value_in_unit(simtk_unit.nanometer)
+        yield param[1].value_in_unit(openmm_unit.nanometer)
 
 
 def _get_epsilon_from_nonbonded_force(
@@ -77,7 +77,7 @@ def _get_epsilon_from_nonbonded_force(
 ):
     for idx in range(n_particles):
         param = nonbond_force.getParticleParameters(idx)
-        yield param[2].value_in_unit(simtk_unit.kilojoule_per_mole)
+        yield param[2].value_in_unit(openmm_unit.kilojoule_per_mole)
 
 
 def _get_lj_params_from_openmm_system(omm_sys: openmm.System):
@@ -134,7 +134,7 @@ def _create_angle_dict(angle_force):
 def _compare_individual_torsions(x, y):
     assert x[0] == y[0]
     assert x[1] == y[1]
-    assert (x[2] - y[2]) < 1e-15 * simtk_unit.kilojoule_per_mole
+    assert (x[2] - y[2]) < 1e-15 * openmm_unit.kilojoule_per_mole
 
 
 def _compare_torsion_forces(force1, force2):
@@ -159,7 +159,7 @@ def _compare_bond_forces(force1, force2):
     for key in bonds1:
         length_diff = bonds2[key][0] - bonds1[key][0]
         assert (
-            abs(length_diff) < 1e-15 * simtk_unit.nanometer
+            abs(length_diff) < 1e-15 * openmm_unit.nanometer
         ), f"Bond lengths differ by {length_diff}"
         k_diff = bonds2[key][1] - bonds1[key][1]
         assert abs(k_diff) < 1e-9 * kj_nm2_mol, f"bond k differ by {k_diff}"
@@ -174,7 +174,7 @@ def _compare_angle_forces(force1, force2):
     for key in angles1:
         angle_diff = angles2[key][0] - angles1[key][0]
         assert (
-            abs(angle_diff) < 1e-15 * simtk_unit.radian
+            abs(angle_diff) < 1e-15 * openmm_unit.radian
         ), f"angles differ by {angle_diff}"
         k_diff = angles2[key][1] - angles1[key][1]
         assert abs(k_diff) < 1e-10 * kj_rad2_mol, f"angle k differ by {k_diff}"
@@ -206,13 +206,13 @@ def _compare_nonbonded_parameters(force1, force2):
         q1, sig1, eps1 = force1.getParticleParameters(i)
         q2, sig2, eps2 = force2.getParticleParameters(i)
         assert (
-            abs(q2 - q1) < 1e-8 * simtk_unit.elementary_charge
+            abs(q2 - q1) < 1e-8 * openmm_unit.elementary_charge
         ), f"charge mismatch in particle {i}: {q1} vs {q2}"
         assert (
-            abs(sig2 - sig1) < 1e-12 * simtk_unit.nanometer
+            abs(sig2 - sig1) < 1e-12 * openmm_unit.nanometer
         ), f"sigma mismatch in particle {i}: {sig1} vs {sig2}"
         assert (
-            abs(eps2 - eps1) < 1e-12 * simtk_unit.kilojoule_per_mole
+            abs(eps2 - eps1) < 1e-12 * openmm_unit.kilojoule_per_mole
         ), f"epsilon mismatch in particle {i}: {eps1} vs {eps2}"
 
 
@@ -225,13 +225,13 @@ def _compare_exceptions(force1, force2):
         _, _, q1, sig1, eps1 = force1.getExceptionParameters(i)
         _, _, q2, sig2, eps2 = force2.getExceptionParameters(i)
         assert (
-            abs(q2 - q1) < 1e-12 * simtk_unit.elementary_charge ** 2
+            abs(q2 - q1) < 1e-12 * openmm_unit.elementary_charge ** 2
         ), f"charge mismatch in exception {i}"
         assert (
-            abs(sig2 - sig1) < 1e-12 * simtk_unit.nanometer
+            abs(sig2 - sig1) < 1e-12 * openmm_unit.nanometer
         ), f"sigma mismatch in exception {i}"
         assert (
-            abs(eps2 - eps1) < 1e-12 * simtk_unit.kilojoule_per_mole
+            abs(eps2 - eps1) < 1e-12 * openmm_unit.kilojoule_per_mole
         ), f"epsilon mismatch in exception {i}"
 
 
