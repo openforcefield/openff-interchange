@@ -9,7 +9,7 @@ dependencies:
   - pip
   - numpy >=1.21
   - pydantic
-  - openmm ==7.5
+  - openmm
   - mdtraj
   # OpenFF stack
   - openff-toolkit >=0.10.0
@@ -19,7 +19,7 @@ dependencies:
   - jax
   - unyt
   - mbuild
-  - foyer>=0.8.1
+  - foyer >=0.8.1
   # Testing
   - openff-evaluator
   - openff-recharge
