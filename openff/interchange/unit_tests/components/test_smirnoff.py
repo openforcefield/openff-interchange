@@ -1,4 +1,5 @@
 import numpy as np
+import openmm
 import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol, create_reversed_ethanol
 from openff.toolkit.tests.utils import get_data_file_path, requires_openeye
@@ -19,7 +20,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from openmm import openmm
 from openmm import unit as openmm_unit
 from pydantic import ValidationError
 

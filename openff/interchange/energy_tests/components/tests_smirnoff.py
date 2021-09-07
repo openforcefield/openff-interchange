@@ -1,10 +1,10 @@
 import numpy as np
+import openmm
 import pytest
 from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.units import unit
-from openmm import openmm
 from openmm import unit as openmm_unit
 
 from openff.interchange.components.interchange import Interchange

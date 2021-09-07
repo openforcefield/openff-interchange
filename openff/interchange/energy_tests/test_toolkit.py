@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+import openmm
 import pytest
 from openff.toolkit.tests.utils import requires_openeye
 from openff.toolkit.topology import Molecule, Topology
@@ -12,7 +13,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from openmm import openmm
 from openmm import unit as openmm_unit
 from rdkit import Chem
 

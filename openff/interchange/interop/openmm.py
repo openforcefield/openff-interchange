@@ -2,9 +2,10 @@
 from typing import TYPE_CHECKING
 
 import numpy as np
+import openmm
 from openff.units import unit as off_unit
 from openff.units.openmm import from_openmm as from_openmm_unit
-from openmm import openmm, unit
+from openmm import unit
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.exceptions import (

@@ -2,8 +2,8 @@
 import pathlib
 from collections import OrderedDict
 
+import openmm
 from openff.toolkit.typing.engines.smirnoff import ForceField
-from openmm import openmm
 from openmm import unit as omm_unit
 from pkg_resources import resource_filename
 
