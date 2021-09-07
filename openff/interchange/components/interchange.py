@@ -340,6 +340,16 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
+    def _to_inpcrd(self, file_path: Union[Path, str], writer="parmed"):
+        """Export this interchange to an Amber .inpcrd file."""
+        if writer == "parmed":
+            from openff.interchange.interop.external import ParmEdWrapper
+
+            ParmEdWrapper().to_file(self, file_path)
+
+        else:
+            raise UnsupportedExportError
+
     def _to_parmed(self):
         """Export this interchange to a ParmEd Structure."""
         from openff.interchange.interop.parmed import _to_parmed
