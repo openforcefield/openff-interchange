@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from openmm import unit as omm_unit
 from pydantic import ValidationError
-from simtk import unit as omm_unit
 
 from openff.interchange.exceptions import UnitValidationError
 from openff.interchange.models import DefaultModel

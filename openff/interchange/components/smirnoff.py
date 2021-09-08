@@ -34,9 +34,9 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 from openff.units import unit
-from openff.units.simtk import from_simtk
+from openff.units.openmm import from_openmm
+from openmm import unit as omm_unit
 from pydantic import Field
-from simtk import unit as omm_unit
 from typing_extensions import Literal
 
 from openff.interchange.components.potentials import (
@@ -1002,7 +1002,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             virtual_site_potential = Potential(
                 parameters={
-                    "charge_increments": from_simtk(virtual_site_type.charge_increment),
+                    "charge_increments": from_openmm(
+                        virtual_site_type.charge_increment
+                    ),
                 }
             )
 
@@ -1027,7 +1029,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 )
 
                 potential = Potential(
-                    parameters={"charge_increment": from_simtk(charge_increment)}
+                    parameters={"charge_increment": from_openmm(charge_increment)}
                 )
 
                 matches[topology_key] = potential_key
@@ -1043,7 +1045,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         molecule = copy.deepcopy(molecule)
         molecule.assign_partial_charges(method)
 
-        return from_simtk(molecule.partial_charges)
+        return from_openmm(molecule.partial_charges)
 
     @classmethod
     def _library_charge_to_potentials(
@@ -1062,7 +1064,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             potential_key = PotentialKey(
                 id=parameter.smirks, mult=i, associated_handler="LibraryCharges"
             )
-            potential = Potential(parameters={"charge": from_simtk(charge)})
+            potential = Potential(parameters={"charge": from_openmm(charge)})
 
             matches[topology_key] = potential_key
             potentials[potential_key] = potential
@@ -1092,7 +1094,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             charge_increment = getattr(parameter, f"charge_increment{i + 1}")
 
             potential = Potential(
-                parameters={"charge_increment": from_simtk(charge_increment)}
+                parameters={"charge_increment": from_openmm(charge_increment)}
             )
 
             matches[topology_key] = potential_key
@@ -1417,7 +1419,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
             for attr in ["outOfPlaneAngle", "inPlaneAngle"]:
                 if hasattr(parameter_type, attr):
                     potential.parameters.update(
-                        {attr: from_simtk(getattr(parameter_type, attr))}
+                        {attr: from_openmm(getattr(parameter_type, attr))}
                     )
             self.potentials[potential_key] = potential
 

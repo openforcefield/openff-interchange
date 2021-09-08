@@ -6,7 +6,7 @@ from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from simtk import unit as simtk_unit
+from openmm import unit as openmm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
@@ -137,11 +137,11 @@ class TestGROMACSVirtualSites(_BaseTest):
         sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * simtk_unit.angstrom,
+            distance=1.4 * openmm_unit.angstrom,
             type="BondCharge",
             match="once",
-            charge_increment1=0.1 * simtk_unit.elementary_charge,
-            charge_increment2=0.2 * simtk_unit.elementary_charge,
+            charge_increment1=0.1 * openmm_unit.elementary_charge,
+            charge_increment2=0.2 * openmm_unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=sigma_type)
@@ -157,14 +157,14 @@ class TestGROMACSVirtualSites(_BaseTest):
         carbonyl_type = VirtualSiteHandler.VirtualSiteMonovalentLonePairType(
             name="EP",
             smirks="[O:1]=[C:2]-[*:3]",
-            distance=0.3 * simtk_unit.angstrom,
+            distance=0.3 * openmm_unit.angstrom,
             type="MonovalentLonePair",
             match="once",
-            outOfPlaneAngle=0.0 * simtk_unit.degree,
-            inPlaneAngle=120.0 * simtk_unit.degree,
-            charge_increment1=0.05 * simtk_unit.elementary_charge,
-            charge_increment2=0.1 * simtk_unit.elementary_charge,
-            charge_increment3=0.15 * simtk_unit.elementary_charge,
+            outOfPlaneAngle=0.0 * openmm_unit.degree,
+            inPlaneAngle=120.0 * openmm_unit.degree,
+            charge_increment1=0.05 * openmm_unit.elementary_charge,
+            charge_increment2=0.1 * openmm_unit.elementary_charge,
+            charge_increment3=0.15 * openmm_unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=carbonyl_type)

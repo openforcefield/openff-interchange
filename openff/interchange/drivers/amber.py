@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, Union
 
 from openff.utilities.utilities import temporary_cd
-from simtk import unit as omm_unit
+from openmm import unit as omm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport

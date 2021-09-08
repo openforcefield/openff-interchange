@@ -6,11 +6,11 @@ from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
+from openmm import app
+from openmm import unit as omm_unit
 from parmed.amber import readparm
 from pmdtest.utils import get_fn as get_pmd_fn
 from pydantic import ValidationError
-from simtk import unit as omm_unit
-from simtk.openmm import app
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop

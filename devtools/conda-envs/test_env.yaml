@@ -4,43 +4,39 @@ channels:
   - bioconda
   - openeye
 dependencies:
-    # Base depends
+  # Core
   - python
   - pip
   - numpy >=1.21
-  - pandas
   - pydantic
-  - pint
-  - openmm ==7.5
+  - openmm
+  - mdtraj
+  # OpenFF stack
   - openff-toolkit >=0.10.0
   - openff-utilities
   - openff-units
+  # Optional features
   - jax
-  - mdtraj
-  - ele
-
-    # Python <3.8
-  - typing-extensions
-
-    # Testing
-  - pytest
-  - pytest-cov
-  - pytest-timeout
-  - codecov
-  - nbval
-  - conda
   - unyt
-  - gromacs >=2021
-  - lammps
   - mbuild
-  - foyer>=0.8.1
-  - panedr
+  - foyer >=0.8.1
+  # Testing
   - openff-evaluator
   - openff-recharge
   - openeye-toolkits
-
+  - pytest
+  - pytest-timeout
+  - codecov
+  - pytest-cov
+  - nbval
+  - conda
+  # Drivers
+  - gromacs >=2021
+  - lammps
+  - panedr
   # Typing
   - mypy
+  - typing-extensions
   - types-setuptools
   - types-pkg_resources
   - pandas-stubs

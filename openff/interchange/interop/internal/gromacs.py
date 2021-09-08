@@ -3,7 +3,6 @@ import math
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Dict, Set, Tuple, Union
 
-import ele
 import numpy as np
 from openff.units import unit
 
@@ -329,7 +328,6 @@ def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict
 
     for atom_idx, atom_type in typemap.items():
         atom = openff_sys.topology.atom(atom_idx)
-        element = ele.element_from_atomic_number(atom.atomic_number)
         parameters = _get_buck_parameters(openff_sys, atom_idx)
         a = parameters["A"].to(unit.Unit("kilojoule / mol")).magnitude
         b = parameters["B"].to(1 / unit.nanometer).magnitude
@@ -340,7 +338,7 @@ def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict
                 atom_type,  # atom type
                 # "XX",  # atom "bonding type", i.e. bond class
                 atom.atomic_number,
-                element.mass,
+                atom.atom.mass._value,
                 0.0,  # charge, overriden later in [ atoms ]
                 "A",  # ptype
                 a,

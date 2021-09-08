@@ -1,7 +1,7 @@
 import numpy as np
 from openff.toolkit.topology import Molecule, Topology
 from openff.utilities.testing import skip_if_missing
-from simtk import unit as simtk_unit
+from openmm import unit as openmm_unit
 
 from openff.interchange.components.mbuild import offmol_to_compound, offtop_to_compound
 
@@ -19,7 +19,7 @@ class TestMBuildConversions:
         assert comp.n_bonds == offmol.n_bonds
 
         np.testing.assert_equal(
-            offmol.conformers[0].value_in_unit(simtk_unit.nanometer),
+            offmol.conformers[0].value_in_unit(openmm_unit.nanometer),
             comp.xyz,
         )
 
@@ -36,31 +36,33 @@ class TestMBuildConversions:
         expected_conf = offmol.conformers[0]
 
         np.testing.assert_equal(
-            expected_conf.value_in_unit(simtk_unit.nanometer),
+            expected_conf.value_in_unit(openmm_unit.nanometer),
             comp.xyz,
         )
 
     def test_mbuild_conversion_first_conformer_used(self):
         """Test that only the first conformer in an OFFMol is used"""
         offmol = Molecule.from_smiles("C1=CC=C(C=C1)C2=CC=C(C=C2)C3=CC=CC=C3")
-        offmol.generate_conformers(n_conformers=3, rms_cutoff=0.0 * simtk_unit.angstrom)
+        offmol.generate_conformers(
+            n_conformers=3, rms_cutoff=0.0 * openmm_unit.angstrom
+        )
 
         comp = offmol_to_compound(offmol)
 
         np.testing.assert_equal(
-            offmol.conformers[0].value_in_unit(simtk_unit.nanometer),
+            offmol.conformers[0].value_in_unit(openmm_unit.nanometer),
             comp.xyz,
         )
 
         with np.testing.assert_raises(AssertionError):
             np.testing.assert_equal(
-                offmol.conformers[1].value_in_unit(simtk_unit.nanometer),
+                offmol.conformers[1].value_in_unit(openmm_unit.nanometer),
                 comp.xyz,
             )
 
         with np.testing.assert_raises(AssertionError):
             np.testing.assert_equal(
-                offmol.conformers[2].value_in_unit(simtk_unit.nanometer),
+                offmol.conformers[2].value_in_unit(openmm_unit.nanometer),
                 comp.xyz,
             )
 

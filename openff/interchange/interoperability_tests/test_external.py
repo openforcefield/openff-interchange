@@ -1,12 +1,12 @@
 import mdtraj as md
 import numpy as np
+import openmm
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
-from simtk import openmm
-from simtk.unit import nanometer as nm
+from openmm.unit import nanometer as nm
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
