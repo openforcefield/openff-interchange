@@ -119,7 +119,7 @@ def from_gro(file_path: Union[Path, str]) -> "Interchange":
         path = file_path
 
     # Infer coordinate precision
-    def _infer_coord_precision(file_path: Path) -> int:
+    def _infer_coord_precision(file_path: Union[Path, str]) -> int:
         """
         Infer decimal precision of coordinates by parsing periods in atoms lines.
         """
