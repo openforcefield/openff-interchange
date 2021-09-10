@@ -111,6 +111,73 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
         gro.write("\n")
 
 
+def from_gro(file_path: Union[Path, str]) -> "Interchange":
+    """Read coordinates and box information from a GROMACS GRO (.gro) file."""
+    if isinstance(file_path, str):
+        path = Path(file_path)
+    if isinstance(file_path, Path):
+        path = file_path
+
+    # Infer coordinate precision
+    def _infer_coord_precision(file_path: Path) -> int:
+        """
+        Infer decimal precision of coordinates by parsing periods in atoms lines.
+        """
+        with open(file_path) as file_in:
+            file_in.readline()
+            file_in.readline()
+            atom_line = file_in.readline()
+            period_indices = [i for i, x in enumerate(atom_line) if x == "."]
+            spacing_between_periods = period_indices[-1] - period_indices[-2]
+            precision = spacing_between_periods - 5
+            return precision
+
+    precision = _infer_coord_precision(file_path)
+    coordinate_width = precision + 5
+    # Column numbers in file separating x, y, z coords of each atom.
+    # Default (3 decimals of precision -> 8 columns) are 20, 28, 36, 44
+    coordinate_columns = [
+        20,
+        20 + coordinate_width,
+        20 + 2 * coordinate_width,
+        20 + 3 * coordinate_width,
+    ]
+
+    with open(path) as gro_file:
+        # Throe away comment / name line
+        gro_file.readline()
+        n_atoms = int(gro_file.readline())
+
+        unitless_coordinates = np.zeros((n_atoms, 3))
+        for coordinate_index in range(n_atoms):
+            line = gro_file.readline()
+            _ = int(line[:5])  # residue_index
+            _ = line[5:10]  # residue_name
+            _ = line[10:15]  # atom_name
+            _ = int(line[15:20])  # atom_index
+            x = float(line[coordinate_columns[0] : coordinate_columns[1]])
+            y = float(line[coordinate_columns[1] : coordinate_columns[2]])
+            z = float(line[coordinate_columns[2] : coordinate_columns[3]])
+            unitless_coordinates[coordinate_index] = np.array([x, y, z])
+
+        coordinates = unitless_coordinates * unit.nanometer
+
+        box_line = gro_file.readline()
+
+        parsed_box = [float(val) for val in box_line.split()]
+
+        if len(parsed_box) == 3:
+            box = parsed_box * np.eye(3) * unit.nanometer
+
+        from openff.interchange.components.interchange import Interchange
+
+        interchange = Interchange()
+        interchange.box = box
+        interchange.positions = coordinates
+
+        return interchange
+
+
 def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
     """
     Write a GROMACS topology (.top) file.
