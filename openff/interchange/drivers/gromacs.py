@@ -1,3 +1,4 @@
+"""Functions for running energy evluations with GROMACS."""
 import subprocess
 import tempfile
 from pathlib import Path
@@ -256,7 +257,7 @@ def _get_gmx_energy_coul(gmx_energies: Dict):
 def _get_gmx_energy_torsion(gmx_energies: Dict):
     """Canonicalize torsion energies from a set of GROMACS energies."""
     gmx_torsion = 0.0 * kj_mol
-    for key in ["Torsion", "Ryckaert-Bell."]:
+    for key in ["Torsion", "Ryckaert-Bell.", "Proper Dih."]:
         try:
             gmx_torsion += gmx_energies[key]
         except KeyError:

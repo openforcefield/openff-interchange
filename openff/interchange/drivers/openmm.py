@@ -1,7 +1,9 @@
+"""Functions for running energy evluations with OpenMM."""
 from typing import Dict
 
 import numpy as np
-from simtk import openmm, unit
+import openmm
+from openmm import unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
@@ -38,6 +40,9 @@ def get_openmm_energies(
     electrostatics : bool, default=True
         A boolean indicating whether or not electrostatics should be included in the energy
         calculation.
+    combine_nonbonded_forces : bool, default=False
+        Whether or not to combine all non-bonded interactions (vdW, short- and long-range
+        ectrostaelectrostatics, and 1-4 interactions) into a single openmm.NonbondedForce.
 
     Returns
     -------
@@ -45,6 +50,21 @@ def get_openmm_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
+    positions = off_sys.positions
+
+    if "VirtualSites" in off_sys.handlers:
+        if len(off_sys["VirtualSites"].slot_map) > 0:
+            if not combine_nonbonded_forces:
+                raise NotImplementedError(
+                    "Cannot yet split out NonbondedForce components while virtual sites are present."
+                )
+
+            n_virtual_sites = len(off_sys["VirtualSites"].slot_map)
+
+            # TODO: Actually compute virtual site positions based on initial conformers
+            virtual_site_positions = np.zeros((n_virtual_sites, 3))
+            virtual_site_positions *= off_sys.positions.units
+            positions = np.vstack([positions, virtual_site_positions])
 
     omm_sys: openmm.System = off_sys.to_openmm(
         combine_nonbonded_forces=combine_nonbonded_forces
@@ -53,7 +73,7 @@ def get_openmm_energies(
     return _get_openmm_energies(
         omm_sys=omm_sys,
         box_vectors=off_sys.box,
-        positions=off_sys.positions,
+        positions=positions,
         round_positions=round_positions,
         hard_cutoff=hard_cutoff,
         electrostatics=electrostatics,
