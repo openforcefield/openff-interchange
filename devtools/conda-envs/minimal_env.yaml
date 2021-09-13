@@ -15,4 +15,5 @@ dependencies:
   - openff-units
   # Testing
   - pytest
+  - pytest-xdist
   - conda

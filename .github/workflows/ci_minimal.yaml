@@ -56,4 +56,4 @@ jobs:
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v -m "not slow" openff/interchange/unit_tests/
+        python -m pytest -v -nauto -m "not slow" openff/interchange/unit_tests/

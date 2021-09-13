@@ -29,6 +29,7 @@ dependencies:
   - pytest-timeout
   - codecov
   - pytest-cov
+  - pytest-xdist
   - nbval
   - conda
   # Drivers
