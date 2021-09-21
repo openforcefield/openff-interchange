@@ -17,6 +17,7 @@ releasehistory.rst
 ---
 caption: User Guides
 ---
+using/migrating.md
 using/gromacs.md
 using/openmm.md
 using/lammps.md
