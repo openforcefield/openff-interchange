@@ -307,7 +307,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             else:
                 raise NotImplementedError(
                     f"Mixing rule `{vdw_handler.mixing_rule}` not compatible with current OpenMM export."
-                    "The only supported values is `lorentez-berthelot`."
+                    "The only supported values is `lorentz-berthelot`."
                 )
 
         if vdw_handler.mixing_rule == "lorentz-berthelot":
