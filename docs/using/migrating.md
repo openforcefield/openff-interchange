@@ -1,6 +1,7 @@
 # Migrating
 
-##
+## OpenFF Toolkit
+
 Where previously the OpenFF Toolkit was used to generate an OpenMM system:
 
 ```python
