@@ -164,7 +164,7 @@ def test_liquid_argon():
     omm_energies.compare(
         gmx_energies,
         custom_tolerances={
-            "vdW": 0.008 * openmm_unit.kilojoule_per_mole,
+            "vdW": 0.009 * openmm_unit.kilojoule_per_mole,
         },
     )
 
@@ -282,6 +282,7 @@ def test_packmol_boxes(toolkit_file_path):
             "Angle": 1e-2 * openmm_unit.kilojoule_per_mole,
             "Torsion": 1e-2 * openmm_unit.kilojoule_per_mole,
             "Electrostatics": 3200 * openmm_unit.kilojoule_per_mole,
+            "vdW": 0.5 * openmm_unit.kilojoule_per_mole,
         },
     )
 
@@ -306,6 +307,7 @@ def test_water_dimer():
         openff_sys,
         hard_cutoff=True,
         electrostatics=False,
+        combine_nonbonded_forces=True,
     )
 
     toolkit_energies = _get_openmm_energies(
