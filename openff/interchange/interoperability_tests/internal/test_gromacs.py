@@ -166,7 +166,7 @@ class TestGROMACS(_BaseTest):
         omm_energies = get_openmm_energies(out)
         by_hand = A * exp(-B * r) - C * r ** -6
 
-        resid = omm_energies.energies["Nonbonded"] - by_hand
+        resid = omm_energies.energies["vdW"] - by_hand
         assert resid < 1e-5 * unit.kilojoule / unit.mol
 
         # TODO: Add back comparison to GROMACS energies once GROMACS 2020+
