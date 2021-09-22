@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from openff.toolkit.topology import Molecule, Topology
 from openff.utilities.utilities import has_package, requires_package
-from simtk import unit
+from openmm import unit
 
 if has_package("mbuild") or TYPE_CHECKING:
     import mbuild as mb

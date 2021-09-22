@@ -1,4 +1,4 @@
-## Energy Tests
+# Energy Tests
 
 This project includes infrastructure for comparing representations of parametrized systems via computing single-point energies using molecular simulation engines.
 

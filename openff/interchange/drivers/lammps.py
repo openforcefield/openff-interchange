@@ -4,7 +4,7 @@ from typing import List
 
 import numpy as np
 from openff.units import unit
-from simtk import unit as omm_unit
+from openmm import unit as omm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport

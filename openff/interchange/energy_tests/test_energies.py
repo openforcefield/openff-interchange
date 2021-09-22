@@ -2,14 +2,14 @@ from copy import deepcopy
 
 import mdtraj as md
 import numpy as np
+import openmm
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from simtk import openmm
-from simtk import unit as simtk_unit
-from simtk.openmm import app
+from openmm import app
+from openmm import unit as openmm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
@@ -75,7 +75,7 @@ def test_energies_single_mol(constrained, mol_smi):
     mol.generate_conformers(n_conformers=1)
     mol.name = "FOO"
     top = mol.to_topology()
-    top.box_vectors = None  # [10, 10, 10] * simtk_unit.nanometer
+    top.box_vectors = None  # [10, 10, 10] * openmm_unit.nanometer
 
     if constrained:
         parsley = ForceField("openff-1.0.0.offxml")
@@ -112,11 +112,11 @@ def test_energies_single_mol(constrained, mol_smi):
     gmx_energies = get_gromacs_energies(off_sys, mdp=mdp)
 
     custom_tolerances = {
-        "Bond": 2e-5 * simtk_unit.kilojoule_per_mole,
-        "Electrostatics": 2 * simtk_unit.kilojoule_per_mole,
-        "vdW": 2 * simtk_unit.kilojoule_per_mole,
-        "Nonbonded": 2 * simtk_unit.kilojoule_per_mole,
-        "Angle": 1e-4 * simtk_unit.kilojoule_per_mole,
+        "Bond": 2e-5 * openmm_unit.kilojoule_per_mole,
+        "Electrostatics": 2 * openmm_unit.kilojoule_per_mole,
+        "vdW": 2 * openmm_unit.kilojoule_per_mole,
+        "Nonbonded": 2 * openmm_unit.kilojoule_per_mole,
+        "Angle": 1e-4 * openmm_unit.kilojoule_per_mole,
     }
 
     gmx_energies.compare(
@@ -133,8 +133,8 @@ def test_energies_single_mol(constrained, mol_smi):
         )
         lmp_energies = get_lammps_energies(off_sys)
         custom_tolerances = {
-            "vdW": 5.0 * simtk_unit.kilojoule_per_mole,
-            "Electrostatics": 5.0 * simtk_unit.kilojoule_per_mole,
+            "vdW": 5.0 * openmm_unit.kilojoule_per_mole,
+            "Electrostatics": 5.0 * openmm_unit.kilojoule_per_mole,
         }
         lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
 
@@ -164,7 +164,7 @@ def test_liquid_argon():
     omm_energies.compare(
         gmx_energies,
         custom_tolerances={
-            "vdW": 0.008 * simtk_unit.kilojoule_per_mole,
+            "vdW": 0.008 * openmm_unit.kilojoule_per_mole,
         },
     )
 
@@ -179,7 +179,7 @@ def test_liquid_argon():
     omm_energies.compare(
         lmp_energies,
         custom_tolerances={
-            "vdW": 10.5 * simtk_unit.kilojoule_per_mole,
+            "vdW": 10.5 * openmm_unit.kilojoule_per_mole,
         },
     )
 
@@ -228,7 +228,7 @@ def test_packmol_boxes(toolkit_file_path):
     off_sys = Interchange.from_smirnoff(parsley, off_topology)
 
     off_sys.box = np.asarray(
-        pdbfile.topology.getPeriodicBoxVectors().value_in_unit(simtk_unit.nanometer)
+        pdbfile.topology.getPeriodicBoxVectors().value_in_unit(openmm_unit.nanometer)
     )
     off_sys.positions = pdbfile.positions
 
@@ -249,12 +249,12 @@ def test_packmol_boxes(toolkit_file_path):
         omm_energies.compare(
             reference,
             # custom_tolerances={
-            #    "Electrostatics": 2e-4 * simtk_unit.kilojoule_per_mole,
+            #    "Electrostatics": 2e-4 * openmm_unit.kilojoule_per_mole,
             # },
         )
     except EnergyError as err:
         if "Torsion" in err.args[0]:
-            from openff.interchange.tests.utils import (
+            from openff.interchange.tests.utils import (  # type: ignore
                 _compare_torsion_forces,
                 _get_force,
             )
@@ -279,9 +279,9 @@ def test_packmol_boxes(toolkit_file_path):
     omm_energies_rounded.compare(
         other=gmx_energies,
         custom_tolerances={
-            "Angle": 1e-2 * simtk_unit.kilojoule_per_mole,
-            "Torsion": 1e-2 * simtk_unit.kilojoule_per_mole,
-            "Electrostatics": 3200 * simtk_unit.kilojoule_per_mole,
+            "Angle": 1e-2 * openmm_unit.kilojoule_per_mole,
+            "Torsion": 1e-2 * openmm_unit.kilojoule_per_mole,
+            "Electrostatics": 3200 * openmm_unit.kilojoule_per_mole,
         },
     )
 
@@ -523,7 +523,7 @@ def test_interpolated_parameters(smi):
 
         toolkit_energy = _get_openmm_energies(
             toolkit_system,
-            box_vectors=[[4, 0, 0], [0, 4, 0], [0, 0, 4]] * simtk_unit.nanometer,
+            box_vectors=[[4, 0, 0], [0, 4, 0], [0, 0, 4]] * openmm_unit.nanometer,
             positions=mol.conformers[0],
         ).energies[key]
 

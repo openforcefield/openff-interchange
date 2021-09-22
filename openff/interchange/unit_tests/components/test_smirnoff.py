@@ -1,4 +1,5 @@
 import numpy as np
+import openmm
 import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol, create_reversed_ethanol
 from openff.toolkit.tests.utils import get_data_file_path, requires_openeye
@@ -19,9 +20,8 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from openmm import unit as openmm_unit
 from pydantic import ValidationError
-from simtk import openmm
-from simtk import unit as simtk_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
@@ -94,8 +94,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         bond_handler = BondHandler(version=0.3)
         bond_parameter = BondHandler.BondType(
             smirks="[*:1]~[*:2]",
-            k=1.5 * simtk_unit.kilocalorie_per_mole / simtk_unit.angstrom ** 2,
-            length=1.5 * simtk_unit.angstrom,
+            k=1.5 * openmm_unit.kilocalorie_per_mole / openmm_unit.angstrom ** 2,
+            length=1.5 * openmm_unit.angstrom,
             id="b1000",
         )
         bond_handler.add_parameter(bond_parameter.to_dict())
@@ -120,8 +120,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         angle_handler = AngleHandler(version=0.3)
         angle_parameter = AngleHandler.AngleType(
             smirks="[*:1]~[*:2]~[*:3]",
-            k=2.5 * simtk_unit.kilocalorie_per_mole / simtk_unit.radian ** 2,
-            angle=100 * simtk_unit.degree,
+            k=2.5 * openmm_unit.kilocalorie_per_mole / openmm_unit.radian ** 2,
+            angle=100 * openmm_unit.degree,
             id="b1000",
         )
         angle_handler.add_parameter(angle_parameter.to_dict())
@@ -148,8 +148,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
             parameter=ImproperTorsionHandler.ImproperTorsionType(
                 smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]",
                 periodicity1=2,
-                phase1=180.0 * simtk_unit.degree,
-                k1=1.1 * simtk_unit.kilocalorie_per_mole,
+                phase1=180.0 * openmm_unit.degree,
+                k1=1.1 * openmm_unit.kilocalorie_per_mole,
             )
         )
 
@@ -197,8 +197,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         library_charge_handler.add_parameter(
             {
                 "smirks": "[#6X4:1]-[#1:2]",
-                "charge1": -0.1 * simtk_unit.elementary_charge,
-                "charge2": 0.025 * simtk_unit.elementary_charge,
+                "charge1": -0.1 * openmm_unit.elementary_charge,
+                "charge2": 0.025 * openmm_unit.elementary_charge,
             }
         )
 
@@ -230,8 +230,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         charge_increment_handler.add_parameter(
             {
                 "smirks": "[#17:1]-[#1:2]",
-                "charge_increment1": 0.1 * simtk_unit.elementary_charge,
-                "charge_increment2": -0.1 * simtk_unit.elementary_charge,
+                "charge_increment1": 0.1 * openmm_unit.elementary_charge,
+                "charge_increment2": -0.1 * openmm_unit.elementary_charge,
             }
         )
 
@@ -256,7 +256,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
     def test_charges_with_virtual_site(self, parsley):
         mol = Molecule.from_smiles("CCl")
         mol.generate_conformers(n_conformers=1)
-        mol.partial_charges = simtk_unit.elementary_charge * np.array(
+        mol.partial_charges = openmm_unit.elementary_charge * np.array(
             [0.5, -0.8, 0.1, 0.1, 0.1]
         )
 
@@ -276,11 +276,11 @@ class TestSMIRNOFFHandlers(_BaseTest):
         sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * simtk_unit.angstrom,
+            distance=1.4 * openmm_unit.angstrom,
             type="BondCharge",
             match="once",
-            charge_increment1=0.2 * simtk_unit.elementary_charge,
-            charge_increment2=0.1 * simtk_unit.elementary_charge,
+            charge_increment1=0.2 * openmm_unit.elementary_charge,
+            charge_increment2=0.1 * openmm_unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=sigma_type)
@@ -311,6 +311,24 @@ class TestSMIRNOFFHandlers(_BaseTest):
         np.testing.assert_allclose(
             charges[:5], [v.m for v in out["Electrostatics"].charges.values()]
         )
+
+
+class TestInterchangeFromSMIRNOFF(_BaseTest):
+    """General tests for Interchange.from_smirnoff. Some are ported from the toolkit."""
+
+    def test_modified_nonbonded_cutoffs(self, parsley):
+        from openff.toolkit.tests.create_molecules import create_ethanol
+
+        topology = Topology.from_molecules(create_ethanol())
+        modified_parsley = ForceField(parsley.to_string())
+
+        modified_parsley["vdW"].cutoff = 0.777 * openmm_unit.angstrom
+        modified_parsley["Electrostatics"].cutoff = 0.777 * openmm_unit.angstrom
+
+        out = Interchange.from_smirnoff(force_field=modified_parsley, topology=topology)
+
+        assert out["vdW"].cutoff == 0.777 * unit.angstrom
+        assert out["Electrostatics"].cutoff == 0.777 * unit.angstrom
 
 
 class TestUnassignedParameters(_BaseTest):
@@ -382,7 +400,7 @@ def test_library_charges_from_molecule():
     with pytest.raises(ValueError, match="missing partial"):
         library_charge_from_molecule(mol)
 
-    mol.partial_charges = np.linspace(-0.3, 0.3, 4) * simtk_unit.elementary_charge
+    mol.partial_charges = np.linspace(-0.3, 0.3, 4) * openmm_unit.elementary_charge
 
     library_charges = library_charge_from_molecule(mol)
 
@@ -544,6 +562,21 @@ class TestMatrixRepresentations(_BaseTest):
             assert np.allclose(
                 np.sum(param_matrix, axis=1), np.ones(param_matrix.shape[0])
             )
+
+    def test_set_force_field_parameters(self, parsley, ethanol_top):
+        import jax
+
+        bond_handler = SMIRNOFFBondHandler._from_toolkit(
+            parameter_handler=parsley["Bonds"],
+            topology=ethanol_top,
+        )
+
+        original = bond_handler.get_force_field_parameters()
+        modified = original * jax.numpy.array([1.1, 0.5])
+
+        bond_handler.set_force_field_parameters(modified)
+
+        assert (bond_handler.get_force_field_parameters() == modified).all()
 
 
 class TestSMIRNOFFVirtualSites:
@@ -749,6 +782,8 @@ def _get_n_virtual_sites_toolkit(
         if type(force) == openmm.NonbondedForce:
             n_openmm_particles = force.getNumParticles()
             return n_openmm_particles - n_atoms
+
+    return 0
 
 
 class TestParameterInterpolation(_BaseTest):

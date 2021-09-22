@@ -115,6 +115,12 @@ class UnsupportedExportError(BaseException):
         return msg
 
 
+class ConversionError(BaseException):
+    """
+    Base exception for error handling during object conversion.
+    """
+
+
 class MissingBoxError(BaseException):
     """
     Exception for when box vectors are needed but missing.
@@ -124,6 +130,12 @@ class MissingBoxError(BaseException):
 class MissingPositionsError(BaseException):
     """
     Exception for when positions are needed but missing.
+    """
+
+
+class MissingParameterHandlerError(BaseException):
+    """
+    Exception for when a parameter handler is requested but not found.
     """
 
 
@@ -171,7 +183,13 @@ class InternalInconsistencyError(BaseException):
     """
 
 
-class SanderError(BaseException):
+class AmberError(BaseException):
+    """
+    Base exception for handling Amber-related errors.
+    """
+
+
+class SanderError(AmberError):
     """
     Exception for when a sander subprocess fails.
     """

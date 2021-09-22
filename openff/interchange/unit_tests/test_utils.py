@@ -1,21 +1,21 @@
 import numpy as np
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
-from openff.units.simtk import from_simtk
-from simtk import unit as simtk_unit
+from openff.units.openmm import from_openmm
+from openmm import unit as openmm_unit
 
 from openff.interchange.testing import _BaseTest
 from openff.interchange.utils import (
     _unwrap_list_of_pint_quantities,
     compare_forcefields,
     get_partial_charges_from_openmm_system,
-    pint_to_simtk,
+    pint_to_openmm,
 )
 
-simtk_quantitites = [
-    4.0 * simtk_unit.nanometer,
-    5.0 * simtk_unit.angstrom,
-    1.0 * simtk_unit.elementary_charge,
+openmm_quantitites = [
+    4.0 * openmm_unit.nanometer,
+    5.0 * openmm_unit.angstrom,
+    1.0 * openmm_unit.elementary_charge,
 ]
 
 pint_quantities = [
@@ -25,19 +25,19 @@ pint_quantities = [
 ]
 
 
-def test_simtk_list_of_quantities_to_pint():
+def test_openmm_list_of_quantities_to_pint():
     """Test conversion from Quantity lists, lists of Quantity"""
-    list_of_quantities = [val * simtk_unit.meter for val in range(10)]
-    quantity_list = simtk_unit.meter * [val for val in range(10)]
+    list_of_quantities = [val * openmm_unit.meter for val in range(10)]
+    quantity_list = openmm_unit.meter * [val for val in range(10)]
 
     assert list_of_quantities != quantity_list
-    assert all(from_simtk(list_of_quantities) == from_simtk(quantity_list))
+    assert all(from_openmm(list_of_quantities) == from_openmm(quantity_list))
 
 
-def test_pint_to_simtk():
+def test_pint_to_openmm():
     """Test conversion from pint Quantity to SimTK Quantity."""
     q = 5.0 / unit.nanometer
-    assert pint_to_simtk(q) == 0.5 / simtk_unit.angstrom
+    assert pint_to_openmm(q) == 0.5 / openmm_unit.angstrom
 
 
 class TestUtils(_BaseTest):

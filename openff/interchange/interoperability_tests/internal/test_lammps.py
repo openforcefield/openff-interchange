@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
-from simtk import unit as omm_unit
+from openmm import unit as omm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop

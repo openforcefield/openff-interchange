@@ -63,8 +63,6 @@ class FoyerVDWHandler(PotentialHandler):
     type: str = "atoms"
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     mixing_rule: str = "geometric"
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.5  # TODO: Replace with Foyer API point?
     scale_15: float = 1.0
@@ -192,8 +190,6 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
 
     type: str = "harmonic_bonds"
     expression: str = "1/2 * k * (r - length) ** 2"
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
     connection_attribute = "topology_bonds"
 
     def get_params_with_units(self, params):
@@ -209,8 +205,6 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
 
     type: str = "harmonic_angles"
     expression: str = "0.5 * k * (theta-angle)**2"
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
     connection_attribute: str = "angles"
 
     def get_params_with_units(self, params):
@@ -233,8 +227,6 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
         "C2 * cos(phi)**2 + C3 * cos(phi)**3 + "
         "C4 * cos(phi)**4 + C5 * cos(phi)**5"
     )
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()
     connection_attribute: str = "propers"
     raise_on_missing_params: bool = False
 
@@ -288,5 +280,3 @@ class _RBTorsionHandler(PotentialHandler):
         "C4 * (cos(phi - 180)) ** 4 + C5 * (cos(phi - 180)) ** 5 "
     )
     # independent_variables: Set[str] = {"C0", "C1", "C2", "C3", "C4", "C5"}
-    slot_map: Dict[TopologyKey, PotentialKey] = dict()
-    potentials: Dict[PotentialKey, Potential] = dict()

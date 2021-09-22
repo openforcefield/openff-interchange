@@ -3,7 +3,6 @@ import math
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Dict, Set, Tuple, Union
 
-import ele
 import numpy as np
 from openff.units import unit
 
@@ -110,6 +109,73 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
                         gro.write(f"{box[i, j]:11.7f}")
 
         gro.write("\n")
+
+
+def from_gro(file_path: Union[Path, str]) -> "Interchange":
+    """Read coordinates and box information from a GROMACS GRO (.gro) file."""
+    if isinstance(file_path, str):
+        path = Path(file_path)
+    if isinstance(file_path, Path):
+        path = file_path
+
+    # Infer coordinate precision
+    def _infer_coord_precision(file_path: Union[Path, str]) -> int:
+        """
+        Infer decimal precision of coordinates by parsing periods in atoms lines.
+        """
+        with open(file_path) as file_in:
+            file_in.readline()
+            file_in.readline()
+            atom_line = file_in.readline()
+            period_indices = [i for i, x in enumerate(atom_line) if x == "."]
+            spacing_between_periods = period_indices[-1] - period_indices[-2]
+            precision = spacing_between_periods - 5
+            return precision
+
+    precision = _infer_coord_precision(file_path)
+    coordinate_width = precision + 5
+    # Column numbers in file separating x, y, z coords of each atom.
+    # Default (3 decimals of precision -> 8 columns) are 20, 28, 36, 44
+    coordinate_columns = [
+        20,
+        20 + coordinate_width,
+        20 + 2 * coordinate_width,
+        20 + 3 * coordinate_width,
+    ]
+
+    with open(path) as gro_file:
+        # Throe away comment / name line
+        gro_file.readline()
+        n_atoms = int(gro_file.readline())
+
+        unitless_coordinates = np.zeros((n_atoms, 3))
+        for coordinate_index in range(n_atoms):
+            line = gro_file.readline()
+            _ = int(line[:5])  # residue_index
+            _ = line[5:10]  # residue_name
+            _ = line[10:15]  # atom_name
+            _ = int(line[15:20])  # atom_index
+            x = float(line[coordinate_columns[0] : coordinate_columns[1]])
+            y = float(line[coordinate_columns[1] : coordinate_columns[2]])
+            z = float(line[coordinate_columns[2] : coordinate_columns[3]])
+            unitless_coordinates[coordinate_index] = np.array([x, y, z])
+
+        coordinates = unitless_coordinates * unit.nanometer
+
+        box_line = gro_file.readline()
+
+        parsed_box = [float(val) for val in box_line.split()]
+
+        if len(parsed_box) == 3:
+            box = parsed_box * np.eye(3) * unit.nanometer
+
+        from openff.interchange.components.interchange import Interchange
+
+        interchange = Interchange()
+        interchange.box = box
+        interchange.positions = coordinates
+
+        return interchange
 
 
 def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
@@ -221,11 +287,11 @@ def _build_typemap(openff_sys: "Interchange") -> Dict:
     return typemap
 
 
-def _build_virtual_site_map(interchange: "Interchange") -> Dict:
+def _build_virtual_site_map(interchange: "Interchange") -> Dict[VirtualSiteKey, int]:
     """
     Construct a mapping between the VirtualSiteKey objects found in a SMIRNOFFVirtualSiteHandler and particle indices.
     """
-    virtual_site_topology_index_map = dict()
+    virtual_site_topology_index_map: Dict[VirtualSiteKey, int] = dict()
 
     if "VirtualSites" not in interchange.handlers:
         return virtual_site_topology_index_map
@@ -280,10 +346,11 @@ def _write_atomtypes_lj(
         parameters = _get_lj_parameters(openff_sys, atom_idx)
         sigma = parameters["sigma"].to(unit.nanometer).magnitude
         epsilon = parameters["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude
+        # top.write('{0:<11s} {1:5s} {2:6d} {3:18.8f} {4:18.8f} {5:5s}'.format(
         top_file.write(
-            "{:<11s} {:6d} {:.16g} {:.16g} {:5s} {:.16g} {:.16g}\n".format(
+            "{:<11s} {:6s} {:6d} {:.16g} {:.16g} {:5s} {:.16g} {:.16g}\n".format(
                 atom_type,  # atom type
-                # "XX",  # atom "bonding type", i.e. bond class
+                "XX",  # atom "bonding type", i.e. bond class
                 atomic_number,
                 mass,
                 0.0,  # charge, overriden later in [ atoms ]
@@ -327,7 +394,6 @@ def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict
 
     for atom_idx, atom_type in typemap.items():
         atom = openff_sys.topology.atom(atom_idx)
-        element = ele.element_from_atomic_number(atom.atomic_number)
         parameters = _get_buck_parameters(openff_sys, atom_idx)
         a = parameters["A"].to(unit.Unit("kilojoule / mol")).magnitude
         b = parameters["B"].to(1 / unit.nanometer).magnitude
@@ -338,7 +404,7 @@ def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict
                 atom_type,  # atom type
                 # "XX",  # atom "bonding type", i.e. bond class
                 atom.atomic_number,
-                element.mass,
+                atom.atom.mass._value,
                 0.0,  # charge, overriden later in [ atoms ]
                 "A",  # ptype
                 a,
@@ -525,7 +591,7 @@ def _write_virtual_sites(
                 )
                 started_virtual_sites3 = True
 
-            reference_atoms = sorted(virtual_site_key.atom_indices)
+            reference_atoms = tuple(sorted(virtual_site_key.atom_indices))
             if len(reference_atoms) != 3:
                 raise NotImplementedError
 
@@ -580,7 +646,7 @@ def _write_virtual_sites(
 
             # TODO: Cannot sort here. Atom ordering implies "chirality" of virtual sites,
             #  i.e. which side of a 5-site water each lone pair particle should go.
-            reference_atoms = sorted(virtual_site_key.atom_indices)
+            reference_atoms = tuple(sorted(virtual_site_key.atom_indices))
             if len(reference_atoms) != 3:
                 raise NotImplementedError
 

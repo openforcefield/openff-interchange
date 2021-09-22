@@ -2,13 +2,13 @@
 import pathlib
 from collections import OrderedDict
 
+import openmm
 from openff.toolkit.typing.engines.smirnoff import ForceField
+from openmm import unit as omm_unit
 from pkg_resources import resource_filename
-from simtk import openmm
-from simtk import unit as omm_unit
 
 
-def pint_to_simtk(quantity):
+def pint_to_openmm(quantity):
     """Convert a pint Quantity to an OpenMM unit."""
     # TODO: Move these hacks into openff-units
     if str(quantity.units) in ["kilojoule / mole", "kJ / mol"]:
@@ -76,7 +76,7 @@ def get_partial_charges_from_openmm_system(omm_system):
     n_particles = omm_system.getNumParticles()
     force = get_nonbonded_force_from_openmm_system(omm_system)
     # TODO: don't assume the partial charge will always be parameter 0
-    # partial_charges = [simtk_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)]
+    # partial_charges = [openmm_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)]
     partial_charges = [
         force.getParticleParameters(idx)[0] / omm_unit.elementary_charge
         for idx in range(n_particles)

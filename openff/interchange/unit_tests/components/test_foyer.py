@@ -9,7 +9,7 @@ from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
-from simtk import unit as omm_unit
+from openmm import unit as omm_unit
 
 from openff.interchange.components.foyer import _RBTorsionHandler
 from openff.interchange.components.interchange import Interchange

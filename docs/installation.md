@@ -20,7 +20,6 @@ Some libraries or tools are only used for development, testing, or optional feat
   - nbval
   - mypy
   - unyt
-  - intermol
   - gromacs >=2020
   - panedr
   - lammps

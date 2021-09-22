@@ -1,3 +1,3 @@
-## Use with AMBER
+# Use with AMBER
 
 Under construction!

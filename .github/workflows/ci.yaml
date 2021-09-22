@@ -44,7 +44,7 @@ jobs:
     - name: Install topology refactor branch
       shell: bash -l {0}
       run: |
-        pip install git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
+        pip install git+https://github.com/openforcefield/openff-toolkit.git@hierarchy_schemes_elements
 
     - name: Install package
       shell: bash -l {0}
@@ -57,12 +57,12 @@ jobs:
         conda info
         conda list
 
-#   - name: Clone ParmEd tests
-#     shell: bash -l {0}
-#     run: |
-#       git clone https://github.com/parmed/tests
-#       cp -r tests/pmdtest .
-#       echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
+    - name: Clone ParmEd tests
+      shell: bash -l {0}
+      run: |
+        git clone https://github.com/mattwthompson/tests
+        cp -r tests/pmdtest .
+        echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
 
     - name: License OpenEye
       shell: bash -l {0}
@@ -73,7 +73,6 @@ jobs:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     - name: Run mypy
-      continue-on-error: true
       shell: bash -l {0}
       run: |
         mypy --show-error-codes --warn-unused-configs --warn-unused-ignores --namespace-packages -p "openff.interchange"
@@ -87,7 +86,7 @@ jobs:
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v $COV openff/interchange/ --ignore=openff/interchange/interoperability_tests/test_parmed.py
+        python -m pytest -v -nauto $COV openff/interchange/
 
 #    - name: Run ParmEd tests
 #      continue-on-error: true
@@ -101,7 +100,7 @@ jobs:
         python -m pytest -v $COV examples/ --nbval-lax
 
     - name: Codecov
-      uses: codecov/codecov-action@v2.0.2
+      uses: codecov/codecov-action@v2.1.0
       with:
         file: ./coverage.xml
         fail_ci_if_error: false

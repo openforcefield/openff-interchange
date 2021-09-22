@@ -1,13 +1,13 @@
 import mdtraj as md
 import numpy as np
+import openmm
 import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol
 from openff.toolkit.tests.utils import compare_system_parameters, get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
-from simtk import openmm
-from simtk import unit as simtk_unit
-from simtk.openmm import app
+from openmm import app
+from openmm import unit as openmm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
@@ -154,17 +154,17 @@ def test_from_openmm_single_mols(mol, n_mols):
     mol = Molecule.from_smiles(mol)
     mol.generate_conformers(n_conformers=1)
     top = Topology.from_molecules(n_mols * [mol])
-    mol.conformers[0] -= np.min(mol.conformers) * simtk_unit.angstrom
+    mol.conformers[0] -= np.min(mol.conformers) * openmm_unit.angstrom
 
-    top.box_vectors = np.eye(3) * np.asarray([15, 15, 15]) * simtk_unit.nanometer
+    top.box_vectors = np.eye(3) * np.asarray([15, 15, 15]) * openmm_unit.nanometer
 
     if n_mols == 1:
         positions = mol.conformers[0]
     elif n_mols == 2:
         positions = np.vstack(
-            [mol.conformers[0], mol.conformers[0] + 3 * simtk_unit.nanometer]
+            [mol.conformers[0], mol.conformers[0] + 3 * openmm_unit.nanometer]
         )
-        positions = positions * simtk_unit.angstrom
+        positions = positions * openmm_unit.angstrom
 
     toolkit_system = parsley.create_openmm_system(top)
 
@@ -186,12 +186,10 @@ def test_from_openmm_single_mols(mol, n_mols):
     toolkit_energy.compare(native_energy)
 
 
-@pytest.mark.xfail(
-    reason="from_openmm does not correctly import vdW parameters from custom forces."
-)
 @pytest.mark.slow()
-def test_openmm_roundtrip():
-    mol = Molecule.from_smiles("CCO")
+@pytest.mark.parametrize("mol_smi", ["C", "CC", "CCO"])
+def test_openmm_roundtrip(mol_smi):
+    mol = Molecule.from_smiles(mol_smi)
     mol.generate_conformers(n_conformers=1)
     top = mol.to_topology()
     omm_top = top.to_openmm()
@@ -201,22 +199,20 @@ def test_openmm_roundtrip():
     off_sys = Interchange.from_smirnoff(parsley, top)
 
     off_sys.box = [4, 4, 4]
-    off_sys.positions = mol.conformers[0].value_in_unit(simtk_unit.nanometer)
+    off_sys.positions = mol.conformers[0].value_in_unit(openmm_unit.nanometer)
 
-    omm_sys = off_sys.to_openmm()
+    omm_sys = off_sys.to_openmm(combine_nonbonded_forces=True)
 
     converted = from_openmm(
         topology=omm_top,
         system=omm_sys,
     )
 
-    converted.topology = off_sys.topology
     converted.box = off_sys.box
     converted.positions = off_sys.positions
 
     get_openmm_energies(off_sys).compare(
-        get_openmm_energies(converted),
-        custom_tolerances={"Nonbonded": 1.5 * simtk_unit.kilojoule_per_mole},
+        get_openmm_energies(converted, combine_nonbonded_forces=True),
     )
 
 
@@ -254,11 +250,11 @@ class TestOpenMMVirtualSites(_BaseTest):
         sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * simtk_unit.angstrom,
+            distance=1.4 * openmm_unit.angstrom,
             type="BondCharge",
             match="once",
-            charge_increment1=0.1 * simtk_unit.elementary_charge,
-            charge_increment2=0.2 * simtk_unit.elementary_charge,
+            charge_increment1=0.1 * openmm_unit.elementary_charge,
+            charge_increment2=0.2 * openmm_unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=sigma_type)
@@ -274,14 +270,14 @@ class TestOpenMMVirtualSites(_BaseTest):
         carbonyl_type = VirtualSiteHandler.VirtualSiteMonovalentLonePairType(
             name="EP",
             smirks="[O:1]=[C:2]-[C:3]",
-            distance=0.3 * simtk_unit.angstrom,
+            distance=0.3 * openmm_unit.angstrom,
             type="MonovalentLonePair",
             match="once",
-            outOfPlaneAngle=0.0 * simtk_unit.degree,
-            inPlaneAngle=120.0 * simtk_unit.degree,
-            charge_increment1=0.05 * simtk_unit.elementary_charge,
-            charge_increment2=0.1 * simtk_unit.elementary_charge,
-            charge_increment3=0.15 * simtk_unit.elementary_charge,
+            outOfPlaneAngle=0.0 * openmm_unit.degree,
+            inPlaneAngle=120.0 * openmm_unit.degree,
+            charge_increment1=0.05 * openmm_unit.elementary_charge,
+            charge_increment2=0.1 * openmm_unit.elementary_charge,
+            charge_increment3=0.15 * openmm_unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=carbonyl_type)

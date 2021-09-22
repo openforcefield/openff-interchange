@@ -1,12 +1,15 @@
 from math import exp
 
 import mdtraj as md
+import numpy as np
+import openmm
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from simtk import unit as simtk_unit
+from openmm import unit as openmm_unit
+from pkg_resources import resource_filename
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
@@ -15,10 +18,55 @@ from openff.interchange.components.potentials import Potential
 from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
+from openff.interchange.interop.internal.gromacs import from_gro
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.testing import _BaseTest
 from openff.interchange.testing.utils import needs_gmx
 from openff.interchange.utils import get_test_file_path
+
+
+@needs_gmx
+class TestGROMACSGROFile(_BaseTest):
+    def test_load_gro(self):
+        file = resource_filename(
+            "intermol", "tests/gromacs/unit_tests/angle10_vacuum/angle10_vacuum.gro"
+        )
+
+        internal_coords = from_gro(file).positions.m_as(unit.nanometer)
+        internal_box = from_gro(file).box.m_as(unit.nanometer)
+
+        openmm_gro = openmm.app.GromacsGroFile(file)
+        openmm_coords = np.array(
+            openmm_gro.getPositions().value_in_unit(openmm_unit.nanometer)
+        )
+        openmm_box = np.array(
+            openmm_gro.getPeriodicBoxVectors().value_in_unit(openmm_unit.nanometer)
+        )
+
+        assert np.allclose(internal_coords, openmm_coords)
+        assert np.allclose(internal_box, openmm_box)
+
+    @skip_if_missing("parmed")
+    @skip_if_missing("intermol")
+    def test_load_gro_nonstandard_precision(self):
+        import parmed as pmd
+
+        file = resource_filename(
+            "intermol", "tests/gromacs/unit_tests/lj3_bulk/lj3_bulk.gro"
+        )
+        internal_coords = from_gro(file).positions.m_as(unit.nanometer)
+
+        # OpenMM seems to assume a precision of 3. Use ParmEd instead here.
+        parmed_coords = np.array(
+            pmd.load_file(file).positions.value_in_unit(openmm_unit.nanometer)
+        )
+
+        assert np.allclose(internal_coords, parmed_coords)
+
+        # This file happens to have 12 digits of preicion; what really matters is that
+        # the convential precision of 3 was not used.
+        n_decimals = len(str(internal_coords[0, 0]).split(".")[1])
+        assert n_decimals == 12
 
 
 @needs_gmx
@@ -137,11 +185,11 @@ class TestGROMACSVirtualSites(_BaseTest):
         sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * simtk_unit.angstrom,
+            distance=1.4 * openmm_unit.angstrom,
             type="BondCharge",
             match="once",
-            charge_increment1=0.1 * simtk_unit.elementary_charge,
-            charge_increment2=0.2 * simtk_unit.elementary_charge,
+            charge_increment1=0.1 * openmm_unit.elementary_charge,
+            charge_increment2=0.2 * openmm_unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=sigma_type)
@@ -157,14 +205,14 @@ class TestGROMACSVirtualSites(_BaseTest):
         carbonyl_type = VirtualSiteHandler.VirtualSiteMonovalentLonePairType(
             name="EP",
             smirks="[O:1]=[C:2]-[*:3]",
-            distance=0.3 * simtk_unit.angstrom,
+            distance=0.3 * openmm_unit.angstrom,
             type="MonovalentLonePair",
             match="once",
-            outOfPlaneAngle=0.0 * simtk_unit.degree,
-            inPlaneAngle=120.0 * simtk_unit.degree,
-            charge_increment1=0.05 * simtk_unit.elementary_charge,
-            charge_increment2=0.1 * simtk_unit.elementary_charge,
-            charge_increment3=0.15 * simtk_unit.elementary_charge,
+            outOfPlaneAngle=0.0 * openmm_unit.degree,
+            inPlaneAngle=120.0 * openmm_unit.degree,
+            charge_increment1=0.05 * openmm_unit.elementary_charge,
+            charge_increment2=0.1 * openmm_unit.elementary_charge,
+            charge_increment3=0.15 * openmm_unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=carbonyl_type)

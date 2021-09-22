@@ -2,9 +2,10 @@
 from typing import TYPE_CHECKING
 
 import numpy as np
+import openmm
 from openff.units import unit as off_unit
-from openff.units.simtk import from_simtk
-from simtk import openmm, unit
+from openff.units.openmm import from_openmm as from_openmm_unit
+from openmm import unit
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.exceptions import (
@@ -14,7 +15,7 @@ from openff.interchange.exceptions import (
 )
 from openff.interchange.interop.parmed import _lj_params_from_potential
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
-from openff.interchange.utils import pint_to_simtk
+from openff.interchange.utils import pint_to_openmm
 
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
@@ -485,9 +486,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
             # TODO: Add electrostatics
             params = buck_handler.potentials[pot_key].parameters
-            a = pint_to_simtk(params["A"])
-            b = pint_to_simtk(params["B"])
-            c = pint_to_simtk(params["C"])
+            a = pint_to_openmm(params["A"])
+            b = pint_to_openmm(params["B"])
+            c = pint_to_openmm(params["C"])
             non_bonded_force.setParticleParameters(atom_idx, [a, b, c])
 
         return
@@ -629,7 +630,7 @@ def _create_virtual_site(
         parent_atom_positions.append(interchange.positions[parent_atom])
 
     _origin_weight = np.atleast_2d(origin_weight)
-    parent_atom_positions = np.atleast_2d(parent_atom_positions)
+    parent_atom_positions = np.atleast_2d(parent_atom_positions)  # type: ignore[assignment]
 
     origin = np.dot(_origin_weight, parent_atom_positions).sum(axis=0)
 
@@ -680,10 +681,11 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
             if isinstance(force, openmm.PeriodicTorsionForce):
                 proper_torsion_handler = _convert_periodic_torsion_force(force)
                 openff_sys.add_handler(
-                    handler_name="PeriodicTorsions", handler=proper_torsion_handler
+                    handler_name="ProperTorsions",
+                    handler=proper_torsion_handler,
                 )
 
-    if topology:
+    if topology is not None:
         import mdtraj as md
 
         from openff.interchange.components.mdtraj import _OFFBioTop
@@ -692,12 +694,12 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
         top = _OFFBioTop()
         top.mdtop = mdtop
 
-        openff_sys.topoology = top
+        openff_sys.topology = top
 
-    if positions:
+    if positions is not None:
         openff_sys.positions = positions
 
-    if box_vectors:
+    if box_vectors is not None:
         openff_sys.box = box_vectors
 
     return openff_sys
@@ -710,7 +712,7 @@ def _convert_nonbonded_force(force):
     )
 
     vdw_handler = SMIRNOFFvdWHandler()
-    electrostatics = SMIRNOFFElectrostaticsHandler(method="pme")
+    electrostatics = SMIRNOFFElectrostaticsHandler(scale_14=0.833333, method="pme")
 
     n_parametrized_particles = force.getNumParticles()
 
@@ -720,8 +722,8 @@ def _convert_nonbonded_force(force):
         pot_key = PotentialKey(id=f"{idx}")
         pot = Potential(
             parameters={
-                "sigma": from_simtk(sigma),
-                "epsilon": from_simtk(epsilon),
+                "sigma": from_openmm_unit(sigma),
+                "epsilon": from_openmm_unit(epsilon),
             }
         )
         vdw_handler.slot_map.update({top_key: pot_key})
@@ -729,22 +731,26 @@ def _convert_nonbonded_force(force):
 
         electrostatics.slot_map.update({top_key: pot_key})
         electrostatics.potentials.update(
-            {pot_key: Potential(parameters={"charge": from_simtk(charge)})}
+            {pot_key: Potential(parameters={"charge": from_openmm_unit(charge)})}
         )
-
-    vdw_handler.cutoff = force.getCutoffDistance()
-    electrostatics.cutoff = force.getCutoffDistance()
 
     if force.getNonbondedMethod() == openmm.NonbondedForce.PME:
         electrostatics.method = "pme"
+        vdw_handler.method = "cutoff"
     elif force.getNonbondedMethod() in {
         openmm.NonbondedForce.CutoffPeriodic,
         openmm.NonbondedForce.CutoffNonPeriodic,
     }:
         # TODO: Store reaction-field dielectric
         electrostatics.method = "reactionfield"
+        vdw_handler.method = "cutoff"
     elif force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff:
-        raise Exception("NonbondedMethod NoCutoff is not supported")
+        electrostatics.method = "no-cutoff"
+        vdw_handler.method = "no-cutoff"
+
+    if vdw_handler.method == "cutoff":
+        vdw_handler.cutoff = force.getCutoffDistance()
+    electrostatics.cutoff = force.getCutoffDistance()
 
     return vdw_handler, electrostatics
 
@@ -760,7 +766,9 @@ def _convert_harmonic_bond_force(force):
         atom1, atom2, length, k = force.getBondParameters(idx)
         top_key = TopologyKey(atom_indices=(atom1, atom2))
         pot_key = PotentialKey(id=f"{atom1}-{atom2}")
-        pot = Potential(parameters={"length": from_simtk(length), "k": from_simtk(k)})
+        pot = Potential(
+            parameters={"length": from_openmm_unit(length), "k": from_openmm_unit(k)}
+        )
 
         bond_handler.slot_map.update({top_key: pot_key})
         bond_handler.potentials.update({pot_key: pot})
@@ -779,7 +787,9 @@ def _convert_harmonic_angle_force(force):
         atom1, atom2, atom3, angle, k = force.getAngleParameters(idx)
         top_key = TopologyKey(atom_indices=(atom1, atom2, atom3))
         pot_key = PotentialKey(id=f"{atom1}-{atom2}-{atom3}")
-        pot = Potential(parameters={"angle": from_simtk(angle), "k": from_simtk(k)})
+        pot = Potential(
+            parameters={"angle": from_openmm_unit(angle), "k": from_openmm_unit(k)}
+        )
 
         angle_handler.slot_map.update({top_key: pot_key})
         angle_handler.potentials.update({pot_key: pot})
@@ -807,8 +817,8 @@ def _convert_periodic_torsion_force(force):
         pot = Potential(
             parameters={
                 "periodicity": int(per) * unit.dimensionless,
-                "phase": from_simtk(phase),
-                "k": from_simtk(k),
+                "phase": from_openmm_unit(phase),
+                "k": from_openmm_unit(k),
                 "idivf": 1 * unit.dimensionless,
             }
         )

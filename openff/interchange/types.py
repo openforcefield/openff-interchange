@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Dict
 import numpy as np
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
-from simtk import unit as simtk_unit
+from openmm import unit as openmm_unit
 
 from openff.interchange.exceptions import (
     MissingUnitError,
@@ -39,7 +39,7 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 raise MissingUnitError(f"Value {val} needs to be tagged with a unit")
             elif isinstance(val, unit.Quantity):
                 return unit.Quantity(val)
-            elif isinstance(val, simtk_unit.Quantity):
+            elif isinstance(val, openmm_unit.Quantity):
                 return _from_omm_quantity(val)
             else:
                 raise UnitValidationError(
@@ -55,7 +55,7 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
                 # could return here, without converting
                 # (could be inconsistent with data model - heteregenous but compatible units)
                 # return val
-            if isinstance(val, simtk_unit.Quantity):
+            if isinstance(val, openmm_unit.Quantity):
                 return _from_omm_quantity(val).to(unit_)
             if has_package("unyt"):
                 if isinstance(val, unyt.unyt_quantity):
@@ -68,7 +68,7 @@ class FloatQuantity(float, metaclass=_FloatQuantityMeta):
             raise UnitValidationError(f"Could not validate data of type {type(val)}")
 
 
-def _from_omm_quantity(val: simtk_unit.Quantity):
+def _from_omm_quantity(val: openmm_unit.Quantity):
     """
     Convert float or array quantities tagged with SimTK/OpenMM units to a Pint-compatible quantity.
     """
@@ -82,7 +82,7 @@ def _from_omm_quantity(val: simtk_unit.Quantity):
         return array * unit.Unit(str(unit_))
     else:
         raise UnitValidationError(
-            "Found a simtk.unit.Unit wrapped around something other than a float-like "
+            "Found a openmm.unit.Unit wrapped around something other than a float-like "
             f"or np.ndarray-like. Found a unit wrapped around type {type(val_)}."
         )
 
@@ -175,7 +175,7 @@ else:
                 elif isinstance(val, unit.Quantity):
                     # Redundant cast? Maybe this handles pint vs openff.interchange.unit?
                     return unit.Quantity(val)
-                elif isinstance(val, simtk_unit.Quantity):
+                elif isinstance(val, openmm_unit.Quantity):
                     return _from_omm_quantity(val)
                 else:
                     raise UnitValidationError(
@@ -186,7 +186,7 @@ else:
                 if isinstance(val, unit.Quantity):
                     assert unit_.dimensionality == val.dimensionality
                     return val.to(unit_)
-                if isinstance(val, simtk_unit.Quantity):
+                if isinstance(val, openmm_unit.Quantity):
                     return _from_omm_quantity(val).to(unit_)
                 if isinstance(val, (np.ndarray, list)):
                     if has_package("unyt"):

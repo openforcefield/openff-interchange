@@ -1,3 +1,3 @@
-## Use with CHARMM
+# Use with CHARMM
 
 Under construction!
