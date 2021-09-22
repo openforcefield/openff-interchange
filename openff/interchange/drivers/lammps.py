@@ -138,11 +138,18 @@ def _write_lammps_input(
             )
         )
 
-        fo.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")
+        if electrostatics_handler.method == "pme":
+            fo.write(f"pair_style lj/cut/coul/long {vdw_cutoff} {coul_cutoff}\n")
+        elif electrostatics_handler.method == "cutoff":
+            fo.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")
 
         fo.write("pair_modify mix arithmetic tail yes\n\n")
         fo.write("read_data out.lmp\n\n")
         fo.write(
             "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n"
-            "run 0\n"
         )
+
+        if electrostatics_handler.method == "pme":
+            fo.write("kspace_style pppm 1e-6\n")
+
+        fo.write("run 0\n")
