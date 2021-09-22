@@ -9,6 +9,8 @@ A project (and object) for storing, manipulating, and converting molecular mecha
 caption: Installation
 ---
 installation.md
+developing.md
+releasehistory.rst
 ```
 
 ```{toctree}
@@ -20,16 +22,23 @@ using/openmm.md
 using/lammps.md
 using/amber.md
 using/charmm.md
+energy_tests.md
 ```
 
-```{toctree}
----
-maxdepth: 2
-caption: API Reference
----
-openff.interchange.rst
-openff.interchange.components.rst
-openff.interchange.drivers.rst
-openff.interchange.interop.rst
-openff.interchange.interop.internal.rst
+<div class="toctree-wrapper"><p class="caption" role="heading"><span class="caption-text">
+API Reference
+</span></p></div>
+
+<!--
+The autosummary directive renders to rST,
+so we must use eval-rst here
+-->
+```{eval-rst}
+.. autosummary::
+    :recursive:
+    :caption: API Reference
+    :toctree: _autosummary
+    :nosignatures:
+
+    openff.interchange
 ```

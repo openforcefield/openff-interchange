@@ -1,4 +1,4 @@
-## Use with GROMACS
+# Use with GROMACS
 
 Once an `Interchange` object has been constructed, the `.gro` and `.top` files can be written using
 `Interchange.to_top` and `Interchange.to_gro`:

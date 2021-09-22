@@ -1,9 +1,10 @@
+"""Functions for running energy evluations with LAMMPS."""
 import subprocess
 from typing import List
 
 import numpy as np
 from openff.units import unit
-from simtk import unit as omm_unit
+from openmm import unit as omm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
@@ -39,7 +40,6 @@ def get_lammps_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
-
     if round_positions is not None:
         off_sys.positions = np.round(off_sys.positions, round_positions)
 
