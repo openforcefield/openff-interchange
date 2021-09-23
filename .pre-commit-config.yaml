@@ -8,7 +8,7 @@ repos:
     exclude: '\.(pdb|gro|top|sdf)$'
   - id: debug-statements
 - repo: https://github.com/psf/black
-  rev: 21.8b0
+  rev: 21.9b0
   hooks:
   - id: black
     files: ^openff
@@ -32,7 +32,7 @@ repos:
         'flake8-pytest-style',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.25.0
+  rev: v2.26.0
   hooks:
   - id: pyupgrade
     files: ^openff/interchange
@@ -45,7 +45,7 @@ repos:
     files: ^openff/interchange
     args: ["--config=setup.cfg"]
 - repo: https://github.com/econchick/interrogate
-  rev: 1.4.0
+  rev: 1.5.0
   hooks:
     - id: interrogate
       args: [--fail-under=60, openff/interchange/]
@@ -55,7 +55,7 @@ repos:
     - id: blacken-docs
       additional_dependencies: [black==21.6b0]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.1.0
+  rev: 1.1.1
   hooks:
     - id: nbqa-pyupgrade
       args:
