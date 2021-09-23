@@ -42,6 +42,6 @@ def get_summary_data(interchange: "Interchange") -> "DataFrame":
 
     for k, v in energies.items():
         for kk in v.energies:
-            energies[k].energies[kk] = energies[k].energies[kk].m_as(kj_mol)
+            energies[k].energies[kk] = energies[k].energies[kk].m_as(kj_mol)  # type: ignore[union-attr]
 
     return DataFrame({k: v.energies for k, v in energies.items()}).T
