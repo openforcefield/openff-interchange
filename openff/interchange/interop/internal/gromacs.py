@@ -1,7 +1,7 @@
 """Interfaces with GROMACS."""
 import math
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Dict, Set, Tuple, Union
+from typing import IO, TYPE_CHECKING, Dict, List, Set, Tuple, Union
 
 import numpy as np
 from openff.units import unit
@@ -11,10 +11,11 @@ from openff.interchange.components.mdtraj import (
     _iterate_impropers,
     _iterate_pairs,
     _iterate_propers,
+    _OFFBioTop,
     _store_bond_partners,
 )
 from openff.interchange.exceptions import UnsupportedExportError
-from openff.interchange.models import TopologyKey, VirtualSiteKey
+from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
@@ -213,6 +214,149 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
             virtual_site_map,
         )
         _write_system(top_file, openff_sys)
+
+
+def from_top(top_file: IO, gro_file: IO):
+    """Read the contents of a GROMACS Topology (.top) file."""
+    import mdtraj as md
+    from intermol.forces import HarmonicAngle, HarmonicBond
+    from intermol.gromacs.gromacs_parser import GromacsParser
+    from openff.units.openmm import from_openmm
+
+    from openff.interchange.components.base import (
+        BaseAngleHandler,
+        BaseBondHandler,
+        BaseElectrostaticsHandler,
+        BasevdWHandler,
+    )
+    from openff.interchange.components.interchange import Interchange
+    from openff.interchange.components.potentials import Potential
+
+    intermol_system = GromacsParser(top_file, gro_file).read()
+
+    interchange = Interchange()
+
+    interchange.box_vectors = intermol_system.box_vector
+    interchange.positions = from_openmm([a.position for a in intermol_system.atoms])
+
+    vdw_handler = BasevdWHandler(
+        scale_14=intermol_system.lj_correction,
+        mixing_rule=intermol_system.combination_rule,
+    )
+
+    if vdw_handler.mixing_rule == "Multiply-Sigeps":
+        vdw_handler.mixing_rule = "geometric"
+
+    electrostatics_handler = BaseElectrostaticsHandler(
+        scale_14=intermol_system.coulomb_correction
+    )
+
+    bond_handler = BaseBondHandler()
+    angle_handler = BaseAngleHandler()
+
+    # TODO: Store atomtypes on a minimal topology, not as a list
+    atomtypes: List = [atom.atomtype[0] for atom in intermol_system.atoms]
+
+    topology = md.Topology()
+    default_chain = topology.add_chain()
+    default_residue = topology.add_residue(name="FOO", chain=default_chain)
+
+    for atom in intermol_system.atoms:
+        topology.add_atom(
+            name=atom.atomtype[0],
+            element=md.element.Element.getByMass(atom.mass[0]._value),
+            residue=default_residue,
+            serial=atom.index - 1,
+        )
+        topology_key = TopologyKey(atom_indices=(atom.index - 1,))
+        vdw_key = PotentialKey(id=atom.atomtype[0], associated_handler="vdW")
+        electrostatics_key = PotentialKey(
+            id=atom.atomtype[0], associated_handler="Electrostatics"
+        )
+
+        # Intermol has an abstraction layer for multiple states, though only one is implemented
+        charge = from_openmm(atom.charge[0])
+        sigma = atom.sigma[0]
+        epsilon = atom.epsilon[0]
+
+        vdw_handler.slot_map[topology_key] = vdw_key
+        electrostatics_handler.slot_map[topology_key] = electrostatics_key
+
+        vdw_handler.potentials[vdw_key] = Potential(
+            parameters={"sigma": sigma, "epsilon": epsilon}
+        )
+        electrostatics_handler.potentials[electrostatics_key] = Potential(
+            parameters={"charge": charge}
+        )
+
+    for molecule_type in intermol_system.molecule_types.values():
+        for bond_force in molecule_type.bond_forces:
+            if type(bond_force) != HarmonicBond:
+                raise Exception
+
+            topology.add_bond(
+                atom1=topology._atoms[bond_force.atom1 - 1],
+                atom2=topology._atoms[bond_force.atom2 - 1],
+            )
+
+            topology_key = TopologyKey(
+                atom_indices=(val - 1 for val in [bond_force.atom1, bond_force.atom2]),
+            )
+            potential_key = PotentialKey(
+                id=f"{atomtypes[bond_force.atom1-1]}-{atomtypes[bond_force.atom2-1]}",
+                associated_handler="Bonds",
+            )
+
+            bond_handler.slot_map[topology_key] = potential_key
+
+            if potential_key not in bond_handler:
+                potential = Potential(
+                    parameters={
+                        "k": from_openmm(bond_force.k),
+                        "length": from_openmm(bond_force.length),
+                    }
+                )
+
+                bond_handler.potentials[potential_key] = potential
+
+        for angle_force in molecule_type.angle_forces:
+            if type(angle_force) != HarmonicAngle:
+                raise Exception
+
+            topology_key = TopologyKey(
+                atom_indices=(
+                    val - 1
+                    for val in [angle_force.atom1, angle_force.atom2, angle_force.atom3]
+                ),
+            )
+            potential_key = PotentialKey(
+                id=(
+                    f"{atomtypes[angle_force.atom1-1]}-{atomtypes[angle_force.atom2-1]}-"
+                    f"{atomtypes[angle_force.atom3-1]}"
+                ),
+                associated_handler="Angles",
+            )
+
+            angle_handler.slot_map[topology_key] = potential_key
+
+            if potential_key not in angle_handler:
+                potential = Potential(
+                    parameters={
+                        "k": from_openmm(angle_force.k),
+                        "angle": from_openmm(angle_force.theta),
+                    }
+                )
+
+                angle_handler.potentials[potential_key] = potential
+
+    interchange.handlers["vdW"] = vdw_handler
+    interchange.handlers["Electrostatics"] = electrostatics_handler
+    interchange.handlers["Bonds"] = bond_handler
+    interchange.handlers["Angles"] = angle_handler
+
+    interchange.topology = _OFFBioTop(mdtop=topology)
+
+    return interchange
 
 
 def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
