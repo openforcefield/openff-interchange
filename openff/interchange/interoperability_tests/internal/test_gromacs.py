@@ -18,7 +18,7 @@ from openff.interchange.components.potentials import Potential
 from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
-from openff.interchange.interop.internal.gromacs import from_gro
+from openff.interchange.interop.internal.gromacs import from_gro, from_top
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.testing import _BaseTest
 from openff.interchange.testing.utils import needs_gmx
@@ -71,6 +71,27 @@ class TestGROMACSGROFile(_BaseTest):
 
 @needs_gmx
 class TestGROMACS(_BaseTest):
+    def test_simple_roundtrip(self, parsley):
+        molecule = Molecule.from_smiles("O=C=O")
+        molecule.generate_conformers(n_conformers=1)
+        topology = molecule.to_topology()
+
+        out = Interchange.from_smirnoff(force_field=parsley, topology=topology)
+        out.box = [4, 4, 4]
+        out.positions = molecule.conformers[0]
+
+        out.to_top("out.top")
+        out.to_gro("out.gro")
+
+        converted = from_top("out.top", "out.gro")
+
+        assert np.allclose(out.positions, converted.positions)
+        assert np.allclose(out.box, converted.box)
+        get_gromacs_energies(out).compare(
+            get_gromacs_energies(converted),
+            custom_tolerances={"Electrostatics": 0.05 * unit.kilojoule / unit.mol},
+        )
+
     @skip_if_missing("parmed")
     def test_set_mixing_rule(self, ethanol_top, parsley):
         import parmed as pmd
