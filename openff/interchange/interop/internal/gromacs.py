@@ -264,7 +264,7 @@ def from_top(top_file: IO, gro_file: IO):
     for atom in intermol_system.atoms:
         topology.add_atom(
             name=atom.atomtype[0],
-            element=md.element.Element.getByMass(atom.mass[0]._value),
+            element=md.element.Element.getByMass(atom.mass[0]._value),  # type: ignore
             residue=default_residue,
             serial=atom.index - 1,
         )
@@ -295,8 +295,8 @@ def from_top(top_file: IO, gro_file: IO):
                 raise Exception
 
             topology.add_bond(
-                atom1=topology._atoms[bond_force.atom1 - 1],
-                atom2=topology._atoms[bond_force.atom2 - 1],
+                atom1=topology._atoms[bond_force.atom1 - 1],  # type: ignore[attr-defined]
+                atom2=topology._atoms[bond_force.atom2 - 1],  # type: ignore[attr-defined]
             )
 
             topology_key = TopologyKey(
@@ -339,7 +339,7 @@ def from_top(top_file: IO, gro_file: IO):
 
             angle_handler.slot_map[topology_key] = potential_key
 
-            if potential_key not in angle_handler:
+            if potential_key not in angle_handler.potentials:
                 potential = Potential(
                     parameters={
                         "k": from_openmm(angle_force.k),
