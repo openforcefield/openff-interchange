@@ -402,7 +402,7 @@ def from_top(top_file: IO, gro_file: IO):
 
             def ensure_unique_key(handler: BaseProperTorsionHandler, key: TopologyKey):
                 if key in handler.slot_map:
-                    key.mult += 1
+                    key.mult += 1  # type: ignore[operator]
                     ensure_unique_key(handler, key)
 
             ensure_unique_key(proper_handler, topology_key)
