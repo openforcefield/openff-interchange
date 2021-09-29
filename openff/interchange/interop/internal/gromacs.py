@@ -219,7 +219,12 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
 def from_top(top_file: IO, gro_file: IO):
     """Read the contents of a GROMACS Topology (.top) file."""
     import mdtraj as md
-    from intermol.forces import HarmonicAngle, HarmonicBond
+    from intermol.forces import (
+        HarmonicAngle,
+        HarmonicBond,
+        TrigDihedral,
+        convert_dihedral_from_trig_to_proper,
+    )
     from intermol.gromacs.gromacs_parser import GromacsParser
     from openff.units.openmm import from_openmm
 
@@ -227,6 +232,7 @@ def from_top(top_file: IO, gro_file: IO):
         BaseAngleHandler,
         BaseBondHandler,
         BaseElectrostaticsHandler,
+        BaseProperTorsionHandler,
         BasevdWHandler,
     )
     from openff.interchange.components.interchange import Interchange
@@ -253,6 +259,7 @@ def from_top(top_file: IO, gro_file: IO):
 
     bond_handler = BaseBondHandler()
     angle_handler = BaseAngleHandler()
+    proper_handler = BaseProperTorsionHandler()
 
     # TODO: Store atomtypes on a minimal topology, not as a list
     atomtypes: List = [atom.atomtype[0] for atom in intermol_system.atoms]
@@ -300,7 +307,9 @@ def from_top(top_file: IO, gro_file: IO):
             )
 
             topology_key = TopologyKey(
-                atom_indices=(val - 1 for val in [bond_force.atom1, bond_force.atom2]),
+                atom_indices=tuple(
+                    val - 1 for val in [bond_force.atom1, bond_force.atom2]
+                ),
             )
             potential_key = PotentialKey(
                 id=f"{atomtypes[bond_force.atom1-1]}-{atomtypes[bond_force.atom2-1]}",
@@ -325,8 +334,14 @@ def from_top(top_file: IO, gro_file: IO):
 
             topology_key = TopologyKey(
                 atom_indices=(
-                    val - 1
-                    for val in [angle_force.atom1, angle_force.atom2, angle_force.atom3]
+                    tuple(
+                        val - 1
+                        for val in [
+                            angle_force.atom1,
+                            angle_force.atom2,
+                            angle_force.atom3,
+                        ]
+                    )
                 ),
             )
             potential_key = PotentialKey(
@@ -349,10 +364,78 @@ def from_top(top_file: IO, gro_file: IO):
 
                 angle_handler.potentials[potential_key] = potential
 
+        for dihedral_force in molecule_type.dihedral_forces:
+
+            if type(dihedral_force) == TrigDihedral:
+                proper_dihedral_parameters = convert_dihedral_from_trig_to_proper(
+                    {
+                        "fc0": dihedral_force.fc0,
+                        "fc1": dihedral_force.fc1,
+                        "fc2": dihedral_force.fc2,
+                        "fc3": dihedral_force.fc3,
+                        "fc4": dihedral_force.fc4,
+                        "fc5": dihedral_force.fc5,
+                        "fc6": dihedral_force.fc6,
+                        "phi": dihedral_force.phi,
+                    }
+                )
+
+                if len(proper_dihedral_parameters) != 1:
+                    raise RuntimeError
+
+                proper_dihedral_parameters = proper_dihedral_parameters[0]
+
+            topology_key = TopologyKey(
+                atom_indices=(
+                    tuple(
+                        val - 1
+                        for val in [
+                            dihedral_force.atom1,
+                            dihedral_force.atom2,
+                            dihedral_force.atom3,
+                            dihedral_force.atom4,
+                        ]
+                    )
+                ),
+                mult=0,
+            )
+
+            def ensure_unique_key(handler: BaseProperTorsionHandler, key: TopologyKey):
+                if key in handler.slot_map:
+                    key.mult += 1
+                    ensure_unique_key(handler, key)
+
+            ensure_unique_key(proper_handler, topology_key)
+
+            potential_key = PotentialKey(
+                id=(
+                    f"{atomtypes[dihedral_force.atom1 - 1]}-{atomtypes[dihedral_force.atom2 - 1]}-"
+                    f"{atomtypes[dihedral_force.atom3 - 1]}-{atomtypes[dihedral_force.atom4 - 1]}-"
+                    f"{topology_key.mult}"
+                ),
+                associated_handler="ProperTorsions",
+            )
+
+            proper_handler.slot_map[topology_key] = potential_key
+
+            if potential_key not in proper_handler.potentials:
+
+                potential = Potential(
+                    parameters={
+                        "phase": proper_dihedral_parameters["phi"],
+                        "periodicity": proper_dihedral_parameters["multiplicity"],
+                        "weight": proper_dihedral_parameters["weight"],
+                        "k": proper_dihedral_parameters["k"],
+                    }
+                )
+
+                proper_handler.potentials[potential_key] = potential
+
     interchange.handlers["vdW"] = vdw_handler
     interchange.handlers["Electrostatics"] = electrostatics_handler
     interchange.handlers["Bonds"] = bond_handler
     interchange.handlers["Angles"] = angle_handler
+    interchange.handlers["ProperTorsions"] = proper_handler
 
     interchange.topology = _OFFBioTop(mdtop=topology)
 
