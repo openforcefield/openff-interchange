@@ -18,7 +18,7 @@ from openff.interchange.components.potentials import Potential
 from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
-from openff.interchange.interop.internal.gromacs import from_gro
+from openff.interchange.interop.internal.gromacs import from_gro, from_top
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.testing import _BaseTest
 from openff.interchange.testing.utils import needs_gmx
@@ -71,6 +71,44 @@ class TestGROMACSGROFile(_BaseTest):
 
 @needs_gmx
 class TestGROMACS(_BaseTest):
+    @pytest.mark.parametrize(
+        "smiles",
+        [
+            "C",
+            "O=C=O",  # Adds unconstrained bonds without torsion(s)
+            "CC",  # Adds a proper torsion term(s)
+            # "C=O",  # Simplest molecule with any improper torsion
+            "OC=O",  # Simplest molecule with a multi-term torsion
+            # "CCOC",  # This hits t86, which has a non-1.0 idivf
+            # "C1COC(=O)O1",  # This adds an improper, i2
+        ],
+    )
+    def test_simple_roundtrip(self, smiles):
+        parsley = ForceField("openff_unconstrained-1.0.0.offxml")
+
+        molecule = Molecule.from_smiles(smiles)
+        molecule.generate_conformers(n_conformers=1)
+        topology = molecule.to_topology()
+
+        out = Interchange.from_smirnoff(force_field=parsley, topology=topology)
+        out.box = [4, 4, 4]
+        out.positions = molecule.conformers[0]
+
+        out.to_top("out.top")
+        out.to_gro("out.gro")
+
+        converted = from_top("out.top", "out.gro")
+
+        assert np.allclose(out.positions, converted.positions)
+        assert np.allclose(out.box, converted.box)
+        get_gromacs_energies(out).compare(
+            get_gromacs_energies(converted),
+            custom_tolerances={
+                "Bond": 0.002 * molecule.n_bonds * unit.kilojoule / unit.mol,
+                "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
+            },
+        )
+
     @skip_if_missing("parmed")
     def test_set_mixing_rule(self, ethanol_top, parsley):
         import parmed as pmd

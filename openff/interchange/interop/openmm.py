@@ -432,7 +432,10 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                     f"Electrostatics method {electrostatics_method} not supported"
                 )
 
-        partial_charges = electrostatics_handler.charges_with_virtual_sites
+        try:
+            partial_charges = electrostatics_handler.charges_with_virtual_sites
+        except AttributeError:
+            partial_charges = electrostatics_handler.charges
 
         for top_key, pot_key in vdw_handler.slot_map.items():
             # TODO: Actually process virtual site vdW parameters here
