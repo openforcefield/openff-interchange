@@ -351,7 +351,6 @@ def _write_atomtypes_lj(
     for atom_idx, atom_type in typemap.items():
         atom = openff_sys.topology.mdtop.atom(atom_idx)
         mass = atom.element.mass
-        atomic_number = atom.element.atomic_number
         parameters = _get_lj_parameters(openff_sys, atom_idx)
         sigma = parameters["sigma"].to(unit.nanometer).magnitude
         epsilon = parameters["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude
