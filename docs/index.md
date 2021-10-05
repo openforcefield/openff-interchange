@@ -15,6 +15,14 @@ releasehistory.rst
 
 ```{toctree}
 ---
+caption: Other stuff
+---
+foo.md
+faq.md
+```
+
+```{toctree}
+---
 caption: User Guides
 ---
 using/migrating.md
