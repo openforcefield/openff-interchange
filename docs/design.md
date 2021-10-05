@@ -8,7 +8,8 @@ There are four components of an `Interchange` object:
 
 None are strictly required; an `Interchange` object can beconstructed containing none of the above components:
 
-```python3
+```pycon
+
 >>> from openff.interchange.components.interchange import Interchange
 >>> empty_interchange = Interchange()
 >>> empty_interchange.topology
@@ -31,14 +32,45 @@ of the same name provided by
 [MDTraj](https://www.mdtraj.org/1.9.5/api/generated/mdtraj.Topology.html#mdtraj.Topology), stored as
 an attribute `Interchange.topology.mdtop`.
 
+After a refactor that is currently in development, this `Topology` model will be able to store
+molecules that are rich in cheminformatics information (atoms connected by bonds with fractional
+bond orders, bond and atom stereochemistry, aromaticity, etc.) and minimal, molecular
+mechanics-focused representations (particles with masses that are connected to each other).
+
 A topology is optional, though any conversions requiring topological information will fail if any required data is missing.
 
 ## Handlers
 
-This attribute is a dictionary of key-value pairs in which the keys are string identifiers and the values are `PotentialHandler` objects.
-These handlers roughly mirror
-[`ParameterHandler`](https://open-forcefield-toolkit.readthedocs.io/en/stable/users/developing.html#parameterhandler) 
-the necessary handler(s) are required.
+This attribute is a dictionary of key-value pairs in which the keys are string identifiers and the
+values are `PotentialHandler` objects.  These handlers roughly mirror
+[`ParameterHandler`](https://open-forcefield-toolkit.readthedocs.io/en/stable/users/developing.html#parameterhandler)
+objects in the OpenFF Toolkit, but as a post-parameterization representation of the force field
+parameters. In other words, parameter handlers are components of a force field, and potential
+handlers describe how those parameters are appled to a chemical system. (The process by which this
+happens is "parameterization.")
+
+There are three central components in each handler: topology keys, potential keys, and potentials.
+
+Topology keys (`TopologyKey` object in memory) are unique identifiers of locations in a topology.
+These objects do not include physics parameters. The basic information is a tuple of atom indices,
+which can be of any non-zero length. For example, a topology key describing a torsion will have a
+4-length tuple, and a topology key describing a vdW parameter will have a 1-length tuple.
+
+Potential keys (`PotentialKey` objects in memory) are unique identifiers of physics parameters.
+These objects do not know anything about the topology they are associated with. In SMIRNOFF force
+fields, SMIRKS patterns uniquely identify a parameter within a parameter handler, so (with some
+exceptions) that is all that is needed to construct a potential key. For classically atom-typed
+force fields, a key can be constructed using atom types or combinations thereof.
+
+Potentials (`Potential` objects in memory) store the physics parameters that result from
+parameterizing a chemical topology with a force field. These do not know anything about where in the
+topology they are associated. The parameters are stored in a dictionary attribute `.parameters` in
+which keys are string identifiers and values are the parameters themselves, tagged with units.
+
+These objects are strung together with two mappings, each stored as dictionary attributes of a
+`PotentialHandler`. The `.slot_map` attribute maps segments of a topology to the potential keys (`TopologyKey`
+to `PotentialKey` mapping). The `.potentials` attribute maps the potential keys to the potentials
+(`PotentialKey` to `Potential`).
 
 Handlers are optional, though any conversions requiring force parameters will fail if the necessary handler(s) are required.
 
@@ -57,7 +89,8 @@ associated with with the values.
 
 Positions are optional, though any conversions requiring positions will fail if they are missing.
 
-```python3
+```pycon
+
 >>> from openff.interchange.components.interchange import Interchange
 >>> from openff.units import unit
 >>> from openff.toolkit.topology import Molecule
@@ -118,7 +151,8 @@ legnths of a rectangular unit cell (`a_x`, `b_y`, `c_z`).
 Box vectors are optional; if it is `None` it is implied that the `Interchange` object represents a
 non-periodic system.
 
-```python3
+```pycon
+
 >>> from openff.interchange.components.interchange import Interchange
 >>> from openff.units import unit
 >>> import numpy as np

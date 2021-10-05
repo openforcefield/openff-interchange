@@ -15,9 +15,9 @@ releasehistory.rst
 
 ```{toctree}
 ---
-caption: Other stuff
+caption: Design
 ---
-foo.md
+design.md
 faq.md
 ```
 

@@ -3,7 +3,7 @@
 An `Interchange` object can be converted to an `openmm.System` object with
 `Interchange.to_openmm()`.
 
-```python3
+```python
 openmm_sys = interchange.to_openmm()
 ```
 
