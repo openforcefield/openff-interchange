@@ -37,7 +37,7 @@ A topology is optional, though any conversions requiring topological information
 
 This attribute is a dictionary of key-value pairs in which the keys are string identifiers and the values are `PotentialHandler` objects.
 These handlers roughly mirror
-[`ParameterHandler`](https://open-forcefield-toolkit.readthedocs.io/en/stable/users/developing.html#parameterhandler) 
+[`ParameterHandler`](https://open-forcefield-toolkit.readthedocs.io/en/stable/users/developing.html#parameterhandler)
 the necessary handler(s) are required.
 
 Handlers are optional, though any conversions requiring force parameters will fail if the necessary handler(s) are required.
