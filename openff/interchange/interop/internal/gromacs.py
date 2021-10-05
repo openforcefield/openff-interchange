@@ -1,20 +1,24 @@
 """Interfaces with GROMACS."""
 import math
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Dict, Set, Tuple, Union
+from typing import IO, TYPE_CHECKING, Callable, Dict, NoReturn, Set, Tuple, Union
 
+import mdtraj as md
 import numpy as np
 from openff.units import unit
 
+from openff.interchange.components.base import BaseElectrostaticsHandler, BasevdWHandler
 from openff.interchange.components.mdtraj import (
     _iterate_angles,
     _iterate_impropers,
     _iterate_pairs,
     _iterate_propers,
+    _OFFBioTop,
     _store_bond_partners,
 )
+from openff.interchange.components.potentials import Potential
 from openff.interchange.exceptions import UnsupportedExportError
-from openff.interchange.models import TopologyKey, VirtualSiteKey
+from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
@@ -111,6 +115,8 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
         gro.write("\n")
 
 
+# TODO: Split this out into separate functions for positions and box vectors,
+#       each of which return only arrays, not incomplete Interchange objcets
 def from_gro(file_path: Union[Path, str]) -> "Interchange":
     """Read coordinates and box information from a GROMACS GRO (.gro) file."""
     if isinstance(file_path, str):
@@ -213,11 +219,6 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
             virtual_site_map,
         )
         _write_system(top_file, openff_sys)
-
-
-def from_top(top_file: IO, gro_file: IO):
-    """Read the contents of a GROMACS Topology (.top) file."""
-    raise NotImplementedError()
 
 
 def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
@@ -345,14 +346,18 @@ def _write_atomtypes_lj(
     for atom_idx, atom_type in typemap.items():
         atom = openff_sys.topology.mdtop.atom(atom_idx)
         mass = atom.element.mass
+        atomic_number = atom.element.atomic_number
         parameters = _get_lj_parameters(openff_sys, atom_idx)
         sigma = parameters["sigma"].to(unit.nanometer).magnitude
         epsilon = parameters["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude
-        # top.write('{0:<11s} {1:5s} {2:6d} {3:18.8f} {4:18.8f} {5:5s}'.format(
+        # TODO: Sometimes a "bondingtype" can sneak in to as the second column. This
+        #       seems to be used commonly in how OPLS groups atom types for valence
+        #       terms, and InterMol attempts to parse it as such, but the GROMACS
+        #       documentation makes no mention of this behavior.
         top_file.write(
-            "{:<11s} {:6s} {:.16g} {:.16f} {:5s} {:.16g} {:.16g}\n".format(
-                atom_type,  # atom type
-                "XX",  # atom "bonding type", i.e. bond class
+            "{:<11s} {:6d} {:.16g} {:.16f} {:5s} {:.16g} {:.16g}\n".format(
+                atom_type,
+                atomic_number,
                 mass,
                 0.0,  # charge, overriden later in [ atoms ]
                 "A",  # ptype
@@ -946,3 +951,202 @@ def _get_buck_parameters(openff_sys: "Interchange", atom_idx: int) -> Dict:
     parameters = potential.parameters
 
     return parameters
+
+
+def from_top(top_file: IO, gro_file: IO):
+    """Read the contents of a GROMACS Topology (.top) file."""
+    from openff.interchange.components.interchange import Interchange
+
+    interchange = Interchange()
+    current_directive = None
+
+    def process_defaults(interchange: Interchange, line: str) -> NoReturn:
+        fields = line.split()
+        if len(fields) != 5:
+            raise Exception(fields)
+
+        nbfunc, comb_rule, gen_pairs, lj_14, coul_14 = fields
+
+        if nbfunc == "1":
+            vdw_handler = BasevdWHandler()
+        elif nbfunc == "2":
+            raise NotImplementedError(
+                "Parsing GROMACS files with the Buckingham-6 potential is not supported"
+            )
+
+        if comb_rule == "1":
+            vdw_handler.mixing_rule = "geometric"
+        elif comb_rule == "2":
+            vdw_handler.mixing_rule = "lorentz-berthelot"
+        else:
+            raise RuntimeError(f"Found bad/unsupported combination rule: '{comb_rule}'")
+
+        # TODO: Process pairs
+
+        electrostatics_handler = BaseElectrostaticsHandler()
+
+        vdw_handler.scale_14 = lj_14
+        electrostatics_handler.scale_14 = coul_14
+
+        interchange.add_handler("vdW", vdw_handler)
+        interchange.add_handler("Electrostatics", electrostatics_handler)
+
+    def process_atomtype(interchange: Interchange, line: str) -> NoReturn:
+        fields = line.split()
+        if len(fields) != 7:
+            raise Exception
+
+        atom_type, atomic_number, mass, charge, ptype, sigma, epsilon = fields
+
+        potential_key = PotentialKey(id=atom_type)
+        if potential_key in interchange["vdW"].potentials:
+            raise RuntimeError
+
+        potential = Potential(
+            parameters={
+                "sigma": float(sigma) * unit.nanometer,
+                "epsilon": float(epsilon) * unit.kilojoule / unit.mole,
+            }
+        )
+
+        interchange["vdW"].potentials.update({potential_key: potential})
+
+    def process_moleculetype(interchange: Interchange, line: str) -> NoReturn:
+        from openff.toolkit.topology.molecule import Molecule
+
+        fields = line.split()
+        if len(fields) != 2:
+            raise Exception
+
+        molecule_name, nrexcl = fields
+
+        if nrexcl != "3":
+            raise Exception()
+
+        molecule = Molecule()
+        molecule.name = molecule_name
+
+        if interchange.topology is not None:
+            raise Exception
+
+        mdtop = md.Topology.from_openmm(molecule.to_topology().to_openmm())
+        default_chain = mdtop.add_chain()
+        mdtop.add_residue(name="FOO", chain=default_chain)
+
+        topology = _OFFBioTop()
+        topology.mdtop = mdtop
+
+        interchange.topology = topology
+
+    def process_atom(interchange: Interchange, line: str) -> NoReturn:
+        fields = line.split()
+        if len(fields) != 8:
+            raise Exception
+
+        (
+            atom_number,
+            atom_type,
+            residue_number,
+            residue_name,
+            atom_name,
+            cg_number,
+            charge,
+            mass,
+        ) = fields
+
+        interchange.topology.mdtop.add_atom(
+            name=atom_name,
+            element=md.element.Element.getByMass(float(mass)),
+            residue=interchange.topology.mdtop.residue(0),
+        )
+
+        topology_key = TopologyKey(atom_indices=(int(atom_number) - 1,))
+        potential_key = PotentialKey(id=atom_type)
+
+        if potential_key not in interchange["vdW"].potentials:
+            raise RuntimeError(
+                f"Found atom type {atom_type} in an atoms directive but "
+                "either did not find or failed to process an atom type of the same name "
+                "in the atomtypes directive."
+            )
+
+        charge: unit.Quantity = float(charge) * unit.elementary_charge
+
+        interchange["vdW"].slot_map.update({topology_key: potential_key})
+        # The vdw .potentials was constructed while parsing [ atomtypes ]
+        interchange["Electrostatics"].slot_map.update({topology_key: potential_key})
+        interchange["Electrostatics"].potentials.update(
+            {potential_key: Potential(parameters={"charge": charge})}
+        )
+
+    def process_pair(interchange: Interchange, line: str) -> NoReturn:
+        pass
+
+    def process_bond(interchange: Interchange, line: str) -> NoReturn:
+        pass
+
+    def process_angle(interchange: Interchange, line: str) -> NoReturn:
+        pass
+
+    def process_dihedral(interchange: Interchange, line: str) -> NoReturn:
+        pass
+
+    def process_molecule(interchange: Interchange, line: str) -> NoReturn:
+        fields = line.split()
+        if len(fields) != 2:
+            raise Exception
+
+        molecule_name, n_molecules = fields
+
+        if n_molecules != "1":
+            raise NotImplementedError(
+                "Only single-molecule topologies are currently supported"
+            )
+
+    def process_system(interchange: Interchange, line: str) -> NoReturn:
+        interchange.name = line
+
+    supported_directives: Dict[str, Callable] = {
+        "defaults": process_defaults,
+        "atomtypes": process_atomtype,
+        "moleculetype": process_moleculetype,
+        "atoms": process_atom,
+        "pairs": process_pair,
+        "bonds": process_bond,
+        "angles": process_angle,
+        "dihedrals": process_dihedral,
+        "molecules": process_molecule,
+        "system": process_system,
+    }
+
+    with open(top_file) as opened_top:
+        for line in opened_top:
+            line = line.strip()
+
+            if ";" in line:
+                line = line[: line.index(";")].strip()
+            if len(line) == 0:
+                continue
+
+            if line.startswith("#"):
+                raise NotImplementedError(
+                    "Parsing GROMACS files with preprocessor commands "
+                    "is not yet supported. Found a line with contents "
+                    f"{line}"
+                )
+
+            elif line.startswith("["):
+                current_directive = line[1:-1].strip()
+                continue
+
+            if current_directive in supported_directives:
+                supported_directives[current_directive](interchange, line)
+
+            else:
+                raise RuntimeError(
+                    "Found bad top file or unsupported directive. "
+                    f"Current directive is: {current_directive}\n"
+                    f"Current line is: '{line}'"
+                )
+
+    return interchange
