@@ -217,13 +217,7 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
 
 def from_top(top_file: IO, gro_file: IO):
     """Read the contents of a GROMACS Topology (.top) file."""
-    from intermol.gromacs.gromacs_parser import GromacsParser
-
-    from openff.interchange.interop.intermol import from_intermol_system
-
-    intermol_system = GromacsParser(top_file, gro_file).read()
-
-    return from_intermol_system(intermol_system)
+    raise NotImplementedError()
 
 
 def _write_top_defaults(openff_sys: "Interchange", top_file: IO):

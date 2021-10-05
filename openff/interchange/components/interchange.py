@@ -2,7 +2,7 @@
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union
+from typing import IO, TYPE_CHECKING, Dict, Optional, Tuple, Union
 
 import mdtraj as md
 import numpy as np
@@ -409,6 +409,21 @@ class Interchange(DefaultModel):
                 handler.store_potentials(force_field)
 
         return system
+
+    @classmethod
+    @requires_package("intermol")
+    def from_gromacs(cls, top_file: IO, gro_file: IO) -> "Interchange":
+        """
+        Create an Interchange object from GROMACS files.
+
+        """
+        from intermol.gromacs.gromacs_parser import GromacsParser
+
+        from openff.interchange.interop.intermol import from_intermol_system
+
+        intermol_system = GromacsParser(top_file, gro_file).read()
+
+        return from_intermol_system(intermol_system)
 
     def _get_parameters(self, handler_name: str, atom_indices: Tuple[int]) -> Dict:
         """
