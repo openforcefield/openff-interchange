@@ -419,18 +419,28 @@ class Interchange(DefaultModel):
         Create an Interchange object from GROMACS files.
 
         """
+        from intermol.gromacs.gromacs_parser import GromacsParser
+
+        from openff.interchange.interop.intermol import from_intermol_system
+
+        intermol_system = GromacsParser(topology_file, gro_file).read()
+        via_intermol = from_intermol_system(intermol_system)
+
         if reader == "intermol":
-            from intermol.gromacs.gromacs_parser import GromacsParser
+            return via_intermol
 
-            from openff.interchange.interop.intermol import from_intermol_system
-
-            intermol_system = GromacsParser(topology_file, gro_file).read()
-
-            return from_intermol_system(intermol_system)
         elif reader == "internal":
             from openff.interchange.interop.internal.gromacs import from_top
 
-            return from_top(topology_file, gro_file)
+            via_internal = from_top(topology_file, gro_file)
+
+            via_internal.positions = via_intermol.positions
+            via_internal.box = via_intermol.box
+            for key in via_intermol.handlers:
+                via_internal.handlers[key] = via_intermol.handlers[key]
+            via_internal.topology = via_intermol.topology
+
+            return via_internal
 
     def _get_parameters(self, handler_name: str, atom_indices: Tuple[int]) -> Dict:
         """

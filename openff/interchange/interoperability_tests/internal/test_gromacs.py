@@ -71,6 +71,7 @@ class TestGROMACSGROFile(_BaseTest):
 
 @needs_gmx
 class TestGROMACS(_BaseTest):
+    @pytest.mark.parametrize("reader", ["intermol", "internal"])
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -83,7 +84,7 @@ class TestGROMACS(_BaseTest):
             # "C1COC(=O)O1",  # This adds an improper, i2
         ],
     )
-    def test_simple_roundtrip(self, smiles):
+    def test_simple_roundtrip(self, smiles, reader):
         parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
         molecule = Molecule.from_smiles(smiles)
@@ -97,7 +98,7 @@ class TestGROMACS(_BaseTest):
         out.to_top("out.top")
         out.to_gro("out.gro")
 
-        converted = Interchange.from_gromacs("out.top", "out.gro")
+        converted = Interchange.from_gromacs("out.top", "out.gro", reader=reader)
 
         assert np.allclose(out.positions, converted.positions)
         assert np.allclose(out.box, converted.box)
