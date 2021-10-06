@@ -120,6 +120,10 @@ def _write_lammps_input(
         vdw_hander = off_sys.handlers["vdW"]
         electrostatics_handler = off_sys.handlers["Electrostatics"]
 
+        has_electrostatics = any(
+            c.m != 0 for c in electrostatics_handler.charges.values()
+        )
+
         # TODO: Ensure units
         vdw_cutoff = vdw_hander.cutoff
         vdw_cutoff = vdw_cutoff.m_as(unit.angstrom)
@@ -138,11 +142,23 @@ def _write_lammps_input(
             )
         )
 
-        fo.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")
+        if has_electrostatics:
+            if electrostatics_handler.method == "pme":
+                fo.write(f"pair_style lj/cut/coul/long {vdw_cutoff} {coul_cutoff}\n")
+            elif electrostatics_handler.method == "cutoff":
+                fo.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")
+        else:
+            fo.write(f"pair_style lj/cut {vdw_cutoff}\n")
 
         fo.write("pair_modify mix arithmetic tail yes\n\n")
         fo.write("read_data out.lmp\n\n")
         fo.write(
             "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n"
-            "run 0\n"
         )
+
+        if electrostatics_handler.method == "pme" and has_electrostatics:
+            # LAMMPS will error out if using kspace on something with all zero charges, so
+            # only specify kpsace if some charge is non-zero
+            fo.write("kspace_style pppm 1e-6\n")
+
+        fo.write("run 0\n")

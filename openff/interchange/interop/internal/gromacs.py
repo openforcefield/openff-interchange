@@ -215,6 +215,17 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
         _write_system(top_file, openff_sys)
 
 
+def from_top(top_file: IO, gro_file: IO):
+    """Read the contents of a GROMACS Topology (.top) file."""
+    from intermol.gromacs.gromacs_parser import GromacsParser
+
+    from openff.interchange.interop.intermol import from_intermol_system
+
+    intermol_system = GromacsParser(top_file, gro_file).read()
+
+    return from_intermol_system(intermol_system)
+
+
 def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
     """Write [ defaults ] section."""
     top_file.write("[ defaults ]\n")
@@ -236,7 +247,7 @@ def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
             "with GROMACS. Looked for handlers named `vdW` and `Buckingham-6`."
         )
 
-    mixing_rule = openff_sys[handler_key].mixing_rule
+    mixing_rule = openff_sys[handler_key].mixing_rule.lower()
     if mixing_rule == "lorentz-berthelot":
         comb_rule = 2
     elif mixing_rule == "geometric":
@@ -335,23 +346,19 @@ def _write_atomtypes_lj(
 ):
     """Write the [ atomtypes ] section when all atoms use the LJ potential."""
     top_file.write("[ atomtypes ]\n")
-    top_file.write(
-        ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n"
-    )
+    top_file.write(";type, bondingtype, mass, charge, ptype, sigma, epsilon\n")
 
     for atom_idx, atom_type in typemap.items():
         atom = openff_sys.topology.mdtop.atom(atom_idx)
         mass = atom.element.mass
-        atomic_number = atom.element.atomic_number
         parameters = _get_lj_parameters(openff_sys, atom_idx)
         sigma = parameters["sigma"].to(unit.nanometer).magnitude
         epsilon = parameters["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude
         # top.write('{0:<11s} {1:5s} {2:6d} {3:18.8f} {4:18.8f} {5:5s}'.format(
         top_file.write(
-            "{:<11s} {:6s} {:6d} {:.16g} {:.16g} {:5s} {:.16g} {:.16g}\n".format(
+            "{:<11s} {:6s} {:.16g} {:.16f} {:5s} {:.16g} {:.16g}\n".format(
                 atom_type,  # atom type
                 "XX",  # atom "bonding type", i.e. bond class
-                atomic_number,
                 mass,
                 0.0,  # charge, overriden later in [ atoms ]
                 "A",  # ptype
@@ -499,10 +506,10 @@ def _write_atoms(
     _store_bond_partners(openff_sys.topology.mdtop)
 
     try:
-        mixing_rule = openff_sys["vdW"].mixing_rule
+        mixing_rule = openff_sys["vdW"].mixing_rule.lower()
         scale_lj = openff_sys["vdW"].scale_14
     except LookupError:
-        mixing_rule = openff_sys["Buckingham-6"].mixing_rule
+        mixing_rule = openff_sys["Buckingham-6"].mixing_rule.lower()
         scale_lj = openff_sys["Buckingham-6"].scale_14
 
     # Use a set to de-duplicate
