@@ -7,7 +7,14 @@ import mdtraj as md
 import numpy as np
 from openff.units import unit
 
-from openff.interchange.components.base import BaseElectrostaticsHandler, BasevdWHandler
+from openff.interchange.components.base import (
+    BaseAngleHandler,
+    BaseBondHandler,
+    BaseElectrostaticsHandler,
+    BaseImproperTorsionHandler,
+    BaseProperTorsionHandler,
+    BasevdWHandler,
+)
 from openff.interchange.components.mdtraj import (
     _iterate_angles,
     _iterate_impropers,
@@ -1098,13 +1105,133 @@ def from_top(top_file: IO, gro_file: IO):
         pass
 
     def process_bond(interchange: Interchange, line: str) -> NoReturn:
-        pass
+        fields = line.split()
+        if len(fields) != 5:
+            raise Exception
+
+        if "Bonds" not in interchange.handlers:
+            bond_handler = BaseBondHandler()
+            interchange.add_handler("Bonds", bond_handler)
+
+        atom1, atom2, func, length, k = fields
+
+        interchange.topology.mdtop.add_bond(
+            atom1=interchange.topology.mdtop.atom(int(atom1) - 1),
+            atom2=interchange.topology.mdtop.atom(int(atom2) - 1),
+        )
+
+        topology_key = TopologyKey(atom_indices=(int(atom1) - 1, int(atom2) - 1))
+        potential_key = PotentialKey(
+            id="-".join(str(i) for i in topology_key.atom_indices)
+        )
+
+        # TODO: De-depulicate identical bond parameters into "types"
+        potential = Potential(
+            parameters={
+                "length": float(length) * unit.nanometer,
+                "k": float(k) * unit.kilojoule / unit.mole / unit.nanometer ** 2,
+            }
+        )
+
+        interchange["Bonds"].slot_map.update({topology_key: potential_key})
+        interchange["Bonds"].potentials.update({potential_key: potential})
 
     def process_angle(interchange: Interchange, line: str) -> NoReturn:
-        pass
+        fields = line.split()
+        if len(fields) != 6:
+            raise Exception
+
+        if "Angles" not in interchange.handlers:
+            angle_handler = BaseAngleHandler()
+            interchange.add_handler("Angles", angle_handler)
+
+        atom1, atom2, atom3, func, theta, k = fields
+
+        topology_key = TopologyKey(
+            atom_indices=(int(i) - 1 for i in [atom1, atom2, atom3])
+        )
+        potential_key = PotentialKey(
+            id="-".join(str(i) for i in topology_key.atom_indices)
+        )
+
+        # TODO: De-depulicate identical angle parameters into "types"
+        potential = Potential(
+            parameters={
+                "angle": float(theta) * unit.degree,
+                "k": float(k) * unit.kilojoule / unit.mole / unit.radian ** 2,
+            }
+        )
+
+        interchange["Angles"].slot_map.update({topology_key: potential_key})
+        interchange["Angles"].potentials.update({potential_key: potential})
 
     def process_dihedral(interchange: Interchange, line: str) -> NoReturn:
-        pass
+        fields = line.split()
+        if len(fields) != 8:
+            raise Exception
+
+        if "ProperTorsions" not in interchange.handlers:
+            proper_handler = BaseProperTorsionHandler()
+            interchange.add_handler("ProperTorsions", proper_handler)
+
+        if "ImproperTorsions" not in interchange.handlers:
+            improper_handler = BaseImproperTorsionHandler()
+            interchange.add_handler("ImproperTorsions", improper_handler)
+
+        atom1, atom2, atom3, atom4, func, phase, k, periodicity = fields
+
+        topology_key = TopologyKey(
+            atom_indices=(int(i) - 1 for i in [atom1, atom2, atom3, atom4]),
+            mult=0,
+        )
+
+        def ensure_unique_key(
+            handler: Union[BaseProperTorsionHandler, BaseImproperTorsionHandler],
+            key: TopologyKey,
+        ):
+            if key in handler.slot_map:
+                key.mult += 1  # type: ignore[operator]
+                ensure_unique_key(handler, key)
+
+        potential_key = PotentialKey(
+            id="-".join(str(i) for i in topology_key.atom_indices),
+        )
+
+        if func == "1":
+            ensure_unique_key(interchange["ProperTorsions"], topology_key)
+            potential_key.mult = topology_key.mult
+
+            potential = Potential(
+                parameters={
+                    "phase": float(phase) * unit.degree,
+                    "k": float(k) * unit.kilojoule / unit.mole,
+                    "periodicity": int(periodicity) * unit.dimensionless,
+                    "idivf": 1 * unit.dimensionless,
+                }
+            )
+
+            interchange["ProperTorsions"].slot_map.update({topology_key: potential_key})
+            interchange["ProperTorsions"].potentials.update({potential_key: potential})
+
+        elif func == "4":
+            ensure_unique_key(interchange["ImproperTorsions"], topology_key)
+            potential_key.mult = topology_key.mult
+
+            potential = Potential(
+                parameters={
+                    "phase": float(phase) * unit.degree,
+                    "k": float(k) * unit.kilojoule / unit.mole,
+                    "periodicity": int(periodicity) * unit.dimensionless,
+                    "idivf": 1 * unit.dimensionless,
+                }
+            )
+
+            interchange["ImproperTorsions"].slot_map.update(
+                {topology_key: potential_key}
+            )
+            interchange["ImproperTorsions"].potentials.update(
+                {potential_key: potential}
+            )
 
     def process_molecule(interchange: Interchange, line: str) -> NoReturn:
         fields = line.split()

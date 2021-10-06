@@ -441,8 +441,16 @@ class Interchange(DefaultModel):
             via_internal.positions = _read_coordinates(gro_file)
             via_internal.box = _read_box(gro_file)
             for key in via_intermol.handlers:
-                via_internal.handlers[key] = via_intermol.handlers[key]
-            via_internal.topology = via_intermol.topology
+                if key not in [
+                    "Bonds",
+                    "Angles",
+                    "ProperTorsions",
+                    "ImproperTorsions",
+                    "vdW",
+                    "Electrostatics",
+                ]:
+                    raise Exception(f"Found unexpected handler with name {key}")
+                    via_internal.handlers[key] = via_intermol.handlers[key]
 
             return via_internal
 
