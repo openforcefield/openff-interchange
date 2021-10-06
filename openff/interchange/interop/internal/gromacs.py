@@ -169,7 +169,7 @@ def _read_box(file_path: Path) -> np.array:
         gro_file.readline()
         n_atoms = int(gro_file.readline())
 
-        box_line = gro_file.readlines()[n_atoms + 2 :]
+        box_line = gro_file.readlines()[n_atoms]
 
     parsed_box = [float(val) for val in box_line.split()]
 

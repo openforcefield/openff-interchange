@@ -430,12 +430,16 @@ class Interchange(DefaultModel):
             return via_intermol
 
         elif reader == "internal":
-            from openff.interchange.interop.internal.gromacs import from_top
+            from openff.interchange.interop.internal.gromacs import (
+                _read_box,
+                _read_coordinates,
+                from_top,
+            )
 
             via_internal = from_top(topology_file, gro_file)
 
-            via_internal.positions = via_intermol.positions
-            via_internal.box = via_intermol.box
+            via_internal.positions = _read_coordinates(gro_file)
+            via_internal.box = _read_box(gro_file)
             for key in via_intermol.handlers:
                 via_internal.handlers[key] = via_intermol.handlers[key]
             via_internal.topology = via_intermol.topology
