@@ -2,7 +2,7 @@
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Dict, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union
 
 import mdtraj as md
 import numpy as np
@@ -413,7 +413,10 @@ class Interchange(DefaultModel):
     @classmethod
     @requires_package("intermol")
     def from_gromacs(
-        cls, topology_file: IO, gro_file: IO, reader="intermol"
+        cls,
+        topology_file: Union[Path, str],
+        gro_file: Union[Path, str],
+        reader="intermol",
     ) -> "Interchange":
         """
         Create an Interchange object from GROMACS files.
@@ -453,6 +456,9 @@ class Interchange(DefaultModel):
                     via_internal.handlers[key] = via_intermol.handlers[key]
 
             return via_internal
+
+        else:
+            raise Exception(f"Reader {reader} is not implemented.")
 
     def _get_parameters(self, handler_name: str, atom_indices: Tuple[int]) -> Dict:
         """

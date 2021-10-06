@@ -157,7 +157,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
             if dihedral_force.improper:
                 handler = improper_handler
             else:
-                handler = proper_handler
+                handler = proper_handler  # type: ignore[assignment]
 
             if type(dihedral_force) == TrigDihedral:
                 dihedral_parameters = convert_dihedral_from_trig_to_proper(

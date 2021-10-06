@@ -1,7 +1,7 @@
 """Interfaces with GROMACS."""
 import math
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Callable, Dict, NoReturn, Set, Tuple, Union
+from typing import IO, TYPE_CHECKING, Callable, Dict, Set, Tuple, Union
 
 import mdtraj as md
 import numpy as np
@@ -122,8 +122,8 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
         gro.write("\n")
 
 
-def _read_coordinates(file_path: Path) -> np.array:
-    def _infer_coord_precision(file_path: Path) -> int:
+def _read_coordinates(file_path: Union[Path, str]) -> np.ndarray:
+    def _infer_coord_precision(file_path: Union[Path, str]) -> int:
         """
         Infer decimal precision of coordinates by parsing periods in atoms lines.
         """
@@ -169,7 +169,7 @@ def _read_coordinates(file_path: Path) -> np.array:
     return coordinates
 
 
-def _read_box(file_path: Path) -> np.array:
+def _read_box(file_path: Union[Path, str]) -> np.ndarray:
 
     with open(file_path) as gro_file:
         # Throw away comment / name line
@@ -975,14 +975,14 @@ def _get_buck_parameters(openff_sys: "Interchange", atom_idx: int) -> Dict:
     return parameters
 
 
-def from_top(top_file: IO, gro_file: IO):
+def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
     """Read the contents of a GROMACS Topology (.top) file."""
     from openff.interchange.components.interchange import Interchange
 
     interchange = Interchange()
     current_directive = None
 
-    def process_defaults(interchange: Interchange, line: str) -> NoReturn:
+    def process_defaults(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 5:
             raise Exception(fields)
@@ -1007,13 +1007,13 @@ def from_top(top_file: IO, gro_file: IO):
 
         electrostatics_handler = BaseElectrostaticsHandler()
 
-        vdw_handler.scale_14 = lj_14
-        electrostatics_handler.scale_14 = coul_14
+        vdw_handler.scale_14 = float(lj_14)
+        electrostatics_handler.scale_14 = float(coul_14)
 
         interchange.add_handler("vdW", vdw_handler)
         interchange.add_handler("Electrostatics", electrostatics_handler)
 
-    def process_atomtype(interchange: Interchange, line: str) -> NoReturn:
+    def process_atomtype(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 7:
             raise Exception
@@ -1033,7 +1033,7 @@ def from_top(top_file: IO, gro_file: IO):
 
         interchange["vdW"].potentials.update({potential_key: potential})
 
-    def process_moleculetype(interchange: Interchange, line: str) -> NoReturn:
+    def process_moleculetype(interchange: Interchange, line: str):
         from openff.toolkit.topology.molecule import Molecule
 
         fields = line.split()
@@ -1060,7 +1060,7 @@ def from_top(top_file: IO, gro_file: IO):
 
         interchange.topology = topology
 
-    def process_atom(interchange: Interchange, line: str) -> NoReturn:
+    def process_atom(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 8:
             raise Exception
@@ -1072,13 +1072,13 @@ def from_top(top_file: IO, gro_file: IO):
             residue_name,
             atom_name,
             cg_number,
-            charge,
+            _charge,
             mass,
         ) = fields
 
         interchange.topology.mdtop.add_atom(
             name=atom_name,
-            element=md.element.Element.getByMass(float(mass)),
+            element=md.element.Element.getByMass(float(mass)),  # type: ignore[attr-defined]
             residue=interchange.topology.mdtop.residue(0),
         )
 
@@ -1092,7 +1092,7 @@ def from_top(top_file: IO, gro_file: IO):
                 "in the atomtypes directive."
             )
 
-        charge: unit.Quantity = float(charge) * unit.elementary_charge
+        charge: unit.Quantity = float(_charge) * unit.elementary_charge
 
         interchange["vdW"].slot_map.update({topology_key: potential_key})
         # The vdw .potentials was constructed while parsing [ atomtypes ]
@@ -1101,10 +1101,10 @@ def from_top(top_file: IO, gro_file: IO):
             {potential_key: Potential(parameters={"charge": charge})}
         )
 
-    def process_pair(interchange: Interchange, line: str) -> NoReturn:
+    def process_pair(interchange: Interchange, line: str):
         pass
 
-    def process_bond(interchange: Interchange, line: str) -> NoReturn:
+    def process_bond(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 5:
             raise Exception
@@ -1136,7 +1136,7 @@ def from_top(top_file: IO, gro_file: IO):
         interchange["Bonds"].slot_map.update({topology_key: potential_key})
         interchange["Bonds"].potentials.update({potential_key: potential})
 
-    def process_angle(interchange: Interchange, line: str) -> NoReturn:
+    def process_angle(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 6:
             raise Exception
@@ -1165,7 +1165,7 @@ def from_top(top_file: IO, gro_file: IO):
         interchange["Angles"].slot_map.update({topology_key: potential_key})
         interchange["Angles"].potentials.update({potential_key: potential})
 
-    def process_dihedral(interchange: Interchange, line: str) -> NoReturn:
+    def process_dihedral(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 8:
             raise Exception
@@ -1233,7 +1233,7 @@ def from_top(top_file: IO, gro_file: IO):
                 {potential_key: potential}
             )
 
-    def process_molecule(interchange: Interchange, line: str) -> NoReturn:
+    def process_molecule(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 2:
             raise Exception
@@ -1245,7 +1245,7 @@ def from_top(top_file: IO, gro_file: IO):
                 "Only single-molecule topologies are currently supported"
             )
 
-    def process_system(interchange: Interchange, line: str) -> NoReturn:
+    def process_system(interchange: Interchange, line: str):
         interchange.name = line
 
     supported_directives: Dict[str, Callable] = {
