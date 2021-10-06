@@ -115,17 +115,8 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
         gro.write("\n")
 
 
-# TODO: Split this out into separate functions for positions and box vectors,
-#       each of which return only arrays, not incomplete Interchange objcets
-def from_gro(file_path: Union[Path, str]) -> "Interchange":
-    """Read coordinates and box information from a GROMACS GRO (.gro) file."""
-    if isinstance(file_path, str):
-        path = Path(file_path)
-    if isinstance(file_path, Path):
-        path = file_path
-
-    # Infer coordinate precision
-    def _infer_coord_precision(file_path: Union[Path, str]) -> int:
+def _read_coordinates(file_path: Path) -> np.array:
+    def _infer_coord_precision(file_path: Path) -> int:
         """
         Infer decimal precision of coordinates by parsing periods in atoms lines.
         """
@@ -149,8 +140,8 @@ def from_gro(file_path: Union[Path, str]) -> "Interchange":
         20 + 3 * coordinate_width,
     ]
 
-    with open(path) as gro_file:
-        # Throe away comment / name line
+    with open(file_path) as gro_file:
+        # Throw away comment / name line
         gro_file.readline()
         n_atoms = int(gro_file.readline())
 
@@ -168,20 +159,44 @@ def from_gro(file_path: Union[Path, str]) -> "Interchange":
 
         coordinates = unitless_coordinates * unit.nanometer
 
-        box_line = gro_file.readline()
+    return coordinates
 
-        parsed_box = [float(val) for val in box_line.split()]
 
-        if len(parsed_box) == 3:
-            box = parsed_box * np.eye(3) * unit.nanometer
+def _read_box(file_path: Path) -> np.array:
 
-        from openff.interchange.components.interchange import Interchange
+    with open(file_path) as gro_file:
+        # Throw away comment / name line
+        gro_file.readline()
+        n_atoms = int(gro_file.readline())
 
-        interchange = Interchange()
-        interchange.box = box
-        interchange.positions = coordinates
+        box_line = gro_file.readlines()[n_atoms + 2 :]
 
-        return interchange
+    parsed_box = [float(val) for val in box_line.split()]
+
+    if len(parsed_box) == 3:
+        box = parsed_box * np.eye(3) * unit.nanometer
+
+    return box
+
+
+def from_gro(file_path: Union[Path, str]) -> "Interchange":
+    """Read coordinates and box information from a GROMACS GRO (.gro) file."""
+    if isinstance(file_path, str):
+        path = Path(file_path)
+    if isinstance(file_path, Path):
+        path = file_path
+
+    coordinates = _read_coordinates(path)
+
+    box = _read_box(path)
+
+    from openff.interchange.components.interchange import Interchange
+
+    interchange = Interchange()
+    interchange.box = box
+    interchange.positions = coordinates
+
+    return interchange
 
 
 def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
