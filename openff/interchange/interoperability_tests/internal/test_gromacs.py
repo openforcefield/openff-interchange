@@ -18,7 +18,7 @@ from openff.interchange.components.potentials import Potential
 from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
-from openff.interchange.interop.internal.gromacs import from_gro, from_top
+from openff.interchange.interop.internal.gromacs import from_gro
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.testing import _BaseTest
 from openff.interchange.testing.utils import needs_gmx
@@ -71,6 +71,7 @@ class TestGROMACSGROFile(_BaseTest):
 
 @needs_gmx
 class TestGROMACS(_BaseTest):
+    @pytest.mark.parametrize("reader", ["intermol", "internal"])
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -83,7 +84,7 @@ class TestGROMACS(_BaseTest):
             # "C1COC(=O)O1",  # This adds an improper, i2
         ],
     )
-    def test_simple_roundtrip(self, smiles):
+    def test_simple_roundtrip(self, smiles, reader):
         parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
         molecule = Molecule.from_smiles(smiles)
@@ -97,7 +98,7 @@ class TestGROMACS(_BaseTest):
         out.to_top("out.top")
         out.to_gro("out.gro")
 
-        converted = from_top("out.top", "out.gro")
+        converted = Interchange.from_gromacs("out.top", "out.gro", reader=reader)
 
         assert np.allclose(out.positions, converted.positions)
         assert np.allclose(out.box, converted.box)

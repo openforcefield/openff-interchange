@@ -1,5 +1,5 @@
 """Interfaces with InterMol."""
-from typing import List
+from typing import List, Union
 
 import mdtraj as md
 from intermol.forces import (
@@ -9,12 +9,14 @@ from intermol.forces import (
     convert_dihedral_from_trig_to_proper,
 )
 from intermol.system import System
+from openff.units import unit
 from openff.units.openmm import from_openmm
 
 from openff.interchange.components.base import (
     BaseAngleHandler,
     BaseBondHandler,
     BaseElectrostaticsHandler,
+    BaseImproperTorsionHandler,
     BaseProperTorsionHandler,
     BasevdWHandler,
 )
@@ -46,6 +48,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
     bond_handler = BaseBondHandler()
     angle_handler = BaseAngleHandler()
     proper_handler = BaseProperTorsionHandler()
+    improper_handler = BaseImproperTorsionHandler()
 
     # TODO: Store atomtypes on a minimal topology, not as a list
     atomtypes: List = [atom.atomtype[0] for atom in intermol_system.atoms]
@@ -151,9 +154,13 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                 angle_handler.potentials[potential_key] = potential
 
         for dihedral_force in molecule_type.dihedral_forces:
+            if dihedral_force.improper:
+                handler = improper_handler
+            else:
+                handler = proper_handler  # type: ignore[assignment]
 
             if type(dihedral_force) == TrigDihedral:
-                proper_dihedral_parameters = convert_dihedral_from_trig_to_proper(
+                dihedral_parameters = convert_dihedral_from_trig_to_proper(
                     {
                         "fc0": dihedral_force.fc0,
                         "fc1": dihedral_force.fc1,
@@ -166,10 +173,10 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                     }
                 )
 
-                if len(proper_dihedral_parameters) != 1:
+                if len(dihedral_parameters) != 1:
                     raise RuntimeError
 
-                proper_dihedral_parameters = proper_dihedral_parameters[0]
+                dihedral_parameters = dihedral_parameters[0]
 
             topology_key = TopologyKey(
                 atom_indices=(
@@ -186,12 +193,15 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                 mult=0,
             )
 
-            def ensure_unique_key(handler: BaseProperTorsionHandler, key: TopologyKey):
+            def ensure_unique_key(
+                handler: Union[BaseProperTorsionHandler, BaseImproperTorsionHandler],
+                key: TopologyKey,
+            ):
                 if key in handler.slot_map:
                     key.mult += 1  # type: ignore[operator]
                     ensure_unique_key(handler, key)
 
-            ensure_unique_key(proper_handler, topology_key)
+            ensure_unique_key(handler, topology_key)
 
             potential_key = PotentialKey(
                 id=(
@@ -199,29 +209,35 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                     f"{atomtypes[dihedral_force.atom3 - 1]}-{atomtypes[dihedral_force.atom4 - 1]}-"
                     f"{topology_key.mult}"
                 ),
-                associated_handler="ProperTorsions",
+                associated_handler="ImproperTorsions"
+                if dihedral_force.improper
+                else "ProperTorsions",
             )
 
-            proper_handler.slot_map[topology_key] = potential_key
+            handler.slot_map[topology_key] = potential_key
 
-            if potential_key not in proper_handler.potentials:
+            if potential_key not in handler.potentials:
 
                 potential = Potential(
                     parameters={
-                        "phase": proper_dihedral_parameters["phi"],
-                        "periodicity": proper_dihedral_parameters["multiplicity"],
-                        "weight": proper_dihedral_parameters["weight"],
-                        "k": proper_dihedral_parameters["k"],
+                        "phase": dihedral_parameters["phi"],
+                        "periodicity": dihedral_parameters["multiplicity"],
+                        "weight": dihedral_parameters["weight"],
+                        "k": dihedral_parameters["k"],
                     }
                 )
 
-                proper_handler.potentials[potential_key] = potential
+                if dihedral_force.improper:
+                    potential.parameters["idivf"] = 1 * unit.dimensionless
+
+                handler.potentials[potential_key] = potential
 
     interchange.handlers["vdW"] = vdw_handler
     interchange.handlers["Electrostatics"] = electrostatics_handler
     interchange.handlers["Bonds"] = bond_handler
     interchange.handlers["Angles"] = angle_handler
     interchange.handlers["ProperTorsions"] = proper_handler
+    interchange.handlers["ImproperTorsions"] = improper_handler
 
     interchange.topology = _OFFBioTop(mdtop=topology)
 
