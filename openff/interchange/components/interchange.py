@@ -541,6 +541,8 @@ class Interchange(DefaultModel):
 
         self_copy.topology = _combine_topologies(self.topology, other.topology)
 
+        atom_offset = self.topology.mdtop.n_atoms
+
         for handler_name, handler in other.handlers.items():
 
             self_handler = self_copy.handlers[handler_name]

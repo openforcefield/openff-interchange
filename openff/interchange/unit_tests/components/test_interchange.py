@@ -95,6 +95,34 @@ class TestInterchangeCombination(_BaseTest):
         # Just see if it can be converted into OpenMM and run
         get_openmm_energies(combined)
 
+    def test_parameters_do_not_clash(self, parsley_unconstrained):
+        thf = Molecule.from_smiles("C1CCOC1")
+        ace = Molecule.from_smiles("CC(=O)O")
+
+        thf.generate_conformers(n_conformers=1)
+        ace.generate_conformers(n_conformers=1)
+
+        def make_interchange(molecule: Molecule) -> Interchange:
+            molecule.generate_conformers(n_conformers=1)
+            interchange = Interchange.from_smirnoff(
+                force_field=parsley_unconstrained, topology=molecule.to_topology()
+            )
+            interchange.positions = molecule.conformers[0]
+
+            return interchange
+
+        thf_interchange = make_interchange(thf)
+        ace_interchange = make_interchange(ace)
+        complex_interchange = thf_interchange + ace_interchange
+
+        thf_vdw = thf_interchange["vdW"].get_system_parameters()
+        ace_vdw = ace_interchange["vdW"].get_system_parameters()
+        add_vdw = complex_interchange["vdW"].get_system_parameters()
+
+        np.testing.assert_equal(np.vstack([thf_vdw, ace_vdw]), add_vdw)
+
+        # TODO: Ensure the de-duplication is maintained after exports
+
 
 class TestUnimplementedSMIRNOFFCases(_BaseTest):
     def test_bogus_smirnoff_handler(self, parsley):
