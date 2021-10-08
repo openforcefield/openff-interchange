@@ -1,15 +1,22 @@
-name: full_tests
-
+# Adapted from from below link on 9/22/21
+# https://github.com/openpathsampling/openpathsampling/blob/master/.github/workflows/check-openmm-rc.yml
+# See also https://github.com/openmm/openmm/issues/3232#issuecomment-909478595
+#
+# Workflow to test against release candidate of OpenMM.
+# See also: check-openmm-rc.yml
+name: "Test OpenMM Release Candidate"
 on:
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
+  workflow_dispatch:
+  # use this for debugging
+  #pull_request:
+    #branch: master
+
+defaults:
+  run:
+    shell: bash -l {0}
 
 jobs:
-  test:
+  tests:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -34,6 +41,15 @@ jobs:
         miniforge-variant: Mambaforge
         use-mamba: true
 
+    - name: Install OpenMM RC
+      run: |
+        mamba install -c conda-forge/label/openmm_rc -c conda-forge openmm
+
+    - name: Install package
+      shell: bash -l {0}
+      run: |
+        python setup.py develop --no-deps
+
     - name: Additional info about the build
       shell: bash
       run: |
@@ -46,11 +62,6 @@ jobs:
       run: |
         conda info
         conda list
-
-    - name: Install package
-      shell: bash -l {0}
-      run: |
-        python setup.py develop --no-deps
 
     - name: Clone ParmEd tests
       shell: bash -l {0}

@@ -1,12 +1,15 @@
 from math import exp
 
 import mdtraj as md
+import numpy as np
+import openmm
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from openmm import unit as openmm_unit
+from pkg_resources import resource_filename
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
@@ -15,6 +18,7 @@ from openff.interchange.components.potentials import Potential
 from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
+from openff.interchange.interop.internal.gromacs import from_gro
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.testing import _BaseTest
 from openff.interchange.testing.utils import needs_gmx
@@ -22,7 +26,90 @@ from openff.interchange.utils import get_test_file_path
 
 
 @needs_gmx
+class TestGROMACSGROFile(_BaseTest):
+    def test_load_gro(self):
+        file = resource_filename(
+            "intermol", "tests/gromacs/unit_tests/angle10_vacuum/angle10_vacuum.gro"
+        )
+
+        internal_coords = from_gro(file).positions.m_as(unit.nanometer)
+        internal_box = from_gro(file).box.m_as(unit.nanometer)
+
+        openmm_gro = openmm.app.GromacsGroFile(file)
+        openmm_coords = np.array(
+            openmm_gro.getPositions().value_in_unit(openmm_unit.nanometer)
+        )
+        openmm_box = np.array(
+            openmm_gro.getPeriodicBoxVectors().value_in_unit(openmm_unit.nanometer)
+        )
+
+        assert np.allclose(internal_coords, openmm_coords)
+        assert np.allclose(internal_box, openmm_box)
+
+    @skip_if_missing("parmed")
+    @skip_if_missing("intermol")
+    def test_load_gro_nonstandard_precision(self):
+        import parmed as pmd
+
+        file = resource_filename(
+            "intermol", "tests/gromacs/unit_tests/lj3_bulk/lj3_bulk.gro"
+        )
+        internal_coords = from_gro(file).positions.m_as(unit.nanometer)
+
+        # OpenMM seems to assume a precision of 3. Use ParmEd instead here.
+        parmed_coords = np.array(
+            pmd.load_file(file).positions.value_in_unit(openmm_unit.nanometer)
+        )
+
+        assert np.allclose(internal_coords, parmed_coords)
+
+        # This file happens to have 12 digits of preicion; what really matters is that
+        # the convential precision of 3 was not used.
+        n_decimals = len(str(internal_coords[0, 0]).split(".")[1])
+        assert n_decimals == 12
+
+
+@needs_gmx
 class TestGROMACS(_BaseTest):
+    @pytest.mark.parametrize("reader", ["intermol", "internal"])
+    @pytest.mark.parametrize(
+        "smiles",
+        [
+            "C",
+            "O=C=O",  # Adds unconstrained bonds without torsion(s)
+            "CC",  # Adds a proper torsion term(s)
+            # "C=O",  # Simplest molecule with any improper torsion
+            "OC=O",  # Simplest molecule with a multi-term torsion
+            # "CCOC",  # This hits t86, which has a non-1.0 idivf
+            # "C1COC(=O)O1",  # This adds an improper, i2
+        ],
+    )
+    def test_simple_roundtrip(self, smiles, reader):
+        parsley = ForceField("openff_unconstrained-1.0.0.offxml")
+
+        molecule = Molecule.from_smiles(smiles)
+        molecule.generate_conformers(n_conformers=1)
+        topology = molecule.to_topology()
+
+        out = Interchange.from_smirnoff(force_field=parsley, topology=topology)
+        out.box = [4, 4, 4]
+        out.positions = molecule.conformers[0]
+
+        out.to_top("out.top")
+        out.to_gro("out.gro")
+
+        converted = Interchange.from_gromacs("out.top", "out.gro", reader=reader)
+
+        assert np.allclose(out.positions, converted.positions)
+        assert np.allclose(out.box, converted.box)
+        get_gromacs_energies(out).compare(
+            get_gromacs_energies(converted),
+            custom_tolerances={
+                "Bond": 0.002 * molecule.n_bonds * unit.kilojoule / unit.mol,
+                "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
+            },
+        )
+
     @skip_if_missing("parmed")
     def test_set_mixing_rule(self, ethanol_top, parsley):
         import parmed as pmd
@@ -118,7 +205,7 @@ class TestGROMACS(_BaseTest):
         omm_energies = get_openmm_energies(out)
         by_hand = A * exp(-B * r) - C * r ** -6
 
-        resid = omm_energies.energies["Nonbonded"] - by_hand
+        resid = omm_energies.energies["vdW"] - by_hand
         assert resid < 1e-5 * unit.kilojoule / unit.mol
 
         # TODO: Add back comparison to GROMACS energies once GROMACS 2020+

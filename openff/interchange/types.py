@@ -80,6 +80,8 @@ def _from_omm_quantity(val: openmm_unit.Quantity):
     elif type(val_) in {tuple, list, np.ndarray}:
         array = np.asarray(val_)
         return array * unit.Unit(str(unit_))
+    elif isinstance(val_, (float, int)) and type(val_).__module__ == "numpy":
+        return val_ * unit.Unit(str(unit_))
     else:
         raise UnitValidationError(
             "Found a openmm.unit.Unit wrapped around something other than a float-like "

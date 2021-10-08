@@ -313,6 +313,24 @@ class TestSMIRNOFFHandlers(_BaseTest):
         )
 
 
+class TestInterchangeFromSMIRNOFF(_BaseTest):
+    """General tests for Interchange.from_smirnoff. Some are ported from the toolkit."""
+
+    def test_modified_nonbonded_cutoffs(self, parsley):
+        from openff.toolkit.tests.create_molecules import create_ethanol
+
+        topology = Topology.from_molecules(create_ethanol())
+        modified_parsley = ForceField(parsley.to_string())
+
+        modified_parsley["vdW"].cutoff = 0.777 * openmm_unit.angstrom
+        modified_parsley["Electrostatics"].cutoff = 0.777 * openmm_unit.angstrom
+
+        out = Interchange.from_smirnoff(force_field=modified_parsley, topology=topology)
+
+        assert out["vdW"].cutoff == 0.777 * unit.angstrom
+        assert out["Electrostatics"].cutoff == 0.777 * unit.angstrom
+
+
 class TestUnassignedParameters(_BaseTest):
     def test_catch_unassigned_bonds(self, parsley, ethanol_top):
         for param in parsley["Bonds"].parameters:
@@ -544,6 +562,21 @@ class TestMatrixRepresentations(_BaseTest):
             assert np.allclose(
                 np.sum(param_matrix, axis=1), np.ones(param_matrix.shape[0])
             )
+
+    def test_set_force_field_parameters(self, parsley, ethanol_top):
+        import jax
+
+        bond_handler = SMIRNOFFBondHandler._from_toolkit(
+            parameter_handler=parsley["Bonds"],
+            topology=ethanol_top,
+        )
+
+        original = bond_handler.get_force_field_parameters()
+        modified = original * jax.numpy.array([1.1, 0.5])
+
+        bond_handler.set_force_field_parameters(modified)
+
+        assert (bond_handler.get_force_field_parameters() == modified).all()
 
 
 class TestSMIRNOFFVirtualSites:

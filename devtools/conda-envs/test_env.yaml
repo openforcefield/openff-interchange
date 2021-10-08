@@ -21,6 +21,7 @@ dependencies:
   - mbuild
   - foyer >=0.8.1
   # Testing
+  - intermol
   - openff-evaluator
   - openff-recharge
   - openeye-toolkits
@@ -28,6 +29,7 @@ dependencies:
   - pytest-timeout
   - codecov
   - pytest-cov
+  - pytest-xdist
   - nbval
   - conda
   # Drivers

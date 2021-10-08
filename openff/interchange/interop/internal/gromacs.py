@@ -1,20 +1,31 @@
 """Interfaces with GROMACS."""
 import math
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Dict, Set, Tuple, Union
+from typing import IO, TYPE_CHECKING, Callable, Dict, Set, Tuple, Union
 
+import mdtraj as md
 import numpy as np
 from openff.units import unit
 
+from openff.interchange.components.base import (
+    BaseAngleHandler,
+    BaseBondHandler,
+    BaseElectrostaticsHandler,
+    BaseImproperTorsionHandler,
+    BaseProperTorsionHandler,
+    BasevdWHandler,
+)
 from openff.interchange.components.mdtraj import (
     _iterate_angles,
     _iterate_impropers,
     _iterate_pairs,
     _iterate_propers,
+    _OFFBioTop,
     _store_bond_partners,
 )
+from openff.interchange.components.potentials import Potential
 from openff.interchange.exceptions import UnsupportedExportError
-from openff.interchange.models import TopologyKey, VirtualSiteKey
+from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
@@ -111,6 +122,90 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
         gro.write("\n")
 
 
+def _read_coordinates(file_path: Union[Path, str]) -> np.ndarray:
+    def _infer_coord_precision(file_path: Union[Path, str]) -> int:
+        """
+        Infer decimal precision of coordinates by parsing periods in atoms lines.
+        """
+        with open(file_path) as file_in:
+            file_in.readline()
+            file_in.readline()
+            atom_line = file_in.readline()
+            period_indices = [i for i, x in enumerate(atom_line) if x == "."]
+            spacing_between_periods = period_indices[-1] - period_indices[-2]
+            precision = spacing_between_periods - 5
+            return precision
+
+    precision = _infer_coord_precision(file_path)
+    coordinate_width = precision + 5
+    # Column numbers in file separating x, y, z coords of each atom.
+    # Default (3 decimals of precision -> 8 columns) are 20, 28, 36, 44
+    coordinate_columns = [
+        20,
+        20 + coordinate_width,
+        20 + 2 * coordinate_width,
+        20 + 3 * coordinate_width,
+    ]
+
+    with open(file_path) as gro_file:
+        # Throw away comment / name line
+        gro_file.readline()
+        n_atoms = int(gro_file.readline())
+
+        unitless_coordinates = np.zeros((n_atoms, 3))
+        for coordinate_index in range(n_atoms):
+            line = gro_file.readline()
+            _ = int(line[:5])  # residue_index
+            _ = line[5:10]  # residue_name
+            _ = line[10:15]  # atom_name
+            _ = int(line[15:20])  # atom_index
+            x = float(line[coordinate_columns[0] : coordinate_columns[1]])
+            y = float(line[coordinate_columns[1] : coordinate_columns[2]])
+            z = float(line[coordinate_columns[2] : coordinate_columns[3]])
+            unitless_coordinates[coordinate_index] = np.array([x, y, z])
+
+        coordinates = unitless_coordinates * unit.nanometer
+
+    return coordinates
+
+
+def _read_box(file_path: Union[Path, str]) -> np.ndarray:
+
+    with open(file_path) as gro_file:
+        # Throw away comment / name line
+        gro_file.readline()
+        n_atoms = int(gro_file.readline())
+
+        box_line = gro_file.readlines()[n_atoms]
+
+    parsed_box = [float(val) for val in box_line.split()]
+
+    if len(parsed_box) == 3:
+        box = parsed_box * np.eye(3) * unit.nanometer
+
+    return box
+
+
+def from_gro(file_path: Union[Path, str]) -> "Interchange":
+    """Read coordinates and box information from a GROMACS GRO (.gro) file."""
+    if isinstance(file_path, str):
+        path = Path(file_path)
+    if isinstance(file_path, Path):
+        path = file_path
+
+    coordinates = _read_coordinates(path)
+
+    box = _read_box(path)
+
+    from openff.interchange.components.interchange import Interchange
+
+    interchange = Interchange()
+    interchange.box = box
+    interchange.positions = coordinates
+
+    return interchange
+
+
 def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
     """
     Write a GROMACS topology (.top) file.
@@ -169,7 +264,7 @@ def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
             "with GROMACS. Looked for handlers named `vdW` and `Buckingham-6`."
         )
 
-    mixing_rule = openff_sys[handler_key].mixing_rule
+    mixing_rule = openff_sys[handler_key].mixing_rule.lower()
     if mixing_rule == "lorentz-berthelot":
         comb_rule = 2
     elif mixing_rule == "geometric":
@@ -268,9 +363,7 @@ def _write_atomtypes_lj(
 ):
     """Write the [ atomtypes ] section when all atoms use the LJ potential."""
     top_file.write("[ atomtypes ]\n")
-    top_file.write(
-        ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n"
-    )
+    top_file.write(";type, bondingtype, mass, charge, ptype, sigma, epsilon\n")
 
     for atom_idx, atom_type in typemap.items():
         atom = openff_sys.topology.mdtop.atom(atom_idx)
@@ -279,11 +372,13 @@ def _write_atomtypes_lj(
         parameters = _get_lj_parameters(openff_sys, atom_idx)
         sigma = parameters["sigma"].to(unit.nanometer).magnitude
         epsilon = parameters["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude
-        # top.write('{0:<11s} {1:5s} {2:6d} {3:18.8f} {4:18.8f} {5:5s}'.format(
+        # TODO: Sometimes a "bondingtype" can sneak in to as the second column. This
+        #       seems to be used commonly in how OPLS groups atom types for valence
+        #       terms, and InterMol attempts to parse it as such, but the GROMACS
+        #       documentation makes no mention of this behavior.
         top_file.write(
-            "{:<11s} {:6s} {:6d} {:.16g} {:.16g} {:5s} {:.16g} {:.16g}\n".format(
-                atom_type,  # atom type
-                "XX",  # atom "bonding type", i.e. bond class
+            "{:<11s} {:6d} {:.16g} {:.16f} {:5s} {:.16g} {:.16g}\n".format(
+                atom_type,
                 atomic_number,
                 mass,
                 0.0,  # charge, overriden later in [ atoms ]
@@ -427,10 +522,10 @@ def _write_atoms(
     _store_bond_partners(openff_sys.topology.mdtop)
 
     try:
-        mixing_rule = openff_sys["vdW"].mixing_rule
+        mixing_rule = openff_sys["vdW"].mixing_rule.lower()
         scale_lj = openff_sys["vdW"].scale_14
     except LookupError:
-        mixing_rule = openff_sys["Buckingham-6"].mixing_rule
+        mixing_rule = openff_sys["Buckingham-6"].mixing_rule.lower()
         scale_lj = openff_sys["Buckingham-6"].scale_14
 
     # Use a set to de-duplicate
@@ -878,3 +973,322 @@ def _get_buck_parameters(openff_sys: "Interchange", atom_idx: int) -> Dict:
     parameters = potential.parameters
 
     return parameters
+
+
+def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
+    """Read the contents of a GROMACS Topology (.top) file."""
+    from openff.interchange.components.interchange import Interchange
+
+    interchange = Interchange()
+    current_directive = None
+
+    def process_defaults(interchange: Interchange, line: str):
+        fields = line.split()
+        if len(fields) != 5:
+            raise Exception(fields)
+
+        nbfunc, comb_rule, gen_pairs, lj_14, coul_14 = fields
+
+        if nbfunc == "1":
+            vdw_handler = BasevdWHandler()
+        elif nbfunc == "2":
+            raise NotImplementedError(
+                "Parsing GROMACS files with the Buckingham-6 potential is not supported"
+            )
+
+        if comb_rule == "1":
+            vdw_handler.mixing_rule = "geometric"
+        elif comb_rule == "2":
+            vdw_handler.mixing_rule = "lorentz-berthelot"
+        else:
+            raise RuntimeError(f"Found bad/unsupported combination rule: '{comb_rule}'")
+
+        # TODO: Process pairs
+
+        electrostatics_handler = BaseElectrostaticsHandler()
+
+        vdw_handler.scale_14 = float(lj_14)
+        electrostatics_handler.scale_14 = float(coul_14)
+
+        interchange.add_handler("vdW", vdw_handler)
+        interchange.add_handler("Electrostatics", electrostatics_handler)
+
+    def process_atomtype(interchange: Interchange, line: str):
+        fields = line.split()
+        if len(fields) != 7:
+            raise Exception
+
+        atom_type, atomic_number, mass, charge, ptype, sigma, epsilon = fields
+
+        potential_key = PotentialKey(id=atom_type)
+        if potential_key in interchange["vdW"].potentials:
+            raise RuntimeError
+
+        potential = Potential(
+            parameters={
+                "sigma": float(sigma) * unit.nanometer,
+                "epsilon": float(epsilon) * unit.kilojoule / unit.mole,
+            }
+        )
+
+        interchange["vdW"].potentials.update({potential_key: potential})
+
+    def process_moleculetype(interchange: Interchange, line: str):
+        from openff.toolkit.topology.molecule import Molecule
+
+        fields = line.split()
+        if len(fields) != 2:
+            raise Exception
+
+        molecule_name, nrexcl = fields
+
+        if nrexcl != "3":
+            raise Exception()
+
+        molecule = Molecule()
+        molecule.name = molecule_name
+
+        if interchange.topology is not None:
+            raise Exception
+
+        mdtop = md.Topology.from_openmm(molecule.to_topology().to_openmm())
+        default_chain = mdtop.add_chain()
+        mdtop.add_residue(name="FOO", chain=default_chain)
+
+        topology = _OFFBioTop()
+        topology.mdtop = mdtop
+
+        interchange.topology = topology
+
+    def process_atom(interchange: Interchange, line: str):
+        fields = line.split()
+        if len(fields) != 8:
+            raise Exception
+
+        (
+            atom_number,
+            atom_type,
+            residue_number,
+            residue_name,
+            atom_name,
+            cg_number,
+            _charge,
+            mass,
+        ) = fields
+
+        interchange.topology.mdtop.add_atom(
+            name=atom_name,
+            element=md.element.Element.getByMass(float(mass)),  # type: ignore[attr-defined]
+            residue=interchange.topology.mdtop.residue(0),
+        )
+
+        topology_key = TopologyKey(atom_indices=(int(atom_number) - 1,))
+        potential_key = PotentialKey(id=atom_type)
+
+        if potential_key not in interchange["vdW"].potentials:
+            raise RuntimeError(
+                f"Found atom type {atom_type} in an atoms directive but "
+                "either did not find or failed to process an atom type of the same name "
+                "in the atomtypes directive."
+            )
+
+        charge: unit.Quantity = float(_charge) * unit.elementary_charge
+
+        interchange["vdW"].slot_map.update({topology_key: potential_key})
+        # The vdw .potentials was constructed while parsing [ atomtypes ]
+        interchange["Electrostatics"].slot_map.update({topology_key: potential_key})
+        interchange["Electrostatics"].potentials.update(
+            {potential_key: Potential(parameters={"charge": charge})}
+        )
+
+    def process_pair(interchange: Interchange, line: str):
+        pass
+
+    def process_bond(interchange: Interchange, line: str):
+        fields = line.split()
+        if len(fields) != 5:
+            raise Exception
+
+        if "Bonds" not in interchange.handlers:
+            bond_handler = BaseBondHandler()
+            interchange.add_handler("Bonds", bond_handler)
+
+        atom1, atom2, func, length, k = fields
+
+        interchange.topology.mdtop.add_bond(
+            atom1=interchange.topology.mdtop.atom(int(atom1) - 1),
+            atom2=interchange.topology.mdtop.atom(int(atom2) - 1),
+        )
+
+        topology_key = TopologyKey(atom_indices=(int(atom1) - 1, int(atom2) - 1))
+        potential_key = PotentialKey(
+            id="-".join(str(i) for i in topology_key.atom_indices)
+        )
+
+        # TODO: De-depulicate identical bond parameters into "types"
+        potential = Potential(
+            parameters={
+                "length": float(length) * unit.nanometer,
+                "k": float(k) * unit.kilojoule / unit.mole / unit.nanometer ** 2,
+            }
+        )
+
+        interchange["Bonds"].slot_map.update({topology_key: potential_key})
+        interchange["Bonds"].potentials.update({potential_key: potential})
+
+    def process_angle(interchange: Interchange, line: str):
+        fields = line.split()
+        if len(fields) != 6:
+            raise Exception
+
+        if "Angles" not in interchange.handlers:
+            angle_handler = BaseAngleHandler()
+            interchange.add_handler("Angles", angle_handler)
+
+        atom1, atom2, atom3, func, theta, k = fields
+
+        topology_key = TopologyKey(
+            atom_indices=(int(i) - 1 for i in [atom1, atom2, atom3])
+        )
+        potential_key = PotentialKey(
+            id="-".join(str(i) for i in topology_key.atom_indices)
+        )
+
+        # TODO: De-depulicate identical angle parameters into "types"
+        potential = Potential(
+            parameters={
+                "angle": float(theta) * unit.degree,
+                "k": float(k) * unit.kilojoule / unit.mole / unit.radian ** 2,
+            }
+        )
+
+        interchange["Angles"].slot_map.update({topology_key: potential_key})
+        interchange["Angles"].potentials.update({potential_key: potential})
+
+    def process_dihedral(interchange: Interchange, line: str):
+        fields = line.split()
+        if len(fields) != 8:
+            raise Exception
+
+        if "ProperTorsions" not in interchange.handlers:
+            proper_handler = BaseProperTorsionHandler()
+            interchange.add_handler("ProperTorsions", proper_handler)
+
+        if "ImproperTorsions" not in interchange.handlers:
+            improper_handler = BaseImproperTorsionHandler()
+            interchange.add_handler("ImproperTorsions", improper_handler)
+
+        atom1, atom2, atom3, atom4, func, phase, k, periodicity = fields
+
+        topology_key = TopologyKey(
+            atom_indices=(int(i) - 1 for i in [atom1, atom2, atom3, atom4]),
+            mult=0,
+        )
+
+        def ensure_unique_key(
+            handler: Union[BaseProperTorsionHandler, BaseImproperTorsionHandler],
+            key: TopologyKey,
+        ):
+            if key in handler.slot_map:
+                key.mult += 1  # type: ignore[operator]
+                ensure_unique_key(handler, key)
+
+        potential_key = PotentialKey(
+            id="-".join(str(i) for i in topology_key.atom_indices),
+        )
+
+        if func == "1":
+            ensure_unique_key(interchange["ProperTorsions"], topology_key)
+            potential_key.mult = topology_key.mult
+
+            potential = Potential(
+                parameters={
+                    "phase": float(phase) * unit.degree,
+                    "k": float(k) * unit.kilojoule / unit.mole,
+                    "periodicity": int(periodicity) * unit.dimensionless,
+                    "idivf": 1 * unit.dimensionless,
+                }
+            )
+
+            interchange["ProperTorsions"].slot_map.update({topology_key: potential_key})
+            interchange["ProperTorsions"].potentials.update({potential_key: potential})
+
+        elif func == "4":
+            ensure_unique_key(interchange["ImproperTorsions"], topology_key)
+            potential_key.mult = topology_key.mult
+
+            potential = Potential(
+                parameters={
+                    "phase": float(phase) * unit.degree,
+                    "k": float(k) * unit.kilojoule / unit.mole,
+                    "periodicity": int(periodicity) * unit.dimensionless,
+                    "idivf": 1 * unit.dimensionless,
+                }
+            )
+
+            interchange["ImproperTorsions"].slot_map.update(
+                {topology_key: potential_key}
+            )
+            interchange["ImproperTorsions"].potentials.update(
+                {potential_key: potential}
+            )
+
+    def process_molecule(interchange: Interchange, line: str):
+        fields = line.split()
+        if len(fields) != 2:
+            raise Exception
+
+        molecule_name, n_molecules = fields
+
+        if n_molecules != "1":
+            raise NotImplementedError(
+                "Only single-molecule topologies are currently supported"
+            )
+
+    def process_system(interchange: Interchange, line: str):
+        interchange.name = line
+
+    supported_directives: Dict[str, Callable] = {
+        "defaults": process_defaults,
+        "atomtypes": process_atomtype,
+        "moleculetype": process_moleculetype,
+        "atoms": process_atom,
+        "pairs": process_pair,
+        "bonds": process_bond,
+        "angles": process_angle,
+        "dihedrals": process_dihedral,
+        "molecules": process_molecule,
+        "system": process_system,
+    }
+
+    with open(top_file) as opened_top:
+        for line in opened_top:
+            line = line.strip()
+
+            if ";" in line:
+                line = line[: line.index(";")].strip()
+            if len(line) == 0:
+                continue
+
+            if line.startswith("#"):
+                raise NotImplementedError(
+                    "Parsing GROMACS files with preprocessor commands "
+                    "is not yet supported. Found a line with contents "
+                    f"{line}"
+                )
+
+            elif line.startswith("["):
+                current_directive = line[1:-1].strip()
+                continue
+
+            if current_directive in supported_directives:
+                supported_directives[current_directive](interchange, line)
+
+            else:
+                raise RuntimeError(
+                    "Found bad top file or unsupported directive. "
+                    f"Current directive is: {current_directive}\n"
+                    f"Current line is: '{line}'"
+                )
+
+    return interchange
