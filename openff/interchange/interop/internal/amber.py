@@ -1,11 +1,18 @@
+"""Interfaces with Amber."""
+import textwrap
 from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
 from openff.units import unit
 
+from openff.interchange.components.mdtraj import _get_num_h_bonds
+
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
+
+
+AMBER_COULOMBS_CONSTANT = 18.2223
 
 
 def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
@@ -23,14 +30,134 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         now = datetime.datetime.now()
         prmtop.write(
-            "%%VERSION  VERSION_STAMP = V0001.000  DATE = "
+            "%VERSION  VERSION_STAMP = V0001.000  DATE = "
             f"{now.month:02d}/{now.day:02d}/{(now.year % 100):02}  "
-            f"{now.hour:02d}:{now.minute:02d}:{now.second:02d}"
+            f"{now.hour:02d}:{now.minute:02d}:{now.second:02d}\n"
+            "%FLAG TITLE\n"
+            "%FORMAT(20a4)\n"
+            "\n"
         )
 
         from openff.interchange.interop.internal.gromacs import _build_typemap
 
         typemap = _build_typemap(interchange)  # noqa
+
+        NATOM = interchange.topology.mdtop.n_atoms  # : total number of atoms
+        NTYPES = len(typemap)  # : total number of distinct atom types
+        NBONH = _get_num_h_bonds(
+            interchange.topology.mdtop
+        )  # : number of bonds containing hydrogen
+        MBONA = (
+            interchange.topology.mdtop.n_bonds - NBONH
+        )  # : number of bonds not containing hydrogen
+        NTHETH = 0  # : number of angles containing hydrogen
+        MTHETA = 0  # : number of angles not containing hydrogen
+        NPHIH = 0  # : number of dihedrals containing hydrogen
+        MPHIA = 0  # : number of dihedrals not containing hydrogen
+        NHPARM = 0  # : currently not used
+        NPARM = 0  # : used to determine if addles created prmtop
+        NNB = 0  # : number of excluded atoms
+        NRES = interchange.topology.mdtop.n_residues  # : number of residues
+        NBONA = 0  # : MBONA + number of constraint bonds
+        NTHETA = 0  # : MTHETA + number of constraint angles
+        NPHIA = 0  # : MPHIA + number of constraint dihedrals
+        NUMBND = 0  # : number of unique bond types
+        NUMANG = 0  # : number of unique angle types
+        NPTRA = 0  # : number of unique dihedral types
+        NATYP = 0  # : number of atom types in parameter file, see SOLTY below
+        NPHB = 0  # : number of distinct 10-12 hydrogen bond pair types
+        IFPERT = 0  # : set to 1 if perturbation info is to be read in
+        NBPER = 0  # : number of bonds to be perturbed
+        NGPER = 0  # : number of angles to be perturbed
+        NDPER = 0  # : number of dihedrals to be perturbed
+        MBPER = 0  # : number of bonds with atoms completely in perturbed group
+        MGPER = 0  # : number of angles with atoms completely in perturbed group
+        MDPER = 0  # : number of dihedrals with atoms completely in perturbed groups
+        IFBOX = 0  # : set to 1 if standard periodic box, 2 when truncated octahedral
+        NMXRS = 0  # : number of atoms in the largest residue
+        IFCAP = 0  # : set to 1 if the CAP option from edit was specified
+        NUMEXTRA = 0  # : number of extra points found in topology
+        NCOPY = 0  # : number of PIMD slices / number of beads
+        pointers = [
+            NATOM,
+            NTYPES,
+            NBONH,
+            MBONA,
+            NTHETH,
+            MTHETA,
+            NPHIH,
+            MPHIA,
+            NHPARM,
+            NPARM,
+            NNB,
+            NRES,
+            NBONA,
+            NTHETA,
+            NPHIA,
+            NUMBND,
+            NUMANG,
+            NPTRA,
+            NATYP,
+            NPHB,
+            IFPERT,
+            NBPER,
+            NGPER,
+            NDPER,
+            MBPER,
+            MGPER,
+            MDPER,
+            IFBOX,
+            NMXRS,
+            IFCAP,
+            NUMEXTRA,
+            NCOPY,
+        ]
+
+        prmtop.write("%FLAG POINTERS\n" "%FORMAT(10I8)\n")
+
+        text_blob = "".join([str(val).rjust(8) for val in pointers])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG ATOM_NAME\n" "%FORMAT(20a4)\n")
+        text_blob = "".join([val.ljust(4) for val in typemap.values()])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG CHARGE\n" "%FORMAT(5E16.8)\n")
+        charges = [
+            charge.m_as(unit.e) * AMBER_COULOMBS_CONSTANT
+            for charge in interchange["Electrostatics"].charges.values()
+        ]
+        text_blob = "".join([f"{val:16.8E}" for val in charges])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG ATOMIC_NUMBER\n" "%FORMAT(10I8)\n")
+        atomic_numbers = [
+            a.element.atomic_number for a in interchange.topology.mdtop.atoms
+        ]
+        text_blob = "".join([str(val).rjust(8) for val in atomic_numbers])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG MASS\n" "%FORMAT(5E16.8)\n")
+        masses = [a.element.mass for a in interchange.topology.mdtop.atoms]
+        text_blob = "".join([f"{val:16.8E}" for val in masses])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG ATOM_TYPE_INDEX\n" "%FORMAT(10I8)\n")
+        unused_indices = [*range(1, NATOM + 1)]
+        text_blob = "".join([str(val).rjust(8) for val in unused_indices])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG NUMBER_EXCLUDED_ATOMS\n" "%FORMAT(10I8)\n")
+        number_excluded_atoms = NATOM * [0]
+        text_blob = "".join([str(val).rjust(8) for val in number_excluded_atoms])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
 
 
 def to_inpcrd(interchange: "Interchange", file_path: Union[Path, str]):
