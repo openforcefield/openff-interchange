@@ -127,7 +127,7 @@ class TestBadExports(_BaseTest):
     def test_gro_file_all_zero_positions(self, parsley):
         top = Topology.from_molecules(Molecule.from_smiles("CC"))
         zero_positions = Interchange.from_smirnoff(force_field=parsley, topology=top)
-        zero_positions.positions = np.zeros((top.n_topology_atoms, 3)) * unit.nanometer
+        zero_positions.positions = np.zeros((top.n_atoms, 3)) * unit.nanometer
         with pytest.warns(UserWarning, match="seem to all be zero"):
             zero_positions.to_gro("foo.gro")
 

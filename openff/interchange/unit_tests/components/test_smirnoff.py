@@ -775,7 +775,7 @@ def _get_n_virtual_sites_toolkit(
     force_field: "ForceField", topology: "Topology"
 ) -> int:
     """Get the number of virtual particles created by ForceField.create_openmm_system"""
-    n_atoms = topology.n_topology_atoms
+    n_atoms = topology.n_atoms
     omm_sys = force_field.create_openmm_system(topology)
 
     for force in omm_sys.getForces():

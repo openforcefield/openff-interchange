@@ -181,13 +181,8 @@ class Interchange(DefaultModel):
 
         if isinstance(topology, _OFFBioTop):
             raise Exception()
-            # TODO: See if Topology(topology) is fixed
-            # https://github.com/openforcefield/openff-toolkit/issues/946
-            sys_out.topology = deepcopy(topology)
-            sys_out.topology.mdtop = topology.mdtop
         elif isinstance(topology, Topology):
             sys_out.topology = Topology(topology)
-            sys_out.topology.mdtop = md.Topology.from_openmm(topology.to_openmm())
         else:
             raise InvalidTopologyError(
                 "Could not process topology argument, expected Topology or _OFFBioTop. "
@@ -294,6 +289,9 @@ class Interchange(DefaultModel):
 
             to_gro(self, file_path, decimal=decimal)
 
+        else:
+            raise UnsupportedExportError
+
     def to_top(self, file_path: Union[Path, str], writer="internal"):
         """Export this interchange to a .top file."""
         if writer == "parmed":
@@ -305,6 +303,9 @@ class Interchange(DefaultModel):
             from openff.interchange.interop.internal.gromacs import to_top
 
             to_top(self, file_path)
+
+        else:
+            raise UnsupportedExportError
 
     def to_lammps(self, file_path: Union[Path, str], writer="internal"):
         """Export this Interchange to a LAMMPS data file."""

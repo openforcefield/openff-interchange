@@ -25,7 +25,7 @@ def test_residues():
     top = _OFFBioTop.from_openmm(pdb.topology, unique_molecules=[mol])
     top.mdtop = traj.top
 
-    assert top.n_topology_atoms == 29
+    assert top.n_atoms == 29
     assert top.mdtop.n_residues == 4
     assert [r.name for r in top.mdtop.residues] == ["ACE", "ALA", "GLY", "NME"]
 
