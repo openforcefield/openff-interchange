@@ -307,7 +307,7 @@ def _build_virtual_site_map(interchange: "Interchange") -> Dict[VirtualSiteKey, 
     if "VirtualSites" not in interchange.handlers:
         return virtual_site_topology_index_map
 
-    n_atoms = interchange.topology.mdtop.n_atoms
+    n_atoms = interchange.n_atoms
 
     for index, virtual_site_key in enumerate(
         interchange["VirtualSites"].slot_map.keys()
@@ -447,8 +447,8 @@ def _write_atoms(
         mass = off_atom.element.mass._value
         atom_type = typemap[atom_idx]
         try:
-            res_idx = off_atom.atom.metadata["residue_number"]
-            res_name = off_atom.atom.metadata["residue_name"]
+            res_idx = off_atom.metadata["residue_number"]
+            res_name = off_atom.metadata["residue_name"]
         except KeyError:
             res_idx = "999"
             res_name = "FOO"

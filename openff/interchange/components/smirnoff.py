@@ -127,6 +127,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
             valence_terms = self.valence_terms(topology)  # type: ignore[attr-defined]
 
             parameter_handler._check_all_valence_terms_assigned(
+                topology=topology,
                 assigned_terms=matches,
                 valence_terms=valence_terms,
                 exception_cls=UnassignedValenceParameterException,
@@ -221,6 +222,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         valence_terms = self.valence_terms(topology)
 
         parameter_handler._check_all_valence_terms_assigned(
+            topology=topology,
             assigned_terms=matches,
             valence_terms=valence_terms,
             exception_cls=UnassignedValenceParameterException,
@@ -300,11 +302,11 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
                 for p in parameter_handler.parameters
             )
         ):
-            for ref_mol in topology.reference_molecules:
+            for molecule in topology.molecules:
                 # TODO: expose conformer generation and fractional bond order assigment
                 # knobs to user via API
-                ref_mol.generate_conformers(n_conformers=1)
-                ref_mol.assign_fractional_bond_orders(
+                molecule.generate_conformers(n_conformers=1)
+                molecule.assign_fractional_bond_orders(
                     bond_order_model=handler.fractional_bond_order_method.lower(),  # type: ignore[attr-defined]
                 )
 
@@ -528,6 +530,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
                 self.slot_map[topology_key] = potential_key
 
         parameter_handler._check_all_valence_terms_assigned(
+            topology=topology,
             assigned_terms=matches,
             valence_terms=list(topology.propers),
             exception_cls=UnassignedProperTorsionParameterException,
@@ -1299,12 +1302,18 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         self.potentials = dict()
         self.slot_map = dict()
 
-        reference_molecules = [*topology.reference_molecules]
+        # TODO: We **really** need to evaluate shortcuts to finding matches
+        #       on all duplicate molecules, post-TopologyMolecule deprecation.
+        #       Jeff has some ideas about how the toolkit could implement
+        #       some heuristics here.
+        for molecule in topology.molecules:
+            # for reference_molecule in reference_molecules:
 
-        for reference_molecule in reference_molecules:
-
+            # TODO: Rename this method to something like `_find_matches`
             matches, potentials = self._find_reference_matches(
-                parameter_handlers, reference_molecule
+                # parameter_handlers, reference_molecule
+                parameter_handlers,
+                molecule,
             )
 
             match_mults = defaultdict(set)
@@ -1314,22 +1323,22 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             self.potentials.update(potentials)
 
-            for top_mol in topology._reference_molecule_to_topology_molecules[
-                reference_molecule
-            ]:
+            # for top_mol in topology._reference_molecule_to_topology_molecules[
+            #     reference_molecule
+            # ]:
 
-                for topology_particle in top_mol.atoms:
+            for particle in molecule.atoms:
 
-                    reference_index = topology_particle.atom.molecule_particle_index
-                    topology_index = topology_particle.topology_particle_index
+                reference_index = molecule.particle_index(particle)
+                topology_index = topology.particle_index(particle)
 
-                    for mult in match_mults[(reference_index,)]:
+                for mult in match_mults[(reference_index,)]:
 
-                        top_key = TopologyKey(atom_indices=(topology_index,), mult=mult)
+                    top_key = TopologyKey(atom_indices=(topology_index,), mult=mult)
 
-                        self.slot_map[top_key] = matches[
-                            TopologyKey(atom_indices=(reference_index,), mult=mult)
-                        ]
+                    self.slot_map[top_key] = matches[
+                        TopologyKey(atom_indices=(reference_index,), mult=mult)
+                    ]
 
     def store_potentials(
         self,

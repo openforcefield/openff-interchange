@@ -34,9 +34,7 @@ class TestParmedConversion(_BaseTest):
         off_sys = Interchange.from_smirnoff(
             force_field=argon_ff, topology=argon_top, box=box
         )
-        off_sys.positions = (
-            np.zeros(shape=(argon_top.n_topology_atoms, 3)) * unit.angstrom
-        )
+        off_sys.positions = np.zeros(shape=(argon_top.n_atoms, 3)) * unit.angstrom
         struct = off_sys._to_parmed()
 
         assert np.allclose(
@@ -48,7 +46,7 @@ class TestParmedConversion(_BaseTest):
         off_sys = Interchange.from_smirnoff(
             force_field=argon_ff, topology=argon_top, box=box
         )
-        off_sys.positions = np.zeros(shape=(argon_top.n_topology_atoms, 3))
+        off_sys.positions = np.zeros(shape=(argon_top.n_atoms, 3))
         struct = off_sys._to_parmed()
 
         # As partial sanity check, see if it they save without error
@@ -63,7 +61,7 @@ class TestParmedConversion(_BaseTest):
 
         off_sys = Interchange.from_smirnoff(force_field=parsley, topology=top, box=box)
         # UnitArray(...)
-        off_sys.positions = np.zeros(shape=(top.n_topology_atoms, 3))
+        off_sys.positions = np.zeros(shape=(top.n_atoms, 3))
         struct = off_sys._to_parmed()
 
         sigma0 = struct.atoms[0].atom_type.sigma
@@ -96,7 +94,7 @@ class TestParmedConversion(_BaseTest):
         off_sys = Interchange.from_smirnoff(
             force_field=ammonia_ff, topology=ammonia_top, box=box
         )
-        off_sys.positions = np.zeros(shape=(ammonia_top.n_topology_atoms, 3))
+        off_sys.positions = np.zeros(shape=(ammonia_top.n_atoms, 3))
         struct = off_sys._to_parmed()
 
         # As partial sanity check, see if it they save without error

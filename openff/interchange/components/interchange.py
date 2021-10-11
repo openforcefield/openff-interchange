@@ -61,7 +61,7 @@ class Interchange(DefaultModel):
 
         # TODO: Ensure these fields are hidden from the user as intended
         handlers: Dict[str, PotentialHandler] = dict()
-        topology: Optional[_OFFBioTop] = Field(None)
+        topology: Optional[Union[_OFFBioTop, Topology]] = Field(None)
         box: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
         positions: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
 
@@ -138,7 +138,7 @@ class Interchange(DefaultModel):
     def from_smirnoff(
         cls,
         force_field: ForceField,
-        topology: _OFFBioTop,
+        topology: Union[_OFFBioTop, Topology],
         box=None,
     ) -> "Interchange":
         """
@@ -180,12 +180,13 @@ class Interchange(DefaultModel):
         cls._check_supported_handlers(force_field)
 
         if isinstance(topology, _OFFBioTop):
+            raise Exception()
             # TODO: See if Topology(topology) is fixed
             # https://github.com/openforcefield/openff-toolkit/issues/946
             sys_out.topology = deepcopy(topology)
             sys_out.topology.mdtop = topology.mdtop
         elif isinstance(topology, Topology):
-            sys_out.topology = _OFFBioTop(other=topology)
+            sys_out.topology = Topology(topology)
             sys_out.topology.mdtop = md.Topology.from_openmm(topology.to_openmm())
         else:
             raise InvalidTopologyError(
@@ -529,9 +530,7 @@ class Interchange(DefaultModel):
     def __repr__(self):
         periodic = self.box is not None
         try:
-            n_atoms = self.topology.mdtop.n_atoms
-        except AttributeError:
+            n_atoms = self.topology.n_atoms
+        except Exception:
             n_atoms = "unknown number of"
-        except NameError:
-            n_atoms = self.topology.n_topology_atoms
         return f"Interchange with {n_atoms} atoms, {'' if periodic else 'non-'}periodic topology"
