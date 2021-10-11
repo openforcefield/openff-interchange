@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 
 
 AMBER_COULOMBS_CONSTANT = 18.2223
+kcal_mol_a2 = unit.kilocalorie / unit.mol / unit.angstrom ** 2
+kcal_mol_rad2 = unit.kilocalorie / unit.mol / unit.radian ** 2
 
 
 def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
@@ -156,6 +158,94 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         prmtop.write("%FLAG NUMBER_EXCLUDED_ATOMS\n" "%FORMAT(10I8)\n")
         number_excluded_atoms = NATOM * [0]
         text_blob = "".join([str(val).rjust(8) for val in number_excluded_atoms])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG NONBONDED_PARM_INDEX\n" "%FORMAT(10I8)\n")
+        text_blob = "".join([str(val).rjust(8) for val in range(NTYPES ** 2)])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG RESIDUE_LABEL\n" "%FORMAT(20a4)\n")
+        prmtop.write("FOO\n")
+
+        prmtop.write("%FLAG REISUDE_POINTER\n" "%FORMAT(10I8)\n")
+        prmtop.write("1\n")
+
+        # TODO: Exclude (?) bonds containing hydrogens
+        prmtop.write("%FLAG BOND_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
+        bond_k = [
+            interchange["Bonds"].potentials[key].parameters["k"].m_as(kcal_mol_a2) / 2
+            for key in interchange["Bonds"].slot_map.values()
+        ]
+        text_blob = "".join([f"{val:16.8E}" for val in bond_k])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG BOND_EQUIL_VALUE\n" "%FORMAT(5E16.8)\n")
+        bond_length = [
+            interchange["Bonds"]
+            .potentials[key]
+            .parameters["length"]
+            .m_as(unit.angstrom)
+            for key in interchange["Bonds"].slot_map.values()
+        ]
+        text_blob = "".join([f"{val:16.8E}" for val in bond_length])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG ANGLE_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
+        angle_k = [
+            interchange["Angles"].potentials[key].parameters["k"].m_as(kcal_mol_rad2)
+            / 2
+            for key in interchange["Angles"].slot_map.values()
+        ]
+        text_blob = "".join([f"{val:16.8E}" for val in angle_k])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG ANGLE_EQUIL_VALUE\n" "%FORMAT(5E16.8)\n")
+        angle_theta = [
+            interchange["Angles"].potentials[key].parameters["angle"].m_as(unit.radian)
+            for key in interchange["Angles"].slot_map.values()
+        ]
+        text_blob = "".join([f"{val:16.8E}" for val in angle_theta])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG DIHEDRAL_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
+        proper_k = [
+            interchange["ProperTorsions"]
+            .potentials[key]
+            .parameters["k"]
+            .m_as(unit.kilocalorie / unit.mol)
+            for key in interchange["ProperTorsions"].slot_map.values()
+        ]
+        text_blob = "".join([f"{val:16.8E}" for val in proper_k])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG DIHEDRAL_PERIODICITY\n" "%FORMAT(5E16.8)\n")
+        proper_periodicity = [
+            interchange["ProperTorsions"]
+            .potentials[key]
+            .parameters["periodicity"]
+            .m_as(unit.dimensionless)
+            for key in interchange["ProperTorsions"].slot_map.values()
+        ]
+        text_blob = "".join([f"{val:16.8E}" for val in proper_periodicity])
+        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
+            prmtop.write(line + "\n")
+
+        prmtop.write("%FLAG DIHEDRAL_PHASE\n" "%FORMAT(5E16.8)\n")
+        proper_phase = [
+            interchange["ProperTorsions"]
+            .potentials[key]
+            .parameters["phase"]
+            .m_as(unit.dimensionless)
+            for key in interchange["ProperTorsions"].slot_map.values()
+        ]
+        text_blob = "".join([f"{val:16.8E}" for val in proper_phase])
         for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
             prmtop.write(line + "\n")
 
