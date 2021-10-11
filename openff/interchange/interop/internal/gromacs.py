@@ -47,10 +47,15 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
         gro.write(f"{n_particles}\n")
         for atom in openff_sys.topology.atoms:
             _off_atom_index = openff_sys.topology.atom_index(atom)
-            residue_idx = int((atom.metadata["residue_number"]) + 1) % 100000
-            # TODO: After topology refactor, ensure this matches residue names
-            # in the topology file (unsure if this is necessary?)
-            residue_name = atom.metadata["residue_name"][:5]
+            try:
+                residue_idx = int((atom.metadata["residue_number"]) + 1) % 100000
+                # TODO: After topology refactor, ensure this matches residue names
+                # in the topology file (unsure if this is necessary?)
+                residue_name = atom.metadata["residue_name"][:5]
+            except KeyError:
+                residue_idx = 0
+                residue_name = "UNK"
+
             atom_name = typemap[_off_atom_index]
             atom_index = (_off_atom_index + 1) % 100000
             # TODO: Make sure these are in nanometers
@@ -274,9 +279,9 @@ def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
     )
 
 
-def _build_typemap(openff_sys: "Interchange") -> Dict:
+def _build_typemap(openff_sys: "Interchange") -> Dict[int, str]:
     typemap = dict()
-    elements: Dict[int, str] = dict()
+    elements: Dict[str, int] = dict()
 
     # TODO: Think about how this logic relates to atom name/type clashes
     for atom in openff_sys.topology.atoms:
@@ -507,7 +512,7 @@ def _write_atoms(
         scale_lj = openff_sys["Buckingham-6"].scale_14
 
     # Use a set to de-duplicate
-    pairs = {*openff_sys.topology.nth_degree_neighbors(n_degrees=3)}
+    pairs: Set[Tuple] = {*openff_sys.topology.nth_degree_neighbors(n_degrees=3)}
 
     # TODO: Sort pairs by atom indices ascending
     for pair in pairs:
@@ -893,7 +898,7 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange"):
     # TODO: Ensure number of torsions written matches what is expected
     if improper_torsion_handler:
         for improper in openff_sys.topology.impropers:
-            indices = tuple(openff_sys.topology.atom_index(a) for a in proper)
+            indices = tuple(openff_sys.topology.atom_index(a) for a in improper)
             for top_key in improper_torsion_handler.slot_map:
                 if indices == top_key.atom_indices:
                     key = improper_torsion_handler.slot_map[top_key]

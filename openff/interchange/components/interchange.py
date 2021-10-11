@@ -4,7 +4,6 @@ from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union
 
-import mdtraj as md
 import numpy as np
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
@@ -161,14 +160,11 @@ class Interchange(DefaultModel):
         .. code-block:: pycon
 
             >>> from openff.interchange.components.interchange import Interchange
-            >>> from openff.interchange.components.mdtraj import _OFFBioTop
-            >>> from openff.toolkit.topology import Molecule
+            >>> from openff.toolkit.topology import Molecule, Topology
             >>> from openff.toolkit.typing.engines.smirnoff import ForceField
-            >>> import mdtraj as md
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> top = _OFFBioTop.from_molecules([mol])
-            >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
+            >>> top = Topology.from_molecules([mol])
             >>> parsley = ForceField("openff-1.0.0.offxml")
             >>> interchange = Interchange.from_smirnoff(topology=top, force_field=parsley)
             >>> interchange
@@ -180,7 +176,12 @@ class Interchange(DefaultModel):
         cls._check_supported_handlers(force_field)
 
         if isinstance(topology, _OFFBioTop):
-            raise Exception()
+            warnings.warn(
+                "Passing an `_OFFBioTop` object to `Interchange.from_smirnoff` is "
+                "DEPCREATED and will be removed in a future release.",
+                DeprecationWarning,
+            )
+            sys_out.topology = deepcopy(topology)
         elif isinstance(topology, Topology):
             sys_out.topology = Topology(topology)
         else:
@@ -370,14 +371,11 @@ class Interchange(DefaultModel):
         .. code-block:: pycon
 
             >>> from openff.interchange.components.interchange import Interchange
-            >>> from openff.interchange.components.mdtraj import _OFFBioTop
             >>> from openff.toolkit.topology import Molecule
             >>> from foyer import Forcefield
-            >>> import mdtraj as md
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> top = _OFFBioTop.from_molecules([mol])
-            >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
+            >>> top = Topology.from_molecules([mol])
             >>> oplsaa = Forcefield(name="oplsaa")
             >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
             >>> interchange
@@ -490,12 +488,12 @@ class Interchange(DefaultModel):
         self_copy = Interchange()
         self_copy._inner_data = deepcopy(self._inner_data)
 
-        atom_offset = self_copy.topology.mdtop.n_atoms
+        atom_offset = self_copy.topology.n_atoms
 
         other_top = deepcopy(other.topology)
 
-        for top_mol in other_top.topology_molecules:
-            self_copy.topology.add_molecule(top_mol.reference_molecule)
+        for mol in other_top.topology_molecules:
+            self_copy.topology.add_molecule(mol)
 
         self_copy.topology.mdtop = md.Topology.from_openmm(
             self_copy.topology.to_openmm()

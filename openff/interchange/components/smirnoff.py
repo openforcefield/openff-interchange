@@ -201,8 +201,8 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         for key, val in matches.items():
             param = val.parameter_type
             if param.k_bondorder or param.length_bondorder:
-                top_bond = topology.get_bond_between(*key)
-                fractional_bond_order = top_bond.bond.fractional_bond_order
+                bond = topology.get_bond_between(*key)
+                fractional_bond_order = bond.fractional_bond_order
                 if not fractional_bond_order:
                     raise RuntimeError(
                         "Bond orders should already be assigned at this point"
@@ -510,8 +510,8 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
                 smirks = param.smirks
                 if param.k_bondorder:
                     # The relevant bond order is that of the _central_ bond in the torsion
-                    top_bond = topology.get_bond_between(key[1], key[2])
-                    fractional_bond_order = top_bond.bond.fractional_bond_order
+                    bond = topology.get_bond_between(key[1], key[2])
+                    fractional_bond_order = bond.fractional_bond_order
                     if not fractional_bond_order:
                         raise RuntimeError(
                             "Bond orders should already be assigned at this point"
@@ -1322,10 +1322,6 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 match_mults[top_key.atom_indices].add(top_key.mult)
 
             self.potentials.update(potentials)
-
-            # for top_mol in topology._reference_molecule_to_topology_molecules[
-            #     reference_molecule
-            # ]:
 
             for particle in molecule.atoms:
 
