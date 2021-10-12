@@ -310,7 +310,7 @@ def _build_virtual_site_map(interchange: "Interchange") -> Dict[VirtualSiteKey, 
     if "VirtualSites" not in interchange.handlers:
         return virtual_site_topology_index_map
 
-    n_atoms = interchange.n_atoms
+    n_atoms = interchange.topology.n_atoms
 
     for index, virtual_site_key in enumerate(
         interchange["VirtualSites"].slot_map.keys()

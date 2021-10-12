@@ -1387,7 +1387,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         can point to multiple potentials (?); each value in the dict is a
         list of parametertypes, whereas conventional handlers don't have lists
         """
-        virtual_site_index = topology.n_topology_atoms
+        virtual_site_index = topology.n_atoms
         parameter_handler_name = getattr(parameter_handler, "_TAGNAME", None)
         if self.slot_map:
             self.slot_map = dict()

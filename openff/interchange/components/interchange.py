@@ -183,7 +183,12 @@ class Interchange(DefaultModel):
             )
             sys_out.topology = deepcopy(topology)
         elif isinstance(topology, Topology):
+            # Work around https://github.com/openforcefield/openff-toolkit/issues/946#issuecomment-941143659
+            box_vectors = topology.box_vectors
+            topology.box_vectors = None
             sys_out.topology = Topology(topology)
+            topology.box_vectors = box_vectors
+            sys_out.topology.box_vectors = topology.box_vectors
         else:
             raise InvalidTopologyError(
                 "Could not process topology argument, expected Topology or _OFFBioTop. "

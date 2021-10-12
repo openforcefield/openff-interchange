@@ -174,9 +174,7 @@ class TestRBTorsions(_BaseTest):
         smirks = "[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]"
         pot_key = PotentialKey(id=smirks)
         for proper in top.propers:
-            top_key = TopologyKey(
-                atom_indices=tuple(a.topology_atom_index for a in proper)
-            )
+            top_key = TopologyKey(atom_indices=tuple(top.atom_index(a) for a in proper))
             rb_torsions.slot_map.update({top_key: pot_key})
 
         # Values from HC-CT-CT-HC RB torsion
