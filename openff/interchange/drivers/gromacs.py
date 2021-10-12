@@ -97,9 +97,15 @@ def _write_mdp_file(openff_sys: "Interchange"):
             if num_constraints == 0:
                 mdp_file.write("constraints = none\n")
             else:
-                from openff.interchange.components.mdtraj import _get_num_h_bonds
+                try:
+                    from openff.interchange.components.mdtraj import _get_num_h_bonds
 
-                num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)
+                    num_h_bonds = _get_num_h_bonds(openff_sys.topology.mdtop)
+                except AttributeError:
+                    from openff.interchange.components.toolkit import _get_num_h_bonds
+
+                    num_h_bonds = _get_num_h_bonds(openff_sys.topology)
+
                 num_bonds = len(openff_sys["Bonds"].slot_map)
                 num_angles = len(openff_sys["Angles"].slot_map)
 
