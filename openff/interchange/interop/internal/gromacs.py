@@ -10,6 +10,8 @@ from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.models import TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
+    from openff.toolkit.topology.molecule import Molecule
+
     from openff.interchange.components.interchange import Interchange
 
 
@@ -48,7 +50,8 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
         for atom in openff_sys.topology.atoms:
             _off_atom_index = openff_sys.topology.atom_index(atom)
             try:
-                residue_idx = int((atom.metadata["residue_number"]) + 1) % 100000
+                # TODO: Unclear if OpenFF will make residues start at 1 or 0
+                residue_idx = int(atom.metadata["residue_number"]) % 100000
                 # TODO: After topology refactor, ensure this matches residue names
                 # in the topology file (unsure if this is necessary?)
                 residue_name = atom.metadata["residue_name"][:5]
@@ -206,14 +209,18 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
 
         # TODO: De-duplicate based on molecules
         # TODO: Handle special case of water
-        _write_moleculetype(top_file)
-        _write_atoms(top_file, openff_sys, typemap, virtual_site_map)
-        _write_valence(top_file, openff_sys)
-        _write_virtual_sites(
-            top_file,
-            openff_sys,
-            virtual_site_map,
-        )
+        for molecule in openff_sys.topology.molecules:
+
+            _write_moleculetype(top_file, molecule.name)
+            _write_atoms(top_file, openff_sys, molecule, typemap, virtual_site_map)
+            _write_valence(top_file, openff_sys, molecule)
+            _write_virtual_sites(
+                top_file,
+                openff_sys,
+                molecule,
+                virtual_site_map,
+            )
+
         _write_system(top_file, openff_sys)
 
 
@@ -340,6 +347,8 @@ def _write_atomtypes(
         else:
             raise UnsupportedExportError("No vdW interactions found")
 
+    top_file.write("\n")
+
 
 def _write_atomtypes_lj(
     openff_sys: "Interchange",
@@ -425,16 +434,17 @@ def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict
         top_file.write("\n")
 
 
-def _write_moleculetype(top_file: IO):
+def _write_moleculetype(top_file: IO, molecule_name: str):
     """Write the [ moleculetype ] section."""
     top_file.write("[ moleculetype ]\n")
     top_file.write("; Name\tnrexcl\n")
-    top_file.write("MOL\t3\n\n")
+    top_file.write(f"{molecule_name}\t3\n\n")
 
 
 def _write_atoms(
     top_file: IO,
     openff_sys: "Interchange",
+    molecule: "Molecule",
     typemap: Dict,
     virtual_site_map: Dict,
 ):
@@ -444,17 +454,18 @@ def _write_atoms(
 
     charges = openff_sys.handlers["Electrostatics"].charges
 
-    for atom in openff_sys.topology.atoms:
-        atom_idx = openff_sys.topology.atom_index(atom)
+    for atom in molecule.atoms:
+        topology_index = openff_sys.topology.atom_index(atom)
+        molecule_index = molecule.atom_index(atom)
         mass = atom.element.mass._value
-        atom_type = typemap[atom_idx]
+        atom_type = typemap[topology_index]
         try:
             res_idx = atom.metadata["residue_number"]
             res_name = atom.metadata["residue_name"]
         except KeyError:
             res_idx = 0
             res_name = "UNK"
-        top_key = TopologyKey(atom_indices=(atom_idx,))
+        top_key = TopologyKey(atom_indices=(topology_index,))
         charge = charges[top_key].m_as(unit.e)
         # TODO: Figure out why charge increments were applied as an array
         # to the anchor atom involved in a BondChargeVirtualSite?
@@ -464,12 +475,12 @@ def _write_atoms(
         top_file.write(
             "{:6d} {:18s} {:6d} {:8s} {:8s} {:6d} "
             "{:18.8f} {:18.8f}\n".format(
-                atom_idx + 1,
+                molecule_index + 1,
                 atom_type,
-                res_idx + 1,
+                res_idx,
                 res_name,
                 atom_type,
-                atom_idx + 1,
+                molecule_index + 1,
                 charge,
                 mass,
             )
@@ -501,6 +512,8 @@ def _write_atoms(
             )
         )
 
+    top_file.write("\n")
+
     top_file.write("[ pairs ]\n")
     top_file.write("; ai\taj\tfunct\n")
 
@@ -512,16 +525,16 @@ def _write_atoms(
         scale_lj = openff_sys["Buckingham-6"].scale_14
 
     # Use a set to de-duplicate
-    pairs: Set[Tuple] = {*openff_sys.topology.nth_degree_neighbors(n_degrees=3)}
+    pairs: Set[Tuple] = {*molecule.nth_degree_neighbors(n_degrees=3)}
 
     # TODO: Sort pairs by atom indices ascending
     for pair in pairs:
-        indices = [openff_sys.topology.atom_index(atom) for atom in pair]
-        indices = sorted(indices)
-        parameters1 = _get_lj_parameters(openff_sys, indices[0])
+        molecule_indices = sorted(molecule.atom_index(atom) for atom in pair)
+        topology_indices = sorted(openff_sys.topology.atom_index(atom) for atom in pair)
+        parameters1 = _get_lj_parameters(openff_sys, topology_indices[0])
         sigma1 = parameters1["sigma"].to(unit.nanometer).magnitude
         epsilon1 = parameters1["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude
-        parameters2 = _get_lj_parameters(openff_sys, indices[1])
+        parameters2 = _get_lj_parameters(openff_sys, topology_indices[1])
         sigma2 = parameters2["sigma"].to(unit.nanometer).magnitude
         epsilon2 = parameters2["epsilon"].to(unit.Unit("kilojoule / mole")).magnitude
         epsilon_mix = (epsilon1 * epsilon2) ** 0.5
@@ -531,18 +544,21 @@ def _write_atoms(
             sigma_mix = (sigma1 * sigma2) ** 0.5
         top_file.write(
             "{:7d} {:7d} {:6d} {:16g} {:16g}\n".format(
-                indices[0] + 1,
-                indices[1] + 1,
+                molecule_indices[0] + 1,
+                molecule_indices[1] + 1,
                 1,
                 sigma_mix,
                 epsilon_mix * scale_lj,
             )
         )
 
+    top_file.write("\n")
+
 
 def _write_virtual_sites(
     top_file: IO,
     openff_sys: "Interchange",
+    molecule: "Molecule",
     virtual_site_map: Dict,
 ):
     if "VirtualSites" not in openff_sys.handlers:
@@ -743,14 +759,15 @@ def _write_virtual_sites(
 def _write_valence(
     top_file: IO,
     openff_sys: "Interchange",
+    molecule: "Molecule",
 ):
     """Write the [ bonds ], [ angles ], and [ dihedrals ] sections."""
-    _write_bonds(top_file, openff_sys)
-    _write_angles(top_file, openff_sys)
-    _write_dihedrals(top_file, openff_sys)
+    _write_bonds(top_file, openff_sys, molecule)
+    _write_angles(top_file, openff_sys, molecule)
+    _write_dihedrals(top_file, openff_sys, molecule)
 
 
-def _write_bonds(top_file: IO, openff_sys: "Interchange"):
+def _write_bonds(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
     if "Bonds" not in openff_sys.handlers.keys():
         return
 
@@ -759,14 +776,17 @@ def _write_bonds(top_file: IO, openff_sys: "Interchange"):
 
     bond_handler = openff_sys.handlers["Bonds"]
 
-    # for bond in openff_sys.topology.mtop.bonds:
-    for bond in openff_sys.topology.bonds:
+    for bond in molecule.bonds:
 
-        indices = tuple(sorted(openff_sys.topology.atom_index(a) for a in bond.atoms))
+        topology_indices = tuple(
+            sorted(openff_sys.topology.atom_index(a) for a in bond.atoms)
+        )
+        molecule_indices = tuple(sorted(molecule.atom_index(a) for a in bond.atoms))
+
         for top_key in bond_handler.slot_map:
-            if top_key.atom_indices == indices:
+            if top_key.atom_indices == topology_indices:
                 pot_key = bond_handler.slot_map[top_key]
-            elif top_key.atom_indices == indices[::-1]:
+            elif top_key.atom_indices == topology_indices[::-1]:
                 pot_key = bond_handler.slot_map[top_key]
 
         params = bond_handler.potentials[pot_key].parameters
@@ -776,8 +796,8 @@ def _write_bonds(top_file: IO, openff_sys: "Interchange"):
 
         top_file.write(
             "{:7d} {:7d} {:4s} {:.16g} {:.16g}\n".format(
-                indices[0] + 1,  # atom i
-                indices[1] + 1,  # atom j
+                molecule_indices[0] + 1,  # atom i
+                molecule_indices[1] + 1,  # atom j
                 str(1),  # bond type (functional form)
                 length,
                 k,
@@ -789,7 +809,7 @@ def _write_bonds(top_file: IO, openff_sys: "Interchange"):
     top_file.write("\n\n")
 
 
-def _write_angles(top_file: IO, openff_sys: "Interchange"):
+def _write_angles(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
     if "Angles" not in openff_sys.handlers.keys():
         return
 
@@ -798,14 +818,15 @@ def _write_angles(top_file: IO, openff_sys: "Interchange"):
 
     angle_handler = openff_sys.handlers["Angles"]
 
-    for angle in openff_sys.topology.angles:
+    for angle in molecule.angles:
         # TODO: Toolkit makes little guarantees about atom ordering in angles
         #       (only that the index of the first is less than the last)
         #       Easy breakage point
-        indices = tuple(openff_sys.topology.atom_index(a) for a in angle)
+        topology_indices = tuple(openff_sys.topology.atom_index(a) for a in angle)
+        molecule_indices = tuple(molecule.atom_index(a) for a in angle)
 
         for top_key in angle_handler.slot_map:
-            if top_key.atom_indices == indices:
+            if top_key.atom_indices == topology_indices:
                 pot_key = angle_handler.slot_map[top_key]
 
         params = angle_handler.potentials[pot_key].parameters
@@ -814,19 +835,19 @@ def _write_angles(top_file: IO, openff_sys: "Interchange"):
 
         top_file.write(
             "{:7d} {:7d} {:7d} {:4s} {:.16g} {:.16g}\n".format(
-                indices[0] + 1,  # atom i
-                indices[1] + 1,  # atom j
-                indices[2] + 1,  # atom k
+                molecule_indices[0] + 1,  # atom i
+                molecule_indices[1] + 1,  # atom j
+                molecule_indices[2] + 1,  # atom k
                 str(1),  # angle type (functional form)
                 theta,
                 k,
             )
         )
 
-    top_file.write("\n\n")
+    top_file.write("\n")
 
 
-def _write_dihedrals(top_file: IO, openff_sys: "Interchange"):
+def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
     if "ProperTorsions" not in openff_sys.handlers:
         if "RBTorsions" not in openff_sys.handlers:
             if "ImproperTorsions" not in openff_sys.handlers:
@@ -840,11 +861,15 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange"):
     improper_torsion_handler = openff_sys.handlers.get("ImproperTorsions", [])
 
     # TODO: Ensure number of torsions written matches what is expected
-    for proper in openff_sys.topology.propers:
-        indices = tuple(openff_sys.topology.atom_index(a) for a in proper)
+    for proper in molecule.propers:
+
+        topology_indices = tuple(openff_sys.topology.atom_index(a) for a in proper)
+        molecule_indices = tuple(molecule.atom_index(a) for a in proper)
+
         if proper_torsion_handler:
+
             for top_key in proper_torsion_handler.slot_map:
-                if top_key.atom_indices == indices:
+                if top_key.atom_indices == topology_indices:
                     pot_key = proper_torsion_handler.slot_map[top_key]
                     params = proper_torsion_handler.potentials[pot_key].parameters
 
@@ -854,10 +879,10 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange"):
                     idivf = int(params["idivf"]) if "idivf" in params else 1
                     top_file.write(
                         "{:7d} {:7d} {:7d} {:7d} {:6d} {:16g} {:16g} {:7d}\n".format(
-                            indices[0] + 1,
-                            indices[1] + 1,
-                            indices[2] + 1,
-                            indices[3] + 1,
+                            molecule_indices[0] + 1,
+                            molecule_indices[1] + 1,
+                            molecule_indices[2] + 1,
+                            molecule_indices[3] + 1,
                             1,
                             phase,
                             k / idivf,
@@ -867,7 +892,7 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange"):
         # This should be `if` if a single quartet can be subject to both proper and RB torsions
         if rb_torsion_handler:
             for top_key in rb_torsion_handler.slot_map:
-                if top_key.atom_indices == indices:
+                if top_key.atom_indices == topology_indices:
                     pot_key = rb_torsion_handler.slot_map[top_key]
                     params = rb_torsion_handler.potentials[pot_key].parameters
 
@@ -881,10 +906,10 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange"):
                     top_file.write(
                         "{:7d} {:7d} {:7d} {:7d} {:6d} "
                         "{:16g} {:16g} {:16g} {:16g} {:16g} {:16g} \n".format(
-                            indices[0] + 1,
-                            indices[1] + 1,
-                            indices[2] + 1,
-                            indices[3] + 1,
+                            molecule_indices[0] + 1,
+                            molecule_indices[1] + 1,
+                            molecule_indices[2] + 1,
+                            molecule_indices[3] + 1,
                             3,
                             c0,
                             c1,
@@ -897,10 +922,16 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange"):
 
     # TODO: Ensure number of torsions written matches what is expected
     if improper_torsion_handler:
-        for improper in openff_sys.topology.impropers:
-            indices = tuple(openff_sys.topology.atom_index(a) for a in improper)
+
+        for improper in molecule.impropers:
+
+            topology_indices = tuple(
+                openff_sys.topology.atom_index(a) for a in improper
+            )
+            molecule_indices = tuple(molecule.atom_index(a) for a in improper)
+
             for top_key in improper_torsion_handler.slot_map:
-                if indices == top_key.atom_indices:
+                if topology_indices == top_key.atom_indices:
                     key = improper_torsion_handler.slot_map[top_key]
                     params = improper_torsion_handler.potentials[key].parameters
 
@@ -910,16 +941,18 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange"):
                     idivf = int(params["idivf"])
                     top_file.write(
                         "{:7d} {:7d} {:7d} {:7d} {:6d} {:.16g} {:.16g} {:.16g}\n".format(
-                            indices[0] + 1,
-                            indices[1] + 1,
-                            indices[2] + 1,
-                            indices[3] + 1,
+                            molecule_indices[0] + 1,
+                            molecule_indices[1] + 1,
+                            molecule_indices[2] + 1,
+                            molecule_indices[3] + 1,
                             4,
                             phase,
                             k / idivf,
                             periodicity,
                         )
                     )
+
+    top_file.write("\n")
 
 
 def _write_system(top_file: IO, openff_sys: "Interchange"):
@@ -930,8 +963,10 @@ def _write_system(top_file: IO, openff_sys: "Interchange"):
 
     top_file.write("[ molecules ]\n")
     top_file.write("; Compound\tnmols\n")
-    # TODO: Write molecules separately
-    top_file.write("MOL\t1")
+    # TODO: Collapse identical molecules? Need to define the criteria,
+    #       and if that's to be done automatically or only by the user
+    for molecule in openff_sys.topology.molecules:
+        top_file.write(f"{molecule.name}\t1\n")
 
     top_file.write("\n")
 

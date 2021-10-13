@@ -338,10 +338,10 @@ def test_water_dimer():
 def test_process_rb_torsions():
     """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
 
-    import foyer
-    import mbuild as mb
+    from foyer import Forcefield
+    from mbuild import Box
 
-    oplsaa = foyer.Forcefield(name="oplsaa")
+    oplsaa = Forcefield(name="oplsaa")
 
     ethanol = Molecule.from_smiles("CCO")
     ethanol.generate_conformers(n_conformers=1)
@@ -351,9 +351,9 @@ def test_process_rb_torsions():
     from openff.interchange.components.mbuild import offmol_to_compound
 
     my_compound = offmol_to_compound(ethanol)
-    my_compound.box = mb.Box(lengths=[4, 4, 4])
+    my_compound.box = Box(lengths=[4, 4, 4])
 
-    oplsaa = foyer.Forcefield(name="oplsaa")
+    oplsaa = Forcefield(name="oplsaa")
     struct = oplsaa.apply(my_compound)
 
     struct.save("eth.top", overwrite=True)

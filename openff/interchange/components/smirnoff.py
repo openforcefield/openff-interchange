@@ -182,7 +182,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def valence_terms(cls, topology):
         """Return all bonds in this topology."""
-        return [list(b.atoms) for b in topology.topology_bonds]
+        return [tuple(b.atoms) for b in topology.bonds]
 
     def store_matches(
         self,
