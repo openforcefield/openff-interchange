@@ -209,8 +209,9 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
 
         # TODO: De-duplicate based on molecules
         # TODO: Handle special case of water
-        for molecule in openff_sys.topology.molecules:
+        for molecule_idx, molecule in enumerate(openff_sys.topology.molecules):
 
+            molecule.name = str(molecule.name) + "x" + str(molecule_idx)
             _write_moleculetype(top_file, molecule.name)
             _write_atoms(top_file, openff_sys, molecule, typemap, virtual_site_map)
             _write_valence(top_file, openff_sys, molecule)
@@ -423,7 +424,7 @@ def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict
                 atom_type,  # atom type
                 # "XX",  # atom "bonding type", i.e. bond class
                 atom.atomic_number,
-                atom.atom.mass._value,
+                atom.mass._value,
                 0.0,  # charge, overriden later in [ atoms ]
                 "A",  # ptype
                 a,
@@ -923,7 +924,7 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
     # TODO: Ensure number of torsions written matches what is expected
     if improper_torsion_handler:
 
-        for improper in molecule.impropers:
+        for improper in molecule.amber_impropers:
 
             topology_indices = tuple(
                 openff_sys.topology.atom_index(a) for a in improper
@@ -966,6 +967,8 @@ def _write_system(top_file: IO, openff_sys: "Interchange"):
     # TODO: Collapse identical molecules? Need to define the criteria,
     #       and if that's to be done automatically or only by the user
     for molecule in openff_sys.topology.molecules:
+        if not molecule.name:
+            raise Exception("Molecule missing a name")
         top_file.write(f"{molecule.name}\t1\n")
 
     top_file.write("\n")

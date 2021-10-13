@@ -44,6 +44,7 @@ def _top_from_smiles(
 
     """
     mol = Molecule.from_smiles(smiles)
+    mol.name = Molecule.to_hill_formula(mol)
     mol.generate_conformers(n_conformers=1)
     top = Topology.from_molecules(n_molecules * [mol])
     # Add dummy box vectors

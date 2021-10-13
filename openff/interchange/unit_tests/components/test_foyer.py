@@ -162,6 +162,7 @@ class TestRBTorsions(_BaseTest):
     @pytest.fixture(scope="class")
     def ethanol_with_rb_torsions(self):
         mol = Molecule.from_smiles("CC")
+        mol.name = "ETH"
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
         parsley = ForceField("openff-1.0.0.offxml")

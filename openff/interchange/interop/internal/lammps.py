@@ -395,7 +395,10 @@ def _write_impropers(lmp_file: IO, openff_sys: Interchange):
 
     improper_type_map_inv = dict({v: k for k, v in improper_type_map.items()})
 
-    for improper_idx, improper in enumerate(openff_sys.topology.impropers):
+    # TODO: Iterating through .amber_impropers is necessary because of logic in
+    #       SMIRNOFFImproperTorsionHandler that re-roders atoms from central atom
+    #       to central atom first ... is this necessary?
+    for improper_idx, improper in enumerate(openff_sys.topology.amber_impropers):
 
         indices = tuple(openff_sys.topology.atom_index(a) for a in improper)
 

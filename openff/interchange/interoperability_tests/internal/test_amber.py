@@ -16,6 +16,7 @@ kj_mol = unit.kilojoule / unit.mol
 def test_amber_energy():
     """Basic test to see if the amber energy driver is functional"""
     mol = Molecule.from_smiles("CCO")
+    mol.name = "ETH"
     mol.generate_conformers(n_conformers=1)
     top = mol.to_topology()
     top.mdtop = md.Topology.from_openmm(top.to_openmm())
