@@ -527,28 +527,22 @@ class Interchange(DefaultModel):
 
     def __add__(self, other):
         """Combine two Interchange objects. This method is unstable and likely unsafe."""
-        import mdtraj as md
-
+        from openff.interchange.components.mdtraj import _combine_topologies
         from openff.interchange.models import TopologyKey
 
         warnings.warn(
             "Iterchange object combination is experimental and likely to produce "
-            "strange results. Use with caution!"
+            "strange results. Any workflow using this method is not guaranteed to "
+            "be suitable for production. Use with extreme caution and thoroughly "
+            "validate results!"
         )
 
         self_copy = Interchange()
         self_copy._inner_data = deepcopy(self._inner_data)
 
-        atom_offset = self_copy.topology.mdtop.n_atoms
+        self_copy.topology = _combine_topologies(self.topology, other.topology)
 
-        other_top = deepcopy(other.topology)
-
-        for top_mol in other_top.topology_molecules:
-            self_copy.topology.add_molecule(top_mol.reference_molecule)
-
-        self_copy.topology.mdtop = md.Topology.from_openmm(
-            self_copy.topology.to_openmm()
-        )
+        atom_offset = self.topology.mdtop.n_atoms
 
         for handler_name, handler in other.handlers.items():
 
