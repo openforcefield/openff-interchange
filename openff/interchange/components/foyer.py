@@ -261,7 +261,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
         topology: "_OFFBioTop",
     ) -> None:
         for angle in _iterate_angles(topology.mdtop):
-            atoms_indices = tuple((a.index for a in angle))
+            atoms_indices = tuple(a.index for a in angle)
             top_key = TopologyKey(atom_indices=atoms_indices)
 
             pot_key_ids = tuple(
@@ -297,7 +297,7 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
         topology: "_OFFBioTop",
     ) -> None:
         for proper in _iterate_propers(topology.mdtop):
-            atoms_indices = tuple((a.index for a in proper))
+            atoms_indices = tuple(a.index for a in proper)
             top_key = TopologyKey(atom_indices=atoms_indices)
 
             pot_key_ids = tuple(
