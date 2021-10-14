@@ -25,6 +25,7 @@ from openff.interchange.exceptions import (
     MissingParameterHandlerError,
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
+    UnsupportedCombinationError,
     UnsupportedExportError,
 )
 from openff.interchange.models import DefaultModel
@@ -551,7 +552,14 @@ class Interchange(DefaultModel):
 
         for handler_name, handler in other.handlers.items():
 
-            self_handler = self_copy.handlers[handler_name]
+            # TODO: Specify behavior in this case
+            try:
+                self_handler = self_copy.handlers[handler_name]
+            except KeyError as key_error:
+                raise UnsupportedCombinationError(
+                    f"`other` Interchange object has handler with name {handler_name} not "
+                    f"found in `self`. Found while processing\n{self=}\nand\n{other=}"
+                ) from key_error
 
             for top_key, pot_key in handler.slot_map.items():
 
@@ -570,7 +578,7 @@ class Interchange(DefaultModel):
         self_copy.positions = new_positions
 
         if not np.all(self_copy.box == other.box):
-            raise NotImplementedError(
+            raise UnsupportedCombinationError(
                 "Combination with unequal box vectors is not curretnly supported"
             )
 
