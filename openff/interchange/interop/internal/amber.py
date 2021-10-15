@@ -208,10 +208,15 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         NBONA = MBONA  # : MBONA + number of constraint bonds
         NTHETA = MTHETA  # : MTHETA + number of constraint angles
         NPHIA = MPHIA  # : MPHIA + number of constraint dihedrals
-        NUMBND = 0  # : number of unique bond types
-        NUMANG = 0  # : number of unique angle types
-        NPTRA = 0  # : number of unique dihedral types
-        NATYP = 0  # : number of atom types in parameter file, see SOLTY below
+        # number of unique bond types
+        NUMBND = len(interchange["Bonds"].potentials)
+        # number of unique angle types
+        NUMANG = len(interchange["Angles"].potentials)
+        # number of unique dihedral types
+        NPTRA = len(interchange["ProperTorsions"].potentials)  # TODO: Impropers
+        # number of atom types in parameter file, see SOLTY below
+        # this appears to be unused, but ParmEd writes a 1 here (?)
+        NATYP = 1
         NPHB = 0  # : number of distinct 10-12 hydrogen bond pair types
         IFPERT = 0  # : set to 1 if perturbation info is to be read in
         NBPER = 0  # : number of bonds to be perturbed
@@ -222,10 +227,14 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         MDPER = 0  # : number of dihedrals with atoms completely in perturbed groups
         # set to 1 if standard periodic box, 2 when truncated octahedral
         IFBOX = 0 if interchange.box is None else 1
-        NMXRS = 0  # : number of atoms in the largest residue
+        # number of atoms in the largest residue
+        NMXRS = interchange.topology.mdtop.n_atoms
         IFCAP = 0  # : set to 1 if the CAP option from edit was specified
         NUMEXTRA = 0  # : number of extra points found in topology
-        NCOPY = 0  # : number of PIMD slices / number of beads
+        # number of PIMD slices / number of beads
+        # ParmEd does not seem to write this _at all_ in most/all cases
+        NCOPY = 0
+
         pointers = [
             NATOM,
             NTYPES,
@@ -262,7 +271,6 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         ]
 
         prmtop.write("%FLAG POINTERS\n" "%FORMAT(10I8)\n")
-
         text_blob = "".join([str(val).rjust(8) for val in pointers])
         _write_text_blob(prmtop, text_blob)
 
