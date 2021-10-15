@@ -220,7 +220,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         MBPER = 0  # : number of bonds with atoms completely in perturbed group
         MGPER = 0  # : number of angles with atoms completely in perturbed group
         MDPER = 0  # : number of dihedrals with atoms completely in perturbed groups
-        IFBOX = 0  # : set to 1 if standard periodic box, 2 when truncated octahedral
+        # set to 1 if standard periodic box, 2 when truncated octahedral
+        IFBOX = 0 if interchange.box is None else 1
         NMXRS = 0  # : number of atoms in the largest residue
         IFCAP = 0  # : set to 1 if the CAP option from edit was specified
         NUMEXTRA = 0  # : number of extra points found in topology
@@ -497,6 +498,23 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         _ = NATOM * [0]
         text_blob = "".join([str(val).rjust(8) for val in _])
         _write_text_blob(prmtop, text_blob)
+
+        if IFBOX == 1:
+            prmtop.write("%FLAG SOLVENT_POINTERS\n" "%FORMAT(3I8)\n")
+            prmtop.write("       1       1       2\n")
+
+            # TODO: No easy way to accurately export this section while
+            #       using an MDTraj topology
+            prmtop.write("%FLAG ATOMS_PER_MOLECULE\n" "%FORMAT(10I8)\n")
+            prmtop.write(str(interchange.topology.mdtop.n_atoms).rjust(8))
+            prmtop.write("\n")
+
+            prmtop.write("%FLAG BOX_DIMENSIONS\n" "%FORMAT(5E16.8)\n")
+            box = [90.0]
+            for i in range(3):
+                box.append(interchange.box[i, i].m_as(unit.angstrom))
+            text_blob = "".join([f"{val:16.8E}" for val in box])
+            _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG RADIUS_SET\n" "%FORMAT(1a80)\n")
         prmtop.write("0\n")
