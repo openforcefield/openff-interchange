@@ -20,6 +20,14 @@ kcal_mol_a2 = kcal_mol / unit.angstrom ** 2
 kcal_mol_rad2 = kcal_mol / unit.radian ** 2
 
 
+def _write_text_blob(file, blob):
+    if blob == "":
+        file.write("\n")
+    else:
+        for line in textwrap.wrap(blob, width=80, drop_whitespace=False):
+            file.write(line + "\n")
+
+
 def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
     """
     Write a .prmtop file. See http://ambermd.org/prmtop.pdf for details.
@@ -48,7 +56,9 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         typemap = _build_typemap(interchange)  # noqa
 
         NATOM = interchange.topology.mdtop.n_atoms  # : total number of atoms
-        NTYPES = len(typemap)  # : total number of distinct atom types
+        NTYPES = len(
+            interchange["vdW"].potentials
+        )  # : total number of distinct atom types
         NBONH = _get_num_h_bonds(
             interchange.topology.mdtop
         )  # : number of bonds containing hydrogen
@@ -121,13 +131,11 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         prmtop.write("%FLAG POINTERS\n" "%FORMAT(10I8)\n")
 
         text_blob = "".join([str(val).rjust(8) for val in pointers])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG ATOM_NAME\n" "%FORMAT(20a4)\n")
         text_blob = "".join([val.ljust(4) for val in typemap.values()])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG CHARGE\n" "%FORMAT(5E16.8)\n")
         charges = [
@@ -135,28 +143,31 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             for charge in interchange["Electrostatics"].charges.values()
         ]
         text_blob = "".join([f"{val:16.8E}" for val in charges])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG ATOMIC_NUMBER\n" "%FORMAT(10I8)\n")
         atomic_numbers = [
             a.element.atomic_number for a in interchange.topology.mdtop.atoms
         ]
         text_blob = "".join([str(val).rjust(8) for val in atomic_numbers])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG MASS\n" "%FORMAT(5E16.8)\n")
         masses = [a.element.mass for a in interchange.topology.mdtop.atoms]
         text_blob = "".join([f"{val:16.8E}" for val in masses])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
+
+        potential_key_to_atom_type_mapping: Dict[PotentialKey, int] = {
+            key: i for i, key in enumerate(interchange["vdW"].potentials)
+        }
+        atom_type_indices = [
+            potential_key_to_atom_type_mapping[potential_key]
+            for potential_key in interchange["vdW"].slot_map.values()
+        ]
 
         prmtop.write("%FLAG ATOM_TYPE_INDEX\n" "%FORMAT(10I8)\n")
-        unused_indices = [*range(1, NATOM + 1)]
-        text_blob = "".join([str(val).rjust(8) for val in unused_indices])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        text_blob = "".join([str(val + 1).rjust(8) for val in atom_type_indices])
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG NUMBER_EXCLUDED_ATOMS\n" "%FORMAT(10I8)\n")
         # This approach assumes ordering, 0 index, etc.
@@ -164,13 +175,20 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         # https://ambermd.org/prmtop.pdf says this section is ignored (!?)
         number_excluded_atoms = NATOM * [0]
         text_blob = "".join([str(val).rjust(8) for val in number_excluded_atoms])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
+
+        # index = NONBONDED PARM INDEX [NTYPES × (ATOM TYPE INDEX(i) − 1) + ATOM TYPE INDEX(j)]
+        indices = []
+        for i, key_i in enumerate(potential_key_to_atom_type_mapping):  # noqa
+            for j, key_j in enumerate(potential_key_to_atom_type_mapping):  # noqa
+                # TODO: Figure out the right way to map cross-interactions, using the
+                #       key_i and key_j objects as lookups to parameters
+                index = NTYPES * (i) + j + 1
+                indices.append(index)
 
         prmtop.write("%FLAG NONBONDED_PARM_INDEX\n" "%FORMAT(10I8)\n")
-        text_blob = "".join([str(val).rjust(8) for val in range(NTYPES ** 2)])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        text_blob = "".join([str(val).rjust(8) for val in indices])
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG RESIDUE_LABEL\n" "%FORMAT(20a4)\n")
         prmtop.write("FOO\n")
@@ -189,8 +207,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             for key in potential_key_to_bond_type_mapping
         ]
         text_blob = "".join([f"{val:16.8E}" for val in bond_k])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG BOND_EQUIL_VALUE\n" "%FORMAT(5E16.8)\n")
         bond_length = [
@@ -201,8 +218,11 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             for key in potential_key_to_bond_type_mapping
         ]
         text_blob = "".join([f"{val:16.8E}" for val in bond_length])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
+
+        potential_key_to_angle_type_mapping: Dict[PotentialKey, int] = {
+            key: i for i, key in enumerate(interchange["Angles"].potentials)
+        }
 
         prmtop.write("%FLAG ANGLE_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
         angle_k = [
@@ -211,8 +231,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             for key in interchange["Angles"].slot_map.values()
         ]
         text_blob = "".join([f"{val:16.8E}" for val in angle_k])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG ANGLE_EQUIL_VALUE\n" "%FORMAT(5E16.8)\n")
         angle_theta = [
@@ -220,8 +239,11 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             for key in interchange["Angles"].slot_map.values()
         ]
         text_blob = "".join([f"{val:16.8E}" for val in angle_theta])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
+
+        potential_key_to_dihedral_type_mapping: Dict[PotentialKey, int] = {
+            key: i for i, key in enumerate(interchange["ProperTorsions"].potentials)
+        }
 
         prmtop.write("%FLAG DIHEDRAL_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
         proper_k = [
@@ -232,8 +254,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             for key in interchange["ProperTorsions"].slot_map.values()
         ]
         text_blob = "".join([f"{val:16.8E}" for val in proper_k])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG DIHEDRAL_PERIODICITY\n" "%FORMAT(5E16.8)\n")
         proper_periodicity = [
@@ -244,8 +265,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             for key in interchange["ProperTorsions"].slot_map.values()
         ]
         text_blob = "".join([f"{val:16.8E}" for val in proper_periodicity])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG DIHEDRAL_PHASE\n" "%FORMAT(5E16.8)\n")
         proper_phase = [
@@ -256,20 +276,17 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             for key in interchange["ProperTorsions"].slot_map.values()
         ]
         text_blob = "".join([f"{val:16.8E}" for val in proper_phase])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG SCEE_SCALE_FACTOR\n" "%FORMAT(5E16.8)\n")
         scee = len(interchange["ProperTorsions"].slot_map) * [1.2]
         text_blob = "".join([f"{val:16.8E}" for val in scee])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG SCNB_SCALE_FACTOR\n" "%FORMAT(5E16.8)\n")
         scnb = len(interchange["ProperTorsions"].slot_map) * [2.0]
         text_blob = "".join([f"{val:16.8E}" for val in scnb])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG SOLTY\n" "%FORMAT(5E16.8)\n")
         prmtop.write(f"{0:16.8E}\n")
@@ -302,38 +319,151 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         prmtop.write("%FLAG LENNARD_JONES_ACOEF\n" "%FORMAT(5E16.8)\n")
         text_blob = "".join([f"{val:16.8E}" for val in acoef])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG LENNARD_JONES_BCOEF\n" "%FORMAT(5E16.8)\n")
         text_blob = "".join([f"{val:16.8E}" for val in bcoef])
-        for line in textwrap.wrap(text_blob, width=80, drop_whitespace=False):
-            prmtop.write(line + "\n")
+        _write_text_blob(prmtop, text_blob)
 
         bonds_inc_hydrogen = list()
         bonds_without_hydrogen = list()
 
-        for bond, key in interchange["Bonds"].slot_map.values():
+        for bond, key in interchange["Bonds"].slot_map.items():
             bond_type_index = potential_key_to_bond_type_mapping[key]
-            atom1_index = interchange.topology.mdtop.atom(bond.atom_indices[0])
-            atom2_index = interchange.topology.mdtop.atom(bond.atom_indices[1])
-            if (
-                interchange.topology.mdtop.atom(0).element.atomic_number == 1
-                or interchange.topology.mdtop.atom(1).element.atomic_number == 1
-            ):
-                bonds_inc_hydrogen.append(atom1_index)
-                bonds_inc_hydrogen.append(atom2_index)
-                bonds_inc_hydrogen.append(bond_type_index)
+
+            atom1 = interchange.topology.mdtop.atom(bond.atom_indices[0])
+            atom2 = interchange.topology.mdtop.atom(bond.atom_indices[1])
+            if atom1.element.atomic_number == 1 or atom2.element.atomic_number == 1:
+                bonds_inc_hydrogen.append(atom1.index * 3)
+                bonds_inc_hydrogen.append(atom2.index * 3)
+                bonds_inc_hydrogen.append(bond_type_index + 1)
             else:
-                bonds_without_hydrogen.append(atom1_index)
-                bonds_without_hydrogen.append(atom1_index)
-                bonds_without_hydrogen.append(bond_type_index)
+                bonds_without_hydrogen.append(atom1.index * 3)
+                bonds_without_hydrogen.append(atom2.index * 3)
+                bonds_without_hydrogen.append(bond_type_index + 1)
 
         prmtop.write("%FLAG BONDS_INC_HYDROGEN\n" "%FORMAT(10I8)\n")
-        prmtop.write("\n")
+        text_blob = "".join([str(val).rjust(8) for val in bonds_inc_hydrogen])
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG BONDS_WITHOUT_HYDROGEN\n" "%FORMAT(10I8)\n")
-        prmtop.write("\n")
+        text_blob = "".join([str(val).rjust(8) for val in bonds_without_hydrogen])
+        _write_text_blob(prmtop, text_blob)
+
+        angles_inc_hydrogen = list()
+        angles_without_hydrogen = list()
+
+        for angle, key in interchange["Angles"].slot_map.items():
+            angle_type_index = potential_key_to_angle_type_mapping[key]
+
+            atom1 = interchange.topology.mdtop.atom(angle.atom_indices[0])
+            atom2 = interchange.topology.mdtop.atom(angle.atom_indices[1])
+            atom3 = interchange.topology.mdtop.atom(angle.atom_indices[2])
+            if 1 in [
+                atom1.element.atomic_number,
+                atom2.element.atomic_number,
+                atom3.element.atomic_number,
+            ]:
+                angles_inc_hydrogen.append(atom1.index * 3)
+                angles_inc_hydrogen.append(atom2.index * 3)
+                angles_inc_hydrogen.append(atom3.index * 3)
+                angles_inc_hydrogen.append(angle_type_index + 1)
+            else:
+                angles_without_hydrogen.append(atom1.index * 3)
+                angles_without_hydrogen.append(atom2.index * 3)
+                angles_without_hydrogen.append(atom3.index * 3)
+                angles_without_hydrogen.append(angle_type_index + 1)
+
+        prmtop.write("%FLAG ANGLES_INC_HYDROGEN\n" "%FORMAT(10I8)\n")
+        text_blob = "".join([str(val).rjust(8) for val in angles_inc_hydrogen])
+        _write_text_blob(prmtop, text_blob)
+
+        prmtop.write("%FLAG ANGLES_WITHOUT_HYDROGEN\n" "%FORMAT(10I8)\n")
+        text_blob = "".join([str(val).rjust(8) for val in angles_without_hydrogen])
+        _write_text_blob(prmtop, text_blob)
+
+        dihedrals_inc_hydrogen = list()
+        dihedrals_without_hydrogen = list()
+
+        for dihedral, key in interchange["ProperTorsions"].slot_map.items():
+            dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
+
+            atom1 = interchange.topology.mdtop.atom(dihedral.atom_indices[0])
+            atom2 = interchange.topology.mdtop.atom(dihedral.atom_indices[1])
+            atom3 = interchange.topology.mdtop.atom(dihedral.atom_indices[2])
+            atom4 = interchange.topology.mdtop.atom(dihedral.atom_indices[2])
+            if 1 in [
+                atom1.element.atomic_number,
+                atom2.element.atomic_number,
+                atom3.element.atomic_number,
+                atom4.element.atomic_number,
+            ]:
+                dihedrals_inc_hydrogen.append(atom1.index * 3)
+                dihedrals_inc_hydrogen.append(atom2.index * 3)
+                dihedrals_inc_hydrogen.append(atom3.index * 3)
+                dihedrals_inc_hydrogen.append(atom4.index * 3)
+                dihedrals_inc_hydrogen.append(dihedral_type_index + 1)
+            else:
+                dihedrals_without_hydrogen.append(atom1.index * 3)
+                dihedrals_without_hydrogen.append(atom2.index * 3)
+                dihedrals_without_hydrogen.append(atom3.index * 3)
+                dihedrals_without_hydrogen.append(atom4.index * 3)
+                dihedrals_without_hydrogen.append(dihedral_type_index + 1)
+
+        prmtop.write("%FLAG DIHEDRALS_INC_HYDROGEN\n" "%FORMAT(10I8)\n")
+        text_blob = "".join([str(val).rjust(8) for val in dihedrals_inc_hydrogen])
+        _write_text_blob(prmtop, text_blob)
+
+        prmtop.write("%FLAG DIHEDRALS_WITHOUT_HYDROGEN\n" "%FORMAT(10I8)\n")
+        text_blob = "".join([str(val).rjust(8) for val in dihedrals_without_hydrogen])
+        _write_text_blob(prmtop, text_blob)
+
+        prmtop.write("%FLAG EXCLUDED_ATOMS_LIST\n" "%FORMAT(10I8)\n")
+        _write_text_blob(prmtop, "")
+
+        prmtop.write("%FLAG HBOND_ACOEF\n" "%FORMAT(5E16.8)\n")
+        _write_text_blob(prmtop, "")
+
+        prmtop.write("%FLAG HBOND_BCOEF\n" "%FORMAT(5E16.8)\n")
+        _write_text_blob(prmtop, "")
+
+        prmtop.write("%FLAG HBCUT\n" "%FORMAT(5E16.8)\n")
+        _write_text_blob(prmtop, "")
+
+        prmtop.write("%FLAG AMBER_ATOM_TYPE\n" "%FORMAT(20a4)\n")
+        text_blob = "".join([val.ljust(4) for val in typemap.values()])
+        _write_text_blob(prmtop, text_blob)
+
+        prmtop.write("%FLAG TREE_CHAIN_CLASSIFICATION\n" "%FORMAT(20a4)\n")
+        blahs = NATOM * ["BLA"]
+        text_blob = "".join([val.ljust(4) for val in blahs])
+        _write_text_blob(prmtop, text_blob)
+
+        prmtop.write("%FLAG JOIN_ARRAY\n" "%FORMAT(10I8)\n")
+        _ = NATOM * [0]
+        text_blob = "".join([str(val).rjust(8) for val in _])
+        _write_text_blob(prmtop, text_blob)
+
+        prmtop.write("%FLAG IROTAT\n" "%FORMAT(10I8)\n")
+        _ = NATOM * [0]
+        text_blob = "".join([str(val).rjust(8) for val in _])
+        _write_text_blob(prmtop, text_blob)
+
+        prmtop.write("%FLAG RADIUS_SET\n" "%FORMAT(1a80)\n")
+        prmtop.write("0\n")
+
+        prmtop.write("%FLAG RADII\n" "%FORMAT(5E16.8)\n")
+        radii = NATOM * [0]
+        text_blob = "".join([f"{val:16.8E}" for val in radii])
+        _write_text_blob(prmtop, text_blob)
+
+        prmtop.write("%FLAG SCREEN\n" "%FORMAT(5E16.8)\n")
+        screen = NATOM * [0]
+        text_blob = "".join([f"{val:16.8E}" for val in screen])
+        _write_text_blob(prmtop, text_blob)
+
+        prmtop.write("%FLAG IPOL\n" "%FORMAT(1I8)\n")
+        prmtop.write("       0\n")
 
 
 def to_inpcrd(interchange: "Interchange", file_path: Union[Path, str]):
