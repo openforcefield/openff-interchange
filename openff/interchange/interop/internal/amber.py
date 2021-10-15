@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Dict, Union
 import numpy as np
 from openff.units import unit
 
-from openff.interchange.components.mdtraj import _get_num_h_bonds
-from openff.interchange.models import TopologyKey
+from openff.interchange.components.mdtraj import _get_num_h_bonds, _store_bond_partners
+from openff.interchange.components.toolkit import _get_number_excluded_atoms
 
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
@@ -28,6 +28,40 @@ def _write_text_blob(file, blob):
             file.write(line + "\n")
 
 
+def _get_exclusion_lists(topology):
+
+    _store_bond_partners(topology.mdtop)
+
+    number_excluded_atoms = list()
+    excluded_atoms_list = list()
+
+    for atom1 in topology.mdtop.atoms:
+        # Excluded atoms _on this atom_
+        tmp = list()
+
+        for atom2 in atom1._bond_partners:
+
+            if atom2.index > atom1.index and atom2.index + 1 not in tmp:
+                tmp.append(atom2.index + 1)
+
+            for atom3 in atom2._bond_partners:
+
+                if atom3.index > atom1.index and atom3.index + 1 not in tmp:
+                    tmp.append(atom3.index + 1)
+
+                for atom4 in atom3._bond_partners:
+                    if atom4.index > atom1.index and atom4.index + 1 not in tmp:
+                        tmp.append(atom4.index + 1)
+
+        if len(tmp) == 0:
+            tmp.append(0)
+
+        number_excluded_atoms.append(len(tmp))
+        [excluded_atoms_list.append(_) for _ in tmp]
+
+        return number_excluded_atoms, excluded_atoms_list
+
+
 def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
     """
     Write a .prmtop file. See http://ambermd.org/prmtop.pdf for details.
@@ -37,6 +71,9 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         path = Path(file_path)
     if isinstance(file_path, Path):
         path = file_path
+
+    if interchange["vdW"].mixing_rule != "lorentz-berthelot":
+        raise Exception
 
     with open(path, "w") as prmtop:
         import datetime
@@ -55,27 +92,122 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         typemap = _build_typemap(interchange)  # noqa
 
-        NATOM = interchange.topology.mdtop.n_atoms  # : total number of atoms
-        NTYPES = len(
-            interchange["vdW"].potentials
-        )  # : total number of distinct atom types
-        NBONH = _get_num_h_bonds(
-            interchange.topology.mdtop
-        )  # : number of bonds containing hydrogen
-        MBONA = (
-            interchange.topology.mdtop.n_bonds - NBONH
-        )  # : number of bonds not containing hydrogen
-        NTHETH = 0  # : number of angles containing hydrogen
-        MTHETA = 0  # : number of angles not containing hydrogen
-        NPHIH = 0  # : number of dihedrals containing hydrogen
-        MPHIA = 0  # : number of dihedrals not containing hydrogen
+        potential_key_to_atom_type_mapping: Dict[PotentialKey, int] = {
+            key: i for i, key in enumerate(interchange["vdW"].potentials)
+        }
+        atom_type_indices = [
+            potential_key_to_atom_type_mapping[potential_key]
+            for potential_key in interchange["vdW"].slot_map.values()
+        ]
+
+        potential_key_to_bond_type_mapping: Dict[PotentialKey, int] = {
+            key: i for i, key in enumerate(interchange["Bonds"].potentials)
+        }
+
+        potential_key_to_angle_type_mapping: Dict[PotentialKey, int] = {
+            key: i for i, key in enumerate(interchange["Angles"].potentials)
+        }
+
+        potential_key_to_dihedral_type_mapping: Dict[PotentialKey, int] = {
+            key: i for i, key in enumerate(interchange["ProperTorsions"].potentials)
+        }
+
+        bonds_inc_hydrogen = list()
+        bonds_without_hydrogen = list()
+
+        for bond, key in interchange["Bonds"].slot_map.items():
+            bond_type_index = potential_key_to_bond_type_mapping[key]
+
+            atom1 = interchange.topology.mdtop.atom(bond.atom_indices[0])
+            atom2 = interchange.topology.mdtop.atom(bond.atom_indices[1])
+            if atom1.element.atomic_number == 1 or atom2.element.atomic_number == 1:
+                bonds_inc_hydrogen.append(atom1.index * 3)
+                bonds_inc_hydrogen.append(atom2.index * 3)
+                bonds_inc_hydrogen.append(bond_type_index + 1)
+            else:
+                bonds_without_hydrogen.append(atom1.index * 3)
+                bonds_without_hydrogen.append(atom2.index * 3)
+                bonds_without_hydrogen.append(bond_type_index + 1)
+
+        angles_inc_hydrogen = list()
+        angles_without_hydrogen = list()
+
+        for angle, key in interchange["Angles"].slot_map.items():
+            angle_type_index = potential_key_to_angle_type_mapping[key]
+
+            atom1 = interchange.topology.mdtop.atom(angle.atom_indices[0])
+            atom2 = interchange.topology.mdtop.atom(angle.atom_indices[1])
+            atom3 = interchange.topology.mdtop.atom(angle.atom_indices[2])
+            if 1 in [
+                atom1.element.atomic_number,
+                atom2.element.atomic_number,
+                atom3.element.atomic_number,
+            ]:
+                angles_inc_hydrogen.append(atom1.index * 3)
+                angles_inc_hydrogen.append(atom2.index * 3)
+                angles_inc_hydrogen.append(atom3.index * 3)
+                angles_inc_hydrogen.append(angle_type_index + 1)
+            else:
+                angles_without_hydrogen.append(atom1.index * 3)
+                angles_without_hydrogen.append(atom2.index * 3)
+                angles_without_hydrogen.append(atom3.index * 3)
+                angles_without_hydrogen.append(angle_type_index + 1)
+
+        dihedrals_inc_hydrogen = list()
+        dihedrals_without_hydrogen = list()
+
+        for dihedral, key in interchange["ProperTorsions"].slot_map.items():
+            dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
+
+            atom1 = interchange.topology.mdtop.atom(dihedral.atom_indices[0])
+            atom2 = interchange.topology.mdtop.atom(dihedral.atom_indices[1])
+            atom3 = interchange.topology.mdtop.atom(dihedral.atom_indices[2])
+            atom4 = interchange.topology.mdtop.atom(dihedral.atom_indices[2])
+            if 1 in [
+                atom1.element.atomic_number,
+                atom2.element.atomic_number,
+                atom3.element.atomic_number,
+                atom4.element.atomic_number,
+            ]:
+                dihedrals_inc_hydrogen.append(atom1.index * 3)
+                dihedrals_inc_hydrogen.append(atom2.index * 3)
+                dihedrals_inc_hydrogen.append(atom3.index * 3)
+                dihedrals_inc_hydrogen.append(atom4.index * 3)
+                dihedrals_inc_hydrogen.append(dihedral_type_index + 1)
+            else:
+                dihedrals_without_hydrogen.append(atom1.index * 3)
+                dihedrals_without_hydrogen.append(atom2.index * 3)
+                dihedrals_without_hydrogen.append(atom3.index * 3)
+                dihedrals_without_hydrogen.append(atom4.index * 3)
+                dihedrals_without_hydrogen.append(dihedral_type_index + 1)
+
+        number_excluded_atoms, excluded_atoms_list = _get_exclusion_lists(
+            interchange.topology
+        )
+        # total number of atoms
+        NATOM = interchange.topology.mdtop.n_atoms
+        # total number of distinct atom types
+        NTYPES = len(interchange["vdW"].potentials)
+        # number of bonds containing hydrogen
+        NBONH = _get_num_h_bonds(interchange.topology.mdtop)
+        # number of bonds not containing hydrogen
+        MBONA = interchange.topology.mdtop.n_bonds - NBONH
+        # number of angles containing hydrogen
+        NTHETH = int(len(angles_inc_hydrogen) / 4)
+        # number of angles not containing hydrogen
+        MTHETA = int(len(angles_without_hydrogen) / 4)
+        # number of dihedrals containing hydrogen
+        NPHIH = int(len(dihedrals_inc_hydrogen) / 5)
+        # number of dihedrals not containing hydrogen
+        MPHIA = int(len(dihedrals_without_hydrogen) / 5)
         NHPARM = 0  # : currently not used
         NPARM = 0  # : used to determine if addles created prmtop
-        NNB = 0  # : number of excluded atoms
+        # number of excluded atoms
+        NNB = len(excluded_atoms_list)
         NRES = interchange.topology.mdtop.n_residues  # : number of residues
-        NBONA = 0  # : MBONA + number of constraint bonds
-        NTHETA = 0  # : MTHETA + number of constraint angles
-        NPHIA = 0  # : MPHIA + number of constraint dihedrals
+        NBONA = MBONA  # : MBONA + number of constraint bonds
+        NTHETA = MTHETA  # : MTHETA + number of constraint angles
+        NPHIA = MPHIA  # : MPHIA + number of constraint dihedrals
         NUMBND = 0  # : number of unique bond types
         NUMANG = 0  # : number of unique angle types
         NPTRA = 0  # : number of unique dihedral types
@@ -157,48 +289,68 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         text_blob = "".join([f"{val:16.8E}" for val in masses])
         _write_text_blob(prmtop, text_blob)
 
-        potential_key_to_atom_type_mapping: Dict[PotentialKey, int] = {
-            key: i for i, key in enumerate(interchange["vdW"].potentials)
-        }
-        atom_type_indices = [
-            potential_key_to_atom_type_mapping[potential_key]
-            for potential_key in interchange["vdW"].slot_map.values()
-        ]
-
         prmtop.write("%FLAG ATOM_TYPE_INDEX\n" "%FORMAT(10I8)\n")
         text_blob = "".join([str(val + 1).rjust(8) for val in atom_type_indices])
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG NUMBER_EXCLUDED_ATOMS\n" "%FORMAT(10I8)\n")
         # This approach assumes ordering, 0 index, etc.
-        # number_excluded_atoms = _get_number_excluded_atoms(interchange.topology).values()
+        number_excluded_atoms = _get_number_excluded_atoms(
+            interchange.topology
+        ).values()
+
         # https://ambermd.org/prmtop.pdf says this section is ignored (!?)
         number_excluded_atoms = NATOM * [0]
         text_blob = "".join([str(val).rjust(8) for val in number_excluded_atoms])
         _write_text_blob(prmtop, text_blob)
 
+        acoefs = list()
+        bcoefs = list()
         # index = NONBONDED PARM INDEX [NTYPES × (ATOM TYPE INDEX(i) − 1) + ATOM TYPE INDEX(j)]
-        indices = []
-        for i, key_i in enumerate(potential_key_to_atom_type_mapping):  # noqa
-            for j, key_j in enumerate(potential_key_to_atom_type_mapping):  # noqa
+        nonbonded_parm_atom_type_tuple_mappings = dict()
+        for i, key_i in enumerate(potential_key_to_atom_type_mapping):
+            for j, key_j in enumerate(potential_key_to_atom_type_mapping):
+
+                index = NTYPES * (i) + j + 1
                 # TODO: Figure out the right way to map cross-interactions, using the
                 #       key_i and key_j objects as lookups to parameters
-                index = NTYPES * (i) + j + 1
-                indices.append(index)
+                sigma_i = interchange["vdW"].potentials[key_i].parameters["sigma"]
+                sigma_j = interchange["vdW"].potentials[key_j].parameters["sigma"]
+                epsilon_i = interchange["vdW"].potentials[key_i].parameters["epsilon"]
+                epsilon_j = interchange["vdW"].potentials[key_j].parameters["epsilon"]
+
+                sigma = (sigma_i + sigma_j) * 0.5
+                epsilon = (epsilon_i * epsilon_j) ** 0.5
+
+                acoef = (4 * epsilon * sigma ** 12).m_as(kcal_mol * unit.angstrom ** 12)
+                bcoef = (4 * epsilon * sigma ** 6).m_as(kcal_mol * unit.angstrom ** 6)
+
+                # TODO: This is probably dangerous on the basis that it's likely
+                #       sensitive to rounding
+                if acoef not in acoefs:
+                    acoefs.append(acoef)
+                    bcoefs.append(bcoef)
+
+                index = acoefs.index(acoef)
+
+                nonbonded_parm_atom_type_tuple_mappings[tuple((key_i, key_j))] = (
+                    index + 1
+                )
 
         prmtop.write("%FLAG NONBONDED_PARM_INDEX\n" "%FORMAT(10I8)\n")
-        text_blob = "".join([str(val).rjust(8) for val in indices])
+        text_blob = "".join(
+            [
+                str(val).rjust(8)
+                for val in nonbonded_parm_atom_type_tuple_mappings.values()
+            ]
+        )
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG RESIDUE_LABEL\n" "%FORMAT(20a4)\n")
         prmtop.write("FOO\n")
 
-        prmtop.write("%FLAG RESIUDE_POINTER\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG RESIDUE_POINTER\n" "%FORMAT(10I8)\n")
         prmtop.write("       1\n")
-
-        potential_key_to_bond_type_mapping: Dict[PotentialKey, int] = {
-            key: i for i, key in enumerate(interchange["Bonds"].potentials)
-        }
 
         # TODO: Exclude (?) bonds containing hydrogens
         prmtop.write("%FLAG BOND_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
@@ -220,10 +372,6 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         text_blob = "".join([f"{val:16.8E}" for val in bond_length])
         _write_text_blob(prmtop, text_blob)
 
-        potential_key_to_angle_type_mapping: Dict[PotentialKey, int] = {
-            key: i for i, key in enumerate(interchange["Angles"].potentials)
-        }
-
         prmtop.write("%FLAG ANGLE_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
         angle_k = [
             interchange["Angles"].potentials[key].parameters["k"].m_as(kcal_mol_rad2)
@@ -240,10 +388,6 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         ]
         text_blob = "".join([f"{val:16.8E}" for val in angle_theta])
         _write_text_blob(prmtop, text_blob)
-
-        potential_key_to_dihedral_type_mapping: Dict[PotentialKey, int] = {
-            key: i for i, key in enumerate(interchange["ProperTorsions"].potentials)
-        }
 
         prmtop.write("%FLAG DIHEDRAL_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
         proper_k = [
@@ -291,56 +435,13 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         prmtop.write("%FLAG SOLTY\n" "%FORMAT(5E16.8)\n")
         prmtop.write(f"{0:16.8E}\n")
 
-        sigmas = [
-            interchange["vdW"]
-            .potentials[
-                interchange["vdW"].slot_map[TopologyKey(atom_indices=(atom_index,))]
-            ]
-            .parameters["sigma"]
-            for atom_index in range(interchange.topology.mdtop.n_atoms)
-        ]
-        epsilons = [
-            interchange["vdW"]
-            .potentials[
-                interchange["vdW"].slot_map[TopologyKey(atom_indices=(atom_index,))]
-            ]
-            .parameters["epsilon"]
-            for atom_index in range(interchange.topology.mdtop.n_atoms)
-        ]
-
-        acoef = [
-            (4 * epsilon * sigma ** 12).m_as(kcal_mol * unit.angstrom ** 12)
-            for sigma, epsilon in zip(sigmas, epsilons)
-        ]
-        bcoef = [
-            (4 * epsilon * sigma ** 6).m_as(kcal_mol * unit.angstrom ** 6)
-            for sigma, epsilon in zip(sigmas, epsilons)
-        ]
-
         prmtop.write("%FLAG LENNARD_JONES_ACOEF\n" "%FORMAT(5E16.8)\n")
-        text_blob = "".join([f"{val:16.8E}" for val in acoef])
+        text_blob = "".join([f"{val:16.8E}" for val in acoefs])
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG LENNARD_JONES_BCOEF\n" "%FORMAT(5E16.8)\n")
-        text_blob = "".join([f"{val:16.8E}" for val in bcoef])
+        text_blob = "".join([f"{val:16.8E}" for val in bcoefs])
         _write_text_blob(prmtop, text_blob)
-
-        bonds_inc_hydrogen = list()
-        bonds_without_hydrogen = list()
-
-        for bond, key in interchange["Bonds"].slot_map.items():
-            bond_type_index = potential_key_to_bond_type_mapping[key]
-
-            atom1 = interchange.topology.mdtop.atom(bond.atom_indices[0])
-            atom2 = interchange.topology.mdtop.atom(bond.atom_indices[1])
-            if atom1.element.atomic_number == 1 or atom2.element.atomic_number == 1:
-                bonds_inc_hydrogen.append(atom1.index * 3)
-                bonds_inc_hydrogen.append(atom2.index * 3)
-                bonds_inc_hydrogen.append(bond_type_index + 1)
-            else:
-                bonds_without_hydrogen.append(atom1.index * 3)
-                bonds_without_hydrogen.append(atom2.index * 3)
-                bonds_without_hydrogen.append(bond_type_index + 1)
 
         prmtop.write("%FLAG BONDS_INC_HYDROGEN\n" "%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in bonds_inc_hydrogen])
@@ -350,30 +451,6 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         text_blob = "".join([str(val).rjust(8) for val in bonds_without_hydrogen])
         _write_text_blob(prmtop, text_blob)
 
-        angles_inc_hydrogen = list()
-        angles_without_hydrogen = list()
-
-        for angle, key in interchange["Angles"].slot_map.items():
-            angle_type_index = potential_key_to_angle_type_mapping[key]
-
-            atom1 = interchange.topology.mdtop.atom(angle.atom_indices[0])
-            atom2 = interchange.topology.mdtop.atom(angle.atom_indices[1])
-            atom3 = interchange.topology.mdtop.atom(angle.atom_indices[2])
-            if 1 in [
-                atom1.element.atomic_number,
-                atom2.element.atomic_number,
-                atom3.element.atomic_number,
-            ]:
-                angles_inc_hydrogen.append(atom1.index * 3)
-                angles_inc_hydrogen.append(atom2.index * 3)
-                angles_inc_hydrogen.append(atom3.index * 3)
-                angles_inc_hydrogen.append(angle_type_index + 1)
-            else:
-                angles_without_hydrogen.append(atom1.index * 3)
-                angles_without_hydrogen.append(atom2.index * 3)
-                angles_without_hydrogen.append(atom3.index * 3)
-                angles_without_hydrogen.append(angle_type_index + 1)
-
         prmtop.write("%FLAG ANGLES_INC_HYDROGEN\n" "%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in angles_inc_hydrogen])
         _write_text_blob(prmtop, text_blob)
@@ -381,34 +458,6 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         prmtop.write("%FLAG ANGLES_WITHOUT_HYDROGEN\n" "%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in angles_without_hydrogen])
         _write_text_blob(prmtop, text_blob)
-
-        dihedrals_inc_hydrogen = list()
-        dihedrals_without_hydrogen = list()
-
-        for dihedral, key in interchange["ProperTorsions"].slot_map.items():
-            dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
-
-            atom1 = interchange.topology.mdtop.atom(dihedral.atom_indices[0])
-            atom2 = interchange.topology.mdtop.atom(dihedral.atom_indices[1])
-            atom3 = interchange.topology.mdtop.atom(dihedral.atom_indices[2])
-            atom4 = interchange.topology.mdtop.atom(dihedral.atom_indices[2])
-            if 1 in [
-                atom1.element.atomic_number,
-                atom2.element.atomic_number,
-                atom3.element.atomic_number,
-                atom4.element.atomic_number,
-            ]:
-                dihedrals_inc_hydrogen.append(atom1.index * 3)
-                dihedrals_inc_hydrogen.append(atom2.index * 3)
-                dihedrals_inc_hydrogen.append(atom3.index * 3)
-                dihedrals_inc_hydrogen.append(atom4.index * 3)
-                dihedrals_inc_hydrogen.append(dihedral_type_index + 1)
-            else:
-                dihedrals_without_hydrogen.append(atom1.index * 3)
-                dihedrals_without_hydrogen.append(atom2.index * 3)
-                dihedrals_without_hydrogen.append(atom3.index * 3)
-                dihedrals_without_hydrogen.append(atom4.index * 3)
-                dihedrals_without_hydrogen.append(dihedral_type_index + 1)
 
         prmtop.write("%FLAG DIHEDRALS_INC_HYDROGEN\n" "%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in dihedrals_inc_hydrogen])
@@ -482,11 +531,16 @@ def to_inpcrd(interchange: "Interchange", file_path: Union[Path, str]):
     with open(path, "w") as inpcrd:
         inpcrd.write(f"\n{n_atoms:5d}{time:15.7e}\n")
 
-        fmt = "%12.7f%12.7f%12.7f" "%12.7f%12.7f%12.7f\n"
         coords = interchange.positions.m_as(unit.angstrom)
-        reshaped = coords.reshape((-1, 6))
-        for row in reshaped:
-            inpcrd.write(fmt % (row[0], row[1], row[2], row[3], row[4], row[5]))
+        blob = "".join([f"{val:12.7f}".rjust(12) for val in coords.flatten()])
+
+        for line in textwrap.wrap(blob, width=72, drop_whitespace=False):
+            inpcrd.write(line + "\n")
+
+        # fmt = "%12.7f%12.7f%12.7f" "%12.7f%12.7f%12.7f\n"
+        # reshaped = coords.reshape((-1, 6))
+        # for row in reshaped:
+        #     inpcrd.write(fmt % (row[0], row[1], row[2], row[3], row[4], row[5]))
 
         box = interchange.box.to(unit.angstrom).magnitude
         if (box == np.diag(np.diagonal(box))).all():
