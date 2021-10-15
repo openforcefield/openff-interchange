@@ -7,7 +7,6 @@ import numpy as np
 from openff.units import unit
 
 from openff.interchange.components.mdtraj import _get_num_h_bonds, _store_bond_partners
-from openff.interchange.components.toolkit import _get_number_excluded_atoms
 
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
@@ -59,7 +58,7 @@ def _get_exclusion_lists(topology):
         number_excluded_atoms.append(len(tmp))
         [excluded_atoms_list.append(_) for _ in tmp]
 
-        return number_excluded_atoms, excluded_atoms_list
+    return number_excluded_atoms, excluded_atoms_list
 
 
 def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
@@ -184,6 +183,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         number_excluded_atoms, excluded_atoms_list = _get_exclusion_lists(
             interchange.topology
         )
+
         # total number of atoms
         NATOM = interchange.topology.mdtop.n_atoms
         # total number of distinct atom types
@@ -295,13 +295,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG NUMBER_EXCLUDED_ATOMS\n" "%FORMAT(10I8)\n")
-        # This approach assumes ordering, 0 index, etc.
-        number_excluded_atoms = _get_number_excluded_atoms(
-            interchange.topology
-        ).values()
-
         # https://ambermd.org/prmtop.pdf says this section is ignored (!?)
-        number_excluded_atoms = NATOM * [0]
         text_blob = "".join([str(val).rjust(8) for val in number_excluded_atoms])
         _write_text_blob(prmtop, text_blob)
 
@@ -469,7 +463,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG EXCLUDED_ATOMS_LIST\n" "%FORMAT(10I8)\n")
-        _write_text_blob(prmtop, "")
+        text_blob = "".join([str(val).rjust(8) for val in excluded_atoms_list])
+        _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG HBOND_ACOEF\n" "%FORMAT(5E16.8)\n")
         _write_text_blob(prmtop, "")
