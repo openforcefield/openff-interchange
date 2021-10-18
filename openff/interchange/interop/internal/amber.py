@@ -209,11 +209,12 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         NTHETA = MTHETA  # : MTHETA + number of constraint angles
         NPHIA = MPHIA  # : MPHIA + number of constraint dihedrals
         # number of unique bond types
-        NUMBND = len(interchange["Bonds"].potentials)
+        NUMBND = len(potential_key_to_bond_type_mapping)
         # number of unique angle types
-        NUMANG = len(interchange["Angles"].potentials)
+        NUMANG = len(potential_key_to_angle_type_mapping)
         # number of unique dihedral types
-        NPTRA = len(interchange["ProperTorsions"].potentials)  # TODO: Impropers
+        NPTRA = len(potential_key_to_dihedral_type_mapping)
+        # TODO: Impropers
         # number of atom types in parameter file, see SOLTY below
         # this appears to be unused, but ParmEd writes a 1 here (?)
         NATYP = 1
@@ -426,12 +427,12 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG SCEE_SCALE_FACTOR\n" "%FORMAT(5E16.8)\n")
-        scee = len(interchange["ProperTorsions"].slot_map) * [1.2]
+        scee = NPTRA * [1.2]
         text_blob = "".join([f"{val:16.8E}" for val in scee])
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG SCNB_SCALE_FACTOR\n" "%FORMAT(5E16.8)\n")
-        scnb = len(interchange["ProperTorsions"].slot_map) * [2.0]
+        scnb = NPTRA * [2.0]
         text_blob = "".join([f"{val:16.8E}" for val in scnb])
         _write_text_blob(prmtop, text_blob)
 
