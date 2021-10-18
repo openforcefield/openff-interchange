@@ -161,7 +161,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             atom1 = interchange.topology.mdtop.atom(dihedral.atom_indices[0])
             atom2 = interchange.topology.mdtop.atom(dihedral.atom_indices[1])
             atom3 = interchange.topology.mdtop.atom(dihedral.atom_indices[2])
-            atom4 = interchange.topology.mdtop.atom(dihedral.atom_indices[2])
+            atom4 = interchange.topology.mdtop.atom(dihedral.atom_indices[3])
             if 1 in [
                 atom1.element.atomic_number,
                 atom2.element.atomic_number,
@@ -379,7 +379,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         angle_k = [
             interchange["Angles"].potentials[key].parameters["k"].m_as(kcal_mol_rad2)
             / 2  # noqa
-            for key in interchange["Angles"].slot_map.values()
+            for key in potential_key_to_angle_type_mapping
         ]
         text_blob = "".join([f"{val:16.8E}" for val in angle_k])
         _write_text_blob(prmtop, text_blob)
@@ -387,7 +387,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         prmtop.write("%FLAG ANGLE_EQUIL_VALUE\n" "%FORMAT(5E16.8)\n")
         angle_theta = [
             interchange["Angles"].potentials[key].parameters["angle"].m_as(unit.radian)
-            for key in interchange["Angles"].slot_map.values()
+            for key in potential_key_to_angle_type_mapping
         ]
         text_blob = "".join([f"{val:16.8E}" for val in angle_theta])
         _write_text_blob(prmtop, text_blob)
@@ -398,7 +398,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             .potentials[key]
             .parameters["k"]
             .m_as(unit.kilocalorie / unit.mol)
-            for key in interchange["ProperTorsions"].slot_map.values()
+            for key in potential_key_to_dihedral_type_mapping
         ]
         text_blob = "".join([f"{val:16.8E}" for val in proper_k])
         _write_text_blob(prmtop, text_blob)
@@ -409,7 +409,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             .potentials[key]
             .parameters["periodicity"]
             .m_as(unit.dimensionless)
-            for key in interchange["ProperTorsions"].slot_map.values()
+            for key in potential_key_to_dihedral_type_mapping
         ]
         text_blob = "".join([f"{val:16.8E}" for val in proper_periodicity])
         _write_text_blob(prmtop, text_blob)
@@ -420,7 +420,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             .potentials[key]
             .parameters["phase"]
             .m_as(unit.dimensionless)
-            for key in interchange["ProperTorsions"].slot_map.values()
+            for key in potential_key_to_dihedral_type_mapping
         ]
         text_blob = "".join([f"{val:16.8E}" for val in proper_phase])
         _write_text_blob(prmtop, text_blob)

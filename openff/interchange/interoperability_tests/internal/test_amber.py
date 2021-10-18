@@ -9,13 +9,13 @@ from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers import get_amber_energies, get_gromacs_energies
-from openff.interchange.tests import BaseTest
-from openff.interchange.tests.utils import needs_gmx
+from openff.interchange.testing import _BaseTest
+from openff.interchange.testing.utils import needs_gmx
 
 kj_mol = unit.kilojoule / unit.mol
 
 
-class TestAmber(BaseTest):
+class TestAmber(_BaseTest):
     def test_inpcrd(self, parsley):
         mol = Molecule.from_smiles(10 * "C")
         mol.name = "HPER"
