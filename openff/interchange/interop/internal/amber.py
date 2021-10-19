@@ -154,6 +154,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         dihedrals_inc_hydrogen = list()
         dihedrals_without_hydrogen = list()
+        known_14_pairs = list()
 
         for dihedral, key in interchange["ProperTorsions"].slot_map.items():
             dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
@@ -162,6 +163,22 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             atom2 = interchange.topology.mdtop.atom(dihedral.atom_indices[1])
             atom3 = interchange.topology.mdtop.atom(dihedral.atom_indices[2])
             atom4 = interchange.topology.mdtop.atom(dihedral.atom_indices[3])
+
+            # Need to know _before_ building dihedral lists if this one will need its
+            # third atom tagged with a negative sign. From https://ambermd.org/prmtop.pdf:
+            # > If the third atom is negative, then the 1-4 non-bonded interactions
+            # > for this torsion is not calculated. This is required to avoid
+            # > double-counting these non-bonded interactions in some ring systems
+            # > and in multi-term torsions.
+            if [atom1.index, atom4.index] in known_14_pairs or [
+                atom4.index,
+                atom1.index,
+            ] in known_14_pairs:
+                _14_tag = -1
+            else:
+                known_14_pairs.append([atom1.index, atom4.index])
+                _14_tag = 1
+
             if 1 in [
                 atom1.element.atomic_number,
                 atom2.element.atomic_number,
@@ -170,13 +187,13 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             ]:
                 dihedrals_inc_hydrogen.append(atom1.index * 3)
                 dihedrals_inc_hydrogen.append(atom2.index * 3)
-                dihedrals_inc_hydrogen.append(atom3.index * 3)
+                dihedrals_inc_hydrogen.append(atom3.index * 3 * _14_tag)
                 dihedrals_inc_hydrogen.append(atom4.index * 3)
                 dihedrals_inc_hydrogen.append(dihedral_type_index + 1)
             else:
                 dihedrals_without_hydrogen.append(atom1.index * 3)
                 dihedrals_without_hydrogen.append(atom2.index * 3)
-                dihedrals_without_hydrogen.append(atom3.index * 3)
+                dihedrals_without_hydrogen.append(atom3.index * 3 * _14_tag)
                 dihedrals_without_hydrogen.append(atom4.index * 3)
                 dihedrals_without_hydrogen.append(dihedral_type_index + 1)
 
