@@ -170,11 +170,15 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             # > for this torsion is not calculated. This is required to avoid
             # > double-counting these non-bonded interactions in some ring systems
             # > and in multi-term torsions.
-            if [atom1.index, atom4.index] in known_14_pairs or [
-                atom4.index,
-                atom1.index,
-            ] in known_14_pairs:
+            if ([atom1.index, atom4.index] in known_14_pairs) or (
+                [atom4.index, atom1.index] in known_14_pairs
+            ):
                 _14_tag = -1
+                # Since 0 can't be negative, attempt to re-arrange this torsion
+                # such that the third atom listed is negative.
+                if atom3.index == 0:
+                    (atom4, atom3, atom2, atom1) = atom1, atom2, atom3, atom4
+
             else:
                 known_14_pairs.append([atom1.index, atom4.index])
                 _14_tag = 1
