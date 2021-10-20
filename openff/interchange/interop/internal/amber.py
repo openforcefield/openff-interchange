@@ -128,7 +128,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             bond_indices = sorted(bond.atom_indices)
 
             bonds_list = bonds_inc_hydrogen if (atom1.element.atomic_number == 1 or atom2.element.atomic_number == 1) else bonds_without_hydrogen:
-            
+
             bonds_list.append(bond_indices[0] * 3)
             bonds_list.append(bond_indices[1] * 3)
             bonds_list.append(bond_type_index + 1)
