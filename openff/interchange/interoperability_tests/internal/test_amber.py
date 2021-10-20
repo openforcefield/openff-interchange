@@ -5,12 +5,10 @@ import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
-from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.drivers import get_amber_energies, get_gromacs_energies
+from openff.interchange.drivers import get_amber_energies, get_openmm_energies
 from openff.interchange.testing import _BaseTest
-from openff.interchange.testing.utils import needs_gmx
 
 kj_mol = unit.kilojoule / unit.mol
 
@@ -34,32 +32,37 @@ class TestAmber(_BaseTest):
 
         np.testing.assert_equal(coords1, coords2)
 
-    @skip_if_missing("intermol")
-    @needs_gmx
-    @pytest.mark.slow()
-    def test_amber_energy(self):
+    @pytest.mark.parametrize(
+        "smiles",
+        [
+            "C",
+            "CC",  # Adds a proper torsion term(s)
+            "C=O",  # Simplest molecule with any improper torsion
+            "OC=O",  # Simplest molecule with a multi-term torsion
+            "CCOC",  # This hits t86, which has a non-1.0 idivf
+            "C1COC(=O)O1",  # This adds an improper, i2
+        ],
+    )
+    def test_amber_energy(self, smiles):
         """Basic test to see if the amber energy driver is functional"""
-        mol = Molecule.from_smiles("CCO")
+        mol = Molecule.from_smiles(smiles)
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
-        parsley = ForceField("openff_unconstrained-1.0.0.offxml")
+        parsley = ForceField("openff_unconstrained-2.0.0.offxml")
         off_sys = Interchange.from_smirnoff(parsley, top)
 
         off_sys.box = [4, 4, 4]
         off_sys.positions = mol.conformers[0]
 
-        omm_energies = get_gromacs_energies(off_sys, mdp="cutoff_hbonds")
+        omm_energies = get_openmm_energies(off_sys)
         amb_energies = get_amber_energies(off_sys)
 
         omm_energies.compare(
             amb_energies,
             custom_tolerances={
-                "Bond": 3.6 * kj_mol,
-                "Angle": 0.2 * kj_mol,
-                "Torsion": 1.9 * kj_mol,
-                "vdW": 1.5 * kj_mol,
-                "Electrostatics": 36.5 * kj_mol,
+                "vdW": 0.02 * kj_mol,
+                "Electrostatics": 0.05 * kj_mol,
             },
         )

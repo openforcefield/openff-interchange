@@ -232,24 +232,6 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             dihedrals_list.append(atom4.index * 3)
             dihedrals_list.append(dihedral_type_index + 1)
 
-            # if 1 in [
-            #     atom1.element.atomic_number,
-            #     atom2.element.atomic_number,
-            #     atom3.element.atomic_number,
-            #     atom4.element.atomic_number,
-            # ]:
-            #     dihedrals_inc_hydrogen.append(atom1.index * 3)
-            #     dihedrals_inc_hydrogen.append(atom2.index * 3)
-            #     dihedrals_inc_hydrogen.append(atom3.index * 3 * _14_tag)
-            #     dihedrals_inc_hydrogen.append(atom4.index * 3)
-            #     dihedrals_inc_hydrogen.append(dihedral_type_index + 1)
-            # else:
-            #     dihedrals_without_hydrogen.append(atom1.index * 3)
-            #     dihedrals_without_hydrogen.append(atom2.index * 3)
-            #     dihedrals_without_hydrogen.append(atom3.index * 3 * _14_tag)
-            #     dihedrals_without_hydrogen.append(atom4.index * 3)
-            #     dihedrals_without_hydrogen.append(dihedral_type_index + 1)
-
         for dihedral, key in interchange["ImproperTorsions"].slot_map.items():
             dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
 
@@ -263,7 +245,10 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             ):
                 _14_tag = -1
             else:
-                # known_14_pairs.append([atom1.index, atom4.index])
+                # Probably no need to append 1-4 pairs here, since 1-4 pairs should not
+                # exist in impropers and should be covered when 1-2 bond and 1-3 angle
+                # pairs are appended to this list. Not actually sure a case in which
+                # an improper can hit this clause?
                 _14_tag = 1
 
             dihedrals_list = (
