@@ -127,7 +127,13 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
             bond_indices = sorted(bond.atom_indices)
 
-            bonds_list = bonds_inc_hydrogen if (atom1.element.atomic_number == 1 or atom2.element.atomic_number == 1) else bonds_without_hydrogen:
+            bonds_list = (
+                bonds_inc_hydrogen
+                if (
+                    atom1.element.atomic_number == 1 or atom2.element.atomic_number == 1
+                )
+                else bonds_without_hydrogen
+            )
 
             bonds_list.append(bond_indices[0] * 3)
             bonds_list.append(bond_indices[1] * 3)
@@ -456,6 +462,13 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             .m_as(unit.kilocalorie / unit.mol)
             for key in potential_key_to_dihedral_type_mapping
         ]
+
+        for key in potential_key_to_dihedral_type_mapping:
+            if "idivf" in interchange["ProperTorsions"].potentials[key].parameters:
+                proper_k[potential_key_to_dihedral_type_mapping[key]] /= int(
+                    interchange["ProperTorsions"].potentials[key].parameters["idivf"]
+                )
+
         text_blob = "".join([f"{val:16.8E}" for val in proper_k])
         _write_text_blob(prmtop, text_blob)
 
