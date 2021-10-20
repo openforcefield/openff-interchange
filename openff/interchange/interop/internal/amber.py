@@ -111,6 +111,10 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             key: i for i, key in enumerate(interchange["ProperTorsions"].potentials)
         }
 
+        # Track bonds and angles here also to ensure the 1-2 and 1-3 exclusions are
+        # properly applied.
+        known_14_pairs = list()
+
         bonds_inc_hydrogen = list()
         bonds_without_hydrogen = list()
 
@@ -119,14 +123,20 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
             atom1 = interchange.topology.mdtop.atom(bond.atom_indices[0])
             atom2 = interchange.topology.mdtop.atom(bond.atom_indices[1])
+
+            bond_indices = sorted(bond.atom_indices)
+
             if atom1.element.atomic_number == 1 or atom2.element.atomic_number == 1:
-                bonds_inc_hydrogen.append(atom1.index * 3)
-                bonds_inc_hydrogen.append(atom2.index * 3)
+                bonds_inc_hydrogen.append(bond_indices[0] * 3)
+                bonds_inc_hydrogen.append(bond_indices[1] * 3)
                 bonds_inc_hydrogen.append(bond_type_index + 1)
             else:
-                bonds_without_hydrogen.append(atom1.index * 3)
-                bonds_without_hydrogen.append(atom2.index * 3)
+                bonds_without_hydrogen.append(bond_indices[0] * 3)
+                bonds_without_hydrogen.append(bond_indices[1] * 3)
                 bonds_without_hydrogen.append(bond_type_index + 1)
+
+            known_14_pairs.append(bond_indices)
+            known_14_pairs.append(list(reversed(bond_indices)))
 
         angles_inc_hydrogen = list()
         angles_without_hydrogen = list()
@@ -137,24 +147,34 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             atom1 = interchange.topology.mdtop.atom(angle.atom_indices[0])
             atom2 = interchange.topology.mdtop.atom(angle.atom_indices[1])
             atom3 = interchange.topology.mdtop.atom(angle.atom_indices[2])
+
+            angle_indices = list(angle.atom_indices)
+            angle_indices = (
+                angle_indices
+                if angle_indices[0] < angle_indices[-1]
+                else list(reversed(angle_indices))
+            )
+
             if 1 in [
                 atom1.element.atomic_number,
                 atom2.element.atomic_number,
                 atom3.element.atomic_number,
             ]:
-                angles_inc_hydrogen.append(atom1.index * 3)
-                angles_inc_hydrogen.append(atom2.index * 3)
-                angles_inc_hydrogen.append(atom3.index * 3)
+                angles_inc_hydrogen.append(angle_indices[0] * 3)
+                angles_inc_hydrogen.append(angle_indices[1] * 3)
+                angles_inc_hydrogen.append(angle_indices[2] * 3)
                 angles_inc_hydrogen.append(angle_type_index + 1)
             else:
-                angles_without_hydrogen.append(atom1.index * 3)
-                angles_without_hydrogen.append(atom2.index * 3)
-                angles_without_hydrogen.append(atom3.index * 3)
+                angles_without_hydrogen.append(angle_indices[0] * 3)
+                angles_without_hydrogen.append(angle_indices[1] * 3)
+                angles_without_hydrogen.append(angle_indices[2] * 3)
                 angles_without_hydrogen.append(angle_type_index + 1)
+
+            known_14_pairs.append([angle_indices[0], angle_indices[-1]])
+            known_14_pairs.append([angle_indices[-1], angle_indices[0]])
 
         dihedrals_inc_hydrogen = list()
         dihedrals_without_hydrogen = list()
-        known_14_pairs = list()
 
         for dihedral, key in interchange["ProperTorsions"].slot_map.items():
             dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
@@ -333,14 +353,31 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         text_blob = "".join([str(val).rjust(8) for val in number_excluded_atoms])
         _write_text_blob(prmtop, text_blob)
 
-        acoefs = list()
-        bcoefs = list()
-        # index = NONBONDED PARM INDEX [NTYPES × (ATOM TYPE INDEX(i) − 1) + ATOM TYPE INDEX(j)]
-        nonbonded_parm_atom_type_tuple_mappings = dict()
-        for i, key_i in enumerate(potential_key_to_atom_type_mapping):
-            for j, key_j in enumerate(potential_key_to_atom_type_mapping):
+        acoefs = [None] * int((NTYPES + 1) * NTYPES / 2)
+        bcoefs = [None] * int((NTYPES + 1) * NTYPES / 2)
 
-                index = NTYPES * (i) + j + 1
+        nonbonded_parm_indices = [None] * (NTYPES * NTYPES)
+
+        for key_i, i in potential_key_to_atom_type_mapping.items():
+            for key_j, j in potential_key_to_atom_type_mapping.items():
+
+                if j < i:
+                    # Only need to handle the lower triangle as everything symmetric.
+                    continue
+
+                atom_type_index_i = i + 1
+                atom_type_index_j = j + 1
+
+                coeff_index = int(i + (j + 1) * j / 2) + 1  # FORTRAN IDX
+
+                # index = NONBONDED PARM INDEX [NTYPES × (ATOM TYPE INDEX(i) − 1) + ATOM TYPE INDEX(j)]
+                parm_index_fwd = (
+                    NTYPES * (atom_type_index_i - 1) + atom_type_index_j  # FORTRAN IDX
+                )
+                parm_index_rev = (
+                    NTYPES * (atom_type_index_j - 1) + atom_type_index_i  # FORTRAN IDX
+                )
+
                 # TODO: Figure out the right way to map cross-interactions, using the
                 #       key_i and key_j objects as lookups to parameters
                 sigma_i = interchange["vdW"].potentials[key_i].parameters["sigma"]
@@ -354,25 +391,20 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
                 acoef = (4 * epsilon * sigma ** 12).m_as(kcal_mol * unit.angstrom ** 12)
                 bcoef = (4 * epsilon * sigma ** 6).m_as(kcal_mol * unit.angstrom ** 6)
 
-                # TODO: This is probably dangerous on the basis that it's likely
-                #       sensitive to rounding
-                if acoef not in acoefs:
-                    acoefs.append(acoef)
-                    bcoefs.append(bcoef)
+                acoefs[coeff_index - 1] = acoef
+                bcoefs[coeff_index - 1] = bcoef
 
-                index = acoefs.index(acoef)
+                nonbonded_parm_indices[parm_index_fwd - 1] = coeff_index
+                nonbonded_parm_indices[parm_index_rev - 1] = coeff_index
 
-                nonbonded_parm_atom_type_tuple_mappings[tuple((key_i, key_j))] = (
-                    index + 1
-                )
+        assert all(
+            value is not None
+            for values in [acoefs, bcoefs, nonbonded_parm_indices]
+            for value in values
+        ), "an internal error occurred"
 
         prmtop.write("%FLAG NONBONDED_PARM_INDEX\n" "%FORMAT(10I8)\n")
-        text_blob = "".join(
-            [
-                str(val).rjust(8)
-                for val in nonbonded_parm_atom_type_tuple_mappings.values()
-            ]
-        )
+        text_blob = "".join([str(val).rjust(8) for val in nonbonded_parm_indices])
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG RESIDUE_LABEL\n" "%FORMAT(20a4)\n")
