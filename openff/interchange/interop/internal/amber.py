@@ -174,14 +174,18 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
                 [atom4.index, atom1.index] in known_14_pairs
             ):
                 _14_tag = -1
-                # Since 0 can't be negative, attempt to re-arrange this torsion
-                # such that the third atom listed is negative.
-                if atom3.index == 0:
-                    (atom4, atom3, atom2, atom1) = atom1, atom2, atom3, atom4
 
             else:
                 known_14_pairs.append([atom1.index, atom4.index])
                 _14_tag = 1
+
+            # Since 0 can't be negative, attempt to re-arrange this torsion
+            # such that the third atom listed is negative.
+            # This should only be strictlye necessary when _14_tag is -1, but
+            # ParmEd likes to always flip it, and always flipping should be harmless.
+            # Could put this in an if block if desired.
+            if atom3.index == 0:
+                (atom4, atom3, atom2, atom1) = atom1, atom2, atom3, atom4
 
             if 1 in [
                 atom1.element.atomic_number,
