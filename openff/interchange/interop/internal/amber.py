@@ -1,5 +1,6 @@
 """Interfaces with Amber."""
 import textwrap
+from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Union
 
@@ -108,8 +109,10 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             key: i for i, key in enumerate(interchange["Angles"].potentials)
         }
 
+        dihedral_potentials = deepcopy(interchange["ProperTorsions"].potentials)
+        dihedral_potentials.update(interchange["ImproperTorsions"].potentials)
         potential_key_to_dihedral_type_mapping: Dict[PotentialKey, int] = {
-            key: i for i, key in enumerate(interchange["ProperTorsions"].potentials)
+            key: i for i, key in enumerate(dihedral_potentials)
         }
 
         # Track bonds and angles here also to ensure the 1-2 and 1-3 exclusions are
@@ -211,23 +214,75 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             if atom3.index == 0:
                 (atom4, atom3, atom2, atom1) = atom1, atom2, atom3, atom4
 
-            if 1 in [
-                atom1.element.atomic_number,
-                atom2.element.atomic_number,
-                atom3.element.atomic_number,
-                atom4.element.atomic_number,
-            ]:
-                dihedrals_inc_hydrogen.append(atom1.index * 3)
-                dihedrals_inc_hydrogen.append(atom2.index * 3)
-                dihedrals_inc_hydrogen.append(atom3.index * 3 * _14_tag)
-                dihedrals_inc_hydrogen.append(atom4.index * 3)
-                dihedrals_inc_hydrogen.append(dihedral_type_index + 1)
+            dihedrals_list = (
+                dihedrals_inc_hydrogen
+                if 1
+                in [
+                    atom1.element.atomic_number,
+                    atom2.element.atomic_number,
+                    atom3.element.atomic_number,
+                    atom4.element.atomic_number,
+                ]
+                else dihedrals_without_hydrogen
+            )
+
+            dihedrals_list.append(atom1.index * 3)
+            dihedrals_list.append(atom2.index * 3)
+            dihedrals_list.append(atom3.index * 3 * _14_tag)
+            dihedrals_list.append(atom4.index * 3)
+            dihedrals_list.append(dihedral_type_index + 1)
+
+            # if 1 in [
+            #     atom1.element.atomic_number,
+            #     atom2.element.atomic_number,
+            #     atom3.element.atomic_number,
+            #     atom4.element.atomic_number,
+            # ]:
+            #     dihedrals_inc_hydrogen.append(atom1.index * 3)
+            #     dihedrals_inc_hydrogen.append(atom2.index * 3)
+            #     dihedrals_inc_hydrogen.append(atom3.index * 3 * _14_tag)
+            #     dihedrals_inc_hydrogen.append(atom4.index * 3)
+            #     dihedrals_inc_hydrogen.append(dihedral_type_index + 1)
+            # else:
+            #     dihedrals_without_hydrogen.append(atom1.index * 3)
+            #     dihedrals_without_hydrogen.append(atom2.index * 3)
+            #     dihedrals_without_hydrogen.append(atom3.index * 3 * _14_tag)
+            #     dihedrals_without_hydrogen.append(atom4.index * 3)
+            #     dihedrals_without_hydrogen.append(dihedral_type_index + 1)
+
+        for dihedral, key in interchange["ImproperTorsions"].slot_map.items():
+            dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
+
+            atom1 = interchange.topology.mdtop.atom(dihedral.atom_indices[0])
+            atom2 = interchange.topology.mdtop.atom(dihedral.atom_indices[1])
+            atom3 = interchange.topology.mdtop.atom(dihedral.atom_indices[2])
+            atom4 = interchange.topology.mdtop.atom(dihedral.atom_indices[3])
+
+            if ([atom1.index, atom4.index] in known_14_pairs) or (
+                [atom4.index, atom1.index] in known_14_pairs
+            ):
+                _14_tag = -1
             else:
-                dihedrals_without_hydrogen.append(atom1.index * 3)
-                dihedrals_without_hydrogen.append(atom2.index * 3)
-                dihedrals_without_hydrogen.append(atom3.index * 3 * _14_tag)
-                dihedrals_without_hydrogen.append(atom4.index * 3)
-                dihedrals_without_hydrogen.append(dihedral_type_index + 1)
+                # known_14_pairs.append([atom1.index, atom4.index])
+                _14_tag = 1
+
+            dihedrals_list = (
+                dihedrals_inc_hydrogen
+                if 1
+                in [
+                    atom1.element.atomic_number,
+                    atom2.element.atomic_number,
+                    atom3.element.atomic_number,
+                    atom4.element.atomic_number,
+                ]
+                else dihedrals_without_hydrogen
+            )
+
+            dihedrals_list.append(atom1.index * 3)
+            dihedrals_list.append(atom2.index * 3)
+            dihedrals_list.append(atom3.index * 3 * _14_tag)
+            dihedrals_list.append(atom4.index * 3 * -1)
+            dihedrals_list.append(dihedral_type_index + 1)
 
         number_excluded_atoms, excluded_atoms_list = _get_exclusion_lists(
             interchange.topology
@@ -454,44 +509,27 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         text_blob = "".join([f"{val:16.8E}" for val in angle_theta])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG DIHEDRAL_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
-        proper_k = [
-            interchange["ProperTorsions"]
-            .potentials[key]
-            .parameters["k"]
-            .m_as(unit.kilocalorie / unit.mol)
-            for key in potential_key_to_dihedral_type_mapping
-        ]
+        dihedral_k = list()
+        dihedral_periodicity = list()
+        dihedral_phase = list()
 
         for key in potential_key_to_dihedral_type_mapping:
-            if "idivf" in interchange["ProperTorsions"].potentials[key].parameters:
-                proper_k[potential_key_to_dihedral_type_mapping[key]] /= int(
-                    interchange["ProperTorsions"].potentials[key].parameters["idivf"]
-                )
+            params = interchange[key.associated_handler].potentials[key].parameters
+            idivf = int(params["idivf"]) if "idivf" in params else 1
+            dihedral_k.append((params["k"] / idivf).m_as(kcal_mol))
+            dihedral_periodicity.append(params["periodicity"].m_as(unit.dimensionless))
+            dihedral_phase.append(params["phase"].m_as(unit.radian))
 
-        text_blob = "".join([f"{val:16.8E}" for val in proper_k])
+        prmtop.write("%FLAG DIHEDRAL_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
+        text_blob = "".join([f"{val:16.8E}" for val in dihedral_k])
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG DIHEDRAL_PERIODICITY\n" "%FORMAT(5E16.8)\n")
-        proper_periodicity = [
-            interchange["ProperTorsions"]
-            .potentials[key]
-            .parameters["periodicity"]
-            .m_as(unit.dimensionless)
-            for key in potential_key_to_dihedral_type_mapping
-        ]
-        text_blob = "".join([f"{val:16.8E}" for val in proper_periodicity])
+        text_blob = "".join([f"{val:16.8E}" for val in dihedral_periodicity])
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG DIHEDRAL_PHASE\n" "%FORMAT(5E16.8)\n")
-        proper_phase = [
-            interchange["ProperTorsions"]
-            .potentials[key]
-            .parameters["phase"]
-            .m_as(unit.dimensionless)
-            for key in potential_key_to_dihedral_type_mapping
-        ]
-        text_blob = "".join([f"{val:16.8E}" for val in proper_phase])
+        text_blob = "".join([f"{val:16.8E}" for val in dihedral_phase])
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG SCEE_SCALE_FACTOR\n" "%FORMAT(5E16.8)\n")
