@@ -320,9 +320,37 @@ class Interchange(DefaultModel):
 
         return to_openmm_(self, combine_nonbonded_forces=combine_nonbonded_forces)
 
-    def _to_prmtop(self, file_path: Union[Path, str], writer="parmed"):
+    def to_prmtop(self, file_path: Union[Path, str], writer="internal"):
         """Export this interchange to an Amber .prmtop file."""
-        if writer == "parmed":
+        if writer == "internal":
+            from openff.interchange.interop.internal.amber import to_prmtop
+
+            to_prmtop(self, file_path)
+
+        elif writer == "parmed":
+            from openff.interchange.interop.external import ParmEdWrapper
+
+            ParmEdWrapper().to_file(self, file_path)
+
+        else:
+            raise UnsupportedExportError
+
+    def to_psf(self, file_path: Union[Path, str]):
+        """Export this interchange to a CHARMM-style .psf file."""
+        raise UnsupportedExportError
+
+    def to_crd(self, file_path: Union[Path, str]):
+        """Export this interchange to a CHARMM-style .crd file."""
+        raise UnsupportedExportError
+
+    def to_inpcrd(self, file_path: Union[Path, str], writer="internal"):
+        """Export this interchange to an Amber .inpcrd file."""
+        if writer == "internal":
+            from openff.interchange.interop.internal.amber import to_inpcrd
+
+            to_inpcrd(self, file_path)
+
+        elif writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
 
             ParmEdWrapper().to_file(self, file_path)
