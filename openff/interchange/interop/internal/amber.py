@@ -61,6 +61,7 @@ def _get_exclusion_lists(topology):
     return number_excluded_atoms, excluded_atoms_list
 
 
+# TODO: Split this mono-function into smaller functions
 def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
     """
     Write a .prmtop file. See http://ambermd.org/prmtop.pdf for details.
@@ -126,14 +127,11 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
             bond_indices = sorted(bond.atom_indices)
 
-            if atom1.element.atomic_number == 1 or atom2.element.atomic_number == 1:
-                bonds_inc_hydrogen.append(bond_indices[0] * 3)
-                bonds_inc_hydrogen.append(bond_indices[1] * 3)
-                bonds_inc_hydrogen.append(bond_type_index + 1)
-            else:
-                bonds_without_hydrogen.append(bond_indices[0] * 3)
-                bonds_without_hydrogen.append(bond_indices[1] * 3)
-                bonds_without_hydrogen.append(bond_type_index + 1)
+            bonds_list = bonds_inc_hydrogen if (atom1.element.atomic_number == 1 or atom2.element.atomic_number == 1) else bonds_without_hydrogen:
+            
+            bonds_list.append(bond_indices[0] * 3)
+            bonds_list.append(bond_indices[1] * 3)
+            bonds_list.append(bond_type_index + 1)
 
             known_14_pairs.append(bond_indices)
             known_14_pairs.append(list(reversed(bond_indices)))
@@ -404,7 +402,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG RESIDUE_LABEL\n" "%FORMAT(20a4)\n")
-        prmtop.write("FOO\n")
+        prmtop.write("\n")
 
         prmtop.write("%FLAG RESIDUE_POINTER\n" "%FORMAT(10I8)\n")
         prmtop.write("       1\n")
