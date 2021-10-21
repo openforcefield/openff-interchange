@@ -55,7 +55,7 @@ def get_amber_energies(
                 struct.save("out.inpcrd")
                 struct.save("out.prmtop")
             else:
-                raise Exception(f"Unsupported `writer` argument {writer=}")
+                raise Exception(f"Unsupported `writer` argument {writer}")
 
             report = _run_sander(
                 prmtop_file="out.prmtop",

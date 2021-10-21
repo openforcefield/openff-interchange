@@ -2,7 +2,7 @@
 import textwrap
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import numpy as np
 from openff.units import unit
@@ -32,8 +32,8 @@ def _get_exclusion_lists(topology):
 
     _store_bond_partners(topology.mdtop)
 
-    number_excluded_atoms = list()
-    excluded_atoms_list = list()
+    number_excluded_atoms: List[int] = list()
+    excluded_atoms_list: List[int] = list()
 
     for atom1 in topology.mdtop.atoms:
         # Excluded atoms _on this atom_
@@ -117,10 +117,10 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         # Track bonds and angles here also to ensure the 1-2 and 1-3 exclusions are
         # properly applied.
-        known_14_pairs = list()
+        known_14_pairs: List[List[int]] = list()
 
-        bonds_inc_hydrogen = list()
-        bonds_without_hydrogen = list()
+        bonds_inc_hydrogen: List[int] = list()
+        bonds_without_hydrogen: List[int] = list()
 
         for bond, key in interchange["Bonds"].slot_map.items():
             bond_type_index = potential_key_to_bond_type_mapping[key]
@@ -145,8 +145,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             known_14_pairs.append(bond_indices)
             known_14_pairs.append(list(reversed(bond_indices)))
 
-        angles_inc_hydrogen = list()
-        angles_without_hydrogen = list()
+        angles_inc_hydrogen: List[int] = list()
+        angles_without_hydrogen: List[int] = list()
 
         for angle, key in interchange["Angles"].slot_map.items():
             angle_type_index = potential_key_to_angle_type_mapping[key]
@@ -180,8 +180,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             known_14_pairs.append([angle_indices[0], angle_indices[-1]])
             known_14_pairs.append([angle_indices[-1], angle_indices[0]])
 
-        dihedrals_inc_hydrogen = list()
-        dihedrals_without_hydrogen = list()
+        dihedrals_inc_hydrogen: List[int] = list()
+        dihedrals_without_hydrogen: List[int] = list()
 
         for dihedral, key in interchange["ProperTorsions"].slot_map.items():
             dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
@@ -400,7 +400,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         acoefs = [None] * int((NTYPES + 1) * NTYPES / 2)
         bcoefs = [None] * int((NTYPES + 1) * NTYPES / 2)
 
-        nonbonded_parm_indices = [None] * (NTYPES * NTYPES)
+        nonbonded_parm_indices: List[Optional[int]] = [None] * (NTYPES * NTYPES)
 
         for key_i, i in potential_key_to_atom_type_mapping.items():
             for key_j, j in potential_key_to_atom_type_mapping.items():
@@ -444,7 +444,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         assert all(
             value is not None
             for values in [acoefs, bcoefs, nonbonded_parm_indices]
-            for value in values
+            for value in values  # type: ignore
         ), "an internal error occurred"
 
         prmtop.write("%FLAG NONBONDED_PARM_INDEX\n" "%FORMAT(10I8)\n")
@@ -494,9 +494,9 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         text_blob = "".join([f"{val:16.8E}" for val in angle_theta])
         _write_text_blob(prmtop, text_blob)
 
-        dihedral_k = list()
-        dihedral_periodicity = list()
-        dihedral_phase = list()
+        dihedral_k: List[int] = list()
+        dihedral_periodicity: List[int] = list()
+        dihedral_phase: List[int] = list()
 
         for key in potential_key_to_dihedral_type_mapping:
             params = interchange[key.associated_handler].potentials[key].parameters
@@ -638,7 +638,7 @@ def to_inpcrd(interchange: "Interchange", file_path: Union[Path, str]):
     if isinstance(file_path, Path):
         path = file_path
 
-    n_atoms = interchange.topology.mdtop.n_atoms  # type: ignore
+    n_atoms = interchange.topology.mdtop.n_atoms
     time = 0.0
 
     with open(path, "w") as inpcrd:
