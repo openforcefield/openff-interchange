@@ -26,7 +26,7 @@ def get_all_energies(interchange: "Interchange") -> Dict[str, EnergyReport]:
         "OpenMM": get_openmm_energies(interchange),
         "GROMACS": get_gromacs_energies(interchange),
         "LAMMPS": get_lammps_energies(interchange),
-        "Amber": get_amber_energies(interchange),
+        "Amber": get_amber_energies(interchange, writer="internal"),
     }
 
 
