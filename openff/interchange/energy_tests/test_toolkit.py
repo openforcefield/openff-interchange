@@ -157,7 +157,7 @@ def compare_condensed_systems(mol, force_field):
 
 @requires_openeye
 @skip_if_missing("openff.evaluator")
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(120)
 @pytest.mark.slow()
 @pytest.mark.parametrize(
     "rdmol",

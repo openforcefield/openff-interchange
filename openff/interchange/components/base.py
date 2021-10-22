@@ -30,6 +30,13 @@ class BaseProperTorsionHandler(PotentialHandler):
     expression: str = "k*(1+cos(periodicity*theta-phase))"
 
 
+class BaseImproperTorsionHandler(PotentialHandler):
+    """Base handler for storing generic improper torsion interactions."""
+
+    type: str = "ImproperTorsions"
+    expression: str = "k*(1+cos(periodicity*theta-phase))"
+
+
 class _BaseNonbondedHandler(PotentialHandler):
     """Base handler for storing generic nonbonded interactions."""
 

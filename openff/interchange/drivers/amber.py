@@ -15,7 +15,7 @@ from openff.interchange.utils import get_test_file_path
 
 def get_amber_energies(
     off_sys: Interchange,
-    writer: str = "parmed",
+    writer: str = "internal",
     electrostatics=True,
 ) -> EnergyReport:
     """
@@ -27,9 +27,8 @@ def get_amber_energies(
     ----------
     off_sys : openff.interchange.components.interchange.Interchange
         An OpenFF Interchange object to compute the single-point energy of
-    writer : str, default="parmed"
-        A string key identifying the backend to be used to write GROMACS files. The
-        default value of `"parmed"` results in ParmEd being used as a backend.
+    writer : str, default="internal"
+        A string key identifying the backend to be used to write GROMACS files.
     electrostatics : bool, default=True
         A boolean indicating whether or not electrostatics should be included in the energy
         calculation.
@@ -48,10 +47,16 @@ def get_amber_energies(
 
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
-            struct = off_sys._to_parmed()
-            struct.save("out.inpcrd")
-            struct.save("out.prmtop")
-            off_sys.to_top("out.top", writer=writer)
+            if writer == "internal":
+                off_sys.to_inpcrd("out.inpcrd")
+                off_sys.to_prmtop("out.prmtop")
+            elif writer == "parmed":
+                struct = off_sys._to_parmed()
+                struct.save("out.inpcrd")
+                struct.save("out.prmtop")
+            else:
+                raise Exception(f"Unsupported `writer` argument {writer}")
+
             report = _run_sander(
                 prmtop_file="out.prmtop",
                 inpcrd_file="out.inpcrd",

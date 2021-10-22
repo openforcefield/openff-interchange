@@ -328,9 +328,37 @@ class Interchange(DefaultModel):
 
         return to_openmm_(self, combine_nonbonded_forces=combine_nonbonded_forces)
 
-    def _to_prmtop(self, file_path: Union[Path, str], writer="parmed"):
+    def to_prmtop(self, file_path: Union[Path, str], writer="internal"):
         """Export this interchange to an Amber .prmtop file."""
-        if writer == "parmed":
+        if writer == "internal":
+            from openff.interchange.interop.internal.amber import to_prmtop
+
+            to_prmtop(self, file_path)
+
+        elif writer == "parmed":
+            from openff.interchange.interop.external import ParmEdWrapper
+
+            ParmEdWrapper().to_file(self, file_path)
+
+        else:
+            raise UnsupportedExportError
+
+    def to_psf(self, file_path: Union[Path, str]):
+        """Export this interchange to a CHARMM-style .psf file."""
+        raise UnsupportedExportError
+
+    def to_crd(self, file_path: Union[Path, str]):
+        """Export this interchange to a CHARMM-style .crd file."""
+        raise UnsupportedExportError
+
+    def to_inpcrd(self, file_path: Union[Path, str], writer="internal"):
+        """Export this interchange to an Amber .inpcrd file."""
+        if writer == "internal":
+            from openff.interchange.interop.internal.amber import to_inpcrd
+
+            to_inpcrd(self, file_path)
+
+        elif writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
 
             ParmEdWrapper().to_file(self, file_path)
@@ -414,6 +442,56 @@ class Interchange(DefaultModel):
                 handler.store_potentials(force_field)
 
         return system
+
+    @classmethod
+    @requires_package("intermol")
+    def from_gromacs(
+        cls,
+        topology_file: Union[Path, str],
+        gro_file: Union[Path, str],
+        reader="intermol",
+    ) -> "Interchange":
+        """
+        Create an Interchange object from GROMACS files.
+
+        """
+        from intermol.gromacs.gromacs_parser import GromacsParser
+
+        from openff.interchange.interop.intermol import from_intermol_system
+
+        intermol_system = GromacsParser(topology_file, gro_file).read()
+        via_intermol = from_intermol_system(intermol_system)
+
+        if reader == "intermol":
+            return via_intermol
+
+        elif reader == "internal":
+            from openff.interchange.interop.internal.gromacs import (
+                _read_box,
+                _read_coordinates,
+                from_top,
+            )
+
+            via_internal = from_top(topology_file, gro_file)
+
+            via_internal.positions = _read_coordinates(gro_file)
+            via_internal.box = _read_box(gro_file)
+            for key in via_intermol.handlers:
+                if key not in [
+                    "Bonds",
+                    "Angles",
+                    "ProperTorsions",
+                    "ImproperTorsions",
+                    "vdW",
+                    "Electrostatics",
+                ]:
+                    raise Exception(f"Found unexpected handler with name {key}")
+                    via_internal.handlers[key] = via_intermol.handlers[key]
+
+            return via_internal
+
+        else:
+            raise Exception(f"Reader {reader} is not implemented.")
 
     def _get_parameters(self, handler_name: str, atom_indices: Tuple[int]) -> Dict:
         """
