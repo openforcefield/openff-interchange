@@ -41,11 +41,6 @@ jobs:
         df -h
         ulimit -a
 
-    - name: Install topology refactor branch
-      shell: bash -l {0}
-      run: |
-        pip install git+https://github.com/openforcefield/openff-toolkit.git@hierarchy_schemes_elements
-
     - name: Install package
       shell: bash -l {0}
       run: |
