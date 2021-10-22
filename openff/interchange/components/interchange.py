@@ -178,7 +178,7 @@ class Interchange(DefaultModel):
         if isinstance(topology, _OFFBioTop):
             warnings.warn(
                 "Passing an `_OFFBioTop` object to `Interchange.from_smirnoff` is "
-                "DEPCREATED and will be removed in a future release.",
+                "DEPRECATED and will be removed in a future release.",
                 DeprecationWarning,
             )
             sys_out.topology = deepcopy(topology)

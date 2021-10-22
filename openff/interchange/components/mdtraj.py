@@ -108,10 +108,14 @@ def _iterate_pairs(mdtop):
 
 def _get_num_h_bonds(mdtop):
     """Get the number of (covalent) bonds containing a hydrogen atom."""
-    n_bonds_containing_hydrogen = 0
+    if isinstance(mdtop, md.Topology):
+        n_bonds_containing_hydrogen = 0
 
-    for bond in mdtop.bonds:
-        if md.element.hydrogen in (bond.atom1.element, bond.atom2.element):
-            n_bonds_containing_hydrogen += 1
+        for bond in mdtop.bonds:
+            if md.element.hydrogen in (bond.atom1.element, bond.atom2.element):
+                n_bonds_containing_hydrogen += 1
 
-    return n_bonds_containing_hydrogen
+        return n_bonds_containing_hydrogen
+
+    else:
+        raise Exception("Bad topology argument passed to _get_num_h_bonds")

@@ -32,7 +32,7 @@ if has_package("foyer"):
             for atom in openff_topology.atoms:
                 atom_index = openff_topology.atom_index(atom)
                 element = periodic_table.Element[atom.atomic_number]
-                top_graph.add_atom(
+                top_graph.add_atom(  # type: ignore[attr-defined]
                     name=atom.name,
                     index=atom_index,
                     atomic_number=atom.atomic_number,
@@ -43,7 +43,7 @@ if has_package("foyer"):
                 atoms_indices = [
                     openff_topology.atom_index(atom) for atom in bond.atoms
                 ]
-                top_graph.add_bond(*atoms_indices)
+                top_graph.add_bond(*atoms_indices)  # type: ignore[attr-defined]
 
             return top_graph
 
