@@ -40,12 +40,6 @@ def get_amber_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
-    if "Constraints" in off_sys.handlers:
-        if len(off_sys["Constraints"].slot_map) > 0:
-            raise AmberError(
-                "Parsing bond constraints not yet supported in this driver."
-            )
-
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             if writer == "internal":
@@ -63,6 +57,12 @@ def get_amber_energies(
                 in_file = "run.in"
             elif inferred_constraints == "h-bonds":
                 in_file = "h-bonds.in"
+            else:
+                raise Exception(
+                    "Amber drive can only support none and h-bond constraints. Inferred a value of "
+                    f"{inferred_constraints}"
+                )
+
             report = _run_sander(
                 prmtop_file="out.prmtop",
                 inpcrd_file="out.inpcrd",
@@ -145,7 +145,7 @@ def _group_energy_terms(mdinfo: str):
     for i, line in enumerate(all_lines):
         # Seems to hit energy minimization
         if line[0:8] == "   NSTEP":
-            startline = i
+            startline = i + 2
             break
         # Seems to hit MD "runs"
         elif line[0:6] == " NSTEP":

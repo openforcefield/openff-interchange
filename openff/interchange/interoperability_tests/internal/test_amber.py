@@ -43,15 +43,20 @@ class TestAmber(_BaseTest):
             "C1COC(=O)O1",  # This adds an improper, i2
         ],
     )
-    def test_amber_energy(self, smiles):
+    @pytest.mark.parametrize("constrained", [True, False])
+    def test_amber_energy(self, smiles, constrained):
         """Basic test to see if the amber energy driver is functional"""
         mol = Molecule.from_smiles(smiles)
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
-        parsley = ForceField("openff_unconstrained-2.0.0.offxml")
-        off_sys = Interchange.from_smirnoff(parsley, top)
+        if constrained:
+            sage = ForceField("openff-2.0.0.offxml")
+        else:
+            sage = ForceField("openff_unconstrained-2.0.0.offxml")
+
+        off_sys = Interchange.from_smirnoff(sage, top)
 
         off_sys.box = [4, 4, 4]
         off_sys.positions = mol.conformers[0]
@@ -59,9 +64,12 @@ class TestAmber(_BaseTest):
         omm_energies = get_openmm_energies(off_sys)
         amb_energies = get_amber_energies(off_sys)
 
+        # MT: I _think_ some of these errors are the result of Amber reporting energies
+        # to 0.001 kcal/mol, which introduces error on the order of ~0.002 kJ/mol
         omm_energies.compare(
             amb_energies,
             custom_tolerances={
+                "Angle": 0.004 * kj_mol,
                 "vdW": 0.02 * kj_mol,
                 "Electrostatics": 0.05 * kj_mol,
             },
