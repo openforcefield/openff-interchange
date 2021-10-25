@@ -9,6 +9,7 @@ from openmm import unit as omm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
+from openff.interchange.drivers.utils import _infer_constraints
 from openff.interchange.exceptions import AmberError, SanderError
 from openff.interchange.utils import get_test_file_path
 
@@ -57,9 +58,15 @@ def get_amber_energies(
             else:
                 raise Exception(f"Unsupported `writer` argument {writer}")
 
+            inferred_constraints = _infer_constraints(off_sys)
+            if inferred_constraints == "none":
+                in_file = "run.in"
+            elif inferred_constraints == "h-bonds":
+                in_file = "h-bonds.in"
             report = _run_sander(
                 prmtop_file="out.prmtop",
                 inpcrd_file="out.inpcrd",
+                in_file=get_test_file_path(in_file),
                 electrostatics=electrostatics,
             )
             return report
@@ -68,6 +75,7 @@ def get_amber_energies(
 def _run_sander(
     inpcrd_file: Union[Path, str],
     prmtop_file: Union[Path, str],
+    in_file: Union[Path, str],
     electrostatics=True,
 ):
     """
@@ -79,6 +87,8 @@ def _run_sander(
         The path to an Amber topology (`.prmtop`) file.
     inpcrd_file : str or pathlib.Path
         The path to an Amber coordinate (`.inpcrd`) file.
+    in_file : str or pathlib.Path
+        The path to an Amber/sander input (`.in`) file.
     electrostatics : bool, default=True
         A boolean indicated whether or not electrostatics should be included in the energy
         calculation.
@@ -89,7 +99,6 @@ def _run_sander(
         An `EnergyReport` object containing the single-point energies.
 
     """
-    in_file = get_test_file_path("run.in")
     sander_cmd = (
         f"sander -i {in_file} -c {inpcrd_file} -p {prmtop_file} -o out.mdout -O"
     )
