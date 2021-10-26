@@ -66,11 +66,16 @@ class TestAmber(_BaseTest):
 
         # MT: I _think_ some of these errors are the result of Amber reporting energies
         # to 0.001 kcal/mol, which introduces error on the order of ~0.002 kJ/mol
+        # TODO: Figure out why bond and angle energies are reported differently
+        #       in constrained systems
+        #       https://github.com/openforcefield/openff-interchange/issues/323
         omm_energies.compare(
             amb_energies,
             custom_tolerances={
-                "Angle": 0.004 * kj_mol,
+                "Bond": (0.1 if constrained else 0.001) * kj_mol,
+                "Angle": (0.05 if constrained else 0.001) * kj_mol,
+                "Torsion": (0.005 if constrained else 0.001) * kj_mol,
                 "vdW": 0.02 * kj_mol,
-                "Electrostatics": 0.05 * kj_mol,
+                "Electrostatics": (0.5 if constrained else 0.05) * kj_mol,
             },
         )

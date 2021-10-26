@@ -9,7 +9,6 @@ from openmm import unit as omm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.drivers.utils import _infer_constraints
 from openff.interchange.exceptions import AmberError, SanderError
 from openff.interchange.utils import get_test_file_path
 
@@ -52,11 +51,13 @@ def get_amber_energies(
             else:
                 raise Exception(f"Unsupported `writer` argument {writer}")
 
+            from openff.interchange.drivers.utils import _infer_constraints
+
             inferred_constraints = _infer_constraints(off_sys)
             if inferred_constraints == "none":
-                in_file = "run.in"
+                in_file = get_test_file_path("run.in")
             elif inferred_constraints == "h-bonds":
-                in_file = "h-bonds.in"
+                in_file = get_test_file_path("h-bonds.in")
             else:
                 raise Exception(
                     "Amber drive can only support none and h-bond constraints. Inferred a value of "
@@ -66,7 +67,7 @@ def get_amber_energies(
             report = _run_sander(
                 prmtop_file="out.prmtop",
                 inpcrd_file="out.inpcrd",
-                in_file=get_test_file_path(in_file),
+                in_file=in_file,
                 electrostatics=electrostatics,
             )
             return report
