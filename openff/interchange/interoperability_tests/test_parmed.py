@@ -200,51 +200,60 @@ class TestParmEdAmber:
         )
 
 
-# TODO: Run this on a system with more molecules?
-def test_mixing_rule_different_energies():
-    pdbfile = app.PDBFile(
-        get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
-    )
-    topology = _OFFBioTop.from_openmm(
-        pdbfile.topology,
-        unique_molecules=[Molecule.from_smiles(smi) for smi in ["C1CCCCC1", "CCO"]],
-    )
-    topology.mdtop = md.Topology.from_openmm(pdbfile.topology)
+class TestParmedMixingRules(_BaseTest):
+    def test_mixing_rule_different_energies(self):
+        pdbfile = app.PDBFile(
+            get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
+        )
+        topology = _OFFBioTop.from_openmm(
+            pdbfile.topology,
+            unique_molecules=[Molecule.from_smiles(smi) for smi in ["C1CCCCC1", "CCO"]],
+        )
+        topology.mdtop = md.Topology.from_openmm(pdbfile.topology)
 
-    forcefield = ForceField("test_forcefields/test_forcefield.offxml")
-    openff_sys = Interchange.from_smirnoff(force_field=forcefield, topology=topology)
-    openff_sys.positions = pdbfile.getPositions()
-    openff_sys.box = pdbfile.topology.getPeriodicBoxVectors()
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        openff_sys = Interchange.from_smirnoff(
+            force_field=forcefield, topology=topology
+        )
+        openff_sys.positions = pdbfile.getPositions()
+        openff_sys.box = pdbfile.topology.getPeriodicBoxVectors()
 
-    lorentz_struct = openff_sys._to_parmed()
-    lorentz_struct.save("lorentz.prmtop")
-    lorentz_struct.save("lorentz.inpcrd")
+        lorentz_struct = openff_sys._to_parmed()
+        lorentz_struct.save("lorentz.prmtop")
+        lorentz_struct.save("lorentz.inpcrd")
 
-    lorentz = _run_sander(prmtop_file="lorentz.prmtop", inpcrd_file="lorentz.inpcrd")
+        lorentz = _run_sander(
+            prmtop_file="lorentz.prmtop",
+            inpcrd_file="lorentz.inpcrd",
+            in_file=get_test_file_path("run.in"),
+        )
 
-    openff_sys["vdW"].mixing_rule = "geometric"
+        openff_sys["vdW"].mixing_rule = "geometric"
 
-    geometric_struct = openff_sys._to_parmed()
-    geometric_struct.save("geometric.prmtop")
-    geometric_struct.save("geometric.inpcrd")
+        geometric_struct = openff_sys._to_parmed()
+        geometric_struct.save("geometric.prmtop")
+        geometric_struct.save("geometric.inpcrd")
 
-    geometric = _run_sander(
-        prmtop_file="geometric.prmtop", inpcrd_file="geometric.inpcrd"
-    )
+        geometric = _run_sander(
+            prmtop_file="geometric.prmtop",
+            inpcrd_file="geometric.inpcrd",
+            in_file=get_test_file_path("run.in"),
+        )
 
-    diff = geometric - lorentz
+        diff = geometric - lorentz
 
-    for energy_type in ["vdW", "Electrostatics"]:
-        assert abs(diff[energy_type].m) > 5e-4
+        for energy_type in ["vdW", "Electrostatics"]:
+            assert abs(diff[energy_type].m) > 5e-4
 
+    def test_unsupported_mixing_rule(self):
+        pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
+        topology = _OFFBioTop()
+        topology.mdtop = md.Topology.from_openmm(pdbfile.topology)
 
-def test_unsupported_mixing_rule():
-    pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
-    topology = _OFFBioTop()
-    topology.mdtop = md.Topology.from_openmm(pdbfile.topology)
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        openff_sys = Interchange.from_smirnoff(
+            force_field=forcefield, topology=topology
+        )
 
-    forcefield = ForceField("test_forcefields/test_forcefield.offxml")
-    openff_sys = Interchange.from_smirnoff(force_field=forcefield, topology=topology)
-
-    with pytest.raises(ValidationError):
-        openff_sys["vdW"].mixing_rule = "magic"
+        with pytest.raises(ValidationError):
+            openff_sys["vdW"].mixing_rule = "magic"
