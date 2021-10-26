@@ -1,12 +1,13 @@
 # Content of an Interchange object
 
-There are four components of an `Interchange` object:
-1. Topology
-1. Handlers
-2. Positions
-3. Box vectors
+An [`Interchange`](openff.interchange.components.interchange.Interchange) object stores all the information known about a system; this includes its chemistry, how that chemistry is represented by a force field, and how the system is organised in 3D space. An `Interchange` object has four components:
 
-None are strictly required; an `Interchange` object can beconstructed containing none of the above components:
+1. **Topology**: Stores chemical information, such as connectivity and formal charges,  independently of force field
+2. **Handlers**: Maps the chemical information to force field parameters
+3. **Positions**: Cartesian co-ordinates of atoms
+4. **Box vectors**: Periodicity information
+
+None are strictly required; an `Interchange` object can be constructed containing none of the above components:
 
 ```pycon
 
@@ -19,75 +20,90 @@ None are strictly required; an `Interchange` object can beconstructed containing
 >>> empty_interchange.box
 ```
 
-This is not useful in this state, but each component can assigned, allowing for programmitic
-construction. (However, it is recommended that the API be used where possible, i.e.
-`Interchange.from_smirnoff` and `Interchange.from_foyer`).
+An empty `Interchange` is not useful in itself, but a meaningful object can be
+constructed programmatically by building and assigning each component
+piecemeal. `Interchange` provides a broad API for automated construction which
+makes construction easier and less error prone in common cases.
 
 ## Topology
 
-The `Interchange.topology` object is inteded to mirror the
-[`Topology`](https://open-forcefield-toolkit.readthedocs.io/en/stable/api/generated/openff.toolkit.topology.Topology.html#openff.toolkit.topology.Topology)
-class provided by the OpenFF Toolkit. At present, however, it serves only as a container for a class
-of the same name provided by
-[MDTraj](https://www.mdtraj.org/1.9.5/api/generated/mdtraj.Topology.html#mdtraj.Topology), stored as
-an attribute `Interchange.topology.mdtop`.
+The [`Interchange.topology`](openff.interchange.components.interchange.Interchange.topology)
+object is intended to mirror the [`Topology`](openff.toolkit.topology.Topology)
+class provided by the OpenFF Toolkit. At present, however, it serves only as a
+container for a class of the same name provided by [MDTraj](mdtraj.Topology),
+stored as the attribute `Interchange.topology.mdtop`.
 
-After a refactor that is currently in development, this `Topology` model will be able to store
-molecules that are rich in cheminformatics information (atoms connected by bonds with fractional
-bond orders, bond and atom stereochemistry, aromaticity, etc.) and minimal, molecular
-mechanics-focused representations (particles with masses that are connected to each other).
+In an upcoming release, this `Topology` model will be able to store molecules
+that are rich in chemical information (atoms connected by bonds with fractional
+bond orders, bond and atom stereochemistry, aromaticity, etc.) and minimal,
+molecular mechanics-focused representations (particles with masses that are
+connected to each other).
 
-A topology is optional, though any conversions requiring topological information will fail if any required data is missing.
+A topology is optional, though any conversions requiring topological information
+will fail if any required data is missing.
 
 ## Handlers
 
-This attribute is a dictionary of key-value pairs in which the keys are string identifiers and the
-values are `PotentialHandler` objects.  These handlers roughly mirror
-[`ParameterHandler`](https://open-forcefield-toolkit.readthedocs.io/en/stable/users/developing.html#parameterhandler)
-objects in the OpenFF Toolkit, but as a post-parameterization representation of the force field
-parameters. In other words, parameter handlers are components of a force field, and potential
-handlers describe how those parameters are appled to a chemical system. (The process by which this
-happens is "parameterization.")
+This attribute is a dictionary whose keys are string
+identifiers and whose values are `PotentialHandler` objects. These handlers
+roughly mirror[`ParameterHandler`](https://open-forcefield-toolkit.readthedocs.io/en/stable/users/developing.html#parameterhandler)
+objects in the OpenFF Toolkit, but as a post-parameterization representation of
+the force field parameters. In other words, parameter handlers are components
+of a force field, and potential handlers describe how those parameters are
+applied to a chemical system. (The process by which this happens
+is "parameterization.")
 
 There are three central components in each handler: topology keys, potential keys, and potentials.
 
-Topology keys (`TopologyKey` object in memory) are unique identifiers of locations in a topology.
-These objects do not include physics parameters. The basic information is a tuple of atom indices,
-which can be of any non-zero length. For example, a topology key describing a torsion will have a
-4-length tuple, and a topology key describing a vdW parameter will have a 1-length tuple.
+Topology keys ([`TopologyKey`](openff.interchange.models.TopologyKey) object in
+memory) are unique identifiers of locations in a topology. These objects do not
+include physics parameters. The basic information is a tuple of atom indices,
+which can be of any non-zero length. For example, a topology key describing a
+torsion will have a 4-length tuple, and a topology key describing a vdW
+parameter will have a 1-length tuple.
 
-Potential keys (`PotentialKey` objects in memory) are unique identifiers of physics parameters.
-These objects do not know anything about the topology they are associated with. In SMIRNOFF force
-fields, SMIRKS patterns uniquely identify a parameter within a parameter handler, so (with some
-exceptions) that is all that is needed to construct a potential key. For classically atom-typed
-force fields, a key can be constructed using atom types or combinations thereof.
+Potential keys ([`PotentialKey`](openff.interchange.models.PotentialKey) objects
+in memory) are unique identifiers of physics parameters. These objects do not
+know anything about the topology they are associated with. In SMIRNOFF force
+fields, SMIRKS patterns uniquely identify a parameter within a parameter
+handler, so (with some exceptions) that is all that is needed to construct a
+potential key. For classically atom-typed force fields, a key can be
+constructed using atom types or combinations thereof.
 
-Potentials (`Potential` objects in memory) store the physics parameters that result from
-parameterizing a chemical topology with a force field. These do not know anything about where in the
-topology they are associated. The parameters are stored in a dictionary attribute `.parameters` in
-which keys are string identifiers and values are the parameters themselves, tagged with units.
+Potentials ([`Potential`](openff.interchange.components.potentials.Potential)
+objects in memory) store the physics parameters that result from parameterizing
+a chemical topology with a force field. These do not know anything about where
+in the topology they are associated. The parameters are stored in a dictionary
+attribute `.parameters` in which keys are string identifiers and values are the
+parameters themselves, tagged with units.
 
-These objects are strung together with two mappings, each stored as dictionary attributes of a
-`PotentialHandler`. The `.slot_map` attribute maps segments of a topology to the potential keys (`TopologyKey`
-to `PotentialKey` mapping). The `.potentials` attribute maps the potential keys to the potentials
+These objects are strung together with two mappings, each stored as dictionary
+attributes of a `PotentialHandler`. The `.slot_map` attribute maps segments of
+a topology to the potential keys (`TopologyKey` to `PotentialKey` mapping). The
+`.potentials` attribute maps the potential keys to the potentials
 (`PotentialKey` to `Potential`).
 
-Handlers are optional, though any conversions requiring force parameters will fail if the necessary handler(s) are required.
+Handlers are optional, though any conversions requiring force field parameters
+will fail if the necessary handlers are missing.
 
 ## Positions
 
-Particle positions are stored as a unit-tagged Nx3 matrix where N is the number of particles in the
-topology. For systems with no virtual sites, N is the number of atoms; for systems with virtual
-sites, N is the number of atoms plus the number of virtual sites.
+Particle positions are stored as a unit-tagged $N×3$ matrix, where $N$ is the
+number of particles in the topology. For systems with no virtual sites, $N$ is
+the number of atoms; for systems with virtual sites, $N$ is the number of atoms
+plus the number of virtual sites.
 
-Positions are by represented with nanometers internally and when requested via the getter. However,
-they can be set with positions of other units, and can also be converted as desired.
+Positions are represented in nanometers both internally and when reported. However, they can be set with positions of other units, and can
+also be converted as desired. Internally, Interchange uses `openff-units` to
+store units, but units from the `openmm.units` or `unyt` packages are also
+supported.
 
-If positions are passed to the setter without tagged units, nanometers will be assumed. The setter
-will immediately tag the unitless vectors with units; the internal state always has units explicitly
-associated with with the values.
+Interchange assumes positions without units are expressed in nanometers. The
+setter will immediately tag the unitless vectors with units; the internal state
+always has units explicitly associated with the values.
 
-Positions are optional, though any conversions requiring positions will fail if they are missing.
+Positions are optional, though any conversions requiring positions will fail if
+they are missing.
 
 ```pycon
 
@@ -134,19 +150,19 @@ array([[ 0.88165321, -0.04478118, -0.01474324],
 
 ## Box vectors
 
-Information about the periodic box of a system is stored as a unit-tagged 3x3 matrix, following
+Information about the periodic box of a system is stored as a unit-tagged $3×3$ matrix, following
 conventional periodic box vectors and the implementation in
 [`OpenMM`](http://docs.openmm.org/latest/userguide/theory/05_other_features.html#periodic-boundary-conditions).
 
-Box vectors are by represented with nanometers internally and when requested via the getter. However, they can be set with box vectors of other
-units, and can also be converted as desired.
+Box vectors are represented with nanometers internally and when reported. However, they can be set with box vectors of other units, and can
+also be converted as desired.
 
 If box vectors are passed to the setter without tagged units, nanometers will be assumed. The setter
 will immediately tag the unitless vectors with units; the internal state always has units explicitly
 associated with with the values.
 
-If a 1x3 matrix (array) is passed to the setter, it is assumed that these values correspond to the
-legnths of a rectangular unit cell (`a_x`, `b_y`, `c_z`).
+If a $1×3$ matrix (array) is passed to the setter, it is assumed that these values correspond to the
+lengths of a rectangular unit cell ($a_x$, $b_y$, $c_z$).
 
 Box vectors are optional; if it is `None` it is implied that the `Interchange` object represents a
 non-periodic system.
