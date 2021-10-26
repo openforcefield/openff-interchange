@@ -293,6 +293,9 @@ class Interchange(DefaultModel):
 
             to_gro(self, file_path, decimal=decimal)
 
+        else:
+            raise UnsupportedExportError
+
     def to_top(self, file_path: Union[Path, str], writer="internal"):
         """Export this interchange to a .top file."""
         if writer == "parmed":
@@ -305,14 +308,17 @@ class Interchange(DefaultModel):
 
             to_top(self, file_path)
 
-    def to_lammps(self, file_path: Union[Path, str], writer="internal"):
-        """Export this Interchange to a LAMMPS data file."""
-        if writer != "internal":
+        else:
             raise UnsupportedExportError
 
-        from openff.interchange.interop.internal.lammps import to_lammps
+    def to_lammps(self, file_path: Union[Path, str], writer="internal"):
+        """Export this Interchange to a LAMMPS data file."""
+        if writer == "internal":
+            from openff.interchange.interop.internal.lammps import to_lammps
 
-        to_lammps(self, file_path)
+            to_lammps(self, file_path)
+        else:
+            raise UnsupportedExportError
 
     def to_openmm(self, combine_nonbonded_forces: bool = False):
         """Export this interchange to an OpenMM System."""
@@ -351,16 +357,6 @@ class Interchange(DefaultModel):
             to_inpcrd(self, file_path)
 
         elif writer == "parmed":
-            from openff.interchange.interop.external import ParmEdWrapper
-
-            ParmEdWrapper().to_file(self, file_path)
-
-        else:
-            raise UnsupportedExportError
-
-    def _to_crd(self, file_path: Union[Path, str], writer="parmed"):
-        """Export this interchange to an Amber .crd file."""
-        if writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
 
             ParmEdWrapper().to_file(self, file_path)
