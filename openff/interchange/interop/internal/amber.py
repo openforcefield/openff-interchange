@@ -322,7 +322,6 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         NUMANG = len(potential_key_to_angle_type_mapping)
         # number of unique dihedral types
         NPTRA = len(potential_key_to_dihedral_type_mapping)
-        # TODO: Impropers
         # number of atom types in parameter file, see SOLTY below
         # this appears to be unused, but ParmEd writes a 1 here (?)
         NATYP = 1
@@ -684,11 +683,6 @@ def to_inpcrd(interchange: "Interchange", file_path: Union[Path, str]):
 
         for line in textwrap.wrap(blob, width=72, drop_whitespace=False):
             inpcrd.write(line + "\n")
-
-        # fmt = "%12.7f%12.7f%12.7f" "%12.7f%12.7f%12.7f\n"
-        # reshaped = coords.reshape((-1, 6))
-        # for row in reshaped:
-        #     inpcrd.write(fmt % (row[0], row[1], row[2], row[3], row[4], row[5]))
 
         box = interchange.box.to(unit.angstrom).magnitude
         if (box == np.diag(np.diagonal(box))).all():

@@ -27,6 +27,7 @@ from openff.interchange.utils import get_test_file_path
 
 @needs_gmx
 class TestGROMACSGROFile(_BaseTest):
+    @skip_if_missing("intermol")
     def test_load_gro(self):
         file = resource_filename(
             "intermol", "tests/gromacs/unit_tests/angle10_vacuum/angle10_vacuum.gro"
@@ -46,22 +47,31 @@ class TestGROMACSGROFile(_BaseTest):
         assert np.allclose(internal_coords, openmm_coords)
         assert np.allclose(internal_box, openmm_box)
 
-    @skip_if_missing("parmed")
     @skip_if_missing("intermol")
     def test_load_gro_nonstandard_precision(self):
-        import parmed as pmd
-
         file = resource_filename(
             "intermol", "tests/gromacs/unit_tests/lj3_bulk/lj3_bulk.gro"
         )
         internal_coords = from_gro(file).positions.m_as(unit.nanometer)
 
-        # OpenMM seems to assume a precision of 3. Use ParmEd instead here.
-        parmed_coords = np.array(
-            pmd.load_file(file).positions.value_in_unit(openmm_unit.nanometer)
+        # OpenMM seems to assume a precision of 3. Use InterMol instead here.
+        from intermol.gromacs.grofile_parser import GromacsGroParser
+
+        intermol_gro = GromacsGroParser(file)
+        intermol_gro.read()
+
+        # InterMol stores positions as NumPy arrays _of openmm.unit.Quantity_
+        # objects, so need to carefully convert everything through unitless
+        # floats; converting through Pint-like quantities might produce a
+        # funky double-wrapped thing
+        def converter(x):
+            return x.value_in_unit(openmm_unit.nanometer)
+
+        other_coords = np.frompyfunc(converter, 1, 1)(intermol_gro.positions).astype(
+            float
         )
 
-        assert np.allclose(internal_coords, parmed_coords)
+        assert np.allclose(internal_coords, other_coords)
 
         # This file happens to have 12 digits of preicion; what really matters is that
         # the convential precision of 3 was not used.
@@ -113,23 +123,25 @@ class TestGROMACS(_BaseTest):
             },
         )
 
-    @skip_if_missing("parmed")
+    @skip_if_missing("intermol")
     def test_set_mixing_rule(self, ethanol_top, parsley):
-        import parmed as pmd
+        from intermol.gromacs.gromacs_parser import GromacsParser
 
         openff_sys = Interchange.from_smirnoff(
             force_field=parsley, topology=ethanol_top
         )
+        openff_sys.positions = np.zeros((ethanol_top.n_topology_atoms, 3))
+        openff_sys.to_gro("tmp.gro")
 
         openff_sys.to_top("lorentz.top")
-        top_file = pmd.load_file("lorentz.top")
-        assert top_file.combining_rule == "lorentz"
+        lorentz = GromacsParser("lorentz.top", "tmp.gro").read()
+        assert lorentz.combination_rule == "Lorentz-Berthelot"
 
         openff_sys["vdW"].mixing_rule = "geometric"
 
         openff_sys.to_top("geometric.top")
-        top_file = pmd.load_file("geometric.top")
-        assert top_file.combining_rule == "geometric"
+        geometric = GromacsParser("geometric.top", "tmp.gro").read()
+        assert geometric.combination_rule == "Multiply-Sigeps"
 
     @pytest.mark.xfail(
         reason="cannot test unsupported mixing rules in GROMACS with current SMIRNOFFvdWHandler model"
@@ -299,7 +311,6 @@ class TestGROMACSVirtualSites(_BaseTest):
 
         assert abs(np.sum([p.charge for p in gmx_top.atoms])) < 1e-3
 
-    @skip_if_missing("parmed")
     def test_carbonyl_example(self, parsley_with_monovalent_lone_pair):
         """Test that a single-molecule DivalentLonePair example runs"""
         mol = Molecule.from_smiles("C=O")
