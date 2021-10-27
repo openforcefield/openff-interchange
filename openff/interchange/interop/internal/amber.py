@@ -111,8 +111,12 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             key: i for i, key in enumerate(interchange["Angles"].potentials)
         }
 
-        dihedral_potentials = deepcopy(interchange["ProperTorsions"].potentials)
-        dihedral_potentials.update(interchange["ImproperTorsions"].potentials)
+        dihedral_potentials = dict()
+        for key in ["ProperTorsions", "ImproperTorsions"]:
+            if key in interchange.handlers:
+                dihedral_potentials.update(deepcopy(interchange[key].potentials))
+                dihedral_potentials.update(deepcopy(interchange[key].potentials))
+
         potential_key_to_dihedral_type_mapping: Dict[PotentialKey, int] = {
             key: i for i, key in enumerate(dihedral_potentials)
         }
@@ -183,103 +187,105 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         dihedrals_inc_hydrogen: List[int] = list()
         dihedrals_without_hydrogen: List[int] = list()
 
-        for dihedral, key in interchange["ProperTorsions"].slot_map.items():
-            dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
+        if "ProperTorsions" in interchange.handlers:
+            for dihedral, key in interchange["ProperTorsions"].slot_map.items():
+                dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
 
-            atom1 = interchange.topology.atom(dihedral.atom_indices[0])
-            atom2 = interchange.topology.atom(dihedral.atom_indices[1])
-            atom3 = interchange.topology.atom(dihedral.atom_indices[2])
-            atom4 = interchange.topology.atom(dihedral.atom_indices[3])
+                atom1 = interchange.topology.atom(dihedral.atom_indices[0])
+                atom2 = interchange.topology.atom(dihedral.atom_indices[1])
+                atom3 = interchange.topology.atom(dihedral.atom_indices[2])
+                atom4 = interchange.topology.atom(dihedral.atom_indices[3])
 
-            # Since 0 can't be negative, attempt to re-arrange this torsion
-            # such that the third atom listed is negative.
-            # This should only be strictlye necessary when _14_tag is -1, but
-            # ParmEd likes to always flip it, and always flipping should be harmless.
-            # Could put this in an if block if desired.
-            atom3_index = interchange.topology.atom_index(atom3)
+                # Since 0 can't be negative, attempt to re-arrange this torsion
+                # such that the third atom listed is negative.
+                # This should only be strictlye necessary when _14_tag is -1, but
+                # ParmEd likes to always flip it, and always flipping should be harmless.
+                # Could put this in an if block if desired.
+                atom3_index = interchange.topology.atom_index(atom3)
 
-            if atom3_index == 0:
-                (atom4, atom3, atom2, atom1) = atom1, atom2, atom3, atom4
+                if atom3_index == 0:
+                    (atom4, atom3, atom2, atom1) = atom1, atom2, atom3, atom4
 
-            atom1_index = interchange.topology.atom_index(atom1)
-            atom2_index = interchange.topology.atom_index(atom2)
-            atom3_index = interchange.topology.atom_index(atom3)
-            atom4_index = interchange.topology.atom_index(atom4)
+                atom1_index = interchange.topology.atom_index(atom1)
+                atom2_index = interchange.topology.atom_index(atom2)
+                atom3_index = interchange.topology.atom_index(atom3)
+                atom4_index = interchange.topology.atom_index(atom4)
 
-            # Need to know _before_ building dihedral lists if this one will need its
-            # third atom tagged with a negative sign. From https://ambermd.org/prmtop.pdf:
-            # > If the third atom is negative, then the 1-4 non-bonded interactions
-            # > for this torsion is not calculated. This is required to avoid
-            # > double-counting these non-bonded interactions in some ring systems
-            # > and in multi-term torsions.
-            if ([atom1_index, atom4_index] in known_14_pairs) or (
-                [atom4_index, atom1_index] in known_14_pairs
-            ):
-                _14_tag = -1
+                # Need to know _before_ building dihedral lists if this one will need its
+                # third atom tagged with a negative sign. From https://ambermd.org/prmtop.pdf:
+                # > If the third atom is negative, then the 1-4 non-bonded interactions
+                # > for this torsion is not calculated. This is required to avoid
+                # > double-counting these non-bonded interactions in some ring systems
+                # > and in multi-term torsions.
+                if ([atom1_index, atom4_index] in known_14_pairs) or (
+                    [atom4_index, atom1_index] in known_14_pairs
+                ):
+                    _14_tag = -1
 
-            else:
-                known_14_pairs.append([atom1_index, atom4_index])
-                _14_tag = 1
+                else:
+                    known_14_pairs.append([atom1_index, atom4_index])
+                    _14_tag = 1
 
-            dihedrals_list = (
-                dihedrals_inc_hydrogen
-                if 1
-                in [
-                    atom1.atomic_number,
-                    atom2.atomic_number,
-                    atom3.atomic_number,
-                    atom4.atomic_number,
-                ]
-                else dihedrals_without_hydrogen
-            )
+                dihedrals_list = (
+                    dihedrals_inc_hydrogen
+                    if 1
+                    in [
+                        atom1.atomic_number,
+                        atom2.atomic_number,
+                        atom3.atomic_number,
+                        atom4.atomic_number,
+                    ]
+                    else dihedrals_without_hydrogen
+                )
 
-            dihedrals_list.append(atom1_index * 3)
-            dihedrals_list.append(atom2_index * 3)
-            dihedrals_list.append(atom3_index * 3 * _14_tag)
-            dihedrals_list.append(atom4_index * 3)
-            dihedrals_list.append(dihedral_type_index + 1)
+                dihedrals_list.append(atom1_index * 3)
+                dihedrals_list.append(atom2_index * 3)
+                dihedrals_list.append(atom3_index * 3 * _14_tag)
+                dihedrals_list.append(atom4_index * 3)
+                dihedrals_list.append(dihedral_type_index + 1)
 
-        for dihedral, key in interchange["ImproperTorsions"].slot_map.items():
-            dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
+        if "ImproperTorsions" in interchange.handlers:
+            for dihedral, key in interchange["ImproperTorsions"].slot_map.items():
+                dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
 
-            atom1 = interchange.topology.atom(dihedral.atom_indices[0])
-            atom2 = interchange.topology.atom(dihedral.atom_indices[1])
-            atom3 = interchange.topology.atom(dihedral.atom_indices[2])
-            atom4 = interchange.topology.atom(dihedral.atom_indices[3])
+                atom1 = interchange.topology.atom(dihedral.atom_indices[0])
+                atom2 = interchange.topology.atom(dihedral.atom_indices[1])
+                atom3 = interchange.topology.atom(dihedral.atom_indices[2])
+                atom4 = interchange.topology.atom(dihedral.atom_indices[3])
 
-            atom1_index = interchange.topology.atom_index(atom1)
-            atom2_index = interchange.topology.atom_index(atom2)
-            atom3_index = interchange.topology.atom_index(atom3)
-            atom4_index = interchange.topology.atom_index(atom4)
+                atom1_index = interchange.topology.atom_index(atom1)
+                atom2_index = interchange.topology.atom_index(atom2)
+                atom3_index = interchange.topology.atom_index(atom3)
+                atom4_index = interchange.topology.atom_index(atom4)
 
-            if ([atom1_index, atom4_index] in known_14_pairs) or (
-                [atom4_index, atom1_index] in known_14_pairs
-            ):
-                _14_tag = -1
-            else:
-                # Probably no need to append 1-4 pairs here, since 1-4 pairs should not
-                # exist in impropers and should be covered when 1-2 bond and 1-3 angle
-                # pairs are appended to this list. Not actually sure a case in which
-                # an improper can hit this clause?
-                _14_tag = 1
+                if ([atom1_index, atom4_index] in known_14_pairs) or (
+                    [atom4_index, atom1_index] in known_14_pairs
+                ):
+                    _14_tag = -1
+                else:
+                    # Probably no need to append 1-4 pairs here, since 1-4 pairs should not
+                    # exist in impropers and should be covered when 1-2 bond and 1-3 angle
+                    # pairs are appended to this list. Not actually sure a case in which
+                    # an improper can hit this clause?
+                    _14_tag = 1
 
-            dihedrals_list = (
-                dihedrals_inc_hydrogen
-                if 1
-                in [
-                    atom1.atomic_number,
-                    atom2.atomic_number,
-                    atom3.atomic_number,
-                    atom4.atomic_number,
-                ]
-                else dihedrals_without_hydrogen
-            )
+                dihedrals_list = (
+                    dihedrals_inc_hydrogen
+                    if 1
+                    in [
+                        atom1.atomic_number,
+                        atom2.atomic_number,
+                        atom3.atomic_number,
+                        atom4.atomic_number,
+                    ]
+                    else dihedrals_without_hydrogen
+                )
 
-            dihedrals_list.append(atom1_index * 3)
-            dihedrals_list.append(atom2_index * 3)
-            dihedrals_list.append(atom3_index * 3 * _14_tag)
-            dihedrals_list.append(atom4_index * 3 * -1)
-            dihedrals_list.append(dihedral_type_index + 1)
+                dihedrals_list.append(atom1_index * 3)
+                dihedrals_list.append(atom2_index * 3)
+                dihedrals_list.append(atom3_index * 3 * _14_tag)
+                dihedrals_list.append(atom4_index * 3 * -1)
+                dihedrals_list.append(dihedral_type_index + 1)
 
         number_excluded_atoms, excluded_atoms_list = _get_exclusion_lists(
             interchange.topology
@@ -306,7 +312,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         # number of excluded atoms
         NNB = len(excluded_atoms_list)
         # number of residues
-        NRES = 1  # interchange.topology.mdtop.n_residues
+        NRES = max(1, len([*interchange.topology.hierarchy_iterator("residues")]))
         NBONA = MBONA  # : MBONA + number of constraint bonds
         NTHETA = MTHETA  # : MTHETA + number of constraint angles
         NPHIA = MPHIA  # : MPHIA + number of constraint dihedrals
@@ -462,11 +468,29 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         text_blob = "".join([str(val).rjust(8) for val in nonbonded_parm_indices])
         _write_text_blob(prmtop, text_blob)
 
+        residue_names = (
+            [
+                residue.residue_name
+                for residue in interchange.topology.hierarchy_iterator("residues")
+            ]
+            if NRES > 1
+            else ["RES"]
+        )
         prmtop.write("%FLAG RESIDUE_LABEL\n" "%FORMAT(20a4)\n")
-        prmtop.write("\n")
+        text_blob = "".join([val.ljust(4) for val in residue_names])
+        _write_text_blob(prmtop, text_blob)
 
+        residue_pointers = (
+            [
+                interchange.topology.atom_index([*residue.particles][0])
+                for residue in interchange.topology.hierarchy_iterator("residues")
+            ]
+            if NRES > 1
+            else [1]
+        )
         prmtop.write("%FLAG RESIDUE_POINTER\n" "%FORMAT(10I8)\n")
-        prmtop.write("       1\n")
+        text_blob = "".join([str(val + 1).rjust(8) for val in residue_pointers])
+        _write_text_blob(prmtop, text_blob)
 
         # TODO: Exclude (?) bonds containing hydrogens
         prmtop.write("%FLAG BOND_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
