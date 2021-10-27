@@ -1,6 +1,6 @@
 # Migrating
 
-## OpenFF Toolkit
+## Migrating from the OpenFF Toolkit
 
 Where previously the OpenFF Toolkit was used to generate an OpenMM system:
 
@@ -20,7 +20,7 @@ From here, the `Interchange` object can be exported to files for OpenMM:
 openmm_system = interchange.to_openmm()
 ```
 
-or other simulation enginegs:
+or other simulation engines:
 
 ```python
 interchange.to_gro("out.gro")
@@ -51,7 +51,7 @@ interchange.to_gro("out.gro")
 interchange.to_top("out.top")
 ```
 
-## Foyer
+## Migrating from Foyer
 
 Where previously Foyer is used to generate a ParmEd Structure:
 
