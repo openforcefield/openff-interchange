@@ -945,15 +945,28 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
     # TODO: Ensure number of torsions written matches what is expected
     if improper_torsion_handler:
 
-        for improper in molecule.amber_impropers:
+        # Molecule/Topology.impropers lists the central atom **second** ...
+        for improper in molecule.smirnoff_impropers:
 
             topology_indices = tuple(
                 openff_sys.topology.atom_index(a) for a in improper
             )
+            # ... so the tuple must be modified to list the central atom **first**,
+            # which is how the improper handler's slot map is built up
+            indices_to_match = (
+                topology_indices[1],
+                topology_indices[0],
+                topology_indices[2],
+                topology_indices[3],
+            )
+
             molecule_indices = tuple(molecule.atom_index(a) for a in improper)
 
+            # Now, indices_to_match has the central atom listed **first**,
+            # but it's still listed second in molecule_indices
+
             for top_key in improper_torsion_handler.slot_map:
-                if topology_indices == top_key.atom_indices:
+                if indices_to_match == top_key.atom_indices:
                     key = improper_torsion_handler.slot_map[top_key]
                     params = improper_torsion_handler.potentials[key].parameters
 
@@ -963,8 +976,9 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
                     idivf = int(params["idivf"])
                     top_file.write(
                         "{:7d} {:7d} {:7d} {:7d} {:6d} {:.16g} {:.16g} {:.16g}\n".format(
-                            molecule_indices[0] + 1,
+                            # central atom is listed first in GROMACS
                             molecule_indices[1] + 1,
+                            molecule_indices[0] + 1,
                             molecule_indices[2] + 1,
                             molecule_indices[3] + 1,
                             4,

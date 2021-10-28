@@ -78,6 +78,24 @@ class TestGROMACSGROFile(_BaseTest):
         n_decimals = len(str(internal_coords[0, 0]).split(".")[1])
         assert n_decimals == 12
 
+    @pytest.mark.slow()
+    def test_residue_names_in_gro_file(self):
+        """Test that residue names > 5 characters don't break .gro file output"""
+        benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
+        benzene.name = "supercalifragilisticexpialidocious"
+        top = _OFFBioTop.from_molecules(benzene)
+        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+
+        # Populate an entire interchange because ...
+        force_field = ForceField("openff-1.0.0.offxml")
+        out = Interchange.from_smirnoff(force_field, top)
+        out.box = [4, 4, 4]
+        out.positions = benzene.conformers[0]
+
+        # ... the easiest way to check the validity of the files
+        # is to see if GROMACS can run them
+        get_gromacs_energies(out)
+
 
 @needs_gmx
 class TestGROMACS(_BaseTest):
@@ -123,6 +141,21 @@ class TestGROMACS(_BaseTest):
             },
         )
 
+    @skip_if_missing("parmed")
+    def test_num_impropers(self, parsley):
+        top = Molecule.from_smiles("CC1=CC=CC=C1").to_topology()
+        out = Interchange.from_smirnoff(parsley, top)
+        out.to_top("tmp.top")
+
+        # Sanity check; toluene should have some improper(s)
+        assert len(out["ImproperTorsions"].slot_map) > 0
+
+        import parmed as pmd
+
+        struct = pmd.load_file("tmp.top")
+        n_impropers_parmed = len([d for d in struct.dihedrals if d.improper])
+        assert n_impropers_parmed == len(out["ImproperTorsions"].slot_map)
+
     @skip_if_missing("intermol")
     def test_set_mixing_rule(self, ethanol_top, parsley):
         from intermol.gromacs.gromacs_parser import GromacsParser
@@ -155,24 +188,6 @@ class TestGROMACS(_BaseTest):
 
         with pytest.raises(UnsupportedExportError, match="rule `geometric` not compat"):
             openff_sys.to_top("out.top")
-
-    @pytest.mark.slow()
-    def test_residue_names_in_gro_file(self):
-        """Test that residue names > 5 characters don't break .gro file output"""
-        benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
-        benzene.name = "supercalifragilisticexpialidocious"
-        top = _OFFBioTop.from_molecules(benzene)
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
-
-        # Populate an entire interchange because ...
-        force_field = ForceField("openff-1.0.0.offxml")
-        out = Interchange.from_smirnoff(force_field, top)
-        out.box = [4, 4, 4]
-        out.positions = benzene.conformers[0]
-
-        # ... the easiest way to check the validity of the files
-        # is to see if GROMACS can run them
-        get_gromacs_energies(out)
 
     @pytest.mark.slow()
     def test_argon_buck(self):

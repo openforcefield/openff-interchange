@@ -48,14 +48,14 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
         if n_bonds > 0:
             lmp_file.write(f"\n{len(openff_sys['Bonds'].potentials)} bond types")
         if n_angles > 0:
-            lmp_file.write(f"\n{len(openff_sys['Angles'].potentials)} angle types\n")
+            lmp_file.write(f"\n{len(openff_sys['Angles'].potentials)} angle types")
         if n_propers > 0:
             lmp_file.write(
-                f"\n{len(openff_sys['ProperTorsions'].potentials)} dihedral types\n"
+                f"\n{len(openff_sys['ProperTorsions'].potentials)} dihedral types"
             )
         if n_impropers > 0:
             lmp_file.write(
-                f"\n{len(openff_sys['ImproperTorsions'].potentials)} improper types\n"
+                f"\n{len(openff_sys['ImproperTorsions'].potentials)} improper types"
             )
 
         lmp_file.write("\n")
@@ -395,15 +395,17 @@ def _write_impropers(lmp_file: IO, openff_sys: Interchange):
 
     improper_type_map_inv = dict({v: k for k, v in improper_type_map.items()})
 
-    # TODO: Iterating through .amber_impropers is necessary because of logic in
-    #       SMIRNOFFImproperTorsionHandler that re-roders atoms from central atom
-    #       to central atom first ... is this necessary?
-    for improper_idx, improper in enumerate(openff_sys.topology.amber_impropers):
+    # Molecule/Topology.impropers lists the central atom **second** ...
+    for improper_idx, improper in enumerate(openff_sys.topology.impropers):
 
         indices = tuple(openff_sys.topology.atom_index(a) for a in improper)
 
+        # ... so the tuple must be modified to list the central atom **first**,
+        # which is how the improper handler's slot map is built up
+        _indices = tuple((indices[1], indices[0], indices[2], indices[3]))
+
         for top_key, pot_key in improper_handler.slot_map.items():
-            if indices == top_key.atom_indices:
+            if _indices == top_key.atom_indices:
 
                 improper_type_idx = improper_type_map_inv[pot_key]
 
