@@ -6,10 +6,10 @@ from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
+from openff.utilities.testing import skip_if_missing
 from openmm import app
 from openmm import unit as omm_unit
 from parmed.amber import readparm
-from pmdtest.utils import get_fn as get_pmd_fn
 from pydantic import ValidationError
 
 from openff.interchange.components.interchange import Interchange
@@ -169,9 +169,12 @@ class TestParmedConversion(_BaseTest):
         )
 
 
+@skip_if_missing("pmdtest")
 class TestParmEdAmber:
     @pytest.mark.slow()
     def test_load_prmtop(self):
+        from pmdtest.utils import get_fn as get_pmd_fn
+
         struct = readparm.LoadParm(get_pmd_fn("trx.prmtop"))
         other_struct = readparm.AmberParm(get_pmd_fn("trx.prmtop"))
         prmtop = Interchange._from_parmed(struct)
@@ -191,6 +194,8 @@ class TestParmEdAmber:
 
     @pytest.mark.slow()
     def test_read_box_parm7(self):
+        from pmdtest.utils import get_fn as get_pmd_fn
+
         top = readparm.LoadParm(get_pmd_fn("solv2.parm7"))
         out = Interchange._from_parmed(top)
         # pmd.load_file(get_pmd_fn("solv2.rst7")))
