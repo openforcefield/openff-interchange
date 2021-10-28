@@ -280,7 +280,7 @@ def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
     else:
         raise UnsupportedExportError(
             f"Mixing rule `{mixing_rule} not compatible with GROMACS and/or not supported "
-            "by current exporter. Supported values are `lorentez-berthelot` and `geometric`."
+            "by current exporter. Supported values are `lorentz-berthelot` and `geometric`."
         )
 
     top_file.write(

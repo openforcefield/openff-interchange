@@ -21,12 +21,14 @@ if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
 
 kcal_mol = unit.kilocalorie_per_mole
-kcal_ang = kcal_mol / unit.angstrom ** 2
-kcal_rad = kcal_mol / unit.radian ** 2
 
-kj_mol = unit.kilojoule_per_mole
-kj_nm = kj_mol / unit.nanometer ** 2
-kj_rad = kj_mol / unit.radian ** 2
+if "__sphinx_mock__" not in dir(kcal_mol):
+    kcal_ang = kcal_mol / unit.angstrom ** 2
+    kcal_rad = kcal_mol / unit.radian ** 2
+
+    kj_mol = unit.kilojoule_per_mole
+    kj_nm = kj_mol / unit.nanometer ** 2
+    kj_rad = kj_mol / unit.radian ** 2
 
 
 def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.System:
@@ -307,7 +309,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             else:
                 raise NotImplementedError(
                     f"Mixing rule `{vdw_handler.mixing_rule}` not compatible with current OpenMM export."
-                    "The only supported values is `lorentez-berthelot`."
+                    "The only supported values is `lorentz-berthelot`."
                 )
 
         if vdw_handler.mixing_rule == "lorentz-berthelot":

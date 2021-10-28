@@ -56,6 +56,15 @@ extensions = [
     # "sphinxcontrib.autodoc_pydantic",
 ]
 
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "openff.toolkit": (
+        "https://open-forcefield-toolkit.readthedocs.io/en/stable/",
+        None,
+    ),
+    "mdtraj": ("https://www.mdtraj.org/1.9.5/", None),
+}
+
 autosummary_generate = True
 autosummary_imported_members = False
 autosummary_context = {
@@ -71,7 +80,7 @@ napoleon_google_docstring = False
 napoleon_use_param = False
 napoleon_use_ivar = True
 
-autodoc_mock_imports = ["pmdtest", "openmm"]
+autodoc_mock_imports = ["pmdtest", "openmm", "foyer", "openff.toolkit"]
 autodoc_default_options = {
     "member-order": "bysource",
 }
@@ -86,6 +95,14 @@ suppress_warnings = ["autodoc"]
 # autodoc_pydantic_model_show_validators = False
 # autodoc_pydantic_field_show_alias = False
 # autodoc_pydantic_model_show_json = False
+
+myst_enable_extensions = [
+    "deflist",
+    "smartquotes",
+    "replacements",
+    "dollarmath",
+    "colon_fence",
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
