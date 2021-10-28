@@ -8,7 +8,7 @@ There are also some internal functions that can be used to compute energies from
 
 This example shows many ways of computing single-point energies from a constructed `System` object.
 
-```python3
+```python
 import numpy as np
 
 # Create an OpenFF System object from an OpenFF Molecule, Topology, and ForceField
@@ -18,7 +18,7 @@ from openff.system.stubs import ForceField
 molecule = Molecule.from_smiles("CCO")
 molecule.generate_conformers(n_conformers=1)
 topology = molecule.to_topology()
-forcefield = ForceField('openff-1.2.0.offxml')
+forcefield = ForceField("openff-1.2.0.offxml")
 openff_system = forcefield.create_openff_system(topology)
 openff_system.box = [5, 5, 5]
 openff_system.positions = np.round(molecule.conformers[0]._value / 10.0, 3)
@@ -39,7 +39,7 @@ gmx_energies.compare(lmp_energies)  # EnergyError: ...
 
 
 # Compute single-point energies from engine-specific files/objects
-from openff.system.tests.energy_tests.openmm import  _get_openmm_energies
+from openff.system.tests.energy_tests.openmm import _get_openmm_energies
 
 _get_openmm_energies(
     omm_sys=openff_system.to_openmm(),

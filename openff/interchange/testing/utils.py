@@ -20,8 +20,9 @@ needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
 needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs GROMACS")
 
 
-kj_nm2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.nanometer ** 2
-kj_rad2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.radian ** 2
+if "__sphinx_mock__" not in dir(openmm_unit.kilojoule_per_mole):
+    kj_nm2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.nanometer ** 2
+    kj_rad2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.radian ** 2
 
 
 def _top_from_smiles(
