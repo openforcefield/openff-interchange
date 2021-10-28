@@ -31,12 +31,6 @@ jobs:
         miniforge-variant: Mambaforge
         use-mamba: true
 
-    - name: Install development version of OpenFF Recharge
-      shell: bash -l {0}
-      run: |
-        mamba install --only-deps openff-recharge -c conda-forge -c omnia
-        python -m pip install git+https://github.com/openforcefield/openff-recharge.git
-
     - name: Additional info about the build
       shell: bash
       run: |
@@ -55,18 +49,6 @@ jobs:
       run: |
         python setup.py develop --no-deps
 
-    - name: Install OpenFF Units
-      shell: bash -l {0}
-      run: |
-        pip install git+git://github.com/mattwthompson/openff-units.git
-
-#   - name: Clone ParmEd tests
-#     shell: bash -l {0}
-#     run: |
-#       git clone https://github.com/parmed/tests
-#       cp -r tests/pmdtest .
-#       echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
-
     - name: Run mypy
       continue-on-error: true
       shell: bash -l {0}
@@ -77,13 +59,7 @@ jobs:
       if: always()
       shell: bash -l {0}
       run: |
-        python -m pytest -v $COV openff/interchange/ --ignore=openff/interchange/tests/parmed/
-
-#   - name: Run ParmEd tests
-#     continue-on-error: true
-#     shell: bash -l {0}
-#     run: |
-#       python -m pytest -v $COV openff/interchange/tests/parmed
+        python -m pytest -v $COV openff/interchange/
 
     - name: Run example notebooks
       shell: bash -l {0}
