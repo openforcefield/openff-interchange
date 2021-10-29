@@ -574,7 +574,11 @@ class Interchange(DefaultModel):
 
         for handler_name, handler in other.handlers.items():
 
-            self_handler = self_copy.handlers[handler_name]
+            try:
+                self_handler = self_copy.handlers[handler_name]
+            except KeyError:
+                self_copy.handlers[handler_name] = handler
+                continue
 
             for top_key, pot_key in handler.slot_map.items():
 
