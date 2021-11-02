@@ -29,7 +29,7 @@ def get_all_energies(interchange: "Interchange") -> Dict[str, EnergyReport]:
 
     for engine_name, engine_driver, engine_exception in [
         ("Amber", get_amber_energies, AmberError),
-        ("Gromacs", get_gromacs_energies, GMXRunError),
+        ("GROMACS", get_gromacs_energies, GMXRunError),
         ("LAMMPS", get_lammps_energies, LAMMPSRunError),
     ]:
         try:
