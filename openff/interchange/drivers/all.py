@@ -33,7 +33,7 @@ def get_all_energies(interchange: "Interchange") -> Dict[str, EnergyReport]:
         ("LAMMPS", get_lammps_energies, LAMMPSRunError),
     ]:
         try:
-            all_energies[engine_name] = engine_driver(interchange)
+            all_energies[engine_name] = engine_driver(interchange)  # type: ignore[operator]
         except engine_exception:
             pass
 
