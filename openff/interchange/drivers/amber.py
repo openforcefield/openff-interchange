@@ -1,6 +1,7 @@
 """Functions for running energy evluations with Amber."""
 import subprocess
 import tempfile
+from distutils.spawn import find_executable
 from pathlib import Path
 from typing import Dict, Union
 
@@ -9,7 +10,11 @@ from openmm import unit as omm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.exceptions import AmberError, SanderError
+from openff.interchange.exceptions import (
+    AmberError,
+    AmberExecutableNotFoundError,
+    SanderError,
+)
 from openff.interchange.utils import get_test_file_path
 
 
@@ -100,6 +105,12 @@ def _run_sander(
         An `EnergyReport` object containing the single-point energies.
 
     """
+    if not find_executable("sander"):
+        raise AmberExecutableNotFoundError(
+            "Unable to find the 'sander' executable. Please ensure that "
+            "the Amber executables are installed and in your PATH."
+        )
+
     sander_cmd = (
         f"sander -i {in_file} -c {inpcrd_file} -p {prmtop_file} -o out.mdout -O"
     )
@@ -115,7 +126,7 @@ def _run_sander(
     _, err = sander.communicate()
 
     if sander.returncode:
-        raise SanderError
+        raise SanderError(err)
 
     energies, _ = _group_energy_terms("mdinfo")
 
