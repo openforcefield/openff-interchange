@@ -12,7 +12,6 @@ repos:
   hooks:
   - id: black
     files: ^openff
-    args: [--check]
   - id: black-jupyter
     files: ^examples
 - repo: https://github.com/PyCQA/isort
@@ -20,7 +19,6 @@ repos:
   hooks:
   - id: isort
     files: ^openff
-    args: [--check]
 - repo: https://github.com/PyCQA/flake8
   rev: 4.0.1
   hooks:
@@ -58,6 +56,8 @@ repos:
   rev: 1.1.1
   hooks:
     - id: nbqa-pyupgrade
+      files: ^examples
       args:
         - --py37-plus
     - id: nbqa-isort
+      files: ^examples

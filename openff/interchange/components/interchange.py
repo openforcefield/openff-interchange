@@ -1,4 +1,5 @@
 """An object for storing, manipulating, and converting molecular mechanics data."""
+import time
 import warnings
 from copy import deepcopy
 from pathlib import Path
@@ -219,6 +220,9 @@ class Interchange(DefaultModel):
                 if allowed_type in parameter_handlers_by_type
             ]
 
+            handler_name = potential_handler_type().type
+            time_start = time.time()
+
             if len(parameter_handlers) == 0:
                 continue
 
@@ -227,10 +231,14 @@ class Interchange(DefaultModel):
             #       depending on the bond handler)
             if potential_handler_type == SMIRNOFFBondHandler:
                 SMIRNOFFBondHandler.check_supported_parameters(force_field["Bonds"])
+                print(f"Starting handler: {handler_name}...")
                 potential_handler = SMIRNOFFBondHandler._from_toolkit(
                     parameter_handler=force_field["Bonds"],
                     topology=topology,
                     # constraint_handler=constraint_handler,
+                )
+                print(
+                    f"Finished handler: ... {handler_name}. Took {time.time() - time_start}"
                 )
                 sys_out.handlers.update({"Bonds": potential_handler})
             elif potential_handler_type == SMIRNOFFConstraintHandler:
@@ -240,6 +248,7 @@ class Interchange(DefaultModel):
                 )
                 if constraint_handler is None:
                     continue
+                print(f"Starting handler: {handler_name}...")
                 constraints = SMIRNOFFConstraintHandler._from_toolkit(
                     parameter_handler=[
                         val
@@ -249,17 +258,28 @@ class Interchange(DefaultModel):
                     topology=topology,
                 )
                 sys_out.handlers.update({"Constraints": constraints})
+                print(
+                    f"Finished handler: ... {handler_name}. Took {time.time() - time_start}"
+                )
                 continue
             elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
+                print(f"Starting handler: {handler_name}...")
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers,
                     topology=topology,
                 )
+                print(
+                    f"Finished handler: ... {handler_name}. Took {time.time() - time_start}"
+                )
             else:
                 potential_handler_type.check_supported_parameters(parameter_handlers[0])
+                print(f"Starting handler: {handler_name}...")
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers[0],
                     topology=topology,
+                )
+                print(
+                    f"Finished handler: ... {handler_name}. Took {time.time() - time_start}"
                 )
             sys_out.handlers.update({potential_handler.type: potential_handler})
 
