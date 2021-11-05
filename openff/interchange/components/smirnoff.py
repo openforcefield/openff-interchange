@@ -892,9 +892,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         self, include_virtual_sites=False
     ) -> Dict[Union[VirtualSiteKey, TopologyKey], unit.Quantity]:
         """Get the total partial charge on each atom or particle."""
-        charges: DefaultDict[
-            Union[TopologyKey, VirtualSiteKey], FloatQuantity
-        ] = defaultdict(lambda: 0.0 * unit.e)
+        charges: DefaultDict[Union[TopologyKey, VirtualSiteKey], float] = defaultdict(
+            lambda: 0.0
+        )
 
         for topology_key, potential_key in self.slot_map.items():
 

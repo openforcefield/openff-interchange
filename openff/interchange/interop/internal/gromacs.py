@@ -17,6 +17,7 @@ from openff.interchange.components.base import (
 )
 from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import Potential
+from openff.interchange.components.toolkit import _get_14_pairs
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
@@ -547,7 +548,7 @@ def _write_atoms(
         scale_lj = openff_sys["Buckingham-6"].scale_14
 
     # Use a set to de-duplicate
-    pairs: Set[Tuple] = {*molecule.nth_degree_neighbors(n_degrees=3)}
+    pairs: Set[Tuple] = {*_get_14_pairs(openff_sys.topology)}
 
     # TODO: Sort pairs by atom indices ascending
     for pair in pairs:
