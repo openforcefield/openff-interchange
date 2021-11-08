@@ -64,6 +64,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/_autosummary/
 
 # PyBuilder
 target/
@@ -112,7 +113,7 @@ scratch/
 *.edr
 *.xvg
 *.tpr
-*.mdp
+# *.mdp
 *out.gro
 md.log
 *stderr.txt

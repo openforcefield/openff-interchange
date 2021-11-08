@@ -1,55 +1,21 @@
 # Installation
 
-These instructions are likely in flux. If something looks out of date or is not working, please raise an issue.
+These instructions assume that the `conda` package manager is installed. It can be obtained either from the [Anaconda](https://www.anaconda.com/products/individual#Downloads) Python distribution or a lightweight stand-in such as [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Miniforge](https://github.com/conda-forge/miniforge#readme).
 
-## Install dependencies
 
-Until a conda package is live, the core dependencies are listed in `devtools/conda-envs/test_env.yaml` and optional dependencies can be found in `devtools/conda-envs/minimal_env.yaml`.
-
-Required dependencies:
-  - python
-  - pip
-  - pydantic
-  - pint
-  - openmm
-  - openff-toolkit
-  - jax
-  - mdtraj
-  - ele
-  - `openff-units`
-  - `openff-utilities`
-
-Note that the last two packages are currently unrelreased and must be installed as development builds:
+## Quick Installation
+Install the latest release from `conda-forge`:
 
 ```shell
-# In an activated conda environment
-pip install git+git://github.com/mattwthompson/openff-units.git
-pip install git+git://github.com/mattwthompson/openff-utilities.git
+conda install openff-interchange -c conda-forge
 ```
 
-Optional/test/dev dependencies:
-  - pytest
-  - pytest-cov
-  - codecov
-  - nbval
-  - mypy
-  - unyt
-  - intermol
-  - gromacs >=2021
-  - lammps
-  - mbuild
-  - foyer>=0.8.0
+## Optional dependencies
 
-If portions of the API that require optional dependencies are called while some of those dependencies are not available, an informative error message should be provided.
+Some libraries or tools are only used for development, testing, or optional features. If portions of the API that require optional dependencies are called while those package(s) are not available, an informative error message should be provided. If one is not provided or is insufficiently informative, please [raise an issue](https://github.com/openforcefield/openff-interchange/issues).
 
-All packages are assumed to be at their latest version. In particular, compatibility with older versions of the OpenFF Toolkit (i.e. versions 0.9.0 and older) are not guaranteed.
+It is assumed that all packages are updated to their latest minor versions. Compatibility with old releases is not guaranteed and likely to not work. For example, compatibility with older versions of the OpenFF Toolkit (i.e. versions 0.8.3 and older) and OpenMM (7.5.1 and older) are not guaranteed. If there are a compelling reasons to add compatibiility with old versions of dependencies, please [raise an issue](https://github.com/openforcefield/openff-interchange/issues).
 
-All packages (with the exceptions of GROMACS via `bioconda`, `openff-units`, and `openff-utilities` described above) are available on `conda-forge` and it assumed that `conda` is used to install them. Most are also available on PyPI via `pip`; while this method of installation is likely to work, it is not currently tested.
+All packages (with the exception of OpenEye toolkits) are understood to be open source and free to use. Some operations within the OpenFF Toolkit can be faster if OpenEye toolkits are available, but free alternatives (using RDKit, AmberTools) are available for all methods. For more see [here](https://open-forcefield-toolkit.readthedocs.io/en/stable/installation.html#optional-dependencies).
 
-## Install the package
-
-Until a conda package is live, the package must be installed locally. After cloning the repo:
-
-```shell
-python -m pip install -e .
-```
+All packages used in core functionality are available on `conda-forge` and it assumed that `conda` is used to install them. Most are also available on [PyPI](https://pypi.org) via `pip`; while this method of installation is likely to work, it is not currently tested and no guarantees are made.

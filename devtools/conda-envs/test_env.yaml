@@ -1,36 +1,44 @@
-name: openff-system-env
+name: openff-interchange-env
 channels:
   - conda-forge
   - bioconda
+  - openeye
 dependencies:
-    # Base depends
+  # Core
   - python
   - pip
-  - numpy
-  - pandas
+  - numpy >=1.21
   - pydantic
-  - pint
   - openmm
-  - openff-toolkit
-  - openff-utilities
-  - jax
   - mdtraj
-  - ele
-
-    # Python <3.8
-  - typing-extensions
-
-    # Testing
-  - pytest
-  - pytest-cov
-  - codecov
-  - nbval
-  - mypy
+  # OpenFF stack
+  - openff-toolkit >=0.10.0
+  - openff-utilities
+  - openff-units
+  # Optional features
+  - jax
   - unyt
+  - mbuild
+  - foyer >=0.8.1
+  # Testing
   - intermol
+  - openff-evaluator
+  - openff-recharge
+  - openeye-toolkits
+  - pytest
+  - pytest-timeout
+  - codecov
+  - pytest-cov
+  - pytest-xdist
+  - nbval
+  - conda
+  # Drivers
   - gromacs >=2021
   - lammps
-  - mbuild
-  - foyer>=0.8.0
   - panedr
+  # Typing
+  - mypy
+  - typing-extensions
+  - types-setuptools
+  - types-pkg_resources
   - pandas-stubs
