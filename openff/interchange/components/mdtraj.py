@@ -1,10 +1,13 @@
+"""Temporary utilities to use an MDTraj Trajectory with an OpenFF Trajectory."""
 import copy
 
 import mdtraj as md
 from openff.toolkit.topology import Topology
 
 
-class OFFBioTop(Topology):
+class _OFFBioTop(Topology):
+    """A subclass of an OpenFF Topology that carries around an MDTraj topology."""
+
     def __init__(self, mdtop=None, *args, **kwargs):
         self.mdtop = mdtop
         super().__init__(*args, **kwargs)
@@ -104,7 +107,7 @@ def _iterate_pairs(mdtop):
 
 
 def _get_num_h_bonds(mdtop):
-    """Get the number of (covalent) bonds containing a hydrogen atom"""
+    """Get the number of (covalent) bonds containing a hydrogen atom."""
     n_bonds_containing_hydrogen = 0
 
     for bond in mdtop.bonds:
@@ -112,3 +115,56 @@ def _get_num_h_bonds(mdtop):
             n_bonds_containing_hydrogen += 1
 
     return n_bonds_containing_hydrogen
+
+
+def _combine_topologies(topology1: _OFFBioTop, topology2: _OFFBioTop) -> _OFFBioTop:
+    """
+    Experimental shim for combining _OFFBioTop objects.
+
+    Note that this really only operates on the mdtops.
+    """
+    mdtop1 = copy.deepcopy(topology1.mdtop)
+    mdtop2 = copy.deepcopy(topology2.mdtop)
+
+    mdtop = md.Topology()
+    first_topology_chain = mdtop.add_chain()
+    second_topology_chain = mdtop.add_chain()
+
+    for residue in mdtop1.residues:
+        this_residue = mdtop.add_residue(
+            name=residue.name,
+            chain=first_topology_chain,
+            resSeq=residue.resSeq,
+            segment_id=residue.segment_id,
+        )
+        for atom in residue.atoms:
+            mdtop.add_atom(atom.name, atom.element, this_residue)
+
+    for residue in mdtop2.residues:
+        this_residue = mdtop.add_residue(
+            name=residue.name,
+            chain=second_topology_chain,
+            resSeq=residue.resSeq,
+            segment_id=residue.segment_id,
+        )
+        for atom in residue.atoms:
+            mdtop.add_atom(atom.name, atom.element, this_residue)
+
+    atom_offset = mdtop1.n_atoms
+
+    for bond in mdtop1.bonds:
+        mdtop.add_bond(
+            atom1=mdtop.atom(bond.atom1.index),
+            atom2=mdtop.atom(bond.atom2.index),
+        )
+
+    for bond in mdtop2.bonds:
+        mdtop.add_bond(
+            atom1=mdtop.atom(bond.atom1.index + atom_offset),
+            atom2=mdtop.atom(bond.atom2.index + atom_offset),
+        )
+
+    combined_topology = _OFFBioTop()
+    combined_topology.mdtop = mdtop
+
+    return combined_topology

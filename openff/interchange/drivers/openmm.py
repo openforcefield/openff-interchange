@@ -1,7 +1,9 @@
+"""Functions for running energy evluations with OpenMM."""
 from typing import Dict
 
 import numpy as np
-from simtk import openmm, unit
+import openmm
+from openmm import unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
@@ -38,6 +40,9 @@ def get_openmm_energies(
     electrostatics : bool, default=True
         A boolean indicating whether or not electrostatics should be included in the energy
         calculation.
+    combine_nonbonded_forces : bool, default=False
+        Whether or not to combine all non-bonded interactions (vdW, short- and long-range
+        ectrostaelectrostatics, and 1-4 interactions) into a single openmm.NonbondedForce.
 
     Returns
     -------
@@ -45,6 +50,21 @@ def get_openmm_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
+    positions = off_sys.positions
+
+    if "VirtualSites" in off_sys.handlers:
+        if len(off_sys["VirtualSites"].slot_map) > 0:
+            if not combine_nonbonded_forces:
+                raise NotImplementedError(
+                    "Cannot yet split out NonbondedForce components while virtual sites are present."
+                )
+
+            n_virtual_sites = len(off_sys["VirtualSites"].slot_map)
+
+            # TODO: Actually compute virtual site positions based on initial conformers
+            virtual_site_positions = np.zeros((n_virtual_sites, 3))
+            virtual_site_positions *= off_sys.positions.units
+            positions = np.vstack([positions, virtual_site_positions])
 
     omm_sys: openmm.System = off_sys.to_openmm(
         combine_nonbonded_forces=combine_nonbonded_forces
@@ -53,7 +73,7 @@ def get_openmm_energies(
     return _get_openmm_energies(
         omm_sys=omm_sys,
         box_vectors=off_sys.box,
-        positions=off_sys.positions,
+        positions=positions,
         round_positions=round_positions,
         hard_cutoff=hard_cutoff,
         electrostatics=electrostatics,
@@ -123,10 +143,15 @@ def _get_openmm_energies(
             openmm.CustomNonbondedForce,
             openmm.CustomBondForce,
         ]:
-            if "Nonbonded" in omm_energies:
-                omm_energies["Nonbonded"] += raw_energies[key]
+            energy_type = _infer_nonbonded_energy_type(force)
+
+            if energy_type == "None":
+                continue
+
+            if energy_type in omm_energies:
+                omm_energies[energy_type] += raw_energies[key]
             else:
-                omm_energies["Nonbonded"] = raw_energies[key]
+                omm_energies[energy_type] = raw_energies[key]
 
     # Fill in missing keys if interchange does not have all typical forces
     for required_key in [
@@ -148,16 +173,59 @@ def _get_openmm_energies(
             "Bond": omm_energies.get("HarmonicBondForce", 0.0 * kj_mol),
             "Angle": omm_energies.get("HarmonicAngleForce", 0.0 * kj_mol),
             "Torsion": _canonicalize_torsion_energies(omm_energies),
-            "Nonbonded": omm_energies.get(
-                "Nonbonded", _canonicalize_nonbonded_energies(omm_energies)
-            ),
         }
     )
 
-    report.energies.pop("vdW")
-    report.energies.pop("Electrostatics")
+    if "Nonbonded" in omm_energies:
+        report.update_energies(
+            {"Nonbonded": _canonicalize_nonbonded_energies(omm_energies)}
+        )
+        report.energies.pop("vdW")
+        report.energies.pop("Electrostatics")
+    else:
+        report.update_energies({"vdW": omm_energies.get("vdW", 0.0 * kj_mol)})
+        report.update_energies(
+            {"Electrostatics": omm_energies.get("Electrostatics", 0.0 * kj_mol)}
+        )
 
     return report
+
+
+def _infer_nonbonded_energy_type(force):
+    if type(force) == openmm.NonbondedForce:
+        has_electrostatics = False
+        has_vdw = False
+        for i in range(force.getNumParticles()):
+            if has_electrostatics and has_vdw:
+                continue
+            params = force.getParticleParameters(i)
+            if not has_electrostatics:
+                if params[0]._value != 0:
+                    has_electrostatics = True
+            if not has_vdw:
+                if params[2]._value != 0:
+                    has_vdw = True
+
+        if has_electrostatics and not has_vdw:
+            return "Electrostatics"
+        if has_vdw and not has_electrostatics:
+            return "vdW"
+        if has_vdw and has_electrostatics:
+            return "Nonbonded"
+        if not has_vdw and not has_electrostatics:
+            return "None"
+
+    if type(force) == openmm.CustomNonbondedForce:
+        if "epsilon" or "sigma" in force.getEnergyFunction():
+            return "vdW"
+
+    if type(force) == openmm.CustomBondForce:
+        if "qq" in force.getEnergyFunction():
+            return "Electrostatics"
+        else:
+            return "vdW"
+
+    raise Exception(type(force))
 
 
 def _canonicalize_nonbonded_energies(energies: Dict):

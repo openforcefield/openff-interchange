@@ -7,11 +7,13 @@ dependencies:
   - pip
   - pydantic
   - pint
-  - openmm
-  - openff-toolkit
+  - openff-toolkit-base
+  - openff-units
+  - openff-utilities
   - jax
   - ele
   # readthedocs dependencies
   - myst-parser
   - numpydoc
-  - sphinx_rtd_theme
+  - pip:
+    - git+https://github.com/openforcefield/openff-sphinx-theme.git@main

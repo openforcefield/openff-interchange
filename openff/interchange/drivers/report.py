@@ -1,25 +1,16 @@
+"""Storing and processing results of energy evaluations."""
+import warnings
 from typing import Dict, Optional
 
 import pandas as pd
 from openff.units import unit
 from pydantic import validator
 
+from openff.interchange.exceptions import EnergyError, MissingEnergyError
 from openff.interchange.models import DefaultModel
 from openff.interchange.types import FloatQuantity
 
 kj_mol = unit.kilojoule / unit.mol
-
-
-class EnergyError(BaseException):
-    """
-    Base class for energies in reports not matching.
-    """
-
-
-class MissingEnergyError(BaseException):
-    """
-    Exception for when one report has a value for an energy group but the other does not.
-    """
 
 
 class EnergyReport(DefaultModel):
@@ -49,18 +40,22 @@ class EnergyReport(DefaultModel):
             )
         if item in self.energies.keys():
             return self.energies[item]
+        if item.lower() == "total":
+            return sum(self.energies.values())
         else:
             return None
 
     def update_energies(self, new_energies):
+        """Update the energies in this report with new value(s)."""
         self.energies.update(self.validate_energies(new_energies))
 
     # TODO: Better way of exposing tolerances
     def compare(self, other: "EnergyReport", custom_tolerances=None):
         """
-        Compare this `EnergyReport` to another `EnergyReport`. Energies are grouped into
-        four categories (bond, angle, torsion, and nonbonded) with default tolerances for
-        each set to 1e-3 kJ/mol.
+        Compare this `EnergyReport` to another `EnergyReport`.
+
+        Energies are grouped into four categories (bond, angle, torsion, and nonbonded) with
+        default tolerances for each set to 1e-3 kJ/mol.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -154,6 +149,16 @@ class EnergyReport(DefaultModel):
 
         # TODO: Return energy differences even if none are greater than tolerance
         # This might result in mis-matched keys
+
+    def __sub__(self, other):
+        diff = dict()
+        for key in self.energies:
+            if key not in other.energies:
+                warnings.warn(f"Did not find key {key} in second report")
+                continue
+            diff[key] = self.energies[key] - other.energies[key]
+
+        return diff
 
     def __str__(self):
         return (
