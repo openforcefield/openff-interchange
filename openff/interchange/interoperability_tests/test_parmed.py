@@ -230,7 +230,7 @@ class TestParmedMixingRules(_BaseTest):
         lorentz = _run_sander(
             prmtop_file="lorentz.prmtop",
             inpcrd_file="lorentz.inpcrd",
-            in_file=get_test_file_path("run.in"),
+            input_file=get_test_file_path("run.in"),
         )
 
         openff_sys["vdW"].mixing_rule = "geometric"
@@ -242,7 +242,7 @@ class TestParmedMixingRules(_BaseTest):
         geometric = _run_sander(
             prmtop_file="geometric.prmtop",
             inpcrd_file="geometric.inpcrd",
-            in_file=get_test_file_path("run.in"),
+            input_file=get_test_file_path("run.in"),
         )
 
         diff = geometric - lorentz
