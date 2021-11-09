@@ -128,13 +128,13 @@ def _run_sander(
     if sander.returncode:
         print("input_file:")
         with open(in_file) as f:
-            print(f.read())
+            err += f.read()
         print("inpcrd_file:")
         with open(inpcrd_file) as f:
-            print(f.read())
+            err += f.read()
         print("prmtop_file:")
         with open(prmtop_file) as f:
-            print(f.read())
+            err += f.read()
         raise SanderError(err)
 
     energies, _ = _group_energy_terms("mdinfo")
