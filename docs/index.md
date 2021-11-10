@@ -22,7 +22,7 @@ maxdepth: 2
 
 using/intro.md
 using/design.md
-using/ouput.md
+using/output.md
 using/migrating.md
 using/energy_tests.md
 

@@ -1,16 +1,8 @@
-# Producing molecular mechanics input files
-
-## Amber
-
-Under construction!
-
-## CHARMM
-
-Under construction!
+# Producing MM input files
 
 ## GROMACS
 
-Once an `Interchange` object has been constructed, the `.gro` and `.top` files
+Once an [`Interchange`] object has been constructed, the `.gro` and `.top` files
 can be written using [`Interchange.to_top()`] and [`Interchange.to_gro()`]:
 
 ```python
@@ -31,7 +23,7 @@ _write_mdp_file(interchange)
 
 ## LAMMPS
 
-An `Interchange` object can be written to a LAMMPS data file with
+An [`Interchange`] object can be written to a LAMMPS data file with
 [`Interchange.to_lammps()`]
 
 ```python
@@ -49,10 +41,9 @@ from openff.interchange.drivers.gromacs import _write_mdp_file
 _write_lammps_input(interchange, "run.inp")
 ```
 
-
 ## OpenMM
 
-An `Interchange` object can be converted to an `openmm.System` object with
+An [`Interchange`] object can be converted to an `openmm.System` object with
 [`Interchange.to_openmm()`].
 
 ```python
@@ -63,9 +54,15 @@ By default, this will separate non-bonded interactions into several different
 `openmm.Force` objects. To combine everything into a single
 `openmm.NonbondedForce`, use the `combine_nonbonded_forces=True` argument.
 
+## Amber
 
+Under construction!
 
+## CHARMM
 
+Under construction!
+
+[`Interchange`]: openff.interchange.components.interchange.Interchange
 [`Interchange.to_top()`]: openff.interchange.components.interchange.Interchange.to_top
 [`Interchange.to_gro()`]: openff.interchange.components.interchange.Interchange.to_gro
 [`Interchange.to_lammps()`]: openff.interchange.components.interchange.Interchange.to_lammps
