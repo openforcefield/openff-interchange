@@ -56,7 +56,7 @@ class Interchange(DefaultModel):
     .. warning :: This API is experimental and subject to change.
     """
 
-    class InnerSystem(DefaultModel):
+    class _InnerSystem(DefaultModel):
         """Inner representation of Interchange components."""
 
         # TODO: Ensure these fields are hidden from the user as intended
@@ -78,7 +78,7 @@ class Interchange(DefaultModel):
                 raise InvalidBoxError
 
     def __init__(self):
-        self._inner_data = self.InnerSystem()
+        self._inner_data = self._InnerSystem()
 
     @property
     def handlers(self):
