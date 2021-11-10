@@ -12,4 +12,4 @@ sphinx:
   fail_on_warning: true
 
 conda:
-  environment: docs/environment.yml
+  environment: devtools/conda-envs/docs_env.yaml
