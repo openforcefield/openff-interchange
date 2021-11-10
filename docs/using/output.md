@@ -1,4 +1,4 @@
-# Producing MM input files
+# Exporting to other software
 
 ## GROMACS
 
