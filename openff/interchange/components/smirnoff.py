@@ -53,9 +53,8 @@ from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 from openff.interchange.types import FloatQuantity
 
 kcal_mol = omm_unit.kilocalorie_per_mole
-if "__sphinx_mock__" not in dir(kcal_mol):
-    kcal_mol_angstroms = kcal_mol / omm_unit.angstrom ** 2
-    kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
+kcal_mol_angstroms = kcal_mol / omm_unit.angstrom ** 2
+kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 if TYPE_CHECKING:
     from openff.toolkit.topology import Topology

@@ -1,5 +1,7 @@
 name: openff-interchange-docs
 channels:
+  # Skip installing CUDA to speed up builds
+  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
 dependencies:
   # Base depends
@@ -10,6 +12,7 @@ dependencies:
   - openff-toolkit-base
   - openff-units
   - openff-utilities
+  - openmm
   - jax
   - ele
   # readthedocs dependencies
