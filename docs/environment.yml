@@ -18,5 +18,7 @@ dependencies:
   # readthedocs dependencies
   - myst-parser
   - numpydoc
+  - autodoc-pydantic
+  - sphinx
   - pip:
     - git+https://github.com/openforcefield/openff-sphinx-theme.git@main
