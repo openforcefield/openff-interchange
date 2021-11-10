@@ -293,7 +293,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         NPARM = 0  # : used to determine if addles created prmtop
         # number of excluded atoms
         NNB = len(excluded_atoms_list)
-        NRES = interchange.topology.mdtop.n_residues  # : number of residues
+        # number of residues
+        NRES = 1  # interchange.topology.mdtop.n_residues
         NBONA = MBONA  # : MBONA + number of constraint bonds
         NTHETA = MTHETA  # : MTHETA + number of constraint angles
         NPHIA = MPHIA  # : MPHIA + number of constraint dihedrals
