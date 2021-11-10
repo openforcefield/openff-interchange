@@ -54,7 +54,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.todo",
     "openff_sphinx_theme",
-    # "sphinxcontrib.autodoc_pydantic",
+    "sphinxcontrib.autodoc_pydantic",
 ]
 
 intersphinx_mapping = {
@@ -90,12 +90,12 @@ autodoc_inherit_docstrings = False
 suppress_warnings = ["autodoc"]
 
 # autodoc_pydantic settings
-# autodoc_pydantic_show_config = False
-# autodoc_pydantic_model_show_config = False
-# autodoc_pydantic_show_validators = False
-# autodoc_pydantic_model_show_validators = False
-# autodoc_pydantic_field_show_alias = False
-# autodoc_pydantic_model_show_json = False
+autodoc_pydantic_show_config = False
+autodoc_pydantic_model_show_config = False
+autodoc_pydantic_show_validators = False
+autodoc_pydantic_model_show_validators = False
+autodoc_pydantic_field_show_alias = False
+autodoc_pydantic_model_show_json = False
 
 myst_enable_extensions = [
     "deflist",
