@@ -87,7 +87,6 @@ autodoc_default_options = {
 }
 autodoc_preserve_defaults = True
 autodoc_inherit_docstrings = False
-suppress_warnings = ["autodoc"]
 
 # autodoc_pydantic settings
 autodoc_pydantic_show_config = False
@@ -127,7 +126,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "README.md"]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "default"
