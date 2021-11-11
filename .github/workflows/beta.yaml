@@ -1,8 +1,10 @@
-name: Nightly tests
+name: Tests against betas
 
-on:
-  schedule:
-    - cron: "0 0 * * *"
+on: [workflow_dispatch, push]
+#
+# on:
+#   schedule:
+#     - cron: "0 0 * * *"
 
 jobs:
   test:
@@ -23,7 +25,7 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
         python-version: ${{ matrix.python-version }}
-        environment-file: devtools/conda-envs/test_env.yaml
+        environment-file: devtools/conda-envs/beta_env.yaml
         activate-environment: test
         auto-activate-base: false
         mamba-version: "*"
