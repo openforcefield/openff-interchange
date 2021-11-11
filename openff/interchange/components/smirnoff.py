@@ -70,6 +70,7 @@ if TYPE_CHECKING:
 
 
 T = TypeVar("T", bound="SMIRNOFFPotentialHandler")
+TP = TypeVar("TP", bound="PotentialHandler")
 
 
 class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
@@ -134,7 +135,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
     @classmethod
     def _from_toolkit(
         cls: Type[T],
-        parameter_handler: PotentialHandler,
+        parameter_handler: TP,
         topology: "Topology",
     ) -> T:
         """
