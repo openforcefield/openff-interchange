@@ -53,9 +53,8 @@ from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 from openff.interchange.types import FloatQuantity
 
 kcal_mol = omm_unit.kilocalorie_per_mole
-if "__sphinx_mock__" not in dir(kcal_mol):
-    kcal_mol_angstroms = kcal_mol / omm_unit.angstrom ** 2
-    kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
+kcal_mol_angstroms = kcal_mol / omm_unit.angstrom ** 2
+kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
 
 if TYPE_CHECKING:
     from openff.toolkit.topology import Topology
@@ -71,7 +70,7 @@ if TYPE_CHECKING:
 
 
 T = TypeVar("T", bound="SMIRNOFFPotentialHandler")
-T_ = TypeVar("T_", bound="PotentialHandler")
+TP = TypeVar("TP", bound="PotentialHandler")
 
 
 class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
@@ -136,7 +135,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
     @classmethod
     def _from_toolkit(
         cls: Type[T],
-        parameter_handler: T_,
+        parameter_handler: TP,
         topology: "Topology",
     ) -> T:
         """

@@ -54,7 +54,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.todo",
     "openff_sphinx_theme",
-    # "sphinxcontrib.autodoc_pydantic",
+    "sphinxcontrib.autodoc_pydantic",
 ]
 
 intersphinx_mapping = {
@@ -81,21 +81,20 @@ napoleon_google_docstring = False
 napoleon_use_param = False
 napoleon_use_ivar = True
 
-autodoc_mock_imports = ["openmm", "foyer", "openff.toolkit"]
+autodoc_mock_imports = []
 autodoc_default_options = {
     "member-order": "bysource",
 }
 autodoc_preserve_defaults = True
 autodoc_inherit_docstrings = False
-suppress_warnings = ["autodoc"]
 
 # autodoc_pydantic settings
-# autodoc_pydantic_show_config = False
-# autodoc_pydantic_model_show_config = False
-# autodoc_pydantic_show_validators = False
-# autodoc_pydantic_model_show_validators = False
-# autodoc_pydantic_field_show_alias = False
-# autodoc_pydantic_model_show_json = False
+autodoc_pydantic_show_config = False
+autodoc_pydantic_model_show_config = False
+autodoc_pydantic_show_validators = False
+autodoc_pydantic_model_show_validators = False
+autodoc_pydantic_field_show_alias = False
+autodoc_pydantic_model_show_json = False
 
 myst_enable_extensions = [
     "deflist",
@@ -127,7 +126,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "README.md"]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "default"
