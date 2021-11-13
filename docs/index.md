@@ -11,7 +11,7 @@ maxdepth: 2
 ---
 installation.md
 developing.md
-releasehistory.rst
+releasehistory.md
 ```
 
 ```{toctree}
