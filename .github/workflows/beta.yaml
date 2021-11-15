@@ -20,7 +20,7 @@ jobs:
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
-    - uses: actions/checkout@v2.3.4
+    - uses: actions/checkout@v2.4.0
 
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
