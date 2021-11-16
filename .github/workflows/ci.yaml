@@ -8,6 +8,10 @@ on:
     branches:
       - master
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -35,25 +39,21 @@ jobs:
         use-mamba: true
 
     - name: Additional info about the build
-      shell: bash
       run: |
         uname -a
         df -h
         ulimit -a
 
     - name: Environment Information
-      shell: bash -l {0}
       run: |
         conda info
         conda list
 
     - name: Install package
-      shell: bash -l {0}
       run: |
         python setup.py develop --no-deps
 
     - name: License OpenEye
-      shell: bash -l {0}
       run: |
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
@@ -61,23 +61,19 @@ jobs:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     - name: Run mypy
-      shell: bash -l {0}
       run: |
         mypy --namespace-packages -p "openff.interchange"
 
     - name: Run docexamples
-      shell: bash -l {0}
       run: |
         pytest -v --doctest-modules openff/interchange/ --ignore=openff/interchange/energy_tests --ignore=openff/interchange/unit_tests --ignore=openff/interchange/data --ignore=openff/interchange/interoperability_tests
 
     - name: Run all tests
       if: always()
-      shell: bash -l {0}
       run: |
         python -m pytest -v -nauto $COV openff/interchange/
 
     - name: Run example notebooks
-      shell: bash -l {0}
       run: |
         python -m pytest -v $COV examples/ --nbval-lax
 
