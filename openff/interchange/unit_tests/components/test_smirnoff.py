@@ -580,12 +580,28 @@ class TestMatrixRepresentations(_BaseTest):
 
 
 class TestSMIRNOFFVirtualSites:
-    from openff.toolkit.tests.test_forcefield import (
-        xml_ff_virtual_sites_bondcharge_match_all,
-        xml_ff_virtual_sites_bondcharge_match_once,
-        xml_ff_virtual_sites_divalent_match_all,
-        xml_ff_virtual_sites_trivalent_match_once,
-    )
+    try:
+        from openff.toolkit.tests.test_forcefield import (
+            xml_ff_virtual_sites_bondcharge_match_all,
+            xml_ff_virtual_sites_bondcharge_match_once,
+            xml_ff_virtual_sites_divalent_match_all,
+            xml_ff_virtual_sites_trivalent_match_once,
+        )
+    except ImportError:
+        from openff.toolkit.tests.test_forcefield import TestForceFieldVirtualSites
+
+        xml_ff_virtual_sites_bondcharge_match_all = (
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_bondcharge_match_all
+        )
+        xml_ff_virtual_sites_bondcharge_match_once = (
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_bondcharge_match_once
+        )
+        xml_ff_virtual_sites_divalent_match_all = (
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_divalent_match_all
+        )
+        xml_ff_virtual_sites_trivalent_match_once = (
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_trivalent_match_once
+        )
 
     @pytest.mark.parametrize(
         ("xml", "mol"),
@@ -658,10 +674,20 @@ class TestSMIRNOFFVirtualSites:
         )
 
     def test_store_trivalent_lone_pair_virtual_site(self):
-        from openff.toolkit.tests.test_forcefield import (
-            create_ammonia,
-            xml_ff_virtual_sites_trivalent_match_once,
-        )
+        try:
+            from openff.toolkit.tests.test_forcefield import (
+                create_ammonia,
+                xml_ff_virtual_sites_trivalent_match_once,
+            )
+        except ImportError:
+            from openff.toolkit.tests.test_forcefield import (
+                TestForceFieldVirtualSites,
+                create_ammonia,
+            )
+
+            xml_ff_virtual_sites_trivalent_match_once = (
+                TestForceFieldVirtualSites.xml_ff_virtual_sites_trivalent_match_once
+            )
 
         top = create_ammonia().to_topology()
 
@@ -749,7 +775,7 @@ def _get_n_virtual_sites_toolkit(
     force_field: "ForceField", topology: "Topology"
 ) -> int:
     """Get the number of virtual particles created by ForceField.create_openmm_system"""
-    n_atoms = topology.n_topology_atoms
+    n_atoms = topology.n_atoms
     omm_sys = force_field.create_openmm_system(topology)
 
     for force in omm_sys.getForces():

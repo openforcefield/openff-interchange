@@ -41,16 +41,23 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     else:
         has_electrostatics = False
 
-    for atom in off_system.topology.mdtop.atoms:
+    for atom in off_system.topology.atoms:
         atomic_number = atom.element.atomic_number
-        mass = atom.element.mass
+        mass = atom.element.mass._value
+        try:
+            resname = atom.metadata["residue_number"]
+            resnum = atom.metadata["residue_name"]
+        except KeyError:
+            resname = "UNK"
+            resnum = 0
+
         structure.add_atom(
             pmd.Atom(
                 atomic_number=atomic_number,
                 mass=mass,
             ),
-            resname=atom.residue.name,
-            resnum=atom.residue.index,
+            resname,
+            resnum,
         )
 
     if "Bonds" in off_system.handlers.keys():
@@ -262,16 +269,14 @@ def _from_parmed(cls, structure) -> "Interchange":
 
         out.box = structure.box[:3] * unit.angstrom
 
-    from openff.interchange.components.mdtraj import _OFFBioTop
-
     if structure.topology is not None:
+        from openff.toolkit.topology.topology import Topology
+
         mdtop = md.Topology.from_openmm(value=structure.topology)
-        top = _OFFBioTop(mdtop=mdtop)
-        out.topology = top
+        out.topology = Topology()
+        out.topology.mdtop = mdtop
     else:
         raise ConversionError("ParmEd Structure missing an topology attribute")
-
-    out.topology = top
 
     from openff.interchange.components.smirnoff import (
         SMIRNOFFAngleHandler,

@@ -42,3 +42,10 @@ dependencies:
   - types-setuptools
   - types-pkg_resources
   - pandas-stubs
+  - openff-evaluator
+  - openff-recharge
+  - openeye-toolkits
+  - cached-property
+  - cachetools
+  - pip:
+    - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor

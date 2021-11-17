@@ -127,6 +127,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
             valence_terms = self.valence_terms(topology)  # type: ignore[attr-defined]
 
             parameter_handler._check_all_valence_terms_assigned(
+                topology=topology,
                 assigned_terms=matches,
                 valence_terms=valence_terms,
                 exception_cls=UnassignedValenceParameterException,
@@ -181,7 +182,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def valence_terms(cls, topology):
         """Return all bonds in this topology."""
-        return [list(b.atoms) for b in topology.topology_bonds]
+        return [tuple(b.atoms) for b in topology.bonds]
 
     def store_matches(
         self,
@@ -200,8 +201,8 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         for key, val in matches.items():
             param = val.parameter_type
             if param.k_bondorder or param.length_bondorder:
-                top_bond = topology.get_bond_between(*key)
-                fractional_bond_order = top_bond.bond.fractional_bond_order
+                bond = topology.get_bond_between(*key)
+                fractional_bond_order = bond.fractional_bond_order
                 if not fractional_bond_order:
                     raise RuntimeError(
                         "Bond orders should already be assigned at this point"
@@ -221,6 +222,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         valence_terms = self.valence_terms(topology)
 
         parameter_handler._check_all_valence_terms_assigned(
+            topology=topology,
             assigned_terms=matches,
             valence_terms=valence_terms,
             exception_cls=UnassignedValenceParameterException,
@@ -300,11 +302,11 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
                 for p in parameter_handler.parameters
             )
         ):
-            for ref_mol in topology.reference_molecules:
+            for molecule in topology.molecules:
                 # TODO: expose conformer generation and fractional bond order assigment
                 # knobs to user via API
-                ref_mol.generate_conformers(n_conformers=1)
-                ref_mol.assign_fractional_bond_orders(
+                molecule.generate_conformers(n_conformers=1)
+                molecule.assign_fractional_bond_orders(
                     bond_order_model=handler.fractional_bond_order_method.lower(),  # type: ignore[attr-defined]
                 )
 
@@ -508,8 +510,8 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
                 smirks = param.smirks
                 if param.k_bondorder:
                     # The relevant bond order is that of the _central_ bond in the torsion
-                    top_bond = topology.get_bond_between(key[1], key[2])
-                    fractional_bond_order = top_bond.bond.fractional_bond_order
+                    bond = topology.get_bond_between(key[1], key[2])
+                    fractional_bond_order = bond.fractional_bond_order
                     if not fractional_bond_order:
                         raise RuntimeError(
                             "Bond orders should already be assigned at this point"
@@ -528,6 +530,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
                 self.slot_map[topology_key] = potential_key
 
         parameter_handler._check_all_valence_terms_assigned(
+            topology=topology,
             assigned_terms=matches,
             valence_terms=list(topology.propers),
             exception_cls=UnassignedProperTorsionParameterException,
@@ -889,9 +892,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         self, include_virtual_sites=False
     ) -> Dict[Union[VirtualSiteKey, TopologyKey], unit.Quantity]:
         """Get the total partial charge on each atom or particle."""
-        charges: DefaultDict[
-            Union[TopologyKey, VirtualSiteKey], FloatQuantity
-        ] = defaultdict(lambda: 0.0 * unit.e)
+        charges: DefaultDict[Union[TopologyKey, VirtualSiteKey], float] = defaultdict(
+            lambda: 0.0
+        )
 
         for topology_key, potential_key in self.slot_map.items():
 
@@ -1299,12 +1302,18 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         self.potentials = dict()
         self.slot_map = dict()
 
-        reference_molecules = [*topology.reference_molecules]
+        # TODO: We **really** need to evaluate shortcuts to finding matches
+        #       on all duplicate molecules, post-TopologyMolecule deprecation.
+        #       Jeff has some ideas about how the toolkit could implement
+        #       some heuristics here.
+        for molecule in topology.molecules:
+            # for reference_molecule in reference_molecules:
 
-        for reference_molecule in reference_molecules:
-
+            # TODO: Rename this method to something like `_find_matches`
             matches, potentials = self._find_reference_matches(
-                parameter_handlers, reference_molecule
+                # parameter_handlers, reference_molecule
+                parameter_handlers,
+                molecule,
             )
 
             match_mults = defaultdict(set)
@@ -1314,22 +1323,18 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             self.potentials.update(potentials)
 
-            for top_mol in topology._reference_molecule_to_topology_molecules[
-                reference_molecule
-            ]:
+            for particle in molecule.atoms:
 
-                for topology_particle in top_mol.atoms:
+                reference_index = molecule.particle_index(particle)
+                topology_index = topology.particle_index(particle)
 
-                    reference_index = topology_particle.atom.molecule_particle_index
-                    topology_index = topology_particle.topology_particle_index
+                for mult in match_mults[(reference_index,)]:
 
-                    for mult in match_mults[(reference_index,)]:
+                    top_key = TopologyKey(atom_indices=(topology_index,), mult=mult)
 
-                        top_key = TopologyKey(atom_indices=(topology_index,), mult=mult)
-
-                        self.slot_map[top_key] = matches[
-                            TopologyKey(atom_indices=(reference_index,), mult=mult)
-                        ]
+                    self.slot_map[top_key] = matches[
+                        TopologyKey(atom_indices=(reference_index,), mult=mult)
+                    ]
 
     def store_potentials(
         self,
@@ -1382,7 +1387,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         can point to multiple potentials (?); each value in the dict is a
         list of parametertypes, whereas conventional handlers don't have lists
         """
-        virtual_site_index = topology.n_topology_atoms
+        virtual_site_index = topology.n_atoms
         parameter_handler_name = getattr(parameter_handler, "_TAGNAME", None)
         if self.slot_map:
             self.slot_map = dict()

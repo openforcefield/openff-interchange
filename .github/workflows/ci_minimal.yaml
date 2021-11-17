@@ -44,14 +44,14 @@ jobs:
         df -h
         ulimit -a
 
+    - name: Install package
+      run: |
+        python setup.py develop --no-deps
+
     - name: Environment Information
       run: |
         conda info
         conda list
-
-    - name: Install package
-      run: |
-        python setup.py develop --no-deps
 
     - name: Run unit tests
       if: always()
