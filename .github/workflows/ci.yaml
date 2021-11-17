@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - topology-refactor
   pull_request:
     branches:
       - master
