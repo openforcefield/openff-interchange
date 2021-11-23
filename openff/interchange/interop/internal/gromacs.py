@@ -786,9 +786,9 @@ def _write_bonds(top_file: IO, openff_sys: "Interchange"):
                 found_match = True
             else:
                 found_match = False
-                print(f"Failed to find parameters for bond with indices {indices}")
 
         if not found_match:
+            print(f"Failed to find parameters for bond with indices {indices}")
             continue
 
         params = bond_handler.potentials[pot_key].parameters
