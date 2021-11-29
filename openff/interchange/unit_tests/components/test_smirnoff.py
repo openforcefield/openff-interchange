@@ -173,7 +173,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
         molecule.assign_partial_charges(partial_charge_method="am1bcc")
 
         # Explicitly store these, since results differ RDKit/AmberTools vs. OpenEye
-        reference_charges = [c._value for c in molecule.partial_charges]
+        reference_charges = [c.m for c in molecule.partial_charges]
 
         top = _OFFBioTop.from_molecules(molecule)
 
@@ -222,7 +222,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
 
         molecule.assign_partial_charges(partial_charge_method="am1-mulliken")
 
-        reference_charges = [c._value for c in molecule.partial_charges]
+        reference_charges = [c.m for c in molecule.partial_charges]
         reference_charges[0] += 0.1
         reference_charges[1] -= 0.1
 

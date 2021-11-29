@@ -42,3 +42,5 @@ dependencies:
   - types-setuptools
   - types-pkg_resources
   - pandas-stubs
+  - pip:
+    - git+git://github.com/openforcefield/openff-toolkit.git@openmm-optional

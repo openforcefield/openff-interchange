@@ -7,6 +7,7 @@ import numpy as np
 import openmm
 import pytest
 from openff.toolkit.topology import Molecule
+from openff.units import unit
 from openff.utilities.utilities import has_executable
 from openmm import unit as openmm_unit
 
@@ -50,7 +51,7 @@ def _top_from_smiles(
     top.mdtop = md.Topology.from_openmm(value=top.to_openmm())
     # Add dummy box vectors
     # TODO: Revisit if/after Topology.is_periodic
-    top.box_vectors = np.eye(3) * 10 * openmm_unit.nanometer
+    top.box_vectors = np.eye(3) * 10 * unit.nanometer
     return top
 
 
