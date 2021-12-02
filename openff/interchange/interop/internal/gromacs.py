@@ -572,7 +572,7 @@ def _write_atoms(
         scale_lj = openff_sys["Buckingham-6"].scale_14
 
     # Use a set to de-duplicate
-    pairs: Set[Tuple] = {*_get_14_pairs(openff_sys.topology)}
+    pairs: Set[Tuple] = {*_get_14_pairs(molecule)}
 
     lj_parameters = openff_sys["vdW"].get_system_parameters()
 

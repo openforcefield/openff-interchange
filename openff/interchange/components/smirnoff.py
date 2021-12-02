@@ -1109,7 +1109,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     def _find_slot_matches(
         cls,
         parameter_handler: Union["LibraryChargeHandler", "ChargeIncrementModelHandler"],
-        reference_molecule: Molecule,
+        unique_molecule: Molecule,
     ) -> Tuple[Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
         """
         Construct a slot and potential map for a slot based parameter handler.
@@ -1118,7 +1118,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         unique_parameter_matches = {
             tuple(sorted(key)): (key, val)
             for key, val in parameter_handler.find_matches(
-                reference_molecule.to_topology()
+                unique_molecule.to_topology()
             ).items()
         }
 
@@ -1156,19 +1156,17 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     def _find_am1_matches(
         cls,
         parameter_handler: Union["ToolkitAM1BCCHandler", ChargeIncrementModelHandler],
-        reference_molecule: Molecule,
+        unique_molecule: Molecule,
     ) -> Tuple[Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
         """Construct a slot and potential map for a charge model based parameter handler."""
-        reference_molecule = copy.deepcopy(reference_molecule)
-        reference_smiles = reference_molecule.to_smiles(
+        unique_molecule = copy.deepcopy(unique_molecule)
+        reference_smiles = unique_molecule.to_smiles(
             isomeric=True, explicit_hydrogens=True, mapped=True
         )
 
         method = getattr(parameter_handler, "partial_charge_method", "am1bcc")
 
-        partial_charges = cls._compute_partial_charges(
-            reference_molecule, method=method
-        )
+        partial_charges = cls._compute_partial_charges(unique_molecule, method=method)
 
         matches = {}
         potentials = {}
@@ -1188,7 +1186,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     def _find_reference_matches(
         cls,
         parameter_handlers: Dict[str, "ElectrostaticsHandlerType"],
-        reference_molecule: Molecule,
+        unique_molecule: Molecule,
     ) -> Tuple[Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
         """
         Construct a slot and potential map for a particular reference molecule and set of parameter handlers.
@@ -1196,7 +1194,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         matches = {}
         potentials = {}
 
-        expected_matches = {i for i in range(reference_molecule.n_atoms)}
+        expected_matches = {i for i in range(unique_molecule.n_atoms)}
 
         for handler_type in cls.parameter_handler_precedence():
 
@@ -1212,13 +1210,15 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             if handler_type in ["LibraryCharges", "ChargeIncrementModel"]:
 
                 slot_matches, slot_potentials = cls._find_slot_matches(
-                    parameter_handler, reference_molecule
+                    parameter_handler,
+                    unique_molecule,
                 )
 
             if handler_type in ["ToolkitAM1BCC", "ChargeIncrementModel"]:
 
                 am1_matches, am1_potentials = cls._find_am1_matches(
-                    parameter_handler, reference_molecule
+                    parameter_handler,
+                    unique_molecule,
                 )
 
             if slot_matches is None and am1_matches is None:
@@ -1273,7 +1273,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         if found_matches != expected_matches:
 
             raise RuntimeError(
-                f"{reference_molecule.to_smiles(explicit_hydrogens=False)} could "
+                f"{unique_molecule.to_smiles(explicit_hydrogens=False)} could "
                 f"not be fully assigned charges."
             )
 
@@ -1302,18 +1302,19 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         self.potentials = dict()
         self.slot_map = dict()
 
-        # TODO: We **really** need to evaluate shortcuts to finding matches
-        #       on all duplicate molecules, post-TopologyMolecule deprecation.
-        #       Jeff has some ideas about how the toolkit could implement
-        #       some heuristics here.
-        for molecule in topology.molecules:
-            # for reference_molecule in reference_molecules:
+        groups = topology.identical_molecule_groups
+
+        for unique_molecule_index, group in groups.items():
+
+            unique_molecule = topology.molecule(unique_molecule_index)
+
+            # TODO: Here is where the toolkit calls self.check_charges_assigned(). Do we skip this
+            #       entirely given that we are not accepting `charge_from_molecules`?
 
             # TODO: Rename this method to something like `_find_matches`
             matches, potentials = self._find_reference_matches(
-                # parameter_handlers, reference_molecule
                 parameter_handlers,
-                molecule,
+                unique_molecule,
             )
 
             match_mults = defaultdict(set)
@@ -1323,18 +1324,35 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             self.potentials.update(potentials)
 
-            for particle in molecule.atoms:
+            for unique_molecule_particle in unique_molecule.particles:
+                unique_molecule_particle_index = unique_molecule.particle_index(
+                    unique_molecule_particle
+                )
+                # particle_charge = unique_molecule.partial_charges[unique_molecule_particle_index]
 
-                reference_index = molecule.particle_index(particle)
-                topology_index = topology.particle_index(particle)
-
-                for mult in match_mults[(reference_index,)]:
-
-                    top_key = TopologyKey(atom_indices=(topology_index,), mult=mult)
-
-                    self.slot_map[top_key] = matches[
-                        TopologyKey(atom_indices=(reference_index,), mult=mult)
+                for duplicate_molecule_index, atom_map in group:
+                    duplicate_molecule = topology.molecule(duplicate_molecule_index)
+                    duplicate_molecule_particle_index = atom_map[
+                        unique_molecule_particle_index
                     ]
+                    duplicate_molecule_particle = duplicate_molecule.particle(
+                        duplicate_molecule_particle_index
+                    )
+                    topology_particle_index = topology.particle_index(
+                        duplicate_molecule_particle
+                    )
+
+                    for mult in match_mults[(unique_molecule_index,)]:
+                        topology_key = TopologyKey(
+                            atom_indices=(topology_particle_index,),
+                            mult=mult,
+                        )
+                        reference_key = TopologyKey(
+                            atom_indices=(unique_molecule_particle_index,), mult=mult
+                        )
+                        potential_key = matches[reference_key]
+
+                        self.slot_map[topology_key] = potential_key
 
     def store_potentials(
         self,
