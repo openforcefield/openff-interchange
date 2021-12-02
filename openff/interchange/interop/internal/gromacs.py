@@ -777,13 +777,16 @@ def _write_bonds(top_file: IO, openff_sys: "Interchange"):
     for bond in openff_sys.topology.mdtop.bonds:
 
         indices = tuple(sorted((bond.atom1.index, bond.atom2.index)))
+        found_match = False
         for top_key in bond_handler.slot_map:
             if top_key.atom_indices == indices:
                 pot_key = bond_handler.slot_map[top_key]
                 found_match = True
+                break
             elif top_key.atom_indices == indices[::-1]:
                 pot_key = bond_handler.slot_map[top_key]
                 found_match = True
+                break
             else:
                 found_match = False
 
