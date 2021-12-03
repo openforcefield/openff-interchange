@@ -361,7 +361,7 @@ class TestUnassignedParameters(_BaseTest):
         with pytest.raises(
             UnassignedProperTorsionParameterException,
             match="- Topology indices [(]5, 0, 1, 6[)]: "
-            r"names and elements [(](H\d+)?x H[)], [(](C\d+)?x C[)], [(](C\d+)?x C[)], [(](H\d+)?x H[)],",
+            r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
         ):
             Interchange.from_smirnoff(force_field=parsley, topology=ethanol_top)
 
