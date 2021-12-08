@@ -578,6 +578,37 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
                 potential = Potential(parameters=parameters)  # type: ignore[assignment]
             self.potentials[potential_key] = potential
 
+    @classmethod
+    def _from_toolkit(
+        cls: Type[T],
+        parameter_handler: "ProperTorsionHandler",
+        topology: "Topology",
+    ) -> T:
+        """
+        Create a SMIRNOFFProperTorsionHandler from toolkit data.
+
+        """
+        handler: T = cls(
+            type="ProperTorsions", expression="k*(1+cos(periodicity*theta-phase))"
+        )
+
+        if any(
+            getattr(p, "k_bondorder", None) is not None
+            for p in parameter_handler.parameters
+        ):
+            for ref_mol in topology.reference_molecules:
+                # TODO: expose conformer generation and fractional bond order assigment
+                # knobs to user via API
+                ref_mol.generate_conformers(n_conformers=1)
+                ref_mol.assign_fractional_bond_orders(
+                    bond_order_model=handler.fractional_bond_order_method.lower(),  # type: ignore[attr-defined]
+                )
+
+        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
+        handler.store_potentials(parameter_handler=parameter_handler)
+
+        return handler
+
 
 class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
     """Handler storing improper torsions potentials as produced by a SMIRNOFF force field."""

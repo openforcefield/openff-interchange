@@ -410,18 +410,6 @@ def test_library_charges_from_molecule():
 
 
 class TestBondOrderInterpolation(_BaseTest):
-    xml_ff_bo_bonds = """<?xml version='1.0' encoding='ASCII'?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-      <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-        <Bond smirks="[#6:1]~[#8:2]" id="bbo1"
-            k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
-            k_bondorder2="1000.0 * kilocalories_per_mole/angstrom**2"
-            length_bondorder1="1.5 * angstrom"
-            length_bondorder2="1.0 * angstrom"/>
-      </Bonds>
-    </SMIRNOFF>
-    """
-
     @pytest.mark.slow()
     def test_input_bond_orders_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
@@ -497,7 +485,8 @@ class TestBondOrderInterpolation(_BaseTest):
         mol = Molecule.from_smiles("CCO")
 
         forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo_bonds
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            self.xml_ff_bo_bonds,
         )
         forcefield.get_parameter_handler(
             "ProperTorsions"

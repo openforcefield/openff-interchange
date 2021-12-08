@@ -49,3 +49,15 @@ class _BaseTest:
     @pytest.fixture()
     def parsley_unconstrained(self):
         return ForceField("openff_unconstrained-1.0.0.offxml")
+
+    xml_ff_bo_bonds = """<?xml version='1.0' encoding='ASCII'?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+      <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+        <Bond smirks="[#6:1]~[#8:2]" id="bbo1"
+            k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
+            k_bondorder2="1000.0 * kilocalories_per_mole/angstrom**2"
+            length_bondorder1="1.5 * angstrom"
+            length_bondorder2="1.0 * angstrom"/>
+      </Bonds>
+    </SMIRNOFF>
+    """
