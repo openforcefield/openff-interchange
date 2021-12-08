@@ -65,16 +65,28 @@ class Interchange(DefaultModel):
         positions: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
 
         @validator("box")
-        def validate_box(cls, val):
-            if val is None:
-                return val
+        def validate_box(cls, value):
+            if value is None:
+                return value
             if val.shape == (3, 3):
-                return val
-            elif val.shape == (3,):
-                val = val * np.eye(3)
-                return val
+                return value
+            elif value.shape == (3,):
+                value = value * np.eye(3)
+                return value
             else:
                 raise InvalidBoxError
+
+        @validator("topology")
+        def validate_topology(cls, value):
+            if isinstance(value, Topology):
+                return Topology(other=value)
+            if isinstance(value, _OFFBioTop):
+                raise InvalidTopologyError("_OFFBioTop is no longer supported")
+            else:
+                raise InvalidTopologyError(
+                    "Could not process topology argument, expected openff.toolkit.topology.Topology. "
+                    f"Found object of type {type(value)}."
+                )
 
     def __init__(self):
         self._inner_data = self._InnerSystem()
@@ -175,18 +187,7 @@ class Interchange(DefaultModel):
 
         cls._check_supported_handlers(force_field)
 
-        if isinstance(topology, Topology):
-            # Work around https://github.com/openforcefield/openff-toolkit/issues/946#issuecomment-941143659
-            box_vectors = topology.box_vectors
-            topology.box_vectors = None
-            sys_out.topology = Topology(topology)
-            topology.box_vectors = box_vectors
-            sys_out.topology.box_vectors = topology.box_vectors
-        else:
-            raise InvalidTopologyError(
-                "Could not process topology argument, expected Topology or _OFFBioTop. "
-                f"Found object of type {type(topology)}."
-            )
+        sys_out.topology = topology
 
         parameter_handlers_by_type = {
             force_field[parameter_handler_name].__class__: force_field[
@@ -222,7 +223,7 @@ class Interchange(DefaultModel):
                 SMIRNOFFBondHandler.check_supported_parameters(force_field["Bonds"])
                 potential_handler = SMIRNOFFBondHandler._from_toolkit(
                     parameter_handler=force_field["Bonds"],
-                    topology=topology,
+                    topology=sys_out._inner_data.topology,
                     # constraint_handler=constraint_handler,
                 )
                 sys_out.handlers.update({"Bonds": potential_handler})
@@ -239,20 +240,20 @@ class Interchange(DefaultModel):
                         for val in [bond_handler, constraint_handler]
                         if val is not None
                     ],
-                    topology=topology,
+                    topology=sys_out._inner_data.topology,
                 )
                 sys_out.handlers.update({"Constraints": constraints})
                 continue
             elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers,
-                    topology=topology,
+                    topology=sys_out._inner_data.topology,
                 )
             else:
                 potential_handler_type.check_supported_parameters(parameter_handlers[0])
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers[0],
-                    topology=topology,
+                    topology=sys_out._inner_data.topology,
                 )
             sys_out.handlers.update({potential_handler.type: potential_handler})
 
@@ -420,7 +421,7 @@ class Interchange(DefaultModel):
         for name, Handler in get_handlers_callable().items():
             system.handlers[name] = Handler()
 
-        system.handlers["vdW"].store_matches(force_field, topology=topology)
+        system.handlers["vdW"].store_matches(force_field, topology=sys_out.topology)
         system.handlers["vdW"].store_potentials(force_field=force_field)
 
         atom_slots = system.handlers["vdW"].slot_map
@@ -435,7 +436,7 @@ class Interchange(DefaultModel):
 
         for name, handler in system.handlers.items():
             if name not in ["vdW", "Electrostatics"]:
-                handler.store_matches(atom_slots, topology=topology)
+                handler.store_matches(atom_slots, topology=sys_out.topology)
                 handler.store_potentials(force_field)
 
         return system
@@ -569,8 +570,8 @@ class Interchange(DefaultModel):
         self_copy = Interchange()
         self_copy._inner_data = deepcopy(self._inner_data)
 
-        atom_offset = self_copy.topology.n_atoms
         self_copy.topology = _combine_topologies(self.topology, other.topology)
+        atom_offset = self_copy.topology.n_atoms
 
         for handler_name, handler in other.handlers.items():
 

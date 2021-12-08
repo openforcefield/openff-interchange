@@ -184,6 +184,20 @@ class TestBadExports(_BaseTest):
 
 
 class TestInterchange(_BaseTest):
+    def test_input_topology_not_modified(self):
+        molecule = Molecule.from_smiles("CCO")
+        molecule.generate_conformers(n_conformers=1)
+        molecule.conformers[0] += 1 * unit.angstrom
+        topology = molecule.to_topology()
+        original = list(topology.molecules)[0].conformers[0]
+
+        sage = ForceField("openff-2.0.0.offxml")
+
+        Interchange.from_smirnoff(force_field=sage, topology=topology)
+        new = list(topology.molecules)[0].conformers[0]
+
+        assert np.sum(original - new) == pytest.approx(0 * unit.angstrom)
+
     def test_from_parsley(self):
 
         force_field = ForceField("openff-1.3.0.offxml")

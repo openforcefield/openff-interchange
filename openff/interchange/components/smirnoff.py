@@ -204,6 +204,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
                 bond = topology.get_bond_between(*key)
                 fractional_bond_order = bond.fractional_bond_order
                 if not fractional_bond_order:
+                    assert self._get_uses_interpolation(parameter_handler)
                     raise RuntimeError(
                         "Bond orders should already be assigned at this point"
                     )
@@ -272,6 +273,22 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
                 )
             self.potentials[potential_key] = potential
 
+    def _get_uses_interpolation(self, parameter_handler: "BondHandler") -> bool:
+        if (
+            any(
+                getattr(p, "k_bondorder", None) is not None
+                for p in parameter_handler.parameters
+            )
+        ) or (
+            any(
+                getattr(p, "length_bondorder", None) is not None
+                for p in parameter_handler.parameters
+            )
+        ):
+            return True
+        else:
+            return False
+
     @classmethod
     def _from_toolkit(
         cls: Type[T],
@@ -291,17 +308,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
         handler: T = cls(type="Bonds", expression="k/2*(r-length)**2")
 
-        if (
-            any(
-                getattr(p, "k_bondorder", None) is not None
-                for p in parameter_handler.parameters
-            )
-        ) or (
-            any(
-                getattr(p, "length_bondorder", None) is not None
-                for p in parameter_handler.parameters
-            )
-        ):
+        if handler._get_uses_interpolation(parameter_handler):
             for molecule in topology.molecules:
                 # TODO: expose conformer generation and fractional bond order assigment
                 # knobs to user via API
@@ -580,6 +587,37 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
                 }
                 potential = Potential(parameters=parameters)  # type: ignore[assignment]
             self.potentials[potential_key] = potential
+
+    @classmethod
+    def _from_toolkit(
+        cls: Type[T],
+        parameter_handler: "ProperTorsionHandler",
+        topology: "Topology",
+    ) -> T:
+        """
+        Create a SMIRNOFFProperTorsionHandler from toolkit data.
+
+        """
+        handler: T = cls(
+            type="ProperTorsions", expression="k*(1+cos(periodicity*theta-phase))"
+        )
+
+        if any(
+            getattr(p, "k_bondorder", None) is not None
+            for p in parameter_handler.parameters
+        ):
+            for ref_mol in topology.reference_molecules:
+                # TODO: expose conformer generation and fractional bond order assigment
+                # knobs to user via API
+                ref_mol.generate_conformers(n_conformers=1)
+                ref_mol.assign_fractional_bond_orders(
+                    bond_order_model=handler.fractional_bond_order_method.lower(),  # type: ignore[attr-defined]
+                )
+
+        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
+        handler.store_potentials(parameter_handler=parameter_handler)
+
+        return handler
 
 
 class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
