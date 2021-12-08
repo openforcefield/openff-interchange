@@ -64,6 +64,7 @@ class Interchange(DefaultModel):
         topology: Optional[_OFFBioTop] = Field(None)
         box: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
         positions: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
+        velocities: ArrayQuantity["nanometer/picosecond"] = Field(None)  # type: ignore
 
         @validator("box")
         def validate_box(cls, val):
@@ -110,6 +111,15 @@ class Interchange(DefaultModel):
     @positions.setter
     def positions(self, value):
         self._inner_data.positions = value
+
+    @property
+    def velocities(self):
+        """Get the velocities of all particles."""
+        return self._inner_data.velocities
+
+    @velocities.setter
+    def velocities(self, value):
+        self._inner_data.velocities = value
 
     @property
     def box(self):
