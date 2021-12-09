@@ -554,7 +554,7 @@ class Interchange(DefaultModel):
         from openff.interchange.models import TopologyKey
 
         warnings.warn(
-            "Iterchange object combination is experimental and likely to produce "
+            "Interchange object combination is experimental and likely to produce "
             "strange results. Any workflow using this method is not guaranteed to "
             "be suitable for production. Use with extreme caution and thoroughly "
             "validate results!"
