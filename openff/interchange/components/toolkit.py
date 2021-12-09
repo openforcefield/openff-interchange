@@ -1,6 +1,9 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
 from typing import TYPE_CHECKING, Dict, Union
 
+import numpy as np
+from openff.toolkit.utils.collections import ValidatedList
+
 if TYPE_CHECKING:
     from openff.toolkit.topology import Molecule, Topology
 
@@ -75,3 +78,10 @@ def _get_14_pairs(topology_or_molecule: Union["Topology", "Molecule"]):
                         yield (atom_j_partner, atom_i_partner)
                     else:
                         yield (atom_i_partner, atom_j_partner)
+
+
+def _validated_list_to_array(validated_list: ValidatedList) -> np.ndarray:
+    from openff.units import unit
+
+    unit_ = validated_list[0].units
+    return unit.Quantity(np.asarray([val.m for val in validated_list]), unit_)

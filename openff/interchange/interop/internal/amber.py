@@ -400,7 +400,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG MASS\n" "%FORMAT(5E16.8)\n")
-        masses = [a.mass._value for a in interchange.topology.atoms]
+        masses = [a.mass for a in interchange.topology.atoms]
         text_blob = "".join([f"{val:16.8E}" for val in masses])
         _write_text_blob(prmtop, text_blob)
 

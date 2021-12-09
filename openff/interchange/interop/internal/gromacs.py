@@ -413,7 +413,7 @@ def _write_atomtypes_lj(
 
     for atom_idx, atom_type in typemap.items():
         atom = openff_sys.topology.atom(atom_idx)
-        mass = atom.element.mass._value
+        mass = atom.element.mass
         atomic_number = atom.element.atomic_number
         sigma, epsilon = lj_parameters[atom_idx]
         # TODO: Sometimes a "bondingtype" can sneak in to as the second column. This
@@ -476,7 +476,7 @@ def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict
                 atom_type,  # atom type
                 # "XX",  # atom "bonding type", i.e. bond class
                 atom.atomic_number,
-                atom.mass._value,
+                atom.mass,
                 0.0,  # charge, overriden later in [ atoms ]
                 "A",  # ptype
                 a,
@@ -509,7 +509,7 @@ def _write_atoms(
 
     for molecule_index, atom in enumerate(molecule.atoms):
         topology_index = openff_sys.topology.atom_index(atom)
-        mass = atom.element.mass._value
+        mass = atom.element.mass
         atom_type = typemap[topology_index]
         try:
             res_idx = atom.metadata["residue_number"]

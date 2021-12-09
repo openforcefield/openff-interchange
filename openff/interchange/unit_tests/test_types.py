@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from openmm import unit as omm_unit
+from openmm import unit as openmm_unit
 from pydantic import ValidationError
 
 from openff.interchange.exceptions import UnitValidationError
@@ -27,8 +27,8 @@ class TestQuantityTypes:
             charge=0 * unit.elementary_charge,
             foo=2.0 * unit.nanometer,
             bar="90.0 degree",
-            baz=0.4 * omm_unit.nanometer,
-            qux=omm_unit.Quantity(np.float64(0.4), omm_unit.nanometer),
+            baz=0.4 * openmm_unit.nanometer,
+            qux=openmm_unit.Quantity(np.float64(0.4), openmm_unit.nanometer),
         )
 
         assert a.mass == 4 * unit.atomic_mass_constant
@@ -76,7 +76,7 @@ class TestQuantityTypes:
         m = Molecule(
             masses=[16, 1, 1],
             charges=np.asarray([-1, 0.5, 0.5]),
-            other=[2.0, 2.0] * omm_unit.second,
+            other=[2.0, 2.0] * openmm_unit.second,
             foo=np.array([2.0, -2.0, 0.0]) * unit.nanometer,
             bar=[0, 90, 180],
             baz=np.array([3, 2, 1]).tobytes(),
@@ -110,8 +110,8 @@ class TestQuantityTypes:
         class BoxModel(DefaultModel):
             box_vectors: ArrayQuantity["nanometer"]
 
-        as_tuple = ((4, 0, 0), (0, 4, 0), (0, 0, 4)) * omm_unit.nanometer
-        as_array = np.eye(3) * 4 * omm_unit.nanometer
+        as_tuple = ((4, 0, 0), (0, 4, 0), (0, 0, 4)) * openmm_unit.nanometer
+        as_array = np.eye(3) * 4 * openmm_unit.nanometer
 
         assert np.allclose(
             BoxModel(box_vectors=as_tuple).box_vectors,
@@ -160,8 +160,8 @@ class TestQuantityTypes:
 
         for new_data in [
             [3, 2, 1] * unit.second,
-            [3, 2, 1] * omm_unit.second,
-            np.asarray([3, 2, 1]) * omm_unit.second,
+            [3, 2, 1] * openmm_unit.second,
+            np.asarray([3, 2, 1]) * openmm_unit.second,
             [3, 2, 1] * unyt.second,
         ]:
             model.data = new_data
@@ -238,9 +238,9 @@ class TestQuantityTypes:
 def test_from_omm_quantity():
     from openff.interchange.types import _from_omm_quantity
 
-    from_list = _from_omm_quantity([1, 0] * omm_unit.second)
-    from_array = _from_omm_quantity(np.asarray([1, 0]) * omm_unit.second)
+    from_list = _from_omm_quantity([1, 0] * openmm_unit.second)
+    from_array = _from_omm_quantity(np.asarray([1, 0]) * openmm_unit.second)
     assert all(from_array == from_list)
 
     with pytest.raises(UnitValidationError):
-        _from_omm_quantity(True * omm_unit.femtosecond)
+        _from_omm_quantity(True * openmm_unit.femtosecond)

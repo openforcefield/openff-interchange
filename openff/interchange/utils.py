@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 import openmm
 from openff.toolkit.typing.engines.smirnoff import ForceField
-from openmm import unit as omm_unit
+from openmm import unit as openmm_unit
 from pkg_resources import resource_filename
 
 
@@ -12,22 +12,24 @@ def pint_to_openmm(quantity):
     """Convert a pint Quantity to an OpenMM unit."""
     # TODO: Move these hacks into openff-units
     if str(quantity.units) in ["kilojoule / mole", "kJ / mol"]:
-        return quantity.m * omm_unit.kilojoule_per_mole
+        return quantity.m * openmm_unit.kilojoule_per_mole
     if str(quantity.units) == "1 / nm":
-        return quantity.m / omm_unit.nanometer
+        return quantity.m / openmm_unit.nanometer
     if str(quantity.units) == "1 / Å":
-        return quantity.m / omm_unit.angstrom
+        return quantity.m / openmm_unit.angstrom
     if str(quantity.units) in [
         "kilojoule * nanometer ** 6 / mole",
         "nanometer ** 6 * kilojoule / mole",
     ]:
-        return quantity.m * omm_unit.nanometer ** 6 / omm_unit.kilojoule_per_mole
+        return quantity.m * openmm_unit.nanometer ** 6 / openmm_unit.kilojoule_per_mole
     if str(quantity.units) == "kJ * Å ** 6 / mol":
-        return quantity.m * omm_unit.angstrom ** 6 / omm_unit.kilojoule_per_mole
+        return quantity.m * openmm_unit.angstrom ** 6 / openmm_unit.kilojoule_per_mole
     if str(quantity.units) == "erg / mol":
-        return quantity.m * omm_unit.erg / omm_unit.mole
+        return quantity.m * openmm_unit.erg / openmm_unit.mole
     if str(quantity.units) == "erg * Å ** 6 / mol":
-        return quantity.m * omm_unit.erg * omm_unit.angstrom ** 6 / omm_unit.mole
+        return (
+            quantity.m * openmm_unit.erg * openmm_unit.angstrom ** 6 / openmm_unit.mole
+        )
     else:
         raise NotImplementedError(f"caught units {str(quantity.units)}")
 
@@ -78,7 +80,7 @@ def get_partial_charges_from_openmm_system(omm_system):
     # TODO: don't assume the partial charge will always be parameter 0
     # partial_charges = [openmm_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)]
     partial_charges = [
-        force.getParticleParameters(idx)[0] / omm_unit.elementary_charge
+        force.getParticleParameters(idx)[0] / openmm_unit.elementary_charge
         for idx in range(n_particles)
     ]
 

@@ -34,8 +34,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 from openff.units import unit
-from openff.units.openmm import from_openmm
-from openmm import unit as omm_unit
+from openmm import unit as openmm_unit
 from pydantic import Field
 from typing_extensions import Literal
 
@@ -44,6 +43,7 @@ from openff.interchange.components.potentials import (
     PotentialHandler,
     WrappedPotential,
 )
+from openff.interchange.components.toolkit import _validated_list_to_array
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     MissingParametersError,
@@ -52,9 +52,9 @@ from openff.interchange.exceptions import (
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 from openff.interchange.types import FloatQuantity
 
-kcal_mol = omm_unit.kilocalorie_per_mole
-kcal_mol_angstroms = kcal_mol / omm_unit.angstrom ** 2
-kcal_mol_radians = kcal_mol / omm_unit.radian ** 2
+kcal_mol = openmm_unit.kilocalorie_per_mole
+kcal_mol_angstroms = kcal_mol / openmm_unit.angstrom ** 2
+kcal_mol_radians = kcal_mol / openmm_unit.radian ** 2
 
 if TYPE_CHECKING:
     from openff.toolkit.topology import Topology
@@ -1005,7 +1005,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             virtual_site_potential = Potential(
                 parameters={
-                    "charge_increments": from_openmm(
+                    "charge_increments": _validated_list_to_array(
                         virtual_site_type.charge_increment
                     ),
                 }
@@ -1031,9 +1031,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                     virtual_site_type, f"charge_increment{i + 1}"
                 )
 
-                potential = Potential(
-                    parameters={"charge_increment": from_openmm(charge_increment)}
-                )
+                potential = Potential(parameters={"charge_increment": charge_increment})
 
                 matches[topology_key] = potential_key
                 potentials[potential_key] = potential
@@ -1048,7 +1046,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         molecule = copy.deepcopy(molecule)
         molecule.assign_partial_charges(method)
 
-        return from_openmm(molecule.partial_charges)
+        return molecule.partial_charges
 
     @classmethod
     def _library_charge_to_potentials(
@@ -1067,7 +1065,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             potential_key = PotentialKey(
                 id=parameter.smirks, mult=i, associated_handler="LibraryCharges"
             )
-            potential = Potential(parameters={"charge": from_openmm(charge)})
+            potential = Potential(parameters={"charge": charge})
 
             matches[topology_key] = potential_key
             potentials[potential_key] = potential
@@ -1096,9 +1094,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             #       maybe by implementing this in the TK?
             charge_increment = getattr(parameter, f"charge_increment{i + 1}")
 
-            potential = Potential(
-                parameters={"charge_increment": from_openmm(charge_increment)}
-            )
+            potential = Potential(parameters={"charge_increment": charge_increment})
 
             matches[topology_key] = potential_key
             potentials[potential_key] = potential
@@ -1441,9 +1437,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
             )
             for attr in ["outOfPlaneAngle", "inPlaneAngle"]:
                 if hasattr(parameter_type, attr):
-                    potential.parameters.update(
-                        {attr: from_openmm(getattr(parameter_type, attr))}
-                    )
+                    potential.parameters.update({attr: getattr(parameter_type, attr)})
             self.potentials[potential_key] = potential
 
     def _get_local_frame_weights(self, virtual_site_key: "VirtualSiteKey"):

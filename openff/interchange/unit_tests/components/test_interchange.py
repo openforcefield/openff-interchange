@@ -82,7 +82,7 @@ class TestInterchangeCombination(_BaseTest):
         openff_sys = Interchange.from_smirnoff(parsley_unconstrained, top)
 
         openff_sys.box = [4, 4, 4] * np.eye(3)
-        openff_sys.positions = mol.conformers[0]._value / 10.0
+        openff_sys.positions = mol.conformers[0]
 
         # Copy and translate atoms by [1, 1, 1]
         other = Interchange()
