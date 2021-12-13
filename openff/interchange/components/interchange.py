@@ -341,6 +341,21 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
+    def to_pdb(self, file_path: Union[Path, str], writer="toolkit"):
+        """Export this interchange to a .pdb file."""
+        from openff.units.openmm import to_openmm
+
+        if self.positions is None:
+            raise MissingPositionsError(
+                "Positions are required to write a `.pdb` file but found None."
+            )
+
+        self.topology.to_file(
+            file_path,
+            to_openmm(self.positions),
+            file_format="PDB",
+        )
+
     def to_psf(self, file_path: Union[Path, str]):
         """Export this interchange to a CHARMM-style .psf file."""
         raise UnsupportedExportError
