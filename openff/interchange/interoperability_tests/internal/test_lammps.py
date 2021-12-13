@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
-from openmm import unit as omm_unit
+from openmm import unit as openmm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
@@ -39,21 +39,21 @@ def test_to_lammps_single_mols(mol, n_mols):
     mol = Molecule.from_smiles(mol)
     mol.generate_conformers(n_conformers=1)
     top = _OFFBioTop.from_molecules(n_mols * [mol])
-    mol.conformers[0] -= np.min(mol.conformers) * omm_unit.angstrom
+    mol.conformers[0] -= np.min(mol.conformers)
 
-    top.box_vectors = np.eye(3) * np.asarray([10, 10, 10]) * omm_unit.nanometer
+    top.box_vectors = np.eye(3) * np.asarray([10, 10, 10]) * openmm_unit.nanometer
 
     if n_mols == 1:
         positions = mol.conformers[0]
     elif n_mols == 2:
         positions = np.vstack(
-            [mol.conformers[0], mol.conformers[0] + 3 * omm_unit.nanometer]
+            [mol.conformers[0], mol.conformers[0] + 3 * openmm_unit.nanometer]
         )
-        positions = positions * omm_unit.angstrom
+        positions = positions * openmm_unit.angstrom
 
     openff_sys = Interchange.from_smirnoff(parsley, top)
     openff_sys.top.mdtop = md.Topology.from_openmm(top.to_openmm())
-    openff_sys.positions = positions.value_in_unit(omm_unit.nanometer)
+    openff_sys.positions = positions.value_in_unit(openmm_unit.nanometer)
     openff_sys.box = top.box_vectors
 
     reference = get_openmm_energies(
@@ -74,9 +74,9 @@ def test_to_lammps_single_mols(mol, n_mols):
     lmp_energies.compare(
         reference,
         custom_tolerances={
-            "Nonbonded": 100 * omm_unit.kilojoule_per_mole,
-            "Electrostatics": 100 * omm_unit.kilojoule_per_mole,
-            "vdW": 100 * omm_unit.kilojoule_per_mole,
-            "Torsion": 3e-5 * omm_unit.kilojoule_per_mole,
+            "Nonbonded": 100 * openmm_unit.kilojoule_per_mole,
+            "Electrostatics": 100 * openmm_unit.kilojoule_per_mole,
+            "vdW": 100 * openmm_unit.kilojoule_per_mole,
+            "Torsion": 3e-5 * openmm_unit.kilojoule_per_mole,
         },
     )

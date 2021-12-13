@@ -9,7 +9,6 @@ from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
-from openmm import unit as omm_unit
 
 from openff.interchange.components.foyer import _RBTorsionHandler
 from openff.interchange.components.interchange import Interchange
@@ -52,7 +51,7 @@ class TestFoyer(_BaseTest):
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
         oplsaa = foyer.Forcefield(name="oplsaa")
         interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
-        interchange.positions = molecule.conformers[0].value_in_unit(omm_unit.nanometer)
+        interchange.positions = molecule.conformers[0].m_as(unit.nanometer)
         interchange.box = [4, 4, 4]
         return interchange
 
@@ -75,14 +74,14 @@ class TestFoyer(_BaseTest):
             if isinstance(molecule_or_molecules, list):
                 openff_interchange.positions = np.vstack(
                     tuple(
-                        molecule.conformers[0].value_in_unit(omm_unit.nanometer)
+                        molecule.conformers[0].m_as(unit.nanometer)
                         for molecule in molecule_or_molecules
                     )
                 )
             else:
-                openff_interchange.positions = molecule_or_molecules.conformers[
-                    0
-                ].value_in_unit(omm_unit.nanometer)
+                openff_interchange.positions = molecule_or_molecules.conformers[0].m_as(
+                    unit.nanometer
+                )
 
             openff_interchange.box = [4, 4, 4]
 

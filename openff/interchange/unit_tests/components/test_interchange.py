@@ -82,7 +82,7 @@ class TestInterchangeCombination(_BaseTest):
         openff_sys = Interchange.from_smirnoff(parsley_unconstrained, top)
 
         openff_sys.box = [4, 4, 4] * np.eye(3)
-        openff_sys.positions = mol.conformers[0]._value / 10.0
+        openff_sys.positions = mol.conformers[0]
 
         # Copy and translate atoms by [1, 1, 1]
         other = Interchange()
@@ -93,6 +93,60 @@ class TestInterchangeCombination(_BaseTest):
 
         # Just see if it can be converted into OpenMM and run
         get_openmm_energies(combined)
+
+    def test_parameters_do_not_clash(self, parsley_unconstrained):
+        thf = Molecule.from_smiles("C1CCOC1")
+        ace = Molecule.from_smiles("CC(=O)O")
+
+        thf.generate_conformers(n_conformers=1)
+        ace.generate_conformers(n_conformers=1)
+
+        def make_interchange(molecule: Molecule) -> Interchange:
+            molecule.generate_conformers(n_conformers=1)
+            interchange = Interchange.from_smirnoff(
+                force_field=parsley_unconstrained, topology=molecule.to_topology()
+            )
+            interchange.positions = molecule.conformers[0]
+
+            return interchange
+
+        thf_interchange = make_interchange(thf)
+        ace_interchange = make_interchange(ace)
+        complex_interchange = thf_interchange + ace_interchange
+
+        thf_vdw = thf_interchange["vdW"].get_system_parameters()
+        ace_vdw = ace_interchange["vdW"].get_system_parameters()
+        add_vdw = complex_interchange["vdW"].get_system_parameters()
+
+        np.testing.assert_equal(np.vstack([thf_vdw, ace_vdw]), add_vdw)
+
+        # TODO: Ensure the de-duplication is maintained after exports
+
+    def test_positions_setting(self):
+        """Test that positions exist on the result if and only if
+        both input objects have positions."""
+
+        ethane = Molecule.from_smiles("CC")
+        ethane.generate_conformers(n_conformers=1)
+        methane = Molecule.from_smiles("C")
+        methane.generate_conformers(n_conformers=1)
+
+        force_field = ForceField("openff_unconstrained-1.3.0.offxml")
+
+        ethane_interchange = Interchange.from_smirnoff(
+            force_field,
+            ethane.to_topology(),
+        )
+        methane_interchange = Interchange.from_smirnoff(
+            force_field,
+            methane.to_topology(),
+        )
+
+        assert not (methane_interchange + ethane_interchange).positions
+        methane_interchange.positions = methane.conformers[0]
+        assert not (methane_interchange + ethane_interchange).positions
+        ethane_interchange.positions = ethane.conformers[0]
+        assert (methane_interchange + ethane_interchange).positions is not None
 
 
 class TestUnimplementedSMIRNOFFCases(_BaseTest):

@@ -43,7 +43,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
 
     for atom in off_system.topology.atoms:
         atomic_number = atom.element.atomic_number
-        mass = atom.element.mass._value
+        mass = atom.element.mass
         try:
             resname = atom.metadata["residue_number"]
             resnum = atom.metadata["residue_name"]
