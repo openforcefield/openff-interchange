@@ -584,8 +584,14 @@ class Interchange(DefaultModel):
                 self_handler.slot_map.update({new_top_key: pot_key})
                 self_handler.potentials.update({pot_key: handler.potentials[pot_key]})
 
-        new_positions = np.vstack([self_copy.positions, other.positions])
-        self_copy.positions = new_positions
+        if self_copy.positions is not None and other.positions is not None:
+            new_positions = np.vstack([self_copy.positions, other.positions])
+            self_copy.positions = new_positions
+        else:
+            warnings.warn(
+                "Setting positions to None because one or both objects added together were missing positions."
+            )
+            self_copy.positions = None
 
         if not np.all(self_copy.box == other.box):
             raise NotImplementedError(
