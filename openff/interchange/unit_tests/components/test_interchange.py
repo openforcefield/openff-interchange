@@ -123,6 +123,32 @@ class TestInterchangeCombination(_BaseTest):
 
         # TODO: Ensure the de-duplication is maintained after exports
 
+    def test_positions_setting(self):
+        """Test that positions exist on the result if and only if
+        both input objects have positions."""
+
+        ethane = Molecule.from_smiles("CC")
+        ethane.generate_conformers(n_conformers=1)
+        methane = Molecule.from_smiles("C")
+        methane.generate_conformers(n_conformers=1)
+
+        force_field = ForceField("openff_unconstrained-1.3.0.offxml")
+
+        ethane_interchange = Interchange.from_smirnoff(
+            force_field,
+            ethane.to_topology(),
+        )
+        methane_interchange = Interchange.from_smirnoff(
+            force_field,
+            methane.to_topology(),
+        )
+
+        assert not (methane_interchange + ethane_interchange).positions
+        methane_interchange.positions = methane.conformers[0]
+        assert not (methane_interchange + ethane_interchange).positions
+        ethane_interchange.positions = ethane.conformers[0]
+        assert (methane_interchange + ethane_interchange).positions is not None
+
 
 class TestUnimplementedSMIRNOFFCases(_BaseTest):
     def test_bogus_smirnoff_handler(self, parsley):
