@@ -20,8 +20,6 @@ if TYPE_CHECKING:
     from foyer.forcefield import Forcefield
     from foyer.topology_graph import TopologyGraph
 
-    from openff.interchange.components.mdtraj import _OFFBioTop
-
 # Is this the safest way to achieve PotentialKey id separation?
 POTENTIAL_KEY_SEPARATOR = "-"
 
@@ -225,6 +223,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
         atom_slots: Dict[TopologyKey, PotentialKey],
         topology: "_OFFBioTop",
     ) -> None:
+        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for bond in topology.mdtop.bonds:
             atoms_indices = tuple((bond.atom1.index, bond.atom2.index))
             top_key = TopologyKey(atom_indices=atoms_indices)
@@ -260,6 +259,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
         atom_slots: Dict[TopologyKey, PotentialKey],
         topology: "_OFFBioTop",
     ) -> None:
+        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for angle in _iterate_angles(topology.mdtop):
             atoms_indices = tuple(a.index for a in angle)
             top_key = TopologyKey(atom_indices=atoms_indices)
@@ -296,6 +296,7 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
         atom_slots: Dict[TopologyKey, PotentialKey],
         topology: "_OFFBioTop",
     ) -> None:
+        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for proper in _iterate_propers(topology.mdtop):
             atoms_indices = tuple(a.index for a in proper)
             top_key = TopologyKey(atom_indices=atoms_indices)
