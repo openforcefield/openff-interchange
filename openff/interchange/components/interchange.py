@@ -552,7 +552,7 @@ class Interchange(DefaultModel):
             except KeyError as key_error:
                 raise UnsupportedCombinationError(
                     f"`other` Interchange object has handler with name {handler_name} not "
-                    f"found in `self`. Found while processing\n{self=}\nand\n{other=}"
+                    f"found in `self`. Found while processing\n{self}\nand\n{other}"
                 ) from key_error
 
             for top_key, pot_key in handler.slot_map.items():

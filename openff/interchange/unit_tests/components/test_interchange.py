@@ -10,7 +10,7 @@ from openff.utilities.testing import skip_if_missing
 from pydantic import ValidationError
 
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop
+from openff.interchange.components.mdtraj import _OFFBioTop, _store_bond_partners
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
     InvalidTopologyError,
@@ -202,6 +202,7 @@ class TestInterchange(_BaseTest):
         benzene.name = "BENZ"
         biotop = _OFFBioTop.from_molecules(benzene)
         biotop.mdtop = md.Topology.from_openmm(biotop.to_openmm())
+        _store_bond_partners(biotop.mdtop)
         out = Interchange.from_foyer(force_field=oplsaa, topology=biotop)
         out.box = [4, 4, 4]
         out.positions = benzene.conformers[0]
