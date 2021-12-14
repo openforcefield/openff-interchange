@@ -376,11 +376,11 @@ class TestOpenMMToPDB(_BaseTest):
         with pytest.raises(MissingPositionsError):
             out.to_pdb("file_should_not_exist.pdb")
 
-        with pytest.raises(UnsupportedExportError):
-            out.to_pdb("file_should_not_exist.pdb", writer="magik")
-
         out.positions = molecule.conformers[0]
 
         out.to_pdb("out.pdb")
 
         md.load("out.pdb")
+
+        with pytest.raises(UnsupportedExportError):
+            out.to_pdb("file_should_not_exist.pdb", writer="magik")
