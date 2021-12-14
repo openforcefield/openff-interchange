@@ -1,8 +1,10 @@
-"""Interfaces with ParmEd."""
-from typing import TYPE_CHECKING
+"""Interfaces with OpenMM."""
+from pathlib import Path
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 import openmm
+from openff.toolkit.topology import Topology
 from openff.units import unit as off_unit
 from openff.units.openmm import from_openmm as from_openmm_unit
 from openmm import unit
@@ -833,3 +835,22 @@ def _convert_periodic_torsion_force(force):
         proper_torsion_handler.potentials.update({pot_key: pot})
 
     return proper_torsion_handler
+
+
+def _to_pdb(file_path: Union[Path, str], topology: Topology, positions):
+    from openff.units.openmm import to_openmm
+    from openmm import app
+
+    if topology.n_topology_atoms == 0:
+        # Assume this "topology" is an _OFFBioTop with an MDTraj Topology
+        from openff.interchange.components.mdtraj import _OFFBioTop
+
+        assert isinstance(topology, _OFFBioTop), "Topology is not an _OFFBioTop"
+        openmm_topology = topology.mdtop.to_openmm()
+    else:
+        openmm_topology = topology.to_openmm(ensure_unique_atom_names=False)
+
+    positions = to_openmm(positions)
+
+    with open(file_path, "w") as outfile:
+        app.PDBFile.writeFile(openmm_topology, positions, outfile)

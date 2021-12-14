@@ -319,7 +319,7 @@ class Interchange(DefaultModel):
             raise UnsupportedExportError
 
     def to_top(self, file_path: Union[Path, str], writer="internal"):
-        """Export this interchange to a .top file."""
+        """Export this Interchange to a .top file."""
         if writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
 
@@ -343,13 +343,13 @@ class Interchange(DefaultModel):
             raise UnsupportedExportError
 
     def to_openmm(self, combine_nonbonded_forces: bool = False):
-        """Export this interchange to an OpenMM System."""
+        """Export this Interchange to an OpenMM System."""
         from openff.interchange.interop.openmm import to_openmm as to_openmm_
 
         return to_openmm_(self, combine_nonbonded_forces=combine_nonbonded_forces)
 
     def to_prmtop(self, file_path: Union[Path, str], writer="internal"):
-        """Export this interchange to an Amber .prmtop file."""
+        """Export this Interchange to an Amber .prmtop file."""
         if writer == "internal":
             from openff.interchange.interop.internal.amber import to_prmtop
 
@@ -363,16 +363,30 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
+    def to_pdb(self, file_path: Union[Path, str], writer="openmm"):
+        """Export this Interchange to a .pdb file."""
+        if self.positions is None:
+            raise MissingPositionsError(
+                "Positions are required to write a `.pdb` file but found None."
+            )
+
+        if writer == "openmm":
+            from openff.interchange.interop.openmm import _to_pdb
+
+            _to_pdb(file_path, self.topology, self.positions)
+        else:
+            raise UnsupportedExportError
+
     def to_psf(self, file_path: Union[Path, str]):
-        """Export this interchange to a CHARMM-style .psf file."""
+        """Export this Interchange to a CHARMM-style .psf file."""
         raise UnsupportedExportError
 
     def to_crd(self, file_path: Union[Path, str]):
-        """Export this interchange to a CHARMM-style .crd file."""
+        """Export this Interchange to a CHARMM-style .crd file."""
         raise UnsupportedExportError
 
     def to_inpcrd(self, file_path: Union[Path, str], writer="internal"):
-        """Export this interchange to an Amber .inpcrd file."""
+        """Export this Interchange to an Amber .inpcrd file."""
         if writer == "internal":
             from openff.interchange.interop.internal.amber import to_inpcrd
 
@@ -387,7 +401,7 @@ class Interchange(DefaultModel):
             raise UnsupportedExportError
 
     def _to_parmed(self):
-        """Export this interchange to a ParmEd Structure."""
+        """Export this Interchange to a ParmEd Structure."""
         from openff.interchange.interop.parmed import _to_parmed
 
         return _to_parmed(self)

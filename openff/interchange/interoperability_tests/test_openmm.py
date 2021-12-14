@@ -15,6 +15,7 @@ from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.interchange.exceptions import (
+    MissingPositionsError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
@@ -361,3 +362,25 @@ class TestOpenMMVirtualSites(_BaseTest):
             out.to_openmm(combine_nonbonded_forces=True),
             parsley_with_monovalent_lone_pair.create_openmm_system(mol.to_topology()),
         )
+
+
+class TestOpenMMToPDB(_BaseTest):
+    def test_to_pdb(self):
+        molecule = Molecule.from_smiles("O")
+        molecule.generate_conformers(n_conformers=1)
+
+        parsley = ForceField("openff_unconstrained-1.0.0.offxml")
+
+        out = Interchange.from_smirnoff(parsley, molecule.to_topology())
+
+        with pytest.raises(MissingPositionsError):
+            out.to_pdb("file_should_not_exist.pdb")
+
+        out.positions = molecule.conformers[0]
+
+        out.to_pdb("out.pdb")
+
+        md.load("out.pdb")
+
+        with pytest.raises(UnsupportedExportError):
+            out.to_pdb("file_should_not_exist.pdb", writer="magik")
