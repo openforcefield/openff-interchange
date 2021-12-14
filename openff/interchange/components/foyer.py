@@ -68,7 +68,7 @@ class FoyerVDWHandler(PotentialHandler):
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     mixing_rule: str = "geometric"
     scale_13: float = 0.0
-    scale_14: float = 0.5  # TODO: Replace with Foyer API point?
+    scale_14: float = 0.5
     scale_15: float = 1.0
     method: str = "cutoff"
     cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
@@ -123,7 +123,7 @@ class FoyerElectrostaticsHandler(PotentialHandler):
     expression: str = "coul"
     charges: Dict[TopologyKey, float] = dict()
     scale_13: float = 0.0
-    scale_14: float = 0.5  # TODO: Replace with Foyer API point?
+    scale_14: float = 0.5
     scale_15: float = 1.0
     cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
 
@@ -143,6 +143,8 @@ class FoyerElectrostaticsHandler(PotentialHandler):
             charge = foyer_params["charge"]
             charge = charge * unit.elementary_charge
             self.charges[top_key] = charge
+            self.slot_map[top_key] = pot_key
+            self.potentials[pot_key] = Potential(parameters={"charge": charge})
 
 
 class FoyerConnectedAtomsHandler(PotentialHandler):
@@ -157,8 +159,6 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
         topology: "_OFFBioTop",
     ) -> None:
         """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
-        print(f"Not finding matches with handler type {self.type}")
-        """
         for connection in getattr(topology, self.connection_attribute):
             try:
                 atoms_iterable = connection.atoms
@@ -174,7 +174,6 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
             self.slot_map[top_key] = PotentialKey(
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids)
             )
-        """
 
     def store_potentials(self, force_field: "Forcefield") -> None:
         """Populate self.potentials with key-val pairs of [PotentialKey, Potential]."""

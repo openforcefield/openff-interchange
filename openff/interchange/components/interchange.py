@@ -422,14 +422,24 @@ class Interchange(DefaultModel):
 
         """
         from openff.interchange.components.foyer import get_handlers_callable
+        from openff.interchange.components.mdtraj import _store_bond_partners
 
         system = cls()
         system.topology = topology
 
-        for name, Handler in get_handlers_callable().items():
-            system.handlers[name] = Handler()
+        _store_bond_partners(system.topology.mdtop)
 
-        system.handlers["vdW"].store_matches(force_field, topology=topology)
+        for name, Handler in get_handlers_callable().items():
+            if name == "Electrostatics":
+                handler = Handler(scale_14=force_field.coulomb14scale)
+            if name == "vdW":
+                handler = Handler(scale_14=force_field.lj14scale)
+            else:
+                handler = Handler()
+
+            system.handlers[name] = handler
+
+        system.handlers["vdW"].store_matches(force_field, topology=system.topology)
         system.handlers["vdW"].store_potentials(force_field=force_field)
 
         atom_slots = system.handlers["vdW"].slot_map
@@ -444,7 +454,7 @@ class Interchange(DefaultModel):
 
         for name, handler in system.handlers.items():
             if name not in ["vdW", "Electrostatics"]:
-                handler.store_matches(atom_slots, topology=topology)
+                handler.store_matches(atom_slots, topology=system.topology)
                 handler.store_potentials(force_field)
 
         return system
@@ -582,16 +592,29 @@ class Interchange(DefaultModel):
 
         atom_offset = self.topology.mdtop.n_atoms
 
+        """
+        for handler_name in self.handlers:
+            if type(self.handlers[handler_name]).__name__ == "FoyerElectrostaticsHandler":
+                self.handlers[handler_name].slot_map = self.handlers[handler_name].charges
+        """
+
         for handler_name, handler in other.handlers.items():
 
-            # TODO: Specify behavior in this case
+            """
+            if type(handler).__name__ == "FoyerElectrostaticsHandler":
+                handler.slot_map = handler.charges
+            """
+
+            # TODO: Actually specify behavior in this case
             try:
                 self_handler = self_copy.handlers[handler_name]
-            except KeyError as key_error:
-                raise UnsupportedCombinationError(
-                    f"`other` Interchange object has handler with name {handler_name} not "
-                    f"found in `self`. Found while processing\n{self}\nand\n{other}"
-                ) from key_error
+            except KeyError:
+                self.add_handler(handler_name, handler)
+                warnings.warn(
+                    f"'other' Interchange object has handler with name {handler_name} not "
+                    f"found in 'self,' but it has now been added."
+                )
+                continue
 
             for top_key, pot_key in handler.slot_map.items():
 
