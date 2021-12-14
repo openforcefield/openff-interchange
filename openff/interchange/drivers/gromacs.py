@@ -256,7 +256,7 @@ def _parse_gmx_energy(edr_path: str) -> EnergyReport:
         from pandas import DataFrame
 
     df: DataFrame = panedr.edr_to_df("out.edr")
-    energies_dict: Dict = df.to_dict("index")
+    energies_dict: Dict = df.to_dict("index")  # type: ignore[assignment]
     energies = energies_dict[0.0]
     energies.pop("Time")
 
