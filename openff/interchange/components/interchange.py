@@ -57,7 +57,7 @@ class Interchange(DefaultModel):
     .. warning :: This API is experimental and subject to change.
     """
 
-    class InnerSystem(DefaultModel):
+    class _InnerSystem(DefaultModel):
         """Inner representation of Interchange components."""
 
         # TODO: Ensure these fields are hidden from the user as intended
@@ -79,7 +79,7 @@ class Interchange(DefaultModel):
                 raise InvalidBoxError
 
     def __init__(self):
-        self._inner_data = self.InnerSystem()
+        self._inner_data = self._InnerSystem()
 
     @property
     def handlers(self):
@@ -294,8 +294,11 @@ class Interchange(DefaultModel):
 
             to_gro(self, file_path, decimal=decimal)
 
+        else:
+            raise UnsupportedExportError
+
     def to_top(self, file_path: Union[Path, str], writer="internal"):
-        """Export this interchange to a .top file."""
+        """Export this Interchange to a .top file."""
         if writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
 
@@ -306,24 +309,32 @@ class Interchange(DefaultModel):
 
             to_top(self, file_path)
 
-    def to_lammps(self, file_path: Union[Path, str], writer="internal"):
-        """Export this Interchange to a LAMMPS data file."""
-        if writer != "internal":
+        else:
             raise UnsupportedExportError
 
-        from openff.interchange.interop.internal.lammps import to_lammps
+    def to_lammps(self, file_path: Union[Path, str], writer="internal"):
+        """Export this Interchange to a LAMMPS data file."""
+        if writer == "internal":
+            from openff.interchange.interop.internal.lammps import to_lammps
 
-        to_lammps(self, file_path)
+            to_lammps(self, file_path)
+        else:
+            raise UnsupportedExportError
 
     def to_openmm(self, combine_nonbonded_forces: bool = False):
-        """Export this interchange to an OpenMM System."""
+        """Export this Interchange to an OpenMM System."""
         from openff.interchange.interop.openmm import to_openmm as to_openmm_
 
         return to_openmm_(self, combine_nonbonded_forces=combine_nonbonded_forces)
 
-    def _to_prmtop(self, file_path: Union[Path, str], writer="parmed"):
-        """Export this interchange to an Amber .prmtop file."""
-        if writer == "parmed":
+    def to_prmtop(self, file_path: Union[Path, str], writer="internal"):
+        """Export this Interchange to an Amber .prmtop file."""
+        if writer == "internal":
+            from openff.interchange.interop.internal.amber import to_prmtop
+
+            to_prmtop(self, file_path)
+
+        elif writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
 
             ParmEdWrapper().to_file(self, file_path)
@@ -331,9 +342,36 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
-    def _to_crd(self, file_path: Union[Path, str], writer="parmed"):
-        """Export this interchange to an Amber .crd file."""
-        if writer == "parmed":
+    def to_pdb(self, file_path: Union[Path, str], writer="openmm"):
+        """Export this Interchange to a .pdb file."""
+        if self.positions is None:
+            raise MissingPositionsError(
+                "Positions are required to write a `.pdb` file but found None."
+            )
+
+        if writer == "openmm":
+            from openff.interchange.interop.openmm import _to_pdb
+
+            _to_pdb(file_path, self.topology, self.positions)
+        else:
+            raise UnsupportedExportError
+
+    def to_psf(self, file_path: Union[Path, str]):
+        """Export this Interchange to a CHARMM-style .psf file."""
+        raise UnsupportedExportError
+
+    def to_crd(self, file_path: Union[Path, str]):
+        """Export this Interchange to a CHARMM-style .crd file."""
+        raise UnsupportedExportError
+
+    def to_inpcrd(self, file_path: Union[Path, str], writer="internal"):
+        """Export this Interchange to an Amber .inpcrd file."""
+        if writer == "internal":
+            from openff.interchange.interop.internal.amber import to_inpcrd
+
+            to_inpcrd(self, file_path)
+
+        elif writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
 
             ParmEdWrapper().to_file(self, file_path)
@@ -342,7 +380,7 @@ class Interchange(DefaultModel):
             raise UnsupportedExportError
 
     def _to_parmed(self):
-        """Export this interchange to a ParmEd Structure."""
+        """Export this Interchange to a ParmEd Structure."""
         from openff.interchange.interop.parmed import _to_parmed
 
         return _to_parmed(self)
@@ -531,7 +569,7 @@ class Interchange(DefaultModel):
         from openff.interchange.models import TopologyKey
 
         warnings.warn(
-            "Iterchange object combination is experimental and likely to produce "
+            "Interchange object combination is experimental and likely to produce "
             "strange results. Any workflow using this method is not guaranteed to "
             "be suitable for production. Use with extreme caution and thoroughly "
             "validate results!"
@@ -568,8 +606,14 @@ class Interchange(DefaultModel):
                 self_handler.slot_map.update({new_top_key: pot_key})
                 self_handler.potentials.update({pot_key: handler.potentials[pot_key]})
 
-        new_positions = np.vstack([self_copy.positions, other.positions])
-        self_copy.positions = new_positions
+        if self_copy.positions is not None and other.positions is not None:
+            new_positions = np.vstack([self_copy.positions, other.positions])
+            self_copy.positions = new_positions
+        else:
+            warnings.warn(
+                "Setting positions to None because one or both objects added together were missing positions."
+            )
+            self_copy.positions = None
 
         if not np.all(self_copy.box == other.box):
             raise UnsupportedCombinationError(

@@ -1,5 +1,7 @@
 name: openff-interchange-docs
 channels:
+  # Skip installing CUDA to speed up builds
+  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
 dependencies:
   # Base depends
@@ -10,9 +12,16 @@ dependencies:
   - openff-toolkit-base
   - openff-units
   - openff-utilities
+  - openmm
   - jax
   - ele
+  - intermol
+  - pytest
+  - mdtraj
   # readthedocs dependencies
   - myst-parser
   - numpydoc
-  - sphinx_rtd_theme
+  - autodoc-pydantic
+  - sphinx=4.2.0
+  - pip:
+    - git+https://github.com/openforcefield/openff-sphinx-theme.git@main

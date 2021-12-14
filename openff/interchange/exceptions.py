@@ -193,6 +193,12 @@ class AmberError(BaseException):
     """
 
 
+class AmberExecutableNotFoundError(AmberError):
+    """
+    Exception for when an Amber-related excutable is not found.
+    """
+
+
 class SanderError(AmberError):
     """
     Exception for when a sander subprocess fails.
