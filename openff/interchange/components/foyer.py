@@ -82,11 +82,11 @@ class FoyerVDWHandler(PotentialHandler):
         from foyer.atomtyper import find_atomtypes
 
         if topology.n_topology_atoms == 0:
-            from parmed.openmm import load_topology
+            from parmed.openmm import load_topology  # type: ignore
 
             _store_bond_partners(topology.mdtop)
             top_graph = TopologyGraph.from_parmed(
-                load_topology(topology.mdtop.to_openmm())
+                structure=load_topology(topology.mdtop.to_openmm())
             )
         else:
             top_graph = TopologyGraph.from_openff_topology(openff_topology=topology)
