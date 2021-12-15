@@ -187,15 +187,13 @@ class TestBadExports(_BaseTest):
 
 
 class TestInterchange(_BaseTest):
-    def test_from_parsley(self):
-
-        force_field = ForceField("openff-1.3.0.offxml")
+    def test_from_parsley(self, parsley):
 
         top = _OFFBioTop.from_molecules(
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")]
         )
 
-        out = Interchange.from_smirnoff(force_field, top)
+        out = Interchange.from_smirnoff(parsley, top)
 
         assert "Constraints" in out.handlers.keys()
         assert "Bonds" in out.handlers.keys()
@@ -239,3 +237,23 @@ class TestInterchange(_BaseTest):
         get_gromacs_energies(out)
         get_openmm_energies(out)
         get_lammps_energies(out)
+
+    def test_visualize(self, parsley):
+        import nglview
+
+        molecule = Molecule.from_smiles("CCO")
+        molecule.generate_conformers(n_conformers=1)
+
+        out = Interchange.from_smirnoff(
+            force_field=parsley,
+            topology=molecule.to_topology(),
+        )
+
+        with pytest.raises(
+            MissingPositionsError, match="Cannot visualize system without positions."
+        ):
+            out.visualize()
+
+        out.positions = molecule.conformers[0]
+
+        assert isinstance(out.visualize(), nglview.NGLWidget)

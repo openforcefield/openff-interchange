@@ -34,6 +34,8 @@ from openff.interchange.types import ArrayQuantity
 if TYPE_CHECKING:
     if has_package("foyer"):
         from foyer.forcefield import Forcefield as FoyerForcefield
+    if has_package("nglview"):
+        import nglview
 
 _SUPPORTED_SMIRNOFF_HANDLERS = {
     "Constraints",
@@ -270,6 +272,41 @@ class Interchange(DefaultModel):
             sys_out.box = box
 
         return sys_out
+
+    def visualize(self, backend: str = "nglview"):
+        """
+        Visualize this Interchange.
+
+        This currently only uses NGLview. Other engines may be added in the future.
+
+        Parameters
+        ----------
+        backend : str, default="nglview"
+            The backend to use for visualization. Currently only "nglview" is supported.
+
+        Returns
+        -------
+        widget : nglview.NGLWidget
+            The NGLWidget containing the visualization.
+
+        """
+        if backend == "nglview":
+            return self._visualize_nglview()
+        else:
+            raise UnsupportedExportError
+
+    @requires_package("nglview")
+    def _visualize_nglview(self) -> "nglview.NGLWidget":
+        """Visualize the system using NGLView via a PDB file."""
+        import nglview
+
+        try:
+            self.to_pdb("_tmp_pdb_file.pdb", writer="openmm")
+        except MissingPositionsError as error:
+            raise MissingPositionsError(
+                "Cannot visualize system without positions."
+            ) from error
+        return nglview.show_file("_tmp_pdb_file.pdb")
 
     def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 8):
         """Export this Interchange object to a .gro file."""
