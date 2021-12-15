@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Dict, Union
 
 from openff.units import unit
 from openff.utilities.utilities import temporary_cd
-from openmm import unit as omm_unit
+from openmm import unit as openmm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from openff.interchange.components.smirnoff import SMIRNOFFvdWHandler
 
 
-def _write_input_file(interchange: "Interchange"):
+def _write_input_file(interchange: "Interchange") -> None:
     with open("auto_generated.in", "w") as input_file:
         input_file.write(
             "single-point energy\n" "&cntrl\n" "imin=1,\n" "maxcyc=0,\n" "ntb=1,\n"
@@ -73,7 +73,7 @@ def _write_input_file(interchange: "Interchange"):
 def get_amber_energies(
     off_sys: Interchange,
     writer: str = "internal",
-    electrostatics=True,
+    electrostatics: bool = True,
 ) -> EnergyReport:
     """
     Given an OpenFF Interchange object, return single-point energies as computed by Amber.
@@ -134,8 +134,8 @@ def _run_sander(
     inpcrd_file: Union[Path, str],
     prmtop_file: Union[Path, str],
     input_file: Union[Path, str],
-    electrostatics=True,
-):
+    electrostatics: bool = True,
+) -> EnergyReport:
     """
     Given Amber files, return single-point energies as computed by Amber.
 
@@ -180,7 +180,7 @@ def _run_sander(
     if sander.returncode:
         raise SanderError(err)
 
-    energies, _ = _group_energy_terms("mdinfo")
+    energies = _group_energy_terms("mdinfo")
 
     energy_report = EnergyReport(
         energies={
@@ -195,7 +195,7 @@ def _run_sander(
     return energy_report
 
 
-def _group_energy_terms(mdinfo: str):
+def _group_energy_terms(mdinfo: str) -> Dict[str, openmm_unit.Quantity]:
     """
     Parse AMBER output file and group the energy terms in a dict.
 
@@ -225,7 +225,7 @@ def _group_energy_terms(mdinfo: str):
     ranges = [[1, 24], [26, 49], [51, 77]]
 
     e_out = dict()
-    potential = 0 * omm_unit.kilocalories_per_mole
+    potential = 0 * openmm_unit.kilocalories_per_mole
     for line in all_lines[startline + 1 :]:
         if "=" in line:
             for i in range(3):
@@ -233,7 +233,9 @@ def _group_energy_terms(mdinfo: str):
                 term = line[r[0] : r[1]]
                 if "=" in term:
                     energy_type, energy_value = term.strip().split("=")
-                    energy_value = float(energy_value) * omm_unit.kilocalories_per_mole
+                    energy_value = (
+                        float(energy_value) * openmm_unit.kilocalories_per_mole
+                    )
                     potential += energy_value
                     energy_type = energy_type.rstrip()
                     e_out[energy_type] = energy_value
@@ -241,12 +243,12 @@ def _group_energy_terms(mdinfo: str):
             break
     e_out["ENERGY"] = potential
 
-    return e_out, mdinfo
+    return e_out
 
 
-def _get_amber_energy_vdw(amber_energies: Dict):
+def _get_amber_energy_vdw(amber_energies: Dict) -> openmm_unit.Quantity:
     """Get the total nonbonded energy from a set of Amber energies."""
-    amber_vdw = 0.0 * omm_unit.kilojoule_per_mole
+    amber_vdw = 0.0 * openmm_unit.kilojoule_per_mole
     for key in ["VDWAALS", "1-4 VDW", "1-4 NB"]:
         try:
             amber_vdw += amber_energies[key]
@@ -256,9 +258,9 @@ def _get_amber_energy_vdw(amber_energies: Dict):
     return amber_vdw
 
 
-def _get_amber_energy_coul(amber_energies: Dict):
+def _get_amber_energy_coul(amber_energies: Dict) -> openmm_unit.Quantity:
     """Get the total nonbonded energy from a set of Amber energies."""
-    amber_coul = 0.0 * omm_unit.kilojoule_per_mole
+    amber_coul = 0.0 * openmm_unit.kilojoule_per_mole
     for key in ["EEL", "1-4 EEL"]:
         try:
             amber_coul += amber_energies[key]

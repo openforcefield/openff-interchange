@@ -196,7 +196,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
             def ensure_unique_key(
                 handler: Union[BaseProperTorsionHandler, BaseImproperTorsionHandler],
                 key: TopologyKey,
-            ):
+            ) -> None:
                 if key in handler.slot_map:
                     key.mult += 1  # type: ignore[operator]
                     ensure_unique_key(handler, key)

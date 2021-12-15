@@ -84,8 +84,7 @@ def test_combine_topologies():
 
     topology = molecule.to_topology()
 
-    top = _OFFBioTop()
-    top.mdtop = md.Topology.from_openmm(topology.to_openmm())
+    top = _OFFBioTop(mdtop=md.Topology.from_openmm(topology.to_openmm()))
 
     combined = _combine_topologies(top, top)
 

@@ -1,18 +1,22 @@
 """Temporary utilities to use an MDTraj Trajectory with an OpenFF Trajectory."""
 import copy
+from typing import TYPE_CHECKING, Any, Generator, Tuple
 
 import mdtraj as md
 from openff.toolkit.topology import Topology
+
+if TYPE_CHECKING:
+    from mdtraj import Atom
 
 
 class _OFFBioTop(Topology):
     """A subclass of an OpenFF Topology that carries around an MDTraj topology."""
 
-    def __init__(self, mdtop=None, *args, **kwargs):
+    def __init__(self, mdtop: md.Topology, *args: Any, **kwargs: Any) -> None:
         self.mdtop = mdtop
         super().__init__(*args, **kwargs)
 
-    def copy_initializer(self, other: Topology):
+    def copy_initializer(self, other: Topology) -> None:
         # TODO: The OFFBioTop cannot use the `other` kwarg until TK 946 is resolved.
         self._aromaticity_model = other.aromaticity_model
         self._constrained_atom_pairs = copy.deepcopy(other.constrained_atom_pairs)
@@ -25,7 +29,7 @@ class _OFFBioTop(Topology):
         self._topology_molecules = copy.deepcopy(other.topology_molecules)
 
 
-def _store_bond_partners(mdtop):
+def _store_bond_partners(mdtop: md.Topology) -> None:
     for atom in mdtop.atoms:
         atom._bond_partners = []
     for bond in mdtop.bonds:
@@ -33,7 +37,9 @@ def _store_bond_partners(mdtop):
         bond.atom2._bond_partners.append(bond.atom1)
 
 
-def _iterate_angles(mdtop):
+def _iterate_angles(
+    mdtop: md.Topology,
+) -> Generator[Tuple["Atom", "Atom", "Atom"], None, None]:
     for atom1 in mdtop.atoms:
         for atom2 in atom1._bond_partners:
             for atom3 in atom2._bond_partners:
@@ -42,11 +48,13 @@ def _iterate_angles(mdtop):
                 if atom1.index < atom3.index:
                     yield (atom1, atom2, atom3)
                 else:
-                    # Do no duplicate
+                    # Do not duplicate
                     pass  # yield (atom3, atom2, atom1)
 
 
-def _iterate_propers(mdtop):
+def _iterate_propers(
+    mdtop: md.Topology,
+) -> Generator[Tuple["Atom", "Atom", "Atom", "Atom"], None, None]:
     for atom1 in mdtop.atoms:
         for atom2 in atom1._bond_partners:
             for atom3 in atom2._bond_partners:
@@ -63,7 +71,9 @@ def _iterate_propers(mdtop):
                         pass  # yield (atom4, atom3, atom2, atom1)
 
 
-def _iterate_impropers(mdtop):
+def _iterate_impropers(
+    mdtop: md.Topology,
+) -> Generator[Tuple["Atom", "Atom", "Atom", "Atom"], None, None]:
     for atom1 in mdtop.atoms:
         for atom2 in atom1._bond_partners:
             for atom3 in atom2._bond_partners:
@@ -77,7 +87,7 @@ def _iterate_impropers(mdtop):
                     yield (atom2, atom1, atom3, atom4)
 
 
-def _iterate_pairs(mdtop):
+def _iterate_pairs(mdtop: md.Topology) -> Generator[Tuple["Atom", "Atom"], None, None]:
     # TODO: Replace this with Topology.nth_degree_neighbors after
     # OpenFF Toolkit 0.9.3 or later
     for bond in mdtop.bonds:
@@ -106,12 +116,14 @@ def _iterate_pairs(mdtop):
                         yield (atom_i_partner, atom_j_partner)
 
 
-def _get_num_h_bonds(mdtop):
+def _get_num_h_bonds(mdtop: md.Topology) -> int:
     """Get the number of (covalent) bonds containing a hydrogen atom."""
     n_bonds_containing_hydrogen = 0
 
     for bond in mdtop.bonds:
-        if md.element.hydrogen in (bond.atom1.element, bond.atom2.element):
+        if (bond.atom1.element.atomic_number == 1) or (
+            bond.atom2.element.atomic_number == 1
+        ):
             n_bonds_containing_hydrogen += 1
 
     return n_bonds_containing_hydrogen
@@ -164,7 +176,6 @@ def _combine_topologies(topology1: _OFFBioTop, topology2: _OFFBioTop) -> _OFFBio
             atom2=mdtop.atom(bond.atom2.index + atom_offset),
         )
 
-    combined_topology = _OFFBioTop()
-    combined_topology.mdtop = mdtop
+    combined_topology = _OFFBioTop(mdtop=mdtop)
 
     return combined_topology
