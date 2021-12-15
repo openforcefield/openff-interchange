@@ -238,6 +238,7 @@ class TestInterchange(_BaseTest):
         get_openmm_energies(out)
         get_lammps_energies(out)
 
+    @skip_if_missing("nglview")
     def test_visualize(self, parsley):
         import nglview
 
