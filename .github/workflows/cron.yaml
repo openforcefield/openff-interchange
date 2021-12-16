@@ -59,7 +59,7 @@ jobs:
     - name: Run all tests
       if: always()
       run: |
-        python -m pytest -v $COV openff/interchange/
+        python -m pytest -v $COV openff/interchange/ -m "slow or not slow"
 
     - name: Run example notebooks
       run: |

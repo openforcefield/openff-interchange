@@ -1,3 +1,4 @@
+fail_fast: true
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v4.0.1
@@ -12,7 +13,6 @@ repos:
   hooks:
   - id: black
     files: ^openff
-    args: [--check]
   - id: black-jupyter
     files: ^examples
 - repo: https://github.com/PyCQA/isort
@@ -20,7 +20,6 @@ repos:
   hooks:
   - id: isort
     files: ^openff
-    args: [--check]
 - repo: https://github.com/PyCQA/flake8
   rev: 4.0.1
   hooks:

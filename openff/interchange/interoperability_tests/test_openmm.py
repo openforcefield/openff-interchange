@@ -246,6 +246,7 @@ def test_combine_nonbonded_forces():
     ).m < 0.001
 
 
+@pytest.mark.slow()
 class TestOpenMMVirtualSites(_BaseTest):
     @pytest.fixture()
     def parsley_with_sigma_hole(self, parsley):
