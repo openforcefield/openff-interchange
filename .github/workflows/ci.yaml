@@ -29,7 +29,7 @@ jobs:
 
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "${{ matrix.python-version }}"
         environment-file: devtools/conda-envs/test_env.yaml
         activate-environment: test
         auto-activate-base: false
