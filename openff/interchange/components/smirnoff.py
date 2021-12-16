@@ -203,6 +203,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
                 top_bond = topology.get_bond_between(*key)
                 fractional_bond_order = top_bond.bond.fractional_bond_order
                 if not fractional_bond_order:
+                    assert self._get_uses_interpolation(parameter_handler)
                     raise RuntimeError(
                         "Bond orders should already be assigned at this point"
                     )
@@ -270,6 +271,22 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
                 )
             self.potentials[potential_key] = potential
 
+    def _get_uses_interpolation(self, parameter_handler: "BondHandler") -> bool:
+        if (
+            any(
+                getattr(p, "k_bondorder", None) is not None
+                for p in parameter_handler.parameters
+            )
+        ) or (
+            any(
+                getattr(p, "length_bondorder", None) is not None
+                for p in parameter_handler.parameters
+            )
+        ):
+            return True
+        else:
+            return False
+
     @classmethod
     def _from_toolkit(
         cls: Type[T],
@@ -289,17 +306,11 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
         handler: T = cls(type="Bonds", expression="k/2*(r-length)**2")
 
-        if (
-            any(
-                getattr(p, "k_bondorder", None) is not None
-                for p in parameter_handler.parameters
-            )
-        ) or (
-            any(
-                getattr(p, "length_bondorder", None) is not None
-                for p in parameter_handler.parameters
-            )
-        ):
+        for topology_bond in topology.topology_bonds:
+            if topology_bond.bond.fractional_bond_order is not None:
+                print(topology_bond.bond.fractional_bond_order)
+
+        if handler._get_uses_interpolation:
             for ref_mol in topology.reference_molecules:
                 # TODO: expose conformer generation and fractional bond order assigment
                 # knobs to user via API
@@ -307,6 +318,12 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
                 ref_mol.assign_fractional_bond_orders(
                     bond_order_model=handler.fractional_bond_order_method.lower(),  # type: ignore[attr-defined]
                 )
+        for topology_bond in topology.topology_bonds:
+            if topology_bond.bond.fractional_bond_order is not None:
+                print(topology_bond.bond.fractional_bond_order)
+        for reference_molecule in topology.reference_molecules:
+            for bond in reference_molecule.bonds:
+                print(bond.fractional_bond_order)
 
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
         handler.store_potentials(parameter_handler=parameter_handler)

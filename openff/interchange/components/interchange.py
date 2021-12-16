@@ -61,21 +61,35 @@ class Interchange(DefaultModel):
 
         # TODO: Ensure these fields are hidden from the user as intended
         handlers: Dict[str, PotentialHandler] = dict()
-        topology: Optional[_OFFBioTop] = Field(None)
+        topology: Optional[Union[_OFFBioTop, Topology]] = Field(None)
         box: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
         positions: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
 
         @validator("box")
-        def validate_box(cls, val):
-            if val is None:
-                return val
-            if val.shape == (3, 3):
-                return val
-            elif val.shape == (3,):
-                val = val * np.eye(3)
-                return val
+        def validate_box(cls, value):
+            if value is None:
+                return value
+            if value.shape == (3, 3):
+                return value
+            elif value.shape == (3,):
+                value = value * np.eye(3)
+                return value
             else:
                 raise InvalidBoxError
+
+        @validator("topology")
+        def validate_topology(cls, value):
+            if isinstance(value, _OFFBioTop):
+                return _OFFBioTop(other=value, mdtop=value.mdtop)
+            elif isinstance(value, Topology):
+                return _OFFBioTop(
+                    other=value, mdtop=md.Topology.from_openmm(value.to_openmm())
+                )
+            else:
+                raise InvalidTopologyError(
+                    "Could not process topology argument, expected Topology or _OFFBioTop. "
+                    f"Found object of type {type(value)}."
+                )
 
     def __init__(self):
         self._inner_data = self._InnerSystem()
@@ -179,19 +193,7 @@ class Interchange(DefaultModel):
 
         cls._check_supported_handlers(force_field)
 
-        if isinstance(topology, _OFFBioTop):
-            # TODO: See if Topology(topology) is fixed
-            # https://github.com/openforcefield/openff-toolkit/issues/946
-            sys_out.topology = deepcopy(topology)
-            sys_out.topology.mdtop = topology.mdtop
-        elif isinstance(topology, Topology):
-            sys_out.topology = _OFFBioTop(other=topology)
-            sys_out.topology.mdtop = md.Topology.from_openmm(topology.to_openmm())
-        else:
-            raise InvalidTopologyError(
-                "Could not process topology argument, expected Topology or _OFFBioTop. "
-                f"Found object of type {type(topology)}."
-            )
+        sys_out.topology = topology
 
         parameter_handlers_by_type = {
             force_field[parameter_handler_name].__class__: force_field[
@@ -227,7 +229,7 @@ class Interchange(DefaultModel):
                 SMIRNOFFBondHandler.check_supported_parameters(force_field["Bonds"])
                 potential_handler = SMIRNOFFBondHandler._from_toolkit(
                     parameter_handler=force_field["Bonds"],
-                    topology=sys_out._inner_data.topology,
+                    topology=sys_out.topology,
                     # constraint_handler=constraint_handler,
                 )
                 sys_out.handlers.update({"Bonds": potential_handler})
@@ -244,20 +246,20 @@ class Interchange(DefaultModel):
                         for val in [bond_handler, constraint_handler]
                         if val is not None
                     ],
-                    topology=sys_out._inner_data.topology,
+                    topology=sys_out.topology,
                 )
                 sys_out.handlers.update({"Constraints": constraints})
                 continue
             elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers,
-                    topology=sys_out._inner_data.topology,
+                    topology=sys_out.topology,
                 )
             else:
                 potential_handler_type.check_supported_parameters(parameter_handlers[0])
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers[0],
-                    topology=sys_out._inner_data.topology,
+                    topology=sys_out.topology,
                 )
             sys_out.handlers.update({potential_handler.type: potential_handler})
 
