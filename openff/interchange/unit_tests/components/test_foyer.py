@@ -13,7 +13,7 @@ from openmm import unit as omm_unit
 
 from openff.interchange.components.foyer import _RBTorsionHandler
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop
+from openff.interchange.components.mdtraj import _OFFBioTop, _store_bond_partners
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.models import PotentialKey, TopologyKey
@@ -50,6 +50,7 @@ class TestFoyer(_BaseTest):
 
         top = _OFFBioTop.from_molecules(molecule)
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        _store_bond_partners(top.mdtop)
         oplsaa = foyer.Forcefield(name="oplsaa")
         interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
         interchange.positions = molecule.conformers[0].value_in_unit(omm_unit.nanometer)
@@ -70,6 +71,7 @@ class TestFoyer(_BaseTest):
 
             off_bio_top = _OFFBioTop.from_molecules(molecule_or_molecules)
             off_bio_top.mdtop = md.Topology.from_openmm(off_bio_top.to_openmm())
+            _store_bond_partners(off_bio_top.mdtop)
             openff_interchange = Interchange.from_foyer(off_bio_top, oplsaa)
 
             if isinstance(molecule_or_molecules, list):

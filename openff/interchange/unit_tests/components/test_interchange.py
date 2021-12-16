@@ -11,7 +11,7 @@ from openmm import unit as openmm_unit
 from pydantic import ValidationError
 
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop
+from openff.interchange.components.mdtraj import _OFFBioTop, _store_bond_partners
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
     InvalidTopologyError,
@@ -124,6 +124,32 @@ class TestInterchangeCombination(_BaseTest):
 
         # TODO: Ensure the de-duplication is maintained after exports
 
+    def test_positions_setting(self):
+        """Test that positions exist on the result if and only if
+        both input objects have positions."""
+
+        ethane = Molecule.from_smiles("CC")
+        ethane.generate_conformers(n_conformers=1)
+        methane = Molecule.from_smiles("C")
+        methane.generate_conformers(n_conformers=1)
+
+        force_field = ForceField("openff_unconstrained-1.3.0.offxml")
+
+        ethane_interchange = Interchange.from_smirnoff(
+            force_field,
+            ethane.to_topology(),
+        )
+        methane_interchange = Interchange.from_smirnoff(
+            force_field,
+            methane.to_topology(),
+        )
+
+        assert not (methane_interchange + ethane_interchange).positions
+        methane_interchange.positions = methane.conformers[0]
+        assert not (methane_interchange + ethane_interchange).positions
+        ethane_interchange.positions = ethane.conformers[0]
+        assert (methane_interchange + ethane_interchange).positions is not None
+
 
 class TestUnimplementedSMIRNOFFCases(_BaseTest):
     def test_bogus_smirnoff_handler(self, parsley):
@@ -176,15 +202,13 @@ class TestInterchange(_BaseTest):
 
         assert np.sum((original - new)._value) == 0.0
 
-    def test_from_parsley(self):
-
-        force_field = ForceField("openff-1.3.0.offxml")
+    def test_from_parsley(self, parsley):
 
         top = _OFFBioTop.from_molecules(
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")]
         )
 
-        out = Interchange.from_smirnoff(force_field, top)
+        out = Interchange.from_smirnoff(parsley, top)
 
         assert "Constraints" in out.handlers.keys()
         assert "Bonds" in out.handlers.keys()
@@ -217,6 +241,7 @@ class TestInterchange(_BaseTest):
         benzene.name = "BENZ"
         biotop = _OFFBioTop.from_molecules(benzene)
         biotop.mdtop = md.Topology.from_openmm(biotop.to_openmm())
+        _store_bond_partners(biotop.mdtop)
         out = Interchange.from_foyer(force_field=oplsaa, topology=biotop)
         out.box = [4, 4, 4]
         out.positions = benzene.conformers[0]
@@ -227,3 +252,24 @@ class TestInterchange(_BaseTest):
         get_gromacs_energies(out)
         get_openmm_energies(out)
         get_lammps_energies(out)
+
+    @skip_if_missing("nglview")
+    def test_visualize(self, parsley):
+        import nglview
+
+        molecule = Molecule.from_smiles("CCO")
+        molecule.generate_conformers(n_conformers=1)
+
+        out = Interchange.from_smirnoff(
+            force_field=parsley,
+            topology=molecule.to_topology(),
+        )
+
+        with pytest.raises(
+            MissingPositionsError, match="Cannot visualize system without positions."
+        ):
+            out.visualize()
+
+        out.positions = molecule.conformers[0]
+
+        assert isinstance(out.visualize(), nglview.NGLWidget)

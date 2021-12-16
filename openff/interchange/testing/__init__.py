@@ -1,9 +1,6 @@
-import mdtraj as md
 import pytest
-from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.testing.utils import _top_from_smiles
 from openff.interchange.utils import get_test_file_path
 
@@ -23,19 +20,6 @@ class _BaseTest:
     def argon_top(self):
         """Fixture that builds a simple arogon topology."""
         return _top_from_smiles("[#18]")
-
-    @pytest.fixture()
-    def ammonia_ff(self):
-        """Fixture that loads an SMIRNOFF XML for ammonia."""
-        return ForceField(get_test_file_path("ammonia.offxml"))
-
-    @pytest.fixture()
-    def ammonia_top(self):
-        """Fixture that builds a simple ammonia topology."""
-        mol = Molecule.from_smiles("N")
-        top = _OFFBioTop.from_molecules(4 * [mol])
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
-        return top
 
     @pytest.fixture()
     def ethanol_top(self):

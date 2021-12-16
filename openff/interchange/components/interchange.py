@@ -25,6 +25,7 @@ from openff.interchange.exceptions import (
     MissingParameterHandlerError,
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
+    UnsupportedCombinationError,
     UnsupportedExportError,
 )
 from openff.interchange.models import DefaultModel
@@ -33,6 +34,8 @@ from openff.interchange.types import ArrayQuantity
 if TYPE_CHECKING:
     if has_package("foyer"):
         from foyer.forcefield import Forcefield as FoyerForcefield
+    if has_package("nglview"):
+        import nglview
 
 _SUPPORTED_SMIRNOFF_HANDLERS = {
     "Constraints",
@@ -272,6 +275,41 @@ class Interchange(DefaultModel):
 
         return sys_out
 
+    def visualize(self, backend: str = "nglview"):
+        """
+        Visualize this Interchange.
+
+        This currently only uses NGLview. Other engines may be added in the future.
+
+        Parameters
+        ----------
+        backend : str, default="nglview"
+            The backend to use for visualization. Currently only "nglview" is supported.
+
+        Returns
+        -------
+        widget : nglview.NGLWidget
+            The NGLWidget containing the visualization.
+
+        """
+        if backend == "nglview":
+            return self._visualize_nglview()
+        else:
+            raise UnsupportedExportError
+
+    @requires_package("nglview")
+    def _visualize_nglview(self) -> "nglview.NGLWidget":
+        """Visualize the system using NGLView via a PDB file."""
+        import nglview
+
+        try:
+            self.to_pdb("_tmp_pdb_file.pdb", writer="openmm")
+        except MissingPositionsError as error:
+            raise MissingPositionsError(
+                "Cannot visualize system without positions."
+            ) from error
+        return nglview.show_file("_tmp_pdb_file.pdb")
+
     def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 8):
         """Export this Interchange object to a .gro file."""
         if self.positions is None:
@@ -299,7 +337,7 @@ class Interchange(DefaultModel):
             raise UnsupportedExportError
 
     def to_top(self, file_path: Union[Path, str], writer="internal"):
-        """Export this interchange to a .top file."""
+        """Export this Interchange to a .top file."""
         if writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
 
@@ -323,13 +361,13 @@ class Interchange(DefaultModel):
             raise UnsupportedExportError
 
     def to_openmm(self, combine_nonbonded_forces: bool = False):
-        """Export this interchange to an OpenMM System."""
+        """Export this Interchange to an OpenMM System."""
         from openff.interchange.interop.openmm import to_openmm as to_openmm_
 
         return to_openmm_(self, combine_nonbonded_forces=combine_nonbonded_forces)
 
     def to_prmtop(self, file_path: Union[Path, str], writer="internal"):
-        """Export this interchange to an Amber .prmtop file."""
+        """Export this Interchange to an Amber .prmtop file."""
         if writer == "internal":
             from openff.interchange.interop.internal.amber import to_prmtop
 
@@ -343,16 +381,30 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
+    def to_pdb(self, file_path: Union[Path, str], writer="openmm"):
+        """Export this Interchange to a .pdb file."""
+        if self.positions is None:
+            raise MissingPositionsError(
+                "Positions are required to write a `.pdb` file but found None."
+            )
+
+        if writer == "openmm":
+            from openff.interchange.interop.openmm import _to_pdb
+
+            _to_pdb(file_path, self.topology, self.positions)
+        else:
+            raise UnsupportedExportError
+
     def to_psf(self, file_path: Union[Path, str]):
-        """Export this interchange to a CHARMM-style .psf file."""
+        """Export this Interchange to a CHARMM-style .psf file."""
         raise UnsupportedExportError
 
     def to_crd(self, file_path: Union[Path, str]):
-        """Export this interchange to a CHARMM-style .crd file."""
+        """Export this Interchange to a CHARMM-style .crd file."""
         raise UnsupportedExportError
 
     def to_inpcrd(self, file_path: Union[Path, str], writer="internal"):
-        """Export this interchange to an Amber .inpcrd file."""
+        """Export this Interchange to an Amber .inpcrd file."""
         if writer == "internal":
             from openff.interchange.interop.internal.amber import to_inpcrd
 
@@ -367,7 +419,7 @@ class Interchange(DefaultModel):
             raise UnsupportedExportError
 
     def _to_parmed(self):
-        """Export this interchange to a ParmEd Structure."""
+        """Export this Interchange to a ParmEd Structure."""
         from openff.interchange.interop.parmed import _to_parmed
 
         return _to_parmed(self)
@@ -409,14 +461,23 @@ class Interchange(DefaultModel):
 
         """
         from openff.interchange.components.foyer import get_handlers_callable
+        from openff.interchange.components.mdtraj import _store_bond_partners
 
         system = cls()
         system.topology = topology
 
-        for name, Handler in get_handlers_callable().items():
-            system.handlers[name] = Handler()
+        _store_bond_partners(system.topology.mdtop)
 
-        system.handlers["vdW"].store_matches(force_field, topology=sys_out.topology)
+        for name, Handler in get_handlers_callable().items():
+            if name == "Electrostatics":
+                handler = Handler(scale_14=force_field.coulomb14scale)
+            if name == "vdW":
+                handler = Handler(scale_14=force_field.lj14scale)
+            else:
+                handler = Handler()
+
+            system.handlers[name] = handler
+
         system.handlers["vdW"].store_potentials(force_field=force_field)
 
         atom_slots = system.handlers["vdW"].slot_map
@@ -431,7 +492,7 @@ class Interchange(DefaultModel):
 
         for name, handler in system.handlers.items():
             if name not in ["vdW", "Electrostatics"]:
-                handler.store_matches(atom_slots, topology=sys_out.topology)
+                handler.store_matches(atom_slots, topology=system.topology)
                 handler.store_potentials(force_field)
 
         return system
@@ -556,7 +617,7 @@ class Interchange(DefaultModel):
         from openff.interchange.models import TopologyKey
 
         warnings.warn(
-            "Iterchange object combination is experimental and likely to produce "
+            "Interchange object combination is experimental and likely to produce "
             "strange results. Any workflow using this method is not guaranteed to "
             "be suitable for production. Use with extreme caution and thoroughly "
             "validate results!"
@@ -569,9 +630,29 @@ class Interchange(DefaultModel):
 
         atom_offset = self_copy.topology.mdtop.n_atoms
 
+        """
+        for handler_name in self.handlers:
+            if type(self.handlers[handler_name]).__name__ == "FoyerElectrostaticsHandler":
+                self.handlers[handler_name].slot_map = self.handlers[handler_name].charges
+        """
+
         for handler_name, handler in other.handlers.items():
 
-            self_handler = self_copy.handlers[handler_name]
+            """
+            if type(handler).__name__ == "FoyerElectrostaticsHandler":
+                handler.slot_map = handler.charges
+            """
+
+            # TODO: Actually specify behavior in this case
+            try:
+                self_handler = self_copy.handlers[handler_name]
+            except KeyError:
+                self.add_handler(handler_name, handler)
+                warnings.warn(
+                    f"'other' Interchange object has handler with name {handler_name} not "
+                    f"found in 'self,' but it has now been added."
+                )
+                continue
 
             for top_key, pot_key in handler.slot_map.items():
 
@@ -586,11 +667,17 @@ class Interchange(DefaultModel):
                 self_handler.slot_map.update({new_top_key: pot_key})
                 self_handler.potentials.update({pot_key: handler.potentials[pot_key]})
 
-        new_positions = np.vstack([self_copy.positions, other.positions])
-        self_copy.positions = new_positions
+        if self_copy.positions is not None and other.positions is not None:
+            new_positions = np.vstack([self_copy.positions, other.positions])
+            self_copy.positions = new_positions
+        else:
+            warnings.warn(
+                "Setting positions to None because one or both objects added together were missing positions."
+            )
+            self_copy.positions = None
 
         if not np.all(self_copy.box == other.box):
-            raise NotImplementedError(
+            raise UnsupportedCombinationError(
                 "Combination with unequal box vectors is not curretnly supported"
             )
 

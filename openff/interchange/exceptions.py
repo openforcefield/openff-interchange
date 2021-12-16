@@ -115,6 +115,10 @@ class UnsupportedExportError(BaseException):
         return msg
 
 
+class UnsupportedCombinationError(BaseException):
+    """General exception for something going wrong in Interchange object combination."""
+
+
 class ConversionError(BaseException):
     """
     Base exception for error handling during object conversion.

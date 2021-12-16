@@ -27,7 +27,7 @@ class ParmEdWrapper(InteroperabilityWrapper):
 
     def to_file(self, openff_sys: Interchange, file_path: Union[str, Path]):
         """
-        Convert an Iterchange object to a ParmEd Structure and write it to a file.
+        Convert an Interchange object to a ParmEd Structure and write it to a file.
 
         """
         if isinstance(file_path, str):
