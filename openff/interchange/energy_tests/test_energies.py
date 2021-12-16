@@ -185,6 +185,7 @@ def test_liquid_argon():
 
 
 @needs_gmx
+@pytest.mark.slow()
 @pytest.mark.parametrize(
     "toolkit_file_path",
     [
