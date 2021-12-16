@@ -32,6 +32,7 @@ class TestAmber(_BaseTest):
 
         np.testing.assert_equal(coords1, coords2)
 
+    @pytest.mark.slow()
     @pytest.mark.parametrize(
         "smiles",
         [

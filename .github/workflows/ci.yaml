@@ -71,7 +71,7 @@ jobs:
     - name: Run all tests
       if: always()
       run: |
-        python -m pytest -v -nauto $COV openff/interchange/
+        python -m pytest -v -nauto $COV openff/interchange/ -m "slow or not slow"
 
     - name: Run example notebooks
       run: |
