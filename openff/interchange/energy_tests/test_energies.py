@@ -7,6 +7,7 @@ import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
+from openff.units.openmm import to_openmm
 from openff.utilities.testing import skip_if_missing
 from openmm import app
 from openmm import unit as openmm_unit
@@ -100,8 +101,8 @@ def test_energies_single_mol(constrained, mol_smi):
     omm_reference = parsley.create_openmm_system(top)
     reference_energies = _get_openmm_energies(
         omm_sys=omm_reference,
-        box_vectors=off_sys.box,
-        positions=off_sys.positions,
+        box_vectors=to_openmm(off_sys.box),
+        positions=to_openmm(off_sys.positions),
         round_positions=8,
     )
 
@@ -527,7 +528,7 @@ def test_interpolated_parameters(smi):
         toolkit_energy = _get_openmm_energies(
             toolkit_system,
             box_vectors=[[4, 0, 0], [0, 4, 0], [0, 0, 4]] * openmm_unit.nanometer,
-            positions=mol.conformers[0],
+            positions=to_openmm(mol.conformers[0]),
         ).energies[key]
 
         toolkit_diff = abs(interchange_energy - toolkit_energy).m_as(kj_mol)

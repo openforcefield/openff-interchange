@@ -256,11 +256,11 @@ class TestGROMACSVirtualSites(_BaseTest):
         sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * openmm_unit.angstrom,
+            distance=1.4 * unit.angstrom,
             type="BondCharge",
             match="once",
-            charge_increment1=0.1 * openmm_unit.elementary_charge,
-            charge_increment2=0.2 * openmm_unit.elementary_charge,
+            charge_increment1=0.1 * unit.elementary_charge,
+            charge_increment2=0.2 * unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=sigma_type)
@@ -276,14 +276,14 @@ class TestGROMACSVirtualSites(_BaseTest):
         carbonyl_type = VirtualSiteHandler.VirtualSiteMonovalentLonePairType(
             name="EP",
             smirks="[O:1]=[C:2]-[*:3]",
-            distance=0.3 * openmm_unit.angstrom,
+            distance=0.3 * unit.angstrom,
             type="MonovalentLonePair",
             match="once",
-            outOfPlaneAngle=0.0 * openmm_unit.degree,
-            inPlaneAngle=120.0 * openmm_unit.degree,
-            charge_increment1=0.05 * openmm_unit.elementary_charge,
-            charge_increment2=0.1 * openmm_unit.elementary_charge,
-            charge_increment3=0.15 * openmm_unit.elementary_charge,
+            outOfPlaneAngle=0.0 * unit.degree,
+            inPlaneAngle=120.0 * unit.degree,
+            charge_increment1=0.05 * unit.elementary_charge,
+            charge_increment2=0.1 * unit.elementary_charge,
+            charge_increment3=0.15 * unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=carbonyl_type)
