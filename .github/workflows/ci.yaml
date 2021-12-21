@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - topology-refactor
   pull_request:
     branches:
       - master
@@ -44,14 +45,14 @@ jobs:
         df -h
         ulimit -a
 
+    - name: Install package
+      run: |
+        python setup.py develop --no-deps
+
     - name: Environment Information
       run: |
         conda info
         conda list
-
-    - name: Install package
-      run: |
-        python setup.py develop --no-deps
 
     - name: License OpenEye
       run: |

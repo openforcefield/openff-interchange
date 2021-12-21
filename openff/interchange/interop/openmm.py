@@ -58,7 +58,7 @@ def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.Syst
 
     # Add particles with appropriate masses
     # TODO: Add virtual particles
-    for atom in openff_sys.topology.mdtop.atoms:
+    for atom in openff_sys.topology.atoms:
         openmm_sys.addParticle(atom.element.mass)
 
     _process_nonbonded_forces(
@@ -321,7 +321,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             non_bonded_force = openmm.NonbondedForce()
             openmm_sys.addForce(non_bonded_force)
 
-            for _ in openff_sys.topology.mdtop.atoms:
+            for _ in openff_sys.topology.atoms:
                 non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
             if vdw_method == "cutoff" and electrostatics_method == "pme":
@@ -362,7 +362,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             vdw_force.addPerParticleParameter("epsilon")
 
             # TODO: Add virtual particles
-            for _ in openff_sys.topology.mdtop.atoms:
+            for _ in openff_sys.topology.atoms:
                 vdw_force.addParticle([1.0, 0.0])
 
             if vdw_method == "cutoff":
@@ -407,7 +407,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             electrostatics_force = openmm.NonbondedForce()
             openmm_sys.addForce(electrostatics_force)
 
-            for _ in openff_sys.topology.mdtop.atoms:
+            for _ in openff_sys.topology.atoms:
                 electrostatics_force.addParticle(0.0, 1.0, 0.0)
 
             if electrostatics_method == "reaction-field":
@@ -476,7 +476,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         non_bonded_force.addPerParticleParameter("C")
         openmm_sys.addForce(non_bonded_force)
 
-        for _ in openff_sys.topology.mdtop.atoms:
+        for _ in openff_sys.topology.atoms:
             non_bonded_force.addParticle([0.0, 0.0, 0.0])
 
         if openff_sys.box is None:
@@ -516,7 +516,10 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
     # Need to create 1-4 exceptions, just to have a baseline for splitting out/modifying
     # It might be simpler to iterate over 1-4 pairs directly
-    bonds = [(b.atom1.index, b.atom2.index) for b in openff_sys.topology.mdtop.bonds]
+    bonds = [
+        sorted(openff_sys.topology.atom_index(a) for a in bond.atoms)
+        for bond in openff_sys.topology.bonds
+    ]
 
     if combine_nonbonded_forces:
         non_bonded_force.createExceptionsFromBonds(

@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+import numpy as np
 import openmm
 import pytest
 from openff.toolkit.tests.utils import requires_openeye
@@ -30,8 +31,9 @@ from openff.interchange.utils import get_test_file_path
 
 kj_mol = unit.kilojoule / unit.mol
 _parsley = ForceField("openff-1.0.0.offxml")
-_box_vectors = openmm_unit.Quantity(
-    [[4, 0, 0], [0, 4, 0], [0, 0, 4]], unit=openmm_unit.nanometer
+_box_vectors = unit.Quantity(
+    4 * np.eye(3),
+    unit.nanometer,
 )
 
 

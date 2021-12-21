@@ -68,13 +68,6 @@ def offtop_to_compound(off_top: "Topology") -> "mb.Compound":
         (<class 'mbuild.compound.Compound'>, 4, 28, 24)
 
     """
-    sub_comps = []
-
-    for top_mol in off_top.topology_molecules:
-        # TODO: This could have unintended consequences if the TopologyMolecule
-        # has atoms in a different order than the reference Molecule
-        this_comp = offmol_to_compound(top_mol.reference_molecule)
-        sub_comps.append(this_comp)
-
-    comp = mb.Compound(subcompounds=sub_comps)
-    return comp
+    return mb.Compound(
+        subcompounds=[offmol_to_compound(molecule) for molecule in off_top.molecules]
+    )

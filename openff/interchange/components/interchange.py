@@ -160,13 +160,11 @@ class Interchange(DefaultModel):
         .. code-block:: pycon
 
             >>> from openff.interchange.components.interchange import Interchange
-            >>> from openff.toolkit.topology import Molecule
+            >>> from openff.toolkit.topology import Molecule, Topology
             >>> from openff.toolkit.typing.engines.smirnoff import ForceField
-            >>> import mdtraj as md
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
             >>> top = Topology.from_molecules([mol])
-            >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
             >>> parsley = ForceField("openff-1.0.0.offxml")
             >>> interchange = Interchange.from_smirnoff(topology=top, force_field=parsley)
             >>> interchange
@@ -178,7 +176,12 @@ class Interchange(DefaultModel):
         cls._check_supported_handlers(force_field)
 
         if isinstance(topology, Topology):
-            sys_out.topology = Topology(other=topology)
+            # Work around https://github.com/openforcefield/openff-toolkit/issues/946#issuecomment-941143659
+            box_vectors = topology.box_vectors
+            topology.box_vectors = None
+            sys_out.topology = Topology(topology)
+            topology.box_vectors = box_vectors
+            sys_out.topology.box_vectors = topology.box_vectors
         else:
             raise InvalidTopologyError(
                 "Could not process topology argument, expected Topology or _OFFBioTop. "
@@ -384,14 +387,11 @@ class Interchange(DefaultModel):
         .. code-block:: pycon
 
             >>> from openff.interchange.components.interchange import Interchange
-            >>> from openff.interchange.components.mdtraj import _OFFBioTop
             >>> from openff.toolkit.topology import Molecule
             >>> from foyer import Forcefield
-            >>> import mdtraj as md
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> top = _OFFBioTop.from_molecules([mol])
-            >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
+            >>> top = Topology.from_molecules([mol])
             >>> oplsaa = Forcefield(name="oplsaa")
             >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
             >>> interchange
@@ -542,7 +542,7 @@ class Interchange(DefaultModel):
 
     def __add__(self, other):
         """Combine two Interchange objects. This method is unstable and likely unsafe."""
-        from openff.interchange.components.mdtraj import _combine_topologies
+        from openff.interchange.components.toolkit import _combine_topologies
         from openff.interchange.models import TopologyKey
 
         warnings.warn(
@@ -555,13 +555,16 @@ class Interchange(DefaultModel):
         self_copy = Interchange()
         self_copy._inner_data = deepcopy(self._inner_data)
 
+        atom_offset = self_copy.topology.n_atoms
         self_copy.topology = _combine_topologies(self.topology, other.topology)
-
-        atom_offset = self.topology.mdtop.n_atoms
 
         for handler_name, handler in other.handlers.items():
 
-            self_handler = self_copy.handlers[handler_name]
+            try:
+                self_handler = self_copy.handlers[handler_name]
+            except KeyError:
+                self_copy.handlers[handler_name] = handler
+                continue
 
             for top_key, pot_key in handler.slot_map.items():
 
@@ -576,8 +579,14 @@ class Interchange(DefaultModel):
                 self_handler.slot_map.update({new_top_key: pot_key})
                 self_handler.potentials.update({pot_key: handler.potentials[pot_key]})
 
-        new_positions = np.vstack([self_copy.positions, other.positions])
-        self_copy.positions = new_positions
+        if self_copy.positions is not None and other.positions is not None:
+            new_positions = np.vstack([self_copy.positions, other.positions])
+            self_copy.positions = new_positions
+        else:
+            warnings.warn(
+                "Setting positions to None because one or both objects added together were missing positions."
+            )
+            self_copy.positions = None
 
         if not np.all(self_copy.box == other.box):
             raise NotImplementedError(
@@ -588,10 +597,5 @@ class Interchange(DefaultModel):
 
     def __repr__(self):
         periodic = self.box is not None
-        try:
-            n_atoms = self.topology.mdtop.n_atoms
-        except AttributeError:
-            n_atoms = "unknown number of"
-        except NameError:
-            n_atoms = self.topology.n_atoms
+        n_atoms = self.topology.n_atoms
         return f"Interchange with {n_atoms} atoms, {'' if periodic else 'non-'}periodic topology"

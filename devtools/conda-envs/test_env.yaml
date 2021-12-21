@@ -26,10 +26,11 @@ dependencies:
   - openff-recharge
   - openeye-toolkits
   - pytest
-  - pytest-timeout
   - codecov
   - pytest-cov
   - pytest-xdist
+  - pytest-randomly
+  - pytest-timeout
   - nbval
   - conda
   # Drivers
@@ -42,5 +43,10 @@ dependencies:
   - types-setuptools
   - types-pkg_resources
   - pandas-stubs
+  - openff-evaluator
+  - openff-recharge
+  - openeye-toolkits
+  - cached-property
+  - cachetools
   - pip:
-    - git+git://github.com/openforcefield/openff-toolkit.git@openmm-optional
+    - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor

@@ -185,6 +185,7 @@ def test_liquid_argon():
 
 
 @needs_gmx
+@pytest.mark.slow()
 @pytest.mark.parametrize(
     "toolkit_file_path",
     [
@@ -338,10 +339,10 @@ def test_water_dimer():
 def test_process_rb_torsions():
     """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
 
-    import foyer
-    import mbuild as mb
+    from foyer import Forcefield
+    from mbuild import Box
 
-    oplsaa = foyer.Forcefield(name="oplsaa")
+    oplsaa = Forcefield(name="oplsaa")
 
     ethanol = Molecule.from_smiles("CCO")
     ethanol.generate_conformers(n_conformers=1)
@@ -351,9 +352,9 @@ def test_process_rb_torsions():
     from openff.interchange.components.mbuild import offmol_to_compound
 
     my_compound = offmol_to_compound(ethanol)
-    my_compound.box = mb.Box(lengths=[4, 4, 4])
+    my_compound.box = Box(lengths=[4, 4, 4])
 
-    oplsaa = foyer.Forcefield(name="oplsaa")
+    oplsaa = Forcefield(name="oplsaa")
     struct = oplsaa.apply(my_compound)
 
     struct.save("eth.top", overwrite=True)
@@ -404,8 +405,8 @@ def test_cutoff_electrostatics():
     ion_ff = ForceField(get_test_file_path("ions.offxml"))
     ions = Topology.from_molecules(
         [
-            Molecule.from_smiles("[#3]"),
-            Molecule.from_smiles("[#17]"),
+            Molecule.from_smiles("[#3+]"),
+            Molecule.from_smiles("[#17-]"),
         ]
     )
     out = Interchange.from_smirnoff(ion_ff, ions)

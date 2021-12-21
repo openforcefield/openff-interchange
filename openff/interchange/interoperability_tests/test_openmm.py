@@ -6,6 +6,7 @@ from openff.toolkit.tests.test_forcefield import create_ethanol
 from openff.toolkit.tests.utils import compare_system_parameters, get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
+from openff.units import unit
 from openmm import app
 from openmm import unit as openmm_unit
 
@@ -155,17 +156,16 @@ def test_from_openmm_single_mols(mol, n_mols):
     mol = Molecule.from_smiles(mol)
     mol.generate_conformers(n_conformers=1)
     top = Topology.from_molecules(n_mols * [mol])
-    mol.conformers[0] -= np.min(mol.conformers) * openmm_unit.angstrom
+    mol.conformers[0] -= np.min(mol.conformers)
 
-    top.box_vectors = np.eye(3) * np.asarray([15, 15, 15]) * openmm_unit.nanometer
+    top.box_vectors = 15 * np.eye(3) * unit.nanometer
 
     if n_mols == 1:
         positions = mol.conformers[0]
     elif n_mols == 2:
-        positions = np.vstack(
-            [mol.conformers[0], mol.conformers[0] + 3 * openmm_unit.nanometer]
+        positions = np.concatenate(
+            [mol.conformers[0], mol.conformers[0] + 3 * mol.conformers[0].units]
         )
-        positions = positions * openmm_unit.angstrom
 
     toolkit_system = parsley.create_openmm_system(top)
 
@@ -256,11 +256,11 @@ class TestOpenMMVirtualSites(_BaseTest):
         sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * openmm_unit.angstrom,
+            distance=1.4 * unit.angstrom,
             type="BondCharge",
             match="once",
-            charge_increment1=0.1 * openmm_unit.elementary_charge,
-            charge_increment2=0.2 * openmm_unit.elementary_charge,
+            charge_increment1=0.1 * unit.elementary_charge,
+            charge_increment2=0.2 * unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=sigma_type)
@@ -276,14 +276,14 @@ class TestOpenMMVirtualSites(_BaseTest):
         carbonyl_type = VirtualSiteHandler.VirtualSiteMonovalentLonePairType(
             name="EP",
             smirks="[O:1]=[C:2]-[C:3]",
-            distance=0.3 * openmm_unit.angstrom,
+            distance=0.3 * unit.angstrom,
             type="MonovalentLonePair",
             match="once",
-            outOfPlaneAngle=0.0 * openmm_unit.degree,
-            inPlaneAngle=120.0 * openmm_unit.degree,
-            charge_increment1=0.05 * openmm_unit.elementary_charge,
-            charge_increment2=0.1 * openmm_unit.elementary_charge,
-            charge_increment3=0.15 * openmm_unit.elementary_charge,
+            outOfPlaneAngle=0.0 * unit.degree,
+            inPlaneAngle=120.0 * unit.degree,
+            charge_increment1=0.05 * unit.elementary_charge,
+            charge_increment2=0.1 * unit.elementary_charge,
+            charge_increment3=0.15 * unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=carbonyl_type)

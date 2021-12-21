@@ -20,7 +20,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
-from openmm import unit as openmm_unit
 from pydantic import ValidationError
 
 from openff.interchange.components.interchange import Interchange
@@ -94,8 +93,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         bond_handler = BondHandler(version=0.3)
         bond_parameter = BondHandler.BondType(
             smirks="[*:1]~[*:2]",
-            k=1.5 * openmm_unit.kilocalorie_per_mole / openmm_unit.angstrom ** 2,
-            length=1.5 * openmm_unit.angstrom,
+            k=1.5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            length=1.5 * unit.angstrom,
             id="b1000",
         )
         bond_handler.add_parameter(bond_parameter.to_dict())
@@ -120,8 +119,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         angle_handler = AngleHandler(version=0.3)
         angle_parameter = AngleHandler.AngleType(
             smirks="[*:1]~[*:2]~[*:3]",
-            k=2.5 * openmm_unit.kilocalorie_per_mole / openmm_unit.radian ** 2,
-            angle=100 * openmm_unit.degree,
+            k=2.5 * unit.kilocalorie_per_mole / unit.radian ** 2,
+            angle=100 * unit.degree,
             id="b1000",
         )
         angle_handler.add_parameter(angle_parameter.to_dict())
@@ -148,8 +147,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
             parameter=ImproperTorsionHandler.ImproperTorsionType(
                 smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]",
                 periodicity1=2,
-                phase1=180.0 * openmm_unit.degree,
-                k1=1.1 * openmm_unit.kilocalorie_per_mole,
+                phase1=180.0 * unit.degree,
+                k1=1.1 * unit.kilocalorie_per_mole,
             )
         )
 
@@ -197,8 +196,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         library_charge_handler.add_parameter(
             {
                 "smirks": "[#6X4:1]-[#1:2]",
-                "charge1": -0.1 * openmm_unit.elementary_charge,
-                "charge2": 0.025 * openmm_unit.elementary_charge,
+                "charge1": -0.1 * unit.elementary_charge,
+                "charge2": 0.025 * unit.elementary_charge,
             }
         )
 
@@ -230,8 +229,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         charge_increment_handler.add_parameter(
             {
                 "smirks": "[#17:1]-[#1:2]",
-                "charge_increment1": 0.1 * openmm_unit.elementary_charge,
-                "charge_increment2": -0.1 * openmm_unit.elementary_charge,
+                "charge_increment1": 0.1 * unit.elementary_charge,
+                "charge_increment2": -0.1 * unit.elementary_charge,
             }
         )
 
@@ -256,8 +255,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
     def test_charges_with_virtual_site(self, parsley):
         mol = Molecule.from_smiles("CCl")
         mol.generate_conformers(n_conformers=1)
-        mol.partial_charges = openmm_unit.elementary_charge * np.array(
-            [0.5, -0.8, 0.1, 0.1, 0.1]
+        mol.partial_charges = unit.Quantity(
+            np.array([0.5, -0.8, 0.1, 0.1, 0.1]), unit.elementary_charge
         )
 
         parsley = ForceField("openff-1.3.1.offxml")
@@ -276,11 +275,11 @@ class TestSMIRNOFFHandlers(_BaseTest):
         sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * openmm_unit.angstrom,
+            distance=1.4 * unit.angstrom,
             type="BondCharge",
             match="once",
-            charge_increment1=0.2 * openmm_unit.elementary_charge,
-            charge_increment2=0.1 * openmm_unit.elementary_charge,
+            charge_increment1=0.2 * unit.elementary_charge,
+            charge_increment2=0.1 * unit.elementary_charge,
         )
 
         virtual_site_handler.add_parameter(parameter=sigma_type)
@@ -322,8 +321,8 @@ class TestInterchangeFromSMIRNOFF(_BaseTest):
         topology = Topology.from_molecules(create_ethanol())
         modified_parsley = ForceField(parsley.to_string())
 
-        modified_parsley["vdW"].cutoff = 0.777 * openmm_unit.angstrom
-        modified_parsley["Electrostatics"].cutoff = 0.777 * openmm_unit.angstrom
+        modified_parsley["vdW"].cutoff = 0.777 * unit.angstrom
+        modified_parsley["Electrostatics"].cutoff = 0.777 * unit.angstrom
 
         out = Interchange.from_smirnoff(force_field=modified_parsley, topology=topology)
 
@@ -361,7 +360,7 @@ class TestUnassignedParameters(_BaseTest):
         with pytest.raises(
             UnassignedProperTorsionParameterException,
             match="- Topology indices [(]5, 0, 1, 6[)]: "
-            r"names and elements [(](H\d+)?x H[)], [(](C\d+)?x C[)], [(](C\d+)?x C[)], [(](H\d+)?x H[)],",
+            r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
         ):
             Interchange.from_smirnoff(force_field=parsley, topology=ethanol_top)
 
@@ -400,7 +399,7 @@ def test_library_charges_from_molecule():
     with pytest.raises(ValueError, match="missing partial"):
         library_charge_from_molecule(mol)
 
-    mol.partial_charges = np.linspace(-0.3, 0.3, 4) * openmm_unit.elementary_charge
+    mol.partial_charges = np.linspace(-0.3, 0.3, 4) * unit.elementary_charge
 
     library_charges = library_charge_from_molecule(mol)
 
@@ -580,12 +579,28 @@ class TestMatrixRepresentations(_BaseTest):
 
 
 class TestSMIRNOFFVirtualSites:
-    from openff.toolkit.tests.test_forcefield import (
-        xml_ff_virtual_sites_bondcharge_match_all,
-        xml_ff_virtual_sites_bondcharge_match_once,
-        xml_ff_virtual_sites_divalent_match_all,
-        xml_ff_virtual_sites_trivalent_match_once,
-    )
+    try:
+        from openff.toolkit.tests.test_forcefield import (
+            xml_ff_virtual_sites_bondcharge_match_all,
+            xml_ff_virtual_sites_bondcharge_match_once,
+            xml_ff_virtual_sites_divalent_match_all,
+            xml_ff_virtual_sites_trivalent_match_once,
+        )
+    except ImportError:
+        from openff.toolkit.tests.test_forcefield import TestForceFieldVirtualSites
+
+        xml_ff_virtual_sites_bondcharge_match_all = (
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_bondcharge_match_all
+        )
+        xml_ff_virtual_sites_bondcharge_match_once = (
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_bondcharge_match_once
+        )
+        xml_ff_virtual_sites_divalent_match_all = (
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_divalent_match_all
+        )
+        xml_ff_virtual_sites_trivalent_match_once = (
+            TestForceFieldVirtualSites.xml_ff_virtual_sites_trivalent_match_once
+        )
 
     @pytest.mark.parametrize(
         ("xml", "mol"),
@@ -658,10 +673,20 @@ class TestSMIRNOFFVirtualSites:
         )
 
     def test_store_trivalent_lone_pair_virtual_site(self):
-        from openff.toolkit.tests.test_forcefield import (
-            create_ammonia,
-            xml_ff_virtual_sites_trivalent_match_once,
-        )
+        try:
+            from openff.toolkit.tests.test_forcefield import (
+                create_ammonia,
+                xml_ff_virtual_sites_trivalent_match_once,
+            )
+        except ImportError:
+            from openff.toolkit.tests.test_forcefield import (
+                TestForceFieldVirtualSites,
+                create_ammonia,
+            )
+
+            xml_ff_virtual_sites_trivalent_match_once = (
+                TestForceFieldVirtualSites.xml_ff_virtual_sites_trivalent_match_once
+            )
 
         top = create_ammonia().to_topology()
 
@@ -749,7 +774,7 @@ def _get_n_virtual_sites_toolkit(
     force_field: "ForceField", topology: "Topology"
 ) -> int:
     """Get the number of virtual particles created by ForceField.create_openmm_system"""
-    n_atoms = topology.n_topology_atoms
+    n_atoms = topology.n_atoms
     omm_sys = force_field.create_openmm_system(topology)
 
     for force in omm_sys.getForces():
