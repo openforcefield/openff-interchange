@@ -4,7 +4,7 @@ from copy import copy
 from typing import TYPE_CHECKING, Dict, Type
 
 from openff.units import unit
-from openff.utilities.utilities import has_package
+from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange.components.potentials import Potential, PotentialHandler
 from openff.interchange.models import PotentialKey, TopologyKey
@@ -13,6 +13,7 @@ from openff.interchange.types import FloatQuantity
 if TYPE_CHECKING:
     from foyer.forcefield import Forcefield
     from foyer.topology_graph import TopologyGraph
+    from openff.toolkit.topology import Topology
 
     from openff.interchange.components.mdtraj import _OFFBioTop
 
@@ -21,7 +22,7 @@ POTENTIAL_KEY_SEPARATOR = "-"
 
 
 if has_package("foyer"):
-    from foyer.topology_graph import TopologyGraph  # noqa
+    pass
 
 
 def _copy_params(
@@ -77,7 +78,7 @@ class FoyerVDWHandler(PotentialHandler):
         """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
         from foyer.atomtyper import find_atomtypes
 
-        top_graph = TopologyGraph.from_openff_topology(openff_topology=topology)
+        top_graph = _topology_graph_from_openff_topology(topology=topology)
         type_map = find_atomtypes(top_graph, forcefield=force_field)
         for key, val in type_map.items():
             top_key = TopologyKey(atom_indices=(key,))
@@ -146,7 +147,8 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
                 atoms_iterable = connection.atoms
             except AttributeError:
                 atoms_iterable = connection
-            atoms_indices = tuple(atom.topology_atom_index for atom in atoms_iterable)
+            atoms_indices = tuple(topology.atom_index(atom) for atom in atoms_iterable)
+
             top_key = TopologyKey(atom_indices=atoms_indices)
 
             pot_key_ids = tuple(
@@ -280,3 +282,28 @@ class _RBTorsionHandler(PotentialHandler):
         "C4 * (cos(phi - 180)) ** 4 + C5 * (cos(phi - 180)) ** 5 "
     )
     # independent_variables: Set[str] = {"C0", "C1", "C2", "C3", "C4", "C5"}
+
+
+@requires_package("foyer")
+def _topology_graph_from_openff_topology(
+    topology: "Topology",
+) -> "TopologyGraph":
+    """Create a TopologyGraph from an OpenFF Topology."""
+    from foyer.topology_graph import TopologyGraph, pt
+
+    topology_graph = TopologyGraph()
+    for atom in topology.atoms:
+        atom_index = topology.atom_index(atom)
+        element = pt.Element[atom.atomic_number]
+        topology_graph.add_atom(
+            name=atom.name,
+            index=atom_index,
+            atomic_number=atom.atomic_number,
+            element=element,
+        )
+
+        for bond in topology.bonds:
+            atoms_indices = [topology.atom_index(atom) for atom in bond.atoms]
+            topology_graph.add_bond(*atoms_indices)
+
+    return topology_graph

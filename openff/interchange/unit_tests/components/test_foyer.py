@@ -10,7 +10,10 @@ from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
 
-from openff.interchange.components.foyer import _RBTorsionHandler
+from openff.interchange.components.foyer import (
+    _RBTorsionHandler,
+    _topology_graph_from_openff_topology,
+)
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import Potential
@@ -33,6 +36,7 @@ if HAS_GROMACS:
 kj_mol = unit.Unit("kilojoule / mol")
 
 
+@pytest.mark.skip(reason="Typing with Foyer is temporarily unsupported")
 @skip_if_missing("foyer")
 class TestFoyer(_BaseTest):
     @pytest.fixture(scope="session")
@@ -157,6 +161,7 @@ class TestFoyer(_BaseTest):
         )
 
 
+@pytest.mark.skip(reason="Typing with Foyer is temporarily unsupported")
 class TestRBTorsions(_BaseTest):
     @pytest.fixture(scope="class")
     def ethanol_with_rb_torsions(self):
@@ -241,3 +246,13 @@ class TestRBTorsions(_BaseTest):
         ]
 
         assert (omm - rb_torsion_energy_from_foyer).m_as(kj_mol) < 1e-6
+
+
+def test_from_openff_topology():
+    from openff.toolkit.topology import Molecule
+
+    topology = Molecule.from_smiles("CCO").to_topology()
+    topology_graph = _topology_graph_from_openff_topology(topology)
+
+    assert topology_graph.number_of_nodes() == topology.n_atoms
+    assert topology_graph.number_of_edges() == topology.n_bonds

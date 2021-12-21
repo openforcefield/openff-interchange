@@ -127,6 +127,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
 
             parameter_handler._check_all_valence_terms_assigned(
                 assigned_terms=matches,
+                topology=topology,
                 valence_terms=valence_terms,
                 exception_cls=UnassignedValenceParameterException,
             )
@@ -221,6 +222,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
         parameter_handler._check_all_valence_terms_assigned(
             assigned_terms=matches,
+            topology=topology,
             valence_terms=valence_terms,
             exception_cls=UnassignedValenceParameterException,
         )
@@ -528,6 +530,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
 
         parameter_handler._check_all_valence_terms_assigned(
             assigned_terms=matches,
+            topology=topology,
             valence_terms=list(topology.propers),
             exception_cls=UnassignedProperTorsionParameterException,
         )
