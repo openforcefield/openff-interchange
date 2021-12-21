@@ -11,6 +11,7 @@ dependencies:
   - pydantic
   - openmm
   - mdtraj
+  - mendeleev
   # OpenFF stack
   - openff-toolkit >=0.10.0
   - openff-utilities
