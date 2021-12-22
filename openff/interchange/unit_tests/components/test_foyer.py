@@ -248,6 +248,7 @@ class TestRBTorsions(_BaseTest):
         assert (omm - rb_torsion_energy_from_foyer).m_as(kj_mol) < 1e-6
 
 
+@skip_if_missing("foyer")
 def test_from_openff_topology():
     from openff.toolkit.topology import Molecule
 
