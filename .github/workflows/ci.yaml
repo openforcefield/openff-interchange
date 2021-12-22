@@ -67,16 +67,16 @@ jobs:
 
     - name: Run docexamples
       run: |
-        pytest -v --doctest-modules openff/interchange/ --ignore=openff/interchange/energy_tests --ignore=openff/interchange/unit_tests --ignore=openff/interchange/data --ignore=openff/interchange/interoperability_tests
+        pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/energy_tests --ignore=openff/interchange/unit_tests --ignore=openff/interchange/data --ignore=openff/interchange/interoperability_tests
 
     - name: Run all tests
       if: always()
       run: |
-        python -m pytest -v -nauto $COV openff/interchange/ -m "slow or not slow"
+        python -m pytest -r xfsE -nauto $COV openff/interchange/ -m "slow or not slow"
 
     - name: Run example notebooks
       run: |
-        python -m pytest -v $COV examples/ --nbval-lax
+        python -m pytest $COV examples/ --nbval-lax
 
     - name: Codecov
       uses: codecov/codecov-action@v2.1.0
