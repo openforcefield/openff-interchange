@@ -4,7 +4,7 @@ import mdtraj as md
 import numpy as np
 import openmm
 import pytest
-from openff.toolkit.topology import Molecule
+from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
@@ -78,6 +78,7 @@ class TestGROMACSGROFile(_BaseTest):
         n_decimals = len(str(internal_coords[0, 0]).split(".")[1])
         assert n_decimals == 12
 
+    @pytest.mark.skip(reason="Revisit after OFFTK 0.11.0")
     @pytest.mark.slow()
     def test_residue_names_in_gro_file(self):
         """Test that residue names > 5 characters don't break .gro file output"""
@@ -157,6 +158,7 @@ class TestGROMACS(_BaseTest):
         n_impropers_parmed = len([d for d in struct.dihedrals if d.improper])
         assert n_impropers_parmed == len(out["ImproperTorsions"].slot_map)
 
+    @pytest.mark.slow()
     @skip_if_missing("intermol")
     def test_set_mixing_rule(self, ethanol_top, parsley):
         from intermol.gromacs.gromacs_parser import GromacsParser
@@ -197,8 +199,7 @@ class TestGROMACS(_BaseTest):
 
         mol = Molecule.from_smiles("[#18]")
         mol.name = "Argon"
-        top = _OFFBioTop.from_molecules([mol, mol])
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        top = Topology.from_molecules([mol, mol])
 
         # http://www.sklogwiki.org/SklogWiki/index.php/Argon#Buckingham_potential
         erg_mol = unit.erg / unit.mol * float(unit.avogadro_number)
@@ -214,8 +215,8 @@ class TestGROMACS(_BaseTest):
         pot_key = PotentialKey(id="[#18]")
         pot = Potential(parameters={"A": A, "B": B, "C": C})
 
-        for atom in top.mdtop.atoms:
-            top_key = TopologyKey(atom_indices=(atom.index,))
+        for atom in top.atoms:
+            top_key = TopologyKey(atom_indices=(top.atom_index(atom),))
             buck.slot_map.update({top_key: pot_key})
 
             coul.slot_map.update({top_key: pot_key})

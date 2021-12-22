@@ -10,10 +10,6 @@ from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
 
-from openff.interchange.components.foyer import (
-    _RBTorsionHandler,
-    _topology_graph_from_openff_topology,
-)
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import Potential
@@ -25,6 +21,11 @@ from openff.interchange.utils import get_test_files_dir_path
 
 if has_package("foyer"):
     import foyer
+
+    from openff.interchange.components.foyer import (
+        _RBTorsionHandler,
+        _topology_graph_from_openff_topology,
+    )
 
 if HAS_GROMACS:
     from openff.interchange.drivers.gromacs import (

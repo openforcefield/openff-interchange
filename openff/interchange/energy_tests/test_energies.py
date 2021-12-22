@@ -7,7 +7,7 @@ import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
-from openff.units.openmm import to_openmm
+from openff.units.openmm import from_openmm, to_openmm
 from openff.utilities.testing import skip_if_missing
 from openmm import app
 from openmm import unit as openmm_unit
@@ -151,7 +151,7 @@ def test_liquid_argon():
     argon_ff = ForceField(get_test_file_path("argon.offxml"))
 
     out = Interchange.from_smirnoff(argon_ff, top)
-    out.positions = pdbfile.positions
+    out.positions = from_openmm(pdbfile.positions)
 
     omm_energies = get_openmm_energies(out)
 
@@ -184,6 +184,9 @@ def test_liquid_argon():
     )
 
 
+@pytest.mark.skip(
+    reason="Needs to be reimplmented after OFFTK 0.11.0 with fewer moving parts"
+)
 @needs_gmx
 @pytest.mark.slow()
 @pytest.mark.parametrize(

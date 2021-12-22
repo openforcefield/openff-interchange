@@ -1,5 +1,6 @@
 """Interfaces with GROMACS."""
 import math
+import warnings
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Callable, Dict, Set, Tuple, Union
 
@@ -469,7 +470,7 @@ def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict
         parameters = _get_buck_parameters(openff_sys, atom_idx)
         a = parameters["A"].m_as(kj_mol)
         b = parameters["B"].m_as(1 / unit.nanometer)
-        c = parameters["C"].m_as(kj_mol / unit.nanometer ** 6)
+        c = parameters["C"].m_as(kj_mol * unit.nanometer ** 6)
 
         top_file.write(
             "{:<11s} {:6d} {:.16g} {:.16g} {:5s} {:.16g} {:.16g} {:.16g}".format(
@@ -579,7 +580,12 @@ def _write_atoms(
     # Use a set to de-duplicate
     pairs: Set[Tuple] = {*_get_14_pairs(molecule)}
 
-    lj_parameters = openff_sys["vdW"].get_system_parameters()
+    if "vdW" in openff_sys.handlers:
+        lj_parameters = openff_sys["vdW"].get_system_parameters()
+    elif "Buckingham-6" in openff_sys.handlers:
+        warnings.warn("Not writing a [ pairs ] section with Buckingham interactions.")
+        top_file.write("\n")
+        return
 
     # TODO: Sort pairs by atom indices ascending
     for pair in pairs:
