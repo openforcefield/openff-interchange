@@ -157,6 +157,9 @@ def compare_condensed_systems(mol, force_field):
             raise e
 
 
+@pytest.mark.skip(
+    "Needs an OpenFF Evaluator release and/or refactoring out packing code to here"
+)
 @requires_openeye
 @skip_if_missing("openff.evaluator")
 @pytest.mark.timeout(120)

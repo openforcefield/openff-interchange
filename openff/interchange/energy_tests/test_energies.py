@@ -13,7 +13,6 @@ from openmm import app
 from openmm import unit as openmm_unit
 
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
 from openff.interchange.drivers.report import EnergyError, EnergyReport
@@ -220,9 +219,7 @@ def test_packmol_boxes(toolkit_file_path):
         ]
     ]
     omm_topology = pdbfile.topology
-    off_topology = _OFFBioTop.from_openmm(
-        omm_topology, unique_molecules=unique_molecules
-    )
+    off_topology = Topology.from_openmm(omm_topology, unique_molecules=unique_molecules)
     off_topology.mdtop = md.Topology.from_openmm(omm_topology)
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")

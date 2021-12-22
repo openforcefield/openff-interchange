@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Dict, Union
 
 from openff.units import unit
 from openff.utilities.utilities import temporary_cd
-from openmm import unit as omm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
@@ -225,7 +224,7 @@ def _group_energy_terms(mdinfo: str):
     ranges = [[1, 24], [26, 49], [51, 77]]
 
     e_out = dict()
-    potential = 0 * omm_unit.kilocalories_per_mole
+    potential = 0 * unit.kilocalories_per_mole
     for line in all_lines[startline + 1 :]:
         if "=" in line:
             for i in range(3):
@@ -233,7 +232,7 @@ def _group_energy_terms(mdinfo: str):
                 term = line[r[0] : r[1]]
                 if "=" in term:
                     energy_type, energy_value = term.strip().split("=")
-                    energy_value = float(energy_value) * omm_unit.kilocalories_per_mole
+                    energy_value = float(energy_value) * unit.kilocalories_per_mole
                     potential += energy_value
                     energy_type = energy_type.rstrip()
                     e_out[energy_type] = energy_value
@@ -246,7 +245,7 @@ def _group_energy_terms(mdinfo: str):
 
 def _get_amber_energy_vdw(amber_energies: Dict):
     """Get the total nonbonded energy from a set of Amber energies."""
-    amber_vdw = 0.0 * omm_unit.kilojoule_per_mole
+    amber_vdw = 0.0 * unit.kilojoule_per_mole
     for key in ["VDWAALS", "1-4 VDW", "1-4 NB"]:
         try:
             amber_vdw += amber_energies[key]
@@ -258,7 +257,7 @@ def _get_amber_energy_vdw(amber_energies: Dict):
 
 def _get_amber_energy_coul(amber_energies: Dict):
     """Get the total nonbonded energy from a set of Amber energies."""
-    amber_coul = 0.0 * omm_unit.kilojoule_per_mole
+    amber_coul = 0.0 * unit.kilojoule_per_mole
     for key in ["EEL", "1-4 EEL"]:
         try:
             amber_coul += amber_energies[key]

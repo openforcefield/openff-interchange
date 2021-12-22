@@ -21,7 +21,6 @@ POTENTIAL_KEY_SEPARATOR = "-"
 
 
 if has_package("foyer"):
-    pass
 
     class _TopologyGraph(TopologyGraph):
         """Shim to get TopologyGraph.from_openff_topology working with the Topology refactor."""
@@ -32,7 +31,7 @@ if has_package("foyer"):
             for atom in openff_topology.atoms:
                 atom_index = openff_topology.atom_index(atom)
                 element = periodic_table.Element[atom.atomic_number]
-                top_graph.add_atom(  # type: ignore[attr-defined]
+                top_graph.add_atom(
                     name=atom.name,
                     index=atom_index,
                     atomic_number=atom.atomic_number,
@@ -43,7 +42,7 @@ if has_package("foyer"):
                 atoms_indices = [
                     openff_topology.atom_index(atom) for atom in bond.atoms
                 ]
-                top_graph.add_bond(*atoms_indices)  # type: ignore[attr-defined]
+                top_graph.add_bond(*atoms_indices)
 
             return top_graph
 
@@ -312,7 +311,7 @@ def _topology_graph_from_openff_topology(
     topology: "Topology",
 ) -> "TopologyGraph":
     """Create a TopologyGraph from an OpenFF Topology."""
-    from foyer.topology_graph import TopologyGraph, pt
+    from foyer.topology_graph import TopologyGraph, pt  # type: ignore[attr-defined]
 
     topology_graph = TopologyGraph()
     for atom in topology.atoms:
