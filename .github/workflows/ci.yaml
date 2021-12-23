@@ -76,7 +76,7 @@ jobs:
 
     - name: Run example notebooks
       run: |
-        python -m pytest $COV examples/ --nbval-lax
+        python -m pytest $COV examples/ --nbval-lax -p no:randomly
 
     - name: Codecov
       uses: codecov/codecov-action@v2.1.0
