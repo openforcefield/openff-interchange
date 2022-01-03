@@ -6,6 +6,7 @@ from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
+from openff.units.openmm import from_openmm
 from openmm.unit import nanometer as nm
 
 from openff.interchange.components.interchange import Interchange
@@ -30,7 +31,7 @@ class TestFromOpenMM(_BaseTest):
 
         out = Interchange.from_smirnoff(argon_ff, top)
         out.box = box
-        out.positions = pdbfile.getPositions()
+        out.positions = from_openmm(pdbfile.getPositions())
 
         assert np.allclose(
             out.positions.to(unit.nanometer).magnitude,
@@ -53,6 +54,9 @@ class TestFromOpenMM(_BaseTest):
         # What if, instead ...
         # Molecule.from_iupac(molecules)
 
+    @pytest.mark.skip(
+        reason="Needs to be reimplmented after OFFTK 0.11.0 with fewer moving parts"
+    )
     @pytest.mark.slow()
     @pytest.mark.parametrize(
         "pdb_path",
@@ -83,7 +87,7 @@ class TestFromOpenMM(_BaseTest):
 
         out = Interchange.from_smirnoff(ff, top)
         out.box = box
-        out.positions = pdbfile.getPositions()
+        out.positions = from_openmm(pdbfile.getPositions())
 
         assert np.allclose(
             out.positions.to(unit.nanometer).magnitude,

@@ -56,12 +56,12 @@ class Interchange(DefaultModel):
     .. warning :: This API is experimental and subject to change.
     """
 
-    class InnerSystem(DefaultModel):
+    class _InnerSystem(DefaultModel):
         """Inner representation of Interchange components."""
 
         # TODO: Ensure these fields are hidden from the user as intended
         handlers: Dict[str, PotentialHandler] = dict()
-        topology: Optional[Union[_OFFBioTop, Topology]] = Field(None)
+        topology: Optional[Union[Topology, _OFFBioTop]] = Field(None)
         box: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
         positions: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
 
@@ -78,7 +78,7 @@ class Interchange(DefaultModel):
                 raise InvalidBoxError
 
     def __init__(self):
-        self._inner_data = self.InnerSystem()
+        self._inner_data = self._InnerSystem()
 
     @property
     def handlers(self):
@@ -138,7 +138,7 @@ class Interchange(DefaultModel):
     def from_smirnoff(
         cls,
         force_field: ForceField,
-        topology: Union[_OFFBioTop, Topology],
+        topology: Topology,
         box=None,
     ) -> "Interchange":
         """
@@ -176,14 +176,7 @@ class Interchange(DefaultModel):
 
         cls._check_supported_handlers(force_field)
 
-        if isinstance(topology, _OFFBioTop):
-            warnings.warn(
-                "Passing an `_OFFBioTop` object to `Interchange.from_smirnoff` is "
-                "DEPRECATED and will be removed in a future release.",
-                DeprecationWarning,
-            )
-            sys_out.topology = deepcopy(topology)
-        elif isinstance(topology, Topology):
+        if isinstance(topology, Topology):
             # Work around https://github.com/openforcefield/openff-toolkit/issues/946#issuecomment-941143659
             box_vectors = topology.box_vectors
             topology.box_vectors = None
@@ -583,28 +576,21 @@ class Interchange(DefaultModel):
 
     def __add__(self, other):
         """Combine two Interchange objects. This method is unstable and likely unsafe."""
-        import mdtraj as md
-
+        from openff.interchange.components.toolkit import _combine_topologies
         from openff.interchange.models import TopologyKey
 
         warnings.warn(
             "Iterchange object combination is experimental and likely to produce "
-            "strange results. Use with caution!"
+            "strange results. Any workflow using this method is not guaranteed to "
+            "be suitable for production. Use with extreme caution and thoroughly "
+            "validate results!"
         )
 
         self_copy = Interchange()
         self_copy._inner_data = deepcopy(self._inner_data)
 
         atom_offset = self_copy.topology.n_atoms
-
-        other_top = deepcopy(other.topology)
-
-        for mol in other_top.topology_molecules:
-            self_copy.topology.add_molecule(mol)
-
-        self_copy.topology.mdtop = md.Topology.from_openmm(
-            self_copy.topology.to_openmm()
-        )
+        self_copy.topology = _combine_topologies(self.topology, other.topology)
 
         for handler_name, handler in other.handlers.items():
 
@@ -645,8 +631,5 @@ class Interchange(DefaultModel):
 
     def __repr__(self):
         periodic = self.box is not None
-        try:
-            n_atoms = self.topology.n_atoms
-        except Exception:
-            n_atoms = "unknown number of"
+        n_atoms = self.topology.n_atoms
         return f"Interchange with {n_atoms} atoms, {'' if periodic else 'non-'}periodic topology"

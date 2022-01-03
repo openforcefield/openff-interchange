@@ -330,6 +330,7 @@ class TestInterchangeFromSMIRNOFF(_BaseTest):
         assert out["Electrostatics"].cutoff == 0.777 * unit.angstrom
 
 
+@pytest.mark.slow()
 class TestUnassignedParameters(_BaseTest):
     def test_catch_unassigned_bonds(self, parsley, ethanol_top):
         for param in parsley["Bonds"].parameters:

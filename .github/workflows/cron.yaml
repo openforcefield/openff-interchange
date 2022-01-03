@@ -1,8 +1,9 @@
-name: nightly tests
+name: Nightly tests
 
 on:
   schedule:
     - cron: "0 0 * * *"
+  workflow_dispatch:
 
 defaults:
   run:
@@ -15,14 +16,14 @@ jobs:
       fail-fast: false
       matrix:
         os: [macOS-latest, ubuntu-latest]
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.8, 3.9]
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
-    - uses: actions/checkout@v2.3.4
+    - uses: actions/checkout@v2.4.0
 
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
@@ -58,7 +59,7 @@ jobs:
     - name: Run all tests
       if: always()
       run: |
-        python -m pytest -v $COV openff/interchange/
+        python -m pytest -v $COV openff/interchange/ -m "slow or not slow"
 
     - name: Run example notebooks
       run: |

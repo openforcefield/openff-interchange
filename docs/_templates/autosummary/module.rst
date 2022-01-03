@@ -1,10 +1,10 @@
-{{ fullname | escape | underline(line="=")}}
+{{ objname | escape | underline(line="=")}}
 
 .. automodule:: {{ fullname }}
 
 {% block modules %}
 {% if modules %}
-.. rubric:: Modules
+{{ _('Modules') | escape | underline(line="-") }}
 
 .. autosummary::
    :toctree:
@@ -15,41 +15,37 @@
 {% endif %}
 {% endblock %}
 
-{% block classes %}
-{% if classes %}
+{% block classes -%}
+
+{%- set types = [] -%}
+{%- for item in members -%}
+   {%- if not item.startswith('_') and not (item in functions or item in attributes or item in exceptions) -%}
+      {%- set _ = types.append(item) -%}
+   {%- endif -%}
+{%- endfor %}
+
+{% if types %}
 {{ _('Classes') | escape | underline(line="-") }}
 
    .. autosummary::
+      :toctree:
       :nosignatures:
-   {% for item in classes %}
+   {% for item in types %}
       {{ item }}
-   {%- endfor %}
-
-   {% for item in classes %}
-   .. autoclass:: {{ item }}
-      :members:
-      :special-members: __init__
-      :undoc-members:
-      :show-inheritance:
-      :inherited-members:
    {%- endfor %}
 
 {% endif %}
 {% endblock %}
-
 
 {% block functions %}
 {% if functions %}
 {{ _('Functions') | escape | underline(line="-") }}
 
    .. autosummary::
+      :toctree:
       :nosignatures:
    {% for item in functions %}
       {{ item }}
-   {%- endfor %}
-
-   {% for item in functions %}
-   .. autofunction:: {{ item }}
    {%- endfor %}
 
 {% endif %}
@@ -60,13 +56,10 @@
 {{ _('Exceptions') | escape | underline(line="-") }}
 
    .. autosummary::
+      :toctree:
       :nosignatures:
    {% for item in exceptions %}
       {{ item }}
-   {%- endfor %}
-
-   {% for item in exceptions %}
-   .. autoexception:: {{ item }}
    {%- endfor %}
 
 {% endif %}
@@ -76,10 +69,8 @@
 {% if attributes %}
 {{ _('Module Attributes') | escape | underline(line="-") }}
 
-   .. autosummary::
-      :nosignatures:
    {% for item in attributes %}
-      {{ item }}
+   .. autoattribute:: {{ item }}
    {%- endfor %}
 
 {% endif %}

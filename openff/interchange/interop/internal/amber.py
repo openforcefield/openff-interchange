@@ -128,8 +128,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         bonds_inc_hydrogen: List[int] = list()
         bonds_without_hydrogen: List[int] = list()
 
-        for bond, key in interchange["Bonds"].slot_map.items():
-            bond_type_index = potential_key_to_bond_type_mapping[key]
+        for bond, key_ in interchange["Bonds"].slot_map.items():
+            bond_type_index = potential_key_to_bond_type_mapping[key_]
 
             atom1 = interchange.topology.atom(bond.atom_indices[0])
             atom2 = interchange.topology.atom(bond.atom_indices[1])
@@ -152,8 +152,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         angles_inc_hydrogen: List[int] = list()
         angles_without_hydrogen: List[int] = list()
 
-        for angle, key in interchange["Angles"].slot_map.items():
-            angle_type_index = potential_key_to_angle_type_mapping[key]
+        for angle, key_ in interchange["Angles"].slot_map.items():
+            angle_type_index = potential_key_to_angle_type_mapping[key_]
 
             atom1 = interchange.topology.atom(angle.atom_indices[0])
             atom2 = interchange.topology.atom(angle.atom_indices[1])
@@ -188,8 +188,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         dihedrals_without_hydrogen: List[int] = list()
 
         if "ProperTorsions" in interchange.handlers:
-            for dihedral, key in interchange["ProperTorsions"].slot_map.items():
-                dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
+            for dihedral, key_ in interchange["ProperTorsions"].slot_map.items():
+                dihedral_type_index = potential_key_to_dihedral_type_mapping[key_]
 
                 atom1 = interchange.topology.atom(dihedral.atom_indices[0])
                 atom2 = interchange.topology.atom(dihedral.atom_indices[1])
@@ -245,8 +245,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
                 dihedrals_list.append(dihedral_type_index + 1)
 
         if "ImproperTorsions" in interchange.handlers:
-            for dihedral, key in interchange["ImproperTorsions"].slot_map.items():
-                dihedral_type_index = potential_key_to_dihedral_type_mapping[key]
+            for dihedral, key_ in interchange["ImproperTorsions"].slot_map.items():
+                dihedral_type_index = potential_key_to_dihedral_type_mapping[key_]
 
                 atom1 = interchange.topology.atom(dihedral.atom_indices[0])
                 atom2 = interchange.topology.atom(dihedral.atom_indices[1])
@@ -532,8 +532,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         dihedral_periodicity: List[int] = list()
         dihedral_phase: List[int] = list()
 
-        for key in potential_key_to_dihedral_type_mapping:
-            params = interchange[key.associated_handler].potentials[key].parameters
+        for key_ in potential_key_to_dihedral_type_mapping:
+            params = interchange[key_.associated_handler].potentials[key_].parameters
             idivf = int(params["idivf"]) if "idivf" in params else 1
             dihedral_k.append((params["k"] / idivf).m_as(kcal_mol))
             dihedral_periodicity.append(params["periodicity"].m_as(unit.dimensionless))

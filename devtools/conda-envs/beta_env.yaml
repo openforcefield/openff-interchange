@@ -1,5 +1,8 @@
 name: openff-interchange-env
 channels:
+  - conda-forge/label/openmm_rc
+  - openeye/label/beta
+  - openeye/label/rc
   - conda-forge
   - bioconda
   - openeye
@@ -11,7 +14,6 @@ dependencies:
   - pydantic
   - openmm
   - mdtraj
-  - mendeleev
   # OpenFF stack
   - openff-toolkit >=0.10.0
   - openff-utilities
@@ -27,11 +29,10 @@ dependencies:
   - openff-recharge
   - openeye-toolkits
   - pytest
+  - pytest-timeout
   - codecov
   - pytest-cov
   - pytest-xdist
-  - pytest-randomly
-  - pytest-timeout
   - nbval
   - conda
   # Drivers
@@ -44,10 +45,3 @@ dependencies:
   - types-setuptools
   - types-pkg_resources
   - pandas-stubs
-  - openff-evaluator
-  - openff-recharge
-  - openeye-toolkits
-  - cached-property
-  - cachetools
-  - pip:
-    - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor

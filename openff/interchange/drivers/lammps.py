@@ -4,7 +4,6 @@ from typing import List
 
 import numpy as np
 from openff.units import unit
-from openmm import unit as omm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
@@ -65,7 +64,7 @@ def get_lammps_energies(
         raise LAMMPSRunError(err)
 
     # thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe
-    parsed_energies = omm_unit.kilocalorie_per_mole * _parse_lammps_log("log.lammps")
+    parsed_energies = unit.kilocalorie_per_mole * _parse_lammps_log("log.lammps")
 
     report = EnergyReport(
         energies={

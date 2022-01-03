@@ -70,7 +70,7 @@ if TYPE_CHECKING:
 
 
 T = TypeVar("T", bound="SMIRNOFFPotentialHandler")
-T_ = TypeVar("T_", bound="PotentialHandler")
+TP = TypeVar("TP", bound="PotentialHandler")
 
 
 class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
@@ -127,8 +127,8 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
             valence_terms = self.valence_terms(topology)  # type: ignore[attr-defined]
 
             parameter_handler._check_all_valence_terms_assigned(
-                topology=topology,
                 assigned_terms=matches,
+                topology=topology,
                 valence_terms=valence_terms,
                 exception_cls=UnassignedValenceParameterException,
             )
@@ -136,7 +136,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
     @classmethod
     def _from_toolkit(
         cls: Type[T],
-        parameter_handler: T_,
+        parameter_handler: TP,
         topology: "Topology",
     ) -> T:
         """
@@ -383,7 +383,7 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
             )
         else:
             bond_handler = None
-            bonds = None  # type: ignore[assignment]
+            bonds = None
 
         for key, match in constraint_matches.items():
             topology_key = TopologyKey(atom_indices=key)
@@ -404,9 +404,9 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
                         "of this constraint is not specified."
                     )
                 # ... so use the same PotentialKey instance as the BondHandler to look up the distance
-                potential_key = bonds.slot_map[topology_key]
+                potential_key = bonds.slot_map[topology_key]  # type: ignore[union-attr]
                 self.slot_map[topology_key] = potential_key
-                distance = bonds.potentials[potential_key].parameters["length"]
+                distance = bonds.potentials[potential_key].parameters["length"]  # type: ignore[union-attr]
             potential = Potential(
                 parameters={
                     "distance": distance,
@@ -1338,7 +1338,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                         duplicate_molecule_particle
                     )
 
-                    for mult in match_mults[(unique_molecule_index,)]:
+                    for mult in match_mults[(unique_molecule_particle_index,)]:
                         topology_key = TopologyKey(
                             atom_indices=(topology_particle_index,),
                             mult=mult,

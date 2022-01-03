@@ -14,6 +14,7 @@ kj_mol = unit.kilojoule / unit.mol
 
 
 class TestAmber(_BaseTest):
+    @pytest.mark.slow()
     def test_inpcrd(self, parsley):
         mol = Molecule.from_smiles(10 * "C")
         mol.name = "HPER"
@@ -32,6 +33,7 @@ class TestAmber(_BaseTest):
 
         np.testing.assert_equal(coords1, coords2)
 
+    @pytest.mark.slow()
     @pytest.mark.parametrize(
         "smiles",
         [
