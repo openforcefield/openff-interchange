@@ -1,11 +1,9 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
-from typing import TYPE_CHECKING, Dict, Union
+from typing import Dict, Union
 
 import numpy as np
+from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils.collections import ValidatedList
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology import Molecule, Topology
 
 
 def _get_num_h_bonds(topology: "Topology") -> int:
@@ -85,3 +83,13 @@ def _validated_list_to_array(validated_list: ValidatedList) -> np.ndarray:
 
     unit_ = validated_list[0].units
     return unit.Quantity(np.asarray([val.m for val in validated_list]), unit_)
+
+
+def _combine_topologies(topology1: Topology, topology2: Topology) -> Topology:
+    topology1_ = Topology(other=topology1)
+    topology2_ = Topology(other=topology2)
+
+    for molecule in topology2_.molecules:
+        topology1_.add_molecule(molecule)
+
+    return topology1_

@@ -3,6 +3,7 @@ import json
 from typing import TYPE_CHECKING, Any, Dict
 
 import numpy as np
+from openff.toolkit.utils.collections import ValidatedList
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from openmm import unit as openmm_unit
@@ -77,7 +78,7 @@ def _from_omm_quantity(val: openmm_unit.Quantity):
     if type(val_) in {float, int}:
         unit_ = val.unit
         return val_ * unit.Unit(str(unit_))
-    elif type(val_) in {tuple, list, np.ndarray}:
+    elif type(val_) in {tuple, list, np.ndarray, ValidatedList}:
         array = np.asarray(val_)
         return array * unit.Unit(str(unit_))
     elif isinstance(val_, (float, int)) and type(val_).__module__ == "numpy":

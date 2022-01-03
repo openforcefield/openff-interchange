@@ -8,6 +8,7 @@ dependencies:
   - numpy >=1.21
   - pydantic
   - openmm
+  - mendeleev
   - mdtraj
   # OpenFF stack
   - openff-toolkit >=0.10.0

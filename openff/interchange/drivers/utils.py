@@ -20,7 +20,9 @@ def _infer_constraints(interchange: "Interchange") -> str:
 
                 num_h_bonds = _get_num_h_bonds(interchange.topology.mdtop)
             else:
-                from openff.interchange.components.toolkit import _get_num_h_bonds
+                from openff.interchange.components.toolkit import (  # type: ignore[no-redef]
+                    _get_num_h_bonds,
+                )
 
                 num_h_bonds = _get_num_h_bonds(interchange.topology)
 

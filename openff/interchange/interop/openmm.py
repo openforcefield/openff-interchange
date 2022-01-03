@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
 
 kcal_mol = unit.kilocalorie_per_mole
+
 kcal_ang = kcal_mol / unit.angstrom ** 2
 kcal_rad = kcal_mol / unit.radian ** 2
 
@@ -309,7 +310,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             else:
                 raise NotImplementedError(
                     f"Mixing rule `{vdw_handler.mixing_rule}` not compatible with current OpenMM export."
-                    "The only supported values is `lorentez-berthelot`."
+                    "The only supported values is `lorentz-berthelot`."
                 )
 
         if vdw_handler.mixing_rule == "lorentz-berthelot":
@@ -638,7 +639,7 @@ def _create_virtual_site(
         parent_atom_positions.append(interchange.positions[parent_atom])
 
     _origin_weight = np.atleast_2d(origin_weight)
-    parent_atom_positions = np.atleast_2d(parent_atom_positions)  # type: ignore[assignment]
+    parent_atom_positions = np.atleast_2d(parent_atom_positions)
 
     origin = np.dot(_origin_weight, parent_atom_positions).sum(axis=0)
 
