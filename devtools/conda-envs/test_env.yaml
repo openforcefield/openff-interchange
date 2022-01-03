@@ -23,8 +23,12 @@ dependencies:
   - foyer >=0.8.1
   # Testing
   - intermol
+  - nglview
   - openff-evaluator
   - openff-recharge
+  - openff-amber-ff-ports
+  - cached-property
+  - cachetools
   - openeye-toolkits
   - pytest
   - codecov
@@ -44,10 +48,6 @@ dependencies:
   - types-setuptools
   - types-pkg_resources
   - pandas-stubs
-  - openff-evaluator
-  - openff-recharge
-  - openeye-toolkits
-  - cached-property
-  - cachetools
+  # Temporary
   - pip:
     - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
