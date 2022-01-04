@@ -1,6 +1,5 @@
 from copy import deepcopy
 
-import mdtraj as md
 import numpy as np
 import openmm
 import pytest
@@ -12,7 +11,6 @@ from openmm import app
 from openmm import unit as openmm_unit
 
 from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
 from openff.interchange.drivers.report import EnergyError, EnergyReport
@@ -219,10 +217,8 @@ def test_packmol_boxes(toolkit_file_path):
         ]
     ]
     omm_topology = pdbfile.topology
-    off_topology = _OFFBioTop.from_openmm(
-        omm_topology, unique_molecules=unique_molecules
-    )
-    off_topology.mdtop = md.Topology.from_openmm(omm_topology)
+    off_topology = Topology.from_openmm(omm_topology, unique_molecules=unique_molecules)
+    # shim_topology = _OFFBioTop(mdtop=md.Topology.from_openmm(omm_topology))
 
     parsley = ForceField("openff_unconstrained-1.0.0.offxml")
 
@@ -255,13 +251,13 @@ def test_packmol_boxes(toolkit_file_path):
         )
     except EnergyError as err:
         if "Torsion" in err.args[0]:
-            from openff.interchange.tests.utils import (  # type: ignore
+            from openff.interchange.testing.utils import (
                 _compare_torsion_forces,
                 _get_force,
             )
 
             _compare_torsion_forces(
-                _get_force(off_sys.to_openmm, openmm.PeriodicTorsionForce),
+                _get_force(off_sys.to_openmm(), openmm.PeriodicTorsionForce),
                 _get_force(sys_from_toolkit, openmm.PeriodicTorsionForce),
             )
 
@@ -293,14 +289,14 @@ def test_packmol_boxes(toolkit_file_path):
 def test_water_dimer():
     tip3p = ForceField(get_test_file_path("tip3p.offxml"))
     water = Molecule.from_smiles("O")
-    top = Topology.from_molecules(2 * [water])
-    top.mdtop = md.Topology.from_openmm(top.to_openmm())
+    tmp = Topology.from_molecules(2 * [water])
+    # top = _OFFBioTop(mdtop=md.Topology.from_openmm(tmp.to_openmm()))
 
     pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
 
     positions = pdbfile.positions
 
-    openff_sys = Interchange.from_smirnoff(tip3p, top)
+    openff_sys = Interchange.from_smirnoff(tip3p, tmp)
     openff_sys.positions = positions
     openff_sys.box = [10, 10, 10] * unit.nanometer
 
@@ -312,7 +308,7 @@ def test_water_dimer():
     )
 
     toolkit_energies = _get_openmm_energies(
-        tip3p.create_openmm_system(top),
+        tip3p.create_openmm_system(tmp),
         openff_sys.box,
         openff_sys.positions,
         hard_cutoff=True,
@@ -409,7 +405,8 @@ def test_cutoff_electrostatics():
             Molecule.from_smiles("[#17]"),
         ]
     )
-    out = Interchange.from_smirnoff(ion_ff, ions)
+    # topology = _OFFBioTop(mdtop=md.Topology.from_openmm(ions.to_openmm()))
+    out = Interchange.from_smirnoff(ion_ff, ions)  # topology)
     out.box = [4, 4, 4] * unit.nanometer
 
     gmx = []

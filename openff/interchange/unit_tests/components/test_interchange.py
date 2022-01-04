@@ -20,7 +20,7 @@ from openff.interchange.exceptions import (
     SMIRNOFFHandlersNotImplementedError,
 )
 from openff.interchange.testing import _BaseTest
-from openff.interchange.testing.utils import needs_gmx, needs_lmp
+from openff.interchange.testing.utils import _top_from_smiles, needs_gmx, needs_lmp
 from openff.interchange.utils import get_test_file_path
 
 
@@ -178,7 +178,7 @@ class TestBadExports(_BaseTest):
             no_positions.to_gro("foo.gro")
 
     def test_gro_file_all_zero_positions(self, parsley):
-        top = Topology.from_molecules(Molecule.from_smiles("CC"))
+        top = _top_from_smiles("CC")
         zero_positions = Interchange.from_smirnoff(force_field=parsley, topology=top)
         zero_positions.positions = np.zeros((top.n_topology_atoms, 3)) * unit.nanometer
         with pytest.warns(UserWarning, match="seem to all be zero"):
@@ -224,8 +224,9 @@ class TestInterchange(_BaseTest):
 
         benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
         benzene.name = "BENZ"
-        biotop = _OFFBioTop.from_molecules(benzene)
-        biotop.mdtop = md.Topology.from_openmm(biotop.to_openmm())
+        biotop = _OFFBioTop(
+            mdtop=md.Topology.from_openmm(benzene.to_topology().to_openmm())
+        )
         _store_bond_partners(biotop.mdtop)
         out = Interchange.from_foyer(force_field=oplsaa, topology=biotop)
         out.box = [4, 4, 4]
