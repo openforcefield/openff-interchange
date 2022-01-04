@@ -36,7 +36,7 @@ calculation. `run` and other commands should be modified to before running an
 MD simulation. This will write a file `run.inp`:
 
 ```python
-from openff.interchange.drivers.gromacs import _write_mdp_file
+from openff.interchange.drivers.lammps import _write_lammps_input
 
 _write_lammps_input(interchange, "run.inp")
 ```

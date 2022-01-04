@@ -3,10 +3,13 @@ Test the behavior of the drivers.all module
 """
 from distutils.spawn import find_executable
 
+import pytest
+
 from openff.interchange.drivers.all import get_all_energies
 from openff.interchange.testing import _BaseTest
 
 
+@pytest.mark.slow()
 class TestDriversAll(_BaseTest):
     def test_skipping_drivers(self, ethanol_top, parsley):
         from openff.toolkit.topology import Molecule

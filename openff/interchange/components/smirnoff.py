@@ -381,7 +381,7 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
             )
         else:
             bond_handler = None
-            bonds = None  # type: ignore[assignment]
+            bonds = None
 
         for key, match in constraint_matches.items():
             topology_key = TopologyKey(atom_indices=key)
@@ -402,9 +402,9 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
                         "of this constraint is not specified."
                     )
                 # ... so use the same PotentialKey instance as the BondHandler to look up the distance
-                potential_key = bonds.slot_map[topology_key]
+                potential_key = bonds.slot_map[topology_key]  # type: ignore[union-attr]
                 self.slot_map[topology_key] = potential_key
-                distance = bonds.potentials[potential_key].parameters["length"]
+                distance = bonds.potentials[potential_key].parameters["length"]  # type: ignore[union-attr]
             potential = Potential(
                 parameters={
                     "distance": distance,
