@@ -48,8 +48,9 @@ class TestFoyer(_BaseTest):
         )
         molecule.name = "ETH"
 
-        top = _OFFBioTop.from_molecules(molecule)
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        top = _OFFBioTop(
+            mdtop=md.Topology.from_openmm(molecule.to_topology().to_openmm())
+        )
         _store_bond_partners(top.mdtop)
         oplsaa = foyer.Forcefield(name="oplsaa")
         interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)

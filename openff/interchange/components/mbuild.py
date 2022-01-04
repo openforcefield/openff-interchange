@@ -16,7 +16,7 @@ def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
 
     Examples
     --------
-    .. code-block:: pycon
+    .. code-block:: python
 
         >>> from openff.toolkit.topology import Molecule
         >>> from openff.interchange.components.mbuild import offmol_to_compound
@@ -54,7 +54,7 @@ def offtop_to_compound(off_top: "Topology") -> "mb.Compound":
 
     Examples
     --------
-    .. code-block:: pycon
+    .. code-block:: python
 
         >>> from openff.toolkit.topology import Molecule, Topology
         >>> from openff.interchange.components.mbuild import offtop_to_compound

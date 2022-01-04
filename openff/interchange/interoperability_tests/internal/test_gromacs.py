@@ -128,7 +128,7 @@ class TestGROMACS(_BaseTest):
         openff_sys = Interchange.from_smirnoff(
             force_field=parsley, topology=ethanol_top
         )
-        openff_sys.positions = np.zeros((ethanol_top.n_topology_atoms, 3))
+        openff_sys.positions = np.zeros((ethanol_top.mdtop.n_atoms, 3))
         openff_sys.to_gro("tmp.gro")
 
         openff_sys.to_top("lorentz.top")

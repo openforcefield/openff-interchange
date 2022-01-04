@@ -77,8 +77,7 @@ class TestInterchangeCombination(_BaseTest):
         """Test basic use of Interchange.__add__() based on the README example"""
         mol = Molecule.from_smiles("C")
         mol.generate_conformers(n_conformers=1)
-        top = _OFFBioTop.from_molecules([mol])
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        top = _OFFBioTop(mdtop=md.Topology.from_openmm(mol.to_topology().to_openmm()))
 
         openff_sys = Interchange.from_smirnoff(parsley_unconstrained, top)
 
@@ -189,9 +188,10 @@ class TestBadExports(_BaseTest):
 class TestInterchange(_BaseTest):
     def test_from_parsley(self, parsley):
 
-        top = _OFFBioTop.from_molecules(
+        tmp = Topology.from_molecules(
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")]
         )
+        top = _OFFBioTop(mdtop=md.Topology.from_openmm(tmp.to_openmm()))
 
         out = Interchange.from_smirnoff(parsley, top)
 

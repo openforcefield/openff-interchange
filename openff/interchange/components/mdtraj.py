@@ -1,9 +1,9 @@
 """Temporary utilities to use an MDTraj Trajectory with an OpenFF Trajectory."""
 import copy
-from typing import TYPE_CHECKING, Any, Generator, Tuple
+from typing import TYPE_CHECKING, Any, Generator, List, Tuple
 
 import mdtraj as md
-from openff.toolkit.topology import Topology
+from openff.toolkit.topology import Molecule, Topology
 
 if TYPE_CHECKING:
     from mdtraj import Atom
@@ -27,6 +27,14 @@ class _OFFBioTop(Topology):
             other._reference_molecule_to_topology_molecules
         )
         self._topology_molecules = copy.deepcopy(other.topology_molecules)
+
+    @classmethod
+    def from_molecules(cls, mdtop: md.Topology, molecules: List[Molecule]):
+        topology = cls(mdtop=mdtop)
+        for molecule in molecules:
+            topology.add_molecule(molecule)
+
+        return topology
 
 
 def _store_bond_partners(mdtop: md.Topology) -> None:

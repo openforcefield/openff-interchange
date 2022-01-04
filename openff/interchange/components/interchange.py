@@ -170,8 +170,7 @@ class Interchange(DefaultModel):
             >>> import mdtraj as md
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> top = _OFFBioTop.from_molecules([mol])
-            >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
+            >>> top = _OFFBioTop(mdtop=md.Topology.from_openmm(mol.to_topology().to_openmm()))
             >>> parsley = ForceField("openff-1.0.0.offxml")
             >>> interchange = Interchange.from_smirnoff(topology=top, force_field=parsley)
             >>> interchange
@@ -188,8 +187,9 @@ class Interchange(DefaultModel):
             sys_out.topology = deepcopy(topology)
             sys_out.topology.mdtop = topology.mdtop
         elif isinstance(topology, Topology):
-            sys_out.topology = _OFFBioTop(other=topology)
-            sys_out.topology.mdtop = md.Topology.from_openmm(topology.to_openmm())
+            sys_out.topology = _OFFBioTop(
+                mdtop=md.Topology.from_openmm(topology.to_openmm())
+            )
         else:
             raise InvalidTopologyError(
                 "Could not process topology argument, expected Topology or _OFFBioTop. "
@@ -450,8 +450,7 @@ class Interchange(DefaultModel):
             >>> import mdtraj as md
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> top = _OFFBioTop.from_molecules([mol])
-            >>> top.mdtop = md.Topology.from_openmm(top.to_openmm())
+            >>> top = _OFFBioTop(mdtop=md.Topology.from_openmm(mol.to_topology().to_openmm()))
             >>> oplsaa = Forcefield(name="oplsaa")
             >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
             >>> interchange

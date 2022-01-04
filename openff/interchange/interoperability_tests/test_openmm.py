@@ -117,11 +117,15 @@ def test_openmm_nonbonded_methods(inputs):
 def test_unsupported_mixing_rule():
     molecules = [create_ethanol()]
     pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
-    topology = _OFFBioTop.from_openmm(pdbfile.topology, unique_molecules=molecules)
-    topology.mdtop = md.Topology.from_openmm(topology.to_openmm())
+    openff_topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+    shim_topology = _OFFBioTop(
+        mdtop=md.Topology.from_openmm(openff_topology.to_openmm())
+    )
 
     forcefield = ForceField("test_forcefields/test_forcefield.offxml")
-    openff_sys = Interchange.from_smirnoff(force_field=forcefield, topology=topology)
+    openff_sys = Interchange.from_smirnoff(
+        force_field=forcefield, topology=shim_topology
+    )
 
     openff_sys["vdW"].mixing_rule = "geometric"
 
