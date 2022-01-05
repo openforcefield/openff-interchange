@@ -872,6 +872,14 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange"):
     for proper in _iterate_propers(openff_sys.topology.mdtop):
         if proper_torsion_handler:
             for top_key in proper_torsion_handler.slot_map:
+                if top_key.atom_indices[0] != proper[0].index:
+                    continue
+                if top_key.atom_indices[1] != proper[1].index:
+                    continue
+                if top_key.atom_indices[2] != proper[2].index:
+                    continue
+                if top_key.atom_indices[3] != proper[3].index:
+                    continue
                 indices = tuple(a.index for a in proper)
                 if top_key.atom_indices == indices:
                     pot_key = proper_torsion_handler.slot_map[top_key]
@@ -896,6 +904,14 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange"):
         # This should be `if` if a single quartet can be subject to both proper and RB torsions
         if rb_torsion_handler:
             for top_key in rb_torsion_handler.slot_map:
+                if top_key.atom_indices[0] != proper[0].index:
+                    continue
+                if top_key.atom_indices[1] != proper[1].index:
+                    continue
+                if top_key.atom_indices[2] != proper[2].index:
+                    continue
+                if top_key.atom_indices[3] != proper[3].index:
+                    continue
                 indices = tuple(a.index for a in proper)
                 if top_key.atom_indices == indices:
                     pot_key = rb_torsion_handler.slot_map[top_key]
@@ -929,6 +945,14 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange"):
     for improper in _iterate_impropers(openff_sys.topology.mdtop):
         if improper_torsion_handler:
             for top_key in improper_torsion_handler.slot_map:
+                if top_key.atom_indices[0] != improper[0].index:
+                    continue
+                if top_key.atom_indices[1] != improper[1].index:
+                    continue
+                if top_key.atom_indices[2] != improper[2].index:
+                    continue
+                if top_key.atom_indices[3] != improper[3].index:
+                    continue
                 indices = tuple(a.index for a in improper)
                 if indices == top_key.atom_indices:
                     key = improper_torsion_handler.slot_map[top_key]
