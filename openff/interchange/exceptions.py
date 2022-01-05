@@ -1,4 +1,8 @@
 """Custom exceptions used in Interchange."""
+from typing import TYPE_CHECKING, List, Union
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology import Molecule
 
 
 class SMIRNOFFParameterAttributeNotImplementedError(Exception):
@@ -15,14 +19,14 @@ class SMIRNOFFHandlersNotImplementedError(Exception):
     Exception for when some parameter handlers in the SMIRNOFF specification are not implemented here.
     """
 
-    def __init__(self, *args):
+    def __init__(self, *args: Union[List, str]) -> None:
         if args:
             if isinstance(args[0], str):
                 self.names = [args[0]]
             elif isinstance(args[0], list):
                 self.names = args[0]
 
-    def __str__(self):
+    def __str__(self) -> str:
         msg = "SMIRNOFF parameters not implemented here: "
         for name in self.names:
             msg += f"\t{name}"
@@ -34,14 +38,15 @@ class ToolkitTopologyConformersNotFoundError(Exception):
     Exception for when reference molecules in a toolkit topology lack conformers.
     """
 
-    def __init__(self, *args):
+    def __init__(self, *args: "Molecule") -> None:
         if args:
             self.mol = str(args[0])
 
-    def __str__(self):
+    def __str__(self) -> str:
         msg = "A reference molecule in the topology does not contain any conformers"
         if self.mol:
             msg += f"The molecule lacking a conformer is {self.mol}"
+        return msg
 
 
 class InvalidParameterHandlerError(ValueError):
@@ -103,11 +108,11 @@ class UnsupportedExportError(BaseException):
     Exception for attempting to write to an unsupported file format.
     """
 
-    def __init__(self, *args):
+    def __init__(self, *args: str) -> None:
         if args:
             self.file_ext = args[0]
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.file_ext:
             msg = f"Writing file format {self.file_ext} not supported."
         else:

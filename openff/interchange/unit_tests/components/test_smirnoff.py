@@ -1,3 +1,4 @@
+import mdtraj as md
 import numpy as np
 import openmm
 import pytest
@@ -39,6 +40,7 @@ from openff.interchange.components.smirnoff import (
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.models import TopologyKey, VirtualSiteKey
 from openff.interchange.testing import _BaseTest
+from openff.interchange.testing.utils import _top_from_smiles
 from openff.interchange.utils import get_test_file_path
 
 kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
@@ -89,7 +91,7 @@ class TestSMIRNOFFPotentialHandler(_BaseTest):
 
 class TestSMIRNOFFHandlers(_BaseTest):
     def test_bond_potential_handler(self):
-        top = _OFFBioTop.from_molecules(Molecule.from_smiles("O=O"))
+        top = _top_from_smiles("O=O")
 
         bond_handler = BondHandler(version=0.3)
         bond_parameter = BondHandler.BondType(
@@ -115,7 +117,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
         assert pot.parameters["k"].to(kcal_mol_a2).magnitude == pytest.approx(1.5)
 
     def test_angle_potential_handler(self):
-        top = _OFFBioTop.from_molecules(Molecule.from_smiles("CCC"))
+        top = _top_from_smiles("CCC")
 
         angle_handler = AngleHandler(version=0.3)
         angle_parameter = AngleHandler.AngleType(
@@ -175,7 +177,10 @@ class TestSMIRNOFFHandlers(_BaseTest):
         # Explicitly store these, since results differ RDKit/AmberTools vs. OpenEye
         reference_charges = [c._value for c in molecule.partial_charges]
 
-        top = _OFFBioTop.from_molecules(molecule)
+        top = _OFFBioTop.from_molecules(
+            mdtop=md.Topology.from_openmm(molecule.to_topology().to_openmm()),
+            molecules=[molecule],
+        )
 
         parameter_handlers = [
             ElectrostaticsHandler(version=0.3),
@@ -191,7 +196,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
         )
 
     def test_electrostatics_library_charges(self):
-        top = _OFFBioTop.from_molecules(Molecule.from_smiles("C"))
+        top = _top_from_smiles("C")
 
         library_charge_handler = LibraryChargeHandler(version=0.3)
         library_charge_handler.add_parameter(
@@ -218,7 +223,10 @@ class TestSMIRNOFFHandlers(_BaseTest):
 
     def test_electrostatics_charge_increments(self):
         molecule = Molecule.from_mapped_smiles("[Cl:1][H:2]")
-        top = _OFFBioTop.from_molecules(molecule)
+        top = _OFFBioTop.from_molecules(
+            mdtop=md.Topology.from_openmm(molecule.to_topology().to_openmm()),
+            molecules=[molecule],
+        )
 
         molecule.assign_partial_charges(partial_charge_method="am1-mulliken")
 
@@ -361,7 +369,7 @@ class TestUnassignedParameters(_BaseTest):
         with pytest.raises(
             UnassignedProperTorsionParameterException,
             match="- Topology indices [(]5, 0, 1, 6[)]: "
-            r"names and elements [(](H\d+)?x H[)], [(](C\d+)?x C[)], [(](C\d+)?x C[)], [(](H\d+)?x H[)],",
+            r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
         ):
             Interchange.from_smirnoff(force_field=parsley, topology=ethanol_top)
 

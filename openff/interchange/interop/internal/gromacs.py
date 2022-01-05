@@ -1066,8 +1066,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
         default_chain = mdtop.add_chain()
         mdtop.add_residue(name="FOO", chain=default_chain)
 
-        topology = _OFFBioTop()
-        topology.mdtop = mdtop
+        topology = _OFFBioTop(mdtop=mdtop)
 
         interchange.topology = topology
 

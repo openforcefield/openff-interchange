@@ -1,7 +1,7 @@
 import mdtraj as md
 import numpy as np
 import pytest
-from openff.toolkit.topology import Molecule
+from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openmm import unit as omm_unit
 
@@ -38,7 +38,10 @@ def test_to_lammps_single_mols(mol, n_mols):
 
     mol = Molecule.from_smiles(mol)
     mol.generate_conformers(n_conformers=1)
-    top = _OFFBioTop.from_molecules(n_mols * [mol])
+    tmp = Topology.from_molecules(n_mols * [mol])
+    top = _OFFBioTop.from_molecules(
+        mdtop=md.Topology.from_openmm(tmp.to_openmm()), molecules=n_mols * [mol]
+    )
     mol.conformers[0] -= np.min(mol.conformers) * omm_unit.angstrom
 
     top.box_vectors = np.eye(3) * np.asarray([10, 10, 10]) * omm_unit.nanometer

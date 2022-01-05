@@ -5,7 +5,7 @@ import mdtraj as md
 import numpy as np
 import parmed as pmd
 import pytest
-from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
@@ -48,8 +48,9 @@ class TestFoyer(_BaseTest):
         )
         molecule.name = "ETH"
 
-        top = _OFFBioTop.from_molecules(molecule)
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        top = _OFFBioTop(
+            mdtop=md.Topology.from_openmm(molecule.to_topology().to_openmm())
+        )
         _store_bond_partners(top.mdtop)
         oplsaa = foyer.Forcefield(name="oplsaa")
         interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
@@ -68,8 +69,13 @@ class TestFoyer(_BaseTest):
                     mol.name = f"{mol_name}_{idx}"
             else:
                 molecule_or_molecules.name = mol_name
+                molecule_or_molecules = [molecule_or_molecules]
 
-            off_bio_top = _OFFBioTop.from_molecules(molecule_or_molecules)
+            tmp = Topology.from_molecules(molecule_or_molecules)
+            off_bio_top = _OFFBioTop.from_molecules(
+                mdtop=md.Topology.from_openmm(tmp.to_openmm()),
+                molecules=molecule_or_molecules,
+            )
             off_bio_top.mdtop = md.Topology.from_openmm(off_bio_top.to_openmm())
             _store_bond_partners(off_bio_top.mdtop)
             openff_interchange = Interchange.from_foyer(off_bio_top, oplsaa)

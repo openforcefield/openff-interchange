@@ -4,7 +4,7 @@ import mdtraj as md
 import numpy as np
 import openmm
 import pytest
-from openff.toolkit.topology import Molecule
+from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
@@ -128,7 +128,7 @@ class TestGROMACS(_BaseTest):
         openff_sys = Interchange.from_smirnoff(
             force_field=parsley, topology=ethanol_top
         )
-        openff_sys.positions = np.zeros((ethanol_top.n_topology_atoms, 3))
+        openff_sys.positions = np.zeros((ethanol_top.mdtop.n_atoms, 3))
         openff_sys.to_gro("tmp.gro")
 
         openff_sys.to_top("lorentz.top")
@@ -159,7 +159,10 @@ class TestGROMACS(_BaseTest):
         """Test that residue names > 5 characters don't break .gro file output"""
         benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
         benzene.name = "supercalifragilisticexpialidocious"
-        top = _OFFBioTop.from_molecules(benzene)
+        top = _OFFBioTop.from_molecules(
+            mdtop=md.Topology.from_openmm(benzene.to_topology().to_openmm()),
+            molecules=[benzene],
+        )
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
         # Populate an entire interchange because ...
@@ -178,8 +181,10 @@ class TestGROMACS(_BaseTest):
         from openff.interchange.components.smirnoff import SMIRNOFFElectrostaticsHandler
 
         mol = Molecule.from_smiles("[#18]")
-        top = _OFFBioTop.from_molecules([mol, mol])
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        tmp = Topology.from_molecules([mol, mol])
+        top = _OFFBioTop.from_molecules(
+            mdtop=md.Topology.from_openmm(tmp.to_openmm()), molecules=[mol, mol]
+        )
 
         # http://www.sklogwiki.org/SklogWiki/index.php/Argon#Buckingham_potential
         erg_mol = unit.erg / unit.mol * float(unit.avogadro_number)

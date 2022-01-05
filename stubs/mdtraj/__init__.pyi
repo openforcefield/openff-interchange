@@ -1,8 +1,33 @@
-from typing import Any, Optional, NoReturn, Iterator
+from typing import Any, Optional, NoReturn, Generator, List
+
+class Element(object):
+    atomic_number: int
+
+class Atom(object):
+    name: str
+    _bond_partners: List[Atom]
+    index: int
+    element: Element
+
+class Bond(object):
+    atom1: Atom
+    atom2: Atom
+
+class Chain(object): ...
+
+class Residue(object):
+    name: str
+    chain: Chain
+    resSeq: Optional[int]
+    segment_id: Optional[str]
+    @property
+    def atoms(self) -> Generator[Atom, None, None]: ...
 
 class Topology(object):
+    n_atoms: int
     @classmethod
     def from_openmm(cls, value: Any) -> Topology: ...
+    def to_openmm(self) -> Any: ...
     def add_chain(self) -> Any: ...
     def add_residue(
         self,
@@ -25,4 +50,10 @@ class Topology(object):
         type: Optional[Any] = None,
         order: Optional[int] = None,
     ) -> NoReturn: ...
-    def atom(self, index: int) -> Iterator[Any]: ...
+    def atom(self, index: int) -> Atom: ...
+    @property
+    def atoms(self) -> Generator[Atom, None, None]: ...
+    @property
+    def bonds(self) -> Generator[Bond, None, None]: ...
+    @property
+    def residues(self) -> Generator[Residue, None, None]: ...

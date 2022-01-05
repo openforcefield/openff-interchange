@@ -6,7 +6,7 @@ import mdtraj as md
 import numpy as np
 import openmm
 import pytest
-from openff.toolkit.topology import Molecule
+from openff.toolkit.topology import Molecule, Topology
 from openff.utilities.utilities import has_executable
 from openmm import unit as openmm_unit
 
@@ -46,12 +46,15 @@ def _top_from_smiles(
     """
     mol = Molecule.from_smiles(smiles)
     mol.generate_conformers(n_conformers=1)
-    top = _OFFBioTop.from_molecules(n_molecules * [mol])
-    top.mdtop = md.Topology.from_openmm(value=top.to_openmm())
+    openff_topology = Topology.from_molecules(n_molecules * [mol])
+    shim_topology = _OFFBioTop.from_molecules(
+        mdtop=md.Topology.from_openmm(value=openff_topology.to_openmm()),
+        molecules=n_molecules * [mol],
+    )
     # Add dummy box vectors
     # TODO: Revisit if/after Topology.is_periodic
-    top.box_vectors = np.eye(3) * 10 * openmm_unit.nanometer
-    return top
+    shim_topology.box_vectors = np.eye(3) * 10 * openmm_unit.nanometer
+    return shim_topology
 
 
 def _get_charges_from_openmm_system(omm_sys: openmm.System):
