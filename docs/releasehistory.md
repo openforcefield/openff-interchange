@@ -9,8 +9,29 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.1.4 - 2022-01-11
 
+This pre-release of OpenFF Interchange includes interoperability and documentation improvements.
+
+This release supports Python 3.8 and 3.9; it may be compatible with older and newer versions may but is not guaranteed.
+
+### New features
+* #355 Add `Interchange.to_pdb`
+* #357 Add more type annotations
+
+### Documentation improvements
+* #319 Add Foyer showcase (silica nanoparticle solvated in an organic species)
+* #358 Fix `output.md`
+* #352 Fix some typos in docstrings
+
+### Breaking changes
+* #357 The `_OFFBioTop` constructor now requires an `mdtraj.Topology` passed through the `mdtop` argumment.
+* #363 This project is no longer tested on Python 3.7
+
+### Bugfixes
+* #351 Fix setting byte order while processing bytes to NumPy arrays
+* #354 Fix positions processing in `Interchange.__add__`
+* `e176033` Fixes nonbonded energies not being parsed while reporting energies from the OpenMM drver.
 
 ## 0.1.3 - 2021-11-12
 
