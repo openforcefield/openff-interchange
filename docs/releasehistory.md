@@ -31,6 +31,7 @@ This release supports Python 3.8 and 3.9; it may be compatible with older and ne
 ### Bugfixes
 * #351 Fix setting byte order while processing bytes to NumPy arrays
 * #354 Fix positions processing in `Interchange.__add__`
+* `e176033` Fixes nonbonded energies not being parsed while reporting energies from the OpenMM drver.
 
 ## 0.1.3 - 2021-11-12
 

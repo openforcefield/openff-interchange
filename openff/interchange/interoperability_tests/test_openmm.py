@@ -337,6 +337,7 @@ class TestOpenMMVirtualSites(_BaseTest):
         assert abs(np.sum([p.charge for p in gmx_top.atoms])) < 1e-3
         """
 
+    @pytest.mark.skip("Broken with OpenFF Toolkit issue #1159")
     def test_carbonyl_example(self, parsley_with_monovalent_lone_pair):
         """Test that a single-molecule DivalentLonePair example runs"""
         mol = Molecule.from_smiles("CC=O")
