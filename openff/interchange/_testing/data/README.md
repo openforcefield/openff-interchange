@@ -1,4 +1,8 @@
-Documenting how some of these files were generated
+A collection of files used for testing Interchange.
+
+Disclaimer: Not intended for public consumption and no guarantees related to usage are made.
+
+Below documents how some of these files were generated
 
 
 `10_ar.pdb`:
