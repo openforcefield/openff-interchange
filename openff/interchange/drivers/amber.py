@@ -16,7 +16,7 @@ from openff.interchange.exceptions import (
     SanderError,
     UnsupportedExportError,
 )
-from openff.interchange.utils import get_test_file_path
+from openff.interchange.tests import get_test_file_path
 
 if TYPE_CHECKING:
     from openff.interchange.components.smirnoff import SMIRNOFFvdWHandler

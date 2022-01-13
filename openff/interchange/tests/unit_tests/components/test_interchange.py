@@ -18,9 +18,7 @@ from openff.interchange.exceptions import (
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
 )
-from openff.interchange.testing import _BaseTest
-from openff.interchange.testing.utils import needs_gmx, needs_lmp
-from openff.interchange.utils import get_test_file_path
+from openff.interchange.tests import _BaseTest, get_test_file_path, needs_gmx, needs_lmp
 
 
 def test_getitem():

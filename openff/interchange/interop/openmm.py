@@ -7,6 +7,7 @@ import openmm
 from openff.toolkit.topology import Topology
 from openff.units import unit as off_unit
 from openff.units.openmm import from_openmm as from_openmm_unit
+from openff.units.openmm import to_openmm as to_openmm_unit
 from openmm import unit
 
 from openff.interchange.components.potentials import Potential
@@ -17,7 +18,6 @@ from openff.interchange.exceptions import (
 )
 from openff.interchange.interop.parmed import _lj_params_from_potential
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
-from openff.interchange.utils import pint_to_openmm
 
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
@@ -492,9 +492,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
             # TODO: Add electrostatics
             params = buck_handler.potentials[pot_key].parameters
-            a = pint_to_openmm(params["A"])
-            b = pint_to_openmm(params["B"])
-            c = pint_to_openmm(params["C"])
+            a = to_openmm_unit(params["A"])
+            b = to_openmm_unit(params["B"])
+            c = to_openmm_unit(params["C"])
             non_bonded_force.setParticleParameters(atom_idx, [a, b, c])
 
         return
@@ -855,3 +855,25 @@ def _to_pdb(file_path: Union[Path, str], topology: Topology, positions):
 
     with open(file_path, "w") as outfile:
         app.PDBFile.writeFile(openmm_topology, positions, outfile)
+
+
+def get_nonbonded_force_from_openmm_system(omm_system):
+    """Get a single NonbondedForce object with an OpenMM System."""
+    for force in omm_system.getForces():
+        if type(force) == openmm.NonbondedForce:
+            return force
+
+
+def get_partial_charges_from_openmm_system(omm_system):
+    """Get partial charges from an OpenMM interchange as a unit.Quantity array."""
+    # TODO: deal with virtual sites
+    n_particles = omm_system.getNumParticles()
+    force = get_nonbonded_force_from_openmm_system(omm_system)
+    # TODO: don't assume the partial charge will always be parameter 0
+    # partial_charges = [openmm_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)]
+    partial_charges = [
+        force.getParticleParameters(idx)[0] / unit.elementary_charge
+        for idx in range(n_particles)
+    ]
+
+    return partial_charges

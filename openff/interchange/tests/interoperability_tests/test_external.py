@@ -13,8 +13,7 @@ from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
-from openff.interchange.testing import _BaseTest
-from openff.interchange.utils import get_test_file_path
+from openff.interchange.tests import _BaseTest, get_test_file_path
 
 
 class TestFromOpenMM(_BaseTest):

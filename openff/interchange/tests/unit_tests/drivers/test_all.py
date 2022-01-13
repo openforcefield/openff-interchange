@@ -6,7 +6,7 @@ from distutils.spawn import find_executable
 import pytest
 
 from openff.interchange.drivers.all import get_all_energies
-from openff.interchange.testing import _BaseTest
+from openff.interchange.tests import _BaseTest
 
 
 @pytest.mark.slow()

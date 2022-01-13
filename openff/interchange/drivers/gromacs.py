@@ -14,7 +14,7 @@ from openff.interchange.exceptions import (
     GMXMdrunError,
     UnsupportedExportError,
 )
-from openff.interchange.utils import get_test_file_path
+from openff.interchange.tests import get_test_file_path
 
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange

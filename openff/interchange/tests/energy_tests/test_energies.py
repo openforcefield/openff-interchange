@@ -16,13 +16,13 @@ from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
 from openff.interchange.drivers.report import EnergyError, EnergyReport
-from openff.interchange.testing.utils import (
+from openff.interchange.tests import (
     HAS_GROMACS,
     HAS_LAMMPS,
+    get_test_file_path,
     needs_gmx,
     needs_lmp,
 )
-from openff.interchange.utils import get_test_file_path
 
 if HAS_GROMACS:
     from openff.interchange.drivers.gromacs import (
@@ -536,7 +536,7 @@ def test_interpolated_parameters(smi):
         if toolkit_diff < 1e-6:
             pass
         elif toolkit_diff < 1e-2:
-            pytest.xpass(
+            pytest.xfail(
                 f"Found energy difference of {toolkit_diff} kJ/mol vs. toolkit"
             )
         else:

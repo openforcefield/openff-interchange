@@ -15,9 +15,12 @@ from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.models import PotentialKey, TopologyKey
-from openff.interchange.testing import _BaseTest
-from openff.interchange.testing.utils import HAS_GROMACS, needs_gmx
-from openff.interchange.utils import get_test_files_dir_path
+from openff.interchange.tests import (
+    HAS_GROMACS,
+    _BaseTest,
+    get_test_files_dir_path,
+    needs_gmx,
+)
 
 if has_package("foyer"):
     import foyer
