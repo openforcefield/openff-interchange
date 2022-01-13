@@ -68,7 +68,7 @@ jobs:
 
     - name: Run docexamples
       run: |
-        pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/energy_tests --ignore=openff/interchange/unit_tests --ignore=openff/interchange/data --ignore=openff/interchange/interoperability_tests
+        pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/tests
 
     - name: Run all tests
       if: always()

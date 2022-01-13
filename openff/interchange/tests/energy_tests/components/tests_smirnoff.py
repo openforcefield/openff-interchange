@@ -9,7 +9,7 @@ from openmm import unit as openmm_unit
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
-from openff.interchange.unit_tests.components.test_smirnoff import (
+from openff.interchange.tests.unit_tests.components.test_smirnoff import (
     TestBondOrderInterpolation,
 )
 
