@@ -25,7 +25,7 @@ from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule
 
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
 
 kj_mol = unit.Unit("kilojoule / mole")
 
@@ -202,7 +202,7 @@ def from_gro(file_path: Union[Path, str]) -> "Interchange":
 
     box = _read_box(path)
 
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
 
     interchange = Interchange()
     interchange.box = box
@@ -1065,7 +1065,7 @@ def _get_buck_parameters(openff_sys: "Interchange", atom_idx: int) -> Dict:
 
 def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
     """Read the contents of a GROMACS Topology (.top) file."""
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
 
     interchange = Interchange()
     current_directive = None

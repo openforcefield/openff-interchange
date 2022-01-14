@@ -36,7 +36,7 @@ from openff.toolkit.typing.engines.smirnoff import ForceField
 sage = ForceField("openff-2.0.0.offxml")
 
 # Create an Interchange object
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 out = Interchange.from_smirnoff(force_field=sage, topology=topology)
 
 # Define box vectors and assign atomic positions

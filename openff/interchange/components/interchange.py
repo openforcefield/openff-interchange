@@ -159,7 +159,7 @@ class Interchange(DefaultModel):
 
         .. code-block:: pycon
 
-            >>> from openff.interchange.components.interchange import Interchange
+            >>> from openff.interchange import Interchange
             >>> from openff.toolkit.topology import Molecule, Topology
             >>> from openff.toolkit.typing.engines.smirnoff import ForceField
             >>> mol = Molecule.from_smiles("CC")
@@ -400,7 +400,7 @@ class Interchange(DefaultModel):
 
         .. code-block:: pycon
 
-            >>> from openff.interchange.components.interchange import Interchange
+            >>> from openff.interchange import Interchange
             >>> from openff.toolkit.topology import Molecule
             >>> from foyer import Forcefield
             >>> mol = Molecule.from_smiles("CC")

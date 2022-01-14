@@ -12,7 +12,7 @@ from openff.utilities.testing import skip_if_missing
 from openmm import app
 from openmm import unit as openmm_unit
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
 from openff.interchange.drivers.report import EnergyError, EnergyReport

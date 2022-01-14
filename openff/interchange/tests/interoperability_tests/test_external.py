@@ -9,7 +9,7 @@ from openff.units import unit
 from openff.units.openmm import from_openmm
 from openmm.unit import nanometer as nm
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies

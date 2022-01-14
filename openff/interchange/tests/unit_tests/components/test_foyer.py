@@ -10,7 +10,7 @@ from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_openmm_energies

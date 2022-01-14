@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import Union
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.exceptions import (
     MissingBoxError,
     MissingPositionsError,

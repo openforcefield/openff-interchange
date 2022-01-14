@@ -22,7 +22,7 @@ from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from pydantic import ValidationError
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.smirnoff import (
     SMIRNOFFAngleHandler,

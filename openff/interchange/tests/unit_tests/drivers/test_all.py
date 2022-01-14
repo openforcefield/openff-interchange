@@ -14,7 +14,7 @@ class TestDriversAll(_BaseTest):
     def test_skipping_drivers(self, ethanol_top, parsley):
         from openff.toolkit.topology import Molecule
 
-        from openff.interchange.components.interchange import Interchange
+        from openff.interchange import Interchange
 
         molecule = Molecule.from_smiles("C")
         molecule.generate_conformers(n_conformers=1)

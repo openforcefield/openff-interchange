@@ -4,7 +4,7 @@ from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.drivers import get_lammps_energies, get_openmm_energies
 from openff.interchange.drivers.lammps import _write_lammps_input
 from openff.interchange.tests import needs_lmp

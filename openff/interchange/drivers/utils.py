@@ -2,7 +2,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
 
 
 def _infer_constraints(interchange: "Interchange") -> str:

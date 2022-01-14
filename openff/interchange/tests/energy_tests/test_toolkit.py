@@ -17,7 +17,7 @@ from openff.utilities.testing import skip_if_missing
 from openmm import unit as openmm_unit
 from rdkit import Chem
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.components.smirnoff import library_charge_from_molecule
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.interchange.drivers.report import EnergyError

@@ -20,7 +20,7 @@ from openff.interchange.interop.parmed import _lj_params_from_potential
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
 
 kcal_mol = unit.kilocalorie_per_mole
 
@@ -671,7 +671,7 @@ def _create_virtual_site(
 
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
     """Create an Interchange object from OpenMM data."""
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
 
     openff_sys = Interchange()
 

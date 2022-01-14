@@ -11,7 +11,7 @@ from openff.utilities.testing import skip_if_missing
 from openmm import unit as openmm_unit
 from pkg_resources import resource_filename
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.nonbonded import BuckinghamvdWHandler
 from openff.interchange.components.potentials import Potential

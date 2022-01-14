@@ -10,7 +10,7 @@ from openff.units import unit
 from openmm import app
 from openmm import unit as openmm_unit
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies

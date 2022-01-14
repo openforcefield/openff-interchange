@@ -15,7 +15,7 @@ from openff.utilities.utilities import has_executable
 from openmm import unit as openmm_unit
 from pkg_resources import resource_filename
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 
 
 def get_test_file_path(test_file) -> str:

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     import parmed as pmd
 
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
     from openff.interchange.components.smirnoff import (
         SMIRNOFFImproperTorsionHandler,
         SMIRNOFFProperTorsionHandler,
