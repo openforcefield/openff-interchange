@@ -9,7 +9,7 @@ from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from pydantic import ValidationError
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
     InvalidTopologyError,
@@ -18,9 +18,7 @@ from openff.interchange.exceptions import (
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
 )
-from openff.interchange.testing import _BaseTest
-from openff.interchange.testing.utils import needs_gmx, needs_lmp
-from openff.interchange.utils import get_test_file_path
+from openff.interchange.tests import _BaseTest, get_test_file_path, needs_gmx, needs_lmp
 
 
 def test_getitem():
@@ -212,7 +210,7 @@ class TestInterchange(_BaseTest):
         """Test that atom indices in bonds are ordered consistently between the slot map and topology"""
         import foyer
 
-        from openff.interchange.components.interchange import Interchange
+        from openff.interchange import Interchange
         from openff.interchange.drivers import (
             get_gromacs_energies,
             get_lammps_energies,

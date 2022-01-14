@@ -22,7 +22,7 @@ from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from pydantic import ValidationError
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.smirnoff import (
     SMIRNOFFAngleHandler,
@@ -37,8 +37,7 @@ from openff.interchange.components.smirnoff import (
 )
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.models import TopologyKey, VirtualSiteKey
-from openff.interchange.testing import _BaseTest
-from openff.interchange.utils import get_test_file_path
+from openff.interchange.tests import _BaseTest, get_test_file_path
 
 kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
 kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")

@@ -6,9 +6,9 @@ from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.drivers import get_amber_energies, get_openmm_energies
-from openff.interchange.testing import _BaseTest
+from openff.interchange.tests import _BaseTest
 
 kj_mol = unit.kilojoule / unit.mol
 

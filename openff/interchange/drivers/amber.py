@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Dict, Union
 from openff.units import unit
 from openff.utilities.utilities import temporary_cd
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import (
     AmberError,
@@ -16,7 +16,7 @@ from openff.interchange.exceptions import (
     SanderError,
     UnsupportedExportError,
 )
-from openff.interchange.utils import get_test_file_path
+from openff.interchange.tests import get_test_file_path
 
 if TYPE_CHECKING:
     from openff.interchange.components.smirnoff import SMIRNOFFvdWHandler

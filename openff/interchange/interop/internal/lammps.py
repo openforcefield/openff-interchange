@@ -5,7 +5,7 @@ from typing import IO, Dict, Union
 import numpy as np
 from openff.units import unit
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.models import TopologyKey
 

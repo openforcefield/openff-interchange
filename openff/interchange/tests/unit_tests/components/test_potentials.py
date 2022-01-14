@@ -6,7 +6,7 @@ from openff.interchange.components.potentials import (
     PotentialHandler,
     WrappedPotential,
 )
-from openff.interchange.testing import _BaseTest
+from openff.interchange.tests import _BaseTest
 
 
 class TestWrappedPotential(_BaseTest):

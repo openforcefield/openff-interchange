@@ -10,7 +10,7 @@ from openff.units import unit
 from openff.interchange.components.toolkit import _get_num_h_bonds
 
 if TYPE_CHECKING:
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
     from openff.interchange.models import PotentialKey
 
 

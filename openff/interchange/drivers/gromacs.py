@@ -14,10 +14,10 @@ from openff.interchange.exceptions import (
     GMXMdrunError,
     UnsupportedExportError,
 )
-from openff.interchange.utils import get_test_file_path
+from openff.interchange.tests import get_test_file_path
 
 if TYPE_CHECKING:
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
     from openff.interchange.components.smirnoff import SMIRNOFFvdWHandler
 
 
@@ -119,7 +119,7 @@ def get_gromacs_energies(
 
     Parameters
     ----------
-    off_sys : openff.interchange.components.interchange.Interchange
+    off_sys : openff.interchange.Interchange
         An OpenFF Interchange object to compute the single-point energy of
     mdp : str, default="cutoff"
         A string key identifying the GROMACS `.mdp` file to be used. See `_get_mdp_file`.

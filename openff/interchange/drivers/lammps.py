@@ -5,7 +5,7 @@ from typing import List
 import numpy as np
 from openff.units import unit
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import LAMMPSRunError
 
@@ -24,7 +24,7 @@ def get_lammps_energies(
 
     Parameters
     ----------
-    off_sys : openff.interchange.components.interchange.Interchange
+    off_sys : openff.interchange.Interchange
         An OpenFF Interchange object to compute the single-point energy of
     round_positions : int, optional
         The number of decimal places, in nanometers, to round positions. This can be useful when

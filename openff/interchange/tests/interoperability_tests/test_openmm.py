@@ -10,7 +10,7 @@ from openff.units import unit
 from openmm import app
 from openmm import unit as openmm_unit
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
@@ -19,9 +19,11 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
-from openff.interchange.interop.openmm import from_openmm
-from openff.interchange.testing import _BaseTest
-from openff.interchange.utils import get_test_file_path
+from openff.interchange.interop.openmm import (
+    from_openmm,
+    get_partial_charges_from_openmm_system,
+)
+from openff.interchange.tests import _BaseTest
 
 nonbonded_resolution_matrix = [
     {
@@ -152,7 +154,7 @@ def test_from_openmm_single_mols(mol, n_mols):
     TODO: Test periodic and non-periodic
     """
 
-    parsley = ForceField(get_test_file_path("parsley.offxml"))
+    parsley = ForceField("openff-1.0.0.offxml")
 
     mol = Molecule.from_smiles(mol)
     mol.generate_conformers(n_conformers=1)
@@ -245,6 +247,17 @@ def test_combine_nonbonded_forces():
     assert (
         separate["vdW"] + separate["Electrostatics"] - combined["Nonbonded"]
     ).m < 0.001
+
+
+class TestOpenMM(_BaseTest):
+    def test_openmm_partial_charges(self, argon_ff, argon_top):
+        omm_system = argon_ff.create_openmm_system(argon_top)
+        partial_charges = get_partial_charges_from_openmm_system(omm_system)
+
+        # assert isinstance(partial_charges, unit.Quantity)
+        # assert partial_charges.units == unit.elementary_charge
+        assert isinstance(partial_charges, list)
+        assert np.allclose(partial_charges, np.zeros(4))  # .magnitude
 
 
 @pytest.mark.slow()

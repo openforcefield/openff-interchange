@@ -6,7 +6,7 @@ from distutils.spawn import find_executable
 import pytest
 
 from openff.interchange.drivers.all import get_all_energies
-from openff.interchange.testing import _BaseTest
+from openff.interchange.tests import _BaseTest
 
 
 @pytest.mark.slow()
@@ -14,7 +14,7 @@ class TestDriversAll(_BaseTest):
     def test_skipping_drivers(self, ethanol_top, parsley):
         from openff.toolkit.topology import Molecule
 
-        from openff.interchange.components.interchange import Interchange
+        from openff.interchange import Interchange
 
         molecule = Molecule.from_smiles("C")
         molecule.generate_conformers(n_conformers=1)
