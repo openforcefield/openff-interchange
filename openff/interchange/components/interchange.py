@@ -420,7 +420,7 @@ class Interchange(DefaultModel):
         for name, Handler in get_handlers_callable().items():
             system.handlers[name] = Handler()
 
-        system.handlers["vdW"].store_matches(force_field, topology=sys_out.topology)
+        system.handlers["vdW"].store_matches(force_field, topology=system.topology)
         system.handlers["vdW"].store_potentials(force_field=force_field)
 
         atom_slots = system.handlers["vdW"].slot_map
@@ -435,7 +435,7 @@ class Interchange(DefaultModel):
 
         for name, handler in system.handlers.items():
             if name not in ["vdW", "Electrostatics"]:
-                handler.store_matches(atom_slots, topology=sys_out.topology)
+                handler.store_matches(atom_slots, topology=system.topology)
                 handler.store_potentials(force_field)
 
         return system
@@ -570,7 +570,7 @@ class Interchange(DefaultModel):
         self_copy._inner_data = deepcopy(self._inner_data)
 
         self_copy.topology = _combine_topologies(self.topology, other.topology)
-        atom_offset = self_copy.topology.n_atoms
+        atom_offset = self.topology.n_atoms
 
         for handler_name, handler in other.handlers.items():
 

@@ -172,7 +172,6 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
             atoms_indices = tuple(topology.atom_index(atom) for atom in atoms_iterable)
 
             top_key = TopologyKey(atom_indices=atoms_indices)
-
             pot_key_ids = tuple(
                 _get_potential_key_id(atom_slots, idx) for idx in atoms_indices
             )
