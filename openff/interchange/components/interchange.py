@@ -20,7 +20,6 @@ from openff.interchange.components.smirnoff import (
 from openff.interchange.exceptions import (
     InternalInconsistencyError,
     InvalidBoxError,
-    InvalidTopologyError,
     MissingParameterHandlerError,
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
@@ -60,7 +59,7 @@ class Interchange(DefaultModel):
 
         # TODO: Ensure these fields are hidden from the user as intended
         handlers: Dict[str, PotentialHandler] = dict()
-        topology: Optional[Union[Topology, _OFFBioTop]] = Field(None)
+        topology: Optional[Topology] = Field(None)
         box: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
         positions: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
 
@@ -68,7 +67,7 @@ class Interchange(DefaultModel):
         def validate_box(cls, value):
             if value is None:
                 return value
-            if val.shape == (3, 3):
+            if value.shape == (3, 3):
                 return value
             elif value.shape == (3,):
                 value = value * np.eye(3)
@@ -80,10 +79,10 @@ class Interchange(DefaultModel):
         def validate_topology(cls, value):
             if isinstance(value, Topology):
                 return Topology(other=value)
-            if isinstance(value, _OFFBioTop):
-                raise InvalidTopologyError("_OFFBioTop is no longer supported")
+            elif isinstance(value, _OFFBioTop):
+                raise ValueError("_OFFBioTop is no longer supported")
             else:
-                raise InvalidTopologyError(
+                raise ValueError(
                     "Could not process topology argument, expected openff.toolkit.topology.Topology. "
                     f"Found object of type {type(value)}."
                 )

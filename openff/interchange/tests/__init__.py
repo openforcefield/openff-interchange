@@ -106,6 +106,18 @@ class _BaseTest:
     def two_peptides(self, mainchain_ala, mainchain_arg):
         return Topology.from_molecules([mainchain_ala, mainchain_arg])
 
+    xml_ff_bo_bonds = """<?xml version='1.0' encoding='ASCII'?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+      <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+        <Bond smirks="[#6:1]~[#8:2]" id="bbo1"
+            k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
+            k_bondorder2="1000.0 * kilocalories_per_mole/angstrom**2"
+            length_bondorder1="1.5 * angstrom"
+            length_bondorder2="1.0 * angstrom"/>
+      </Bonds>
+    </SMIRNOFF>
+    """
+
 
 HAS_GROMACS = any(has_executable(e) for e in ["gmx", "gmx_d"])
 HAS_LAMMPS = any(has_executable(e) for e in ["lammps", "lmp_mpi", "lmp_serial"])

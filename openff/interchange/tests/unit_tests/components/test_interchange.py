@@ -12,7 +12,6 @@ from pydantic import ValidationError
 from openff.interchange import Interchange
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
-    InvalidTopologyError,
     MissingParameterHandlerError,
     MissingParametersError,
     MissingPositionsError,
@@ -165,9 +164,14 @@ class TestBadExports(_BaseTest):
         """Test that InvalidTopologyError is caught when passing an unsupported
         topology type to Interchange.from_smirnoff"""
         top = Molecule.from_smiles("CC").to_topology().to_openmm()
+        # Thought this should raise ...
+        """
         with pytest.raises(
             InvalidTopologyError, match="Could not process topology argument.*openmm.*"
         ):
+        """
+        # but Pydantic it pre-emptively raising ValidationError because of the type mismatch
+        with pytest.raises(ValidationError):
             Interchange.from_smirnoff(force_field=parsley, topology=top)
 
     def test_gro_file_no_positions(self):

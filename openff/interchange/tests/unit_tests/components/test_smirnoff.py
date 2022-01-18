@@ -90,6 +90,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
         top = _OFFBioTop.from_molecules(Molecule.from_smiles("O=O"))
 
         bond_handler = BondHandler(version=0.3)
+        bond_handler.fractional_bondorder_method = "AM1-Wiberg"
         bond_parameter = BondHandler.BondType(
             smirks="[*:1]~[*:2]",
             k=1.5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
@@ -487,9 +488,7 @@ class TestBondOrderInterpolation(_BaseTest):
             get_data_file_path("test_forcefields/test_forcefield.offxml"),
             self.xml_ff_bo_bonds,
         )
-        forcefield.get_parameter_handler(
-            "ProperTorsions"
-        )._fractional_bondorder_interpolation = "invalid method name"
+        forcefield["Bonds"]._fractional_bondorder_interpolation = "invalid method name"
         topology = Topology.from_molecules([mol])
 
         # TODO: Make this a more descriptive custom exception

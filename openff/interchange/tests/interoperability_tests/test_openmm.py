@@ -11,7 +11,6 @@ from openmm import app
 from openmm import unit as openmm_unit
 
 from openff.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.interchange.exceptions import (
@@ -120,13 +119,12 @@ def test_openmm_nonbonded_methods(inputs):
 def test_unsupported_mixing_rule():
     molecules = [create_ethanol()]
     pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
-    topology = _OFFBioTop.from_openmm(pdbfile.topology, unique_molecules=molecules)
-    topology.mdtop = md.Topology.from_openmm(topology.to_openmm())
-
+    topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
     forcefield = ForceField("test_forcefields/test_forcefield.offxml")
     openff_sys = Interchange.from_smirnoff(force_field=forcefield, topology=topology)
 
     openff_sys["vdW"].mixing_rule = "geometric"
+    openff_sys.positions = pdbfile.positions
 
     with pytest.raises(UnsupportedExportError, match="default NonbondedForce"):
         openff_sys.to_openmm(combine_nonbonded_forces=True)

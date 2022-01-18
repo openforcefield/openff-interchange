@@ -147,7 +147,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
             raise InvalidParameterHandlerError(type(parameter_handler))
 
         handler = cls()
-        if hasattr(handler, "fractional_bond_order_method"):
+        if hasattr(handler, "fractional_bondorder_method"):
             if getattr(parameter_handler, "fractional_bondorder_method", None):
                 handler.fractional_bond_order_method = (  # type: ignore[attr-defined]
                     parameter_handler.fractional_bondorder_method  # type: ignore[attr-defined]
@@ -166,8 +166,17 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
     type: Literal["Bonds"] = "Bonds"
     expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
-    fractional_bond_order_method: Literal["AM1-Wiberg"] = "AM1-Wiberg"
+    fractional_bond_order_method: Literal["AM1-Wiberg", "None"] = "AM1-Wiberg"
     fractional_bond_order_interpolation: Literal["linear"] = "linear"
+
+    # Note that Parsley shipped with `"None"` (not `None`!) as the default value
+    # for the bond order interpolation, so disallowing it would be problematic.
+    #
+    # >>> from openff.toolkit.typing.engines.smirnoff import ForceField
+    # >>> ForceField("openff-1.0.0.offxml")['Bonds'].fractional_bondorder_method
+    # 'None'
+    # >>> ForceField("openff-1.0.0.offxml")['ProperTorsions'].fractional_bondorder_method
+    # 'AM1-Wiberg'
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -306,7 +315,12 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         if type(parameter_handler) not in cls.allowed_parameter_handlers():
             raise InvalidParameterHandlerError
 
-        handler: T = cls(type="Bonds", expression="k/2*(r-length)**2")
+        handler: T = cls(
+            type="Bonds",
+            expression="k/2*(r-length)**2",
+            fractional_bond_order_method=parameter_handler.fractional_bondorder_method,
+            fractional_bond_order_interpolation=parameter_handler.fractional_bondorder_interpolation,
+        )
 
         if handler._get_uses_interpolation(parameter_handler):
             for molecule in topology.molecules:
@@ -599,7 +613,10 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
 
         """
         handler: T = cls(
-            type="ProperTorsions", expression="k*(1+cos(periodicity*theta-phase))"
+            type="ProperTorsions",
+            expression="k*(1+cos(periodicity*theta-phase))",
+            fractional_bond_order_method=parameter_handler.fractional_bondorder_method,
+            fractional_bond_order_interpolation=parameter_handler.fractional_bondorder_interpolation,
         )
 
         if any(
