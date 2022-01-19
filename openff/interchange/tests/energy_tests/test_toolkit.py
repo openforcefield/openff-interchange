@@ -5,7 +5,6 @@ import openmm
 import pytest
 from openff.toolkit.tests.utils import requires_openeye
 from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     LibraryChargeHandler,
     UnassignedAngleParameterException,
@@ -22,6 +21,7 @@ from openff.interchange.components.smirnoff import library_charge_from_molecule
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.interchange.drivers.report import EnergyError
 from openff.interchange.tests import (
+    _BaseTest,
     _compare_nonbonded_parameters,
     _compare_nonbonded_settings,
     _compare_torsion_forces,
@@ -30,7 +30,6 @@ from openff.interchange.tests import (
 )
 
 kj_mol = unit.kilojoule / unit.mol
-_parsley = ForceField("openff-1.0.0.offxml")
 _box_vectors = unit.Quantity(
     4 * np.eye(3),
     unit.nanometer,
@@ -73,7 +72,7 @@ def compare_single_mol_systems(mol, force_field):
     )
 
 
-def compare_condensed_systems(mol, force_field):
+def compare_condensed_systems(self, mol, force_field):
     from openff.evaluator import unit as evaluator_unit  # type: ignore[import]
     from openff.evaluator.utils.packmol import pack_box  # type: ignore[import]
 
@@ -157,65 +156,68 @@ def compare_condensed_systems(mol, force_field):
             raise e
 
 
-@pytest.mark.skip(
-    "Needs an OpenFF Evaluator release and/or refactoring out packing code to here"
-)
-@requires_openeye
-@skip_if_missing("openff.evaluator")
-@pytest.mark.timeout(120)
-@pytest.mark.slow()
-@pytest.mark.parametrize(
-    "rdmol",
-    Chem.SDMolSupplier(get_test_file_path("MiniDrugBankTrimmed.sdf"), sanitize=False),
-)
-def test_energy_vs_toolkit(rdmol):
+class TestToolkit(_BaseTest):
+    @pytest.mark.skip(
+        "Needs an OpenFF Evaluator release and/or refactoring out packing code to here"
+    )
+    @requires_openeye
+    @skip_if_missing("openff.evaluator")
+    @pytest.mark.timeout(120)
+    @pytest.mark.slow()
+    @pytest.mark.parametrize(
+        "rdmol",
+        Chem.SDMolSupplier(
+            get_test_file_path("MiniDrugBankTrimmed.sdf"), sanitize=False
+        ),
+    )
+    def test_energy_vs_toolkit(self, parsley, rdmol):
 
-    Chem.SanitizeMol(rdmol)
-    mol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=True)
+        Chem.SanitizeMol(rdmol)
+        mol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=True)
 
-    if mol.name in ["DrugBank_6182"]:
-        pytest.xfail("OpenEye stereochemistry assumptions fail")
-    elif mol.name in [
-        "DrugBank_2148",
-        "DrugBank_1971",
-        "DrugBank_2563",
-        "DrugBank_2585",
-    ]:
-        pytest.xfail(
-            "These molecules results in small non-bonded energy differences on CI "
-            "runners, although some behavior is observed on different hardware."
-        )
+        if mol.name in ["DrugBank_6182"]:
+            pytest.xfail("OpenEye stereochemistry assumptions fail")
+        elif mol.name in [
+            "DrugBank_2148",
+            "DrugBank_1971",
+            "DrugBank_2563",
+            "DrugBank_2585",
+        ]:
+            pytest.xfail(
+                "These molecules results in small non-bonded energy differences on CI "
+                "runners, although some behavior is observed on different hardware."
+            )
 
-    assert mol.n_conformers > 0
+        assert mol.n_conformers > 0
 
-    max_n_heavy_atoms = 12
-    if len([a for a in mol.atoms if a.atomic_number > 1]) > max_n_heavy_atoms:
-        pytest.skip(f"Skipping > {max_n_heavy_atoms} heavy atoms for now")
+        max_n_heavy_atoms = 12
+        if len([a for a in mol.atoms if a.atomic_number > 1]) > max_n_heavy_atoms:
+            pytest.skip(f"Skipping > {max_n_heavy_atoms} heavy atoms for now")
 
-    # Skip molecules that cause hangs due to the toolkit taking an excessive time
-    # to match the library charge SMIRKS.
-    if mol.to_inchikey(fixed_hydrogens=True) in [
-        "MUUSFMCMCWXMEM-UHFFFAOYNA-N",  # CHEMBL1362008
-    ]:
+        # Skip molecules that cause hangs due to the toolkit taking an excessive time
+        # to match the library charge SMIRKS.
+        if mol.to_inchikey(fixed_hydrogens=True) in [
+            "MUUSFMCMCWXMEM-UHFFFAOYNA-N",  # CHEMBL1362008
+        ]:
 
-        pytest.skip(
-            "toolkit taking an excessive time to match the library charge SMIRKS"
-        )
+            pytest.skip(
+                "toolkit taking an excessive time to match the library charge SMIRKS"
+            )
 
-    # Faster to load once and deepcopy N times than load N times
-    parsley = deepcopy(_parsley)
+        # Faster to load once and deepcopy N times than load N times
+        parsley = deepcopy(parsley)
 
-    if mol.partial_charges is None:
-        pytest.skip("missing partial charges")
-    # mol.assign_partial_charges(partial_charge_method="am1bcc")
+        if mol.partial_charges is None:
+            pytest.skip("missing partial charges")
+        # mol.assign_partial_charges(partial_charge_method="am1bcc")
 
-    # Avoid AM1BCC calulations by using the partial charges in the SDF file
-    library_charge_handler = LibraryChargeHandler(version=0.3)
-    library_charges = library_charge_from_molecule(mol)
-    library_charge_handler.add_parameter(parameter=library_charges)
-    parsley.register_parameter_handler(library_charge_handler)
+        # Avoid AM1BCC calulations by using the partial charges in the SDF file
+        library_charge_handler = LibraryChargeHandler(version=0.3)
+        library_charges = library_charge_from_molecule(mol)
+        library_charge_handler.add_parameter(parameter=library_charges)
+        parsley.register_parameter_handler(library_charge_handler)
 
-    compare_condensed_systems(mol, parsley)
-    parsley.deregister_parameter_handler(parsley["Constraints"])
+        compare_condensed_systems(mol, parsley)
+        parsley.deregister_parameter_handler(parsley["Constraints"])
 
-    compare_single_mol_systems(mol, parsley)
+        compare_single_mol_systems(mol, parsley)

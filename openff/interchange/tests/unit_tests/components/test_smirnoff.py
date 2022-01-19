@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy as np
 import openmm
 import pytest
@@ -258,7 +260,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
             np.array([0.5, -0.8, 0.1, 0.1, 0.1]), unit.elementary_charge
         )
 
-        parsley = ForceField("openff-1.3.1.offxml")
+        parsley = deepcopy(parsley)
         parsley.deregister_parameter_handler(parsley["ToolkitAM1BCC"])
         parsley.deregister_parameter_handler(parsley["LibraryCharges"])
 
@@ -365,7 +367,7 @@ class TestUnassignedParameters(_BaseTest):
             Interchange.from_smirnoff(force_field=parsley, topology=ethanol_top)
 
 
-class TestConstraints:
+class TestConstraints(_BaseTest):
     @pytest.mark.parametrize(
         ("mol", "n_constraints"),
         [
@@ -373,11 +375,9 @@ class TestConstraints:
             ("CC", 6),
         ],
     )
-    def test_num_constraints(self, mol, n_constraints):
-        force_field = ForceField("openff-1.0.0.offxml")
-
-        bond_handler = force_field["Bonds"]
-        constraint_handler = force_field["Constraints"]
+    def test_num_constraints(self, parsley, mol, n_constraints):
+        bond_handler = parsley["Bonds"]
+        constraint_handler = parsley["Constraints"]
 
         topology = Molecule.from_smiles(mol).to_topology()
 

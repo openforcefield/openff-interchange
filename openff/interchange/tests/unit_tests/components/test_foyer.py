@@ -6,7 +6,6 @@ import numpy as np
 import parmed as pmd
 import pytest
 from openff.toolkit.topology.molecule import Molecule
-from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
 
@@ -168,12 +167,12 @@ class TestFoyer(_BaseTest):
 @pytest.mark.skip(reason="Typing with Foyer is temporarily unsupported")
 class TestRBTorsions(_BaseTest):
     @pytest.fixture(scope="class")
-    def ethanol_with_rb_torsions(self):
+    def ethanol_with_rb_torsions(self, parsley):
         mol = Molecule.from_smiles("CC")
         mol.name = "ETH"
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
-        parsley = ForceField("openff-1.0.0.offxml")
+
         out = Interchange.from_smirnoff(parsley, top)
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]

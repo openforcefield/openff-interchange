@@ -5,7 +5,7 @@ import numpy as np
 import openmm
 import pytest
 from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
+from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from openmm import unit as openmm_unit
@@ -78,7 +78,7 @@ class TestGROMACSGROFile(_BaseTest):
 
     @pytest.mark.skip(reason="Revisit after OFFTK 0.11.0")
     @pytest.mark.slow()
-    def test_residue_names_in_gro_file(self):
+    def test_residue_names_in_gro_file(self, parsley):
         """Test that residue names > 5 characters don't break .gro file output"""
         benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
         benzene.name = "supercalifragilisticexpialidocious"
@@ -86,8 +86,7 @@ class TestGROMACSGROFile(_BaseTest):
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
         # Populate an entire interchange because ...
-        force_field = ForceField("openff-1.0.0.offxml")
-        out = Interchange.from_smirnoff(force_field, top)
+        out = Interchange.from_smirnoff(parsley, top)
         out.box = [4, 4, 4]
         out.positions = benzene.conformers[0]
 
@@ -113,9 +112,7 @@ class TestGROMACS(_BaseTest):
             # "C1COC(=O)O1",  # This adds an improper, i2
         ],
     )
-    def test_simple_roundtrip(self, smiles, reader):
-        parsley = ForceField("openff_unconstrained-1.0.0.offxml")
-
+    def test_simple_roundtrip(self, parsley, smiles, reader):
         molecule = Molecule.from_smiles(smiles)
         molecule.name = molecule.to_hill_formula(molecule)
         molecule.generate_conformers(n_conformers=1)

@@ -3,7 +3,6 @@ import numpy as np
 import openmm
 import pytest
 from openff.toolkit.topology import Molecule
-from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.units.openmm import from_openmm
@@ -66,14 +65,12 @@ class TestFromOpenMM(_BaseTest):
             ("propane_methane_butanol_0.2_0.3_0.5.pdb"),
         ],
     )
-    def test_from_toolkit_packmol_boxes(self, pdb_path, unique_molecules):
+    def test_from_toolkit_packmol_boxes(self, parsley, pdb_path, unique_molecules):
         """
         Test loading some pre-prepared PACKMOL-generated systems.
 
         These use PDB files already prepared in the toolkit because PDB files are a pain.
         """
-        ff = ForceField("openff-1.0.0.offxml")
-
         pdb_file_path = get_data_file_path("systems/packmol_boxes/" + pdb_path)
         pdbfile = openmm.app.PDBFile(pdb_file_path)
         top = _OFFBioTop.from_openmm(
@@ -84,7 +81,7 @@ class TestFromOpenMM(_BaseTest):
         box = pdbfile.topology.getPeriodicBoxVectors()
         box = box.value_in_unit(nm) * unit.nanometer
 
-        out = Interchange.from_smirnoff(ff, top)
+        out = Interchange.from_smirnoff(parsley, top)
         out.box = box
         out.positions = from_openmm(pdbfile.getPositions())
 
@@ -99,7 +96,7 @@ class TestFromOpenMM(_BaseTest):
             combine_nonbonded_forces=True,
         ).compare(
             _get_openmm_energies(
-                omm_sys=ff.create_openmm_system(top),
+                omm_sys=parsley.create_openmm_system(top),
                 box_vectors=pdbfile.topology.getPeriodicBoxVectors(),
                 positions=pdbfile.getPositions(),
                 hard_cutoff=True,

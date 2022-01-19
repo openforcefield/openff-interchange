@@ -4,7 +4,7 @@ import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField, ParameterHandler
+from openff.toolkit.typing.engines.smirnoff import ParameterHandler
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from pydantic import ValidationError
@@ -21,55 +21,50 @@ from openff.interchange.exceptions import (
 from openff.interchange.tests import _BaseTest, get_test_file_path, needs_gmx, needs_lmp
 
 
-def test_getitem():
-    """Test behavior of Interchange.__getitem__"""
-    mol = Molecule.from_smiles("CCO")
-    parsley = ForceField("openff-1.0.0.offxml")
-    out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
-
-    out.box = [4, 4, 4]
-
-    assert not out.positions
-    np.testing.assert_equal(out["box"].m, (4 * np.eye(3) * unit.nanometer).m)
-    np.testing.assert_equal(out["box"].m, out["box_vectors"].m)
-
-    assert out["Bonds"] == out.handlers["Bonds"]
-
-    with pytest.raises(LookupError, match="Only str"):
-        out[1]
-
-    with pytest.raises(LookupError, match="Could not find"):
-        out["CMAPs"]
-
-
-def test_get_parameters():
-    mol = Molecule.from_smiles("CCO")
-    parsley = ForceField("openff-1.0.0.offxml")
-    out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
-
-    from_interchange = out._get_parameters("Bonds", (0, 4))
-    from_handler = out["Bonds"]._get_parameters((0, 4))
-
-    assert "k" in from_interchange.keys()
-    assert "length" in from_interchange.keys()
-    assert from_interchange == from_handler
-
-    with pytest.raises(MissingParameterHandlerError, match="Foobar"):
-        out._get_parameters("Foobar", (0, 1))
-
-    with pytest.raises(MissingParametersError, match=r"atoms \(0, 100\)"):
-        out._get_parameters("Bonds", (0, 100))
-
-
-def test_box_setter():
-    tmp = Interchange()
-
-    with pytest.raises(ValidationError):
-        tmp.box = [2, 2, 3, 90, 90, 90]
-
-
 @pytest.mark.slow()
-class TestInterchangeCombination(_BaseTest):
+class TestInterchange(_BaseTest):
+    def test_getitem(self, parsley):
+        """Test behavior of Interchange.__getitem__"""
+        mol = Molecule.from_smiles("CCO")
+        out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
+
+        out.box = [4, 4, 4]
+
+        assert not out.positions
+        np.testing.assert_equal(out["box"].m, (4 * np.eye(3) * unit.nanometer).m)
+        np.testing.assert_equal(out["box"].m, out["box_vectors"].m)
+
+        assert out["Bonds"] == out.handlers["Bonds"]
+
+        with pytest.raises(LookupError, match="Only str"):
+            out[1]
+
+        with pytest.raises(LookupError, match="Could not find"):
+            out["CMAPs"]
+
+    def test_get_parameters(parsley):
+        mol = Molecule.from_smiles("CCO")
+        out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
+
+        from_interchange = out._get_parameters("Bonds", (0, 4))
+        from_handler = out["Bonds"]._get_parameters((0, 4))
+
+        assert "k" in from_interchange.keys()
+        assert "length" in from_interchange.keys()
+        assert from_interchange == from_handler
+
+        with pytest.raises(MissingParameterHandlerError, match="Foobar"):
+            out._get_parameters("Foobar", (0, 1))
+
+        with pytest.raises(MissingParametersError, match=r"atoms \(0, 100\)"):
+            out._get_parameters("Bonds", (0, 100))
+
+    def test_box_setter(self):
+        tmp = Interchange()
+
+        with pytest.raises(ValidationError):
+            tmp.box = [2, 2, 3, 90, 90, 90]
+
     def test_basic_combination(self, parsley_unconstrained):
         """Test basic use of Interchange.__add__() based on the README example"""
         mol = Molecule.from_smiles("C")
@@ -120,7 +115,7 @@ class TestInterchangeCombination(_BaseTest):
 
         # TODO: Ensure the de-duplication is maintained after exports
 
-    def test_positions_setting(self):
+    def test_positions_setting(self, parsley):
         """Test that positions exist on the result if and only if
         both input objects have positions."""
 
@@ -129,14 +124,12 @@ class TestInterchangeCombination(_BaseTest):
         methane = Molecule.from_smiles("C")
         methane.generate_conformers(n_conformers=1)
 
-        force_field = ForceField("openff_unconstrained-1.3.0.offxml")
-
         ethane_interchange = Interchange.from_smirnoff(
-            force_field,
+            parsley,
             ethane.to_topology(),
         )
         methane_interchange = Interchange.from_smirnoff(
-            force_field,
+            parsley,
             methane.to_topology(),
         )
 
@@ -182,17 +175,13 @@ class TestBadExports(_BaseTest):
         with pytest.warns(UserWarning, match="seem to all be zero"):
             zero_positions.to_gro("foo.gro")
 
-
-class TestInterchange(_BaseTest):
-    def test_from_parsley(self):
-
-        force_field = ForceField("openff-1.3.0.offxml")
+    def test_from_parsley(self, parsley):
 
         top = Topology.from_molecules(
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")]
         )
 
-        out = Interchange.from_smirnoff(force_field, top)
+        out = Interchange.from_smirnoff(parsley, top)
 
         assert "Constraints" in out.handlers.keys()
         assert "Bonds" in out.handlers.keys()
