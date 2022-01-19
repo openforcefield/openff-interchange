@@ -1,12 +1,12 @@
 import mdtraj as md
 import numpy as np
-import openmm
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.units.openmm import from_openmm
+from openmm import app
 from openmm.unit import nanometer as nm
 
 from openff.interchange import Interchange
@@ -20,7 +20,7 @@ class TestFromOpenMM(_BaseTest):
     @pytest.mark.slow()
     def test_from_openmm_pdbfile(self, argon_ff, argon_top):
         pdb_file_path = get_test_file_path("10-argons.pdb")
-        pdbfile = openmm.app.PDBFile(pdb_file_path)
+        pdbfile = app.PDBFile(pdb_file_path)
 
         mol = Molecule.from_smiles("[#18]")
         top = _OFFBioTop.from_openmm(pdbfile.topology, unique_molecules=[mol])
@@ -75,7 +75,7 @@ class TestFromOpenMM(_BaseTest):
         ff = ForceField("openff-1.0.0.offxml")
 
         pdb_file_path = get_data_file_path("systems/packmol_boxes/" + pdb_path)
-        pdbfile = openmm.app.PDBFile(pdb_file_path)
+        pdbfile = app.PDBFile(pdb_file_path)
         top = _OFFBioTop.from_openmm(
             pdbfile.topology,
             unique_molecules=unique_molecules,
