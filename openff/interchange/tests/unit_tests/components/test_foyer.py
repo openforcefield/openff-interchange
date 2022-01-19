@@ -5,12 +5,13 @@ import mdtraj as md
 import numpy as np
 import parmed as pmd
 import pytest
-from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.topology import Molecule, Topology
 from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop
+from openff.interchange.components.foyer import _RBTorsionHandler
+from openff.interchange.components.mdtraj import _OFFBioTop, _store_bond_partners
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.models import PotentialKey, TopologyKey
@@ -24,10 +25,7 @@ from openff.interchange.tests import (
 if has_package("foyer"):
     import foyer
 
-    from openff.interchange.components.foyer import (
-        _RBTorsionHandler,
-        _topology_graph_from_openff_topology,
-    )
+    from openff.interchange.components.foyer import _topology_graph_from_openff_topology
 
 if HAS_GROMACS:
     from openff.interchange.drivers.gromacs import (
@@ -54,8 +52,10 @@ class TestFoyer(_BaseTest):
         )
         molecule.name = "ETH"
 
-        top = _OFFBioTop.from_molecules(molecule)
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        top = _OFFBioTop(
+            mdtop=md.Topology.from_openmm(molecule.to_topology().to_openmm())
+        )
+        _store_bond_partners(top.mdtop)
         oplsaa = foyer.Forcefield(name="oplsaa")
         interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
         interchange.positions = molecule.conformers[0].m_as(unit.nanometer)
@@ -73,9 +73,15 @@ class TestFoyer(_BaseTest):
                     mol.name = f"{mol_name}_{idx}"
             else:
                 molecule_or_molecules.name = mol_name
+                molecule_or_molecules = [molecule_or_molecules]
 
-            off_bio_top = _OFFBioTop.from_molecules(molecule_or_molecules)
+            tmp = Topology.from_molecules(molecule_or_molecules)
+            off_bio_top = _OFFBioTop.from_molecules(
+                mdtop=md.Topology.from_openmm(tmp.to_openmm()),
+                molecules=molecule_or_molecules,
+            )
             off_bio_top.mdtop = md.Topology.from_openmm(off_bio_top.to_openmm())
+            _store_bond_partners(off_bio_top.mdtop)
             openff_interchange = Interchange.from_foyer(off_bio_top, oplsaa)
 
             if isinstance(molecule_or_molecules, list):

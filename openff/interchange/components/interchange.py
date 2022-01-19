@@ -23,6 +23,7 @@ from openff.interchange.exceptions import (
     MissingParameterHandlerError,
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
+    UnsupportedCombinationError,
     UnsupportedExportError,
 )
 from openff.interchange.models import DefaultModel
@@ -31,6 +32,8 @@ from openff.interchange.types import ArrayQuantity
 if TYPE_CHECKING:
     if has_package("foyer"):
         from foyer.forcefield import Forcefield as FoyerForcefield
+    if has_package("nglview"):
+        import nglview
 
 _SUPPORTED_SMIRNOFF_HANDLERS = {
     "Constraints",
@@ -265,6 +268,41 @@ class Interchange(DefaultModel):
 
         return sys_out
 
+    def visualize(self, backend: str = "nglview"):
+        """
+        Visualize this Interchange.
+
+        This currently only uses NGLview. Other engines may be added in the future.
+
+        Parameters
+        ----------
+        backend : str, default="nglview"
+            The backend to use for visualization. Currently only "nglview" is supported.
+
+        Returns
+        -------
+        widget : nglview.NGLWidget
+            The NGLWidget containing the visualization.
+
+        """
+        if backend == "nglview":
+            return self._visualize_nglview()
+        else:
+            raise UnsupportedExportError
+
+    @requires_package("nglview")
+    def _visualize_nglview(self) -> "nglview.NGLWidget":
+        """Visualize the system using NGLView via a PDB file."""
+        import nglview
+
+        try:
+            self.to_pdb("_tmp_pdb_file.pdb", writer="openmm")
+        except MissingPositionsError as error:
+            raise MissingPositionsError(
+                "Cannot visualize system without positions."
+            ) from error
+        return nglview.show_file("_tmp_pdb_file.pdb")
+
     def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 8):
         """Export this Interchange object to a .gro file."""
         if self.positions is None:
@@ -413,12 +451,23 @@ class Interchange(DefaultModel):
 
         """
         from openff.interchange.components.foyer import get_handlers_callable
+        from openff.interchange.components.mdtraj import _store_bond_partners
 
         system = cls()
         system.topology = topology
 
+        _store_bond_partners(system.topology.mdtop)
+
+        # This block is from a mega merge, unclear if it's still needed
         for name, Handler in get_handlers_callable().items():
-            system.handlers[name] = Handler()
+            if name == "Electrostatics":
+                handler = Handler(scale_14=force_field.coulomb14scale)
+            if name == "vdW":
+                handler = Handler(scale_14=force_field.lj14scale)
+            else:
+                handler = Handler()
+
+            system.handlers[name] = handler
 
         system.handlers["vdW"].store_matches(force_field, topology=system.topology)
         system.handlers["vdW"].store_potentials(force_field=force_field)
@@ -560,7 +609,7 @@ class Interchange(DefaultModel):
         from openff.interchange.models import TopologyKey
 
         warnings.warn(
-            "Iterchange object combination is experimental and likely to produce "
+            "Interchange object combination is experimental and likely to produce "
             "strange results. Any workflow using this method is not guaranteed to "
             "be suitable for production. Use with extreme caution and thoroughly "
             "validate results!"
@@ -572,12 +621,28 @@ class Interchange(DefaultModel):
         self_copy.topology = _combine_topologies(self.topology, other.topology)
         atom_offset = self.topology.n_atoms
 
+        """
+        for handler_name in self.handlers:
+            if type(self.handlers[handler_name]).__name__ == "FoyerElectrostaticsHandler":
+                self.handlers[handler_name].slot_map = self.handlers[handler_name].charges
+        """
+
         for handler_name, handler in other.handlers.items():
 
+            """
+            if type(handler).__name__ == "FoyerElectrostaticsHandler":
+                handler.slot_map = handler.charges
+            """
+
+            # TODO: Actually specify behavior in this case
             try:
                 self_handler = self_copy.handlers[handler_name]
             except KeyError:
-                self_copy.handlers[handler_name] = handler
+                self.add_handler(handler_name, handler)
+                warnings.warn(
+                    f"'other' Interchange object has handler with name {handler_name} not "
+                    f"found in 'self,' but it has now been added."
+                )
                 continue
 
             for top_key, pot_key in handler.slot_map.items():
@@ -603,7 +668,7 @@ class Interchange(DefaultModel):
             self_copy.positions = None
 
         if not np.all(self_copy.box == other.box):
-            raise NotImplementedError(
+            raise UnsupportedCombinationError(
                 "Combination with unequal box vectors is not curretnly supported"
             )
 

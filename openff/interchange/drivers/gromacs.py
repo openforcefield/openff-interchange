@@ -43,7 +43,7 @@ constraints              = none
 """
 
 
-def _write_mdp_file(openff_sys: "Interchange"):
+def _write_mdp_file(openff_sys: "Interchange") -> None:
     with open("auto_generated.mdp", "w") as mdp_file:
         mdp_file.write(MDP_HEADER)
 
@@ -155,7 +155,7 @@ def _run_gmx_energy(
     gro_file: Union[Path, str],
     mdp_file: Union[Path, str],
     maxwarn: int = 1,
-):
+) -> EnergyReport:
     """
     Given GROMACS files, return single-point energies as computed by GROMACS.
 
@@ -212,7 +212,7 @@ def _run_gmx_energy(
     return report
 
 
-def _get_gmx_energy_vdw(gmx_energies: Dict):
+def _get_gmx_energy_vdw(gmx_energies: Dict) -> unit.Quantity:
     """Get the total nonbonded energy from a set of GROMACS energies."""
     gmx_vdw = 0.0 * kj_mol
     for key in ["LJ (SR)", "LJ-14", "Disper. corr.", "Buck.ham (SR)"]:
@@ -224,7 +224,7 @@ def _get_gmx_energy_vdw(gmx_energies: Dict):
     return gmx_vdw
 
 
-def _get_gmx_energy_coul(gmx_energies: Dict):
+def _get_gmx_energy_coul(gmx_energies: Dict) -> unit.Quantity:
     gmx_coul = 0.0 * kj_mol
     for key in ["Coulomb (SR)", "Coul. recip.", "Coulomb-14"]:
         try:
@@ -235,7 +235,7 @@ def _get_gmx_energy_coul(gmx_energies: Dict):
     return gmx_coul
 
 
-def _get_gmx_energy_torsion(gmx_energies: Dict):
+def _get_gmx_energy_torsion(gmx_energies: Dict) -> unit.Quantity:
     """Canonicalize torsion energies from a set of GROMACS energies."""
     gmx_torsion = 0.0 * kj_mol
     for key in ["Torsion", "Ryckaert-Bell.", "Proper Dih."]:

@@ -202,8 +202,7 @@ else:
                         return val * unit_
                 if isinstance(val, bytes):
                     # Define outside loop
-                    dt = np.dtype(int)
-                    dt.newbyteorder("<")
+                    dt = np.dtype(int).newbyteorder("<")
                     return np.frombuffer(val, dtype=dt) * unit_
                 if isinstance(val, str):
                     # could do custom deserialization here?

@@ -700,8 +700,7 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
         from openff.interchange.components.mdtraj import _OFFBioTop
 
         mdtop = md.Topology.from_openmm(topology)
-        top = _OFFBioTop()
-        top.mdtop = mdtop
+        top = _OFFBioTop(mdtop=mdtop)
 
         openff_sys.topology = top
 
@@ -751,7 +750,7 @@ def _convert_nonbonded_force(force):
         openmm.NonbondedForce.CutoffNonPeriodic,
     }:
         # TODO: Store reaction-field dielectric
-        electrostatics.method = "reactionfield"
+        electrostatics.method = "reaction-field"
         vdw_handler.method = "cutoff"
     elif force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff:
         electrostatics.method = "no-cutoff"
@@ -820,7 +819,7 @@ def _convert_periodic_torsion_force(force):
         # TODO: Process layered torsions
         top_key = TopologyKey(atom_indices=(atom1, atom2, atom3, atom4), mult=0)
         while top_key in proper_torsion_handler.slot_map:
-            top_key.mult += 1
+            top_key.mult: int = top_key.mult + 1
 
         pot_key = PotentialKey(id=f"{atom1}-{atom2}-{atom3}-{atom4}", mult=top_key.mult)
         pot = Potential(

@@ -5,7 +5,7 @@ import numpy as np
 import openmm
 import pytest
 from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
+from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from openmm import unit as openmm_unit
@@ -161,7 +161,7 @@ class TestGROMACS(_BaseTest):
         openff_sys = Interchange.from_smirnoff(
             force_field=parsley, topology=ethanol_top
         )
-        openff_sys.positions = np.zeros((ethanol_top.n_topology_atoms, 3))
+        openff_sys.positions = np.zeros((ethanol_top.n_atoms, 3))
         openff_sys.to_gro("tmp.gro")
 
         openff_sys.to_top("lorentz.top")
@@ -186,6 +186,27 @@ class TestGROMACS(_BaseTest):
 
         with pytest.raises(UnsupportedExportError, match="rule `geometric` not compat"):
             openff_sys.to_top("out.top")
+
+    @pytest.mark.slow()
+    def test_residue_names_in_gro_file(self):
+        """Test that residue names > 5 characters don't break .gro file output"""
+        benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
+        benzene.name = "supercalifragilisticexpialidocious"
+        top = _OFFBioTop.from_molecules(
+            mdtop=md.Topology.from_openmm(benzene.to_topology().to_openmm()),
+            molecules=[benzene],
+        )
+        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+
+        # Populate an entire interchange because ...
+        force_field = ForceField("openff-1.0.0.offxml")
+        out = Interchange.from_smirnoff(force_field, top)
+        out.box = [4, 4, 4]
+        out.positions = benzene.conformers[0]
+
+        # ... the easiest way to check the validity of the files
+        # is to see if GROMACS can run them
+        get_gromacs_energies(out)
 
     @pytest.mark.slow()
     def test_argon_buck(self):
@@ -287,6 +308,7 @@ class TestGROMACSVirtualSites(_BaseTest):
 
         return parsley
 
+    @pytest.mark.xfail()
     @skip_if_missing("parmed")
     def test_sigma_hole_example(self, parsley_with_sigma_hole):
         """Test that a single-molecule sigma hole example runs"""

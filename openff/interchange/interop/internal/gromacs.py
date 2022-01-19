@@ -838,12 +838,28 @@ def _write_bonds(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
             sorted(openff_sys.topology.atom_index(a) for a in bond.atoms)
         )
         molecule_indices = tuple(sorted(molecule.atom_index(a) for a in bond.atoms))
+        topology_indices = tuple(
+            sorted(openff_sys.topology.atom_index(atom) for atom in bond.atoms)
+        )
 
+        found_match = False
         for top_key in bond_handler.slot_map:
             if top_key.atom_indices == topology_indices:
                 pot_key = bond_handler.slot_map[top_key]
+                found_match = True
+                break
             elif top_key.atom_indices == topology_indices[::-1]:
                 pot_key = bond_handler.slot_map[top_key]
+                found_match = True
+                break
+            else:
+                found_match = False
+
+        if not found_match:
+            print(
+                f"Failed to find parameters for bond with topology indices {topology_indices}"
+            )
+            continue
 
         params = bond_handler.potentials[pot_key].parameters
 
@@ -1143,8 +1159,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
         default_chain = mdtop.add_chain()
         mdtop.add_residue(name="FOO", chain=default_chain)
 
-        topology = _OFFBioTop()
-        topology.mdtop = mdtop
+        topology = _OFFBioTop(mdtop=mdtop)
 
         interchange.topology = topology
 

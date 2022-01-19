@@ -10,6 +10,7 @@ from openff.utilities.testing import skip_if_missing
 from pydantic import ValidationError
 
 from openff.interchange import Interchange
+from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
     MissingParameterHandlerError,
@@ -17,7 +18,13 @@ from openff.interchange.exceptions import (
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
 )
-from openff.interchange.tests import _BaseTest, get_test_file_path, needs_gmx, needs_lmp
+from openff.interchange.tests import (
+    _BaseTest,
+    _top_from_smiles,
+    get_test_file_path,
+    needs_gmx,
+    needs_lmp,
+)
 
 
 @pytest.mark.slow()
@@ -41,7 +48,7 @@ class TestInterchange(_BaseTest):
         with pytest.raises(LookupError, match="Could not find"):
             out["CMAPs"]
 
-    def test_get_parameters(parsley):
+    def test_get_parameters(self, parsley):
         mol = Molecule.from_smiles("CCO")
         out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
 
@@ -180,6 +187,45 @@ class TestInterchange(_BaseTest):
         get_openmm_energies(out)
         get_lammps_energies(out)
 
+    def test_from_parsley(self, parsley):
+
+        tmp = Topology.from_molecules(
+            [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")]
+        )
+        top = _OFFBioTop(mdtop=md.Topology.from_openmm(tmp.to_openmm()))
+
+        out = Interchange.from_smirnoff(parsley, top)
+
+        assert "Constraints" in out.handlers.keys()
+        assert "Bonds" in out.handlers.keys()
+        assert "Angles" in out.handlers.keys()
+        assert "ProperTorsions" in out.handlers.keys()
+        assert "vdW" in out.handlers.keys()
+
+        assert type(out.topology) == Topology
+        assert isinstance(out.topology, Topology)
+
+    @skip_if_missing("nglview")
+    def test_visualize(self, parsley):
+        import nglview
+
+        molecule = Molecule.from_smiles("CCO")
+        molecule.generate_conformers(n_conformers=1)
+
+        out = Interchange.from_smirnoff(
+            force_field=parsley,
+            topology=molecule.to_topology(),
+        )
+
+        with pytest.raises(
+            MissingPositionsError, match="Cannot visualize system without positions."
+        ):
+            out.visualize()
+
+        out.positions = molecule.conformers[0]
+
+        assert isinstance(out.visualize(), nglview.NGLWidget)
+
 
 class TestUnimplementedSMIRNOFFCases(_BaseTest):
     def test_bogus_smirnoff_handler(self, parsley):
@@ -215,7 +261,7 @@ class TestBadExports(_BaseTest):
             no_positions.to_gro("foo.gro")
 
     def test_gro_file_all_zero_positions(self, parsley):
-        top = Topology.from_molecules(Molecule.from_smiles("CC"))
+        top = _top_from_smiles("CC")
         zero_positions = Interchange.from_smirnoff(force_field=parsley, topology=top)
         zero_positions.positions = np.zeros((top.n_atoms, 3)) * unit.nanometer
         with pytest.warns(UserWarning, match="seem to all be zero"):

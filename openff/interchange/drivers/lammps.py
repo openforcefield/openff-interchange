@@ -1,6 +1,6 @@
 """Functions for running energy evluations with LAMMPS."""
 import subprocess
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 from openff.units import unit
@@ -12,7 +12,7 @@ from openff.interchange.exceptions import LAMMPSRunError
 
 def get_lammps_energies(
     off_sys: Interchange,
-    round_positions=None,
+    round_positions: Optional[int] = None,
     writer: str = "internal",
 ) -> EnergyReport:
     """
@@ -79,7 +79,7 @@ def get_lammps_energies(
     return report
 
 
-def _parse_lammps_log(file_in) -> List[float]:
+def _parse_lammps_log(file_in: str) -> List[float]:
     """Parse a LAMMPS log file for energy components."""
     tag = False
     with open(file_in) as fi:
@@ -95,8 +95,8 @@ def _parse_lammps_log(file_in) -> List[float]:
 
 def _write_lammps_input(
     off_sys: Interchange,
-    file_name="test.in",
-):
+    file_name: str = "test.in",
+) -> None:
     """Write a LAMMPS input file for running single-point energies."""
     with open(file_name, "w") as fo:
         fo.write(

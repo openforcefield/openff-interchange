@@ -1,5 +1,5 @@
 """Functions for running energy evluations with OpenMM."""
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 import openmm
@@ -13,7 +13,7 @@ kj_mol = unit.kilojoule_per_mole
 
 def get_openmm_energies(
     off_sys: Interchange,
-    round_positions=None,
+    round_positions: Optional[int] = None,
     hard_cutoff: bool = False,
     electrostatics: bool = True,
     combine_nonbonded_forces: bool = False,
@@ -230,7 +230,12 @@ def _infer_nonbonded_energy_type(force):
 
 def _canonicalize_nonbonded_energies(energies: Dict):
     omm_nonbonded = 0.0 * kj_mol
-    for key in ["NonbondedForce", "CustomNonbondedForce", "CustomBondForce"]:
+    for key in [
+        "Nonbonded",
+        "NonbondedForce",
+        "CustomNonbondedForce",
+        "CustomBondForce",
+    ]:
         try:
             omm_nonbonded += energies[key]
         except KeyError:

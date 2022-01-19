@@ -1523,15 +1523,15 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
             local_frame_position = np.asarray([-1.0, 0.0, 0.0]) * distance
         elif virtual_site_key.type == "MonovalentLonePair":
             distance = potential.parameters["distance"]
-            theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)  # type: ignore[union-attr]
-            psi = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)  # type: ignore[union-attr]
+            theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)  # type: ignore
+            psi = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)  # type: ignore
             factor = np.array(
                 [np.cos(theta) * np.cos(psi), np.sin(theta) * np.cos(psi), np.sin(psi)]
             )
             local_frame_position = factor * distance
         elif virtual_site_key.type == "DivalentLonePair":
             distance = potential.parameters["distance"]
-            theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)  # type: ignore[union-attr]
+            theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)  # type: ignore
             factor = np.asarray([-1.0 * np.cos(theta), 0.0, np.sin(theta)])
             local_frame_position = factor * distance
         elif virtual_site_key.type == "TrivalentLonePair":

@@ -59,7 +59,8 @@ def _get_exclusion_lists(topology):
             tmp.append(0)
 
         number_excluded_atoms.append(len(tmp))
-        [excluded_atoms_list.append(_) for _ in tmp]
+        for _ in tmp:
+            excluded_atoms_list.append(_)
 
     return number_excluded_atoms, excluded_atoms_list
 

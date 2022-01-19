@@ -1,7 +1,6 @@
-import mdtraj as md
 import numpy as np
 import pytest
-from openff.toolkit.topology import Molecule
+from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.units.openmm import from_openmm
@@ -22,12 +21,12 @@ class TestFromOpenMM(_BaseTest):
         pdbfile = app.PDBFile(pdb_file_path)
 
         mol = Molecule.from_smiles("[#18]")
-        top = _OFFBioTop.from_openmm(pdbfile.topology, unique_molecules=[mol])
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        tmp = Topology.from_openmm(pdbfile.topology, unique_molecules=[mol])
+        # top = _OFFBioTop(mdtop=md.Topology.from_openmm(pdbfile.topology))
         box = pdbfile.topology.getPeriodicBoxVectors()
         box = box.value_in_unit(nm) * unit.nanometer
 
-        out = Interchange.from_smirnoff(argon_ff, top)
+        out = Interchange.from_smirnoff(argon_ff, tmp)
         out.box = box
         out.positions = from_openmm(pdbfile.getPositions())
 
@@ -38,7 +37,7 @@ class TestFromOpenMM(_BaseTest):
 
         get_openmm_energies(out, hard_cutoff=True).compare(
             _get_openmm_energies(
-                omm_sys=argon_ff.create_openmm_system(top),
+                omm_sys=argon_ff.create_openmm_system(tmp),
                 box_vectors=pdbfile.topology.getPeriodicBoxVectors(),
                 positions=pdbfile.getPositions(),
                 hard_cutoff=True,
@@ -77,7 +76,7 @@ class TestFromOpenMM(_BaseTest):
             pdbfile.topology,
             unique_molecules=unique_molecules,
         )
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        # top = _OFFBioTop(mdtop=md.Topology.from_openmm(tmp.to_openmm()))
         box = pdbfile.topology.getPeriodicBoxVectors()
         box = box.value_in_unit(nm) * unit.nanometer
 

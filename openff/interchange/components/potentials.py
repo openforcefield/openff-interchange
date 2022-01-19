@@ -22,7 +22,12 @@ else:
     import numpy  # type: ignore[no-redef]
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
     from openff.interchange.components.mdtraj import _OFFBioTop
+
+    if has_package("jax"):
+        from jaxlib.xla_extension import DeviceArray
 
 
 class Potential(DefaultModel):
@@ -32,15 +37,17 @@ class Potential(DefaultModel):
     map_key: Optional[int] = None
 
     @validator("parameters")
-    def validate_parameters(cls, v):
+    def validate_parameters(
+        cls, v: Dict[str, Union[ArrayQuantity, FloatQuantity]]
+    ) -> Dict[str, FloatQuantity]:
         for key, val in v.items():
             if isinstance(val, list):
                 v[key] = ArrayQuantity.validate_type(val)
             else:
                 v[key] = FloatQuantity.validate_type(val)
-        return v
+        return v  # type: ignore[return-value]
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(tuple(self.parameters.values()))
 
 
@@ -54,28 +61,33 @@ class WrappedPotential(DefaultModel):
 
     _inner_data: InnerData = PrivateAttr()
 
-    def __init__(self, data):
+    def __init__(self, data: Union[Potential, dict]) -> None:
         if isinstance(data, Potential):
             self._inner_data = self.InnerData(data={data: 1.0})
         elif isinstance(data, dict):
             self._inner_data = self.InnerData(data=data)
 
     @property
-    def parameters(self):
+    def parameters(self) -> Dict[str, FloatQuantity]:
         """Get the parameters as represented by the stored potentials and coefficients."""
-        keys = {
-            pot for pot in self._inner_data.data.keys() for pot in pot.parameters.keys()
+        keys: Set[str] = {
+            param_key
+            for pot in self._inner_data.data.keys()
+            for param_key in pot.parameters.keys()
         }
-
         params = dict()
         for key in keys:
-            sum_ = 0.0
-            for pot, coeff in self._inner_data.data.items():
-                sum_ += coeff * pot.parameters[key]
-            params.update({key: sum_})
-        return params
+            params.update(
+                {
+                    key: sum(
+                        coeff * pot.parameters[key]
+                        for pot, coeff in self._inner_data.data.items()
+                    )
+                }
+            )
+        return params  # type: ignore
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self._inner_data.data)
 
 
@@ -133,7 +145,7 @@ class PotentialHandler(DefaultModel):
             f"associated with atoms {atom_indices}"
         )
 
-    def get_force_field_parameters(self):
+    def get_force_field_parameters(self) -> "ArrayLike":
         """Return a flattened representation of the force field parameters."""
         # TODO: Handle WrappedPotential
         if any(
@@ -143,29 +155,34 @@ class PotentialHandler(DefaultModel):
             raise NotImplementedError
 
         return numpy.array(
-            [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
+            [
+                [
+                    v.m for v in p.parameters.values()  # type:ignore[attr-defined]
+                ]
+                for p in self.potentials.values()
+            ]
         )
 
-    def set_force_field_parameters(self, new_p):
+    def set_force_field_parameters(self, new_p: "ArrayLike") -> None:
         """Set the force field parameters from a flattened representation."""
         mapping = self.get_mapping()
-        if new_p.shape[0] != len(mapping):
+        if new_p.shape[0] != len(mapping):  # type: ignore
             raise RuntimeError
 
         for potential_key, potential_index in self.get_mapping().items():
             potential = self.potentials[potential_key]
-            if len(new_p[potential_index, :]) != len(potential.parameters):
+            if len(new_p[potential_index, :]) != len(potential.parameters):  # type: ignore
                 raise RuntimeError
 
             for parameter_index, parameter_key in enumerate(potential.parameters):
-                parameter_units = potential.parameters[parameter_key].units
-                modified_parameter = new_p[potential_index, parameter_index]
+                parameter_units = potential.parameters[parameter_key].units  # type: ignore
+                modified_parameter = new_p[potential_index, parameter_index]  # type: ignore
 
                 self.potentials[potential_key].parameters[parameter_key] = (
                     modified_parameter * parameter_units
                 )
 
-    def get_system_parameters(self, p=None):
+    def get_system_parameters(self, p=None) -> numpy.ndarray:
         """
         Return a flattened representation of system parameters.
 
@@ -189,7 +206,7 @@ class PotentialHandler(DefaultModel):
 
         return numpy.array(q)
 
-    def get_mapping(self) -> Dict:
+    def get_mapping(self) -> Dict[PotentialKey, int]:
         """Get a mapping between potentials and array indices."""
         mapping: Dict = dict()
         index = 0
@@ -200,7 +217,7 @@ class PotentialHandler(DefaultModel):
 
         return mapping
 
-    def parametrize(self, p=None):
+    def parametrize(self, p=None) -> numpy.ndarray:
         """Return an array of system parameters, given an array of force field parameters."""
         if p is None:
             p = self.get_force_field_parameters()
@@ -217,7 +234,7 @@ class PotentialHandler(DefaultModel):
         )
 
     @requires_package("jax")
-    def get_param_matrix(self):
+    def get_param_matrix(self) -> "DeviceArray":
         """Get a matrix representing the mapping between force field and system parameters."""
         from functools import partial
 
@@ -232,4 +249,4 @@ class PotentialHandler(DefaultModel):
         jac_parametrize = jax.jacfwd(parametrize_partial)
         jac_res = jac_parametrize(p)
 
-        return jac_res.reshape(-1, p.flatten().shape[0])
+        return jac_res.reshape(-1, p.flatten().shape[0])  # type: ignore[union-attr]
