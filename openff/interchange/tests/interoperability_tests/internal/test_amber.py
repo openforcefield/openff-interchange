@@ -3,7 +3,6 @@ import numpy as np
 import parmed as pmd
 import pytest
 from openff.toolkit.topology import Molecule
-from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 
 from openff.interchange import Interchange
@@ -46,19 +45,16 @@ class TestAmber(_BaseTest):
         ],
     )
     @pytest.mark.parametrize("constrained", [True, False])
-    def test_amber_energy(self, smiles, constrained):
+    def test_amber_energy(self, sage, sage_unconstrained, smiles, constrained):
         """Basic test to see if the amber energy driver is functional"""
         mol = Molecule.from_smiles(smiles)
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
         top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
-        if constrained:
-            sage = ForceField("openff-2.0.0.offxml")
-        else:
-            sage = ForceField("openff_unconstrained-2.0.0.offxml")
+        force_field = sage if constrained else sage_unconstrained
 
-        off_sys = Interchange.from_smirnoff(sage, top)
+        off_sys = Interchange.from_smirnoff(force_field, top)
 
         off_sys.box = [4, 4, 4]
         off_sys.positions = mol.conformers[0]

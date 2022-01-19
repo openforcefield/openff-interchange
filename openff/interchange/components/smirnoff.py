@@ -322,7 +322,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
             fractional_bond_order_interpolation=parameter_handler.fractional_bondorder_interpolation,
         )
 
-        if handler._get_uses_interpolation(parameter_handler):
+        if handler._get_uses_interpolation(parameter_handler):  # type: ignore[attr-defined]
             for molecule in topology.molecules:
                 # TODO: expose conformer generation and fractional bond order assigment
                 # knobs to user via API
