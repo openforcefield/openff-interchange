@@ -160,6 +160,7 @@ class TestInterchange(_BaseTest):
     @needs_gmx
     @needs_lmp
     @pytest.mark.slow()
+    @pytest.mark.skip(reason="Broken until `TypedMolecule` is implemented")
     @skip_if_missing("foyer")
     def test_atom_ordering(self):
         """Test that atom indices in bonds are ordered consistently between the slot map and topology"""

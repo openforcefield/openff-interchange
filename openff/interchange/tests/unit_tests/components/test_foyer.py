@@ -10,7 +10,6 @@ from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange.components.foyer import _RBTorsionHandler
 from openff.interchange.components.mdtraj import _OFFBioTop, _store_bond_partners
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_openmm_energies
@@ -25,7 +24,10 @@ from openff.interchange.tests import (
 if has_package("foyer"):
     import foyer
 
-    from openff.interchange.components.foyer import _topology_graph_from_openff_topology
+    from openff.interchange.components.foyer import (
+        _RBTorsionHandler,
+        _topology_graph_from_openff_topology,
+    )
 
 if HAS_GROMACS:
     from openff.interchange.drivers.gromacs import (

@@ -656,7 +656,14 @@ class Interchange(DefaultModel):
                 )
 
                 self_handler.slot_map.update({new_top_key: pot_key})
-                self_handler.potentials.update({pot_key: handler.potentials[pot_key]})
+                if handler_name == "Constraints":
+                    self_handler.constraints.update(
+                        {pot_key: handler.constraints[pot_key]}
+                    )
+                else:
+                    self_handler.potentials.update(
+                        {pot_key: handler.potentials[pot_key]}
+                    )
 
         if self_copy.positions is not None and other.positions is not None:
             new_positions = np.vstack([self_copy.positions, other.positions])
