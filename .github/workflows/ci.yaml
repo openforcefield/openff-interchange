@@ -78,7 +78,7 @@ jobs:
 
     - name: Run example notebooks
       run: |
-        python -m pytest $COV examples/ --nbval-lax -p no:randomly --ignore=examples/packed_box.ipynb
+        python -m pytest $COV examples/ --nbval-lax -p no:randomly --ignore=examples/packed_box.ipynb --ignore=examples/foyer-showcase/
 
     - name: Codecov
       uses: codecov/codecov-action@v2.1.0
