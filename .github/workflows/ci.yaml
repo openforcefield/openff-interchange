@@ -3,12 +3,10 @@ name: full_tests
 on:
   push:
     branches:
-      - master
-      - topology-refactor
+      - main
   pull_request:
     branches:
-      - master
-      - topology-refactor
+      - main
 
 defaults:
   run:

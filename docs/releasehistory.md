@@ -9,6 +9,13 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## 0.2.0 - Development
+
+The v0.2.x line of Interchange targets biopolymer support and consistitutes several significant
+changes compared to older versions. Because of this, versions v0.2.0 and newer will not generally be compatible with the 0.1.x line or versions of the OpenFF Toolkit older than v0.11.0.
+
+The default branch has been renamed from `master` to `main`.
+
 ## 0.1.4 - 2022-01-11
 
 This pre-release of OpenFF Interchange includes interoperability and documentation improvements.
