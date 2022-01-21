@@ -34,7 +34,7 @@ kj_rad = kj_mol / unit.radian ** 2
 
 def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.System:
     """
-    Convert an Interchange to a ParmEd Structure.
+    Convert an Interchange to an OpenmM System.
 
     Parameters
     ----------
