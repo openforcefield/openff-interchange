@@ -126,8 +126,12 @@ def _iterate_pairs(mdtop: md.Topology) -> Generator[Tuple["Atom", "Atom"], None,
 
 def _get_num_h_bonds(mdtop: md.Topology) -> int:
     """Get the number of (covalent) bonds containing a hydrogen atom."""
-    n_bonds_containing_hydrogen = 0
+    if not isinstance(mdtop, md.Topology):
+        raise Exception(
+            "Bad topology argument passed to _get_num_h_bonds, expected mdtraj.Topology"
+        )
 
+    n_bonds_containing_hydrogen = 0
     for bond in mdtop.bonds:
         if (bond.atom1.element.atomic_number == 1) or (
             bond.atom2.element.atomic_number == 1

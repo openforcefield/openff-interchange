@@ -12,6 +12,7 @@ from intermol.system import System
 from openff.units import unit
 from openff.units.openmm import from_openmm
 
+from openff.interchange import Interchange
 from openff.interchange.components.base import (
     BaseAngleHandler,
     BaseBondHandler,
@@ -20,7 +21,6 @@ from openff.interchange.components.base import (
     BaseProperTorsionHandler,
     BasevdWHandler,
 )
-from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import Potential
 from openff.interchange.models import PotentialKey, TopologyKey

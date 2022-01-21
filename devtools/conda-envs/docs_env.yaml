@@ -1,4 +1,4 @@
-name: openff-interchange-docs
+name: interchange-docs
 channels:
   # Skip installing CUDA to speed up builds
   - jaimergp/label/unsupported-cudatoolkit-shim

@@ -3,14 +3,15 @@ from abc import abstractmethod
 from copy import copy
 from typing import TYPE_CHECKING, Dict, Type
 
+from foyer.topology_graph import TopologyGraph
 from openff.units import unit
-from openff.utilities.utilities import has_package
+from openff.utilities.utilities import has_package, requires_package
+from parmed import periodic_table
 
 from openff.interchange.components.mdtraj import (
     _iterate_angles,
     _iterate_propers,
     _OFFBioTop,
-    _store_bond_partners,
 )
 from openff.interchange.components.potentials import Potential, PotentialHandler
 from openff.interchange.models import PotentialKey, TopologyKey
@@ -18,14 +19,37 @@ from openff.interchange.types import FloatQuantity
 
 if TYPE_CHECKING:
     from foyer.forcefield import Forcefield
-    from foyer.topology_graph import TopologyGraph
+    from openff.toolkit.topology import Topology
 
 # Is this the safest way to achieve PotentialKey id separation?
 POTENTIAL_KEY_SEPARATOR = "-"
 
 
 if has_package("foyer"):
-    from foyer.topology_graph import TopologyGraph  # noqa
+
+    class _TopologyGraph(TopologyGraph):
+        """Shim to get TopologyGraph.from_openff_topology working with the Topology refactor."""
+
+        @classmethod
+        def from_openff_topology(cls, openff_topology: "Topology"):
+            top_graph = cls()
+            for atom in openff_topology.atoms:
+                atom_index = openff_topology.atom_index(atom)
+                element = periodic_table.Element[atom.atomic_number]
+                top_graph.add_atom(
+                    name=atom.name,
+                    index=atom_index,
+                    atomic_number=atom.atomic_number,
+                    element=element,
+                )
+
+            for bond in openff_topology.bonds:
+                atoms_indices = [
+                    openff_topology.atom_index(atom) for atom in bond.atoms
+                ]
+                top_graph.add_bond(*atoms_indices)
+
+            return top_graph
 
 
 def _copy_params(
@@ -76,23 +100,12 @@ class FoyerVDWHandler(PotentialHandler):
     def store_matches(
         self,
         force_field: "Forcefield",
-        topology: "_OFFBioTop",
+        topology: "Topology",
     ) -> None:
         """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
         from foyer.atomtyper import find_atomtypes
 
-        if topology.n_topology_atoms == 0:
-            from parmed.openmm import load_topology  # type: ignore
-
-            _store_bond_partners(topology.mdtop)
-            top_graph = TopologyGraph.from_parmed(
-                structure=load_topology(topology.mdtop.to_openmm())
-            )
-        else:
-            top_graph = TopologyGraph.from_openff_topology(openff_topology=topology)
-
-        if top_graph.number_of_nodes() == 0:
-            raise RuntimeError()
+        top_graph = _topology_graph_from_openff_topology(topology=topology)
 
         type_map = find_atomtypes(top_graph, forcefield=force_field)
         for key, val in type_map.items():
@@ -156,7 +169,7 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
     def store_matches(
         self,
         atom_slots: Dict[TopologyKey, PotentialKey],
-        topology: "_OFFBioTop",
+        topology: "Topology",
     ) -> None:
         """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for connection in getattr(topology, self.connection_attribute):
@@ -164,9 +177,9 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
                 atoms_iterable = connection.atoms
             except AttributeError:
                 atoms_iterable = connection
-            atoms_indices = tuple(atom.topology_atom_index for atom in atoms_iterable)
-            top_key = TopologyKey(atom_indices=atoms_indices)
+            atoms_indices = tuple(topology.atom_index(atom) for atom in atoms_iterable)
 
+            top_key = TopologyKey(atom_indices=atoms_indices)
             pot_key_ids = tuple(
                 _get_potential_key_id(atom_slots, idx) for idx in atoms_indices
             )
@@ -208,7 +221,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
 
     type: str = "harmonic_bonds"
     expression: str = "1/2 * k * (r - length) ** 2"
-    connection_attribute = "topology_bonds"
+    connection_attribute = "bonds"
 
     def get_params_with_units(self, params):
         """Get the parameters of this handler, tagged with units."""
@@ -352,3 +365,28 @@ class _RBTorsionHandler(PotentialHandler):
         "C4 * (cos(phi - 180)) ** 4 + C5 * (cos(phi - 180)) ** 5 "
     )
     # independent_variables: Set[str] = {"C0", "C1", "C2", "C3", "C4", "C5"}
+
+
+@requires_package("foyer")
+def _topology_graph_from_openff_topology(
+    topology: "Topology",
+) -> "TopologyGraph":
+    """Create a TopologyGraph from an OpenFF Topology."""
+    from foyer.topology_graph import TopologyGraph, pt  # type: ignore[attr-defined]
+
+    topology_graph = TopologyGraph()
+    for atom in topology.atoms:
+        atom_index = topology.atom_index(atom)
+        element = pt.Element[atom.atomic_number]
+        topology_graph.add_atom(
+            name=atom.name,
+            index=atom_index,
+            atomic_number=atom.atomic_number,
+            element=element,
+        )
+
+        for bond in topology.bonds:
+            atoms_indices = [topology.atom_index(atom) for atom in bond.atoms]
+            topology_graph.add_bond(*atoms_indices)
+
+    return topology_graph

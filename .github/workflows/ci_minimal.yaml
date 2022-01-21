@@ -3,10 +3,10 @@ name: minimal_tests
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 defaults:
   run:
@@ -44,16 +44,16 @@ jobs:
         df -h
         ulimit -a
 
+    - name: Install package
+      run: |
+        python setup.py develop --no-deps
+
     - name: Environment Information
       run: |
         conda info
         conda list
 
-    - name: Install package
-      run: |
-        python setup.py develop --no-deps
-
     - name: Run unit tests
       if: always()
       run: |
-        python -m pytest -v -nauto openff/interchange/unit_tests/
+        python -m pytest -v -nauto openff/interchange/tests/unit_tests/

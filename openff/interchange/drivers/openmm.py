@@ -5,7 +5,7 @@ import numpy as np
 import openmm
 from openmm import unit
 
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
 
 kj_mol = unit.kilojoule_per_mole
@@ -25,7 +25,7 @@ def get_openmm_energies(
 
     Parameters
     ----------
-    off_sys : openff.interchange.components.interchange.Interchange
+    off_sys : openff.interchange.Interchange
         An OpenFF Interchange object to compute the single-point energy of
     round_positions : int, optional
         The number of decimal places, in nanometers, to round positions. This can be useful when
