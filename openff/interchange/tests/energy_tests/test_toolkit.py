@@ -76,7 +76,7 @@ def compare_condensed_systems(self, mol, force_field):
     from openff.evaluator import unit as evaluator_unit  # type: ignore[import]
     from openff.evaluator.utils.packmol import pack_box  # type: ignore[import]
 
-    mass_density = 500 * evaluator_unit.kilogram / evaluator_unit.meter ** 3
+    mass_density = 500 * evaluator_unit.kilogram / evaluator_unit.meter**3
 
     trj, assigned_residue_names = pack_box(
         molecules=[mol], number_of_copies=[100], mass_density=mass_density

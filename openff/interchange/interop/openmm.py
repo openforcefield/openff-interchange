@@ -24,12 +24,12 @@ if TYPE_CHECKING:
 
 kcal_mol = unit.kilocalorie_per_mole
 
-kcal_ang = kcal_mol / unit.angstrom ** 2
-kcal_rad = kcal_mol / unit.radian ** 2
+kcal_ang = kcal_mol / unit.angstrom**2
+kcal_rad = kcal_mol / unit.radian**2
 
 kj_mol = unit.kilojoule_per_mole
-kj_nm = kj_mol / unit.nanometer ** 2
-kj_rad = kj_mol / unit.radian ** 2
+kj_nm = kj_mol / unit.nanometer**2
+kj_rad = kj_mol / unit.radian**2
 
 
 def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.System:
@@ -121,7 +121,7 @@ def _process_bond_forces(openff_sys, openmm_sys):
         indices = top_key.atom_indices
         params = bond_handler.potentials[pot_key].parameters
         k = params["k"].m_as(
-            off_unit.kilojoule / off_unit.nanometer ** 2 / off_unit.mol
+            off_unit.kilojoule / off_unit.nanometer**2 / off_unit.mol
         )
         length = params["length"].m_as(off_unit.nanometer)
 

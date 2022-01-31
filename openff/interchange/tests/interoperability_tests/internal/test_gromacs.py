@@ -221,7 +221,7 @@ class TestGROMACS(_BaseTest):
         erg_mol = unit.erg / unit.mol * float(unit.avogadro_number)
         A = 1.69e-8 * erg_mol
         B = 1 / (0.273 * unit.angstrom)
-        C = 102e-12 * erg_mol * unit.angstrom ** 6
+        C = 102e-12 * erg_mol * unit.angstrom**6
 
         r = 0.3 * unit.nanometer
 
@@ -252,7 +252,7 @@ class TestGROMACS(_BaseTest):
         out.to_top("out.top", writer="internal")
 
         omm_energies = get_openmm_energies(out)
-        by_hand = A * exp(-B * r) - C * r ** -6
+        by_hand = A * exp(-B * r) - C * r**-6
 
         resid = omm_energies.energies["vdW"] - by_hand
         assert resid < 1e-5 * unit.kilojoule / unit.mol
