@@ -75,6 +75,7 @@ autosummary_context = {
         "openff.interchange.tests",
     ],
 }
+autosummary_ignore_module_all = False
 napoleon_google_docstring = False
 napoleon_use_param = False
 napoleon_use_ivar = True
@@ -85,6 +86,7 @@ autodoc_default_options = {
 }
 autodoc_preserve_defaults = True
 autodoc_inherit_docstrings = False
+autodoc_typehints_format = "short"
 
 # autodoc_pydantic settings
 autodoc_pydantic_show_config = False
