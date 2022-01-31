@@ -3,7 +3,6 @@ from abc import abstractmethod
 from copy import copy
 from typing import TYPE_CHECKING, Dict, Type
 
-from foyer.topology_graph import TopologyGraph
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from parmed import periodic_table
@@ -26,6 +25,7 @@ POTENTIAL_KEY_SEPARATOR = "-"
 
 
 if has_package("foyer"):
+    from foyer.topology_graph import TopologyGraph
 
     class _TopologyGraph(TopologyGraph):
         """Shim to get TopologyGraph.from_openff_topology working with the Topology refactor."""
