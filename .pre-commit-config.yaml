@@ -8,7 +8,7 @@ repos:
     exclude: '\.(pdb|gro|top|sdf)$'
   - id: debug-statements
 - repo: https://github.com/psf/black
-  rev: 21.12b0
+  rev: 22.1.0
   hooks:
   - id: black
     files: ^openff
@@ -48,7 +48,7 @@ repos:
     - id: interrogate
       args: [--fail-under=60, openff/interchange/]
 - repo: https://github.com/asottile/blacken-docs
-  rev: v1.12.0
+  rev: v1.12.1
   hooks:
   - id: blacken-docs
     files: ^docs/

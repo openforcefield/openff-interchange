@@ -241,7 +241,7 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
 
     if "Bonds" in openff_sys.handlers:
         for potential in openff_sys["Bonds"].potentials.values():
-            potential.parameters["k"].ito(kj_mol / unit.nanometer ** 2)
+            potential.parameters["k"].ito(kj_mol / unit.nanometer**2)
             potential.parameters["length"].ito(unit.nanometer)
 
     if "Angles" in openff_sys.handlers:
@@ -470,7 +470,7 @@ def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict
         parameters = _get_buck_parameters(openff_sys, atom_idx)
         a = parameters["A"].m_as(kj_mol)
         b = parameters["B"].m_as(1 / unit.nanometer)
-        c = parameters["C"].m_as(kj_mol * unit.nanometer ** 6)
+        c = parameters["C"].m_as(kj_mol * unit.nanometer**6)
 
         top_file.write(
             "{:<11s} {:6d} {:.16g} {:.16g} {:5s} {:.16g} {:.16g} {:.16g}".format(
@@ -794,7 +794,7 @@ def _write_virtual_sites(
                     2 * bond1_length * math.cos(angle / 2)
                 )
                 c = (-1 * distance * math.sin(out_of_plane_angle)) / (
-                    bond1_length ** 2 * math.sin(angle)
+                    bond1_length**2 * math.sin(angle)
                 )
 
                 top_file.write(
@@ -1232,7 +1232,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
         potential = Potential(
             parameters={
                 "length": float(length) * unit.nanometer,
-                "k": float(k) * unit.kilojoule / unit.mole / unit.nanometer ** 2,
+                "k": float(k) * unit.kilojoule / unit.mole / unit.nanometer**2,
             }
         )
 
@@ -1261,7 +1261,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
         potential = Potential(
             parameters={
                 "angle": float(theta) * unit.degree,
-                "k": float(k) * unit.kilojoule / unit.mole / unit.radian ** 2,
+                "k": float(k) * unit.kilojoule / unit.mole / unit.radian**2,
             }
         )
 

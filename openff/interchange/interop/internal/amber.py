@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 AMBER_COULOMBS_CONSTANT = 18.2223
 kcal_mol = unit.kilocalorie / unit.mol
-kcal_mol_a2 = kcal_mol / unit.angstrom ** 2
-kcal_mol_rad2 = kcal_mol / unit.radian ** 2
+kcal_mol_a2 = kcal_mol / unit.angstrom**2
+kcal_mol_rad2 = kcal_mol / unit.radian**2
 
 
 def _write_text_blob(file, blob):
@@ -449,8 +449,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
                 sigma = (sigma_i + sigma_j) * 0.5
                 epsilon = (epsilon_i * epsilon_j) ** 0.5
 
-                acoef = (4 * epsilon * sigma ** 12).m_as(kcal_mol * unit.angstrom ** 12)
-                bcoef = (4 * epsilon * sigma ** 6).m_as(kcal_mol * unit.angstrom ** 6)
+                acoef = (4 * epsilon * sigma**12).m_as(kcal_mol * unit.angstrom**12)
+                bcoef = (4 * epsilon * sigma**6).m_as(kcal_mol * unit.angstrom**6)
 
                 acoefs[coeff_index - 1] = acoef
                 bcoefs[coeff_index - 1] = bcoef
