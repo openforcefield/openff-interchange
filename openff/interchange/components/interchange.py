@@ -259,6 +259,19 @@ class Interchange(DefaultModel):
                 )
             sys_out.handlers.update({potential_handler.type: potential_handler})
 
+        # TODO: Figure out a cleaner way to do this - perhaps the above for loop should be
+        #       reconsidered altogether in favor of a more direct and explicit, but potentially
+        #       less elegeannt solution?
+        if "VirtualSites" in force_field._parameter_handlers:
+            sys_out.handlers["Electrostatics"]._from_toolkit_virtual_sites(
+                force_field["VirtualSites"],
+                sys_out._inner_data.topology,
+            )
+            sys_out.handlers["vdW"]._from_toolkit_virtual_sites(
+                force_field["VirtualSites"],
+                sys_out._inner_data.topology,
+            )
+
         # `box` argument is only overriden if passed `None` and the input topology
         # has box vectors
         if box is None and topology.box_vectors is not None:

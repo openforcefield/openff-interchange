@@ -1425,7 +1425,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
     A handler which stores the information necessary to construct virtual sites (virtual particles).
     """
 
-    type: Literal["Bonds"] = "Bonds"
+    type: Literal["VirtualSites"] = "VirtualSites"
     expression: Literal[""] = ""
     virtual_site_key_topology_index_map: Dict["VirtualSiteKey", int] = Field(
         dict(),
@@ -1442,7 +1442,21 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def supported_parameters(cls):
         """Return a list of parameter attributes supported by this handler."""
-        return ["distance", "outOfPlaneAngle", "inPlaneAngle"]
+        return [
+            "smirks",
+            "id",
+            "type",
+            "name",
+            "match",
+            "sigma",
+            "epsilon",
+            "rmin_half",
+            "charge_increment",
+            "distance",
+            "outOfPlaneAngle",
+            "inPlaneAngle",
+            "parent_id",
+        ]
 
     def store_matches(
         self,
@@ -1574,4 +1588,5 @@ SMIRNOFF_POTENTIAL_HANDLERS = [
     SMIRNOFFImproperTorsionHandler,
     SMIRNOFFvdWHandler,
     SMIRNOFFElectrostaticsHandler,
+    SMIRNOFFVirtualSiteHandler,
 ]

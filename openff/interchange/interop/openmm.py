@@ -114,7 +114,7 @@ def _process_bond_forces(openff_sys, openmm_sys):
 
     for top_key, pot_key in bond_handler.slot_map.items():
         if has_constraint_handler:
-            # If this bond show up in the constraints ...
+            # If this bond shows up in the constraints ...
             if top_key in constraint_handler.slot_map:
                 # ... don't add it as an interacting bond
                 continue
@@ -571,6 +571,11 @@ def _process_virtual_sites(openff_sys, openmm_sys):
 
     vdw_handler = openff_sys.handlers["vdW"]
     coul_handler = openff_sys.handlers["Electrostatics"]
+
+    # In contrast to other OpenMM forces, atomic positions *must* be known to
+    # safely add virtual sites
+    # TODO: Once position handling is settled, add a check to ensure that
+    # position information is known for all virtual particles
 
     # TODO: Handle case of split-out non-bonded forces
     non_bonded_force = [
