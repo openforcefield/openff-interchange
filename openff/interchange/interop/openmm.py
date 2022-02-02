@@ -60,6 +60,7 @@ def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.Syst
 
     # Add particles with appropriate masses
     # TODO: Add virtual particles
+
     for atom in openff_sys.topology.atoms:
         openmm_sys.addParticle(atom.element.mass)
 
@@ -574,8 +575,11 @@ def _process_virtual_sites(openff_sys, openmm_sys):
 
     # In contrast to other OpenMM forces, atomic positions *must* be known to
     # safely add virtual sites
-    # TODO: Once position handling is settled, add a check to ensure that
-    # position information is known for all virtual particles
+    if openff_sys.positions.shape[0] != openff_sys.topology.n_particles:
+        raise Exception(
+            "In order to export virtual sites to OpenMM, positions must be set "
+            "for all atoms and virtual particles."
+        )
 
     # TODO: Handle case of split-out non-bonded forces
     non_bonded_force = [
