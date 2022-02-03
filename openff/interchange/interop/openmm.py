@@ -2,7 +2,6 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
-import numpy as np
 import openmm
 from openff.toolkit.topology import Topology
 from openff.units import unit as off_unit
@@ -573,13 +572,35 @@ def _process_virtual_sites(openff_sys, openmm_sys):
     vdw_handler = openff_sys.handlers["vdW"]
     coul_handler = openff_sys.handlers["Electrostatics"]
 
+    """
     # In contrast to other OpenMM forces, atomic positions *must* be known to
-    # safely add virtual sites
-    if openff_sys.positions.shape[0] != openff_sys.topology.n_particles:
+    # safely add virtual sites (maybe)
+
+    for molecule in openff_sys.topology.molecules:
+        if molecule.n_conformers == 0:
+            molecule.generate_conformers(n_conformers=1)
+
+    atom_positions = np.vstack(
+        [mol.conformers[0] for mol in openff_sys.topology.molecules]
+    )
+
+    virtual_site_positions = np.vstack(
+        [
+            virtual_particle.compute_position_from_conformer(0).reshape(1, 3)
+            for virtual_particle in openff_sys.topology.virtual_particles
+        ]
+    )
+
+    particle_positions = np.concatenate((atom_positions, virtual_site_positions))
+
+    if particle_positions.shape[0] != openff_sys.topology.n_particles:
         raise Exception(
             "In order to export virtual sites to OpenMM, positions must be set "
             "for all atoms and virtual particles."
         )
+
+    openff_sys.positions = atom_positions
+    """
 
     # TODO: Handle case of split-out non-bonded forces
     non_bonded_force = [
@@ -636,45 +657,49 @@ def _create_virtual_site(
     origin_weight, x_direction, y_direction = interchange[
         "VirtualSites"
     ]._get_local_frame_weights(virtual_site_key)
-    displacement = interchange["VirtualSites"]._get_local_frame_position(
-        virtual_site_key
-    )
+    position = interchange["VirtualSites"]._get_local_frame_position(virtual_site_key)
 
-    x, y, z = ((v / v.units).m for v in displacement)
-    # x, y, z = displacement / displacement.units
+    #     x, y, z = ((v / v.units).m for v in displacement)
+    #     # x, y, z = displacement / displacement.units
+    #
+    #     parent_atom_positions = []
+    #     for parent_atom in parent_atoms:
+    #         parent_atom_positions.append(interchange.positions[parent_atom])
+    #
+    #     _origin_weight = np.atleast_2d(origin_weight)
+    #     parent_atom_positions = np.atleast_2d(parent_atom_positions)
+    #
+    #     origin = np.dot(_origin_weight, parent_atom_positions).sum(axis=0)
+    #
+    #     x_axis, y_axis = np.dot(
+    #         np.vstack((x_direction, y_direction)), parent_atom_positions
+    #     )
+    #
+    #     z_axis = np.cross(x_axis, y_axis)
+    #     y_axis = np.cross(z_axis, x_axis)
+    #
+    #     def _normalize(axis):
+    #         l = np.linalg.norm(axis)  # noqa
+    #         if l > 0.0:
+    #             axis /= l
+    #         return axis
+    #
+    #     x_axis, y_axis, z_axis = map(_normalize, (x_axis, y_axis, z_axis))
+    #
+    #     position = origin + x * x_axis + y * y_axis + z * z_axis
 
-    parent_atom_positions = []
-    for parent_atom in parent_atoms:
-        parent_atom_positions.append(interchange.positions[parent_atom])
-
-    _origin_weight = np.atleast_2d(origin_weight)
-    parent_atom_positions = np.atleast_2d(parent_atom_positions)
-
-    origin = np.dot(_origin_weight, parent_atom_positions).sum(axis=0)
-
-    x_axis, y_axis = np.dot(
-        np.vstack((x_direction, y_direction)), parent_atom_positions
-    )
-
-    z_axis = np.cross(x_axis, y_axis)
-    y_axis = np.cross(z_axis, x_axis)
-
-    def _normalize(axis):
-        l = np.linalg.norm(axis)  # noqa
-        if l > 0.0:
-            axis /= l
-        return axis
-
-    x_axis, y_axis, z_axis = map(_normalize, (x_axis, y_axis, z_axis))
-
-    position = origin + x * x_axis + y * y_axis + z * z_axis
+    print(f"{parent_atoms=}")
+    print(f"{origin_weight=}")
+    print(f"{x_direction=}")
+    print(f"{y_direction=}")
+    print(f"{position=}")
 
     return openmm.LocalCoordinatesSite(
         parent_atoms,
         origin_weight,
         x_direction,
         y_direction,
-        position,
+        to_openmm_unit(position),
     )
 
 

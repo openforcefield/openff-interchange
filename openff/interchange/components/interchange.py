@@ -272,17 +272,6 @@ class Interchange(DefaultModel):
                 sys_out._inner_data.topology,
             )
 
-        atom_positions = np.vstack([mol.conformers[0] for mol in topology.molecules])
-        virtual_site_positions = np.vstack(
-            [
-                virtual_particle.compute_position_from_conformer(0).reshape(1, 3)
-                for virtual_particle in topology.virtual_particles
-            ]
-        )
-
-        positions = np.concatenate((atom_positions, virtual_site_positions))
-        sys_out.positions = positions
-
         # `box` argument is only overriden if passed `None` and the input topology
         # has box vectors
         if box is None and topology.box_vectors is not None:

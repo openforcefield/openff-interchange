@@ -57,7 +57,7 @@ kcal_mol_angstroms = kcal_mol / openmm_unit.angstrom ** 2
 kcal_mol_radians = kcal_mol / openmm_unit.radian ** 2
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology import Topology
+    from openff.toolkit.topology.topology import Topology, UnsortedDict
 
     from openff.interchange.components.mdtraj import _OFFBioTop
 
@@ -179,17 +179,17 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
     # 'AM1-Wiberg'
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> List[T]:
         """Return a list of allowed types of ParameterHandler classes."""
         return [BondHandler]
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> List[str]:
         """Return a list of supported parameter attribute names."""
         return ["smirks", "id", "k", "length", "k_bondorder", "length_bondorder"]
 
     @classmethod
-    def valence_terms(cls, topology):
+    def valence_terms(cls, topology) -> List[Tuple]:
         """Return all bonds in this topology."""
         return [tuple(b.atoms) for b in topology.bonds]
 
@@ -347,12 +347,12 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
     ] = dict()  # should this be named potentials for consistency?
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> List[T]:
         """Return a list of allowed types of ParameterHandler classes."""
         return [BondHandler, ConstraintHandler]
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> List[str]:
         """Return a list of supported parameter attribute names."""
         return ["smirks", "id", "k", "length", "distance"]
 
@@ -443,17 +443,17 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
     expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> List[T]:
         """Return a list of allowed types of ParameterHandler classes."""
         return [AngleHandler]
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> List[str]:
         """Return a list of supported parameter attributes."""
         return ["smirks", "id", "k", "angle"]
 
     @classmethod
-    def valence_terms(cls, topology):
+    def valence_terms(cls, topology) -> List[Tuple]:
         """Return all angles in this topology."""
         return list(topology.angles)
 
@@ -503,12 +503,12 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
     fractional_bond_order_interpolation: Literal["linear"] = "linear"
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> List[T]:
         """Return a list of allowed types of ParameterHandler classes."""
         return [ProperTorsionHandler]
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> List[str]:
         """Return a list of supported parameter attribute names."""
         return ["smirks", "id", "k", "periodicity", "phase", "idivf", "k_bondorder"]
 
@@ -646,12 +646,12 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
     ] = "k*(1+cos(periodicity*theta-phase))"
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> List[T]:
         """Return a list of allowed types of ParameterHandler classes."""
         return [ImproperTorsionHandler]
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> List[str]:
         """Return a list of supported parameter attribute names."""
         return ["smirks", "id", "k", "periodicity", "phase", "idivf"]
 
@@ -759,12 +759,12 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
     )
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> List[T]:
         """Return a list of allowed types of ParameterHandler classes."""
         return [vdWHandler]
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> List[str]:
         """Return a list of supported parameter attributes."""
         return ["smirks", "id", "sigma", "epsilon", "rmin_half"]
 
@@ -917,7 +917,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     method: Literal["pme", "cutoff", "reaction-field", "no-cutoff"] = Field("pme")
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> List[T]:
         """Return a list of allowed types of ParameterHandler classes."""
         return [
             LibraryChargeHandler,
@@ -1435,12 +1435,12 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
     exclusion_policy: Literal["parents"] = "parents"
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> List[T]:
         """Return a list of allowed types of ParameterHandler classes."""
         return [VirtualSiteHandler]
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> List[str]:
         """Return a list of parameter attributes supported by this handler."""
         return [
             "smirks",
@@ -1474,16 +1474,38 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         parameter_handler_name = getattr(parameter_handler, "_TAGNAME", None)
         if self.slot_map:
             self.slot_map = dict()
-        matches = parameter_handler.find_matches(topology)
-        for key, val_list in matches.items():
-            for val in val_list:
+
+        # VirtualSiteHandler.find_matches returns an object that (using toolkit terminology)
+        # groups virtual particles into sites. It also does not process `match="once"`
+        virtual_site_group_matches: UnsortedDict = parameter_handler.find_matches(
+            topology
+        )
+
+        # This method splits the matches out into per-particle matches and also
+        # accounts for `match="once"`
+        matches_of_virtual_sites: List[
+            List
+        ] = parameter_handler._reduce_virtual_particles_to_sites(
+            virtual_site_group_matches
+        )
+
+        for row in matches_of_virtual_sites:
+            parameter_type, orientations = row
+            if parameter_type.match == "once":
+                orientations = [
+                    parameter_type.transformed_dict_cls.key_transform(orientations[0])
+                ]
+
+            for atom_indices in orientations:
+                # TODO: At this point, `match` seems to be applied. Does it need to be a field
+                #       in VirtualSiteKey?
                 virtual_site_key = VirtualSiteKey(
-                    atom_indices=key,
-                    type=val.parameter_type.type,
-                    match=val.parameter_type.match,
+                    atom_indices=atom_indices,
+                    type=parameter_type.type,
+                    match=parameter_type.match,
                 )
                 potential_key = PotentialKey(
-                    id=val.parameter_type.smirks,
+                    id=parameter_type.smirks,
                     associated_handler=parameter_handler_name,
                 )
                 self.slot_map[virtual_site_key] = potential_key
