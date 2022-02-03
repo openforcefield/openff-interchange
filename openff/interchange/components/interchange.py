@@ -17,6 +17,7 @@ from openff.interchange.components.smirnoff import (
     SMIRNOFFBondHandler,
     SMIRNOFFConstraintHandler,
 )
+from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
     InternalInconsistencyError,
     InvalidBoxError,
@@ -188,6 +189,13 @@ class Interchange(DefaultModel):
         sys_out = Interchange()
 
         cls._check_supported_handlers(force_field)
+
+        if "Electrostatics" not in force_field.registered_parameter_handlers:
+            if _check_electrostatics_handlers(force_field):
+                raise MissingParameterHandlerError(
+                    "Force field contains parameter handler(s) that may assign/modify "
+                    "partial charges, but no ElectrostaticsHandler was found."
+                )
 
         sys_out.topology = topology
 

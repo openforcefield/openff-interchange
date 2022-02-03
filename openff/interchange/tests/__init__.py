@@ -114,14 +114,53 @@ class _BaseTest:
     def two_peptides(self, mainchain_ala, mainchain_arg):
         return Topology.from_molecules([mainchain_ala, mainchain_arg])
 
+    @pytest.fixture()
+    def tip3p_missing_electrostatics_xml(self):
+        # Stripped from below, follow link for details
+        # https://github.com/openforcefield/openff-toolkit/blob/0.10.2/openff/toolkit/data/test_forcefields/tip3p.offxml
+        return """<?xml version="1.0" encoding='ASCII'?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <vdW
+    version="0.3"
+    potential="Lennard-Jones-12-6"
+    combining_rules="Lorentz-Berthelot"
+    scale12="0.0"
+    scale13="0.0"
+    scale14="0.5"
+    scale15="1"
+    switch_width="1.0*angstroms"
+    cutoff="9.0*angstroms" method="cutoff"
+  >
+    <Atom
+      smirks="[#1]-[#8X2H2+0:1]-[#1]"
+      id="n1"
+      sigma="0.31507524065751241*nanometers"
+      epsilon="0.635968*kilojoules_per_mole"
+    />
+    <Atom
+      smirks="[#1:1]-[#8X2H2+0]-[#1]"
+      id="n2"
+      sigma="1*nanometers"
+      epsilon="0*kilojoules_per_mole" />
+  </vdW>
+  <LibraryCharges version="0.3">
+    <LibraryCharge
+        name="TIP3P"
+        smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+        charge1="0.417*elementary_charge"
+        charge2="-0.834*elementary_charge"
+        charge3="0.417*elementary_charge"/>
+  </LibraryCharges>
+</SMIRNOFF>"""
+
     xml_ff_bo_bonds = """<?xml version='1.0' encoding='ASCII'?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
       <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
         <Bond smirks="[#6:1]~[#8:2]" id="bbo1"
-            k_bondorder1="100.0 * kilocalories_per_mole/angstrom**2"
-            k_bondorder2="1000.0 * kilocalories_per_mole/angstrom**2"
-            length_bondorder1="1.5 * angstrom"
-            length_bondorder2="1.0 * angstrom"/>
+            k_bondorder1="100.0*kilocalories_per_mole/angstrom**2"
+            k_bondorder2="1000.0*kilocalories_per_mole/angstrom**2"
+            length_bondorder1="1.5*angstrom"
+            length_bondorder2="1.0*angstrom"/>
       </Bonds>
     </SMIRNOFF>
     """
