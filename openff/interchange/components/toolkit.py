@@ -1,9 +1,13 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 import numpy as np
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.utils.collections import ValidatedList
+from openff.toolkit.topology import Topology
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology import Molecule
+    from openff.toolkit.typing.engines.smirnonff import ForceField
+    from openff.toolkit.utils.collections import ValidatedList
 
 
 def _get_num_h_bonds(topology: "Topology") -> int:
@@ -78,7 +82,7 @@ def _get_14_pairs(topology_or_molecule: Union["Topology", "Molecule"]):
                         yield (atom_i_partner, atom_j_partner)
 
 
-def _validated_list_to_array(validated_list: ValidatedList) -> np.ndarray:
+def _validated_list_to_array(validated_list: "ValidatedList") -> np.ndarray:
     from openff.units import unit
 
     unit_ = validated_list[0].units
@@ -93,3 +97,32 @@ def _combine_topologies(topology1: Topology, topology2: Topology) -> Topology:
         topology1_.add_molecule(molecule)
 
     return topology1_
+
+
+def _check_electrostatics_handlers(force_field: "ForceField") -> bool:
+    """
+    Return whether or not this ForceField should have an Electrostatics tag.
+    """
+    # Manually-curated list of names of ParameterHandler classes that are expected
+    # to assign/modify partial charges
+    partial_charge_handlers = [
+        "LibraryCharges",
+        "ToolkitAM1BCC",
+        "ChargeIncrementModel",
+        "VirtualSites",
+        "GBSA",
+    ]
+
+    # A more robust solution would probably take place late in the parameterization
+    # process, but this solution should cover a vast majority of cases with minimal
+    # complexity. Most notably this will *not* behave well with
+    #   * parameter handler plugins
+    #   * future additions to -built-in handlers
+    #   * handlers that _could_ assign partial charges but happen to not assign
+    #       any for some particular topology
+
+    for parameter_handler_name in force_field.registered_parameter_handlers:
+        if parameter_handler_name in partial_charge_handlers:
+            return True
+
+    return False
