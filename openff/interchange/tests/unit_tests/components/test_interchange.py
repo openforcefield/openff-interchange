@@ -91,7 +91,7 @@ class TestInterchange(_BaseTest):
 
         out = Interchange.from_smirnoff(tip3p, topology)
 
-        assert out.cutoff == 7.89 * unit.angstrom
+        assert out["Electrostatics"].cutoff == 7.89 * unit.angstrom
 
     def test_box_setter(self):
         tmp = Interchange()
