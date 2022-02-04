@@ -3,7 +3,6 @@ from abc import abstractmethod
 from copy import copy
 from typing import TYPE_CHECKING, Dict, Type
 
-from foyer.topology_graph import TopologyGraph
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from parmed import periodic_table
@@ -26,6 +25,7 @@ POTENTIAL_KEY_SEPARATOR = "-"
 
 
 if has_package("foyer"):
+    from foyer.topology_graph import TopologyGraph
 
     class _TopologyGraph(TopologyGraph):
         """Shim to get TopologyGraph.from_openff_topology working with the Topology refactor."""
@@ -227,7 +227,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
         """Get the parameters of this handler, tagged with units."""
         return _copy_params(
             params,
-            param_units={"k": unit.kJ / unit.mol / unit.nm ** 2, "length": unit.nm},
+            param_units={"k": unit.kJ / unit.mol / unit.nm**2, "length": unit.nm},
         )
 
     def store_matches(
@@ -261,7 +261,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
         return _copy_params(
             {"k": params["k"], "angle": params["theta"]},
             param_units={
-                "k": unit.kJ / unit.mol / unit.radian ** 2,
+                "k": unit.kJ / unit.mol / unit.radian**2,
                 "angle": unit.dimensionless,
             },
         )
@@ -342,7 +342,7 @@ class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler):
         return _copy_params(
             params,
             param_units={
-                "k": unit.kJ / unit.mol / unit.nm ** 2,
+                "k": unit.kJ / unit.mol / unit.nm**2,
                 "phase": unit.dimensionless,
                 "periodicity": unit.dimensionless,
             },

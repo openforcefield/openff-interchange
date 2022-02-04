@@ -22,6 +22,6 @@ dependencies:
   - myst-parser
   - numpydoc
   - autodoc-pydantic
-  - sphinx=4.2.0
+  - sphinx>=4.4.0,<5
   - pip:
     - git+https://github.com/openforcefield/openff-sphinx-theme.git@main

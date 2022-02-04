@@ -96,7 +96,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
         bond_handler.fractional_bondorder_method = "AM1-Wiberg"
         bond_parameter = BondHandler.BondType(
             smirks="[*:1]~[*:2]",
-            k=1.5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=1.5 * unit.kilocalorie_per_mole / unit.angstrom**2,
             length=1.5 * unit.angstrom,
             id="b1000",
         )
@@ -122,7 +122,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
         angle_handler = AngleHandler(version=0.3)
         angle_parameter = AngleHandler.AngleType(
             smirks="[*:1]~[*:2]~[*:3]",
-            k=2.5 * unit.kilocalorie_per_mole / unit.radian ** 2,
+            k=2.5 * unit.kilocalorie_per_mole / unit.radian**2,
             angle=100 * unit.degree,
             id="b1000",
         )

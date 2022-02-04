@@ -172,8 +172,8 @@ HAS_LAMMPS = any(has_executable(e) for e in ["lammps", "lmp_mpi", "lmp_serial"])
 needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
 needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs GROMACS")
 
-kj_nm2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.nanometer ** 2
-kj_rad2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.radian ** 2
+kj_nm2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.nanometer**2
+kj_rad2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.radian**2
 
 
 def _top_from_smiles(
@@ -377,7 +377,7 @@ def _compare_exceptions(force1, force2):
         _, _, q1, sig1, eps1 = force1.getExceptionParameters(i)
         _, _, q2, sig2, eps2 = force2.getExceptionParameters(i)
         assert (
-            abs(q2 - q1) < 1e-12 * openmm_unit.elementary_charge ** 2
+            abs(q2 - q1) < 1e-12 * openmm_unit.elementary_charge**2
         ), f"charge mismatch in exception {i}"
         assert (
             abs(sig2 - sig1) < 1e-12 * openmm_unit.nanometer
