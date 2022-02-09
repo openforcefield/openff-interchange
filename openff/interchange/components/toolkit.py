@@ -5,9 +5,11 @@ import numpy as np
 from openff.toolkit.topology import Topology
 
 if TYPE_CHECKING:
+    import networkx as nx
     from openff.toolkit.topology import Molecule
     from openff.toolkit.typing.engines.smirnonff import ForceField
     from openff.toolkit.utils.collections import ValidatedList
+    from openmm.app import Topology as OpenMMTopology
 
 
 def _get_num_h_bonds(topology: "Topology") -> int:
@@ -126,3 +128,17 @@ def _check_electrostatics_handlers(force_field: "ForceField") -> bool:
             return True
 
     return False
+
+
+def _simple_topology_from_openmm(openmm_topology: "OpenMMTopology") -> Topology:
+    """Convert an OpenMM Topology into an OpenFF Topology consisting **only** of so-called `_SimpleMolecule`s."""
+    # TODO: Residue metadata
+    # TODO: Splice in fully-defined OpenFF `Molecule`s?
+    raise NotImplementedError()
+
+
+def _topology_to_networkx_graph(openmm_topology: "OpenMMTopology") -> "nx.Graph":
+    """Convert an OpenMM Topology into a NetworkX Graph."""
+    import networkx as nx
+
+    raise NotImplementedError()
