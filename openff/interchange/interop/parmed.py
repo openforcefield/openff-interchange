@@ -42,7 +42,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
         has_electrostatics = False
 
     for atom in off_system.topology.atoms:
-        atomic_number = atom.element.atomic_number
+        atomic_number = atom.atomic_number
         mass = atom.mass.m
         try:
             resname = atom.metadata["residue_number"]
