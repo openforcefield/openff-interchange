@@ -21,5 +21,5 @@ dependencies:
   - cached-property
   - cachetools
   - pip:
-    - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
+    - git+https://github.com/openforcefield/openff-toolkit.git@typed-molecule
     - git+https://github.com/openforcefield/openff-units.git@element-module
