@@ -61,7 +61,8 @@ def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.Syst
     # Add particles with appropriate masses
     # TODO: Add virtual particles
     for atom in openff_sys.topology.atoms:
-        openmm_sys.addParticle(atom.element.mass)
+        # Skip unit check for speed, toolkit should report mass in Dalton
+        openmm_sys.addParticle(atom.mass.m)
 
     _process_nonbonded_forces(
         openff_sys, openmm_sys, combine_nonbonded_forces=combine_nonbonded_forces
