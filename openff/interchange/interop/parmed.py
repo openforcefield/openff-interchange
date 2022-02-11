@@ -42,8 +42,8 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
         has_electrostatics = False
 
     for atom in off_system.topology.atoms:
-        atomic_number = atom.element.atomic_number
-        mass = atom.element.mass
+        atomic_number = atom.atomic_number
+        mass = atom.mass.m
         try:
             resname = atom.metadata["residue_number"]
             resnum = atom.metadata["residue_name"]
@@ -207,16 +207,16 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
         top_key = TopologyKey(atom_indices=(pmd_idx,))
         smirks = vdw_handler.slot_map[top_key]
         potential = vdw_handler.potentials[smirks]
-        element = pmd.periodic_table.Element[pmd_atom.element]
+        element_symbol = atom.symbol
         sigma, epsilon = _lj_params_from_potential(potential)
         sigma = sigma.m_as(unit.angstrom)
         epsilon = epsilon.m_as(kcal_mol)
 
         atom_type = pmd.AtomType(
-            name=element + str(pmd_idx + 1),
+            name=element_symbol + str(pmd_idx + 1),
             number=pmd_idx,
             atomic_number=pmd_atom.atomic_number,
-            mass=pmd.periodic_table.Mass[element],
+            mass=pmd.periodic_table.Mass[element_symbol],
         )
 
         atom_type.set_lj_params(eps=epsilon, rmin=sigma * 2 ** (1 / 6) / 2)
