@@ -10,7 +10,6 @@ from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
 
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import PotentialHandler
 from openff.interchange.components.smirnoff import (
     SMIRNOFF_POTENTIAL_HANDLERS,
@@ -83,13 +82,16 @@ class Interchange(DefaultModel):
         def validate_topology(cls, value):
             if isinstance(value, Topology):
                 return Topology(other=value)
-            elif isinstance(value, _OFFBioTop):
-                raise ValueError("_OFFBioTop is no longer supported")
             else:
-                raise ValueError(
-                    "Could not process topology argument, expected openff.toolkit.topology.Topology. "
-                    f"Found object of type {type(value)}."
-                )
+                from openff.interchange.components.mdtraj import _OFFBioTop
+
+                if isinstance(value, _OFFBioTop):
+                    raise ValueError("_OFFBioTop is no longer supported")
+                else:
+                    raise ValueError(
+                        "Could not process topology argument, expected openff.toolkit.topology.Topology. "
+                        f"Found object of type {type(value)}."
+                    )
 
     def __init__(self):
         self._inner_data = self._InnerSystem()
@@ -434,7 +436,7 @@ class Interchange(DefaultModel):
     @classmethod
     @requires_package("foyer")
     def from_foyer(
-        cls, topology: "_OFFBioTop", force_field: "FoyerForcefield", **kwargs
+        cls, force_field: "FoyerForcefield", topology: "Topology", **kwargs
     ) -> "Interchange":
         """
         Create an Interchange object from a Foyer force field and an OpenFF topology.
@@ -447,7 +449,7 @@ class Interchange(DefaultModel):
         .. code-block:: pycon
 
             >>> from openff.interchange import Interchange
-            >>> from openff.toolkit.topology import Molecule
+            >>> from openff.toolkit.topology import Molecule, Topology
             >>> from foyer import Forcefield
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
@@ -459,12 +461,9 @@ class Interchange(DefaultModel):
 
         """
         from openff.interchange.components.foyer import get_handlers_callable
-        from openff.interchange.components.mdtraj import _store_bond_partners
 
         system = cls()
         system.topology = topology
-
-        _store_bond_partners(system.topology.mdtop)
 
         # This block is from a mega merge, unclear if it's still needed
         for name, Handler in get_handlers_callable().items():

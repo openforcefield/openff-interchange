@@ -24,6 +24,7 @@ from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule
+    from openff.units.unit import Quantity
 
     from openff.interchange import Interchange
 
@@ -1195,7 +1196,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
                 "in the atomtypes directive."
             )
 
-        charge: unit.Quantity = float(_charge) * unit.elementary_charge
+        charge: "Quantity" = float(_charge) * unit.elementary_charge
 
         interchange["vdW"].slot_map.update({topology_key: potential_key})
         # The vdw .potentials was constructed while parsing [ atomtypes ]

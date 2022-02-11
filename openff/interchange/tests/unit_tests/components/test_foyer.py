@@ -1,16 +1,15 @@
 import glob
 from pathlib import Path
 
-import mdtraj as md
 import numpy as np
 import parmed as pmd
 import pytest
 from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop, _store_bond_partners
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.models import PotentialKey, TopologyKey
@@ -39,7 +38,6 @@ if HAS_GROMACS:
 kj_mol = unit.Unit("kilojoule / mol")
 
 
-@pytest.mark.skip(reason="Typing with Foyer is temporarily unsupported")
 @skip_if_missing("foyer")
 class TestFoyer(_BaseTest):
     @pytest.fixture(scope="session")
@@ -54,10 +52,8 @@ class TestFoyer(_BaseTest):
         )
         molecule.name = "ETH"
 
-        top = _OFFBioTop(
-            mdtop=md.Topology.from_openmm(molecule.to_topology().to_openmm())
-        )
-        _store_bond_partners(top.mdtop)
+        top = molecule.to_topology()
+
         oplsaa = foyer.Forcefield(name="oplsaa")
         interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
         interchange.positions = molecule.conformers[0].m_as(unit.nanometer)
@@ -77,14 +73,8 @@ class TestFoyer(_BaseTest):
                 molecule_or_molecules.name = mol_name
                 molecule_or_molecules = [molecule_or_molecules]
 
-            tmp = Topology.from_molecules(molecule_or_molecules)
-            off_bio_top = _OFFBioTop.from_molecules(
-                mdtop=md.Topology.from_openmm(tmp.to_openmm()),
-                molecules=molecule_or_molecules,
-            )
-            off_bio_top.mdtop = md.Topology.from_openmm(off_bio_top.to_openmm())
-            _store_bond_partners(off_bio_top.mdtop)
-            openff_interchange = Interchange.from_foyer(off_bio_top, oplsaa)
+            topology = Topology.from_molecules(molecule_or_molecules)
+            openff_interchange = Interchange.from_foyer(oplsaa, topology)
 
             if isinstance(molecule_or_molecules, list):
                 openff_interchange.positions = np.vstack(
@@ -100,7 +90,7 @@ class TestFoyer(_BaseTest):
 
             openff_interchange.box = [4, 4, 4]
 
-            parmed_struct = pmd.openmm.load_topology(off_bio_top.to_openmm())
+            parmed_struct = pmd.openmm.load_topology(topology.to_openmm())
             parmed_struct.positions = openff_interchange.positions.m_as(unit.angstrom)
             parmed_struct.box = [40, 40, 40, 90, 90, 90]
 
@@ -172,16 +162,19 @@ class TestFoyer(_BaseTest):
         )
 
 
-@pytest.mark.skip(reason="Typing with Foyer is temporarily unsupported")
 class TestRBTorsions(_BaseTest):
     @pytest.fixture(scope="class")
-    def ethanol_with_rb_torsions(self, parsley):
+    def parsley_(self):
+        return ForceField("openff-1.0.0.offxml")
+
+    @pytest.fixture(scope="class")
+    def ethanol_with_rb_torsions(self, parsley_):
         mol = Molecule.from_smiles("CC")
         mol.name = "ETH"
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
 
-        out = Interchange.from_smirnoff(parsley, top)
+        out = Interchange.from_smirnoff(parsley_, top)
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
         out.positions = np.round(out.positions, 2)
