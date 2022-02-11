@@ -95,7 +95,7 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
             # Find just one topology atom matching this SMIRKS by vdW
             matched_atom_idx = slot_map_inv[smirks].atom_indices[0]
             matched_atom = openff_sys.topology.atom(matched_atom_idx)
-            mass = matched_atom.element.mass
+            mass = matched_atom.mass.m
 
             lmp_file.write(f"{atom_type_idx + 1:d}\t{mass:.8g}\n")
 

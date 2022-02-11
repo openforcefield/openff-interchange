@@ -10,7 +10,7 @@ dependencies:
   - pydantic
   - pint
   - openff-toolkit-base
-  - openff-units
+  - openff-units >=0.1.5
   - openff-utilities
   - openmm
   - jax
