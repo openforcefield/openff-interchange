@@ -477,7 +477,7 @@ def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict
                 atom_type,  # atom type
                 # "XX",  # atom "bonding type", i.e. bond class
                 atom.atomic_number,
-                atom.mass,
+                atom.mass.m,
                 0.0,  # charge, overriden later in [ atoms ]
                 "A",  # ptype
                 a,
