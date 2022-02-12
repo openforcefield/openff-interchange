@@ -67,7 +67,8 @@ class BasevdWHandler(_BaseNonbondedHandler):
 
     method: Literal["cutoff", "pme", "no-cutoff"] = Field("cutoff")
 
-    mixing_rule: str = Field(
+    # TODO: Expose this via setter
+    mixing_rule: Literal["lorentz-berthelot", "geometric"] = Field(
         "lorentz-berthelot",
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )
