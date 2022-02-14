@@ -86,8 +86,8 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                 raise Exception
 
             topology.add_bond(
-                atom1=topology._atoms[bond_force.atom1 - 1],  # type: ignore[attr-defined]
-                atom2=topology._atoms[bond_force.atom2 - 1],  # type: ignore[attr-defined]
+                atom1=topology._atoms[bond_force.atom1 - 1],
+                atom2=topology._atoms[bond_force.atom2 - 1],
             )
 
             topology_key = TopologyKey(
@@ -102,7 +102,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
 
             bond_handler.slot_map[topology_key] = potential_key
 
-            if potential_key not in bond_handler:
+            if potential_key not in bond_handler.potentials:
                 potential = Potential(
                     parameters={
                         "k": from_openmm(bond_force.k),
