@@ -82,16 +82,13 @@ class Interchange(DefaultModel):
         def validate_topology(cls, value):
             if isinstance(value, Topology):
                 return Topology(other=value)
+            elif value.__class__.__name__ == "_OFFBioTop":
+                raise ValueError("_OFFBioTop is no longer supported")
             else:
-                from openff.interchange.components.mdtraj import _OFFBioTop
-
-                if isinstance(value, _OFFBioTop):
-                    raise ValueError("_OFFBioTop is no longer supported")
-                else:
-                    raise ValueError(
-                        "Could not process topology argument, expected openff.toolkit.topology.Topology. "
-                        f"Found object of type {type(value)}."
-                    )
+                raise ValueError(
+                    "Could not process topology argument, expected openff.toolkit.topology.Topology. "
+                    f"Found object of type {type(value)}."
+                )
 
     def __init__(self):
         self._inner_data = self._InnerSystem()

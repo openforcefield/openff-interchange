@@ -4,7 +4,6 @@ import warnings
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Callable, Dict, Set, Tuple, Union
 
-import mdtraj as md
 import numpy as np
 from openff.units import unit
 
@@ -16,7 +15,6 @@ from openff.interchange.components.base import (
     BaseProperTorsionHandler,
     BasevdWHandler,
 )
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import _get_14_pairs
 from openff.interchange.exceptions import UnsupportedExportError
@@ -1156,11 +1154,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
         if interchange.topology is not None:
             raise Exception
 
-        mdtop = md.Topology.from_openmm(molecule.to_topology().to_openmm())
-        default_chain = mdtop.add_chain()
-        mdtop.add_residue(name="FOO", chain=default_chain)
-
-        topology = _OFFBioTop(mdtop=mdtop)
+        topology = molecule.to_topology()
 
         interchange.topology = topology
 
@@ -1180,10 +1174,10 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
             mass,
         ) = fields
 
-        interchange.topology.mdtop.add_atom(
-            name=atom_name,
-            element=md.element.Element.getByMass(float(mass)),  # type: ignore[attr-defined]
-            residue=interchange.topology.mdtop.residue(0),
+        # TODO: Fix topology graph
+        interchange.topology.add_atom(
+            atomic_number=0,
+            # residue=interchange.topology.mdtop.residue(0),
         )
 
         topology_key = TopologyKey(atom_indices=(int(atom_number) - 1,))

@@ -1,6 +1,5 @@
 from math import exp
 
-import mdtraj as md
 import numpy as np
 import openmm
 import pytest
@@ -12,7 +11,6 @@ from openmm import unit as openmm_unit
 from pkg_resources import resource_filename
 
 from openff.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.nonbonded import BuckinghamvdWHandler
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
@@ -82,8 +80,7 @@ class TestGROMACSGROFile(_BaseTest):
         """Test that residue names > 5 characters don't break .gro file output"""
         benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
         benzene.name = "supercalifragilisticexpialidocious"
-        top = _OFFBioTop.from_molecules(benzene)
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        top = Topology.from_molecules(benzene)
 
         # Populate an entire interchange because ...
         out = Interchange.from_smirnoff(parsley, top)
@@ -192,11 +189,7 @@ class TestGROMACS(_BaseTest):
         """Test that residue names > 5 characters don't break .gro file output"""
         benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
         benzene.name = "supercalifragilisticexpialidocious"
-        top = _OFFBioTop.from_molecules(
-            mdtop=md.Topology.from_openmm(benzene.to_topology().to_openmm()),
-            molecules=[benzene],
-        )
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        top = Topology.from_molecules(molecules=[benzene])
 
         # Populate an entire interchange because ...
         force_field = ForceField("openff-1.0.0.offxml")

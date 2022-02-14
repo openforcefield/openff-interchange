@@ -1,6 +1,5 @@
 from copy import deepcopy
 
-import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
@@ -103,7 +102,6 @@ class TestInterchange(_BaseTest):
         mol = Molecule.from_smiles("C")
         mol.generate_conformers(n_conformers=1)
         top = Topology.from_molecules([mol])
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
         openff_sys = Interchange.from_smirnoff(parsley_unconstrained, top)
 
