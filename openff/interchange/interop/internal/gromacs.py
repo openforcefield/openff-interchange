@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import IO, TYPE_CHECKING, Callable, Dict, Set, Tuple, Union
 
 import numpy as np
+from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.topology.mm_molecule import _SimpleMolecule
 from openff.units import unit
 
 from openff.interchange.components.base import (
@@ -17,11 +19,10 @@ from openff.interchange.components.base import (
 )
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import _get_14_pairs
-from openff.interchange.exceptions import UnsupportedExportError
+from openff.interchange.exceptions import MissingPositionsError, UnsupportedExportError
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Molecule
     from openff.units.unit import Quantity
 
     from openff.interchange import Interchange
@@ -45,13 +46,30 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
     if isinstance(file_path, Path):
         path = file_path
 
+    if openff_sys.positions is None:
+        raise MissingPositionsError(
+            "Positions are required to write a `.gro` file but found None."
+        )
+    elif np.allclose(openff_sys.positions, 0):
+        warnings.warn(
+            "Positions seem to all be zero. Result coordinate file may be non-physical.",
+            UserWarning,
+        )
     # Explicitly round here to avoid ambiguous things in string formatting
     rounded_positions = np.round(openff_sys.positions, decimal)
     rounded_positions = rounded_positions.m_as(unit.nanometer)
 
     n = decimal
 
+    # Do virtual particles go in the GRO file?
     n_particles = openff_sys.positions.shape[0]
+
+    if openff_sys.topology.n_atoms != n_particles:
+        raise MissingPositionsError(
+            "Found a mismatch in the number of atoms in the provided topology and positions "
+            f"matrix. Detected {openff_sys.topology.n_atoms} atoms in the topology but found "
+            f"{n_particles} positions in `.positions` attribute."
+        )
 
     typemap = _build_typemap(openff_sys)
 
@@ -1083,6 +1101,10 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
     from openff.interchange import Interchange
 
     interchange = Interchange()
+    interchange.topology = Topology()
+    pesudo_molecule = _SimpleMolecule()
+    interchange.add_molecule(pesudo_molecule)
+
     current_directive = None
 
     def process_defaults(interchange: Interchange, line: str):
@@ -1175,9 +1197,12 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
         ) = fields
 
         # TODO: Fix topology graph
-        interchange.topology.add_atom(
+        interchange.topology.molecules[0].add_atom(
             atomic_number=0,
-            # residue=interchange.topology.mdtop.residue(0),
+            metadata={
+                "residue_number": residue_number,
+                "residue_name": residue_name,
+            },
         )
 
         topology_key = TopologyKey(atom_indices=(int(atom_number) - 1,))
@@ -1213,9 +1238,10 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
 
         atom1, atom2, func, length, k = fields
 
-        interchange.topology.mdtop.add_bond(
-            atom1=interchange.topology.mdtop.atom(int(atom1) - 1),
-            atom2=interchange.topology.mdtop.atom(int(atom2) - 1),
+        # Assumes 1-molecule topology
+        interchange.topology.molecules[0].add_bond(
+            atom1=atom1 - 1,
+            atom2=atom2 - 1,
         )
 
         topology_key = TopologyKey(atom_indices=(int(atom1) - 1, int(atom2) - 1))

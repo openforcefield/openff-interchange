@@ -8,6 +8,7 @@ from intermol.forces import (
     convert_dihedral_from_trig_to_proper,
 )
 from intermol.system import System
+from openff.toolkit.topology.mm_molecule import _SimpleMolecule
 from openff.toolkit.topology.topology import Topology
 from openff.units import unit
 from openff.units.openmm import from_openmm
@@ -29,6 +30,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
     """Convert and Intermol `System` to an `Interchange` object."""
     interchange = Interchange()
 
+    interchange._inner_data.topology = _topology_from_intermol(intermol_system)
     interchange.box = intermol_system.box_vector
     interchange.positions = from_openmm([a.position for a in intermol_system.atoms])
 
@@ -52,13 +54,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
     # TODO: Store atomtypes on a minimal topology, not as a list
     atomtypes: List = [atom.atomtype[0] for atom in intermol_system.atoms]
 
-    topology = Topology()
-
-    # TODO: Either add molecule-by-molecule or splice into molecules later
     for atom in intermol_system.atoms:
-        topology.add_atom(
-            atomic_number=atom.atomic_number,
-        )
         topology_key = TopologyKey(atom_indices=(atom.index - 1,))
         vdw_key = PotentialKey(id=atom.atomtype[0], associated_handler="vdW")
         electrostatics_key = PotentialKey(
@@ -84,11 +80,6 @@ def from_intermol_system(intermol_system: System) -> Interchange:
         for bond_force in molecule_type.bond_forces:
             if type(bond_force) != HarmonicBond:
                 raise Exception
-
-            topology.add_bond(
-                atom1=topology._atoms[bond_force.atom1 - 1],
-                atom2=topology._atoms[bond_force.atom2 - 1],
-            )
 
             topology_key = TopologyKey(
                 atom_indices=tuple(
@@ -234,6 +225,33 @@ def from_intermol_system(intermol_system: System) -> Interchange:
     interchange.handlers["ProperTorsions"] = proper_handler
     interchange.handlers["ImproperTorsions"] = improper_handler
 
-    interchange.topology = topology
-
     return interchange
+
+
+def _topology_from_intermol(intermol_system: System) -> Topology:
+    # Create a pesudo-molecule and later split up into connected molecules
+    pseudo_molecule = _SimpleMolecule()
+
+    for atom in intermol_system.atoms:
+        pseudo_molecule.add_atom(
+            atomic_number=atom.atomic_number,
+            metadata={
+                "residue_number": atom.residue_index,
+                "residue_name": atom.residue_name,
+            },
+        )
+
+    for edge in intermol_system.bondgraph.edges:
+        pseudo_molecule.add_bond(
+            atom1=pseudo_molecule.atom(edge[0].index - 1),
+            atom2=pseudo_molecule.atom(edge[1].index - 1),
+        )
+
+    pseudo_molecule.name = "FOO"
+
+    # TODO: Split molecule
+
+    topology = Topology()
+    topology.add_molecule(pseudo_molecule)
+
+    return topology

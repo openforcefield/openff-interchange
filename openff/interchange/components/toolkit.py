@@ -1,12 +1,12 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
 from typing import TYPE_CHECKING, Dict, Union
 
+import networkx as nx
 import numpy as np
 from openff.toolkit.topology import Topology
 from openff.toolkit.topology.mm_molecule import _SimpleMolecule
 
 if TYPE_CHECKING:
-    import networkx as nx
     from openff.toolkit.topology import Molecule
     from openff.toolkit.typing.engines.smirnonff import ForceField
     from openff.toolkit.utils.collections import ValidatedList
@@ -138,7 +138,6 @@ def _simple_topology_from_openmm(openmm_topology: "OpenMMTopology") -> Topology:
     # TODO: Splice in fully-defined OpenFF `Molecule`s?
     graph = nx.Graph()
 
-    topology = Topology()
     for atom in openmm_topology.atoms():
         graph.add_node(
             atom.index,
@@ -150,6 +149,12 @@ def _simple_topology_from_openmm(openmm_topology: "OpenMMTopology") -> Topology:
             bond.atom1.index,
             bond.atom2.index,
         )
+
+    return _simple_topology_from_graph(graph)
+
+
+def _simple_topology_from_graph(graph: nx.Graph) -> Topology:
+    topology = Topology()
 
     for component in nx.connected_components(graph):
         subgraph = graph.subgraph(component)

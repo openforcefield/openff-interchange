@@ -81,7 +81,14 @@ class Interchange(DefaultModel):
         @validator("topology")
         def validate_topology(cls, value):
             if isinstance(value, Topology):
-                return Topology(other=value)
+                try:
+                    return Topology(other=value)
+                except Exception as exception:
+                    # Topology cannot roundtrip with simple molecules
+                    for molecule in value.molecules:
+                        if molecule.__class__.__name__ == "_SimpleMolecule":
+                            return value
+                    raise exception
             elif value.__class__.__name__ == "_OFFBioTop":
                 raise ValueError("_OFFBioTop is no longer supported")
             else:
@@ -312,16 +319,6 @@ class Interchange(DefaultModel):
 
     def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 8):
         """Export this Interchange object to a .gro file."""
-        if self.positions is None:
-            raise MissingPositionsError(
-                "Positions are required to write a `.gro` file but found None."
-            )
-        elif np.allclose(self.positions, 0):
-            warnings.warn(
-                "Positions seem to all be zero. Result coordinate file may be non-physical.",
-                UserWarning,
-            )
-
         # TODO: Enum-style class for handling writer arg?
         if writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper

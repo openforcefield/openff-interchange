@@ -74,7 +74,6 @@ class TestGROMACSGROFile(_BaseTest):
         n_decimals = len(str(internal_coords[0, 0]).split(".")[1])
         assert n_decimals == 12
 
-    @pytest.mark.skip(reason="Revisit after OFFTK 0.11.0")
     @pytest.mark.slow()
     def test_residue_names_in_gro_file(self, parsley):
         """Test that residue names > 5 characters don't break .gro file output"""
@@ -95,7 +94,6 @@ class TestGROMACSGROFile(_BaseTest):
 @needs_gmx
 class TestGROMACS(_BaseTest):
     @pytest.mark.slow()
-    @pytest.mark.skip("from_top is not yet refactored for new Topology API")
     @pytest.mark.parametrize("reader", ["intermol", "internal"])
     @pytest.mark.parametrize(
         "smiles",
@@ -111,7 +109,7 @@ class TestGROMACS(_BaseTest):
     )
     def test_simple_roundtrip(self, parsley, smiles, reader):
         molecule = Molecule.from_smiles(smiles)
-        molecule.name = molecule.to_hill_formula(molecule)
+        molecule.name = molecule.to_hill_formula()
         molecule.generate_conformers(n_conformers=1)
         topology = molecule.to_topology()
 
