@@ -1,6 +1,5 @@
 from copy import deepcopy
 
-import mdtraj as md
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
@@ -14,7 +13,6 @@ from openff.utilities.testing import skip_if_missing
 from pydantic import ValidationError
 
 from openff.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
     MissingParameterHandlerError,
@@ -104,7 +102,6 @@ class TestInterchange(_BaseTest):
         mol = Molecule.from_smiles("C")
         mol.generate_conformers(n_conformers=1)
         top = Topology.from_molecules([mol])
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
         openff_sys = Interchange.from_smirnoff(parsley_unconstrained, top)
 
@@ -188,7 +185,6 @@ class TestInterchange(_BaseTest):
     @needs_gmx
     @needs_lmp
     @pytest.mark.slow()
-    @pytest.mark.skip(reason="Broken until `TypedMolecule` is implemented")
     @skip_if_missing("foyer")
     def test_atom_ordering(self):
         """Test that atom indices in bonds are ordered consistently between the slot map and topology"""
@@ -218,10 +214,9 @@ class TestInterchange(_BaseTest):
 
     def test_from_parsley(self, parsley):
 
-        tmp = Topology.from_molecules(
+        top = Topology.from_molecules(
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")]
         )
-        top = _OFFBioTop(mdtop=md.Topology.from_openmm(tmp.to_openmm()))
 
         out = Interchange.from_smirnoff(parsley, top)
 

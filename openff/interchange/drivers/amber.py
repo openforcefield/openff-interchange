@@ -52,9 +52,9 @@ def _write_input_file(interchange: "Interchange") -> None:
             if num_constraints == 0:
                 input_file.write("ntc=2,\n")
             else:
-                from openff.interchange.components.mdtraj import _get_num_h_bonds
+                from openff.interchange.components.toolkit import _get_num_h_bonds
 
-                num_h_bonds = _get_num_h_bonds(interchange.topology.mdtop)
+                num_h_bonds = _get_num_h_bonds(interchange.topology)
                 num_bonds = len(interchange["Bonds"].slot_map)
                 num_angles = len(interchange["Angles"].slot_map)
 

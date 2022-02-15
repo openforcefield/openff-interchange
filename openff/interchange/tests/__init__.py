@@ -3,7 +3,6 @@ import pathlib
 from collections import defaultdict
 from typing import DefaultDict, Dict, List, Tuple
 
-import mdtraj as md
 import numpy as np
 import openmm
 import pytest
@@ -68,7 +67,6 @@ class _BaseTest:
         """Fixture that builds a simple ammonia topology."""
         mol = Molecule.from_smiles("N")
         top = Topology.from_molecules(4 * [mol])
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
         return top
 
     @pytest.fixture()

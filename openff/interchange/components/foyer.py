@@ -7,11 +7,6 @@ from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from parmed import periodic_table
 
-from openff.interchange.components.mdtraj import (
-    _iterate_angles,
-    _iterate_propers,
-    _OFFBioTop,
-)
 from openff.interchange.components.potentials import Potential, PotentialHandler
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.types import FloatQuantity
@@ -44,10 +39,8 @@ if has_package("foyer"):
                 )
 
             for bond in openff_topology.bonds:
-                atoms_indices = [
-                    openff_topology.atom_index(atom) for atom in bond.atoms
-                ]
-                top_graph.add_bond(*atoms_indices)
+                atom_indices = [openff_topology.atom_index(atom) for atom in bond.atoms]
+                top_graph.add_bond(*atom_indices)
 
             return top_graph
 
@@ -177,11 +170,11 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
                 atoms_iterable = connection.atoms
             except AttributeError:
                 atoms_iterable = connection
-            atoms_indices = tuple(topology.atom_index(atom) for atom in atoms_iterable)
+            atom_indices = tuple(topology.atom_index(atom) for atom in atoms_iterable)
 
-            top_key = TopologyKey(atom_indices=atoms_indices)
+            top_key = TopologyKey(atom_indices=atom_indices)
             pot_key_ids = tuple(
-                _get_potential_key_id(atom_slots, idx) for idx in atoms_indices
+                _get_potential_key_id(atom_slots, idx) for idx in atom_indices
             )
 
             self.slot_map[top_key] = PotentialKey(
@@ -233,15 +226,18 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
     def store_matches(
         self,
         atom_slots: Dict[TopologyKey, PotentialKey],
-        topology: "_OFFBioTop",
+        topology: "Topology",
     ) -> None:
         """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
-        for bond in topology.mdtop.bonds:
-            atoms_indices = tuple((bond.atom1.index, bond.atom2.index))
-            top_key = TopologyKey(atom_indices=atoms_indices)
+        for bond in topology.bonds:
+            atom_indices = (
+                topology.atom_index(bond.atom1),
+                topology.atom_index(bond.atom2),
+            )
+            top_key = TopologyKey(atom_indices=atom_indices)
 
             pot_key_ids = tuple(
-                _get_potential_key_id(atom_slots, idx) for idx in atoms_indices
+                _get_potential_key_id(atom_slots, idx) for idx in atom_indices
             )
 
             self.slot_map[top_key] = PotentialKey(
@@ -269,15 +265,15 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
     def store_matches(
         self,
         atom_slots: Dict[TopologyKey, PotentialKey],
-        topology: "_OFFBioTop",
+        topology: "Topology",
     ) -> None:
         """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
-        for angle in _iterate_angles(topology.mdtop):
-            atoms_indices = tuple(a.index for a in angle)
-            top_key = TopologyKey(atom_indices=atoms_indices)
+        for angle in topology.angles:
+            atom_indices = tuple(topology.atom_index(atom) for atom in angle)
+            top_key = TopologyKey(atom_indices=atom_indices)
 
             pot_key_ids = tuple(
-                _get_potential_key_id(atom_slots, idx) for idx in atoms_indices
+                _get_potential_key_id(atom_slots, idx) for idx in atom_indices
             )
 
             self.slot_map[top_key] = PotentialKey(
@@ -306,15 +302,15 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
     def store_matches(
         self,
         atom_slots: Dict[TopologyKey, PotentialKey],
-        topology: "_OFFBioTop",
+        topology: "Topology",
     ) -> None:
         """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
-        for proper in _iterate_propers(topology.mdtop):
-            atoms_indices = tuple(a.index for a in proper)
-            top_key = TopologyKey(atom_indices=atoms_indices)
+        for proper in topology.propers:
+            atom_indices = tuple(topology.atom_index(atom) for atom in proper)
+            top_key = TopologyKey(atom_indices=atom_indices)
 
             pot_key_ids = tuple(
-                _get_potential_key_id(atom_slots, idx) for idx in atoms_indices
+                _get_potential_key_id(atom_slots, idx) for idx in atom_indices
             )
 
             self.slot_map[top_key] = PotentialKey(
@@ -386,7 +382,7 @@ def _topology_graph_from_openff_topology(
         )
 
         for bond in topology.bonds:
-            atoms_indices = [topology.atom_index(atom) for atom in bond.atoms]
-            topology_graph.add_bond(*atoms_indices)
+            atom_indices = [topology.atom_index(atom) for atom in bond.atoms]
+            topology_graph.add_bond(*atom_indices)
 
     return topology_graph

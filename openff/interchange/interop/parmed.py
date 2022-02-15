@@ -1,7 +1,6 @@
 """Interfaces with ParmEd."""
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
-import mdtraj as md
 import numpy as np
 from openff.units import unit
 
@@ -270,11 +269,9 @@ def _from_parmed(cls, structure) -> "Interchange":
         out.box = structure.box[:3] * unit.angstrom
 
     if structure.topology is not None:
-        from openff.toolkit.topology.topology import Topology
+        from openff.interchange.components.toolkit import _simple_topology_from_openmm
 
-        mdtop = md.Topology.from_openmm(value=structure.topology)
-        out.topology = Topology()
-        out.topology.mdtop = mdtop
+        out.topology = _simple_topology_from_openmm(structure.topology)
     else:
         raise ConversionError("ParmEd Structure missing an topology attribute")
 

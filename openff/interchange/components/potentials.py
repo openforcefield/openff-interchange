@@ -23,8 +23,7 @@ else:
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
-
-    from openff.interchange.components.mdtraj import _OFFBioTop
+    from openff.toolkit.topology import Topology
 
     if has_package("jax"):
         from jaxlib.xla_extension import DeviceArray
@@ -124,7 +123,7 @@ class PotentialHandler(DefaultModel):
     def store_matches(
         self,
         parameter_handler: ParameterHandler,
-        topology: "_OFFBioTop",
+        topology: "Topology",
     ) -> None:
         """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
         raise NotImplementedError

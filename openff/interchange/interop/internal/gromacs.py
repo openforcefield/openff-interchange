@@ -4,8 +4,9 @@ import warnings
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Callable, Dict, Set, Tuple, Union
 
-import mdtraj as md
 import numpy as np
+from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.topology.mm_molecule import _SimpleMolecule
 from openff.units import unit
 
 from openff.interchange.components.base import (
@@ -16,14 +17,13 @@ from openff.interchange.components.base import (
     BaseProperTorsionHandler,
     BasevdWHandler,
 )
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import _get_14_pairs
-from openff.interchange.exceptions import UnsupportedExportError
+from openff.interchange.exceptions import MissingPositionsError, UnsupportedExportError
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Molecule
+    from openff.units.unit import Quantity
 
     from openff.interchange import Interchange
 
@@ -46,13 +46,30 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
     if isinstance(file_path, Path):
         path = file_path
 
+    if openff_sys.positions is None:
+        raise MissingPositionsError(
+            "Positions are required to write a `.gro` file but found None."
+        )
+    elif np.allclose(openff_sys.positions, 0):
+        warnings.warn(
+            "Positions seem to all be zero. Result coordinate file may be non-physical.",
+            UserWarning,
+        )
     # Explicitly round here to avoid ambiguous things in string formatting
     rounded_positions = np.round(openff_sys.positions, decimal)
     rounded_positions = rounded_positions.m_as(unit.nanometer)
 
     n = decimal
 
+    # Do virtual particles go in the GRO file?
     n_particles = openff_sys.positions.shape[0]
+
+    if openff_sys.topology.n_atoms != n_particles:
+        raise MissingPositionsError(
+            "Found a mismatch in the number of atoms in the provided topology and positions "
+            f"matrix. Detected {openff_sys.topology.n_atoms} atoms in the topology but found "
+            f"{n_particles} positions in `.positions` attribute."
+        )
 
     typemap = _build_typemap(openff_sys)
 
@@ -1079,11 +1096,19 @@ def _get_buck_parameters(openff_sys: "Interchange", atom_idx: int) -> Dict:
     return parameters
 
 
+# TODO: Needs to be reworked in a way that makes sane assumptions about the structure
+#       of the topology while parsinng the forces and other data. This may require two
+#       passes over the file, one to parse the topology and the other to parse the rest.
 def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
     """Read the contents of a GROMACS Topology (.top) file."""
+    raise NotImplementedError("Internal `from_gromacs` parser temporarily unsupported.")
     from openff.interchange import Interchange
 
     interchange = Interchange()
+    interchange.topology = Topology()
+    pesudo_molecule = _SimpleMolecule()
+    interchange.topology.add_molecule(pesudo_molecule)
+
     current_directive = None
 
     def process_defaults(interchange: Interchange, line: str):
@@ -1155,11 +1180,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
         if interchange.topology is not None:
             raise Exception
 
-        mdtop = md.Topology.from_openmm(molecule.to_topology().to_openmm())
-        default_chain = mdtop.add_chain()
-        mdtop.add_residue(name="FOO", chain=default_chain)
-
-        topology = _OFFBioTop(mdtop=mdtop)
+        topology = molecule.to_topology()
 
         interchange.topology = topology
 
@@ -1179,10 +1200,13 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
             mass,
         ) = fields
 
-        interchange.topology.mdtop.add_atom(
-            name=atom_name,
-            element=md.element.Element.getByMass(float(mass)),  # type: ignore[attr-defined]
-            residue=interchange.topology.mdtop.residue(0),
+        # TODO: Fix topology graph
+        interchange.topology.molecules[0].add_atom(
+            atomic_number=0,
+            metadata={
+                "residue_number": residue_number,
+                "residue_name": residue_name,
+            },
         )
 
         topology_key = TopologyKey(atom_indices=(int(atom_number) - 1,))
@@ -1195,7 +1219,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
                 "in the atomtypes directive."
             )
 
-        charge: unit.Quantity = float(_charge) * unit.elementary_charge
+        charge: "Quantity" = float(_charge) * unit.elementary_charge
 
         interchange["vdW"].slot_map.update({topology_key: potential_key})
         # The vdw .potentials was constructed while parsing [ atomtypes ]
@@ -1218,9 +1242,10 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
 
         atom1, atom2, func, length, k = fields
 
-        interchange.topology.mdtop.add_bond(
-            atom1=interchange.topology.mdtop.atom(int(atom1) - 1),
-            atom2=interchange.topology.mdtop.atom(int(atom2) - 1),
+        # Assumes 1-molecule topology
+        interchange.topology.molecules[0].add_bond(
+            atom1=int(atom1) - 1,
+            atom2=int(atom2) - 1,
         )
 
         topology_key = TopologyKey(atom_indices=(int(atom1) - 1, int(atom2) - 1))
@@ -1293,7 +1318,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
             key: TopologyKey,
         ):
             if key in handler.slot_map:
-                key.mult += 1  # type: ignore[operator]
+                key.mult += 1
                 ensure_unique_key(handler, key)
 
         potential_key = PotentialKey(

@@ -1,13 +1,17 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
 from typing import TYPE_CHECKING, Dict, Union
 
+import networkx as nx
 import numpy as np
 from openff.toolkit.topology import Topology
+from openff.toolkit.topology.mm_molecule import _SimpleMolecule
 
 if TYPE_CHECKING:
     from openff.toolkit.topology import Molecule
     from openff.toolkit.typing.engines.smirnonff import ForceField
     from openff.toolkit.utils.collections import ValidatedList
+    from openff.units.unit import Quantity
+    from openmm.app import Topology as OpenMMTopology
 
 
 def _get_num_h_bonds(topology: "Topology") -> int:
@@ -82,7 +86,7 @@ def _get_14_pairs(topology_or_molecule: Union["Topology", "Molecule"]):
                         yield (atom_i_partner, atom_j_partner)
 
 
-def _validated_list_to_array(validated_list: "ValidatedList") -> np.ndarray:
+def _validated_list_to_array(validated_list: "ValidatedList") -> "Quantity":
     from openff.units import unit
 
     unit_ = validated_list[0].units
@@ -126,3 +130,34 @@ def _check_electrostatics_handlers(force_field: "ForceField") -> bool:
             return True
 
     return False
+
+
+def _simple_topology_from_openmm(openmm_topology: "OpenMMTopology") -> Topology:
+    """Convert an OpenMM Topology into an OpenFF Topology consisting **only** of so-called `_SimpleMolecule`s."""
+    # TODO: Residue metadata
+    # TODO: Splice in fully-defined OpenFF `Molecule`s?
+    graph = nx.Graph()
+
+    for atom in openmm_topology.atoms():
+        graph.add_node(
+            atom.index,
+            atomic_number=atom.element.atomic_number,
+        )
+
+    for bond in openmm_topology.bonds():
+        graph.add_edge(
+            bond.atom1.index,
+            bond.atom2.index,
+        )
+
+    return _simple_topology_from_graph(graph)
+
+
+def _simple_topology_from_graph(graph: nx.Graph) -> Topology:
+    topology = Topology()
+
+    for component in nx.connected_components(graph):
+        subgraph = graph.subgraph(component)
+        topology.add_molecule(_SimpleMolecule._from_subgraph(subgraph))
+
+    return topology
