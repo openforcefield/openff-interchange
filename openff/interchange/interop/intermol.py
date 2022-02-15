@@ -36,7 +36,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
 
     vdw_handler = BasevdWHandler(
         scale_14=intermol_system.lj_correction,
-        mixing_rule=intermol_system.combination_rule,
+        mixing_rule=intermol_system.combination_rule.lower(),
     )
 
     if vdw_handler.mixing_rule == "Multiply-Sigeps":

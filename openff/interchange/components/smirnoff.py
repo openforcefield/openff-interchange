@@ -57,6 +57,7 @@ kcal_mol_angstroms = kcal_mol / openmm_unit.angstrom**2
 kcal_mol_radians = kcal_mol / openmm_unit.radian**2
 
 if TYPE_CHECKING:
+
     from openff.toolkit.topology import Topology
     from openff.units.unit import Quantity
 
@@ -971,10 +972,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 else:
                     raise NotImplementedError()
 
-        returned_charges: Dict[
-            Union[VirtualSiteKey, TopologyKey],
-            "Quantity",
-        ] = dict()
+        returned_charges: Dict[Union[VirtualSiteKey, TopologyKey], "Quantity"] = dict()
 
         for index, charge in charges.items():
             if isinstance(index, int):
