@@ -34,7 +34,7 @@ Below is a minimal but complete example parameterizing an ethanol molecule with 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.typing.engines.smirnoff import ForceField
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 
 sdf_file_path = get_data_file_path("molecules/ethanol.sdf")
 molecule: Molecule = Molecule.from_file(sdf_file_path)
@@ -79,7 +79,7 @@ from foyer import Forcefield
 import mdtraj as md
 from openff.toolkit.topology import Molecule
 from openff.interchange.components.mdtraj import _OFFBioTop
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 
 ethanol: Molecule = Molecule.from_smiles("CCO")
 ethanol.generate_conformers(n_conformers=1)

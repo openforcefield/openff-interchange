@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.0.1
+  rev: v4.1.0
   hooks:
   - id: check-yaml
   - id: end-of-file-fixer
@@ -8,11 +8,10 @@ repos:
     exclude: '\.(pdb|gro|top|sdf)$'
   - id: debug-statements
 - repo: https://github.com/psf/black
-  rev: 21.12b0
+  rev: 22.1.0
   hooks:
   - id: black
     files: ^openff
-    args: [--check]
   - id: black-jupyter
     files: ^examples
 - repo: https://github.com/PyCQA/isort
@@ -20,7 +19,6 @@ repos:
   hooks:
   - id: isort
     files: ^openff
-    args: [--check]
 - repo: https://github.com/PyCQA/flake8
   rev: 4.0.1
   hooks:
@@ -32,7 +30,7 @@ repos:
         'flake8-pytest-style',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.29.1
+  rev: v2.31.0
   hooks:
   - id: pyupgrade
     files: ^openff/interchange
@@ -50,13 +48,13 @@ repos:
     - id: interrogate
       args: [--fail-under=60, openff/interchange/]
 - repo: https://github.com/asottile/blacken-docs
-  rev: v1.12.0
+  rev: v1.12.1
   hooks:
   - id: blacken-docs
     files: ^docs/
     additional_dependencies: [black==21.6b0]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.2.2
+  rev: 1.2.3
   hooks:
     - id: nbqa-pyupgrade
       args:

@@ -1,10 +1,13 @@
-"""Interfaces with ParmEd."""
-from typing import TYPE_CHECKING
+"""Interfaces with OpenMM."""
+from pathlib import Path
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 import openmm
+from openff.toolkit.topology import Topology
 from openff.units import unit as off_unit
 from openff.units.openmm import from_openmm as from_openmm_unit
+from openff.units.openmm import to_openmm as to_openmm_unit
 from openmm import unit
 
 from openff.interchange.components.potentials import Potential
@@ -15,24 +18,23 @@ from openff.interchange.exceptions import (
 )
 from openff.interchange.interop.parmed import _lj_params_from_potential
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
-from openff.interchange.utils import pint_to_openmm
 
 if TYPE_CHECKING:
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
 
 kcal_mol = unit.kilocalorie_per_mole
 
-kcal_ang = kcal_mol / unit.angstrom ** 2
-kcal_rad = kcal_mol / unit.radian ** 2
+kcal_ang = kcal_mol / unit.angstrom**2
+kcal_rad = kcal_mol / unit.radian**2
 
 kj_mol = unit.kilojoule_per_mole
-kj_nm = kj_mol / unit.nanometer ** 2
-kj_rad = kj_mol / unit.radian ** 2
+kj_nm = kj_mol / unit.nanometer**2
+kj_rad = kj_mol / unit.radian**2
 
 
 def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.System:
     """
-    Convert an Interchange to a ParmEd Structure.
+    Convert an Interchange to an OpenmM System.
 
     Parameters
     ----------
@@ -58,8 +60,9 @@ def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.Syst
 
     # Add particles with appropriate masses
     # TODO: Add virtual particles
-    for atom in openff_sys.topology.mdtop.atoms:
-        openmm_sys.addParticle(atom.element.mass)
+    for atom in openff_sys.topology.atoms:
+        # Skip unit check for speed, toolkit should report mass in Dalton
+        openmm_sys.addParticle(atom.mass.m)
 
     _process_nonbonded_forces(
         openff_sys, openmm_sys, combine_nonbonded_forces=combine_nonbonded_forces
@@ -119,7 +122,7 @@ def _process_bond_forces(openff_sys, openmm_sys):
         indices = top_key.atom_indices
         params = bond_handler.potentials[pot_key].parameters
         k = params["k"].m_as(
-            off_unit.kilojoule / off_unit.nanometer ** 2 / off_unit.mol
+            off_unit.kilojoule / off_unit.nanometer**2 / off_unit.mol
         )
         length = params["length"].m_as(off_unit.nanometer)
 
@@ -321,7 +324,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             non_bonded_force = openmm.NonbondedForce()
             openmm_sys.addForce(non_bonded_force)
 
-            for _ in openff_sys.topology.mdtop.atoms:
+            for _ in openff_sys.topology.atoms:
                 non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
             if vdw_method == "cutoff" and electrostatics_method == "pme":
@@ -362,7 +365,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             vdw_force.addPerParticleParameter("epsilon")
 
             # TODO: Add virtual particles
-            for _ in openff_sys.topology.mdtop.atoms:
+            for _ in openff_sys.topology.atoms:
                 vdw_force.addParticle([1.0, 0.0])
 
             if vdw_method == "cutoff":
@@ -407,7 +410,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             electrostatics_force = openmm.NonbondedForce()
             openmm_sys.addForce(electrostatics_force)
 
-            for _ in openff_sys.topology.mdtop.atoms:
+            for _ in openff_sys.topology.atoms:
                 electrostatics_force.addParticle(0.0, 1.0, 0.0)
 
             if electrostatics_method == "reaction-field":
@@ -476,7 +479,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         non_bonded_force.addPerParticleParameter("C")
         openmm_sys.addForce(non_bonded_force)
 
-        for _ in openff_sys.topology.mdtop.atoms:
+        for _ in openff_sys.topology.atoms:
             non_bonded_force.addParticle([0.0, 0.0, 0.0])
 
         if openff_sys.box is None:
@@ -490,9 +493,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
             # TODO: Add electrostatics
             params = buck_handler.potentials[pot_key].parameters
-            a = pint_to_openmm(params["A"])
-            b = pint_to_openmm(params["B"])
-            c = pint_to_openmm(params["C"])
+            a = to_openmm_unit(params["A"])
+            b = to_openmm_unit(params["B"])
+            c = to_openmm_unit(params["C"])
             non_bonded_force.setParticleParameters(atom_idx, [a, b, c])
 
         return
@@ -516,7 +519,10 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
     # Need to create 1-4 exceptions, just to have a baseline for splitting out/modifying
     # It might be simpler to iterate over 1-4 pairs directly
-    bonds = [(b.atom1.index, b.atom2.index) for b in openff_sys.topology.mdtop.bonds]
+    bonds = [
+        sorted(openff_sys.topology.atom_index(a) for a in bond.atoms)
+        for bond in openff_sys.topology.bonds
+    ]
 
     if combine_nonbonded_forces:
         non_bonded_force.createExceptionsFromBonds(
@@ -634,7 +640,7 @@ def _create_virtual_site(
         parent_atom_positions.append(interchange.positions[parent_atom])
 
     _origin_weight = np.atleast_2d(origin_weight)
-    parent_atom_positions = np.atleast_2d(parent_atom_positions)  # type: ignore[assignment]
+    parent_atom_positions = np.atleast_2d(parent_atom_positions)
 
     origin = np.dot(_origin_weight, parent_atom_positions).sum(axis=0)
 
@@ -666,7 +672,7 @@ def _create_virtual_site(
 
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
     """Create an Interchange object from OpenMM data."""
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
 
     openff_sys = Interchange()
 
@@ -690,15 +696,11 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
                 )
 
     if topology is not None:
-        import mdtraj as md
+        from openff.interchange.components.toolkit import _simple_topology_from_openmm
 
-        from openff.interchange.components.mdtraj import _OFFBioTop
+        openff_topology = _simple_topology_from_openmm(topology)
 
-        mdtop = md.Topology.from_openmm(topology)
-        top = _OFFBioTop()
-        top.mdtop = mdtop
-
-        openff_sys.topology = top
+        openff_sys.topology = openff_topology
 
     if positions is not None:
         openff_sys.positions = positions
@@ -746,7 +748,7 @@ def _convert_nonbonded_force(force):
         openmm.NonbondedForce.CutoffNonPeriodic,
     }:
         # TODO: Store reaction-field dielectric
-        electrostatics.method = "reactionfield"
+        electrostatics.method = "reaction-field"
         vdw_handler.method = "cutoff"
     elif force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff:
         electrostatics.method = "no-cutoff"
@@ -815,7 +817,7 @@ def _convert_periodic_torsion_force(force):
         # TODO: Process layered torsions
         top_key = TopologyKey(atom_indices=(atom1, atom2, atom3, atom4), mult=0)
         while top_key in proper_torsion_handler.slot_map:
-            top_key.mult += 1
+            top_key.mult: int = top_key.mult + 1
 
         pot_key = PotentialKey(id=f"{atom1}-{atom2}-{atom3}-{atom4}", mult=top_key.mult)
         pot = Potential(
@@ -831,3 +833,37 @@ def _convert_periodic_torsion_force(force):
         proper_torsion_handler.potentials.update({pot_key: pot})
 
     return proper_torsion_handler
+
+
+def _to_pdb(file_path: Union[Path, str], topology: Topology, positions):
+    from openff.units.openmm import to_openmm
+    from openmm import app
+
+    openmm_topology = topology.to_openmm(ensure_unique_atom_names=False)
+
+    positions = to_openmm(positions)
+
+    with open(file_path, "w") as outfile:
+        app.PDBFile.writeFile(openmm_topology, positions, outfile)
+
+
+def get_nonbonded_force_from_openmm_system(omm_system):
+    """Get a single NonbondedForce object with an OpenMM System."""
+    for force in omm_system.getForces():
+        if type(force) == openmm.NonbondedForce:
+            return force
+
+
+def get_partial_charges_from_openmm_system(omm_system):
+    """Get partial charges from an OpenMM interchange as a unit.Quantity array."""
+    # TODO: deal with virtual sites
+    n_particles = omm_system.getNumParticles()
+    force = get_nonbonded_force_from_openmm_system(omm_system)
+    # TODO: don't assume the partial charge will always be parameter 0
+    # partial_charges = [openmm_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)]
+    partial_charges = [
+        force.getParticleParameters(idx)[0] / unit.elementary_charge
+        for idx in range(n_particles)
+    ]
+
+    return partial_charges

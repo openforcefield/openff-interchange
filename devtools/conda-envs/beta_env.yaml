@@ -13,17 +13,17 @@ dependencies:
   - numpy >=1.21
   - pydantic
   - openmm
-  - mdtraj
   # OpenFF stack
   - openff-toolkit >=0.10.0
   - openff-utilities
-  - openff-units
+  - openff-units >=0.1.5
   # Optional features
   - jax
   - unyt
   - mbuild
   - foyer >=0.8.1
   # Testing
+  - mdtraj
   - intermol
   - openff-evaluator
   - openff-recharge

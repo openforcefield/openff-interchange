@@ -1,12 +1,12 @@
 OpenFF Interchange
 ==================
 [//]: # (Badges)
-[![CI Status](https://github.com/openforcefield/openff-interchange/workflows/ci/badge.svg)](https://github.com/openforcefield/openff-interchange/actions?query=branch%3Amaster+workflow%3Aci)
+[![CI Status](https://github.com/openforcefield/openff-interchange/workflows/ci/badge.svg)](https://github.com/openforcefield/openff-interchange/actions?query=branch%3Amain+workflow%3Aci)
 [![Documentation Status](https://readthedocs.org/projects/openff-interchange/badge/?version=latest)](https://openff-interchange.readthedocs.io/en/latest/?badge=latest)
 [![Codecov coverage](https://img.shields.io/codecov/c/github/openforcefield/openff-interchange.svg?logo=Codecov&logoColor=white)](https://codecov.io/gh/openforcefield/openff-interchange)
 [![LGTM analysis](https://img.shields.io/lgtm/grade/python/g/openforcefield/openff-interchange.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/openforcefield/openff-interchange/context:python)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/openforcefield/openff-interchange/master.svg)](https://results.pre-commit.ci/latest/github/openforcefield/openff-interchange/master)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/openforcefield/openff-interchange/main.svg)](https://results.pre-commit.ci/latest/github/openforcefield/openff-interchange/main)
 
 A project (and object) for storing, manipulating, and converting molecular mechanics data.
 
@@ -36,7 +36,7 @@ from openff.toolkit.typing.engines.smirnoff import ForceField
 sage = ForceField("openff-2.0.0.offxml")
 
 # Create an Interchange object
-from openff.interchange.components.interchange import Interchange
+from openff.interchange import Interchange
 out = Interchange.from_smirnoff(force_field=sage, topology=topology)
 
 # Define box vectors and assign atomic positions
@@ -54,7 +54,7 @@ out.to_top("out.top")
 
 Future releases will include improved support for other file formats such as those used by AMBER, CHARMM, and LAMMPS.
 
-Other examples are available via [binder](https://mybinder.org/v2/gh/openforcefield/openff-interchange/master?filepath=%2Fexamples%2F), executable in a web browser without installing anyting on your computer.
+Other examples are available via [binder](https://mybinder.org/v2/gh/openforcefield/openff-interchange/main?filepath=%2Fexamples%2F), executable in a web browser without installing anyting on your computer.
 
 For more information, please consult the [full documentation](https://openff-interchange.readthedocs.io/).
 

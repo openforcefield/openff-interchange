@@ -13,7 +13,7 @@ from openff.interchange.exceptions import AmberError, GMXRunError, LAMMPSRunErro
 if TYPE_CHECKING:
     from pandas import DataFrame
 
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
 
 
 def get_all_energies(interchange: "Interchange") -> Dict[str, EnergyReport]:

@@ -26,13 +26,13 @@ class EnergyReport(DefaultModel):
     }
 
     @validator("energies")
-    def validate_energies(cls, v):
+    def validate_energies(cls, v: Dict) -> Dict:
         for key, val in v.items():
             if not isinstance(val, unit.Quantity):
                 v[key] = FloatQuantity.validate_type(val)
         return v
 
-    def __getitem__(self, item: str):
+    def __getitem__(self, item: str) -> Optional[FloatQuantity]:
         if type(item) != str:
             raise LookupError(
                 "Only str arguments can be currently be used for lookups.\n"
@@ -41,16 +41,20 @@ class EnergyReport(DefaultModel):
         if item in self.energies.keys():
             return self.energies[item]
         if item.lower() == "total":
-            return sum(self.energies.values())
+            return sum(self.energies.values())  # type: ignore[return-value]
         else:
             return None
 
-    def update_energies(self, new_energies):
+    def update_energies(self, new_energies: Dict) -> None:
         """Update the energies in this report with new value(s)."""
         self.energies.update(self.validate_energies(new_energies))
 
     # TODO: Better way of exposing tolerances
-    def compare(self, other: "EnergyReport", custom_tolerances=None):
+    def compare(
+        self,
+        other: "EnergyReport",
+        custom_tolerances: Optional[Dict[str, FloatQuantity]] = None,
+    ) -> None:
         """
         Compare this `EnergyReport` to another `EnergyReport`.
 
@@ -150,17 +154,17 @@ class EnergyReport(DefaultModel):
         # TODO: Return energy differences even if none are greater than tolerance
         # This might result in mis-matched keys
 
-    def __sub__(self, other):
+    def __sub__(self, other: "EnergyReport") -> Dict[str, FloatQuantity]:
         diff = dict()
         for key in self.energies:
             if key not in other.energies:
                 warnings.warn(f"Did not find key {key} in second report")
                 continue
-            diff[key] = self.energies[key] - other.energies[key]
+            diff[key]: FloatQuantity = self.energies[key] - other.energies[key]  # type: ignore
 
-        return diff
+        return diff  # type: ignore
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             "Energies:\n\n"
             f"Bond:          \t\t{self['Bond']}\n"

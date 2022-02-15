@@ -2,7 +2,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
 
 
 def _infer_constraints(interchange: "Interchange") -> str:
@@ -15,9 +15,10 @@ def _infer_constraints(interchange: "Interchange") -> str:
         if num_constraints == 0:
             return "none"
         else:
-            from openff.interchange.components.mdtraj import _get_num_h_bonds
+            from openff.interchange.components.toolkit import _get_num_h_bonds
 
-            num_h_bonds = _get_num_h_bonds(interchange.topology.mdtop)
+            num_h_bonds = _get_num_h_bonds(interchange.topology)
+
             num_bonds = len(interchange["Bonds"].slot_map)
             num_angles = len(interchange["Angles"].slot_map)
 

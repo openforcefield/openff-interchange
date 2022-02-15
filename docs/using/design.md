@@ -11,7 +11,7 @@ None are strictly required; an `Interchange` object can be constructed containin
 
 ```pycon
 
->>> from openff.interchange.components.interchange import Interchange
+>>> from openff.interchange import Interchange
 >>> empty_interchange = Interchange()
 >>> empty_interchange.topology
 >>> empty_interchange.handlers
@@ -107,7 +107,7 @@ they are missing.
 
 ```pycon
 
->>> from openff.interchange.components.interchange import Interchange
+>>> from openff.interchange import Interchange
 >>> from openff.units import unit
 >>> from openff.toolkit.topology import Molecule
 >>> molecule = Molecule.from_smiles("CCO")
@@ -169,7 +169,7 @@ non-periodic system.
 
 ```pycon
 
->>> from openff.interchange.components.interchange import Interchange
+>>> from openff.interchange import Interchange
 >>> from openff.units import unit
 >>> import numpy as np
 >>> model = Interchange()
