@@ -1096,14 +1096,18 @@ def _get_buck_parameters(openff_sys: "Interchange", atom_idx: int) -> Dict:
     return parameters
 
 
+# TODO: Needs to be reworked in a way that makes sane assumptions about the structure
+#       of the topology while parsinng the forces and other data. This may require two
+#       passes over the file, one to parse the topology and the other to parse the rest.
 def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
     """Read the contents of a GROMACS Topology (.top) file."""
+    raise NotImplementedError("Internal `from_gromacs` parser temporarily unsupported.")
     from openff.interchange import Interchange
 
     interchange = Interchange()
     interchange.topology = Topology()
     pesudo_molecule = _SimpleMolecule()
-    interchange.add_molecule(pesudo_molecule)
+    interchange.topology.add_molecule(pesudo_molecule)
 
     current_directive = None
 
@@ -1240,8 +1244,8 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
 
         # Assumes 1-molecule topology
         interchange.topology.molecules[0].add_bond(
-            atom1=atom1 - 1,
-            atom2=atom2 - 1,
+            atom1=int(atom1) - 1,
+            atom2=int(atom2) - 1,
         )
 
         topology_key = TopologyKey(atom_indices=(int(atom1) - 1, int(atom2) - 1))
@@ -1314,7 +1318,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
             key: TopologyKey,
         ):
             if key in handler.slot_map:
-                key.mult += 1  # type: ignore[operator]
+                key.mult += 1
                 ensure_unique_key(handler, key)
 
         potential_key = PotentialKey(
