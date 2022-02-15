@@ -649,7 +649,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             prmtop.write("%FLAG BOX_DIMENSIONS\n" "%FORMAT(5E16.8)\n")
             box = [90.0]
             for i in range(3):
-                box.append(interchange.box[i, i].m_as(unit.angstrom))
+                box.append(interchange.box[i, i].m_as(unit.angstrom))  # type: ignore
             text_blob = "".join([f"{val:16.8E}" for val in box])
             _write_text_blob(prmtop, text_blob)
 

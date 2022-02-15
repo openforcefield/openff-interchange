@@ -57,7 +57,9 @@ kcal_mol_angstroms = kcal_mol / openmm_unit.angstrom**2
 kcal_mol_radians = kcal_mol / openmm_unit.radian**2
 
 if TYPE_CHECKING:
+
     from openff.toolkit.topology import Topology
+    from openff.units.unit import Quantity
 
     from openff.interchange.components.mdtraj import _OFFBioTop
 
@@ -932,20 +934,20 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         pass
 
     @property
-    def charges(self) -> Dict[Union[TopologyKey, VirtualSiteKey], unit.Quantity]:
+    def charges(self) -> Dict[Union[TopologyKey, VirtualSiteKey], "Quantity"]:
         """Get the total partial charge on each atom, excluding virtual sites."""
         return self.get_charges(include_virtual_sites=False)
 
     @property
     def charges_with_virtual_sites(
         self,
-    ) -> Dict[Union[VirtualSiteKey, TopologyKey], unit.Quantity]:
+    ) -> Dict[Union[VirtualSiteKey, TopologyKey], "Quantity"]:
         """Get the total partial charge on each atom, including virtual sites."""
         return self.get_charges(include_virtual_sites=True)
 
     def get_charges(
         self, include_virtual_sites=False
-    ) -> Dict[Union[VirtualSiteKey, TopologyKey], unit.Quantity]:
+    ) -> Dict[Union[VirtualSiteKey, TopologyKey], "Quantity"]:
         """Get the total partial charge on each atom or particle."""
         charges: DefaultDict[Union[TopologyKey, VirtualSiteKey], float] = defaultdict(
             lambda: 0.0
@@ -970,9 +972,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 else:
                     raise NotImplementedError()
 
-        returned_charges: Dict[
-            Union[VirtualSiteKey, TopologyKey], unit.Quantity
-        ] = dict()
+        returned_charges: Dict[Union[VirtualSiteKey, TopologyKey], "Quantity"] = dict()
 
         for index, charge in charges.items():
             if isinstance(index, int):
@@ -1096,7 +1096,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
     @classmethod
     @functools.lru_cache(None)
-    def _compute_partial_charges(cls, molecule: Molecule, method: str) -> unit.Quantity:
+    def _compute_partial_charges(cls, molecule: Molecule, method: str) -> "Quantity":
         """Call out to the toolkit's toolkit wrappers to generate partial charges."""
         molecule = copy.deepcopy(molecule)
         molecule.assign_partial_charges(method)

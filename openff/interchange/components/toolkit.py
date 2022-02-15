@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from openff.toolkit.topology import Molecule
     from openff.toolkit.typing.engines.smirnonff import ForceField
     from openff.toolkit.utils.collections import ValidatedList
+    from openff.units.unit import Quantity
 
 
 def _get_num_h_bonds(topology: "Topology") -> int:
@@ -82,7 +83,7 @@ def _get_14_pairs(topology_or_molecule: Union["Topology", "Molecule"]):
                         yield (atom_i_partner, atom_j_partner)
 
 
-def _validated_list_to_array(validated_list: "ValidatedList") -> np.ndarray:
+def _validated_list_to_array(validated_list: "ValidatedList") -> "Quantity":
     from openff.units import unit
 
     unit_ = validated_list[0].units
