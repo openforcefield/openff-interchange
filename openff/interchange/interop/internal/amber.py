@@ -8,6 +8,7 @@ import numpy as np
 from openff.units import unit
 
 from openff.interchange.components.toolkit import _get_num_h_bonds
+from openff.interchange.exceptions import UnsupportedExportError
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
@@ -78,6 +79,12 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
     if interchange["vdW"].mixing_rule != "lorentz-berthelot":
         raise Exception
+
+    if interchange.box is None:
+        if interchange["Electrostatics"].method.lower() == "pme":
+            raise UnsupportedExportError(
+                "Electrostatics method PME is not valid for a non-periodic system. "
+            )
 
     with open(path, "w") as prmtop:
         import datetime
@@ -685,14 +692,15 @@ def to_inpcrd(interchange: "Interchange", file_path: Union[Path, str]):
         for line in textwrap.wrap(blob, width=72, drop_whitespace=False):
             inpcrd.write(line + "\n")
 
-        box = interchange.box.to(unit.angstrom).magnitude
-        if (box == np.diag(np.diagonal(box))).all():
-            for i in range(3):
-                inpcrd.write(f"{box[i, i]:12.7f}")
-            for _ in range(3):
-                inpcrd.write("  90.0000000")
-        else:
-            # TODO: Handle non-rectangular
-            raise NotImplementedError
+        if interchange.box is not None:
+            box = interchange.box.to(unit.angstrom).magnitude
+            if (box == np.diag(np.diagonal(box))).all():
+                for i in range(3):
+                    inpcrd.write(f"{box[i, i]:12.7f}")
+                for _ in range(3):
+                    inpcrd.write("  90.0000000")
+            else:
+                # TODO: Handle non-rectangular
+                raise NotImplementedError
 
         inpcrd.write("\n")

@@ -138,6 +138,13 @@ class TestGROMACS(_BaseTest):
             },
         )
 
+    def test_nonperiodic_pme(self, ethanol_top, sage):
+        interchange = Interchange.from_smirnoff(sage, ethanol_top)
+        interchange.box = None
+
+        with pytest.raises(UnsupportedExportError, match="non-p"):
+            interchange.to_top("foo.top")
+
     @skip_if_missing("parmed")
     def test_num_impropers(self, parsley):
         top = Molecule.from_smiles("CC1=CC=CC=C1").to_topology()

@@ -7,6 +7,7 @@ from openff.units import unit
 
 from openff.interchange import Interchange
 from openff.interchange.drivers import get_amber_energies, get_openmm_energies
+from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.tests import _BaseTest
 
 kj_mol = unit.kilojoule / unit.mol
@@ -31,6 +32,13 @@ class TestAmber(_BaseTest):
         coords2 = pmd.load_file("parmed.inpcrd").coordinates
 
         np.testing.assert_equal(coords1, coords2)
+
+    def test_nonperiodic_pme(self, ethanol_top, sage):
+        interchange = Interchange.from_smirnoff(sage, ethanol_top)
+        interchange.box = None
+
+        with pytest.raises(UnsupportedExportError, match="non-p"):
+            interchange.to_prmtop("foo.prmtop")
 
     @pytest.mark.slow()
     @pytest.mark.parametrize(
