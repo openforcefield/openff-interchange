@@ -1,6 +1,5 @@
 from copy import deepcopy
 
-import mdtraj as md
 import numpy as np
 import openmm
 import pytest
@@ -26,7 +25,6 @@ from openff.utilities.testing import skip_if_missing
 from pydantic import ValidationError
 
 from openff.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.smirnoff import (
     SMIRNOFFAngleHandler,
     SMIRNOFFBondHandler,
@@ -177,10 +175,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
         # Explicitly store these, since results differ RDKit/AmberTools vs. OpenEye
         reference_charges = [c.m for c in molecule.partial_charges]
 
-        top = _OFFBioTop.from_molecules(
-            mdtop=md.Topology.from_openmm(molecule.to_topology().to_openmm()),
-            molecules=[molecule],
-        )
+        top = molecule.to_topology()
 
         parameter_handlers = [
             ElectrostaticsHandler(version=0.3),
@@ -223,10 +218,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
 
     def test_electrostatics_charge_increments(self):
         molecule = Molecule.from_mapped_smiles("[Cl:1][H:2]")
-        top = _OFFBioTop.from_molecules(
-            mdtop=md.Topology.from_openmm(molecule.to_topology().to_openmm()),
-            molecules=[molecule],
-        )
+        top = molecule.to_topology()
 
         molecule.assign_partial_charges(partial_charge_method="am1-mulliken")
 

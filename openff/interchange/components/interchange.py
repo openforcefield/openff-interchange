@@ -10,7 +10,6 @@ from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
 
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import PotentialHandler
 from openff.interchange.components.smirnoff import (
     SMIRNOFF_POTENTIAL_HANDLERS,
@@ -82,8 +81,15 @@ class Interchange(DefaultModel):
         @validator("topology")
         def validate_topology(cls, value):
             if isinstance(value, Topology):
-                return Topology(other=value)
-            elif isinstance(value, _OFFBioTop):
+                try:
+                    return Topology(other=value)
+                except Exception as exception:
+                    # Topology cannot roundtrip with simple molecules
+                    for molecule in value.molecules:
+                        if molecule.__class__.__name__ == "_SimpleMolecule":
+                            return value
+                    raise exception
+            elif value.__class__.__name__ == "_OFFBioTop":
                 raise ValueError("_OFFBioTop is no longer supported")
             else:
                 raise ValueError(
@@ -313,16 +319,6 @@ class Interchange(DefaultModel):
 
     def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 8):
         """Export this Interchange object to a .gro file."""
-        if self.positions is None:
-            raise MissingPositionsError(
-                "Positions are required to write a `.gro` file but found None."
-            )
-        elif np.allclose(self.positions, 0):
-            warnings.warn(
-                "Positions seem to all be zero. Result coordinate file may be non-physical.",
-                UserWarning,
-            )
-
         # TODO: Enum-style class for handling writer arg?
         if writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
@@ -434,7 +430,7 @@ class Interchange(DefaultModel):
     @classmethod
     @requires_package("foyer")
     def from_foyer(
-        cls, topology: "_OFFBioTop", force_field: "FoyerForcefield", **kwargs
+        cls, force_field: "FoyerForcefield", topology: "Topology", **kwargs
     ) -> "Interchange":
         """
         Create an Interchange object from a Foyer force field and an OpenFF topology.
@@ -447,7 +443,7 @@ class Interchange(DefaultModel):
         .. code-block:: pycon
 
             >>> from openff.interchange import Interchange
-            >>> from openff.toolkit.topology import Molecule
+            >>> from openff.toolkit.topology import Molecule, Topology
             >>> from foyer import Forcefield
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
@@ -459,12 +455,9 @@ class Interchange(DefaultModel):
 
         """
         from openff.interchange.components.foyer import get_handlers_callable
-        from openff.interchange.components.mdtraj import _store_bond_partners
 
         system = cls()
         system.topology = topology
-
-        _store_bond_partners(system.topology.mdtop)
 
         # This block is from a mega merge, unclear if it's still needed
         for name, Handler in get_handlers_callable().items():

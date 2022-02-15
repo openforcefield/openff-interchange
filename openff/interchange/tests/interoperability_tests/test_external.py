@@ -5,10 +5,9 @@ from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.units.openmm import from_openmm
 from openmm import app
-from openmm.unit import nanometer as nm
+from openmm import unit as openmm_unit
 
 from openff.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
 from openff.interchange.tests import _BaseTest, get_test_file_path
@@ -22,17 +21,14 @@ class TestFromOpenMM(_BaseTest):
 
         mol = Molecule.from_smiles("[#18]")
         tmp = Topology.from_openmm(pdbfile.topology, unique_molecules=[mol])
-        # top = _OFFBioTop(mdtop=md.Topology.from_openmm(pdbfile.topology))
-        box = pdbfile.topology.getPeriodicBoxVectors()
-        box = box.value_in_unit(nm) * unit.nanometer
 
         out = Interchange.from_smirnoff(argon_ff, tmp)
-        out.box = box
+        out.box = from_openmm(pdbfile.topology.getPeriodicBoxVectors())
         out.positions = from_openmm(pdbfile.getPositions())
 
         assert np.allclose(
             out.positions.to(unit.nanometer).magnitude,
-            pdbfile.getPositions().value_in_unit(nm),
+            pdbfile.getPositions().value_in_unit(openmm_unit.nanometer),
         )
 
         get_openmm_energies(out, hard_cutoff=True).compare(
@@ -72,21 +68,18 @@ class TestFromOpenMM(_BaseTest):
         """
         pdb_file_path = get_data_file_path("systems/packmol_boxes/" + pdb_path)
         pdbfile = app.PDBFile(pdb_file_path)
-        top = _OFFBioTop.from_openmm(
+        top = Topology.from_openmm(
             pdbfile.topology,
             unique_molecules=unique_molecules,
         )
-        # top = _OFFBioTop(mdtop=md.Topology.from_openmm(tmp.to_openmm()))
-        box = pdbfile.topology.getPeriodicBoxVectors()
-        box = box.value_in_unit(nm) * unit.nanometer
 
         out = Interchange.from_smirnoff(parsley, top)
-        out.box = box
+        out.box = from_openmm(pdbfile.topology.getPeriodicBoxVectors())
         out.positions = from_openmm(pdbfile.getPositions())
 
         assert np.allclose(
             out.positions.to(unit.nanometer).magnitude,
-            pdbfile.getPositions().value_in_unit(nm),
+            pdbfile.getPositions().value_in_unit(openmm_unit.nanometer),
         )
 
         get_openmm_energies(

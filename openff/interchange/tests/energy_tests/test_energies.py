@@ -1,6 +1,5 @@
 from copy import deepcopy
 
-import mdtraj as md
 import numpy as np
 import openmm
 import pytest
@@ -224,7 +223,6 @@ class TestEnergies(_BaseTest):
         off_topology = Topology.from_openmm(
             omm_topology, unique_molecules=unique_molecules
         )
-        off_topology.mdtop = md.Topology.from_openmm(omm_topology)
 
         off_sys = Interchange.from_smirnoff(parsley, off_topology)
 
@@ -298,7 +296,6 @@ class TestEnergies(_BaseTest):
         tip3p = ForceField(get_test_file_path("tip3p.offxml"))
         water = Molecule.from_smiles("O")
         top = Topology.from_molecules(2 * [water])
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
         pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
 

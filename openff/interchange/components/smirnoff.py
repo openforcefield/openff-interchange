@@ -61,8 +61,6 @@ if TYPE_CHECKING:
     from openff.toolkit.topology import Topology
     from openff.units.unit import Quantity
 
-    from openff.interchange.components.mdtraj import _OFFBioTop
-
     ElectrostaticsHandlerType = Union[
         ElectrostaticsHandler,
         ChargeIncrementModelHandler,
@@ -109,7 +107,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
     def store_matches(
         self,
         parameter_handler: ParameterHandler,
-        topology: Union["Topology", "_OFFBioTop"],
+        topology: "Topology",
     ) -> None:
         """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
         parameter_handler_name = getattr(parameter_handler, "_TAGNAME", None)
@@ -198,7 +196,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
     def store_matches(
         self,
         parameter_handler: ParameterHandler,
-        topology: Union["Topology", "_OFFBioTop"],
+        topology: "Topology",
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
@@ -387,7 +385,7 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
     def store_constraints(
         self,
         parameter_handlers: Any,
-        topology: "_OFFBioTop",
+        topology: "Topology",
     ) -> None:
         """Store constraints."""
         if self.slot_map:
@@ -517,7 +515,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
     def store_matches(
         self,
         parameter_handler: "ProperTorsionHandler",
-        topology: "_OFFBioTop",
+        topology: "Topology",
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
@@ -658,7 +656,9 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
         return ["smirks", "id", "k", "periodicity", "phase", "idivf"]
 
     def store_matches(
-        self, parameter_handler: "ImproperTorsionHandler", topology: "_OFFBioTop"
+        self,
+        parameter_handler: "ImproperTorsionHandler",
+        topology: "Topology",
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
@@ -1335,7 +1335,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         parameter_handler: Union[
             "ElectrostaticsHandlerType", List["ElectrostaticsHandlerType"]
         ],
-        topology: Union["Topology", "_OFFBioTop"],
+        topology: "Topology",
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
@@ -1447,7 +1447,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
     def store_matches(
         self,
         parameter_handler: ParameterHandler,
-        topology: Union["Topology", "_OFFBioTop"],
+        topology: "Topology",
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey].

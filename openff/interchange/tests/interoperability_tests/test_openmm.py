@@ -1,4 +1,3 @@
-import mdtraj as md
 import numpy as np
 import openmm
 import pytest
@@ -120,7 +119,6 @@ class TestOpenMM(_BaseTest):
         molecules = [create_ethanol()]
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-        topology.mdtop = md.Topology.from_openmm(topology.to_openmm())
 
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         openff_sys = Interchange.from_smirnoff(
@@ -373,6 +371,8 @@ class TestOpenMMVirtualSites(_BaseTest):
 
 class TestOpenMMToPDB(_BaseTest):
     def test_to_pdb(self, parsley):
+        import mdtraj as md
+
         molecule = Molecule.from_smiles("O")
         molecule.generate_conformers(n_conformers=1)
 

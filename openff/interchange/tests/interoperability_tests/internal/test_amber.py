@@ -1,4 +1,3 @@
-import mdtraj as md
 import numpy as np
 import parmed as pmd
 import pytest
@@ -58,7 +57,6 @@ class TestAmber(_BaseTest):
         mol = Molecule.from_smiles(smiles)
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
 
         force_field = sage if constrained else sage_unconstrained
 

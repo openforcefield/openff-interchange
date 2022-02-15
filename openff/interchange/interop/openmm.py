@@ -696,14 +696,11 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
                 )
 
     if topology is not None:
-        import mdtraj as md
+        from openff.interchange.components.toolkit import _simple_topology_from_openmm
 
-        from openff.interchange.components.mdtraj import _OFFBioTop
+        openff_topology = _simple_topology_from_openmm(topology)
 
-        mdtop = md.Topology.from_openmm(topology)
-        top = _OFFBioTop(mdtop=mdtop)
-
-        openff_sys.topology = top
+        openff_sys.topology = openff_topology
 
     if positions is not None:
         openff_sys.positions = positions
@@ -842,14 +839,7 @@ def _to_pdb(file_path: Union[Path, str], topology: Topology, positions):
     from openff.units.openmm import to_openmm
     from openmm import app
 
-    if topology.n_topology_atoms == 0:
-        # Assume this "topology" is an _OFFBioTop with an MDTraj Topology
-        from openff.interchange.components.mdtraj import _OFFBioTop
-
-        assert isinstance(topology, _OFFBioTop), "Topology is not an _OFFBioTop"
-        openmm_topology = topology.mdtop.to_openmm()
-    else:
-        openmm_topology = topology.to_openmm(ensure_unique_atom_names=False)
+    openmm_topology = topology.to_openmm(ensure_unique_atom_names=False)
 
     positions = to_openmm(positions)
 

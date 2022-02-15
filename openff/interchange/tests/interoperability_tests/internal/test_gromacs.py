@@ -1,6 +1,5 @@
 from math import exp
 
-import mdtraj as md
 import numpy as np
 import openmm
 import pytest
@@ -12,7 +11,6 @@ from openmm import unit as openmm_unit
 from pkg_resources import resource_filename
 
 from openff.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.nonbonded import BuckinghamvdWHandler
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
@@ -76,14 +74,12 @@ class TestGROMACSGROFile(_BaseTest):
         n_decimals = len(str(internal_coords[0, 0]).split(".")[1])
         assert n_decimals == 12
 
-    @pytest.mark.skip(reason="Revisit after OFFTK 0.11.0")
     @pytest.mark.slow()
     def test_residue_names_in_gro_file(self, parsley):
         """Test that residue names > 5 characters don't break .gro file output"""
         benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
         benzene.name = "supercalifragilisticexpialidocious"
-        top = _OFFBioTop.from_molecules(benzene)
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        top = Topology.from_molecules(benzene)
 
         # Populate an entire interchange because ...
         out = Interchange.from_smirnoff(parsley, top)
@@ -114,7 +110,7 @@ class TestGROMACS(_BaseTest):
     )
     def test_simple_roundtrip(self, parsley, smiles, reader):
         molecule = Molecule.from_smiles(smiles)
-        molecule.name = molecule.to_hill_formula(molecule)
+        molecule.name = molecule.to_hill_formula()
         molecule.generate_conformers(n_conformers=1)
         topology = molecule.to_topology()
 
@@ -149,6 +145,7 @@ class TestGROMACS(_BaseTest):
     def test_num_impropers(self, parsley):
         top = Molecule.from_smiles("CC1=CC=CC=C1").to_topology()
         out = Interchange.from_smirnoff(parsley, top)
+        out.box = unit.Quantity(4 * np.eye(3), units=unit.nanometer)
         out.to_top("tmp.top")
 
         # Sanity check; toluene should have some improper(s)
@@ -199,11 +196,7 @@ class TestGROMACS(_BaseTest):
         """Test that residue names > 5 characters don't break .gro file output"""
         benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
         benzene.name = "supercalifragilisticexpialidocious"
-        top = _OFFBioTop.from_molecules(
-            mdtop=md.Topology.from_openmm(benzene.to_topology().to_openmm()),
-            molecules=[benzene],
-        )
-        top.mdtop = md.Topology.from_openmm(top.to_openmm())
+        top = Topology.from_molecules(molecules=[benzene])
 
         # Populate an entire interchange because ...
         force_field = ForceField("openff-1.0.0.offxml")
