@@ -8,16 +8,17 @@ import numpy as np
 from openff.units import unit
 
 from openff.interchange.components.toolkit import _get_num_h_bonds
+from openff.interchange.exceptions import UnsupportedExportError
 
 if TYPE_CHECKING:
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
     from openff.interchange.models import PotentialKey
 
 
 AMBER_COULOMBS_CONSTANT = 18.2223
 kcal_mol = unit.kilocalorie / unit.mol
-kcal_mol_a2 = kcal_mol / unit.angstrom ** 2
-kcal_mol_rad2 = kcal_mol / unit.radian ** 2
+kcal_mol_a2 = kcal_mol / unit.angstrom**2
+kcal_mol_rad2 = kcal_mol / unit.radian**2
 
 
 def _write_text_blob(file, blob):
@@ -59,7 +60,8 @@ def _get_exclusion_lists(topology):
             tmp.append(0)
 
         number_excluded_atoms.append(len(tmp))
-        [excluded_atoms_list.append(_) for _ in tmp]
+        for _ in tmp:
+            excluded_atoms_list.append(_)
 
     return number_excluded_atoms, excluded_atoms_list
 
@@ -77,6 +79,12 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
     if interchange["vdW"].mixing_rule != "lorentz-berthelot":
         raise Exception
+
+    if interchange.box is None:
+        if interchange["Electrostatics"].method.lower() == "pme":
+            raise UnsupportedExportError(
+                "Electrostatics method PME is not valid for a non-periodic system. "
+            )
 
     with open(path, "w") as prmtop:
         import datetime
@@ -400,7 +408,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG MASS\n" "%FORMAT(5E16.8)\n")
-        masses = [a.mass for a in interchange.topology.atoms]
+        masses = [a.mass.m for a in interchange.topology.atoms]
         text_blob = "".join([f"{val:16.8E}" for val in masses])
         _write_text_blob(prmtop, text_blob)
 
@@ -448,8 +456,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
                 sigma = (sigma_i + sigma_j) * 0.5
                 epsilon = (epsilon_i * epsilon_j) ** 0.5
 
-                acoef = (4 * epsilon * sigma ** 12).m_as(kcal_mol * unit.angstrom ** 12)
-                bcoef = (4 * epsilon * sigma ** 6).m_as(kcal_mol * unit.angstrom ** 6)
+                acoef = (4 * epsilon * sigma**12).m_as(kcal_mol * unit.angstrom**12)
+                bcoef = (4 * epsilon * sigma**6).m_as(kcal_mol * unit.angstrom**6)
 
                 acoefs[coeff_index - 1] = acoef
                 bcoefs[coeff_index - 1] = bcoef
@@ -641,7 +649,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             prmtop.write("%FLAG BOX_DIMENSIONS\n" "%FORMAT(5E16.8)\n")
             box = [90.0]
             for i in range(3):
-                box.append(interchange.box[i, i].m_as(unit.angstrom))
+                box.append(interchange.box[i, i].m_as(unit.angstrom))  # type: ignore
             text_blob = "".join([f"{val:16.8E}" for val in box])
             _write_text_blob(prmtop, text_blob)
 
@@ -684,14 +692,15 @@ def to_inpcrd(interchange: "Interchange", file_path: Union[Path, str]):
         for line in textwrap.wrap(blob, width=72, drop_whitespace=False):
             inpcrd.write(line + "\n")
 
-        box = interchange.box.to(unit.angstrom).magnitude
-        if (box == np.diag(np.diagonal(box))).all():
-            for i in range(3):
-                inpcrd.write(f"{box[i, i]:12.7f}")
-            for _ in range(3):
-                inpcrd.write("  90.0000000")
-        else:
-            # TODO: Handle non-rectangular
-            raise NotImplementedError
+        if interchange.box is not None:
+            box = interchange.box.to(unit.angstrom).magnitude
+            if (box == np.diag(np.diagonal(box))).all():
+                for i in range(3):
+                    inpcrd.write(f"{box[i, i]:12.7f}")
+                for _ in range(3):
+                    inpcrd.write("  90.0000000")
+            else:
+                # TODO: Handle non-rectangular
+                raise NotImplementedError
 
         inpcrd.write("\n")

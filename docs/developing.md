@@ -74,9 +74,9 @@ Dependencies for building the documentation can be found in `docs/environment.ym
 
 ```shell
 # Create the environment
-conda env create -n interchange-docs -f docs/environment.yml
+conda env create --file devtools/conda-envs/docs_env.yaml
 # Prepare the current shell session
-conda activate -n interchange-docs
+conda activate interchange-docs
 cd docs
 # Build the docs
 make html

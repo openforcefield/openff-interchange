@@ -74,7 +74,7 @@ class TopologyKey(DefaultModel):
         "between multiple parameters(s), the bond order determining the coefficients of the wrapped potentials.",
     )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.atom_indices, self.mult, self.bond_order))
 
 
@@ -89,7 +89,7 @@ class VirtualSiteKey(DefaultModel):
         description="The `match` attribute of the associated virtual site type"
     )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.atom_indices, self.type, self.match))
 
 
@@ -146,5 +146,5 @@ class PotentialKey(DefaultModel):
         "the bond order determining the coefficients of the wrapped potentials.",
     )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.id, self.mult, self.associated_handler, self.bond_order))

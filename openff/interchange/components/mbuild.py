@@ -16,7 +16,7 @@ def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
 
     Examples
     --------
-    .. code-block:: pycon
+    .. code-block:: python
 
         >>> from openff.toolkit.topology import Molecule
         >>> from openff.interchange.components.mbuild import offmol_to_compound
@@ -36,7 +36,7 @@ def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
     comp.name = off_mol.name
 
     for a in off_mol.atoms:
-        atom_comp = mb.Particle(name=a.element.symbol)
+        atom_comp = mb.Particle(name=a.symbol)
         comp.add(atom_comp, label=a.name)
 
     for b in off_mol.bonds:
@@ -54,7 +54,7 @@ def offtop_to_compound(off_top: "Topology") -> "mb.Compound":
 
     Examples
     --------
-    .. code-block:: pycon
+    .. code-block:: python
 
         >>> from openff.toolkit.topology import Molecule, Topology
         >>> from openff.interchange.components.mbuild import offtop_to_compound

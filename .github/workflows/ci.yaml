@@ -3,12 +3,10 @@ name: full_tests
 on:
   push:
     branches:
-      - master
-      - topology-refactor
+      - main
   pull_request:
     branches:
-      - master
-      - topology-refactor
+      - main
 
 defaults:
   run:
@@ -31,7 +29,7 @@ jobs:
 
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "${{ matrix.python-version }}"
         environment-file: devtools/conda-envs/test_env.yaml
         activate-environment: test
         auto-activate-base: false
@@ -68,7 +66,8 @@ jobs:
 
     - name: Run docexamples
       run: |
-        pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/energy_tests --ignore=openff/interchange/unit_tests --ignore=openff/interchange/data --ignore=openff/interchange/interoperability_tests
+        # TODO: Add back /interchange.py when `TypedMolecule` is implemented
+        pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/tests --ignore=openff/interchange/components/interchange.py
 
     - name: Run all tests
       if: always()
@@ -77,7 +76,7 @@ jobs:
 
     - name: Run example notebooks
       run: |
-        python -m pytest $COV examples/ --nbval-lax -p no:randomly --ignore=examples/packed_box.ipynb
+        python -m pytest $COV examples/ --nbval-lax -p no:randomly --ignore=examples/packed_box.ipynb --ignore=examples/foyer-showcase/
 
     - name: Codecov
       uses: codecov/codecov-action@v2.1.0

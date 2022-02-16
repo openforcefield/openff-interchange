@@ -3,7 +3,7 @@
 mkdir src
 cd src
 
-git clone https://github.com/openforcefield/openff-system.git
-cd openff-system
+git clone https://github.com/openforcefield/openff-interchange.git
+cd openff-interchange
 python -m pip install .
 cd ..

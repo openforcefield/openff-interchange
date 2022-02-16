@@ -3,7 +3,6 @@ from abc import abstractmethod
 from copy import copy
 from typing import TYPE_CHECKING, Dict, Type
 
-from foyer.topology_graph import TopologyGraph
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from parmed import periodic_table
@@ -21,6 +20,7 @@ POTENTIAL_KEY_SEPARATOR = "-"
 
 
 if has_package("foyer"):
+    from foyer.topology_graph import TopologyGraph
 
     class _TopologyGraph(TopologyGraph):
         """Shim to get TopologyGraph.from_openff_topology working with the Topology refactor."""
@@ -39,10 +39,8 @@ if has_package("foyer"):
                 )
 
             for bond in openff_topology.bonds:
-                atoms_indices = [
-                    openff_topology.atom_index(atom) for atom in bond.atoms
-                ]
-                top_graph.add_bond(*atoms_indices)
+                atom_indices = [openff_topology.atom_index(atom) for atom in bond.atoms]
+                top_graph.add_bond(*atom_indices)
 
             return top_graph
 
@@ -87,7 +85,7 @@ class FoyerVDWHandler(PotentialHandler):
     expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     mixing_rule: str = "geometric"
     scale_13: float = 0.0
-    scale_14: float = 0.5  # TODO: Replace with Foyer API point?
+    scale_14: float = 0.5
     scale_15: float = 1.0
     method: str = "cutoff"
     cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
@@ -101,6 +99,7 @@ class FoyerVDWHandler(PotentialHandler):
         from foyer.atomtyper import find_atomtypes
 
         top_graph = _topology_graph_from_openff_topology(topology=topology)
+
         type_map = find_atomtypes(top_graph, forcefield=force_field)
         for key, val in type_map.items():
             top_key = TopologyKey(atom_indices=(key,))
@@ -130,7 +129,7 @@ class FoyerElectrostaticsHandler(PotentialHandler):
     expression: str = "coul"
     charges: Dict[TopologyKey, float] = dict()
     scale_13: float = 0.0
-    scale_14: float = 0.5  # TODO: Replace with Foyer API point?
+    scale_14: float = 0.5
     scale_15: float = 1.0
     cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
 
@@ -150,6 +149,8 @@ class FoyerElectrostaticsHandler(PotentialHandler):
             charge = foyer_params["charge"]
             charge = charge * unit.elementary_charge
             self.charges[top_key] = charge
+            self.slot_map[top_key] = pot_key
+            self.potentials[pot_key] = Potential(parameters={"charge": charge})
 
 
 class FoyerConnectedAtomsHandler(PotentialHandler):
@@ -169,12 +170,11 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
                 atoms_iterable = connection.atoms
             except AttributeError:
                 atoms_iterable = connection
-            atoms_indices = tuple(topology.atom_index(atom) for atom in atoms_iterable)
+            atom_indices = tuple(topology.atom_index(atom) for atom in atoms_iterable)
 
-            top_key = TopologyKey(atom_indices=atoms_indices)
-
+            top_key = TopologyKey(atom_indices=atom_indices)
             pot_key_ids = tuple(
-                _get_potential_key_id(atom_slots, idx) for idx in atoms_indices
+                _get_potential_key_id(atom_slots, idx) for idx in atom_indices
             )
 
             self.slot_map[top_key] = PotentialKey(
@@ -185,7 +185,7 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
         """Populate self.potentials with key-val pairs of [PotentialKey, Potential]."""
         from foyer.exceptions import MissingForceError, MissingParametersError
 
-        for _, pot_key in self.slot_map.items():
+        for pot_key in self.slot_map.values():
             try:
                 params = force_field.get_parameters(
                     self.type, key=pot_key.id.split(POTENTIAL_KEY_SEPARATOR)
@@ -220,8 +220,29 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
         """Get the parameters of this handler, tagged with units."""
         return _copy_params(
             params,
-            param_units={"k": unit.kJ / unit.mol / unit.nm ** 2, "length": unit.nm},
+            param_units={"k": unit.kJ / unit.mol / unit.nm**2, "length": unit.nm},
         )
+
+    def store_matches(
+        self,
+        atom_slots: Dict[TopologyKey, PotentialKey],
+        topology: "Topology",
+    ) -> None:
+        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        for bond in topology.bonds:
+            atom_indices = (
+                topology.atom_index(bond.atom1),
+                topology.atom_index(bond.atom2),
+            )
+            top_key = TopologyKey(atom_indices=atom_indices)
+
+            pot_key_ids = tuple(
+                _get_potential_key_id(atom_slots, idx) for idx in atom_indices
+            )
+
+            self.slot_map[top_key] = PotentialKey(
+                id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids)
+            )
 
 
 class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
@@ -236,10 +257,28 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
         return _copy_params(
             {"k": params["k"], "angle": params["theta"]},
             param_units={
-                "k": unit.kJ / unit.mol / unit.radian ** 2,
+                "k": unit.kJ / unit.mol / unit.radian**2,
                 "angle": unit.dimensionless,
             },
         )
+
+    def store_matches(
+        self,
+        atom_slots: Dict[TopologyKey, PotentialKey],
+        topology: "Topology",
+    ) -> None:
+        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        for angle in topology.angles:
+            atom_indices = tuple(topology.atom_index(atom) for atom in angle)
+            top_key = TopologyKey(atom_indices=atom_indices)
+
+            pot_key_ids = tuple(
+                _get_potential_key_id(atom_slots, idx) for idx in atom_indices
+            )
+
+            self.slot_map[top_key] = PotentialKey(
+                id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids)
+            )
 
 
 class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
@@ -259,6 +298,24 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
         rb_params = {k.upper(): v for k, v in params.items()}
         param_units = {k: unit.kJ / unit.mol for k in rb_params}
         return _copy_params(rb_params, param_units=param_units)
+
+    def store_matches(
+        self,
+        atom_slots: Dict[TopologyKey, PotentialKey],
+        topology: "Topology",
+    ) -> None:
+        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        for proper in topology.propers:
+            atom_indices = tuple(topology.atom_index(atom) for atom in proper)
+            top_key = TopologyKey(atom_indices=atom_indices)
+
+            pot_key_ids = tuple(
+                _get_potential_key_id(atom_slots, idx) for idx in atom_indices
+            )
+
+            self.slot_map[top_key] = PotentialKey(
+                id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids)
+            )
 
 
 class FoyerRBImproperHandler(FoyerRBProperHandler):
@@ -281,7 +338,7 @@ class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler):
         return _copy_params(
             params,
             param_units={
-                "k": unit.kJ / unit.mol / unit.nm ** 2,
+                "k": unit.kJ / unit.mol / unit.nm**2,
                 "phase": unit.dimensionless,
                 "periodicity": unit.dimensionless,
             },
@@ -325,7 +382,7 @@ def _topology_graph_from_openff_topology(
         )
 
         for bond in topology.bonds:
-            atoms_indices = [topology.atom_index(atom) for atom in bond.atoms]
-            topology_graph.add_bond(*atoms_indices)
+            atom_indices = [topology.atom_index(atom) for atom in bond.atoms]
+            topology_graph.add_bond(*atom_indices)
 
     return topology_graph
