@@ -51,5 +51,4 @@ dependencies:
   - pandas-stubs
   # Temporary
   - pip:
-    - git+https://github.com/openforcefield/openff-toolkit.git@typed-molecule
-    - git+https://github.com/openforcefield/openff-units.git@element-module
+    - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
