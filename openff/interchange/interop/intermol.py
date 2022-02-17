@@ -8,7 +8,7 @@ from intermol.forces import (
     convert_dihedral_from_trig_to_proper,
 )
 from intermol.system import System
-from openff.toolkit.topology.mm_molecule import _SimpleMolecule
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.topology.topology import Topology
 from openff.units import unit
 from openff.units.openmm import from_openmm

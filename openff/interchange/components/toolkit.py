@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Dict, Union
 import networkx as nx
 import numpy as np
 from openff.toolkit.topology import Topology
-from openff.toolkit.topology.mm_molecule import _SimpleMolecule
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
 if TYPE_CHECKING:
     from openff.toolkit.topology import Molecule
