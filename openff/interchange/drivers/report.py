@@ -32,6 +32,11 @@ class EnergyReport(DefaultModel):
                 v[key] = FloatQuantity.validate_type(val)
         return v
 
+    @property
+    def total_energy(self):
+        """Return the total energy."""
+        return self["total"]
+
     def __getitem__(self, item: str) -> Optional[FloatQuantity]:
         if type(item) != str:
             raise LookupError(
