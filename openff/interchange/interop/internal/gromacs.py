@@ -6,7 +6,7 @@ from typing import IO, TYPE_CHECKING, Callable, Dict, Set, Tuple, Union
 
 import numpy as np
 from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.topology.mm_molecule import _SimpleMolecule
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.units import unit
 
 from openff.interchange.components.base import (
