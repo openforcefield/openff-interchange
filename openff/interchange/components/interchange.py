@@ -240,7 +240,7 @@ class Interchange(DefaultModel):
                 if allowed_type in parameter_handlers_by_type
             ]
 
-            handler_name = potential_handler_type().type
+            handler_name = potential_handler_type.__fields__["type"].default
             time_start = time.time()
 
             if len(parameter_handlers) == 0:
