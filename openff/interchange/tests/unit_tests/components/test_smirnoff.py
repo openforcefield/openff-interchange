@@ -390,6 +390,19 @@ class TestConstraints(_BaseTest):
 
         assert len(constraints.slot_map) == n_constraints
 
+    def test_constraints_with_distance(self, tip3p_xml):
+        tip3p = ForceField(tip3p_xml)
+
+        topology = Molecule.from_smiles("O").to_topology()
+        topology.box_vectors = [4, 4, 4] * unit.nanometer
+
+        constraints = SMIRNOFFConstraintHandler._from_toolkit(
+            parameter_handler=tip3p["Constraints"], topology=topology
+        )
+
+        assert len(constraints.slot_map) == 3
+        assert len(constraints.constraints) == 2
+
 
 # TODO: Remove xfail after openff-toolkit 0.10.0
 @pytest.mark.xfail()

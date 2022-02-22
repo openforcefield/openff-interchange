@@ -113,6 +113,62 @@ class _BaseTest:
         return Topology.from_molecules([mainchain_ala, mainchain_arg])
 
     @pytest.fixture()
+    def tip3p_xml(self):
+        # Modified (added Electrostatics tag) from below link
+        # https://github.com/openforcefield/openff-toolkit/blob/0.10.2/openff/toolkit/data/test_forcefields/tip3p.offxml
+        return """<?xml version="1.0" encoding='ASCII'?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Constraints version="0.3">
+    <Constraint smirks="[#1:1]-[*:2]" id="c1"></Constraint>
+    <Constraint smirks="[#1:1]-[#8X2H2+0:2]-[#1]"
+        id="c-tip3p-H-O" distance="0.9572 * angstrom"></Constraint>
+    <Constraint smirks="[#1:1]-[#8X2H2+0]-[#1:2]"
+        id="c-tip3p-H-O-H" distance="1.5139006545247014*angstrom"></Constraint>
+  </Constraints>
+  <vdW
+    version="0.3"
+    potential="Lennard-Jones-12-6"
+    combining_rules="Lorentz-Berthelot"
+    scale12="0.0"
+    scale13="0.0"
+    scale14="0.5"
+    scale15="1"
+    switch_width="1.0*angstroms"
+    cutoff="9.0*angstroms" method="cutoff"
+  >
+    <Atom
+      smirks="[#1]-[#8X2H2+0:1]-[#1]"
+      id="n1"
+      sigma="0.31507524065751241*nanometers"
+      epsilon="0.635968*kilojoules_per_mole"
+    />
+    <Atom
+      smirks="[#1:1]-[#8X2H2+0]-[#1]"
+      id="n2"
+      sigma="1*nanometers"
+      epsilon="0*kilojoules_per_mole" />
+  </vdW>
+  <Electrostatics
+    version="0.3"
+    method="PME"
+    scale12="0.0"
+    scale13="0.0"
+    scale14="0.833333"
+    scale15="1.0"
+    switch_width="0.0*angstrom"
+    cutoff="9.0*angstrom"
+  ></Electrostatics>
+  <LibraryCharges version="0.3">
+    <LibraryCharge
+        name="TIP3P"
+        smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+        charge1="0.417*elementary_charge"
+        charge2="-0.834*elementary_charge"
+        charge3="0.417*elementary_charge"/>
+  </LibraryCharges>
+</SMIRNOFF>"""
+
+    @pytest.fixture()
     def tip3p_missing_electrostatics_xml(self):
         # Stripped from below, follow link for details
         # https://github.com/openforcefield/openff-toolkit/blob/0.10.2/openff/toolkit/data/test_forcefields/tip3p.offxml
