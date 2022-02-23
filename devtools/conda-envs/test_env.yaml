@@ -15,7 +15,7 @@ dependencies:
   - openff-utilities
   - openff-units >=0.1.5
   # Optional features
-  - jax
+  # jax
   - unyt
   - mbuild
   - foyer >=0.8.1
