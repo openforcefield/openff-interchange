@@ -46,3 +46,5 @@ dependencies:
   - types-setuptools
   - types-pkg_resources
   - pandas-stubs
+  - pip:
+    - jax
