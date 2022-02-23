@@ -25,7 +25,7 @@ dependencies:
   - openff-evaluator
   - openff-recharge
   - openeye-toolkits
-  - pytest
+  - pytest <7.0.0
   - codecov
   - pytest-cov
   - pytest-xdist
