@@ -250,6 +250,24 @@ class TestOpenMM(_BaseTest):
         assert isinstance(partial_charges, list)
         assert np.allclose(partial_charges, np.zeros(4))  # .magnitude
 
+    def test_openmm_no_angle_force_if_constrained(self):
+        # Sage includes angle parameters for water and also TIP3P constraints
+        tip3p = ForceField("openff-2.0.0.offxml")
+
+        topology = Molecule.from_smiles("O").to_topology()
+        topology.box_vectors = [4, 4, 4] * unit.nanometer
+
+        interchange = Interchange.from_smirnoff(tip3p, topology)
+        openmm_system = interchange.to_openmm(combine_nonbonded_forces=True)
+
+        # The only angle in the system (H-O-H) includes bonds with constrained lengths
+        # and a constrained angle, so by convention a force should NOT be added
+        for force in openmm_system.getForces():
+            if type(force) == openmm.HarmonicAngleForce:
+                assert force.getNumAngles() == 0
+        else:
+            raise Exception("No HarmonicAngleForce found")
+
 
 @pytest.mark.slow()
 class TestOpenMMVirtualSites(_BaseTest):
