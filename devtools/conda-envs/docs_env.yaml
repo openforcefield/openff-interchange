@@ -13,8 +13,8 @@ dependencies:
   - openff-units >=0.1.5
   - openff-utilities
   - openmm
-  - jax <0.3.0
-  - jaxlib <0.3.0
+  - jax =0.2.26
+  - jaxlib =0.1.75
   - ele
   - intermol
   - pytest
