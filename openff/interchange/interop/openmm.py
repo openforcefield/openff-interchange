@@ -67,11 +67,11 @@ def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.Syst
     _process_nonbonded_forces(
         openff_sys, openmm_sys, combine_nonbonded_forces=combine_nonbonded_forces
     )
+    _process_constraints(openff_sys, openmm_sys)
     _process_torsion_forces(openff_sys, openmm_sys)
     _process_improper_torsion_forces(openff_sys, openmm_sys)
     _process_angle_forces(openff_sys, openmm_sys)
     _process_bond_forces(openff_sys, openmm_sys)
-    _process_constraints(openff_sys, openmm_sys)
     _process_virtual_sites(openff_sys, openmm_sys)
 
     return openmm_sys
@@ -92,6 +92,7 @@ def _process_constraints(openff_sys, openmm_sys):
         distance = params["distance"]
         distance_omm = distance.m_as(off_unit.nanometer)
 
+        openff_sys.topology.add_constraint(indices[0], indices[1])
         openmm_sys.addConstraint(indices[0], indices[1], distance_omm)
 
 
@@ -114,8 +115,9 @@ def _process_bond_forces(openff_sys, openmm_sys):
         has_constraint_handler = False
 
     for top_key, pot_key in bond_handler.slot_map.items():
+        # TODO: is topology.is_constrained faster/more reliable for this?
         if has_constraint_handler:
-            # If this bond show up in the constraints ...
+            # If this bond shows up in the constraints ...
             if top_key in constraint_handler.slot_map:
                 # ... don't add it as an interacting bond
                 continue
@@ -146,8 +148,21 @@ def _process_angle_forces(openff_sys, openmm_sys):
     except KeyError:
         return
 
+    has_constraint_handler = "Constraints" in openff_sys.handlers
+
     for top_key, pot_key in angle_handler.slot_map.items():
+
         indices = top_key.atom_indices
+
+        if has_constraint_handler:
+            if openff_sys.topology.is_constrained(indices[0], indices[2]):
+                if openff_sys.topology.is_constrained(indices[0], indices[1]) and (
+                    openff_sys.topology.is_constrained(indices[1], indices[2])
+                ):
+                    # This angle's geometry is fully subject to constraints, so do
+                    # not an angle force
+                    continue
+
         params = angle_handler.potentials[pot_key].parameters
         k = params["k"].m_as(off_unit.kilojoule / off_unit.rad / off_unit.mol)
         angle = params["angle"].m_as(off_unit.radian)

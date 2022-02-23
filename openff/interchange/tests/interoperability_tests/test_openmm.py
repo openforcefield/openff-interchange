@@ -265,6 +265,7 @@ class TestOpenMM(_BaseTest):
         for force in openmm_system.getForces():
             if type(force) == openmm.HarmonicAngleForce:
                 assert force.getNumAngles() == 0
+                break
         else:
             raise Exception("No HarmonicAngleForce found")
 
