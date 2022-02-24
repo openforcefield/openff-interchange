@@ -38,7 +38,7 @@ dependencies:
   - conda
   # Drivers
   - gromacs >=2021
-  - lammps
+  - lammps >=2021
   - panedr
   # Typing
   - mypy
