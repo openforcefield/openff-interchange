@@ -32,7 +32,11 @@ kj_nm = kj_mol / unit.nanometer**2
 kj_rad = kj_mol / unit.radian**2
 
 
-def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.System:
+def to_openmm(
+    openff_sys,
+    combine_nonbonded_forces: bool = False,
+    add_constrained_forces: bool = False,
+) -> openmm.System:
     """
     Convert an Interchange to an OpenmM System.
 
@@ -43,6 +47,9 @@ def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.Syst
     combine_nonbonded_forces : bool, default=False
         If True, an attempt will be made to combine all non-bonded interactions into a single openmm.NonbondedForce.
         If False, non-bonded interactions will be split across multiple forces.
+    add_constrained_forces : bool, default=False,
+        If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
+        on a bond or angle that is fully constrained.
 
     Returns
     -------
@@ -70,8 +77,12 @@ def to_openmm(openff_sys, combine_nonbonded_forces: bool = False) -> openmm.Syst
     _process_constraints(openff_sys, openmm_sys)
     _process_torsion_forces(openff_sys, openmm_sys)
     _process_improper_torsion_forces(openff_sys, openmm_sys)
-    _process_angle_forces(openff_sys, openmm_sys)
-    _process_bond_forces(openff_sys, openmm_sys)
+    _process_angle_forces(
+        openff_sys, openmm_sys, add_constrained_forces=add_constrained_forces
+    )
+    _process_bond_forces(
+        openff_sys, openmm_sys, add_constrained_forces=add_constrained_forces
+    )
     _process_virtual_sites(openff_sys, openmm_sys)
 
     return openmm_sys
@@ -96,7 +107,7 @@ def _process_constraints(openff_sys, openmm_sys):
         openmm_sys.addConstraint(indices[0], indices[1], distance_omm)
 
 
-def _process_bond_forces(openff_sys, openmm_sys):
+def _process_bond_forces(openff_sys, openmm_sys, add_constrained_forces: bool):
     """
     Process the Bonds section of an Interchange object.
     """
@@ -116,7 +127,7 @@ def _process_bond_forces(openff_sys, openmm_sys):
 
     for top_key, pot_key in bond_handler.slot_map.items():
         # TODO: is topology.is_constrained faster/more reliable for this?
-        if has_constraint_handler:
+        if has_constraint_handler and not add_constrained_forces:
             # If this bond shows up in the constraints ...
             if top_key in constraint_handler.slot_map:
                 # ... don't add it as an interacting bond
@@ -136,7 +147,7 @@ def _process_bond_forces(openff_sys, openmm_sys):
         )
 
 
-def _process_angle_forces(openff_sys, openmm_sys):
+def _process_angle_forces(openff_sys, openmm_sys, add_constrained_forces: bool):
     """
     Process the Angles section of an Interchange object.
     """
@@ -154,7 +165,7 @@ def _process_angle_forces(openff_sys, openmm_sys):
 
         indices = top_key.atom_indices
 
-        if has_constraint_handler:
+        if has_constraint_handler and not add_constrained_forces:
             if openff_sys.topology.is_constrained(indices[0], indices[2]):
                 if openff_sys.topology.is_constrained(indices[0], indices[1]) and (
                     openff_sys.topology.is_constrained(indices[1], indices[2])
