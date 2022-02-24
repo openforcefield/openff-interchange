@@ -1,6 +1,6 @@
 """Interfaces with OpenMM."""
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, List, Tuple, Union
 
 import numpy as np
 import openmm
@@ -74,14 +74,20 @@ def to_openmm(
     _process_nonbonded_forces(
         openff_sys, openmm_sys, combine_nonbonded_forces=combine_nonbonded_forces
     )
-    _process_constraints(openff_sys, openmm_sys)
+    constrained_pairs = _process_constraints(openff_sys, openmm_sys)
     _process_torsion_forces(openff_sys, openmm_sys)
     _process_improper_torsion_forces(openff_sys, openmm_sys)
     _process_angle_forces(
-        openff_sys, openmm_sys, add_constrained_forces=add_constrained_forces
+        openff_sys,
+        openmm_sys,
+        add_constrained_forces=add_constrained_forces,
+        constrained_pairs=constrained_pairs,
     )
     _process_bond_forces(
-        openff_sys, openmm_sys, add_constrained_forces=add_constrained_forces
+        openff_sys,
+        openmm_sys,
+        add_constrained_forces=add_constrained_forces,
+        constrained_pairs=constrained_pairs,
     )
     _process_virtual_sites(openff_sys, openmm_sys)
 
@@ -97,17 +103,26 @@ def _process_constraints(openff_sys, openmm_sys):
     except KeyError:
         return
 
+    constrained_pairs = list()
+
     for top_key, pot_key in constraint_handler.slot_map.items():
         indices = top_key.atom_indices
         params = constraint_handler.constraints[pot_key].parameters
         distance = params["distance"]
         distance_omm = distance.m_as(off_unit.nanometer)
 
-        openff_sys.topology.add_constraint(indices[0], indices[1])
+        constrained_pairs.append(tuple(sorted(indices)))
         openmm_sys.addConstraint(indices[0], indices[1], distance_omm)
 
+    return constrained_pairs
 
-def _process_bond_forces(openff_sys, openmm_sys, add_constrained_forces: bool):
+
+def _process_bond_forces(
+    openff_sys,
+    openmm_sys,
+    add_constrained_forces: bool,
+    constrained_pairs: List[Tuple[int]],
+):
     """
     Process the Bonds section of an Interchange object.
     """
@@ -119,19 +134,17 @@ def _process_bond_forces(openff_sys, openmm_sys, add_constrained_forces: bool):
     except KeyError:
         return
 
-    try:
-        constraint_handler = openff_sys.handlers["Constraints"]
-        has_constraint_handler = True
-    except KeyError:
-        has_constraint_handler = False
+    has_constraint_handler = "Constraints" in openff_sys.handlers
 
     for top_key, pot_key in bond_handler.slot_map.items():
-        # TODO: is topology.is_constrained faster/more reliable for this?
+
+        indices = top_key.atom_indices
+
         if has_constraint_handler and not add_constrained_forces:
-            # If this bond shows up in the constraints ...
-            if top_key in constraint_handler.slot_map:
-                # ... don't add it as an interacting bond
+            if _is_constrained(constrained_pairs, (indices[0], indices[1])):
+                # This bond's length is constrained, dpo so not add a bond force
                 continue
+
         indices = top_key.atom_indices
         params = bond_handler.potentials[pot_key].parameters
         k = params["k"].m_as(
@@ -147,7 +160,9 @@ def _process_bond_forces(openff_sys, openmm_sys, add_constrained_forces: bool):
         )
 
 
-def _process_angle_forces(openff_sys, openmm_sys, add_constrained_forces: bool):
+def _process_angle_forces(
+    openff_sys, openmm_sys, add_constrained_forces: bool, constrained_pairs
+):
     """
     Process the Angles section of an Interchange object.
     """
@@ -166,13 +181,12 @@ def _process_angle_forces(openff_sys, openmm_sys, add_constrained_forces: bool):
         indices = top_key.atom_indices
 
         if has_constraint_handler and not add_constrained_forces:
-            if openff_sys.topology.is_constrained(indices[0], indices[2]):
-                if openff_sys.topology.is_constrained(indices[0], indices[1]) and (
-                    openff_sys.topology.is_constrained(indices[1], indices[2])
-                ):
-                    # This angle's geometry is fully subject to constraints, so do
-                    # not an angle force
-                    continue
+            if _is_constrained(constrained_pairs, (indices[0], indices[2])):
+                if _is_constrained(constrained_pairs, (indices[0], indices[1])):
+                    if _is_constrained(constrained_pairs, (indices[1], indices[2])):
+                        # This angle's geometry is fully subject to constraints, so do
+                        # not an angle force
+                        continue
 
         params = angle_handler.potentials[pot_key].parameters
         k = params["k"].m_as(off_unit.kilojoule / off_unit.rad / off_unit.mol)
@@ -893,3 +907,11 @@ def get_partial_charges_from_openmm_system(omm_system):
     ]
 
     return partial_charges
+
+
+def _is_constrained(constrained_pairs: List[Tuple[int]], pair: Tuple[int]) -> bool:
+    if (pair[0], pair[1]) in constrained_pairs:
+        return True
+    if (pair[1], pair[0]) in constrained_pairs:
+        return True
+    return False
