@@ -415,6 +415,7 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
                 potential_key = PotentialKey(
                     id=smirks, associated_handler="Constraints"
                 )
+                self.slot_map[topology_key] = potential_key
                 distance = match.parameter_type.distance
             else:
                 # This constraint parameter depends on the BondHandler ...
