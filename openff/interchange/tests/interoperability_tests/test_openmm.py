@@ -316,6 +316,7 @@ class TestOpenMMVirtualSites(_BaseTest):
 
         return parsley
 
+    @pytest.mark.skip(reason="virtual sites in development")
     def test_sigma_hole_example(self, parsley_with_sigma_hole):
         """Test that a single-molecule sigma hole example runs"""
         mol = Molecule.from_smiles("CCl")
@@ -356,6 +357,7 @@ class TestOpenMMVirtualSites(_BaseTest):
         assert abs(np.sum([p.charge for p in gmx_top.atoms])) < 1e-3
         """
 
+    @pytest.mark.skip(reason="virtual sites in development")
     def test_carbonyl_example(self, parsley_with_monovalent_lone_pair):
         """Test that a single-molecule DivalentLonePair example runs"""
         mol = Molecule.from_smiles("CC=O")
