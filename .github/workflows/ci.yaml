@@ -75,6 +75,7 @@ jobs:
         python -m pytest -r fE -nauto $COV openff/interchange/ -m "slow or not slow"
 
     - name: Run example notebooks
+      if: always()
       run: |
         python -m pytest $COV examples/ --nbval-lax -p no:randomly --ignore=examples/packed_box.ipynb --ignore=examples/foyer-showcase/
 

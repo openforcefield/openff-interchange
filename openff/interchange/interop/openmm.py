@@ -161,7 +161,10 @@ def _process_bond_forces(
 
 
 def _process_angle_forces(
-    openff_sys, openmm_sys, add_constrained_forces: bool, constrained_pairs
+    openff_sys,
+    openmm_sys,
+    add_constrained_forces: bool,
+    constrained_pairs: List[Tuple[int]],
 ):
     """
     Process the Angles section of an Interchange object.
@@ -909,7 +912,7 @@ def get_partial_charges_from_openmm_system(omm_system):
     return partial_charges
 
 
-def _is_constrained(constrained_pairs: List[Tuple[int]], pair: Tuple[int]) -> bool:
+def _is_constrained(constrained_pairs: List[Tuple[int]], pair: Tuple[int, int]) -> bool:
     if (pair[0], pair[1]) in constrained_pairs:
         return True
     if (pair[1], pair[0]) in constrained_pairs:
