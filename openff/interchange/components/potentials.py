@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from openff.toolkit.topology import Topology
 
     if has_package("jax"):
-        from jaxlib.xla_extension import DeviceArray
+        from jaxlib.xla_extension import DeviceArray  # type[import]
 
 
 class Potential(DefaultModel):
