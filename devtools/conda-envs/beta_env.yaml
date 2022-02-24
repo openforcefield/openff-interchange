@@ -47,4 +47,6 @@ dependencies:
   - types-pkg_resources
   - pandas-stubs
   - pip:
+    # https://github.com/conda-forge/jaxlib-feedstock/issues/89
     - jax
+    - jaxlib

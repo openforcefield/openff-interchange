@@ -51,4 +51,5 @@ dependencies:
   - pip:
     # https://github.com/conda-forge/jaxlib-feedstock/issues/89
     - jax
+    - jaxlib
     - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
