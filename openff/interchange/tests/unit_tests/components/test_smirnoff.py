@@ -330,6 +330,19 @@ class TestInterchangeFromSMIRNOFF(_BaseTest):
         assert out["vdW"].cutoff == 0.777 * unit.angstrom
         assert out["Electrostatics"].cutoff == 0.777 * unit.angstrom
 
+    def test_sage_tip3p_charges(self, tip3p_xml):
+        """Ensure tip3p charges packaged with sage are applied over AM1-BCC charges.
+        https://github.com/openforcefield/openff-toolkit/issues/1199"""
+        sage = ForceField("openff-2.0.0.offxml")
+
+        topology = Molecule.from_smiles("O").to_topology()
+        topology.box_vectors = [4, 4, 4] * unit.nanometer
+
+        out = Interchange.from_smirnoff(force_field=sage, topology=topology)
+        found_charges = [v.m for v in out["Electrostatics"].charges.values()]
+
+        assert np.allclose(found_charges, [-0.834, 0.417, 0.417])
+
 
 @pytest.mark.slow()
 class TestUnassignedParameters(_BaseTest):
