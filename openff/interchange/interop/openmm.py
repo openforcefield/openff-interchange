@@ -66,7 +66,7 @@ def to_openmm(
         openmm_sys.setDefaultPeriodicBoxVectors(*box)
 
     # Add particles with appropriate masses
-    # TODO: Add virtual particles
+    # TODO: When to add virtual particles?
     for atom in openff_sys.topology.atoms:
         # Skip unit check for speed, toolkit should report mass in Dalton
         openmm_sys.addParticle(atom.mass.m)
@@ -376,6 +376,30 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                     non_bonded_force.setUseDispersionCorrection(True)
                     non_bonded_force.setCutoffDistance(vdw_cutoff)
                     non_bonded_force.setEwaldErrorTolerance(1.0e-4)
+
+                    if getattr(vdw_handler, "switch_width", None) is None:
+                        non_bonded_force.setUseSwitchingFunction(False)
+                    else:
+                        if vdw_handler.switch_width == 0.0:
+                            non_bonded_force.setUseSwitchingFunction(False)
+                        else:
+                            switching_distance = (
+                                vdw_handler.cutoff - vdw_handler.switch_width
+                            ).m_as(off_unit.angstrom)
+
+                            if switching_distance < 0:
+                                raise UnsupportedCutoffMethodError(
+                                    "Found a `switch_width` greater than the cutoff distance. It's not clear "
+                                    "what this means and it's probably invalid. Found "
+                                    f"switch_width{vdw_handler.switch_width} and cutoff {vdw_handler.cutoff}"
+                                )
+
+                            switching_distance = unit.Quantity(
+                                switching_distance, unit.angstrom
+                            )
+
+                            non_bonded_force.setUseSwitchingFunction(True)
+                            non_bonded_force.setSwitchingDistance(switching_distance)
                 else:
                     raise UnsupportedCutoffMethodError(
                         f"Combination of non-bonded cutoff methods {vdw_cutoff} (vdW) and "
@@ -420,22 +444,24 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                     vdw_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
                 vdw_force.setUseLongRangeCorrection(True)
                 vdw_force.setCutoffDistance(vdw_cutoff)
+
                 if getattr(vdw_handler, "switch_width", None) is not None:
                     if vdw_handler.switch_width == 0.0:
                         vdw_force.setUseSwitchingFunction(False)
                     else:
                         switching_distance = (
                             vdw_handler.cutoff - vdw_handler.switch_width
-                        )
-                        if switching_distance.m < 0:
+                        ).m_as(off_unit.angstrom)
+
+                        if switching_distance < 0:
                             raise UnsupportedCutoffMethodError(
-                                "Found a 'switch_width' greater than the cutoff distance. It's not clear "
+                                "Found a `switch_width` greater than the cutoff distance. It's not clear "
                                 "what this means and it's probably invalid. Found "
                                 f"switch_width{vdw_handler.switch_width} and cutoff {vdw_handler.cutoff}"
                             )
 
-                        switching_distance = (
-                            switching_distance.m_as(off_unit.angstrom) * unit.angstrom
+                        switching_distance = unit.Quantity(
+                            switching_distance, unit.angstrom
                         )
 
                         vdw_force.setUseSwitchingFunction(True)
