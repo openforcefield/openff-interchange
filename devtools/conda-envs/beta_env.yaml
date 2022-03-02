@@ -18,7 +18,8 @@ dependencies:
   - openff-utilities
   - openff-units >=0.1.5
   # Optional features
-  - jax
+  - jax =0.2.26
+  - jaxlib =0.1.75
   - unyt
   - mbuild
   - foyer >=0.8.1
@@ -37,7 +38,7 @@ dependencies:
   - conda
   # Drivers
   - gromacs >=2021
-  - lammps
+  - lammps >=2021
   - panedr
   # Typing
   - mypy
@@ -45,3 +46,7 @@ dependencies:
   - types-setuptools
   - types-pkg_resources
   - pandas-stubs
+  - pip:
+    # https://github.com/conda-forge/jaxlib-feedstock/issues/89
+    - jax
+    - jaxlib

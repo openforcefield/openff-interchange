@@ -18,14 +18,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
         python-version: [3.8, 3.9]
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
-    - uses: actions/checkout@v2.4.0
+    - uses: actions/checkout@v3
 
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
@@ -75,6 +75,7 @@ jobs:
         python -m pytest -r fE -nauto $COV openff/interchange/ -m "slow or not slow"
 
     - name: Run example notebooks
+      if: always()
       run: |
         python -m pytest $COV examples/ --nbval-lax -p no:randomly --ignore=examples/packed_box.ipynb --ignore=examples/foyer-showcase/
 

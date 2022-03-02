@@ -13,7 +13,6 @@ dependencies:
   - openff-units >=0.1.5
   - openff-utilities
   - openmm
-  - jax
   - ele
   - intermol
   - pytest
@@ -24,5 +23,8 @@ dependencies:
   - autodoc-pydantic
   - sphinx>=4.4.0,<5
   - pip:
+    # https://github.com/conda-forge/jaxlib-feedstock/issues/89
+    - jax
+    - jaxlib
     - git+https://github.com/openforcefield/openff-sphinx-theme.git@main
     - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
