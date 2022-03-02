@@ -4,24 +4,22 @@ from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union
 
-import mdtraj as md
 import numpy as np
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
 
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import PotentialHandler
 from openff.interchange.components.smirnoff import (
     SMIRNOFF_POTENTIAL_HANDLERS,
     SMIRNOFFBondHandler,
     SMIRNOFFConstraintHandler,
 )
+from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
     InternalInconsistencyError,
     InvalidBoxError,
-    InvalidTopologyError,
     MissingParameterHandlerError,
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
@@ -64,21 +62,41 @@ class Interchange(DefaultModel):
 
         # TODO: Ensure these fields are hidden from the user as intended
         handlers: Dict[str, PotentialHandler] = dict()
-        topology: Optional[_OFFBioTop] = Field(None)
+        topology: Optional[Topology] = Field(None)
         box: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
         positions: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
+        velocities: ArrayQuantity["nanometer/picosecond"] = Field(None)  # type: ignore
 
         @validator("box")
-        def validate_box(cls, val):
-            if val is None:
-                return val
-            if val.shape == (3, 3):
-                return val
-            elif val.shape == (3,):
-                val = val * np.eye(3)
-                return val
+        def validate_box(cls, value):
+            if value is None:
+                return value
+            if value.shape == (3, 3):
+                return value
+            elif value.shape == (3,):
+                value = value * np.eye(3)
+                return value
             else:
                 raise InvalidBoxError
+
+        @validator("topology")
+        def validate_topology(cls, value):
+            if isinstance(value, Topology):
+                try:
+                    return Topology(other=value)
+                except Exception as exception:
+                    # Topology cannot roundtrip with simple molecules
+                    for molecule in value.molecules:
+                        if molecule.__class__.__name__ == "_SimpleMolecule":
+                            return value
+                    raise exception
+            elif value.__class__.__name__ == "_OFFBioTop":
+                raise ValueError("_OFFBioTop is no longer supported")
+            else:
+                raise ValueError(
+                    "Could not process topology argument, expected openff.toolkit.topology.Topology. "
+                    f"Found object of type {type(value)}."
+                )
 
     def __init__(self):
         self._inner_data = self._InnerSystem()
@@ -115,6 +133,15 @@ class Interchange(DefaultModel):
         self._inner_data.positions = value
 
     @property
+    def velocities(self):
+        """Get the velocities of all particles."""
+        return self._inner_data.velocities
+
+    @velocities.setter
+    def velocities(self, value):
+        self._inner_data.velocities = value
+
+    @property
     def box(self):
         """If periodic, an array representing the periodic boundary conditions."""
         return self._inner_data.box
@@ -141,7 +168,7 @@ class Interchange(DefaultModel):
     def from_smirnoff(
         cls,
         force_field: ForceField,
-        topology: _OFFBioTop,
+        topology: Topology,
         box=None,
     ) -> "Interchange":
         """
@@ -163,14 +190,12 @@ class Interchange(DefaultModel):
 
         .. code-block:: pycon
 
-            >>> from openff.interchange.components.interchange import Interchange
-            >>> from openff.interchange.components.mdtraj import _OFFBioTop
-            >>> from openff.toolkit.topology import Molecule
+            >>> from openff.interchange import Interchange
+            >>> from openff.toolkit.topology import Molecule, Topology
             >>> from openff.toolkit.typing.engines.smirnoff import ForceField
-            >>> import mdtraj as md
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> top = _OFFBioTop(mdtop=md.Topology.from_openmm(mol.to_topology().to_openmm()))
+            >>> top = Topology.from_molecules([mol])
             >>> parsley = ForceField("openff-1.0.0.offxml")
             >>> interchange = Interchange.from_smirnoff(topology=top, force_field=parsley)
             >>> interchange
@@ -181,20 +206,14 @@ class Interchange(DefaultModel):
 
         cls._check_supported_handlers(force_field)
 
-        if isinstance(topology, _OFFBioTop):
-            # TODO: See if Topology(topology) is fixed
-            # https://github.com/openforcefield/openff-toolkit/issues/946
-            sys_out.topology = deepcopy(topology)
-            sys_out.topology.mdtop = topology.mdtop
-        elif isinstance(topology, Topology):
-            sys_out.topology = _OFFBioTop(
-                mdtop=md.Topology.from_openmm(topology.to_openmm())
-            )
-        else:
-            raise InvalidTopologyError(
-                "Could not process topology argument, expected Topology or _OFFBioTop. "
-                f"Found object of type {type(topology)}."
-            )
+        if "Electrostatics" not in force_field.registered_parameter_handlers:
+            if _check_electrostatics_handlers(force_field):
+                raise MissingParameterHandlerError(
+                    "Force field contains parameter handler(s) that may assign/modify "
+                    "partial charges, but no ElectrostaticsHandler was found."
+                )
+
+        sys_out.topology = topology
 
         parameter_handlers_by_type = {
             force_field[parameter_handler_name].__class__: force_field[
@@ -230,7 +249,7 @@ class Interchange(DefaultModel):
                 SMIRNOFFBondHandler.check_supported_parameters(force_field["Bonds"])
                 potential_handler = SMIRNOFFBondHandler._from_toolkit(
                     parameter_handler=force_field["Bonds"],
-                    topology=topology,
+                    topology=sys_out._inner_data.topology,
                     # constraint_handler=constraint_handler,
                 )
                 sys_out.handlers.update({"Bonds": potential_handler})
@@ -247,20 +266,20 @@ class Interchange(DefaultModel):
                         for val in [bond_handler, constraint_handler]
                         if val is not None
                     ],
-                    topology=topology,
+                    topology=sys_out._inner_data.topology,
                 )
                 sys_out.handlers.update({"Constraints": constraints})
                 continue
             elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers,
-                    topology=topology,
+                    topology=sys_out._inner_data.topology,
                 )
             else:
                 potential_handler_type.check_supported_parameters(parameter_handlers[0])
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers[0],
-                    topology=topology,
+                    topology=sys_out._inner_data.topology,
                 )
             sys_out.handlers.update({potential_handler.type: potential_handler})
 
@@ -310,16 +329,6 @@ class Interchange(DefaultModel):
 
     def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 8):
         """Export this Interchange object to a .gro file."""
-        if self.positions is None:
-            raise MissingPositionsError(
-                "Positions are required to write a `.gro` file but found None."
-            )
-        elif np.allclose(self.positions, 0):
-            warnings.warn(
-                "Positions seem to all be zero. Result coordinate file may be non-physical.",
-                UserWarning,
-            )
-
         # TODO: Enum-style class for handling writer arg?
         if writer == "parmed":
             from openff.interchange.interop.external import ParmEdWrapper
@@ -431,7 +440,7 @@ class Interchange(DefaultModel):
     @classmethod
     @requires_package("foyer")
     def from_foyer(
-        cls, topology: "_OFFBioTop", force_field: "FoyerForcefield", **kwargs
+        cls, force_field: "FoyerForcefield", topology: "Topology", **kwargs
     ) -> "Interchange":
         """
         Create an Interchange object from a Foyer force field and an OpenFF topology.
@@ -443,14 +452,12 @@ class Interchange(DefaultModel):
 
         .. code-block:: pycon
 
-            >>> from openff.interchange.components.interchange import Interchange
-            >>> from openff.interchange.components.mdtraj import _OFFBioTop
-            >>> from openff.toolkit.topology import Molecule
+            >>> from openff.interchange import Interchange
+            >>> from openff.toolkit.topology import Molecule, Topology
             >>> from foyer import Forcefield
-            >>> import mdtraj as md
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> top = _OFFBioTop(mdtop=md.Topology.from_openmm(mol.to_topology().to_openmm()))
+            >>> top = Topology.from_molecules([mol])
             >>> oplsaa = Forcefield(name="oplsaa")
             >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
             >>> interchange
@@ -458,13 +465,11 @@ class Interchange(DefaultModel):
 
         """
         from openff.interchange.components.foyer import get_handlers_callable
-        from openff.interchange.components.mdtraj import _store_bond_partners
 
         system = cls()
         system.topology = topology
 
-        _store_bond_partners(system.topology.mdtop)
-
+        # This block is from a mega merge, unclear if it's still needed
         for name, Handler in get_handlers_callable().items():
             if name == "Electrostatics":
                 handler = Handler(scale_14=force_field.coulomb14scale)
@@ -611,7 +616,7 @@ class Interchange(DefaultModel):
 
     def __add__(self, other):
         """Combine two Interchange objects. This method is unstable and likely unsafe."""
-        from openff.interchange.components.mdtraj import _combine_topologies
+        from openff.interchange.components.toolkit import _combine_topologies
         from openff.interchange.models import TopologyKey
 
         warnings.warn(
@@ -625,8 +630,7 @@ class Interchange(DefaultModel):
         self_copy._inner_data = deepcopy(self._inner_data)
 
         self_copy.topology = _combine_topologies(self.topology, other.topology)
-
-        atom_offset = self.topology.mdtop.n_atoms
+        atom_offset = self.topology.n_atoms
 
         """
         for handler_name in self.handlers:
@@ -663,7 +667,14 @@ class Interchange(DefaultModel):
                 )
 
                 self_handler.slot_map.update({new_top_key: pot_key})
-                self_handler.potentials.update({pot_key: handler.potentials[pot_key]})
+                if handler_name == "Constraints":
+                    self_handler.constraints.update(
+                        {pot_key: handler.constraints[pot_key]}
+                    )
+                else:
+                    self_handler.potentials.update(
+                        {pot_key: handler.potentials[pot_key]}
+                    )
 
         if self_copy.positions is not None and other.positions is not None:
             new_positions = np.vstack([self_copy.positions, other.positions])
@@ -683,10 +694,5 @@ class Interchange(DefaultModel):
 
     def __repr__(self):
         periodic = self.box is not None
-        try:
-            n_atoms = self.topology.mdtop.n_atoms
-        except AttributeError:
-            n_atoms = "unknown number of"
-        except NameError:
-            n_atoms = self.topology.n_topology_atoms
+        n_atoms = self.topology.n_atoms
         return f"Interchange with {n_atoms} atoms, {'' if periodic else 'non-'}periodic topology"

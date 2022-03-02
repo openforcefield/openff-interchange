@@ -2,8 +2,8 @@
 from typing import TYPE_CHECKING
 
 from openff.toolkit.topology import Molecule, Topology
+from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
-from openmm import unit
 
 if has_package("mbuild") or TYPE_CHECKING:
     import mbuild as mb
@@ -36,13 +36,13 @@ def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
     comp.name = off_mol.name
 
     for a in off_mol.atoms:
-        atom_comp = mb.Particle(name=a.element.symbol)
+        atom_comp = mb.Particle(name=a.symbol)
         comp.add(atom_comp, label=a.name)
 
     for b in off_mol.bonds:
         comp.add_bond((comp[b.atom1_index], comp[b.atom2_index]))
 
-    comp.xyz = off_mol.conformers[0].value_in_unit(unit.nanometer)
+    comp.xyz = off_mol.conformers[0].m_as(unit.nanometer)
 
     return comp
 
@@ -68,13 +68,6 @@ def offtop_to_compound(off_top: "Topology") -> "mb.Compound":
         (<class 'mbuild.compound.Compound'>, 4, 28, 24)
 
     """
-    sub_comps = []
-
-    for top_mol in off_top.topology_molecules:
-        # TODO: This could have unintended consequences if the TopologyMolecule
-        # has atoms in a different order than the reference Molecule
-        this_comp = offmol_to_compound(top_mol.reference_molecule)
-        sub_comps.append(this_comp)
-
-    comp = mb.Compound(subcompounds=sub_comps)
-    return comp
+    return mb.Compound(
+        subcompounds=[offmol_to_compound(molecule) for molecule in off_top.molecules]
+    )

@@ -14,10 +14,12 @@ from openff.interchange.exceptions import (
     GMXMdrunError,
     UnsupportedExportError,
 )
-from openff.interchange.utils import get_test_file_path
+from openff.interchange.tests import get_test_file_path
 
 if TYPE_CHECKING:
-    from openff.interchange.components.interchange import Interchange
+    from openff.units.unit import Quantity
+
+    from openff.interchange import Interchange
     from openff.interchange.components.smirnoff import SMIRNOFFvdWHandler
 
 
@@ -119,7 +121,7 @@ def get_gromacs_energies(
 
     Parameters
     ----------
-    off_sys : openff.interchange.components.interchange.Interchange
+    off_sys : openff.interchange.Interchange
         An OpenFF Interchange object to compute the single-point energy of
     mdp : str, default="cutoff"
         A string key identifying the GROMACS `.mdp` file to be used. See `_get_mdp_file`.
@@ -212,7 +214,7 @@ def _run_gmx_energy(
     return report
 
 
-def _get_gmx_energy_vdw(gmx_energies: Dict) -> unit.Quantity:
+def _get_gmx_energy_vdw(gmx_energies: Dict) -> "Quantity":
     """Get the total nonbonded energy from a set of GROMACS energies."""
     gmx_vdw = 0.0 * kj_mol
     for key in ["LJ (SR)", "LJ-14", "Disper. corr.", "Buck.ham (SR)"]:
@@ -224,7 +226,7 @@ def _get_gmx_energy_vdw(gmx_energies: Dict) -> unit.Quantity:
     return gmx_vdw
 
 
-def _get_gmx_energy_coul(gmx_energies: Dict) -> unit.Quantity:
+def _get_gmx_energy_coul(gmx_energies: Dict) -> "Quantity":
     gmx_coul = 0.0 * kj_mol
     for key in ["Coulomb (SR)", "Coul. recip.", "Coulomb-14"]:
         try:
@@ -235,7 +237,7 @@ def _get_gmx_energy_coul(gmx_energies: Dict) -> unit.Quantity:
     return gmx_coul
 
 
-def _get_gmx_energy_torsion(gmx_energies: Dict) -> unit.Quantity:
+def _get_gmx_energy_torsion(gmx_energies: Dict) -> "Quantity":
     """Canonicalize torsion energies from a set of GROMACS energies."""
     gmx_torsion = 0.0 * kj_mol
     for key in ["Torsion", "Ryckaert-Bell.", "Proper Dih."]:

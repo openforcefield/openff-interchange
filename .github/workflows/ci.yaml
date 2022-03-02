@@ -3,10 +3,10 @@ name: full_tests
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 defaults:
   run:
@@ -18,14 +18,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
         python-version: [3.8, 3.9]
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
-    - uses: actions/checkout@v2.4.0
+    - uses: actions/checkout@v3
 
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
@@ -44,14 +44,14 @@ jobs:
         df -h
         ulimit -a
 
+    - name: Install package
+      run: |
+        python setup.py develop --no-deps
+
     - name: Environment Information
       run: |
         conda info
         conda list
-
-    - name: Install package
-      run: |
-        python setup.py develop --no-deps
 
     - name: License OpenEye
       run: |
@@ -66,16 +66,18 @@ jobs:
 
     - name: Run docexamples
       run: |
-        pytest -v --doctest-modules openff/interchange/ --ignore=openff/interchange/energy_tests --ignore=openff/interchange/unit_tests --ignore=openff/interchange/data --ignore=openff/interchange/interoperability_tests
+        # TODO: Add back /interchange.py when `TypedMolecule` is implemented
+        pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/tests --ignore=openff/interchange/components/interchange.py
 
     - name: Run all tests
       if: always()
       run: |
-        python -m pytest -v -nauto $COV openff/interchange/ -m "slow or not slow"
+        python -m pytest -r fE -nauto $COV openff/interchange/ -m "slow or not slow"
 
     - name: Run example notebooks
+      if: always()
       run: |
-        python -m pytest -v $COV examples/ --nbval-lax
+        python -m pytest $COV examples/ --nbval-lax -p no:randomly --ignore=examples/packed_box.ipynb --ignore=examples/foyer-showcase/
 
     - name: Codecov
       uses: codecov/codecov-action@v2.1.0

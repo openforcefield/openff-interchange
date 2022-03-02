@@ -1,7 +1,6 @@
 """Interfaces with InterMol."""
 from typing import List, Union
 
-import mdtraj as md
 from intermol.forces import (
     HarmonicAngle,
     HarmonicBond,
@@ -9,9 +8,12 @@ from intermol.forces import (
     convert_dihedral_from_trig_to_proper,
 )
 from intermol.system import System
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
+from openff.toolkit.topology.topology import Topology
 from openff.units import unit
 from openff.units.openmm import from_openmm
 
+from openff.interchange import Interchange
 from openff.interchange.components.base import (
     BaseAngleHandler,
     BaseBondHandler,
@@ -20,8 +22,6 @@ from openff.interchange.components.base import (
     BaseProperTorsionHandler,
     BasevdWHandler,
 )
-from openff.interchange.components.interchange import Interchange
-from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange.components.potentials import Potential
 from openff.interchange.models import PotentialKey, TopologyKey
 
@@ -30,12 +30,13 @@ def from_intermol_system(intermol_system: System) -> Interchange:
     """Convert and Intermol `System` to an `Interchange` object."""
     interchange = Interchange()
 
+    interchange._inner_data.topology = _topology_from_intermol(intermol_system)
     interchange.box = intermol_system.box_vector
     interchange.positions = from_openmm([a.position for a in intermol_system.atoms])
 
     vdw_handler = BasevdWHandler(
         scale_14=intermol_system.lj_correction,
-        mixing_rule=intermol_system.combination_rule,
+        mixing_rule=intermol_system.combination_rule.lower(),
     )
 
     if vdw_handler.mixing_rule == "Multiply-Sigeps":
@@ -53,17 +54,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
     # TODO: Store atomtypes on a minimal topology, not as a list
     atomtypes: List = [atom.atomtype[0] for atom in intermol_system.atoms]
 
-    topology = md.Topology()
-    default_chain = topology.add_chain()
-    default_residue = topology.add_residue(name="FOO", chain=default_chain)
-
     for atom in intermol_system.atoms:
-        topology.add_atom(
-            name=atom.atomtype[0],
-            element=md.element.Element.getByMass(atom.mass[0]._value),  # type: ignore
-            residue=default_residue,
-            serial=atom.index - 1,
-        )
         topology_key = TopologyKey(atom_indices=(atom.index - 1,))
         vdw_key = PotentialKey(id=atom.atomtype[0], associated_handler="vdW")
         electrostatics_key = PotentialKey(
@@ -90,11 +81,6 @@ def from_intermol_system(intermol_system: System) -> Interchange:
             if type(bond_force) != HarmonicBond:
                 raise Exception
 
-            topology.add_bond(
-                atom1=topology._atoms[bond_force.atom1 - 1],  # type: ignore[attr-defined]
-                atom2=topology._atoms[bond_force.atom2 - 1],  # type: ignore[attr-defined]
-            )
-
             topology_key = TopologyKey(
                 atom_indices=tuple(
                     val - 1 for val in [bond_force.atom1, bond_force.atom2]
@@ -107,7 +93,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
 
             bond_handler.slot_map[topology_key] = potential_key
 
-            if potential_key not in bond_handler:
+            if potential_key not in bond_handler.potentials:
                 potential = Potential(
                     parameters={
                         "k": from_openmm(bond_force.k),
@@ -239,6 +225,33 @@ def from_intermol_system(intermol_system: System) -> Interchange:
     interchange.handlers["ProperTorsions"] = proper_handler
     interchange.handlers["ImproperTorsions"] = improper_handler
 
-    interchange.topology = _OFFBioTop(mdtop=topology)
-
     return interchange
+
+
+def _topology_from_intermol(intermol_system: System) -> Topology:
+    # Create a pesudo-molecule and later split up into connected molecules
+    pseudo_molecule = _SimpleMolecule()
+
+    for atom in intermol_system.atoms:
+        pseudo_molecule.add_atom(
+            atomic_number=atom.atomic_number,
+            metadata={
+                "residue_number": atom.residue_index,
+                "residue_name": atom.residue_name,
+            },
+        )
+
+    for edge in intermol_system.bondgraph.edges:
+        pseudo_molecule.add_bond(
+            atom1=pseudo_molecule.atom(edge[0].index - 1),
+            atom2=pseudo_molecule.atom(edge[1].index - 1),
+        )
+
+    pseudo_molecule.name = "FOO"
+
+    # TODO: Split molecule
+
+    topology = Topology()
+    topology.add_molecule(pseudo_molecule)
+
+    return topology

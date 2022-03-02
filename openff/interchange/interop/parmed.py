@@ -1,7 +1,6 @@
 """Interfaces with ParmEd."""
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
-import mdtraj as md
 import numpy as np
 from openff.units import unit
 
@@ -17,7 +16,7 @@ if TYPE_CHECKING:
 
     import parmed as pmd
 
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
     from openff.interchange.components.smirnoff import (
         SMIRNOFFImproperTorsionHandler,
         SMIRNOFFProperTorsionHandler,
@@ -41,16 +40,23 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     else:
         has_electrostatics = False
 
-    for atom in off_system.topology.mdtop.atoms:
-        atomic_number = atom.element.atomic_number
-        mass = atom.element.mass
+    for atom in off_system.topology.atoms:
+        atomic_number = atom.atomic_number
+        mass = atom.mass.m
+        try:
+            resname = atom.metadata["residue_number"]
+            resnum = atom.metadata["residue_name"]
+        except KeyError:
+            resname = "UNK"
+            resnum = 0
+
         structure.add_atom(
             pmd.Atom(
                 atomic_number=atomic_number,
                 mass=mass,
             ),
-            resname=atom.residue.name,
-            resnum=atom.residue.index,
+            resname,
+            resnum,
         )
 
     if "Bonds" in off_system.handlers.keys():
@@ -200,16 +206,16 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
         top_key = TopologyKey(atom_indices=(pmd_idx,))
         smirks = vdw_handler.slot_map[top_key]
         potential = vdw_handler.potentials[smirks]
-        element = pmd.periodic_table.Element[pmd_atom.element]
+        element_symbol = atom.symbol
         sigma, epsilon = _lj_params_from_potential(potential)
         sigma = sigma.m_as(unit.angstrom)
         epsilon = epsilon.m_as(kcal_mol)
 
         atom_type = pmd.AtomType(
-            name=element + str(pmd_idx + 1),
+            name=element_symbol + str(pmd_idx + 1),
             number=pmd_idx,
             atomic_number=pmd_atom.atomic_number,
-            mass=pmd.periodic_table.Mass[element],
+            mass=pmd.periodic_table.Mass[element_symbol],
         )
 
         atom_type.set_lj_params(eps=epsilon, rmin=sigma * 2 ** (1 / 6) / 2)
@@ -262,16 +268,12 @@ def _from_parmed(cls, structure) -> "Interchange":
 
         out.box = structure.box[:3] * unit.angstrom
 
-    from openff.interchange.components.mdtraj import _OFFBioTop
-
     if structure.topology is not None:
-        mdtop = md.Topology.from_openmm(value=structure.topology)
-        top = _OFFBioTop(mdtop=mdtop)
-        out.topology = top
+        from openff.interchange.components.toolkit import _simple_topology_from_openmm
+
+        out.topology = _simple_topology_from_openmm(structure.topology)
     else:
         raise ConversionError("ParmEd Structure missing an topology attribute")
-
-    out.topology = top
 
     from openff.interchange.components.smirnoff import (
         SMIRNOFFAngleHandler,
