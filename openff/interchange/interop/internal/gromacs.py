@@ -964,13 +964,13 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
         if proper_torsion_handler:
 
             for top_key in proper_torsion_handler.slot_map:
-                if top_key.atom_indices[0] != proper[0].index:
+                if top_key.atom_indices[0] != topology_indices[0]:
                     continue
-                if top_key.atom_indices[1] != proper[1].index:
+                if top_key.atom_indices[1] != topology_indices[1]:
                     continue
-                if top_key.atom_indices[2] != proper[2].index:
+                if top_key.atom_indices[2] != topology_indices[2]:
                     continue
-                if top_key.atom_indices[3] != proper[3].index:
+                if top_key.atom_indices[3] != topology_indices[3]:
                     continue
                 if top_key.atom_indices == topology_indices:
                     pot_key = proper_torsion_handler.slot_map[top_key]
@@ -1055,13 +1055,13 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
             # but it's still listed second in molecule_indices
 
             for top_key in improper_torsion_handler.slot_map:
-                if top_key.atom_indices[0] != improper[0].index:
+                if top_key.atom_indices[0] != indices_to_match[0]:
                     continue
-                if top_key.atom_indices[1] != improper[1].index:
+                if top_key.atom_indices[1] != indices_to_match[1]:
                     continue
-                if top_key.atom_indices[2] != improper[2].index:
+                if top_key.atom_indices[2] != indices_to_match[2]:
                     continue
-                if top_key.atom_indices[3] != improper[3].index:
+                if top_key.atom_indices[3] != indices_to_match[3]:
                     continue
                 if indices_to_match == top_key.atom_indices:
                     key = improper_torsion_handler.slot_map[top_key]
