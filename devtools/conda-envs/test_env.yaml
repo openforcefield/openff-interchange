@@ -9,9 +9,9 @@ dependencies:
   - pip
   - numpy >=1.21
   - pydantic
-  - openmm
+  - openmm =7.6
   # OpenFF stack
-  - openff-toolkit >=0.10.0
+  - openff-toolkit =0.10.3
   - openff-utilities
   - openff-units >=0.1.5
   # Optional features
