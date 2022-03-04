@@ -345,25 +345,13 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         electrostatics_handler = openff_sys.handlers["Electrostatics"]
         electrostatics_method = electrostatics_handler.method.lower()
 
-        if vdw_handler.mixing_rule != "lorentz-berthelot":
-            if combine_nonbonded_forces:
+        if combine_nonbonded_forces:
+            if vdw_handler.mixing_rule != "lorentz-berthelot":
                 raise UnsupportedExportError(
                     "OpenMM's default NonbondedForce only supports Lorentz-Berthelot mixing rules."
                     "Try setting `combine_nonbonded_forces=False`."
                 )
-            else:
-                raise NotImplementedError(
-                    f"Mixing rule `{vdw_handler.mixing_rule}` not compatible with current OpenMM export."
-                    "The only supported values is `lorentz-berthelot`."
-                )
 
-        if vdw_handler.mixing_rule == "lorentz-berthelot":
-            if not combine_nonbonded_forces:
-                mixing_rule_expression = (
-                    "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); "
-                )
-
-        if combine_nonbonded_forces:
             non_bonded_force = openmm.NonbondedForce()
             openmm_sys.addForce(non_bonded_force)
 
@@ -371,48 +359,29 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
             if vdw_method == "cutoff" and electrostatics_method == "pme":
-                if openff_sys.box is not None:
-                    non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                    non_bonded_force.setUseDispersionCorrection(True)
-                    non_bonded_force.setCutoffDistance(vdw_cutoff)
-                    non_bonded_force.setEwaldErrorTolerance(1.0e-4)
-
-                    if getattr(vdw_handler, "switch_width", None) is None:
-                        non_bonded_force.setUseSwitchingFunction(False)
-                    else:
-                        if vdw_handler.switch_width == 0.0:
-                            non_bonded_force.setUseSwitchingFunction(False)
-                        else:
-                            switching_distance = (
-                                vdw_handler.cutoff - vdw_handler.switch_width
-                            ).m_as(off_unit.angstrom)
-
-                            if switching_distance < 0:
-                                raise UnsupportedCutoffMethodError(
-                                    "Found a `switch_width` greater than the cutoff distance. It's not clear "
-                                    "what this means and it's probably invalid. Found "
-                                    f"switch_width{vdw_handler.switch_width} and cutoff {vdw_handler.cutoff}"
-                                )
-
-                            switching_distance = unit.Quantity(
-                                switching_distance, unit.angstrom
-                            )
-
-                            non_bonded_force.setUseSwitchingFunction(True)
-                            non_bonded_force.setSwitchingDistance(switching_distance)
-                else:
+                if openff_sys.box is None:
                     raise UnsupportedCutoffMethodError(
                         f"Combination of non-bonded cutoff methods {vdw_cutoff} (vdW) and "
                         f"{electrostatics_method} (Electrostatics) not currently supported with "
                         f"`combine_nonbonded_forces={combine_nonbonded_forces}` and "
                         f"`.box={openff_sys.box}`"
                     )
+                else:
+                    non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
+                    non_bonded_force.setUseDispersionCorrection(True)
+                    non_bonded_force.setCutoffDistance(vdw_cutoff)
+                    non_bonded_force.setEwaldErrorTolerance(1.0e-4)
+
             elif vdw_method == "pme" and electrostatics_method == "pme":
-                if openff_sys.box is not None:
+                if openff_sys.box is None:
+                    raise UnsupportedCutoffMethodError(
+                        f"Combination of non-bonded cutoff methods {vdw_cutoff} (vdW) and "
+                        f"{electrostatics_method} (Electrostatics) not valid with a non-periodic system "
+                        f"(`.box={openff_sys.box}`)"
+                    )
+                else:
                     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
                     non_bonded_force.setEwaldErrorTolerance(1.0e-4)
-                else:
-                    raise UnsupportedCutoffMethodError
             else:
                 raise UnimplementedCutoffMethodError(
                     f"Combination of non-bonded cutoff methods {vdw_cutoff} (vdW) and "
@@ -423,6 +392,10 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         else:
             vdw_expression = vdw_handler.expression
             vdw_expression = vdw_expression.replace("**", "^")
+
+            mixing_rule_expression = (
+                "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); "
+            )
 
             vdw_force = openmm.CustomNonbondedForce(
                 vdw_expression + "; " + mixing_rule_expression
@@ -445,27 +418,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 vdw_force.setUseLongRangeCorrection(True)
                 vdw_force.setCutoffDistance(vdw_cutoff)
 
-                if getattr(vdw_handler, "switch_width", None) is not None:
-                    if vdw_handler.switch_width == 0.0:
-                        vdw_force.setUseSwitchingFunction(False)
-                    else:
-                        switching_distance = (
-                            vdw_handler.cutoff - vdw_handler.switch_width
-                        ).m_as(off_unit.angstrom)
-
-                        if switching_distance < 0:
-                            raise UnsupportedCutoffMethodError(
-                                "Found a `switch_width` greater than the cutoff distance. It's not clear "
-                                "what this means and it's probably invalid. Found "
-                                f"switch_width{vdw_handler.switch_width} and cutoff {vdw_handler.cutoff}"
-                            )
-
-                        switching_distance = unit.Quantity(
-                            switching_distance, unit.angstrom
-                        )
-
-                        vdw_force.setUseSwitchingFunction(True)
-                        vdw_force.setSwitchingDistance(switching_distance)
+                _apply_switching_function(vdw_handler, vdw_force)
 
             elif vdw_method == "pme":
                 if openff_sys.box is None:
@@ -473,8 +426,13 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                         "vdW method pme/ljpme is not valid for non-periodic systems."
                     )
                 else:
-                    # TODO: Fully flesh out this implementation - cutoffs, other settings
-                    vdw_force.setNonbondedMethod(openmm.NonbondedForce.PME)
+                    raise UnsupportedCutoffMethodError(
+                        "LJ-PME with split non-bonded forces is not supported due to openmm.CustomNonbondedForce "
+                        "not supporting PME. If also using PME electrostatics, try `combine_nonbonded_forces=True`,  "
+                        "which should produce a single force with NonbondedForce.LJPME, which uses PME for both "
+                        "electrostatics and LJ forces tersm. If your use case would benenfit from split non-bonded "
+                        "forces with LJPME, please file an feature request."
+                    )
 
             electrostatics_force = openmm.NonbondedForce()
             openmm_sys.addForce(electrostatics_force)
@@ -737,6 +695,34 @@ def _create_virtual_site(
         y_direction,
         position,
     )
+
+
+def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
+    if not hasattr(force, "setUseSwitchingFunction"):
+        raise ValueError(
+            "Attempting to set switching funcntion on an OpenMM force that does nont support it."
+            f"Passed force of type {type(force)}."
+        )
+    if getattr(vdw_handler, "switch_width", None) is None:
+        force.setUseSwitchingFunction(False)
+    elif vdw_handler.switch_width.m == 0.0:
+        force.setUseSwitchingFunction(False)
+    else:
+        switching_distance = (vdw_handler.cutoff - vdw_handler.switch_width).m_as(
+            off_unit.angstrom
+        )
+
+        if switching_distance < 0:
+            raise UnsupportedCutoffMethodError(
+                "Found a `switch_width` greater than the cutoff distance. It's not clear "
+                "what this means and it's probably invalid. Found "
+                f"switch_width{vdw_handler.switch_width} and cutoff {vdw_handler.cutoff}"
+            )
+
+        switching_distance = unit.Quantity(switching_distance, unit.angstrom)
+
+        force.setUseSwitchingFunction(True)
+        force.setSwitchingDistance(switching_distance)
 
 
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
