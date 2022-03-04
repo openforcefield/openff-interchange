@@ -70,10 +70,4 @@ jobs:
     - name: Run example notebooks
       if: always()
       run: |
-        python -m pytest $COV examples/ --nbval-lax -p no:randomly --ignore=examples/packed_box.ipynb --ignore=examples/foyer-showcase/ --ignore=examples/protein-ligand
-
-    - name: Codecov
-      uses: codecov/codecov-action@v2.1.0
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: false
+        python -m pytest examples/ --nbval-lax --ignore=examples/packed_box.ipynb --ignore=examples/foyer-showcase/ --ignore=examples/protein-ligand
