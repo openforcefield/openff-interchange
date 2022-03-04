@@ -29,7 +29,6 @@ dependencies:
   - cachetools
   - openeye-toolkits
   - pytest
-  - codecov
   - pytest-cov
   - pytest-xdist
   - pytest-randomly

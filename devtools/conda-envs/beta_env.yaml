@@ -31,7 +31,6 @@ dependencies:
   - openeye-toolkits
   - pytest
   - pytest-timeout
-  - codecov
   - pytest-cov
   - pytest-xdist
   - nbval
