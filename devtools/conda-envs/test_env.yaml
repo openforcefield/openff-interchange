@@ -23,7 +23,6 @@ dependencies:
   - mdtraj
   - intermol
   - nglview
-  - openff-recharge
   - openff-amber-ff-ports
   - cached-property
   - cachetools
@@ -33,7 +32,6 @@ dependencies:
   - pytest-xdist
   - pytest-randomly
   - pytest-timeout
-  - nbval
   - nglview
   # Drivers
   - gromacs >=2021
