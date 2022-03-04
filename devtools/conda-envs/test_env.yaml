@@ -1,5 +1,6 @@
 name: openff-interchange-env
 channels:
+  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
   - bioconda
   - openeye
@@ -9,7 +10,7 @@ dependencies:
   - pip
   - numpy >=1.21
   - pydantic
-  - openmm =7.6
+  - openmm
   # OpenFF stack
   - openff-toolkit =0.10.3
   - openff-utilities
@@ -22,7 +23,6 @@ dependencies:
   - mdtraj
   - intermol
   - nglview
-  - openff-evaluator
   - openff-recharge
   - openff-amber-ff-ports
   - cached-property
@@ -34,7 +34,6 @@ dependencies:
   - pytest-randomly
   - pytest-timeout
   - nbval
-  - conda
   - nglview
   # Drivers
   - gromacs >=2021
