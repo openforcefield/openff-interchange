@@ -15,16 +15,18 @@ dependencies:
   - openff-toolkit =0.10.3
   - openff-utilities
   - openff-units >=0.1.5
+  - cached-property
+  - cachetools
   # Optional features
   - unyt
   - mbuild
   - foyer >=0.8.1
-  # Testing
+  # Examples
+  - intermol
+  - openff-evaluator-base
   - mdtraj
   - nglview
   - openff-amber-ff-ports
-  - cached-property
-  - cachetools
   - openeye-toolkits
   - pytest
   - nbval
