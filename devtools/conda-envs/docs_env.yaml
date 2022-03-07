@@ -10,10 +10,11 @@ dependencies:
   - pydantic
   - pint
   - openff-toolkit-base
+  - cached-property
+  - cachetools
   - openff-units >=0.1.5
   - openff-utilities
   - openmm =7.6
-  - ele
   - intermol
   - pytest
   - mdtraj
