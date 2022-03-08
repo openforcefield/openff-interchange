@@ -126,13 +126,20 @@ def _process_bond_forces(
     """
     Process the Bonds section of an Interchange object.
     """
-    harmonic_bond_force = openmm.HarmonicBondForce()
-    openmm_sys.addForce(harmonic_bond_force)
-
     try:
         bond_handler = openff_sys.handlers["Bonds"]
     except KeyError:
         return
+
+    if bond_handler.expression == "k/2*(r-length)**2":
+        harmonic_bond_force = openmm.HarmonicBondForce()
+    else:
+        raise UnsupportedExportError(
+            "Only harmonic bonds are supported at this time. Found a bond handler with"
+            f"{bond_handler.expression=}"
+        )
+
+    openmm_sys.addForce(harmonic_bond_force)
 
     has_constraint_handler = "Constraints" in openff_sys.handlers
 
@@ -169,13 +176,20 @@ def _process_angle_forces(
     """
     Process the Angles section of an Interchange object.
     """
-    harmonic_angle_force = openmm.HarmonicAngleForce()
-    openmm_sys.addForce(harmonic_angle_force)
-
     try:
         angle_handler = openff_sys.handlers["Angles"]
     except KeyError:
         return
+
+    if angle_handler.expression == "k/2*(theta-angle)**2":
+        harmonic_angle_force = openmm.HarmonicAngleForce()
+    else:
+        raise UnsupportedExportError(
+            "Only harmonic angles are supported at this time. Found an angle handler with"
+            f"{angle_handler.expression=}"
+        )
+
+    openmm_sys.addForce(harmonic_angle_force)
 
     has_constraint_handler = "Constraints" in openff_sys.handlers
 
