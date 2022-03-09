@@ -135,7 +135,7 @@ def _process_bond_forces(
         harmonic_bond_force = openmm.HarmonicBondForce()
     else:
         raise UnsupportedExportError(
-            "Only harmonic bonds are supported at this time. Found a bond handler with"
+            "Found an unsupported functional form in the bond handler:\n\t"
             f"{bond_handler.expression=}"
         )
 
