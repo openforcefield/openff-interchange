@@ -6,8 +6,8 @@ import numpy as np
 import openmm
 from openff.toolkit.topology import Topology
 from openff.units import unit as off_unit
-from openff.units.openmm import from_openmm as from_openmm_unit
-from openff.units.openmm import to_openmm as to_openmm_unit
+from openff.units.openmm import from_openmm as from_openmm_quantity
+from openff.units.openmm import to_openmm as to_openmm_quantity
 from openmm import unit
 
 from openff.interchange.components.potentials import Potential
@@ -189,7 +189,7 @@ def _process_angle_forces(
         harmonic_angle_force = openmm.CustomAngleForce(
             angle_handler.expression.replace("**", "^")
         )
-        for parameter_name in angle_handler._potential_parameters:
+        for parameter_name in angle_handler._potential_parameters():
             harmonic_angle_force.addPerAngleParameter(parameter_name)
     else:
         raise UnsupportedExportError(
@@ -216,7 +216,8 @@ def _process_angle_forces(
         if custom:
             params = angle_handler.potentials[pot_key].parameters
             parameter_values = [
-                to_openmm(val) for val in angle_handler._potential_parameters
+                to_openmm_quantity(params[val])
+                for val in angle_handler._potential_parameters()
             ]
 
             harmonic_angle_force.addAngle(
@@ -556,9 +557,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
             # TODO: Add electrostatics
             params = buck_handler.potentials[pot_key].parameters
-            a = to_openmm_unit(params["A"])
-            b = to_openmm_unit(params["B"])
-            c = to_openmm_unit(params["C"])
+            a = to_openmm_quantity(params["A"])
+            b = to_openmm_quantity(params["B"])
+            c = to_openmm_quantity(params["C"])
             non_bonded_force.setParticleParameters(atom_idx, [a, b, c])
 
         return
@@ -819,8 +820,8 @@ def _convert_nonbonded_force(force):
         pot_key = PotentialKey(id=f"{idx}")
         pot = Potential(
             parameters={
-                "sigma": from_openmm_unit(sigma),
-                "epsilon": from_openmm_unit(epsilon),
+                "sigma": from_openmm_quantity(sigma),
+                "epsilon": from_openmm_quantity(epsilon),
             }
         )
         vdw_handler.slot_map.update({top_key: pot_key})
@@ -828,7 +829,7 @@ def _convert_nonbonded_force(force):
 
         electrostatics.slot_map.update({top_key: pot_key})
         electrostatics.potentials.update(
-            {pot_key: Potential(parameters={"charge": from_openmm_unit(charge)})}
+            {pot_key: Potential(parameters={"charge": from_openmm_quantity(charge)})}
         )
 
     if force.getNonbondedMethod() == openmm.NonbondedForce.PME:
@@ -864,7 +865,10 @@ def _convert_harmonic_bond_force(force):
         top_key = TopologyKey(atom_indices=(atom1, atom2))
         pot_key = PotentialKey(id=f"{atom1}-{atom2}")
         pot = Potential(
-            parameters={"length": from_openmm_unit(length), "k": from_openmm_unit(k)}
+            parameters={
+                "length": from_openmm_quantity(length),
+                "k": from_openmm_quantity(k),
+            }
         )
 
         bond_handler.slot_map.update({top_key: pot_key})
@@ -885,7 +889,10 @@ def _convert_harmonic_angle_force(force):
         top_key = TopologyKey(atom_indices=(atom1, atom2, atom3))
         pot_key = PotentialKey(id=f"{atom1}-{atom2}-{atom3}")
         pot = Potential(
-            parameters={"angle": from_openmm_unit(angle), "k": from_openmm_unit(k)}
+            parameters={
+                "angle": from_openmm_quantity(angle),
+                "k": from_openmm_quantity(k),
+            }
         )
 
         angle_handler.slot_map.update({top_key: pot_key})
@@ -914,8 +921,8 @@ def _convert_periodic_torsion_force(force):
         pot = Potential(
             parameters={
                 "periodicity": int(per) * unit.dimensionless,
-                "phase": from_openmm_unit(phase),
-                "k": from_openmm_unit(k),
+                "phase": from_openmm_quantity(phase),
+                "k": from_openmm_quantity(k),
                 "idivf": 1 * unit.dimensionless,
             }
         )
