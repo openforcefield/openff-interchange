@@ -441,7 +441,9 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
     """Handler storing angle potentials as produced by a SMIRNOFF force field."""
 
     type: Literal["Angles"] = "Angles"
-    expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
+    expression: Literal[
+        "k/2*(theta-angle)**2", "k/2*(cos(theta)-cos(angle))**2"
+    ] = "k/2*(theta-angle)**2"
 
     @classmethod
     def allowed_parameter_handlers(cls):

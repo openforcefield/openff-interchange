@@ -182,10 +182,18 @@ def _process_angle_forces(
         return
 
     if angle_handler.expression == "k/2*(theta-angle)**2":
+        custom = False
         harmonic_angle_force = openmm.HarmonicAngleForce()
+    elif angle_handler.expression == "k/2*(cos(theta)-cos(angle))**2":
+        custom = True
+        harmonic_angle_force = openmm.CustomAngleForce(
+            angle_handler.expression.replace("**", "^")
+        )
+        harmonic_angle_force.addPerAngleParameter("k")
+        harmonic_angle_force.addPerAngleParameter("angle")
     else:
         raise UnsupportedExportError(
-            "Only harmonic angles are supported at this time. Found an angle handler with"
+            "Found an unsupported functional form in the angle handler:\n\t"
             f"{angle_handler.expression=}"
         )
 
@@ -205,17 +213,30 @@ def _process_angle_forces(
                         # not an angle force
                         continue
 
-        params = angle_handler.potentials[pot_key].parameters
-        k = params["k"].m_as(off_unit.kilojoule / off_unit.rad / off_unit.mol)
-        angle = params["angle"].m_as(off_unit.radian)
+        if custom:
+            params = angle_handler.potentials[pot_key].parameters
+            k = params["k"].m_as(off_unit.kilojoule / off_unit.rad / off_unit.mol)
+            angle = params["angle"].m_as(off_unit.radian)
 
-        harmonic_angle_force.addAngle(
-            particle1=indices[0],
-            particle2=indices[1],
-            particle3=indices[2],
-            angle=angle,
-            k=k,
-        )
+            harmonic_angle_force.addAngle(
+                indices[0],
+                indices[1],
+                indices[2],
+                [k, angle],
+            )
+
+        else:
+            params = angle_handler.potentials[pot_key].parameters
+            k = params["k"].m_as(off_unit.kilojoule / off_unit.rad / off_unit.mol)
+            angle = params["angle"].m_as(off_unit.radian)
+
+            harmonic_angle_force.addAngle(
+                particle1=indices[0],
+                particle2=indices[1],
+                particle3=indices[2],
+                angle=angle,
+                k=k,
+            )
 
 
 def _process_torsion_forces(openff_sys, openmm_sys):
