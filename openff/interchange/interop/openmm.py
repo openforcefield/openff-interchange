@@ -189,8 +189,8 @@ def _process_angle_forces(
         harmonic_angle_force = openmm.CustomAngleForce(
             angle_handler.expression.replace("**", "^")
         )
-        harmonic_angle_force.addPerAngleParameter("k")
-        harmonic_angle_force.addPerAngleParameter("angle")
+        for parameter_name in angle_handler._potential_parameters:
+            harmonic_angle_force.addPerAngleParameter(parameter_name)
     else:
         raise UnsupportedExportError(
             "Found an unsupported functional form in the angle handler:\n\t"
@@ -215,14 +215,15 @@ def _process_angle_forces(
 
         if custom:
             params = angle_handler.potentials[pot_key].parameters
-            k = params["k"].m_as(off_unit.kilojoule / off_unit.rad / off_unit.mol)
-            angle = params["angle"].m_as(off_unit.radian)
+            parameter_values = [
+                to_openmm(val) for val in angle_handler._potential_parameters
+            ]
 
             harmonic_angle_force.addAngle(
                 indices[0],
                 indices[1],
                 indices[2],
-                [k, angle],
+                parameter_values,
             )
 
         else:
