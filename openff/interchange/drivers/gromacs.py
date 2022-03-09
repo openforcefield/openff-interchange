@@ -41,7 +41,6 @@ vdwtype                 = cutoff
 rvdw                     = 0.9
 vdw-modifier             = None
 DispCorr                 = No
-constraints              = none
 """
 
 

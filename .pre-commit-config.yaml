@@ -54,9 +54,11 @@ repos:
     files: ^docs/
     additional_dependencies: [black==21.6b0]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.2.3
+  rev: 1.3.0
   hooks:
     - id: nbqa-pyupgrade
+      files: ^examples
       args:
         - --py37-plus
     - id: nbqa-isort
+      files: ^examples

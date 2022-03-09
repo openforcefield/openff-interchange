@@ -18,14 +18,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: [3.8, 3.9]
+        os:
+          - ubuntu-latest
+        python-version:
+          - "3.8"
+          - "3.9"
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
 
     steps:
-    - uses: actions/checkout@v2.4.0
+    - uses: actions/checkout@v3
 
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:

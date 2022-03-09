@@ -1,8 +1,5 @@
 name: openff-interchange-env
 channels:
-  - conda-forge/label/openmm_rc
-  - openeye/label/beta
-  - openeye/label/rc
   - conda-forge
   - bioconda
   - openeye
@@ -18,21 +15,29 @@ dependencies:
   - openff-utilities
   - openff-units >=0.1.5
   # Optional features
-  - jax
   - unyt
   - mbuild
   - foyer >=0.8.1
+  - jax >=0.3.0
   # Testing
   - mdtraj
   - intermol
   - openff-evaluator
+  - openff-recharge
   - openeye-toolkits
   - pytest
   - pytest-timeout
   - pytest-cov
   - pytest-xdist
   - nbval
-  - conda
+  - conda-tree
+  - qcportal
+  - openff-qcsubmit
+  - openff-evaluator
+  - openff-recharge
+  - openeye-toolkits
+  - cached-property
+  - cachetools
   # Drivers
   - gromacs >=2021
   - lammps >=2021
@@ -43,3 +48,16 @@ dependencies:
   - types-setuptools
   - types-pkg_resources
   - pandas-stubs
+  # Development tools
+  - mamba
+  - jupyterlab
+  - ipdb
+  - pre-commit
+  - black
+  - isort
+  - flake8
+  - snakeviz
+  - tuna
+  - rich
+  - pip:
+    - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
