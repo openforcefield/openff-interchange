@@ -269,6 +269,21 @@ class TestOpenMM(_BaseTest):
         else:
             raise Exception("No HarmonicAngleForce found")
 
+    def test_nonharmonic_angle(self, sage, ethanol_top):
+        out = Interchange.from_smirnoff(sage, ethanol_top)
+        out["Angles"].expression = "k/2*(cos(theta)-cos(angle))**2"
+
+        system = out.to_openmm()
+
+        def _is_custom_angle(force):
+            return isinstance(force, openmm.CustomAngleForce)
+
+        assert len([f for f in system.getForces() if _is_custom_angle(f)]) == 1
+
+        for force in system.getForces():
+            if _is_custom_angle(force):
+                assert force.getEnergyFunction() == "k/2*(cos(theta)-cos(angle))^2"
+
 
 @pytest.mark.slow()
 class TestOpenMMVirtualSites(_BaseTest):
