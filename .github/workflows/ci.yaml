@@ -71,7 +71,7 @@ jobs:
     - name: Run all tests
       if: always()
       run: |
-        python -m pytest -r fE -nauto $COV openff/interchange/ -m "slow or not slow"
+        python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
 
     - name: Codecov
       uses: codecov/codecov-action@v2.1.0
