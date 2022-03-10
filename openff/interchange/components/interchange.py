@@ -22,6 +22,7 @@ from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
     InternalInconsistencyError,
     InvalidBoxError,
+    InvalidTopologyError,
     MissingParameterHandlerError,
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
@@ -92,10 +93,12 @@ class Interchange(DefaultModel):
                         if molecule.__class__.__name__ == "_SimpleMolecule":
                             return value
                     raise exception
+            elif isinstance(topology, list):
+                return Topology.from_molecules(topology)
             elif value.__class__.__name__ == "_OFFBioTop":
-                raise ValueError("_OFFBioTop is no longer supported")
+                raise InvalidTopologyError("_OFFBioTop is no longer supported")
             else:
-                raise ValueError(
+                raise InvalidTopologyError(
                     "Could not process topology argument, expected openff.toolkit.topology.Topology. "
                     f"Found object of type {type(value)}."
                 )
@@ -205,10 +208,9 @@ class Interchange(DefaultModel):
             Interchange with 8 atoms, non-periodic topology
 
         """
-        if not isinstance(topology, Topology):
-            topology = Topology.from_molecules(topology)
-
         sys_out = Interchange()
+
+        sys_out.topology = topology
 
         cls._check_supported_handlers(force_field)
 
@@ -218,8 +220,6 @@ class Interchange(DefaultModel):
                     "Force field contains parameter handler(s) that may assign/modify "
                     "partial charges, but no ElectrostaticsHandler was found."
                 )
-
-        sys_out.topology = topology
 
         parameter_handlers_by_type = {
             force_field[parameter_handler_name].__class__: force_field[
