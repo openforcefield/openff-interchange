@@ -3,7 +3,7 @@ import time
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from openff.toolkit.topology.molecule import Molecule
@@ -175,20 +175,24 @@ class Interchange(DefaultModel):
         force_field: ForceField,
         topology: Union[Topology, List[Molecule]],
         box=None,
+        charge_from_molecules: Optional[List[Molecule]] = None,
     ) -> "Interchange":
         """
         Create a new object by parameterizing a topology with a SMIRNOFF force field.
 
         Parameters
         ----------
-        force_field
+        force_field : `openff.toolkit.ForceField`
             The force field to parameterize the topology with.
-        topology
+        topology : `openff.toolkit.topology.Topology` or `List[openff.toolkit.topology.Molecule]`
             The topology to parameterize, or a list of molecules to construct a
             topology from and parameterize.
-        box
+        box : `openff.unit.Quantity`, optional
             The box vectors associated with the ``Interchange``. If ``None``,
             box vectors are taken from the topology, if present.
+        charge_from_molecules : `List[openff.toolkit.molecule.Molecule]`, optional
+            If specified, partial charges will be taken from the given molecules
+            instead of being determined by the force field.
 
         Examples
         --------

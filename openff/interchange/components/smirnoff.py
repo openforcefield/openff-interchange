@@ -9,6 +9,7 @@ from typing import (
     DefaultDict,
     Dict,
     List,
+    Optional,
     Tuple,
     Type,
     TypeVar,
@@ -1331,12 +1332,47 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
         return matches, potentials
 
+    @classmethod
+    def _assign_charges_from_charge_from_molecules(
+        cls,
+        topology: "Topology",
+        unique_molecule: Molecule,
+        charge_from_molecules=Optional[List[Molecule]],
+    ) -> Tuple[bool, Dict, Dict]:
+        if charge_from_molecules is None:
+            return False, dict(), dict()
+
+        for reference_molecule in charge_from_molecules:
+            if reference_molecule.is_isomorphic(unique_molecule):
+                break
+        else:
+            return False, dict(), dict()
+
+        matches = dict()
+        potentials = dict()
+        mapped_smiles = unique_molecule.to_smiles(mapped=True, explicit_hydrogens=True)
+
+        for index, partial_charge in enumerate(reference_molecule.partial_charges):
+            topology_key = TopologyKey(atom_indices=(index,))
+            potential_key = PotentialKey(
+                id=mapped_smiles,
+                mult=index,
+                associated_handler="charge_from_molecules",
+                bond_order=None,
+            )
+            potential = Potential(parameters={"charge": partial_charge})
+            matches[topology_key] = potential_key
+            potentials[potential_key] = potential
+
+        return True, matches, potentials
+
     def store_matches(
         self,
         parameter_handler: Union[
             "ElectrostaticsHandlerType", List["ElectrostaticsHandlerType"]
         ],
         topology: "Topology",
+        charge_from_molecules=None,
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
@@ -1360,14 +1396,20 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             unique_molecule = topology.molecule(unique_molecule_index)
 
+            flag, matches, potentials = self._assign_charges_from_charge_from_molecules(
+                topology,
+                unique_molecule,
+                charge_from_molecules,
+            )
             # TODO: Here is where the toolkit calls self.check_charges_assigned(). Do we skip this
             #       entirely given that we are not accepting `charge_from_molecules`?
 
-            # TODO: Rename this method to something like `_find_matches`
-            matches, potentials = self._find_reference_matches(
-                parameter_handlers,
-                unique_molecule,
-            )
+            if not flag:
+                # TODO: Rename this method to something like `_find_matches`
+                matches, potentials = self._find_reference_matches(
+                    parameter_handlers,
+                    unique_molecule,
+                )
 
             match_mults = defaultdict(set)
 

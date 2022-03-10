@@ -421,6 +421,23 @@ def test_library_charges_from_molecule():
     assert library_charges.charge == [*mol.partial_charges]
 
 
+class TestChargeFromMolecules(_BaseTest):
+    def test_charge_from_molecules_basic(self, sage):
+
+        molecule = Molecule.from_smiles("CCO")
+        molecule.assign_partial_charges(partial_charge_method="am1bcc")
+
+        default = Interchange.from_smirnoff(sage, molecule.to_topology())
+        uses = Interchange.from_smirnoff(
+            sage, molecule.to_topology(), charge_from_molecules=[molecule]
+        )
+
+        assert np.allclose(
+            [v.m for v in default["Electrostatics"].charges.values()],
+            [v.m for v in uses["Electrostatics"].charges.values()],
+        )
+
+
 class TestBondOrderInterpolation(_BaseTest):
     @pytest.mark.slow()
     def test_input_bond_orders_ignored(self):
