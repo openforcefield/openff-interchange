@@ -281,7 +281,7 @@ class Interchange(DefaultModel):
                 sys_out.handlers.update({"Constraints": constraints})
                 continue
             elif potential_handler_type == SMIRNOFFElectrostaticsHandler:
-                potential_handler = potential_handler_type._from_toolkit(
+                potential_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(  # type: ignore[assignment]
                     parameter_handler=parameter_handlers,
                     topology=sys_out._inner_data.topology,
                     charge_from_molecules=charge_from_molecules,

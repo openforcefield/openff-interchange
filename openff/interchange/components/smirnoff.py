@@ -1022,7 +1022,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         )
 
         handler.store_matches(
-            parameter_handlers, topology, charge_from_molecules=charge_from_molecules
+            parameter_handlers,
+            topology,
+            charge_from_molecules=charge_from_molecules,  # type: ignore[call-arg]
         )
 
         return handler
