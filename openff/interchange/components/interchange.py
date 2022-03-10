@@ -3,9 +3,10 @@ import time
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import numpy as np
+from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.utilities.utilities import has_package, requires_package
@@ -169,7 +170,7 @@ class Interchange(DefaultModel):
     def from_smirnoff(
         cls,
         force_field: ForceField,
-        topology: Topology,
+        topology: Union[Topology, List[Molecule]],
         box=None,
     ) -> "Interchange":
         """
@@ -180,9 +181,11 @@ class Interchange(DefaultModel):
         force_field
             The force field to parameterize the topology with.
         topology
-            The topology to parameterize.
+            The topology to parameterize, or a list of molecules to construct a
+            topology from and parameterize.
         box
-            The box vectors associated with the interchange.
+            The box vectors associated with the ``Interchange``. If ``None``,
+            box vectors are taken from the topology, if present.
 
         Examples
         --------
@@ -196,13 +199,15 @@ class Interchange(DefaultModel):
             >>> from openff.toolkit.typing.engines.smirnoff import ForceField
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> top = Topology.from_molecules([mol])
             >>> parsley = ForceField("openff-1.0.0.offxml")
-            >>> interchange = Interchange.from_smirnoff(topology=top, force_field=parsley)
+            >>> interchange = Interchange.from_smirnoff(topology=[mol], force_field=parsley)
             >>> interchange
             Interchange with 8 atoms, non-periodic topology
 
         """
+        if not isinstance(topology, Topology):
+            topology = Topology.from_molecules(topology)
+
         sys_out = Interchange()
 
         cls._check_supported_handlers(force_field)
