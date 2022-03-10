@@ -3,9 +3,10 @@ import time
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import numpy as np
+from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.topology.topology import Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.utilities.utilities import has_package, requires_package
@@ -21,6 +22,7 @@ from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
     InternalInconsistencyError,
     InvalidBoxError,
+    InvalidTopologyError,
     MissingParameterHandlerError,
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
@@ -63,7 +65,7 @@ class Interchange(DefaultModel):
 
         # TODO: Ensure these fields are hidden from the user as intended
         handlers: Dict[str, PotentialHandler] = dict()
-        topology: Optional[Topology] = Field(None)
+        topology: Union[Topology, List, None] = Field(None)
         box: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
         positions: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
         velocities: ArrayQuantity["nanometer/picosecond"] = Field(None)  # type: ignore
@@ -91,10 +93,12 @@ class Interchange(DefaultModel):
                         if molecule.__class__.__name__ == "_SimpleMolecule":
                             return value
                     raise exception
+            elif isinstance(value, list):
+                return Topology.from_molecules(value)
             elif value.__class__.__name__ == "_OFFBioTop":
-                raise ValueError("_OFFBioTop is no longer supported")
+                raise InvalidTopologyError("_OFFBioTop is no longer supported")
             else:
-                raise ValueError(
+                raise InvalidTopologyError(
                     "Could not process topology argument, expected openff.toolkit.topology.Topology. "
                     f"Found object of type {type(value)}."
                 )
@@ -169,7 +173,7 @@ class Interchange(DefaultModel):
     def from_smirnoff(
         cls,
         force_field: ForceField,
-        topology: Topology,
+        topology: Union[Topology, List[Molecule]],
         box=None,
     ) -> "Interchange":
         """
@@ -180,9 +184,11 @@ class Interchange(DefaultModel):
         force_field
             The force field to parameterize the topology with.
         topology
-            The topology to parameterize.
+            The topology to parameterize, or a list of molecules to construct a
+            topology from and parameterize.
         box
-            The box vectors associated with the interchange.
+            The box vectors associated with the ``Interchange``. If ``None``,
+            box vectors are taken from the topology, if present.
 
         Examples
         --------
@@ -196,14 +202,15 @@ class Interchange(DefaultModel):
             >>> from openff.toolkit.typing.engines.smirnoff import ForceField
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> top = Topology.from_molecules([mol])
             >>> parsley = ForceField("openff-1.0.0.offxml")
-            >>> interchange = Interchange.from_smirnoff(topology=top, force_field=parsley)
+            >>> interchange = Interchange.from_smirnoff(topology=[mol], force_field=parsley)
             >>> interchange
             Interchange with 8 atoms, non-periodic topology
 
         """
         sys_out = Interchange()
+
+        sys_out.topology = topology
 
         cls._check_supported_handlers(force_field)
 
@@ -213,8 +220,6 @@ class Interchange(DefaultModel):
                     "Force field contains parameter handler(s) that may assign/modify "
                     "partial charges, but no ElectrostaticsHandler was found."
                 )
-
-        sys_out.topology = topology
 
         parameter_handlers_by_type = {
             force_field[parameter_handler_name].__class__: force_field[
@@ -304,9 +309,12 @@ class Interchange(DefaultModel):
             sys_out.handlers.update({potential_handler.type: potential_handler})
 
         # `box` argument is only overriden if passed `None` and the input topology
-        # has box vectors
-        if box is None and topology.box_vectors is not None:
-            sys_out.box = topology.box_vectors
+        # is a `Topology` (could be `List[Molecule]`) and has box vectors
+        if box is None:
+            if isinstance(topology, Topology):
+                sys_out.box = topology.box_vectors
+            else:
+                sys_out.box = None
         else:
             sys_out.box = box
 

@@ -229,6 +229,22 @@ class TestInterchange(_BaseTest):
         assert type(out.topology) == Topology
         assert isinstance(out.topology, Topology)
 
+    def test_from_parsley_molecule_list(self, parsley):
+
+        out = Interchange.from_smirnoff(
+            parsley,
+            [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")],
+        )
+
+        assert "Constraints" in out.handlers.keys()
+        assert "Bonds" in out.handlers.keys()
+        assert "Angles" in out.handlers.keys()
+        assert "ProperTorsions" in out.handlers.keys()
+        assert "vdW" in out.handlers.keys()
+
+        assert type(out.topology) == Topology
+        assert isinstance(out.topology, Topology)
+
     @skip_if_missing("nglview")
     def test_visualize(self, parsley):
         import nglview
