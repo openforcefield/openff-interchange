@@ -1,5 +1,4 @@
 """An object for storing, manipulating, and converting molecular mechanics data."""
-import time
 import warnings
 from copy import deepcopy
 from pathlib import Path
@@ -17,6 +16,7 @@ from openff.interchange.components.smirnoff import (
     SMIRNOFF_POTENTIAL_HANDLERS,
     SMIRNOFFBondHandler,
     SMIRNOFFConstraintHandler,
+    SMIRNOFFElectrostaticsHandler,
 )
 from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
@@ -249,9 +249,6 @@ class Interchange(DefaultModel):
                 if allowed_type in parameter_handlers_by_type
             ]
 
-            handler_name = potential_handler_type.__fields__["type"].default
-            time_start = time.time()
-
             if len(parameter_handlers) == 0:
                 continue
 
@@ -260,14 +257,10 @@ class Interchange(DefaultModel):
             #       depending on the bond handler)
             if potential_handler_type == SMIRNOFFBondHandler:
                 SMIRNOFFBondHandler.check_supported_parameters(force_field["Bonds"])
-                print(f"Starting handler: {handler_name}...")
                 potential_handler = SMIRNOFFBondHandler._from_toolkit(
                     parameter_handler=force_field["Bonds"],
                     topology=sys_out._inner_data.topology,
                     # constraint_handler=constraint_handler,
-                )
-                print(
-                    f"Finished handler: ... {handler_name}. Took {time.time() - time_start}"
                 )
                 sys_out.handlers.update({"Bonds": potential_handler})
             elif potential_handler_type == SMIRNOFFConstraintHandler:
@@ -277,7 +270,6 @@ class Interchange(DefaultModel):
                 )
                 if constraint_handler is None:
                     continue
-                print(f"Starting handler: {handler_name}...")
                 constraints = SMIRNOFFConstraintHandler._from_toolkit(
                     parameter_handler=[
                         val
@@ -287,28 +279,23 @@ class Interchange(DefaultModel):
                     topology=sys_out._inner_data.topology,
                 )
                 sys_out.handlers.update({"Constraints": constraints})
-                print(
-                    f"Finished handler: ... {handler_name}. Took {time.time() - time_start}"
-                )
                 continue
+            elif potential_handler_type == SMIRNOFFElectrostaticsHandler:
+                potential_handler = potential_handler_type._from_toolkit(
+                    parameter_handler=parameter_handlers,
+                    topology=sys_out._inner_data.topology,
+                    charge_from_molecules=charge_from_molecules,
+                )
             elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
-                print(f"Starting handler: {handler_name}...")
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers,
                     topology=sys_out._inner_data.topology,
                 )
-                print(
-                    f"Finished handler: ... {handler_name}. Took {time.time() - time_start}"
-                )
             else:
                 potential_handler_type.check_supported_parameters(parameter_handlers[0])
-                print(f"Starting handler: {handler_name}...")
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers[0],
                     topology=sys_out._inner_data.topology,
-                )
-                print(
-                    f"Finished handler: ... {handler_name}. Took {time.time() - time_start}"
                 )
             sys_out.handlers.update({potential_handler.type: potential_handler})
 

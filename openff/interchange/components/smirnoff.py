@@ -997,6 +997,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         cls: Type[T],
         parameter_handler: Any,
         topology: "Topology",
+        charge_from_molecules=None,
     ) -> T:
         """
         Create a SMIRNOFFElectrostaticsHandler from toolkit data.
@@ -1020,7 +1021,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             method=toolkit_handler_with_metadata.method.lower(),
         )
 
-        handler.store_matches(parameter_handlers, topology)
+        handler.store_matches(
+            parameter_handlers, topology, charge_from_molecules=charge_from_molecules
+        )
 
         return handler
 
@@ -1343,7 +1346,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             return False, dict(), dict()
 
         for reference_molecule in charge_from_molecules:
-            if reference_molecule.is_isomorphic(unique_molecule):
+            if reference_molecule.is_isomorphic_with(unique_molecule):
                 break
         else:
             return False, dict(), dict()
