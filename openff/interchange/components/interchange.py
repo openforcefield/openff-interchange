@@ -3,7 +3,7 @@ import time
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import numpy as np
 from openff.toolkit.topology.molecule import Molecule
@@ -65,7 +65,7 @@ class Interchange(DefaultModel):
 
         # TODO: Ensure these fields are hidden from the user as intended
         handlers: Dict[str, PotentialHandler] = dict()
-        topology: Optional[Topology] = Field(None)
+        topology: Union[Topology, List, None] = Field(None)
         box: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
         positions: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
         velocities: ArrayQuantity["nanometer/picosecond"] = Field(None)  # type: ignore
@@ -93,8 +93,8 @@ class Interchange(DefaultModel):
                         if molecule.__class__.__name__ == "_SimpleMolecule":
                             return value
                     raise exception
-            elif isinstance(topology, list):
-                return Topology.from_molecules(topology)
+            elif isinstance(value, list):
+                return Topology.from_molecules(value)
             elif value.__class__.__name__ == "_OFFBioTop":
                 raise InvalidTopologyError("_OFFBioTop is no longer supported")
             else:
@@ -309,9 +309,12 @@ class Interchange(DefaultModel):
             sys_out.handlers.update({potential_handler.type: potential_handler})
 
         # `box` argument is only overriden if passed `None` and the input topology
-        # has box vectors
-        if box is None and topology.box_vectors is not None:
-            sys_out.box = topology.box_vectors
+        # is a `Topology` (could be `List[Molecule]`) and has box vectors
+        if box is None:
+            if isinstance(topology, Topology):
+                sys_out.box = topology.box_vectors
+            else:
+                sys_out.box = None
         else:
             sys_out.box = box
 
