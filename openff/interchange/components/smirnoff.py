@@ -304,6 +304,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         cls: Type[T],
         parameter_handler: "BondHandler",
         topology: "Topology",
+        partial_bond_orders_from_molecules=None,
     ) -> T:
         """
         Create a SMIRNOFFBondHandler from toolkit data.
@@ -325,6 +326,10 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
         if handler._get_uses_interpolation(parameter_handler):  # type: ignore[attr-defined]
             for molecule in topology.molecules:
+                if _check_partial_bond_orders(
+                    molecule, partial_bond_orders_from_molecules
+                ):
+                    continue
                 # TODO: expose conformer generation and fractional bond order assigment
                 # knobs to user via API
                 molecule.generate_conformers(n_conformers=1)
@@ -609,6 +614,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
         cls: Type[T],
         parameter_handler: "ProperTorsionHandler",
         topology: "Topology",
+        partial_bond_orders_from_molecules=None,
     ) -> T:
         """
         Create a SMIRNOFFProperTorsionHandler from toolkit data.
@@ -626,8 +632,11 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
             for p in parameter_handler.parameters
         ):
             for ref_mol in topology.reference_molecules:
-                # TODO: expose conformer generation and fractional bond order assigment
-                # knobs to user via API
+                if _check_partial_bond_orders(
+                    ref_mol, partial_bond_orders_from_molecules
+                ):
+                    continue
+                # TODO: expose conformer generation and fractional bond order assigment knobs via API?
                 ref_mol.generate_conformers(n_conformers=1)
                 ref_mol.assign_fractional_bond_orders(
                     bond_order_model=handler.fractional_bond_order_method.lower(),  # type: ignore[attr-defined]
@@ -1612,6 +1621,25 @@ def _get_interpolation_coeffs(fractional_bond_order, data):
     coeff2 = (fractional_bond_order - x1) / (x2 - x1)
 
     return coeff1, coeff2
+
+
+def _check_partial_bond_orders(
+    reference_molecule: Molecule, molecule_list: List[Molecule]
+) -> bool:
+    """Check if the reference molecule is isomorphic with any molecules in a provided list."""
+    if molecule_list is None:
+        return False
+
+    if len(molecule_list) == 0:
+        return False
+
+    for molecule in molecule_list:
+        if reference_molecule.is_isomorphic_with(molecule):
+            # TODO: Here is where a check for "all bonds in this molecule must have partial bond orders assigned"
+            #       would go. That seems like a difficult mangled state to end up in, so not implemented for now.
+            return True
+
+    return False
 
 
 SMIRNOFF_POTENTIAL_HANDLERS = [

@@ -17,6 +17,7 @@ from openff.interchange.components.smirnoff import (
     SMIRNOFFBondHandler,
     SMIRNOFFConstraintHandler,
     SMIRNOFFElectrostaticsHandler,
+    SMIRNOFFProperTorsionHandler,
 )
 from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
@@ -176,6 +177,7 @@ class Interchange(DefaultModel):
         topology: Union[Topology, List[Molecule]],
         box=None,
         charge_from_molecules: Optional[List[Molecule]] = None,
+        partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
     ) -> "Interchange":
         """
         Create a new object by parameterizing a topology with a SMIRNOFF force field.
@@ -192,6 +194,9 @@ class Interchange(DefaultModel):
             box vectors are taken from the topology, if present.
         charge_from_molecules : `List[openff.toolkit.molecule.Molecule]`, optional
             If specified, partial charges will be taken from the given molecules
+            instead of being determined by the force field.
+        partial_bond_orders_from_molecules : List[openff.toolkit.molecule.Molecule], optional
+            If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
 
         Examples
@@ -257,16 +262,27 @@ class Interchange(DefaultModel):
             #       depending on the bond handler)
             if potential_handler_type == SMIRNOFFBondHandler:
                 SMIRNOFFBondHandler.check_supported_parameters(force_field["Bonds"])
-                potential_handler = SMIRNOFFBondHandler._from_toolkit(
+                bond_handler = SMIRNOFFBondHandler._from_toolkit(
                     parameter_handler=force_field["Bonds"],
                     topology=sys_out._inner_data.topology,
                     # constraint_handler=constraint_handler,
+                    partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
                 )
-                sys_out.handlers.update({"Bonds": potential_handler})
+                sys_out.handlers.update({"Bonds": bond_handler})
+            elif potential_handler_type == SMIRNOFFProperTorsionHandler:
+                SMIRNOFFProperTorsionHandler.check_supported_parameters(
+                    force_field["ProperTorsions"]
+                )
+                potential_handler = SMIRNOFFProperTorsionHandler._from_toolkit(
+                    parameter_handler=force_field["ProperTorsions"],
+                    topology=sys_out._inner_data.topology,
+                    partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
+                )
+                sys_out.handlers.update({"ProperTorsions": potential_handler})
             elif potential_handler_type == SMIRNOFFConstraintHandler:
-                bond_handler = force_field._parameter_handlers.get("Bonds", None)
-                constraint_handler = force_field._parameter_handlers.get(
-                    "Constraints", None
+                (bond_handler, constraint_handler) = (
+                    force_field._parameter_handlers.get(val, None)
+                    for val in ["Bonds", "Constraints"]
                 )
                 if constraint_handler is None:
                     continue
@@ -279,25 +295,26 @@ class Interchange(DefaultModel):
                     topology=sys_out._inner_data.topology,
                 )
                 sys_out.handlers.update({"Constraints": constraints})
-                continue
             elif potential_handler_type == SMIRNOFFElectrostaticsHandler:
-                potential_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(  # type: ignore[assignment]
+                electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
                     parameter_handler=parameter_handlers,
                     topology=sys_out._inner_data.topology,
                     charge_from_molecules=charge_from_molecules,
                 )
+                sys_out.handlers.update({"Electrostatics": electrostatics_handler})
             elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers,
                     topology=sys_out._inner_data.topology,
                 )
+                sys_out.handlers.update({potential_handler.type: potential_handler})
             else:
                 potential_handler_type.check_supported_parameters(parameter_handlers[0])
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers[0],
                     topology=sys_out._inner_data.topology,
                 )
-            sys_out.handlers.update({potential_handler.type: potential_handler})
+                sys_out.handlers.update({potential_handler.type: potential_handler})
 
         # `box` argument is only overriden if passed `None` and the input topology
         # is a `Topology` (could be `List[Molecule]`) and has box vectors
