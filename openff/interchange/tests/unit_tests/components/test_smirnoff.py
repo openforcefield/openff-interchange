@@ -542,7 +542,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
         forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
 
         molecule = Molecule.from_smiles("CCO")
-        decoy = Molecule.from_smiles("C#NN")
+        decoy = Molecule.from_smiles("C#N")
         decoy.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
 
         default = Interchange.from_smirnoff(forcefield, molecule.to_topology())
