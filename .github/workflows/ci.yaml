@@ -24,6 +24,12 @@ jobs:
         python-version:
           - "3.8"
           - "3.9"
+        openeye:
+          - true
+          - false
+        exclude:
+          - openeye: true
+            python-version: 3.8
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
@@ -58,6 +64,7 @@ jobs:
         conda list
 
     - name: License OpenEye
+      if: ${{ matrix.openeye == true }}
       run: |
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
