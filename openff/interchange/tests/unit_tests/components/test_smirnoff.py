@@ -421,6 +421,64 @@ def test_library_charges_from_molecule():
     assert library_charges.charge == [*mol.partial_charges]
 
 
+class TestChargeFromMolecules(_BaseTest):
+    def test_charge_from_molecules_basic(self, sage):
+
+        molecule = Molecule.from_smiles("CCO")
+        molecule.assign_partial_charges(partial_charge_method="am1bcc")
+        molecule.partial_charges *= -1
+
+        default = Interchange.from_smirnoff(sage, molecule.to_topology())
+        uses = Interchange.from_smirnoff(
+            sage,
+            molecule.to_topology(),
+            charge_from_molecules=[molecule],
+        )
+
+        found_charges_no_uses = [
+            v.m for v in default["Electrostatics"].charges.values()
+        ]
+        found_charges_uses = [v.m for v in uses["Electrostatics"].charges.values()]
+
+        assert not np.allclose(found_charges_no_uses, found_charges_uses)
+
+        assert np.allclose(found_charges_uses, molecule.partial_charges.m)
+
+    def test_charge_from_molecules_empty(self, sage):
+
+        molecule = Molecule.from_smiles("CCO")
+
+        default = Interchange.from_smirnoff(sage, molecule.to_topology())
+        empty = Interchange.from_smirnoff(
+            sage,
+            molecule.to_topology(),
+            charge_from_molecules=list(),
+        )
+
+        assert np.allclose(
+            [v.m for v in default["Electrostatics"].charges.values()],
+            [v.m for v in empty["Electrostatics"].charges.values()],
+        )
+
+    def test_charge_from_molecules_no_matches(self, sage):
+
+        molecule = Molecule.from_smiles("CCO")
+        decoy = Molecule.from_smiles("O")
+        decoy.assign_partial_charges(partial_charge_method="am1bcc")
+
+        default = Interchange.from_smirnoff(sage, molecule.to_topology())
+        uses = Interchange.from_smirnoff(
+            sage,
+            molecule.to_topology(),
+            charge_from_molecules=[decoy],
+        )
+
+        assert np.allclose(
+            [v.m for v in default["Electrostatics"].charges.values()],
+            [v.m for v in uses["Electrostatics"].charges.values()],
+        )
+
+
 class TestBondOrderInterpolation(_BaseTest):
     @pytest.mark.slow()
     def test_input_bond_orders_ignored(self):
