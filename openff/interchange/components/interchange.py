@@ -280,9 +280,9 @@ class Interchange(DefaultModel):
                 )
                 sys_out.handlers.update({"ProperTorsions": potential_handler})
             elif potential_handler_type == SMIRNOFFConstraintHandler:
-                constraint_handler = force_field._parameter_handlers.get("Bonds", None)
-                constraint_handler = force_field._parameter_handlers.get(
-                    "Constraints", None
+                (bond_handler, constraint_handler) = (
+                    force_field._parameter_handlers.get(val, None)
+                    for val in ["Bonds", "Constraints"]
                 )
                 if constraint_handler is None:
                     continue

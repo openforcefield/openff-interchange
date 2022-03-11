@@ -445,42 +445,8 @@ class TestChargeFromMolecules(_BaseTest):
 
         assert np.allclose(found_charges_uses, molecule.partial_charges.m)
 
-    def test_charge_from_molecules_empty(self, sage):
 
-        molecule = Molecule.from_smiles("CCO")
-
-        default = Interchange.from_smirnoff(sage, molecule.to_topology())
-        empty = Interchange.from_smirnoff(
-            sage,
-            molecule.to_topology(),
-            charge_from_molecules=list(),
-        )
-
-        assert np.allclose(
-            [v.m for v in default["Electrostatics"].charges.values()],
-            [v.m for v in empty["Electrostatics"].charges.values()],
-        )
-
-    def test_charge_from_molecules_no_matches(self, sage):
-
-        molecule = Molecule.from_smiles("CCO")
-        decoy = Molecule.from_smiles("O")
-        decoy.assign_partial_charges(partial_charge_method="am1bcc")
-
-        default = Interchange.from_smirnoff(sage, molecule.to_topology())
-        uses = Interchange.from_smirnoff(
-            sage,
-            molecule.to_topology(),
-            charge_from_molecules=[decoy],
-        )
-
-        assert np.allclose(
-            [v.m for v in default["Electrostatics"].charges.values()],
-            [v.m for v in uses["Electrostatics"].charges.values()],
-        )
-
-
-class TestFractionalBondOrderFromMolecules(_BaseTest):
+class TestPartialBondOrdersFromMolecules(_BaseTest):
     from openff.toolkit.tests.create_molecules import (
         create_ethanol,
         create_reversed_ethanol,
@@ -551,6 +517,44 @@ class TestFractionalBondOrderFromMolecules(_BaseTest):
         )
 
         assert found_torsion_k.m_as(kcal_mol) == pytest.approx(1.44)
+
+    def test_partial_bond_order_from_molecules_empty(self):
+        from openff.toolkit.tests.test_forcefield import xml_ff_bo
+
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+
+        molecule = Molecule.from_smiles("CCO")
+
+        default = Interchange.from_smirnoff(forcefield, molecule.to_topology())
+        empty = Interchange.from_smirnoff(
+            forcefield,
+            molecule.to_topology(),
+            partial_bond_orders_from_molecules=list(),
+        )
+
+        assert _get_interpolated_bond_k(default["Bonds"]) == pytest.approx(
+            _get_interpolated_bond_k(empty["Bonds"])
+        )
+
+    def test_partial_bond_order_from_molecules_no_matches(self):
+        from openff.toolkit.tests.test_forcefield import xml_ff_bo
+
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+
+        molecule = Molecule.from_smiles("CCO")
+        decoy = Molecule.from_smiles("C#NN")
+        decoy.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
+
+        default = Interchange.from_smirnoff(forcefield, molecule.to_topology())
+        uses = Interchange.from_smirnoff(
+            forcefield,
+            molecule.to_topology(),
+            partial_bond_orders_from_molecules=[decoy],
+        )
+
+        assert _get_interpolated_bond_k(default["Bonds"]) == pytest.approx(
+            _get_interpolated_bond_k(uses["Bonds"])
+        )
 
 
 class TestBondOrderInterpolation(_BaseTest):
@@ -1110,3 +1114,12 @@ class TestParameterInterpolation(_BaseTest):
                 np.testing.assert_allclose(
                     k / k.unit, k_torsion_interpolated, atol=0, rtol=2e-6
                 )
+
+
+def _get_interpolated_bond_k(bond_handler) -> float:
+    for key in bond_handler.slot_map:
+        if key.bond_order is not None:
+            topology_key = key
+            break
+    potential_key = bond_handler.slot_map[topology_key]
+    return bond_handler.potentials[potential_key].parameters["k"].m
