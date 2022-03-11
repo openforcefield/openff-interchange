@@ -1641,9 +1641,6 @@ def _check_partial_bond_orders(
 
     return False
 
-    if len(reference_molecule.partial_bond_orders) == 0:
-        raise ValueError("Reference molecule has no partial bond orders.")
-
 
 SMIRNOFF_POTENTIAL_HANDLERS = [
     SMIRNOFFBondHandler,
