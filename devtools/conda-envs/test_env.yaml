@@ -2,7 +2,6 @@ name: openff-interchange-env
 channels:
   - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
-  - bioconda
   - openeye
 dependencies:
   # Core
@@ -35,7 +34,7 @@ dependencies:
   - pytest-timeout
   - nglview
   # Drivers
-  - gromacs >=2021
+  - gromacs >=2021=nompi*
   - lammps >=2021
   - panedr
   # Typing

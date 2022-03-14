@@ -4,7 +4,6 @@ channels:
   - openeye/label/beta
   - openeye/label/rc
   - conda-forge
-  - bioconda
   - openeye
 dependencies:
   # Core
@@ -34,7 +33,7 @@ dependencies:
   - nbval
   - conda
   # Drivers
-  - gromacs >=2021
+  - gromacs >=2021=nompi*
   - lammps >=2021
   - panedr
   # Typing

@@ -89,7 +89,7 @@ class TestSMIRNOFFPotentialHandler(_BaseTest):
 
 class TestSMIRNOFFHandlers(_BaseTest):
     def test_bond_potential_handler(self):
-        top = _top_from_smiles("O=O")
+        top = _top_from_smiles("O")
 
         bond_handler = BondHandler(version=0.3)
         bond_handler.fractional_bondorder_method = "AM1-Wiberg"
@@ -741,10 +741,12 @@ class TestSMIRNOFFVirtualSites:
     @pytest.mark.parametrize(
         ("xml", "mol"),
         [
-            (
-                xml_ff_virtual_sites_bondcharge_match_once,
-                "O=O",
-            ),
+            # Cannot assign am1bccelf10 charges, replace with different example
+            # https://github.com/openforcefield/openff-toolkit/pull/1214#issuecomment-1067351064
+            # (
+            #     xml_ff_virtual_sites_bondcharge_match_once,
+            #     "O=O",
+            # ),
             # TODO: Implement match="once"
             # (
             #     xml_ff_virtual_sites_bondcharge_match_once,
