@@ -4,7 +4,6 @@ channels:
   - openeye/label/beta
   - openeye/label/rc
   - conda-forge
-  - bioconda
   - openeye
 dependencies:
   # Core
