@@ -38,7 +38,7 @@ dependencies:
   - cached-property
   - cachetools
   # Drivers
-  - gromacs >=2021
+  - gromacs >=2021=nompi*
   - lammps >=2021
   - panedr
   # Typing
@@ -60,4 +60,3 @@ dependencies:
   - rich
   - pip:
     - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
-    - git+https://github.com/mattwthompson/nbval@fspath-depr

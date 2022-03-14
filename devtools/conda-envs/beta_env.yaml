@@ -33,7 +33,7 @@ dependencies:
   - nbval
   - conda
   # Drivers
-  - gromacs >=2021
+  - gromacs >=2021=nompi*
   - lammps >=2021
   - panedr
   # Typing

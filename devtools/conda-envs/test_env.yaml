@@ -34,7 +34,7 @@ dependencies:
   - pytest-timeout
   - nglview
   # Drivers
-  - gromacs >=2021
+  - gromacs >=2021=nompi*
   - lammps >=2021
   - panedr
   # Typing
@@ -46,4 +46,3 @@ dependencies:
   # Temporary
   - pip:
     - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
-    - git+https://github.com/mattwthompson/nbval@fspath-depr
