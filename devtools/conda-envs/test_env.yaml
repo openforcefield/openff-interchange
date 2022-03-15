@@ -23,6 +23,7 @@ dependencies:
   - intermol
   - nglview
   - openff-amber-ff-ports
+  - openff-evaluator
   - cached-property
   - cachetools
   - openeye-toolkits
@@ -46,3 +47,4 @@ dependencies:
   # Temporary
   - pip:
     - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
+    - git+https://github.com/mattwthompson/openff-evaluator.git
