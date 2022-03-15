@@ -9,6 +9,7 @@ from typing import (
     DefaultDict,
     Dict,
     List,
+    Optional,
     Tuple,
     Type,
     TypeVar,
@@ -303,6 +304,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         cls: Type[T],
         parameter_handler: "BondHandler",
         topology: "Topology",
+        partial_bond_orders_from_molecules=None,
     ) -> T:
         """
         Create a SMIRNOFFBondHandler from toolkit data.
@@ -324,6 +326,10 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
         if handler._get_uses_interpolation(parameter_handler):  # type: ignore[attr-defined]
             for molecule in topology.molecules:
+                if _check_partial_bond_orders(
+                    molecule, partial_bond_orders_from_molecules
+                ):
+                    continue
                 # TODO: expose conformer generation and fractional bond order assigment
                 # knobs to user via API
                 molecule.generate_conformers(n_conformers=1)
@@ -608,6 +614,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
         cls: Type[T],
         parameter_handler: "ProperTorsionHandler",
         topology: "Topology",
+        partial_bond_orders_from_molecules=None,
     ) -> T:
         """
         Create a SMIRNOFFProperTorsionHandler from toolkit data.
@@ -625,8 +632,11 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
             for p in parameter_handler.parameters
         ):
             for ref_mol in topology.reference_molecules:
-                # TODO: expose conformer generation and fractional bond order assigment
-                # knobs to user via API
+                if _check_partial_bond_orders(
+                    ref_mol, partial_bond_orders_from_molecules
+                ):
+                    continue
+                # TODO: expose conformer generation and fractional bond order assigment knobs via API?
                 ref_mol.generate_conformers(n_conformers=1)
                 ref_mol.assign_fractional_bond_orders(
                     bond_order_model=handler.fractional_bond_order_method.lower(),  # type: ignore[attr-defined]
@@ -996,6 +1006,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         cls: Type[T],
         parameter_handler: Any,
         topology: "Topology",
+        charge_from_molecules=None,
     ) -> T:
         """
         Create a SMIRNOFFElectrostaticsHandler from toolkit data.
@@ -1019,7 +1030,11 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             method=toolkit_handler_with_metadata.method.lower(),
         )
 
-        handler.store_matches(parameter_handlers, topology)
+        handler.store_matches(
+            parameter_handlers,
+            topology,
+            charge_from_molecules=charge_from_molecules,  # type: ignore[call-arg]
+        )
 
         return handler
 
@@ -1331,12 +1346,47 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
         return matches, potentials
 
+    @classmethod
+    def _assign_charges_from_charge_from_molecules(
+        cls,
+        topology: "Topology",
+        unique_molecule: Molecule,
+        charge_from_molecules=Optional[List[Molecule]],
+    ) -> Tuple[bool, Dict, Dict]:
+        if charge_from_molecules is None:
+            return False, dict(), dict()
+
+        for reference_molecule in charge_from_molecules:
+            if reference_molecule.is_isomorphic_with(unique_molecule):
+                break
+        else:
+            return False, dict(), dict()
+
+        matches = dict()
+        potentials = dict()
+        mapped_smiles = unique_molecule.to_smiles(mapped=True, explicit_hydrogens=True)
+
+        for index, partial_charge in enumerate(reference_molecule.partial_charges):
+            topology_key = TopologyKey(atom_indices=(index,))
+            potential_key = PotentialKey(
+                id=mapped_smiles,
+                mult=index,
+                associated_handler="charge_from_molecules",
+                bond_order=None,
+            )
+            potential = Potential(parameters={"charge": partial_charge})
+            matches[topology_key] = potential_key
+            potentials[potential_key] = potential
+
+        return True, matches, potentials
+
     def store_matches(
         self,
         parameter_handler: Union[
             "ElectrostaticsHandlerType", List["ElectrostaticsHandlerType"]
         ],
         topology: "Topology",
+        charge_from_molecules=None,
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
@@ -1360,14 +1410,20 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             unique_molecule = topology.molecule(unique_molecule_index)
 
+            flag, matches, potentials = self._assign_charges_from_charge_from_molecules(
+                topology,
+                unique_molecule,
+                charge_from_molecules,
+            )
             # TODO: Here is where the toolkit calls self.check_charges_assigned(). Do we skip this
             #       entirely given that we are not accepting `charge_from_molecules`?
 
-            # TODO: Rename this method to something like `_find_matches`
-            matches, potentials = self._find_reference_matches(
-                parameter_handlers,
-                unique_molecule,
-            )
+            if not flag:
+                # TODO: Rename this method to something like `_find_matches`
+                matches, potentials = self._find_reference_matches(
+                    parameter_handlers,
+                    unique_molecule,
+                )
 
             match_mults = defaultdict(set)
 
@@ -1565,6 +1621,25 @@ def _get_interpolation_coeffs(fractional_bond_order, data):
     coeff2 = (fractional_bond_order - x1) / (x2 - x1)
 
     return coeff1, coeff2
+
+
+def _check_partial_bond_orders(
+    reference_molecule: Molecule, molecule_list: List[Molecule]
+) -> bool:
+    """Check if the reference molecule is isomorphic with any molecules in a provided list."""
+    if molecule_list is None:
+        return False
+
+    if len(molecule_list) == 0:
+        return False
+
+    for molecule in molecule_list:
+        if reference_molecule.is_isomorphic_with(molecule):
+            # TODO: Here is where a check for "all bonds in this molecule must have partial bond orders assigned"
+            #       would go. That seems like a difficult mangled state to end up in, so not implemented for now.
+            return True
+
+    return False
 
 
 SMIRNOFF_POTENTIAL_HANDLERS = [

@@ -1,5 +1,6 @@
 name: openff-interchange-minimal-env
 channels:
+  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
 dependencies:
   # Core
@@ -9,13 +10,12 @@ dependencies:
   - pydantic
   - openmm
   # OpenFF stack
-  - openff-toolkit >=0.10.0
+  - openff-toolkit =0.10.3
   - openff-utilities
   - openff-units >=0.1.5
   # Testing
   - pytest
   - pytest-xdist
-  - conda
   - cached-property
   - cachetools
   - mdtraj

@@ -1,4 +1,4 @@
-name: full_tests
+name: examples
 
 on:
   push:
@@ -19,14 +19,12 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macOS-latest
           - ubuntu-latest
+          - macos-latest
         python-version:
-          - "3.8"
           - "3.9"
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
     - uses: actions/checkout@v3
@@ -34,8 +32,8 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
         python-version: "${{ matrix.python-version }}"
-        environment-file: devtools/conda-envs/test_env.yaml
-        activate-environment: test
+        environment-file: devtools/conda-envs/examples_env.yaml
+        activate-environment: interchange-examples-env
         auto-activate-base: false
         mamba-version: "*"
         miniforge-version: latest
@@ -64,17 +62,12 @@ jobs:
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
-    - name: Run mypy
+    - name: Run docexamples
       run: |
-        mypy --namespace-packages -p "openff.interchange"
+        # TODO: Add back /interchange.py when `TypedMolecule` is implemented
+        pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/tests --ignore=openff/interchange/components/interchange.py
 
-    - name: Run all tests
+    - name: Run example notebooks
       if: always()
       run: |
-        python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
-
-    - name: Codecov
-      uses: codecov/codecov-action@v2.1.0
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: false
+        python -m pytest examples/ --nbval-lax --ignore=examples/packed_box.ipynb --ignore=examples/foyer-showcase/ --ignore=examples/protein-ligand

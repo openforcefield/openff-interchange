@@ -18,8 +18,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: [3.8, 3.9]
+        os:
+          - ubuntu-latest
+        python-version:
+          - "3.8"
+          - "3.9"
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
@@ -56,4 +59,4 @@ jobs:
     - name: Run unit tests
       if: always()
       run: |
-        python -m pytest -v -nauto openff/interchange/tests/unit_tests/
+        python -m pytest -v -nauto --durations=10 openff/interchange/tests/unit_tests/
