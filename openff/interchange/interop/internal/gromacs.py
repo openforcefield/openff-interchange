@@ -995,13 +995,13 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
         # This should be `if` if a single quartet can be subject to both proper and RB torsions
         if rb_torsion_handler:
             for top_key in rb_torsion_handler.slot_map:
-                if top_key.atom_indices[0] != proper[0].index:
+                if top_key.atom_indices[0] != topology_indices[0]:
                     continue
-                if top_key.atom_indices[1] != proper[1].index:
+                if top_key.atom_indices[1] != topology_indices[1]:
                     continue
-                if top_key.atom_indices[2] != proper[2].index:
+                if top_key.atom_indices[2] != topology_indices[2]:
                     continue
-                if top_key.atom_indices[3] != proper[3].index:
+                if top_key.atom_indices[3] != topology_indices[3]:
                     continue
                 if top_key.atom_indices == topology_indices:
                     pot_key = rb_torsion_handler.slot_map[top_key]
