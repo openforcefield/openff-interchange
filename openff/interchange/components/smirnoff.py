@@ -1564,7 +1564,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         elif virtual_site_key.type == "DivalentLonePair":
             origin_weight = [0.0, 1.0, 0.0]
             x_direction = [0.5, -1.0, 0.5]
-            y_direction = [1.0, -1.0, 1.0]
+            y_direction = [1.0, -1.0, 0.0]
         elif virtual_site_key.type == "TrivalentLonePair":
             origin_weight = [0.0, 1.0, 0.0, 0.0]
             x_direction = [1 / 3, -1.0, 1 / 3, 1 / 3]
@@ -1588,6 +1588,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
             local_frame_position = factor * distance
         elif virtual_site_key.type == "DivalentLonePair":
             distance = potential.parameters["distance"]
+            theta = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)  # type: ignore
             factor = np.asarray([-1.0 * np.cos(theta), 0.0, np.sin(theta)])
             local_frame_position = factor * distance
         elif virtual_site_key.type == "TrivalentLonePair":
