@@ -216,6 +216,11 @@ class Interchange(DefaultModel):
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
 
+        Notes
+        -----
+        If the `Molecule` objects in the `topology` argument each contain conformers, the returned `Interchange` object
+        will have its positions set via concatenating the 0th conformer of each `Molecule`.
+
         Examples
         --------
         Generate an Interchange object from a single-molecule (OpenFF) topology and
