@@ -26,7 +26,8 @@ dependencies:
   - cached-property
   - cachetools
   - openeye-toolkits
-  - jax
+  - jax >0.3.0
+  - jaxlib >=0.3.0
   - pytest
   - pytest-cov
   - pytest-xdist
