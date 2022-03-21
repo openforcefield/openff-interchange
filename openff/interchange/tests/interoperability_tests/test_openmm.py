@@ -395,13 +395,13 @@ class TestOpenMMToPDB(_BaseTest):
         import mdtraj as md
 
         molecule = Molecule.from_smiles("O")
-        molecule.generate_conformers(n_conformers=1)
 
         out = Interchange.from_smirnoff(parsley, molecule.to_topology())
 
         with pytest.raises(MissingPositionsError):
             out.to_pdb("file_should_not_exist.pdb")
 
+        molecule.generate_conformers(n_conformers=1)
         out.positions = molecule.conformers[0]
 
         out.to_pdb("out.pdb")

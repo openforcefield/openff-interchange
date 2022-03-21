@@ -331,6 +331,20 @@ class TestInterchangeFromSMIRNOFF(_BaseTest):
         assert out["vdW"].cutoff == 0.777 * unit.angstrom
         assert out["Electrostatics"].cutoff == 0.777 * unit.angstrom
 
+    def test_infer_positions(self, sage):
+        from openff.toolkit.tests.create_molecules import create_ethanol
+
+        molecule = create_ethanol()
+
+        assert Interchange.from_smirnoff(sage, [molecule]).positions is None
+
+        molecule.generate_conformers(n_conformers=1)
+
+        assert Interchange.from_smirnoff(sage, [molecule]).positions.shape == (
+            molecule.n_atoms,
+            3,
+        )
+
 
 @pytest.mark.slow()
 class TestUnassignedParameters(_BaseTest):
