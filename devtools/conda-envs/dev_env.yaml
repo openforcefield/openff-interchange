@@ -1,7 +1,6 @@
 name: openff-interchange-env
 channels:
   - conda-forge
-  - bioconda
   - openeye
 dependencies:
   # Core
@@ -19,6 +18,7 @@ dependencies:
   - mbuild
   - foyer >=0.8.1
   - jax >=0.3.0
+  - jaxlib >=0.3.0
   # Testing
   - mdtraj
   - intermol
@@ -39,7 +39,7 @@ dependencies:
   - cached-property
   - cachetools
   # Drivers
-  - gromacs >=2021
+  - gromacs >=2021=nompi*
   - lammps >=2021
   - panedr
   # Typing

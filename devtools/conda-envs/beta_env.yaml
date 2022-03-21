@@ -4,7 +4,6 @@ channels:
   - openeye/label/beta
   - openeye/label/rc
   - conda-forge
-  - bioconda
   - openeye
 dependencies:
   # Core
@@ -18,7 +17,8 @@ dependencies:
   - openff-utilities
   - openff-units >=0.1.5
   # Optional features
-  - jax
+  - jax >=0.3.0
+  - jaxlib >=0.3.0
   - unyt
   - mbuild
   - foyer >=0.8.1
@@ -34,7 +34,7 @@ dependencies:
   - nbval
   - conda
   # Drivers
-  - gromacs >=2021
+  - gromacs >=2021=nompi*
   - lammps >=2021
   - panedr
   # Typing
@@ -43,3 +43,5 @@ dependencies:
   - types-setuptools
   - types-pkg_resources
   - pandas-stubs
+  - pip:
+    - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
