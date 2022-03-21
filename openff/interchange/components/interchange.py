@@ -12,13 +12,6 @@ from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
 
 from openff.interchange.components.potentials import PotentialHandler
-from openff.interchange.components.smirnoff import (
-    SMIRNOFF_POTENTIAL_HANDLERS,
-    SMIRNOFFBondHandler,
-    SMIRNOFFConstraintHandler,
-    SMIRNOFFElectrostaticsHandler,
-    SMIRNOFFProperTorsionHandler,
-)
 from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
     InternalInconsistencyError,
@@ -239,6 +232,15 @@ class Interchange(DefaultModel):
             Interchange with 8 atoms, non-periodic topology
 
         """
+        from openff.interchange.components.smirnoff import (
+            SMIRNOFF_POTENTIAL_HANDLERS,
+            SMIRNOFFBondHandler,
+            SMIRNOFFConstraintHandler,
+            SMIRNOFFElectrostaticsHandler,
+            SMIRNOFFProperTorsionHandler,
+            SMIRNOFFVirtualSiteHandler,
+        )
+
         sys_out = Interchange()
 
         sys_out.topology = topology
@@ -326,6 +328,20 @@ class Interchange(DefaultModel):
                     charge_from_molecules=charge_from_molecules,
                 )
                 sys_out.handlers.update({"Electrostatics": electrostatics_handler})
+            elif potential_handler_type == SMIRNOFFVirtualSiteHandler:
+                virtual_site_handler = SMIRNOFFVirtualSiteHandler._from_toolkit(
+                    parameter_handler=force_field["VirtualSites"],
+                    topology=sys_out._inner_data.topology,
+                )
+                sys_out.handlers.update({"VirtualSites": virtual_site_handler})
+                sys_out["vdW"]._from_toolkit_virtual_sites(
+                    parameter_handler=force_field["VirtualSites"],
+                    topology=sys_out._inner_data.topology,
+                )
+                sys_out["Electrostatics"]._from_toolkit_virtual_sites(
+                    parameter_handler=force_field["VirtualSites"],
+                    topology=sys_out._inner_data.topology,
+                )
             elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers,
