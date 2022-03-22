@@ -879,6 +879,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
             top_key = VirtualSiteKey(
                 atom_indices=atoms,
                 type=virtual_site_type.type,
+                name=virtual_site_type.name,
                 match=virtual_site_type.match,
             )
             pot_key = PotentialKey(
@@ -1066,6 +1067,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             virtual_site_key = VirtualSiteKey(
                 atom_indices=atom_indices,
                 type=virtual_site_type.type,
+                name=virtual_site_type.name,
                 match=virtual_site_type.match,
             )
 
@@ -1538,6 +1540,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                 virtual_site_key = VirtualSiteKey(
                     atom_indices=key,
                     type=val.parameter_type.type,
+                    name=val.parameter_type.name,
                     match=val.parameter_type.match,
                 )
                 potential_key = PotentialKey(

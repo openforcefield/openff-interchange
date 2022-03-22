@@ -85,6 +85,7 @@ class VirtualSiteKey(DefaultModel):
         tuple(), description="The indices of the atoms that anchor this virtual site"
     )
     type: str = Field(description="The type of this virtual site")
+    name: str = Field(description="Some name identifier, needs better description")
     match: Literal["once", "all_permutations"] = Field(
         description="The `match` attribute of the associated virtual site type"
     )
