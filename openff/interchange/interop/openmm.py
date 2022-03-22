@@ -597,6 +597,14 @@ def _process_virtual_sites(openff_sys, openmm_sys):
     except KeyError:
         return
 
+    _SUPPORTED_EXCLUSION_POLICIES = ["parents"]
+
+    if virtual_site_handler.exclusion_policy not in _SUPPORTED_EXCLUSION_POLICIES:
+        raise UnsupportedExportError(
+            f"Found unsupported exclusion policy {virtual_site_handler.exclusion_policy}. "
+            f"Supported exclusion policies are {_SUPPORTED_EXCLUSION_POLICIES}"
+        )
+
     vdw_handler = openff_sys.handlers["vdW"]
     coul_handler = openff_sys.handlers["Electrostatics"]
 
@@ -640,9 +648,21 @@ def _process_virtual_sites(openff_sys, openmm_sys):
 
         non_bonded_force.addParticle(charge, sigma, epsilon)
 
-        for parent_atom_index in virtual_site_key.atom_indices:
-            non_bonded_force.addException(
-                parent_atom_index, virtual_site_index, 0.0, 0.0, 0.0, replace=True
+        # Notes: For each type of virtual site, the parent atom is defined as the _first_ (0th) atom.
+        # The toolkit, however, might have some bugs from following different assumptions:
+        # https://github.com/openforcefield/openff-interchange/pull/415#issuecomment-1074546516
+        if virtual_site_handler.exclusion_policy in ["none", "minimal"]:
+            raise UnsupportedCutoffMethodError(
+                f"Virtual site exclusion policy {virtual_site_handler.exclusion_policy} not yet supported."
+            )
+        elif virtual_site_handler.exclusion_policy == "parents":
+            for parent_atom_index in virtual_site_key.atom_indices:
+                non_bonded_force.addException(
+                    parent_atom_index, virtual_site_index, 0.0, 0.0, 0.0, replace=True
+                )
+        else:
+            raise UnsupportedCutoffMethodError(
+                f"Virtual site exclusion policy {virtual_site_handler.exclusion_policy} not yet supported."
             )
 
 

@@ -1489,7 +1489,9 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         description="A mapping between VirtualSiteKey objects (stored analogously to TopologyKey objects"
         "in other handlers) and topology indices describing the associated virtual site",
     )
-    exclusion_policy: Literal["parents"] = "parents"
+    exclusion_policy: Literal[
+        "none", "minimal", "parents", "local", "neighbors", "connected", "all"
+    ] = "parents"
 
     @classmethod
     def allowed_parameter_handlers(cls):
