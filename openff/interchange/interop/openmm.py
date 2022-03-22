@@ -745,6 +745,31 @@ def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
         force.setSwitchingDistance(switching_distance)
 
 
+def to_openmm_topology(interchange: "Interchange") -> openmm.app.Topology:
+    """Export components of this Interchange to an OpenMM Topology."""
+    if "VirtualSites" not in interchange.handlers.keys():
+        return interchange.topology.to_openmm()
+    else:
+        from openmm.app.element import Element
+
+        openmm_topology = interchange.topology.to_openmm()
+        virtual_site_element = (Element.getByMass(0),)
+        # TODO: This almost surely isn't the right way to process virtual particles' residues,
+        # but it's not clear how this should be done and what standards exist for this
+        virtual_site_residue = [*openmm_topology.residues()][0]
+
+        for virtual_site_key in interchange["VirtualSites"].slot_map:
+            virtual_site_name = virtual_site_key.name
+
+            openmm_topology.addAtom(
+                virtual_site_name,
+                virtual_site_element,
+                virtual_site_residue,
+            )
+
+        return openmm_topology
+
+
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
     """Create an Interchange object from OpenMM data."""
     from openff.interchange import Interchange
