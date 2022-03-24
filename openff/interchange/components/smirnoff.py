@@ -1090,10 +1090,8 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             self.slot_map.update({virtual_site_key: virtual_site_potential_key})
             self.potentials.update({virtual_site_potential_key: virtual_site_potential})
 
-            # TODO: Counter-intuitive that toolkit regression tests pass by using the counter
-            # variable i as if it was the atom index - shouldn't it just use atom_index?
             for i, atom_index in enumerate(atom_indices):  # noqa
-                topology_key = TopologyKey(atom_indices=(i,), mult=2)
+                topology_key = TopologyKey(atom_indices=(atom_index,), mult=2)
                 potential_key = PotentialKey(
                     id=virtual_site_type.smirks,
                     mult=i,
