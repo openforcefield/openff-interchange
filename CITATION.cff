@@ -1,0 +1,17 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: OpenFF Interchannge
+message: 'If you use Interchange, please cite it as below.'
+type: software
+authors:
+  - given-names: Matthew
+    family-names: Thompson
+    orcid: 'https://orcid.org/0000-0002-1460-3983'
+  - given-names: Jeff
+    family-names: Wagner
+    orcid: 'https://orcid.org/0000-0001-6448-0873'
+version: v0.1.4
+date-released: 2022-01-11
+url: "https://github.com/openforcefield/openff-interchange"
