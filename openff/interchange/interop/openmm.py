@@ -8,7 +8,7 @@ from openff.toolkit.topology import Topology
 from openff.units import unit as off_unit
 from openff.units.openmm import from_openmm as from_openmm_unit
 from openff.units.openmm import to_openmm as to_openmm_unit
-from openmm import unit
+from openmm import app, unit
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.exceptions import (
@@ -745,7 +745,7 @@ def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
         force.setSwitchingDistance(switching_distance)
 
 
-def to_openmm_topology(interchange: "Interchange") -> openmm.app.Topology:
+def to_openmm_topology(interchange: "Interchange") -> app.Topology:
     """Export components of this Interchange to an OpenMM Topology."""
     if "VirtualSites" not in interchange.handlers.keys():
         return interchange.topology.to_openmm()

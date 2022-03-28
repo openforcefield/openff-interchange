@@ -1093,7 +1093,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 # TODO: Better way of dedupliciating this case (charge increments from multiple different
                 #       virtual sites are applied to the same atom)
                 while topology_key in self.slot_map:
-                    topology_key.mult += 1000
+                    topology_key.mult += 1000  # type: ignore[operator]
 
                 potential_key = PotentialKey(
                     id=virtual_site_type.smirks,

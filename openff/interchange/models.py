@@ -91,7 +91,7 @@ class VirtualSiteKey(DefaultModel):
     )
 
     def __hash__(self) -> int:
-        return hash((self.atom_indices, self.type, self.match))
+        return hash((self.atom_indices, self.name, self.type, self.match))
 
 
 class PotentialKey(DefaultModel):
