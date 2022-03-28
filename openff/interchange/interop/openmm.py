@@ -8,7 +8,7 @@ from openff.toolkit.topology import Topology
 from openff.units import unit as off_unit
 from openff.units.openmm import from_openmm as from_openmm_unit
 from openff.units.openmm import to_openmm as to_openmm_unit
-from openmm import unit
+from openmm import app, unit
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.exceptions import (
@@ -597,6 +597,14 @@ def _process_virtual_sites(openff_sys, openmm_sys):
     except KeyError:
         return
 
+    _SUPPORTED_EXCLUSION_POLICIES = ["parents"]
+
+    if virtual_site_handler.exclusion_policy not in _SUPPORTED_EXCLUSION_POLICIES:
+        raise UnsupportedExportError(
+            f"Found unsupported exclusion policy {virtual_site_handler.exclusion_policy}. "
+            f"Supported exclusion policies are {_SUPPORTED_EXCLUSION_POLICIES}"
+        )
+
     vdw_handler = openff_sys.handlers["vdW"]
     coul_handler = openff_sys.handlers["Electrostatics"]
 
@@ -640,9 +648,21 @@ def _process_virtual_sites(openff_sys, openmm_sys):
 
         non_bonded_force.addParticle(charge, sigma, epsilon)
 
-        for parent_atom_index in virtual_site_key.atom_indices:
-            non_bonded_force.addException(
-                parent_atom_index, virtual_site_index, 0.0, 0.0, 0.0, replace=True
+        # Notes: For each type of virtual site, the parent atom is defined as the _first_ (0th) atom.
+        # The toolkit, however, might have some bugs from following different assumptions:
+        # https://github.com/openforcefield/openff-interchange/pull/415#issuecomment-1074546516
+        if virtual_site_handler.exclusion_policy in ["none", "minimal"]:
+            raise UnsupportedCutoffMethodError(
+                f"Virtual site exclusion policy {virtual_site_handler.exclusion_policy} not yet supported."
+            )
+        elif virtual_site_handler.exclusion_policy == "parents":
+            for parent_atom_index in virtual_site_key.atom_indices:
+                non_bonded_force.addException(
+                    parent_atom_index, virtual_site_index, 0.0, 0.0, 0.0, replace=True
+                )
+        else:
+            raise UnsupportedCutoffMethodError(
+                f"Virtual site exclusion policy {virtual_site_handler.exclusion_policy} not yet supported."
             )
 
 
@@ -723,6 +743,31 @@ def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
 
         force.setUseSwitchingFunction(True)
         force.setSwitchingDistance(switching_distance)
+
+
+def to_openmm_topology(interchange: "Interchange") -> app.Topology:
+    """Export components of this Interchange to an OpenMM Topology."""
+    if "VirtualSites" not in interchange.handlers.keys():
+        return interchange.topology.to_openmm()
+    else:
+        from openmm.app.element import Element
+
+        openmm_topology = interchange.topology.to_openmm()
+        virtual_site_element = (Element.getByMass(0),)
+        # TODO: This almost surely isn't the right way to process virtual particles' residues,
+        # but it's not clear how this should be done and what standards exist for this
+        virtual_site_residue = [*openmm_topology.residues()][0]
+
+        for virtual_site_key in interchange["VirtualSites"].slot_map:
+            virtual_site_name = virtual_site_key.name
+
+            openmm_topology.addAtom(
+                virtual_site_name,
+                virtual_site_element,
+                virtual_site_residue,
+            )
+
+        return openmm_topology
 
 
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
