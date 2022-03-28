@@ -1231,9 +1231,31 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             isomeric=True, explicit_hydrogens=True, mapped=True
         )
 
-        method = getattr(parameter_handler, "partial_charge_method", "am1bcc")
+        if isinstance(parameter_handler, ChargeIncrementModelHandler):
+            partial_charge_method = parameter_handler.partial_charge_method
+        elif isinstance(parameter_handler, ToolkitAM1BCCHandler):
+            # TODO: There needs to be a cleaner way of doing this check, since it's not
+            #       exposed as an attribute of ToolkitAM1BCCHandler and the check that the
+            #       toolkit does is internal to that handler. Implementation at
+            #       https://github.com/openforcefield/openff-toolkit/blob/0c42148bcbd984af50236696ad281c98cf6d8a0a/openff/toolkit/typing/engines/smirnoff/parameters.py#L4198-L4210
+            try:
+                from openeye import oechem
 
-        partial_charges = cls._compute_partial_charges(unique_molecule, method=method)
+                if oechem.OEChemIsLicensed():
+                    partial_charge_method = "am1bccelf10"
+                else:
+                    partial_charge_method = "am1bcc"
+            except ImportError:
+                partial_charge_method = "am1bcc"
+        else:
+            raise InvalidParameterHandlerError(
+                f"Encountered unknown handler of type {type(parameter_handler)} where only "
+                "ToolkitAM1BCCHandler or ChargeIncrementModelHandler are expected."
+            )
+
+        partial_charges = cls._compute_partial_charges(
+            unique_molecule, method=partial_charge_method
+        )
 
         matches = {}
         potentials = {}
