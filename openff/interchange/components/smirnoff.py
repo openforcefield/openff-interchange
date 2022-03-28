@@ -1084,14 +1084,17 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 }
             )
 
-            matches = {}
-            potentials = {}
-
             self.slot_map.update({virtual_site_key: virtual_site_potential_key})
             self.potentials.update({virtual_site_potential_key: virtual_site_potential})
 
             for i, atom_index in enumerate(atom_indices):  # noqa
-                topology_key = TopologyKey(atom_indices=(atom_index,), mult=2)
+                topology_key = TopologyKey(atom_indices=(atom_index,), mult=i)
+
+                # TODO: Better way of dedupliciating this case (charge increments from multiple different
+                #       virtual sites are applied to the same atom)
+                while topology_key in self.slot_map:
+                    topology_key.mult += 1000
+
                 potential_key = PotentialKey(
                     id=virtual_site_type.smirks,
                     mult=i,
@@ -1104,11 +1107,8 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
                 potential = Potential(parameters={"charge_increment": charge_increment})
 
-                matches[topology_key] = potential_key
-                potentials[potential_key] = potential
-
-        self.slot_map.update(matches)
-        self.potentials.update(potentials)
+                self.slot_map[topology_key] = potential_key
+                self.potentials[potential_key] = potential
 
     @classmethod
     @functools.lru_cache(None)
