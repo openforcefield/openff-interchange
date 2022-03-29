@@ -654,7 +654,19 @@ def _process_virtual_sites(openff_sys, openmm_sys):
         if virtual_site_handler.exclusion_policy == "none":
             pass
         elif virtual_site_handler.exclusion_policy == "minimal":
-            root_parent_atom = virtual_site_key.atom_indices[0]
+            # TODO: This behavior is likely wrong but written to match the toolkit's behavior.
+            #       Exclusion policy "minimal" _should_ always exclude the 0th index atom, but
+            #       this is nont the case for one reason or another.
+            # root_parent_atom = virtual_site_key.atom_indices[0]
+            if len(virtual_site_key.atom_indices) == 2:
+                root_parent_atom = virtual_site_key.atom_indices[0]
+            elif len(virtual_site_key.atom_indices) >= 3:
+                root_parent_atom = virtual_site_key.atom_indices[1]
+            else:
+                raise NotImplementedError(
+                    "This should not be reachable. Please file an issue"
+                )
+
             non_bonded_force.addException(
                 root_parent_atom, virtual_site_index, 0.0, 0.0, 0.0, replace=True
             )
