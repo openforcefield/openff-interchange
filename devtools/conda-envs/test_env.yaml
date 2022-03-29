@@ -26,8 +26,6 @@ dependencies:
   - intermol
   - nglview
   - openff-amber-ff-ports
-  - cached-property
-  - cachetools
   - openeye-toolkits
   - jax >0.3.0
   - jaxlib >=0.3.0
