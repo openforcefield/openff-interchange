@@ -671,13 +671,13 @@ def _create_virtual_site(
     interchange: "Interchange",
 ) -> "openmm.LocalCoordinatesSites":
 
+    handler = interchange.handlers["VirtualSites"]
+
     parent_atoms = virtual_site_key.atom_indices
-    origin_weight, x_direction, y_direction = interchange[
-        "VirtualSites"
-    ]._get_local_frame_weights(virtual_site_key)
-    displacement = interchange["VirtualSites"]._get_local_frame_position(
+    origin_weight, x_direction, y_direction = handler._get_local_frame_weights(
         virtual_site_key
     )
+    displacement = handler._get_local_frame_position(virtual_site_key)
 
     x, y, z = ((v / v.units).m for v in displacement)
     # x, y, z = displacement / displacement.units
@@ -686,10 +686,10 @@ def _create_virtual_site(
     for parent_atom in parent_atoms:
         parent_atom_positions.append(interchange.positions[parent_atom])
 
-    _origin_weight = np.atleast_2d(origin_weight)
+    # _origin_weight = np.atleast_2d(origin_weight)
     parent_atom_positions = np.atleast_2d(parent_atom_positions)
 
-    origin = np.dot(_origin_weight, parent_atom_positions).sum(axis=0)
+    # origin = np.dot(_origin_weight, parent_atom_positions).sum(axis=0)
 
     x_axis, y_axis = np.dot(
         np.vstack((x_direction, y_direction)), parent_atom_positions
@@ -706,14 +706,18 @@ def _create_virtual_site(
 
     x_axis, y_axis, z_axis = map(_normalize, (x_axis, y_axis, z_axis))
 
-    position = origin + x * x_axis + y * y_axis + z * z_axis
+    # position = origin + x * x_axis + y * y_axis + z * z_axis
+    local_frame_position = handler._get_local_frame_position(virtual_site_key).m_as(
+        off_unit.nanometer
+    )
 
     return openmm.LocalCoordinatesSite(
         parent_atoms,
         origin_weight,
+        # _origin_weight,
         x_direction,
         y_direction,
-        position,
+        local_frame_position,
     )
 
 
