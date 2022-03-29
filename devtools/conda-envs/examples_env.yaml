@@ -16,6 +16,7 @@ dependencies:
   - openff-units >=0.1.5
   - cached-property
   - cachetools
+  - python-constraint
   # Optional features
   - jax >=0.3.0
   - jaxlib >=0.3.0
