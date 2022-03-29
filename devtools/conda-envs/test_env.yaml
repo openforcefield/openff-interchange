@@ -14,6 +14,9 @@ dependencies:
   - openff-toolkit =0.10.3
   - openff-utilities
   - openff-units >=0.1.5
+  - cached-property
+  - cachetools
+  - python-constraint
   # Optional features
   - unyt
   - mbuild
