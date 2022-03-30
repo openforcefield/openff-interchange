@@ -141,6 +141,7 @@ class TestEnergies(_BaseTest):
     @needs_gmx
     @needs_lmp
     @pytest.mark.slow()
+    @pytest.mark.skip(reason="Revisit after performannce optimizations in writers")
     def test_liquid_argon(self):
         argon = Molecule.from_smiles("[#18]")
         pdbfile = app.PDBFile(get_test_file_path("packed-argon.pdb"))
@@ -431,59 +432,10 @@ class TestEnergies(_BaseTest):
     @pytest.mark.parametrize(
         "smi",
         [
-            "C#Cc1ccc(cc1)N",
-            "C=Cc1ccc(cc1)N",
-            "C=Nc1ccc(cc1)N",
-            "CC(=O)Nc1ccc(cc1)N",
-            # "CC(=O)Oc1ccc(cc1)N",
-            "CC(=O)c1ccc(cc1)N",
-            "CC(C)(C)c1ccc(cc1)N",
-            "CN(C)c1ccc(cc1)N",
-            "CNC(=O)c1ccc(cc1)N",
-            # "CNc1ccc(cc1)N", significant energy differences
-            "COC(=O)c1ccc(cc1)N",
-            "COc1ccc(cc1)N",
-            "CS(=O)(=O)Oc1ccc(cc1)N",
-            "CSc1ccc(cc1)N",
-            "C[N+](C)(C)c1ccc(cc1)N",
-            "Cc1ccc(cc1)N",
-            "c1cc(ccc1C#N)N",
-            "c1cc(ccc1C(=O)Cl)N",
-            # "c1cc(ccc1C(=O)N)N", significant energy differences
-            "c1cc(ccc1C(=O)O)N",
-            "c1cc(ccc1C(Br)(Br)Br)N",
-            "c1cc(ccc1C(Cl)(Cl)Cl)N",
-            "c1cc(ccc1C(F)(F)F)N",
-            "c1cc(ccc1C=O)N",
-            "c1cc(ccc1CS(=O)(=O)[O-])N",
-            "c1cc(ccc1N)Br",
-            "c1cc(ccc1N)Cl",
-            "c1cc(ccc1N)F",
-            "c1cc(ccc1N)N",
-            "c1cc(ccc1N)N(=O)=O",
-            "c1cc(ccc1N)N=C=O",
-            "c1cc(ccc1N)N=C=S",
-            # "c1cc(ccc1N)N=[N+]=[N-]", SQM failures
-            "c1cc(ccc1N)NC(=O)N",
-            "c1cc(ccc1N)NO",
-            "c1cc(ccc1N)O",
-            "c1cc(ccc1N)OC#N",
-            # "c1cc(ccc1N)OC(=O)C(F)(F)F",
-            "c1cc(ccc1N)OC(F)(F)F",
-            "c1cc(ccc1N)S",
-            "c1cc(ccc1N)S(=O)(=O)C(F)(F)F",
-            "c1cc(ccc1N)S(=O)(=O)N",
-            "c1cc(ccc1N)SC#N",
-            "c1cc(ccc1N)[N+]#N",
-            "c1cc(ccc1N)[O-]",
-            "c1cc(ccc1N)[S-]",
-            "c1ccc(cc1)Nc2ccc(cc2)N",
-            "c1ccc(cc1)Oc2ccc(cc2)N",
-            "c1ccc(cc1)Sc2ccc(cc2)N",
-            "c1ccc(cc1)c2ccc(cc2)N",
-        ][
-            :8
-        ],  # TODO: Expand the entire molecule set out into a regression tests
+            "c1cc(ccc1c2ccncc2)O",
+            "c1cc(ccc1c2ccncc2)[O-]",
+            "c1cc(c(cc1O)Cl)c2cc[nH+]cc2",
+        ],
     )
     @needs_gmx
     @pytest.mark.slow()

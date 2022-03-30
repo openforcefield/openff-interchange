@@ -1,7 +1,8 @@
-name: openff-interchange-minimal-env
+name: interchange-examples-env
 channels:
   - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
+  - openeye
 dependencies:
   # Core
   - python
@@ -16,9 +17,26 @@ dependencies:
   - cached-property
   - cachetools
   - python-constraint
-  # Testing
-  - pytest
-  - pytest-xdist
+  # Optional features
+  - jax >=0.3.0
+  - jaxlib >=0.3.0
+  - unyt
+  - mbuild
+  - foyer >=0.8.1
+  # Examples
+  - intermol
+  - openff-evaluator-base
   - mdtraj
+  - nglview
+  - openff-amber-ff-ports
+  - openeye-toolkits
+  - pytest
+  - nbval
+  - nglview
+  # Drivers
+  - gromacs >=2021=nompi*
+  - lammps >=2021
+  - panedr
+  # Temporary
   - pip:
     - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor

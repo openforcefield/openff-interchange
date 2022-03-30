@@ -151,9 +151,7 @@ class TestInterchange(_BaseTest):
         both input objects have positions."""
 
         ethane = Molecule.from_smiles("CC")
-        ethane.generate_conformers(n_conformers=1)
         methane = Molecule.from_smiles("C")
-        methane.generate_conformers(n_conformers=1)
 
         ethane_interchange = Interchange.from_smirnoff(
             parsley,
@@ -164,9 +162,12 @@ class TestInterchange(_BaseTest):
             methane.to_topology(),
         )
 
-        assert not (methane_interchange + ethane_interchange).positions
+        ethane.generate_conformers(n_conformers=1)
+        methane.generate_conformers(n_conformers=1)
+
+        assert (methane_interchange + ethane_interchange).positions is None
         methane_interchange.positions = methane.conformers[0]
-        assert not (methane_interchange + ethane_interchange).positions
+        assert (methane_interchange + ethane_interchange).positions is None
         ethane_interchange.positions = ethane.conformers[0]
         assert (methane_interchange + ethane_interchange).positions is not None
 
@@ -229,12 +230,27 @@ class TestInterchange(_BaseTest):
         assert type(out.topology) == Topology
         assert isinstance(out.topology, Topology)
 
+    def test_from_parsley_molecule_list(self, parsley):
+
+        out = Interchange.from_smirnoff(
+            parsley,
+            [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")],
+        )
+
+        assert "Constraints" in out.handlers.keys()
+        assert "Bonds" in out.handlers.keys()
+        assert "Angles" in out.handlers.keys()
+        assert "ProperTorsions" in out.handlers.keys()
+        assert "vdW" in out.handlers.keys()
+
+        assert type(out.topology) == Topology
+        assert isinstance(out.topology, Topology)
+
     @skip_if_missing("nglview")
     def test_visualize(self, parsley):
         import nglview
 
         molecule = Molecule.from_smiles("CCO")
-        molecule.generate_conformers(n_conformers=1)
 
         out = Interchange.from_smirnoff(
             force_field=parsley,
@@ -246,6 +262,7 @@ class TestInterchange(_BaseTest):
         ):
             out.visualize()
 
+        molecule.generate_conformers(n_conformers=1)
         out.positions = molecule.conformers[0]
 
         assert isinstance(out.visualize(), nglview.NGLWidget)

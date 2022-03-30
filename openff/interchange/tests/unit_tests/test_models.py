@@ -30,13 +30,18 @@ def test_topologykey_hash_uniqueness():
 def test_virtualsitekey_hash_uniqueness():
     """Test that VirtualSiteKey hashes differ when optional attributes are set."""
 
-    ref = VirtualSiteKey(atom_indices=(0, 1), type="BondCharge", match="once")
+    ref = VirtualSiteKey(
+        atom_indices=(0, 1), name="vs1", type="BondCharge", match="once"
+    )
+    with_name = VirtualSiteKey(
+        atom_indices=(0, 1), name="vs2", type="TrivalentLonePair", match="once"
+    )
     with_type = VirtualSiteKey(
-        atom_indices=(0, 1), type="TrivalentLonePair", match="once"
+        atom_indices=(0, 1), name="vs1", type="TrivalentLonePair", match="once"
     )
     with_match = VirtualSiteKey(
-        atom_indices=(0, 1), type="BondCharge", match="all_permutations"
+        atom_indices=(0, 1), name="vs1", type="BondCharge", match="all_permutations"
     )
 
-    keys = [ref, with_type, with_match]
+    keys = [ref, with_type, with_match, with_name]
     assert len({hash(k) for k in keys}) == len(keys)
