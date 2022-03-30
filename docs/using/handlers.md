@@ -12,7 +12,7 @@ whose values are [`PotentialHandler`] objects. Instead of linking parameters to
 abstract chemical environments like SMIRNOFF force fields, or copying
 parameters into place like a traditional force field format, a
 `PotentialHandler` links an input parameter in the force field to every place
-in the topology where it is used. 
+in the topology where it is used.
 
 Like SMIRNOFF force fields, each parameter in an `Interchange`  knows where it
 came from, but like traditional force fields, the parameterized system is
@@ -21,7 +21,7 @@ input parameter to be reflected instantly in the parameterized system. Unlike a
 SMIRNOFF force field, the chemistry of system itself cannot be changed; a new
 `Interchange` must be defined and parameterized.
 
-There are three central components in each handler: topology keys, potential keys, 
+There are three central components in each handler: topology keys, potential keys,
 and potentials.
 
 [`TopologyKey`] objects are unique identifiers of locations in a topology. These
@@ -53,7 +53,7 @@ all the places in the topology where it is used are updated immediately.
 Despite this, getting the `Potential` for a place in the topology is a constant
 time operation.
 
-Each potential handler inherits from the base [`PotentialHandler`] class and 
+Each potential handler inherits from the base [`PotentialHandler`] class and
 describes a single type of parameter from a single source. Potential handlers
 for SMIRNOFF force fields are found in the [](openff.interchange.components.smirnoff)
 module, while those for Foyer are found in the [](openff.interchange.components.foyer).
@@ -66,7 +66,7 @@ Construct a simple `Interchange`
 ```python
 >>> from openff.interchange import Interchange
 >>> from openff.toolkit import Molecule, ForceField
->>> 
+>>>
 >>> ethane = Molecule.from_smiles("CC")
 >>> sage = ForceField("openff-2.0.0.offxml")
 >>> box = box=[[1,0,0], [0,1,0], [0,0,1]]
@@ -78,13 +78,13 @@ The [`Interchange.handlers`] attribute maps names to the corresponding handler:
 
 ```python
 >>> interchange.handlers.keys()  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
-dict_keys(['Bonds', 'Constraints', 'Angles', 'ProperTorsions', 
+dict_keys(['Bonds', 'Constraints', 'Angles', 'ProperTorsions',
     'ImproperTorsions', 'vdW', 'Electrostatics'])
 >>> # Ethane has no improper torsions, so both maps will be empty
 >>> interchange.handlers['ImproperTorsions']  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
-SMIRNOFFImproperTorsionHandler(type='ImproperTorsions', 
-    expression='k*(1+cos(periodicity*theta-phase))', 
-    slot_map={}, 
+SMIRNOFFImproperTorsionHandler(type='ImproperTorsions',
+    expression='k*(1+cos(periodicity*theta-phase))',
+    slot_map={},
     potentials={})
 
 ```
@@ -111,16 +111,16 @@ Which atom indices represent hydrogens bonded to carbon atom 0, and which are
 bonded to carbon atom 1?
 :::
 
-The bond handler also maps the two potential keys to the appropriate `Potential`. 
-Here we can read off the force constant and length: 
+The bond handler also maps the two potential keys to the appropriate `Potential`.
+Here we can read off the force constant and length:
 
 ```python
 >>> interchange.handlers['Bonds'].potentials  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
-{PotentialKey(id='[#6X4:1]-[#6X4:2]', ...): 
-     Potential(parameters={'k': <Quantity(529.242972, 'kilocalorie / angstrom ** 2 / mole')>, 
-                           'length': <Quantity(1.52190126, 'angstrom')>}, ...), 
- PotentialKey(id='[#6X4:1]-[#1:2]', ...): 
-     Potential(parameters={'k': <Quantity(740.093414, 'kilocalorie / angstrom ** 2 / mole')>, 
+{PotentialKey(id='[#6X4:1]-[#6X4:2]', ...):
+     Potential(parameters={'k': <Quantity(529.242972, 'kilocalorie / angstrom ** 2 / mole')>,
+                           'length': <Quantity(1.52190126, 'angstrom')>}, ...),
+ PotentialKey(id='[#6X4:1]-[#1:2]', ...):
+     Potential(parameters={'k': <Quantity(740.093414, 'kilocalorie / angstrom ** 2 / mole')>,
                            'length': <Quantity(1.09389949, 'angstrom')>}, ...)}
 
 ```

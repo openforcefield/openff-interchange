@@ -80,6 +80,7 @@ Below is a minimal but complete example parameterizing an ethanol molecule with 
 from foyer import Forcefield
 import mdtraj as md
 from openff.toolkit.topology import Molecule
+
 # from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange import Interchange
 

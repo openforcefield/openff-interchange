@@ -1,6 +1,6 @@
 # Exporting to other software
 
-`Interchange` provides several methods to produce input data for other 
+`Interchange` provides several methods to produce input data for other
 software. Note that none of these methods write out all the information
 stored in an `Interchange`; they support a design where the principle
 source of truth is the rich chemical information in the `Interchange`
@@ -25,7 +25,7 @@ interchange.to_gro("out.gro")
 interchange.to_top("out.top")
 ```
 
-<!-- 
+<!--
 :::{TODO}
 We should either make this a public method or document it, not both
 :::
@@ -50,7 +50,7 @@ An [`Interchange`] object can be written to a LAMMPS data file with
 interchange.to_lammps("data.lmp")
 ```
 
-<!-- 
+<!--
 :::{TODO}
 We should either make this a public method or document it, not both
 :::
@@ -79,7 +79,7 @@ By default, this will separate non-bonded interactions into several different
 `openmm.Force` objects. To combine everything into a single
 `openmm.NonbondedForce`, use the `combine_nonbonded_forces=True` argument.
 
-The accompanying OpenMM topology can be constructed with the 
+The accompanying OpenMM topology can be constructed with the
 [`Topology.to_openmm()`] method:
 
 ```python
@@ -95,7 +95,7 @@ coordinate files with [`Interchange.to_prmtop()`] and [`Interchange.to_inpcrd()`
 interchange.to_prmtop("out.prmtop")
 interchange.to_inpcrd("out.inpcrd")
 ```
-<!-- 
+<!--
 ## CHARMM
 
 An `Interchange` object can be written to CHARMM topology and

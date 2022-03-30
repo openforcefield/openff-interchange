@@ -7,14 +7,14 @@ An [`Interchange`] is most commonly constructed via the
 [next-generation force field format]. It uses SMIRKS codes instead of atom
 types to describe the chemistry of each parameter, which both reduces the
 number of parameters needed to accurately describe biomolecular systems and
-makes augmenting and extending the force field much simpler. 
+makes augmenting and extending the force field much simpler.
 
 The molecular topology is simply a description of the system that should be
 parameterized. It is usually given as a list of OpenFF Toolkit [`Molecule`]
-objects, though specialist users can pass in a [`Topology`] instead. A 
-`Molecule` describes a single molecule, including its atoms, formal charges, 
-and full connectivity information. A `Molecule` describes chemistry directly, 
-rather than in terms of a molecular mechanics model; the `Interchange` and 
+objects, though specialist users can pass in a [`Topology`] instead. A
+`Molecule` describes a single molecule, including its atoms, formal charges,
+and full connectivity information. A `Molecule` describes chemistry directly,
+rather than in terms of a molecular mechanics model; the `Interchange` and
 `ForceField` are responsible for applying simulation parameters.
 
 Positions and velocities can be applied to an `Interchange` directly via the
@@ -85,17 +85,18 @@ import numpy as np
 mol = Molecule.from_smiles("CC")
 mol.generate_conformers()
 sage = ForceField("openff-2.0.0.offxml")
-cubic_box = np.array([
-    [10.0,  0.0,  0.0],
-    [ 0.0, 10.0,  0.0],
-    [ 0.0,  0.0, 10.0],
-]) * unit.angstrom
-
-interchange = Interchange.from_smirnoff(
-    topology=[mol], 
-    force_field=sage, 
-    box=cubic_box
+cubic_box = (
+    np.array(
+        [
+            [10.0, 0.0, 0.0],
+            [0.0, 10.0, 0.0],
+            [0.0, 0.0, 10.0],
+        ]
+    )
+    * unit.angstrom
 )
+
+interchange = Interchange.from_smirnoff(topology=[mol], force_field=sage, box=cubic_box)
 ```
 
 
@@ -145,7 +146,7 @@ do require some information from the topology.
 
 ### Handlers
 
-Handlers store force field information in a format that associates assigned 
+Handlers store force field information in a format that associates assigned
 parameters with their source and allows parameters to be inspected and even
 modified with the full power of SMIRKS-based direct chemical perception. They
 are discussed further in [](handlers.md)
@@ -238,7 +239,7 @@ $c_z$).
 
 Box vectors are optional; if it is `None` it is implied that the `Interchange`
 object represents a non-periodic system. However, note that passing `None` to
-the `box` argument of `Interchange.from_smirnoff()` may produce a periodic 
+the `box` argument of `Interchange.from_smirnoff()` may produce a periodic
 `Interchange` if box vectors are present in the `Topology`.
 
 ```pycon
