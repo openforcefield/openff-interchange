@@ -252,6 +252,44 @@ class TestSMIRNOFFHandlers(_BaseTest):
             reference_charges,
         )
 
+    def test_toolkit_am1bcc_uses_elf10_if_oe_is_available(self, sage):
+        """
+        Ensure that the ToolkitAM1BCCHandler assigns ELF10 charges if OpenEye is available.
+
+        Taken from https://github.com/openforcefield/openff-toolkit/pull/1214,
+        """
+        molecule = Molecule.from_smiles("OCCCCCCO")
+
+        try:
+            molecule.assign_partial_charges(partial_charge_method="am1bccelf10")
+            uses_elf10 = True
+        except ValueError:
+            molecule.assign_partial_charges(partial_charge_method="am1bcc")
+            uses_elf10 = False
+
+        partial_charges = [c.m for c in molecule.partial_charges]
+
+        assigned_charges = [
+            v.m
+            for v in Interchange.from_smirnoff(sage, [molecule])[
+                "Electrostatics"
+            ].charges.values()
+        ]
+
+        try:
+            from openeye import oechem
+
+            openeye_available = oechem.OEChemIsLicensed()
+        except ImportError:
+            openeye_available = False
+
+        if openeye_available:
+            assert uses_elf10
+            np.testing.assert_allclose(partial_charges, assigned_charges)
+        else:
+            assert not uses_elf10
+            np.testing.assert_allclose(partial_charges, assigned_charges)
+
     # TODO: Remove xfail after openff-toolkit 0.10.0
     @pytest.mark.xfail()
     def test_charges_with_virtual_site(self, parsley):
@@ -330,6 +368,20 @@ class TestInterchangeFromSMIRNOFF(_BaseTest):
 
         assert out["vdW"].cutoff == 0.777 * unit.angstrom
         assert out["Electrostatics"].cutoff == 0.777 * unit.angstrom
+
+    def test_infer_positions(self, sage):
+        from openff.toolkit.tests.create_molecules import create_ethanol
+
+        molecule = create_ethanol()
+
+        assert Interchange.from_smirnoff(sage, [molecule]).positions is None
+
+        molecule.generate_conformers(n_conformers=1)
+
+        assert Interchange.from_smirnoff(sage, [molecule]).positions.shape == (
+            molecule.n_atoms,
+            3,
+        )
 
 
 @pytest.mark.slow()

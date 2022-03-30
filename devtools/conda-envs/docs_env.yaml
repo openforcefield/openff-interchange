@@ -10,15 +10,17 @@ dependencies:
   - pydantic
   - pint
   - openff-toolkit-base
-  - cached-property
-  - cachetools
   - openff-units >=0.1.5
   - openff-utilities
-  - openmm =7.6
+  - cached-property
+  - cachetools
+  - python-constraint
+  - openmm =>7.6
   - intermol
   - pytest
   - mdtraj
-  - jax
+  - jax >=0.3.0
+  - jaxlib >=0.3.0
   # readthedocs dependencies
   - myst-parser
   - numpydoc

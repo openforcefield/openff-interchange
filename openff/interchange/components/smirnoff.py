@@ -879,6 +879,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
             top_key = VirtualSiteKey(
                 atom_indices=atoms,
                 type=virtual_site_type.type,
+                name=virtual_site_type.name,
                 match=virtual_site_type.match,
             )
             pot_key = PotentialKey(
@@ -1066,6 +1067,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             virtual_site_key = VirtualSiteKey(
                 atom_indices=atom_indices,
                 type=virtual_site_type.type,
+                name=virtual_site_type.name,
                 match=virtual_site_type.match,
             )
 
@@ -1082,16 +1084,17 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 }
             )
 
-            matches = {}
-            potentials = {}
-
             self.slot_map.update({virtual_site_key: virtual_site_potential_key})
             self.potentials.update({virtual_site_potential_key: virtual_site_potential})
 
-            # TODO: Counter-intuitive that toolkit regression tests pass by using the counter
-            # variable i as if it was the atom index - shouldn't it just use atom_index?
             for i, atom_index in enumerate(atom_indices):  # noqa
-                topology_key = TopologyKey(atom_indices=(i,), mult=2)
+                topology_key = TopologyKey(atom_indices=(atom_index,), mult=i)
+
+                # TODO: Better way of dedupliciating this case (charge increments from multiple different
+                #       virtual sites are applied to the same atom)
+                while topology_key in self.slot_map:
+                    topology_key.mult += 1000  # type: ignore[operator]
+
                 potential_key = PotentialKey(
                     id=virtual_site_type.smirks,
                     mult=i,
@@ -1104,11 +1107,8 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
                 potential = Potential(parameters={"charge_increment": charge_increment})
 
-                matches[topology_key] = potential_key
-                potentials[potential_key] = potential
-
-        self.slot_map.update(matches)
-        self.potentials.update(potentials)
+                self.slot_map[topology_key] = potential_key
+                self.potentials[potential_key] = potential
 
     @classmethod
     @functools.lru_cache(None)
@@ -1231,9 +1231,31 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             isomeric=True, explicit_hydrogens=True, mapped=True
         )
 
-        method = getattr(parameter_handler, "partial_charge_method", "am1bcc")
+        if isinstance(parameter_handler, ChargeIncrementModelHandler):
+            partial_charge_method = parameter_handler.partial_charge_method
+        elif isinstance(parameter_handler, ToolkitAM1BCCHandler):
+            # TODO: There needs to be a cleaner way of doing this check, since it's not
+            #       exposed as an attribute of ToolkitAM1BCCHandler and the check that the
+            #       toolkit does is internal to that handler. Implementation at
+            #       https://github.com/openforcefield/openff-toolkit/blob/0c42148bcbd984af50236696ad281c98cf6d8a0a/openff/toolkit/typing/engines/smirnoff/parameters.py#L4198-L4210
+            try:
+                from openeye import oechem
 
-        partial_charges = cls._compute_partial_charges(unique_molecule, method=method)
+                if oechem.OEChemIsLicensed():
+                    partial_charge_method = "am1bccelf10"
+                else:
+                    partial_charge_method = "am1bcc"
+            except ImportError:
+                partial_charge_method = "am1bcc"
+        else:
+            raise InvalidParameterHandlerError(
+                f"Encountered unknown handler of type {type(parameter_handler)} where only "
+                "ToolkitAM1BCCHandler or ChargeIncrementModelHandler are expected."
+            )
+
+        partial_charges = cls._compute_partial_charges(
+            unique_molecule, method=partial_charge_method
+        )
 
         matches = {}
         potentials = {}
@@ -1482,14 +1504,16 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
     A handler which stores the information necessary to construct virtual sites (virtual particles).
     """
 
-    type: Literal["Bonds"] = "Bonds"
+    type: Literal["VirtualSites"] = "VirtualSites"
     expression: Literal[""] = ""
     virtual_site_key_topology_index_map: Dict["VirtualSiteKey", int] = Field(
         dict(),
         description="A mapping between VirtualSiteKey objects (stored analogously to TopologyKey objects"
         "in other handlers) and topology indices describing the associated virtual site",
     )
-    exclusion_policy: Literal["parents"] = "parents"
+    exclusion_policy: Literal[
+        "none", "minimal", "parents", "local", "neighbors", "connected", "all"
+    ] = "parents"
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -1499,7 +1523,20 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
     @classmethod
     def supported_parameters(cls):
         """Return a list of parameter attributes supported by this handler."""
-        return ["distance", "outOfPlaneAngle", "inPlaneAngle"]
+        return [
+            "type",
+            "name",
+            "id",
+            "match",
+            "smirks",
+            "sigma",
+            "epsilon",
+            "rmin_half",
+            "charge_increment",
+            "distance",
+            "outOfPlaneAngle",
+            "inPlaneAngle",
+        ]
 
     def store_matches(
         self,
@@ -1523,6 +1560,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                 virtual_site_key = VirtualSiteKey(
                     atom_indices=key,
                     type=val.parameter_type.type,
+                    name=val.parameter_type.name,
                     match=val.parameter_type.match,
                 )
                 potential_key = PotentialKey(
@@ -1564,7 +1602,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         elif virtual_site_key.type == "DivalentLonePair":
             origin_weight = [0.0, 1.0, 0.0]
             x_direction = [0.5, -1.0, 0.5]
-            y_direction = [1.0, -1.0, 1.0]
+            y_direction = [1.0, -1.0, 0.0]
         elif virtual_site_key.type == "TrivalentLonePair":
             origin_weight = [0.0, 1.0, 0.0, 0.0]
             x_direction = [1 / 3, -1.0, 1 / 3, 1 / 3]
@@ -1588,7 +1626,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
             local_frame_position = factor * distance
         elif virtual_site_key.type == "DivalentLonePair":
             distance = potential.parameters["distance"]
-            theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)  # type: ignore
+            theta = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)  # type: ignore
             factor = np.asarray([-1.0 * np.cos(theta), 0.0, np.sin(theta)])
             local_frame_position = factor * distance
         elif virtual_site_key.type == "TrivalentLonePair":
@@ -1650,4 +1688,5 @@ SMIRNOFF_POTENTIAL_HANDLERS = [
     SMIRNOFFImproperTorsionHandler,
     SMIRNOFFvdWHandler,
     SMIRNOFFElectrostaticsHandler,
+    SMIRNOFFVirtualSiteHandler,
 ]

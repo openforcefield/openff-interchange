@@ -13,11 +13,12 @@ dependencies:
   - openff-toolkit =0.10.3
   - openff-utilities
   - openff-units >=0.1.5
+  - cached-property
+  - cachetools
+  - python-constraint
   # Testing
   - pytest
   - pytest-xdist
-  - cached-property
-  - cachetools
   - mdtraj
   - pip:
     - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor

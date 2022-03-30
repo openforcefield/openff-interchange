@@ -14,6 +14,9 @@ dependencies:
   - openff-toolkit =0.10.3
   - openff-utilities
   - openff-units >=0.1.5
+  - cached-property
+  - cachetools
+  - python-constraint
   # Optional features
   - unyt
   - mbuild
@@ -24,10 +27,9 @@ dependencies:
   - nglview
   - openff-amber-ff-ports
   - openff-evaluator
-  - cached-property
-  - cachetools
   - openeye-toolkits
-  - jax
+  - jax >0.3.0
+  - jaxlib >=0.3.0
   - pytest
   - pytest-cov
   - pytest-xdist

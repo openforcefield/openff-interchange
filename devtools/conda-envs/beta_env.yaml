@@ -16,8 +16,12 @@ dependencies:
   - openff-toolkit =0.10.3
   - openff-utilities
   - openff-units >=0.1.5
+  - cached-property
+  - cachetools
+  - python-constraint
   # Optional features
-  - jax
+  - jax >=0.3.0
+  - jaxlib >=0.3.0
   - unyt
   - mbuild
   - foyer >=0.8.1

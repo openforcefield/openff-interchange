@@ -13,11 +13,15 @@ dependencies:
   - openff-toolkit =0.10.3
   - openff-utilities
   - openff-units >=0.1.5
+  - cached-property
+  - cachetools
+  - python-constraint
   # Optional features
   - unyt
   - mbuild
   - foyer >=0.8.1
   - jax >=0.3.0
+  - jaxlib >=0.3.0
   # Testing
   - mdtraj
   - intermol
@@ -31,11 +35,6 @@ dependencies:
   - conda-tree
   - qcportal
   - openff-qcsubmit
-  - openff-evaluator
-  - openff-recharge
-  - openeye-toolkits
-  - cached-property
-  - cachetools
   # Drivers
   - gromacs >=2021=nompi*
   - lammps >=2021
