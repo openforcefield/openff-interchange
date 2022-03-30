@@ -55,6 +55,7 @@ extensions = [
     "sphinx.ext.todo",
     "openff_sphinx_theme",
     "sphinxcontrib.autodoc_pydantic",
+    "sphinxcontrib.mermaid",
 ]
 
 intersphinx_mapping = {
@@ -65,6 +66,12 @@ intersphinx_mapping = {
     ),
     "mdtraj": ("https://www.mdtraj.org/1.9.5/", None),
 }
+
+mermaid_init_js = """mermaid.initialize({
+    startOnLoad:true,
+    fontFamily:"montserrat,sans",
+    theme: "default",
+});"""
 
 autosummary_generate = True
 autosummary_imported_members = False
@@ -91,6 +98,7 @@ autodoc_typehints_format = "short"
 # autodoc_pydantic settings
 autodoc_pydantic_show_config = False
 autodoc_pydantic_model_show_config = False
+autodoc_pydantic_model_show_config_summary = False
 autodoc_pydantic_show_validators = False
 autodoc_pydantic_model_show_validators = False
 autodoc_pydantic_field_show_alias = False
@@ -158,9 +166,9 @@ html_theme_options = {
     # violet, pink, pale-green, green, crimson, eggplant, turquoise,
     # or a tuple of three ints in the range [0, 255] corresponding to
     # a position in RGB space.
-    "color_accent": "pale-green",
+    "color_accent": "pink",
     # Content Minification for deployment, prettification for debugging
-    "html_minify": True,
+    "html_minify": False,  # q for mermaid to work
     "css_minify": True,
 }
 
