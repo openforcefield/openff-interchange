@@ -217,16 +217,16 @@ class Interchange(DefaultModel):
         Examples
         --------
         Generate an Interchange object from a single-molecule (OpenFF) topology and
-        OpenFF 1.0.0 "Parsley"
+        OpenFF 2.0.0 "Sage"
 
         .. code-block:: pycon
 
             >>> from openff.interchange import Interchange
-            >>> from openff.toolkit.topology import Molecule, Topology
+            >>> from openff.toolkit.topology import Molecule
             >>> from openff.toolkit.typing.engines.smirnoff import ForceField
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> parsley = ForceField("openff-1.0.0.offxml")
+            >>> parsley = ForceField("openff-2.0.0.offxml")
             >>> interchange = Interchange.from_smirnoff(topology=[mol], force_field=parsley)
             >>> interchange
             Interchange with 8 atoms, non-periodic topology
