@@ -1,4 +1,4 @@
-{{ objname | escape | underline}}
+{{ objname | escape | underline }}
 
 .. currentmodule:: {{ module }}
 
@@ -9,7 +9,6 @@
    .. rubric:: {{ _('Attributes') }}
 
    .. autosummary::
-      :toctree:
    {% for item in attributes %}
       ~{{ name }}.{{ item }}
    {%- endfor %}
@@ -32,3 +31,4 @@
 
    {% endif %}
    {% endblock %}
+   
