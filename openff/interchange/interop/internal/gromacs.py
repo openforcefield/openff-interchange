@@ -242,6 +242,15 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
     if not isinstance(file_path, (str, Path)):
         raise Exception
 
+    if "VirtualSites" in openff_sys.handlers:
+        if len(openff_sys["VirtualSites"].slot_map) > 0:
+            raise UnsupportedExportError(
+                "Exporting virtual sites to GROMACS is not validated in this version."
+            )
+        else:
+            # Allow a handler with no particles to exist
+            pass
+
     if isinstance(file_path, str):
         path = Path(file_path)
     if isinstance(file_path, Path):
