@@ -973,6 +973,14 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
         if proper_torsion_handler:
 
             for top_key in proper_torsion_handler.slot_map:
+                if top_key.atom_indices[0] != topology_indices[0]:
+                    continue
+                if top_key.atom_indices[1] != topology_indices[1]:
+                    continue
+                if top_key.atom_indices[2] != topology_indices[2]:
+                    continue
+                if top_key.atom_indices[3] != topology_indices[3]:
+                    continue
                 if top_key.atom_indices == topology_indices:
                     pot_key = proper_torsion_handler.slot_map[top_key]
                     params = proper_torsion_handler.potentials[pot_key].parameters
@@ -996,6 +1004,14 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
         # This should be `if` if a single quartet can be subject to both proper and RB torsions
         if rb_torsion_handler:
             for top_key in rb_torsion_handler.slot_map:
+                if top_key.atom_indices[0] != topology_indices[0]:
+                    continue
+                if top_key.atom_indices[1] != topology_indices[1]:
+                    continue
+                if top_key.atom_indices[2] != topology_indices[2]:
+                    continue
+                if top_key.atom_indices[3] != topology_indices[3]:
+                    continue
                 if top_key.atom_indices == topology_indices:
                     pot_key = rb_torsion_handler.slot_map[top_key]
                     params = rb_torsion_handler.potentials[pot_key].parameters
@@ -1048,6 +1064,14 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
             # but it's still listed second in molecule_indices
 
             for top_key in improper_torsion_handler.slot_map:
+                if top_key.atom_indices[0] != indices_to_match[0]:
+                    continue
+                if top_key.atom_indices[1] != indices_to_match[1]:
+                    continue
+                if top_key.atom_indices[2] != indices_to_match[2]:
+                    continue
+                if top_key.atom_indices[3] != indices_to_match[3]:
+                    continue
                 if indices_to_match == top_key.atom_indices:
                     key = improper_torsion_handler.slot_map[top_key]
                     params = improper_torsion_handler.potentials[key].parameters

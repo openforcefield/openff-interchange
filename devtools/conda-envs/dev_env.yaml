@@ -25,7 +25,6 @@ dependencies:
   # Testing
   - mdtraj
   - intermol
-  - openff-evaluator
   - openff-recharge
   - openeye-toolkits
   - pytest
@@ -59,3 +58,4 @@ dependencies:
   - rich
   - pip:
     - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
+    - git+https://github.com/mattwthompson/openff-evaluator.git
