@@ -597,7 +597,7 @@ def _process_virtual_sites(openff_sys, openmm_sys):
     except KeyError:
         return
 
-    _SUPPORTED_EXCLUSION_POLICIES = ["parents"]
+    _SUPPORTED_EXCLUSION_POLICIES = ["none", "minimal", "parents"]
 
     if virtual_site_handler.exclusion_policy not in _SUPPORTED_EXCLUSION_POLICIES:
         raise UnsupportedExportError(
@@ -651,9 +651,24 @@ def _process_virtual_sites(openff_sys, openmm_sys):
         # Notes: For each type of virtual site, the parent atom is defined as the _first_ (0th) atom.
         # The toolkit, however, might have some bugs from following different assumptions:
         # https://github.com/openforcefield/openff-interchange/pull/415#issuecomment-1074546516
-        if virtual_site_handler.exclusion_policy in ["none", "minimal"]:
-            raise UnsupportedCutoffMethodError(
-                f"Virtual site exclusion policy {virtual_site_handler.exclusion_policy} not yet supported."
+        if virtual_site_handler.exclusion_policy == "none":
+            pass
+        elif virtual_site_handler.exclusion_policy == "minimal":
+            # TODO: This behavior is likely wrong but written to match the toolkit's behavior.
+            #       Exclusion policy "minimal" _should_ always exclude the 0th index atom, but
+            #       this is nont the case for one reason or another.
+            # root_parent_atom = virtual_site_key.atom_indices[0]
+            if len(virtual_site_key.atom_indices) == 2:
+                root_parent_atom = virtual_site_key.atom_indices[0]
+            elif len(virtual_site_key.atom_indices) >= 3:
+                root_parent_atom = virtual_site_key.atom_indices[1]
+            else:
+                raise NotImplementedError(
+                    "This should not be reachable. Please file an issue"
+                )
+
+            non_bonded_force.addException(
+                root_parent_atom, virtual_site_index, 0.0, 0.0, 0.0, replace=True
             )
         elif virtual_site_handler.exclusion_policy == "parents":
             for parent_atom_index in virtual_site_key.atom_indices:
@@ -671,13 +686,13 @@ def _create_virtual_site(
     interchange: "Interchange",
 ) -> "openmm.LocalCoordinatesSites":
 
+    handler = interchange.handlers["VirtualSites"]
+
     parent_atoms = virtual_site_key.atom_indices
-    origin_weight, x_direction, y_direction = interchange[
-        "VirtualSites"
-    ]._get_local_frame_weights(virtual_site_key)
-    displacement = interchange["VirtualSites"]._get_local_frame_position(
+    origin_weight, x_direction, y_direction = handler._get_local_frame_weights(
         virtual_site_key
     )
+    displacement = handler._get_local_frame_position(virtual_site_key)
 
     x, y, z = ((v / v.units).m for v in displacement)
     # x, y, z = displacement / displacement.units
@@ -686,10 +701,10 @@ def _create_virtual_site(
     for parent_atom in parent_atoms:
         parent_atom_positions.append(interchange.positions[parent_atom])
 
-    _origin_weight = np.atleast_2d(origin_weight)
+    # _origin_weight = np.atleast_2d(origin_weight)
     parent_atom_positions = np.atleast_2d(parent_atom_positions)
 
-    origin = np.dot(_origin_weight, parent_atom_positions).sum(axis=0)
+    # origin = np.dot(_origin_weight, parent_atom_positions).sum(axis=0)
 
     x_axis, y_axis = np.dot(
         np.vstack((x_direction, y_direction)), parent_atom_positions
@@ -706,14 +721,18 @@ def _create_virtual_site(
 
     x_axis, y_axis, z_axis = map(_normalize, (x_axis, y_axis, z_axis))
 
-    position = origin + x * x_axis + y * y_axis + z * z_axis
+    # position = origin + x * x_axis + y * y_axis + z * z_axis
+    local_frame_position = handler._get_local_frame_position(virtual_site_key).m_as(
+        off_unit.nanometer
+    )
 
     return openmm.LocalCoordinatesSite(
         parent_atoms,
         origin_weight,
+        # _origin_weight,
         x_direction,
         y_direction,
-        position,
+        local_frame_position,
     )
 
 

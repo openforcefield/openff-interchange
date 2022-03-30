@@ -333,6 +333,9 @@ class Interchange(DefaultModel):
                     parameter_handler=force_field["VirtualSites"],
                     topology=sys_out._inner_data.topology,
                 )
+                virtual_site_handler.exclusion_policy = force_field[
+                    "VirtualSites"
+                ].exclusion_policy
                 sys_out.handlers.update({"VirtualSites": virtual_site_handler})
                 sys_out["vdW"]._from_toolkit_virtual_sites(
                     parameter_handler=force_field["VirtualSites"],

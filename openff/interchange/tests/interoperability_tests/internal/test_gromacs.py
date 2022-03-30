@@ -263,6 +263,7 @@ class TestGROMACS(_BaseTest):
             get_gromacs_energies(out, mdp="cutoff_buck")
 
 
+@pytest.mark.skip("Virtual site support in GROMACS not fully validated")
 @needs_gmx
 class TestGROMACSVirtualSites(_BaseTest):
     @pytest.fixture()
