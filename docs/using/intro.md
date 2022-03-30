@@ -2,9 +2,72 @@
 
 OpenFF Interchange is a Python package developed by the Open Force Field
 Initiative for storing, manipulating, and converting molecular mechanics data.
-Most importantly, the package provides the [`Interchange`] class, which stores
+The package is oriented around the [`Interchange`] class, which stores
 a molecular mechanics system and provides methods to write the system out in
 numerous formats.
+
+An `Interchange` contains a fully parameterized molecular system with all the
+information needed to start a simulation. This includes the force field, box
+vectors, positions, velocities, and a topology containing individual molecules
+and their connectivity. For most users, Interchange forms the bridge between
+the OpenFF ecosystem and their simulation software of choice; users describe
+their system with the [OpenFF Toolkit] and then parameterize it with Interchange.
+
+An `Interchange` stores parameters in handlers that link the topology to the
+force field. This allows changes in the force field to be reflected in the
+`Interchange` immediately. This is useful for iteratively tweaking parts of a
+force field without having to recompute expensive parts like the charges.
+
+Once the Interchange is created and parameterized, it can be exported as
+simulation-ready input files to a number of molecular mechanics software packages,
+including Amber, OpenMM, GROMACS, and LAMMPS.
+
+:::{mermaid}
+---
+alt: "Flowchart describing the construction and use of an Interchange (See textual description below)"
+align: center
+---
+flowchart LR
+    OFFXML
+    SMILES/SDF/PDB
+    BoxVecs[Box vectors]
+    Positions
+    Velocities
+    subgraph tk [openff.toolkit]
+        Molecule([Molecule])
+        ForceField([ForceField])
+    end
+    subgraph int [openff.interchange]
+        Interchange[(Interchange)]
+        FromSmirnoff[["from_smirnoff()"]]
+    end
+    GMX{{GROMACS}}
+    CHARMM{{CHARMM}}
+    Amber{{Amber}}
+    OpenMM{{OpenMM}}
+    LAMMPS{{LAMMPS}}
+
+    style tk fill:#2f9ed2,color:#fff,stroke:#555;
+    style int fill:#ee4266,color:#fff,stroke:#555;
+
+    classDef default stroke:#555;
+
+    classDef code font-family:cousine,font-size:11pt,font-weight:bold;
+    class FromSmirnoff,Molecule,ForceField,Interchange,tk,int code
+
+    OFFXML --> ForceField --> FromSmirnoff
+    SMILES/SDF/PDB --> Molecule --> FromSmirnoff
+    FromSmirnoff --> Interchange
+    BoxVecs -..-> Interchange
+    Positions -..-> Interchange
+    Velocities -..-> Interchange
+    Interchange --> Amber
+    Interchange --> OpenMM
+    Interchange -.-> GMX
+    Interchange -.-> CHARMM
+    Interchange -.-> LAMMPS
+:::
+
 
 ## Interchange's goals
 
@@ -14,8 +77,9 @@ Force Field software stack. Interchange aims to support systems created with
 the [OpenFF Toolkit], which can be converted to `Interchange` objects by
 applying a SMIRNOFF force field from the Toolkit or a [Foyer] force field. The
 `Interchange` object can then produce input files for downstream molecular
-mechanics software suites. At present, it supports GROMACS, LAMMPS, and OpenMM,
-and support for Amber and CHARMM is planned.
+mechanics software suites. At present, it supports Amber and OpenMM. GROMACS,
+and LAMMPS support is in place but experimental, and support for CHARMM is 
+planned.
 
 By design, Interchange supports extensive chemical information about the target
 system. Downstream MM software generally requires only the atoms present in the
@@ -27,13 +91,9 @@ mathematical model. This allows Interchange to easily switch between different
 force fields for the same system, and supports a simple workflow for force
 field modification.
 
-Converting in the reverse direction is not a goal of the project; Interchange is
-not intended to provide general conversions between molecular mechanics codes.
-This is because individual MM codes each represent the same chemical system in
-different ways, and the information, especially metadata, required to safely
-and robustly convert is often not present in simulation input files. If
-arbitrary conversion is required, consider [ParmEd].
+Converting in the reverse direction is a long term goal of the project.
 
+(interchange_units)=
 ## Units in Interchange
 
 As a best practice, Interchange always associates explicit units with numerical

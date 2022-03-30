@@ -1,4 +1,6 @@
-# Migrating
+# Migrating from other tools
+
+Interchange provides special support for migrating from the OpenFF Toolkit and Foyer.
 
 ## Migrating from the OpenFF Toolkit
 
@@ -78,7 +80,7 @@ Below is a minimal but complete example parameterizing an ethanol molecule with 
 from foyer import Forcefield
 import mdtraj as md
 from openff.toolkit.topology import Molecule
-from openff.interchange.components.mdtraj import _OFFBioTop
+# from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange import Interchange
 
 ethanol: Molecule = Molecule.from_smiles("CCO")
