@@ -65,7 +65,7 @@ module.
 
 Construct a simple `Interchange`
 
-```python
+```pycon
 >>> from openff.interchange import Interchange
 >>> from openff.toolkit import Molecule, ForceField
 >>>
@@ -78,7 +78,7 @@ Construct a simple `Interchange`
 
 The [`Interchange.handlers`] attribute maps names to the corresponding handler:
 
-```python
+```pycon
 >>> interchange.handlers.keys()  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
 dict_keys(['Bonds', 'Constraints', 'Angles', 'ProperTorsions',
     'ImproperTorsions', 'vdW', 'Electrostatics'])
@@ -96,7 +96,7 @@ potential keys, one for the carbon-carbon bond, and the other for the
 carbon-hydrogen bonds. It's clear from the SMIRKS codes that atoms 0 and 1 are
 the carbon atoms, and atoms 2 through 7 are the hydrogens:
 
-```python
+```pycon
 >>> interchange.handlers['Bonds'].slot_map  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
 {TopologyKey(atom_indices=(0, 1), ...): PotentialKey(id='[#6X4:1]-[#6X4:2]', ...),
  TopologyKey(atom_indices=(0, 2), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
@@ -116,7 +116,7 @@ bonded to carbon atom 1?
 The bond handler also maps the two potential keys to the appropriate `Potential`.
 Here we can read off the force constant and length:
 
-```python
+```pycon
 >>> interchange.handlers['Bonds'].potentials  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
 {PotentialKey(id='[#6X4:1]-[#6X4:2]', ...):
      Potential(parameters={'k': <Quantity(529.242972, 'kilocalorie / angstrom ** 2 / mole')>,
@@ -130,7 +130,7 @@ Here we can read off the force constant and length:
 We can even modify a value here, export the new interchange, and see that all of
 the bonds have been updated:
 
-```python
+```pycon
 >>> from openff.interchange.models import TopologyKey
 >>> from openff.units import unit
 >>> # Get the potential from the first C-H bond
