@@ -52,7 +52,7 @@ a topology to the potential keys (`TopologyKey` to `PotentialKey` mapping). The
 same `Potential` by sharing a `PotentialKey`. If the `Potential` is updated,
 all the places in the topology where it is used are updated immediately.
 Despite this, getting the `Potential` for a place in the topology is a constant
-time operation. For example, parametrizing a thousand water molecules each with 
+time operation. For example, parametrizing a thousand water molecules each with
 two identical bonds will produce only one `Potential`, rather than two thousand.
 
 Each potential handler inherits from the base [`PotentialHandler`] class and

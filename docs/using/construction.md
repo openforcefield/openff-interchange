@@ -11,9 +11,9 @@ makes augmenting and extending the force field much simpler.
 
 The molecular topology is simply a description of the system that should be
 parameterized. It is usually given as a list of OpenFF Toolkit
-[`Molecule`] objects, though specialist users can pass in a [`Topology`] 
+[`Molecule`] objects, though specialist users can pass in a [`Topology`]
 instead. A `Molecule` describes a single molecule, including its atoms, formal
-charges, and full connectivity information. `Molecule` objects can be 
+charges, and full connectivity information. `Molecule` objects can be
 constructed in a [variety of ways] from most popular molecular data formats.
 A `Molecule` describes chemistry directly, rather than in terms of a
 molecular mechanics model; the `Interchange` and `ForceField` are responsible
