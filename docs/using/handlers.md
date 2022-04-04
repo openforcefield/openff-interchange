@@ -21,8 +21,8 @@ input parameter to be reflected instantly in the parameterized system. Unlike a
 SMIRNOFF force field, the chemistry of system itself cannot be changed; a new
 `Interchange` must be defined and parameterized.
 
-There are three central components in each handler: topology keys, potential keys,
-and potentials.
+There are three central components in each handler: topology keys, potentials,
+and potential keys.
 
 [`TopologyKey`] objects are unique identifiers of locations in a topology. These
 objects do not include physics parameters. The basic information is a tuple of
@@ -30,18 +30,19 @@ atom indices, which can be of any non-zero length. For example, a topology key
 describing a torsion will have a 4-length tuple, and a topology key describing
 a vdW parameter will have a 1-length tuple.
 
-[`PotentialKey`] objects are unique identifiers of physics parameters. These
-objects do not know anything about the topology they are associated with. In
-SMIRNOFF force fields, SMIRKS patterns uniquely identify a parameter within a
-parameter handler, so (with some exceptions) that is all that is needed to
-construct a potential key. For classically atom-typed force fields, a key can
-be constructed using atom types or combinations thereof.
-
 [`Potential`] objects store the physics parameters that result from parameterizing
 a chemical topology with a force field. These do not know anything about where
-in the topology they are associated. The parameters are stored in a dictionary
+in the topology they are applied. The parameters are stored in a dictionary
 attribute `.parameters` in which keys are string identifiers and values are the
 parameters themselves, tagged with units.
+
+[`PotentialKey`] objects uniquely identify physics parameters so that many
+topology keys can refer to the same potential. Potential keys do not know
+anything about the topology they are associated with. In SMIRNOFF force fields,
+SMIRKS patterns uniquely identify a parameter within a parameter handler, so
+(with some exceptions) the SMIRKS pattern is all that is needed to construct a
+potential key. For classically atom-typed force fields, a key can be
+constructed using atom types or combinations thereof.
 
 These objects are strung together with two mappings, each stored as dictionary
 attributes of a `PotentialHandler`. The `.slot_map` attribute maps segments of
@@ -51,12 +52,13 @@ a topology to the potential keys (`TopologyKey` to `PotentialKey` mapping). The
 same `Potential` by sharing a `PotentialKey`. If the `Potential` is updated,
 all the places in the topology where it is used are updated immediately.
 Despite this, getting the `Potential` for a place in the topology is a constant
-time operation.
+time operation. For example, parametrizing a thousand water molecules each with 
+two identical bonds will produce only one `Potential`, rather than two thousand.
 
 Each potential handler inherits from the base [`PotentialHandler`] class and
 describes a single type of parameter from a single source. Potential handlers
-for SMIRNOFF force fields are found in the [](openff.interchange.components.smirnoff)
-module, while those for Foyer are found in the [](openff.interchange.components.foyer).
+for SMIRNOFF force fields are found in the [`openff.interchange.components.smirnoff`]
+module, while those for Foyer are found in the [`openff.interchange.components.foyer`]
 module.
 
 ## Inspecting an assigned parameter
@@ -106,7 +108,7 @@ the carbon atoms, and atoms 2 through 7 are the hydrogens:
 
 ```
 
-:::{hint}
+:::{admonition} Question
 Which atom indices represent hydrogens bonded to carbon atom 0, and which are
 bonded to carbon atom 1?
 :::
@@ -162,3 +164,5 @@ the bonds have been updated:
 [`PotentialKey`]: openff.interchange.models.PotentialKey
 [`Potential`]: openff.interchange.components.potentials.Potential
 [`Interchange.handlers`]: openff.interchange.Interchange.topology
+[`openff.interchange.components.smirnoff`]: openff.interchange.components.smirnoff
+[`openff.interchange.components.foyer`]: openff.interchange.components.foyer

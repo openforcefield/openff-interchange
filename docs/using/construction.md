@@ -1,21 +1,23 @@
 # Constructing an `Interchange`
 
 An [`Interchange`] is most commonly constructed via the
-[`Interchange.from_smirnoff()`] class method. `from_smirnoff()` takes a
-[SMIRNOFF force field] and applies it to a molecular topology to construct an
-`Interchange`. SMIRNOFF is the Open Force Field Initiative's
-[next-generation force field format]. It uses SMIRKS codes instead of atom
-types to describe the chemistry of each parameter, which both reduces the
-number of parameters needed to accurately describe biomolecular systems and
+[`Interchange.from_smirnoff()`] class method. `from_smirnoff()` takes an OpenFF
+Toolkit [`ForceField`] and applies it to a molecular topology to construct an
+`Interchange`. `ForceField` implements SMIRNOFF, the Open Force Field
+Initiative's [next-generation force field format]. It uses SMIRKS codes instead
+of atom types to describe the chemistry of each parameter, which both reduces
+the number of parameters needed to accurately describe biomolecular systems and
 makes augmenting and extending the force field much simpler.
 
 The molecular topology is simply a description of the system that should be
-parameterized. It is usually given as a list of OpenFF Toolkit [`Molecule`]
-objects, though specialist users can pass in a [`Topology`] instead. A
-`Molecule` describes a single molecule, including its atoms, formal charges,
-and full connectivity information. A `Molecule` describes chemistry directly,
-rather than in terms of a molecular mechanics model; the `Interchange` and
-`ForceField` are responsible for applying simulation parameters.
+parameterized. It is usually given as a list of OpenFF Toolkit
+[`Molecule`] objects, though specialist users can pass in a [`Topology`] 
+instead. A `Molecule` describes a single molecule, including its atoms, formal
+charges, and full connectivity information. `Molecule` objects can be 
+constructed in a [variety of ways] from most popular molecular data formats.
+A `Molecule` describes chemistry directly, rather than in terms of a
+molecular mechanics model; the `Interchange` and `ForceField` are responsible
+for applying simulation parameters.
 
 Positions and velocities can be applied to an `Interchange` directly via the
 `.positions` and `.velocities` attributes. Likewise, box vectors can be applied
@@ -177,7 +179,6 @@ Positions and velocities are optional, though any conversions requiring them
 will fail if they are missing.
 
 ```pycon
-
 >>> from openff.interchange import Interchange
 >>> from openff.units import unit
 >>> from openff.toolkit.topology import Molecule
@@ -273,7 +274,8 @@ array([[28.,  0.,  0.],
 [`Interchange`]: openff.interchange.Interchange
 [`Interchange.from_smirnoff()`]: openff.interchange.Interchange.from_smirnoff
 [`Interchange.topology`]: openff.interchange.Interchange.topology
-[SMIRNOFF force field]: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField
+[`ForceField`]: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField
 [`Topology`]: openff.toolkit.topology.Topology
 [`Molecule`]: openff.toolkit.topology.Molecule
 [next-generation force field format]: https://open-forcefield-toolkit.readthedocs.io/en/stable/users/smirnoff.html
+[variety of ways]: https://open-forcefield-toolkit.readthedocs.io/en/latest/users/molecule_cookbook.html
