@@ -39,7 +39,7 @@ MD simulation. This will write a file `auto_generated.mdp`:
 from openff.interchange.drivers.gromacs import _write_mdp_file
 
 _write_mdp_file(interchange)
-``` 
+```
 -->
 
 ## LAMMPS
@@ -65,7 +65,7 @@ MD simulation. This will write a file `run.inp`:
 from openff.interchange.drivers.lammps import _write_lammps_input
 
 _write_lammps_input(interchange, "run.inp")
-``` 
+```
 -->
 
 ## OpenMM

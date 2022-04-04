@@ -71,7 +71,7 @@ Construct a simple `Interchange`
 >>>
 >>> ethane = Molecule.from_smiles("CC")
 >>> sage = ForceField("openff-2.0.0.offxml")
->>> box = box=[[1,0,0], [0,1,0], [0,0,1]]
+>>> box = box = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 >>> interchange = Interchange.from_smirnoff(sage, [ethane], box=box)
 
 ```
