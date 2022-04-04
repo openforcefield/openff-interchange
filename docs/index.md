@@ -21,10 +21,10 @@ maxdepth: 2
 ---
 
 using/intro.md
-using/design.md
+using/construction.rst
 using/output.md
+using/handlers.md
 using/migrating.md
-using/energy_tests.md
 
 ```
 
