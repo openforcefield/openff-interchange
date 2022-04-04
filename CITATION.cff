@@ -27,6 +27,9 @@ authors:
   - given-names: Simon
     family-names: Boothroyd
     orcid: 'https://orcid.org/0000-0002-3456-1872'
+  - given-names: "Joshua A."
+    family-names: Mitchell
+    orcid: 'https://orcid.org/0000-0002-8246-5113'
 version: v0.1.4
 date-released: 2022-01-11
 url: "https://github.com/openforcefield/openff-interchange"
