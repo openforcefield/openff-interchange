@@ -73,6 +73,11 @@ mermaid_init_js = """mermaid.initialize({
     theme: "default",
 });"""
 
+## Suppress warnings about ambiguous Python references
+suppress_warnings = [
+    "ref.python",
+]
+
 autosummary_generate = True
 autosummary_imported_members = False
 autosummary_context = {

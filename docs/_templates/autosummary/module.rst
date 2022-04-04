@@ -18,6 +18,7 @@
       or item in attributes
       or item in exceptions
       or item in modules
+      or item == "TYPE_CHECKING"
 ) -%}
       {%- set _ = types.append(item) -%}
    {%- endif -%}
