@@ -40,11 +40,11 @@ dependencies:
   - lammps >=2021
   - panedr
   # Typing
-  - mypy
+  - mypy >=0.942
   - typing-extensions
   - types-setuptools
   - types-pkg_resources
-  - pandas-stubs
+  - pandas-stubs >=1.2.0.56
   # Development tools
   - mamba
   - jupyterlab
