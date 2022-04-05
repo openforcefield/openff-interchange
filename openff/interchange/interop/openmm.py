@@ -389,6 +389,8 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                     f"`combine_nonbonded_forces={combine_nonbonded_forces}"
                 )
 
+            _apply_switching_function(vdw_handler, non_bonded_force)
+
         else:
             vdw_expression = vdw_handler.expression
             vdw_expression = vdw_expression.replace("**", "^")

@@ -270,6 +270,56 @@ class TestOpenMM(_BaseTest):
             raise Exception("No HarmonicAngleForce found")
 
 
+class TestOpenMMSwitchingFunction(_BaseTest):
+    def test_switching_function_applied(self, sage, basic_top):
+        out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
+            combine_nonbonded_forces=True
+        )
+
+        found_force = False
+        for force in out.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                found_force = True
+                assert force.getUseSwitchingFunction()
+                assert force.getSwitchingDistance() == 8 * openmm_unit.angstrom
+
+        assert found_force, "NonbondedForce not found in system"
+
+    def test_switching_function_not_applied(self, sage, basic_top):
+        sage["vdW"].switch_width = 0.0 * unit.angstrom
+
+        out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
+            combine_nonbonded_forces=True
+        )
+
+        found_force = False
+        for force in out.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                found_force = True
+                assert not force.getUseSwitchingFunction()
+                assert force.getSwitchingDistance() == -1 * openmm_unit.nanometer
+
+        assert found_force, "NonbondedForce not found in system"
+
+    def test_switching_function_nonstandard(self, sage, basic_top):
+        sage["vdW"].switch_width = 0.12345 * unit.angstrom
+
+        out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
+            combine_nonbonded_forces=True
+        )
+
+        found_force = False
+        for force in out.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                found_force = True
+                assert force.getUseSwitchingFunction()
+                assert (
+                    force.getSwitchingDistance() - (9 - 0.12345) * openmm_unit.angstrom
+                ) < 1e-10 * openmm_unit.angstrom
+
+        assert found_force, "NonbondedForce not found in system"
+
+
 @pytest.mark.slow()
 class TestOpenMMVirtualSites(_BaseTest):
     @pytest.fixture()
