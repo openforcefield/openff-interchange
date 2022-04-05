@@ -70,6 +70,12 @@ class _BaseTest:
         return top
 
     @pytest.fixture()
+    def basic_top(self):
+        top = Molecule.from_smiles("C").to_topology()
+        top.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
+        return top
+
+    @pytest.fixture()
     def ethanol_top(self):
         """Fixture that builds a simple four ethanol topology."""
         return _top_from_smiles("CCO", n_molecules=4)
