@@ -81,7 +81,7 @@ jobs:
         python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
 
     - name: Codecov
-      uses: codecov/codecov-action@v2.1.0
+      uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
         fail_ci_if_error: false
