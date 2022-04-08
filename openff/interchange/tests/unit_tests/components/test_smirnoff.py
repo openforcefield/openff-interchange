@@ -191,9 +191,25 @@ class TestSMIRNOFFHandlers(_BaseTest):
             parameter_handler=handler, topology=topology
         )
 
+        handler = ImproperTorsionHandler(version=0.3)
+        handler.default_idivf = 5.555
+        handler.add_parameter(
+            {
+                "smirks": "[*:1]~[#6:2](~[#8:3])~[*:4]",
+                "periodicity1": 2,
+                "phase1": 180.0 * unit.degree,
+                "k1": 1.1 * unit.kilocalorie_per_mole,
+                "id": "i1",
+            }
+        )
+
+        potential_handler = SMIRNOFFImproperTorsionHandler._from_toolkit(
+            parameter_handler=handler, topology=topology
+        )
+
         assert [*potential_handler.potentials.values()][0].parameters[
             "idivf"
-        ] == 1.234 * unit.dimensionless
+        ] == 5.555 * unit.dimensionless
 
     def test_electrostatics_am1_handler(self):
         molecule = Molecule.from_smiles("C")
