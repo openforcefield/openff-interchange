@@ -655,6 +655,7 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
     expression: Literal[
         "k*(1+cos(periodicity*theta-phase))"
     ] = "k*(1+cos(periodicity*theta-phase))"
+    # TODO: Consider whether or not default_idivf should be stored here
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -715,15 +716,32 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
         Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
 
         """
+        _default_idivf = parameter_handler.default_idivf
+
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
             n = potential_key.mult
             parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            if parameter.idivf is None:
+                idivf = None
+            else:
+                # Assumed to be list here
+                idivf = parameter.idivf[n]
+                if idivf is not None:
+                    idivf = idivf * unit.dimensionless
+
+            if idivf is None:
+                if _default_idivf == "auto":
+                    idivf = 3.0 * unit.dimensionless
+                else:
+                    # Assumed to be a numerical value
+                    idivf = _default_idivf * unit.dimensionless
+
             parameters = {
                 "k": parameter.k[n],
                 "periodicity": parameter.periodicity[n] * unit.dimensionless,
                 "phase": parameter.phase[n],
-                "idivf": 3.0 * unit.dimensionless,
+                "idivf": idivf,
             }
             potential = Potential(parameters=parameters)
             self.potentials[potential_key] = potential
