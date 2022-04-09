@@ -169,6 +169,48 @@ class TestSMIRNOFFHandlers(_BaseTest):
             TopologyKey(atom_indices=(0, 3, 1, 2), mult=0) in potential_handler.slot_map
         )
 
+    def test_store_nonstandard_improper_idivf(self):
+        acetaldehyde = Molecule.from_mapped_smiles(
+            "[C:1]([C:2](=[O:3])[H:7])([H:4])([H:5])[H:6]"
+        )
+        topology = acetaldehyde.to_topology()
+
+        handler = ImproperTorsionHandler(version=0.3)
+        handler.add_parameter(
+            {
+                "smirks": "[*:1]~[#6:2](~[#8:3])~[*:4]",
+                "periodicity1": 2,
+                "phase1": 180.0 * unit.degree,
+                "k1": 1.1 * unit.kilocalorie_per_mole,
+                "idivf1": 1.234 * unit.dimensionless,
+                "id": "i1",
+            }
+        )
+
+        potential_handler = SMIRNOFFImproperTorsionHandler._from_toolkit(
+            parameter_handler=handler, topology=topology
+        )
+
+        handler = ImproperTorsionHandler(version=0.3)
+        handler.default_idivf = 5.555
+        handler.add_parameter(
+            {
+                "smirks": "[*:1]~[#6:2](~[#8:3])~[*:4]",
+                "periodicity1": 2,
+                "phase1": 180.0 * unit.degree,
+                "k1": 1.1 * unit.kilocalorie_per_mole,
+                "id": "i1",
+            }
+        )
+
+        potential_handler = SMIRNOFFImproperTorsionHandler._from_toolkit(
+            parameter_handler=handler, topology=topology
+        )
+
+        assert [*potential_handler.potentials.values()][0].parameters[
+            "idivf"
+        ] == 5.555 * unit.dimensionless
+
     def test_electrostatics_am1_handler(self):
         molecule = Molecule.from_smiles("C")
         molecule.assign_partial_charges(partial_charge_method="am1bcc")
