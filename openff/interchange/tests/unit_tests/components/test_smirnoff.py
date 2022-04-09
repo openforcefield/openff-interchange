@@ -653,9 +653,9 @@ class TestBondOrderInterpolation(_BaseTest):
         for pot_key1, pot_key2 in zip(
             bonds.slot_map.values(), bonds_mod.slot_map.values()
         ):
-            k1 = bonds.potentials[pot_key1].parameters["k"]
-            k2 = bonds_mod.potentials[pot_key2].parameters["k"]
-            assert k1 == k2
+            k1 = bonds.potentials[pot_key1].parameters["k"].m_as(kcal_mol_a2)
+            k2 = bonds_mod.potentials[pot_key2].parameters["k"].m_as(kcal_mol_a2)
+            assert k1 == pytest.approx(k2)
 
     def test_input_conformers_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
@@ -686,9 +686,9 @@ class TestBondOrderInterpolation(_BaseTest):
         )
 
         for key1, key2 in zip(bonds.potentials, bonds_mod.potentials):
-            k1 = bonds.potentials[key1].parameters["k"]
-            k2 = bonds_mod.potentials[key2].parameters["k"]
-            assert k1 == k2
+            k1 = bonds.potentials[key1].parameters["k"].m_as(kcal_mol_a2)
+            k2 = bonds_mod.potentials[key2].parameters["k"].m_as(kcal_mol_a2)
+            assert k1 == pytest.approx(k2), (k1, k2)
 
     def test_fractional_bondorder_invalid_interpolation_method(self):
         """
