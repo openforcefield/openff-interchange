@@ -28,7 +28,7 @@
 {{ _('Classes') | escape | underline(line="-") }}
 
    .. autosummary::
-      :toctree: {{objname}}
+      :toctree:
       :nosignatures:
    {% for item in types %}
       {% if item.startswith(fullname ~ ".") -%}
@@ -46,7 +46,7 @@
 {{ _('Functions') | escape | underline(line="-") }}
 
    .. autosummary::
-      :toctree: {{objname}}
+      :toctree:
       :nosignatures:
    {% for item in functions %}
       {% if item.startswith(fullname ~ ".") -%}
@@ -64,7 +64,7 @@
 {{ _('Exceptions') | escape | underline(line="-") }}
 
    .. autosummary::
-      :toctree: {{objname}}
+      :toctree:
       :nosignatures:
    {% for item in exceptions %}
       {% if item.startswith(fullname ~ ".") -%}
@@ -97,7 +97,7 @@
 {{ _('Modules') | escape | underline(line="-") }}
 
 .. autosummary::
-   :toctree: {{objname}}
+   :toctree:
    :recursive:
 {% for item in modules if item not in exclude_modules %}
    {% if item.startswith(fullname ~ ".") -%}
