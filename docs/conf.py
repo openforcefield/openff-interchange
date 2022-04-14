@@ -138,7 +138,7 @@ if importlib.util.find_spec("notfound"):
     <p>
         Sorry, we couldn't find that page. This often happens as a result of
         following an outdated link. Please check the
-        <a href="https://open-forcefield-toolkit.readthedocs.io/en/stable/">latest stable version</a>
+        <a href="https://openff-interchange.readthedocs.io/en/stable/">latest stable version</a>
         of the docs, unless you're sure you want an earlier version, and
         try using the search box or the navigation menu on the left.
     </p>
