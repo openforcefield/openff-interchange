@@ -15,7 +15,7 @@ dependencies:
   - cached-property
   - cachetools
   - python-constraint
-  - openmm =>7.6
+  - openmm >=7.6
   - intermol
   - pytest
   - mdtraj
@@ -27,6 +27,7 @@ dependencies:
   - autodoc-pydantic
   - sphinx>=4.4.0,<5
   - sphinxcontrib-mermaid
+  - sphinx-notfound-page
   - pip:
     - git+https://github.com/openforcefield/openff-sphinx-theme.git@main
     - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor

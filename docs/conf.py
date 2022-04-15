@@ -95,10 +95,16 @@ napoleon_use_ivar = True
 autodoc_mock_imports = []
 autodoc_default_options = {
     "member-order": "bysource",
+    "undoc-members": True,
+    "inherited-members": False,
+    "show-inheritance": True,
 }
 autodoc_preserve_defaults = True
 autodoc_inherit_docstrings = False
 autodoc_typehints_format = "short"
+# Workaround for autodoc_typehints_format not working for attributes
+# see https://github.com/sphinx-doc/sphinx/issues/10290#issuecomment-1079740009
+python_use_unqualified_type_names = True
 
 # autodoc_pydantic settings
 autodoc_pydantic_show_config = False
@@ -116,6 +122,30 @@ myst_enable_extensions = [
     "dollarmath",
     "colon_fence",
 ]
+
+# sphinx-notfound-page
+# https://github.com/readthedocs/sphinx-notfound-page
+# Renders a 404 page with absolute links
+import importlib
+
+if importlib.util.find_spec("notfound"):
+    extensions.append("notfound.extension")
+
+    notfound_context = {
+        "title": "404: File Not Found",
+        "body": """
+    <h1>404: File Not Found</h1>
+    <p>
+        Sorry, we couldn't find that page. This often happens as a result of
+        following an outdated link. Please check the
+        <a href="https://openff-interchange.readthedocs.io/en/stable/">latest stable version</a>
+        of the docs, unless you're sure you want an earlier version, and
+        try using the search box or the navigation menu on the left.
+    </p>
+    <p>
+    </p>
+    """,
+    }
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
