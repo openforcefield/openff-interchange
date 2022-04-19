@@ -380,10 +380,10 @@ class TestEnergies(_BaseTest):
 
         out = Interchange.from_smirnoff(parsley, mol.to_topology())
         out.positions = mol.conformers[0]
+        out.box = unit.Quantity(4 * np.eye(3), unit.nanometer)
 
         # Put this molecule in a large box with cut-off electrostatics
         # to prevent it from interacting with images of itself
-        out.box = [40, 40, 40]
         out["Electrostatics"].method = "cutoff"
 
         gmx_energies = get_gromacs_energies(out)

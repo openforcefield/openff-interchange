@@ -108,8 +108,6 @@ def get_amber_energies(
             else:
                 raise Exception(f"Unsupported `writer` argument {writer}")
 
-            from openff.interchange.drivers.utils import _infer_constraints
-
             inferred_constraints = _infer_constraints(off_sys)
             if inferred_constraints == "none":
                 input_file = get_test_file_path("run.in")
