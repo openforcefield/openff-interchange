@@ -8,18 +8,13 @@ from openff.units import unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.exceptions import (
-    GMXGromppError,
-    GMXMdrunError,
-    UnsupportedExportError,
-)
+from openff.interchange.exceptions import GMXGromppError, GMXMdrunError
 from openff.interchange.tests import get_test_file_path
 
 if TYPE_CHECKING:
     from openff.units.unit import Quantity
 
     from openff.interchange import Interchange
-    from openff.interchange.components.smirnoff import SMIRNOFFvdWHandler
 
 
 kj_mol = unit.kilojoule / unit.mol
@@ -76,7 +71,7 @@ def get_gromacs_energies(
                 off_sys.mdconfig.write_mdp_file("tmp.mdp")
                 mdp_file = "tmp.mdp"
             else:
-                mdp_file = _write_mdp_file(off_sys)
+                mdp_file = _get_mdp_file(mdp)
             report = _run_gmx_energy(
                 top_file="out.top",
                 gro_file="out.gro",
