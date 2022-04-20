@@ -10,6 +10,7 @@ from openff.interchange.tests import _BaseTest, needs_lmp
 
 @needs_lmp
 class TestLammps(_BaseTest):
+    @pytest.mark.skip("LAMMPS export experimental")
     @pytest.mark.slow()
     @pytest.mark.parametrize("n_mols", [1, 2])
     @pytest.mark.parametrize(

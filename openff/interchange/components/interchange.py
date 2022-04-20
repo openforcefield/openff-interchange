@@ -600,6 +600,8 @@ class Interchange(DefaultModel):
                 handler.store_matches(atom_slots, topology=system.topology)
                 handler.store_potentials(force_field)
 
+        system.mdconfig = MDConfig.from_interchange(system)
+
         return system
 
     @classmethod

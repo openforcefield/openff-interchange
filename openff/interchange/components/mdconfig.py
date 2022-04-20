@@ -74,12 +74,17 @@ class MDConfig(DefaultModel):
             mdconfig.vdw_cutoff = interchange.handlers["vdW"].cutoff
             mdconfig.vdw_method = interchange.handlers["vdW"].method
             mdconfig.mixing_rule = interchange.handlers["vdW"].mixing_rule
-            mdconfig.switching_function = (
-                interchange.handlers["vdW"].switch_width is not None
-            )
-            mdconfig.switching_distance = (
-                mdconfig.vdw_cutoff - interchange.handlers["vdW"].switch_width
-            )
+
+            if interchange.handlers["vdW"].switch_width is not None:
+                if interchange.handlers["vdW"].switch_width.m == 0:
+                    mdconfig.switching_function = False
+                else:
+                    mdconfig.switching_function = True
+                    mdconfig.switching_distance = (
+                        mdconfig.vdw_cutoff - interchange.handlers["vdW"].switch_width
+                    )
+            else:
+                mdconfig.switching_function = False
 
         if "Electrostatics" in interchange.handlers:
             mdconfig.coul_method = interchange.handlers["Electrostatics"].method
@@ -133,7 +138,7 @@ class MDConfig(DefaultModel):
 
             if self.switching_function:
                 mdp.write("vdw-modifier = Potential-switch\n")
-                distance = round(self.switching_distance.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
+                distance = round(self.switching_distance.m_as(unit.nanometer), 4)  # type: ignore[union-attr]
                 mdp.write(f"rvdwswitch = {distance}\n")
 
     def write_lammps_input(self, input_file: str = "run.in") -> None:
@@ -160,14 +165,12 @@ class MDConfig(DefaultModel):
                 )
             )
 
+            vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
+            coul_cutoff = round(self.coul_cutoff.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
             if self.coul_method == "pme":
-                lmp.write(
-                    f"pair_style lj/cut/coul/long {self.vdw_cutoff} {self.coul_cutoff}\n"
-                )
+                lmp.write(f"pair_style lj/cut/coul/long {vdw_cutoff} {coul_cutoff}\n")
             elif self.coul_method == "cutoff":
-                lmp.write(
-                    f"pair_style lj/cut/coul/cut {self.vdw_cutoff} {self.coul_cutoff}\n"
-                )
+                lmp.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")
             else:
                 raise UnsupportedExportError(
                     f"Unsupported electrostatics method {self.coul_method}"
@@ -193,33 +196,37 @@ class MDConfig(DefaultModel):
 
             lmp.write("run 0\n")
 
-    def _write_sander_input_file(self, input_file: str = "run.in") -> None:
+    def write_sander_input_file(self, input_file: str = "run.in") -> None:
         """Write a Sander input file for running single-point energies."""
-        with open("input_file", "w") as sander:
+        with open(input_file, "w") as sander:
             sander.write("single-point energy\n&cntrl\nimin=1,\nmaxcyc=0,\nntb=1,\n")
 
-        if self.switching_function is not None:
-            distance = round(self.switching_distance.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
-            sander.write(f"fswitch={distance},\n")
+            if self.switching_function is not None:
+                distance = round(self.switching_distance.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
+                sander.write(f"fswitch={distance},\n")
 
-        if self.constraints in ["none", None]:
-            sander.write("ntc=1,\nntf=1,\n")
-        elif self.constraints == "h-bonds":
-            sander.write("ntc=2,\nntf=2,\n")
-        # TODO: Is there a clear analog to GROMACS's all-bonds?
-        elif self.constraints == "angles":
-            raise UnsupportedExportError("Unclear how to constrain angles with sander")
+            if self.constraints in ["none", None]:
+                sander.write("ntc=1,\nntf=1,\n")
+            elif self.constraints == "h-bonds":
+                sander.write("ntc=2,\nntf=2,\n")
+            # TODO: Is there a clear analog to GROMACS's all-bonds?
+            elif self.constraints == "angles":
+                raise UnsupportedExportError(
+                    "Unclear how to constrain angles with sander"
+                )
 
-        if self.vdw_method == "cutoff":
-            vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
-            sander.write(f"cut={vdw_cutoff},\n")
-        else:
-            raise UnsupportedExportError(f"vdW method {self.vdw_method} not supported")
+            if self.vdw_method == "cutoff":
+                vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
+                sander.write(f"cut={vdw_cutoff},\n")
+            else:
+                raise UnsupportedExportError(
+                    f"vdW method {self.vdw_method} not supported"
+                )
 
-        if self.coul_method == "pme":
-            sander.write("/\n&ewald\norder=4\nskinnb=1.0\n/")
+            if self.coul_method == "pme":
+                sander.write("/\n&ewald\norder=4\nskinnb=1.0\n/")
 
-        sander.write("/\n")
+            sander.write("/\n")
 
 
 def _infer_constraints(interchange: "Interchange") -> str:
