@@ -16,7 +16,7 @@ class TestDriversAll(_BaseTest):
 
         from openff.interchange import Interchange
 
-        molecule = Molecule.from_smiles("C")
+        molecule = Molecule.from_smiles("CCO")
         molecule.generate_conformers(n_conformers=1)
         molecule.name = "MOL"
         topology = molecule.to_topology()

@@ -396,6 +396,7 @@ class TestEnergies(_BaseTest):
         # TODO: It would be best to save the 1-4 interactions, split off into vdW and Electrostatics
         # in the energies. This might be tricky/intractable to do for engines that are not GROMACS
 
+    @pytest.mark.skip("LAMMPS export experimental")
     @needs_gmx
     @needs_lmp
     @pytest.mark.slow()
