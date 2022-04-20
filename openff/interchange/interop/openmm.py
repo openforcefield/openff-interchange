@@ -699,14 +699,11 @@ def _create_virtual_site(
     x, y, z = ((v / v.units).m for v in displacement)
     # x, y, z = displacement / displacement.units
 
-    parent_atom_positions = []
-    for parent_atom in parent_atoms:
-        parent_atom_positions.append(interchange.positions[parent_atom])
-
-    # _origin_weight = np.atleast_2d(origin_weight)
-    parent_atom_positions = np.atleast_2d(  # type: ignore[assignment]
-        parent_atom_positions
+    parent_atom_positions = np.asarray(
+        interchange.positions[parent_atom] for parent_atom in parent_atoms
     )
+
+    parent_atom_positions = np.atleast_2d(parent_atom_positions)
 
     # origin = np.dot(_origin_weight, parent_atom_positions).sum(axis=0)
 
