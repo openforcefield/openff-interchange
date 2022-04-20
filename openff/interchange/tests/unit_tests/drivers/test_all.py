@@ -16,7 +16,7 @@ class TestDriversAll(_BaseTest):
 
         from openff.interchange import Interchange
 
-        molecule = Molecule.from_smiles("C")
+        molecule = Molecule.from_smiles("CCO")
         molecule.generate_conformers(n_conformers=1)
         molecule.name = "MOL"
         topology = molecule.to_topology()
@@ -26,13 +26,11 @@ class TestDriversAll(_BaseTest):
         out.box = [4, 4, 4]
 
         summary = get_all_energies(out)
-
         assert ("GROMACS" in summary) == (find_executable("gmx") is not None)
 
         assert ("Amber" in summary) == (find_executable("sander") is not None)
 
         assert ("LAMMPS" in summary) == (find_executable("lmp_serial") is not None)
-
         number_expected_drivers = 1 + sum(
             int(find_executable(exec) is not None)
             for exec in ["gmx", "lmp_serial", "sander"]

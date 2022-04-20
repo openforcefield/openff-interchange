@@ -8,95 +8,22 @@ from openff.units import unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.drivers.utils import _infer_constraints
-from openff.interchange.exceptions import (
-    GMXGromppError,
-    GMXMdrunError,
-    UnsupportedExportError,
-)
+from openff.interchange.exceptions import GMXGromppError, GMXMdrunError
 from openff.interchange.tests import get_test_file_path
 
 if TYPE_CHECKING:
     from openff.units.unit import Quantity
 
     from openff.interchange import Interchange
-    from openff.interchange.components.smirnoff import SMIRNOFFvdWHandler
 
 
 kj_mol = unit.kilojoule / unit.mol
 
-MDP_HEADER = """
-nsteps                   = 0
-nstenergy                = 1000
-continuation             = yes
-cutoff-scheme            = verlet
-
-DispCorr                 = Ener
-"""
-_ = """
-pbc                      = xyz
-coulombtype              = Cut-off
-rcoulomb                 = 0.9
-vdwtype                 = cutoff
-rvdw                     = 0.9
-vdw-modifier             = None
-DispCorr                 = No
-"""
-
-
-def _write_mdp_file(openff_sys: "Interchange") -> None:
-    with open("auto_generated.mdp", "w") as mdp_file:
-        mdp_file.write(MDP_HEADER)
-
-        if openff_sys.box is not None:
-            mdp_file.write("pbc = xyz\n")
-
-        if "Electrostatics" in openff_sys.handlers:
-            coul_handler = openff_sys.handlers["Electrostatics"]
-            coul_method = coul_handler.method
-            coul_cutoff = coul_handler.cutoff.m_as(unit.nanometer)
-            coul_cutoff = round(coul_cutoff, 4)
-            if coul_method == "cutoff":
-                mdp_file.write("coulombtype = Cut-off\n")
-                mdp_file.write("coulomb-modifier = None\n")
-                mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
-            elif coul_method == "pme":
-                mdp_file.write("coulombtype = PME\n")
-                mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
-            elif coul_method == "reactionfield":
-                mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
-                mdp_file.write(f"rcoulomb = {coul_cutoff}\n")
-            else:
-                raise UnsupportedExportError(
-                    f"Electrostatics method {coul_method} not supported"
-                )
-
-        if "vdW" in openff_sys.handlers:
-            vdw_handler: "SMIRNOFFvdWHandler" = openff_sys.handlers["vdW"]
-            vdw_method = vdw_handler.method.lower().replace("-", "")
-            vdw_cutoff = vdw_handler.cutoff.m_as(unit.nanometer)  # type: ignore[attr-defined]
-            vdw_cutoff = round(vdw_cutoff, 4)
-            if vdw_method == "cutoff":
-                mdp_file.write("vdwtype = cutoff\n")
-            elif vdw_method == "pme":
-                mdp_file.write("vdwtype = PME\n")
-            else:
-                raise UnsupportedExportError(f"vdW method {vdw_method} not supported")
-            mdp_file.write(f"rvdw = {vdw_cutoff}\n")
-            if getattr(vdw_handler, "switch_width", None) is not None:
-                mdp_file.write("vdw-modifier = Potential-switch\n")
-                switch_distance = vdw_handler.cutoff - vdw_handler.switch_width
-                switch_distance = switch_distance.m_as(unit.nanometer)  # type: ignore
-                mdp_file.write(f"rvdw-switch = {switch_distance}\n")
-
-        constraints = _infer_constraints(openff_sys)
-        mdp_file.write(f"constraints = {constraints}\n")
-
 
 def _get_mdp_file(key: str = "auto") -> str:
-    if key == "auto":
-        return "auto_generated.mdp"
-
+    #       if key == "auto":
+    #           return "auto_generated.mdp"
+    #
     mapping = {
         "default": "default.mdp",
         "cutoff": "cutoff.mdp",
@@ -141,11 +68,14 @@ def get_gromacs_energies(
             off_sys.to_gro("out.gro", writer=writer, decimal=decimal)
             off_sys.to_top("out.top", writer=writer)
             if mdp == "auto":
-                _write_mdp_file(off_sys)
+                off_sys.mdconfig.write_mdp_file("tmp.mdp")
+                mdp_file = "tmp.mdp"
+            else:
+                mdp_file = _get_mdp_file(mdp)
             report = _run_gmx_energy(
                 top_file="out.top",
                 gro_file="out.gro",
-                mdp_file=_get_mdp_file(mdp),
+                mdp_file=mdp_file,
                 maxwarn=2,
             )
             return report

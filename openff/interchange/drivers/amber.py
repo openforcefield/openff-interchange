@@ -3,7 +3,7 @@ import subprocess
 import tempfile
 from distutils.spawn import find_executable
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Union
+from typing import Dict, Union
 
 from openff.units import unit
 from openff.utilities.utilities import temporary_cd
@@ -15,59 +15,7 @@ from openff.interchange.exceptions import (
     AmberError,
     AmberExecutableNotFoundError,
     SanderError,
-    UnsupportedExportError,
 )
-from openff.interchange.tests import get_test_file_path
-
-if TYPE_CHECKING:
-    from openff.interchange.components.smirnoff import SMIRNOFFvdWHandler
-
-
-def _write_input_file(interchange: "Interchange") -> None:
-    with open("auto_generated.in", "w") as input_file:
-        input_file.write(
-            "single-point energy\n" "&cntrl\n" "imin=1,\n" "maxcyc=0,\n" "ntb=1,\n"
-        )
-
-        vdw_handler: "SMIRNOFFvdWHandler" = interchange.handlers["vdW"]
-        vdw_method = vdw_handler.method.lower().replace("-", "")
-        vdw_cutoff = vdw_handler.cutoff.m_as(unit.angstrom)  # type: ignore[attr-defined]
-        vdw_cutoff = round(vdw_cutoff, 4)
-        if vdw_method == "cutoff":
-            input_file.write(f"cut={vdw_cutoff},\n")
-        else:
-            raise UnsupportedExportError(f"vdW method {vdw_method} not supported")
-        if getattr(vdw_handler, "switch_width", None) is not None:
-            switch_distance = vdw_handler.cutoff - vdw_handler.switch_width
-            switch_distance = switch_distance.m_as(unit.angstrom)  # type: ignore
-            switch_distance = round(switch_distance, 4)
-            input_file.write(f"fswitch={switch_distance},\n")
-
-        if "Constraints" not in interchange.handlers:
-            input_file.write("ntc=2,\n")
-        elif "Bonds" not in interchange.handlers:
-            input_file.write("ntc=2,\n")
-        else:
-            num_constraints = len(interchange["Constraints"].slot_map)
-            if num_constraints == 0:
-                input_file.write("ntc=2,\n")
-            else:
-                from openff.interchange.components.toolkit import _get_num_h_bonds
-
-                num_h_bonds = _get_num_h_bonds(interchange.topology)
-                num_bonds = len(interchange["Bonds"].slot_map)
-                num_angles = len(interchange["Angles"].slot_map)
-
-                if num_constraints == len(interchange["Bonds"].slot_map):
-                    input_file.write("ntc=3,\n")
-                elif num_constraints == num_h_bonds:
-                    input_file.write("ntc=3,\n")
-                elif num_constraints == (num_bonds + num_angles):
-                    raise UnsupportedExportError(
-                        "Unclear how to constrain angles with sander"
-                    )
-
-        input_file.write("/\n")
 
 
 def get_amber_energies(
@@ -108,23 +56,12 @@ def get_amber_energies(
             else:
                 raise Exception(f"Unsupported `writer` argument {writer}")
 
-            from openff.interchange.drivers.utils import _infer_constraints
-
-            inferred_constraints = _infer_constraints(off_sys)
-            if inferred_constraints == "none":
-                input_file = get_test_file_path("run.in")
-            elif inferred_constraints == "h-bonds":
-                input_file = get_test_file_path("h-bonds.in")
-            else:
-                raise Exception(
-                    "Amber drive can only support none and h-bond constraints. Inferred a value of "
-                    f"{inferred_constraints}"
-                )
+            off_sys.mdconfig.write_sander_input_file("run.in")
 
             report = _run_sander(
                 prmtop_file="out.prmtop",
                 inpcrd_file="out.inpcrd",
-                input_file=input_file,
+                input_file="run.in",
                 electrostatics=electrostatics,
             )
             return report

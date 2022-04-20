@@ -183,6 +183,7 @@ class TestInterchange(_BaseTest):
 
         assert np.sum(original - new) == pytest.approx(0 * unit.angstrom)
 
+    @pytest.mark.skip("LAMMPS export experimental")
     @needs_gmx
     @needs_lmp
     @pytest.mark.slow()

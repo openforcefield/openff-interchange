@@ -11,6 +11,7 @@ from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
 
+from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.components.potentials import PotentialHandler
 from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
@@ -60,6 +61,7 @@ class Interchange(DefaultModel):
         # TODO: Ensure these fields are hidden from the user as intended
         handlers: Dict[str, PotentialHandler] = dict()
         topology: Union[Topology, List, None] = Field(None)
+        mdconfig: Optional[MDConfig] = None
         box: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
         positions: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
         velocities: ArrayQuantity["nanometer/picosecond"] = Field(None)  # type: ignore
@@ -148,6 +150,19 @@ class Interchange(DefaultModel):
     @box.setter
     def box(self, value):
         self._inner_data.box = value
+        try:
+            self._inner_data.mdconfig.periodic = value is not None
+        except AttributeError:
+            pass
+
+    @property
+    def mdconfig(self):
+        """EXPERIMENTAL: A store of runtime simulation settings."""
+        return self._inner_data.mdconfig
+
+    @mdconfig.setter
+    def mdconfig(self, value):
+        self._inner_data.mdconfig = value
 
     @classmethod
     def _check_supported_handlers(cls, force_field: ForceField):
@@ -369,6 +384,8 @@ class Interchange(DefaultModel):
         else:
             sys_out.box = box
 
+        sys_out.mdconfig = MDConfig.from_interchange(sys_out)
+
         return sys_out
 
     def visualize(self, backend: str = "nglview"):
@@ -582,6 +599,8 @@ class Interchange(DefaultModel):
             if name not in ["vdW", "Electrostatics"]:
                 handler.store_matches(atom_slots, topology=system.topology)
                 handler.store_potentials(force_field)
+
+        system.mdconfig = MDConfig.from_interchange(system)
 
         return system
 

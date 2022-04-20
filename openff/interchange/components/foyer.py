@@ -89,6 +89,7 @@ class FoyerVDWHandler(PotentialHandler):
     scale_15: float = 1.0
     method: str = "cutoff"
     cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
+    switch_width: FloatQuantity["angstrom"] = 0.0 * unit.angstrom  # type: ignore
 
     def store_matches(
         self,

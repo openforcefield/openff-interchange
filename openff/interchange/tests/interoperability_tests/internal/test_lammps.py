@@ -5,12 +5,12 @@ from openff.units import unit
 
 from openff.interchange import Interchange
 from openff.interchange.drivers import get_lammps_energies, get_openmm_energies
-from openff.interchange.drivers.lammps import _write_lammps_input
 from openff.interchange.tests import _BaseTest, needs_lmp
 
 
 @needs_lmp
 class TestLammps(_BaseTest):
+    @pytest.mark.skip("LAMMPS export experimental")
     @pytest.mark.slow()
     @pytest.mark.parametrize("n_mols", [1, 2])
     @pytest.mark.parametrize(
@@ -67,10 +67,7 @@ class TestLammps(_BaseTest):
             round_positions=3,
         )
 
-        _write_lammps_input(
-            off_sys=openff_sys,
-            file_name="tmp.in",
-        )
+        openff_sys.mdconfig.write_lammps_input("tmp.in")
 
         lmp_energies.compare(
             reference,
