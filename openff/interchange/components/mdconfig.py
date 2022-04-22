@@ -54,7 +54,9 @@ class MDConfig(DefaultModel):
         None,
         description="The distance at which the switching function is applied",
     )
-    coul_method: Optional[Literal["cutoff", "pme", "reaction-field"]] = Field(
+    coul_method: Optional[
+        Literal["ewald3d-conductingboundary", "cutoff", "pme", "reaction-field"]
+    ] = Field(
         None,
         description="The method used to compute pairwise electrostatic interactions",
     )
@@ -87,7 +89,9 @@ class MDConfig(DefaultModel):
                 mdconfig.switching_function = False
 
         if "Electrostatics" in interchange.handlers:
-            mdconfig.coul_method = interchange.handlers["Electrostatics"].method
+            mdconfig.coul_method = interchange.handlers[
+                "Electrostatics"
+            ].periodic_potential
             mdconfig.coul_cutoff = interchange.handlers["Electrostatics"].cutoff
 
         return mdconfig

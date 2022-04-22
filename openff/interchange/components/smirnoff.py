@@ -49,6 +49,7 @@ from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     MissingParametersError,
     SMIRNOFFParameterAttributeNotImplementedError,
+    SMIRNOFFVersionNotSupportedError,
 )
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 from openff.interchange.types import FloatQuantity
@@ -946,7 +947,11 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     type: Literal["Electrostatics"] = "Electrostatics"  # type: ignore[assignment]
     expression: Literal["coul"] = "coul"
 
-    method: Literal["pme", "cutoff", "reaction-field", "no-cutoff"] = Field("pme")
+    periodic_potential: Literal[
+        "ewald3d-conductingboundary", "cutoff", "no-cutoff"
+    ] = Field("pme")
+    nonperiodic_potential: Literal["coulomb", "cutoff", "no-cutoff"] = Field("coulomb")
+    exception_potential: Literal["coulomb"] = Field("coulomb")
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -1031,10 +1036,20 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         Create a SMIRNOFFElectrostaticsHandler from toolkit data.
 
         """
+        from packaging import version
+
         if isinstance(parameter_handler, list):
             parameter_handlers = parameter_handler
         else:
             parameter_handlers = [parameter_handler]
+
+        for handler in parameter_handlers:
+            if isinstance(handler, ElectrostaticsHandler):
+                if version.Version(str(handler.version)) < version.Version("0.4"):
+                    raise SMIRNOFFVersionNotSupportedError(
+                        "Electrostatics section must be up-converted to 0.4 or newer. Found version "
+                        f"{handler.version}."
+                    )
 
         toolkit_handler_with_metadata = [
             p for p in parameter_handlers if type(p) == ElectrostaticsHandler
@@ -1046,7 +1061,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             scale_14=toolkit_handler_with_metadata.scale14,
             scale_15=toolkit_handler_with_metadata.scale15,
             cutoff=toolkit_handler_with_metadata.cutoff,
-            method=toolkit_handler_with_metadata.method.lower(),
+            periodic_potential=toolkit_handler_with_metadata.periodic_potential.lower(),
+            nonperiodic_potential=toolkit_handler_with_metadata.nonperiodic_potential.lower(),
+            exception_potential=toolkit_handler_with_metadata.exception_potential.lower(),
         )
 
         handler.store_matches(
