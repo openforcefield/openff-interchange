@@ -90,7 +90,7 @@ class TestOpenMM(_BaseTest):
             forcefield.get_parameter_handler("vdW", {}).method = vdw_method
             forcefield.get_parameter_handler(
                 "Electrostatics", {}
-            ).method = electrostatics_method
+            ).periodic_potential = electrostatics_method
             openff_interchange = Interchange.from_smirnoff(
                 force_field=forcefield, topology=topology
             )
@@ -106,7 +106,7 @@ class TestOpenMM(_BaseTest):
             forcefield.get_parameter_handler("vdW", {}).method = vdw_method
             forcefield.get_parameter_handler(
                 "Electrostatics", {}
-            ).method = electrostatics_method
+            ).periodic_potential = electrostatics_method
             openff_interchange = Interchange.from_smirnoff(
                 force_field=forcefield, topology=topology
             )

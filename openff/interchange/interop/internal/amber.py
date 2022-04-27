@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from openff.interchange.models import PotentialKey
 
 
+_PME = "Ewald3D-ConductingBoundary"
+
 AMBER_COULOMBS_CONSTANT = 18.2223
 kcal_mol = unit.kilocalorie / unit.mol
 kcal_mol_a2 = kcal_mol / unit.angstrom**2
@@ -81,9 +83,9 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         raise Exception
 
     if interchange.box is None:
-        if interchange["Electrostatics"].method.lower() == "pme":
+        if interchange["Electrostatics"].periodic_potential != _PME:
             raise UnsupportedExportError(
-                "Electrostatics method PME is not valid for a non-periodic system. "
+                'Electrostatics method PME (`"Ewald3D-ConductingBoundary"`) is not valid for a non-periodic system. '
             )
 
     with open(path, "w") as prmtop:

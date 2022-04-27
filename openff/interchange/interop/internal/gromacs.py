@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
     from openff.interchange import Interchange
 
+_PME = "Ewald3D-ConductingBoundary"
 kj_mol = unit.Unit("kilojoule / mole")
 
 
@@ -257,9 +258,9 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
         path = file_path
 
     if openff_sys.box is None:
-        if openff_sys["Electrostatics"].method.lower() == "pme":
+        if openff_sys["Electrostatics"].periodic_potential != _PME:
             raise UnsupportedExportError(
-                "Electrostatics method PME is not valid for a non-periodic system. "
+                'Electrostatics method PME (`"Ewald3D-ConductingBoundary"`) is not valid for a non-periodic system. '
             )
 
     # For performance, immediately convert everything into GROMACS units.  This

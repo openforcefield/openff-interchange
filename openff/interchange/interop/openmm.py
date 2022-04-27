@@ -22,6 +22,8 @@ from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 if TYPE_CHECKING:
     from openff.interchange import Interchange
 
+_PME = "Ewald3D-ConductingBoundary"
+
 kcal_mol = unit.kilocalorie_per_mole
 
 kcal_ang = kcal_mol / unit.angstrom**2
@@ -336,6 +338,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
     `combine_nonbondoed_forces=False`.
 
     """
+    # TODO: Process ElectrostaticsHandler.exception_potential
     if "vdW" in openff_sys.handlers:
         vdw_handler = openff_sys.handlers["vdW"]
 
@@ -343,7 +346,6 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         vdw_method = vdw_handler.method.lower()
 
         electrostatics_handler = openff_sys.handlers["Electrostatics"]
-        electrostatics_method = electrostatics_handler.method.lower()
 
         if combine_nonbonded_forces:
             if vdw_handler.mixing_rule != "lorentz-berthelot":
@@ -358,36 +360,35 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             for _ in openff_sys.topology.atoms:
                 non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
-            if vdw_method == "cutoff" and electrostatics_method == "pme":
-                if openff_sys.box is None:
-                    raise UnsupportedCutoffMethodError(
-                        f"Combination of non-bonded cutoff methods {vdw_cutoff} (vdW) and "
-                        f"{electrostatics_method} (Electrostatics) not currently supported with "
-                        f"`combine_nonbonded_forces={combine_nonbonded_forces}` and "
-                        f"`.box={openff_sys.box}`"
-                    )
-                else:
-                    non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
+            if openff_sys.box is None:
+                electrostatics_method = electrostatics_handler.nonperiodic_potential
+                if vdw_method == "cutoff" and electrostatics_method == "Coulomb":
+                    non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
                     non_bonded_force.setUseDispersionCorrection(True)
                     non_bonded_force.setCutoffDistance(vdw_cutoff)
-                    non_bonded_force.setEwaldErrorTolerance(1.0e-4)
-
-            elif vdw_method == "pme" and electrostatics_method == "pme":
-                if openff_sys.box is None:
-                    raise UnsupportedCutoffMethodError(
-                        f"Combination of non-bonded cutoff methods {vdw_cutoff} (vdW) and "
-                        f"{electrostatics_method} (Electrostatics) not valid with a non-periodic system "
-                        f"(`.box={openff_sys.box}`)"
-                    )
                 else:
+                    raise UnsupportedCutoffMethodError(
+                        f"Combination of non-bonded cutoff methods {vdw_method} (vdW) and {electrostatics_method}"
+                        "(Electrostatics) not currently supported or invalid with "
+                        f"`combine_nonbonded_forces={combine_nonbonded_forces}` and `.box={openff_sys.box}`."
+                    )
+
+            else:
+                electrostatics_method = electrostatics_handler.periodic_potential
+                if vdw_method == "cutoff" and electrostatics_method == _PME:
+                    non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
+                    non_bonded_force.setEwaldErrorTolerance(1.0e-4)
+                    non_bonded_force.setUseDispersionCorrection(True)
+                    non_bonded_force.setCutoffDistance(vdw_cutoff)
+                elif vdw_method == "pme" and electrostatics_method == _PME:
                     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
                     non_bonded_force.setEwaldErrorTolerance(1.0e-4)
-            else:
-                raise UnimplementedCutoffMethodError(
-                    f"Combination of non-bonded cutoff methods {vdw_cutoff} (vdW) and "
-                    f"{electrostatics_method} (Electrostatics) not currently supported with "
-                    f"`combine_nonbonded_forces={combine_nonbonded_forces}"
-                )
+                else:
+                    raise UnsupportedCutoffMethodError(
+                        f"Combination of non-bonded cutoff methods {vdw_method} (vdW) and {electrostatics_method}"
+                        "(Electrostatics) not currently supported or invalid with "
+                        f"`combine_nonbonded_forces={combine_nonbonded_forces}` and `.box={openff_sys.box}`."
+                    )
 
             _apply_switching_function(vdw_handler, non_bonded_force)
 
@@ -838,7 +839,7 @@ def _convert_nonbonded_force(force):
     )
 
     vdw_handler = SMIRNOFFvdWHandler()
-    electrostatics = SMIRNOFFElectrostaticsHandler(scale_14=0.833333, method="pme")
+    electrostatics = SMIRNOFFElectrostaticsHandler(version=0.4, scale_14=0.833333)
 
     n_parametrized_particles = force.getNumParticles()
 
@@ -861,18 +862,21 @@ def _convert_nonbonded_force(force):
         )
 
     if force.getNonbondedMethod() == openmm.NonbondedForce.PME:
-        electrostatics.method = "pme"
+        electrostatics.periodic_potential = _PME
         vdw_handler.method = "cutoff"
+    if force.getNonbondedMethod() == openmm.NonbondedForce.LJPME:
+        electrostatics.periodic_potential = _PME
+        vdw_handler.method = "PME"
     elif force.getNonbondedMethod() in {
         openmm.NonbondedForce.CutoffPeriodic,
         openmm.NonbondedForce.CutoffNonPeriodic,
     }:
         # TODO: Store reaction-field dielectric
-        electrostatics.method = "reaction-field"
+        electrostatics.periodic_potential = "reaction-field"
         vdw_handler.method = "cutoff"
     elif force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff:
-        electrostatics.method = "no-cutoff"
-        vdw_handler.method = "no-cutoff"
+        electrostatics.periodic_potential = "Coulomb"
+        vdw_handler.method = "Coulomb"
 
     if vdw_handler.method == "cutoff":
         vdw_handler.cutoff = force.getCutoffDistance()

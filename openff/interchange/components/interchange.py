@@ -680,7 +680,9 @@ class Interchange(DefaultModel):
             raise InternalInconsistencyError("Found no non-bonded handlers")
 
         nonbonded_ = {
-            "electrostatics_method": self.handlers["Electrostatics"].method,
+            "electrostatics_periodic_potential": self.handlers[
+                "Electrostatics"
+            ].periodic_potential,
             "vdw_method": self.handlers[nonbonded_handler].method,
             "periodic_topology": self.box is not None,
         }
