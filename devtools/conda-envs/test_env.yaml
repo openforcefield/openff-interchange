@@ -36,6 +36,9 @@ dependencies:
   - pytest-randomly
   - pytest-timeout
   - nglview
+  # Remove after new Evaluator release
+  - pymbar >=3.0.5
+  - cmiles
   # Drivers
   - gromacs >=2021=nompi*
   - lammps >=2021
