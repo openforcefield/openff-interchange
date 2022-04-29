@@ -7,7 +7,7 @@ source of truth is the rich chemical information in the `Interchange`
 object, and exported files are tools to perform some operation.
 
 (sec-mdconfig)=
-### Run control/config files
+## Run control/config files
 
 SMIRNOFF force fields include several parameters that many MD engines do not
 include as part of their topologies. These values are essential for accurately
