@@ -173,13 +173,14 @@ class MDConfig(DefaultModel):
             }
             lmp.write(
                 "special_bonds lj "
-                f"{scale_factors['vdw']['1-2']} "
-                f"{scale_factors['vdw']['1-3']} "
-                f"{scale_factors['vdw']['1-4']} "
+                f"{scale_factors['vdW']['1-2']} "
+                f"{scale_factors['vdW']['1-3']} "
+                f"{scale_factors['vdW']['1-4']} "
                 "coul "
                 f"{scale_factors['Electrostatics']['1-2']} "
                 f"{scale_factors['Electrostatics']['1-3']} "
                 f"{scale_factors['Electrostatics']['1-4']} "
+                "\n"
             )
 
             vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)  # type: ignore[union-attr]

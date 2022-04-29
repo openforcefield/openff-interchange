@@ -11,7 +11,7 @@ from openff.interchange.tests import _BaseTest
 
 @pytest.mark.slow()
 class TestDriversAll(_BaseTest):
-    def test_skipping_drivers(self, ethanol_top, parsley):
+    def test_skipping_drivers(self, ethanol_top, sage):
         from openff.toolkit.topology import Molecule
 
         from openff.interchange import Interchange
@@ -21,7 +21,7 @@ class TestDriversAll(_BaseTest):
         molecule.name = "MOL"
         topology = molecule.to_topology()
 
-        out = Interchange.from_smirnoff(parsley, topology)
+        out = Interchange.from_smirnoff(sage, topology)
         out.positions = molecule.conformers[0]
         out.box = [4, 4, 4]
 
