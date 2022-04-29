@@ -157,12 +157,30 @@ class MDConfig(DefaultModel):
             lmp.write("improper_style cvff\n")
 
             # TODO: LAMMPS puts this information in the "run" file. Should it live in MDConfig or not?
-            scale_factors = {"vdW": [0, 0.5, 1], "Electrostatics": [0, 0.8333333333, 1]}
+            scale_factors = {
+                "vdW": {
+                    "1-2": 0.0,
+                    "1-3": 0.0,
+                    "1-4": 0.5,
+                    "1-5": 1,
+                },
+                "Electrostatics": {
+                    "1-2": 0.0,
+                    "1-3": 0.0,
+                    "1-4": 0.8333333333,
+                    "1-5": 1,
+                },
+            }
             lmp.write(
-                "special_bonds lj {} {} {} coul {} {} {}\n\n".format(
-                    *scale_factors["vdW"],
-                    *scale_factors["Electrostatics"],
-                )
+                "special_bonds lj "
+                f"{scale_factors['vdW']['1-2']} "
+                f"{scale_factors['vdW']['1-3']} "
+                f"{scale_factors['vdW']['1-4']} "
+                "coul "
+                f"{scale_factors['Electrostatics']['1-2']} "
+                f"{scale_factors['Electrostatics']['1-3']} "
+                f"{scale_factors['Electrostatics']['1-4']} "
+                "\n"
             )
 
             vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
