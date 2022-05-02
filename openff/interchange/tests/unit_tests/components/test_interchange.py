@@ -20,21 +20,15 @@ from openff.interchange.exceptions import (
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
 )
-from openff.interchange.tests import (
-    _BaseTest,
-    _top_from_smiles,
-    get_test_file_path,
-    needs_gmx,
-    needs_lmp,
-)
+from openff.interchange.tests import _BaseTest, get_test_file_path, needs_gmx, needs_lmp
 
 
 @pytest.mark.slow()
 class TestInterchange(_BaseTest):
-    def test_getitem(self, parsley):
+    def test_getitem(self, sage):
         """Test behavior of Interchange.__getitem__"""
         mol = Molecule.from_smiles("CCO")
-        out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
+        out = Interchange.from_smirnoff(force_field=sage, topology=[mol])
 
         out.box = [4, 4, 4]
 
@@ -50,9 +44,9 @@ class TestInterchange(_BaseTest):
         with pytest.raises(LookupError, match="Could not find"):
             out["CMAPs"]
 
-    def test_get_parameters(self, parsley):
+    def test_get_parameters(self, sage):
         mol = Molecule.from_smiles("CCO")
-        out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
+        out = Interchange.from_smirnoff(force_field=sage, topology=[mol])
 
         from_interchange = out._get_parameters("Bonds", (0, 4))
         from_handler = out["Bonds"]._get_parameters((0, 4))
@@ -97,13 +91,13 @@ class TestInterchange(_BaseTest):
         with pytest.raises(ValidationError):
             tmp.box = [2, 2, 3, 90, 90, 90]
 
-    def test_basic_combination(self, parsley_unconstrained):
+    def test_basic_combination(self, sage_unconstrained):
         """Test basic use of Interchange.__add__() based on the README example"""
         mol = Molecule.from_smiles("C")
         mol.generate_conformers(n_conformers=1)
         top = Topology.from_molecules([mol])
 
-        openff_sys = Interchange.from_smirnoff(parsley_unconstrained, top)
+        openff_sys = Interchange.from_smirnoff(sage_unconstrained, top)
 
         openff_sys.box = [4, 4, 4] * np.eye(3)
         openff_sys.positions = mol.conformers[0]
@@ -118,7 +112,7 @@ class TestInterchange(_BaseTest):
         # Just see if it can be converted into OpenMM and run
         get_openmm_energies(combined)
 
-    def test_parameters_do_not_clash(self, parsley_unconstrained):
+    def test_parameters_do_not_clash(self, sage_unconstrained):
         thf = Molecule.from_smiles("C1CCOC1")
         ace = Molecule.from_smiles("CC(=O)O")
 
@@ -128,7 +122,7 @@ class TestInterchange(_BaseTest):
         def make_interchange(molecule: Molecule) -> Interchange:
             molecule.generate_conformers(n_conformers=1)
             interchange = Interchange.from_smirnoff(
-                force_field=parsley_unconstrained, topology=molecule.to_topology()
+                force_field=sage_unconstrained, topology=[molecule]
             )
             interchange.positions = molecule.conformers[0]
 
@@ -146,7 +140,7 @@ class TestInterchange(_BaseTest):
 
         # TODO: Ensure the de-duplication is maintained after exports
 
-    def test_positions_setting(self, parsley):
+    def test_positions_setting(self, sage):
         """Test that positions exist on the result if and only if
         both input objects have positions."""
 
@@ -154,13 +148,10 @@ class TestInterchange(_BaseTest):
         methane = Molecule.from_smiles("C")
 
         ethane_interchange = Interchange.from_smirnoff(
-            parsley,
-            ethane.to_topology(),
+            sage,
+            [ethane],
         )
-        methane_interchange = Interchange.from_smirnoff(
-            parsley,
-            methane.to_topology(),
-        )
+        methane_interchange = Interchange.from_smirnoff(sage, [methane])
 
         ethane.generate_conformers(n_conformers=1)
         methane.generate_conformers(n_conformers=1)
@@ -214,13 +205,13 @@ class TestInterchange(_BaseTest):
         get_openmm_energies(out)
         get_lammps_energies(out)
 
-    def test_from_parsley(self, parsley):
+    def test_from_sage(self, sage):
 
         top = Topology.from_molecules(
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")]
         )
 
-        out = Interchange.from_smirnoff(parsley, top)
+        out = Interchange.from_smirnoff(sage, top)
 
         assert "Constraints" in out.handlers.keys()
         assert "Bonds" in out.handlers.keys()
@@ -231,10 +222,10 @@ class TestInterchange(_BaseTest):
         assert type(out.topology) == Topology
         assert isinstance(out.topology, Topology)
 
-    def test_from_parsley_molecule_list(self, parsley):
+    def test_from_sage_molecule_list(self, sage):
 
         out = Interchange.from_smirnoff(
-            parsley,
+            sage,
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")],
         )
 
@@ -248,13 +239,13 @@ class TestInterchange(_BaseTest):
         assert isinstance(out.topology, Topology)
 
     @skip_if_missing("nglview")
-    def test_visualize(self, parsley):
+    def test_visualize(self, sage):
         import nglview
 
         molecule = Molecule.from_smiles("CCO")
 
         out = Interchange.from_smirnoff(
-            force_field=parsley,
+            force_field=sage,
             topology=molecule.to_topology(),
         )
 
@@ -270,20 +261,20 @@ class TestInterchange(_BaseTest):
 
 
 class TestUnimplementedSMIRNOFFCases(_BaseTest):
-    def test_bogus_smirnoff_handler(self, parsley):
+    def test_bogus_smirnoff_handler(self, sage):
         top = Molecule.from_smiles("CC").to_topology()
 
         bogus_parameter_handler = ParameterHandler(version=0.3)
         bogus_parameter_handler._TAGNAME = "bogus"
-        parsley.register_parameter_handler(bogus_parameter_handler)
+        sage.register_parameter_handler(bogus_parameter_handler)
         with pytest.raises(
             SMIRNOFFHandlersNotImplementedError, match="SMIRNOFF.*bogus"
         ):
-            Interchange.from_smirnoff(force_field=parsley, topology=top)
+            Interchange.from_smirnoff(force_field=sage, topology=top)
 
 
 class TestBadExports(_BaseTest):
-    def test_invalid_topology(self, parsley):
+    def test_invalid_topology(self, sage):
         """Test that InvalidTopologyError is caught when passing an unsupported
         topology type to Interchange.from_smirnoff"""
         top = Molecule.from_smiles("CC").to_topology().to_openmm()
@@ -295,16 +286,19 @@ class TestBadExports(_BaseTest):
         """
         # but Pydantic it pre-emptively raising ValidationError because of the type mismatch
         with pytest.raises(ValidationError):
-            Interchange.from_smirnoff(force_field=parsley, topology=top)
+            Interchange.from_smirnoff(force_field=sage, topology=top)
 
     def test_gro_file_no_positions(self):
         no_positions = Interchange()
         with pytest.raises(MissingPositionsError, match="Positions are req"):
             no_positions.to_gro("foo.gro")
 
-    def test_gro_file_all_zero_positions(self, parsley):
-        top = _top_from_smiles("CC")
-        zero_positions = Interchange.from_smirnoff(force_field=parsley, topology=top)
-        zero_positions.positions = np.zeros((top.n_atoms, 3)) * unit.nanometer
+    def test_gro_file_all_zero_positions(self, sage):
+        zero_positions = Interchange.from_smirnoff(
+            force_field=sage, topology=[Molecule.from_smiles("CC")]
+        )
+        zero_positions.positions = unit.Quantity(
+            np.zeros((zero_positions.topology.n_atoms, 3)), unit.nanometer
+        )
         with pytest.warns(UserWarning, match="seem to all be zero"):
             zero_positions.to_gro("foo.gro")

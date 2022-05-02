@@ -170,15 +170,6 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
     fractional_bond_order_method: Literal["AM1-Wiberg", "None"] = "AM1-Wiberg"
     fractional_bond_order_interpolation: Literal["linear"] = "linear"
 
-    # Note that Parsley shipped with `"None"` (not `None`!) as the default value
-    # for the bond order interpolation, so disallowing it would be problematic.
-    #
-    # >>> from openff.toolkit.typing.engines.smirnoff import ForceField
-    # >>> ForceField("openff-1.0.0.offxml")['Bonds'].fractional_bondorder_method
-    # 'None'
-    # >>> ForceField("openff-1.0.0.offxml")['ProperTorsions'].fractional_bondorder_method
-    # 'AM1-Wiberg'
-
     @classmethod
     def allowed_parameter_handlers(cls):
         """Return a list of allowed types of ParameterHandler classes."""

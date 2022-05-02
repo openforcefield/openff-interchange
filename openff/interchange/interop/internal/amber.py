@@ -8,17 +8,17 @@ import numpy as np
 from openff.units import unit
 
 from openff.interchange.components.toolkit import _get_num_h_bonds
+from openff.interchange.constants import (
+    AMBER_COULOMBS_CONSTANT,
+    kcal_mol,
+    kcal_mol_a2,
+    kcal_mol_rad2,
+)
 from openff.interchange.exceptions import UnsupportedExportError
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
     from openff.interchange.models import PotentialKey
-
-
-AMBER_COULOMBS_CONSTANT = 18.2223
-kcal_mol = unit.kilocalorie / unit.mol
-kcal_mol_a2 = kcal_mol / unit.angstrom**2
-kcal_mol_rad2 = kcal_mol / unit.radian**2
 
 
 def _write_text_blob(file, blob):

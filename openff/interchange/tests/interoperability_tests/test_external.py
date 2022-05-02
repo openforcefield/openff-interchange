@@ -15,7 +15,7 @@ from openff.interchange.tests import _BaseTest, get_test_file_path
 
 class TestFromOpenMM(_BaseTest):
     @pytest.mark.slow()
-    def test_from_openmm_pdbfile(self, argon_ff, argon_top):
+    def test_from_openmm_pdbfile(self, argon_ff):
         pdb_file_path = get_test_file_path("10-argons.pdb")
         pdbfile = app.PDBFile(pdb_file_path)
 

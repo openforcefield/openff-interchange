@@ -6,9 +6,8 @@ import openmm
 from openmm import unit
 
 from openff.interchange import Interchange
+from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
-
-kj_mol = unit.kilojoule_per_mole
 
 
 def get_openmm_energies(

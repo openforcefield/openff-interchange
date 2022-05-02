@@ -11,6 +11,7 @@ from openff.utilities.testing import has_package, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange.components.potentials import Potential
+from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.tests import (
@@ -35,11 +36,11 @@ if HAS_GROMACS:
         get_gromacs_energies,
     )
 
-kj_mol = unit.Unit("kilojoule / mol")
-
 
 @skip_if_missing("foyer")
 class TestFoyer(_BaseTest):
+    import foyer
+
     @pytest.fixture(scope="session")
     def oplsaa(self):
         return foyer.forcefields.load_OPLSAA()
@@ -54,7 +55,6 @@ class TestFoyer(_BaseTest):
 
         top = molecule.to_topology()
 
-        oplsaa = foyer.Forcefield(name="oplsaa")
         interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
         interchange.positions = molecule.conformers[0].m_as(unit.nanometer)
         interchange.box = [4, 4, 4]
@@ -163,6 +163,8 @@ class TestFoyer(_BaseTest):
 
 
 class TestRBTorsions(_BaseTest):
+    import foyer
+
     @pytest.fixture(scope="class")
     def parsley_(self):
         return ForceField("openff-1.0.0.offxml")
@@ -223,16 +225,15 @@ class TestRBTorsions(_BaseTest):
     @skip_if_missing("foyer")
     @skip_if_missing("mbuild")
     @needs_gmx
-    def test_rb_torsions_vs_foyer(self, ethanol_with_rb_torsions):
+    def test_rb_torsions_vs_foyer(self, oplsaa, ethanol_with_rb_torsions):
         # Given that these force constants are copied from Foyer's OPLS-AA file,
         # compare to processing through the current MoSDeF pipeline
-        import foyer
         import mbuild
 
         comp = mbuild.load("CC", smiles=True)
         comp.xyz = ethanol_with_rb_torsions.positions.m_as(unit.nanometer)
-        ff = foyer.Forcefield(name="oplsaa")
-        from_foyer = ff.apply(comp)
+
+        from_foyer = oplsaa.apply(comp)
         from_foyer.box = [40, 40, 40, 90, 90, 90]
         from_foyer.save("from_foyer.top")
         from_foyer.save("from_foyer.gro")

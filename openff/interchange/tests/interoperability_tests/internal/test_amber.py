@@ -5,11 +5,10 @@ from openff.toolkit.topology import Molecule
 from openff.units import unit
 
 from openff.interchange import Interchange
+from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_amber_energies, get_openmm_energies
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.tests import _BaseTest
-
-kj_mol = unit.kilojoule / unit.mol
 
 
 class TestAmber(_BaseTest):

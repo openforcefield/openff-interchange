@@ -6,11 +6,10 @@ import pandas as pd
 from openff.units import unit
 from pydantic import validator
 
+from openff.interchange.constants import kj_mol
 from openff.interchange.exceptions import EnergyError, MissingEnergyError
 from openff.interchange.models import DefaultModel
 from openff.interchange.types import FloatQuantity
-
-kj_mol = unit.kilojoule / unit.mol
 
 
 class EnergyReport(DefaultModel):

@@ -38,7 +38,7 @@ from openff.interchange.components.smirnoff import (
 )
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.models import TopologyKey, VirtualSiteKey
-from openff.interchange.tests import _BaseTest, _top_from_smiles, get_test_file_path
+from openff.interchange.tests import _BaseTest, get_test_file_path
 
 kcal_mol = unit.Unit("kilocalorie / mol")
 kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
@@ -89,8 +89,6 @@ class TestSMIRNOFFPotentialHandler(_BaseTest):
 
 class TestSMIRNOFFHandlers(_BaseTest):
     def test_bond_potential_handler(self):
-        top = _top_from_smiles("O")
-
         bond_handler = BondHandler(version=0.3)
         bond_handler.fractional_bondorder_method = "AM1-Wiberg"
         bond_parameter = BondHandler.BondType(
@@ -105,7 +103,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
         forcefield.register_parameter_handler(bond_handler)
         bond_potentials = SMIRNOFFBondHandler._from_toolkit(
             parameter_handler=forcefield["Bonds"],
-            topology=top,
+            topology=Molecule.from_smiles("O").to_topology(),
         )
 
         top_key = TopologyKey(atom_indices=(0, 1))
@@ -116,8 +114,6 @@ class TestSMIRNOFFHandlers(_BaseTest):
         assert pot.parameters["k"].to(kcal_mol_a2).magnitude == pytest.approx(1.5)
 
     def test_angle_potential_handler(self):
-        top = _top_from_smiles("CCC")
-
         angle_handler = AngleHandler(version=0.3)
         angle_parameter = AngleHandler.AngleType(
             smirks="[*:1]~[*:2]~[*:3]",
@@ -131,7 +127,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
         forcefield.register_parameter_handler(angle_handler)
         angle_potentials = SMIRNOFFAngleHandler._from_toolkit(
             parameter_handler=forcefield["Angles"],
-            topology=top,
+            topology=Molecule.from_smiles("CCC").to_topology(),
         )
 
         top_key = TopologyKey(atom_indices=(0, 1, 2))
@@ -234,7 +230,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
         )
 
     def test_electrostatics_library_charges(self):
-        top = _top_from_smiles("C")
+        top = Molecule.from_smiles("C").to_topology()
 
         library_charge_handler = LibraryChargeHandler(version=0.3)
         library_charge_handler.add_parameter(
@@ -334,23 +330,23 @@ class TestSMIRNOFFHandlers(_BaseTest):
 
     # TODO: Remove xfail after openff-toolkit 0.10.0
     @pytest.mark.xfail()
-    def test_charges_with_virtual_site(self, parsley):
+    def test_charges_with_virtual_site(self, sage):
         mol = Molecule.from_smiles("CCl")
         mol.generate_conformers(n_conformers=1)
         mol.partial_charges = unit.Quantity(
             np.array([0.5, -0.8, 0.1, 0.1, 0.1]), unit.elementary_charge
         )
 
-        parsley = deepcopy(parsley)
-        parsley.deregister_parameter_handler(parsley["ToolkitAM1BCC"])
-        parsley.deregister_parameter_handler(parsley["LibraryCharges"])
+        sage = deepcopy(sage)
+        sage.deregister_parameter_handler(sage["ToolkitAM1BCC"])
+        sage.deregister_parameter_handler(sage["LibraryCharges"])
 
         library_charge_handler = LibraryChargeHandler(version=0.3)
 
         library_charge_type = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
         library_charge_handler.add_parameter(parameter=library_charge_type)
 
-        parsley.register_parameter_handler(library_charge_handler)
+        sage.register_parameter_handler(library_charge_handler)
 
         virtual_site_handler = VirtualSiteHandler(version=0.3)
 
@@ -365,14 +361,14 @@ class TestSMIRNOFFHandlers(_BaseTest):
         )
 
         virtual_site_handler.add_parameter(parameter=sigma_type)
-        parsley.register_parameter_handler(virtual_site_handler)
+        sage.register_parameter_handler(virtual_site_handler)
 
-        out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
+        out = Interchange.from_smirnoff(force_field=sage, topology=mol.to_topology())
         out["Electrostatics"]._from_toolkit_virtual_sites(
-            parameter_handler=parsley["VirtualSites"], topology=mol.to_topology()
+            parameter_handler=sage["VirtualSites"], topology=mol.to_topology()
         )
 
-        via_toolkit = parsley.create_openmm_system(mol.to_topology())
+        via_toolkit = sage.create_openmm_system(mol.to_topology())
 
         charges = []
         for force in via_toolkit.getForces():
@@ -397,16 +393,16 @@ class TestSMIRNOFFHandlers(_BaseTest):
 class TestInterchangeFromSMIRNOFF(_BaseTest):
     """General tests for Interchange.from_smirnoff. Some are ported from the toolkit."""
 
-    def test_modified_nonbonded_cutoffs(self, parsley):
+    def test_modified_nonbonded_cutoffs(self, sage):
         from openff.toolkit.tests.create_molecules import create_ethanol
 
         topology = Topology.from_molecules(create_ethanol())
-        modified_parsley = ForceField(parsley.to_string())
+        modified_sage = ForceField(sage.to_string())
 
-        modified_parsley["vdW"].cutoff = 0.777 * unit.angstrom
-        modified_parsley["Electrostatics"].cutoff = 0.777 * unit.angstrom
+        modified_sage["vdW"].cutoff = 0.777 * unit.angstrom
+        modified_sage["Electrostatics"].cutoff = 0.777 * unit.angstrom
 
-        out = Interchange.from_smirnoff(force_field=modified_parsley, topology=topology)
+        out = Interchange.from_smirnoff(force_field=modified_sage, topology=topology)
 
         assert out["vdW"].cutoff == 0.777 * unit.angstrom
         assert out["Electrostatics"].cutoff == 0.777 * unit.angstrom
@@ -441,30 +437,30 @@ class TestInterchangeFromSMIRNOFF(_BaseTest):
 
 @pytest.mark.slow()
 class TestUnassignedParameters(_BaseTest):
-    def test_catch_unassigned_bonds(self, parsley, ethanol_top):
-        for param in parsley["Bonds"].parameters:
+    def test_catch_unassigned_bonds(self, sage, ethanol_top):
+        for param in sage["Bonds"].parameters:
             param.smirks = "[#99:1]-[#99:2]"
 
-        parsley.deregister_parameter_handler(parsley["Constraints"])
+        sage.deregister_parameter_handler(sage["Constraints"])
 
         with pytest.raises(
             UnassignedValenceParameterException,
             match="BondHandler was not able to find par",
         ):
-            Interchange.from_smirnoff(force_field=parsley, topology=ethanol_top)
+            Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
 
-    def test_catch_unassigned_angles(self, parsley, ethanol_top):
-        for param in parsley["Angles"].parameters:
+    def test_catch_unassigned_angles(self, sage, ethanol_top):
+        for param in sage["Angles"].parameters:
             param.smirks = "[#99:1]-[#99:2]-[#99:3]"
 
         with pytest.raises(
             UnassignedValenceParameterException,
             match="AngleHandler was not able to find par",
         ):
-            Interchange.from_smirnoff(force_field=parsley, topology=ethanol_top)
+            Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
 
-    def test_catch_unassigned_torsions(self, parsley, ethanol_top):
-        for param in parsley["ProperTorsions"].parameters:
+    def test_catch_unassigned_torsions(self, sage, ethanol_top):
+        for param in sage["ProperTorsions"].parameters:
             param.smirks = "[#99:1]-[#99:2]-[#99:3]-[#99:4]"
 
         with pytest.raises(
@@ -472,7 +468,7 @@ class TestUnassignedParameters(_BaseTest):
             match="- Topology indices [(]5, 0, 1, 6[)]: "
             r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
         ):
-            Interchange.from_smirnoff(force_field=parsley, topology=ethanol_top)
+            Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
 
 
 class TestConstraints(_BaseTest):
@@ -483,9 +479,9 @@ class TestConstraints(_BaseTest):
             ("CC", 6),
         ],
     )
-    def test_num_constraints(self, parsley, mol, n_constraints):
-        bond_handler = parsley["Bonds"]
-        constraint_handler = parsley["Constraints"]
+    def test_num_constraints(self, sage, mol, n_constraints):
+        bond_handler = sage["Bonds"]
+        constraint_handler = sage["Constraints"]
 
         topology = Molecule.from_smiles(mol).to_topology()
 
@@ -758,23 +754,23 @@ class TestMatrixRepresentations(_BaseTest):
         [("vdW", 10, 72), ("Bonds", 8, 64), ("Angles", 6, 104)],
     )
     def test_to_force_field_to_system_parameters(
-        self, parsley, ethanol_top, handler_name, n_ff_terms, n_sys_terms
+        self, sage, ethanol_top, handler_name, n_ff_terms, n_sys_terms
     ):
         import jax
 
         if handler_name == "Bonds":
             handler = SMIRNOFFBondHandler._from_toolkit(
-                parameter_handler=parsley["Bonds"],
+                parameter_handler=sage["Bonds"],
                 topology=ethanol_top,
             )
         elif handler_name == "Angles":
             handler = SMIRNOFFAngleHandler._from_toolkit(
-                parameter_handler=parsley[handler_name],
+                parameter_handler=sage[handler_name],
                 topology=ethanol_top,
             )
         elif handler_name == "vdW":
             handler = SMIRNOFFvdWHandler._from_toolkit(
-                parameter_handler=parsley[handler_name],
+                parameter_handler=sage[handler_name],
                 topology=ethanol_top,
             )
         else:
@@ -805,12 +801,12 @@ class TestMatrixRepresentations(_BaseTest):
                 np.sum(param_matrix, axis=1), np.ones(param_matrix.shape[0])
             )
 
-    def test_set_force_field_parameters(self, parsley, ethanol_top):
+    def test_set_force_field_parameters(self, sage, ethanol):
         import jax
 
         bond_handler = SMIRNOFFBondHandler._from_toolkit(
-            parameter_handler=parsley["Bonds"],
-            topology=ethanol_top,
+            parameter_handler=sage["Bonds"],
+            topology=ethanol.to_topology(),
         )
 
         original = bond_handler.get_force_field_parameters()

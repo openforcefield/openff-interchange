@@ -241,8 +241,8 @@ class Interchange(DefaultModel):
             >>> from openff.toolkit.typing.engines.smirnoff import ForceField
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> parsley = ForceField("openff-2.0.0.offxml")
-            >>> interchange = Interchange.from_smirnoff(topology=[mol], force_field=parsley)
+            >>> sage = ForceField("openff-2.0.0.offxml")
+            >>> interchange = Interchange.from_smirnoff(topology=[mol], force_field=sage)
             >>> interchange
             Interchange with 8 atoms, non-periodic topology
 
