@@ -2,6 +2,7 @@
 import abc
 import copy
 import functools
+import json
 from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
@@ -51,7 +52,7 @@ from openff.interchange.exceptions import (
     SMIRNOFFParameterAttributeNotImplementedError,
 )
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
-from openff.interchange.types import FloatQuantity
+from openff.interchange.types import FloatQuantity, custom_quantity_encoder, json_loader
 
 kcal_mol = openmm_unit.kilocalorie_per_mole
 kcal_mol_angstroms = kcal_mol / openmm_unit.angstrom**2
@@ -74,8 +75,33 @@ T = TypeVar("T", bound="SMIRNOFFPotentialHandler")
 TP = TypeVar("TP", bound="PotentialHandler")
 
 
+def _sanitize(o):
+    # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
+    # for the mapping dicts `slot_map` and `potentials`.
+    if isinstance(o, dict):
+        return {_sanitize(k): _sanitize(v) for k, v in o.items()}
+    elif isinstance(o, (PotentialKey, TopologyKey)):
+        return o.json()
+    elif isinstance(o, unit.Quantity):
+        return custom_quantity_encoder(o)
+    return o
+
+
+def handler_dumps(v, *, default):
+    """Dump a SMIRNOFFPotentialHandler to JSON after converting to compatible types."""
+    return json.dumps(_sanitize(v), default=default)
+
+
 class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
     """Base class for handlers storing potentials produced by SMIRNOFF force fields."""
+
+    class Config:
+        """Default configuration options for SMIRNOFF potential handlers."""
+
+        json_dumps = handler_dumps
+        json_loads = json_loader
+        validate_assignment = True
+        arbitrary_types_allowed = True
 
     @classmethod
     @abc.abstractmethod

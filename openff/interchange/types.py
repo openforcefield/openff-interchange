@@ -1,4 +1,5 @@
 """Custom models for dealing with unit-bearing quantities in a Pydantic-compatible manner."""
+import copy
 import json
 from typing import TYPE_CHECKING, Any, Dict
 
@@ -14,7 +15,11 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
 )
 
-if TYPE_CHECKING or has_package("unyt"):
+if TYPE_CHECKING:
+    import unyt
+    from openff.toolkit import Topology
+
+elif has_package("unyt"):
     import unyt
 
 
@@ -211,3 +216,14 @@ else:
                 raise UnitValidationError(
                     f"Could not validate data of type {type(val)}"
                 )
+
+
+class TopologyEncoder(json.JSONEncoder):
+    """Custom encoder for `Topology` objects."""
+
+    def default(self, obj: "Topology"):  # noqa
+        _topology = copy.deepcopy(obj)
+        for molecule in _topology.molecules:
+            molecule._conformers = None
+
+        return _topology.to_json()

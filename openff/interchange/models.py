@@ -5,7 +5,11 @@ from openff.units import unit
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
 
-from openff.interchange.types import custom_quantity_encoder, json_loader
+from openff.interchange.types import (
+    custom_quantity_encoder,
+    json_loader,
+    topology_encoder,
+)
 
 
 class DefaultModel(BaseModel):
@@ -16,6 +20,7 @@ class DefaultModel(BaseModel):
 
         json_encoders = {
             unit.Quantity: custom_quantity_encoder,
+            "Topology": topology_encoder,
         }
         json_loads = json_loader
         validate_assignment = True

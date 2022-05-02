@@ -1,13 +1,13 @@
 """An object for storing, manipulating, and converting molecular mechanics data."""
+import copy
+import json
 import warnings
-from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-from openff.toolkit.topology.molecule import Molecule
-from openff.toolkit.topology.topology import Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.toolkit import ForceField, Molecule, Topology
+from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
 
@@ -24,8 +24,14 @@ from openff.interchange.exceptions import (
     UnsupportedCombinationError,
     UnsupportedExportError,
 )
-from openff.interchange.models import DefaultModel
-from openff.interchange.types import ArrayQuantity
+from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
+from openff.interchange.types import (
+    ArrayQuantity,
+    QuantityEncoder,
+    TopologyEncoder,
+    custom_quantity_encoder,
+    json_loader,
+)
 
 if TYPE_CHECKING:
     if has_package("foyer"):
@@ -47,6 +53,35 @@ _SUPPORTED_SMIRNOFF_HANDLERS = {
 }
 
 
+def _sanitize(o):
+    # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
+    # for the mapping dicts `slot_map` and `potentials`.
+    if isinstance(o, dict):
+        return {_sanitize(k): _sanitize(v) for k, v in o.items()}
+    elif isinstance(o, (PotentialKey, TopologyKey)):
+        return o.json()
+    elif isinstance(o, unit.Quantity):
+        return custom_quantity_encoder(o)
+    return o
+
+
+def interchange_dumps(v, *, default):
+    """Dump an Interchange to JSON after converting to compatible types."""
+    return json.dumps(
+        {
+            "positions": QuantityEncoder().default(v["_inner_data"]["positions"]),
+            "box": QuantityEncoder().default(v["_inner_data"]["box"]),
+            "topology": TopologyEncoder().default(v["_inner_data"]["topology"]),
+            "handlers": {
+                "Bonds": json.dumps(
+                    _sanitize(v["_inner_data"]["handlers"]["Bonds"]), default=default
+                )
+            },
+        },
+        default=default,
+    )
+
+
 class Interchange(DefaultModel):
     """
     A object for storing, manipulating, and converting molecular mechanics data.
@@ -54,6 +89,14 @@ class Interchange(DefaultModel):
     .. warning :: This object is in an early and experimental state and unsuitable for production.
     .. warning :: This API is experimental and subject to change.
     """
+
+    class Config:
+        """Configuration options for Interchange."""
+
+        json_dumps = interchange_dumps
+        json_loads = json_loader
+        validate_assignment = True
+        arbitrary_types_allowed = True
 
     class _InnerSystem(DefaultModel):
         """Inner representation of Interchange components."""
@@ -731,7 +774,7 @@ class Interchange(DefaultModel):
         )
 
         self_copy = Interchange()
-        self_copy._inner_data = deepcopy(self._inner_data)
+        self_copy._inner_data = copy.deepcopy(self._inner_data)
 
         self_copy.topology = _combine_topologies(self.topology, other.topology)
         atom_offset = self.topology.n_atoms
