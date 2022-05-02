@@ -14,6 +14,7 @@ from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.interchange.exceptions import (
     MissingPositionsError,
+    UnimplementedCutoffMethodError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
@@ -23,55 +24,52 @@ from openff.interchange.interop.openmm import (
 )
 from openff.interchange.tests import _BaseTest
 
-nonbonded_resolution_matrix = [
+nonbonded_methods = [
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic": "PME",
         "periodic": True,
         "result": openmm.NonbondedForce.PME,
     },
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic": "PME",
         "periodic": False,
-        "result": UnsupportedCutoffMethodError,
+        "result": openmm.NonbondedForce.NoCutoff,
     },
     {
         "vdw_method": "PME",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic": "PME",
         "periodic": True,
         "result": openmm.NonbondedForce.LJPME,
     },
     {
         "vdw_method": "PME",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic": "PME",
         "periodic": False,
         "result": UnsupportedCutoffMethodError,
     },
-]
-# Revisit after OpenFF Toolkit >0.9.2 release
-"""
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "reaction-field",
+        "electrostatics_periodic": "reaction-field",
         "periodic": True,
         "result": UnimplementedCutoffMethodError,
     },
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "reaction-field",
+        "electrostatics_periodic": "reaction-field",
         "periodic": False,
         "result": UnimplementedCutoffMethodError,
     },
-"""
+]
 
 
 class TestOpenMM(_BaseTest):
-    @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
+    @pytest.mark.parametrize("inputs", nonbonded_methods)
     def test_openmm_nonbonded_methods(self, inputs):
         """See test_nonbonded_method_resolution in openff/toolkit/tests/test_forcefield.py"""
         vdw_method = inputs["vdw_method"]
-        electrostatics_method = inputs["electrostatics_method"]
+        electrostatics_method = inputs["electrostatics_periodic"]
         periodic = inputs["periodic"]
         result = inputs["result"]
 
@@ -84,6 +82,13 @@ class TestOpenMM(_BaseTest):
         if not periodic:
             topology.box_vectors = None
 
+        forcefield.get_parameter_handler("vdW", {}).method = vdw_method
+        forcefield.get_parameter_handler(
+            "Electrostatics", {}
+        ).periodic_potential = electrostatics_method
+        interchange = Interchange.from_smirnoff(
+            force_field=forcefield, topology=topology
+        )
         if type(result) == int:
             nonbonded_method = result
             # The method is validated and may raise an exception if it's not supported.
@@ -91,10 +96,10 @@ class TestOpenMM(_BaseTest):
             forcefield.get_parameter_handler(
                 "Electrostatics", {}
             ).periodic_potential = electrostatics_method
-            openff_interchange = Interchange.from_smirnoff(
+            interchange = Interchange.from_smirnoff(
                 force_field=forcefield, topology=topology
             )
-            openmm_system = openff_interchange.to_openmm(combine_nonbonded_forces=True)
+            openmm_system = interchange.to_openmm(combine_nonbonded_forces=True)
             for force in openmm_system.getForces():
                 if isinstance(force, openmm.NonbondedForce):
                     assert force.getNonbondedMethod() == nonbonded_method
@@ -103,15 +108,8 @@ class TestOpenMM(_BaseTest):
                 raise Exception
         elif issubclass(result, (BaseException, Exception)):
             exception = result
-            forcefield.get_parameter_handler("vdW", {}).method = vdw_method
-            forcefield.get_parameter_handler(
-                "Electrostatics", {}
-            ).periodic_potential = electrostatics_method
-            openff_interchange = Interchange.from_smirnoff(
-                force_field=forcefield, topology=topology
-            )
             with pytest.raises(exception):
-                openff_interchange.to_openmm(combine_nonbonded_forces=True)
+                interchange.to_openmm(combine_nonbonded_forces=True)
         else:
             raise Exception("uh oh")
 

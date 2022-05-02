@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Literal, Optional
 from openff.units import unit
 from pydantic import Field
 
+from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
@@ -34,7 +35,7 @@ class MDConfig(DefaultModel):
     constraints: Literal["none", "h-bonds", "all-bonds", "all-angles"] = Field(
         "none", description="The type of constraints to be used in the simulation."
     )
-    vdw_method: Optional[Literal["cutoff", "pme", "no-cutoff"]] = Field(
+    vdw_method: Optional[str] = Field(
         None, description="The method used to calculate the vdW interactions."
     )
     vdw_cutoff: Optional[FloatQuantity["angstrom"]] = Field(  # type: ignore
@@ -54,9 +55,7 @@ class MDConfig(DefaultModel):
         None,
         description="The distance at which the switching function is applied",
     )
-    coul_method: Optional[
-        Literal["ewald3d-conductingboundary", "cutoff", "pme", "reaction-field"]
-    ] = Field(
+    coul_method: Optional[str] = Field(
         None,
         description="The method used to compute pairwise electrostatic interactions",
     )
@@ -113,7 +112,7 @@ class MDConfig(DefaultModel):
                 mdp.write("coulombtype = Cut-off\n")
                 mdp.write("coulomb-modifier = None\n")
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
-            elif self.coul_method == "pme":
+            elif self.coul_method == _PME:
                 if not self.periodic:
                     raise UnsupportedCutoffMethodError(
                         "PME is not valid with a non-periodic system."
@@ -171,7 +170,7 @@ class MDConfig(DefaultModel):
 
             vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
             coul_cutoff = round(self.coul_cutoff.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
-            if self.coul_method == "pme":
+            if self.coul_method == _PME:
                 lmp.write(f"pair_style lj/cut/coul/long {vdw_cutoff} {coul_cutoff}\n")
             elif self.coul_method == "cutoff":
                 lmp.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")

@@ -19,6 +19,7 @@ from openff.interchange.components.base import (
 )
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import _get_14_pairs
+from openff.interchange.constants import _PME
 from openff.interchange.exceptions import MissingPositionsError, UnsupportedExportError
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
@@ -27,7 +28,6 @@ if TYPE_CHECKING:
 
     from openff.interchange import Interchange
 
-_PME = "Ewald3D-ConductingBoundary"
 kj_mol = unit.Unit("kilojoule / mole")
 
 
@@ -260,7 +260,7 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
     if openff_sys.box is None:
         if openff_sys["Electrostatics"].periodic_potential != _PME:
             raise UnsupportedExportError(
-                'Electrostatics method PME (`"Ewald3D-ConductingBoundary"`) is not valid for a non-periodic system. '
+                f'Electrostatics method PME (`"{_PME}"`) is not valid for a non-periodic system. '
             )
 
     # For performance, immediately convert everything into GROMACS units.  This

@@ -8,6 +8,7 @@ from openff.utilities.utilities import has_package, requires_package
 from parmed import periodic_table
 
 from openff.interchange.components.potentials import Potential, PotentialHandler
+from openff.interchange.constants import _PME
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.types import FloatQuantity
 
@@ -126,7 +127,7 @@ class FoyerElectrostaticsHandler(PotentialHandler):
     """Handler storing electrostatics potentials as produced by a Foyer force field."""
 
     type: str = "Electrostatics"
-    method: str = "pme"
+    periodic_potential: str = _PME
     expression: str = "coul"
     charges: Dict[TopologyKey, float] = dict()
     scale_13: float = 0.0

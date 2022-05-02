@@ -45,6 +45,7 @@ from openff.interchange.components.potentials import (
     WrappedPotential,
 )
 from openff.interchange.components.toolkit import _validated_list_to_array
+from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     MissingParametersError,
@@ -948,10 +949,10 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     expression: Literal["coul"] = "coul"
 
     periodic_potential: Literal[
-        "ewald3d-conductingboundary", "cutoff", "no-cutoff"
-    ] = Field("pme")
-    nonperiodic_potential: Literal["coulomb", "cutoff", "no-cutoff"] = Field("coulomb")
-    exception_potential: Literal["coulomb"] = Field("coulomb")
+        "Ewald3D-ConductingBoundary", "cutoff", "no-cutoff"
+    ] = Field(_PME)
+    nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
+    exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -1061,15 +1062,15 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             scale_14=toolkit_handler_with_metadata.scale14,
             scale_15=toolkit_handler_with_metadata.scale15,
             cutoff=toolkit_handler_with_metadata.cutoff,
-            periodic_potential=toolkit_handler_with_metadata.periodic_potential.lower(),
-            nonperiodic_potential=toolkit_handler_with_metadata.nonperiodic_potential.lower(),
-            exception_potential=toolkit_handler_with_metadata.exception_potential.lower(),
+            periodic_potential=toolkit_handler_with_metadata.periodic_potential,
+            nonperiodic_potential=toolkit_handler_with_metadata.nonperiodic_potential,
+            exception_potential=toolkit_handler_with_metadata.exception_potential,
         )
 
         handler.store_matches(
             parameter_handlers,
             topology,
-            charge_from_molecules=charge_from_molecules,  # type: ignore[call-arg]
+            charge_from_molecules=charge_from_molecules,
         )
 
         return handler

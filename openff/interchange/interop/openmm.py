@@ -11,6 +11,7 @@ from openff.units.openmm import to_openmm as to_openmm_unit
 from openmm import app, unit
 
 from openff.interchange.components.potentials import Potential
+from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     UnimplementedCutoffMethodError,
     UnsupportedCutoffMethodError,
@@ -21,8 +22,6 @@ from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
-
-_PME = "Ewald3D-ConductingBoundary"
 
 kcal_mol = unit.kilocalorie_per_mole
 
@@ -385,7 +384,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                     non_bonded_force.setEwaldErrorTolerance(1.0e-4)
                 else:
                     raise UnsupportedCutoffMethodError(
-                        f"Combination of non-bonded cutoff methods {vdw_method} (vdW) and {electrostatics_method}"
+                        f"Combination of non-bonded cutoff methods {vdw_method} (vdW) and {electrostatics_method} "
                         "(Electrostatics) not currently supported or invalid with "
                         f"`combine_nonbonded_forces={combine_nonbonded_forces}` and `.box={openff_sys.box}`."
                     )
