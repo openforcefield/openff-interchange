@@ -161,6 +161,7 @@ class TestFoyer(_BaseTest):
         )
 
 
+@skip_if_missing("foyer")
 class TestRBTorsions(TestFoyer):
     import foyer
 
