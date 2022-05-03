@@ -11,6 +11,7 @@ from openff.units.openmm import to_openmm as to_openmm_unit
 from openmm import app, unit
 
 from openff.interchange.components.potentials import Potential
+from openff.interchange.constants import kj_mol
 from openff.interchange.exceptions import (
     UnimplementedCutoffMethodError,
     UnsupportedCutoffMethodError,
@@ -21,15 +22,6 @@ from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
-
-kcal_mol = unit.kilocalorie_per_mole
-
-kcal_ang = kcal_mol / unit.angstrom**2
-kcal_rad = kcal_mol / unit.radian**2
-
-kj_mol = unit.kilojoule_per_mole
-kj_nm = kj_mol / unit.nanometer**2
-kj_rad = kj_mol / unit.radian**2
 
 
 def to_openmm(

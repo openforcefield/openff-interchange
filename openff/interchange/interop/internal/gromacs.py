@@ -19,6 +19,7 @@ from openff.interchange.components.base import (
 )
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import _get_14_pairs
+from openff.interchange.constants import kj_mol
 from openff.interchange.exceptions import MissingPositionsError, UnsupportedExportError
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
@@ -26,8 +27,6 @@ if TYPE_CHECKING:
     from openff.units.unit import Quantity
 
     from openff.interchange import Interchange
-
-kj_mol = unit.Unit("kilojoule / mole")
 
 
 def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):

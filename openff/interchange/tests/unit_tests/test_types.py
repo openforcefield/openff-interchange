@@ -40,12 +40,12 @@ class TestQuantityTypes:
 
         # TODO: Update with custom deserialization to == a.dict()
         assert json.loads(a.json()) == {
-            "mass": '{"val": 4, "unit": "m_u"}',
-            "charge": '{"val": 0, "unit": "e"}',
-            "foo": '{"val": 2.0, "unit": "nm"}',
-            "bar": '{"val": 90.0, "unit": "deg"}',
-            "baz": '{"val": 0.4, "unit": "nm"}',
-            "qux": '{"val": 0.4, "unit": "nm"}',
+            "mass": '{"val": 4, "unit": "atomic_mass_constant"}',
+            "charge": '{"val": 0, "unit": "elementary_charge"}',
+            "foo": '{"val": 2.0, "unit": "nanometer"}',
+            "bar": '{"val": 90.0, "unit": "degree"}',
+            "baz": '{"val": 0.4, "unit": "nanometer"}',
+            "qux": '{"val": 0.4, "unit": "nanometer"}',
         }
 
         parsed = Atom.parse_raw(a.json())
@@ -83,12 +83,12 @@ class TestQuantityTypes:
         )
 
         assert json.loads(m.json()) == {
-            "masses": '{"val": [16, 1, 1], "unit": "m_u"}',
-            "charges": '{"val": [-1.0, 0.5, 0.5], "unit": "e"}',
-            "other": '{"val": [2.0, 2.0], "unit": "s"}',
-            "foo": '{"val": [2.0, -2.0, 0.0], "unit": "nm"}',
-            "bar": '{"val": [0, 90, 180], "unit": "deg"}',
-            "baz": '{"val": [3, 2, 1], "unit": "s"}',
+            "masses": '{"val": [16, 1, 1], "unit": "atomic_mass_constant"}',
+            "charges": '{"val": [-1.0, 0.5, 0.5], "unit": "elementary_charge"}',
+            "other": '{"val": [2.0, 2.0], "unit": "second"}',
+            "foo": '{"val": [2.0, -2.0, 0.0], "unit": "nanometer"}',
+            "bar": '{"val": [0, 90, 180], "unit": "degree"}',
+            "baz": '{"val": [3, 2, 1], "unit": "second"}',
         }
 
         parsed = Molecule.parse_raw(m.json())
@@ -178,8 +178,8 @@ class TestQuantityTypes:
         )
 
         assert json.loads(m.json()) == {
-            "scalar_data": '{"val": 1.0, "unit": "m"}',
-            "array_data": '{"val": [-1, 0], "unit": "s"}',
+            "scalar_data": '{"val": 1.0, "unit": "meter"}',
+            "array_data": '{"val": [-1, 0], "unit": "second"}',
             "name": "foo",
         }
 

@@ -270,7 +270,7 @@ def _write_atoms(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
 
         atom_index = openff_sys.topology.atom_index(atom)
         try:
-            molecule_index = atom.metadata["residue_number"]
+            molecule_index = int(atom.metadata["residue_number"])
         except KeyError:
             # TODO: Is there a mapping between molecules and their
             #       "molecule index" somewhere?

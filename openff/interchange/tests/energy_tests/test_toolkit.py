@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import numpy as np
 import openmm
 import pytest
@@ -18,6 +16,7 @@ from rdkit import Chem
 
 from openff.interchange import Interchange
 from openff.interchange.components.smirnoff import library_charge_from_molecule
+from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.interchange.drivers.report import EnergyError
 from openff.interchange.tests import (
@@ -29,7 +28,6 @@ from openff.interchange.tests import (
     get_test_file_path,
 )
 
-kj_mol = unit.kilojoule / unit.mol
 _box_vectors = unit.Quantity(
     4 * np.eye(3),
     unit.nanometer,
@@ -170,7 +168,7 @@ class TestToolkit(_BaseTest):
             get_test_file_path("MiniDrugBankTrimmed.sdf"), sanitize=False
         ),
     )
-    def test_energy_vs_toolkit(self, parsley, rdmol):
+    def test_energy_vs_toolkit(self, sage, rdmol):
 
         Chem.SanitizeMol(rdmol)
         mol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=True)
@@ -204,9 +202,6 @@ class TestToolkit(_BaseTest):
                 "toolkit taking an excessive time to match the library charge SMIRKS"
             )
 
-        # Faster to load once and deepcopy N times than load N times
-        parsley = deepcopy(parsley)
-
         if mol.partial_charges is None:
             pytest.skip("missing partial charges")
         # mol.assign_partial_charges(partial_charge_method="am1bcc")
@@ -215,9 +210,9 @@ class TestToolkit(_BaseTest):
         library_charge_handler = LibraryChargeHandler(version=0.3)
         library_charges = library_charge_from_molecule(mol)
         library_charge_handler.add_parameter(parameter=library_charges)
-        parsley.register_parameter_handler(library_charge_handler)
+        sage.register_parameter_handler(library_charge_handler)
 
-        compare_condensed_systems(mol, parsley)
-        parsley.deregister_parameter_handler(parsley["Constraints"])
+        compare_condensed_systems(mol, sage)
+        sage.deregister_parameter_handler(sage["Constraints"])
 
-        compare_single_mol_systems(mol, parsley)
+        compare_single_mol_systems(mol, sage)

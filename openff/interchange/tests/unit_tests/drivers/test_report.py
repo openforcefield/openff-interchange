@@ -1,10 +1,9 @@
 import pytest
 from openff.units import unit
 
+from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.tests import _BaseTest
-
-kj_mol = unit.kilojoule / unit.mole
 
 
 class TestEnergyReport(_BaseTest):

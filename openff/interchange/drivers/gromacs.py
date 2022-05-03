@@ -4,9 +4,9 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Union
 
-from openff.units import unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
+from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import GMXGromppError, GMXMdrunError
 from openff.interchange.tests import get_test_file_path
@@ -15,9 +15,6 @@ if TYPE_CHECKING:
     from openff.units.unit import Quantity
 
     from openff.interchange import Interchange
-
-
-kj_mol = unit.kilojoule / unit.mol
 
 
 def _get_mdp_file(key: str = "auto") -> str:
