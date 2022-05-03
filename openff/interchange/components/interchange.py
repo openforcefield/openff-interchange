@@ -82,6 +82,30 @@ def interchange_dumps(v, *, default):
     )
 
 
+def interchange_loader(data: str) -> dict:
+    """Load a JSON representation of an Interchange object."""
+    tmp = {
+        "positions": None,
+        "velocities": None,
+        "box": None,
+        "topology": None,
+        "handlers": {},
+    }
+    for key, val in json.loads(data).items():
+        if key == "positions":
+            tmp["positions"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+        elif key == "velocities":
+            tmp["velocities"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+        elif key == "box":
+            tmp["box"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+        elif key == "topology":
+            tmp["topology"] = Topology.from_json(val)
+
+    return {
+        "_inner_data": tmp,
+    }
+
+
 class Interchange(DefaultModel):
     """
     A object for storing, manipulating, and converting molecular mechanics data.
@@ -103,11 +127,11 @@ class Interchange(DefaultModel):
 
         # TODO: Ensure these fields are hidden from the user as intended
         handlers: Dict[str, PotentialHandler] = dict()
-        topology: Union[Topology, List, None] = Field(None)
+        topology: Optional[Union[Topology, List]] = Field(None)
         mdconfig: Optional[MDConfig] = None
-        box: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
-        positions: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
-        velocities: ArrayQuantity["nanometer/picosecond"] = Field(None)  # type: ignore
+        box: Optional[ArrayQuantity["nanometer"]] = Field(None)  # type: ignore
+        positions: Optional[ArrayQuantity["nanometer"]] = Field(None)  # type: ignore
+        velocities: Optional[ArrayQuantity["nanometer/picosecond"]] = Field(None)  # type: ignore
 
         @validator("box")
         def validate_box(cls, value):
@@ -123,6 +147,8 @@ class Interchange(DefaultModel):
 
         @validator("topology")
         def validate_topology(cls, value):
+            if value is None:
+                return None
             if isinstance(value, Topology):
                 try:
                     return Topology(other=value)
@@ -142,7 +168,7 @@ class Interchange(DefaultModel):
                     f"Found object of type {type(value)}."
                 )
 
-    def __init__(self):
+    def __init__(self, _inner_data: Optional[dict] = None):
         self._inner_data = self._InnerSystem()
 
     @property
