@@ -29,7 +29,6 @@ from openff.interchange.types import (
     QuantityEncoder,
     TopologyEncoder,
     custom_quantity_encoder,
-    json_loader,
 )
 
 if TYPE_CHECKING:
@@ -89,6 +88,8 @@ def interchange_loader(data: str) -> dict:
         "handlers": {},
     }
     for key, val in json.loads(data).items():
+        if val is None:
+            continue
         if key == "positions":
             tmp["positions"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
         elif key == "velocities":
@@ -120,7 +121,7 @@ class Interchange(DefaultModel):
         """Configuration options for Interchange."""
 
         json_dumps = interchange_dumps
-        json_loads = json_loader
+        json_loads = interchange_loader
         validate_assignment = True
         arbitrary_types_allowed = True
 
