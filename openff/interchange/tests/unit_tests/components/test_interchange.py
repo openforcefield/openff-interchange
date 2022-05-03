@@ -110,7 +110,7 @@ class TestInterchange(_BaseTest):
 
         # Copy and translate atoms by [1, 1, 1]
         other = Interchange()
-        other._inner_data = deepcopy(openff_sys._inner_data)
+        other = deepcopy(openff_sys)
         other.positions += 1.0 * unit.nanometer
 
         combined = openff_sys + other
