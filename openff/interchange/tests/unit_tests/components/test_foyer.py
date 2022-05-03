@@ -5,7 +5,6 @@ import numpy as np
 import parmed as pmd
 import pytest
 from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
 
@@ -166,17 +165,13 @@ class TestRBTorsions(_BaseTest):
     import foyer
 
     @pytest.fixture(scope="class")
-    def parsley_(self):
-        return ForceField("openff-1.0.0.offxml")
-
-    @pytest.fixture(scope="class")
-    def ethanol_with_rb_torsions(self, parsley_):
+    def ethanol_with_rb_torsions(self, sage):
         mol = Molecule.from_smiles("CC")
         mol.name = "ETH"
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
 
-        out = Interchange.from_smirnoff(parsley_, top)
+        out = Interchange.from_smirnoff(sage, top)
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
         out.positions = np.round(out.positions, 2)

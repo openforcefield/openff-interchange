@@ -60,7 +60,7 @@ class TestFromOpenMM(_BaseTest):
             ("propane_methane_butanol_0.2_0.3_0.5.pdb"),
         ],
     )
-    def test_from_toolkit_packmol_boxes(self, parsley, pdb_path, unique_molecules):
+    def test_from_toolkit_packmol_boxes(self, sage, pdb_path, unique_molecules):
         """
         Test loading some pre-prepared PACKMOL-generated systems.
 
@@ -73,7 +73,7 @@ class TestFromOpenMM(_BaseTest):
             unique_molecules=unique_molecules,
         )
 
-        out = Interchange.from_smirnoff(parsley, top)
+        out = Interchange.from_smirnoff(sage, top)
         out.box = from_openmm(pdbfile.topology.getPeriodicBoxVectors())
         out.positions = from_openmm(pdbfile.getPositions())
 
@@ -88,7 +88,7 @@ class TestFromOpenMM(_BaseTest):
             combine_nonbonded_forces=True,
         ).compare(
             _get_openmm_energies(
-                omm_sys=parsley.create_openmm_system(top),
+                omm_sys=sage.create_openmm_system(top),
                 box_vectors=pdbfile.topology.getPeriodicBoxVectors(),
                 positions=pdbfile.getPositions(),
                 hard_cutoff=True,

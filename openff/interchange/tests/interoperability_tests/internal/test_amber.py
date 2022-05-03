@@ -13,12 +13,12 @@ from openff.interchange.tests import _BaseTest
 
 class TestAmber(_BaseTest):
     @pytest.mark.slow()
-    def test_inpcrd(self, parsley):
+    def test_inpcrd(self, sage):
         mol = Molecule.from_smiles(10 * "C")
         mol.name = "HPER"
         mol.generate_conformers(n_conformers=1)
 
-        out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
+        out = Interchange.from_smirnoff(force_field=sage, topology=mol.to_topology())
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
         out.positions = unit.nanometer * np.round(out.positions.m_as(unit.nanometer), 5)

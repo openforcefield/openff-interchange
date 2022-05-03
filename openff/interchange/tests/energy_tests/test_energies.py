@@ -70,16 +70,14 @@ class TestEnergies(_BaseTest):
     @pytest.mark.slow()
     @pytest.mark.parametrize("constrained", [True, False])
     @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
-    def test_energies_single_mol(
-        self, constrained, parsley, parsley_unconstrained, mol_smi
-    ):
+    def test_energies_single_mol(self, constrained, sage, sage_unconstrained, mol_smi):
         import mbuild as mb
 
         mol = Molecule.from_smiles(mol_smi)
         mol.generate_conformers(n_conformers=1)
         mol.name = "FOO"
 
-        force_field = parsley if constrained else parsley_unconstrained
+        force_field = sage if constrained else sage_unconstrained
 
         off_sys = Interchange.from_smirnoff(force_field, [mol])
 
@@ -155,7 +153,7 @@ class TestEnergies(_BaseTest):
             "systems/packmol_boxes/propane_methane_butanol_0.2_0.3_0.5.pdb",
         ],
     )
-    def test_packmol_boxes(self, parsley, toolkit_file_path):
+    def test_packmol_boxes(self, sage, toolkit_file_path):
         # TODO: Isolate a set of systems here instead of using toolkit data
         # TODO: Fix nonbonded energy differences
         from openff.toolkit.utils import get_data_file_path
@@ -179,7 +177,7 @@ class TestEnergies(_BaseTest):
             omm_topology, unique_molecules=unique_molecules
         )
 
-        off_sys = Interchange.from_smirnoff(parsley, off_topology)
+        off_sys = Interchange.from_smirnoff(sage, off_topology)
 
         off_sys.box = np.asarray(
             pdbfile.topology.getPeriodicBoxVectors().value_in_unit(
@@ -188,7 +186,7 @@ class TestEnergies(_BaseTest):
         )
         off_sys.positions = pdbfile.positions
 
-        sys_from_toolkit = parsley.create_openmm_system(off_topology)
+        sys_from_toolkit = sage.create_openmm_system(off_topology)
 
         omm_energies = get_openmm_energies(
             off_sys,
