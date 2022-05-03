@@ -166,6 +166,7 @@ class TestGROMACS(_BaseTest):
         openff_sys.positions = np.zeros((ethanol_top.n_atoms, 3))
         openff_sys.to_gro("tmp.gro")
 
+        openff_sys.box = [4, 4, 4]
         openff_sys.to_top("lorentz.top")
         lorentz = GromacsParser("lorentz.top", "tmp.gro").read()
         assert lorentz.combination_rule == "Lorentz-Berthelot"

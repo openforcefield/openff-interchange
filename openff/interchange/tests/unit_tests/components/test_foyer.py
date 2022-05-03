@@ -161,10 +161,10 @@ class TestFoyer(_BaseTest):
         )
 
 
-class TestRBTorsions(_BaseTest):
+class TestRBTorsions(TestFoyer):
     import foyer
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture()
     def ethanol_with_rb_torsions(self, sage):
         mol = Molecule.from_smiles("CC")
         mol.name = "ETH"

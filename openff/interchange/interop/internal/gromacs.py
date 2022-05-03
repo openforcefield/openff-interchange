@@ -255,6 +255,12 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
     if isinstance(file_path, Path):
         path = file_path
 
+    if openff_sys.box is None:
+        if openff_sys["Electrostatics"].method.lower() == "pme":
+            raise UnsupportedExportError(
+                "Electrostatics method PME is not valid for a non-periodic system. "
+            )
+
     # For performance, immediately convert everything into GROMACS units.  This
     # introduces an overhead but should pay off by allowing the blind use of
     # `Quantity.magnitdue` without the default unit-checking work.
