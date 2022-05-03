@@ -113,29 +113,35 @@ class Interchange(DefaultModel):
     handlers: Dict[str, PotentialHandler] = dict()
     topology: Optional[Union[Topology, List]] = Field(None)
     mdconfig: Optional[MDConfig] = None
-    box: Optional[ArrayQuantity["nanometer"]] = Field(None)  # type: ignore
+    box: Optional[Union[ArrayQuantity["nanometer"], List]] = Field(None)
     positions: Optional[ArrayQuantity["nanometer"]] = Field(None)  # type: ignore
     velocities: Optional[ArrayQuantity["nanometer/picosecond"]] = Field(None)  # type: ignore
 
     class Config:
-        """Configuration options for Interchange."""
+        """Custom Pydantic-facing configuration for the Interchange class."""
 
-        json_dumps = interchange_dumps
         json_loads = interchange_loader
+        json_dumps = interchange_dumps
         validate_assignment = True
         arbitrary_types_allowed = True
 
-    @validator("box")
+    @validator("box", allow_reuse=True)
     def validate_box(cls, value):
         if value is None:
             return value
-        if value.shape == (3, 3):
-            return value
-        elif value.shape == (3,):
-            value = value * np.eye(3)
-            return value
+        first_pass = ArrayQuantity.validate_type(value)
+        as_2d = np.atleast_2d(first_pass)
+        if as_2d.shape == (3, 3):
+            box = as_2d
+        elif as_2d.shape == (1, 3):
+            box = as_2d * np.eye(3)
         else:
-            raise InvalidBoxError
+            raise InvalidBoxError(
+                f"Failed to convert value {value} to 3x3 box vectors. Please file an issue if you think this "
+                "input should be supported and the failure is an error."
+            )
+
+        return box
 
     @validator("topology")
     def validate_topology(cls, value):
@@ -254,7 +260,9 @@ class Interchange(DefaultModel):
 
         sys_out = Interchange()
 
-        sys_out.topology = topology
+        # FIXME: Figure out why setting `.topology` does not pass it through the validator
+        #       (despite `validate_assignment=True`)
+        sys_out.topology = Interchange.validate_topology(topology)
 
         sys_out.positions = sys_out._infer_positions()
 
@@ -370,6 +378,7 @@ class Interchange(DefaultModel):
                 )
                 sys_out.handlers.update({potential_handler.type: potential_handler})
 
+        # FIXME: Figure out why setting `.box` does not pass it through the validator
         # `box` argument is only overriden if passed `None` and the input topology
         # is a `Topology` (could be `List[Molecule]`) and has box vectors
         if box is None:
@@ -687,15 +696,17 @@ class Interchange(DefaultModel):
     # Taken from https://stackoverflow.com/a/4017638/4248961
     _aliases = {"box_vectors": "x", "coordinates": "positions", "top": "topology"}
 
-    def __setattr__(self, name, value):
+    # FIXME: These were turned off because they were screwing up the automatic use of validators
+    #        when assigning valeus to fields. Remove the appended `f`s to try to turn back on.
+    def __setattr__f(self, name, value):  # noqa
         name = self._aliases.get(name, name)
         object.__setattr__(self, name, value)
 
-    def __getattr__(self, name):
+    def __getattr__f(self, name):  # noqa
         name = self._aliases.get(name, name)
         return object.__getattribute__(self, name)
 
-    def __getitem__(self, item: str):
+    def __getitem__(self, item: str):  # noqa
         """Syntax sugar for looking up potential handlers or other components."""
         if type(item) != str:
             raise LookupError(

@@ -1165,7 +1165,8 @@ class TestParameterInterpolation(_BaseTest):
         topology = Topology.from_molecules(mol)
 
         out = Interchange.from_smirnoff(forcefield, topology)
-        out.box = [4, 4, 4]
+        out.box = unit.Quantity(4 * np.eye(3), unit.nanometer)
+        out.mdconfig.periodic = True
         omm_system = out.to_openmm(combine_nonbonded_forces=True)
 
         # Verify that the assigned bond parameters were correctly interpolated

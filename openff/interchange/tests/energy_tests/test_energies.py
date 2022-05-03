@@ -327,7 +327,9 @@ class TestEnergies(_BaseTest):
 
         out = Interchange.from_smirnoff(sage, [mol])
         out.positions = mol.conformers[0]
-        out.box = unit.Quantity(10 * np.eye(3), unit.nanometer)
+        # FIXME
+        out.box = out.validate_box(unit.Quantity(10 * np.eye(3), unit.nanometer))
+        out.mdconfig.periodic = True
 
         # Put this molecule in a large box with cut-off electrostatics
         # to prevent it from interacting with images of itself
