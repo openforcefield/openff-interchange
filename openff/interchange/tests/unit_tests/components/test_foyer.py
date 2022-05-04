@@ -38,8 +38,6 @@ if HAS_GROMACS:
 
 @skip_if_missing("foyer")
 class TestFoyer(_BaseTest):
-    import foyer
-
     @pytest.fixture(scope="session")
     def oplsaa(self):
         return foyer.forcefields.load_OPLSAA()
@@ -163,8 +161,6 @@ class TestFoyer(_BaseTest):
 
 @skip_if_missing("foyer")
 class TestRBTorsions(TestFoyer):
-    import foyer
-
     @pytest.fixture()
     def ethanol_with_rb_torsions(self, sage):
         mol = Molecule.from_smiles("CC")

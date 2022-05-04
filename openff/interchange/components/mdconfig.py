@@ -274,4 +274,10 @@ def _infer_constraints(interchange: "Interchange") -> str:
                 return "all-angles"
 
             else:
-                raise Exception("Generic failure while inferring constraints")
+                import warnings
+
+                warnings.warn(
+                    "Ambiguous failure while processing constraints. Constraining h-bonds as a stopgap."
+                )
+
+                return "h-bonds"
