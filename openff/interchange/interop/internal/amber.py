@@ -122,8 +122,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         dihedral_potentials = dict()
         for key in ["ProperTorsions", "ImproperTorsions"]:
             if key in interchange.handlers:
-                dihedral_potentials.update(deepcopy(interchange[key].potentials))
-                dihedral_potentials.update(deepcopy(interchange[key].potentials))
+                dihedral_potentials.update(deepcopy(interchange[key].potentials))  # type: ignore
+                dihedral_potentials.update(deepcopy(interchange[key].potentials))  # type: ignore
 
         potential_key_to_dihedral_type_mapping: Dict[PotentialKey, int] = {
             key: i for i, key in enumerate(dihedral_potentials)
@@ -541,7 +541,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         dihedral_phase: List[int] = list()
 
         for key_ in potential_key_to_dihedral_type_mapping:
-            params = interchange[key_.associated_handler].potentials[key_].parameters
+            params = interchange[key_.associated_handler].potentials[key_].parameters  # type: ignore
             idivf = int(params["idivf"]) if "idivf" in params else 1
             dihedral_k.append((params["k"] / idivf).m_as(kcal_mol))
             dihedral_periodicity.append(params["periodicity"].m_as(unit.dimensionless))

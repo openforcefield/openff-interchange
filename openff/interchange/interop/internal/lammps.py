@@ -148,7 +148,7 @@ def _write_bond_coeffs(lmp_file: IO, openff_sys: Interchange):
     """Write the Bond Coeffs section of a LAMMPS data file."""
     lmp_file.write("Bond Coeffs\n\n")
 
-    bond_handler = openff_sys.handlers["Bonds"]
+    bond_handler = openff_sys["Bonds"]
     bond_type_map = dict(enumerate(bond_handler.potentials))
 
     for bond_type_idx, smirks in bond_type_map.items():
@@ -167,7 +167,7 @@ def _write_angle_coeffs(lmp_file: IO, openff_sys: Interchange):
     """Write the Angle Coeffs section of a LAMMPS data file."""
     lmp_file.write("\nAngle Coeffs\n\n")
 
-    angle_handler = openff_sys.handlers["Angles"]
+    angle_handler = openff_sys["Angles"]
     angle_type_map = dict(enumerate(angle_handler.potentials))
 
     for angle_type_idx, smirks in angle_type_map.items():
@@ -186,7 +186,7 @@ def _write_proper_coeffs(lmp_file: IO, openff_sys: Interchange):
     """Write the Dihedral Coeffs section of a LAMMPS data file."""
     lmp_file.write("\nDihedral Coeffs\n\n")
 
-    proper_handler = openff_sys.handlers["ProperTorsions"]
+    proper_handler = openff_sys["ProperTorsions"]
     proper_type_map = dict(enumerate(proper_handler.potentials))
 
     for proper_type_idx, smirks in proper_type_map.items():
@@ -209,7 +209,7 @@ def _write_improper_coeffs(lmp_file: IO, openff_sys: Interchange):
     """Write the Improper Coeffs section of a LAMMPS data file."""
     lmp_file.write("\nImproper Coeffs\n\n")
 
-    improper_handler = openff_sys.handlers["ImproperTorsions"]
+    improper_handler = openff_sys["ImproperTorsions"]
     improper_type_map = dict(enumerate(improper_handler.potentials))
 
     for improper_type_idx, smirks in improper_type_map.items():
@@ -261,8 +261,8 @@ def _write_atoms(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
 
     atom_type_map_inv = dict({v: k for k, v in atom_type_map.items()})
 
-    electrostatics_handler = openff_sys.handlers["Electrostatics"]
-    vdw_hander = openff_sys.handlers["vdW"]
+    electrostatics_handler = openff_sys["Electrostatics"]
+    vdw_hander = openff_sys["vdW"]
 
     charges = electrostatics_handler.charges
 

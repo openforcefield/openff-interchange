@@ -45,7 +45,7 @@ class EnergyReport(DefaultModel):
         if item in self.energies.keys():
             return self.energies[item]
         if item.lower() == "total":
-            return sum(self.energies.values())  # type: ignore[return-value]
+            return sum(self.energies.values())
         else:
             return None
 
@@ -129,7 +129,7 @@ class EnergyReport(DefaultModel):
                 tolerance = tolerances[key]
             except KeyError as e:
                 if "Nonbonded" in str(e):
-                    tolerance = tolerances["vdW"] + tolerances["Electrostatics"]  # type: ignore[assignment]
+                    tolerance = tolerances["vdW"] + tolerances["Electrostatics"]
                 else:
                     raise e
 
@@ -166,7 +166,7 @@ class EnergyReport(DefaultModel):
                 continue
             diff[key]: FloatQuantity = self.energies[key] - other.energies[key]  # type: ignore
 
-        return diff  # type: ignore
+        return diff
 
     def __str__(self) -> str:
         return (

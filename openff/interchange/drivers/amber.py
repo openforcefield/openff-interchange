@@ -10,6 +10,7 @@ from openff.utilities.utilities import temporary_cd
 from openmm import unit as openmm_unit
 
 from openff.interchange import Interchange
+from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import (
     AmberError,
@@ -56,7 +57,8 @@ def get_amber_energies(
             else:
                 raise Exception(f"Unsupported `writer` argument {writer}")
 
-            off_sys.mdconfig.write_sander_input_file("run.in")
+            mdconfig = MDConfig.from_interchange(off_sys)
+            mdconfig.write_sander_input_file("run.in")
 
             report = _run_sander(
                 prmtop_file="out.prmtop",

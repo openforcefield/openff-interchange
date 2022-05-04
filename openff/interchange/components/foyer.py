@@ -88,8 +88,8 @@ class FoyerVDWHandler(PotentialHandler):
     scale_14: float = 0.5
     scale_15: float = 1.0
     method: str = "cutoff"
-    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
-    switch_width: FloatQuantity["angstrom"] = 0.0 * unit.angstrom  # type: ignore
+    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom
+    switch_width: FloatQuantity["angstrom"] = 0.0 * unit.angstrom
 
     def store_matches(
         self,
@@ -132,7 +132,7 @@ class FoyerElectrostaticsHandler(PotentialHandler):
     scale_13: float = 0.0
     scale_14: float = 0.5
     scale_15: float = 1.0
-    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
+    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom
 
     @property
     def charges_with_virtual_sites(self):

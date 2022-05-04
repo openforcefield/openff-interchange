@@ -1,14 +1,16 @@
 """An object for storing, manipulating, and converting molecular mechanics data."""
+import copy
 import json
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union, overload
 
 import numpy as np
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
+from typing_extensions import Literal
 
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.components.potentials import PotentialHandler
@@ -32,6 +34,17 @@ from openff.interchange.types import (
 )
 
 if TYPE_CHECKING:
+    from openff.interchange.components.smirnoff import (
+        SMIRNOFFAngleHandler,
+        SMIRNOFFBondHandler,
+        SMIRNOFFConstraintHandler,
+        SMIRNOFFElectrostaticsHandler,
+        SMIRNOFFImproperTorsionHandler,
+        SMIRNOFFProperTorsionHandler,
+        SMIRNOFFvdWHandler,
+        SMIRNOFFVirtualSiteHandler,
+    )
+
     if has_package("foyer"):
         from foyer.forcefield import Forcefield as FoyerForcefield
     if has_package("nglview"):
@@ -80,7 +93,7 @@ def interchange_dumps(v, *, default):
 
 def interchange_loader(data: str) -> dict:
     """Load a JSON representation of an Interchange object."""
-    tmp = {
+    tmp: Dict = {
         "positions": None,
         "velocities": None,
         "box": None,
@@ -110,12 +123,12 @@ class Interchange(DefaultModel):
     .. warning :: This API is experimental and subject to change.
     """
 
-    handlers: Dict[str, PotentialHandler] = dict()
-    topology: Optional[Union[Topology, List]] = Field(None)
-    mdconfig: Optional[MDConfig] = None
-    box: Optional[Union[ArrayQuantity["nanometer"], List]] = Field(None)
-    positions: Optional[ArrayQuantity["nanometer"]] = Field(None)  # type: ignore
-    velocities: Optional[ArrayQuantity["nanometer/picosecond"]] = Field(None)  # type: ignore
+    handlers: Dict[str, PotentialHandler] = Field(dict())
+    topology: Topology = Field(None)
+    mdconfig: MDConfig = Field(None)
+    box: ArrayQuantity["nanometer"] = Field(None)
+    positions: ArrayQuantity["nanometer"] = Field(None)
+    velocities: ArrayQuantity["nanometer/picosecond"] = Field(None)
 
     class Config:
         """Custom Pydantic-facing configuration for the Interchange class."""
@@ -143,7 +156,7 @@ class Interchange(DefaultModel):
 
         return box
 
-    @validator("topology")
+    @validator("topology", pre=True)
     def validate_topology(cls, value):
         if value is None:
             return None
@@ -389,7 +402,7 @@ class Interchange(DefaultModel):
         else:
             sys_out.box = box
 
-        sys_out.mdconfig = MDConfig.from_interchange(sys_out)
+        # FIXME: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
 
         return sys_out
 
@@ -587,25 +600,25 @@ class Interchange(DefaultModel):
 
             system.handlers[name] = handler
 
-        system.handlers["vdW"].store_matches(force_field, topology=system.topology)
-        system.handlers["vdW"].store_potentials(force_field=force_field)
+        system["vdW"].store_matches(force_field, topology=system.topology)
+        system["vdW"].store_potentials(force_field=force_field)  # type: ignore[call-arg]
 
-        atom_slots = system.handlers["vdW"].slot_map
+        atom_slots = system["vdW"].slot_map
 
-        system.handlers["Electrostatics"].store_charges(
+        system["Electrostatics"].store_charges(  # type: ignore
             atom_slots=atom_slots,
             force_field=force_field,
         )
 
-        system.handlers["vdW"].scale_14 = force_field.lj14scale
-        system.handlers["Electrostatics"].scale_14 = force_field.coulomb14scale
+        system["vdW"].scale_14 = force_field.lj14scale  # type: ignore[assignment]
+        system["Electrostatics"].scale_14 = force_field.coulomb14scale  # type: ignore[assignment]
 
         for name, handler in system.handlers.items():
             if name not in ["vdW", "Electrostatics"]:
                 handler.store_matches(atom_slots, topology=system.topology)
                 handler.store_potentials(force_field)
 
-        system.mdconfig = MDConfig.from_interchange(system)
+        # FIXME: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
 
         return system
 
@@ -671,7 +684,7 @@ class Interchange(DefaultModel):
         """
         for handler in self.handlers:
             if handler == handler_name:
-                return self[handler_name]._get_parameters(atom_indices=atom_indices)
+                return self[handler_name]._get_parameters(atom_indices=atom_indices)  # type: ignore
         raise MissingParameterHandlerError(
             f"Could not find parameter handler of name {handler_name}"
         )
@@ -685,7 +698,7 @@ class Interchange(DefaultModel):
             raise InternalInconsistencyError("Found no non-bonded handlers")
 
         nonbonded_ = {
-            "electrostatics_method": self.handlers["Electrostatics"].method,
+            "electrostatics_method": self["Electrostatics"].method,
             "vdw_method": self.handlers[nonbonded_handler].method,
             "periodic_topology": self.box is not None,
         }
@@ -705,6 +718,46 @@ class Interchange(DefaultModel):
     def __getattr__f(self, name):  # noqa
         name = self._aliases.get(name, name)
         return object.__getattribute__(self, name)
+
+    @overload
+    def __getitem__(self, item: Literal["Bonds"]) -> "SMIRNOFFBondHandler":
+        ...
+
+    @overload
+    def __getitem__(self, item: Literal["Constraints"]) -> "SMIRNOFFConstraintHandler":
+        ...
+
+    @overload
+    def __getitem__(self, item: Literal["Angles"]) -> "SMIRNOFFAngleHandler":
+        ...
+
+    @overload
+    def __getitem__(self, item: Literal["vdW"]) -> "SMIRNOFFvdWHandler":
+        ...
+
+    @overload
+    def __getitem__(
+        self, item: Literal["ProperTorsions"]
+    ) -> "SMIRNOFFProperTorsionHandler":
+        ...
+
+    @overload
+    def __getitem__(
+        self, item: Literal["ImproperTorsions"]
+    ) -> "SMIRNOFFImproperTorsionHandler":
+        ...
+
+    @overload
+    def __getitem__(
+        self, item: Literal["VirtualSites"]
+    ) -> "SMIRNOFFVirtualSiteHandler":
+        ...
+
+    @overload
+    def __getitem__(
+        self, item: Literal["Electrostatics"]
+    ) -> "SMIRNOFFElectrostaticsHandler":
+        ...
 
     def __getitem__(self, item: str):  # noqa
         """Syntax sugar for looking up potential handlers or other components."""
@@ -737,7 +790,7 @@ class Interchange(DefaultModel):
             "validate results!"
         )
 
-        self_copy = Interchange()
+        self_copy = copy.deepcopy(self)
 
         self_copy.topology = _combine_topologies(self.topology, other.topology)
         atom_offset = self.topology.n_atoms
@@ -759,7 +812,7 @@ class Interchange(DefaultModel):
             try:
                 self_handler = self_copy.handlers[handler_name]
             except KeyError:
-                self.add_handler(handler_name, handler)
+                self_copy.handlers[handler_name] = handler
                 warnings.warn(
                     f"'other' Interchange object has handler with name {handler_name} not "
                     f"found in 'self,' but it has now been added."
@@ -785,6 +838,8 @@ class Interchange(DefaultModel):
                     self_handler.potentials.update(
                         {pot_key: handler.potentials[pot_key]}
                     )
+
+            self_copy.handlers[handler_name] = self_handler
 
         if self_copy.positions is not None and other.positions is not None:
             new_positions = np.vstack([self_copy.positions, other.positions])
