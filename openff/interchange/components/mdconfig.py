@@ -1,5 +1,5 @@
 """Runtime settings for MD simulations."""
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Literal
 
 from openff.units import unit
 from pydantic import Field
@@ -34,31 +34,31 @@ class MDConfig(DefaultModel):
     constraints: Literal["none", "h-bonds", "all-bonds", "all-angles"] = Field(
         "none", description="The type of constraints to be used in the simulation."
     )
-    vdw_method: Optional[Literal["cutoff", "pme", "no-cutoff"]] = Field(
+    vdw_method: Literal["cutoff", "pme", "no-cutoff"] = Field(
         None, description="The method used to calculate the vdW interactions."
     )
-    vdw_cutoff: Optional[FloatQuantity["angstrom"]] = Field(  # type: ignore
+    vdw_cutoff: FloatQuantity["angstrom"] = Field(
         None,
         description="The distance at which pairwise interactions are truncated",
     )
-    mixing_rule: Optional[Literal["lorentz-berthelot", "geometric"]] = Field(
+    mixing_rule: Literal["lorentz-berthelot", "geometric"] = Field(
         None,
         description="The mixing rule (combination rule, combining rule) used in computing pairwise vdW interactions",
     )
 
-    switching_function: Optional[bool] = Field(
+    switching_function: bool = Field(
         None,
         description="Whether or not to use a switching function for the vdw interactions",
     )
-    switching_distance: Optional[FloatQuantity["angstrom"]] = Field(  # type: ignore
+    switching_distance: FloatQuantity["angstrom"] = Field(
         None,
         description="The distance at which the switching function is applied",
     )
-    coul_method: Optional[Literal["cutoff", "pme", "reaction-field"]] = Field(
+    coul_method: Literal["cutoff", "pme", "reaction-field"] = Field(
         None,
         description="The method used to compute pairwise electrostatic interactions",
     )
-    coul_cutoff: Optional[FloatQuantity["angstrom"]] = Field(  # type: ignore
+    coul_cutoff: FloatQuantity["angstrom"] = Field(
         None,
         description="The distance at which electrostatic interactions are truncated or transformed.",
     )
@@ -71,24 +71,26 @@ class MDConfig(DefaultModel):
             constraints=_infer_constraints(interchange),
         )
         if "vdW" in interchange.handlers:
-            mdconfig.vdw_cutoff = interchange.handlers["vdW"].cutoff
-            mdconfig.vdw_method = interchange.handlers["vdW"].method
-            mdconfig.mixing_rule = interchange.handlers["vdW"].mixing_rule
+            vdw_handler = interchange["vdW"]
+            mdconfig.vdw_cutoff = vdw_handler.cutoff
+            mdconfig.vdw_method = vdw_handler.method
+            mdconfig.mixing_rule = vdw_handler.mixing_rule
 
-            if interchange.handlers["vdW"].switch_width is not None:
-                if interchange.handlers["vdW"].switch_width.m == 0:
+            if vdw_handler.switch_width is not None:
+                if vdw_handler.switch_width.m == 0:
                     mdconfig.switching_function = False
                 else:
                     mdconfig.switching_function = True
                     mdconfig.switching_distance = (
-                        mdconfig.vdw_cutoff - interchange.handlers["vdW"].switch_width
+                        mdconfig.vdw_cutoff - vdw_handler.switch_width
                     )
             else:
                 mdconfig.switching_function = False
 
         if "Electrostatics" in interchange.handlers:
-            mdconfig.coul_method = interchange.handlers["Electrostatics"].method
-            mdconfig.coul_cutoff = interchange.handlers["Electrostatics"].cutoff
+            electrostatics_handler = interchange["Electrostatics"]
+            mdconfig.coul_method = electrostatics_handler.method  # type: ignore[assignment]
+            mdconfig.coul_cutoff = electrostatics_handler.cutoff
 
         return mdconfig
 
@@ -104,7 +106,7 @@ class MDConfig(DefaultModel):
 
             mdp.write(f"constraints = {self.constraints}\n")
 
-            coul_cutoff = round(self.coul_cutoff.m_as(unit.nanometer), 4)  # type: ignore[union-attr]
+            coul_cutoff = round(self.coul_cutoff.m_as(unit.nanometer), 4)
             if self.coul_method == "cutoff":
                 mdp.write("coulombtype = Cut-off\n")
                 mdp.write("coulomb-modifier = None\n")
@@ -133,12 +135,12 @@ class MDConfig(DefaultModel):
                     f"vdW method {self.vdw_method} not supported"
                 )
 
-            vdw_cutoff = round(self.vdw_cutoff.m_as(unit.nanometer), 4)  # type: ignore[union-attr]
+            vdw_cutoff = round(self.vdw_cutoff.m_as(unit.nanometer), 4)
             mdp.write(f"rvdw = {vdw_cutoff}\n")
 
             if self.switching_function:
                 mdp.write("vdw-modifier = Potential-switch\n")
-                distance = round(self.switching_distance.m_as(unit.nanometer), 4)  # type: ignore[union-attr]
+                distance = round(self.switching_distance.m_as(unit.nanometer), 4)
                 mdp.write(f"rvdwswitch = {distance}\n")
 
     def write_lammps_input(self, input_file: str = "run.in") -> None:
@@ -183,8 +185,8 @@ class MDConfig(DefaultModel):
                 "\n"
             )
 
-            vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
-            coul_cutoff = round(self.coul_cutoff.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
+            vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)
+            coul_cutoff = round(self.coul_cutoff.m_as(unit.angstrom), 4)
             if self.coul_method == "pme":
                 lmp.write(f"pair_style lj/cut/coul/long {vdw_cutoff} {coul_cutoff}\n")
             elif self.coul_method == "cutoff":
@@ -220,7 +222,7 @@ class MDConfig(DefaultModel):
             sander.write("single-point energy\n&cntrl\nimin=1,\nmaxcyc=0,\nntb=1,\n")
 
             if self.switching_function is not None:
-                distance = round(self.switching_distance.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
+                distance = round(self.switching_distance.m_as(unit.angstrom), 4)
                 sander.write(f"fswitch={distance},\n")
 
             if self.constraints in ["none", None]:
@@ -234,7 +236,7 @@ class MDConfig(DefaultModel):
                 )
 
             if self.vdw_method == "cutoff":
-                vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)  # type: ignore[union-attr]
+                vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)
                 sander.write(f"cut={vdw_cutoff},\n")
             else:
                 raise UnsupportedExportError(
@@ -272,4 +274,10 @@ def _infer_constraints(interchange: "Interchange") -> str:
                 return "all-angles"
 
             else:
-                raise Exception("Generic failure while inferring constraints")
+                import warnings
+
+                warnings.warn(
+                    "Ambiguous failure while processing constraints. Constraining h-bonds as a stopgap."
+                )
+
+                return "h-bonds"

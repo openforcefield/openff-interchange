@@ -2,6 +2,7 @@
 import abc
 import copy
 import functools
+import json
 from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
@@ -51,7 +52,7 @@ from openff.interchange.exceptions import (
     SMIRNOFFParameterAttributeNotImplementedError,
 )
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
-from openff.interchange.types import FloatQuantity
+from openff.interchange.types import FloatQuantity, custom_quantity_encoder, json_loader
 
 kcal_mol = openmm_unit.kilocalorie_per_mole
 kcal_mol_angstroms = kcal_mol / openmm_unit.angstrom**2
@@ -74,8 +75,33 @@ T = TypeVar("T", bound="SMIRNOFFPotentialHandler")
 TP = TypeVar("TP", bound="PotentialHandler")
 
 
+def _sanitize(o):
+    # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
+    # for the mapping dicts `slot_map` and `potentials`.
+    if isinstance(o, dict):
+        return {_sanitize(k): _sanitize(v) for k, v in o.items()}
+    elif isinstance(o, (PotentialKey, TopologyKey)):
+        return o.json()
+    elif isinstance(o, unit.Quantity):
+        return custom_quantity_encoder(o)
+    return o
+
+
+def handler_dumps(v, *, default):
+    """Dump a SMIRNOFFPotentialHandler to JSON after converting to compatible types."""
+    return json.dumps(_sanitize(v), default=default)
+
+
 class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
     """Base class for handlers storing potentials produced by SMIRNOFF force fields."""
+
+    class Config:
+        """Default configuration options for SMIRNOFF potential handlers."""
+
+        json_dumps = handler_dumps
+        json_loads = json_loader
+        validate_assignment = True
+        arbitrary_types_allowed = True
 
     @classmethod
     @abc.abstractmethod
@@ -169,15 +195,6 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
     expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
     fractional_bond_order_method: Literal["AM1-Wiberg", "None"] = "AM1-Wiberg"
     fractional_bond_order_interpolation: Literal["linear"] = "linear"
-
-    # Note that Parsley shipped with `"None"` (not `None`!) as the default value
-    # for the bond order interpolation, so disallowing it would be problematic.
-    #
-    # >>> from openff.toolkit.typing.engines.smirnoff import ForceField
-    # >>> ForceField("openff-1.0.0.offxml")['Bonds'].fractional_bondorder_method
-    # 'None'
-    # >>> ForceField("openff-1.0.0.offxml")['ProperTorsions'].fractional_bondorder_method
-    # 'AM1-Wiberg'
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -750,9 +767,9 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
 class _SMIRNOFFNonbondedHandler(SMIRNOFFPotentialHandler, abc.ABC):
     """Base class for handlers storing non-bonded potentials produced by SMIRNOFF force fields."""
 
-    type: Literal["nonbonded"] = "nonbonded"
+    type: str = "nonbonded"
 
-    cutoff: FloatQuantity["angstrom"] = Field(  # type: ignore
+    cutoff: FloatQuantity["angstrom"] = Field(
         9.0 * unit.angstrom,
         description="The distance at which pairwise interactions are truncated",
     )
@@ -771,7 +788,7 @@ class _SMIRNOFFNonbondedHandler(SMIRNOFFPotentialHandler, abc.ABC):
 class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
     """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
 
-    type: Literal["vdW"] = "vdW"  # type: ignore[assignment]
+    type: Literal["vdW"] = "vdW"
 
     expression: Literal[
         "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
@@ -784,7 +801,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )
 
-    switch_width: FloatQuantity["angstrom"] = Field(  # type: ignore
+    switch_width: FloatQuantity["angstrom"] = Field(
         1.0 * unit.angstrom,
         description="The width over which the switching function is applied",
     )
@@ -943,7 +960,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     rather than having each in their own handler.
     """
 
-    type: Literal["Electrostatics"] = "Electrostatics"  # type: ignore[assignment]
+    type: Literal["Electrostatics"] = "Electrostatics"
     expression: Literal["coul"] = "coul"
 
     method: Literal["pme", "cutoff", "reaction-field", "no-cutoff"] = Field("pme")
@@ -1636,15 +1653,15 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
             local_frame_position = np.asarray([-1.0, 0.0, 0.0]) * distance
         elif virtual_site_key.type == "MonovalentLonePair":
             distance = potential.parameters["distance"]
-            theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)  # type: ignore
-            psi = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)  # type: ignore
+            theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
+            psi = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
             factor = np.array(
                 [np.cos(theta) * np.cos(psi), np.sin(theta) * np.cos(psi), np.sin(psi)]
             )
             local_frame_position = factor * distance
         elif virtual_site_key.type == "DivalentLonePair":
             distance = potential.parameters["distance"]
-            theta = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)  # type: ignore
+            theta = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
             factor = np.asarray([-1.0 * np.cos(theta), 0.0, np.sin(theta)])
             local_frame_position = factor * distance
         elif virtual_site_key.type == "TrivalentLonePair":

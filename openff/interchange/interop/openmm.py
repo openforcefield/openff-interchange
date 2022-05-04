@@ -11,6 +11,7 @@ from openff.units.openmm import to_openmm as to_openmm_unit
 from openmm import app, unit
 
 from openff.interchange.components.potentials import Potential
+from openff.interchange.constants import kj_mol
 from openff.interchange.exceptions import (
     UnimplementedCutoffMethodError,
     UnsupportedCutoffMethodError,
@@ -21,15 +22,6 @@ from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
-
-kcal_mol = unit.kilocalorie_per_mole
-
-kcal_ang = kcal_mol / unit.angstrom**2
-kcal_rad = kcal_mol / unit.radian**2
-
-kj_mol = unit.kilojoule_per_mole
-kj_nm = kj_mol / unit.nanometer**2
-kj_rad = kj_mol / unit.radian**2
 
 
 def to_openmm(
@@ -99,8 +91,8 @@ def _process_constraints(openff_sys, openmm_sys):
     Process the Constraints section of an Interchange object.
     """
     try:
-        constraint_handler = openff_sys.handlers["Constraints"]
-    except KeyError:
+        constraint_handler = openff_sys["Constraints"]
+    except LookupError:
         return
 
     constrained_pairs = list()
@@ -130,8 +122,8 @@ def _process_bond_forces(
     openmm_sys.addForce(harmonic_bond_force)
 
     try:
-        bond_handler = openff_sys.handlers["Bonds"]
-    except KeyError:
+        bond_handler = openff_sys["Bonds"]
+    except LookupError:
         return
 
     has_constraint_handler = "Constraints" in openff_sys.handlers
@@ -173,8 +165,8 @@ def _process_angle_forces(
     openmm_sys.addForce(harmonic_angle_force)
 
     try:
-        angle_handler = openff_sys.handlers["Angles"]
-    except KeyError:
+        angle_handler = openff_sys["Angles"]
+    except LookupError:
         return
 
     has_constraint_handler = "Constraints" in openff_sys.handlers
@@ -218,7 +210,7 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
     torsion_force = openmm.PeriodicTorsionForce()
     openmm_sys.addForce(torsion_force)
 
-    proper_torsion_handler = openff_sys.handlers["ProperTorsions"]
+    proper_torsion_handler = openff_sys["ProperTorsions"]
 
     for top_key, pot_key in proper_torsion_handler.slot_map.items():
         indices = top_key.atom_indices
@@ -263,7 +255,7 @@ def _process_rb_torsion_forces(openff_sys, openmm_sys):
     rb_force = openmm.RBTorsionForce()
     openmm_sys.addForce(rb_force)
 
-    rb_torsion_handler = openff_sys.handlers["RBTorsions"]
+    rb_torsion_handler = openff_sys["RBTorsions"]
 
     for top_key, pot_key in rb_torsion_handler.slot_map.items():
         indices = top_key.atom_indices
@@ -304,7 +296,7 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys):
     else:
         torsion_force = openmm.PeriodicTorsionForce()
 
-    improper_torsion_handler = openff_sys.handlers["ImproperTorsions"]
+    improper_torsion_handler = openff_sys["ImproperTorsions"]
 
     for top_key, pot_key in improper_torsion_handler.slot_map.items():
         indices = top_key.atom_indices
@@ -337,12 +329,12 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
     """
     if "vdW" in openff_sys.handlers:
-        vdw_handler = openff_sys.handlers["vdW"]
+        vdw_handler = openff_sys["vdW"]
 
         vdw_cutoff = vdw_handler.cutoff.m_as(off_unit.angstrom) * unit.angstrom
         vdw_method = vdw_handler.method.lower()
 
-        electrostatics_handler = openff_sys.handlers["Electrostatics"]
+        electrostatics_handler = openff_sys["Electrostatics"]
         electrostatics_method = electrostatics_handler.method.lower()
 
         if combine_nonbonded_forces:
@@ -498,7 +490,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 )
 
     elif "Buckingham-6" in openff_sys.handlers:
-        buck_handler = openff_sys.handlers["Buckingham-6"]
+        buck_handler = openff_sys["Buckingham-6"]
 
         non_bonded_force = openmm.CustomNonbondedForce(
             "A * exp(-B * r) - C * r ^ -6; A = sqrt(A1 * A2); B = 2 / (1 / B1 + 1 / B2); C = sqrt(C1 * C2)"
@@ -595,8 +587,8 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
 def _process_virtual_sites(openff_sys, openmm_sys):
     try:
-        virtual_site_handler = openff_sys.handlers["VirtualSites"]
-    except KeyError:
+        virtual_site_handler = openff_sys["VirtualSites"]
+    except LookupError:
         return
 
     _SUPPORTED_EXCLUSION_POLICIES = ["none", "minimal", "parents"]
@@ -607,8 +599,8 @@ def _process_virtual_sites(openff_sys, openmm_sys):
             f"Supported exclusion policies are {_SUPPORTED_EXCLUSION_POLICIES}"
         )
 
-    vdw_handler = openff_sys.handlers["vdW"]
-    coul_handler = openff_sys.handlers["Electrostatics"]
+    vdw_handler = openff_sys["vdW"]
+    coul_handler = openff_sys["Electrostatics"]
 
     # TODO: Handle case of split-out non-bonded forces
     non_bonded_force = [
@@ -688,7 +680,7 @@ def _create_virtual_site(
     interchange: "Interchange",
 ) -> "openmm.LocalCoordinatesSites":
 
-    handler = interchange.handlers["VirtualSites"]
+    handler = interchange["VirtualSites"]
 
     parent_atoms = virtual_site_key.atom_indices
     origin_weight, x_direction, y_direction = handler._get_local_frame_weights(
@@ -779,7 +771,7 @@ def to_openmm_topology(interchange: "Interchange") -> app.Topology:
         virtual_site_residue = [*openmm_topology.residues()][0]
 
         for virtual_site_key in interchange["VirtualSites"].slot_map:
-            virtual_site_name = virtual_site_key.name
+            virtual_site_name = virtual_site_key.name  # type: ignore[union-attr]
 
             openmm_topology.addAtom(
                 virtual_site_name,

@@ -8,17 +8,17 @@ import numpy as np
 from openff.units import unit
 
 from openff.interchange.components.toolkit import _get_num_h_bonds
+from openff.interchange.constants import (
+    AMBER_COULOMBS_CONSTANT,
+    kcal_mol,
+    kcal_mol_a2,
+    kcal_mol_rad2,
+)
 from openff.interchange.exceptions import UnsupportedExportError
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
     from openff.interchange.models import PotentialKey
-
-
-AMBER_COULOMBS_CONSTANT = 18.2223
-kcal_mol = unit.kilocalorie / unit.mol
-kcal_mol_a2 = kcal_mol / unit.angstrom**2
-kcal_mol_rad2 = kcal_mol / unit.radian**2
 
 
 def _write_text_blob(file, blob):
@@ -122,8 +122,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         dihedral_potentials = dict()
         for key in ["ProperTorsions", "ImproperTorsions"]:
             if key in interchange.handlers:
-                dihedral_potentials.update(deepcopy(interchange[key].potentials))
-                dihedral_potentials.update(deepcopy(interchange[key].potentials))
+                dihedral_potentials.update(deepcopy(interchange[key].potentials))  # type: ignore
+                dihedral_potentials.update(deepcopy(interchange[key].potentials))  # type: ignore
 
         potential_key_to_dihedral_type_mapping: Dict[PotentialKey, int] = {
             key: i for i, key in enumerate(dihedral_potentials)
@@ -541,7 +541,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         dihedral_phase: List[int] = list()
 
         for key_ in potential_key_to_dihedral_type_mapping:
-            params = interchange[key_.associated_handler].potentials[key_].parameters
+            params = interchange[key_.associated_handler].potentials[key_].parameters  # type: ignore
             idivf = int(params["idivf"]) if "idivf" in params else 1
             dihedral_k.append((params["k"] / idivf).m_as(kcal_mol))
             dihedral_periodicity.append(params["periodicity"].m_as(unit.dimensionless))

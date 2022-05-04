@@ -30,7 +30,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
     """Convert and Intermol `System` to an `Interchange` object."""
     interchange = Interchange()
 
-    interchange._inner_data.topology = _topology_from_intermol(intermol_system)
+    interchange.topology = _topology_from_intermol(intermol_system)
     interchange.box = intermol_system.box_vector
     interchange.positions = from_openmm([a.position for a in intermol_system.atoms])
 

@@ -44,7 +44,7 @@ class Potential(DefaultModel):
                 v[key] = ArrayQuantity.validate_type(val)
             else:
                 v[key] = FloatQuantity.validate_type(val)
-        return v  # type: ignore[return-value]
+        return v
 
     def __hash__(self) -> int:
         return hash(tuple(self.parameters.values()))
@@ -84,7 +84,7 @@ class WrappedPotential(DefaultModel):
                     )
                 }
             )
-        return params  # type: ignore
+        return params
 
     def __repr__(self) -> str:
         return str(self._inner_data.data)
@@ -154,12 +154,7 @@ class PotentialHandler(DefaultModel):
             raise NotImplementedError
 
         return numpy.array(
-            [
-                [
-                    v.m for v in p.parameters.values()  # type:ignore[attr-defined]
-                ]
-                for p in self.potentials.values()
-            ]
+            [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
         )
 
     def set_force_field_parameters(self, new_p: "ArrayLike") -> None:
@@ -174,7 +169,7 @@ class PotentialHandler(DefaultModel):
                 raise RuntimeError
 
             for parameter_index, parameter_key in enumerate(potential.parameters):
-                parameter_units = potential.parameters[parameter_key].units  # type: ignore
+                parameter_units = potential.parameters[parameter_key].units
                 modified_parameter = new_p[potential_index, parameter_index]  # type: ignore
 
                 self.potentials[potential_key].parameters[parameter_key] = (
