@@ -336,7 +336,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         vdw_method = vdw_handler.method.lower()
 
         electrostatics_handler = openff_sys["Electrostatics"]
-        electrostatics_method = electrostatics_handler.method.lower()
+        electrostatics_method = electrostatics_handler.periodic_potential
 
         if combine_nonbonded_forces:
             if vdw_handler.mixing_rule != "lorentz-berthelot":
@@ -444,7 +444,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                     raise UnimplementedCutoffMethodError(
                         f"Electrostatics method {electrostatics_method} is not yet implemented."
                     )
-            elif electrostatics_method == "pme":
+            elif electrostatics_method == _PME:
                 electrostatics_force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 electrostatics_force.setEwaldErrorTolerance(1.0e-4)
                 electrostatics_force.setUseDispersionCorrection(True)

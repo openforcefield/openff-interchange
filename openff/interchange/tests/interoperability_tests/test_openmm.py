@@ -14,12 +14,13 @@ from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.interchange.exceptions import (
     MissingPositionsError,
-    UnimplementedCutoffMethodError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
 from openff.interchange.interop.openmm import from_openmm
 from openff.interchange.tests import _BaseTest
+
+# WISHLIST: Add tests for reaction-field if implemented
 
 nonbonded_methods = [
     {
@@ -45,18 +46,6 @@ nonbonded_methods = [
         "electrostatics_periodic": "PME",
         "periodic": False,
         "result": UnsupportedCutoffMethodError,
-    },
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic": "reaction-field",
-        "periodic": True,
-        "result": UnimplementedCutoffMethodError,
-    },
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic": "reaction-field",
-        "periodic": False,
-        "result": UnimplementedCutoffMethodError,
     },
 ]
 
