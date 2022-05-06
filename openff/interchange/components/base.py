@@ -52,7 +52,7 @@ class _BaseNonbondedHandler(PotentialHandler):
         1.0, description="The scaling factor applied to 1-5 interactions"
     )
 
-    cutoff: FloatQuantity["angstrom"] = Field(  # type: ignore
+    cutoff: FloatQuantity["angstrom"] = Field(
         10.0 * unit.angstrom,
         description="The distance at which pairwise interactions are truncated",
     )

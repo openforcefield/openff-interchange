@@ -1,15 +1,16 @@
 """An object for storing, manipulating, and converting molecular mechanics data."""
+import copy
+import json
 import warnings
-from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union, overload
 
 import numpy as np
-from openff.toolkit.topology.molecule import Molecule
-from openff.toolkit.topology.topology import Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.toolkit import ForceField, Molecule, Topology
+from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
+from typing_extensions import Literal
 
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.components.potentials import PotentialHandler
@@ -24,10 +25,26 @@ from openff.interchange.exceptions import (
     UnsupportedCombinationError,
     UnsupportedExportError,
 )
-from openff.interchange.models import DefaultModel
-from openff.interchange.types import ArrayQuantity
+from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
+from openff.interchange.types import (
+    ArrayQuantity,
+    QuantityEncoder,
+    TopologyEncoder,
+    custom_quantity_encoder,
+)
 
 if TYPE_CHECKING:
+    from openff.interchange.components.smirnoff import (
+        SMIRNOFFAngleHandler,
+        SMIRNOFFBondHandler,
+        SMIRNOFFConstraintHandler,
+        SMIRNOFFElectrostaticsHandler,
+        SMIRNOFFImproperTorsionHandler,
+        SMIRNOFFProperTorsionHandler,
+        SMIRNOFFvdWHandler,
+        SMIRNOFFVirtualSiteHandler,
+    )
+
     if has_package("foyer"):
         from foyer.forcefield import Forcefield as FoyerForcefield
     if has_package("nglview"):
@@ -47,6 +64,57 @@ _SUPPORTED_SMIRNOFF_HANDLERS = {
 }
 
 
+def _sanitize(o):
+    # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
+    # for the mapping dicts `slot_map` and `potentials`.
+    if isinstance(o, dict):
+        return {_sanitize(k): _sanitize(v) for k, v in o.items()}
+    elif isinstance(o, (PotentialKey, TopologyKey)):
+        return o.json()
+    elif isinstance(o, unit.Quantity):
+        return custom_quantity_encoder(o)
+    return o
+
+
+def interchange_dumps(v, *, default):
+    """Dump an Interchange to JSON after converting to compatible types."""
+    return json.dumps(
+        {
+            "positions": QuantityEncoder().default(v["positions"]),
+            "box": QuantityEncoder().default(v["box"]),
+            "topology": TopologyEncoder().default(v["topology"]),
+            "handlers": {
+                "Bonds": json.dumps(_sanitize(v["handlers"]["Bonds"]), default=default)
+            },
+        },
+        default=default,
+    )
+
+
+def interchange_loader(data: str) -> dict:
+    """Load a JSON representation of an Interchange object."""
+    tmp: Dict = {
+        "positions": None,
+        "velocities": None,
+        "box": None,
+        "topology": None,
+        "handlers": {},
+    }
+    for key, val in json.loads(data).items():
+        if val is None:
+            continue
+        if key == "positions":
+            tmp["positions"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+        elif key == "velocities":
+            tmp["velocities"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+        elif key == "box":
+            tmp["box"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+        elif key == "topology":
+            tmp["topology"] = Topology.from_json(val)
+
+    return tmp
+
+
 class Interchange(DefaultModel):
     """
     A object for storing, manipulating, and converting molecular mechanics data.
@@ -55,114 +123,61 @@ class Interchange(DefaultModel):
     .. warning :: This API is experimental and subject to change.
     """
 
-    class _InnerSystem(DefaultModel):
-        """Inner representation of Interchange components."""
+    handlers: Dict[str, PotentialHandler] = Field(dict())
+    topology: Topology = Field(None)
+    mdconfig: MDConfig = Field(None)
+    box: ArrayQuantity["nanometer"] = Field(None)
+    positions: ArrayQuantity["nanometer"] = Field(None)
+    velocities: ArrayQuantity["nanometer/picosecond"] = Field(None)
 
-        # TODO: Ensure these fields are hidden from the user as intended
-        handlers: Dict[str, PotentialHandler] = dict()
-        topology: Union[Topology, List, None] = Field(None)
-        mdconfig: Optional[MDConfig] = None
-        box: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
-        positions: ArrayQuantity["nanometer"] = Field(None)  # type: ignore
-        velocities: ArrayQuantity["nanometer/picosecond"] = Field(None)  # type: ignore
+    class Config:
+        """Custom Pydantic-facing configuration for the Interchange class."""
 
-        @validator("box")
-        def validate_box(cls, value):
-            if value is None:
-                return value
-            if value.shape == (3, 3):
-                return value
-            elif value.shape == (3,):
-                value = value * np.eye(3)
-                return value
-            else:
-                raise InvalidBoxError
+        json_loads = interchange_loader
+        json_dumps = interchange_dumps
+        validate_assignment = True
+        arbitrary_types_allowed = True
 
-        @validator("topology")
-        def validate_topology(cls, value):
-            if isinstance(value, Topology):
-                try:
-                    return Topology(other=value)
-                except Exception as exception:
-                    # Topology cannot roundtrip with simple molecules
-                    for molecule in value.molecules:
-                        if molecule.__class__.__name__ == "_SimpleMolecule":
-                            return value
-                    raise exception
-            elif isinstance(value, list):
-                return Topology.from_molecules(value)
-            elif value.__class__.__name__ == "_OFFBioTop":
-                raise InvalidTopologyError("_OFFBioTop is no longer supported")
-            else:
-                raise InvalidTopologyError(
-                    "Could not process topology argument, expected openff.toolkit.topology.Topology. "
-                    f"Found object of type {type(value)}."
-                )
+    @validator("box", allow_reuse=True)
+    def validate_box(cls, value):
+        if value is None:
+            return value
+        first_pass = ArrayQuantity.validate_type(value)
+        as_2d = np.atleast_2d(first_pass)
+        if as_2d.shape == (3, 3):
+            box = as_2d
+        elif as_2d.shape == (1, 3):
+            box = as_2d * np.eye(3)
+        else:
+            raise InvalidBoxError(
+                f"Failed to convert value {value} to 3x3 box vectors. Please file an issue if you think this "
+                "input should be supported and the failure is an error."
+            )
 
-    def __init__(self):
-        self._inner_data = self._InnerSystem()
+        return box
 
-    @property
-    def handlers(self):
-        """Get the PotentialHandler objects in this Interchange object."""
-        return self._inner_data.handlers
-
-    def add_handler(self, handler_name: str, handler):
-        """Add a ParameterHandler to this Interchange object."""
-        self._inner_data.handlers.update({handler_name: handler})
-
-    def remove_handler(self, handler_name: str):
-        """Remove a PotentialHandler in this Interchange object."""
-        self._inner_data.handlers.pop(handler_name)
-
-    @property
-    def topology(self):
-        """Get the OpenFF Topology object in this Interchange object."""
-        return self._inner_data.topology
-
-    @topology.setter
-    def topology(self, value):
-        self._inner_data.topology = value
-
-    @property
-    def positions(self):
-        """Get the positions of all particles."""
-        return self._inner_data.positions
-
-    @positions.setter
-    def positions(self, value):
-        self._inner_data.positions = value
-
-    @property
-    def velocities(self):
-        """Get the velocities of all particles."""
-        return self._inner_data.velocities
-
-    @velocities.setter
-    def velocities(self, value):
-        self._inner_data.velocities = value
-
-    @property
-    def box(self):
-        """If periodic, an array representing the periodic boundary conditions."""
-        return self._inner_data.box
-
-    @box.setter
-    def box(self, value):
-        self._inner_data.box = value
-        try:
-            self._inner_data.mdconfig.periodic = value is not None
-        except AttributeError:
-            pass
-
-    @property
-    def mdconfig(self):
-        """EXPERIMENTAL: A store of runtime simulation settings."""
-        return self._inner_data.mdconfig
-
-    @mdconfig.setter
-    def mdconfig(self, value):
-        self._inner_data.mdconfig = value
+    @validator("topology", pre=True)
+    def validate_topology(cls, value):
+        if value is None:
+            return None
+        if isinstance(value, Topology):
+            try:
+                return Topology(other=value)
+            except Exception as exception:
+                # Topology cannot roundtrip with simple molecules
+                for molecule in value.molecules:
+                    if molecule.__class__.__name__ == "_SimpleMolecule":
+                        return value
+                raise exception
+        elif isinstance(value, list):
+            return Topology.from_molecules(value)
+        elif value.__class__.__name__ == "_OFFBioTop":
+            raise InvalidTopologyError("_OFFBioTop is no longer supported")
+        else:
+            raise InvalidTopologyError(
+                "Could not process topology argument, expected openff.toolkit.topology.Topology. "
+                f"Found object of type {type(value)}."
+            )
 
     @classmethod
     def _check_supported_handlers(cls, force_field: ForceField):
@@ -241,8 +256,8 @@ class Interchange(DefaultModel):
             >>> from openff.toolkit.typing.engines.smirnoff import ForceField
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> parsley = ForceField("openff-2.0.0.offxml")
-            >>> interchange = Interchange.from_smirnoff(topology=[mol], force_field=parsley)
+            >>> sage = ForceField("openff-2.0.0.offxml")
+            >>> interchange = Interchange.from_smirnoff(topology=[mol], force_field=sage)
             >>> interchange
             Interchange with 8 atoms, non-periodic topology
 
@@ -258,7 +273,9 @@ class Interchange(DefaultModel):
 
         sys_out = Interchange()
 
-        sys_out.topology = topology
+        # FIXME: Figure out why setting `.topology` does not pass it through the validator
+        #       (despite `validate_assignment=True`)
+        sys_out.topology = Interchange.validate_topology(topology)
 
         sys_out.positions = sys_out._infer_positions()
 
@@ -305,7 +322,7 @@ class Interchange(DefaultModel):
                 SMIRNOFFBondHandler.check_supported_parameters(force_field["Bonds"])
                 bond_handler = SMIRNOFFBondHandler._from_toolkit(
                     parameter_handler=force_field["Bonds"],
-                    topology=sys_out._inner_data.topology,
+                    topology=sys_out.topology,
                     # constraint_handler=constraint_handler,
                     partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
                 )
@@ -316,7 +333,7 @@ class Interchange(DefaultModel):
                 )
                 potential_handler = SMIRNOFFProperTorsionHandler._from_toolkit(
                     parameter_handler=force_field["ProperTorsions"],
-                    topology=sys_out._inner_data.topology,
+                    topology=sys_out.topology,
                     partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
                 )
                 sys_out.handlers.update({"ProperTorsions": potential_handler})
@@ -333,20 +350,20 @@ class Interchange(DefaultModel):
                         for val in [bond_handler, constraint_handler]
                         if val is not None
                     ],
-                    topology=sys_out._inner_data.topology,
+                    topology=sys_out.topology,
                 )
                 sys_out.handlers.update({"Constraints": constraints})
             elif potential_handler_type == SMIRNOFFElectrostaticsHandler:
                 electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
                     parameter_handler=parameter_handlers,
-                    topology=sys_out._inner_data.topology,
+                    topology=sys_out.topology,
                     charge_from_molecules=charge_from_molecules,
                 )
                 sys_out.handlers.update({"Electrostatics": electrostatics_handler})
             elif potential_handler_type == SMIRNOFFVirtualSiteHandler:
                 virtual_site_handler = SMIRNOFFVirtualSiteHandler._from_toolkit(
                     parameter_handler=force_field["VirtualSites"],
-                    topology=sys_out._inner_data.topology,
+                    topology=sys_out.topology,
                 )
                 virtual_site_handler.exclusion_policy = force_field[
                     "VirtualSites"
@@ -354,26 +371,27 @@ class Interchange(DefaultModel):
                 sys_out.handlers.update({"VirtualSites": virtual_site_handler})
                 sys_out["vdW"]._from_toolkit_virtual_sites(
                     parameter_handler=force_field["VirtualSites"],
-                    topology=sys_out._inner_data.topology,
+                    topology=sys_out.topology,
                 )
                 sys_out["Electrostatics"]._from_toolkit_virtual_sites(
                     parameter_handler=force_field["VirtualSites"],
-                    topology=sys_out._inner_data.topology,
+                    topology=sys_out.topology,
                 )
             elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers,
-                    topology=sys_out._inner_data.topology,
+                    topology=sys_out.topology,
                 )
                 sys_out.handlers.update({potential_handler.type: potential_handler})
             else:
                 potential_handler_type.check_supported_parameters(parameter_handlers[0])
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers[0],
-                    topology=sys_out._inner_data.topology,
+                    topology=sys_out.topology,
                 )
                 sys_out.handlers.update({potential_handler.type: potential_handler})
 
+        # FIXME: Figure out why setting `.box` does not pass it through the validator
         # `box` argument is only overriden if passed `None` and the input topology
         # is a `Topology` (could be `List[Molecule]`) and has box vectors
         if box is None:
@@ -384,7 +402,7 @@ class Interchange(DefaultModel):
         else:
             sys_out.box = box
 
-        sys_out.mdconfig = MDConfig.from_interchange(sys_out)
+        # FIXME: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
 
         return sys_out
 
@@ -582,25 +600,25 @@ class Interchange(DefaultModel):
 
             system.handlers[name] = handler
 
-        system.handlers["vdW"].store_matches(force_field, topology=system.topology)
-        system.handlers["vdW"].store_potentials(force_field=force_field)
+        system["vdW"].store_matches(force_field, topology=system.topology)
+        system["vdW"].store_potentials(force_field=force_field)  # type: ignore[call-arg]
 
-        atom_slots = system.handlers["vdW"].slot_map
+        atom_slots = system["vdW"].slot_map
 
-        system.handlers["Electrostatics"].store_charges(
+        system["Electrostatics"].store_charges(  # type: ignore
             atom_slots=atom_slots,
             force_field=force_field,
         )
 
-        system.handlers["vdW"].scale_14 = force_field.lj14scale
-        system.handlers["Electrostatics"].scale_14 = force_field.coulomb14scale
+        system["vdW"].scale_14 = force_field.lj14scale  # type: ignore[assignment]
+        system["Electrostatics"].scale_14 = force_field.coulomb14scale  # type: ignore[assignment]
 
         for name, handler in system.handlers.items():
             if name not in ["vdW", "Electrostatics"]:
                 handler.store_matches(atom_slots, topology=system.topology)
                 handler.store_potentials(force_field)
 
-        system.mdconfig = MDConfig.from_interchange(system)
+        # FIXME: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
 
         return system
 
@@ -666,7 +684,7 @@ class Interchange(DefaultModel):
         """
         for handler in self.handlers:
             if handler == handler_name:
-                return self[handler_name]._get_parameters(atom_indices=atom_indices)
+                return self[handler_name]._get_parameters(atom_indices=atom_indices)  # type: ignore
         raise MissingParameterHandlerError(
             f"Could not find parameter handler of name {handler_name}"
         )
@@ -693,15 +711,57 @@ class Interchange(DefaultModel):
     # Taken from https://stackoverflow.com/a/4017638/4248961
     _aliases = {"box_vectors": "x", "coordinates": "positions", "top": "topology"}
 
-    def __setattr__(self, name, value):
+    # FIXME: These were turned off because they were screwing up the automatic use of validators
+    #        when assigning valeus to fields. Remove the appended `f`s to try to turn back on.
+    def __setattr__f(self, name, value):  # noqa
         name = self._aliases.get(name, name)
         object.__setattr__(self, name, value)
 
-    def __getattr__(self, name):
+    def __getattr__f(self, name):  # noqa
         name = self._aliases.get(name, name)
         return object.__getattribute__(self, name)
 
-    def __getitem__(self, item: str):
+    @overload
+    def __getitem__(self, item: Literal["Bonds"]) -> "SMIRNOFFBondHandler":
+        ...
+
+    @overload
+    def __getitem__(self, item: Literal["Constraints"]) -> "SMIRNOFFConstraintHandler":
+        ...
+
+    @overload
+    def __getitem__(self, item: Literal["Angles"]) -> "SMIRNOFFAngleHandler":
+        ...
+
+    @overload
+    def __getitem__(self, item: Literal["vdW"]) -> "SMIRNOFFvdWHandler":
+        ...
+
+    @overload
+    def __getitem__(
+        self, item: Literal["ProperTorsions"]
+    ) -> "SMIRNOFFProperTorsionHandler":
+        ...
+
+    @overload
+    def __getitem__(
+        self, item: Literal["ImproperTorsions"]
+    ) -> "SMIRNOFFImproperTorsionHandler":
+        ...
+
+    @overload
+    def __getitem__(
+        self, item: Literal["VirtualSites"]
+    ) -> "SMIRNOFFVirtualSiteHandler":
+        ...
+
+    @overload
+    def __getitem__(
+        self, item: Literal["Electrostatics"]
+    ) -> "SMIRNOFFElectrostaticsHandler":
+        ...
+
+    def __getitem__(self, item: str):  # noqa
         """Syntax sugar for looking up potential handlers or other components."""
         if type(item) != str:
             raise LookupError(
@@ -732,8 +792,7 @@ class Interchange(DefaultModel):
             "validate results!"
         )
 
-        self_copy = Interchange()
-        self_copy._inner_data = deepcopy(self._inner_data)
+        self_copy = copy.deepcopy(self)
 
         self_copy.topology = _combine_topologies(self.topology, other.topology)
         atom_offset = self.topology.n_atoms
@@ -755,7 +814,7 @@ class Interchange(DefaultModel):
             try:
                 self_handler = self_copy.handlers[handler_name]
             except KeyError:
-                self.add_handler(handler_name, handler)
+                self_copy.handlers[handler_name] = handler
                 warnings.warn(
                     f"'other' Interchange object has handler with name {handler_name} not "
                     f"found in 'self,' but it has now been added."
@@ -781,6 +840,8 @@ class Interchange(DefaultModel):
                     self_handler.potentials.update(
                         {pot_key: handler.potentials[pot_key]}
                     )
+
+            self_copy.handlers[handler_name] = self_handler
 
         if self_copy.positions is not None and other.positions is not None:
             new_positions = np.vstack([self_copy.positions, other.positions])
