@@ -899,12 +899,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         if not all(
             isinstance(
                 p,
-                (
-                    VirtualSiteHandler.VirtualSiteBondChargeType,
-                    VirtualSiteHandler.VirtualSiteMonovalentLonePairType,
-                    VirtualSiteHandler.VirtualSiteDivalentLonePairType,
-                    VirtualSiteHandler.VirtualSiteTrivalentLonePairType,
-                ),
+                (VirtualSiteHandler.VirtualSiteType,),
             )
             for p in parameter_handler.parameters
         ):
