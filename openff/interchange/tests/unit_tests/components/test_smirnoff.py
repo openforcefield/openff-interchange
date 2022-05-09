@@ -1,4 +1,6 @@
+import itertools
 from copy import deepcopy
+from typing import List, Tuple
 
 import numpy as np
 import openmm
@@ -22,6 +24,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from openmm import unit as openmm_unit
 from pydantic import ValidationError
 
 from openff.interchange import Interchange
@@ -786,14 +789,14 @@ class TestMatrixRepresentations(_BaseTest):
         assert isinstance(q, jax.interpreters.xla.DeviceArray)
         assert np.prod(q.shape) == n_sys_terms
 
-        assert jax.numpy.allclose(q, handler.parametrize(p))
+        assert jax.np.allclose(q, handler.parametrize(p))
 
         param_matrix = handler.get_param_matrix()
 
         ref_file = get_test_file_path(f"ethanol_param_{handler_name.lower()}.npy")
-        ref = jax.numpy.load(ref_file)
+        ref = jax.np.load(ref_file)
 
-        assert jax.numpy.allclose(ref, param_matrix)
+        assert jax.np.allclose(ref, param_matrix)
 
         # TODO: Update with other handlers that can safely be assumed to follow 1:1 slot:smirks mapping
         if handler_name in ["vdW", "Bonds", "Angles"]:
@@ -810,14 +813,14 @@ class TestMatrixRepresentations(_BaseTest):
         )
 
         original = bond_handler.get_force_field_parameters()
-        modified = original * jax.numpy.array([1.1, 0.5])
+        modified = original * jax.np.array([1.1, 0.5])
 
         bond_handler.set_force_field_parameters(modified)
 
         assert (bond_handler.get_force_field_parameters() == modified).all()
 
 
-class TestSMIRNOFFVirtualSites:
+class TestSMIRNOFFVirtualSitesOLD:
     try:
         from openff.toolkit.tests.test_forcefield import (
             xml_ff_virtual_sites_bondcharge_match_all,
@@ -1228,3 +1231,437 @@ def _get_interpolated_bond_k(bond_handler) -> float:
             break
     potential_key = bond_handler.slot_map[topology_key]
     return bond_handler.potentials[potential_key].parameters["k"].m
+
+
+class TestSMIRNOFFVirtualSites(_BaseTest):
+    from openff.toolkit.tests.mocking import VirtualSiteMocking
+    from openmm import unit as openmm_unit
+
+    @classmethod
+    def build_force_field(cls, v_site_handler: VirtualSiteHandler) -> ForceField:
+
+        force_field = ForceField()
+
+        force_field.get_parameter_handler("Bonds").add_parameter(
+            {
+                "smirks": "[*:1]~[*:2]",
+                "k": 0.0 * unit.kilojoule_per_mole / unit.angstrom**2,
+                "length": 0.0 * unit.angstrom,
+            }
+        )
+        force_field.get_parameter_handler("Angles").add_parameter(
+            {
+                "smirks": "[*:1]~[*:2]~[*:3]",
+                "k": 0.0 * unit.kilojoule_per_mole / unit.degree**2,
+                "angle": 60.0 * unit.degree,
+            }
+        )
+        force_field.get_parameter_handler("ProperTorsions").add_parameter(
+            {
+                "smirks": "[*:1]~[*:2]~[*:3]~[*:4]",
+                "k": [0.0] * unit.kilojoule_per_mole,
+                "phase": [0.0] * unit.degree,
+                "periodicity": [2],
+                "idivf": [1.0],
+            }
+        )
+        force_field.get_parameter_handler("vdW").add_parameter(
+            {
+                "smirks": "[*:1]",
+                "epsilon": 0.0 * unit.kilojoule_per_mole,
+                "sigma": 1.0 * unit.angstrom,
+            }
+        )
+        force_field.get_parameter_handler("LibraryCharges").add_parameter(
+            {"smirks": "[*:1]", "charge": [0.0] * unit.elementary_charge}
+        )
+        force_field.get_parameter_handler("Electrostatics")
+
+        force_field.register_parameter_handler(v_site_handler)
+
+        return force_field
+
+    @classmethod
+    def generate_v_site_coordinates(
+        cls,
+        molecule: Molecule,
+        input_conformer: unit.Quantity,
+        parameter: VirtualSiteHandler.VirtualSiteType,
+    ) -> unit.Quantity:
+
+        # Compute the coordinates of the virtual site. Unfortunately OpenMM does not
+        # seem to offer a more compact way to do this currently.
+        handler = VirtualSiteHandler(version="0.3")
+        handler.add_parameter(parameter=parameter)
+
+        force_field = cls.build_force_field(handler)
+
+        system = Interchange.from_smirnoff(
+            force_field=force_field, topology=molecule.to_topology()
+        ).to_openmm(combine_nonbonded_forces=True)
+
+        n_v_sites = sum(
+            1 if system.isVirtualSite(i) else 0 for i in range(system.getNumParticles())
+        )
+
+        input_conformer = unit.Quantity(
+            np.vstack(
+                [
+                    input_conformer.value_in_unit(unit.angstrom),
+                    np.zeros((n_v_sites, 3)),
+                ]
+            ),
+            unit.angstrom,
+        )
+
+        context = openmm.Context(
+            system,
+            openmm.VerletIntegrator(1.0 * unit.femtosecond),
+            openmm.Platform.getPlatformByName("Reference"),
+        )
+        context.setPositions(input_conformer)
+        context.computeVirtualSites()
+
+        output_conformer = context.getState(getPositions=True).getPositions(asnp=True)
+
+        return output_conformer[molecule.n_atoms :, :]
+
+    @pytest.mark.parametrize(
+        (
+            "parameter",
+            "smiles",
+            "input_conformer",
+            "atoms_to_shuffle",
+            "expected_coordinates",
+        ),
+        [
+            (
+                VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]"),
+                "[Cl:1][C:2]([H:3])([H:4])[H:5]",
+                VirtualSiteMocking.sp3_conformer(),
+                (0, 1),
+                np.array([[0.0, 3.0, 0.0]]) * unit.angstrom,
+            ),
+            (
+                VirtualSiteMocking.bond_charge_parameter("[C:1]#[C:2]"),
+                "[H:1][C:2]#[C:3][C:4]",
+                VirtualSiteMocking.sp1_conformer(),
+                (2, 3),
+                np.array([[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]]) * unit.angstrom,
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[H:3]"),
+                "[O:1]=[C:2]([H:3])[H:4]",
+                VirtualSiteMocking.sp2_conformer(),
+                (0, 1, 2, 3),
+                (
+                    VirtualSiteMocking.sp2_conformer()[0]
+                    + unit.Quantity(  # noqa
+                        np.array([[1.0, np.sqrt(2), 1.0], [1.0, -np.sqrt(2), -1.0]]),
+                        unit.angstrom,
+                    )
+                ),
+            ),
+            (
+                VirtualSiteMocking.divalent_parameter(
+                    "[H:2][O:1][H:3]", match="once", angle=0.0 * unit.degree
+                ),
+                "[H:2][O:1][H:3]",
+                VirtualSiteMocking.sp2_conformer()[1:, :],
+                (0, 1, 2),
+                np.array([[2.0, 0.0, 0.0]]) * unit.angstrom,
+            ),
+            (
+                VirtualSiteMocking.divalent_parameter(
+                    "[H:2][O:1][H:3]",
+                    match="all_permutations",
+                    angle=45.0 * unit.degree,
+                ),
+                "[H:2][O:1][H:3]",
+                VirtualSiteMocking.sp2_conformer()[1:, :],
+                (0, 1, 2),
+                unit.Quantity(
+                    np.array(
+                        [
+                            [np.sqrt(2), np.sqrt(2), 0.0],
+                            [np.sqrt(2), -np.sqrt(2), 0.0],
+                        ]
+                    ),
+                    unit.angstrom,
+                ),
+            ),
+            (
+                VirtualSiteMocking.trivalent_parameter("[N:1]([H:2])([H:3])[H:4]"),
+                "[N:1]([H:2])([H:3])[H:4]",
+                VirtualSiteMocking.sp3_conformer()[1:, :],
+                (0, 1, 2, 3),
+                np.array([[0.0, 2.0, 0.0]]) * unit.angstrom,
+            ),
+        ],
+    )
+    def test_v_site_geometry(
+        self,
+        parameter: VirtualSiteHandler.VirtualSiteType,
+        smiles: str,
+        input_conformer: unit.Quantity,
+        atoms_to_shuffle: Tuple[int, ...],
+        expected_coordinates: unit.Quantity,
+    ):
+        """An integration test that virtual sites are placed correctly relative to the
+        parent atoms"""
+
+        for atom_permutation in itertools.permutations(atoms_to_shuffle):
+
+            molecule = Molecule.from_mapped_smiles(smiles, allow_undefined_stereo=True)
+            molecule._conformers = [input_conformer]
+
+            # We shuffle the ordering of the atoms involved in the v-site orientation
+            # to ensure that the orientation remains invariant as expected.
+            shuffled_atom_order = {i: i for i in range(molecule.n_atoms)}
+            shuffled_atom_order.update(
+                {
+                    old_index: new_index
+                    for old_index, new_index in zip(atoms_to_shuffle, atom_permutation)
+                }
+            )
+
+            molecule = molecule.remap(shuffled_atom_order)
+
+            output_coordinates = self.generate_v_site_coordinates(
+                molecule, molecule.conformers[0], parameter
+            )
+
+            assert output_coordinates.shape == expected_coordinates.shape
+
+            def sort_coordinates(x: np.ndarray) -> np.ndarray:
+                # Sort the rows by first, then second, then third columns as row
+                # as the order of v-sites is not deterministic.
+                return x[np.lexsort((x[:, 2], x[:, 1], x[:, 0])), :]
+
+            assert np.allclose(
+                sort_coordinates(
+                    output_coordinates.value_in_unit(openmm_unit.angstrom)
+                ),
+                sort_coordinates(
+                    expected_coordinates.value_in_unit(openmm_unit.angstrom)
+                ),
+            )
+
+    _E = openmm_unit.elementary_charge
+    _A = openmm_unit.angstrom
+    _KJ = openmm_unit.kilojoule_per_mole
+
+    @pytest.mark.parametrize(
+        ("topology", "parameters", "expected_parameters", "expected_n_v_sites"),
+        [
+            (
+                Topology.from_molecules(
+                    [
+                        VirtualSiteMocking.chloromethane(reverse=False),
+                        VirtualSiteMocking.chloromethane(reverse=True),
+                    ]
+                ),
+                [VirtualSiteMocking.bond_charge_parameter("[Cl:1][C:2]")],
+                [
+                    # charge, sigma, epsilon
+                    (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-0.3 * _E, 4.0 * _A, 3.0 * _KJ),
+                    (-0.3 * _E, 4.0 * _A, 3.0 * _KJ),
+                ],
+                2,
+            ),
+            # Check a complex case of bond charge vsite assignment and overwriting
+            (
+                Topology.from_molecules(
+                    [
+                        VirtualSiteMocking.formaldehyde(reverse=False),
+                        VirtualSiteMocking.formaldehyde(reverse=True),
+                    ]
+                ),
+                [
+                    VirtualSiteMocking.bond_charge_parameter("[O:1]=[*:2]"),
+                    VirtualSiteMocking.bond_charge_parameter(
+                        "[O:1]=[C:2]", param_multiple=1.5
+                    ),
+                    VirtualSiteMocking.bond_charge_parameter(
+                        "[O:1]=[CX3:2]", param_multiple=2.0, name="EP2"
+                    ),
+                ],
+                [
+                    # charge, sigma, epsilon
+                    (0.35 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.7 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.7 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.35 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-0.45 * _E, 6.0 * _A, 4.5 * _KJ),  # C=O vsite
+                    (-0.6 * _E, 8.0 * _A, 6.0 * _KJ),  # CX3=O vsite
+                    (-0.45 * _E, 6.0 * _A, 4.5 * _KJ),  # C=O vsite
+                    (-0.6 * _E, 8.0 * _A, 6.0 * _KJ),  # CX3=O vsite
+                ],
+                4,
+            ),
+            (
+                Topology.from_molecules(
+                    [
+                        VirtualSiteMocking.formaldehyde(reverse=False),
+                        VirtualSiteMocking.formaldehyde(reverse=True),
+                    ]
+                ),
+                [VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[H:3]")],
+                [
+                    # charge, sigma, epsilon
+                    (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.4 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.4 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
+                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
+                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
+                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
+                ],
+                4,
+            ),
+            (
+                Topology.from_molecules(
+                    [
+                        VirtualSiteMocking.hypochlorous_acid(reverse=False),
+                        VirtualSiteMocking.hypochlorous_acid(reverse=True),
+                    ]
+                ),
+                [
+                    VirtualSiteMocking.divalent_parameter(
+                        "[H:2][O:1][Cl:3]", match="all_permutations"
+                    )
+                ],
+                [
+                    # charge, sigma, epsilon
+                    (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
+                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
+                ],
+                2,
+            ),
+            (
+                Topology.from_molecules(
+                    [
+                        VirtualSiteMocking.fake_ammonia(reverse=False),
+                        VirtualSiteMocking.fake_ammonia(reverse=True),
+                    ]
+                ),
+                [VirtualSiteMocking.trivalent_parameter("[N:1]([Br:2])([Cl:3])[H:4]")],
+                [
+                    # charge, sigma, epsilon
+                    (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.4 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.4 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-1.0 * _E, 5.0 * _A, 6.0 * _KJ),
+                    (-1.0 * _E, 5.0 * _A, 6.0 * _KJ),
+                ],
+                2,
+            ),
+        ],
+    )
+    def test_create_force(
+        self,
+        topology: Topology,
+        parameters: List[VirtualSiteHandler.VirtualSiteType],
+        expected_parameters: List[
+            Tuple[openmm_unit.Quantity, openmm_unit.Quantity, openmm_unit.Quantity]
+        ],
+        expected_n_v_sites: int,
+    ):
+
+        expected_n_total = topology.n_atoms + expected_n_v_sites
+        # sanity check the test input
+        assert len(expected_parameters) == expected_n_total
+
+        handler = VirtualSiteHandler(version="0.3")
+
+        for parameter in parameters:
+            handler.add_parameter(parameter=parameter)
+
+        system = openmm.System()
+
+        for _ in range(topology.n_atoms):
+            system.addParticle(10.0 * openmm_unit.amu)
+
+        handler.create_force(system, topology)
+
+        assert system.getNumParticles() == expected_n_total
+
+        assert (
+            sum(v_site.n_particles for v_site in topology.topology_virtual_sites)
+            == expected_n_v_sites  # noqa
+        )
+
+        assert all(not system.isVirtualSite(i) for i in range(topology.n_atoms))
+        assert all(
+            system.isVirtualSite(i) for i in range(topology.n_atoms, expected_n_v_sites)
+        )
+
+        assert system.getNumForces() == 1
+        force: openmm.NonbondedForce = next(iter(system.getForces()))
+
+        total_charge = 0.0 * openmm_unit.elementary_charge
+
+        for i, (expected_charge, expected_sigma, expected_epsilon) in enumerate(
+            expected_parameters
+        ):
+            charge, sigma, epsilon = force.getParticleParameters(i)
+
+            # Make sure v-sites are massless.
+            assert np.isclose(
+                system.getParticleMass(i).value_in_unit(openmm_unit.amu), 0.0
+            ) == (False if i < topology.n_atoms else True)
+
+            assert np.isclose(
+                expected_charge.value_in_unit(expected_charge.unit),
+                charge.value_in_unit(expected_charge.unit),
+            )
+            assert np.isclose(
+                expected_sigma.value_in_unit(expected_sigma.unit),
+                sigma.value_in_unit(expected_sigma.unit),
+            )
+            assert np.isclose(
+                expected_epsilon.value_in_unit(expected_epsilon.unit),
+                epsilon.value_in_unit(expected_epsilon.unit),
+            )
+
+            total_charge += charge
+
+        expected_total_charge = sum(
+            molecule.reference_molecule.total_charge.value_in_unit(
+                unit.elementary_charge
+            )
+            for molecule in topology.topology_molecules
+        )
+        assert np.isclose(
+            expected_total_charge, total_charge.value_in_unit(unit.elementary_charge)
+        )
