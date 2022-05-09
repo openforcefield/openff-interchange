@@ -361,22 +361,28 @@ class Interchange(DefaultModel):
                 )
                 sys_out.handlers.update({"Electrostatics": electrostatics_handler})
             elif potential_handler_type == SMIRNOFFVirtualSiteHandler:
-                virtual_site_handler = SMIRNOFFVirtualSiteHandler._from_toolkit(
-                    parameter_handler=force_field["VirtualSites"],
-                    topology=sys_out.topology,
-                )
+                virtual_site_handler = SMIRNOFFVirtualSiteHandler()
                 virtual_site_handler.exclusion_policy = force_field[
                     "VirtualSites"
                 ].exclusion_policy
+                virtual_site_handler.store_matches(
+                    parameter_handler=force_field["VirtualSites"],
+                    topology=sys_out.topology,
+                )
+                virtual_site_handler.store_potentials(
+                    parameter_handler=force_field["VirtualSites"],
+                    vdw_handler=sys_out["vdW"],
+                    electrostatics_handler=sys_out["Electrostatics"],
+                )
                 sys_out.handlers.update({"VirtualSites": virtual_site_handler})
-                sys_out["vdW"]._from_toolkit_virtual_sites(
-                    parameter_handler=force_field["VirtualSites"],
-                    topology=sys_out.topology,
-                )
-                sys_out["Electrostatics"]._from_toolkit_virtual_sites(
-                    parameter_handler=force_field["VirtualSites"],
-                    topology=sys_out.topology,
-                )
+                # sys_out["vdW"]._from_toolkit_virtual_sites(
+                #     parameter_handler=force_field["VirtualSites"],
+                #     topology=sys_out.topology,
+                # )
+                # sys_out["Electrostatics"]._from_toolkit_virtual_sites(
+                #     parameter_handler=force_field["VirtualSites"],
+                #     topology=sys_out.topology,
+                # )
             elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
                 potential_handler = potential_handler_type._from_toolkit(  # type: ignore
                     parameter_handler=parameter_handlers,
