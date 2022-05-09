@@ -35,7 +35,7 @@ class TestDriversAll(_BaseTest):
         number_expected_drivers = 1 + sum(
             int(find_executable(exec) is not None)
             # FIXME: Add "lmp_serial" in this list
-            for exec in ["gmx", "lmp_serial", "sander"]
+            for exec in ["gmx", "sander"]
         )
 
         assert len(summary) == number_expected_drivers
