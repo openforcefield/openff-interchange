@@ -33,6 +33,12 @@ class SMIRNOFFHandlersNotImplementedError(Exception):
         return msg
 
 
+class SMIRNOFFVersionNotSupportedError(Exception):
+    """
+    Exception for when a parameter handler's version is not supported.
+    """
+
+
 class ToolkitTopologyConformersNotFoundError(Exception):
     """
     Exception for when reference molecules in a toolkit topology lack conformers.

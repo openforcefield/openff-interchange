@@ -81,7 +81,7 @@ class TestEnergies(_BaseTest):
 
         off_sys = Interchange.from_smirnoff(force_field, [mol])
 
-        off_sys.handlers["Electrostatics"].method = "cutoff"
+        off_sys.handlers["Electrostatics"].periodic_potential = "cutoff"
 
         mol.to_file("out.xyz", file_format="xyz")
         compound: mb.Compound = mb.load("out.xyz")
@@ -279,7 +279,7 @@ class TestEnergies(_BaseTest):
         # gmx_energies, _ = get_gromacs_energies(openff_sys)
         # compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)
 
-        openff_sys["Electrostatics"].method = "cutoff"
+        openff_sys["Electrostatics"].periodic_potential = "cutoff"
         omm_energies_cutoff = get_gromacs_energies(openff_sys)  # noqa
 
         # TODO: Don't write out dihedral section of LAMMPS input file for this system
@@ -331,7 +331,7 @@ class TestEnergies(_BaseTest):
 
         # Put this molecule in a large box with cut-off electrostatics
         # to prevent it from interacting with images of itself
-        out["Electrostatics"].method = "cutoff"
+        out["Electrostatics"].periodic_potential = "cutoff"
 
         gmx_energies = get_gromacs_energies(out)
 
@@ -365,7 +365,7 @@ class TestEnergies(_BaseTest):
             positions[1, 0] = d * unit.nanometer
             out.positions = positions
 
-            out["Electrostatics"].method = "cutoff"
+            out["Electrostatics"].periodic_potential = "cutoff"
             gmx.append(
                 get_gromacs_energies(out, mdp="auto").energies["Electrostatics"].m
             )
