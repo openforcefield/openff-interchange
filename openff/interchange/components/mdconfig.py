@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Literal
 from openff.units import unit
 from pydantic import Field
 
+from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
@@ -34,7 +35,7 @@ class MDConfig(DefaultModel):
     constraints: Literal["none", "h-bonds", "all-bonds", "all-angles"] = Field(
         "none", description="The type of constraints to be used in the simulation."
     )
-    vdw_method: Literal["cutoff", "pme", "no-cutoff"] = Field(
+    vdw_method: str = Field(
         None, description="The method used to calculate the vdW interactions."
     )
     vdw_cutoff: FloatQuantity["angstrom"] = Field(
@@ -54,7 +55,7 @@ class MDConfig(DefaultModel):
         None,
         description="The distance at which the switching function is applied",
     )
-    coul_method: Literal["cutoff", "pme", "reaction-field"] = Field(
+    coul_method: str = Field(
         None,
         description="The method used to compute pairwise electrostatic interactions",
     )
@@ -88,9 +89,8 @@ class MDConfig(DefaultModel):
                 mdconfig.switching_function = False
 
         if "Electrostatics" in interchange.handlers:
-            electrostatics_handler = interchange["Electrostatics"]
-            mdconfig.coul_method = electrostatics_handler.method  # type: ignore[assignment]
-            mdconfig.coul_cutoff = electrostatics_handler.cutoff
+            mdconfig.coul_method = interchange["Electrostatics"].periodic_potential
+            mdconfig.coul_cutoff = interchange["Electrostatics"].cutoff
 
         return mdconfig
 
@@ -111,7 +111,7 @@ class MDConfig(DefaultModel):
                 mdp.write("coulombtype = Cut-off\n")
                 mdp.write("coulomb-modifier = None\n")
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
-            elif self.coul_method == "pme":
+            elif self.coul_method == _PME:
                 if not self.periodic:
                     raise UnsupportedCutoffMethodError(
                         "PME is not valid with a non-periodic system."
@@ -187,7 +187,7 @@ class MDConfig(DefaultModel):
 
             vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)
             coul_cutoff = round(self.coul_cutoff.m_as(unit.angstrom), 4)
-            if self.coul_method == "pme":
+            if self.coul_method == _PME:
                 lmp.write(f"pair_style lj/cut/coul/long {vdw_cutoff} {coul_cutoff}\n")
             elif self.coul_method == "cutoff":
                 lmp.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")

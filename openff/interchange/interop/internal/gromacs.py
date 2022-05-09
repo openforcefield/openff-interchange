@@ -19,7 +19,7 @@ from openff.interchange.components.base import (
 )
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import _get_14_pairs
-from openff.interchange.constants import kj_mol
+from openff.interchange.constants import _PME, kj_mol
 from openff.interchange.exceptions import MissingPositionsError, UnsupportedExportError
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
@@ -257,9 +257,9 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
         path = file_path
 
     if openff_sys.box is None:
-        if openff_sys["Electrostatics"].method.lower() == "pme":
+        if openff_sys["Electrostatics"].periodic_potential != _PME:
             raise UnsupportedExportError(
-                "Electrostatics method PME is not valid for a non-periodic system. "
+                f'Electrostatics method PME (`"{_PME}"`) is not valid for a non-periodic system. '
             )
 
     # For performance, immediately convert everything into GROMACS units.  This

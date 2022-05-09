@@ -9,6 +9,7 @@ from openff.units import unit
 
 from openff.interchange.components.toolkit import _get_num_h_bonds
 from openff.interchange.constants import (
+    _PME,
     AMBER_COULOMBS_CONSTANT,
     kcal_mol,
     kcal_mol_a2,
@@ -81,9 +82,9 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         raise Exception
 
     if interchange.box is None:
-        if interchange["Electrostatics"].method.lower() == "pme":
+        if interchange["Electrostatics"].periodic_potential != _PME:
             raise UnsupportedExportError(
-                "Electrostatics method PME is not valid for a non-periodic system. "
+                f'Electrostatics method PME (`"{_PME}"`) is not valid for a non-periodic system. '
             )
 
     with open(path, "w") as prmtop:

@@ -46,10 +46,12 @@ from openff.interchange.components.potentials import (
     WrappedPotential,
 )
 from openff.interchange.components.toolkit import _validated_list_to_array
+from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     MissingParametersError,
     SMIRNOFFParameterAttributeNotImplementedError,
+    SMIRNOFFVersionNotSupportedError,
 )
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 from openff.interchange.types import FloatQuantity, custom_quantity_encoder, json_loader
@@ -897,12 +899,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         if not all(
             isinstance(
                 p,
-                (
-                    VirtualSiteHandler.VirtualSiteBondChargeType,
-                    VirtualSiteHandler.VirtualSiteMonovalentLonePairType,
-                    VirtualSiteHandler.VirtualSiteDivalentLonePairType,
-                    VirtualSiteHandler.VirtualSiteTrivalentLonePairType,
-                ),
+                (VirtualSiteHandler.VirtualSiteType,),
             )
             for p in parameter_handler.parameters
         ):
@@ -963,7 +960,11 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     type: Literal["Electrostatics"] = "Electrostatics"
     expression: Literal["coul"] = "coul"
 
-    method: Literal["pme", "cutoff", "reaction-field", "no-cutoff"] = Field("pme")
+    periodic_potential: Literal[
+        "Ewald3D-ConductingBoundary", "cutoff", "no-cutoff"
+    ] = Field(_PME)
+    nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
+    exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -1048,10 +1049,20 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         Create a SMIRNOFFElectrostaticsHandler from toolkit data.
 
         """
+        from packaging import version
+
         if isinstance(parameter_handler, list):
             parameter_handlers = parameter_handler
         else:
             parameter_handlers = [parameter_handler]
+
+        for handler in parameter_handlers:
+            if isinstance(handler, ElectrostaticsHandler):
+                if version.Version(str(handler.version)) < version.Version("0.4"):
+                    raise SMIRNOFFVersionNotSupportedError(
+                        "Electrostatics section must be up-converted to 0.4 or newer. Found version "
+                        f"{handler.version}."
+                    )
 
         toolkit_handler_with_metadata = [
             p for p in parameter_handlers if type(p) == ElectrostaticsHandler
@@ -1063,13 +1074,15 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             scale_14=toolkit_handler_with_metadata.scale14,
             scale_15=toolkit_handler_with_metadata.scale15,
             cutoff=toolkit_handler_with_metadata.cutoff,
-            method=toolkit_handler_with_metadata.method.lower(),
+            periodic_potential=toolkit_handler_with_metadata.periodic_potential,
+            nonperiodic_potential=toolkit_handler_with_metadata.nonperiodic_potential,
+            exception_potential=toolkit_handler_with_metadata.exception_potential,
         )
 
         handler.store_matches(
             parameter_handlers,
             topology,
-            charge_from_molecules=charge_from_molecules,  # type: ignore[call-arg]
+            charge_from_molecules=charge_from_molecules,
         )
 
         return handler

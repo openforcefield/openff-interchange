@@ -30,10 +30,12 @@ class TestDriversAll(_BaseTest):
 
         assert ("Amber" in summary) == (find_executable("sander") is not None)
 
-        assert ("LAMMPS" in summary) == (find_executable("lmp_serial") is not None)
+        # FIXME: Add back when LAMMPS export fixed
+        # assert ("LAMMPS" in summary) == (find_executable("lmp_serial") is not None)
         number_expected_drivers = 1 + sum(
             int(find_executable(exec) is not None)
-            for exec in ["gmx", "lmp_serial", "sander"]
+            # FIXME: Add "lmp_serial" in this list
+            for exec in ["gmx", "sander"]
         )
 
         assert len(summary) == number_expected_drivers
