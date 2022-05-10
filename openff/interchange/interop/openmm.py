@@ -11,7 +11,7 @@ from openff.units.openmm import to_openmm as to_openmm_unit
 from openmm import app, unit
 
 from openff.interchange.components.potentials import Potential
-from openff.interchange.constants import _PME, kj_mol
+from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InternalInconsistencyError,
     UnimplementedCutoffMethodError,
@@ -595,9 +595,12 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
 
 def _process_virtual_sites(openff_sys, openmm_sys):
-    from openff.interchange.components.particles import (
+    from openff.interchange.components._particles import (
         _BondChargeVirtualSite,
         _create_openmm_virtual_site,
+        _DivalentLonePairVirtualSite,
+        _MonovalentLonePairVirtualSite,
+        _TrivalentLonePairVirtualSite,
     )
 
     try:
@@ -639,13 +642,39 @@ def _process_virtual_sites(openff_sys, openmm_sys):
                 distance=virutal_site_potential_object.parameters["distance"],
                 orientations=orientations,
             )
-
-            openmm_particle = _create_openmm_virtual_site(
-                virtual_site_object,
-                orientations,
+        elif virtual_site_key.type == "MonovalentLonePair":
+            virtual_site_object = _MonovalentLonePairVirtualSite(
+                type="MonovalentLonePair",
+                distance=virutal_site_potential_object.parameters["distance"],
+                out_of_plane_angle=virutal_site_potential_object.parameters[
+                    "outOfPlaneAngle"
+                ],
+                in_plane_angle=virutal_site_potential_object.parameters["inPlaneAngle"],
+                orientations=orientations,
             )
+        elif virtual_site_key.type == "DivalentLonePair":
+            virtual_site_object = _DivalentLonePairVirtualSite(
+                type="DivalentLonePair",
+                distance=virutal_site_potential_object.parameters["distance"],
+                out_of_plane_angle=virutal_site_potential_object.parameters[
+                    "outOfPlaneAngle"
+                ],
+                orientations=orientations,
+            )
+        elif virtual_site_key.type == "TrivalentLonePair":
+            virtual_site_object = _TrivalentLonePairVirtualSite(
+                type="TrivalentLonePair",
+                distance=virutal_site_potential_object.parameters["distance"],
+                orientations=orientations,
+            )
+
         else:
             raise NotImplementedError(virtual_site_key.type)
+
+        openmm_particle = _create_openmm_virtual_site(
+            virtual_site_object,
+            orientations,
+        )
 
         vdw_key = vdw_handler.slot_map.get(virtual_site_key)
         coul_key = coul_handler.slot_map.get(virtual_site_key)
@@ -697,7 +726,7 @@ def _process_virtual_sites(openff_sys, openmm_sys):
                 )
 
             non_bonded_force.addException(
-                root_parent_atom, virtual_site_index, 0.0, 0.0, 0.0, replace=True
+                root_parent_atom, index_force, 0.0, 0.0, 0.0, replace=True
             )
         elif virtual_site_handler.exclusion_policy == "parents":
             for orientation_atom_index in orientations:
@@ -717,8 +746,8 @@ def _create_virtual_site(
 
     handler = interchange["VirtualSites"]
 
-    parent_atom = virtual_site_key.parent_atom_index
-    orientation_atoms = virtual_site_key.orientation_atom_indices
+    parent_atom = virtual_site_key.parent_atom_index  # noqa
+    orientation_atoms = virtual_site_key.orientation_atom_indices  # noqa
     origin_weight, x_direction, y_direction = handler._get_local_frame_weights(
         virtual_site_key
     )
@@ -728,7 +757,7 @@ def _create_virtual_site(
     # x, y, z = displacement / displacement.units
 
     parent_atom_positions = np.asarray(
-        interchange.positions[parent_atom] for parent_atom in parent_atoms
+        interchange.positions[parent_atom] for parent_atom in parent_atoms  # noqa
     )
 
     parent_atom_positions = np.atleast_2d(parent_atom_positions)
@@ -756,7 +785,7 @@ def _create_virtual_site(
     )
 
     return openmm.LocalCoordinatesSite(
-        parent_atoms,
+        parent_atoms,  # noqa
         origin_weight,
         # _origin_weight,
         x_direction,

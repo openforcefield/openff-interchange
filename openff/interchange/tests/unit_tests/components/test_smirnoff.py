@@ -1353,55 +1353,55 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 unit.Quantity(
                     np.array([[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]]), unit.angstrom
                 ),
-            )
-            ############(
-            ############    VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[H:3]"),
-            ############    "[O:1]=[C:2]([H:3])[H:4]",
-            ############    VirtualSiteMocking.sp2_conformer(),
-            ############    (0, 1, 2, 3),
-            ############    (
-            ############        VirtualSiteMocking.sp2_conformer()[0]
-            ############        + unit.Quantity(  # noqa
-            ############            np.array([[1.0, np.sqrt(2), 1.0], [1.0, -np.sqrt(2), -1.0]]),
-            ############            unit.angstrom,
-            ############        )
-            ############    ),
-            ############),
-            ############(
-            ############    VirtualSiteMocking.divalent_parameter(
-            ############        "[H:2][O:1][H:3]", match="once", angle=0.0 * unit.degree
-            ############    ),
-            ############    "[H:2][O:1][H:3]",
-            ############    VirtualSiteMocking.sp2_conformer()[1:, :],
-            ############    (0, 1, 2),
-            ############    np.array([[2.0, 0.0, 0.0]]) * unit.angstrom,
-            ############),
-            ############(
-            ############    VirtualSiteMocking.divalent_parameter(
-            ############        "[H:2][O:1][H:3]",
-            ############        match="all_permutations",
-            ############        angle=45.0 * unit.degree,
-            ############    ),
-            ############    "[H:2][O:1][H:3]",
-            ############    VirtualSiteMocking.sp2_conformer()[1:, :],
-            ############    (0, 1, 2),
-            ############    unit.Quantity(
-            ############        np.array(
-            ############            [
-            ############                [np.sqrt(2), np.sqrt(2), 0.0],
-            ############                [np.sqrt(2), -np.sqrt(2), 0.0],
-            ############            ]
-            ############        ),
-            ############        unit.angstrom,
-            ############    ),
-            ############),
-            ############(
-            ############    VirtualSiteMocking.trivalent_parameter("[N:1]([H:2])([H:3])[H:4]"),
-            ############    "[N:1]([H:2])([H:3])[H:4]",
-            ############    VirtualSiteMocking.sp3_conformer()[1:, :],
-            ############    (0, 1, 2, 3),
-            ############    np.array([[0.0, 2.0, 0.0]]) * unit.angstrom,
-            ############),
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[H:3]"),
+                "[O:1]=[C:2]([H:3])[H:4]",
+                VirtualSiteMocking.sp2_conformer(),
+                (0, 1, 2, 3),
+                (
+                    VirtualSiteMocking.sp2_conformer()[0]
+                    + unit.Quantity(  # noqa
+                        np.array([[1.0, np.sqrt(2), 1.0], [1.0, -np.sqrt(2), -1.0]]),
+                        unit.angstrom,
+                    )
+                ),
+            ),
+            (
+                VirtualSiteMocking.divalent_parameter(
+                    "[H:2][O:1][H:3]", match="once", angle=0.0 * unit.degree
+                ),
+                "[H:2][O:1][H:3]",
+                VirtualSiteMocking.sp2_conformer()[1:, :],
+                (0, 1, 2),
+                np.array([[2.0, 0.0, 0.0]]) * unit.angstrom,
+            ),
+            (
+                VirtualSiteMocking.divalent_parameter(
+                    "[H:2][O:1][H:3]",
+                    match="all_permutations",
+                    angle=45.0 * unit.degree,
+                ),
+                "[H:2][O:1][H:3]",
+                VirtualSiteMocking.sp2_conformer()[1:, :],
+                (0, 1, 2),
+                unit.Quantity(
+                    np.array(
+                        [
+                            [np.sqrt(2), np.sqrt(2), 0.0],
+                            [np.sqrt(2), -np.sqrt(2), 0.0],
+                        ]
+                    ),
+                    unit.angstrom,
+                ),
+            ),
+            (
+                VirtualSiteMocking.trivalent_parameter("[N:1]([H:2])([H:3])[H:4]"),
+                "[N:1]([H:2])([H:3])[H:4]",
+                VirtualSiteMocking.sp3_conformer()[1:, :],
+                (0, 1, 2, 3),
+                np.array([[0.0, 2.0, 0.0]]) * unit.angstrom,
+            ),
         ],
     )
     def test_v_site_geometry(
