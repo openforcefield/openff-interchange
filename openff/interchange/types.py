@@ -1,4 +1,5 @@
 """Custom models for dealing with unit-bearing quantities in a Pydantic-compatible manner."""
+import collections
 import copy
 import json
 from typing import TYPE_CHECKING, Any, Dict
@@ -235,3 +236,16 @@ class TopologyEncoder(json.JSONEncoder):
             molecule._conformers = None
 
         return _topology.to_json()
+
+
+def _remove_ordered_dicts(data):
+    """Map collection.OrderedDicts to dicts in hierarchical structures."""
+    if isinstance(data, (collections.OrderedDict, dict)):
+        return {
+            _remove_ordered_dicts(key): _remove_ordered_dicts(val)
+            for key, val in data.items()
+        }
+    elif isinstance(data, list):
+        return [_remove_ordered_dicts(val) for val in data]
+    else:
+        return data

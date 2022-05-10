@@ -33,6 +33,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     UnassignedProperTorsionParameterException,
     UnassignedValenceParameterException,
     VirtualSiteHandler,
+    _compute_lj_sigma,
     vdWHandler,
 )
 from openff.units import unit
@@ -268,8 +269,8 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         for topology_key, potential_key in self.slot_map.items():
             smirks = potential_key.id
             parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
-            if topology_key.bond_order:  # type: ignore[union-attr]
-                bond_order = topology_key.bond_order  # type: ignore[union-attr]
+            if topology_key.bond_order:
+                bond_order = topology_key.bond_order
                 if parameter.k_bondorder:
                     data = parameter.k_bondorder
                 else:
@@ -593,8 +594,8 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
             n = potential_key.mult
             parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
             # n_terms = len(parameter.k)
-            if topology_key.bond_order:  # type: ignore[union-attr]
-                bond_order = topology_key.bond_order  # type: ignore[union-attr]
+            if topology_key.bond_order:
+                bond_order = topology_key.bond_order
                 data = parameter.k_bondorder[n]
                 coeffs = _get_interpolation_coeffs(
                     fractional_bond_order=bond_order,
@@ -937,7 +938,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
             #         }
             #     )
 
-            self.slot_map.update({top_key: pot_key})
+            self.slot_map.update({top_key: pot_key})  # type: ignore[dict-item]
             self.potentials.update({pot_key: pot})
 
 
@@ -1132,7 +1133,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 }
             )
 
-            self.slot_map.update({virtual_site_key: virtual_site_potential_key})
+            self.slot_map.update({virtual_site_key: virtual_site_potential_key})  # type: ignore[dict-item]
             self.potentials.update({virtual_site_potential_key: virtual_site_potential})
 
             for i, atom_index in enumerate(atom_indices):  # noqa
@@ -1591,52 +1592,93 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         parameter_handler: ParameterHandler,
         topology: "Topology",
     ) -> None:
-        """
-        Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey].
-
-        Differs from SMIRNOFFPotentialHandler.store_matches because each key
-        can point to multiple potentials (?); each value in the dict is a
-        list of parametertypes, whereas conventional handlers don't have lists
-        """
-        virtual_site_index = topology.n_atoms
-        parameter_handler_name = getattr(parameter_handler, "_TAGNAME", None)
+        """Populate self.slot_map with key-val pairs of [VirtualSiteKey, PotentialKey]."""
         if self.slot_map:
             self.slot_map = dict()
-        matches = parameter_handler.find_matches(topology)
-        for key, val_list in matches.items():
-            for val in val_list:
-                virtual_site_key = VirtualSiteKey(
-                    atom_indices=key,
-                    type=val.parameter_type.type,
-                    name=val.parameter_type.name,
-                    match=val.parameter_type.match,
-                )
-                potential_key = PotentialKey(
-                    id=val.parameter_type.smirks,
-                    associated_handler=parameter_handler_name,
-                )
-                self.slot_map[virtual_site_key] = potential_key
-                self.virtual_site_key_topology_index_map[
-                    virtual_site_key
-                ] = virtual_site_index
-                virtual_site_index += 1
 
-    def store_potentials(self, parameter_handler: ParameterHandler) -> None:
+        # Initialze the virtual site index to begin after the topoogy's atoms (0-indexed)
+        virtual_site_index = topology.n_atoms
+
+        matches_by_parent = parameter_handler._find_matches_by_parent(topology)
+
+        for parent_index, parameters in matches_by_parent.items():
+            for parameter, orientations in parameters:
+                for orientation in orientations:
+
+                    orientation_indices = orientation.topology_atom_indices
+
+                    virtual_site_key = VirtualSiteKey(
+                        parent_atom_index=parent_index,
+                        orientation_atom_indices=orientation_indices,
+                        type=parameter.type,
+                        name=parameter.name,
+                        match=parameter.match,
+                    )
+
+                    # TODO: Better way of specifying unique parameters
+                    potential_key = PotentialKey(
+                        id=" ".join(
+                            [parameter.smirks, parameter.name, parameter.match]
+                        ),
+                        associated_handler="VirtualSites",
+                    )
+                    self.slot_map[virtual_site_key] = potential_key  # type: ignore
+                    self.virtual_site_key_topology_index_map[
+                        virtual_site_key
+                    ] = virtual_site_index
+                    virtual_site_index += 1
+
+    def store_potentials(  # type: ignore[override]
+        self,
+        parameter_handler: VirtualSiteHandler,
+        vdw_handler: SMIRNOFFvdWHandler,
+        electrostatics_handler: SMIRNOFFElectrostaticsHandler,
+    ) -> None:
         """Store VirtualSite-specific parameter-like data."""
         if self.potentials:
             self.potentials = dict()
-        for potential_key in self.slot_map.values():
-            smirks = potential_key.id
-            parameter_type = parameter_handler.get_parameter({"smirks": smirks})[0]
-            potential = Potential(
+        for virtual_site_key, potential_key in self.slot_map.items():
+            # TODO: This logic assumes no spaces in the SMIRKS pattern, name or `match` attribute
+            # import ipdb; ipdb.set_trace()
+            smirks, _, _ = potential_key.id.split(" ")
+            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+
+            virtual_site_potential = Potential(
                 parameters={
-                    "distance": parameter_type.distance,
+                    "distance": parameter.distance,
                 },
             )
             for attr in ["outOfPlaneAngle", "inPlaneAngle"]:
-                if hasattr(parameter_type, attr):
-                    potential.parameters.update({attr: getattr(parameter_type, attr)})
-            self.potentials[potential_key] = potential
+                if hasattr(parameter, attr):
+                    virtual_site_potential.parameters.update(
+                        {attr: getattr(parameter, attr)}
+                    )
+            self.potentials[potential_key] = virtual_site_potential
+
+            vdw_key = PotentialKey(id=potential_key.id, associated_handler="vdw")
+            vdw_potential = Potential(
+                parameters={
+                    "sigma": _compute_lj_sigma(parameter.sigma, parameter.rmin_half),
+                    "epsilon": parameter.epsilon,
+                },
+            )
+            vdw_handler.slot_map[virtual_site_key] = vdw_key
+            vdw_handler.potentials[vdw_key] = vdw_potential
+
+            electrostatics_key = PotentialKey(
+                id=potential_key.id, associated_handler="Electrostatics"
+            )
+            electrostatics_potential = Potential(
+                parameters={
+                    "charge_increments": _validated_list_to_array(
+                        parameter.charge_increment
+                    ),
+                }
+            )
+            electrostatics_handler.slot_map[virtual_site_key] = electrostatics_key
+            electrostatics_handler.potentials[
+                electrostatics_key
+            ] = electrostatics_potential
 
     def _get_local_frame_weights(self, virtual_site_key: "VirtualSiteKey"):
         if virtual_site_key.type == "BondCharge":
@@ -1659,7 +1701,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         return origin_weight, x_direction, y_direction
 
     def _get_local_frame_position(self, virtual_site_key: "VirtualSiteKey"):
-        potential_key = self.slot_map[virtual_site_key]
+        potential_key = self.slot_map[virtual_site_key]  # type: ignore
         potential = self.potentials[potential_key]
         if virtual_site_key.type == "BondCharge":
             distance = potential.parameters["distance"]

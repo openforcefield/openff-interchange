@@ -655,7 +655,7 @@ def _write_virtual_sites(
     virtual_site_handler = openff_sys["VirtualSites"]
 
     if not all(
-        k.type in ["BondCharge", "MonovalentLonePair", "DivalentLonePair"]  # type: ignore[union-attr]
+        k.type in ["BondCharge", "MonovalentLonePair", "DivalentLonePair"]  # type: ignore
         for k in virtual_site_handler.slot_map
     ):
         raise NotImplementedError("Only BondCharge virtual sites are implemented")
@@ -664,8 +664,9 @@ def _write_virtual_sites(
     started_virtual_sites3 = False
     # TODO: Cleaner implementation than filter + sort? Maybe split it up into each type
     # and do them sequentially?
+    slot_map: Dict[VirtualSiteKey, PotentialKey] = virtual_site_handler.slot_map  # type: ignore
     for virtual_site_key in sorted(
-        (k for k in virtual_site_handler.slot_map.keys() if type(k) == VirtualSiteKey),
+        (k for k in slot_map if type(k) == VirtualSiteKey),
         key=lambda x: x.type,
     ):
         if virtual_site_key.type == "BondCharge":
@@ -673,7 +674,7 @@ def _write_virtual_sites(
                 top_file.write("\n[ virtual_sites2 ]\n; site  ai  aj  funct   a\n")
                 started_virtual_sites2 = True
 
-            reference_atoms = virtual_site_key.atom_indices
+            reference_atoms = virtual_site_key.orientation_atom_indices
             if len(reference_atoms) != 2:
                 raise NotImplementedError
 
@@ -683,9 +684,7 @@ def _write_virtual_sites(
             func = 2
 
             distance = (
-                virtual_site_handler.potentials[
-                    virtual_site_handler.slot_map[virtual_site_key]
-                ]
+                virtual_site_handler.potentials[slot_map[virtual_site_key]]
                 .parameters["distance"]
                 .m_as(unit.nanometer)
             )
@@ -703,7 +702,7 @@ def _write_virtual_sites(
                 )
                 started_virtual_sites3 = True
 
-            reference_atoms = tuple(sorted(virtual_site_key.atom_indices))
+            reference_atoms = tuple(sorted(virtual_site_key.orientation_atom_indices))
             if len(reference_atoms) != 3:
                 raise NotImplementedError
 
@@ -714,9 +713,7 @@ def _write_virtual_sites(
             func = 3  # "3fad"
 
             out_of_plane_angle = (
-                virtual_site_handler.potentials[
-                    virtual_site_handler.slot_map[virtual_site_key]
-                ]
+                virtual_site_handler.potentials[slot_map[virtual_site_key]]
                 .parameters["outOfPlaneAngle"]
                 .m_as(unit.radian)
             )
@@ -727,17 +724,13 @@ def _write_virtual_sites(
                 )
 
             distance = (
-                virtual_site_handler.potentials[
-                    virtual_site_handler.slot_map[virtual_site_key]
-                ]
+                virtual_site_handler.potentials[slot_map[virtual_site_key]]
                 .parameters["distance"]
                 .m_as(unit.nanometer)
             )
 
             in_plane_angle = (
-                virtual_site_handler.potentials[
-                    virtual_site_handler.slot_map[virtual_site_key]
-                ]
+                virtual_site_handler.potentials[slot_map[virtual_site_key]]
                 .parameters["inPlaneAngle"]
                 .m_as(unit.degree)
             )
@@ -758,7 +751,7 @@ def _write_virtual_sites(
 
             # TODO: Cannot sort here. Atom ordering implies "chirality" of virtual sites,
             #  i.e. which side of a 5-site water each lone pair particle should go.
-            reference_atoms = tuple(sorted(virtual_site_key.atom_indices))
+            reference_atoms = tuple(sorted(virtual_site_key.orientation_atom_indices))
             if len(reference_atoms) != 3:
                 raise NotImplementedError
 
@@ -796,17 +789,13 @@ def _write_virtual_sites(
             )
 
             distance = (
-                virtual_site_handler.potentials[
-                    virtual_site_handler.slot_map[virtual_site_key]
-                ]
+                virtual_site_handler.potentials[slot_map[virtual_site_key]]
                 .parameters["distance"]
                 .m_as(unit.nanometer)
             )
 
             out_of_plane_angle = (
-                virtual_site_handler.potentials[
-                    virtual_site_handler.slot_map[virtual_site_key]
-                ]
+                virtual_site_handler.potentials[slot_map[virtual_site_key]]
                 .parameters["outOfPlaneAngle"]
                 .m_as(unit.radian)
             )
@@ -835,7 +824,7 @@ def _write_virtual_sites(
 
     top_file.write("\n[ exclusions ]\n")
     for virtual_site_key in virtual_site_handler.slot_map:  # type: ignore[assignment]
-        parent_indices = virtual_site_key.atom_indices
+        parent_indices = virtual_site_key.atom_indices  # type: ignore[attr-defined]
         virtual_site_index = virtual_site_map[virtual_site_key]
         top_file.write(f"{virtual_site_index}\t")
         top_file.write("\t".join([str(i + 1) for i in parent_indices]))
@@ -876,6 +865,7 @@ def _write_bonds(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
 
         found_match = False
         for top_key in bond_handler.slot_map:
+            top_key: TopologyKey  # type: ignore[no-redef]
             if top_key.atom_indices == topology_indices:
                 pot_key = bond_handler.slot_map[top_key]
                 found_match = True
