@@ -21,6 +21,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     UnassignedProperTorsionParameterException,
     UnassignedValenceParameterException,
     VirtualSiteHandler,
+    vdWHandler,
 )
 from openff.units import unit
 from openff.units.openmm import to_openmm
@@ -1450,9 +1451,9 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
 
             assert np.allclose(found, expected), expected - found
 
-    _E = openmm_unit.elementary_charge
-    _A = openmm_unit.angstrom
-    _KJ = openmm_unit.kilojoule_per_mole
+    _E = unit.elementary_charge
+    _A = unit.angstrom
+    _KJ = unit.kilojoule_per_mole
 
     @pytest.mark.parametrize(
         ("topology", "parameters", "expected_parameters", "expected_n_v_sites"),
@@ -1610,26 +1611,40 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
         for parameter in parameters:
             handler.add_parameter(parameter=parameter)
 
-        system = openmm.System()
+        force_field = ForceField()
 
-        for _ in range(topology.n_atoms):
-            system.addParticle(10.0 * openmm_unit.amu)
+        force_field.register_parameter_handler(ElectrostaticsHandler(version=0.4))
+        force_field.register_parameter_handler(LibraryChargeHandler(version=0.3))
+        force_field.get_parameter_handler("LibraryCharges").add_parameter(
+            {
+                "smirks": "[*:1]",
+                "charge": [0.0] * unit.elementary_charge,
+            }
+        )
+        force_field.register_parameter_handler(vdWHandler(version=0.3))
+        force_field.get_parameter_handler("vdW").add_parameter(
+            {
+                "smirks": "[*:1]",
+                "epsilon": 0.0 * unit.kilojoule_per_mole,
+                "sigma": 1.0 * unit.nanometer,
+            }
+        )
+        force_field.register_parameter_handler(handler)
 
-        handler.create_force(system, topology)
+        system: openmm.System = Interchange.from_smirnoff(
+            force_field, topology
+        ).to_openmm(
+            combine_nonbonded_forces=True,
+        )
 
         assert system.getNumParticles() == expected_n_total
-
-        assert (
-            sum(v_site.n_particles for v_site in topology.topology_virtual_sites)
-            == expected_n_v_sites  # noqa
-        )
 
         assert all(not system.isVirtualSite(i) for i in range(topology.n_atoms))
         assert all(
             system.isVirtualSite(i) for i in range(topology.n_atoms, expected_n_v_sites)
         )
 
-        assert system.getNumForces() == 1
+        assert system.getNumForces() == 3
         force: openmm.NonbondedForce = next(iter(system.getForces()))
 
         total_charge = 0.0 * openmm_unit.elementary_charge
@@ -1644,27 +1659,28 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 system.getParticleMass(i).value_in_unit(openmm_unit.amu), 0.0
             ) == (False if i < topology.n_atoms else True)
 
+            # import ipdb; ipdb.set_trace()
             assert np.isclose(
-                expected_charge.value_in_unit(expected_charge.unit),
-                charge.value_in_unit(expected_charge.unit),
+                expected_charge.m_as(unit.elementary_charge),
+                charge.value_in_unit(openmm_unit.elementary_charge),
             )
             assert np.isclose(
-                expected_sigma.value_in_unit(expected_sigma.unit),
-                sigma.value_in_unit(expected_sigma.unit),
+                expected_sigma.m_as(unit.angstrom),
+                sigma.value_in_unit(openmm_unit.angstrom),
             )
             assert np.isclose(
-                expected_epsilon.value_in_unit(expected_epsilon.unit),
-                epsilon.value_in_unit(expected_epsilon.unit),
+                expected_epsilon.m_as(unit.kilojoule_per_mole),
+                epsilon.value_in_unit(openmm_unit.kilojoule_per_mole),
             )
 
             total_charge += charge
 
         expected_total_charge = sum(
-            molecule.reference_molecule.total_charge.value_in_unit(
-                unit.elementary_charge
-            )
-            for molecule in topology.topology_molecules
+            molecule.total_charge.m_as(unit.elementary_charge)
+            for molecule in topology.molecules
         )
+
         assert np.isclose(
-            expected_total_charge, total_charge.value_in_unit(unit.elementary_charge)
+            expected_total_charge,
+            total_charge.value_in_unit(openmm_unit.elementary_charge),
         )
