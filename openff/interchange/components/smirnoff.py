@@ -1642,9 +1642,6 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
             # import ipdb; ipdb.set_trace()
             smirks, _, _ = potential_key.id.split(" ")
             parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
-            charge = -sum(  # noqa
-                parameter.charge_increment, 0.0 * unit.elementary_charge
-            )
 
             virtual_site_potential = Potential(
                 parameters={

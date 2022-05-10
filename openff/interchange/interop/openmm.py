@@ -13,6 +13,7 @@ from openmm import app, unit
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import _PME, kj_mol
 from openff.interchange.exceptions import (
+    InternalInconsistencyError,
     UnimplementedCutoffMethodError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
@@ -81,7 +82,15 @@ def to_openmm(
         add_constrained_forces=add_constrained_forces,
         constrained_pairs=constrained_pairs,
     )
-    _process_virtual_sites(openff_sys, openmm_sys)
+
+    if "VirtualSites" in openff_sys.handlers:
+        if combine_nonbonded_forces:
+            _process_virtual_sites(openff_sys, openmm_sys)
+        else:
+            raise UnsupportedExportError(
+                "Exporting systems containing virtual sites is not yet supported with "
+                f"{combine_nonbonded_forces=}"
+            )
 
     return openmm_sys
 
@@ -586,12 +595,17 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
 
 def _process_virtual_sites(openff_sys, openmm_sys):
+    from openff.interchange.components.particles import (
+        _BondChargeVirtualSite,
+        _create_openmm_virtual_site,
+    )
+
     try:
         virtual_site_handler = openff_sys["VirtualSites"]
     except LookupError:
         return
 
-    _SUPPORTED_EXCLUSION_POLICIES = ["none", "minimal", "parents"]
+    _SUPPORTED_EXCLUSION_POLICIES = ["parents"]
 
     if virtual_site_handler.exclusion_policy not in _SUPPORTED_EXCLUSION_POLICIES:
         raise UnsupportedExportError(
@@ -607,40 +621,61 @@ def _process_virtual_sites(openff_sys, openmm_sys):
         f for f in openmm_sys.getForces() if type(f) == openmm.NonbondedForce
     ][0]
 
-    for virtual_site_key in virtual_site_handler.slot_map:
+    virtual_site_key: VirtualSiteKey
+
+    for (
+        virtual_site_key,
+        virtual_site_potential_key,
+    ) in virtual_site_handler.slot_map.items():
+        orientations = virtual_site_key.orientation_atom_indices
+
+        virutal_site_potential_object = virtual_site_handler.potentials[
+            virtual_site_potential_key
+        ]
+
+        if virtual_site_key.type == "BondCharge":
+            virtual_site_object = _BondChargeVirtualSite(
+                type="BondCharge",
+                distance=virutal_site_potential_object.parameters["distance"],
+                orientations=orientations,
+            )
+
+            openmm_particle = _create_openmm_virtual_site(
+                virtual_site_object,
+                orientations,
+            )
+        else:
+            raise NotImplementedError(virtual_site_key.type)
+
         vdw_key = vdw_handler.slot_map.get(virtual_site_key)
         coul_key = coul_handler.slot_map.get(virtual_site_key)
-        if vdw_key is None and coul_key is None:
+        if vdw_key is None or coul_key is None:
             raise Exception(
                 f"Virtual site {virtual_site_key} is not associated with any "
-                "vdW or electrostatics interactions"
+                "vdW and/or electrostatics interactions"
             )
 
-        if coul_key is None:
-            charge = 0.0
-        else:
-            charge = coul_handler.charges_with_virtual_sites[virtual_site_key].m_as(
-                off_unit.elementary_charge,
-            )
-        if vdw_key is None:
-            sigma = 1.0
-            epsilon = 0.0
-        else:
-            vdw_parameters = vdw_handler.potentials[vdw_key].parameters
-            sigma = vdw_parameters["sigma"].m_as(
-                off_unit.nanometer,
-            )
-            epsilon = vdw_parameters["epsilon"].m_as(
-                off_unit.Unit(str(kj_mol)),
-            )
+        charge_increments = coul_handler.potentials[coul_key].parameters[
+            "charge_increments"
+        ]
+        charge = to_openmm_unit(-sum(charge_increments))
 
-        virtual_site_index = openmm_sys.addParticle(mass=0.0)
+        vdw_parameters = vdw_handler.potentials[vdw_key].parameters
+        sigma = to_openmm_unit(vdw_parameters["sigma"])
+        epsilon = to_openmm_unit(vdw_parameters["epsilon"])
 
-        openmm_virtual_site = _create_virtual_site(virtual_site_key, openff_sys)
+        index_system = openmm_sys.addParticle(mass=0.0)
+        index_force = non_bonded_force.addParticle(charge, sigma, epsilon)
 
-        openmm_sys.setVirtualSite(virtual_site_index, openmm_virtual_site)
+        if index_system != index_force:
+            raise InternalInconsistencyError("Mismatch in system and force indexing")
 
-        non_bonded_force.addParticle(charge, sigma, epsilon)
+        openmm_sys.setVirtualSite(index_system, openmm_particle)
+
+        for index, charge_increment in zip(orientations, charge_increments):
+            atom_charge, *atom_vdw = non_bonded_force.getParticleParameters(index)
+            atom_charge += to_openmm_unit(charge_increment)
+            non_bonded_force.setParticleParameters(index, atom_charge, *atom_vdw)
 
         # Notes: For each type of virtual site, the parent atom is defined as the _first_ (0th) atom.
         # The toolkit, however, might have some bugs from following different assumptions:
@@ -665,9 +700,9 @@ def _process_virtual_sites(openff_sys, openmm_sys):
                 root_parent_atom, virtual_site_index, 0.0, 0.0, 0.0, replace=True
             )
         elif virtual_site_handler.exclusion_policy == "parents":
-            for parent_atom_index in virtual_site_key.atom_indices:
+            for orientation_atom_index in orientations:
                 non_bonded_force.addException(
-                    parent_atom_index, virtual_site_index, 0.0, 0.0, 0.0, replace=True
+                    orientation_atom_index, index_force, 0.0, 0.0, 0.0, replace=True
                 )
         else:
             raise UnsupportedCutoffMethodError(
@@ -682,7 +717,8 @@ def _create_virtual_site(
 
     handler = interchange["VirtualSites"]
 
-    parent_atoms = virtual_site_key.atom_indices
+    parent_atom = virtual_site_key.parent_atom_index
+    orientation_atoms = virtual_site_key.orientation_atom_indices
     origin_weight, x_direction, y_direction = handler._get_local_frame_weights(
         virtual_site_key
     )
