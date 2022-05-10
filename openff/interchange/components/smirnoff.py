@@ -269,8 +269,8 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         for topology_key, potential_key in self.slot_map.items():
             smirks = potential_key.id
             parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
-            if topology_key.bond_order:  # type: ignore[union-attr]
-                bond_order = topology_key.bond_order  # type: ignore[union-attr]
+            if topology_key.bond_order:
+                bond_order = topology_key.bond_order
                 if parameter.k_bondorder:
                     data = parameter.k_bondorder
                 else:
@@ -594,8 +594,8 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
             n = potential_key.mult
             parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
             # n_terms = len(parameter.k)
-            if topology_key.bond_order:  # type: ignore[union-attr]
-                bond_order = topology_key.bond_order  # type: ignore[union-attr]
+            if topology_key.bond_order:
+                bond_order = topology_key.bond_order
                 data = parameter.k_bondorder[n]
                 coeffs = _get_interpolation_coeffs(
                     fractional_bond_order=bond_order,
@@ -938,7 +938,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
             #         }
             #     )
 
-            self.slot_map.update({top_key: pot_key})
+            self.slot_map.update({top_key: pot_key})  # type: ignore[dict-item]
             self.potentials.update({pot_key: pot})
 
 
@@ -1133,7 +1133,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 }
             )
 
-            self.slot_map.update({virtual_site_key: virtual_site_potential_key})
+            self.slot_map.update({virtual_site_key: virtual_site_potential_key})  # type: ignore[dict-item]
             self.potentials.update({virtual_site_potential_key: virtual_site_potential})
 
             for i, atom_index in enumerate(atom_indices):  # noqa
@@ -1622,13 +1622,13 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                         ),
                         associated_handler="VirtualSites",
                     )
-                    self.slot_map[virtual_site_key] = potential_key
+                    self.slot_map[virtual_site_key] = potential_key  # type: ignore
                     self.virtual_site_key_topology_index_map[
                         virtual_site_key
                     ] = virtual_site_index
                     virtual_site_index += 1
 
-    def store_potentials(
+    def store_potentials(  # type: ignore[override]
         self,
         parameter_handler: VirtualSiteHandler,
         vdw_handler: SMIRNOFFvdWHandler,
@@ -1701,7 +1701,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         return origin_weight, x_direction, y_direction
 
     def _get_local_frame_position(self, virtual_site_key: "VirtualSiteKey"):
-        potential_key = self.slot_map[virtual_site_key]
+        potential_key = self.slot_map[virtual_site_key]  # type: ignore
         potential = self.potentials[potential_key]
         if virtual_site_key.type == "BondCharge":
             distance = potential.parameters["distance"]

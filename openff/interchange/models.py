@@ -81,13 +81,9 @@ class TopologyKey(DefaultModel):
 class VirtualSiteKey(DefaultModel):
     """A unique identifier of a virtual site in the scope of a chemical topology."""
 
-    parent_atom_index: int = Field(
-        description="The topology index of the (single) 'parent atom,' which corresponds to the atom that the "
-        "virtual site is ‘attached to’."
-    )
     orientation_atom_indices: Tuple[int, ...] = Field(
-        description="The indices of the 'orientation atoms,' which are used to define the position of this "
-        "virtual site."
+        description="The indices of the 'orientation atoms' which are used to define the position of this "
+        "virtual site. The first atom is the 'parent atom' which defines which atom the virtual site is 'attached' to."
     )
     type: str = Field(description="The type of this virtual site parameter.")
     name: str = Field(description="The name of this virtual site parameter.")
@@ -98,7 +94,6 @@ class VirtualSiteKey(DefaultModel):
     def __hash__(self) -> int:
         return hash(
             (
-                self.parent_atom_index,
                 self.orientation_atom_indices,
                 self.name,
                 self.type,

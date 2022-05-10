@@ -2,7 +2,6 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Tuple, Union
 
-import numpy as np
 import openmm
 from openff.toolkit.topology import Topology
 from openff.units import unit as off_unit
@@ -739,61 +738,6 @@ def _process_virtual_sites(openff_sys, openmm_sys):
             )
 
 
-def _create_virtual_site(
-    virtual_site_key: "VirtualSiteKey",
-    interchange: "Interchange",
-) -> "openmm.LocalCoordinatesSites":
-
-    handler = interchange["VirtualSites"]
-
-    parent_atom = virtual_site_key.parent_atom_index  # noqa
-    orientation_atoms = virtual_site_key.orientation_atom_indices  # noqa
-    origin_weight, x_direction, y_direction = handler._get_local_frame_weights(
-        virtual_site_key
-    )
-    displacement = handler._get_local_frame_position(virtual_site_key)
-
-    x, y, z = ((v / v.units).m for v in displacement)
-    # x, y, z = displacement / displacement.units
-
-    parent_atom_positions = np.asarray(
-        interchange.positions[parent_atom] for parent_atom in parent_atoms  # noqa
-    )
-
-    parent_atom_positions = np.atleast_2d(parent_atom_positions)
-
-    # origin = np.dot(_origin_weight, parent_atom_positions).sum(axis=0)
-
-    x_axis, y_axis = np.dot(
-        np.vstack((x_direction, y_direction)), parent_atom_positions
-    )
-
-    z_axis = np.cross(x_axis, y_axis)
-    y_axis = np.cross(z_axis, x_axis)
-
-    def _normalize(axis):
-        l = np.linalg.norm(axis)  # noqa
-        if l > 0.0:
-            axis /= l
-        return axis
-
-    x_axis, y_axis, z_axis = map(_normalize, (x_axis, y_axis, z_axis))
-
-    # position = origin + x * x_axis + y * y_axis + z * z_axis
-    local_frame_position = handler._get_local_frame_position(virtual_site_key).m_as(
-        off_unit.nanometer
-    )
-
-    return openmm.LocalCoordinatesSite(
-        parent_atoms,  # noqa
-        origin_weight,
-        # _origin_weight,
-        x_direction,
-        y_direction,
-        local_frame_position,
-    )
-
-
 def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
     if not hasattr(force, "setUseSwitchingFunction"):
         raise ValueError(
@@ -836,7 +780,8 @@ def to_openmm_topology(interchange: "Interchange") -> app.Topology:
         virtual_site_residue = [*openmm_topology.residues()][0]
 
         for virtual_site_key in interchange["VirtualSites"].slot_map:
-            virtual_site_name = virtual_site_key.name  # type: ignore[union-attr]
+
+            virtual_site_name = virtual_site_key.name  # type: ignore[attr-defined]
 
             openmm_topology.addAtom(
                 virtual_site_name,

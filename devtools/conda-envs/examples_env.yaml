@@ -30,7 +30,7 @@ dependencies:
   - nglview
   - openff-amber-ff-ports
   - openeye-toolkits
-  - pytest
+  - pytest <7.0.0
   - nbval
   - nglview
   # Drivers

@@ -7,12 +7,7 @@ from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, PrivateAttr, validator
 
 from openff.interchange.exceptions import MissingParametersError
-from openff.interchange.models import (
-    DefaultModel,
-    PotentialKey,
-    TopologyKey,
-    VirtualSiteKey,
-)
+from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
 from openff.interchange.types import ArrayQuantity, FloatQuantity
 
 if has_package("jax"):
@@ -98,7 +93,7 @@ class PotentialHandler(DefaultModel):
         ...,
         description="The analytical expression governing the potentials in this handler.",
     )
-    slot_map: Dict[Union[TopologyKey, VirtualSiteKey], PotentialKey] = Field(
+    slot_map: Dict[TopologyKey, PotentialKey] = Field(
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )
@@ -133,6 +128,7 @@ class PotentialHandler(DefaultModel):
         raise NotImplementedError
 
     def _get_parameters(self, atom_indices: Tuple[int]) -> Dict:
+        topology_key: TopologyKey
         for topology_key in self.slot_map:
             if topology_key.atom_indices == atom_indices:
                 potential_key = self.slot_map[topology_key]
