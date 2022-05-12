@@ -343,8 +343,21 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         vdw_cutoff = vdw_handler.cutoff.m_as(off_unit.angstrom) * unit.angstrom
         vdw_method = vdw_handler.method.lower()
 
-        electrostatics_handler = openff_sys["Electrostatics"]
-        electrostatics_method = electrostatics_handler.periodic_potential
+        try:
+            electrostatics_handler = openff_sys["Electrostatics"]
+        except LookupError:
+            electrostatics_handler = None
+
+        if electrostatics_handler is None and combine_nonbonded_forces is False:
+            raise UnsupportedExportError(
+                "`combine_nonbonded_forces=False` is only supported if an ElectrostaticsHandler is found in the "
+                f"force field found {combine_nonbonded_forces=} and no ElectrostaticsHandler."
+            )
+        electrostatics_method = (
+            electrostatics_handler.periodic_potential
+            if electrostatics_handler
+            else None
+        )
 
         if combine_nonbonded_forces:
             if vdw_handler.mixing_rule != "lorentz-berthelot":
@@ -360,8 +373,15 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
             if openff_sys.box is None:
-                electrostatics_method = electrostatics_handler.nonperiodic_potential
-                if vdw_method == "cutoff" and electrostatics_method == "Coulomb":
+                electrostatics_method = (
+                    electrostatics_handler.nonperiodic_potential
+                    if electrostatics_handler
+                    else "UNKNOWN"
+                )
+                if vdw_method == "cutoff" and electrostatics_method in [
+                    "Coulomb",
+                    "UNKNOWN",
+                ]:
                     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
                     non_bonded_force.setUseDispersionCorrection(True)
                     non_bonded_force.setCutoffDistance(vdw_cutoff)
@@ -373,8 +393,15 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                     )
 
             else:
-                electrostatics_method = electrostatics_handler.periodic_potential
-                if vdw_method == "cutoff" and electrostatics_method == _PME:
+                electrostatics_method = (
+                    electrostatics_handler.periodic_potential
+                    if electrostatics_handler
+                    else "UNKNOWN"
+                )
+                if vdw_method == "cutoff" and electrostatics_method in [
+                    _PME,
+                    "UNKNOWN",
+                ]:
                     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
                     non_bonded_force.setEwaldErrorTolerance(1.0e-4)
                     non_bonded_force.setUseDispersionCorrection(True)
@@ -465,10 +492,11 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                     f"Electrostatics method {electrostatics_method} not supported"
                 )
 
-        try:
-            partial_charges = electrostatics_handler.charges_with_virtual_sites
-        except AttributeError:
-            partial_charges = electrostatics_handler.charges
+        if electrostatics_handler is not None:
+            try:
+                partial_charges = electrostatics_handler.charges_with_virtual_sites
+            except AttributeError:
+                partial_charges = electrostatics_handler.charges
 
         for top_key, pot_key in vdw_handler.slot_map.items():
             # TODO: Actually process virtual site vdW parameters here
@@ -476,8 +504,11 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 continue
             atom_idx = top_key.atom_indices[0]
 
-            partial_charge = partial_charges[top_key]
-            # partial_charge = partial_charge.m_as(off_unit.elementary_charge)
+            if electrostatics_handler is not None:
+                partial_charge = partial_charges[top_key].m_as(off_unit.e)
+            else:
+                partial_charge = 0.0
+
             vdw_potential = vdw_handler.potentials[pot_key]
             # these are floats, implicitly angstrom and kcal/mol
             sigma, epsilon = _lj_params_from_potential(vdw_potential)
@@ -487,7 +518,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             if combine_nonbonded_forces:
                 non_bonded_force.setParticleParameters(
                     atom_idx,
-                    partial_charge.m_as(off_unit.e),
+                    partial_charge,
                     sigma,
                     epsilon,
                 )
@@ -556,7 +587,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
     if combine_nonbonded_forces:
         non_bonded_force.createExceptionsFromBonds(
             bonds=bonds,
-            coulomb14Scale=electrostatics_handler.scale_14,
+            coulomb14Scale=electrostatics_handler.scale_14
+            if electrostatics_handler
+            else 1.0,
             lj14Scale=vdw_handler.scale_14,
         )
     else:
