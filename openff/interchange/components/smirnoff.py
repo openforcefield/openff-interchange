@@ -129,6 +129,8 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
         """Verify that a parameter handler is in an allowed list of handlers."""
         for parameter in parameter_handler.parameters:
             for parameter_attribute in parameter._get_defined_parameter_attributes():
+                if parameter_attribute == "parent_id":
+                    continue
                 if parameter_attribute not in cls.supported_parameters():
                     raise SMIRNOFFParameterAttributeNotImplementedError(
                         parameter_attribute,
