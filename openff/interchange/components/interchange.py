@@ -319,7 +319,24 @@ class Interchange(DefaultModel):
             #       move back to the constraint handler dealing with the logic (and
             #       depending on the bond handler)
             if potential_handler_type == SMIRNOFFBondHandler:
-                SMIRNOFFBondHandler.check_supported_parameters(force_field["Bonds"])
+                parameter_handler = force_field["Bonds"]
+                if str(parameter_handler.version) == "0.3":
+                    from openff.interchange.components.smirnoff import (
+                        _upconvert_bondhandler,
+                    )
+
+                    warnings.warn(
+                        "Automatically up-converting BondHandler from version 0.3 to 0.4. Consider manually upgrading "
+                        "this BondHandler (or <Bonds> section in an OFFXML file) to 0.4 or newer. For more details, "
+                        "see https://openforcefield.github.io/standards/standards/smirnoff/#bonds."
+                    )
+
+                    _upconvert_bondhandler(parameter_handler)
+                    assert str(parameter_handler.version) == "0.4"
+                    assert parameter_handler.potential != "harmonic"
+
+                SMIRNOFFBondHandler.check_supported_parameters(parameter_handler)
+
                 bond_handler = SMIRNOFFBondHandler._from_toolkit(
                     parameter_handler=force_field["Bonds"],
                     topology=sys_out.topology,

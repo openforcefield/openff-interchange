@@ -196,7 +196,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
     type: Literal["Bonds"] = "Bonds"
     expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
-    fractional_bond_order_method: Literal["AM1-Wiberg", "None"] = "AM1-Wiberg"
+    fractional_bond_order_method: Literal["AM1-Wiberg", "None", "none"] = "AM1-Wiberg"
     fractional_bond_order_interpolation: Literal["linear"] = "linear"
 
     @classmethod
@@ -1050,7 +1050,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         Create a SMIRNOFFElectrostaticsHandler from toolkit data.
 
         """
-        from packaging import version
+        from packaging.version import Version
 
         if isinstance(parameter_handler, list):
             parameter_handlers = parameter_handler
@@ -1059,7 +1059,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
         for handler in parameter_handlers:
             if isinstance(handler, ElectrostaticsHandler):
-                if version.Version(str(handler.version)) < version.Version("0.4"):
+                if Version(str(handler.version)) < Version("0.4"):
                     raise SMIRNOFFVersionNotSupportedError(
                         "Electrostatics section must be up-converted to 0.4 or newer. Found version "
                         f"{handler.version}."
@@ -1775,3 +1775,15 @@ SMIRNOFF_POTENTIAL_HANDLERS = [
     SMIRNOFFElectrostaticsHandler,
     SMIRNOFFVirtualSiteHandler,
 ]
+
+
+def _upconvert_bondhandler(bond_handler: BondHandler):
+    """Given a BondHandler with version 0.3, up-convert to 0.4."""
+    from packaging.version import Version
+
+    assert bond_handler.version == Version(
+        "0.3"
+    ), "This up-converter only works with version 0.3."
+
+    bond_handler.version = Version("0.4")
+    bond_handler.potential = "(k/2)*(r-length)^2"
