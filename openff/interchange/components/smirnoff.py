@@ -1283,18 +1283,13 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         if isinstance(parameter_handler, ChargeIncrementModelHandler):
             partial_charge_method = parameter_handler.partial_charge_method
         elif isinstance(parameter_handler, ToolkitAM1BCCHandler):
-            # TODO: There needs to be a cleaner way of doing this check, since it's not
-            #       exposed as an attribute of ToolkitAM1BCCHandler and the check that the
-            #       toolkit does is internal to that handler. Implementation at
-            #       https://github.com/openforcefield/openff-toolkit/blob/0c42148bcbd984af50236696ad281c98cf6d8a0a/openff/toolkit/typing/engines/smirnoff/parameters.py#L4198-L4210
-            try:
-                from openeye import oechem
+            from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
-                if oechem.OEChemIsLicensed():
-                    partial_charge_method = "am1bccelf10"
-                else:
-                    partial_charge_method = "am1bcc"
-            except ImportError:
+            # The implementation of _toolkit_registry_manager should result in this `GLOBAL_TOOLKIT_REGISTRY`
+            # including only what it is passed, even if it's not what one would expect at import time
+            if "OpenEye" in GLOBAL_TOOLKIT_REGISTRY.__repr__():
+                partial_charge_method = "am1bccelf10"
+            else:
                 partial_charge_method = "am1bcc"
         else:
             raise InvalidParameterHandlerError(
