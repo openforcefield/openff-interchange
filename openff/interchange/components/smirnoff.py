@@ -1531,6 +1531,20 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
                         self.slot_map[topology_key] = potential_key
 
+        # TODO: Better data structures in Topology.identical_molecule_groups will make this
+        #       cleaner and possibly more performant
+        for molecule in topology.molecules:
+            molecule_charges = list()
+            for atom in molecule.atoms:
+                atom_index = topology.atom_index(atom)
+                charge_key = TopologyKey(
+                    atom_indices=(atom_index,), mult=None, bond_order=None
+                )
+                molecule_charges.append(self.charges[charge_key].m)
+            molecule.partial_charges = unit.Quantity(
+                molecule_charges, unit.elementary_charge
+            )
+
     def store_potentials(
         self,
         parameter_handler: Union[

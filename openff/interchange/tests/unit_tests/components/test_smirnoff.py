@@ -552,6 +552,27 @@ class TestChargeFromMolecules(_BaseTest):
 
         assert np.allclose(found_charges_uses, molecule.partial_charges.m)
 
+    def test_charges_on_molecules_if_return_topology(self, sage):
+        ethanol = Molecule.from_smiles("CCO")
+        water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+        ethanol_charges = np.linspace(-1, 1, 9) * 0.4
+        water_charges = np.linspace(-1, 1, 3)
+
+        ethanol.partial_charges = unit.Quantity(ethanol_charges, unit.elementary_charge)
+        water.partial_charges = unit.Quantity(water_charges, unit.elementary_charge)
+
+        out = Interchange.from_smirnoff(
+            sage,
+            [ethanol],
+            charge_from_molecules=[ethanol, water],
+        )
+
+        for molecule in out.topology.molecules:
+            if "C" in molecule.to_smiles():
+                assert np.allclose(molecule.partial_charges.m, ethanol_charges)
+            else:
+                assert np.allclose(molecule.partial_charges.m, water_charges)
+
 
 class TestPartialBondOrdersFromMolecules(_BaseTest):
     from openff.toolkit.tests.create_molecules import (
