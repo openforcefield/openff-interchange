@@ -1544,8 +1544,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 molecule_charges.append(self.charges[charge_key].m)
 
             charge_sum = sum(molecule_charges)
+            formal_sum = molecule.total_charge.m
 
-            if abs(charge_sum) > 0.01:
+            if abs(charge_sum - formal_sum) > 0.01:
                 raise NonIntegralMoleculeChargeException(
                     f"Molecule {molecule.to_smiles(explicit_hydrogens=False)} has "
                     f"a net charge of {charge_sum}"
