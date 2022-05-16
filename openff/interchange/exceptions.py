@@ -250,3 +250,9 @@ class MissingEnergyError(BaseException):
     """
     Exception for when one report has a value for an energy group but the other does not.
     """
+
+
+class NonintegralMoleculeChargeException(BaseException):
+    """
+    Exception raised when the partial charges on a molecule do not sum up to its formal charge.
+    """

@@ -51,6 +51,7 @@ from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     MissingParametersError,
+    NonintegralMoleculeChargeException,
     SMIRNOFFParameterAttributeNotImplementedError,
     SMIRNOFFVersionNotSupportedError,
 )
@@ -1541,6 +1542,15 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                     atom_indices=(atom_index,), mult=None, bond_order=None
                 )
                 molecule_charges.append(self.charges[charge_key].m)
+
+            charge_sum = sum(molecule_charges)
+
+            if abs(charge_sum) > 1e-6:
+                raise NonintegralMoleculeChargeException(
+                    f"Molecule {molecule.to_smiles(explicit_hydrogens=False)} has "
+                    f"a net charge of {charge_sum}"
+                )
+
             molecule.partial_charges = unit.Quantity(
                 molecule_charges, unit.elementary_charge
             )
@@ -1651,7 +1661,6 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
             self.potentials = dict()
         for virtual_site_key, potential_key in self.slot_map.items():
             # TODO: This logic assumes no spaces in the SMIRKS pattern, name or `match` attribute
-            # import ipdb; ipdb.set_trace()
             smirks, _, _ = potential_key.id.split(" ")
             parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
 
