@@ -1377,7 +1377,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 matched_atom_indices = {
                     index for key in slot_matches for index in key.atom_indices
                 }
-                matched_atom_indices.intersection_update(
+                matched_atom_indices.update(
                     {index for key in am1_matches for index in key.atom_indices}
                 )
 
@@ -1409,7 +1409,8 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             raise RuntimeError(
                 f"{unique_molecule.to_smiles(explicit_hydrogens=False)} could "
-                f"not be fully assigned charges."
+                "not be fully assigned charges. Charges were assigned to atoms "
+                f"{found_matches} but the molecule contains {expected_matches}."
             )
 
         return matches, potentials

@@ -1025,6 +1025,27 @@ def _get_interpolated_bond_k(bond_handler) -> float:
     return bond_handler.potentials[potential_key].parameters["k"].m
 
 
+class TestSMIRNOFFChargeIncrements(_BaseTest):
+    def test_no_charge_increments_applied(self, sage):
+        molecule = Molecule.from_smiles("OCCCCCCO")
+        molecule.assign_partial_charges(partial_charge_method="gasteiger")
+        gastiger_charges = molecule.partial_charges.m
+
+        sage.deregister_parameter_handler("ToolkitAM1BCC")
+        no_increments = ChargeIncrementModelHandler(
+            version=0.3, partial_charge_method="gasteiger"
+        )
+        sage.register_parameter_handler(no_increments)
+
+        assert len(sage["ChargeIncrementModel"].parameters) == 0
+
+        out = Interchange.from_smirnoff(sage, [molecule])
+        assert np.allclose(
+            np.asarray([v.m for v in out["Electrostatics"].charges.values()]),
+            gastiger_charges,
+        )
+
+
 class TestSMIRNOFFVirtualSites(_BaseTest):
     from openff.toolkit.tests.mocking import VirtualSiteMocking
     from openmm import unit as openmm_unit
