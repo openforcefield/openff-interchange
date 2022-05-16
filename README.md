@@ -1,7 +1,7 @@
 OpenFF Interchange
 ==================
 [//]: # (Badges)
-[![CI Status](https://github.com/openforcefield/openff-interchange/workflows/ci/badge.svg)](https://github.com/openforcefield/openff-interchange/actions?query=branch%3Amain+workflow%3Aci)
+[![CI Status](https://github.com/openforcefield/openff-interchange/workflows/full_tests/badge.svg)](https://github.com/openforcefield/openff-interchange/actions?query=branch%3Amain+workflow%3Afull_tests)
 [![Documentation Status](https://readthedocs.org/projects/openff-interchange/badge/?version=latest)](https://openff-interchange.readthedocs.io/en/latest/?badge=latest)
 [![Codecov coverage](https://img.shields.io/codecov/c/github/openforcefield/openff-interchange.svg?logo=Codecov&logoColor=white)](https://codecov.io/gh/openforcefield/openff-interchange)
 [![LGTM analysis](https://img.shields.io/lgtm/grade/python/g/openforcefield/openff-interchange.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/openforcefield/openff-interchange/context:python)
@@ -50,6 +50,9 @@ omm_sys = out.to_openmm(combine_nonbonded_forces=True)
 # or write to GROMACS files
 out.to_gro("out.gro")
 out.to_top("out.top")
+
+# or roundtrip through JSON or other common serialization formats
+roundtripped = Interchange.parse_raw(out.json())
 ```
 
 Future releases will include improved support for other file formats such as those used by AMBER, CHARMM, and LAMMPS.

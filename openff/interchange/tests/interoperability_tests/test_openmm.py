@@ -17,61 +17,45 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
-from openff.interchange.interop.openmm import (
-    from_openmm,
-    get_partial_charges_from_openmm_system,
-)
+from openff.interchange.interop.openmm import from_openmm
 from openff.interchange.tests import _BaseTest
 
-nonbonded_resolution_matrix = [
+# WISHLIST: Add tests for reaction-field if implemented
+
+nonbonded_methods = [
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic": "PME",
         "periodic": True,
         "result": openmm.NonbondedForce.PME,
     },
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic": "PME",
         "periodic": False,
-        "result": UnsupportedCutoffMethodError,
+        "result": openmm.NonbondedForce.NoCutoff,
     },
     {
         "vdw_method": "PME",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic": "PME",
         "periodic": True,
         "result": openmm.NonbondedForce.LJPME,
     },
     {
         "vdw_method": "PME",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic": "PME",
         "periodic": False,
         "result": UnsupportedCutoffMethodError,
     },
 ]
-# Revisit after OpenFF Toolkit >0.9.2 release
-"""
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_method": "reaction-field",
-        "periodic": True,
-        "result": UnimplementedCutoffMethodError,
-    },
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_method": "reaction-field",
-        "periodic": False,
-        "result": UnimplementedCutoffMethodError,
-    },
-"""
 
 
 class TestOpenMM(_BaseTest):
-    @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
+    @pytest.mark.parametrize("inputs", nonbonded_methods)
     def test_openmm_nonbonded_methods(self, inputs):
         """See test_nonbonded_method_resolution in openff/toolkit/tests/test_forcefield.py"""
         vdw_method = inputs["vdw_method"]
-        electrostatics_method = inputs["electrostatics_method"]
+        electrostatics_method = inputs["electrostatics_periodic"]
         periodic = inputs["periodic"]
         result = inputs["result"]
 
@@ -84,17 +68,24 @@ class TestOpenMM(_BaseTest):
         if not periodic:
             topology.box_vectors = None
 
+        forcefield.get_parameter_handler("vdW", {}).method = vdw_method
+        forcefield.get_parameter_handler(
+            "Electrostatics", {}
+        ).periodic_potential = electrostatics_method
+        interchange = Interchange.from_smirnoff(
+            force_field=forcefield, topology=topology
+        )
         if type(result) == int:
             nonbonded_method = result
             # The method is validated and may raise an exception if it's not supported.
             forcefield.get_parameter_handler("vdW", {}).method = vdw_method
             forcefield.get_parameter_handler(
                 "Electrostatics", {}
-            ).method = electrostatics_method
-            openff_interchange = Interchange.from_smirnoff(
+            ).periodic_potential = electrostatics_method
+            interchange = Interchange.from_smirnoff(
                 force_field=forcefield, topology=topology
             )
-            openmm_system = openff_interchange.to_openmm(combine_nonbonded_forces=True)
+            openmm_system = interchange.to_openmm(combine_nonbonded_forces=True)
             for force in openmm_system.getForces():
                 if isinstance(force, openmm.NonbondedForce):
                     assert force.getNonbondedMethod() == nonbonded_method
@@ -103,15 +94,8 @@ class TestOpenMM(_BaseTest):
                 raise Exception
         elif issubclass(result, (BaseException, Exception)):
             exception = result
-            forcefield.get_parameter_handler("vdW", {}).method = vdw_method
-            forcefield.get_parameter_handler(
-                "Electrostatics", {}
-            ).method = electrostatics_method
-            openff_interchange = Interchange.from_smirnoff(
-                force_field=forcefield, topology=topology
-            )
             with pytest.raises(exception):
-                openff_interchange.to_openmm(combine_nonbonded_forces=True)
+                interchange.to_openmm(combine_nonbonded_forces=True)
         else:
             raise Exception("uh oh")
 
@@ -143,7 +127,7 @@ class TestOpenMM(_BaseTest):
             "C1COC(=O)O1",  # This adds an improper, i2
         ],
     )
-    def test_from_openmm_single_mols(parsley, mol, n_mols):
+    def test_from_openmm_single_mols(sage, mol, n_mols):
         """
         Test that ForceField.create_openmm_system and Interchange.to_openmm produce
         objects with similar energies
@@ -165,10 +149,10 @@ class TestOpenMM(_BaseTest):
                 [mol.conformers[0], mol.conformers[0] + 3 * mol.conformers[0].units]
             )
 
-        toolkit_system = parsley.create_openmm_system(top)
+        toolkit_system = sage.create_openmm_system(top)
 
         native_system = Interchange.from_smirnoff(
-            force_field=parsley, topology=top
+            force_field=sage, topology=top
         ).to_openmm()
 
         toolkit_energy = _get_openmm_energies(
@@ -187,13 +171,13 @@ class TestOpenMM(_BaseTest):
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
     @pytest.mark.slow()
     @pytest.mark.parametrize("mol_smi", ["C", "CC", "CCO"])
-    def test_openmm_roundtrip(self, parsley, mol_smi):
+    def test_openmm_roundtrip(self, sage, mol_smi):
         mol = Molecule.from_smiles(mol_smi)
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
         omm_top = top.to_openmm()
 
-        off_sys = Interchange.from_smirnoff(parsley, top)
+        off_sys = Interchange.from_smirnoff(sage, top)
 
         off_sys.box = [4, 4, 4]
         off_sys.positions = mol.conformers[0].value_in_unit(openmm_unit.nanometer)
@@ -214,13 +198,13 @@ class TestOpenMM(_BaseTest):
 
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
     @pytest.mark.slow()
-    def test_combine_nonbonded_forces(self, parsley):
+    def test_combine_nonbonded_forces(self, sage):
 
         mol = Molecule.from_smiles("ClC#CCl")
         mol.name = "HPER"
         mol.generate_conformers(n_conformers=1)
 
-        out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
+        out = Interchange.from_smirnoff(force_field=sage, topology=mol.to_topology())
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
 
@@ -240,15 +224,6 @@ class TestOpenMM(_BaseTest):
         assert (
             separate["vdW"] + separate["Electrostatics"] - combined["Nonbonded"]
         ).m < 0.001
-
-    def test_openmm_partial_charges(self, argon_ff, argon_top):
-        omm_system = argon_ff.create_openmm_system(argon_top)
-        partial_charges = get_partial_charges_from_openmm_system(omm_system)
-
-        # assert isinstance(partial_charges, unit.Quantity)
-        # assert partial_charges.units == unit.elementary_charge
-        assert isinstance(partial_charges, list)
-        assert np.allclose(partial_charges, np.zeros(4))  # .magnitude
 
     def test_openmm_no_angle_force_if_constrained(self):
         # Sage includes angle parameters for water and also TIP3P constraints
@@ -270,10 +245,60 @@ class TestOpenMM(_BaseTest):
             raise Exception("No HarmonicAngleForce found")
 
 
+class TestOpenMMSwitchingFunction(_BaseTest):
+    def test_switching_function_applied(self, sage, basic_top):
+        out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
+            combine_nonbonded_forces=True
+        )
+
+        found_force = False
+        for force in out.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                found_force = True
+                assert force.getUseSwitchingFunction()
+                assert force.getSwitchingDistance() == 8 * openmm_unit.angstrom
+
+        assert found_force, "NonbondedForce not found in system"
+
+    def test_switching_function_not_applied(self, sage, basic_top):
+        sage["vdW"].switch_width = 0.0 * unit.angstrom
+
+        out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
+            combine_nonbonded_forces=True
+        )
+
+        found_force = False
+        for force in out.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                found_force = True
+                assert not force.getUseSwitchingFunction()
+                assert force.getSwitchingDistance() == -1 * openmm_unit.nanometer
+
+        assert found_force, "NonbondedForce not found in system"
+
+    def test_switching_function_nonstandard(self, sage, basic_top):
+        sage["vdW"].switch_width = 0.12345 * unit.angstrom
+
+        out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
+            combine_nonbonded_forces=True
+        )
+
+        found_force = False
+        for force in out.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                found_force = True
+                assert force.getUseSwitchingFunction()
+                assert (
+                    force.getSwitchingDistance() - (9 - 0.12345) * openmm_unit.angstrom
+                ) < 1e-10 * openmm_unit.angstrom
+
+        assert found_force, "NonbondedForce not found in system"
+
+
 @pytest.mark.slow()
 class TestOpenMMVirtualSites(_BaseTest):
     @pytest.fixture()
-    def parsley_with_sigma_hole(self, parsley):
+    def sage_with_sigma_hole(self, sage):
         """Fixture that loads an SMIRNOFF XML for argon"""
         # TODO: Move this into BaseTest to that GROMACS and others can access it
         virtual_site_handler = VirtualSiteHandler(version=0.3)
@@ -289,12 +314,12 @@ class TestOpenMMVirtualSites(_BaseTest):
         )
 
         virtual_site_handler.add_parameter(parameter=sigma_type)
-        parsley.register_parameter_handler(virtual_site_handler)
+        sage.register_parameter_handler(virtual_site_handler)
 
-        return parsley
+        return sage
 
     @pytest.fixture()
-    def parsley_with_monovalent_lone_pair(self, parsley):
+    def sage_with_monovalent_lone_pair(self, sage):
         """Fixture that loads an SMIRNOFF XML for argon"""
         virtual_site_handler = VirtualSiteHandler(version=0.3)
 
@@ -312,31 +337,31 @@ class TestOpenMMVirtualSites(_BaseTest):
         )
 
         virtual_site_handler.add_parameter(parameter=carbonyl_type)
-        parsley.register_parameter_handler(virtual_site_handler)
+        sage.register_parameter_handler(virtual_site_handler)
 
-        return parsley
+        return sage
 
     @pytest.mark.skip(reason="virtual sites in development")
-    def test_sigma_hole_example(self, parsley_with_sigma_hole):
+    def test_sigma_hole_example(self, sage_with_sigma_hole):
         """Test that a single-molecule sigma hole example runs"""
         mol = Molecule.from_smiles("CCl")
         mol.generate_conformers(n_conformers=1)
 
         out = Interchange.from_smirnoff(
-            force_field=parsley_with_sigma_hole, topology=mol.to_topology()
+            force_field=sage_with_sigma_hole, topology=mol.to_topology()
         )
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
         out.handlers["VirtualSites"] = SMIRNOFFVirtualSiteHandler._from_toolkit(
-            parameter_handler=parsley_with_sigma_hole["VirtualSites"],
+            parameter_handler=sage_with_sigma_hole["VirtualSites"],
             topology=mol.to_topology(),
         )
         out["vdW"]._from_toolkit_virtual_sites(
-            parameter_handler=parsley_with_sigma_hole["VirtualSites"],
+            parameter_handler=sage_with_sigma_hole["VirtualSites"],
             topology=mol.to_topology(),
         )
         out["Electrostatics"]._from_toolkit_virtual_sites(
-            parameter_handler=parsley_with_sigma_hole["VirtualSites"],
+            parameter_handler=sage_with_sigma_hole["VirtualSites"],
             topology=mol.to_topology(),
         )
 
@@ -345,7 +370,7 @@ class TestOpenMMVirtualSites(_BaseTest):
 
         compare_system_parameters(
             out.to_openmm(combine_nonbonded_forces=True),
-            parsley_with_sigma_hole.create_openmm_system(mol.to_topology()),
+            sage_with_sigma_hole.create_openmm_system(mol.to_topology()),
         )
         """
         import numpy as np
@@ -358,26 +383,26 @@ class TestOpenMMVirtualSites(_BaseTest):
         """
 
     @pytest.mark.skip(reason="virtual sites in development")
-    def test_carbonyl_example(self, parsley_with_monovalent_lone_pair):
+    def test_carbonyl_example(self, sage_with_monovalent_lone_pair):
         """Test that a single-molecule DivalentLonePair example runs"""
         mol = Molecule.from_smiles("CC=O")
         mol.generate_conformers(n_conformers=1)
 
         out = Interchange.from_smirnoff(
-            force_field=parsley_with_monovalent_lone_pair, topology=mol.to_topology()
+            force_field=sage_with_monovalent_lone_pair, topology=mol.to_topology()
         )
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
         out.handlers["VirtualSites"] = SMIRNOFFVirtualSiteHandler._from_toolkit(
-            parameter_handler=parsley_with_monovalent_lone_pair["VirtualSites"],
+            parameter_handler=sage_with_monovalent_lone_pair["VirtualSites"],
             topology=mol.to_topology(),
         )
         out["vdW"]._from_toolkit_virtual_sites(
-            parameter_handler=parsley_with_monovalent_lone_pair["VirtualSites"],
+            parameter_handler=sage_with_monovalent_lone_pair["VirtualSites"],
             topology=mol.to_topology(),
         )
         out["Electrostatics"]._from_toolkit_virtual_sites(
-            parameter_handler=parsley_with_monovalent_lone_pair["VirtualSites"],
+            parameter_handler=sage_with_monovalent_lone_pair["VirtualSites"],
             topology=mol.to_topology(),
         )
 
@@ -386,22 +411,22 @@ class TestOpenMMVirtualSites(_BaseTest):
 
         compare_system_parameters(
             out.to_openmm(combine_nonbonded_forces=True),
-            parsley_with_monovalent_lone_pair.create_openmm_system(mol.to_topology()),
+            sage_with_monovalent_lone_pair.create_openmm_system(mol.to_topology()),
         )
 
 
 class TestOpenMMToPDB(_BaseTest):
-    def test_to_pdb(self, parsley):
+    def test_to_pdb(self, sage):
         import mdtraj as md
 
         molecule = Molecule.from_smiles("O")
-        molecule.generate_conformers(n_conformers=1)
 
-        out = Interchange.from_smirnoff(parsley, molecule.to_topology())
+        out = Interchange.from_smirnoff(sage, molecule.to_topology())
 
         with pytest.raises(MissingPositionsError):
             out.to_pdb("file_should_not_exist.pdb")
 
+        molecule.generate_conformers(n_conformers=1)
         out.positions = molecule.conformers[0]
 
         out.to_pdb("out.pdb")

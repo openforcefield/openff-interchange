@@ -5,21 +5,19 @@ from openff.toolkit.topology import Molecule
 from openff.units import unit
 
 from openff.interchange import Interchange
+from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_amber_energies, get_openmm_energies
-from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.tests import _BaseTest
-
-kj_mol = unit.kilojoule / unit.mol
 
 
 class TestAmber(_BaseTest):
     @pytest.mark.slow()
-    def test_inpcrd(self, parsley):
+    def test_inpcrd(self, sage):
         mol = Molecule.from_smiles(10 * "C")
         mol.name = "HPER"
         mol.generate_conformers(n_conformers=1)
 
-        out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
+        out = Interchange.from_smirnoff(force_field=sage, topology=mol.to_topology())
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
         out.positions = unit.nanometer * np.round(out.positions.m_as(unit.nanometer), 5)
@@ -31,13 +29,6 @@ class TestAmber(_BaseTest):
         coords2 = pmd.load_file("parmed.inpcrd").coordinates
 
         np.testing.assert_equal(coords1, coords2)
-
-    def test_nonperiodic_pme(self, ethanol_top, sage):
-        interchange = Interchange.from_smirnoff(sage, ethanol_top)
-        interchange.box = None
-
-        with pytest.raises(UnsupportedExportError, match="non-p"):
-            interchange.to_prmtop("foo.prmtop")
 
     @pytest.mark.slow()
     @pytest.mark.parametrize(
@@ -51,16 +42,20 @@ class TestAmber(_BaseTest):
             "C1COC(=O)O1",  # This adds an improper, i2
         ],
     )
-    @pytest.mark.parametrize("constrained", [True, False])
-    def test_amber_energy(self, sage, sage_unconstrained, smiles, constrained):
-        """Basic test to see if the amber energy driver is functional"""
+    def test_amber_energy(self, sage_unconstrained, smiles):
+        """
+        Basic test to see if the amber energy driver is functional.
+
+        Note this test can only use the unconstrained version of Sage because sander applies SHAKE
+        constraints in the single-point energy calculation, i.e. uses geometries with constraints
+        applied, NOT what is in the coordinate file. See issue
+        https://github.com/openforcefield/openff-interchange/issues/323
+        """
         mol = Molecule.from_smiles(smiles)
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
 
-        force_field = sage if constrained else sage_unconstrained
-
-        off_sys = Interchange.from_smirnoff(force_field, top)
+        off_sys = Interchange.from_smirnoff(sage_unconstrained, top)
 
         off_sys.box = [4, 4, 4]
         off_sys.positions = mol.conformers[0]
@@ -68,18 +63,10 @@ class TestAmber(_BaseTest):
         omm_energies = get_openmm_energies(off_sys)
         amb_energies = get_amber_energies(off_sys)
 
-        # MT: I _think_ some of these errors are the result of Amber reporting energies
-        # to 0.001 kcal/mol, which introduces error on the order of ~0.002 kJ/mol
-        # TODO: Figure out why bond and angle energies are reported differently
-        #       in constrained systems
-        #       https://github.com/openforcefield/openff-interchange/issues/323
         omm_energies.compare(
             amb_energies,
             custom_tolerances={
-                "Bond": (0.1 if constrained else 0.001) * kj_mol,
-                "Angle": (0.05 if constrained else 0.001) * kj_mol,
-                "Torsion": (0.005 if constrained else 0.001) * kj_mol,
-                "vdW": 0.02 * kj_mol,
-                "Electrostatics": (0.5 if constrained else 0.05) * kj_mol,
+                "vdW": 0.018 * kj_mol,
+                "Electrostatics": 0.01 * kj_mol,
             },
         )

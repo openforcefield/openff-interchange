@@ -8,6 +8,7 @@ from openff.utilities.utilities import has_package, requires_package
 from parmed import periodic_table
 
 from openff.interchange.components.potentials import Potential, PotentialHandler
+from openff.interchange.constants import _PME
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.types import FloatQuantity
 
@@ -88,7 +89,8 @@ class FoyerVDWHandler(PotentialHandler):
     scale_14: float = 0.5
     scale_15: float = 1.0
     method: str = "cutoff"
-    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
+    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom
+    switch_width: FloatQuantity["angstrom"] = 0.0 * unit.angstrom
 
     def store_matches(
         self,
@@ -125,13 +127,13 @@ class FoyerElectrostaticsHandler(PotentialHandler):
     """Handler storing electrostatics potentials as produced by a Foyer force field."""
 
     type: str = "Electrostatics"
-    method: str = "pme"
+    periodic_potential: str = _PME
     expression: str = "coul"
     charges: Dict[TopologyKey, float] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.5
     scale_15: float = 1.0
-    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom  # type: ignore
+    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom
 
     @property
     def charges_with_virtual_sites(self):

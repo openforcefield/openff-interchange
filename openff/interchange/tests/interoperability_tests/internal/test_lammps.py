@@ -5,12 +5,12 @@ from openff.units import unit
 
 from openff.interchange import Interchange
 from openff.interchange.drivers import get_lammps_energies, get_openmm_energies
-from openff.interchange.drivers.lammps import _write_lammps_input
 from openff.interchange.tests import _BaseTest, needs_lmp
 
 
 @needs_lmp
 class TestLammps(_BaseTest):
+    @pytest.mark.skip("LAMMPS export experimental")
     @pytest.mark.slow()
     @pytest.mark.parametrize("n_mols", [1, 2])
     @pytest.mark.parametrize(
@@ -32,7 +32,7 @@ class TestLammps(_BaseTest):
             ),  # This adds an improper, i2
         ],
     )
-    def test_to_lammps_single_mols(self, mol, parsley_unconstrained, n_mols):
+    def test_to_lammps_single_mols(self, mol, sage_unconstrained, n_mols):
         """
         Test that Interchange.to_openmm Interchange.to_lammps report sufficiently similar energies.
 
@@ -53,7 +53,7 @@ class TestLammps(_BaseTest):
                 [mol.conformers[0], mol.conformers[0] + 3 * unit.nanometer]
             )
 
-        openff_sys = Interchange.from_smirnoff(parsley_unconstrained, top)
+        openff_sys = Interchange.from_smirnoff(sage_unconstrained, top)
         openff_sys.positions = positions
         openff_sys.box = top.box_vectors
 
@@ -67,10 +67,7 @@ class TestLammps(_BaseTest):
             round_positions=3,
         )
 
-        _write_lammps_input(
-            off_sys=openff_sys,
-            file_name="tmp.in",
-        )
+        openff_sys.mdconfig.write_lammps_input("tmp.in")
 
         lmp_energies.compare(
             reference,

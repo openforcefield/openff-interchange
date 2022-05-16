@@ -81,16 +81,25 @@ class TopologyKey(DefaultModel):
 class VirtualSiteKey(DefaultModel):
     """A unique identifier of a virtual site in the scope of a chemical topology."""
 
-    atom_indices: Tuple[int, ...] = Field(
-        tuple(), description="The indices of the atoms that anchor this virtual site"
+    orientation_atom_indices: Tuple[int, ...] = Field(
+        description="The indices of the 'orientation atoms' which are used to define the position of this "
+        "virtual site. The first atom is the 'parent atom' which defines which atom the virtual site is 'attached' to."
     )
-    type: str = Field(description="The type of this virtual site")
+    type: str = Field(description="The type of this virtual site parameter.")
+    name: str = Field(description="The name of this virtual site parameter.")
     match: Literal["once", "all_permutations"] = Field(
         description="The `match` attribute of the associated virtual site type"
     )
 
     def __hash__(self) -> int:
-        return hash((self.atom_indices, self.type, self.match))
+        return hash(
+            (
+                self.orientation_atom_indices,
+                self.name,
+                self.type,
+                self.match,
+            )
+        )
 
 
 class PotentialKey(DefaultModel):

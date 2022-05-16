@@ -18,14 +18,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ["3.8", "3.9", "3.10"]
+        os:
+          - macOS-latest
+          - ubuntu-latest
+        python-version:
+          - "3.8"
+          - "3.9"
+          - "3.10"
+        openeye:
+          - true
+          - false
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
-    - uses: actions/checkout@v2.4.0
+    - uses: actions/checkout@v3
 
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
@@ -54,6 +62,7 @@ jobs:
         conda list
 
     - name: License OpenEye
+      if: ${{ matrix.openeye == true }}
       run: |
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
@@ -64,23 +73,13 @@ jobs:
       run: |
         mypy --namespace-packages -p "openff.interchange"
 
-    - name: Run docexamples
-      run: |
-        # TODO: Add back /interchange.py when `TypedMolecule` is implemented
-        pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/tests --ignore=openff/interchange/components/interchange.py
-
     - name: Run all tests
       if: always()
       run: |
-        python -m pytest -r fE -nauto $COV openff/interchange/ -m "slow or not slow"
-
-    - name: Run example notebooks
-      if: always()
-      run: |
-        python -m pytest $COV examples/ --nbval-lax -p no:randomly --ignore=examples/packed_box.ipynb --ignore=examples/foyer-showcase/
+        python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
 
     - name: Codecov
-      uses: codecov/codecov-action@v2.1.0
+      uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
         fail_ci_if_error: false

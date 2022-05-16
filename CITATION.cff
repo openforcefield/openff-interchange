@@ -1,0 +1,35 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: OpenFF Interchannge
+message: 'If you use Interchange, please cite it as below.'
+type: software
+authors:
+  - given-names: Matthew
+    family-names: Thompson
+    orcid: 'https://orcid.org/0000-0002-1460-3983'
+  - given-names: Jeff
+    family-names: Wagner
+    orcid: 'https://orcid.org/0000-0001-6448-0873'
+  - given-names: "Justin B."
+    family-names: Gilmer
+    affiliation: "Vanderbilt University"
+    orcid: 'https://orcid.org/0000-0002-6915-5591'
+  - given-names: Umesh
+    family-names: Timalsina
+    affiliation: "Vanderbilt University"
+    orcid: 'https://orcid.org/0000-0002-5430-3993'
+  - given-names: "Co D."
+    family-names: Quach
+    affiliation: "Vanderbilt University"
+    orcid: 'https://orcid.org/0000-0002-1255-4161'
+  - given-names: Simon
+    family-names: Boothroyd
+    orcid: 'https://orcid.org/0000-0002-3456-1872'
+  - given-names: "Joshua A."
+    family-names: Mitchell
+    orcid: 'https://orcid.org/0000-0002-8246-5113'
+version: v0.1.4
+date-released: 2022-01-11
+url: "https://github.com/openforcefield/openff-interchange"

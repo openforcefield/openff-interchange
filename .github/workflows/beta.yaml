@@ -15,15 +15,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macOS-latest, ubuntu-latest]
-        python-version: ["3.8", "3.9", "3.10"]
+        os:
+          - macOS-latest
+          - ubuntu-latest
+        python-version:
+          - "3.8"
+          - "3.9"
+          - "3.10"
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
-    - uses: actions/checkout@v2.4.0
+    - uses: actions/checkout@v3
 
     - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
@@ -66,7 +71,7 @@ jobs:
         python -m pytest -v $COV examples/ --nbval-lax
 
     - name: Codecov
-      uses: codecov/codecov-action@v2.1.0
+      uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
         fail_ci_if_error: false
