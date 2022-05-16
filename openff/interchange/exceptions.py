@@ -252,7 +252,7 @@ class MissingEnergyError(BaseException):
     """
 
 
-class NonintegralMoleculeChargeException(BaseException):
+class NonIntegralMoleculeChargeException(BaseException):
     """
     Exception raised when the partial charges on a molecule do not sum up to its formal charge.
     """

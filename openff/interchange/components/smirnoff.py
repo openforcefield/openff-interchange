@@ -51,7 +51,7 @@ from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     MissingParametersError,
-    NonintegralMoleculeChargeException,
+    NonIntegralMoleculeChargeException,
     SMIRNOFFParameterAttributeNotImplementedError,
     SMIRNOFFVersionNotSupportedError,
 )
@@ -1545,8 +1545,8 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             charge_sum = sum(molecule_charges)
 
-            if abs(charge_sum) > 1e-6:
-                raise NonintegralMoleculeChargeException(
+            if abs(charge_sum) > 0.01:
+                raise NonIntegralMoleculeChargeException(
                     f"Molecule {molecule.to_smiles(explicit_hydrogens=False)} has "
                     f"a net charge of {charge_sum}"
                 )
