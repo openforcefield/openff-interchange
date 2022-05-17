@@ -525,7 +525,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             else:
                 vdw_force.setParticleParameters(atom_idx, [sigma, epsilon])
                 electrostatics_force.setParticleParameters(
-                    atom_idx, partial_charge.m_as(off_unit.e), 0.0, 0.0
+                    atom_idx, partial_charge, 0.0, 0.0
                 )
 
     elif "Buckingham-6" in openff_sys.handlers:

@@ -1066,6 +1066,32 @@ class TestSMIRNOFFChargeIncrements(_BaseTest):
             gastiger_charges,
         )
 
+    def test_overlapping_increments(self, sage):
+        """Test that separate charge increments can be properly applied to the same atom."""
+        molecule = Molecule.from_smiles("C")
+
+        sage = ForceField("openff-2.0.0.offxml")
+        sage.deregister_parameter_handler("ToolkitAM1BCC")
+        charge_handler = ChargeIncrementModelHandler(
+            version=0.3, partial_charge_method="formal_charge"
+        )
+        charge_handler.add_parameter(
+            {
+                "smirks": "[C:1][H:2]",
+                "charge_increment1": 0.111 * unit.elementary_charge,
+                "charge_increment2": -0.111 * unit.elementary_charge,
+            }
+        )
+        sage.register_parameter_handler(charge_handler)
+        assert 0.0 == pytest.approx(
+            sum(
+                v.m
+                for v in Interchange.from_smirnoff(sage, [molecule])[
+                    "Electrostatics"
+                ].charges.values()
+            )
+        )
+
 
 class TestSMIRNOFFVirtualSites(_BaseTest):
     from openff.toolkit.tests.mocking import VirtualSiteMocking

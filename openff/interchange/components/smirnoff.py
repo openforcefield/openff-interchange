@@ -1020,6 +1020,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                     charges[topology_key] = charge
                 elif parameter_key in ["charge", "charge_increment"]:
                     charge = parameter_value
+                    assert len(topology_key.atom_indices) == 1
                     charges[topology_key.atom_indices[0]] += charge  # type: ignore
                 else:
                     raise NotImplementedError()
@@ -1207,8 +1208,12 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         matches = {}
         potentials = {}
 
+        if len(atom_indices) > 2:
+            raise Exception
+
         for i, atom_index in enumerate(atom_indices):
-            topology_key = TopologyKey(atom_indices=(atom_index,))
+            other_index = [val for val in atom_indices if val is not atom_index][0]
+            topology_key = TopologyKey(atom_indices=(atom_index,), mult=other_index)
             potential_key = PotentialKey(
                 id=parameter.smirks, mult=i, associated_handler="ChargeIncrementModel"
             )
@@ -1266,7 +1271,10 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             else:
                 raise NotImplementedError()
 
-            matches.update(parameter_matches)
+            for topology_key, potential_key in parameter_matches.items():
+                assert topology_key not in matches
+                matches[topology_key] = potential_key
+            # matches.update(parameter_matches)
             potentials.update(parameter_potentials)
 
         return matches, potentials
@@ -1364,13 +1372,16 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
                 am1_matches = {
                     TopologyKey(
-                        atom_indices=topology_key.atom_indices, mult=0
+                        atom_indices=topology_key.atom_indices,
+                        mult=0 + topology_key.mult if topology_key.mult else 0,
                     ): potential_key
                     for topology_key, potential_key in am1_matches.items()
                 }
+
                 slot_matches = {
                     TopologyKey(
-                        atom_indices=topology_key.atom_indices, mult=1
+                        atom_indices=topology_key.atom_indices,
+                        mult=1000 + topology_key.mult,
                     ): potential_key
                     for topology_key, potential_key in slot_matches.items()
                 }
@@ -1535,13 +1546,13 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         # TODO: Better data structures in Topology.identical_molecule_groups will make this
         #       cleaner and possibly more performant
         for molecule in topology.molecules:
-            molecule_charges = list()
+            molecule_charges = [0.0] * molecule.n_atoms
             for atom in molecule.atoms:
                 atom_index = topology.atom_index(atom)
                 charge_key = TopologyKey(
                     atom_indices=(atom_index,), mult=None, bond_order=None
                 )
-                molecule_charges.append(self.charges[charge_key].m)
+                molecule_charges[atom_index] += self.charges[charge_key].m
 
             charge_sum = sum(molecule_charges)
             formal_sum = molecule.total_charge.m
