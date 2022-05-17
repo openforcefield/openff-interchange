@@ -78,6 +78,37 @@ class TopologyKey(DefaultModel):
         return hash((self.atom_indices, self.mult, self.bond_order))
 
 
+class LibraryChargeTopologyKey(DefaultModel):
+    """Subclass of `TopologyKey` for use with library charges only."""
+
+    # TODO: Eventually rename this for coherence with `TopologyKey`
+    this_atom_index: int
+
+    @property
+    def atom_indices(self) -> Tuple[int, ...]:
+        """Alias for `this_atom_index`."""
+        return (self.this_atom_index,)
+
+    def __hash__(self) -> int:
+        return hash((self.this_atom_index,))
+
+
+class ChargeIncrementTopologyKey(DefaultModel):
+    """Subclass of `TopologyKey` for use with charge increments only."""
+
+    # TODO: Eventually rename this for coherence with `TopologyKey`
+    this_atom_index: int
+    other_atom_indices: Tuple[int, ...]
+
+    @property
+    def atom_indices(self) -> Tuple[int, ...]:
+        """Alias for `this_atom_index`."""
+        return (self.this_atom_index,)
+
+    def __hash__(self) -> int:
+        return hash((self.this_atom_index, self.other_atom_indices))
+
+
 class VirtualSiteKey(DefaultModel):
     """A unique identifier of a virtual site in the scope of a chemical topology."""
 

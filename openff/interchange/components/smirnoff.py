@@ -1181,11 +1181,13 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         """
         Map a matched library charge parameter to a set of potentials.
         """
+        from openff.interchange.models import LibraryChargeTopologyKey
+
         matches = {}
         potentials = {}
 
         for i, (atom_index, charge) in enumerate(zip(atom_indices, parameter.charge)):
-            topology_key = TopologyKey(atom_indices=(atom_index,))
+            topology_key = LibraryChargeTopologyKey(this_atom_index=atom_index)
             potential_key = PotentialKey(
                 id=parameter.smirks, mult=i, associated_handler="LibraryCharges"
             )
@@ -1205,6 +1207,8 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         """
         Map a matched charge increment parameter to a set of potentials.
         """
+        from openff.interchange.models import ChargeIncrementTopologyKey
+
         matches = {}
         potentials = {}
 
@@ -1212,8 +1216,14 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             raise Exception
 
         for i, atom_index in enumerate(atom_indices):
-            other_index = [val for val in atom_indices if val is not atom_index][0]
-            topology_key = TopologyKey(atom_indices=(atom_index,), mult=other_index)
+            other_atom_indices = tuple(
+                val for val in atom_indices if val is not atom_index
+            )
+            topology_key = ChargeIncrementTopologyKey(
+                this_atom_index=atom_index,
+                other_atom_indices=other_atom_indices,
+            )
+            # TopologyKey(atom_indices=(atom_index,), mult=other_index)
             potential_key = PotentialKey(
                 id=parameter.smirks, mult=i, associated_handler="ChargeIncrementModel"
             )
@@ -1378,14 +1388,6 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                     for topology_key, potential_key in am1_matches.items()
                 }
 
-                slot_matches = {
-                    TopologyKey(
-                        atom_indices=topology_key.atom_indices,
-                        mult=1000 + topology_key.mult,
-                    ): potential_key
-                    for topology_key, potential_key in slot_matches.items()
-                }
-
                 matched_atom_indices = {
                     index for key in slot_matches for index in key.atom_indices
                 }
@@ -1428,7 +1430,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         return matches, potentials
 
     @classmethod
-    def _assign_charges_from_charge_from_molecules(
+    def _assign_charges_from_molecules(
         cls,
         topology: "Topology",
         unique_molecule: Molecule,
@@ -1491,7 +1493,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             unique_molecule = topology.molecule(unique_molecule_index)
 
-            flag, matches, potentials = self._assign_charges_from_charge_from_molecules(
+            flag, matches, potentials = self._assign_charges_from_molecules(
                 topology,
                 unique_molecule,
                 charge_from_molecules,
@@ -1506,18 +1508,12 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                     unique_molecule,
                 )
 
-            match_mults = defaultdict(set)
-
-            for top_key in matches:
-                match_mults[top_key.atom_indices].add(top_key.mult)
-
             self.potentials.update(potentials)
 
             for unique_molecule_particle in unique_molecule.particles:
                 unique_molecule_particle_index = unique_molecule.particle_index(
                     unique_molecule_particle
                 )
-                # particle_charge = unique_molecule.partial_charges[unique_molecule_particle_index]
 
                 for duplicate_molecule_index, atom_map in group:
                     duplicate_molecule = topology.molecule(duplicate_molecule_index)
@@ -1531,33 +1527,32 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                         duplicate_molecule_particle
                     )
 
-                    for mult in match_mults[(unique_molecule_particle_index,)]:
-                        topology_key = TopologyKey(
-                            atom_indices=(topology_particle_index,),
-                            mult=mult,
-                        )
-                        reference_key = TopologyKey(
-                            atom_indices=(unique_molecule_particle_index,), mult=mult
-                        )
-                        potential_key = matches[reference_key]
-
-                        self.slot_map[topology_key] = potential_key
+                    for key in _slow_key_lookup_by_atom_index(
+                        matches,
+                        topology_particle_index,
+                    ):
+                        self.slot_map[key] = matches[key]
 
         # TODO: Better data structures in Topology.identical_molecule_groups will make this
         #       cleaner and possibly more performant
         for molecule in topology.molecules:
             molecule_charges = [0.0] * molecule.n_atoms
             for atom in molecule.atoms:
-                atom_index = topology.atom_index(atom)
-                charge_key = TopologyKey(
-                    atom_indices=(atom_index,), mult=None, bond_order=None
+                topology_index = topology.atom_index(atom)
+                molecule_index = molecule.atom_index(atom)
+                charge_keys = _slow_key_lookup_by_atom_index(
+                    self.slot_map,
+                    topology_index,
                 )
-                molecule_charges[atom_index] += self.charges[charge_key].m
+
+                for charge_key in charge_keys:
+                    molecule_charges[molecule_index] += self.charges[charge_key].m
 
             charge_sum = sum(molecule_charges)
             formal_sum = molecule.total_charge.m
 
             if abs(charge_sum - formal_sum) > 0.01:
+
                 raise NonIntegralMoleculeChargeException(
                     f"Molecule {molecule.to_smiles(explicit_hydrogens=False)} has "
                     f"a net charge of {charge_sum}"
@@ -1825,3 +1820,13 @@ def _upconvert_bondhandler(bond_handler: BondHandler):
 
     bond_handler.version = Version("0.4")
     bond_handler.potential = "(k/2)*(r-length)^2"
+
+
+def _slow_key_lookup_by_atom_index(matches: Dict, atom_index: int) -> List[TopologyKey]:
+    matched_keys = list()
+    for key in matches:
+        if (getattr(key, "this_atom_index", None) == atom_index) or (
+            getattr(key, "atom_indices", [None])[0] == atom_index
+        ):
+            matched_keys.append(key)
+    return matched_keys
