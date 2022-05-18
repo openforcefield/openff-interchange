@@ -49,6 +49,35 @@ kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
 kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
 
 
+def hydrogen_cyanide(reversed: bool = False) -> Molecule:
+    return Molecule.from_mapped_smiles(
+        "[H:3][C:2]#[N:1]" if reversed else "[H:1][C:2]#[N:3]"
+    )
+
+
+def hydrogen_cyanide_charge_increments() -> ChargeIncrementModelHandler:
+    handler = ChargeIncrementModelHandler(
+        version=0.4,
+        partial_charge_method="formal_charge",
+    )
+    handler.add_parameter(
+        {
+            "smirks": "[H:1][C:2]",
+            "charge_increment1": -0.111 * unit.elementary_charge,
+            "charge_increment2": 0.111 * unit.elementary_charge,
+        }
+    )
+    handler.add_parameter(
+        {
+            "smirks": "[C:1]#[N:2]",
+            "charge_increment1": 0.5 * unit.elementary_charge,
+            "charge_increment2": -0.5 * unit.elementary_charge,
+        }
+    )
+
+    return handler
+
+
 class TestSMIRNOFFPotentialHandler(_BaseTest):
     def test_allowed_parameter_handler_types(self):
         class DummyParameterHandler(ParameterHandler):
@@ -1092,6 +1121,25 @@ class TestSMIRNOFFChargeIncrements(_BaseTest):
             )
         )
 
+    def test_charge_increment_forwawrd_reverse_molecule(self, sage):
+        sage.deregister_parameter_handler("ToolkitAM1BCC")
+        sage.register_parameter_handler(hydrogen_cyanide_charge_increments())
+
+        topology = Topology.from_molecules(
+            [hydrogen_cyanide(reversed=False), hydrogen_cyanide(reversed=True)]
+        )
+
+        out = Interchange.from_smirnoff(sage, topology)
+
+        expected_charges = [-0.111, 0.611, -0.5, -0.5, 0.611, -0.111]
+
+        # TODO: Fix get_charges to return the atoms in order
+        found_charges = [0.0] * topology.n_atoms
+        for key, val in out["Electrostatics"].get_charges().items():
+            found_charges[key.atom_indices[0]] = val.m
+
+        assert np.allclose(expected_charges, found_charges)
+
 
 class TestSMIRNOFFVirtualSites(_BaseTest):
     from openff.toolkit.tests.mocking import VirtualSiteMocking
@@ -1517,7 +1565,6 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 system.getParticleMass(i).value_in_unit(openmm_unit.amu), 0.0
             ) == (False if i < topology.n_atoms else True)
 
-            # import ipdb; ipdb.set_trace()
             assert np.isclose(
                 expected_charge.m_as(unit.elementary_charge),
                 charge.value_in_unit(openmm_unit.elementary_charge),

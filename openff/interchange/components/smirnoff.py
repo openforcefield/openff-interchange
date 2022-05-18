@@ -55,7 +55,14 @@ from openff.interchange.exceptions import (
     SMIRNOFFParameterAttributeNotImplementedError,
     SMIRNOFFVersionNotSupportedError,
 )
-from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
+from openff.interchange.models import (
+    ChargeIncrementTopologyKey,
+    ChargeModelTopologyKey,
+    LibraryChargeTopologyKey,
+    PotentialKey,
+    TopologyKey,
+    VirtualSiteKey,
+)
 from openff.interchange.types import FloatQuantity, custom_quantity_encoder, json_loader
 
 kcal_mol = openmm_unit.kilocalorie_per_mole
@@ -1181,8 +1188,6 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         """
         Map a matched library charge parameter to a set of potentials.
         """
-        from openff.interchange.models import LibraryChargeTopologyKey
-
         matches = {}
         potentials = {}
 
@@ -1207,8 +1212,6 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         """
         Map a matched charge increment parameter to a set of potentials.
         """
-        from openff.interchange.models import ChargeIncrementTopologyKey
-
         matches = {}
         potentials = {}
 
@@ -1290,20 +1293,22 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         return matches, potentials
 
     @classmethod
-    def _find_am1_matches(
+    def _find_charge_model_matches(
         cls,
         parameter_handler: Union["ToolkitAM1BCCHandler", ChargeIncrementModelHandler],
         unique_molecule: Molecule,
-    ) -> Tuple[Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
+    ) -> Tuple[str, Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
         """Construct a slot and potential map for a charge model based parameter handler."""
         unique_molecule = copy.deepcopy(unique_molecule)
         reference_smiles = unique_molecule.to_smiles(
             isomeric=True, explicit_hydrogens=True, mapped=True
         )
 
-        if isinstance(parameter_handler, ChargeIncrementModelHandler):
+        handler_name = parameter_handler.__class__.__name__
+
+        if handler_name == "ChargeIncrementModelHandler":
             partial_charge_method = parameter_handler.partial_charge_method
-        elif isinstance(parameter_handler, ToolkitAM1BCCHandler):
+        elif handler_name == "ToolkitAM1BCCHandler":
             from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
             # The implementation of _toolkit_registry_manager should result in this `GLOBAL_TOOLKIT_REGISTRY`
@@ -1325,16 +1330,20 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         matches = {}
         potentials = {}
 
-        for i, partial_charge in enumerate(partial_charges):
+        for atom_index, partial_charge in enumerate(partial_charges):
 
+            # These arguments make this object specific to this atom (by index) in this molecule ONLY
+            # (assuming an isomeric, mapped, explicit hydrogen SMILES is unique, which seems true).
             potential_key = PotentialKey(
-                id=reference_smiles, mult=i, associated_handler="ToolkitAM1BCC"
+                id=reference_smiles,
+                mult=atom_index,
+                associated_handler=handler_name,
             )
             potentials[potential_key] = Potential(parameters={"charge": partial_charge})
 
-            matches[TopologyKey(atom_indices=(i,))] = potential_key
+            matches[TopologyKey(atom_indices=(atom_index,))] = potential_key
 
-        return matches, potentials
+        return partial_charge_method, matches, potentials
 
     @classmethod
     def _find_reference_matches(
@@ -1370,7 +1379,11 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             if handler_type in ["ToolkitAM1BCC", "ChargeIncrementModel"]:
 
-                am1_matches, am1_potentials = cls._find_am1_matches(
+                (
+                    partial_charge_method,
+                    am1_matches,
+                    am1_potentials,
+                ) = cls._find_charge_model_matches(
                     parameter_handler,
                     unique_molecule,
                 )
@@ -1381,9 +1394,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             elif slot_matches is not None and am1_matches is not None:
 
                 am1_matches = {
-                    TopologyKey(
-                        atom_indices=topology_key.atom_indices,
-                        mult=0 + topology_key.mult if topology_key.mult else 0,
+                    ChargeModelTopologyKey(
+                        this_atom_index=topology_key.atom_indices[0],
+                        partial_charge_method=partial_charge_method,
                     ): potential_key
                     for topology_key, potential_key in am1_matches.items()
                 }
@@ -1527,26 +1540,37 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                         duplicate_molecule_particle
                     )
 
-                    for key in _slow_key_lookup_by_atom_index(
-                        matches,
-                        topology_particle_index,
-                    ):
-                        self.slot_map[key] = matches[key]
+                    # Copy the keys associated with the reference molecule to the duplicate molecule
+                    for key in matches:
+                        if key.this_atom_index == unique_molecule_particle_index:
+                            new_key = key.__class__(**key.dict())
+                            new_key.this_atom_index = topology_particle_index
+
+                            # Have this new key (on a duplicate molecule) point to the same potential
+                            # as the old key (on a unique/reference molecule)
+                            self.slot_map[new_key] = matches[key]
+
+                    # for key in _slow_key_lookup_by_atom_index(
+                    #     matches,
+                    #     topology_particle_index,
+                    # ):
+                    #     self.slot_map[key] = matches[key]
+
+        topology_charges = [0.0] * topology.n_atoms
+        for key, val in self.get_charges().items():
+            topology_charges[key.atom_indices[0]] = val.m
+        # charges: List[float] = [v.m for v in self.get_charges().values()]
 
         # TODO: Better data structures in Topology.identical_molecule_groups will make this
         #       cleaner and possibly more performant
         for molecule in topology.molecules:
             molecule_charges = [0.0] * molecule.n_atoms
-            for atom in molecule.atoms:
-                topology_index = topology.atom_index(atom)
-                molecule_index = molecule.atom_index(atom)
-                charge_keys = _slow_key_lookup_by_atom_index(
-                    self.slot_map,
-                    topology_index,
-                )
 
-                for charge_key in charge_keys:
-                    molecule_charges[molecule_index] += self.charges[charge_key].m
+            for atom in molecule.atoms:
+                molecule_index = molecule.atom_index(atom)
+                topology_index = topology.atom_index(atom)
+
+                molecule_charges[molecule_index] = topology_charges[topology_index]
 
             charge_sum = sum(molecule_charges)
             formal_sum = molecule.total_charge.m

@@ -93,6 +93,21 @@ class LibraryChargeTopologyKey(DefaultModel):
         return hash((self.this_atom_index,))
 
 
+class ChargeModelTopologyKey(DefaultModel):
+    """Subclass of `TopologyKey` for use with charge models only."""
+
+    this_atom_index: int
+    partial_charge_method: str
+
+    @property
+    def atom_indices(self) -> Tuple[int, ...]:
+        """Alias for `this_atom_index`."""
+        return (self.this_atom_index,)
+
+    def __hash__(self) -> int:
+        return hash((self.this_atom_index, self.partial_charge_method))
+
+
 class ChargeIncrementTopologyKey(DefaultModel):
     """Subclass of `TopologyKey` for use with charge increments only."""
 
