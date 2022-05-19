@@ -166,6 +166,12 @@ class MissingBondOrdersError(BaseException):
     """
 
 
+class NonUniqueMoleculesError(ValueError):
+    """
+    Exception for when molecules are not unique.
+    """
+
+
 class MissingUnitError(ValueError):
     """
     Exception for data missing a unit tag.

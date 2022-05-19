@@ -21,6 +21,7 @@ from openff.interchange.exceptions import (
     InvalidTopologyError,
     MissingParameterHandlerError,
     MissingPositionsError,
+    NonUniqueMoleculesError,
     SMIRNOFFHandlersNotImplementedError,
     UnsupportedCombinationError,
     UnsupportedExportError,
@@ -303,6 +304,13 @@ class Interchange(DefaultModel):
                 "Only force fields that contain one instance of each parameter handler "
                 "type are currently supported."
             )
+
+        if partial_bond_orders_from_molecules is not None:
+            if not _assert_all_isomorphic(partial_bond_orders_from_molecules):
+                raise NonUniqueMoleculesError(
+                    "At least two molecules in `partial_bond_orders_from_molecules` are (likely) isomorphic. "
+                    "Molecules in this list must be unique."
+                )
 
         for potential_handler_type in SMIRNOFF_POTENTIAL_HANDLERS:
 
@@ -886,3 +894,18 @@ class Interchange(DefaultModel):
         periodic = self.box is not None
         n_atoms = self.topology.n_atoms
         return f"Interchange with {n_atoms} atoms, {'' if periodic else 'non-'}periodic topology"
+
+
+# This is to re-implement:
+#   https://github.com/openforcefield/openff-toolkit/blob/60014820e6a333bed04e8bf5181d177da066da4d/
+#   openff/toolkit/typing/engines/smirnoff/parameters.py#L2509-L2515
+# It doesn't seem ideal to assume that matching SMILES === isomorphism?
+class _HashedMolecule(Molecule):
+    def __hash__(self):
+        return hash(self.to_smiles())
+
+
+def _assert_all_isomorphic(molecule_list: List[Molecule]) -> bool:
+    hashed_molecules = {_HashedMolecule(molecule) for molecule in molecule_list}
+
+    return len(hashed_molecules) == len(molecule_list)
