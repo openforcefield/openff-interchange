@@ -1285,9 +1285,11 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 raise NotImplementedError()
 
             for topology_key, potential_key in parameter_matches.items():
-                assert topology_key not in matches
+                # This may silently overwrite an identical key generated from a previous match, but that is
+                # the toolkit behavior (see test_assign_charges_to_molecule_in_parts_using_multiple_library_charges).
+                # If there is a need to track the topology keys that are ignored, this can be changed.
                 matches[topology_key] = potential_key
-            # matches.update(parameter_matches)
+
             potentials.update(parameter_potentials)
 
         return matches, potentials
@@ -1456,11 +1458,17 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         if charge_from_molecules is None:
             return False, dict(), dict()
 
-        for reference_molecule in charge_from_molecules:
-            if reference_molecule.is_isomorphic_with(unique_molecule):
+        for molecule_with_charges in charge_from_molecules:
+            if molecule_with_charges.is_isomorphic_with(unique_molecule):
                 break
         else:
             return False, dict(), dict()
+
+        _, atom_map = Molecule.are_isomorphic(
+            molecule_with_charges,
+            unique_molecule,
+            return_atom_map=True,
+        )
 
         from openff.interchange.models import SingleAtomChargeTopologyKey
 
@@ -1468,11 +1476,16 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         potentials = dict()
         mapped_smiles = unique_molecule.to_smiles(mapped=True, explicit_hydrogens=True)
 
-        for index, partial_charge in enumerate(reference_molecule.partial_charges):
-            topology_key = SingleAtomChargeTopologyKey(this_atom_index=index)
+        for index_in_molecule_with_charges, partial_charge in enumerate(
+            molecule_with_charges.partial_charges
+        ):
+            index_in_topology = atom_map[index_in_molecule_with_charges]
+            topology_key = SingleAtomChargeTopologyKey(
+                this_atom_index=index_in_topology
+            )
             potential_key = PotentialKey(
                 id=mapped_smiles,
-                mult=index,
+                mult=index_in_molecule_with_charges,  # Not sure this prevents clashes in some corner cases
                 associated_handler="charge_from_molecules",
                 bond_order=None,
             )

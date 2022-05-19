@@ -581,7 +581,7 @@ class TestChargeFromMolecules(_BaseTest):
 
         assert np.allclose(found_charges_uses, molecule.partial_charges.m)
 
-    def test_charges_on_molecules_if_return_topology(self, sage):
+    def test_charges_on_molecules_in_topology(self, sage):
         ethanol = Molecule.from_smiles("CCO")
         water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
         ethanol_charges = np.linspace(-1, 1, 9) * 0.4
@@ -601,6 +601,28 @@ class TestChargeFromMolecules(_BaseTest):
                 assert np.allclose(molecule.partial_charges.m, ethanol_charges)
             else:
                 assert np.allclose(molecule.partial_charges.m, water_charges)
+
+    def test_charges_from_molecule_reordered(self, sage):
+        """Test the behavior of charge_from_molecules when the atom ordering differs with the topology"""
+
+        # H - C # N
+        molecule = hydrogen_cyanide(reversed=False)
+
+        #  N  # C  - H
+        # -0.3, 0.0, 0.3
+        molecule_with_charges = hydrogen_cyanide(reversed=True)
+        molecule_with_charges.partial_charges = unit.Quantity(
+            [-0.3, 0.0, 0.3], unit.elementary_charge
+        )
+
+        out = Interchange.from_smirnoff(
+            sage, molecule.to_topology(), charge_from_molecules=[molecule_with_charges]
+        )
+
+        expected_charges = [0.3, 0.0, -0.3]
+        found_charges = [v.m for v in out["Electrostatics"].charges.values()]
+
+        assert np.allclose(expected_charges, found_charges)
 
 
 class TestPartialBondOrdersFromMolecules(_BaseTest):
