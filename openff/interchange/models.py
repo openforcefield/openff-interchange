@@ -93,6 +93,12 @@ class LibraryChargeTopologyKey(DefaultModel):
         return hash((self.this_atom_index,))
 
 
+class SingleAtomChargeTopologyKey(LibraryChargeTopologyKey):
+    """Shim class for storing the result of charge_from_molecules."""
+
+    pass
+
+
 class ChargeModelTopologyKey(DefaultModel):
     """Subclass of `TopologyKey` for use with charge models only."""
 

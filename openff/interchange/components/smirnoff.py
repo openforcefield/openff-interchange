@@ -1299,6 +1299,8 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         unique_molecule: Molecule,
     ) -> Tuple[str, Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
         """Construct a slot and potential map for a charge model based parameter handler."""
+        from openff.interchange.models import SingleAtomChargeTopologyKey
+
         unique_molecule = copy.deepcopy(unique_molecule)
         reference_smiles = unique_molecule.to_smiles(
             isomeric=True, explicit_hydrogens=True, mapped=True
@@ -1341,7 +1343,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             )
             potentials[potential_key] = Potential(parameters={"charge": partial_charge})
 
-            matches[TopologyKey(atom_indices=(atom_index,))] = potential_key
+            matches[
+                SingleAtomChargeTopologyKey(this_atom_index=atom_index)
+            ] = potential_key
 
         return partial_charge_method, matches, potentials
 
@@ -1458,12 +1462,14 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         else:
             return False, dict(), dict()
 
+        from openff.interchange.models import SingleAtomChargeTopologyKey
+
         matches = dict()
         potentials = dict()
         mapped_smiles = unique_molecule.to_smiles(mapped=True, explicit_hydrogens=True)
 
         for index, partial_charge in enumerate(reference_molecule.partial_charges):
-            topology_key = TopologyKey(atom_indices=(index,))
+            topology_key = SingleAtomChargeTopologyKey(this_atom_index=index)
             potential_key = PotentialKey(
                 id=mapped_smiles,
                 mult=index,
