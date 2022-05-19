@@ -1215,9 +1215,6 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         matches = {}
         potentials = {}
 
-        if len(atom_indices) > 2:
-            raise Exception
-
         for i, atom_index in enumerate(atom_indices):
             other_atom_indices = tuple(
                 val for val in atom_indices if val is not atom_index
@@ -1260,6 +1257,31 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         }
 
         parameter_matches = {key: val for key, val in unique_parameter_matches.values()}
+        if type(parameter_handler) == ChargeIncrementModelHandler:
+            for atom_indices, val in parameter_matches.items():
+                charge_increments = val.parameter_type.charge_increment
+
+                if len(atom_indices) - len(charge_increments) == 0:
+                    pass
+                elif len(atom_indices) - len(charge_increments) == 1:
+                    # If we've been provided with one less charge increment value than tagged atoms, assume the last
+                    # tagged atom offsets the charge of the others to make the chargeincrement net-neutral
+                    charge_increment_sum = unit.Quantity(0.0, unit.elementary_charge)
+
+                    for ci in charge_increments:
+                        charge_increment_sum += ci
+                    charge_increments.append(-charge_increment_sum)
+
+                else:
+                    from openff.toolkit.utils.exceptions import SMIRNOFFSpecError
+
+                    raise SMIRNOFFSpecError(
+                        f"Trying to apply chargeincrements {val.parameter_type} "
+                        f"to tagged atoms {atom_indices}, but the number of chargeincrements "
+                        "must be either the same as- or one less than the number of tagged atoms."
+                        f"found {len(atom_indices)} number of tagged atoms and "
+                        f"{len(val.parameter_type.charge_increment)} number of charge increments"
+                    )
 
         matches, potentials = {}, {}
 
