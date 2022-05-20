@@ -1056,6 +1056,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         parameter_handler: Any,
         topology: "Topology",
         charge_from_molecules=None,
+        allow_nonintegral_charges: bool = False,
     ) -> T:
         """
         Create a SMIRNOFFElectrostaticsHandler from toolkit data.
@@ -1095,6 +1096,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             parameter_handlers,
             topology,
             charge_from_molecules=charge_from_molecules,
+            allow_nonintegral_charges=allow_nonintegral_charges,
         )
 
         return handler
@@ -1524,6 +1526,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         ],
         topology: "Topology",
         charge_from_molecules=None,
+        allow_nonintegral_charges: bool = False,
     ) -> None:
         """
         Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
@@ -1618,10 +1621,11 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             if abs(charge_sum - formal_sum) > 0.01:
 
-                raise NonIntegralMoleculeChargeException(
-                    f"Molecule {molecule.to_smiles(explicit_hydrogens=False)} has "
-                    f"a net charge of {charge_sum}"
-                )
+                if allow_nonintegral_charges:
+                    raise NonIntegralMoleculeChargeException(
+                        f"Molecule {molecule.to_smiles(explicit_hydrogens=False)} has "
+                        f"a net charge of {charge_sum}"
+                    )
 
             molecule.partial_charges = unit.Quantity(
                 molecule_charges, unit.elementary_charge

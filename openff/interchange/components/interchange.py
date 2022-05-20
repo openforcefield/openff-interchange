@@ -219,6 +219,7 @@ class Interchange(DefaultModel):
         box=None,
         charge_from_molecules: Optional[List[Molecule]] = None,
         partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
+        allow_nonintegral_charges: bool = False,
     ) -> "Interchange":
         """
         Create a new object by parameterizing a topology with a SMIRNOFF force field.
@@ -239,6 +240,8 @@ class Interchange(DefaultModel):
         partial_bond_orders_from_molecules : List[openff.toolkit.molecule.Molecule], optional
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
+        allow_nonintegral_charges : bool, optional, default=False
+            If True, allow molecules to have approximately non-integral charges.
 
         Notes
         -----
@@ -383,6 +386,7 @@ class Interchange(DefaultModel):
                     parameter_handler=parameter_handlers,
                     topology=sys_out.topology,
                     charge_from_molecules=charge_from_molecules,
+                    allow_nonintegral_charges=allow_nonintegral_charges,
                 )
                 sys_out.handlers.update({"Electrostatics": electrostatics_handler})
             elif potential_handler_type == SMIRNOFFVirtualSiteHandler:
