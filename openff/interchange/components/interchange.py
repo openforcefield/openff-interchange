@@ -814,7 +814,6 @@ class Interchange(DefaultModel):
     def __add__(self, other):
         """Combine two Interchange objects. This method is unstable and likely unsafe."""
         from openff.interchange.components.toolkit import _combine_topologies
-        from openff.interchange.models import TopologyKey
 
         warnings.warn(
             "Interchange object combination is experimental and likely to produce "
@@ -857,10 +856,12 @@ class Interchange(DefaultModel):
                 new_atom_indices = tuple(
                     idx + atom_offset for idx in top_key.atom_indices
                 )
-                new_top_key = TopologyKey(
-                    atom_indices=new_atom_indices,
-                    mult=top_key.mult,
-                )
+                new_top_key = top_key.__class__(**top_key.dict())
+                try:
+                    new_top_key.atom_indices = new_atom_indices
+                except ValueError:
+                    assert len(new_atom_indices) == 1
+                    new_top_key.this_atom_index = new_atom_indices[0]
 
                 self_handler.slot_map.update({new_top_key: pot_key})
                 if handler_name == "Constraints":

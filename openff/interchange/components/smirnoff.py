@@ -1201,7 +1201,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             matches[topology_key] = potential_key
             potentials[potential_key] = potential
 
-        return matches, potentials
+        return matches, potentials  # type: ignore[return-value]
 
     @classmethod
     def _charge_increment_to_potentials(
@@ -1237,7 +1237,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             matches[topology_key] = potential_key
             potentials[potential_key] = potential
 
-        return matches, potentials
+        return matches, potentials  # type: ignore[return-value]
 
     @classmethod
     def _find_slot_matches(
@@ -1371,7 +1371,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 SingleAtomChargeTopologyKey(this_atom_index=atom_index)
             ] = potential_key
 
-        return partial_charge_method, matches, potentials
+        return partial_charge_method, matches, potentials  # type: ignore[return-value]
 
     @classmethod
     def _find_reference_matches(
@@ -1422,7 +1422,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             elif slot_matches is not None and am1_matches is not None:
 
                 am1_matches = {
-                    ChargeModelTopologyKey(
+                    ChargeModelTopologyKey(  # type: ignore[misc]
                         this_atom_index=topology_key.atom_indices[0],
                         partial_charge_method=partial_charge_method,
                     ): potential_key
