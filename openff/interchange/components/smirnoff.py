@@ -1622,6 +1622,9 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             if abs(charge_sum - formal_sum) > 0.01:
 
                 if allow_nonintegral_charges:
+                    # TODO: Is it worth communicating this as a warning, or would it simply be bloat?
+                    pass
+                else:
                     raise NonIntegralMoleculeChargeException(
                         f"Molecule {molecule.to_smiles(explicit_hydrogens=False)} has "
                         f"a net charge of {charge_sum}"
