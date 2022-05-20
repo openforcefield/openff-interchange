@@ -45,7 +45,7 @@ class EnergyReport(DefaultModel):
         if item in self.energies.keys():
             return self.energies[item]
         if item.lower() == "total":
-            return sum(self.energies.values())
+            return sum(self.energies.values())  # type: ignore[type-var]
         else:
             return None
 
