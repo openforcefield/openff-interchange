@@ -6,6 +6,7 @@ import numpy as np
 from openff.units import unit
 
 from openff.interchange import Interchange
+from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import LAMMPSRunError
 
@@ -43,7 +44,8 @@ def get_lammps_energies(
         off_sys.positions = np.round(off_sys.positions, round_positions)
 
     off_sys.to_lammps("out.lmp")
-    off_sys.mdconfig.write_lammps_input(
+    mdconfig = MDConfig.from_interchange(off_sys)
+    mdconfig.write_lammps_input(
         input_file="tmp.in",
     )
 

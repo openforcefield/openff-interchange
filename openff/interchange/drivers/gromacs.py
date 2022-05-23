@@ -4,9 +4,10 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Union
 
-from openff.units import unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
+from openff.interchange.components.mdconfig import MDConfig
+from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import GMXGromppError, GMXMdrunError
 from openff.interchange.tests import get_test_file_path
@@ -15,9 +16,6 @@ if TYPE_CHECKING:
     from openff.units.unit import Quantity
 
     from openff.interchange import Interchange
-
-
-kj_mol = unit.kilojoule / unit.mol
 
 
 def _get_mdp_file(key: str = "auto") -> str:
@@ -68,7 +66,8 @@ def get_gromacs_energies(
             off_sys.to_gro("out.gro", writer=writer, decimal=decimal)
             off_sys.to_top("out.top", writer=writer)
             if mdp == "auto":
-                off_sys.mdconfig.write_mdp_file("tmp.mdp")
+                mdconfig = MDConfig.from_interchange(off_sys)
+                mdconfig.write_mdp_file("tmp.mdp")
                 mdp_file = "tmp.mdp"
             else:
                 mdp_file = _get_mdp_file(mdp)

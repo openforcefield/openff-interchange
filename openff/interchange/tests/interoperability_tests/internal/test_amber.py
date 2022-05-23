@@ -5,21 +5,19 @@ from openff.toolkit.topology import Molecule
 from openff.units import unit
 
 from openff.interchange import Interchange
+from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_amber_energies, get_openmm_energies
-from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.tests import _BaseTest
-
-kj_mol = unit.kilojoule / unit.mol
 
 
 class TestAmber(_BaseTest):
     @pytest.mark.slow()
-    def test_inpcrd(self, parsley):
+    def test_inpcrd(self, sage):
         mol = Molecule.from_smiles(10 * "C")
         mol.name = "HPER"
         mol.generate_conformers(n_conformers=1)
 
-        out = Interchange.from_smirnoff(force_field=parsley, topology=mol.to_topology())
+        out = Interchange.from_smirnoff(force_field=sage, topology=mol.to_topology())
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
         out.positions = unit.nanometer * np.round(out.positions.m_as(unit.nanometer), 5)
@@ -31,13 +29,6 @@ class TestAmber(_BaseTest):
         coords2 = pmd.load_file("parmed.inpcrd").coordinates
 
         np.testing.assert_equal(coords1, coords2)
-
-    def test_nonperiodic_pme(self, ethanol_top, sage):
-        interchange = Interchange.from_smirnoff(sage, ethanol_top)
-        interchange.box = None
-
-        with pytest.raises(UnsupportedExportError, match="non-p"):
-            interchange.to_prmtop("foo.prmtop")
 
     @pytest.mark.slow()
     @pytest.mark.parametrize(

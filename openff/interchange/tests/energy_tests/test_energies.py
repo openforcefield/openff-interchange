@@ -1,17 +1,16 @@
-from copy import deepcopy
-
+import foyer
 import numpy as np
 import openmm
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
-from openff.units.openmm import from_openmm, to_openmm
+from openff.units.openmm import to_openmm
 from openff.utilities.testing import skip_if_missing
-from openmm import app
 from openmm import unit as openmm_unit
 
 from openff.interchange import Interchange
+from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.drivers.openmm import _get_openmm_energies
 from openff.interchange.drivers.report import EnergyError, EnergyReport
@@ -32,8 +31,6 @@ if HAS_GROMACS:
     )
 if HAS_LAMMPS:
     from openff.interchange.drivers.lammps import get_lammps_energies
-
-kj_mol = unit.kilojoule / unit.mol
 
 
 def test_energy_report():
@@ -62,6 +59,10 @@ def test_energy_report():
 
 
 class TestEnergies(_BaseTest):
+    @pytest.fixture(scope="session")
+    def oplsaa(self):
+        return foyer.forcefields.load_OPLSAA()
+
     @skip_if_missing("mbuild")
     @needs_gmx
     @needs_lmp
@@ -69,22 +70,18 @@ class TestEnergies(_BaseTest):
     @pytest.mark.slow()
     @pytest.mark.parametrize("constrained", [True, False])
     @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
-    def test_energies_single_mol(
-        self, constrained, parsley, parsley_unconstrained, mol_smi
-    ):
+    def test_energies_single_mol(self, constrained, sage, sage_unconstrained, mol_smi):
         import mbuild as mb
 
         mol = Molecule.from_smiles(mol_smi)
         mol.generate_conformers(n_conformers=1)
         mol.name = "FOO"
-        top = mol.to_topology()
-        top.box_vectors = None  # [10, 10, 10] * openmm_unit.nanometer
 
-        force_field = parsley if constrained else parsley_unconstrained
+        force_field = sage if constrained else sage_unconstrained
 
-        off_sys = Interchange.from_smirnoff(force_field, top)
+        off_sys = Interchange.from_smirnoff(force_field, [mol])
 
-        off_sys.handlers["Electrostatics"].method = "cutoff"
+        off_sys.handlers["Electrostatics"].periodic_potential = "cutoff"
 
         mol.to_file("out.xyz", file_format="xyz")
         compound: mb.Compound = mb.load("out.xyz")
@@ -97,7 +94,7 @@ class TestEnergies(_BaseTest):
 
         # Compare directly to toolkit's reference implementation
         omm_energies = get_openmm_energies(off_sys, round_positions=8)
-        omm_reference = force_field.create_openmm_system(top)
+        omm_reference = force_field.create_openmm_system(mol.to_topology())
         reference_energies = _get_openmm_energies(
             omm_sys=omm_reference,
             box_vectors=to_openmm(off_sys.box),
@@ -138,51 +135,6 @@ class TestEnergies(_BaseTest):
             }
             lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
 
-    @needs_gmx
-    @needs_lmp
-    @pytest.mark.slow()
-    @pytest.mark.skip(reason="Revisit after performannce optimizations in writers")
-    def test_liquid_argon(self):
-        argon = Molecule.from_smiles("[#18]")
-        pdbfile = app.PDBFile(get_test_file_path("packed-argon.pdb"))
-
-        top = Topology.from_openmm(pdbfile.topology, unique_molecules=[argon])
-
-        argon_ff = ForceField(get_test_file_path("argon.offxml"))
-
-        out = Interchange.from_smirnoff(argon_ff, top)
-        out.positions = from_openmm(pdbfile.positions)
-
-        omm_energies = get_openmm_energies(out)
-
-        gmx_energies = get_gromacs_energies(
-            out,
-            mdp="auto",
-            writer="internal",
-        )
-
-        omm_energies.compare(
-            gmx_energies,
-            custom_tolerances={
-                "vdW": 0.009 * openmm_unit.kilojoule_per_mole,
-            },
-        )
-
-        argon_ff_no_switch = deepcopy(argon_ff)
-        argon_ff_no_switch["vdW"].switch_width *= 0
-
-        out_no_switch = Interchange.from_smirnoff(argon_ff_no_switch, top)
-        out_no_switch.positions = pdbfile.positions
-
-        lmp_energies = get_lammps_energies(out_no_switch)
-
-        omm_energies.compare(
-            lmp_energies,
-            custom_tolerances={
-                "vdW": 10.5 * openmm_unit.kilojoule_per_mole,
-            },
-        )
-
     @pytest.mark.skip(
         reason="Needs to be reimplmented after OFFTK 0.11.0 with fewer moving parts"
     )
@@ -201,7 +153,7 @@ class TestEnergies(_BaseTest):
             "systems/packmol_boxes/propane_methane_butanol_0.2_0.3_0.5.pdb",
         ],
     )
-    def test_packmol_boxes(self, parsley, toolkit_file_path):
+    def test_packmol_boxes(self, sage, toolkit_file_path):
         # TODO: Isolate a set of systems here instead of using toolkit data
         # TODO: Fix nonbonded energy differences
         from openff.toolkit.utils import get_data_file_path
@@ -225,7 +177,7 @@ class TestEnergies(_BaseTest):
             omm_topology, unique_molecules=unique_molecules
         )
 
-        off_sys = Interchange.from_smirnoff(parsley, off_topology)
+        off_sys = Interchange.from_smirnoff(sage, off_topology)
 
         off_sys.box = np.asarray(
             pdbfile.topology.getPeriodicBoxVectors().value_in_unit(
@@ -234,7 +186,7 @@ class TestEnergies(_BaseTest):
         )
         off_sys.positions = pdbfile.positions
 
-        sys_from_toolkit = parsley.create_openmm_system(off_topology)
+        sys_from_toolkit = sage.create_openmm_system(off_topology)
 
         omm_energies = get_openmm_energies(
             off_sys,
@@ -327,7 +279,7 @@ class TestEnergies(_BaseTest):
         # gmx_energies, _ = get_gromacs_energies(openff_sys)
         # compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)
 
-        openff_sys["Electrostatics"].method = "cutoff"
+        openff_sys["Electrostatics"].periodic_potential = "cutoff"
         omm_energies_cutoff = get_gromacs_energies(openff_sys)  # noqa
 
         # TODO: Don't write out dihedral section of LAMMPS input file for this system
@@ -338,25 +290,19 @@ class TestEnergies(_BaseTest):
     @skip_if_missing("foyer")
     @skip_if_missing("mbuild")
     @pytest.mark.slow()
-    def test_process_rb_torsions(self):
+    def test_process_rb_torsions(self, oplsaa):
         """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
-
-        from foyer import Forcefield
         from mbuild import Box
 
-        oplsaa = Forcefield(name="oplsaa")
+        from openff.interchange.components.mbuild import offmol_to_compound
 
         ethanol = Molecule.from_smiles("CCO")
         ethanol.generate_conformers(n_conformers=1)
         ethanol.generate_unique_atom_names()
 
-        # Run this OFFMol through MoSDeF infrastructure and OPLS-AA
-        from openff.interchange.components.mbuild import offmol_to_compound
-
         my_compound = offmol_to_compound(ethanol)
         my_compound.box = Box(lengths=[4, 4, 4])
 
-        oplsaa = Forcefield(name="oplsaa")
         struct = oplsaa.apply(my_compound)
 
         struct.save("eth.top", overwrite=True)
@@ -370,7 +316,7 @@ class TestEnergies(_BaseTest):
         assert oplsaa_energies.energies["Torsion"].m != 0.0
 
     @needs_gmx
-    def test_gmx_14_energies_exist(self, parsley):
+    def test_gmx_14_energies_exist(self, sage):
         # TODO: Make sure 1-4 energies are accurate, not just existent
 
         # Use a molecule with only one 1-4 interaction, and
@@ -379,13 +325,13 @@ class TestEnergies(_BaseTest):
         mol.name = "HPER"
         mol.generate_conformers(n_conformers=1)
 
-        out = Interchange.from_smirnoff(parsley, mol.to_topology())
+        out = Interchange.from_smirnoff(sage, [mol])
         out.positions = mol.conformers[0]
-        out.box = unit.Quantity(4 * np.eye(3), unit.nanometer)
+        out.box = 3 * [10]
 
         # Put this molecule in a large box with cut-off electrostatics
         # to prevent it from interacting with images of itself
-        out["Electrostatics"].method = "cutoff"
+        out["Electrostatics"].periodic_potential = "cutoff"
 
         gmx_energies = get_gromacs_energies(out)
 
@@ -419,7 +365,7 @@ class TestEnergies(_BaseTest):
             positions[1, 0] = d * unit.nanometer
             out.positions = positions
 
-            out["Electrostatics"].method = "cutoff"
+            out["Electrostatics"].periodic_potential = "cutoff"
             gmx.append(
                 get_gromacs_energies(out, mdp="auto").energies["Electrostatics"].m
             )
@@ -457,18 +403,16 @@ class TestEnergies(_BaseTest):
         mol = Molecule.from_smiles(smi)
         mol.generate_conformers(n_conformers=1)
 
-        top = mol.to_topology()
-
         forcefield = ForceField(
             "test_forcefields/test_forcefield.offxml",
             xml_ff_bo_all_heavy_bonds,
         )
 
-        out = Interchange.from_smirnoff(forcefield, top)
+        out = Interchange.from_smirnoff(forcefield, [mol])
         out.box = [4, 4, 4] * unit.nanometer
         out.positions = mol.conformers[0]
 
-        toolkit_system = forcefield.create_openmm_system(top)
+        toolkit_system = forcefield.create_openmm_system(mol.to_topology())
 
         for key in ["Bond", "Torsion"]:
             interchange_energy = get_openmm_energies(

@@ -50,6 +50,9 @@ omm_sys = out.to_openmm(combine_nonbonded_forces=True)
 # or write to GROMACS files
 out.to_gro("out.gro")
 out.to_top("out.top")
+
+# or roundtrip through JSON or other common serialization formats
+roundtripped = Interchange.parse_raw(out.json())
 ```
 
 Future releases will include improved support for other file formats such as those used by AMBER, CHARMM, and LAMMPS.
