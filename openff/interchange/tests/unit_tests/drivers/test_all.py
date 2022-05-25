@@ -6,6 +6,7 @@ from distutils.spawn import find_executable
 import pytest
 
 from openff.interchange.drivers.all import get_all_energies
+from openff.interchange.drivers.gromacs import _find_gromacs_executable
 from openff.interchange.tests import _BaseTest
 
 
@@ -26,16 +27,11 @@ class TestDriversAll(_BaseTest):
         out.box = [4, 4, 4]
 
         summary = get_all_energies(out)
-        assert ("GROMACS" in summary) == (find_executable("gmx") is not None)
+        assert ("GROMACS" in summary) == (_find_gromacs_executable() is not None)
 
         assert ("Amber" in summary) == (find_executable("sander") is not None)
 
         # FIXME: Add back when LAMMPS export fixed
-        # assert ("LAMMPS" in summary) == (find_executable("lmp_serial") is not None)
-        number_expected_drivers = 1 + sum(
-            int(find_executable(exec) is not None)
-            # FIXME: Add "lmp_serial" in this list
-            for exec in ["gmx", "sander"]
-        )
+        # assert ("LAMMPS" in summary) == (_find_lammps_executable() is not None)
 
-        assert len(summary) == number_expected_drivers
+        assert len(summary) == 3
