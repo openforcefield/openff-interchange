@@ -26,7 +26,7 @@ def _get_num_h_bonds(topology: "Topology") -> int:
 
 
 def _get_number_excluded_atoms(topology: "Topology", n=3) -> Dict[int, int]:
-    exclusions = {a.topology_atom_index: 0 for a in topology.topology_atoms}
+    exclusions = {a.topology_atom_index: 0 for a in topology.atoms}
 
     import networkx as nx
 

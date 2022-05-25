@@ -1567,28 +1567,24 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
             self.potentials.update(potentials)
 
-            for unique_molecule_particle in unique_molecule.particles:
-                unique_molecule_particle_index = unique_molecule.particle_index(
-                    unique_molecule_particle
+            for unique_molecule_atom in unique_molecule.atoms:
+                unique_molecule_atom_index = unique_molecule.atom_index(
+                    unique_molecule_atom
                 )
 
                 for duplicate_molecule_index, atom_map in group:
                     duplicate_molecule = topology.molecule(duplicate_molecule_index)
-                    duplicate_molecule_particle_index = atom_map[
-                        unique_molecule_particle_index
-                    ]
-                    duplicate_molecule_particle = duplicate_molecule.particle(
-                        duplicate_molecule_particle_index
+                    duplicate_molecule_atom_index = atom_map[unique_molecule_atom_index]
+                    duplicate_molecule_atom = duplicate_molecule.atom(
+                        duplicate_molecule_atom_index
                     )
-                    topology_particle_index = topology.particle_index(
-                        duplicate_molecule_particle
-                    )
+                    topology_atom_index = topology.atom_index(duplicate_molecule_atom)
 
                     # Copy the keys associated with the reference molecule to the duplicate molecule
                     for key in matches:
-                        if key.this_atom_index == unique_molecule_particle_index:
+                        if key.this_atom_index == unique_molecule_atom_index:
                             new_key = key.__class__(**key.dict())
-                            new_key.this_atom_index = topology_particle_index
+                            new_key.this_atom_index = topology_atom_index
 
                             # Have this new key (on a duplicate molecule) point to the same potential
                             # as the old key (on a unique/reference molecule)
@@ -1596,7 +1592,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
                     # for key in _slow_key_lookup_by_atom_index(
                     #     matches,
-                    #     topology_particle_index,
+                    #     topology_atom_index,
                     # ):
                     #     self.slot_map[key] = matches[key]
 
