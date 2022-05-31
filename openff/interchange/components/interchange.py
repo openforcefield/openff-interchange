@@ -895,10 +895,13 @@ class Interchange(DefaultModel):
 
         return self_copy
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         periodic = self.box is not None
         n_atoms = self.topology.n_atoms
-        return f"Interchange with {n_atoms} atoms, {'' if periodic else 'non-'}periodic topology"
+        return (
+            f"Interchange with {len(self.handlers)} potential handlers, "
+            f"{'' if periodic else 'non-'}periodic topology with {n_atoms} atoms."
+        )
 
 
 # This is to re-implement:

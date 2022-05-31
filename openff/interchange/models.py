@@ -77,6 +77,13 @@ class TopologyKey(DefaultModel):
     def __hash__(self) -> int:
         return hash((self.atom_indices, self.mult, self.bond_order))
 
+    def __repr__(self) -> str:
+        return (
+            f"TopologyKey with atom indices {self.atom_indices}"
+            f"{'' if self.mult is None else ', mult' + self.mult}"
+            f"{'' if self.bond_order is None else ', bond order ' + self.bond_order}"
+        )
+
 
 class LibraryChargeTopologyKey(DefaultModel):
     """Subclass of `TopologyKey` for use with library charges only."""
@@ -209,3 +216,10 @@ class PotentialKey(DefaultModel):
 
     def __hash__(self) -> int:
         return hash((self.id, self.mult, self.associated_handler, self.bond_order))
+
+    def __repr__(self) -> str:
+        return (
+            f"PotentialKey associated with handler '{self.associated_handler}' with id {self.id}"
+            f"{'' if self.mult is None else ', mult' + self.mult}"
+            f"{'' if self.bond_order is None else ', bond order ' + self.bond_order}"
+        )
