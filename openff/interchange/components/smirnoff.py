@@ -200,6 +200,12 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
 
         return handler
 
+    def __repr__(self) -> str:
+        return (
+            f"Handler '{self.type}' with expression '{self.expression}', {len(self.slot_map)} slots, "
+            f"and {len(self.potentials)} potentials"
+        )
+
 
 class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
     """Handler storing bond potentials as produced by a SMIRNOFF force field."""
