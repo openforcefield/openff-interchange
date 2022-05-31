@@ -80,8 +80,8 @@ class TopologyKey(DefaultModel):
     def __repr__(self) -> str:
         return (
             f"TopologyKey with atom indices {self.atom_indices}"
-            f"{'' if self.mult is None else ', mult' + self.mult}"
-            f"{'' if self.bond_order is None else ', bond order ' + self.bond_order}"
+            f"{'' if self.mult is None else ', mult' + str(self.mult)}"
+            f"{'' if self.bond_order is None else ', bond order ' + str(self.bond_order)}"
         )
 
 
@@ -220,6 +220,6 @@ class PotentialKey(DefaultModel):
     def __repr__(self) -> str:
         return (
             f"PotentialKey associated with handler '{self.associated_handler}' with id {self.id}"
-            f"{'' if self.mult is None else ', mult' + self.mult}"
-            f"{'' if self.bond_order is None else ', bond order ' + self.bond_order}"
+            f"{'' if self.mult is None else ', mult' + str(self.mult)}"
+            f"{'' if self.bond_order is None else ', bond order ' + str(self.bond_order)}"
         )
