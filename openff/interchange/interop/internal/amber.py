@@ -490,7 +490,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         residue_pointers = (
             [
-                interchange.topology.atom_index([*residue.particles][0])
+                interchange.topology.atom_index([*residue.atoms][0])
                 for residue in interchange.topology.hierarchy_iterator("residues")
             ]
             if NRES > 1
