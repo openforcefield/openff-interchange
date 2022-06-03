@@ -336,6 +336,14 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
     `combine_nonbondoed_forces=False`.
 
     """
+    from openff.interchange.components.smirnoff import _SMIRNOFFNonbondedHandler
+
+    for handler in openff_sys.handlers.values():
+        if isinstance(handler, _SMIRNOFFNonbondedHandler):
+            break
+    else:
+        return
+
     # TODO: Process ElectrostaticsHandler.exception_potential
     if "vdW" in openff_sys.handlers:
         vdw_handler = openff_sys["vdW"]
