@@ -21,6 +21,7 @@ from openff.interchange.exceptions import (
     InvalidTopologyError,
     MissingParameterHandlerError,
     MissingPositionsError,
+    NonUniqueMoleculesError,
     SMIRNOFFHandlersNotImplementedError,
     UnsupportedCombinationError,
     UnsupportedExportError,
@@ -218,6 +219,7 @@ class Interchange(DefaultModel):
         box=None,
         charge_from_molecules: Optional[List[Molecule]] = None,
         partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
+        allow_nonintegral_charges: bool = False,
     ) -> "Interchange":
         """
         Create a new object by parameterizing a topology with a SMIRNOFF force field.
@@ -238,6 +240,8 @@ class Interchange(DefaultModel):
         partial_bond_orders_from_molecules : List[openff.toolkit.molecule.Molecule], optional
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
+        allow_nonintegral_charges : bool, optional, default=False
+            If True, allow molecules to have approximately non-integral charges.
 
         Notes
         -----
@@ -304,6 +308,13 @@ class Interchange(DefaultModel):
                 "type are currently supported."
             )
 
+        if partial_bond_orders_from_molecules is not None:
+            if not _assert_all_isomorphic(partial_bond_orders_from_molecules):
+                raise NonUniqueMoleculesError(
+                    "At least two molecules in `partial_bond_orders_from_molecules` are (likely) isomorphic. "
+                    "Molecules in this list must be unique."
+                )
+
         for potential_handler_type in SMIRNOFF_POTENTIAL_HANDLERS:
 
             parameter_handlers = [
@@ -319,7 +330,24 @@ class Interchange(DefaultModel):
             #       move back to the constraint handler dealing with the logic (and
             #       depending on the bond handler)
             if potential_handler_type == SMIRNOFFBondHandler:
-                SMIRNOFFBondHandler.check_supported_parameters(force_field["Bonds"])
+                parameter_handler = force_field["Bonds"]
+                if str(parameter_handler.version) == "0.3":
+                    from openff.interchange.components.smirnoff import (
+                        _upconvert_bondhandler,
+                    )
+
+                    warnings.warn(
+                        "Automatically up-converting BondHandler from version 0.3 to 0.4. Consider manually upgrading "
+                        "this BondHandler (or <Bonds> section in an OFFXML file) to 0.4 or newer. For more details, "
+                        "see https://openforcefield.github.io/standards/standards/smirnoff/#bonds."
+                    )
+
+                    _upconvert_bondhandler(parameter_handler)
+                    assert str(parameter_handler.version) == "0.4"
+                    assert parameter_handler.potential != "harmonic"
+
+                SMIRNOFFBondHandler.check_supported_parameters(parameter_handler)
+
                 bond_handler = SMIRNOFFBondHandler._from_toolkit(
                     parameter_handler=force_field["Bonds"],
                     topology=sys_out.topology,
@@ -358,6 +386,7 @@ class Interchange(DefaultModel):
                     parameter_handler=parameter_handlers,
                     topology=sys_out.topology,
                     charge_from_molecules=charge_from_molecules,
+                    allow_nonintegral_charges=allow_nonintegral_charges,
                 )
                 sys_out.handlers.update({"Electrostatics": electrostatics_handler})
             elif potential_handler_type == SMIRNOFFVirtualSiteHandler:
@@ -789,7 +818,6 @@ class Interchange(DefaultModel):
     def __add__(self, other):
         """Combine two Interchange objects. This method is unstable and likely unsafe."""
         from openff.interchange.components.toolkit import _combine_topologies
-        from openff.interchange.models import TopologyKey
 
         warnings.warn(
             "Interchange object combination is experimental and likely to produce "
@@ -832,10 +860,12 @@ class Interchange(DefaultModel):
                 new_atom_indices = tuple(
                     idx + atom_offset for idx in top_key.atom_indices
                 )
-                new_top_key = TopologyKey(
-                    atom_indices=new_atom_indices,
-                    mult=top_key.mult,
-                )
+                new_top_key = top_key.__class__(**top_key.dict())
+                try:
+                    new_top_key.atom_indices = new_atom_indices
+                except ValueError:
+                    assert len(new_atom_indices) == 1
+                    new_top_key.this_atom_index = new_atom_indices[0]
 
                 self_handler.slot_map.update({new_top_key: pot_key})
                 if handler_name == "Constraints":
@@ -865,7 +895,25 @@ class Interchange(DefaultModel):
 
         return self_copy
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         periodic = self.box is not None
         n_atoms = self.topology.n_atoms
-        return f"Interchange with {n_atoms} atoms, {'' if periodic else 'non-'}periodic topology"
+        return (
+            f"Interchange with {len(self.handlers)} potential handlers, "
+            f"{'' if periodic else 'non-'}periodic topology with {n_atoms} atoms."
+        )
+
+
+# This is to re-implement:
+#   https://github.com/openforcefield/openff-toolkit/blob/60014820e6a333bed04e8bf5181d177da066da4d/
+#   openff/toolkit/typing/engines/smirnoff/parameters.py#L2509-L2515
+# It doesn't seem ideal to assume that matching SMILES === isomorphism?
+class _HashedMolecule(Molecule):
+    def __hash__(self):
+        return hash(self.to_smiles())
+
+
+def _assert_all_isomorphic(molecule_list: List[Molecule]) -> bool:
+    hashed_molecules = {_HashedMolecule(molecule) for molecule in molecule_list}
+
+    return len(hashed_molecules) == len(molecule_list)

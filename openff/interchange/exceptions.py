@@ -166,6 +166,12 @@ class MissingBondOrdersError(BaseException):
     """
 
 
+class NonUniqueMoleculesError(ValueError):
+    """
+    Exception for when molecules are not unique.
+    """
+
+
 class MissingUnitError(ValueError):
     """
     Exception for data missing a unit tag.
@@ -249,4 +255,10 @@ class EnergyError(BaseException):
 class MissingEnergyError(BaseException):
     """
     Exception for when one report has a value for an energy group but the other does not.
+    """
+
+
+class NonIntegralMoleculeChargeException(BaseException):
+    """
+    Exception raised when the partial charges on a molecule do not sum up to its formal charge.
     """

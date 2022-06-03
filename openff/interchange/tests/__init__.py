@@ -11,11 +11,12 @@ from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
-from openff.utilities.utilities import has_executable
 from openmm import unit as openmm_unit
 from pkg_resources import resource_filename
 
 from openff.interchange import Interchange
+from openff.interchange.drivers.gromacs import _find_gromacs_executable
+from openff.interchange.drivers.lammps import _find_lammps_executable
 
 
 def get_test_file_path(test_file) -> str:
@@ -231,8 +232,8 @@ class _BaseTest:
     """
 
 
-HAS_GROMACS = any(has_executable(e) for e in ["gmx", "gmx_d"])
-HAS_LAMMPS = any(has_executable(e) for e in ["lammps", "lmp_mpi", "lmp_serial"])
+HAS_GROMACS = _find_gromacs_executable() is not None
+HAS_LAMMPS = _find_lammps_executable() is not None
 
 needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
 needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs GROMACS")

@@ -49,6 +49,35 @@ kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
 kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
 
 
+def hydrogen_cyanide(reversed: bool = False) -> Molecule:
+    return Molecule.from_mapped_smiles(
+        "[H:3][C:2]#[N:1]" if reversed else "[H:1][C:2]#[N:3]"
+    )
+
+
+def hydrogen_cyanide_charge_increments() -> ChargeIncrementModelHandler:
+    handler = ChargeIncrementModelHandler(
+        version=0.4,
+        partial_charge_method="formal_charge",
+    )
+    handler.add_parameter(
+        {
+            "smirks": "[H:1][C:2]",
+            "charge_increment1": -0.111 * unit.elementary_charge,
+            "charge_increment2": 0.111 * unit.elementary_charge,
+        }
+    )
+    handler.add_parameter(
+        {
+            "smirks": "[C:1]#[N:2]",
+            "charge_increment1": 0.5 * unit.elementary_charge,
+            "charge_increment2": -0.5 * unit.elementary_charge,
+        }
+    )
+
+    return handler
+
+
 class TestSMIRNOFFPotentialHandler(_BaseTest):
     def test_allowed_parameter_handler_types(self):
         class DummyParameterHandler(ParameterHandler):
@@ -552,6 +581,49 @@ class TestChargeFromMolecules(_BaseTest):
 
         assert np.allclose(found_charges_uses, molecule.partial_charges.m)
 
+    def test_charges_on_molecules_in_topology(self, sage):
+        ethanol = Molecule.from_smiles("CCO")
+        water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+        ethanol_charges = np.linspace(-1, 1, 9) * 0.4
+        water_charges = np.linspace(-1, 1, 3)
+
+        ethanol.partial_charges = unit.Quantity(ethanol_charges, unit.elementary_charge)
+        water.partial_charges = unit.Quantity(water_charges, unit.elementary_charge)
+
+        out = Interchange.from_smirnoff(
+            sage,
+            [ethanol],
+            charge_from_molecules=[ethanol, water],
+        )
+
+        for molecule in out.topology.molecules:
+            if "C" in molecule.to_smiles():
+                assert np.allclose(molecule.partial_charges.m, ethanol_charges)
+            else:
+                assert np.allclose(molecule.partial_charges.m, water_charges)
+
+    def test_charges_from_molecule_reordered(self, sage):
+        """Test the behavior of charge_from_molecules when the atom ordering differs with the topology"""
+
+        # H - C # N
+        molecule = hydrogen_cyanide(reversed=False)
+
+        #  N  # C  - H
+        # -0.3, 0.0, 0.3
+        molecule_with_charges = hydrogen_cyanide(reversed=True)
+        molecule_with_charges.partial_charges = unit.Quantity(
+            [-0.3, 0.0, 0.3], unit.elementary_charge
+        )
+
+        out = Interchange.from_smirnoff(
+            sage, molecule.to_topology(), charge_from_molecules=[molecule_with_charges]
+        )
+
+        expected_charges = [0.3, 0.0, -0.3]
+        found_charges = [v.m for v in out["Electrostatics"].charges.values()]
+
+        assert np.allclose(expected_charges, found_charges)
+
 
 class TestPartialBondOrdersFromMolecules(_BaseTest):
     from openff.toolkit.tests.create_molecules import (
@@ -1025,6 +1097,72 @@ def _get_interpolated_bond_k(bond_handler) -> float:
     return bond_handler.potentials[potential_key].parameters["k"].m
 
 
+class TestSMIRNOFFChargeIncrements(_BaseTest):
+    def test_no_charge_increments_applied(self, sage):
+        molecule = Molecule.from_smiles("OCCCCCCO")
+        molecule.assign_partial_charges(partial_charge_method="gasteiger")
+        gastiger_charges = molecule.partial_charges.m
+
+        sage.deregister_parameter_handler("ToolkitAM1BCC")
+        no_increments = ChargeIncrementModelHandler(
+            version=0.3, partial_charge_method="gasteiger"
+        )
+        sage.register_parameter_handler(no_increments)
+
+        assert len(sage["ChargeIncrementModel"].parameters) == 0
+
+        out = Interchange.from_smirnoff(sage, [molecule])
+        assert np.allclose(
+            np.asarray([v.m for v in out["Electrostatics"].charges.values()]),
+            gastiger_charges,
+        )
+
+    def test_overlapping_increments(self, sage):
+        """Test that separate charge increments can be properly applied to the same atom."""
+        molecule = Molecule.from_smiles("C")
+
+        sage = ForceField("openff-2.0.0.offxml")
+        sage.deregister_parameter_handler("ToolkitAM1BCC")
+        charge_handler = ChargeIncrementModelHandler(
+            version=0.3, partial_charge_method="formal_charge"
+        )
+        charge_handler.add_parameter(
+            {
+                "smirks": "[C:1][H:2]",
+                "charge_increment1": 0.111 * unit.elementary_charge,
+                "charge_increment2": -0.111 * unit.elementary_charge,
+            }
+        )
+        sage.register_parameter_handler(charge_handler)
+        assert 0.0 == pytest.approx(
+            sum(
+                v.m
+                for v in Interchange.from_smirnoff(sage, [molecule])[
+                    "Electrostatics"
+                ].charges.values()
+            )
+        )
+
+    def test_charge_increment_forwawrd_reverse_molecule(self, sage):
+        sage.deregister_parameter_handler("ToolkitAM1BCC")
+        sage.register_parameter_handler(hydrogen_cyanide_charge_increments())
+
+        topology = Topology.from_molecules(
+            [hydrogen_cyanide(reversed=False), hydrogen_cyanide(reversed=True)]
+        )
+
+        out = Interchange.from_smirnoff(sage, topology)
+
+        expected_charges = [-0.111, 0.611, -0.5, -0.5, 0.611, -0.111]
+
+        # TODO: Fix get_charges to return the atoms in order
+        found_charges = [0.0] * topology.n_atoms
+        for key, val in out["Electrostatics"].get_charges().items():
+            found_charges[key.atom_indices[0]] = val.m
+
+        assert np.allclose(expected_charges, found_charges)
+
+
 class TestSMIRNOFFVirtualSites(_BaseTest):
     from openff.toolkit.tests.mocking import VirtualSiteMocking
     from openmm import unit as openmm_unit
@@ -1449,7 +1587,6 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 system.getParticleMass(i).value_in_unit(openmm_unit.amu), 0.0
             ) == (False if i < topology.n_atoms else True)
 
-            # import ipdb; ipdb.set_trace()
             assert np.isclose(
                 expected_charge.m_as(unit.elementary_charge),
                 charge.value_in_unit(openmm_unit.elementary_charge),

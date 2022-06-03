@@ -1,5 +1,6 @@
 """Functions for running energy evluations with LAMMPS."""
 import subprocess
+from distutils.spawn import find_executable
 from typing import List, Optional
 
 import numpy as np
@@ -9,6 +10,17 @@ from openff.interchange import Interchange
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import LAMMPSRunError
+
+
+def _find_lammps_executable() -> Optional[str]:
+    """Attempt to locate a LAMMPS executable based on commonly-used names."""
+    lammps_executable_names = ["lammps", "lmp_serial", "lmp_mpi"]
+
+    for name in lammps_executable_names:
+        if find_executable(name):
+            return name
+
+    return None
 
 
 def get_lammps_energies(
@@ -40,6 +52,8 @@ def get_lammps_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
+    lmp = _find_lammps_executable()
+
     if round_positions is not None:
         off_sys.positions = np.round(off_sys.positions, round_positions)
 
@@ -49,7 +63,7 @@ def get_lammps_energies(
         input_file="tmp.in",
     )
 
-    run_cmd = "lmp_serial -i tmp.in"
+    run_cmd = f"{lmp} -i tmp.in"
 
     proc = subprocess.Popen(
         run_cmd,

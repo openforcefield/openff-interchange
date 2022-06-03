@@ -1,21 +1,34 @@
 """Functions for running energy evluations with GROMACS."""
+import pathlib
 import subprocess
 import tempfile
+from distutils.spawn import find_executable
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Union
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from openff.utilities.utilities import requires_package, temporary_cd
+from pkg_resources import resource_filename
 
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import GMXGromppError, GMXMdrunError
-from openff.interchange.tests import get_test_file_path
 
 if TYPE_CHECKING:
     from openff.units.unit import Quantity
 
     from openff.interchange import Interchange
+
+
+def _find_gromacs_executable() -> Optional[str]:
+    """Attempt to locate a GROMACS executable based on commonly-used names."""
+    gromacs_executable_names = ["gmx", "gmx_mpi", "gmx_d", "gmx_mpi_d"]
+
+    for name in gromacs_executable_names:
+        if find_executable(name):
+            return name
+
+    return None
 
 
 def _get_mdp_file(key: str = "auto") -> str:
@@ -29,7 +42,8 @@ def _get_mdp_file(key: str = "auto") -> str:
         "cutoff_buck": "cutoff_buck.mdp",
     }
 
-    return get_test_file_path(f"mdp/{mapping[key]}")
+    dir_path = resource_filename("openff.interchange", "tests/data/mdp")
+    return pathlib.Path(dir_path).joinpath(mapping[key]).as_posix()
 
 
 def get_gromacs_energies(
@@ -106,7 +120,9 @@ def _run_gmx_energy(
         An `EnergyReport` object containing the single-point energies.
 
     """
-    grompp_cmd = f"gmx grompp --maxwarn {maxwarn} -o out.tpr"
+    gmx = _find_gromacs_executable()
+
+    grompp_cmd = f"{gmx} grompp --maxwarn {maxwarn} -o out.tpr"
     grompp_cmd += f" -f {mdp_file} -c {gro_file} -p {top_file}"
 
     grompp = subprocess.Popen(
@@ -122,7 +138,8 @@ def _run_gmx_energy(
     if grompp.returncode:
         raise GMXGromppError(err)
 
-    mdrun_cmd = "gmx mdrun -s out.tpr -e out.edr -ntmpi 1"
+    # Some GROMACS builds will want `-ntmpi` instead of `ntomp`
+    mdrun_cmd = f"{gmx} mdrun -s out.tpr -e out.edr -ntomp 1"
 
     mdrun = subprocess.Popen(
         mdrun_cmd,
