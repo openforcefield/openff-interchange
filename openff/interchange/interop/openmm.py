@@ -568,6 +568,45 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
         return
 
+    else:
+        # Here we assume there are no vdW interactions in any handlers
+        vdw_handler = None
+
+        try:
+            electrostatics_handler = openff_sys["Electrostatics"]
+        except LookupError:
+            raise InternalInconsistencyError(
+                "In a confused state, could not find any vdW interactions but also failed to find "
+                "any electrostatics handler. This is a supported use case but should have been caught "
+                "earlier in this function. Please file an issue with a minimal reproducing example."
+            )
+
+        electrostatics_method = (
+            electrostatics_handler.periodic_potential
+            if electrostatics_handler
+            else None
+        )
+
+        non_bonded_force = openmm.NonbondedForce()
+        openmm_sys.addForce(non_bonded_force)
+
+        for _ in openff_sys.topology.atoms:
+            non_bonded_force.addParticle(0.0, 1.0, 0.0)
+
+        if electrostatics_method in ["Coulomb", "UNKNOWN"]:
+            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+            # TODO: Would setting the dispersion correction here have any impact?
+        elif electrostatics_method == _PME:
+            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
+            non_bonded_force.setEwaldErrorTolerance(1.0e-4)
+        else:
+            raise UnsupportedCutoffMethodError(
+                f"Found no vdW interactions but an electrostatics method of {electrostatics_method}. "
+                "This is either unsupported or ambiguous. If you believe this exception has been raised "
+                "in error, please file an issue with a minimally reproducing example and your motivation "
+                "for this use case."
+            )
+
     if not combine_nonbonded_forces:
         # Attempting to match the value used internally by OpenMM; The source of this value is likely
         # https://github.com/openmm/openmm/issues/1149#issuecomment-250299854
@@ -598,7 +637,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             coulomb14Scale=electrostatics_handler.scale_14
             if electrostatics_handler
             else 1.0,
-            lj14Scale=vdw_handler.scale_14,
+            lj14Scale=1.0 if vdw_handler is None else vdw_handler.scale_14,
         )
     else:
         electrostatics_force.createExceptionsFromBonds(
