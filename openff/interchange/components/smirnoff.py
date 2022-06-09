@@ -268,7 +268,8 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
         valence_terms = self.valence_terms(topology)
 
-        parameter_handler._check_all_valence_terms_assigned(
+        _check_all_valence_terms_assigned(
+            handler=parameter_handler,
             topology=topology,
             assigned_terms=matches,
             valence_terms=valence_terms,
@@ -593,7 +594,8 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
                 )
                 self.slot_map[topology_key] = potential_key
 
-        parameter_handler._check_all_valence_terms_assigned(
+        _check_all_valence_terms_assigned(
+            handler=parameter_handler,
             topology=topology,
             assigned_terms=matches,
             valence_terms=list(topology.propers),
