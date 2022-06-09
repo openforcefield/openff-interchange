@@ -33,7 +33,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     UnassignedProperTorsionParameterException,
     UnassignedValenceParameterException,
     VirtualSiteHandler,
-    _compute_lj_sigma,
     vdWHandler,
 )
 from openff.units import unit
@@ -1904,3 +1903,75 @@ def _slow_key_lookup_by_atom_index(matches: Dict, atom_index: int) -> List[Topol
         ):
             matched_keys.append(key)
     return matched_keys
+
+
+def _compute_lj_sigma(
+    sigma: Optional[unit.Quantity], rmin_half: Optional[unit.Quantity]
+) -> unit.Quantity:
+
+    return sigma if sigma is not None else (2.0 * rmin_half / (2.0 ** (1.0 / 6.0)))  # type: ignore
+
+
+# Coped from the toolkit, see
+# https://github.com/openforcefield/openff-toolkit/blob/0133414d3ab51e1af0996bcebe0cc1bdddc6431b/
+# openff/toolkit/typing/engines/smirnoff/forcefield.py#L609
+# However, it's not clear it's being called by any toolkit methods (in 0.10.x, 0.11.x, or at any point in history):
+# https://github.com/openforcefield/openff-toolkit/search?q=_check_for_missing_valence_terms&type=code
+def _check_for_missing_valence_terms(name, topology, assigned_terms, topological_terms):
+    """Check that there are no missing valence terms in the given topology."""
+    # Convert assigned terms and topological terms to lists
+    assigned_terms = [item for item in assigned_terms]
+    topological_terms = [item for item in topological_terms]
+
+    def ordered_tuple(atoms):
+        atoms = list(atoms)
+        if atoms[0] < atoms[-1]:
+            return tuple(atoms)
+        else:
+            return tuple(reversed(atoms))
+
+    try:
+        topology_set = {
+            ordered_tuple(atom.index for atom in atomset)
+            for atomset in topological_terms
+        }
+        assigned_set = {
+            ordered_tuple(index for index in atomset) for atomset in assigned_terms
+        }
+    except TypeError:
+        topology_set = {atom.index for atom in topological_terms}
+        assigned_set = {atomset[0] for atomset in assigned_terms}
+
+    def render_atoms(atomsets):
+        msg = ""
+        for atomset in atomsets:
+            msg += f"{atomset:30} :"
+            try:
+                for atom_index in atomset:
+                    atom = atoms[atom_index]
+                    msg += (
+                        f" {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}"
+                    )
+            except TypeError:
+                atom = atoms[atomset]
+                msg += f" {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}"
+
+            msg += "\n"
+        return msg
+
+    if set(assigned_set) != set(topology_set):
+        # Form informative error message
+        msg = f"{name}: Mismatch between valence terms added and topological terms expected.\n"
+        atoms = [atom for atom in topology.atoms]
+        if len(assigned_set.difference(topology_set)) > 0:
+            msg += "Valence terms created that are not present in Topology:\n"
+            msg += render_atoms(assigned_set.difference(topology_set))
+        if len(topology_set.difference(assigned_set)) > 0:
+            msg += "Topological atom sets not assigned parameters:\n"
+            msg += render_atoms(topology_set.difference(assigned_set))
+        msg += "topology_set:\n"
+        msg += str(topology_set) + "\n"
+        msg += "assigned_set:\n"
+        msg += str(assigned_set) + "\n"
+        # TODO: Raise a more specific exception or delete this method
+        raise Exception(msg)
