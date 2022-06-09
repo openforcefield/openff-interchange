@@ -165,7 +165,8 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
         if self.__class__.__name__ in ["SMIRNOFFBondHandler", "SMIRNOFFAngleHandler"]:
             valence_terms = self.valence_terms(topology)  # type: ignore[attr-defined]
 
-            parameter_handler._check_all_valence_terms_assigned(
+            _check_all_valence_terms_assigned(
+                handler=parameter_handler,
                 assigned_terms=matches,
                 topology=topology,
                 valence_terms=valence_terms,
@@ -1975,3 +1976,74 @@ def _check_for_missing_valence_terms(name, topology, assigned_terms, topological
         msg += str(assigned_set) + "\n"
         # TODO: Raise a more specific exception or delete this method
         raise Exception(msg)
+
+
+# Coped from the toolkit, see
+# https://github.com/openforcefield/openff-toolkit/blob/0133414d3ab51e1af0996bcebe0cc1bdddc6431b/
+# openff/toolkit/typing/engines/smirnoff/parameters.py#L2318
+def _check_all_valence_terms_assigned(
+    handler,
+    assigned_terms,
+    topology,
+    valence_terms,
+    exception_cls=UnassignedValenceParameterException,
+):
+    """Check that all valence terms have been assigned."""
+    if len(assigned_terms) == len(valence_terms):
+        return
+
+    # Convert the valence term to a valence dictionary to make sure
+    # the order of atom indices doesn't matter for comparison.
+    valence_terms_dict = assigned_terms.__class__()
+    for atoms in valence_terms:
+        atom_indices = (topology.atom_index(a) for a in atoms)
+        valence_terms_dict[atom_indices] = atoms
+
+    # Check that both valence dictionaries have the same keys (i.e. terms).
+    assigned_terms_set = set(assigned_terms.keys())
+    valence_terms_set = set(valence_terms_dict.keys())
+    unassigned_terms = valence_terms_set.difference(assigned_terms_set)
+    not_found_terms = assigned_terms_set.difference(valence_terms_set)
+
+    # Raise an error if there are unassigned terms.
+    err_msg = ""
+
+    if len(unassigned_terms) > 0:
+
+        unassigned_atom_tuples = []
+
+        unassigned_str = ""
+        for unassigned_tuple in unassigned_terms:
+            unassigned_str += "\n- Topology indices " + str(unassigned_tuple)
+            unassigned_str += ": names and elements "
+
+            unassigned_atoms = []
+
+            # Pull and add additional helpful info on missing terms
+            for atom_idx in unassigned_tuple:
+                atom = topology.atom(atom_idx)
+                unassigned_atoms.append(atom)
+                unassigned_str += f"({atom.name} {atom.symbol}), "
+            unassigned_atom_tuples.append(tuple(unassigned_atoms))
+        err_msg += (
+            "{parameter_handler} was not able to find parameters for the following valence terms:\n"
+            "{unassigned_str}"
+        ).format(
+            parameter_handler=handler.__class__.__name__, unassigned_str=unassigned_str
+        )
+    if len(not_found_terms) > 0:
+        if err_msg != "":
+            err_msg += "\n"
+        not_found_str = "\n- ".join([str(x) for x in not_found_terms])
+        err_msg += (
+            "{parameter_handler} assigned terms that were not found in the topology:\n"
+            "- {not_found_str}"
+        ).format(
+            parameter_handler=handler.__class__.__name__, not_found_str=not_found_str
+        )
+    if err_msg != "":
+        err_msg += "\n"
+        exception = exception_cls(err_msg)
+        exception.unassigned_topology_atom_tuples = unassigned_atom_tuples
+        exception.handler_class = handler.__class__
+        raise exception
