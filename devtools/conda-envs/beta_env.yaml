@@ -14,7 +14,7 @@ dependencies:
   - openmm
   # OpenFF stack
   - openff-toolkit =0.10.3
-  - openff-utilities
+  - openff-utilities >=0.1.5
   - openff-units >=0.1.6
   - cached-property
   - cachetools

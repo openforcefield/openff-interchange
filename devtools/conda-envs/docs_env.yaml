@@ -11,7 +11,7 @@ dependencies:
   - pint
   - openff-toolkit-base
   - openff-units >=0.1.6
-  - openff-utilities
+  - openff-utilities >=0.1.5
   - cached-property
   - cachetools
   - python-constraint
