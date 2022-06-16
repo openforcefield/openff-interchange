@@ -70,4 +70,4 @@ jobs:
     - name: Run example notebooks
       if: always()
       run: |
-        python -m pytest examples/ --nbval-lax --ignore=examples/packed_box.ipynb --ignore=examples/foyer-showcase/ --ignore=examples/protein-ligand
+        python -m pytest examples/ --nbval-lax --ignore=examples/deprecated/
