@@ -28,7 +28,7 @@ dependencies:
   - openff-evaluator-base
   - mdtraj
   - nglview
-  - openff-amber-ff-ports
+  - openff-amber-ff-ports >=0.0.3
   - openeye-toolkits
   - pytest <7.0.0
   - nbval
