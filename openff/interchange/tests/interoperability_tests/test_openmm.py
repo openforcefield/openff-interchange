@@ -244,6 +244,29 @@ class TestOpenMM(_BaseTest):
         else:
             raise Exception("No HarmonicAngleForce found")
 
+    def test_openmm_no_valence_forces_with_no_handler(self, sage):
+        ethanol = create_ethanol()
+
+        original_system = Interchange.from_smirnoff(sage, [ethanol]).to_openmm(
+            combine_nonbonded_forces=True
+        )
+        assert original_system.getNumForces() == 4
+
+        sage.deregister_parameter_handler("Constraints")
+        sage.deregister_parameter_handler("Bonds")
+
+        no_bonds = Interchange.from_smirnoff(sage, [ethanol]).to_openmm(
+            combine_nonbonded_forces=True
+        )
+        assert no_bonds.getNumForces() == 3
+
+        sage.deregister_parameter_handler("Angles")
+
+        no_angles = Interchange.from_smirnoff(sage, [ethanol]).to_openmm(
+            combine_nonbonded_forces=True
+        )
+        assert no_angles.getNumForces() == 2
+
 
 class TestOpenMMSwitchingFunction(_BaseTest):
     def test_switching_function_applied(self, sage, basic_top):
