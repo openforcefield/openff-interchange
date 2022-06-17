@@ -126,13 +126,13 @@ def _process_bond_forces(
     """
     Process the Bonds section of an Interchange object.
     """
-    harmonic_bond_force = openmm.HarmonicBondForce()
-    openmm_sys.addForce(harmonic_bond_force)
-
     try:
         bond_handler = openff_sys["Bonds"]
     except LookupError:
         return
+
+    harmonic_bond_force = openmm.HarmonicBondForce()
+    openmm_sys.addForce(harmonic_bond_force)
 
     has_constraint_handler = "Constraints" in openff_sys.handlers
 
@@ -169,13 +169,13 @@ def _process_angle_forces(
     """
     Process the Angles section of an Interchange object.
     """
-    harmonic_angle_force = openmm.HarmonicAngleForce()
-    openmm_sys.addForce(harmonic_angle_force)
-
     try:
         angle_handler = openff_sys["Angles"]
     except LookupError:
         return
+
+    harmonic_angle_force = openmm.HarmonicAngleForce()
+    openmm_sys.addForce(harmonic_angle_force)
 
     has_constraint_handler = "Constraints" in openff_sys.handlers
 
