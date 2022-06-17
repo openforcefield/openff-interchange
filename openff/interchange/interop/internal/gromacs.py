@@ -301,8 +301,8 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
 
         try:
             lj_parameters = openff_sys["vdW"].get_system_parameters()
-        except KeyError:
-            pass
+        except LookupError:
+            lj_parameters = None
 
         # TODO: Handle special case of water
         for molecule_idx, molecule in enumerate(openff_sys.topology.molecules):
