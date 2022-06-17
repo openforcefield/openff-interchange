@@ -299,13 +299,24 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
         _write_atomtypes(openff_sys, top_file, typemap, virtual_site_map)
         # TODO: Write [ nonbond_params ] section
 
-        # TODO: De-duplicate based on molecules
+        try:
+            lj_parameters = openff_sys["vdW"].get_system_parameters()
+        except LookupError:
+            lj_parameters = None
+
         # TODO: Handle special case of water
         for molecule_idx, molecule in enumerate(openff_sys.topology.molecules):
 
             molecule.name = str(molecule.name) + "x" + str(molecule_idx)
             _write_moleculetype(top_file, molecule.name)
-            _write_atoms(top_file, openff_sys, molecule, typemap, virtual_site_map)
+            _write_atoms(
+                top_file,
+                openff_sys,
+                molecule,
+                typemap,
+                virtual_site_map,
+                _cached_parameters=lj_parameters,
+            )
             _write_valence(top_file, openff_sys, molecule)
             _write_virtual_sites(
                 top_file,
@@ -533,25 +544,26 @@ def _write_atoms(
     molecule: "Molecule",
     typemap: Dict,
     virtual_site_map: Dict,
+    _cached_parameters=None,
 ):
     """Write the [ atoms ] and [ pairs ] sections for a molecule."""
     top_file.write("[ atoms ]\n")
     top_file.write(";num, type, resnum, resname, atomname, cgnr, q, m\n")
 
-    charges = openff_sys["Electrostatics"].charges
-
-    for molecule_index, atom in enumerate(molecule.atoms):
+    for atom in molecule.atoms:
+        molecule_index = molecule.atom_index(atom)
         topology_index = openff_sys.topology.atom_index(atom)
         mass = atom.mass.m
+        charge = atom.partial_charge.m
         atom_type = typemap[topology_index]
+
         try:
             res_idx = atom.metadata["residue_number"]
             res_name = atom.metadata["residue_name"]
         except KeyError:
             res_idx = 0
             res_name = "UNK"
-        top_key = TopologyKey(atom_indices=(topology_index,))
-        charge = charges[top_key].m_as(unit.e)
+
         # TODO: Figure out why charge increments were applied as an array
         # to the anchor atom involved in a BondChargeVirtualSite?
         if type(charge) == np.ndarray:
@@ -562,7 +574,7 @@ def _write_atoms(
             "{:18.8f} {:18.8f}\n".format(
                 molecule_index + 1,
                 atom_type,
-                res_idx,
+                int(res_idx),
                 res_name,
                 atom_type,
                 molecule_index + 1,
@@ -613,7 +625,10 @@ def _write_atoms(
     pairs: Set[Tuple] = {*_get_14_pairs(molecule)}
 
     if "vdW" in openff_sys.handlers:
-        lj_parameters = openff_sys["vdW"].get_system_parameters()
+        if _cached_parameters is None:
+            lj_parameters = openff_sys["vdW"].get_system_parameters()
+        else:
+            lj_parameters = _cached_parameters
     elif "Buckingham-6" in openff_sys.handlers:
         warnings.warn("Not writing a [ pairs ] section with Buckingham interactions.")
         top_file.write("\n")

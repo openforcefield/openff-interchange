@@ -655,6 +655,17 @@ class Interchange(DefaultModel):
 
         # FIXME: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
 
+        charges = system["Electrostatics"].charges
+
+        for molecule in system.topology.molecules:
+            molecule_charges = [
+                charges[TopologyKey(atom_indices=(system.topology.atom_index(atom),))].m
+                for atom in molecule.atoms
+            ]
+            molecule.partial_charges = unit.Quantity(
+                molecule_charges, unit.elementary_charge
+            )
+
         return system
 
     @classmethod

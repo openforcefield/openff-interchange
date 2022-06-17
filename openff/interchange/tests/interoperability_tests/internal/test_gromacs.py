@@ -230,6 +230,11 @@ class TestGROMACS(_BaseTest):
                 {pot_key: Potential(parameters={"charge": 0 * unit.elementary_charge})}
             )
 
+        for molecule in top.molecules:
+            molecule.partial_charges = unit.Quantity(
+                molecule.n_atoms * [0], unit.elementary_charge
+            )
+
         buck.potentials[pot_key] = pot
 
         out = Interchange()
