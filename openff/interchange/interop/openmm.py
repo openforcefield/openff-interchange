@@ -854,7 +854,7 @@ def to_openmm_topology(interchange: "Interchange") -> app.Topology:
         from openmm.app.element import Element
 
         openmm_topology = interchange.topology.to_openmm()
-        virtual_site_element = (Element.getByMass(0),)
+        virtual_site_element = Element.getByMass(0)
         # TODO: This almost surely isn't the right way to process virtual particles' residues,
         # but it's not clear how this should be done and what standards exist for this
         virtual_site_residue = [*openmm_topology.residues()][0]
