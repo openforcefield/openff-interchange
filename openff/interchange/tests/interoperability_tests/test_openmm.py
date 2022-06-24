@@ -18,7 +18,7 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
 )
 from openff.interchange.interop.openmm import from_openmm
-from openff.interchange.tests import _BaseTest
+from openff.interchange.tests import _BaseTest, get_test_file_path
 
 # WISHLIST: Add tests for reaction-field if implemented
 
@@ -266,6 +266,19 @@ class TestOpenMM(_BaseTest):
             combine_nonbonded_forces=True
         )
         assert no_angles.getNumForces() == 2
+
+    def test_openmm_only_electrostatics_no_vdw(self):
+        force_field_only_charges = ForceField(get_test_file_path("no_vdw.offxml"))
+        molecule = Molecule.from_smiles("HCl")
+
+        system = Interchange.from_smirnoff(
+            force_field_only_charges, [molecule]
+        ).to_openmm(
+            combine_nonbonded_forces=True,
+        )
+
+        assert system.getForce(0).getParticleParameters(0)[0]._value == 1.0
+        assert system.getForce(0).getParticleParameters(1)[0]._value == -1.0
 
 
 class TestOpenMMSwitchingFunction(_BaseTest):
