@@ -345,11 +345,18 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         return
 
     # TODO: Process ElectrostaticsHandler.exception_potential
-    if "vdW" in openff_sys.handlers:
-        vdw_handler = openff_sys["vdW"]
+    if "vdW" in openff_sys.handlers or "Electrostatics" in openff_sys.handlers:
+        try:
+            vdw_handler = openff_sys["vdW"]
+        except LookupError:
+            vdw_handler = None
 
-        vdw_cutoff = vdw_handler.cutoff.m_as(off_unit.angstrom) * unit.angstrom
-        vdw_method = vdw_handler.method.lower()
+        if vdw_handler:
+            vdw_cutoff = vdw_handler.cutoff.m_as(off_unit.angstrom) * unit.angstrom
+            vdw_method = vdw_handler.method.lower()
+        else:
+            vdw_cutoff = None
+            vdw_method = None
 
         try:
             electrostatics_handler = openff_sys["Electrostatics"]
@@ -368,7 +375,10 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         )
 
         if combine_nonbonded_forces:
-            if vdw_handler.mixing_rule != "lorentz-berthelot":
+            if getattr(vdw_handler, "mixing_rule", None) not in (
+                "lorentz-berthelot",
+                None,
+            ):
                 raise UnsupportedExportError(
                     "OpenMM's default NonbondedForce only supports Lorentz-Berthelot mixing rules."
                     "Try setting `combine_nonbonded_forces=False`."
@@ -384,15 +394,16 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 electrostatics_method = (
                     electrostatics_handler.nonperiodic_potential
                     if electrostatics_handler
-                    else "UNKNOWN"
+                    else None
                 )
-                if vdw_method == "cutoff" and electrostatics_method in [
+                if vdw_method in ("cutoff", None) and electrostatics_method in (
                     "Coulomb",
-                    "UNKNOWN",
-                ]:
+                    None,
+                ):
                     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
                     non_bonded_force.setUseDispersionCorrection(True)
-                    non_bonded_force.setCutoffDistance(vdw_cutoff)
+                    if vdw_cutoff:
+                        non_bonded_force.setCutoffDistance(vdw_cutoff)
                 else:
                     raise UnsupportedCutoffMethodError(
                         f"Combination of non-bonded cutoff methods {vdw_method} (vdW) and {electrostatics_method}"
@@ -404,16 +415,23 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 electrostatics_method = (
                     electrostatics_handler.periodic_potential
                     if electrostatics_handler
-                    else "UNKNOWN"
+                    else None
                 )
-                if vdw_method == "cutoff" and electrostatics_method in [
+                if vdw_method in ["cutoff", None] and electrostatics_method in [
                     _PME,
-                    "UNKNOWN",
+                    None,
                 ]:
                     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
                     non_bonded_force.setEwaldErrorTolerance(1.0e-4)
                     non_bonded_force.setUseDispersionCorrection(True)
-                    non_bonded_force.setCutoffDistance(vdw_cutoff)
+                    if vdw_cutoff is None:
+                        # With no vdW handler and/or ambiguous cutoff, cannot set it,
+                        # thereforce silently fall back to OpenMM's default. It's not
+                        # clear if this value matters with only (PME) charges and no
+                        # vdW interactions in the system.
+                        pass
+                    else:
+                        non_bonded_force.setCutoffDistance(vdw_cutoff)
                 elif vdw_method == "pme" and electrostatics_method == _PME:
                     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
                     non_bonded_force.setEwaldErrorTolerance(1.0e-4)
@@ -427,8 +445,11 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             _apply_switching_function(vdw_handler, non_bonded_force)
 
         else:
-            vdw_expression = vdw_handler.expression
-            vdw_expression = vdw_expression.replace("**", "^")
+            if vdw_handler is None:
+                vdw_expression = "(no handler found)"
+            else:
+                vdw_expression = vdw_handler.expression
+                vdw_expression = vdw_expression.replace("**", "^")
 
             mixing_rule_expression = (
                 "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); "
@@ -506,34 +527,38 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             except AttributeError:
                 partial_charges = electrostatics_handler.charges
 
-        for top_key, pot_key in vdw_handler.slot_map.items():
+        for atom_index, _ in enumerate(openff_sys.topology.atoms):
             # TODO: Actually process virtual site vdW parameters here
-            if type(top_key) != TopologyKey:
-                continue
-            atom_idx = top_key.atom_indices[0]
+
+            top_key = TopologyKey(atom_indices=(atom_index,))
 
             if electrostatics_handler is not None:
                 partial_charge = partial_charges[top_key].m_as(off_unit.e)
             else:
                 partial_charge = 0.0
 
-            vdw_potential = vdw_handler.potentials[pot_key]
-            # these are floats, implicitly angstrom and kcal/mol
-            sigma, epsilon = _lj_params_from_potential(vdw_potential)
-            sigma = sigma.m_as(off_unit.nanometer)
-            epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
+            if vdw_handler is not None:
+                pot_key = vdw_handler.slot_map[top_key]
+                sigma, epsilon = _lj_params_from_potential(
+                    vdw_handler.potentials[pot_key]
+                )
+                sigma = sigma.m_as(off_unit.nanometer)
+                epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
+            else:
+                sigma = unit.Quantity(0.0, unit.nanometer)
+                epsilon = unit.Quantity(0.0, unit.kilojoules_per_mole)
 
             if combine_nonbonded_forces:
                 non_bonded_force.setParticleParameters(
-                    atom_idx,
+                    atom_index,
                     partial_charge,
                     sigma,
                     epsilon,
                 )
             else:
-                vdw_force.setParticleParameters(atom_idx, [sigma, epsilon])
+                vdw_force.setParticleParameters(atom_index, [sigma, epsilon])
                 electrostatics_force.setParticleParameters(
-                    atom_idx, partial_charge, 0.0, 0.0
+                    atom_index, partial_charge, 0.0, 0.0
                 )
 
     elif "Buckingham-6" in openff_sys.handlers:
@@ -593,7 +618,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         for _ in openff_sys.topology.atoms:
             non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
-        if electrostatics_method in ["Coulomb", "UNKNOWN"]:
+        if electrostatics_method in ["Coulomb", None]:
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
             # TODO: Would setting the dispersion correction here have any impact?
         elif electrostatics_method == _PME:
