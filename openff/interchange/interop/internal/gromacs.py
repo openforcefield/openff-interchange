@@ -107,6 +107,24 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
             )
 
         for virtual_site_key in virtual_site_map:
+            assert (
+                virtual_site_key.type == "BondCharge"
+            ), "Only 'BondCharge' virtual sites are implemented"
+
+            # TODO: Move virtual site position determination elsewhere
+            r0 = openff_sys.positions[virtual_site_key.orientation_atom_indices[0]]
+            r1 = openff_sys.positions[virtual_site_key.orientation_atom_indices[1]]
+
+            # np.linalg.norm(r0 - r1) requires something unimplemented with __array_function__
+            r1_r0_bond_length = np.sqrt(np.sum((r0 - r1) ** 2))
+
+            potential_key = openff_sys["VirtualSites"].slot_map[virtual_site_key]
+            potential = openff_sys["VirtualSites"].potentials[potential_key]
+            distance = potential.parameters["distance"]
+
+            r_virtual_site = r1 + (r1 - r0) * (distance / r1_r0_bond_length)
+            r_virtual_site_nm = r_virtual_site.m_as(unit.nanometer)
+
             atom_name = "VS"
             residue_idx = 1
             residue_name = ""
@@ -118,9 +136,9 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
                     residue_name,
                     atom_name,
                     atom_index,
-                    0.0,
-                    0.0,
-                    0.0,
+                    r_virtual_site_nm[0],
+                    r_virtual_site_nm[1],
+                    r_virtual_site_nm[2],
                 )
             )
 
@@ -245,7 +263,7 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
     if "VirtualSites" in openff_sys.handlers:
         if len(openff_sys["VirtualSites"].slot_map) > 0:
             raise UnsupportedExportError(
-                "Exporting virtual sites to GROMACS is not validated in this version."
+                "Exporting virtual sites to GROMACS is EXPERIMENTAL and not yet thoroughly validated."
             )
         else:
             # Allow a handler with no particles to exist
