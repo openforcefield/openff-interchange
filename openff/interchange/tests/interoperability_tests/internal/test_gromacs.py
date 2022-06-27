@@ -266,7 +266,7 @@ class TestGROMACS(_BaseTest):
         out.to_gro("out.gro", writer="internal")
         out.to_top("out.top", writer="internal")
 
-        omm_energies = get_openmm_energies(out)
+        omm_energies = get_openmm_energies(out, combine_nonbonded_forces=True)
         by_hand = A * exp(-B * r) - C * r**-6
 
         resid = omm_energies.energies["vdW"] - by_hand

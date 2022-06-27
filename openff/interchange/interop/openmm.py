@@ -394,11 +394,11 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 electrostatics_method = (
                     electrostatics_handler.nonperiodic_potential
                     if electrostatics_handler
-                    else "UNKNOWN"
+                    else None
                 )
                 if vdw_method in ("cutoff", None) and electrostatics_method in (
                     "Coulomb",
-                    "UNKNOWN",
+                    None,
                 ):
                     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
                     non_bonded_force.setUseDispersionCorrection(True)
@@ -415,16 +415,23 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 electrostatics_method = (
                     electrostatics_handler.periodic_potential
                     if electrostatics_handler
-                    else "UNKNOWN"
+                    else None
                 )
-                if vdw_method == "cutoff" and electrostatics_method in [
+                if vdw_method in ["cutoff", None] and electrostatics_method in [
                     _PME,
-                    "UNKNOWN",
+                    None,
                 ]:
                     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
                     non_bonded_force.setEwaldErrorTolerance(1.0e-4)
                     non_bonded_force.setUseDispersionCorrection(True)
-                    non_bonded_force.setCutoffDistance(vdw_cutoff)
+                    if vdw_cutoff is None:
+                        # With no vdW handler and/or ambiguous cutoff, cannot set it,
+                        # thereforce silently fall back to OpenMM's default. It's not
+                        # clear if this value matters with only (PME) charges and no
+                        # vdW interactions in the system.
+                        pass
+                    else:
+                        non_bonded_force.setCutoffDistance(vdw_cutoff)
                 elif vdw_method == "pme" and electrostatics_method == _PME:
                     non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
                     non_bonded_force.setEwaldErrorTolerance(1.0e-4)
@@ -438,8 +445,11 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             _apply_switching_function(vdw_handler, non_bonded_force)
 
         else:
-            vdw_expression = vdw_handler.expression
-            vdw_expression = vdw_expression.replace("**", "^")
+            if vdw_handler is None:
+                vdw_expression = "(no handler found)"
+            else:
+                vdw_expression = vdw_handler.expression
+                vdw_expression = vdw_expression.replace("**", "^")
 
             mixing_rule_expression = (
                 "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); "
@@ -608,7 +618,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         for _ in openff_sys.topology.atoms:
             non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
-        if electrostatics_method in ["Coulomb", "UNKNOWN"]:
+        if electrostatics_method in ["Coulomb", None]:
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
             # TODO: Would setting the dispersion correction here have any impact?
         elif electrostatics_method == _PME:

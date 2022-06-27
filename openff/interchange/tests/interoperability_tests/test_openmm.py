@@ -269,7 +269,7 @@ class TestOpenMM(_BaseTest):
 
     def test_openmm_only_electrostatics_no_vdw(self):
         force_field_only_charges = ForceField(get_test_file_path("no_vdw.offxml"))
-        molecule = Molecule.from_smiles("HCl")
+        molecule = Molecule.from_smiles("[H][Cl]")
 
         system = Interchange.from_smirnoff(
             force_field_only_charges, [molecule]
