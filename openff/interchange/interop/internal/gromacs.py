@@ -107,22 +107,10 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
             )
 
         for virtual_site_key in virtual_site_map:
-            assert (
-                virtual_site_key.type == "BondCharge"
-            ), "Only 'BondCharge' virtual sites are implemented"
-
-            # TODO: Move virtual site position determination elsewhere
-            r0 = openff_sys.positions[virtual_site_key.orientation_atom_indices[0]]
-            r1 = openff_sys.positions[virtual_site_key.orientation_atom_indices[1]]
-
-            # np.linalg.norm(r0 - r1) requires something unimplemented with __array_function__
-            r1_r0_bond_length = np.sqrt(np.sum((r0 - r1) ** 2))
-
-            potential_key = openff_sys["VirtualSites"].slot_map[virtual_site_key]
-            potential = openff_sys["VirtualSites"].potentials[potential_key]
-            distance = potential.parameters["distance"]
-
-            r_virtual_site = r1 + (r1 - r0) * (distance / r1_r0_bond_length)
+            r_virtual_site = _get_virtual_site_positions(
+                virtual_site_key,
+                openff_sys,
+            )
             r_virtual_site_nm = r_virtual_site.m_as(unit.nanometer)
 
             atom_name = "VS"
@@ -1490,3 +1478,59 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
                 )
 
     return interchange
+
+
+def _get_virtual_site_positions(virtual_site_key, interchange) -> unit.Quantity:
+    # TODO: Move this behavior elsewhere, possibly to a non-GROMACS location
+    if virtual_site_key.type == "BondCharge":
+        return _get_bond_charge_virtual_site_positions(virtual_site_key, interchange)
+    if virtual_site_key.type == "DivalentLonePair":
+        return _get_divalent_lone_pair_virtual_site_positions(
+            virtual_site_key, interchange
+        )
+    else:
+        raise Exception(f"Virtual site type {virtual_site_key.type} not implemented.")
+
+
+def _get_bond_charge_virtual_site_positions(
+    virtual_site_key, interchange
+) -> unit.Quantity:
+    r0 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
+    r1 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
+
+    # np.linalg.norm(r0 - r1) requires something unimplemented with __array_function__
+    r1_r0_bond_length = np.sqrt(np.sum((r0 - r1) ** 2))
+
+    potential_key = interchange["VirtualSites"].slot_map[virtual_site_key]
+    potential = interchange["VirtualSites"].potentials[potential_key]
+    distance = potential.parameters["distance"]
+
+    return r1 + (r1 - r0) * (distance / r1_r0_bond_length)
+
+
+def _get_divalent_lone_pair_virtual_site_positions(
+    virtual_site_key, interchange
+) -> unit.Quantity:
+    r0 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
+    r1 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
+    r2 = interchange.positions[virtual_site_key.orientation_atom_indices[2]]
+
+    r0_r1_bond_length = np.sqrt(np.sum((r0 - r1) ** 2))
+    r0_r2_bond_length = np.sqrt(np.sum((r0 - r2) ** 2))
+    rmid = (r1 + r2) / 2
+    rmid_distance = np.sqrt(np.sum((r0 - rmid) ** 2))
+
+    if abs(r0_r1_bond_length - r0_r2_bond_length) > unit.Quantity(1e-3, unit.nanometer):
+        raise Exception(
+            "Only symmetric geometries (i.e. r2 - r0 = r1 - r0) are currently supported"
+        )
+
+    potential_key = interchange["VirtualSites"].slot_map[virtual_site_key]
+    potential = interchange["VirtualSites"].potentials[potential_key]
+    distance = potential.parameters["distance"]
+    out_of_plane_angle = potential.parameters["outOfPlaneAngle"]
+
+    if out_of_plane_angle.m_as(unit.degree) != 0.0:
+        raise Exception("Only flat `DivalentLonePairType` is currently supported.")
+
+    return r0 + (r0 - rmid) * (distance) / (rmid_distance)
