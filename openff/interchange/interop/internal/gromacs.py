@@ -2,7 +2,7 @@
 import math
 import warnings
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Callable, Dict, Optional, Set, Tuple, Union
+from typing import IO, TYPE_CHECKING, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 from openff.toolkit.topology import Molecule, Topology
@@ -246,16 +246,11 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
 
     """
     if not isinstance(file_path, (str, Path)):
-        raise Exception
-
-    if "VirtualSites" in openff_sys.handlers:
-        if len(openff_sys["VirtualSites"].slot_map) > 0:
-            raise UnsupportedExportError(
-                "Exporting virtual sites to GROMACS is EXPERIMENTAL and not yet thoroughly validated."
-            )
-        else:
-            # Allow a handler with no particles to exist
-            pass
+        if "VirtualSites" in openff_sys.handlers:
+            if len(openff_sys["VirtualSites"].slot_map) > 0:
+                warnings.warn(
+                    "Exporting virtual sites to GROMACS is EXPERIMENTAL and not yet thoroughly validated."
+                )
 
     if isinstance(file_path, str):
         path = Path(file_path)
@@ -589,7 +584,14 @@ def _write_atoms(
             )
         )
 
-    for virtual_site_key, index in virtual_site_map.items():
+    index = molecule.n_atoms + 1
+
+    for virtual_site_key in virtual_site_map:
+        if not _this_key_is_in_molecule(
+            virtual_site_key, openff_sys.topology, molecule
+        ):
+            continue
+
         atom_idx = index
         atom_type = "VS"
         res_idx = 1
@@ -614,6 +616,8 @@ def _write_atoms(
                 mass,
             )
         )
+
+        index += 1
 
     top_file.write("\n")
 
@@ -685,7 +689,18 @@ def _write_virtual_sites(
     started_virtual_sites3 = False
     # TODO: Cleaner implementation than filter + sort? Maybe split it up into each type
     # and do them sequentially?
+
     slot_map: Dict[VirtualSiteKey, PotentialKey] = virtual_site_handler.slot_map  # type: ignore
+
+    # TODO: Consolidate this logic with identical code in coordinate writer
+
+    # TODO: Lots of repeated code, like checking to see if a particular virtual site is in _this_
+    #       molecule, etc., should consolidate
+
+    used_keys = dict()
+
+    virtual_site_index = molecule.n_atoms + 1
+
     for virtual_site_key in sorted(
         (k for k in slot_map if type(k) == VirtualSiteKey),
         key=lambda x: x.type,
@@ -695,13 +710,19 @@ def _write_virtual_sites(
                 top_file.write("\n[ virtual_sites2 ]\n; site  ai  aj  funct   a\n")
                 started_virtual_sites2 = True
 
-            reference_atoms = virtual_site_key.orientation_atom_indices
-            if len(reference_atoms) != 2:
+            orientation_atom_indices: List[
+                int
+            ] = virtual_site_key.orientation_atom_indices
+
+            if len(orientation_atom_indices) != 2:
                 raise NotImplementedError
 
-            virtual_site_index = virtual_site_map[virtual_site_key]
-            atom1 = reference_atoms[0]
-            atom2 = reference_atoms[1]
+            offset = openff_sys.topology.atom_index(molecule.atom(0)) - 1
+
+            # virtual_site_index = virtual_site_map[virtual_site_key]
+            atom1 = orientation_atom_indices[0]
+            atom2 = orientation_atom_indices[1]
+
             func = 2
 
             distance = (
@@ -713,8 +734,11 @@ def _write_virtual_sites(
             a = distance
 
             top_file.write(
-                f"{virtual_site_index}\t\t{atom1+1}\t{atom2+1}\t{func}\t{a}\n"
+                f"{virtual_site_index}\t\t{atom1-offset}\t{atom2-offset}\t"
+                f"{func}\t{a}\n"
             )
+
+            used_keys.update({virtual_site_index: virtual_site_key})
 
         if virtual_site_key.type == "MonovalentLonePair":
             if not started_virtual_sites3:
@@ -727,10 +751,18 @@ def _write_virtual_sites(
             if len(reference_atoms) != 3:
                 raise NotImplementedError
 
-            virtual_site_index = virtual_site_map[virtual_site_key]
+            offset = openff_sys.topology.atom_index(molecule.atom(0)) - 1
+
+            # virtual_site_index = virtual_site_map[virtual_site_key]
             atom1 = reference_atoms[0]
             atom2 = reference_atoms[1]
             atom3 = reference_atoms[2]
+
+            if not _this_key_is_in_molecule(
+                virtual_site_key, openff_sys.topology, molecule
+            ):
+                continue
+
             func = 3  # "3fad"
 
             out_of_plane_angle = (
@@ -759,9 +791,11 @@ def _write_virtual_sites(
             in_plane_angle_transformed = 180 - in_plane_angle
 
             top_file.write(
-                f"{virtual_site_index}\t\t{atom1 + 1}\t{atom2 + 1}\t{atom3 + 1}\t"
+                f"{virtual_site_index}\t\t{atom1 -offset}\t{atom2 -offset}\t{atom3 -offset}\t"
                 f"{func}\t{in_plane_angle_transformed}\t{distance}\n"
             )
+
+            used_keys.update({virtual_site_index: virtual_site_key})
 
         if virtual_site_key.type == "DivalentLonePair":
             if not started_virtual_sites3:
@@ -773,13 +807,27 @@ def _write_virtual_sites(
             # TODO: Cannot sort here. Atom ordering implies "chirality" of virtual sites,
             #  i.e. which side of a 5-site water each lone pair particle should go.
             reference_atoms = tuple(sorted(virtual_site_key.orientation_atom_indices))
+
             if len(reference_atoms) != 3:
                 raise NotImplementedError
 
-            virtual_site_index = virtual_site_map[virtual_site_key]
+            offset = openff_sys.topology.atom_index(molecule.atom(0)) - 1
+
+            # GROMACS indexes molecules at 1, so the offset is "one less" than 0-indexed OpenFF indices
+            offset = openff_sys.topology.atom_index(molecule.atom(0)) - 1
+
+            # virtual_site_index = virtual_site_map[virtual_site_key]
             atom1 = reference_atoms[0]
             atom2 = reference_atoms[1]
             atom3 = reference_atoms[2]
+
+            if _this_key_is_in_molecule(
+                virtual_site_key, openff_sys.topology, molecule
+            ):
+                pass
+            else:
+                continue
+
             func = 1
 
             bond1_key = TopologyKey(atom_indices=(atom1, atom2))
@@ -827,8 +875,11 @@ def _write_virtual_sites(
                 a = -1.0 * distance / (math.cos(angle / 2.0) * bond1_length) / 2.0
 
                 top_file.write(
-                    f"{virtual_site_index}\t\t{atom1+1}\t{atom2+1}\t{atom3+1}\t{func}\t{a}\t{a}\n"
+                    f"{virtual_site_index}\t\t{atom1 -offset }\t{atom2 -offset}\t{atom3-offset}"
+                    f"\t{func}\t{a}\t{a}\n"
                 )
+
+                used_keys.update({virtual_site_index: virtual_site_key})
 
             else:
                 func = 4
@@ -840,15 +891,20 @@ def _write_virtual_sites(
                 )
 
                 top_file.write(
-                    f"{virtual_site_index}\t\t{atom1+1}\t{atom2+1}\t{atom3+1}\t{func}\t{a}\t{a}\t{c}\n"
+                    f"{virtual_site_index}\t\t{atom1-offset}\t{atom2-offset}\t{atom3-offset}"
+                    f"\t{func}\t{a}\t{a}\t{c}\n"
                 )
 
-    top_file.write("\n[ exclusions ]\n")
-    for virtual_site_key in virtual_site_handler.slot_map:  # type: ignore[assignment]
-        parent_indices = virtual_site_key.atom_indices  # type: ignore[attr-defined]
-        virtual_site_index = virtual_site_map[virtual_site_key]
+                used_keys.update({virtual_site_index: virtual_site_key})
+
+    if len(used_keys) > 0:
+        top_file.write("\n[ exclusions ]\n")
+
+    for virtual_site_index, virtual_site_key in used_keys.items():
+        orientation_atom_indices = virtual_site_key.orientation_atom_indices
+
         top_file.write(f"{virtual_site_index}\t")
-        top_file.write("\t".join([str(i + 1) for i in parent_indices]))
+        top_file.write("\t".join([str(i - offset) for i in orientation_atom_indices]))
         top_file.write("\n")
 
     top_file.write("\n")
@@ -1534,3 +1590,15 @@ def _get_divalent_lone_pair_virtual_site_positions(
         raise Exception("Only flat `DivalentLonePairType` is currently supported.")
 
     return r0 + (r0 - rmid) * (distance) / (rmid_distance)
+
+
+def _this_key_is_in_molecule(
+    virtual_site_key: VirtualSiteKey, topology: Topology, molecule: Molecule
+) -> bool:
+    """Assert that all orientation atoms in this key are in this molecule."""
+    for atom in molecule.atoms:
+        topology_index = topology.atom_index(atom)
+        if topology_index not in virtual_site_key.orientation_atom_indices:
+            return False
+
+    return True
