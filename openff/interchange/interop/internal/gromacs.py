@@ -316,10 +316,16 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
         except LookupError:
             lj_parameters = None
 
-        # TODO: Handle special case of water
-        for molecule_idx, molecule in enumerate(openff_sys.topology.molecules):
+        unique_molecule_map: Dict[
+            int, List
+        ] = openff_sys.topology.identical_molecule_groups
 
-            molecule.name = str(molecule.name) + "x" + str(molecule_idx)
+        for unique_molecule_index in unique_molecule_map:
+            molecule = openff_sys.topology.molecule(unique_molecule_index)
+
+            if molecule.name == "":
+                molecule.name = str(molecule.name) + "x" + str(unique_molecule_index)
+
             _write_moleculetype(top_file, molecule.name)
             _write_atoms(
                 top_file,
@@ -337,7 +343,7 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
                 virtual_site_map,
             )
 
-        _write_system(top_file, openff_sys)
+        _write_system(top_file, openff_sys, unique_molecule_map)
 
 
 def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
@@ -1183,7 +1189,9 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
     top_file.write("\n")
 
 
-def _write_system(top_file: IO, openff_sys: "Interchange"):
+def _write_system(
+    top_file: IO, openff_sys: "Interchange", uniqe_molecule_map: Dict[int, List]
+):
     """Write the [ system ] section."""
     top_file.write("[ system ]\n")
     top_file.write("; name \n")
@@ -1191,12 +1199,16 @@ def _write_system(top_file: IO, openff_sys: "Interchange"):
 
     top_file.write("[ molecules ]\n")
     top_file.write("; Compound\tnmols\n")
-    # TODO: Collapse identical molecules? Need to define the criteria,
-    #       and if that's to be done automatically or only by the user
-    for molecule in openff_sys.topology.molecules:
-        if not molecule.name:
+
+    for unique_molecule_index in uniqe_molecule_map:
+        unique_molecule = openff_sys.topology.molecule(unique_molecule_index)
+
+        if unique_molecule.name == "":
             raise Exception("Molecule missing a name")
-        top_file.write(f"{molecule.name}\t1\n")
+
+        top_file.write(
+            f"{unique_molecule.name}\t{len(uniqe_molecule_map[unique_molecule_index])}\n"
+        )
 
     top_file.write("\n")
 
