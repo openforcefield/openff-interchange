@@ -1625,12 +1625,12 @@ def _this_key_is_in_molecule(
     virtual_site_key: VirtualSiteKey, topology: Topology, molecule: Molecule
 ) -> bool:
     """Assert that all orientation atoms in this key are in this molecule."""
-    for atom in molecule.atoms:
-        topology_index = topology.atom_index(atom)
-        if topology_index not in virtual_site_key.orientation_atom_indices:
-            return False
+    topology_atom_indices = [topology.atom_index(atom) for atom in molecule.atoms]
 
-    return True
+    return all(
+        orientation_atom_index in topology_atom_indices
+        for orientation_atom_index in virtual_site_key.orientation_atom_indices
+    )
 
 
 def _get_residue_info_from_atom(atom) -> Tuple[int, str]:
