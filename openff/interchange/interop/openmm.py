@@ -805,11 +805,6 @@ def _process_virtual_sites(openff_sys, openmm_sys):
 
         openmm_sys.setVirtualSite(index_system, openmm_particle)
 
-        for index, charge_increment in zip(orientations, charge_increments):
-            atom_charge, *atom_vdw = non_bonded_force.getParticleParameters(index)
-            atom_charge += to_openmm_unit(charge_increment)
-            non_bonded_force.setParticleParameters(index, atom_charge, *atom_vdw)
-
         # Notes: For each type of virtual site, the parent atom is defined as the _first_ (0th) atom.
         # The toolkit, however, might have some bugs from following different assumptions:
         # https://github.com/openforcefield/openff-interchange/pull/415#issuecomment-1074546516
