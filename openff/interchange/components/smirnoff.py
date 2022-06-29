@@ -1027,12 +1027,22 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             for parameter_key, parameter_value in potential.parameters.items():
 
                 if parameter_key == "charge_increments":
+
                     if type(topology_key) != VirtualSiteKey:
                         raise RuntimeError
-                    charge = -1.0 * np.sum(parameter_value)
+
+                    total_charge = np.sum(parameter_value)
                     # assumes virtual sites can only have charges determined in one step
-                    # also, topology_key is actually a VirtualSiteKey
-                    charges[topology_key] = charge
+                    # here, topology_key is actually a VirtualSiteKey
+                    charges[topology_key] = -1.0 * total_charge
+
+                    # Apply increments to "orientation" atoms
+                    for i, increment in enumerate(parameter_value):
+                        orientation_atom_key = TopologyKey(
+                            atom_indices=(topology_key.orientation_atom_indices[i],)
+                        )
+                        charges[orientation_atom_key] += increment
+
                 elif parameter_key in ["charge", "charge_increment"]:
                     charge = parameter_value
                     assert len(topology_key.atom_indices) == 1

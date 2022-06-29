@@ -572,7 +572,13 @@ def _write_atoms(
         molecule_index = molecule.atom_index(atom)
         topology_index = openff_sys.topology.atom_index(atom)
         mass = atom.mass.m
-        charge = atom.partial_charge.m
+        charge = (
+            openff_sys["Electrostatics"]
+            .charges_with_virtual_sites[TopologyKey(atom_indices=(topology_index,))]
+            .m_as(
+                unit.elementary_charge,
+            )
+        )
         atom_type = typemap[topology_index]
 
         try:
@@ -727,8 +733,8 @@ def _write_virtual_sites(
                 top_file.write("\n[ virtual_sites2 ]\n; site  ai  aj  funct   a\n")
                 started_virtual_sites2 = True
 
-            orientation_atom_indices: List[
-                int
+            orientation_atom_indices: Tuple[
+                int, ...
             ] = virtual_site_key.orientation_atom_indices
 
             if len(orientation_atom_indices) != 2:
