@@ -107,6 +107,18 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
 
             for virtual_site_key in virtual_site_map:
 
+                # Short circuit if the last atom in this molecule is (in the topology's atom ordering)
+                # before all orientation atoms in the topology
+                if topology_index < min(virtual_site_key.orientation_atom_indices):
+                    continue
+
+                # Short circuit if the first atom in this molecule is (in the topology's atom ordering)
+                # after all orientation atoms in the topology
+                if topology_index - molecule.n_atoms > max(
+                    virtual_site_key.orientation_atom_indices
+                ):
+                    continue
+
                 if not _this_key_is_in_molecule(
                     virtual_site_key, openff_sys.topology, molecule
                 ):
@@ -776,7 +788,6 @@ def _write_virtual_sites(
 
             offset = openff_sys.topology.atom_index(molecule.atom(0)) - 1
 
-            # virtual_site_index = virtual_site_map[virtual_site_key]
             atom1 = reference_atoms[0]
             atom2 = reference_atoms[1]
             atom3 = reference_atoms[2]
@@ -839,7 +850,6 @@ def _write_virtual_sites(
             # GROMACS indexes molecules at 1, so the offset is "one less" than 0-indexed OpenFF indices
             offset = openff_sys.topology.atom_index(molecule.atom(0)) - 1
 
-            # virtual_site_index = virtual_site_map[virtual_site_key]
             atom1 = reference_atoms[0]
             atom2 = reference_atoms[1]
             atom3 = reference_atoms[2]
@@ -1622,15 +1632,29 @@ def _get_divalent_lone_pair_virtual_site_positions(
 
 
 def _this_key_is_in_molecule(
-    virtual_site_key: VirtualSiteKey, topology: Topology, molecule: Molecule
+    virtual_site_key: VirtualSiteKey,
+    topology: Topology,
+    molecule: Molecule,
+    shortcut=True,
 ) -> bool:
-    """Assert that all orientation atoms in this key are in this molecule."""
-    topology_atom_indices = [topology.atom_index(atom) for atom in molecule.atoms]
+    """
+    Assert that all orientation atoms in this key are in this molecule.
 
-    return all(
-        orientation_atom_index in topology_atom_indices
-        for orientation_atom_index in virtual_site_key.orientation_atom_indices
-    )
+    The `shortcut` code path assumes that if the parent atom of a virtual site is in a molecule, all of
+    the orientation atoms are as well.
+    """
+    if shortcut:
+        parent_atom = topology.atom(virtual_site_key.orientation_atom_indices[0])
+
+        return parent_atom.molecule is molecule
+
+    else:
+        topology_atom_indices = [topology.atom_index(atom) for atom in molecule.atoms]
+
+        return all(
+            orientation_atom_index in topology_atom_indices
+            for orientation_atom_index in virtual_site_key.orientation_atom_indices
+        )
 
 
 def _get_residue_info_from_atom(atom) -> Tuple[int, str]:
