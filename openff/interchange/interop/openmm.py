@@ -13,6 +13,7 @@ from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InternalInconsistencyError,
+    MissingPositionsError,
     UnimplementedCutoffMethodError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
@@ -868,8 +869,10 @@ def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
 
 def to_openmm_topology(interchange: "Interchange") -> app.Topology:
     """Export components of this Interchange to an OpenMM Topology."""
+    atom_topology = interchange.topology.to_openmm()
+
     if "VirtualSites" not in interchange.handlers.keys():
-        return interchange.topology.to_openmm()
+        return atom_topology
     else:
         from openmm.app.element import Element
 
@@ -890,6 +893,34 @@ def to_openmm_topology(interchange: "Interchange") -> app.Topology:
             )
 
         return openmm_topology
+
+
+def to_openmm_positions(interchange: "Interchange") -> unit.Quantity:
+    """Generate an array of positions of all particles, including virtual sites."""
+    # TODO: should there be a `include_virtual_sites: bool=True` option?
+
+    if interchange.positions is None:
+        raise MissingPositionsError(
+            f"Positions are required found {interchange.positions=}."
+        )
+
+    atom_positions = to_openmm_unit(interchange.positions)
+
+    if "VirtualSites" in interchange.handlers:
+        return atom_positions
+    elif len(interchange["VirtualSites"].slot_map) == 0:
+        return atom_positions
+
+    # TODO: This logic is cribbed from `to_gro`, begging to be refactored out
+    from openff.interchange.interop.internal.gromacs import _get_virtual_site_positions
+
+    # TODO: This doesn't actually ensure the ordering is molecule-by-molecule
+    for virtual_site_key in interchange["VirtualSites"].slot_map.keys():
+        this_virtual_site_position = _get_virtual_site_positions(  # noqa
+            virtual_site_key,
+            interchange,
+        )
+        pass
 
 
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):

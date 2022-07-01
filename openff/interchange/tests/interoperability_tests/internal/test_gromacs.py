@@ -278,15 +278,12 @@ class TestGROMACS(_BaseTest):
             get_gromacs_energies(out, mdp="cutoff_buck")
 
 
-@pytest.mark.skip("Virtual site support in GROMACS not fully validated")
 @needs_gmx
 class TestGROMACSVirtualSites(_BaseTest):
     @pytest.fixture()
-    def sage_with_sigma_hole(self, sage):
-        """Fixture that loads an SMIRNOFF XML for argon"""
-        virtual_site_handler = VirtualSiteHandler(version=0.3)
-
-        sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
+    def sigma_hole_type(self, sage):
+        """A handler with a bond charge virtual site on a C-Cl bond."""
+        return VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
             distance=1.4 * unit.angstrom,
@@ -295,11 +292,6 @@ class TestGROMACSVirtualSites(_BaseTest):
             charge_increment1=0.1 * unit.elementary_charge,
             charge_increment2=0.2 * unit.elementary_charge,
         )
-
-        virtual_site_handler.add_parameter(parameter=sigma_type)
-        sage.register_parameter_handler(virtual_site_handler)
-
-        return sage
 
     @pytest.fixture()
     def sage_with_monovalent_lone_pair(self, sage):
