@@ -450,6 +450,19 @@ class TestOpenMMVirtualSites(_BaseTest):
             sage_with_monovalent_lone_pair.create_openmm_system(mol.to_topology()),
         )
 
+    def test_tip5p_num_exceptions(self):
+        tip5p = ForceField(get_test_file_path("tip5p.offxml"))
+        water = Molecule.from_smiles("O")
+        water.generate_conformers(n_conformers=1)
+
+        out = Interchange.from_smirnoff(tip5p, [water]).to_openmm(
+            combine_nonbonded_forces=True
+        )
+
+        for force in out.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                assert force.getNumExceptions() == 12
+
 
 class TestOpenMMToPDB(_BaseTest):
     def test_to_pdb(self, sage):
