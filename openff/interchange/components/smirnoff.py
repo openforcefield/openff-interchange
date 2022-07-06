@@ -519,22 +519,6 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
             )
             self.potentials[potential_key] = potential
 
-    @classmethod
-    def f_from_toolkit(
-        cls: Type[T],
-        parameter_handler: "AngleHandler",
-        topology: "Topology",
-    ) -> T:
-        """
-        Create a SMIRNOFFAngleHandler from toolkit data.
-
-        """
-        handler = cls()
-        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
-        handler.store_potentials(parameter_handler=parameter_handler)
-
-        return handler
-
 
 class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
     """Handler storing proper torsions potentials as produced by a SMIRNOFF force field."""
