@@ -451,7 +451,7 @@ def _build_virtual_site_map(interchange: "Interchange") -> Dict[VirtualSiteKey, 
     for index, virtual_site_key in enumerate(
         interchange["VirtualSites"].slot_map.keys()
     ):
-        virtual_site_topology_index_map[virtual_site_key] = n_atoms + 1 + index  # type: ignore[index]
+        virtual_site_topology_index_map[virtual_site_key] = n_atoms + 1 + index
 
     return virtual_site_topology_index_map
 
@@ -721,7 +721,7 @@ def _write_virtual_sites(
     virtual_site_handler = openff_sys["VirtualSites"]
 
     if not all(
-        k.type in ["BondCharge", "MonovalentLonePair", "DivalentLonePair"]  # type: ignore
+        k.type in ["BondCharge", "MonovalentLonePair", "DivalentLonePair"]
         for k in virtual_site_handler.slot_map
     ):
         raise NotImplementedError("Only BondCharge virtual sites are implemented")
@@ -731,7 +731,7 @@ def _write_virtual_sites(
     # TODO: Cleaner implementation than filter + sort? Maybe split it up into each type
     # and do them sequentially?
 
-    slot_map: Dict[VirtualSiteKey, PotentialKey] = virtual_site_handler.slot_map  # type: ignore
+    slot_map: Dict[VirtualSiteKey, PotentialKey] = virtual_site_handler.slot_map
 
     # TODO: Consolidate this logic with identical code in coordinate writer
 

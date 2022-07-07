@@ -884,7 +884,7 @@ def to_openmm_topology(interchange: "Interchange") -> app.Topology:
 
         for virtual_site_key in interchange["VirtualSites"].slot_map:
 
-            virtual_site_name = virtual_site_key.name  # type: ignore[attr-defined]
+            virtual_site_name = virtual_site_key.name
 
             openmm_topology.addAtom(
                 virtual_site_name,
