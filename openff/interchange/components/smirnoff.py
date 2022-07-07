@@ -1668,7 +1668,10 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
     A handler which stores the information necessary to construct virtual sites (virtual particles).
     """
 
-    slot_map: Dict[VirtualSiteKey, PotentialKey]  # type: ignore[assignment]
+    slot_map: Dict[VirtualSiteKey, PotentialKey] = Field(
+        dict(),
+        description="A mapping between VirtualSiteKey objects and PotentialKey objects.",
+    )  # type: ignore[assignment]
 
     type: Literal["VirtualSites"] = "VirtualSites"
     expression: Literal[""] = ""
