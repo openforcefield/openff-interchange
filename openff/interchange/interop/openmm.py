@@ -513,6 +513,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 electrostatics_force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 electrostatics_force.setEwaldErrorTolerance(1.0e-4)
                 electrostatics_force.setUseDispersionCorrection(True)
+                if vdw_cutoff is not None:
+                    # All nonbonded forces must use the same cutoff, even though PME doesn't have a cutoff
+                    electrostatics_force.setCutoffDistance(vdw_cutoff)
             elif electrostatics_method == "cutoff":
                 raise UnsupportedCutoffMethodError(
                     "OpenMM does not clearly support cut-off electrostatics with no reaction-field attenuation."
