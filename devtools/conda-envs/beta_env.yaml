@@ -1,6 +1,8 @@
 name: openff-interchange-env
 channels:
   - conda-forge/label/openmm_rc
+  - conda-forge/label/openff-toolkit_rc
+  - conda-forge/label/openff-interchange_rc
   - openeye/label/beta
   - openeye/label/rc
   - conda-forge
@@ -10,12 +12,13 @@ dependencies:
   - python
   - pip
   - numpy >=1.21
-  - pydantic
-  - openmm
+  - pydantic <2.0.0a0
+  - openmm >=7.6
   # OpenFF stack
-  - openff-toolkit =0.10.3
+  - openff-toolkit >=0.11.0rc3
   - openff-utilities >=0.1.5
   - openff-units >=0.1.6
+  - openff-amber-ff-ports >=0.0.3
   - cached-property
   - cachetools
   - python-constraint
@@ -46,6 +49,4 @@ dependencies:
   - types-setuptools
   - types-pkg_resources
   - pandas-stubs >=1.2.0.56
-  - pip:
-    - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
-    - git+https://github.com/mattwthompson/openff-evaluator.git
+    - git+https://github.com/mattwthompson/openff-evaluator.git@main
