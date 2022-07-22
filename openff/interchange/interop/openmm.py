@@ -17,6 +17,7 @@ from openff.interchange.exceptions import (
     UnimplementedCutoffMethodError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
+    UnsupportedImportError,
 )
 from openff.interchange.interop.parmed import _lj_params_from_potential
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
@@ -897,19 +898,20 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
         for force in system.getForces():
             if isinstance(force, openmm.NonbondedForce):
                 vdw, coul = _convert_nonbonded_force(force)
-                openff_sys.add_handler(handler_name="vdW", handler=vdw)
-                openff_sys.add_handler(handler_name="Electrostatics", handler=coul)
-            if isinstance(force, openmm.HarmonicBondForce):
+                openff_sys.handlers["vdW"] = vdw
+                openff_sys.handlers["Electrostatics"] = coul
+            elif isinstance(force, openmm.HarmonicBondForce):
                 bond_handler = _convert_harmonic_bond_force(force)
-                openff_sys.add_handler(handler_name="Bonds", handler=bond_handler)
-            if isinstance(force, openmm.HarmonicAngleForce):
+                openff_sys.handlers["Bonds"] = bond_handler
+            elif isinstance(force, openmm.HarmonicAngleForce):
                 angle_handler = _convert_harmonic_angle_force(force)
-                openff_sys.add_handler(handler_name="Angles", handler=angle_handler)
-            if isinstance(force, openmm.PeriodicTorsionForce):
+                openff_sys.handlers["Angles"] = angle_handler
+            elif isinstance(force, openmm.PeriodicTorsionForce):
                 proper_torsion_handler = _convert_periodic_torsion_force(force)
-                openff_sys.add_handler(
-                    handler_name="ProperTorsions",
-                    handler=proper_torsion_handler,
+                openff_sys.handlers["ProperTorsions"] = proper_torsion_handler
+            else:
+                raise UnsupportedImportError(
+                    "Unsupported OpenMM Force type ({type(force)}) found."
                 )
 
     if topology is not None:

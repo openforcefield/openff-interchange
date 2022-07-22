@@ -25,24 +25,21 @@ and chemical topologies via objects in the [OpenFF Toolkit](https://open-forcefi
 an object storing parametrized data.
 
 ```python3
-# Use the OpenFF Toolkit to generate a minimal chemical topology
-from openff.toolkit.topology import Molecule
+from openff.toolkit import Molecule, ForceField
+from openff.units import unit
+from openff.interchange import Interchange
+
+# Use the OpenFF Toolkit to generate a chemical topology
 molecule = Molecule.from_smiles("CCO")
 molecule.generate_conformers(n_conformers=1)
 topology = molecule.to_topology()
+topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
 
 # Load OpenFF 2.0.0 "Sage"
-from openff.toolkit.typing.engines.smirnoff import ForceField
 sage = ForceField("openff-2.0.0.offxml")
 
 # Create an Interchange object
-from openff.interchange import Interchange
 out = Interchange.from_smirnoff(force_field=sage, topology=topology)
-
-# Define box vectors and assign atomic positions
-import numpy as np
-out.box = [4, 4, 4] * np.eye(3)
-out.positions = molecule.conformers[0]
 
 # Convert the Interchnage object to an OpenMM System
 omm_sys = out.to_openmm(combine_nonbonded_forces=True)
