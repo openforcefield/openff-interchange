@@ -12,7 +12,7 @@ dependencies:
   - openmm
   # OpenFF stack
   - openff-toolkit =0.10.3
-  - openff-utilities
+  - openff-utilities >=0.1.5
   - openff-units >=0.1.6
   - cached-property
   - cachetools
@@ -25,7 +25,7 @@ dependencies:
   - mdtraj
   - intermol
   - nglview
-  - openff-amber-ff-ports
+  - openff-amber-ff-ports >=0.0.3
   - openff-evaluator
   - openeye-toolkits
   - jax >0.3.0

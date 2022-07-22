@@ -11,8 +11,8 @@
     <VirtualSite
       type="DivalentLonePair"
       name="EP"
-      smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
-      distance="0.15 * angstrom"
+      smirks="[#1:2]-[#8X2H2+0:1]-[#1:3]"
+      distance="-0.15 * angstrom"
       charge_increment1="0.52 * elementary_charge"
       charge_increment2="0.0 * elementary_charge"
       charge_increment3="0.52 * elementary_charge"

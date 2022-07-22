@@ -1572,7 +1572,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             system.isVirtualSite(i) for i in range(topology.n_atoms, expected_n_v_sites)
         )
 
-        assert system.getNumForces() == 3
+        assert system.getNumForces() == 1
         force: openmm.NonbondedForce = next(iter(system.getForces()))
 
         total_charge = 0.0 * openmm_unit.elementary_charge

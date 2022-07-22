@@ -5,6 +5,7 @@ import openmm
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
+from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from openmm import unit as openmm_unit
@@ -18,7 +19,7 @@ from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
 from openff.interchange.interop.internal.gromacs import from_gro
 from openff.interchange.models import PotentialKey, TopologyKey
-from openff.interchange.tests import _BaseTest, get_test_file_path, needs_gmx
+from openff.interchange.tests import _BaseTest, needs_gmx
 
 
 @needs_gmx
@@ -75,20 +76,30 @@ class TestGROMACSGROFile(_BaseTest):
         assert n_decimals == 12
 
     @pytest.mark.slow()
-    def test_residue_names_in_gro_file(self, sage):
-        """Test that residue names > 5 characters don't break .gro file output"""
-        benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
-        benzene.name = "supercalifragilisticexpialidocious"
-        top = Topology.from_molecules(benzene)
+    def test_residue_info(self, sage):
+        """Test that residue information is passed through to .gro files."""
+        import mdtraj
 
-        # Populate an entire interchange because ...
-        out = Interchange.from_smirnoff(sage, top)
-        out.box = [4, 4, 4]
-        out.positions = benzene.conformers[0]
+        protein = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_HIE.pdb")
+        )
 
-        # ... the easiest way to check the validity of the files
-        # is to see if GROMACS can run them
-        get_gromacs_energies(out)
+        ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
+
+        out = Interchange.from_smirnoff(
+            force_field=ff14sb,
+            topology=[protein],
+        )
+
+        out.to_gro("tmp.gro")
+
+        mdtraj_topology: mdtraj.Topology = mdtraj.load("tmp.gro").topology
+
+        for found_residue, original_residue in zip(
+            mdtraj_topology.residues, out.topology.hierarchy_iterator("residues")
+        ):
+            assert found_residue.name == original_residue.residue_name
+            assert str(found_residue.resSeq) == original_residue.residue_number
 
 
 @needs_gmx
@@ -182,21 +193,30 @@ class TestGROMACS(_BaseTest):
             openff_sys.to_top("out.top")
 
     @pytest.mark.slow()
-    def test_residue_names_in_gro_file(self):
-        """Test that residue names > 5 characters don't break .gro file output"""
-        benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
-        benzene.name = "supercalifragilisticexpialidocious"
-        top = Topology.from_molecules(molecules=[benzene])
+    def test_residue_info(self, sage):
+        """Test that residue information is passed through to .top files."""
+        import parmed
 
-        # Populate an entire interchange because ...
-        force_field = ForceField("openff-1.0.0.offxml")
-        out = Interchange.from_smirnoff(force_field, top)
-        out.box = [4, 4, 4]
-        out.positions = benzene.conformers[0]
+        protein = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_HIE.pdb")
+        )
 
-        # ... the easiest way to check the validity of the files
-        # is to see if GROMACS can run them
-        get_gromacs_energies(out)
+        ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
+
+        out = Interchange.from_smirnoff(
+            force_field=ff14sb,
+            topology=[protein],
+        )
+
+        out.to_top("tmp.top")
+
+        parmed_structure: parmed.Structure = parmed.load_file("tmp.top")
+
+        for found_residue, original_residue in zip(
+            parmed_structure.residues, out.topology.hierarchy_iterator("residues")
+        ):
+            assert found_residue.name == original_residue.residue_name
+            assert str(found_residue.number + 1) == original_residue.residue_number
 
     @pytest.mark.slow()
     def test_argon_buck(self):
@@ -230,6 +250,11 @@ class TestGROMACS(_BaseTest):
                 {pot_key: Potential(parameters={"charge": 0 * unit.elementary_charge})}
             )
 
+        for molecule in top.molecules:
+            molecule.partial_charges = unit.Quantity(
+                molecule.n_atoms * [0], unit.elementary_charge
+            )
+
         buck.potentials[pot_key] = pot
 
         out = Interchange()
@@ -241,7 +266,7 @@ class TestGROMACS(_BaseTest):
         out.to_gro("out.gro", writer="internal")
         out.to_top("out.top", writer="internal")
 
-        omm_energies = get_openmm_energies(out)
+        omm_energies = get_openmm_energies(out, combine_nonbonded_forces=True)
         by_hand = A * exp(-B * r) - C * r**-6
 
         resid = omm_energies.energies["vdW"] - by_hand

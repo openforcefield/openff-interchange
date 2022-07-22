@@ -33,7 +33,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     UnassignedProperTorsionParameterException,
     UnassignedValenceParameterException,
     VirtualSiteHandler,
-    _compute_lj_sigma,
     vdWHandler,
 )
 from openff.units import unit
@@ -166,7 +165,8 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
         if self.__class__.__name__ in ["SMIRNOFFBondHandler", "SMIRNOFFAngleHandler"]:
             valence_terms = self.valence_terms(topology)  # type: ignore[attr-defined]
 
-            parameter_handler._check_all_valence_terms_assigned(
+            _check_all_valence_terms_assigned(
+                handler=parameter_handler,
                 assigned_terms=matches,
                 topology=topology,
                 valence_terms=valence_terms,
@@ -268,7 +268,8 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
         valence_terms = self.valence_terms(topology)
 
-        parameter_handler._check_all_valence_terms_assigned(
+        _check_all_valence_terms_assigned(
+            handler=parameter_handler,
             topology=topology,
             assigned_terms=matches,
             valence_terms=valence_terms,
@@ -593,7 +594,8 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
                 )
                 self.slot_map[topology_key] = potential_key
 
-        parameter_handler._check_all_valence_terms_assigned(
+        _check_all_valence_terms_assigned(
+            handler=parameter_handler,
             topology=topology,
             assigned_terms=matches,
             valence_terms=list(topology.propers),
@@ -1025,12 +1027,22 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             for parameter_key, parameter_value in potential.parameters.items():
 
                 if parameter_key == "charge_increments":
+
                     if type(topology_key) != VirtualSiteKey:
                         raise RuntimeError
-                    charge = -1.0 * np.sum(parameter_value)
+
+                    total_charge = np.sum(parameter_value)
                     # assumes virtual sites can only have charges determined in one step
-                    # also, topology_key is actually a VirtualSiteKey
-                    charges[topology_key] = charge
+                    # here, topology_key is actually a VirtualSiteKey
+                    charges[topology_key] = -1.0 * total_charge
+
+                    # Apply increments to "orientation" atoms
+                    for i, increment in enumerate(parameter_value):
+                        orientation_atom_key = TopologyKey(
+                            atom_indices=(topology_key.orientation_atom_indices[i],)
+                        )
+                        charges[orientation_atom_key] += increment
+
                 elif parameter_key in ["charge", "charge_increment"]:
                     charge = parameter_value
                     assert len(topology_key.atom_indices) == 1
@@ -1904,3 +1916,146 @@ def _slow_key_lookup_by_atom_index(matches: Dict, atom_index: int) -> List[Topol
         ):
             matched_keys.append(key)
     return matched_keys
+
+
+def _compute_lj_sigma(
+    sigma: Optional[unit.Quantity], rmin_half: Optional[unit.Quantity]
+) -> unit.Quantity:
+
+    return sigma if sigma is not None else (2.0 * rmin_half / (2.0 ** (1.0 / 6.0)))  # type: ignore
+
+
+# Coped from the toolkit, see
+# https://github.com/openforcefield/openff-toolkit/blob/0133414d3ab51e1af0996bcebe0cc1bdddc6431b/
+# openff/toolkit/typing/engines/smirnoff/forcefield.py#L609
+# However, it's not clear it's being called by any toolkit methods (in 0.10.x, 0.11.x, or at any point in history):
+# https://github.com/openforcefield/openff-toolkit/search?q=_check_for_missing_valence_terms&type=code
+def _check_for_missing_valence_terms(name, topology, assigned_terms, topological_terms):
+    """Check that there are no missing valence terms in the given topology."""
+    # Convert assigned terms and topological terms to lists
+    assigned_terms = [item for item in assigned_terms]
+    topological_terms = [item for item in topological_terms]
+
+    def ordered_tuple(atoms):
+        atoms = list(atoms)
+        if atoms[0] < atoms[-1]:
+            return tuple(atoms)
+        else:
+            return tuple(reversed(atoms))
+
+    try:
+        topology_set = {
+            ordered_tuple(atom.index for atom in atomset)
+            for atomset in topological_terms
+        }
+        assigned_set = {
+            ordered_tuple(index for index in atomset) for atomset in assigned_terms
+        }
+    except TypeError:
+        topology_set = {atom.index for atom in topological_terms}
+        assigned_set = {atomset[0] for atomset in assigned_terms}
+
+    def render_atoms(atomsets):
+        msg = ""
+        for atomset in atomsets:
+            msg += f"{atomset:30} :"
+            try:
+                for atom_index in atomset:
+                    atom = atoms[atom_index]
+                    msg += (
+                        f" {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}"
+                    )
+            except TypeError:
+                atom = atoms[atomset]
+                msg += f" {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}"
+
+            msg += "\n"
+        return msg
+
+    if set(assigned_set) != set(topology_set):
+        # Form informative error message
+        msg = f"{name}: Mismatch between valence terms added and topological terms expected.\n"
+        atoms = [atom for atom in topology.atoms]
+        if len(assigned_set.difference(topology_set)) > 0:
+            msg += "Valence terms created that are not present in Topology:\n"
+            msg += render_atoms(assigned_set.difference(topology_set))
+        if len(topology_set.difference(assigned_set)) > 0:
+            msg += "Topological atom sets not assigned parameters:\n"
+            msg += render_atoms(topology_set.difference(assigned_set))
+        msg += "topology_set:\n"
+        msg += str(topology_set) + "\n"
+        msg += "assigned_set:\n"
+        msg += str(assigned_set) + "\n"
+        # TODO: Raise a more specific exception or delete this method
+        raise Exception(msg)
+
+
+# Coped from the toolkit, see
+# https://github.com/openforcefield/openff-toolkit/blob/0133414d3ab51e1af0996bcebe0cc1bdddc6431b/
+# openff/toolkit/typing/engines/smirnoff/parameters.py#L2318
+def _check_all_valence_terms_assigned(
+    handler,
+    assigned_terms,
+    topology,
+    valence_terms,
+    exception_cls=UnassignedValenceParameterException,
+):
+    """Check that all valence terms have been assigned."""
+    if len(assigned_terms) == len(valence_terms):
+        return
+
+    # Convert the valence term to a valence dictionary to make sure
+    # the order of atom indices doesn't matter for comparison.
+    valence_terms_dict = assigned_terms.__class__()
+    for atoms in valence_terms:
+        atom_indices = (topology.atom_index(a) for a in atoms)
+        valence_terms_dict[atom_indices] = atoms
+
+    # Check that both valence dictionaries have the same keys (i.e. terms).
+    assigned_terms_set = set(assigned_terms.keys())
+    valence_terms_set = set(valence_terms_dict.keys())
+    unassigned_terms = valence_terms_set.difference(assigned_terms_set)
+    not_found_terms = assigned_terms_set.difference(valence_terms_set)
+
+    # Raise an error if there are unassigned terms.
+    err_msg = ""
+
+    if len(unassigned_terms) > 0:
+
+        unassigned_atom_tuples = []
+
+        unassigned_str = ""
+        for unassigned_tuple in unassigned_terms:
+            unassigned_str += "\n- Topology indices " + str(unassigned_tuple)
+            unassigned_str += ": names and elements "
+
+            unassigned_atoms = []
+
+            # Pull and add additional helpful info on missing terms
+            for atom_idx in unassigned_tuple:
+                atom = topology.atom(atom_idx)
+                unassigned_atoms.append(atom)
+                unassigned_str += f"({atom.name} {atom.symbol}), "
+            unassigned_atom_tuples.append(tuple(unassigned_atoms))
+        err_msg += (
+            "{parameter_handler} was not able to find parameters for the following valence terms:\n"
+            "{unassigned_str}"
+        ).format(
+            parameter_handler=handler.__class__.__name__, unassigned_str=unassigned_str
+        )
+    if len(not_found_terms) > 0:
+        if err_msg != "":
+            err_msg += "\n"
+        not_found_str = "\n- ".join([str(x) for x in not_found_terms])
+        err_msg += (
+            "{parameter_handler} assigned terms that were not found in the topology:\n"
+            "- {not_found_str}"
+        ).format(
+            parameter_handler=handler.__class__.__name__, not_found_str=not_found_str
+        )
+    if err_msg != "":
+        err_msg += "\n"
+        exception = exception_cls(err_msg)
+        exception.unassigned_topology_atom_tuples = unassigned_atom_tuples
+        exception.handler_class = handler.__class__
+        raise exception
