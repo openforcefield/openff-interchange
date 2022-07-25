@@ -35,6 +35,7 @@ dependencies:
   - pytest-xdist
   - pytest-randomly
   - pytest-timeout
+  - nbval
   - nglview
   # Remove after new Evaluator release
   - pymbar >=3.0.5
