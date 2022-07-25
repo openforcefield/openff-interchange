@@ -35,6 +35,7 @@ dependencies:
   - pytest-xdist
   - pytest-randomly
   - pytest-timeout
+  - nbval
   - nglview
   # Remove after new Evaluator release
   - pymbar >=3.0.5
@@ -51,5 +52,5 @@ dependencies:
   - pandas-stubs >=1.2.0.56
   # Temporary
   - pip:
-    - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
-    - git+https://github.com/mattwthompson/openff-evaluator.git
+    - git+https://github.com/openforcefield/openff-toolkit.git@main
+    - git+https://github.com/openforcefield/openff-evaluator.git@main
