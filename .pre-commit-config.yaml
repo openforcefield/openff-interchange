@@ -31,7 +31,7 @@ repos:
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.37.1
+  rev: v2.37.2
   hooks:
   - id: pyupgrade
     files: ^openff/interchange
@@ -64,7 +64,7 @@ repos:
     - id: nbqa-isort
       files: ^examples
 - repo: https://github.com/kynan/nbstripout
-  rev: 0.5.0
+  rev: 0.6.0
   hooks:
     - id: nbstripout
       files: ^examples
