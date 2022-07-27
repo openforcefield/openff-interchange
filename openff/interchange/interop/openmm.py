@@ -463,7 +463,6 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             vdw_force.addPerParticleParameter("sigma")
             vdw_force.addPerParticleParameter("epsilon")
 
-            # TODO: Add virtual particles
             for _ in openff_sys.topology.atoms:
                 vdw_force.addParticle([1.0, 0.0])
 
@@ -969,22 +968,6 @@ def to_openmm_topology(
             last_chain = chain
             last_residue = residue
 
-        virtual_sites_in_this_molecule: List[
-            VirtualSiteKey
-        ] = molecule_virtual_site_map[molecule_index]
-        for this_virtual_site in virtual_sites_in_this_molecule:
-            virtual_site_name = this_virtual_site.name
-
-            # For now, assume that the residue of the last atom in the molecule is the same
-            # residue as the entire molecule
-            virtual_site_residue = residue
-
-            openmm_topology.addAtom(
-                virtual_site_name,
-                virtual_site_element,
-                virtual_site_residue,
-            )
-
         # Add all bonds.
         bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
         for bond in molecule.bonds:
@@ -1010,6 +993,27 @@ def to_openmm_topology(
                 type=bond_type,
                 order=bond_order,
             )
+
+    if len(molecule_virtual_site_map) > 0:
+        # As a stopgap, put all virtual sites in a single residue
+        virtual_site_chain: openmm.app.topology.Chain = openmm_topology.addChain(id="V")
+        virtual_site_residue: openmm.app.topology.Residue = openmm_topology.addResidue(
+            name="VS", chain=virtual_site_chain
+        )
+
+        for molecule in topology.molecules:
+            molecule_index = topology.molecule_index(molecule)
+            virtual_sites_in_this_molecule: List[
+                VirtualSiteKey
+            ] = molecule_virtual_site_map[molecule_index]
+            for this_virtual_site in virtual_sites_in_this_molecule:
+                virtual_site_name = this_virtual_site.name
+
+                openmm_topology.addAtom(
+                    virtual_site_name,
+                    virtual_site_element,
+                    virtual_site_residue,
+                )
 
     if interchange.box is not None:
         from openff.units.openmm import to_openmm
