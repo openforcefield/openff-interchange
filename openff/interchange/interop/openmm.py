@@ -1023,16 +1023,14 @@ def to_openmm_topology(
     return openmm_topology
 
 
-def to_openmm_positions(interchange: "Interchange") -> off_unit.Quantity:
-    """Generate an array of positions of all particles, including virtual sites."""
-    # TODO: should there be a `include_virtual_sites: bool=True` option?
+def to_openmm_positions(
+    interchange: "Interchange",
+    include_virtual_sites: bool = True,
+) -> off_unit.Quantity:
+    """Generate an array of positions of all particles, optionally including virtual sites."""
     from collections import defaultdict
 
     import numpy
-
-    from openff.interchange.interop._virtual_sites import (
-        _virtual_site_parent_molecule_mapping,
-    )
 
     if interchange.positions is None:
         raise MissingPositionsError(
@@ -1048,14 +1046,19 @@ def to_openmm_positions(interchange: "Interchange") -> off_unit.Quantity:
 
     topology = interchange.topology
 
-    virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(interchange)
-
-    molecule_virtual_site_map = defaultdict(list)
-
-    for virtual_site, molecule in virtual_site_molecule_map.items():
-        molecule_virtual_site_map[topology.molecule_index(molecule)].append(
-            virtual_site
+    if include_virtual_sites:
+        from openff.interchange.interop._virtual_sites import (
+            _virtual_site_parent_molecule_mapping,
         )
+
+        virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(interchange)
+
+        molecule_virtual_site_map = defaultdict(list)
+
+        for virtual_site, molecule in virtual_site_molecule_map.items():
+            molecule_virtual_site_map[topology.molecule_index(molecule)].append(
+                virtual_site
+            )
 
     particle_positions = off_unit.Quantity(
         numpy.empty(shape=(0, 3)), off_unit.nanometer
@@ -1071,20 +1074,29 @@ def to_openmm_positions(interchange: "Interchange") -> off_unit.Quantity:
             this_molecule_atom_positions = interchange.positions[atom_indices, :]
             # Interchange.position is populated, but Molecule.conformers is not
 
+        particle_positions = numpy.concatenate(
+            [
+                particle_positions,
+                this_molecule_atom_positions,
+            ]
+        )
+
+    for molecule in topology.molecules:
+        molecule_index = topology.molecule_index(molecule)
+
         n_virtual_sites_in_this_molecule: int = len(
             molecule_virtual_site_map[molecule_index]
         )
         this_molecule_virtual_site_positions = off_unit.Quantity(
             numpy.zeros((n_virtual_sites_in_this_molecule, 3)), off_unit.nanometer
         )
+
         particle_positions = numpy.concatenate(
             [
                 particle_positions,
-                this_molecule_atom_positions,
                 this_molecule_virtual_site_positions,
             ]
         )
-
     return particle_positions
 
 
