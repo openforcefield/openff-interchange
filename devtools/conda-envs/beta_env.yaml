@@ -1,5 +1,6 @@
-name: openff-interchange-env
+name: beta-env
 channels:
+  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge/label/openmm_rc
   - conda-forge/label/openff-toolkit_rc
   - conda-forge/label/openff-interchange_rc
@@ -44,7 +45,7 @@ dependencies:
   - lammps >=2021
   - panedr
   # Typing
-  - mypy >=0.942
+  - mypy >=0.971
   - typing-extensions
   - types-setuptools
   - types-pkg_resources
