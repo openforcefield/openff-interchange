@@ -34,16 +34,18 @@ dependencies:
   - intermol
   - openff-evaluator
   - openeye-toolkits
-  - pytest
   - pytest-timeout
   - pytest-cov
   - pytest-xdist
-  - nbval
   - conda
   # Drivers
   - gromacs >=2021=nompi*
   - lammps >=2021
   - panedr
+  # Examples
+  - nglview
+  - pytest <7.0.0
+  - nbval
   # Typing
   - mypy >=0.971
   - typing-extensions
