@@ -18,6 +18,7 @@ dependencies:
   - python-constraint
   # Testing
   - pytest
+  - pytest-cov
   - pytest-xdist
   - mdtraj
   - pip:
