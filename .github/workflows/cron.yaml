@@ -31,16 +31,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - uses: conda-incubator/setup-miniconda@v2.1.1
+    - name: Install conda environment
+      uses: mamba-org/provision-with-micromamba@main
       with:
-        python-version: "${{ matrix.python-version }}"
         environment-file: devtools/conda-envs/test_env.yaml
-        activate-environment: test
-        auto-activate-base: false
-        mamba-version: "*"
-        miniforge-version: latest
-        miniforge-variant: Mambaforge
-        use-mamba: true
+        extra-specs: |
+          python=${{ matrix.python-version }}
 
     - name: Additional info about the build
       run: |
@@ -73,7 +69,7 @@ jobs:
     - name: Run all tests
       if: always()
       run: |
-        python -m pytest -v -fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
+        python -m pytest -v -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
 
     - name: Run example notebooks
       run: |

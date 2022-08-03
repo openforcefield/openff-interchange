@@ -1,5 +1,6 @@
-name: openff-interchange-env
+name: beta-env
 channels:
+  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge/label/openmm_rc
   - conda-forge/label/openff-toolkit_rc
   - conda-forge/label/openff-interchange_rc
@@ -33,18 +34,20 @@ dependencies:
   - intermol
   - openff-evaluator
   - openeye-toolkits
-  - pytest
   - pytest-timeout
   - pytest-cov
   - pytest-xdist
-  - nbval
   - conda
   # Drivers
   - gromacs >=2021=nompi*
   - lammps >=2021
   - panedr
+  # Examples
+  - nglview
+  - pytest <7.0.0
+  - nbval
   # Typing
-  - mypy >=0.942
+  - mypy >=0.971
   - typing-extensions
   - types-setuptools
   - types-pkg_resources
