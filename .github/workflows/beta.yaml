@@ -46,14 +46,14 @@ jobs:
         df -h
         ulimit -a
 
+    - name: Install package
+      run: |
+        python setup.py develop --no-deps
+
     - name: Environment Information
       run: |
         conda info
         conda list
-
-    - name: Install package
-      run: |
-        python setup.py develop --no-deps
 
     - name: Run mypy
       continue-on-error: true
@@ -67,7 +67,7 @@ jobs:
 
     - name: Run example notebooks
       run: |
-        python -m pytest -v $COV examples/ --nbval-lax
+        python -m pytest -v $COV examples/ --nbval-lax --ignore=examples/deprecated/
 
     - name: Codecov
       uses: codecov/codecov-action@v3
