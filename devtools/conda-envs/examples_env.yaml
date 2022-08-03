@@ -32,7 +32,6 @@ dependencies:
   - openeye-toolkits
   - pytest <7.0.0
   - nbval
-  - nglview
   # Drivers
   - gromacs >=2021=nompi*
   - lammps >=2021

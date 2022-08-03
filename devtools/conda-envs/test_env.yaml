@@ -45,7 +45,7 @@ dependencies:
   - lammps >=2021
   - panedr
   # Typing
-  - mypy >=0.942
+  - mypy >=0.971
   - typing-extensions
   - types-setuptools
   - types-pkg_resources
