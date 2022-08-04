@@ -161,6 +161,12 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
                 n_virtual_sites += 1
 
         if openff_sys.box is None:
+            warnings.warn(
+                "WARNING: System defined with no box vectors, which GROMACS does not offically "
+                "support in versions 2020 or newer (see "
+                "https://gitlab.com/gromacs/gromacs/-/issues/3526). Setting box vectors to a 5 "
+                " nm cube."
+            )
             box = 5 * np.eye(3)
         else:
             box = openff_sys.box.m_as(unit.nanometer)

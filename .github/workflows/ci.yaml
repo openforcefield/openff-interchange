@@ -27,9 +27,6 @@ jobs:
         openeye:
           - true
           - false
-        exclude:
-          - openeye: true
-            python-version: 3.8
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
@@ -37,16 +34,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - uses: conda-incubator/setup-miniconda@v2.1.1
+    - name: Install conda environment
+      uses: mamba-org/provision-with-micromamba@main
       with:
-        python-version: "${{ matrix.python-version }}"
         environment-file: devtools/conda-envs/test_env.yaml
-        activate-environment: test
-        auto-activate-base: false
-        mamba-version: "*"
-        miniforge-version: latest
-        miniforge-variant: Mambaforge
-        use-mamba: true
+        extra-specs: |
+          python=${{ matrix.python-version }}
 
     - name: Additional info about the build
       run: |

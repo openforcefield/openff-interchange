@@ -1,4 +1,5 @@
 """Interfaces with OpenMM."""
+from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Tuple, Union
 
@@ -17,6 +18,7 @@ from openff.interchange.exceptions import (
     UnimplementedCutoffMethodError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
+    UnsupportedImportError,
 )
 from openff.interchange.interop.parmed import _lj_params_from_potential
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
@@ -512,6 +514,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 electrostatics_force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 electrostatics_force.setEwaldErrorTolerance(1.0e-4)
                 electrostatics_force.setUseDispersionCorrection(True)
+                if vdw_cutoff is not None:
+                    # All nonbonded forces must use the same cutoff, even though PME doesn't have a cutoff
+                    electrostatics_force.setCutoffDistance(vdw_cutoff)
             elif electrostatics_method == "cutoff":
                 raise UnsupportedCutoffMethodError(
                     "OpenMM does not clearly support cut-off electrostatics with no reaction-field attenuation."
@@ -730,11 +735,16 @@ def _process_virtual_sites(openff_sys, openmm_sys):
 
     virtual_site_key: VirtualSiteKey
 
+    # Later, we will need to add exclusions between virtual site particles, which unfortunately
+    # requires tracking which added virtual site particle is associated with which atom
+    parent_particle_mapping = defaultdict(list)
+
     for (
         virtual_site_key,
         virtual_site_potential_key,
     ) in virtual_site_handler.slot_map.items():
         orientations = virtual_site_key.orientation_atom_indices
+        parent_atom = orientations[0]
 
         virutal_site_potential_object = virtual_site_handler.potentials[
             virtual_site_potential_key
@@ -803,39 +813,25 @@ def _process_virtual_sites(openff_sys, openmm_sys):
         if index_system != index_force:
             raise InternalInconsistencyError("Mismatch in system and force indexing")
 
+        parent_particle_mapping[parent_atom].append(index_force)
+
         openmm_sys.setVirtualSite(index_system, openmm_particle)
 
-        # Notes: For each type of virtual site, the parent atom is defined as the _first_ (0th) atom.
-        # The toolkit, however, might have some bugs from following different assumptions:
-        # https://github.com/openforcefield/openff-interchange/pull/415#issuecomment-1074546516
-        if virtual_site_handler.exclusion_policy == "none":
-            pass
-        elif virtual_site_handler.exclusion_policy == "minimal":
-            # TODO: This behavior is likely wrong but written to match the toolkit's behavior.
-            #       Exclusion policy "minimal" _should_ always exclude the 0th index atom, but
-            #       this is nont the case for one reason or another.
-            # root_parent_atom = virtual_site_key.atom_indices[0]
-            if len(virtual_site_key.atom_indices) == 2:
-                root_parent_atom = virtual_site_key.atom_indices[0]
-            elif len(virtual_site_key.atom_indices) >= 3:
-                root_parent_atom = virtual_site_key.atom_indices[1]
-            else:
-                raise NotImplementedError(
-                    "This should not be reachable. Please file an issue"
-                )
-
-            non_bonded_force.addException(
-                root_parent_atom, index_force, 0.0, 0.0, 0.0, replace=True
-            )
-        elif virtual_site_handler.exclusion_policy == "parents":
+        if virtual_site_handler.exclusion_policy == "parents":
             for orientation_atom_index in orientations:
                 non_bonded_force.addException(
                     orientation_atom_index, index_force, 0.0, 0.0, 0.0, replace=True
                 )
-        else:
-            raise UnsupportedCutoffMethodError(
-                f"Virtual site exclusion policy {virtual_site_handler.exclusion_policy} not yet supported."
-            )
+
+                # This dict only contains `orientation_atom_index` if that orientation atom (of this
+                # particle) is coincidentally a parent atom of another particle. This is probably
+                # not common but must be dealt with separately.
+                for other_particle_index in parent_particle_mapping[parent_atom]:
+                    if other_particle_index in orientations:
+                        continue
+                    non_bonded_force.addException(
+                        other_particle_index, index_force, 0.0, 0.0, 0.0, replace=True
+                    )
 
 
 def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
@@ -1110,19 +1106,20 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
         for force in system.getForces():
             if isinstance(force, openmm.NonbondedForce):
                 vdw, coul = _convert_nonbonded_force(force)
-                openff_sys.add_handler(handler_name="vdW", handler=vdw)
-                openff_sys.add_handler(handler_name="Electrostatics", handler=coul)
-            if isinstance(force, openmm.HarmonicBondForce):
+                openff_sys.handlers["vdW"] = vdw
+                openff_sys.handlers["Electrostatics"] = coul
+            elif isinstance(force, openmm.HarmonicBondForce):
                 bond_handler = _convert_harmonic_bond_force(force)
-                openff_sys.add_handler(handler_name="Bonds", handler=bond_handler)
-            if isinstance(force, openmm.HarmonicAngleForce):
+                openff_sys.handlers["Bonds"] = bond_handler
+            elif isinstance(force, openmm.HarmonicAngleForce):
                 angle_handler = _convert_harmonic_angle_force(force)
-                openff_sys.add_handler(handler_name="Angles", handler=angle_handler)
-            if isinstance(force, openmm.PeriodicTorsionForce):
+                openff_sys.handlers["Angles"] = angle_handler
+            elif isinstance(force, openmm.PeriodicTorsionForce):
                 proper_torsion_handler = _convert_periodic_torsion_force(force)
-                openff_sys.add_handler(
-                    handler_name="ProperTorsions",
-                    handler=proper_torsion_handler,
+                openff_sys.handlers["ProperTorsions"] = proper_torsion_handler
+            else:
+                raise UnsupportedImportError(
+                    "Unsupported OpenMM Force type ({type(force)}) found."
                 )
 
     if topology is not None:

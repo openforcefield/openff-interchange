@@ -74,6 +74,17 @@ class TestGROMACSGROFile(_BaseTest):
         n_decimals = len(str(internal_coords[0, 0]).split(".")[1])
         assert n_decimals == 12
 
+    def test_vaccum_warning(self, sage):
+        molecule = Molecule.from_smiles("CCO")
+        molecule.generate_conformers(n_conformers=1)
+
+        out = Interchange.from_smirnoff(force_field=sage, topology=[molecule])
+
+        assert out.box is None
+
+        with pytest.warns(UserWarning, match="gitlab"):
+            out.to_gro("tmp.gro")
+
     @pytest.mark.slow()
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .gro files."""

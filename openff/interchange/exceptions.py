@@ -109,6 +109,12 @@ class UnsupportedBoxError(ValueError):
     """
 
 
+class UnsupportedImportError(BaseException):
+    """
+    Generic exception for attempting to import from an unsupported data format.
+    """
+
+
 class UnsupportedExportError(BaseException):
     """
     Exception for attempting to write to an unsupported file format.

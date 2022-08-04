@@ -280,6 +280,28 @@ class TestOpenMM(_BaseTest):
         assert system.getForce(0).getParticleParameters(0)[0]._value == 1.0
         assert system.getForce(0).getParticleParameters(1)[0]._value == -1.0
 
+    def test_nonstandard_cutoffs_match(self):
+        """Test that multiple nonbonded forces use the same cutoff."""
+        force_field = ForceField("test_forcefields/test_forcefield.offxml")
+
+        cutoff = unit.Quantity(1.555, unit.nanometer)
+
+        force_field["vdW"].cutoff = cutoff
+
+        interchange = Interchange.from_smirnoff(
+            force_field=force_field,
+            topology=[Molecule.from_smiles("C")],
+        )
+
+        system = interchange.to_openmm(combine_nonbonded_forces=False)
+
+        # For now, just make sure all non-bonded forces use the vdW handler's cutoff
+        for force in system.getForces():
+            if type(force) in (openmm.NonbondedForce, openmm.CustomNonbondedForce):
+                assert force.getCutoffDistance().value_in_unit(
+                    openmm_unit.nanometer
+                ) == pytest.approx(cutoff.m_as(unit.nanometer))
+
 
 class TestOpenMMSwitchingFunction(_BaseTest):
     def test_switching_function_applied(self, sage, basic_top):
@@ -449,6 +471,19 @@ class TestOpenMMVirtualSites(_BaseTest):
             out.to_openmm(combine_nonbonded_forces=True),
             sage_with_monovalent_lone_pair.create_openmm_system(mol.to_topology()),
         )
+
+    def test_tip5p_num_exceptions(self):
+        tip5p = ForceField(get_test_file_path("tip5p.offxml"))
+        water = Molecule.from_smiles("O")
+        water.generate_conformers(n_conformers=1)
+
+        out = Interchange.from_smirnoff(tip5p, [water]).to_openmm(
+            combine_nonbonded_forces=True
+        )
+
+        for force in out.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                assert force.getNumExceptions() == 12
 
 
 class TestOpenMMToPDB(_BaseTest):
