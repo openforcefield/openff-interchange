@@ -14,7 +14,6 @@ from pkg_resources import resource_filename
 from openff.interchange import Interchange
 from openff.interchange.components.nonbonded import BuckinghamvdWHandler
 from openff.interchange.components.potentials import Potential
-from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
 from openff.interchange.interop.internal.gromacs import from_gro
@@ -289,15 +288,12 @@ class TestGROMACS(_BaseTest):
             get_gromacs_energies(out, mdp="cutoff_buck")
 
 
-@pytest.mark.skip("Virtual site support in GROMACS not fully validated")
 @needs_gmx
 class TestGROMACSVirtualSites(_BaseTest):
     @pytest.fixture()
-    def sage_with_sigma_hole(self, sage):
-        """Fixture that loads an SMIRNOFF XML for argon"""
-        virtual_site_handler = VirtualSiteHandler(version=0.3)
-
-        sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
+    def sigma_hole_type(self, sage):
+        """A handler with a bond charge virtual site on a C-Cl bond."""
+        return VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
             distance=1.4 * unit.angstrom,
@@ -307,22 +303,17 @@ class TestGROMACSVirtualSites(_BaseTest):
             charge_increment2=0.2 * unit.elementary_charge,
         )
 
-        virtual_site_handler.add_parameter(parameter=sigma_type)
-        sage.register_parameter_handler(virtual_site_handler)
-
-        return sage
-
     @pytest.fixture()
     def sage_with_monovalent_lone_pair(self, sage):
         """Fixture that loads an SMIRNOFF XML for argon"""
         virtual_site_handler = VirtualSiteHandler(version=0.3)
 
-        carbonyl_type = VirtualSiteHandler.VirtualSiteMonovalentLonePairType(
+        carbonyl_type = VirtualSiteHandler.VirtualSiteType(
             name="EP",
             smirks="[O:1]=[C:2]-[*:3]",
             distance=0.3 * unit.angstrom,
             type="MonovalentLonePair",
-            match="once",
+            match="all_permutations",
             outOfPlaneAngle=0.0 * unit.degree,
             inPlaneAngle=120.0 * unit.degree,
             charge_increment1=0.05 * unit.elementary_charge,
@@ -348,18 +339,6 @@ class TestGROMACSVirtualSites(_BaseTest):
         )
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
-        out.handlers["VirtualSites"] = SMIRNOFFVirtualSiteHandler._from_toolkit(
-            parameter_handler=sage_with_sigma_hole["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["vdW"]._from_toolkit_virtual_sites(
-            parameter_handler=sage_with_sigma_hole["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["Electrostatics"]._from_toolkit_virtual_sites(
-            parameter_handler=sage_with_sigma_hole["VirtualSites"],
-            topology=mol.to_topology(),
-        )
 
         # TODO: Sanity-check reported energies
         get_gromacs_energies(out)
@@ -383,20 +362,7 @@ class TestGROMACSVirtualSites(_BaseTest):
         )
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
-        out.handlers["VirtualSites"] = SMIRNOFFVirtualSiteHandler._from_toolkit(
-            parameter_handler=sage_with_monovalent_lone_pair["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["vdW"]._from_toolkit_virtual_sites(
-            parameter_handler=sage_with_monovalent_lone_pair["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["Electrostatics"]._from_toolkit_virtual_sites(
-            parameter_handler=sage_with_monovalent_lone_pair["VirtualSites"],
-            topology=mol.to_topology(),
-        )
 
-        # TODO: Sanity-check reported energies
-        get_gromacs_energies(out)
-
-        # ParmEd does not support 3fad, and cannot be used to sanity check charges
+        with pytest.raises(Exception, match="MonovalentLonePair not implemented."):
+            # TODO: Sanity-check reported energies
+            get_gromacs_energies(out)

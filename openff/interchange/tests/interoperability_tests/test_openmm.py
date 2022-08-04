@@ -357,11 +357,11 @@ class TestOpenMMSwitchingFunction(_BaseTest):
 class TestOpenMMVirtualSites(_BaseTest):
     @pytest.fixture()
     def sage_with_sigma_hole(self, sage):
-        """Fixture that loads an SMIRNOFF XML for argon"""
+        """Fixture that loads an SMIRNOFF XML with a C-Cl sigma hole."""
         # TODO: Move this into BaseTest to that GROMACS and others can access it
         virtual_site_handler = VirtualSiteHandler(version=0.3)
 
-        sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
+        sigma_type = VirtualSiteHandler.VirtualSiteType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
             distance=1.4 * unit.angstrom,

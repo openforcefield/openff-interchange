@@ -14,6 +14,7 @@ from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InternalInconsistencyError,
+    MissingPositionsError,
     UnimplementedCutoffMethodError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
@@ -464,7 +465,6 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             vdw_force.addPerParticleParameter("sigma")
             vdw_force.addPerParticleParameter("epsilon")
 
-            # TODO: Add virtual particles
             for _ in openff_sys.topology.atoms:
                 vdw_force.addParticle([1.0, 0.0])
 
@@ -862,30 +862,238 @@ def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
         force.setSwitchingDistance(switching_distance)
 
 
-def to_openmm_topology(interchange: "Interchange") -> app.Topology:
-    """Export components of this Interchange to an OpenMM Topology."""
-    if "VirtualSites" not in interchange.handlers.keys():
-        return interchange.topology.to_openmm()
-    else:
-        from openmm.app.element import Element
+def to_openmm_topology(
+    interchange: "Interchange", ensure_unique_atom_names: bool = True
+) -> app.Topology:
+    """Create an OpenMM Topology containing some virtual site information (if appropriate)."""
+    # Heavily cribbed from the toolkit
+    # https://github.com/openforcefield/openff-toolkit/blob/0.11.0rc2/openff/toolkit/topology/topology.py
 
-        openmm_topology = interchange.topology.to_openmm()
-        virtual_site_element = Element.getByMass(0)
-        # TODO: This almost surely isn't the right way to process virtual particles' residues,
-        # but it's not clear how this should be done and what standards exist for this
-        virtual_site_residue = [*openmm_topology.residues()][0]
+    from collections import defaultdict
 
-        for virtual_site_key in interchange["VirtualSites"].slot_map:
+    from openff.toolkit.topology.molecule import Bond
+    from openmm import app
 
-            virtual_site_name = virtual_site_key.name  # type: ignore[attr-defined]
+    from openff.interchange.interop._virtual_sites import (
+        _virtual_site_parent_molecule_mapping,
+    )
 
-            openmm_topology.addAtom(
-                virtual_site_name,
-                virtual_site_element,
-                virtual_site_residue,
+    topology = interchange.topology
+
+    virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(interchange)
+
+    molecule_virtual_site_map = defaultdict(list)
+
+    for virtual_site, molecule in virtual_site_molecule_map.items():
+        molecule_virtual_site_map[topology.molecule_index(molecule)].append(
+            virtual_site
+        )
+
+    virtual_site_element = openmm.app.element.Element.getByMass(0)
+
+    openmm_topology = app.Topology()
+
+    if ensure_unique_atom_names:
+        for ref_mol in topology.reference_molecules:
+            if not ref_mol.has_unique_atom_names:
+                ref_mol.generate_unique_atom_names()
+
+    # Go through atoms in OpenFF to preserve the order.
+    omm_atoms = []
+
+    # For each atom in each molecule, determine which chain/residue it should be a part of
+    for molecule in topology.molecules:
+        molecule_index = topology.molecule_index(molecule)
+
+        # No chain or residue can span more than one OFF molecule, so reset these to None for the first
+        # atom in each molecule.
+        last_chain = None
+        last_residue = None
+        for atom in molecule.atoms:
+            # If the residue name is undefined, assume a default of "UNK"
+            if "residue_name" in atom.metadata:
+                atom_residue_name = atom.metadata["residue_name"]
+            else:
+                atom_residue_name = "UNK"
+
+            # If the residue number is undefined, assume a default of "0"
+            if "residue_number" in atom.metadata:
+                atom_residue_number = atom.metadata["residue_number"]
+            else:
+                atom_residue_number = "0"
+
+            # If the chain ID is undefined, assume a default of "X"
+            if "chain_id" in atom.metadata:
+                atom_chain_id = atom.metadata["chain_id"]
+            else:
+                atom_chain_id = "X"
+
+            # Determine whether this atom should be part of the last atom's chain, or if it
+            # should start a new chain
+            if last_chain is None:
+                chain = openmm_topology.addChain(atom_chain_id)
+            elif last_chain.id == atom_chain_id:
+                chain = last_chain
+            else:
+                chain = openmm_topology.addChain(atom_chain_id)
+            # Determine whether this atom should be a part of the last atom's residue, or if it
+            # should start a new residue
+            if last_residue is None:
+                residue = openmm_topology.addResidue(atom_residue_name, chain)
+                residue.id = atom_residue_number
+            elif all(
+                (
+                    (last_residue.name == atom_residue_name),
+                    (int(last_residue.id) == int(atom_residue_number)),
+                    (chain.id == last_chain.id),
+                )
+            ):
+                residue = last_residue
+            else:
+                residue = openmm_topology.addResidue(atom_residue_name, chain)
+                residue.id = atom_residue_number
+
+            # Add atom.
+            element = app.Element.getByAtomicNumber(atom.atomic_number)
+            omm_atom = openmm_topology.addAtom(atom.name, element, residue)
+
+            # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
+            # assert topology.atom_index(atom) == int(omm_atom.id) - 1
+            omm_atoms.append(omm_atom)
+
+            last_chain = chain
+            last_residue = residue
+
+        # Add all bonds.
+        bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
+        for bond in molecule.bonds:
+            atom1, atom2 = bond.atoms
+            atom1_idx, atom2_idx = topology.atom_index(atom1), topology.atom_index(
+                atom2
+            )
+            if isinstance(bond, Bond):
+                if bond.is_aromatic:
+                    bond_type = app.Aromatic
+                else:
+                    bond_type = bond_types[bond.bond_order]
+                bond_order = bond.bond_order
+            else:
+                raise RuntimeError(
+                    "Unexpected bond type found while iterating over Topology.bonds."
+                    f"Found {type(bond)}, allowed is Bond."
+                )
+
+            openmm_topology.addBond(
+                omm_atoms[atom1_idx],
+                omm_atoms[atom2_idx],
+                type=bond_type,
+                order=bond_order,
             )
 
-        return openmm_topology
+    if len(molecule_virtual_site_map) > 0:
+        # As a stopgap, put all virtual sites in a single residue
+        virtual_site_chain: openmm.app.topology.Chain = openmm_topology.addChain(id="V")
+        virtual_site_residue: openmm.app.topology.Residue = openmm_topology.addResidue(
+            name="VS", chain=virtual_site_chain
+        )
+
+        for molecule in topology.molecules:
+            molecule_index = topology.molecule_index(molecule)
+            virtual_sites_in_this_molecule: List[
+                VirtualSiteKey
+            ] = molecule_virtual_site_map[molecule_index]
+            for this_virtual_site in virtual_sites_in_this_molecule:
+                virtual_site_name = this_virtual_site.name
+
+                openmm_topology.addAtom(
+                    virtual_site_name,
+                    virtual_site_element,
+                    virtual_site_residue,
+                )
+
+    if interchange.box is not None:
+        from openff.units.openmm import to_openmm
+
+        openmm_topology.setPeriodicBoxVectors(to_openmm(interchange.box))
+
+    return openmm_topology
+
+
+def to_openmm_positions(
+    interchange: "Interchange",
+    include_virtual_sites: bool = True,
+) -> off_unit.Quantity:
+    """Generate an array of positions of all particles, optionally including virtual sites."""
+    from collections import defaultdict
+
+    import numpy
+
+    if interchange.positions is None:
+        raise MissingPositionsError(
+            f"Positions are required found {interchange.positions=}."
+        )
+
+    atom_positions = to_openmm_unit(interchange.positions)
+
+    if "VirtualSites" not in interchange.handlers:
+        return atom_positions
+    elif len(interchange["VirtualSites"].slot_map) == 0:
+        return atom_positions
+
+    topology = interchange.topology
+
+    if include_virtual_sites:
+        from openff.interchange.interop._virtual_sites import (
+            _virtual_site_parent_molecule_mapping,
+        )
+
+        virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(interchange)
+
+        molecule_virtual_site_map = defaultdict(list)
+
+        for virtual_site, molecule in virtual_site_molecule_map.items():
+            molecule_virtual_site_map[topology.molecule_index(molecule)].append(
+                virtual_site
+            )
+
+    particle_positions = off_unit.Quantity(
+        numpy.empty(shape=(0, 3)), off_unit.nanometer
+    )
+
+    for molecule in topology.molecules:
+        molecule_index = topology.molecule_index(molecule)
+
+        try:
+            this_molecule_atom_positions = molecule.conformers[0]
+        except TypeError:
+            atom_indices = [topology.atom_index(atom) for atom in molecule.atoms]
+            this_molecule_atom_positions = interchange.positions[atom_indices, :]
+            # Interchange.position is populated, but Molecule.conformers is not
+
+        particle_positions = numpy.concatenate(
+            [
+                particle_positions,
+                this_molecule_atom_positions,
+            ]
+        )
+
+    for molecule in topology.molecules:
+        molecule_index = topology.molecule_index(molecule)
+
+        n_virtual_sites_in_this_molecule: int = len(
+            molecule_virtual_site_map[molecule_index]
+        )
+        this_molecule_virtual_site_positions = off_unit.Quantity(
+            numpy.zeros((n_virtual_sites_in_this_molecule, 3)), off_unit.nanometer
+        )
+
+        particle_positions = numpy.concatenate(
+            [
+                particle_positions,
+                this_molecule_virtual_site_positions,
+            ]
+        )
+    return particle_positions
 
 
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):

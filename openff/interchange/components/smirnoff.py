@@ -1652,6 +1652,11 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
     A handler which stores the information necessary to construct virtual sites (virtual particles).
     """
 
+    slot_map: Dict[VirtualSiteKey, PotentialKey] = Field(
+        dict(),
+        description="A mapping between VirtualSiteKey objects and PotentialKey objects.",
+    )  # type: ignore[assignment]
+
     type: Literal["VirtualSites"] = "VirtualSites"
     expression: Literal[""] = ""
     virtual_site_key_topology_index_map: Dict["VirtualSiteKey", int] = Field(
@@ -1721,7 +1726,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                         ),
                         associated_handler="VirtualSites",
                     )
-                    self.slot_map[virtual_site_key] = potential_key  # type: ignore
+                    self.slot_map[virtual_site_key] = potential_key
                     self.virtual_site_key_topology_index_map[
                         virtual_site_key
                     ] = virtual_site_index
@@ -1760,7 +1765,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                     "epsilon": parameter.epsilon,
                 },
             )
-            vdw_handler.slot_map[virtual_site_key] = vdw_key
+            vdw_handler.slot_map[virtual_site_key] = vdw_key  # type: ignore[index]
             vdw_handler.potentials[vdw_key] = vdw_potential
 
             electrostatics_key = PotentialKey(
@@ -1773,7 +1778,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                     ),
                 }
             )
-            electrostatics_handler.slot_map[virtual_site_key] = electrostatics_key
+            electrostatics_handler.slot_map[virtual_site_key] = electrostatics_key  # type: ignore[index]
             electrostatics_handler.potentials[
                 electrostatics_key
             ] = electrostatics_potential
@@ -1799,7 +1804,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         return origin_weight, x_direction, y_direction
 
     def _get_local_frame_position(self, virtual_site_key: "VirtualSiteKey"):
-        potential_key = self.slot_map[virtual_site_key]  # type: ignore
+        potential_key = self.slot_map[virtual_site_key]
         potential = self.potentials[potential_key]
         if virtual_site_key.type == "BondCharge":
             distance = potential.parameters["distance"]
