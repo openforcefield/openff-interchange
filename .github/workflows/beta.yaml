@@ -63,7 +63,7 @@ jobs:
 
     - name: Run example notebooks
       run: |
-        python -m pytest -v $COV examples/ --nbval-lax --ignore=examples/deprecated/
+        python -m pytest -v $COV examples/ --nbval-lax --ignore=examples/deprecated/ -p no:randomly
 
     - name: Codecov
       uses: codecov/codecov-action@v3
