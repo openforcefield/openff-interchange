@@ -17,7 +17,7 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
-from openff.interchange.interop.openmm import from_openmm
+from openff.interchange.interop.openmm import from_openmm, to_openmm_topology
 from openff.interchange.tests import _BaseTest, get_test_file_path
 
 # WISHLIST: Add tests for reaction-field if implemented
@@ -52,6 +52,17 @@ nonbonded_methods = [
 
 def _get_num_virtual_sites(openmm_topology: app.Topology) -> int:
     return sum(atom.element is None for atom in openmm_topology.atoms())
+
+
+def _compare_openmm_topologies(top1: app.Topology, top2: app.Topology):
+    """
+    In lieu of first-class serializaiton in OpenMM (https://github.com/openmm/openmm/issues/1543),
+    do some quick heuristics to roughly compare two OpenMM Topology objects.
+    """
+    for method_name in ["getNumAtoms", "getNumBonds", "getNumChains", "getNumResidues"]:
+        assert getattr(top1, method_name)() == getattr(top2, method_name)()
+
+    assert (top1.getPeriodicBoxVectors() == top2.getPeriodicBoxVectors()).all()
 
 
 class TestOpenMM(_BaseTest):
@@ -504,6 +515,19 @@ class TestToOpenMMTopology(_BaseTest):
         # TODO: Monkeypatch Topology.to_openmm() and emit a warning when it seems
         #       to be used while virtual sites are present in a handler
         assert _get_num_virtual_sites(out.topology.to_openmm()) == 0
+
+    def test_interchange_method(self):
+        """
+        Ensure similar-ish behavior between `to_openmm_topology` as a standalone function
+        and as the wrapped method of the same name on the `Interchange` class.
+        """
+        tip4p = ForceField("openff-2.0.0.offxml", get_test_file_path("tip4p.offxml"))
+        topology = Molecule.from_smiles("O").to_topology()
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        out = Interchange.from_smirnoff(tip4p, topology)
+
+        _compare_openmm_topologies(out.to_openmm_topology(), to_openmm_topology(out))
 
 
 class TestToOpenMMPositions(_BaseTest):
