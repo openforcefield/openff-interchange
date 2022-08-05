@@ -522,11 +522,13 @@ class Interchange(DefaultModel):
 
         return to_openmm_(self, combine_nonbonded_forces=combine_nonbonded_forces)
 
-    def to_openmm_topology(self):
+    def to_openmm_topology(self, ensure_unique_atom_names: bool = True):
         """Export components of this Interchange to an OpenMM Topology."""
         from openff.interchange.interop.openmm import to_openmm_topology
 
-        return to_openmm_topology(self)
+        return to_openmm_topology(
+            self, ensure_unique_atom_names=ensure_unique_atom_names
+        )
 
     def to_prmtop(self, file_path: Union[Path, str], writer="internal"):
         """Export this Interchange to an Amber .prmtop file."""

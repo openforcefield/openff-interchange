@@ -1077,22 +1077,24 @@ def to_openmm_positions(
             ]
         )
 
-    for molecule in topology.molecules:
-        molecule_index = topology.molecule_index(molecule)
+    if include_virtual_sites:
+        for molecule in topology.molecules:
+            molecule_index = topology.molecule_index(molecule)
 
-        n_virtual_sites_in_this_molecule: int = len(
-            molecule_virtual_site_map[molecule_index]
-        )
-        this_molecule_virtual_site_positions = off_unit.Quantity(
-            numpy.zeros((n_virtual_sites_in_this_molecule, 3)), off_unit.nanometer
-        )
+            n_virtual_sites_in_this_molecule: int = len(
+                molecule_virtual_site_map[molecule_index]
+            )
+            this_molecule_virtual_site_positions = off_unit.Quantity(
+                numpy.zeros((n_virtual_sites_in_this_molecule, 3)), off_unit.nanometer
+            )
 
-        particle_positions = numpy.concatenate(
-            [
-                particle_positions,
-                this_molecule_virtual_site_positions,
-            ]
-        )
+            particle_positions = numpy.concatenate(
+                [
+                    particle_positions,
+                    this_molecule_virtual_site_positions,
+                ]
+            )
+
     return particle_positions
 
 

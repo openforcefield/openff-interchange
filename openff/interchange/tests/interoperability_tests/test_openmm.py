@@ -1,4 +1,4 @@
-import numpy as np
+import numpy
 import openmm
 import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol
@@ -17,7 +17,7 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
-from openff.interchange.interop.openmm import from_openmm
+from openff.interchange.interop.openmm import from_openmm, to_openmm_topology
 from openff.interchange.tests import _BaseTest, get_test_file_path
 
 # WISHLIST: Add tests for reaction-field if implemented
@@ -48,6 +48,21 @@ nonbonded_methods = [
         "result": UnsupportedCutoffMethodError,
     },
 ]
+
+
+def _get_num_virtual_sites(openmm_topology: app.Topology) -> int:
+    return sum(atom.element is None for atom in openmm_topology.atoms())
+
+
+def _compare_openmm_topologies(top1: app.Topology, top2: app.Topology):
+    """
+    In lieu of first-class serializaiton in OpenMM (https://github.com/openmm/openmm/issues/1543),
+    do some quick heuristics to roughly compare two OpenMM Topology objects.
+    """
+    for method_name in ["getNumAtoms", "getNumBonds", "getNumChains", "getNumResidues"]:
+        assert getattr(top1, method_name)() == getattr(top2, method_name)()
+
+    assert (top1.getPeriodicBoxVectors() == top2.getPeriodicBoxVectors()).all()
 
 
 class TestOpenMM(_BaseTest):
@@ -138,14 +153,14 @@ class TestOpenMM(_BaseTest):
         mol = Molecule.from_smiles(mol)
         mol.generate_conformers(n_conformers=1)
         top = Topology.from_molecules(n_mols * [mol])
-        mol.conformers[0] -= np.min(mol.conformers)
+        mol.conformers[0] -= numpy.min(mol.conformers)
 
-        top.box_vectors = 15 * np.eye(3) * unit.nanometer
+        top.box_vectors = 15 * numpy.eye(3) * unit.nanometer
 
         if n_mols == 1:
             positions = mol.conformers[0]
         elif n_mols == 2:
-            positions = np.concatenate(
+            positions = numpy.concatenate(
                 [mol.conformers[0], mol.conformers[0] + 3 * mol.conformers[0].units]
             )
 
@@ -431,13 +446,13 @@ class TestOpenMMVirtualSites(_BaseTest):
             sage_with_sigma_hole.create_openmm_system(mol.to_topology()),
         )
         """
-        import numpy as np
-        import parmed as pmd
+        import numpy
+        import parmed
 
         out.to_top("sigma.top")
-        gmx_top = pmd.load_file("sigma.top")
+        gmx_top = parmed.load_file("sigma.top")
 
-        assert abs(np.sum([p.charge for p in gmx_top.atoms])) < 1e-3
+        assert abs(numpy.sum([p.charge for p in gmx_top.atoms])) < 1e-3
         """
 
     @pytest.mark.skip(reason="virtual sites in development")
@@ -484,6 +499,57 @@ class TestOpenMMVirtualSites(_BaseTest):
         for force in out.getForces():
             if isinstance(force, openmm.NonbondedForce):
                 assert force.getNumExceptions() == 12
+
+
+class TestToOpenMMTopology(_BaseTest):
+    def test_num_virtual_sites(self):
+        from openff.interchange.interop.openmm import to_openmm_topology
+
+        tip4p = ForceField("openff-2.0.0.offxml", get_test_file_path("tip4p.offxml"))
+        water = Molecule.from_smiles("O")
+
+        out = Interchange.from_smirnoff(tip4p, [water])
+
+        assert _get_num_virtual_sites(to_openmm_topology(out)) == 1
+
+        # TODO: Monkeypatch Topology.to_openmm() and emit a warning when it seems
+        #       to be used while virtual sites are present in a handler
+        assert _get_num_virtual_sites(out.topology.to_openmm()) == 0
+
+    def test_interchange_method(self):
+        """
+        Ensure similar-ish behavior between `to_openmm_topology` as a standalone function
+        and as the wrapped method of the same name on the `Interchange` class.
+        """
+        tip4p = ForceField("openff-2.0.0.offxml", get_test_file_path("tip4p.offxml"))
+        topology = Molecule.from_smiles("O").to_topology()
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        out = Interchange.from_smirnoff(tip4p, topology)
+
+        _compare_openmm_topologies(out.to_openmm_topology(), to_openmm_topology(out))
+
+
+class TestToOpenMMPositions(_BaseTest):
+    @pytest.mark.parametrize("include_virtual_sites", [True, False])
+    def test_positions(self, include_virtual_sites):
+        from openff.interchange.interop.openmm import to_openmm_positions
+
+        tip4p = ForceField("openff-2.0.0.offxml", get_test_file_path("tip4p.offxml"))
+        water = Molecule.from_smiles("O")
+        water.generate_conformers(n_conformers=1)
+
+        out = Interchange.from_smirnoff(tip4p, [water])
+
+        positions = to_openmm_positions(
+            out, include_virtual_sites=include_virtual_sites
+        )
+
+        assert positions.shape == (4, 3) if include_virtual_sites else (3, 3)
+
+        numpy.testing.assert_allclose(
+            positions.to(unit.angstrom)[:3], water.conformers[0]
+        )
 
 
 class TestOpenMMToPDB(_BaseTest):
