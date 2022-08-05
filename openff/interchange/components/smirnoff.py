@@ -285,7 +285,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
             self.potentials = dict()
         for topology_key, potential_key in self.slot_map.items():
             smirks = potential_key.id
-            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.parameters[smirks]
             if topology_key.bond_order:
                 bond_order = topology_key.bond_order
                 if parameter.k_bondorder:
@@ -508,9 +508,7 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
         """
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
-            # ParameterHandler.get_parameter returns a list, although this
-            # should only ever be length 1
-            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.parameters[smirks]
             potential = Potential(
                 parameters={
                     "k": parameter.k,
@@ -594,7 +592,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
         for topology_key, potential_key in self.slot_map.items():
             smirks = potential_key.id
             n = potential_key.mult
-            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.parameters[smirks]
             # n_terms = len(parameter.k)
             if topology_key.bond_order:
                 bond_order = topology_key.bond_order
@@ -743,7 +741,7 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
             n = potential_key.mult
-            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.parameters[smirks]
             if parameter.idivf is None:
                 idivf = None
             else:
@@ -831,7 +829,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
 
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
-            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.parameters[smirks]
             try:
                 potential = Potential(
                     parameters={
@@ -1744,7 +1742,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         for virtual_site_key, potential_key in self.slot_map.items():
             # TODO: This logic assumes no spaces in the SMIRKS pattern, name or `match` attribute
             smirks, _, _ = potential_key.id.split(" ")
-            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.parameters[smirks]
 
             virtual_site_potential = Potential(
                 parameters={
