@@ -1,13 +1,26 @@
 """Functions for running energy evluations with LAMMPS."""
 import subprocess
+from distutils.spawn import find_executable
 from typing import List, Optional
 
 import numpy as np
 from openff.units import unit
 
 from openff.interchange import Interchange
+from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import LAMMPSRunError
+
+
+def _find_lammps_executable() -> Optional[str]:
+    """Attempt to locate a LAMMPS executable based on commonly-used names."""
+    lammps_executable_names = ["lammps", "lmp_serial", "lmp_mpi"]
+
+    for name in lammps_executable_names:
+        if find_executable(name):
+            return name
+
+    return None
 
 
 def get_lammps_energies(
@@ -39,16 +52,18 @@ def get_lammps_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
+    lmp = _find_lammps_executable()
+
     if round_positions is not None:
         off_sys.positions = np.round(off_sys.positions, round_positions)
 
     off_sys.to_lammps("out.lmp")
-    _write_lammps_input(
-        off_sys=off_sys,
-        file_name="tmp.in",
+    mdconfig = MDConfig.from_interchange(off_sys)
+    mdconfig.write_lammps_input(
+        input_file="tmp.in",
     )
 
-    run_cmd = "lmp_serial -i tmp.in"
+    run_cmd = f"{lmp} -i tmp.in"
 
     proc = subprocess.Popen(
         run_cmd,
@@ -91,73 +106,3 @@ def _parse_lammps_log(file_in: str) -> List[float]:
                 tag = True
 
     return data
-
-
-def _write_lammps_input(
-    off_sys: Interchange,
-    file_name: str = "test.in",
-) -> None:
-    """Write a LAMMPS input file for running single-point energies."""
-    with open(file_name, "w") as fo:
-        fo.write(
-            "units real\n" "atom_style full\n" "\n" "dimension 3\nboundary p p p\n\n"
-        )
-
-        if "Bonds" in off_sys.handlers:
-            if len(off_sys["Bonds"].potentials) > 0:
-                fo.write("bond_style hybrid harmonic\n")
-        if "Angles" in off_sys.handlers:
-            if len(off_sys["Angles"].potentials) > 0:
-                fo.write("angle_style hybrid harmonic\n")
-        if "ProperTorsions" in off_sys.handlers:
-            if len(off_sys["ProperTorsions"].potentials) > 0:
-                fo.write("dihedral_style hybrid fourier\n")
-        if "ImproperTorsions" in off_sys.handlers:
-            if len(off_sys["ImproperTorsions"].potentials) > 0:
-                fo.write("improper_style cvff\n")
-
-        vdw_hander = off_sys.handlers["vdW"]
-        electrostatics_handler = off_sys.handlers["Electrostatics"]
-
-        has_electrostatics = any(
-            c.m != 0 for c in electrostatics_handler.charges.values()
-        )
-
-        # TODO: Ensure units
-        vdw_cutoff = vdw_hander.cutoff
-        vdw_cutoff = vdw_cutoff.m_as(unit.angstrom)
-
-        # TODO: Handle separate cutoffs
-        coul_cutoff = vdw_cutoff
-
-        fo.write(
-            "special_bonds lj {} {} {} coul {} {} {}\n\n".format(
-                0.0,  # vdw_hander.scale12,
-                vdw_hander.scale_13,
-                vdw_hander.scale_14,
-                0.0,  # electrostatics_handler.scale12,
-                electrostatics_handler.scale_13,
-                electrostatics_handler.scale_14,
-            )
-        )
-
-        if has_electrostatics:
-            if electrostatics_handler.method == "pme":
-                fo.write(f"pair_style lj/cut/coul/long {vdw_cutoff} {coul_cutoff}\n")
-            elif electrostatics_handler.method == "cutoff":
-                fo.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")
-        else:
-            fo.write(f"pair_style lj/cut {vdw_cutoff}\n")
-
-        fo.write("pair_modify mix arithmetic tail yes\n\n")
-        fo.write("read_data out.lmp\n\n")
-        fo.write(
-            "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n"
-        )
-
-        if electrostatics_handler.method == "pme" and has_electrostatics:
-            # LAMMPS will error out if using kspace on something with all zero charges, so
-            # only specify kpsace if some charge is non-zero
-            fo.write("kspace_style pppm 1e-6\n")
-
-        fo.write("run 0\n")

@@ -1,4 +1,6 @@
 """Custom models for dealing with unit-bearing quantities in a Pydantic-compatible manner."""
+import collections
+import copy
 import json
 from typing import TYPE_CHECKING, Any, Dict
 
@@ -14,7 +16,11 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
 )
 
-if TYPE_CHECKING or has_package("unyt"):
+if TYPE_CHECKING:
+    import unyt
+    from openff.toolkit import Topology
+
+elif has_package("unyt"):
     import unyt
 
 
@@ -23,50 +29,58 @@ class _FloatQuantityMeta(type):
         return type("FloatQuantity", (FloatQuantity,), {"__unit__": t})
 
 
-class FloatQuantity(float, metaclass=_FloatQuantityMeta):
-    """A model for unit-bearing floats."""
+if TYPE_CHECKING:
+    FloatQuantity = unit.Quantity  # np.ndarray
+else:
 
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate_type
+    class FloatQuantity(float, metaclass=_FloatQuantityMeta):
+        """A model for unit-bearing floats."""
 
-    @classmethod
-    def validate_type(cls, val):
-        """Process a value tagged with units into one tagged with "OpenFF" style units."""
-        unit_ = getattr(cls, "__unit__", Any)
-        if unit_ is Any:
-            if isinstance(val, (float, int)):
-                # TODO: Can this exception be raised with knowledge of the field it's in?
-                raise MissingUnitError(f"Value {val} needs to be tagged with a unit")
-            elif isinstance(val, unit.Quantity):
-                return unit.Quantity(val)
-            elif isinstance(val, openmm_unit.Quantity):
-                return _from_omm_quantity(val)
+        @classmethod
+        def __get_validators__(cls):
+            yield cls.validate_type
+
+        @classmethod
+        def validate_type(cls, val):
+            """Process a value tagged with units into one tagged with "OpenFF" style units."""
+            unit_ = getattr(cls, "__unit__", Any)
+            if unit_ is Any:
+                if isinstance(val, (float, int)):
+                    # TODO: Can this exception be raised with knowledge of the field it's in?
+                    raise MissingUnitError(
+                        f"Value {val} needs to be tagged with a unit"
+                    )
+                elif isinstance(val, unit.Quantity):
+                    return unit.Quantity(val)
+                elif isinstance(val, openmm_unit.Quantity):
+                    return _from_omm_quantity(val)
+                else:
+                    raise UnitValidationError(
+                        f"Could not validate data of type {type(val)}"
+                    )
             else:
+                unit_ = unit(unit_)
+                if isinstance(val, unit.Quantity):
+                    # some custom behavior could go here
+                    assert unit_.dimensionality == val.dimensionality
+                    # return through converting to some intended default units (taken from the class)
+                    return val.to(unit_)
+                    # could return here, without converting
+                    # (could be inconsistent with data model - heteregenous but compatible units)
+                    # return val
+                if isinstance(val, openmm_unit.Quantity):
+                    return _from_omm_quantity(val).to(unit_)
+                if has_package("unyt"):
+                    if isinstance(val, unyt.unyt_quantity):
+                        return _from_unyt_quantity(val).to(unit_)
+                if isinstance(val, (float, int)) and not isinstance(val, bool):
+                    return val * unit_
+                if isinstance(val, str):
+                    # could do custom deserialization here?
+                    return unit.Quantity(val).to(unit_)
                 raise UnitValidationError(
                     f"Could not validate data of type {type(val)}"
                 )
-        else:
-            unit_ = unit(unit_)
-            if isinstance(val, unit.Quantity):
-                # some custom behavior could go here
-                assert unit_.dimensionality == val.dimensionality
-                # return through converting to some intended default units (taken from the class)
-                return val.to(unit_)
-                # could return here, without converting
-                # (could be inconsistent with data model - heteregenous but compatible units)
-                # return val
-            if isinstance(val, openmm_unit.Quantity):
-                return _from_omm_quantity(val).to(unit_)
-            if has_package("unyt"):
-                if isinstance(val, unyt.unyt_quantity):
-                    return _from_unyt_quantity(val).to(unit_)
-            if isinstance(val, (float, int)) and not isinstance(val, bool):
-                return val * unit_
-            if isinstance(val, str):
-                # could do custom deserialization here?
-                return unit.Quantity(val).to(unit_)
-            raise UnitValidationError(f"Could not validate data of type {type(val)}")
 
 
 def _from_omm_quantity(val: openmm_unit.Quantity):
@@ -155,7 +169,7 @@ class _ArrayQuantityMeta(type):
 
 
 if TYPE_CHECKING:
-    ArrayQuantity = np.ndarray
+    ArrayQuantity = unit.Quantity  # np.ndarray
 else:
 
     class ArrayQuantity(float, metaclass=_ArrayQuantityMeta):
@@ -211,3 +225,27 @@ else:
                 raise UnitValidationError(
                     f"Could not validate data of type {type(val)}"
                 )
+
+
+class TopologyEncoder(json.JSONEncoder):
+    """Custom encoder for `Topology` objects."""
+
+    def default(self, obj: "Topology"):  # noqa
+        _topology = copy.deepcopy(obj)
+        for molecule in _topology.molecules:
+            molecule._conformers = None
+
+        return _topology.to_json()
+
+
+def _remove_ordered_dicts(data):
+    """Map collection.OrderedDicts to dicts in hierarchical structures."""
+    if isinstance(data, (collections.OrderedDict, dict)):
+        return {
+            _remove_ordered_dicts(key): _remove_ordered_dicts(val)
+            for key, val in data.items()
+        }
+    elif isinstance(data, list):
+        return [_remove_ordered_dicts(val) for val in data]
+    else:
+        return data

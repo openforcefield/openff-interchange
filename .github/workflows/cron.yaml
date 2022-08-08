@@ -21,24 +21,22 @@ jobs:
         python-version:
           - "3.8"
           - "3.9"
+        openeye:
+          - true
+          - false
     env:
-      CI_OS: ${{ matrix.os }}
-      PYVER: ${{ matrix.python-version }}
+      OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
     - uses: actions/checkout@v3
 
-    - uses: conda-incubator/setup-miniconda@v2.1.1
+    - name: Install conda environment
+      uses: mamba-org/provision-with-micromamba@main
       with:
-        python-version: ${{ matrix.python-version }}
         environment-file: devtools/conda-envs/test_env.yaml
-        activate-environment: test
-        auto-activate-base: false
-        mamba-version: "*"
-        miniforge-version: latest
-        miniforge-variant: Mambaforge
-        use-mamba: true
+        extra-specs: |
+          python=${{ matrix.python-version }}
 
     - name: Additional info about the build
       run: |
@@ -46,14 +44,22 @@ jobs:
         df -h
         ulimit -a
 
+    - name: Install package
+      run: |
+        python setup.py develop --no-deps
+
     - name: Environment Information
       run: |
         conda info
         conda list
 
-    - name: Install package
+    - name: License OpenEye
+      if: ${{ matrix.openeye == true }}
       run: |
-        python setup.py develop --no-deps
+        echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
+        python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
+      env:
+        SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     - name: Run mypy
       continue-on-error: true
@@ -63,14 +69,14 @@ jobs:
     - name: Run all tests
       if: always()
       run: |
-        python -m pytest -v $COV openff/interchange/ -m "slow or not slow"
+        python -m pytest -v -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
 
     - name: Run example notebooks
       run: |
         python -m pytest -v $COV examples/ --nbval-lax
 
     - name: Codecov
-      uses: codecov/codecov-action@v2.1.0
+      uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
         fail_ci_if_error: false

@@ -1,7 +1,7 @@
 OpenFF Interchange
 ==================
 [//]: # (Badges)
-[![CI Status](https://github.com/openforcefield/openff-interchange/workflows/ci/badge.svg)](https://github.com/openforcefield/openff-interchange/actions?query=branch%3Amain+workflow%3Aci)
+[![CI Status](https://github.com/openforcefield/openff-interchange/workflows/full_tests/badge.svg)](https://github.com/openforcefield/openff-interchange/actions?query=branch%3Amain+workflow%3Afull_tests)
 [![Documentation Status](https://readthedocs.org/projects/openff-interchange/badge/?version=latest)](https://openff-interchange.readthedocs.io/en/latest/?badge=latest)
 [![Codecov coverage](https://img.shields.io/codecov/c/github/openforcefield/openff-interchange.svg?logo=Codecov&logoColor=white)](https://codecov.io/gh/openforcefield/openff-interchange)
 [![LGTM analysis](https://img.shields.io/lgtm/grade/python/g/openforcefield/openff-interchange.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/openforcefield/openff-interchange/context:python)
@@ -25,24 +25,21 @@ and chemical topologies via objects in the [OpenFF Toolkit](https://open-forcefi
 an object storing parametrized data.
 
 ```python3
-# Use the OpenFF Toolkit to generate a minimal chemical topology
-from openff.toolkit.topology import Molecule
+from openff.toolkit import Molecule, ForceField
+from openff.units import unit
+from openff.interchange import Interchange
+
+# Use the OpenFF Toolkit to generate a chemical topology
 molecule = Molecule.from_smiles("CCO")
 molecule.generate_conformers(n_conformers=1)
 topology = molecule.to_topology()
+topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
 
 # Load OpenFF 2.0.0 "Sage"
-from openff.toolkit.typing.engines.smirnoff import ForceField
 sage = ForceField("openff-2.0.0.offxml")
 
 # Create an Interchange object
-from openff.interchange import Interchange
 out = Interchange.from_smirnoff(force_field=sage, topology=topology)
-
-# Define box vectors and assign atomic positions
-import numpy as np
-out.box = [4, 4, 4] * np.eye(3)
-out.positions = molecule.conformers[0]
 
 # Convert the Interchnage object to an OpenMM System
 omm_sys = out.to_openmm(combine_nonbonded_forces=True)
@@ -50,6 +47,9 @@ omm_sys = out.to_openmm(combine_nonbonded_forces=True)
 # or write to GROMACS files
 out.to_gro("out.gro")
 out.to_top("out.top")
+
+# or roundtrip through JSON or other common serialization formats
+roundtripped = Interchange.parse_raw(out.json())
 ```
 
 Future releases will include improved support for other file formats such as those used by AMBER, CHARMM, and LAMMPS.

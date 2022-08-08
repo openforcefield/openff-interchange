@@ -36,7 +36,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
 
     if "Electrostatics" in off_system.handlers.keys():
         has_electrostatics = True
-        electrostatics_handler = off_system.handlers["Electrostatics"]
+        electrostatics_handler = off_system["Electrostatics"]
     else:
         has_electrostatics = False
 
@@ -60,7 +60,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
         )
 
     if "Bonds" in off_system.handlers.keys():
-        bond_handler = off_system.handlers["Bonds"]
+        bond_handler = off_system["Bonds"]
         bond_type_map: Dict = dict()
         for pot_key, pot in bond_handler.potentials.items():
             k = pot.parameters["k"].to(kcal_mol_a2).magnitude / 2
@@ -82,7 +82,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     structure.bond_types.claim()
 
     if "Angles" in off_system.handlers.keys():
-        angle_handler = off_system.handlers["Angles"]
+        angle_handler = off_system["Angles"]
         angle_type_map: Dict = dict()
         for pot_key, pot in angle_handler.potentials.items():
             k = pot.parameters["k"].to(kcal_mol_rad2).magnitude / 2
@@ -110,14 +110,14 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     # ParmEd treats 1-4 scaling factors at the level of each DihedralType,
     # whereas SMIRNOFF captures them at the level of the non-bonded handler,
     # so they need to be stored here for processing dihedrals
-    vdw_14 = off_system.handlers["vdW"].scale_14
+    vdw_14 = off_system["vdW"].scale_14
     if has_electrostatics:
-        coul_14 = off_system.handlers["Electrostatics"].scale_14
+        coul_14 = off_system["Electrostatics"].scale_14
     else:
         coul_14 = 1.0
-    vdw_handler = off_system.handlers["vdW"]
+    vdw_handler = off_system["vdW"]
     if "ProperTorsions" in off_system.handlers.keys():
-        proper_torsion_handler = off_system.handlers["ProperTorsions"]
+        proper_torsion_handler = off_system["ProperTorsions"]
         proper_type_map: Dict = dict()
         for pot_key, pot in proper_torsion_handler.potentials.items():
             k = pot.parameters["k"].to(kcal_mol).magnitude
@@ -192,7 +192,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     #                )
     #            )
 
-    vdw_handler = off_system.handlers["vdW"]
+    vdw_handler = off_system["vdW"]
     if vdw_handler.mixing_rule == "lorentz-berthelot":
         structure.combining_rule = "lorentz"
     elif vdw_handler.mixing_rule == "geometric":

@@ -5,12 +5,12 @@ import numpy as np
 import parmed as pmd
 import pytest
 from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange.components.potentials import Potential
+from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.tests import (
@@ -35,8 +35,6 @@ if HAS_GROMACS:
         get_gromacs_energies,
     )
 
-kj_mol = unit.Unit("kilojoule / mol")
-
 
 @skip_if_missing("foyer")
 class TestFoyer(_BaseTest):
@@ -54,7 +52,6 @@ class TestFoyer(_BaseTest):
 
         top = molecule.to_topology()
 
-        oplsaa = foyer.Forcefield(name="oplsaa")
         interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
         interchange.positions = molecule.conformers[0].m_as(unit.nanometer)
         interchange.box = [4, 4, 4]
@@ -162,19 +159,16 @@ class TestFoyer(_BaseTest):
         )
 
 
-class TestRBTorsions(_BaseTest):
-    @pytest.fixture(scope="class")
-    def parsley_(self):
-        return ForceField("openff-1.0.0.offxml")
-
-    @pytest.fixture(scope="class")
-    def ethanol_with_rb_torsions(self, parsley_):
+@skip_if_missing("foyer")
+class TestRBTorsions(TestFoyer):
+    @pytest.fixture()
+    def ethanol_with_rb_torsions(self, sage):
         mol = Molecule.from_smiles("CC")
         mol.name = "ETH"
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
 
-        out = Interchange.from_smirnoff(parsley_, top)
+        out = Interchange.from_smirnoff(sage, top)
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
         out.positions = np.round(out.positions, 2)
@@ -223,16 +217,15 @@ class TestRBTorsions(_BaseTest):
     @skip_if_missing("foyer")
     @skip_if_missing("mbuild")
     @needs_gmx
-    def test_rb_torsions_vs_foyer(self, ethanol_with_rb_torsions):
+    def test_rb_torsions_vs_foyer(self, oplsaa, ethanol_with_rb_torsions):
         # Given that these force constants are copied from Foyer's OPLS-AA file,
         # compare to processing through the current MoSDeF pipeline
-        import foyer
         import mbuild
 
         comp = mbuild.load("CC", smiles=True)
         comp.xyz = ethanol_with_rb_torsions.positions.m_as(unit.nanometer)
-        ff = foyer.Forcefield(name="oplsaa")
-        from_foyer = ff.apply(comp)
+
+        from_foyer = oplsaa.apply(comp)
         from_foyer.box = [40, 40, 40, 90, 90, 90]
         from_foyer.save("from_foyer.top")
         from_foyer.save("from_foyer.gro")

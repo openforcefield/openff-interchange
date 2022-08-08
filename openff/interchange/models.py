@@ -42,7 +42,7 @@ class TopologyKey(DefaultModel):
         >>> from openff.interchange.models import TopologyKey
         >>> this_angle = TopologyKey(atom_indices=(2, 1, 3))
         >>> this_angle
-        TopologyKey(atom_indices=(2, 1, 3), mult=None, bond_order=None)
+        TopologyKey with atom indices (2, 1, 3)
 
     Create a TopologyKey indentifying just one atom
 
@@ -50,7 +50,7 @@ class TopologyKey(DefaultModel):
 
         >>> this_atom = TopologyKey(atom_indices=(4,))
         >>> this_atom
-        TopologyKey(atom_indices=(4,), mult=None, bond_order=None)
+        TopologyKey with atom indices (4,)
 
     Layer multiple TopologyKey objects that point to the same torsion
 
@@ -77,20 +77,88 @@ class TopologyKey(DefaultModel):
     def __hash__(self) -> int:
         return hash((self.atom_indices, self.mult, self.bond_order))
 
+    def __repr__(self) -> str:
+        return (
+            f"TopologyKey with atom indices {self.atom_indices}"
+            f"{'' if self.mult is None else ', mult' + str(self.mult)}"
+            f"{'' if self.bond_order is None else ', bond order ' + str(self.bond_order)}"
+        )
+
+
+class LibraryChargeTopologyKey(DefaultModel):
+    """Subclass of `TopologyKey` for use with library charges only."""
+
+    # TODO: Eventually rename this for coherence with `TopologyKey`
+    this_atom_index: int
+
+    @property
+    def atom_indices(self) -> Tuple[int, ...]:
+        """Alias for `this_atom_index`."""
+        return (self.this_atom_index,)
+
+    def __hash__(self) -> int:
+        return hash((self.this_atom_index,))
+
+
+class SingleAtomChargeTopologyKey(LibraryChargeTopologyKey):
+    """Shim class for storing the result of charge_from_molecules."""
+
+    pass
+
+
+class ChargeModelTopologyKey(DefaultModel):
+    """Subclass of `TopologyKey` for use with charge models only."""
+
+    this_atom_index: int
+    partial_charge_method: str
+
+    @property
+    def atom_indices(self) -> Tuple[int, ...]:
+        """Alias for `this_atom_index`."""
+        return (self.this_atom_index,)
+
+    def __hash__(self) -> int:
+        return hash((self.this_atom_index, self.partial_charge_method))
+
+
+class ChargeIncrementTopologyKey(DefaultModel):
+    """Subclass of `TopologyKey` for use with charge increments only."""
+
+    # TODO: Eventually rename this for coherence with `TopologyKey`
+    this_atom_index: int
+    other_atom_indices: Tuple[int, ...]
+
+    @property
+    def atom_indices(self) -> Tuple[int, ...]:
+        """Alias for `this_atom_index`."""
+        return (self.this_atom_index,)
+
+    def __hash__(self) -> int:
+        return hash((self.this_atom_index, self.other_atom_indices))
+
 
 class VirtualSiteKey(DefaultModel):
     """A unique identifier of a virtual site in the scope of a chemical topology."""
 
-    atom_indices: Tuple[int, ...] = Field(
-        tuple(), description="The indices of the atoms that anchor this virtual site"
+    orientation_atom_indices: Tuple[int, ...] = Field(
+        description="The indices of the 'orientation atoms' which are used to define the position of this "
+        "virtual site. The first atom is the 'parent atom' which defines which atom the virtual site is 'attached' to."
     )
-    type: str = Field(description="The type of this virtual site")
+    type: str = Field(description="The type of this virtual site parameter.")
+    name: str = Field(description="The name of this virtual site parameter.")
     match: Literal["once", "all_permutations"] = Field(
         description="The `match` attribute of the associated virtual site type"
     )
 
     def __hash__(self) -> int:
-        return hash((self.atom_indices, self.type, self.match))
+        return hash(
+            (
+                self.orientation_atom_indices,
+                self.name,
+                self.type,
+                self.match,
+            )
+        )
 
 
 class PotentialKey(DefaultModel):
@@ -115,7 +183,7 @@ class PotentialKey(DefaultModel):
         >>> param = parsley["Bonds"].get_parameter({"id": "b55"})[0]
         >>> bond_55 = PotentialKey(id=param.smirks)
         >>> bond_55
-        PotentialKey(id='[#16X4,#16X3:1]-[#8X2:2]', mult=None, associated_handler=None, bond_order=None)
+        PotentialKey associated with handler 'None' with id '[#16X4,#16X3:1]-[#8X2:2]'
 
     Create a PotentialKey corresponding to the angle parameters in OPLS-AA defined
     between atom types opls_135, opls_135, and opls_140
@@ -124,7 +192,7 @@ class PotentialKey(DefaultModel):
 
         >>> oplsaa_angle = PotentialKey(id="opls_135-opls_135-opls_140")
         >>> oplsaa_angle
-        PotentialKey(id='opls_135-opls_135-opls_140', mult=None, associated_handler=None, bond_order=None)
+        PotentialKey associated with handler 'None' with id 'opls_135-opls_135-opls_140'
 
     """
 
@@ -148,3 +216,10 @@ class PotentialKey(DefaultModel):
 
     def __hash__(self) -> int:
         return hash((self.id, self.mult, self.associated_handler, self.bond_order))
+
+    def __repr__(self) -> str:
+        return (
+            f"PotentialKey associated with handler '{self.associated_handler}' with id '{self.id}'"
+            f"{'' if self.mult is None else ', mult' + str(self.mult)}"
+            f"{'' if self.bond_order is None else ', bond order ' + str(self.bond_order)}"
+        )

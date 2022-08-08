@@ -33,6 +33,12 @@ class SMIRNOFFHandlersNotImplementedError(Exception):
         return msg
 
 
+class SMIRNOFFVersionNotSupportedError(Exception):
+    """
+    Exception for when a parameter handler's version is not supported.
+    """
+
+
 class ToolkitTopologyConformersNotFoundError(Exception):
     """
     Exception for when reference molecules in a toolkit topology lack conformers.
@@ -103,6 +109,12 @@ class UnsupportedBoxError(ValueError):
     """
 
 
+class UnsupportedImportError(BaseException):
+    """
+    Generic exception for attempting to import from an unsupported data format.
+    """
+
+
 class UnsupportedExportError(BaseException):
     """
     Exception for attempting to write to an unsupported file format.
@@ -157,6 +169,12 @@ class MissingParametersError(BaseException):
 class MissingBondOrdersError(BaseException):
     """
     Exception for when a parameter handler needs fractional bond orders but they are missing.
+    """
+
+
+class NonUniqueMoleculesError(ValueError):
+    """
+    Exception for when molecules are not unique.
     """
 
 
@@ -243,4 +261,10 @@ class EnergyError(BaseException):
 class MissingEnergyError(BaseException):
     """
     Exception for when one report has a value for an energy group but the other does not.
+    """
+
+
+class NonIntegralMoleculeChargeException(BaseException):
+    """
+    Exception raised when the partial charges on a molecule do not sum up to its formal charge.
     """

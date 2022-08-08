@@ -10,20 +10,24 @@ dependencies:
   - pydantic
   - pint
   - openff-toolkit-base
+  - openff-units >=0.1.6
+  - openff-utilities >=0.1.5
   - cached-property
   - cachetools
-  - openff-units >=0.1.5
-  - openff-utilities
-  - openmm =7.6
+  - python-constraint
+  - openmm >=7.6
   - intermol
   - pytest
   - mdtraj
-  - jax
+  - jax >=0.3.0
+  - jaxlib >=0.3.0
   # readthedocs dependencies
   - myst-parser
   - numpydoc
   - autodoc-pydantic
   - sphinx>=4.4.0,<5
+  - sphinxcontrib-mermaid
+  - sphinx-notfound-page
   - pip:
     - git+https://github.com/openforcefield/openff-sphinx-theme.git@main
-    - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
+    - git+https://github.com/openforcefield/openff-toolkit.git@main

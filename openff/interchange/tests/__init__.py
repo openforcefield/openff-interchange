@@ -6,15 +6,17 @@ from typing import DefaultDict, Dict, List, Tuple
 import numpy as np
 import openmm
 import pytest
+from openff.toolkit.tests.create_molecules import create_ammonia, create_ethanol
 from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
-from openff.utilities.utilities import has_executable
 from openmm import unit as openmm_unit
 from pkg_resources import resource_filename
 
 from openff.interchange import Interchange
+from openff.interchange.drivers.gromacs import _find_gromacs_executable
+from openff.interchange.drivers.lammps import _find_lammps_executable
 
 
 def get_test_file_path(test_file) -> str:
@@ -53,9 +55,15 @@ class _BaseTest:
         return ForceField(get_test_file_path("argon.offxml"))
 
     @pytest.fixture()
-    def argon_top(self):
+    def argon(self):
         """Fixture that builds a simple arogon topology."""
-        return _top_from_smiles("[#18]")
+        argon = Molecule()
+        argon.add_atom(
+            atomic_number=18,
+            formal_charge=0,
+            is_aromatic=False,
+        )
+        return argon
 
     @pytest.fixture()
     def ammonia_ff(self):
@@ -63,24 +71,28 @@ class _BaseTest:
         return ForceField(get_test_file_path("ammonia.offxml"))
 
     @pytest.fixture()
-    def ammonia_top(self):
-        """Fixture that builds a simple ammonia topology."""
-        mol = Molecule.from_smiles("N")
-        top = Topology.from_molecules(4 * [mol])
+    def ammonia(self):
+        return create_ammonia()
+
+    @pytest.fixture()
+    def ethanol(self):
+        return create_ethanol()
+
+    @pytest.fixture()
+    def basic_top(self):
+        top = Molecule.from_smiles("C").to_topology()
+        top.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
         return top
 
     @pytest.fixture()
-    def ethanol_top(self):
+    def ammonia_top(self, ammonia):
+        """Fixture that builds a simple ammonia topology."""
+        return Topology.from_molecules(4 * [ammonia])
+
+    @pytest.fixture()
+    def ethanol_top(self, ethanol):
         """Fixture that builds a simple four ethanol topology."""
-        return _top_from_smiles("CCO", n_molecules=4)
-
-    @pytest.fixture()
-    def parsley(self):
-        return ForceField("openff-1.0.0.offxml")
-
-    @pytest.fixture()
-    def parsley_unconstrained(self):
-        return ForceField("openff_unconstrained-1.0.0.offxml")
+        return Topology.from_molecules(4 * [ethanol])
 
     @pytest.fixture()
     def sage(self):
@@ -220,45 +232,14 @@ class _BaseTest:
     """
 
 
-HAS_GROMACS = any(has_executable(e) for e in ["gmx", "gmx_d"])
-HAS_LAMMPS = any(has_executable(e) for e in ["lammps", "lmp_mpi", "lmp_serial"])
+HAS_GROMACS = _find_gromacs_executable() is not None
+HAS_LAMMPS = _find_lammps_executable() is not None
 
 needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
 needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs GROMACS")
 
 kj_nm2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.nanometer**2
 kj_rad2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.radian**2
-
-
-def _top_from_smiles(
-    smiles: str,
-    n_molecules: int = 1,
-) -> Topology:
-    """
-    Create a gas phase OpenFF Topology from a single-molecule SMILES.
-
-    Parameters
-    ----------
-    smiles : str
-        The SMILES of the input molecule
-    n_molecules : int, optional, default = 1
-        The number of copies of the SMILES molecule from which to
-        compose a topology
-
-    Returns
-    -------
-    top : openff.toolkit.topology.Topology
-        A single-molecule, gas phase-like topology
-
-    """
-    mol = Molecule.from_smiles(smiles)
-    mol.name = Molecule.to_hill_formula(mol)
-    mol.generate_conformers(n_conformers=1)
-    top = Topology.from_molecules(n_molecules * [mol])
-    # Add dummy box vectors
-    # TODO: Revisit if/after Topology.is_periodic
-    top.box_vectors = np.eye(3) * 10 * unit.nanometer
-    return top
 
 
 def _get_charges_from_openmm_system(omm_sys: openmm.System):
@@ -298,7 +279,7 @@ def _get_lj_params_from_openmm_system(omm_sys: openmm.System):
 
 
 def _get_charges_from_openff_interchange(off_sys: Interchange):
-    charges_ = [*off_sys.handlers["Electrostatics"].charges.values()]
+    charges_ = [*off_sys["Electrostatics"].charges.values()]
     charges = np.asarray([charge.magnitude for charge in charges_])
     return charges
 

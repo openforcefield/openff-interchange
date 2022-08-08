@@ -2,7 +2,6 @@ name: interchange-examples-env
 channels:
   - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
-  - bioconda
   - openeye
 dependencies:
   # Core
@@ -13,11 +12,14 @@ dependencies:
   - openmm
   # OpenFF stack
   - openff-toolkit =0.10.3
-  - openff-utilities
-  - openff-units >=0.1.5
+  - openff-utilities >=0.1.5
+  - openff-units >=0.1.6
   - cached-property
   - cachetools
+  - python-constraint
   # Optional features
+  - jax >=0.3.0
+  - jaxlib >=0.3.0
   - unyt
   - mbuild
   - foyer >=0.8.1
@@ -26,18 +28,15 @@ dependencies:
   - openff-evaluator-base
   - mdtraj
   - nglview
-  - openff-amber-ff-ports
+  - openff-amber-ff-ports >=0.0.3
   - openeye-toolkits
-  - pytest
+  - pytest <7.0.0
   - nbval
-  - nglview
   # Drivers
-  - gromacs >=2021
+  - gromacs >=2021=nompi*
   - lammps >=2021
   - panedr
   # Temporary
   - pip:
-    # https://github.com/conda-forge/jaxlib-feedstock/issues/89
-    - jax
-    - jaxlib
-    - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
+    - git+https://github.com/openforcefield/openff-toolkit.git@main
+    - git+https://github.com/openforcefield/openff-evaluator.git@main

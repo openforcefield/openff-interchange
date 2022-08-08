@@ -5,6 +5,7 @@ import openmm
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
+from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 from openmm import unit as openmm_unit
@@ -13,12 +14,11 @@ from pkg_resources import resource_filename
 from openff.interchange import Interchange
 from openff.interchange.components.nonbonded import BuckinghamvdWHandler
 from openff.interchange.components.potentials import Potential
-from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
 from openff.interchange.interop.internal.gromacs import from_gro
 from openff.interchange.models import PotentialKey, TopologyKey
-from openff.interchange.tests import _BaseTest, get_test_file_path, needs_gmx
+from openff.interchange.tests import _BaseTest, needs_gmx
 
 
 @needs_gmx
@@ -74,21 +74,42 @@ class TestGROMACSGROFile(_BaseTest):
         n_decimals = len(str(internal_coords[0, 0]).split(".")[1])
         assert n_decimals == 12
 
+    def test_vaccum_warning(self, sage):
+        molecule = Molecule.from_smiles("CCO")
+        molecule.generate_conformers(n_conformers=1)
+
+        out = Interchange.from_smirnoff(force_field=sage, topology=[molecule])
+
+        assert out.box is None
+
+        with pytest.warns(UserWarning, match="gitlab"):
+            out.to_gro("tmp.gro")
+
     @pytest.mark.slow()
-    def test_residue_names_in_gro_file(self, parsley):
-        """Test that residue names > 5 characters don't break .gro file output"""
-        benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
-        benzene.name = "supercalifragilisticexpialidocious"
-        top = Topology.from_molecules(benzene)
+    def test_residue_info(self, sage):
+        """Test that residue information is passed through to .gro files."""
+        import mdtraj
 
-        # Populate an entire interchange because ...
-        out = Interchange.from_smirnoff(parsley, top)
-        out.box = [4, 4, 4]
-        out.positions = benzene.conformers[0]
+        protein = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_HIE.pdb")
+        )
 
-        # ... the easiest way to check the validity of the files
-        # is to see if GROMACS can run them
-        get_gromacs_energies(out)
+        ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
+
+        out = Interchange.from_smirnoff(
+            force_field=ff14sb,
+            topology=[protein],
+        )
+
+        out.to_gro("tmp.gro")
+
+        mdtraj_topology: mdtraj.Topology = mdtraj.load("tmp.gro").topology
+
+        for found_residue, original_residue in zip(
+            mdtraj_topology.residues, out.topology.hierarchy_iterator("residues")
+        ):
+            assert found_residue.name == original_residue.residue_name
+            assert str(found_residue.resSeq) == original_residue.residue_number
 
 
 @needs_gmx
@@ -108,13 +129,13 @@ class TestGROMACS(_BaseTest):
             # "C1COC(=O)O1",  # This adds an improper, i2
         ],
     )
-    def test_simple_roundtrip(self, parsley, smiles, reader):
+    def test_simple_roundtrip(self, sage, smiles, reader):
         molecule = Molecule.from_smiles(smiles)
         molecule.name = molecule.to_hill_formula()
         molecule.generate_conformers(n_conformers=1)
         topology = molecule.to_topology()
 
-        out = Interchange.from_smirnoff(force_field=parsley, topology=topology)
+        out = Interchange.from_smirnoff(force_field=sage, topology=topology)
         out.box = [4, 4, 4]
         out.positions = molecule.conformers[0]
 
@@ -134,17 +155,10 @@ class TestGROMACS(_BaseTest):
             },
         )
 
-    def test_nonperiodic_pme(self, ethanol_top, sage):
-        interchange = Interchange.from_smirnoff(sage, ethanol_top)
-        interchange.box = None
-
-        with pytest.raises(UnsupportedExportError, match="non-p"):
-            interchange.to_top("foo.top")
-
     @skip_if_missing("parmed")
-    def test_num_impropers(self, parsley):
+    def test_num_impropers(self, sage):
         top = Molecule.from_smiles("CC1=CC=CC=C1").to_topology()
-        out = Interchange.from_smirnoff(parsley, top)
+        out = Interchange.from_smirnoff(sage, top)
         out.box = unit.Quantity(4 * np.eye(3), units=unit.nanometer)
         out.to_top("tmp.top")
 
@@ -159,15 +173,14 @@ class TestGROMACS(_BaseTest):
 
     @pytest.mark.slow()
     @skip_if_missing("intermol")
-    def test_set_mixing_rule(self, ethanol_top, parsley):
+    def test_set_mixing_rule(self, ethanol_top, sage):
         from intermol.gromacs.gromacs_parser import GromacsParser
 
-        openff_sys = Interchange.from_smirnoff(
-            force_field=parsley, topology=ethanol_top
-        )
+        openff_sys = Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
         openff_sys.positions = np.zeros((ethanol_top.n_atoms, 3))
         openff_sys.to_gro("tmp.gro")
 
+        openff_sys.box = [4, 4, 4]
         openff_sys.to_top("lorentz.top")
         lorentz = GromacsParser("lorentz.top", "tmp.gro").read()
         assert lorentz.combination_rule == "Lorentz-Berthelot"
@@ -181,32 +194,39 @@ class TestGROMACS(_BaseTest):
     @pytest.mark.xfail(
         reason="cannot test unsupported mixing rules in GROMACS with current SMIRNOFFvdWHandler model"
     )
-    def test_unsupported_mixing_rule(self, ethanol_top, parsley):
+    def test_unsupported_mixing_rule(self, ethanol_top, sage):
         # TODO: Update this test when the model supports more mixing rules than GROMACS does
-        openff_sys = Interchange.from_smirnoff(
-            force_field=parsley, topology=ethanol_top
-        )
+        openff_sys = Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
         openff_sys["vdW"].mixing_rule = "kong"
 
         with pytest.raises(UnsupportedExportError, match="rule `geometric` not compat"):
             openff_sys.to_top("out.top")
 
     @pytest.mark.slow()
-    def test_residue_names_in_gro_file(self):
-        """Test that residue names > 5 characters don't break .gro file output"""
-        benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
-        benzene.name = "supercalifragilisticexpialidocious"
-        top = Topology.from_molecules(molecules=[benzene])
+    def test_residue_info(self, sage):
+        """Test that residue information is passed through to .top files."""
+        import parmed
 
-        # Populate an entire interchange because ...
-        force_field = ForceField("openff-1.0.0.offxml")
-        out = Interchange.from_smirnoff(force_field, top)
-        out.box = [4, 4, 4]
-        out.positions = benzene.conformers[0]
+        protein = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_HIE.pdb")
+        )
 
-        # ... the easiest way to check the validity of the files
-        # is to see if GROMACS can run them
-        get_gromacs_energies(out)
+        ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
+
+        out = Interchange.from_smirnoff(
+            force_field=ff14sb,
+            topology=[protein],
+        )
+
+        out.to_top("tmp.top")
+
+        parmed_structure: parmed.Structure = parmed.load_file("tmp.top")
+
+        for found_residue, original_residue in zip(
+            parmed_structure.residues, out.topology.hierarchy_iterator("residues")
+        ):
+            assert found_residue.name == original_residue.residue_name
+            assert str(found_residue.number + 1) == original_residue.residue_number
 
     @pytest.mark.slow()
     def test_argon_buck(self):
@@ -240,6 +260,11 @@ class TestGROMACS(_BaseTest):
                 {pot_key: Potential(parameters={"charge": 0 * unit.elementary_charge})}
             )
 
+        for molecule in top.molecules:
+            molecule.partial_charges = unit.Quantity(
+                molecule.n_atoms * [0], unit.elementary_charge
+            )
+
         buck.potentials[pot_key] = pot
 
         out = Interchange()
@@ -251,7 +276,7 @@ class TestGROMACS(_BaseTest):
         out.to_gro("out.gro", writer="internal")
         out.to_top("out.top", writer="internal")
 
-        omm_energies = get_openmm_energies(out)
+        omm_energies = get_openmm_energies(out, combine_nonbonded_forces=True)
         by_hand = A * exp(-B * r) - C * r**-6
 
         resid = omm_energies.energies["vdW"] - by_hand
@@ -266,11 +291,9 @@ class TestGROMACS(_BaseTest):
 @needs_gmx
 class TestGROMACSVirtualSites(_BaseTest):
     @pytest.fixture()
-    def parsley_with_sigma_hole(self, parsley):
-        """Fixture that loads an SMIRNOFF XML for argon"""
-        virtual_site_handler = VirtualSiteHandler(version=0.3)
-
-        sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
+    def sigma_hole_type(self, sage):
+        """A handler with a bond charge virtual site on a C-Cl bond."""
+        return VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
             distance=1.4 * unit.angstrom,
@@ -280,22 +303,17 @@ class TestGROMACSVirtualSites(_BaseTest):
             charge_increment2=0.2 * unit.elementary_charge,
         )
 
-        virtual_site_handler.add_parameter(parameter=sigma_type)
-        parsley.register_parameter_handler(virtual_site_handler)
-
-        return parsley
-
     @pytest.fixture()
-    def parsley_with_monovalent_lone_pair(self, parsley):
+    def sage_with_monovalent_lone_pair(self, sage):
         """Fixture that loads an SMIRNOFF XML for argon"""
         virtual_site_handler = VirtualSiteHandler(version=0.3)
 
-        carbonyl_type = VirtualSiteHandler.VirtualSiteMonovalentLonePairType(
+        carbonyl_type = VirtualSiteHandler.VirtualSiteType(
             name="EP",
             smirks="[O:1]=[C:2]-[*:3]",
             distance=0.3 * unit.angstrom,
             type="MonovalentLonePair",
-            match="once",
+            match="all_permutations",
             outOfPlaneAngle=0.0 * unit.degree,
             inPlaneAngle=120.0 * unit.degree,
             charge_increment1=0.05 * unit.elementary_charge,
@@ -304,35 +322,23 @@ class TestGROMACSVirtualSites(_BaseTest):
         )
 
         virtual_site_handler.add_parameter(parameter=carbonyl_type)
-        parsley.register_parameter_handler(virtual_site_handler)
+        sage.register_parameter_handler(virtual_site_handler)
 
-        return parsley
+        return sage
 
     @pytest.mark.xfail()
     @skip_if_missing("parmed")
-    def test_sigma_hole_example(self, parsley_with_sigma_hole):
+    def test_sigma_hole_example(self, sage_with_sigma_hole):
         """Test that a single-molecule sigma hole example runs"""
         mol = Molecule.from_smiles("CCl")
         mol.name = "Chloromethane"
         mol.generate_conformers(n_conformers=1)
 
         out = Interchange.from_smirnoff(
-            force_field=parsley_with_sigma_hole, topology=mol.to_topology()
+            force_field=sage_with_sigma_hole, topology=mol.to_topology()
         )
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
-        out.handlers["VirtualSites"] = SMIRNOFFVirtualSiteHandler._from_toolkit(
-            parameter_handler=parsley_with_sigma_hole["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["vdW"]._from_toolkit_virtual_sites(
-            parameter_handler=parsley_with_sigma_hole["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["Electrostatics"]._from_toolkit_virtual_sites(
-            parameter_handler=parsley_with_sigma_hole["VirtualSites"],
-            topology=mol.to_topology(),
-        )
 
         # TODO: Sanity-check reported energies
         get_gromacs_energies(out)
@@ -345,31 +351,18 @@ class TestGROMACSVirtualSites(_BaseTest):
 
         assert abs(np.sum([p.charge for p in gmx_top.atoms])) < 1e-3
 
-    def test_carbonyl_example(self, parsley_with_monovalent_lone_pair):
+    def test_carbonyl_example(self, sage_with_monovalent_lone_pair):
         """Test that a single-molecule DivalentLonePair example runs"""
         mol = Molecule.from_smiles("C=O")
         mol.name = "Carbon_monoxide"
         mol.generate_conformers(n_conformers=1)
 
         out = Interchange.from_smirnoff(
-            force_field=parsley_with_monovalent_lone_pair, topology=mol.to_topology()
+            force_field=sage_with_monovalent_lone_pair, topology=mol.to_topology()
         )
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
-        out.handlers["VirtualSites"] = SMIRNOFFVirtualSiteHandler._from_toolkit(
-            parameter_handler=parsley_with_monovalent_lone_pair["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["vdW"]._from_toolkit_virtual_sites(
-            parameter_handler=parsley_with_monovalent_lone_pair["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["Electrostatics"]._from_toolkit_virtual_sites(
-            parameter_handler=parsley_with_monovalent_lone_pair["VirtualSites"],
-            topology=mol.to_topology(),
-        )
 
-        # TODO: Sanity-check reported energies
-        get_gromacs_energies(out)
-
-        # ParmEd does not support 3fad, and cannot be used to sanity check charges
+        with pytest.raises(Exception, match="MonovalentLonePair not implemented."):
+            # TODO: Sanity-check reported energies
+            get_gromacs_energies(out)

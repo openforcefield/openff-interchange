@@ -24,22 +24,17 @@ jobs:
           - "3.8"
           - "3.9"
     env:
-      CI_OS: ${{ matrix.os }}
-      PYVER: ${{ matrix.python-version }}
+      COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
     - uses: actions/checkout@v3
 
-    - uses: conda-incubator/setup-miniconda@v2.1.1
+    - name: Install conda environment
+      uses: mamba-org/provision-with-micromamba@main
       with:
-        python-version: ${{ matrix.python-version }}
         environment-file: devtools/conda-envs/minimal_env.yaml
-        activate-environment: test
-        auto-activate-base: false
-        mamba-version: "*"
-        miniforge-version: latest
-        miniforge-variant: Mambaforge
-        use-mamba: true
+        extra-specs: |
+          python=${{ matrix.python-version }}
 
     - name: Additional info about the build
       run: |
@@ -59,4 +54,4 @@ jobs:
     - name: Run unit tests
       if: always()
       run: |
-        python -m pytest -v -nauto openff/interchange/tests/unit_tests/
+        python -m pytest -v -nauto --durations=10 $COV openff/interchange/tests/unit_tests/

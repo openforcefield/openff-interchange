@@ -24,6 +24,9 @@ jobs:
         python-version:
           - "3.8"
           - "3.9"
+        openeye:
+          - true
+          - false
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
@@ -31,16 +34,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - uses: conda-incubator/setup-miniconda@v2.1.1
+    - name: Install conda environment
+      uses: mamba-org/provision-with-micromamba@main
       with:
-        python-version: "${{ matrix.python-version }}"
         environment-file: devtools/conda-envs/test_env.yaml
-        activate-environment: test
-        auto-activate-base: false
-        mamba-version: "*"
-        miniforge-version: latest
-        miniforge-variant: Mambaforge
-        use-mamba: true
+        extra-specs: |
+          python=${{ matrix.python-version }}
 
     - name: Additional info about the build
       run: |
@@ -58,6 +57,7 @@ jobs:
         conda list
 
     - name: License OpenEye
+      if: ${{ matrix.openeye == true }}
       run: |
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
@@ -71,10 +71,10 @@ jobs:
     - name: Run all tests
       if: always()
       run: |
-        python -m pytest -r fE -nauto $COV openff/interchange/ -m "slow or not slow"
+        python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
 
     - name: Codecov
-      uses: codecov/codecov-action@v2.1.0
+      uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
         fail_ci_if_error: false

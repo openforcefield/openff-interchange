@@ -7,12 +7,7 @@ from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, PrivateAttr, validator
 
 from openff.interchange.exceptions import MissingParametersError
-from openff.interchange.models import (
-    DefaultModel,
-    PotentialKey,
-    TopologyKey,
-    VirtualSiteKey,
-)
+from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
 from openff.interchange.types import ArrayQuantity, FloatQuantity
 
 if has_package("jax"):
@@ -44,7 +39,7 @@ class Potential(DefaultModel):
                 v[key] = ArrayQuantity.validate_type(val)
             else:
                 v[key] = FloatQuantity.validate_type(val)
-        return v  # type: ignore[return-value]
+        return v
 
     def __hash__(self) -> int:
         return hash(tuple(self.parameters.values()))
@@ -84,7 +79,7 @@ class WrappedPotential(DefaultModel):
                     )
                 }
             )
-        return params  # type: ignore
+        return params
 
     def __repr__(self) -> str:
         return str(self._inner_data.data)
@@ -98,7 +93,7 @@ class PotentialHandler(DefaultModel):
         ...,
         description="The analytical expression governing the potentials in this handler.",
     )
-    slot_map: Dict[Union[TopologyKey, VirtualSiteKey], PotentialKey] = Field(
+    slot_map: Dict[TopologyKey, PotentialKey] = Field(
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )
@@ -133,6 +128,7 @@ class PotentialHandler(DefaultModel):
         raise NotImplementedError
 
     def _get_parameters(self, atom_indices: Tuple[int]) -> Dict:
+        topology_key: TopologyKey
         for topology_key in self.slot_map:
             if topology_key.atom_indices == atom_indices:
                 potential_key = self.slot_map[topology_key]
@@ -154,12 +150,7 @@ class PotentialHandler(DefaultModel):
             raise NotImplementedError
 
         return numpy.array(
-            [
-                [
-                    v.m for v in p.parameters.values()  # type:ignore[attr-defined]
-                ]
-                for p in self.potentials.values()
-            ]
+            [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
         )
 
     def set_force_field_parameters(self, new_p: "ArrayLike") -> None:
@@ -174,7 +165,7 @@ class PotentialHandler(DefaultModel):
                 raise RuntimeError
 
             for parameter_index, parameter_key in enumerate(potential.parameters):
-                parameter_units = potential.parameters[parameter_key].units  # type: ignore
+                parameter_units = potential.parameters[parameter_key].units
                 modified_parameter = new_p[potential_index, parameter_index]  # type: ignore
 
                 self.potentials[potential_key].parameters[parameter_key] = (
