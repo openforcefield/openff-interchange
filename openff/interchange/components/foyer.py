@@ -215,7 +215,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
     """Handler storing bond potentials as produced by a Foyer force field."""
 
     type: str = "harmonic_bonds"
-    expression: str = "1/2 * k * (r - length) ** 2"
+    expression: str = "k/2*(r-length)**2"
     connection_attribute = "bonds"
 
     def get_params_with_units(self, params):
@@ -251,7 +251,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
     """Handler storing angle potentials as produced by a Foyer force field."""
 
     type: str = "harmonic_angles"
-    expression: str = "0.5 * k * (theta-angle)**2"
+    expression: str = "k/2*(theta-angle)**2"
     connection_attribute: str = "angles"
 
     def get_params_with_units(self, params):
@@ -331,7 +331,7 @@ class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler):
     """Handler storing periodic proper torsion potentials as produced by a Foyer force field."""
 
     type: str = "periodic_propers"
-    expression: str = "k * (1 + cos(periodicity * phi - phase))"
+    expression: str = "k*(1+cos(periodicity*theta-phase))"
     connection_attribute: str = "propers"
     raise_on_missing_params: bool = False
 

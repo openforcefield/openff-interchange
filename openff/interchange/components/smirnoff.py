@@ -125,6 +125,11 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
         """Return a list of parameter attributes supported by this handler."""
         raise NotImplementedError()
 
+    @classmethod
+    def _potential_parameters(cls):
+        """Return a subset of `supported_parameters` that are meant to be included in potentials."""
+        raise NotImplementedError()
+
     #    @classmethod
     #    @abc.abstractmethod
     #    def valence_terms(cls, topology):
@@ -484,7 +489,9 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
     """Handler storing angle potentials as produced by a SMIRNOFF force field."""
 
     type: Literal["Angles"] = "Angles"
-    expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
+    expression: Literal[
+        "k/2*(theta-angle)**2", "k/2*(cos(theta)-cos(angle))**2"
+    ] = "k/2*(theta-angle)**2"
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -495,6 +502,13 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
     def supported_parameters(cls):
         """Return a list of supported parameter attributes."""
         return ["smirks", "id", "k", "angle"]
+
+    @classmethod
+    def _potential_parameters(cls):
+        """Return a list of supported parameter attribute names."""
+        return [
+            val for val in cls.supported_parameters() if val not in ["id", "smirks"]
+        ]
 
     @classmethod
     def valence_terms(cls, topology):
@@ -511,9 +525,9 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
             parameter = parameter_handler.parameters[smirks]
             potential = Potential(
                 parameters={
-                    "k": parameter.k,
-                    "angle": parameter.angle,
-                },
+                    parameter_name: getattr(parameter, parameter_name)
+                    for parameter_name in self._potential_parameters()
+                }
             )
             self.potentials[potential_key] = potential
 

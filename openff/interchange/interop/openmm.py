@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, List, Tuple, Union
 import openmm
 from openff.toolkit.topology import Topology
 from openff.units import unit as off_unit
-from openff.units.openmm import from_openmm as from_openmm_unit
-from openff.units.openmm import to_openmm as to_openmm_unit
-from openmm import app, unit
+from openff.units.openmm import from_openmm as from_openmm_quantity
+from openff.units.openmm import to_openmm as to_openmm_quantity
+from openmm import unit
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import _PME
@@ -24,6 +24,8 @@ from openff.interchange.interop.parmed import _lj_params_from_potential
 from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
+    from openmm import app
+
     from openff.interchange import Interchange
 
 
@@ -130,11 +132,18 @@ def _process_bond_forces(
     Process the Bonds section of an Interchange object.
     """
     try:
-        bond_handler = openff_sys["Bonds"]
-    except LookupError:
+        bond_handler = openff_sys.handlers["Bonds"]
+    except KeyError:
         return
 
-    harmonic_bond_force = openmm.HarmonicBondForce()
+    if bond_handler.expression == "k/2*(r-length)**2":
+        harmonic_bond_force = openmm.HarmonicBondForce()
+    else:
+        raise UnsupportedExportError(
+            "Found an unsupported functional form in the bond handler:\n\t"
+            f"{bond_handler.expression=}"
+        )
+
     openmm_sys.addForce(harmonic_bond_force)
 
     has_constraint_handler = "Constraints" in openff_sys.handlers
@@ -173,11 +182,26 @@ def _process_angle_forces(
     Process the Angles section of an Interchange object.
     """
     try:
-        angle_handler = openff_sys["Angles"]
-    except LookupError:
+        angle_handler = openff_sys.handlers["Angles"]
+    except KeyError:
         return
 
-    harmonic_angle_force = openmm.HarmonicAngleForce()
+    if angle_handler.expression == "k/2*(theta-angle)**2":
+        custom = False
+        harmonic_angle_force = openmm.HarmonicAngleForce()
+    elif angle_handler.expression == "k/2*(cos(theta)-cos(angle))**2":
+        custom = True
+        harmonic_angle_force = openmm.CustomAngleForce(
+            angle_handler.expression.replace("**", "^")
+        )
+        for parameter_name in angle_handler._potential_parameters():
+            harmonic_angle_force.addPerAngleParameter(parameter_name)
+    else:
+        raise UnsupportedExportError(
+            "Found an unsupported functional form in the angle handler:\n\t"
+            f"{angle_handler.expression=}"
+        )
+
     openmm_sys.addForce(harmonic_angle_force)
 
     has_constraint_handler = "Constraints" in openff_sys.handlers
@@ -194,17 +218,32 @@ def _process_angle_forces(
                         # not an angle force
                         continue
 
-        params = angle_handler.potentials[pot_key].parameters
-        k = params["k"].m_as(off_unit.kilojoule / off_unit.rad / off_unit.mol)
-        angle = params["angle"].m_as(off_unit.radian)
+        if custom:
+            params = angle_handler.potentials[pot_key].parameters
+            parameter_values = [
+                to_openmm_quantity(params[val])
+                for val in angle_handler._potential_parameters()
+            ]
 
-        harmonic_angle_force.addAngle(
-            particle1=indices[0],
-            particle2=indices[1],
-            particle3=indices[2],
-            angle=angle,
-            k=k,
-        )
+            harmonic_angle_force.addAngle(
+                indices[0],
+                indices[1],
+                indices[2],
+                parameter_values,
+            )
+
+        else:
+            params = angle_handler.potentials[pot_key].parameters
+            k = params["k"].m_as(off_unit.kilojoule / off_unit.rad / off_unit.mol)
+            angle = params["angle"].m_as(off_unit.radian)
+
+            harmonic_angle_force.addAngle(
+                particle1=indices[0],
+                particle2=indices[1],
+                particle3=indices[2],
+                angle=angle,
+                k=k,
+            )
 
 
 def _process_torsion_forces(openff_sys, openmm_sys):
@@ -591,9 +630,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
             # TODO: Add electrostatics
             params = buck_handler.potentials[pot_key].parameters
-            a = to_openmm_unit(params["A"])
-            b = to_openmm_unit(params["B"])
-            c = to_openmm_unit(params["C"])
+            a = to_openmm_quantity(params["A"])
+            b = to_openmm_quantity(params["B"])
+            c = to_openmm_quantity(params["C"])
             non_bonded_force.setParticleParameters(atom_idx, [a, b, c])
 
         return
@@ -801,11 +840,11 @@ def _process_virtual_sites(openff_sys, openmm_sys):
         charge_increments = coul_handler.potentials[coul_key].parameters[
             "charge_increments"
         ]
-        charge = to_openmm_unit(-sum(charge_increments))
+        charge = to_openmm_quantity(-sum(charge_increments))
 
         vdw_parameters = vdw_handler.potentials[vdw_key].parameters
-        sigma = to_openmm_unit(vdw_parameters["sigma"])
-        epsilon = to_openmm_unit(vdw_parameters["epsilon"])
+        sigma = to_openmm_quantity(vdw_parameters["sigma"])
+        epsilon = to_openmm_quantity(vdw_parameters["epsilon"])
 
         index_system = openmm_sys.addParticle(mass=0.0)
         index_force = non_bonded_force.addParticle(charge, sigma, epsilon)
@@ -864,7 +903,7 @@ def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
 
 def to_openmm_topology(
     interchange: "Interchange", ensure_unique_atom_names: bool = True
-) -> app.Topology:
+) -> "app.Topology":
     """Create an OpenMM Topology containing some virtual site information (if appropriate)."""
     # Heavily cribbed from the toolkit
     # https://github.com/openforcefield/openff-toolkit/blob/0.11.0rc2/openff/toolkit/topology/topology.py
@@ -889,7 +928,7 @@ def to_openmm_topology(
             virtual_site
         )
 
-    virtual_site_element = openmm.app.element.Element.getByMass(0)
+    virtual_site_element = app.element.Element.getByMass(0)
 
     openmm_topology = app.Topology()
 
@@ -992,8 +1031,8 @@ def to_openmm_topology(
 
     if len(molecule_virtual_site_map) > 0:
         # As a stopgap, put all virtual sites in a single residue
-        virtual_site_chain: openmm.app.topology.Chain = openmm_topology.addChain(id="V")
-        virtual_site_residue: openmm.app.topology.Residue = openmm_topology.addResidue(
+        virtual_site_chain: app.topology.Chain = openmm_topology.addChain(id="V")
+        virtual_site_residue: app.topology.Residue = openmm_topology.addResidue(
             name="VS", chain=virtual_site_chain
         )
 
@@ -1033,7 +1072,7 @@ def to_openmm_positions(
             f"Positions are required found {interchange.positions=}."
         )
 
-    atom_positions = to_openmm_unit(interchange.positions)
+    atom_positions = to_openmm_quantity(interchange.positions)
 
     if "VirtualSites" not in interchange.handlers:
         return atom_positions
@@ -1157,8 +1196,8 @@ def _convert_nonbonded_force(force):
         pot_key = PotentialKey(id=f"{idx}")
         pot = Potential(
             parameters={
-                "sigma": from_openmm_unit(sigma),
-                "epsilon": from_openmm_unit(epsilon),
+                "sigma": from_openmm_quantity(sigma),
+                "epsilon": from_openmm_quantity(epsilon),
             }
         )
         vdw_handler.slot_map.update({top_key: pot_key})
@@ -1166,7 +1205,7 @@ def _convert_nonbonded_force(force):
 
         electrostatics.slot_map.update({top_key: pot_key})
         electrostatics.potentials.update(
-            {pot_key: Potential(parameters={"charge": from_openmm_unit(charge)})}
+            {pot_key: Potential(parameters={"charge": from_openmm_quantity(charge)})}
         )
 
     if force.getNonbondedMethod() == openmm.NonbondedForce.PME:
@@ -1205,7 +1244,10 @@ def _convert_harmonic_bond_force(force):
         top_key = TopologyKey(atom_indices=(atom1, atom2))
         pot_key = PotentialKey(id=f"{atom1}-{atom2}")
         pot = Potential(
-            parameters={"length": from_openmm_unit(length), "k": from_openmm_unit(k)}
+            parameters={
+                "length": from_openmm_quantity(length),
+                "k": from_openmm_quantity(k),
+            }
         )
 
         bond_handler.slot_map.update({top_key: pot_key})
@@ -1226,7 +1268,10 @@ def _convert_harmonic_angle_force(force):
         top_key = TopologyKey(atom_indices=(atom1, atom2, atom3))
         pot_key = PotentialKey(id=f"{atom1}-{atom2}-{atom3}")
         pot = Potential(
-            parameters={"angle": from_openmm_unit(angle), "k": from_openmm_unit(k)}
+            parameters={
+                "angle": from_openmm_quantity(angle),
+                "k": from_openmm_quantity(k),
+            }
         )
 
         angle_handler.slot_map.update({top_key: pot_key})
@@ -1255,8 +1300,8 @@ def _convert_periodic_torsion_force(force):
         pot = Potential(
             parameters={
                 "periodicity": int(per) * unit.dimensionless,
-                "phase": from_openmm_unit(phase),
-                "k": from_openmm_unit(k),
+                "phase": from_openmm_quantity(phase),
+                "k": from_openmm_quantity(k),
                 "idivf": 1 * unit.dimensionless,
             }
         )
