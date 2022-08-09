@@ -903,7 +903,7 @@ def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
 
 def to_openmm_topology(
     interchange: "Interchange", ensure_unique_atom_names: bool = True
-) -> app.Topology:
+) -> "app.Topology":
     """Create an OpenMM Topology containing some virtual site information (if appropriate)."""
     # Heavily cribbed from the toolkit
     # https://github.com/openforcefield/openff-toolkit/blob/0.11.0rc2/openff/toolkit/topology/topology.py
@@ -928,7 +928,7 @@ def to_openmm_topology(
             virtual_site
         )
 
-    virtual_site_element = openmm.app.element.Element.getByMass(0)
+    virtual_site_element = app.element.Element.getByMass(0)
 
     openmm_topology = app.Topology()
 
@@ -1031,8 +1031,8 @@ def to_openmm_topology(
 
     if len(molecule_virtual_site_map) > 0:
         # As a stopgap, put all virtual sites in a single residue
-        virtual_site_chain: openmm.app.topology.Chain = openmm_topology.addChain(id="V")
-        virtual_site_residue: openmm.app.topology.Residue = openmm_topology.addResidue(
+        virtual_site_chain: app.topology.Chain = openmm_topology.addChain(id="V")
+        virtual_site_residue: app.topology.Residue = openmm_topology.addResidue(
             name="VS", chain=virtual_site_chain
         )
 
