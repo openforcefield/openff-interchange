@@ -1,8 +1,8 @@
 """Functions for running energy evluations with Amber."""
 import subprocess
 import tempfile
-from distutils.spawn import find_executable
 from pathlib import Path
+from shutil import which
 from typing import Dict, Union
 
 from openff.units import unit
@@ -96,7 +96,7 @@ def _run_sander(
         An `EnergyReport` object containing the single-point energies.
 
     """
-    if not find_executable("sander"):
+    if not which("sander"):
         raise AmberExecutableNotFoundError(
             "Unable to find the 'sander' executable. Please ensure that "
             "the Amber executables are installed and in your PATH."

@@ -2,8 +2,8 @@
 import pathlib
 import subprocess
 import tempfile
-from distutils.spawn import find_executable
 from pathlib import Path
+from shutil import which
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from openff.utilities.utilities import requires_package, temporary_cd
@@ -25,7 +25,7 @@ def _find_gromacs_executable() -> Optional[str]:
     gromacs_executable_names = ["gmx", "gmx_mpi", "gmx_d", "gmx_mpi_d"]
 
     for name in gromacs_executable_names:
-        if find_executable(name):
+        if which(name):
             return name
 
     return None
