@@ -1,6 +1,6 @@
 """Functions for running energy evluations with LAMMPS."""
 import subprocess
-from distutils.spawn import find_executable
+from shutil import which
 from typing import List, Optional
 
 import numpy as np
@@ -17,7 +17,7 @@ def _find_lammps_executable() -> Optional[str]:
     lammps_executable_names = ["lammps", "lmp_serial", "lmp_mpi"]
 
     for name in lammps_executable_names:
-        if find_executable(name):
+        if which(name):
             return name
 
     return None
