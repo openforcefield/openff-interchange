@@ -928,6 +928,8 @@ def to_openmm_topology(
             virtual_site
         )
 
+    has_virtual_sites = len(virtual_site_molecule_map) > 0
+
     virtual_site_element = app.element.Element.getByMass(0)
 
     openmm_topology = app.Topology()
@@ -1003,6 +1005,23 @@ def to_openmm_topology(
             last_chain = chain
             last_residue = residue
 
+        if has_virtual_sites:
+            virtual_sites_in_this_molecule: List[
+                VirtualSiteKey
+            ] = molecule_virtual_site_map[molecule_index]
+            for this_virtual_site in virtual_sites_in_this_molecule:
+                virtual_site_name = this_virtual_site.name
+
+                # For now, assume that the residue of the last atom in the molecule is the same
+                # residue as the entire molecule - this in unsafe for (bio)polymers/macromolecules
+                virtual_site_residue = residue
+
+                openmm_topology.addAtom(
+                    virtual_site_name,
+                    virtual_site_element,
+                    virtual_site_residue,
+                )
+
         # Add all bonds.
         bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
         for bond in molecule.bonds:
@@ -1028,27 +1047,6 @@ def to_openmm_topology(
                 type=bond_type,
                 order=bond_order,
             )
-
-    if len(molecule_virtual_site_map) > 0:
-        # As a stopgap, put all virtual sites in a single residue
-        virtual_site_chain: app.topology.Chain = openmm_topology.addChain(id="V")
-        virtual_site_residue: app.topology.Residue = openmm_topology.addResidue(
-            name="VS", chain=virtual_site_chain
-        )
-
-        for molecule in topology.molecules:
-            molecule_index = topology.molecule_index(molecule)
-            virtual_sites_in_this_molecule: List[
-                VirtualSiteKey
-            ] = molecule_virtual_site_map[molecule_index]
-            for this_virtual_site in virtual_sites_in_this_molecule:
-                virtual_site_name = this_virtual_site.name
-
-                openmm_topology.addAtom(
-                    virtual_site_name,
-                    virtual_site_element,
-                    virtual_site_residue,
-                )
 
     if interchange.box is not None:
         from openff.units.openmm import to_openmm
@@ -1109,28 +1107,26 @@ def to_openmm_positions(
             this_molecule_atom_positions = interchange.positions[atom_indices, :]
             # Interchange.position is populated, but Molecule.conformers is not
 
-        particle_positions = numpy.concatenate(
-            [
-                particle_positions,
-                this_molecule_atom_positions,
-            ]
-        )
-
-    if include_virtual_sites:
-        for molecule in topology.molecules:
-            molecule_index = topology.molecule_index(molecule)
-
+        if include_virtual_sites:
             n_virtual_sites_in_this_molecule: int = len(
                 molecule_virtual_site_map[molecule_index]
             )
             this_molecule_virtual_site_positions = off_unit.Quantity(
                 numpy.zeros((n_virtual_sites_in_this_molecule, 3)), off_unit.nanometer
             )
-
             particle_positions = numpy.concatenate(
                 [
                     particle_positions,
+                    this_molecule_atom_positions,
                     this_molecule_virtual_site_positions,
+                ]
+            )
+
+        else:
+            particle_positions = numpy.concatenate(
+                [
+                    particle_positions,
+                    this_molecule_atom_positions,
                 ]
             )
 
