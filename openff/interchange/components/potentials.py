@@ -10,13 +10,16 @@ from openff.interchange.exceptions import MissingParametersError
 from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
 from openff.interchange.types import ArrayQuantity, FloatQuantity
 
-if has_package("jax"):
-    from jax import numpy
-else:
-    # Known mypy bug/limitation: https://github.com/python/mypy/issues/1153
-    import numpy  # type: ignore[no-redef]
+
+def _defer_jax_import():
+    if has_package("jax"):
+        from jax import numpy
+    else:
+        import numpy  # noqa
+
 
 if TYPE_CHECKING:
+    import numpy
     from numpy.typing import ArrayLike
     from openff.toolkit.topology import Topology
 
@@ -149,6 +152,8 @@ class PotentialHandler(DefaultModel):
         ):
             raise NotImplementedError
 
+        _defer_jax_import()
+
         return numpy.array(
             [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
         )
@@ -172,7 +177,7 @@ class PotentialHandler(DefaultModel):
                     modified_parameter * parameter_units
                 )
 
-    def get_system_parameters(self, p=None) -> numpy.ndarray:
+    def get_system_parameters(self, p=None) -> "numpy.ndarray":
         """
         Return a flattened representation of system parameters.
 
@@ -194,6 +199,8 @@ class PotentialHandler(DefaultModel):
             index = mapping[potential_key]
             q.append(p[index])
 
+        _defer_jax_import()
+
         return numpy.array(q)
 
     def get_mapping(self) -> Dict[PotentialKey, int]:
@@ -207,7 +214,7 @@ class PotentialHandler(DefaultModel):
 
         return mapping
 
-    def parametrize(self, p=None) -> numpy.ndarray:
+    def parametrize(self, p=None) -> "numpy.ndarray":
         """Return an array of system parameters, given an array of force field parameters."""
         if p is None:
             p = self.get_force_field_parameters()
