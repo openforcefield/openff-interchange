@@ -15,6 +15,9 @@ def _virtual_site_parent_molecule_mapping(
 ) -> Dict[VirtualSiteKey, Molecule]:
     mapping = dict()
 
+    if "VirtualSites" not in interchange.handlers:
+        return
+
     for virtual_site_key in interchange["VirtualSites"].slot_map:
         virtual_site_key: VirtualSiteKey  # type: ignore[no-redef]
         parent_atom_index = virtual_site_key.orientation_atom_indices[0]
