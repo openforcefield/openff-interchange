@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from openmm import app
 
     from openff.interchange import Interchange
+    from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 
 
 def to_openmm(
@@ -386,6 +387,13 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
     else:
         return
 
+    has_virtual_sites = "VirtualSites" in openff_sys.handlers
+
+    if has_virtual_sites:
+        virtual_site_handler = openff_sys["VirtualSites"]
+
+        _check_virtual_site_exclusion_policy(virtual_site_handler)
+
     # TODO: Process ElectrostaticsHandler.exception_potential
     if "vdW" in openff_sys.handlers or "Electrostatics" in openff_sys.handlers:
         try:
@@ -742,6 +750,16 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             # vdw_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
 
 
+def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteHandler"):
+    _SUPPORTED_EXCLUSION_POLICIES = ("parents",)
+
+    if handler.exclusion_policy not in _SUPPORTED_EXCLUSION_POLICIES:
+        raise UnsupportedExportError(
+            f"Found unsupported exclusion policy {handler.exclusion_policy}. "
+            f"Supported exclusion policies are {_SUPPORTED_EXCLUSION_POLICIES}"
+        )
+
+
 def _process_virtual_sites(openff_sys, openmm_sys):
     from openff.interchange.components._particles import (
         _BondChargeVirtualSite,
@@ -756,13 +774,7 @@ def _process_virtual_sites(openff_sys, openmm_sys):
     except LookupError:
         return
 
-    _SUPPORTED_EXCLUSION_POLICIES = ["parents"]
-
-    if virtual_site_handler.exclusion_policy not in _SUPPORTED_EXCLUSION_POLICIES:
-        raise UnsupportedExportError(
-            f"Found unsupported exclusion policy {virtual_site_handler.exclusion_policy}. "
-            f"Supported exclusion policies are {_SUPPORTED_EXCLUSION_POLICIES}"
-        )
+    _check_virtual_site_exclusion_policy(virtual_site_handler)
 
     vdw_handler = openff_sys["vdW"]
     coul_handler = openff_sys["Electrostatics"]
