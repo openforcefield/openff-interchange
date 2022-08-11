@@ -344,7 +344,9 @@ class TestOpenMMSwitchingFunction(_BaseTest):
             if isinstance(force, openmm.NonbondedForce):
                 found_force = True
                 assert force.getUseSwitchingFunction()
-                assert force.getSwitchingDistance() == 8 * openmm_unit.angstrom
+                assert force.getSwitchingDistance().value_in_unit(
+                    openmm_unit.angstrom
+                ) == pytest.approx(8), force.getSwitchingDistance()
 
         assert found_force, "NonbondedForce not found in system"
 
