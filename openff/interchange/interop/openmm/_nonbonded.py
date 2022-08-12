@@ -170,9 +170,13 @@ def _prepare_input_data(openff_sys):
     except LookupError:
         electrostatics_handler = None
 
-    electrostatics_method = (
-        electrostatics_handler.periodic_potential if electrostatics_handler else None
-    )
+    if electrostatics_handler is None:
+        electrostatics_method = None
+    else:
+        if openff_sys.box is None:
+            electrostatics_method = electrostatics_handler.nonperiodic_potential
+        else:
+            electrostatics_method = electrostatics_handler.periodic_potential
 
     return {
         "vdw_handler": vdw_handler,
@@ -287,12 +291,8 @@ def _create_single_nonbonded_force(
         for bond in openff_sys.topology.bonds
     ]
 
-    coul_14 = (
-        data["electrostatics_handler"].scale_14
-        if "electrostatics_handler" in data
-        else 1.0
-    )
-    vdw_14 = data["vdw_handler"].scale_14 if "vdw_handler" in data else 1.0
+    coul_14 = getattr(data["electrostatics_handler"], "scale_14", 1.0)
+    vdw_14 = getattr(data["vdw_handler"], "scale_14", 1.0)
 
     non_bonded_force.createExceptionsFromBonds(
         bonds=bonds,
@@ -355,7 +355,7 @@ def _create_multiple_nonbonded_forces(
     if data["electrostatics_method"] == "reaction-field":
         raise UnsupportedExportError(
             "Reaction field electrostatics not supported. If this use case is important to you, "
-            "please raise an issue describing the scope of functionality you desired."
+            "please raise an issue describing the scope of functionality you would like to use."
         )
 
     elif data["electrostatics_method"] == _PME:
@@ -367,7 +367,15 @@ def _create_multiple_nonbonded_forces(
             electrostatics_force.setCutoffDistance(
                 to_openmm_quantity(data["vdw_cutoff"])
             )
-    elif ["electrostatics_method"] == "cutoff":
+    elif data["electrostatics_method"] == "Coulomb":
+        if openff_sys.box is None:
+            electrostatics_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+        else:
+            raise UnsupportedCutoffMethodError(
+                f"Electrostatics method {data['electrostatics_method']} ambiguous with a periodic system."
+            )
+
+    elif data["electrostatics_method"] == "cutoff":
         raise UnsupportedCutoffMethodError(
             "OpenMM does not clearly support cut-off electrostatics with no reaction-field attenuation."
         )

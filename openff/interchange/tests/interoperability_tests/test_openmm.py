@@ -313,6 +313,8 @@ class TestOpenMM(_BaseTest):
     def test_nonstandard_cutoffs_match(self):
         """Test that multiple nonbonded forces use the same cutoff."""
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
+        topology = Molecule.from_smiles("C").to_topology()
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
 
         cutoff = unit.Quantity(1.555, unit.nanometer)
 
@@ -320,7 +322,7 @@ class TestOpenMM(_BaseTest):
 
         interchange = Interchange.from_smirnoff(
             force_field=force_field,
-            topology=[Molecule.from_smiles("C")],
+            topology=topology,
         )
 
         system = interchange.to_openmm(combine_nonbonded_forces=False)
