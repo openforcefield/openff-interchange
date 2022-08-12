@@ -14,7 +14,6 @@ from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InternalInconsistencyError,
-    UnsupportedExportError,
     UnsupportedImportError,
 )
 from openff.interchange.interop.openmm._nonbonded import _process_nonbonded_forces
@@ -63,10 +62,10 @@ def to_openmm(
         box = openff_sys.box.m_as(off_unit.nanometer)
         openmm_sys.setDefaultPeriodicBoxVectors(*box)
 
-    _process_nonbonded_forces(
+    particle_map = _process_nonbonded_forces(
         openff_sys, openmm_sys, combine_nonbonded_forces=combine_nonbonded_forces
     )
-    constrained_pairs = _process_constraints(openff_sys, openmm_sys)
+    constrained_pairs = _process_constraints(openff_sys, openmm_sys, particle_map)
     _process_torsion_forces(openff_sys, openmm_sys)
     _process_improper_torsion_forces(openff_sys, openmm_sys)
     _process_angle_forces(
@@ -81,15 +80,6 @@ def to_openmm(
         add_constrained_forces=add_constrained_forces,
         constrained_pairs=constrained_pairs,
     )
-
-    if "VirtualSites" in openff_sys.handlers:
-        if combine_nonbonded_forces:
-            _process_virtual_sites(openff_sys, openmm_sys)
-        else:
-            raise UnsupportedExportError(
-                "Exporting systems containing virtual sites is not yet supported with "
-                f"{combine_nonbonded_forces=}"
-            )
 
     return openmm_sys
 

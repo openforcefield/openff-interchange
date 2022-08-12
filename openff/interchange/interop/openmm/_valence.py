@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import openmm
 from openff.units import unit as off_unit
@@ -7,7 +7,7 @@ from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.interchange.exceptions import UnsupportedExportError
 
 
-def _process_constraints(openff_sys, openmm_sys):
+def _process_constraints(openff_sys, openmm_sys, particle_map: Dict[int, int]):
     """
     Process the Constraints section of an Interchange object.
     """
@@ -19,13 +19,21 @@ def _process_constraints(openff_sys, openmm_sys):
     constrained_pairs = list()
 
     for top_key, pot_key in constraint_handler.slot_map.items():
-        indices = top_key.atom_indices
+        openff_indices = top_key.atom_indices
+        openmm_indices = (
+            particle_map[openff_indices[0]],
+            particle_map[openff_indices[1]],
+        )
         params = constraint_handler.constraints[pot_key].parameters
         distance = params["distance"]
         distance_omm = distance.m_as(off_unit.nanometer)
 
-        constrained_pairs.append(tuple(sorted(indices)))
-        openmm_sys.addConstraint(indices[0], indices[1], distance_omm)
+        constrained_pairs.append(tuple(sorted(openmm_indices)))
+        openmm_sys.addConstraint(
+            openmm_indices[0],
+            openmm_indices[1],
+            distance_omm,
+        )
 
     return constrained_pairs
 

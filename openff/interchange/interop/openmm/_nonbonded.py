@@ -21,7 +21,9 @@ if TYPE_CHECKING:
 _LORENTZ_BERTHELOT = "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); "
 
 
-def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=False):
+def _process_nonbonded_forces(
+    openff_sys, openmm_sys, combine_nonbonded_forces=False
+) -> Dict[int, int]:
     """
     Process the non-bonded handlers in an Interchange into corresponding openmm objects.
 
@@ -65,16 +67,22 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
     else:
         molecule_virtual_site_map = dict()
 
+    openff_openmm_particle_map: Dict[int, int] = dict()
+
     for molecule in openff_sys.topology.molecules:
 
         for atom in molecule.atoms:
-            # Skip unit check for speed, toolkit should report mass in Dalton
-            openmm_sys.addParticle(atom.mass.m)
+            atom_index = openff_sys.topology.atom_index(atom)
 
-            if has_virtual_sites:
-                molecule_index = openff_sys.topology.molecule_index(molecule)
-                for _ in molecule_virtual_site_map[molecule_index]:
-                    openmm_sys.addParticle(mass=0.0)
+            # Skip unit check for speed, toolkit should report mass in Dalton
+            openmm_index = openmm_sys.addParticle(atom.mass.m)
+
+            openff_openmm_particle_map[atom_index] = openmm_index
+
+        if has_virtual_sites:
+            molecule_index = openff_sys.topology.molecule_index(molecule)
+            for _ in molecule_virtual_site_map[molecule_index]:
+                openmm_sys.addParticle(mass=0.0)
 
     # TODO: Process ElectrostaticsHandler.exception_potential
     if "vdW" in openff_sys.handlers or "Electrostatics" in openff_sys.handlers:
@@ -177,11 +185,6 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             for _ in molecule.atoms:
                 non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
-            if has_virtual_sites:
-                molecule_index = openff_sys.topology.molecule_index(molecule)
-                for _ in molecule_virtual_site_map[molecule_index]:
-                    non_bonded_force.addParticle(0.0, 1.0, 0.0)
-
         if electrostatics_method in ["Coulomb", None]:
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
             # TODO: Would setting the dispersion correction here have any impact?
@@ -195,6 +198,8 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 "in error, please file an issue with a minimally reproducing example and your motivation "
                 "for this use case."
             )
+
+    return openff_openmm_particle_map
 
 
 def _prepare_input_data(openff_sys):
@@ -261,10 +266,10 @@ def _create_single_nonbonded_force(
         for _ in molecule.atoms:
             non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
-            if has_virtual_sites:
-                molecule_index = openff_sys.topology.molecule_index(molecule)
-                for _ in molecule_virtual_site_map[molecule_index]:
-                    non_bonded_force.addParticle(0.0, 1.0, 0.0)
+        if has_virtual_sites:
+            molecule_index = openff_sys.topology.molecule_index(molecule)
+            for _ in molecule_virtual_site_map[molecule_index]:
+                non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
     if openff_sys.box is None:
         if (data["vdw_method"] in ("cutoff", None)) and (
