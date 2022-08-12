@@ -63,12 +63,6 @@ def to_openmm(
         box = openff_sys.box.m_as(off_unit.nanometer)
         openmm_sys.setDefaultPeriodicBoxVectors(*box)
 
-    # Add particles with appropriate masses
-    # TODO: When to add virtual particles?
-    for atom in openff_sys.topology.atoms:
-        # Skip unit check for speed, toolkit should report mass in Dalton
-        openmm_sys.addParticle(atom.mass.m)
-
     _process_nonbonded_forces(
         openff_sys, openmm_sys, combine_nonbonded_forces=combine_nonbonded_forces
     )

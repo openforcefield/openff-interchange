@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, Tuple
 
 import openmm
@@ -41,6 +42,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
     has_virtual_sites = "VirtualSites" in openff_sys.handlers
 
     if has_virtual_sites:
+        from openff.interchange.interop._virtual_sites import (
+            _virtual_site_parent_molecule_mapping,
+        )
         from openff.interchange.interop.openmm._virtual_sites import (
             _check_virtual_site_exclusion_policy,
         )
@@ -49,13 +53,38 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
 
         _check_virtual_site_exclusion_policy(virtual_site_handler)
 
+        virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(openff_sys)
+
+        molecule_virtual_site_map = defaultdict(list)
+
+        for virtual_site, molecule in virtual_site_molecule_map.items():
+            molecule_virtual_site_map[
+                openff_sys.topology.molecule_index(molecule)
+            ].append(virtual_site)
+
+    else:
+        molecule_virtual_site_map = dict()
+
+    for molecule in openff_sys.topology.molecules:
+
+        for atom in molecule.atoms:
+            # Skip unit check for speed, toolkit should report mass in Dalton
+            openmm_sys.addParticle(atom.mass.m)
+
+            if has_virtual_sites:
+                molecule_index = openff_sys.topology.molecule_index(molecule)
+                for _ in molecule_virtual_site_map[molecule_index]:
+                    openmm_sys.addParticle(mass=0.0)
+
     # TODO: Process ElectrostaticsHandler.exception_potential
     if "vdW" in openff_sys.handlers or "Electrostatics" in openff_sys.handlers:
 
         _data = _prepare_input_data(openff_sys)
 
         if combine_nonbonded_forces:
-            non_bonded_force = _create_single_nonbonded_force(_data, openff_sys)
+            non_bonded_force = _create_single_nonbonded_force(
+                _data, openff_sys, molecule_virtual_site_map
+            )
             openmm_sys.addForce(non_bonded_force)
         else:
             (
@@ -66,6 +95,7 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
             ) = _create_multiple_nonbonded_forces(
                 _data,
                 openff_sys,
+                molecule_virtual_site_map,
             )
             for force in [
                 vdw_force,
@@ -76,6 +106,12 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
                 openmm_sys.addForce(force)
 
     elif "Buckingham-6" in openff_sys.handlers:
+        if has_virtual_sites:
+            raise UnsupportedExportError(
+                "Virtual sites with Buckingham-6 potential not supported. If this use case is important to you, "
+                "please raise an issue describing the functionality you wish to see."
+            )
+
         buck_handler = openff_sys["Buckingham-6"]
 
         non_bonded_force = openmm.CustomNonbondedForce(
@@ -86,8 +122,9 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         non_bonded_force.addPerParticleParameter("C")
         openmm_sys.addForce(non_bonded_force)
 
-        for _ in openff_sys.topology.atoms:
-            non_bonded_force.addParticle([0.0, 0.0, 0.0])
+        for molecule in openff_sys.topology.molecules:
+            for _ in molecule.atoms:
+                non_bonded_force.addParticle([0.0, 0.0, 0.0])
 
         if openff_sys.box is None:
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
@@ -111,6 +148,12 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         # Here we assume there are no vdW interactions in any handlers
         # vdw_handler = None
 
+        if has_virtual_sites:
+            raise UnsupportedExportError(
+                "Virtual sites with no vdW handler not currently supported. If this use case is important to you, "
+                "please raise an issue describing the functionality you wish to see."
+            )
+
         try:
             electrostatics_handler = openff_sys["Electrostatics"]
         except LookupError:
@@ -129,8 +172,15 @@ def _process_nonbonded_forces(openff_sys, openmm_sys, combine_nonbonded_forces=F
         non_bonded_force = openmm.NonbondedForce()
         openmm_sys.addForce(non_bonded_force)
 
-        for _ in openff_sys.topology.atoms:
-            non_bonded_force.addParticle(0.0, 1.0, 0.0)
+        for molecule in openff_sys.topology.molecules:
+
+            for _ in molecule.atoms:
+                non_bonded_force.addParticle(0.0, 1.0, 0.0)
+
+            if has_virtual_sites:
+                molecule_index = openff_sys.topology.molecule_index(molecule)
+                for _ in molecule_virtual_site_map[molecule_index]:
+                    non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
         if electrostatics_method in ["Coulomb", None]:
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
@@ -194,6 +244,7 @@ def _prepare_input_data(openff_sys):
 def _create_single_nonbonded_force(
     data: Dict,
     openff_sys: "Interchange",
+    molecule_virtual_site_map: Dict,
 ) -> openmm.NonbondedForce:
     """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site handlers."""
     if data["mixing_rule"] not in ("lorentz-berthelot", None):
@@ -202,10 +253,18 @@ def _create_single_nonbonded_force(
             "Try setting `combine_nonbonded_forces=False`."
         )
 
+    has_virtual_sites = molecule_virtual_site_map not in (None, dict())
+
     non_bonded_force = openmm.NonbondedForce()
 
-    for _ in openff_sys.topology.atoms:
-        non_bonded_force.addParticle(0.0, 1.0, 0.0)
+    for molecule in openff_sys.topology.molecules:
+        for _ in molecule.atoms:
+            non_bonded_force.addParticle(0.0, 1.0, 0.0)
+
+            if has_virtual_sites:
+                molecule_index = openff_sys.topology.molecule_index(molecule)
+                for _ in molecule_virtual_site_map[molecule_index]:
+                    non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
     if openff_sys.box is None:
         if (data["vdw_method"] in ("cutoff", None)) and (
@@ -308,6 +367,7 @@ def _create_single_nonbonded_force(
 def _create_multiple_nonbonded_forces(
     data: Dict,
     openff_sys: "Interchange",
+    molecule_virtual_site_map: Dict,
 ) -> Tuple[
     openmm.NonbondedForce,
     openmm.CustomNonbondedForce,
@@ -320,8 +380,16 @@ def _create_multiple_nonbonded_forces(
     vdw_force.addPerParticleParameter("sigma")
     vdw_force.addPerParticleParameter("epsilon")
 
-    for _ in openff_sys.topology.atoms:
-        vdw_force.addParticle([1.0, 0.0])
+    has_virtual_sites = molecule_virtual_site_map not in (None, dict())
+
+    for molecule in openff_sys.topology.molecules:
+        for _ in molecule.atoms:
+            vdw_force.addParticle([1.0, 0.0])
+
+        if has_virtual_sites:
+            molecule_index = openff_sys.topology.molecule_index(molecule)
+            for _ in molecule_virtual_site_map[molecule_index]:
+                vdw_force.addParticle(0.0, 1.0, 0.0)
 
     if data["vdw_method"] == "cutoff":
         if openff_sys.box is None:
@@ -349,8 +417,14 @@ def _create_multiple_nonbonded_forces(
 
     electrostatics_force = openmm.NonbondedForce()
 
-    for _ in openff_sys.topology.atoms:
-        electrostatics_force.addParticle(0.0, 1.0, 0.0)
+    for molecule in openff_sys.topology.molecules:
+        for _ in molecule.atoms:
+            electrostatics_force.addParticle(0.0, 1.0, 0.0)
+
+        if has_virtual_sites:
+            molecule_index = openff_sys.topology.molecule_index(molecule)
+            for _ in molecule_virtual_site_map[molecule_index]:
+                vdw_force.addParticle(0.0, 1.0, 0.0)
 
     if data["electrostatics_method"] == "reaction-field":
         raise UnsupportedExportError(
@@ -390,29 +464,33 @@ def _create_multiple_nonbonded_forces(
         except AttributeError:
             partial_charges = data["electrostatics_handler"].charges
 
-    for atom_index, _ in enumerate(openff_sys.topology.atoms):
-        # TODO: Actually process virtual site vdW parameters here
+    for molecule in openff_sys.topology.molecules:
+        for atom in molecule.atoms:
+            atom_index = openff_sys.topology.atom_index(atom)
+            # TODO: Actually process virtual site vdW parameters here
 
-        top_key = TopologyKey(atom_indices=(atom_index,))
+            top_key = TopologyKey(atom_indices=(atom_index,))
 
-        if data["electrostatics_handler"] is not None:
-            partial_charge = partial_charges[top_key].m_as(off_unit.e)
-        else:
-            partial_charge = 0.0
+            if data["electrostatics_handler"] is not None:
+                partial_charge = partial_charges[top_key].m_as(off_unit.e)
+            else:
+                partial_charge = 0.0
 
-        if data["vdw_handler"] is not None:
-            pot_key = data["vdw_handler"].slot_map[top_key]
-            sigma, epsilon = _lj_params_from_potential(
-                data["vdw_handler"].potentials[pot_key]
+            if data["vdw_handler"] is not None:
+                pot_key = data["vdw_handler"].slot_map[top_key]
+                sigma, epsilon = _lj_params_from_potential(
+                    data["vdw_handler"].potentials[pot_key]
+                )
+                sigma = sigma.m_as(off_unit.nanometer)
+                epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
+            else:
+                sigma = unit.Quantity(0.0, unit.nanometer)
+                epsilon = unit.Quantity(0.0, unit.kilojoules_per_mole)
+
+            vdw_force.setParticleParameters(atom_index, [sigma, epsilon])
+            electrostatics_force.setParticleParameters(
+                atom_index, partial_charge, 0.0, 0.0
             )
-            sigma = sigma.m_as(off_unit.nanometer)
-            epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
-        else:
-            sigma = unit.Quantity(0.0, unit.nanometer)
-            epsilon = unit.Quantity(0.0, unit.kilojoules_per_mole)
-
-        vdw_force.setParticleParameters(atom_index, [sigma, epsilon])
-        electrostatics_force.setParticleParameters(atom_index, partial_charge, 0.0, 0.0)
 
     # Attempting to match the value used internally by OpenMM; The source of this value is likely
     # https://github.com/openmm/openmm/issues/1149#issuecomment-250299854
