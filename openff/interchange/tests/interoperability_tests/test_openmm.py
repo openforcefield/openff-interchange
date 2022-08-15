@@ -313,6 +313,8 @@ class TestOpenMM(_BaseTest):
     def test_nonstandard_cutoffs_match(self):
         """Test that multiple nonbonded forces use the same cutoff."""
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
+        topology = Molecule.from_smiles("C").to_topology()
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
 
         cutoff = unit.Quantity(1.555, unit.nanometer)
 
@@ -320,7 +322,7 @@ class TestOpenMM(_BaseTest):
 
         interchange = Interchange.from_smirnoff(
             force_field=force_field,
-            topology=[Molecule.from_smiles("C")],
+            topology=topology,
         )
 
         system = interchange.to_openmm(combine_nonbonded_forces=False)
@@ -344,7 +346,9 @@ class TestOpenMMSwitchingFunction(_BaseTest):
             if isinstance(force, openmm.NonbondedForce):
                 found_force = True
                 assert force.getUseSwitchingFunction()
-                assert force.getSwitchingDistance() == 8 * openmm_unit.angstrom
+                assert force.getSwitchingDistance().value_in_unit(
+                    openmm_unit.angstrom
+                ) == pytest.approx(8), force.getSwitchingDistance()
 
         assert found_force, "NonbondedForce not found in system"
 
@@ -429,7 +433,7 @@ class TestOpenMMVirtualSites(_BaseTest):
 
         return sage
 
-    @pytest.mark.skip(reason="virtual sites in development")
+    @pytest.mark.skip(reason="Virtual sites not supported")
     def test_sigma_hole_example(self, sage_with_sigma_hole):
         """Test that a single-molecule sigma hole example runs"""
         mol = Molecule.from_smiles("CCl")
@@ -470,7 +474,7 @@ class TestOpenMMVirtualSites(_BaseTest):
         assert abs(numpy.sum([p.charge for p in gmx_top.atoms])) < 1e-3
         """
 
-    @pytest.mark.skip(reason="virtual sites in development")
+    @pytest.mark.skip(reason="Virtual sites not supported")
     def test_carbonyl_example(self, sage_with_monovalent_lone_pair):
         """Test that a single-molecule DivalentLonePair example runs"""
         mol = Molecule.from_smiles("CC=O")
@@ -502,6 +506,7 @@ class TestOpenMMVirtualSites(_BaseTest):
             sage_with_monovalent_lone_pair.create_openmm_system(mol.to_topology()),
         )
 
+    @pytest.mark.skip(reason="virtual sites in development")
     def test_tip5p_num_exceptions(self):
         tip5p = ForceField(get_test_file_path("tip5p.offxml"))
         water = Molecule.from_smiles("O")

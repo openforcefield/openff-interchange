@@ -1163,6 +1163,7 @@ class TestSMIRNOFFChargeIncrements(_BaseTest):
         assert np.allclose(expected_charges, found_charges)
 
 
+@pytest.mark.skip(reason="Virtual sites not supported")
 class TestSMIRNOFFVirtualSites(_BaseTest):
     from openff.toolkit.tests.mocking import VirtualSiteMocking
     from openmm import unit as openmm_unit
