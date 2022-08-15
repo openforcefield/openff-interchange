@@ -769,7 +769,7 @@ class TestBondOrderInterpolation(_BaseTest):
         ):
             k1 = bonds.potentials[pot_key1].parameters["k"].m_as(kcal_mol_a2)
             k2 = bonds_mod.potentials[pot_key2].parameters["k"].m_as(kcal_mol_a2)
-            assert k1 == pytest.approx(k2)
+            assert k1 == pytest.approx(k2, rel=1e-5), (k1, k2)
 
     def test_input_conformers_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
@@ -802,7 +802,7 @@ class TestBondOrderInterpolation(_BaseTest):
         for key1, key2 in zip(bonds.potentials, bonds_mod.potentials):
             k1 = bonds.potentials[key1].parameters["k"].m_as(kcal_mol_a2)
             k2 = bonds_mod.potentials[key2].parameters["k"].m_as(kcal_mol_a2)
-            assert k1 == pytest.approx(k2), (k1, k2)
+            assert k1 == pytest.approx(k2, rel=1e-5), (k1, k2)
 
     def test_fractional_bondorder_invalid_interpolation_method(self):
         """
@@ -1163,6 +1163,7 @@ class TestSMIRNOFFChargeIncrements(_BaseTest):
         assert np.allclose(expected_charges, found_charges)
 
 
+@pytest.mark.skip(reason="Virtual sites not supported")
 class TestSMIRNOFFVirtualSites(_BaseTest):
     from openff.toolkit.tests.mocking import VirtualSiteMocking
     from openmm import unit as openmm_unit

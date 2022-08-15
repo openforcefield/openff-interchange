@@ -13,7 +13,10 @@ if TYPE_CHECKING:
 def _virtual_site_parent_molecule_mapping(
     interchange: "Interchange",
 ) -> Dict[VirtualSiteKey, Molecule]:
-    mapping = dict()
+    mapping: Dict[VirtualSiteKey, Molecule] = dict()
+
+    if "VirtualSites" not in interchange.handlers:
+        return mapping
 
     for virtual_site_key in interchange["VirtualSites"].slot_map:
         virtual_site_key: VirtualSiteKey  # type: ignore[no-redef]
