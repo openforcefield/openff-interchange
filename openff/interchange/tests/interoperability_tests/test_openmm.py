@@ -433,7 +433,7 @@ class TestOpenMMVirtualSites(_BaseTest):
 
         return sage
 
-    @pytest.mark.skip(reason="virtual sites in development")
+    @pytest.mark.skip(reason="Virtual sites not supported")
     def test_sigma_hole_example(self, sage_with_sigma_hole):
         """Test that a single-molecule sigma hole example runs"""
         mol = Molecule.from_smiles("CCl")
@@ -474,7 +474,7 @@ class TestOpenMMVirtualSites(_BaseTest):
         assert abs(numpy.sum([p.charge for p in gmx_top.atoms])) < 1e-3
         """
 
-    @pytest.mark.skip(reason="virtual sites in development")
+    @pytest.mark.skip(reason="Virtual sites not supported")
     def test_carbonyl_example(self, sage_with_monovalent_lone_pair):
         """Test that a single-molecule DivalentLonePair example runs"""
         mol = Molecule.from_smiles("CC=O")
@@ -506,6 +506,7 @@ class TestOpenMMVirtualSites(_BaseTest):
             sage_with_monovalent_lone_pair.create_openmm_system(mol.to_topology()),
         )
 
+    @pytest.mark.skip(reason="virtual sites in development")
     def test_tip5p_num_exceptions(self):
         tip5p = ForceField(get_test_file_path("tip5p.offxml"))
         water = Molecule.from_smiles("O")
