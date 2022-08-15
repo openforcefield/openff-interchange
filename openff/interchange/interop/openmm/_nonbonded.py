@@ -39,9 +39,14 @@ def _process_nonbonded_forces(
         if isinstance(handler, _SMIRNOFFNonbondedHandler):
             break
     else:
-        return
+        return dict()
 
     has_virtual_sites = "VirtualSites" in openff_sys.handlers
+
+    if has_virtual_sites:
+        raise UnsupportedExportError(
+            "Virtual sites support not validated in this release."
+        )
 
     if has_virtual_sites:
         from openff.interchange.interop._virtual_sites import (
@@ -65,7 +70,7 @@ def _process_nonbonded_forces(
             ].append(virtual_site)
 
     else:
-        molecule_virtual_site_map = dict()
+        molecule_virtual_site_map = defaultdict(list)  # type: ignore
 
     openff_openmm_particle_map: Dict[int, int] = dict()
 
@@ -150,7 +155,8 @@ def _process_nonbonded_forces(
             c = to_openmm_quantity(params["C"])
             non_bonded_force.setParticleParameters(atom_idx, [a, b, c])
 
-        return
+        # TODO: In principle this is an i-i mapping between OpenFF and OpenMM atom indices
+        return dict()
 
     else:
         # Here we assume there are no vdW interactions in any handlers
