@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, Tuple
+from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import openmm
 from openff.units import unit as off_unit
@@ -13,10 +13,13 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
 )
 from openff.interchange.interop.parmed import _lj_params_from_potential
-from openff.interchange.models import TopologyKey
+from openff.interchange.models import TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
+    from openff.toolkit import Molecule
+
     from openff.interchange import Interchange
+
 
 _LORENTZ_BERTHELOT = "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); "
 
@@ -60,19 +63,30 @@ def _process_nonbonded_forces(
 
         _check_virtual_site_exclusion_policy(virtual_site_handler)
 
-        virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(openff_sys)
+        virtual_site_molecule_map: Dict[
+            VirtualSiteKey, "Molecule"
+        ] = _virtual_site_parent_molecule_mapping(openff_sys)
 
-        molecule_virtual_site_map = defaultdict(list)
+        molecule_virtual_site_map: Dict["Molecule", List[VirtualSiteKey]] = defaultdict(
+            list
+        )
 
-        for virtual_site, molecule in virtual_site_molecule_map.items():
+        for virtual_site_key, molecule in virtual_site_molecule_map.items():
             molecule_virtual_site_map[
                 openff_sys.topology.molecule_index(molecule)
-            ].append(virtual_site)
+            ].append(virtual_site_key)
+
+            # openmm_particle = _create_openmm_virtual_site_object(
+            #     virtual_site_object,
+            #     orientations,
+            # )
 
     else:
-        molecule_virtual_site_map = defaultdict(list)  # type: ignore
+        molecule_virtual_site_map = defaultdict(list)
 
-    openff_openmm_particle_map: Dict[int, int] = dict()
+    # Mapping between OpenFF "particles" and OpenMM particles (via inddex). OpenFF objects
+    # (keys) are either atom indices (if atoms) or `VirtualSitesKey`s if virtual sites
+    openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int] = dict()
 
     for molecule in openff_sys.topology.molecules:
 
@@ -86,8 +100,11 @@ def _process_nonbonded_forces(
 
         if has_virtual_sites:
             molecule_index = openff_sys.topology.molecule_index(molecule)
+
             for _ in molecule_virtual_site_map[molecule_index]:
-                openmm_sys.addParticle(mass=0.0)
+                openmm_index = openmm_sys.addParticle(mass=0.0)
+
+                openff_openmm_particle_map[virtual_site_key] = openmm_index
 
     # TODO: Process ElectrostaticsHandler.exception_potential
     if "vdW" in openff_sys.handlers or "Electrostatics" in openff_sys.handlers:
@@ -95,10 +112,12 @@ def _process_nonbonded_forces(
         _data = _prepare_input_data(openff_sys)
 
         if combine_nonbonded_forces:
-            non_bonded_force = _create_single_nonbonded_force(
-                _data, openff_sys, molecule_virtual_site_map
+            _create_single_nonbonded_force(
+                _data,
+                openff_sys,
+                molecule_virtual_site_map,
+                openmm_sys,
             )
-            openmm_sys.addForce(non_bonded_force)
         else:
             (
                 vdw_force,
@@ -256,7 +275,8 @@ def _create_single_nonbonded_force(
     data: Dict,
     openff_sys: "Interchange",
     molecule_virtual_site_map: Dict,
-) -> openmm.NonbondedForce:
+    openmm_sys: openmm.System,
+):
     """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site handlers."""
     if data["mixing_rule"] not in ("lorentz-berthelot", None):
         raise UnsupportedExportError(
@@ -328,33 +348,115 @@ def _create_single_nonbonded_force(
         except AttributeError:
             partial_charges = data["electrostatics_handler"].charges
 
-    for atom_index, _ in enumerate(openff_sys.topology.atoms):
-        # TODO: Actually process virtual site vdW parameters here
+    if has_virtual_sites:
+        parent_particle_mapping = defaultdict(list)
 
-        top_key = TopologyKey(atom_indices=(atom_index,))
+    for molecule in openff_sys.topology.molecules:
+        for atom in molecule.atoms:
+            atom_index = openff_sys.topology.atom_index(atom)
 
-        if data["electrostatics_handler"] is not None:
-            partial_charge = partial_charges[top_key].m_as(off_unit.e)
-        else:
-            partial_charge = 0.0
+            top_key = TopologyKey(atom_indices=(atom_index,))
 
-        if data["vdw_handler"] is not None:
-            pot_key = data["vdw_handler"].slot_map[top_key]
-            sigma, epsilon = _lj_params_from_potential(
-                data["vdw_handler"].potentials[pot_key]
+            if data["electrostatics_handler"] is not None:
+                partial_charge = partial_charges[top_key].m_as(off_unit.e)
+            else:
+                partial_charge = 0.0
+
+            if data["vdw_handler"] is not None:
+                pot_key = data["vdw_handler"].slot_map[top_key]
+                sigma, epsilon = _lj_params_from_potential(
+                    data["vdw_handler"].potentials[pot_key]
+                )
+                sigma = sigma.m_as(off_unit.nanometer)
+                epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
+            else:
+                sigma = unit.Quantity(0.0, unit.nanometer)
+                epsilon = unit.Quantity(0.0, unit.kilojoules_per_mole)
+
+            non_bonded_force.setParticleParameters(
+                atom_index,
+                partial_charge,
+                sigma,
+                epsilon,
             )
-            sigma = sigma.m_as(off_unit.nanometer)
-            epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
-        else:
-            sigma = unit.Quantity(0.0, unit.nanometer)
-            epsilon = unit.Quantity(0.0, unit.kilojoules_per_mole)
 
-        non_bonded_force.setParticleParameters(
-            atom_index,
-            partial_charge,
-            sigma,
-            epsilon,
-        )
+        for virtual_site_key in molecule_virtual_site_map[molecule]:
+            # TODO: More this function to openff/interchange/interop/_particles
+            from openff.interchange.interop.openmm._virtual_sites import (
+                _create_openmm_virtual_site,
+                _create_virtual_site_object,
+            )
+
+            _potential_key = openff_sys["VirtualSites"].slot_map[virtual_site_key]
+            virtual_site_potential = openff_sys["VirtualSites"].potentials[
+                _potential_key
+            ]
+            virtual_site_object = _create_virtual_site_object(
+                virtual_site_key, virtual_site_potential
+            )
+
+            openmm_particle = _create_openmm_virtual_site(
+                virtual_site_object,
+            )
+
+            vdw_handler = openff_sys["vdW"]
+            coul_handler = openff_sys["Electrostatics"]
+
+            vdw_key = vdw_handler.slot_map.get(virtual_site_key)
+            coul_key = coul_handler.slot_map.get(virtual_site_key)
+            if vdw_key is None or coul_key is None:
+                raise Exception(
+                    f"Virtual site {virtual_site_key} is not associated with any "
+                    "vdW and/or electrostatics interactions"
+                )
+
+            charge_increments = coul_handler.potentials[coul_key].parameters[
+                "charge_increments"
+            ]
+            charge = to_openmm_quantity(-sum(charge_increments))
+
+            vdw_parameters = vdw_handler.potentials[vdw_key].parameters
+            sigma = to_openmm_quantity(vdw_parameters["sigma"])
+            epsilon = to_openmm_quantity(vdw_parameters["epsilon"])
+
+            index_system: int = molecule_virtual_site_map[virtual_site_key]
+            index_force = non_bonded_force.addParticle(charge, sigma, epsilon)
+
+            if index_system != index_force:
+                raise InternalInconsistencyError(
+                    "Mismatch in system and force indexing"
+                )
+
+            parent_atom = virtual_site_object.orientations[0]
+            parent_particle_mapping[parent_atom].append(index_force)
+
+            openmm_sys.setVirtualSite(index_system, openmm_particle)
+
+            if openff_sys["VirtualSites"].exclusion_policy == "parents":
+                for orientation_atom_index in virtual_site_object.orientations:
+
+                    if index_force == orientation_atom_index:
+                        continue
+
+                    non_bonded_force.addException(
+                        orientation_atom_index, index_force, 0.0, 0.0, 0.0, replace=True
+                    )
+
+                    for other_particle_index in parent_particle_mapping[parent_atom]:
+                        if other_particle_index in virtual_site_object.orientations:
+                            continue
+
+                        if index_force == other_particle_index:
+                            continue
+
+                        non_bonded_force.addException(
+                            other_particle_index,
+                            index_force,
+                            0.0,
+                            0.0,
+                            0.0,
+                            replace=True,
+                        )
 
     bonds = [
         sorted(openff_sys.topology.atom_index(a) for a in bond.atoms)
