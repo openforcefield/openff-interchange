@@ -26,10 +26,10 @@ def _create_openmm_virtual_site(
 ) -> openmm.LocalCoordinatesSite:
 
     # It is assumed that the first "orientation" atom is the "parent" atom.
-    originwt, xdir, ydir = virtual_site.local_frame_weights
+    originwt, xdir, ydir = virtual_site.local_frame_weights  # type: ignore[misc]
     pos = virtual_site.local_frame_positions
     return openmm.LocalCoordinatesSite(
-        virtual_site.orientations, originwt, xdir, ydir, to_openmm(pos)
+        virtual_site.orientations, originwt, xdir, ydir, to_openmm(pos)  # type: ignore[has-type]
     )
 
 
@@ -47,16 +47,15 @@ def _create_virtual_site_object(
     )
 
     orientations = virtual_site_key.orientation_atom_indices
-    # parent_atom = orientations[0]
 
     if virtual_site_key.type == "BondCharge":
-        virtual_site_object = _BondChargeVirtualSite(
+        return _BondChargeVirtualSite(
             type="BondCharge",
             distance=virtual_site_potential.parameters["distance"],
             orientations=orientations,
         )
     elif virtual_site_key.type == "MonovalentLonePair":
-        virtual_site_object = _MonovalentLonePairVirtualSite(
+        return _MonovalentLonePairVirtualSite(
             type="MonovalentLonePair",
             distance=virtual_site_potential.parameters["distance"],
             out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
@@ -64,14 +63,14 @@ def _create_virtual_site_object(
             orientations=orientations,
         )
     elif virtual_site_key.type == "DivalentLonePair":
-        virtual_site_object = _DivalentLonePairVirtualSite(
+        return _DivalentLonePairVirtualSite(
             type="DivalentLonePair",
             distance=virtual_site_potential.parameters["distance"],
             out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
             orientations=orientations,
         )
     elif virtual_site_key.type == "TrivalentLonePair":
-        virtual_site_object = _TrivalentLonePairVirtualSite(
+        return _TrivalentLonePairVirtualSite(
             type="TrivalentLonePair",
             distance=virtual_site_potential.parameters["distance"],
             orientations=orientations,
@@ -79,5 +78,3 @@ def _create_virtual_site_object(
 
     else:
         raise NotImplementedError(virtual_site_key.type)
-
-    return virtual_site_object

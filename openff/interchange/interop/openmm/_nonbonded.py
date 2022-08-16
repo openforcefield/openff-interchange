@@ -28,7 +28,7 @@ def _process_nonbonded_forces(
     openff_sys,
     openmm_sys,
     combine_nonbonded_forces=False,
-) -> Dict[int, int]:
+) -> Dict[Union[int, VirtualSiteKey], int]:
     """
     Process the non-bonded handlers in an Interchange into corresponding openmm objects.
 
@@ -47,11 +47,6 @@ def _process_nonbonded_forces(
         return dict()
 
     has_virtual_sites = "VirtualSites" in openff_sys.handlers
-
-    if has_virtual_sites:
-        raise UnsupportedExportError(
-            "Virtual sites support not validated in this release.",
-        )
 
     if has_virtual_sites:
         from openff.interchange.interop._virtual_sites import (
