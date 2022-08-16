@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Union
 
 import openmm
 from openff.units.openmm import to_openmm
@@ -23,13 +23,27 @@ def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteHandler"):
 
 def _create_openmm_virtual_site(
     virtual_site: "_VirtualSite",
+    openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int],
 ) -> openmm.LocalCoordinatesSite:
 
     # It is assumed that the first "orientation" atom is the "parent" atom.
     originwt, xdir, ydir = virtual_site.local_frame_weights  # type: ignore[misc]
     pos = virtual_site.local_frame_positions
+
+    # virtual_site.orientations is a list of the _openff_ indices, which is more or less
+    # the topology index in a topology containing only atoms (no virtual site). This dict,
+    # _if only looking up atoms_, can be used to map between openff "indices" and
+    # openmm "indices", where the openff "index" is the atom's index in the (openff) topology
+    # and the openmm "index" is the atom's index, as a particle, in the openmm system. This
+    # mapping has a different meaning if looking up a virtual site, but that should not happen here
+    # as a virtual site's orientation atom should never be a virtual site
+    openmm_indices: List[int] = [
+        openff_openmm_particle_map[openff_index]
+        for openff_index in virtual_site.orientations
+    ]
+
     return openmm.LocalCoordinatesSite(
-        virtual_site.orientations, originwt, xdir, ydir, to_openmm(pos)  # type: ignore[has-type]
+        openmm_indices, originwt, xdir, ydir, to_openmm(pos)  # type: ignore[has-type]
     )
 
 

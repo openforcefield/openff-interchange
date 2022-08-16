@@ -1249,6 +1249,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             openmm.VerletIntegrator(1.0 * openmm_unit.femtosecond),
             openmm.Platform.getPlatformByName("Reference"),
         )
+
         context.setPositions(to_openmm(input_conformer))
         context.computeVirtualSites()
 
