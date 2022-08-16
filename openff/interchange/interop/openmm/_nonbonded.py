@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Union
 
 import openmm
 from openff.units import unit as off_unit
@@ -25,7 +25,9 @@ _LORENTZ_BERTHELOT = "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); 
 
 
 def _process_nonbonded_forces(
-    openff_sys, openmm_sys, combine_nonbonded_forces=False
+    openff_sys,
+    openmm_sys,
+    combine_nonbonded_forces=False,
 ) -> Dict[int, int]:
     """
     Process the non-bonded handlers in an Interchange into corresponding openmm objects.
@@ -48,7 +50,7 @@ def _process_nonbonded_forces(
 
     if has_virtual_sites:
         raise UnsupportedExportError(
-            "Virtual sites support not validated in this release."
+            "Virtual sites support not validated in this release.",
         )
 
     if has_virtual_sites:
@@ -64,11 +66,12 @@ def _process_nonbonded_forces(
         _check_virtual_site_exclusion_policy(virtual_site_handler)
 
         virtual_site_molecule_map: Dict[
-            VirtualSiteKey, "Molecule"
+            VirtualSiteKey,
+            "Molecule",
         ] = _virtual_site_parent_molecule_mapping(openff_sys)
 
         molecule_virtual_site_map: Dict["Molecule", List[VirtualSiteKey]] = defaultdict(
-            list
+            list,
         )
 
         for virtual_site_key, molecule in virtual_site_molecule_map.items():
@@ -88,23 +91,12 @@ def _process_nonbonded_forces(
     # (keys) are either atom indices (if atoms) or `VirtualSitesKey`s if virtual sites
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int] = dict()
 
-    for molecule in openff_sys.topology.molecules:
-
-        for atom in molecule.atoms:
-            atom_index = openff_sys.topology.atom_index(atom)
-
-            # Skip unit check for speed, toolkit should report mass in Dalton
-            openmm_index = openmm_sys.addParticle(atom.mass.m)
-
-            openff_openmm_particle_map[atom_index] = openmm_index
-
-        if has_virtual_sites:
-            molecule_index = openff_sys.topology.molecule_index(molecule)
-
-            for _ in molecule_virtual_site_map[molecule_index]:
-                openmm_index = openmm_sys.addParticle(mass=0.0)
-
-                openff_openmm_particle_map[virtual_site_key] = openmm_index
+    _add_particles_to_system(
+        openff_sys,
+        openmm_sys,
+        openff_openmm_particle_map,
+        molecule_virtual_site_map,
+    )
 
     # TODO: Process ElectrostaticsHandler.exception_potential
     if "vdW" in openff_sys.handlers or "Electrostatics" in openff_sys.handlers:
@@ -112,42 +104,23 @@ def _process_nonbonded_forces(
         _data = _prepare_input_data(openff_sys)
 
         if combine_nonbonded_forces:
-            _create_single_nonbonded_force(
-                _data,
-                openff_sys,
-                molecule_virtual_site_map,
-                openmm_sys,
-            )
+            _func = _create_single_nonbonded_force
         else:
-            (
-                vdw_force,
-                electrostatics_force,
-                vdw_14_force,
-                coul_14_force,
-            ) = _create_multiple_nonbonded_forces(
-                _data,
-                openff_sys,
-                molecule_virtual_site_map,
-            )
-            for force in [
-                vdw_force,
-                electrostatics_force,
-                vdw_14_force,
-                coul_14_force,
-            ]:
-                openmm_sys.addForce(force)
+            _func = _create_multiple_nonbonded_forces
+
+        _func(_data, openff_sys, molecule_virtual_site_map, openmm_sys)
 
     elif "Buckingham-6" in openff_sys.handlers:
         if has_virtual_sites:
             raise UnsupportedExportError(
                 "Virtual sites with Buckingham-6 potential not supported. If this use case is important to you, "
-                "please raise an issue describing the functionality you wish to see."
+                "please raise an issue describing the functionality you wish to see.",
             )
 
         buck_handler = openff_sys["Buckingham-6"]
 
         non_bonded_force = openmm.CustomNonbondedForce(
-            "A * exp(-B * r) - C * r ^ -6; A = sqrt(A1 * A2); B = 2 / (1 / B1 + 1 / B2); C = sqrt(C1 * C2)"
+            "A * exp(-B * r) - C * r ^ -6; A = sqrt(A1 * A2); B = 2 / (1 / B1 + 1 / B2); C = sqrt(C1 * C2)",
         )
         non_bonded_force.addPerParticleParameter("A")
         non_bonded_force.addPerParticleParameter("B")
@@ -184,7 +157,7 @@ def _process_nonbonded_forces(
         if has_virtual_sites:
             raise UnsupportedExportError(
                 "Virtual sites with no vdW handler not currently supported. If this use case is important to you, "
-                "please raise an issue describing the functionality you wish to see."
+                "please raise an issue describing the functionality you wish to see.",
             )
 
         try:
@@ -193,7 +166,7 @@ def _process_nonbonded_forces(
             raise InternalInconsistencyError(
                 "In a confused state, could not find any vdW interactions but also failed to find "
                 "any electrostatics handler. This is a supported use case but should have been caught "
-                "earlier in this function. Please file an issue with a minimal reproducing example."
+                "earlier in this function. Please file an issue with a minimal reproducing example.",
             )
 
         electrostatics_method = (
@@ -221,10 +194,37 @@ def _process_nonbonded_forces(
                 f"Found no vdW interactions but an electrostatics method of {electrostatics_method}. "
                 "This is either unsupported or ambiguous. If you believe this exception has been raised "
                 "in error, please file an issue with a minimally reproducing example and your motivation "
-                "for this use case."
+                "for this use case.",
             )
 
     return openff_openmm_particle_map
+
+
+def _add_particles_to_system(
+    openff_sys: "Interchange",
+    openmm_sys: openmm.System,
+    openff_openmm_particle_map,
+    molecule_virtual_site_map,
+):
+    has_virtual_sites = molecule_virtual_site_map not in (None, dict())
+
+    for molecule in openff_sys.topology.molecules:
+
+        for atom in molecule.atoms:
+            atom_index = openff_sys.topology.atom_index(atom)
+
+            # Skip unit check for speed, trust that the toolkit reports mass in Dalton
+            openmm_index = openmm_sys.addParticle(mass=atom.mass.m)
+
+            openff_openmm_particle_map[atom_index] = openmm_index
+
+        if has_virtual_sites:
+            molecule_index = openff_sys.topology.molecule_index(molecule)
+
+            for virtual_site_key in molecule_virtual_site_map[molecule_index]:
+                openmm_index = openmm_sys.addParticle(mass=0.0)
+
+                openff_openmm_particle_map[virtual_site_key] = openmm_index
 
 
 def _prepare_input_data(openff_sys):
@@ -281,12 +281,13 @@ def _create_single_nonbonded_force(
     if data["mixing_rule"] not in ("lorentz-berthelot", None):
         raise UnsupportedExportError(
             "OpenMM's default NonbondedForce only supports Lorentz-Berthelot mixing rules."
-            "Try setting `combine_nonbonded_forces=False`."
+            "Try setting `combine_nonbonded_forces=False`.",
         )
 
     has_virtual_sites = molecule_virtual_site_map not in (None, dict())
 
     non_bonded_force = openmm.NonbondedForce()
+    openmm_sys.addForce(non_bonded_force)
 
     for molecule in openff_sys.topology.molecules:
         for _ in molecule.atoms:
@@ -305,13 +306,13 @@ def _create_single_nonbonded_force(
             non_bonded_force.setUseDispersionCorrection(True)
             if data["vdw_cutoff"]:
                 non_bonded_force.setCutoffDistance(
-                    to_openmm_quantity(data["vdw_cutoff"])
+                    to_openmm_quantity(data["vdw_cutoff"]),
                 )
         else:
             raise UnsupportedCutoffMethodError(
                 f"Combination of non-bonded cutoff methods {data['vdw_method']} (vdW) and "
                 f"{data['electrostatics_method']} (Electrostatics) not currently supported or "
-                f"invalid with `combine_nonbonded_forces=True` and `.box={openff_sys.box}`."
+                f"invalid with `combine_nonbonded_forces=True` and `.box={openff_sys.box}`.",
             )
 
     else:
@@ -330,7 +331,7 @@ def _create_single_nonbonded_force(
                 pass
             else:
                 non_bonded_force.setCutoffDistance(
-                    to_openmm_quantity(data["vdw_cutoff"])
+                    to_openmm_quantity(data["vdw_cutoff"]),
                 )
         elif data["vdw_method"] == "pme" and data["electrostatics_method"] == _PME:
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
@@ -339,7 +340,7 @@ def _create_single_nonbonded_force(
             raise UnsupportedCutoffMethodError(
                 f"Combination of non-bonded cutoff methods {data['vdw_method']} (vdW) and "
                 "{data['electrostatics_method']} (Electrostatics) not currently supported or invalid with "
-                f"`combine_nonbonded_forces=True` and `.box={openff_sys.box}`."
+                f"`combine_nonbonded_forces=True` and `.box={openff_sys.box}`.",
             )
 
     if data["electrostatics_handler"] is not None:
@@ -365,7 +366,7 @@ def _create_single_nonbonded_force(
             if data["vdw_handler"] is not None:
                 pot_key = data["vdw_handler"].slot_map[top_key]
                 sigma, epsilon = _lj_params_from_potential(
-                    data["vdw_handler"].potentials[pot_key]
+                    data["vdw_handler"].potentials[pot_key],
                 )
                 sigma = sigma.m_as(off_unit.nanometer)
                 epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
@@ -392,7 +393,8 @@ def _create_single_nonbonded_force(
                 _potential_key
             ]
             virtual_site_object = _create_virtual_site_object(
-                virtual_site_key, virtual_site_potential
+                virtual_site_key,
+                virtual_site_potential,
             )
 
             openmm_particle = _create_openmm_virtual_site(
@@ -407,7 +409,7 @@ def _create_single_nonbonded_force(
             if vdw_key is None or coul_key is None:
                 raise Exception(
                     f"Virtual site {virtual_site_key} is not associated with any "
-                    "vdW and/or electrostatics interactions"
+                    "vdW and/or electrostatics interactions",
                 )
 
             charge_increments = coul_handler.potentials[coul_key].parameters[
@@ -424,7 +426,7 @@ def _create_single_nonbonded_force(
 
             if index_system != index_force:
                 raise InternalInconsistencyError(
-                    "Mismatch in system and force indexing"
+                    "Mismatch in system and force indexing",
                 )
 
             parent_atom = virtual_site_object.orientations[0]
@@ -439,7 +441,12 @@ def _create_single_nonbonded_force(
                         continue
 
                     non_bonded_force.addException(
-                        orientation_atom_index, index_force, 0.0, 0.0, 0.0, replace=True
+                        orientation_atom_index,
+                        index_force,
+                        0.0,
+                        0.0,
+                        0.0,
+                        replace=True,
                     )
 
                     for other_particle_index in parent_particle_mapping[parent_atom]:
@@ -474,24 +481,20 @@ def _create_single_nonbonded_force(
 
     _apply_switching_function(data["vdw_handler"], non_bonded_force)
 
-    return non_bonded_force
-
 
 def _create_multiple_nonbonded_forces(
     data: Dict,
     openff_sys: "Interchange",
     molecule_virtual_site_map: Dict,
-) -> Tuple[
-    openmm.NonbondedForce,
-    openmm.CustomNonbondedForce,
-    openmm.CustomBondForce,
-    openmm.CustomBondForce,
-]:
+    openmm_sys: openmm.System,
+):
     vdw_force = openmm.CustomNonbondedForce(
-        data["vdw_expression"] + "; " + data["mixing_rule_expression"]
+        data["vdw_expression"] + "; " + data["mixing_rule_expression"],
     )
     vdw_force.addPerParticleParameter("sigma")
     vdw_force.addPerParticleParameter("epsilon")
+
+    openmm_sys.addForce(vdw_force)
 
     has_virtual_sites = molecule_virtual_site_map not in (None, dict())
 
@@ -517,7 +520,7 @@ def _create_multiple_nonbonded_forces(
     elif data["vdw_method"] == "pme":
         if openff_sys.box is None:
             raise UnsupportedCutoffMethodError(
-                "vdW method pme/ljpme is not valid for non-periodic systems."
+                "vdW method pme/ljpme is not valid for non-periodic systems.",
             )
         else:
             raise UnsupportedCutoffMethodError(
@@ -525,10 +528,12 @@ def _create_multiple_nonbonded_forces(
                 "not supporting PME. If also using PME electrostatics, try `combine_nonbonded_forces=True`,  "
                 "which should produce a single force with NonbondedForce.LJPME, which uses PME for both "
                 "electrostatics and LJ forces tersm. If your use case would benenfit from split non-bonded "
-                "forces with LJPME, please file an feature request."
+                "forces with LJPME, please file an feature request.",
             )
 
     electrostatics_force = openmm.NonbondedForce()
+
+    openmm_sys.addForce(electrostatics_force)
 
     for molecule in openff_sys.topology.molecules:
         for _ in molecule.atoms:
@@ -542,7 +547,7 @@ def _create_multiple_nonbonded_forces(
     if data["electrostatics_method"] == "reaction-field":
         raise UnsupportedExportError(
             "Reaction field electrostatics not supported. If this use case is important to you, "
-            "please raise an issue describing the scope of functionality you would like to use."
+            "please raise an issue describing the scope of functionality you would like to use.",
         )
 
     elif data["electrostatics_method"] == _PME:
@@ -552,23 +557,23 @@ def _create_multiple_nonbonded_forces(
         if data["vdw_cutoff"] is not None:
             # All nonbonded forces must use the same cutoff, even though PME doesn't have a cutoff
             electrostatics_force.setCutoffDistance(
-                to_openmm_quantity(data["vdw_cutoff"])
+                to_openmm_quantity(data["vdw_cutoff"]),
             )
     elif data["electrostatics_method"] == "Coulomb":
         if openff_sys.box is None:
             electrostatics_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
         else:
             raise UnsupportedCutoffMethodError(
-                f"Electrostatics method {data['electrostatics_method']} ambiguous with a periodic system."
+                f"Electrostatics method {data['electrostatics_method']} ambiguous with a periodic system.",
             )
 
     elif data["electrostatics_method"] == "cutoff":
         raise UnsupportedCutoffMethodError(
-            "OpenMM does not clearly support cut-off electrostatics with no reaction-field attenuation."
+            "OpenMM does not clearly support cut-off electrostatics with no reaction-field attenuation.",
         )
     else:
         raise UnsupportedCutoffMethodError(
-            f"Electrostatics method {data['electrostatics_method']} not supported"
+            f"Electrostatics method {data['electrostatics_method']} not supported",
         )
 
     if data["electrostatics_handler"] is not None:
@@ -592,7 +597,7 @@ def _create_multiple_nonbonded_forces(
             if data["vdw_handler"] is not None:
                 pot_key = data["vdw_handler"].slot_map[top_key]
                 sigma, epsilon = _lj_params_from_potential(
-                    data["vdw_handler"].potentials[pot_key]
+                    data["vdw_handler"].potentials[pot_key],
                 )
                 sigma = sigma.m_as(off_unit.nanometer)
                 epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
@@ -602,7 +607,10 @@ def _create_multiple_nonbonded_forces(
 
             vdw_force.setParticleParameters(atom_index, [sigma, epsilon])
             electrostatics_force.setParticleParameters(
-                atom_index, partial_charge, 0.0, 0.0
+                atom_index,
+                partial_charge,
+                0.0,
+                0.0,
             )
 
     # Attempting to match the value used internally by OpenMM; The source of this value is likely
@@ -617,6 +625,9 @@ def _create_multiple_nonbonded_forces(
     coul_14_force = openmm.CustomBondForce(f"{coul_const}*qq/r")
     coul_14_force.addPerBondParameter("qq")
     coul_14_force.setUsesPeriodicBoundaryConditions(True)
+
+    openmm_sys.addForce(vdw_14_force)
+    openmm_sys.addForce(coul_14_force)
 
     bonds = [
         sorted(openff_sys.topology.atom_index(a) for a in bond.atoms)
@@ -662,14 +673,12 @@ def _create_multiple_nonbonded_forces(
         electrostatics_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
         # vdw_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
 
-    return vdw_force, electrostatics_force, vdw_14_force, coul_14_force
-
 
 def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
     if not hasattr(force, "setUseSwitchingFunction"):
         raise ValueError(
             "Attempting to set switching funcntion on an OpenMM force that does nont support it."
-            f"Passed force of type {type(force)}."
+            f"Passed force of type {type(force)}.",
         )
     if getattr(vdw_handler, "switch_width", None) is None:
         force.setUseSwitchingFunction(False)
@@ -677,14 +686,14 @@ def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
         force.setUseSwitchingFunction(False)
     else:
         switching_distance = to_openmm_quantity(
-            vdw_handler.cutoff - vdw_handler.switch_width
+            vdw_handler.cutoff - vdw_handler.switch_width,
         )
 
         if switching_distance._value < 0:
             raise UnsupportedCutoffMethodError(
                 "Found a `switch_width` greater than the cutoff distance. It's not clear "
                 "what this means and it's probably invalid. Found "
-                f"switch_width{vdw_handler.switch_width} and cutoff {vdw_handler.cutoff}"
+                f"switch_width{vdw_handler.switch_width} and cutoff {vdw_handler.cutoff}",
             )
 
         force.setUseSwitchingFunction(True)
