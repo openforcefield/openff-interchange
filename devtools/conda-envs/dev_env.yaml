@@ -20,8 +20,8 @@ dependencies:
   - unyt
   - mbuild
   - foyer >=0.8.1
-  - jax >=0.3.0
-  - jaxlib >=0.3.0
+  - jax >=0.3.0,<0.3.16
+  - jaxlib >=0.3.0,<0.3.16
   # Testing
   - mdtraj
   - intermol
