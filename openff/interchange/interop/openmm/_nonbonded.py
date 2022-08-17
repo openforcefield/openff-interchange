@@ -339,7 +339,8 @@ def _create_single_nonbonded_force(
             partial_charges = data["electrostatics_handler"].charges
 
     if has_virtual_sites:
-        parent_particle_mapping = defaultdict(list)
+        # mapping between _VirtualSite objects and the OpenMM particles created to represent them
+        virtual_site_object_particles_mapping = defaultdict(list)
 
     for molecule in openff_sys.topology.molecules:
 
@@ -428,42 +429,30 @@ def _create_single_nonbonded_force(
                     "Mismatch in system and force indexing",
                 )
 
-            parent_atom = virtual_site_object.orientations[0]
-            parent_particle_mapping[parent_atom].append(index_force)
+            virtual_site_object_particles_mapping[virtual_site_object].append(
+                index_force
+            )
 
             openmm_sys.setVirtualSite(index_system, openmm_particle)
 
-            if openff_sys["VirtualSites"].exclusion_policy == "parents":
-                for orientation_atom_index in virtual_site_object.orientations:
+    _create_exceptions(
+        data,
+        non_bonded_force,
+        openff_sys,
+        openff_openmm_particle_map,
+        virtual_site_object_particles_mapping,
+    )
 
-                    if index_force == orientation_atom_index:
-                        continue
+    _apply_switching_function(data["vdw_handler"], non_bonded_force)
 
-                    non_bonded_force.addException(
-                        orientation_atom_index,
-                        index_force,
-                        0.0,
-                        0.0,
-                        0.0,
-                        replace=True,
-                    )
 
-                    for other_particle_index in parent_particle_mapping[parent_atom]:
-                        if other_particle_index in virtual_site_object.orientations:
-                            continue
-
-                        if index_force == other_particle_index:
-                            continue
-
-                        non_bonded_force.addException(
-                            other_particle_index,
-                            index_force,
-                            0.0,
-                            0.0,
-                            0.0,
-                            replace=True,
-                        )
-
+def _create_exceptions(
+    data: Dict,
+    non_bonded_force: openmm.NonbondedForce,
+    openff_sys: "Interchange",
+    openff_openmm_particle_map: Dict,
+    virtual_site_object_particles_mapping: Dict,
+):
     bonds = [
         sorted(openff_sys.topology.atom_index(a) for a in bond.atoms)
         for bond in openff_sys.topology.bonds
@@ -478,7 +467,27 @@ def _create_single_nonbonded_force(
         lj14Scale=vdw_14,
     )
 
-    _apply_switching_function(data["vdw_handler"], non_bonded_force)
+    for (
+        virtual_site_object,
+        openmm_particle_index,
+    ) in virtual_site_object_particles_mapping.values():
+        assert isinstance(openmm_particle_index, int)
+
+        # TODO: Need to check if orientation atoms have their own virtual sites,
+        #       whose interactions must also be excluded here
+        for orientation_atom_index_openff in virtual_site_object.orientations:
+            orientation_atom_index_openmm = openff_openmm_particle_map[
+                orientation_atom_index_openff
+            ]
+
+            non_bonded_force.addException(
+                orientation_atom_index_openmm,
+                openmm_particle_index,
+                0.0,
+                0.0,
+                0.0,
+                replace=True,
+            )
 
 
 def _create_multiple_nonbonded_forces(
