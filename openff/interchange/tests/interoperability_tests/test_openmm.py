@@ -2,7 +2,7 @@ import numpy
 import openmm
 import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol
-from openff.toolkit.tests.utils import compare_system_parameters, get_data_file_path
+from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.units import unit
@@ -10,7 +10,6 @@ from openmm import app
 from openmm import unit as openmm_unit
 
 from openff.interchange import Interchange
-from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 from openff.interchange.exceptions import (
     MissingPositionsError,
@@ -432,77 +431,6 @@ class TestOpenMMVirtualSites(_BaseTest):
         sage.register_parameter_handler(virtual_site_handler)
 
         return sage
-
-    def test_sigma_hole_example(self, sage_with_sigma_hole):
-        """Test that a single-molecule sigma hole example runs"""
-        mol = Molecule.from_smiles("CCl")
-        mol.generate_conformers(n_conformers=1)
-
-        out = Interchange.from_smirnoff(
-            force_field=sage_with_sigma_hole, topology=mol.to_topology()
-        )
-        out.box = [4, 4, 4]
-        out.positions = mol.conformers[0]
-        out.handlers["VirtualSites"] = SMIRNOFFVirtualSiteHandler._from_toolkit(
-            parameter_handler=sage_with_sigma_hole["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["vdW"]._from_toolkit_virtual_sites(
-            parameter_handler=sage_with_sigma_hole["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["Electrostatics"]._from_toolkit_virtual_sites(
-            parameter_handler=sage_with_sigma_hole["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-
-        # TODO: Sanity-check reported energies
-        get_openmm_energies(out, combine_nonbonded_forces=True)
-
-        compare_system_parameters(
-            out.to_openmm(combine_nonbonded_forces=True),
-            sage_with_sigma_hole.create_openmm_system(mol.to_topology()),
-        )
-        """
-        import numpy
-        import parmed
-
-        out.to_top("sigma.top")
-        gmx_top = parmed.load_file("sigma.top")
-
-        assert abs(numpy.sum([p.charge for p in gmx_top.atoms])) < 1e-3
-        """
-
-    def test_carbonyl_example(self, sage_with_monovalent_lone_pair):
-        """Test that a single-molecule DivalentLonePair example runs"""
-        mol = Molecule.from_smiles("CC=O")
-        mol.generate_conformers(n_conformers=1)
-
-        out = Interchange.from_smirnoff(
-            force_field=sage_with_monovalent_lone_pair, topology=mol.to_topology()
-        )
-        out.box = [4, 4, 4]
-        out.positions = mol.conformers[0]
-        out.handlers["VirtualSites"] = SMIRNOFFVirtualSiteHandler._from_toolkit(
-            parameter_handler=sage_with_monovalent_lone_pair["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["vdW"]._from_toolkit_virtual_sites(
-            parameter_handler=sage_with_monovalent_lone_pair["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["Electrostatics"]._from_toolkit_virtual_sites(
-            parameter_handler=sage_with_monovalent_lone_pair["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-
-        # TODO: Sanity-check reported energies
-        get_openmm_energies(out, combine_nonbonded_forces=True)
-
-        compare_system_parameters(
-            out.to_openmm(combine_nonbonded_forces=True),
-            sage_with_monovalent_lone_pair.create_openmm_system(mol.to_topology()),
-        )
 
     @pytest.mark.skip(reason="virtual sites in development")
     def test_tip5p_num_exceptions(self):

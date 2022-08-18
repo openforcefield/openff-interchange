@@ -1402,12 +1402,12 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-0.3 * _E, 4.0 * _A, 3.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
-                    (-0.3 * _E, 4.0 * _A, 3.0 * _KJ),
                     (-0.3 * _E, 4.0 * _A, 3.0 * _KJ),
                 ],
                 2,
@@ -1435,12 +1435,12 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     (0.7 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-0.45 * _E, 6.0 * _A, 4.5 * _KJ),  # C=O vsite
+                    (-0.6 * _E, 8.0 * _A, 6.0 * _KJ),  # CX3=O vsite
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.7 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.35 * _E, 10.0 * _A, 0.0 * _KJ),
-                    (-0.45 * _E, 6.0 * _A, 4.5 * _KJ),  # C=O vsite
-                    (-0.6 * _E, 8.0 * _A, 6.0 * _KJ),  # CX3=O vsite
                     (-0.45 * _E, 6.0 * _A, 4.5 * _KJ),  # C=O vsite
                     (-0.6 * _E, 8.0 * _A, 6.0 * _KJ),  # CX3=O vsite
                 ],
@@ -1460,12 +1460,12 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     (0.4 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
+                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.4 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
-                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
-                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                     (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                     (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                 ],
@@ -1488,10 +1488,10 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
-                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                     (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                 ],
                 2,
@@ -1510,11 +1510,11 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.4 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-1.0 * _E, 5.0 * _A, 6.0 * _KJ),
                     (0.4 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
-                    (-1.0 * _E, 5.0 * _A, 6.0 * _KJ),
                     (-1.0 * _E, 5.0 * _A, 6.0 * _KJ),
                 ],
                 2,
@@ -1568,10 +1568,8 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
 
         assert system.getNumParticles() == expected_n_total
 
-        assert all(not system.isVirtualSite(i) for i in range(topology.n_atoms))
-        assert all(
-            system.isVirtualSite(i) for i in range(topology.n_atoms, expected_n_v_sites)
-        )
+        # TODO: Explicitly ensure virtual sites are collated between moleucles
+        #       This is implicitly tested in the construction of the parameter arrays
 
         assert system.getNumForces() == 1
         force: openmm.NonbondedForce = next(iter(system.getForces()))
@@ -1584,9 +1582,9 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             charge, sigma, epsilon = force.getParticleParameters(i)
 
             # Make sure v-sites are massless.
-            assert np.isclose(
-                system.getParticleMass(i).value_in_unit(openmm_unit.amu), 0.0
-            ) == (False if i < topology.n_atoms else True)
+            assert (
+                np.isclose(system.getParticleMass(i)._value, 0.0)
+            ) == system.isVirtualSite(i)
 
             assert np.isclose(
                 expected_charge.m_as(unit.elementary_charge),
