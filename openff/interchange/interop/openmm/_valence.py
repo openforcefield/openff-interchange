@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import openmm
 from openff.units import unit as off_unit
@@ -6,8 +6,13 @@ from openff.units.openmm import to_openmm as to_openmm_quantity
 
 from openff.interchange.exceptions import UnsupportedExportError
 
+if TYPE_CHECKING:
+    from openff.interchange.models import VirtualSiteKey
 
-def _process_constraints(openff_sys, openmm_sys, particle_map: Dict[int, int]):
+
+def _process_constraints(
+    openff_sys, openmm_sys, particle_map: Dict[Union[int, "VirtualSiteKey"], int]
+):
     """
     Process the Constraints section of an Interchange object.
     """

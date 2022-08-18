@@ -56,14 +56,14 @@ def to_openmm(
     """
     openmm_sys = openmm.System()
 
-    # OpenFF box stored implicitly as nm, and that happens to be what
-    # OpenMM casts box vectors to if provided only an np.ndarray
     if openff_sys.box is not None:
         box = openff_sys.box.m_as(off_unit.nanometer)
         openmm_sys.setDefaultPeriodicBoxVectors(*box)
 
     particle_map = _process_nonbonded_forces(
-        openff_sys, openmm_sys, combine_nonbonded_forces=combine_nonbonded_forces
+        openff_sys,
+        openmm_sys,
+        combine_nonbonded_forces=combine_nonbonded_forces,
     )
     constrained_pairs = _process_constraints(openff_sys, openmm_sys, particle_map)
     _process_torsion_forces(openff_sys, openmm_sys)
@@ -174,7 +174,7 @@ def _process_virtual_sites(openff_sys, openmm_sys):
         if vdw_key is None or coul_key is None:
             raise Exception(
                 f"Virtual site {virtual_site_key} is not associated with any "
-                "vdW and/or electrostatics interactions"
+                "vdW and/or electrostatics interactions",
             )
 
         charge_increments = coul_handler.potentials[coul_key].parameters[
@@ -199,7 +199,12 @@ def _process_virtual_sites(openff_sys, openmm_sys):
         if virtual_site_handler.exclusion_policy == "parents":
             for orientation_atom_index in orientations:
                 non_bonded_force.addException(
-                    orientation_atom_index, index_force, 0.0, 0.0, 0.0, replace=True
+                    orientation_atom_index,
+                    index_force,
+                    0.0,
+                    0.0,
+                    0.0,
+                    replace=True,
                 )
 
                 # This dict only contains `orientation_atom_index` if that orientation atom (of this
@@ -209,7 +214,12 @@ def _process_virtual_sites(openff_sys, openmm_sys):
                     if other_particle_index in orientations:
                         continue
                     non_bonded_force.addException(
-                        other_particle_index, index_force, 0.0, 0.0, 0.0, replace=True
+                        other_particle_index,
+                        index_force,
+                        0.0,
+                        0.0,
+                        0.0,
+                        replace=True,
                     )
 
 
@@ -236,7 +246,7 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
                 openff_sys.handlers["ProperTorsions"] = proper_torsion_handler
             else:
                 raise UnsupportedImportError(
-                    "Unsupported OpenMM Force type ({type(force)}) found."
+                    "Unsupported OpenMM Force type ({type(force)}) found.",
                 )
 
     if topology is not None:
@@ -274,14 +284,14 @@ def _convert_nonbonded_force(force):
             parameters={
                 "sigma": from_openmm_quantity(sigma),
                 "epsilon": from_openmm_quantity(epsilon),
-            }
+            },
         )
         vdw_handler.slot_map.update({top_key: pot_key})
         vdw_handler.potentials.update({pot_key: pot})
 
         electrostatics.slot_map.update({top_key: pot_key})
         electrostatics.potentials.update(
-            {pot_key: Potential(parameters={"charge": from_openmm_quantity(charge)})}
+            {pot_key: Potential(parameters={"charge": from_openmm_quantity(charge)})},
         )
 
     if force.getNonbondedMethod() == openmm.NonbondedForce.PME:
@@ -323,7 +333,7 @@ def _convert_harmonic_bond_force(force):
             parameters={
                 "length": from_openmm_quantity(length),
                 "k": from_openmm_quantity(k),
-            }
+            },
         )
 
         bond_handler.slot_map.update({top_key: pot_key})
@@ -347,7 +357,7 @@ def _convert_harmonic_angle_force(force):
             parameters={
                 "angle": from_openmm_quantity(angle),
                 "k": from_openmm_quantity(k),
-            }
+            },
         )
 
         angle_handler.slot_map.update({top_key: pot_key})
@@ -379,7 +389,7 @@ def _convert_periodic_torsion_force(force):
                 "phase": from_openmm_quantity(phase),
                 "k": from_openmm_quantity(k),
                 "idivf": 1 * unit.dimensionless,
-            }
+            },
         )
 
         proper_torsion_handler.slot_map.update({top_key: pot_key})

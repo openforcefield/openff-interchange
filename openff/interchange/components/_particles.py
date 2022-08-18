@@ -1,28 +1,30 @@
 """
 Temporary module for second-class virtual site objects.
 """
+import abc
 import math
 from typing import List, Literal, Tuple
 
 from openff.units import unit
-from openff.units.openmm import to_openmm
-from openmm import LocalCoordinatesSite
 
 from openff.interchange.models import DefaultModel
 from openff.interchange.types import FloatQuantity
 
 
-def _create_openmm_virtual_site(virtual_site, atoms):
+class _VirtualSite(DefaultModel, abc.ABC):
+    type: str
+    distance: FloatQuantity["nanometer"]
+    orientations: Tuple[int, ...]
 
-    originwt, xdir, ydir = virtual_site.local_frame_weights
-    pos = virtual_site.local_frame_positions
-    return LocalCoordinatesSite(atoms, originwt, xdir, ydir, to_openmm(pos))
+    @abc.abstractmethod
+    def local_frame_weights(self) -> Tuple[List[float], ...]:
+        raise NotImplementedError
+
+    def local_frame_positions(self) -> unit.Quantity:
+        raise NotImplementedError
 
 
-# It is assumed that the first "orientation" atom is the "parent" atom.
-
-
-class _BondChargeVirtualSite(DefaultModel):
+class _BondChargeVirtualSite(_VirtualSite):
     type: Literal["BondCharge"]
     distance: FloatQuantity["nanometer"]
     orientations: Tuple[int, ...]
@@ -45,7 +47,7 @@ class _BondChargeVirtualSite(DefaultModel):
         )
 
 
-class _MonovalentLonePairVirtualSite(DefaultModel):
+class _MonovalentLonePairVirtualSite(_VirtualSite):
     type: Literal["MonovalentLonePair"]
     distance: FloatQuantity["nanometer"]
     out_of_plane_angle: FloatQuantity["degree"]
@@ -78,7 +80,7 @@ class _MonovalentLonePairVirtualSite(DefaultModel):
         )
 
 
-class _DivalentLonePairVirtualSite(DefaultModel):
+class _DivalentLonePairVirtualSite(_VirtualSite):
     type: Literal["DivalentLonePair"]
     distance: FloatQuantity["nanometer"]
     out_of_plane_angle: FloatQuantity["degree"]
@@ -109,7 +111,7 @@ class _DivalentLonePairVirtualSite(DefaultModel):
         )
 
 
-class _TrivalentLonePairVirtualSite(DefaultModel):
+class _TrivalentLonePairVirtualSite(_VirtualSite):
     type: Literal["TrivalentLonePair"]
     distance: FloatQuantity["nanometer"]
     orientations: Tuple[int, ...]
