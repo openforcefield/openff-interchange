@@ -70,6 +70,7 @@ def compare_single_mol_systems(mol, force_field):
     )
 
 
+@skip_if_missing("openff.evaluator")
 def compare_condensed_systems(self, mol, force_field):
     from openff.evaluator import unit as evaluator_unit  # type: ignore[import]
     from openff.evaluator.utils.packmol import pack_box  # type: ignore[import]

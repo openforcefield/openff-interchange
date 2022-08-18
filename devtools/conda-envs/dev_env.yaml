@@ -59,5 +59,3 @@ dependencies:
   - rich
   - pip:
     - git+https://github.com/openforcefield/openff-toolkit.git@main
-    - git+https://github.com/openforcefield/openff-evaluator.git@main
-    - jax
