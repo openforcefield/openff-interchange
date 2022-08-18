@@ -40,7 +40,6 @@ jobs:
         environment-file: devtools/conda-envs/test_env.yaml
         extra-specs: |
           python=${{ matrix.python-version }}
-          mamba
 
     - name: Additional info about the build
       run: |
@@ -56,8 +55,6 @@ jobs:
       run: |
         conda info
         conda list
-        mamba repoquery whoneeds jax
-        mamba repoquery whoneeds pymbar
 
     - name: License OpenEye
       if: ${{ matrix.openeye == true }}
