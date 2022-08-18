@@ -443,14 +443,28 @@ class TestOpenMMVirtualSites(_BaseTest):
             combine_nonbonded_forces=True
         )
 
+        # In a TIP5P water    expected exceptions include (total 10)
+        #
+        # V(3)  V(4)          Oxygen to hydrogens and particles (4)
+        #    \ /                - (0, 1), (0, 2), (0, 3), (0, 4)
+        #     O(0)            Hyrogens to virtual particles (4)
+        #    / \                - (1, 3), (1, 4), (2, 3), (2, 4)
+        # H(1)  H(2)          Hydrogens and virtual particles to each other (2)
+        #                       - (1, 2), (3, 4)
+
         for force in out.getForces():
             if isinstance(force, openmm.NonbondedForce):
-                assert force.getNumExceptions() == 12
+                for particle_index in range(force.getNumParticles()):
+                    print(particle_index, out.getParticleMass(particle_index))
+                for exception_index in range(force.getNumExceptions()):
+                    p1, p2 = force.getExceptionParameters(exception_index)[:2]
+                    print(p1, p2)
+                assert force.getNumExceptions() == 10
 
 
 class TestToOpenMMTopology(_BaseTest):
     def test_num_virtual_sites(self):
-        from openff.interchange.interop.openmm import to_openmm_topology
+        from openff.interchange.interop.openmm._topology import to_openmm_topology
 
         tip4p = ForceField("openff-2.0.0.offxml", get_test_file_path("tip4p.offxml"))
         water = Molecule.from_smiles("O")
@@ -480,7 +494,7 @@ class TestToOpenMMTopology(_BaseTest):
 class TestToOpenMMPositions(_BaseTest):
     @pytest.mark.parametrize("include_virtual_sites", [True, False])
     def test_positions(self, include_virtual_sites):
-        from openff.interchange.interop.openmm import to_openmm_positions
+        from openff.interchange.interop.openmm._positions import to_openmm_positions
 
         tip4p = ForceField("openff-2.0.0.offxml", get_test_file_path("tip4p.offxml"))
         water = Molecule.from_smiles("O")
