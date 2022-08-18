@@ -433,7 +433,6 @@ class TestOpenMMVirtualSites(_BaseTest):
 
         return sage
 
-    @pytest.mark.skip(reason="virtual sites in development")
     def test_tip5p_num_exceptions(self):
         tip5p = ForceField(get_test_file_path("tip5p.offxml"))
         water = Molecule.from_smiles("O")
