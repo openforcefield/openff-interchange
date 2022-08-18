@@ -16,7 +16,8 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
-from openff.interchange.interop.openmm import from_openmm, to_openmm_topology
+from openff.interchange.interop.openmm import from_openmm
+from openff.interchange.interop.openmm._topology import to_openmm_topology
 from openff.interchange.tests import _BaseTest, get_test_file_path
 
 # WISHLIST: Add tests for reaction-field if implemented

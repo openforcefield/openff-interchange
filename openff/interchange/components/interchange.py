@@ -524,7 +524,7 @@ class Interchange(DefaultModel):
 
     def to_openmm_topology(self, ensure_unique_atom_names: bool = True):
         """Export components of this Interchange to an OpenMM Topology."""
-        from openff.interchange.interop.openmm import to_openmm_topology
+        from openff.interchange.interop.openmm._topology import to_openmm_topology
 
         return to_openmm_topology(
             self, ensure_unique_atom_names=ensure_unique_atom_names
