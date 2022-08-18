@@ -482,12 +482,17 @@ def _create_exceptions(
     # Faster to loop through exceptions and look up parents than opposite
     if parent_virtual_particle_mapping not in (None, dict()):
         # First add exceptions between each virtual particle and parent atom
-        for parent, virtual_particles_of_this_parent in parent_virtual_particle_mapping.items():
+        for (
+            parent,
+            virtual_particles_of_this_parent,
+        ) in parent_virtual_particle_mapping.items():
             for virtual_particle in virtual_particles_of_this_parent:
                 non_bonded_force.addException(
                     parent,
                     virtual_particle,
-                    0.0, 0.0, 0.0,
+                    0.0,
+                    0.0,
+                    0.0,
                 )
 
         for exception_index in range(non_bonded_force.getNumExceptions()):
