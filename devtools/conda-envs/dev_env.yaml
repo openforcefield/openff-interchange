@@ -17,11 +17,11 @@ dependencies:
   - cachetools
   - python-constraint
   # Optional features
+  - jax ==0.3.14
+  - jaxlib ==0.3.14
   - unyt
   - mbuild
   - foyer >=0.8.1
-  - jax >=0.3.0
-  - jaxlib >=0.3.0
   # Testing
   - mdtraj
   - intermol

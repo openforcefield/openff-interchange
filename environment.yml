@@ -1,20 +1,39 @@
-# Environment file for Jupyter notebook examples
-name: binder-env
+name: interchange-examples-env
 channels:
+  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
-  - omnia
-  - defaults
+  - openeye
 dependencies:
+  # Core
   - python
   - pip
+  - numpy >=1.21
   - pydantic
-  - pint
-  - sympy
-  - qcelemental
-  - jax
-  - sympy
-  - pint
   - openmm
-  - openforcefield>=0.7.2
-  - openff-units
-  - openff-utilities
+  # OpenFF stack
+  - openff-toolkit =0.10.3
+  - openff-utilities >=0.1.5
+  - openff-units >=0.1.6
+  - cached-property
+  - cachetools
+  - python-constraint
+  # Optional features
+  - unyt
+  - mbuild
+  - foyer >=0.8.1
+  # Examples
+  - intermol
+  - openff-evaluator-base
+  - mdtraj
+  - nglview
+  - openff-amber-ff-ports >=0.0.3
+  - openeye-toolkits
+  - pytest <7.0.0
+  - nbval
+  # Drivers
+  - gromacs >=2021=nompi*
+  - lammps >=2021
+  - panedr
+  # Temporary
+  - pip:
+    - git+https://github.com/openforcefield/openff-toolkit.git@main
