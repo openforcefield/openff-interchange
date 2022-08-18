@@ -453,11 +453,6 @@ class TestOpenMMVirtualSites(_BaseTest):
 
         for force in out.getForces():
             if isinstance(force, openmm.NonbondedForce):
-                for particle_index in range(force.getNumParticles()):
-                    print(particle_index, out.getParticleMass(particle_index))
-                for exception_index in range(force.getNumExceptions()):
-                    p1, p2 = force.getExceptionParameters(exception_index)[:2]
-                    print(p1, p2)
                 assert force.getNumExceptions() == 10
 
 
