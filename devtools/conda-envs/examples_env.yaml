@@ -18,8 +18,8 @@ dependencies:
   - cachetools
   - python-constraint
   # Optional features
-  - jax ==0.3.14
-  - jaxlib ==0.3.14
+  - jax
+  - jaxlib
   - unyt
   - mbuild
   - foyer >=0.8.1

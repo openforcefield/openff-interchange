@@ -28,8 +28,8 @@ dependencies:
   - openff-evaluator
   - openff-amber-ff-ports >=0.0.3
   - openeye-toolkits
-  - jax ==0.3.14
-  - jaxlib ==0.3.14
+  - jax
+  - jaxlib
   - pytest
   - pytest-cov
   - pytest-xdist
