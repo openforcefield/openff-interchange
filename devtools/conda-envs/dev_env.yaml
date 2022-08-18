@@ -17,6 +17,8 @@ dependencies:
   - cachetools
   - python-constraint
   # Optional features
+  - jax ==0.3.14
+  - jaxlib ==0.3.14
   - unyt
   - mbuild
   - foyer >=0.8.1
@@ -33,6 +35,9 @@ dependencies:
   - conda-tree
   - qcportal
   - openff-qcsubmit
+  # Remove after new Evaluator release
+  - pymbar >=3.0.5
+  - cmiles
   # Drivers
   - gromacs >=2021=nompi*
   - lammps >=2021
@@ -56,3 +61,4 @@ dependencies:
   - rich
   - pip:
     - git+https://github.com/openforcefield/openff-toolkit.git@main
+    - git+https://github.com/openforcefield/openff-evaluator.git@main

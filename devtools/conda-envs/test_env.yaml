@@ -25,8 +25,11 @@ dependencies:
   - mdtraj
   - intermol
   - nglview
+  - openff-evaluator
   - openff-amber-ff-ports >=0.0.3
   - openeye-toolkits
+  - jax ==0.3.14
+  - jaxlib ==0.3.14
   - pytest
   - pytest-cov
   - pytest-xdist
