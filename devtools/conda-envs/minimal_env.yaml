@@ -23,3 +23,4 @@ dependencies:
   - mdtraj
   - pip:
     - git+https://github.com/openforcefield/openff-toolkit.git@main
+    - jax

@@ -20,8 +20,6 @@ dependencies:
   - unyt
   - mbuild
   - foyer >=0.8.1
-  - jax >=0.3.0,<0.3.16
-  - jaxlib >=0.3.0,<0.3.16
   # Testing
   - mdtraj
   - intermol
@@ -62,3 +60,4 @@ dependencies:
   - pip:
     - git+https://github.com/openforcefield/openff-toolkit.git@main
     - git+https://github.com/openforcefield/openff-evaluator.git@main
+    - jax

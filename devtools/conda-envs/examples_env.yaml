@@ -18,8 +18,6 @@ dependencies:
   - cachetools
   - python-constraint
   # Optional features
-  - jax >=0.3.0,<0.3.16
-  - jaxlib >=0.3.0,<0.3.16
   - unyt
   - mbuild
   - foyer >=0.8.1
@@ -40,3 +38,4 @@ dependencies:
   - pip:
     - git+https://github.com/openforcefield/openff-toolkit.git@main
     - git+https://github.com/openforcefield/openff-evaluator.git@main
+    - jax
