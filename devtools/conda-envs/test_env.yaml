@@ -27,8 +27,8 @@ dependencies:
   - openff-evaluator
   - openff-amber-ff-ports >=0.0.3
   - openeye-toolkits
-  - jax ==0.3.14
-  - jaxlib ==0.3.14
+  - jax
+  - jaxlib
   - pytest
   - pytest-cov
   - pytest-xdist
@@ -36,7 +36,7 @@ dependencies:
   - pytest-timeout
   - nbval
   - nglview
-  - ipywidgets <7  # https://github.com/nglviewer/nglview/issues/1032
+  - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
   # Drivers
   - gromacs >=2021=nompi*
   - lammps >=2021

@@ -26,7 +26,7 @@ dependencies:
   - openff-evaluator-base
   - mdtraj
   - nglview
-  - ipywidgets <7  # https://github.com/nglviewer/nglview/issues/1032
+  - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
   - openff-amber-ff-ports >=0.0.3
   - openeye-toolkits
   - pytest <7.0.0
