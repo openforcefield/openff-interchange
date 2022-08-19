@@ -18,8 +18,8 @@ dependencies:
   - cachetools
   - python-constraint
   # Optional features
-  - jax ==0.3.14
-  - jaxlib ==0.3.14
+  - jax
+  - jaxlib
   - unyt
   - mbuild
   - foyer >=0.8.1
@@ -28,6 +28,7 @@ dependencies:
   - openff-evaluator-base
   - mdtraj
   - nglview
+  - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
   - openff-amber-ff-ports >=0.0.3
   - openeye-toolkits
   - pytest <7.0.0
