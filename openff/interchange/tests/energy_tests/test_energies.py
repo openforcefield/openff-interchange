@@ -5,7 +5,6 @@ import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
-from openff.units.openmm import to_openmm
 from openff.utilities.testing import skip_if_missing
 from openmm import unit as openmm_unit
 
@@ -92,17 +91,7 @@ class TestEnergies(_BaseTest):
         positions = packed_box.xyz * unit.nanometer
         off_sys.positions = positions
 
-        # Compare directly to toolkit's reference implementation
         omm_energies = get_openmm_energies(off_sys, round_positions=8)
-        omm_reference = force_field.create_openmm_system(mol.to_topology())
-        reference_energies = _get_openmm_energies(
-            omm_sys=omm_reference,
-            box_vectors=to_openmm(off_sys.box),
-            positions=to_openmm(off_sys.positions),
-            round_positions=8,
-        )
-
-        omm_energies.compare(reference_energies)
 
         mdp = "cutoff_hbonds" if constrained else "auto"
         # Compare GROMACS writer and OpenMM export
@@ -243,48 +232,7 @@ class TestEnergies(_BaseTest):
             },
         )
 
-    @needs_lmp
-    @pytest.mark.slow()
-    def test_water_dimer(self):
-        tip3p = ForceField(get_test_file_path("tip3p.offxml"))
-        water = Molecule.from_smiles("O")
-        top = Topology.from_molecules(2 * [water])
-
-        pdbfile = openmm.app.PDBFile(get_test_file_path("water-dimer.pdb"))
-
-        positions = pdbfile.positions
-
-        openff_sys = Interchange.from_smirnoff(tip3p, top)
-        openff_sys.positions = positions
-        openff_sys.box = [10, 10, 10] * unit.nanometer
-
-        omm_energies = get_openmm_energies(
-            openff_sys,
-            hard_cutoff=True,
-            electrostatics=False,
-            combine_nonbonded_forces=True,
-        )
-
-        toolkit_energies = _get_openmm_energies(
-            tip3p.create_openmm_system(top),
-            openff_sys.box,
-            openff_sys.positions,
-            hard_cutoff=True,
-            electrostatics=False,
-        )
-
-        omm_energies.compare(toolkit_energies)
-
-        # TODO: Fix GROMACS energies by handling SETTLE constraints
-        # gmx_energies, _ = get_gromacs_energies(openff_sys)
-        # compare_gromacs_openmm(omm_energies=omm_energies, gmx_energies=gmx_energies)
-
-        openff_sys["Electrostatics"].periodic_potential = "cutoff"
-        omm_energies_cutoff = get_gromacs_energies(openff_sys)  # noqa
-
-        # TODO: Don't write out dihedral section of LAMMPS input file for this system
-        # lmp_energies = get_lammps_energies(openff_sys)
-        # lmp_energies.compare(omm_energies_cutoff)
+    # TODO: Add back some sort of water dimer test
 
     @needs_gmx
     @skip_if_missing("foyer")
@@ -412,31 +360,10 @@ class TestEnergies(_BaseTest):
         out.box = [4, 4, 4] * unit.nanometer
         out.positions = mol.conformers[0]
 
-        toolkit_system = forcefield.create_openmm_system(mol.to_topology())
-
         for key in ["Bond", "Torsion"]:
             interchange_energy = get_openmm_energies(
                 out, combine_nonbonded_forces=True
             ).energies[key]
-
-            toolkit_energy = _get_openmm_energies(
-                toolkit_system,
-                box_vectors=[[4, 0, 0], [0, 4, 0], [0, 0, 4]] * openmm_unit.nanometer,
-                positions=to_openmm(mol.conformers[0]),
-            ).energies[key]
-
-            toolkit_diff = abs(interchange_energy - toolkit_energy).m_as(kj_mol)
-
-            if toolkit_diff < 1e-6:
-                pass
-            elif toolkit_diff < 1e-2:
-                pytest.xfail(
-                    f"Found energy difference of {toolkit_diff} kJ/mol vs. toolkit"
-                )
-            else:
-                pytest.xfail(
-                    f"Found energy difference of {toolkit_diff} kJ/mol vs. toolkit"
-                )
 
             gromacs_energy = get_gromacs_energies(out).energies[key]
             energy_diff = abs(interchange_energy - gromacs_energy).m_as(kj_mol)
