@@ -338,8 +338,9 @@ def _create_single_nonbonded_force(
         except AttributeError:
             partial_charges = data["electrostatics_handler"].charges
 
-    # mapping between (openmm) index of each virtual particle and the (openmm) index of its parent atom
-    # if no virtual sites, this remains an empty dict
+    # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
+    #   of that parent atom (if any)
+    # if no virtual sites at all, this remains an empty dict
     parent_virtual_particle_mapping: DefaultDict[int, List[int]] = defaultdict(list)
 
     for molecule in openff_sys.topology.molecules:
@@ -480,6 +481,20 @@ def _create_exceptions(
 
     # Faster to loop through exceptions and look up parents than opposite
     if parent_virtual_particle_mapping not in (None, dict()):
+        # First add exceptions between each virtual particle and parent atom
+        for (
+            parent,
+            virtual_particles_of_this_parent,
+        ) in parent_virtual_particle_mapping.items():
+            for virtual_particle in virtual_particles_of_this_parent:
+                non_bonded_force.addException(
+                    parent,
+                    virtual_particle,
+                    0.0,
+                    0.0,
+                    0.0,
+                )
+
         for exception_index in range(non_bonded_force.getNumExceptions()):
             # These particles should only be atoms in this loop
             (
@@ -492,23 +507,49 @@ def _create_exceptions(
             for virtual_particle_of_p1 in parent_virtual_particle_mapping[p1]:
                 # If this iterable is not empty, add an exception between p1's virtual
                 # particle and the "other" atom in p1's exception
+                if virtual_particle_of_p1 == p2:
+                    continue
+
                 if charge_prod._value == epsilon._value == 0.0:
                     non_bonded_force.addException(
                         virtual_particle_of_p1, p2, 0.0, 0.0, 0.0, replace=True
                     )
                 else:
-                    # TODO: Decide on best logic for inheriting scaled 1-4 interactions
-                    raise Exception
+                    # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
+                    v1_parameters = non_bonded_force.getParticleParameters(
+                        virtual_particle_of_p1
+                    )
+                    p2_parameters = non_bonded_force.getParticleParameters(p2)
+                    non_bonded_force.addException(
+                        particle1=virtual_particle_of_p1,
+                        particle2=p2,
+                        chargeProd=v1_parameters[0] * p2_parameters[0],
+                        sigma=(v1_parameters[1] + p2_parameters[1]) * 0.5,
+                        epsilon=(v1_parameters[2] * p2_parameters[2]) ** 0.5,
+                    )
             for virtual_particle_of_p2 in parent_virtual_particle_mapping[p2]:
                 # If this iterable is not empty, add an exception between p1's virtual
                 # particle and the "other" atom in p1's exception
+                if virtual_particle_of_p2 == p1:
+                    continue
+
                 if charge_prod._value == epsilon._value == 0.0:
                     non_bonded_force.addException(
                         virtual_particle_of_p2, p1, 0.0, 0.0, 0.0, replace=True
                     )
                 else:
-                    # TODO: Decide on best logic for inheriting scaled 1-4 interactions
-                    raise Exception
+                    # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
+                    v2_parameters = non_bonded_force.getParticleParameters(
+                        virtual_particle_of_p2
+                    )
+                    p1_parameters = non_bonded_force.getParticleParameters(p1)
+                    non_bonded_force.addException(
+                        particle1=virtual_particle_of_p2,
+                        particle2=p1,
+                        chargeProd=v2_parameters[0] * p1_parameters[0],
+                        sigma=(v2_parameters[1] + p1_parameters[1]) * 0.5,
+                        epsilon=(v2_parameters[2] * p1_parameters[2]) ** 0.5,
+                    )
 
 
 def _create_multiple_nonbonded_forces(

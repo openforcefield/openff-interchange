@@ -1,5 +1,4 @@
 """Interfaces with OpenMM."""
-from collections import defaultdict
 from pathlib import Path
 from typing import Union
 
@@ -7,18 +6,12 @@ import openmm
 from openff.toolkit.topology import Topology
 from openff.units import unit as off_unit
 from openff.units.openmm import from_openmm as from_openmm_quantity
-from openff.units.openmm import to_openmm as to_openmm_quantity
 from openmm import unit
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import _PME
-from openff.interchange.exceptions import (
-    InternalInconsistencyError,
-    UnsupportedImportError,
-)
+from openff.interchange.exceptions import UnsupportedImportError
 from openff.interchange.interop.openmm._nonbonded import _process_nonbonded_forces
-from openff.interchange.interop.openmm._positions import to_openmm_positions  # noqa
-from openff.interchange.interop.openmm._topology import to_openmm_topology  # noqa
 from openff.interchange.interop.openmm._valence import (
     _process_angle_forces,
     _process_bond_forces,
@@ -26,7 +19,7 @@ from openff.interchange.interop.openmm._valence import (
     _process_improper_torsion_forces,
     _process_torsion_forces,
 )
-from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
+from openff.interchange.models import PotentialKey, TopologyKey
 
 
 def to_openmm(
@@ -82,145 +75,6 @@ def to_openmm(
     )
 
     return openmm_sys
-
-
-def _process_virtual_sites(openff_sys, openmm_sys):
-    from openff.interchange.components._particles import (
-        _BondChargeVirtualSite,
-        _create_openmm_virtual_site,
-        _DivalentLonePairVirtualSite,
-        _MonovalentLonePairVirtualSite,
-        _TrivalentLonePairVirtualSite,
-    )
-
-    try:
-        virtual_site_handler = openff_sys["VirtualSites"]
-    except LookupError:
-        return
-
-    from openff.interchange.interop.openmm._virtual_sites import (
-        _check_virtual_site_exclusion_policy,
-    )
-
-    _check_virtual_site_exclusion_policy(virtual_site_handler)
-
-    vdw_handler = openff_sys["vdW"]
-    coul_handler = openff_sys["Electrostatics"]
-
-    # TODO: Handle case of split-out non-bonded forces
-    non_bonded_force = [
-        f for f in openmm_sys.getForces() if type(f) == openmm.NonbondedForce
-    ][0]
-
-    virtual_site_key: VirtualSiteKey
-
-    # Later, we will need to add exclusions between virtual site particles, which unfortunately
-    # requires tracking which added virtual site particle is associated with which atom
-    parent_particle_mapping = defaultdict(list)
-
-    for (
-        virtual_site_key,
-        virtual_site_potential_key,
-    ) in virtual_site_handler.slot_map.items():
-        orientations = virtual_site_key.orientation_atom_indices
-        parent_atom = orientations[0]
-
-        virutal_site_potential_object = virtual_site_handler.potentials[
-            virtual_site_potential_key
-        ]
-
-        if virtual_site_key.type == "BondCharge":
-            virtual_site_object = _BondChargeVirtualSite(
-                type="BondCharge",
-                distance=virutal_site_potential_object.parameters["distance"],
-                orientations=orientations,
-            )
-        elif virtual_site_key.type == "MonovalentLonePair":
-            virtual_site_object = _MonovalentLonePairVirtualSite(
-                type="MonovalentLonePair",
-                distance=virutal_site_potential_object.parameters["distance"],
-                out_of_plane_angle=virutal_site_potential_object.parameters[
-                    "outOfPlaneAngle"
-                ],
-                in_plane_angle=virutal_site_potential_object.parameters["inPlaneAngle"],
-                orientations=orientations,
-            )
-        elif virtual_site_key.type == "DivalentLonePair":
-            virtual_site_object = _DivalentLonePairVirtualSite(
-                type="DivalentLonePair",
-                distance=virutal_site_potential_object.parameters["distance"],
-                out_of_plane_angle=virutal_site_potential_object.parameters[
-                    "outOfPlaneAngle"
-                ],
-                orientations=orientations,
-            )
-        elif virtual_site_key.type == "TrivalentLonePair":
-            virtual_site_object = _TrivalentLonePairVirtualSite(
-                type="TrivalentLonePair",
-                distance=virutal_site_potential_object.parameters["distance"],
-                orientations=orientations,
-            )
-
-        else:
-            raise NotImplementedError(virtual_site_key.type)
-
-        openmm_particle = _create_openmm_virtual_site(
-            virtual_site_object,
-            orientations,
-        )
-
-        vdw_key = vdw_handler.slot_map.get(virtual_site_key)
-        coul_key = coul_handler.slot_map.get(virtual_site_key)
-        if vdw_key is None or coul_key is None:
-            raise Exception(
-                f"Virtual site {virtual_site_key} is not associated with any "
-                "vdW and/or electrostatics interactions",
-            )
-
-        charge_increments = coul_handler.potentials[coul_key].parameters[
-            "charge_increments"
-        ]
-        charge = to_openmm_quantity(-sum(charge_increments))
-
-        vdw_parameters = vdw_handler.potentials[vdw_key].parameters
-        sigma = to_openmm_quantity(vdw_parameters["sigma"])
-        epsilon = to_openmm_quantity(vdw_parameters["epsilon"])
-
-        index_system = openmm_sys.addParticle(mass=0.0)
-        index_force = non_bonded_force.addParticle(charge, sigma, epsilon)
-
-        if index_system != index_force:
-            raise InternalInconsistencyError("Mismatch in system and force indexing")
-
-        parent_particle_mapping[parent_atom].append(index_force)
-
-        openmm_sys.setVirtualSite(index_system, openmm_particle)
-
-        if virtual_site_handler.exclusion_policy == "parents":
-            for orientation_atom_index in orientations:
-                non_bonded_force.addException(
-                    orientation_atom_index,
-                    index_force,
-                    0.0,
-                    0.0,
-                    0.0,
-                    replace=True,
-                )
-
-                # This dict only contains `orientation_atom_index` if that orientation atom (of this
-                # particle) is coincidentally a parent atom of another particle. This is probably
-                # not common but must be dealt with separately.
-                for other_particle_index in parent_particle_mapping[parent_atom]:
-                    if other_particle_index in orientations:
-                        continue
-                    non_bonded_force.addException(
-                        other_particle_index,
-                        index_force,
-                        0.0,
-                        0.0,
-                        0.0,
-                        replace=True,
-                    )
 
 
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
