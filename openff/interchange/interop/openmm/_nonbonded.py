@@ -515,8 +515,18 @@ def _create_exceptions(
                         virtual_particle_of_p1, p2, 0.0, 0.0, 0.0, replace=True
                     )
                 else:
-                    # TODO: Decide on best logic for inheriting scaled 1-4 interactions
-                    raise Exception
+                    # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
+                    v1_parameters = non_bonded_force.getParticleParameters(
+                        virtual_particle_of_p1
+                    )
+                    p2_parameters = non_bonded_force.getParticleParameters(p2)
+                    non_bonded_force.addException(
+                        particle1=virtual_particle_of_p1,
+                        particle2=p2,
+                        chargeProd=v1_parameters[0] * p2_parameters[0],
+                        sigma=(v1_parameters[1] + p2_parameters[1]) * 0.5,
+                        epsilon=(v1_parameters[2] * p2_parameters[2]) ** 0.5,
+                    )
             for virtual_particle_of_p2 in parent_virtual_particle_mapping[p2]:
                 # If this iterable is not empty, add an exception between p1's virtual
                 # particle and the "other" atom in p1's exception
@@ -528,8 +538,18 @@ def _create_exceptions(
                         virtual_particle_of_p2, p1, 0.0, 0.0, 0.0, replace=True
                     )
                 else:
-                    # TODO: Decide on best logic for inheriting scaled 1-4 interactions
-                    raise Exception
+                    # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
+                    v2_parameters = non_bonded_force.getParticleParameters(
+                        virtual_particle_of_p2
+                    )
+                    p1_parameters = non_bonded_force.getParticleParameters(p1)
+                    non_bonded_force.addException(
+                        particle1=virtual_particle_of_p2,
+                        particle2=p1,
+                        chargeProd=v2_parameters[0] * p1_parameters[0],
+                        sigma=(v2_parameters[1] + p1_parameters[1]) * 0.5,
+                        epsilon=(v2_parameters[2] * p1_parameters[2]) ** 0.5,
+                    )
 
 
 def _create_multiple_nonbonded_forces(
