@@ -40,6 +40,7 @@ jobs:
         environment-file: devtools/conda-envs/test_env.yaml
         extra-specs: |
           python=${{ matrix.python-version }}
+          mamba
 
     - name: Additional info about the build
       run: |
@@ -75,6 +76,7 @@ jobs:
 
     - name: Run small molecule regression tests
       run: |
+        mamba install deepdiff rich click -c conda-forge -yq
         pip install git+https://github.com/openforcefield/interchange-regression-testing.git
         export INTERCHANGE_VERSION=$(python -c "import openff.interchange; print(openff.interchange.__version__)")
 
