@@ -1,6 +1,5 @@
 import foyer
 import numpy as np
-import openmm
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
@@ -11,7 +10,6 @@ from openmm import unit as openmm_unit
 from openff.interchange import Interchange
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
-from openff.interchange.drivers.openmm import _get_openmm_energies
 from openff.interchange.drivers.report import EnergyError, EnergyReport
 from openff.interchange.tests import (
     HAS_GROMACS,
@@ -124,116 +122,6 @@ class TestEnergies(_BaseTest):
             }
             lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
 
-    @pytest.mark.skip(
-        reason="Needs to be reimplmented after OFFTK 0.11.0 with fewer moving parts"
-    )
-    @needs_gmx
-    @pytest.mark.slow()
-    @pytest.mark.parametrize(
-        "toolkit_file_path",
-        [
-            "systems/test_systems/1_cyclohexane_1_ethanol.pdb",
-            "systems/test_systems/1_ethanol.pdb",
-            "systems/test_systems/1_ethanol_reordered.pdb",
-            # "systems/test_systems/T4_lysozyme_water_ions.pdb",
-            "systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb",
-            "systems/packmol_boxes/cyclohexane_water.pdb",
-            "systems/packmol_boxes/ethanol_water.pdb",
-            "systems/packmol_boxes/propane_methane_butanol_0.2_0.3_0.5.pdb",
-        ],
-    )
-    def test_packmol_boxes(self, sage, toolkit_file_path):
-        # TODO: Isolate a set of systems here instead of using toolkit data
-        # TODO: Fix nonbonded energy differences
-        from openff.toolkit.utils import get_data_file_path
-
-        pdb_file_path = get_data_file_path(toolkit_file_path)
-        pdbfile = openmm.app.PDBFile(pdb_file_path)
-
-        unique_molecules = [
-            Molecule.from_smiles(smi)
-            for smi in [
-                "CCO",
-                "CCCCO",
-                "C",
-                "CCC",
-                "C1CCCCC1",
-                "O",
-            ]
-        ]
-        omm_topology = pdbfile.topology
-        off_topology = Topology.from_openmm(
-            omm_topology, unique_molecules=unique_molecules
-        )
-
-        off_sys = Interchange.from_smirnoff(sage, off_topology)
-
-        off_sys.box = np.asarray(
-            pdbfile.topology.getPeriodicBoxVectors().value_in_unit(
-                openmm_unit.nanometer
-            )
-        )
-        off_sys.positions = pdbfile.positions
-
-        sys_from_toolkit = sage.create_openmm_system(off_topology)
-
-        omm_energies = get_openmm_energies(
-            off_sys,
-            combine_nonbonded_forces=True,
-            hard_cutoff=True,
-            electrostatics=False,
-        )
-        reference = _get_openmm_energies(
-            sys_from_toolkit,
-            off_sys.box,
-            off_sys.positions,
-            hard_cutoff=True,
-            electrostatics=False,
-        )
-
-        try:
-            omm_energies.compare(
-                reference,
-                # custom_tolerances={
-                #    "Electrostatics": 2e-4 * openmm_unit.kilojoule_per_mole,
-                # },
-            )
-        except EnergyError as err:
-            if "Torsion" in err.args[0]:
-                from openff.interchange.tests.utils import (  # type: ignore
-                    _compare_torsion_forces,
-                    _get_force,
-                )
-
-                _compare_torsion_forces(
-                    _get_force(off_sys.to_openmm, openmm.PeriodicTorsionForce),
-                    _get_force(sys_from_toolkit, openmm.PeriodicTorsionForce),
-                )
-
-        # custom_tolerances={"HarmonicBondForce": 1.0}
-
-        # Compare GROMACS writer and OpenMM export
-        gmx_energies = get_gromacs_energies(off_sys)
-
-        omm_energies_rounded = get_openmm_energies(
-            off_sys,
-            round_positions=8,
-            hard_cutoff=True,
-            electrostatics=False,
-        )
-
-        omm_energies_rounded.compare(
-            other=gmx_energies,
-            custom_tolerances={
-                "Angle": 1e-2 * openmm_unit.kilojoule_per_mole,
-                "Torsion": 1e-2 * openmm_unit.kilojoule_per_mole,
-                "Electrostatics": 3200 * openmm_unit.kilojoule_per_mole,
-                "vdW": 0.5 * openmm_unit.kilojoule_per_mole,
-            },
-        )
-
-    # TODO: Add back some sort of water dimer test
-
     @needs_gmx
     @skip_if_missing("foyer")
     @skip_if_missing("mbuild")
@@ -290,7 +178,7 @@ class TestEnergies(_BaseTest):
         # TODO: It would be best to save the 1-4 interactions, split off into vdW and Electrostatics
         # in the energies. This might be tricky/intractable to do for engines that are not GROMACS
 
-    @pytest.mark.skip("LAMMPS export experimental")
+    @pytest.mark.skip(reason="LAMMPS export experimental")
     @needs_gmx
     @needs_lmp
     @pytest.mark.slow()

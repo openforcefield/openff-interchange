@@ -501,7 +501,8 @@ class TestToOpenMMPositions(_BaseTest):
         assert positions.shape == (4, 3) if include_virtual_sites else (3, 3)
 
         numpy.testing.assert_allclose(
-            positions.to(unit.angstrom)[:3], water.conformers[0]
+            positions.to(unit.angstrom)[:3],
+            water.conformers[0].m_as(unit.angstrom),
         )
 
 
