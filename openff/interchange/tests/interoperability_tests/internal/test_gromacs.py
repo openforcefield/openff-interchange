@@ -191,9 +191,7 @@ class TestGROMACS(_BaseTest):
         geometric = GromacsParser("geometric.top", "tmp.gro").read()
         assert geometric.combination_rule == "Multiply-Sigeps"
 
-    @pytest.mark.xfail(
-        reason="cannot test unsupported mixing rules in GROMACS with current SMIRNOFFvdWHandler model"
-    )
+    @pytest.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
     def test_unsupported_mixing_rule(self, ethanol_top, sage):
         # TODO: Update this test when the model supports more mixing rules than GROMACS does
         openff_sys = Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)

@@ -114,6 +114,7 @@ class TestOpenMM(_BaseTest):
         else:
             raise Exception("uh oh")
 
+    @pytest.mark.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
     def test_unsupported_mixing_rule(self):
         molecules = [create_ethanol()]
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
