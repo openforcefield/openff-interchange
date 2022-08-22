@@ -81,17 +81,17 @@ jobs:
         export INTERCHANGE_VERSION=$(python -c "import openff.interchange; print(openff.interchange.__version__)")
 
         create_openmm_systems \
-          --input "small-molecule/input-topologies.json" \
-          --output "small-molecule/" \
+          --input "regression_tests/small-molecule/input-topologies.json" \
+          --output "regression_tests/small-molecule/" \
           --using-toolkit \
           --force-field "openff-2.0.0.offxml" \
           --n-procs 2
 
         compare_openmm_systems \
-          --input-dir-a "small-molecule/omm-systems-toolkit-0.10.6" \
-          --input-dir-b "small-molecule/omm-systems-interchange-$INTERCHANGE_VERSION" \
-          --output "differences.json" \
-          --expected-changes "toolkit-to-interchange.json" \
+          --input-dir-a "regression_tests/small-molecule/omm-systems-toolkit-0.10.6" \
+          --input-dir-b "regression_tests/small-molecule/omm-systems-interchange-$INTERCHANGE_VERSION" \
+          --output "regression_tests/differences.json" \
+          --expected-changes "regression_tests/toolkit-to-interchange.json" \
           --n-procs 2
 
     - name: Codecov
