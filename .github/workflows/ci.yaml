@@ -68,10 +68,29 @@ jobs:
       run: |
         mypy --namespace-packages -p "openff.interchange"
 
-    - name: Run all tests
+    - name: Run tests
       if: always()
       run: |
         python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
+
+    - name: Run small molecule regression tests
+      run: |
+        pip install git+https://github.com/openforcefield/interchange-regression-testing.git
+        export INTERCHANGE_VERSION=$(python -c "import openff.interchange; print(openff.interchange.__version__)")
+
+        create_openmm_systems \
+          --input "small-molecule/input-topologies.json" \
+          --output "small-molecule/" \
+          --using-toolkit \
+          --force-field "openff-2.0.0.offxml" \
+          --n-procs 2
+
+        compare_openmm_systems \
+          --input-dir-a "small-molecule/omm-systems-toolkit-0.10.6" \
+          --input-dir-b "small-molecule/omm-systems-interchange-$INTERCHANGE_VERSION" \
+          --output "differences.json" \
+          --expected-changes "toolkit-to-interchange.json" \
+          --n-procs 2
 
     - name: Codecov
       uses: codecov/codecov-action@v3
