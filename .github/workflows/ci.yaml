@@ -65,19 +65,20 @@ jobs:
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
-    - name: Run mypy
-      run: |
-        mypy --namespace-packages -p "openff.interchange"
+#   - name: Run mypy
+#     run: |
+#       mypy --namespace-packages -p "openff.interchange"
 
-    - name: Run tests
-      if: always()
-      run: |
-        python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
+#   - name: Run tests
+#     if: always()
+#     run: |
+#       python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
 
     - name: Run small molecule regression tests
+      if: ${{ matrix.python-version == "3.9"}}
       run: |
         mamba install deepdiff rich click -c conda-forge -yq
-        pip install git+https://github.com/openforcefield/interchange-regression-testing.git
+        python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git
 
         create_openmm_systems \
           --input "regression_tests/small-molecule/input-topologies.json" \
@@ -86,8 +87,12 @@ jobs:
           --force-field "openff-2.0.0.offxml" \
           --n-procs 2
 
+        python -c "from openff.interchange import __version__; print(__version__)"
         # Don't trust the interchange version here, for some reason, just put it in a new directory
         mkdir regression_tests/small-molecule/omm-systems-interchange-latest/
+        ls regression_tests/
+        ls regression_tests/small-molecule/
+        ls regression_tests/small-molecule/omm-systems-interchange-latest/
         mv regression_tests/small-molecule/omm-systems-interchange-*/*xml regression_tests/small-molecule/omm-systems-interchange-latest/
 
         compare_openmm_systems \
