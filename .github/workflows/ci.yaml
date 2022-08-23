@@ -75,15 +75,16 @@ jobs:
 #       python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
 
     - name: Run small molecule regression tests
-      if: ${{ matrix.python-version == "3.9" }}
+      if: ${{ matrix.python-version == 3.9 && matrix.openeye == true }}
       run: |
+        mamba uninstall rdkit ambertools -c conda-forge -yq
         mamba install deepdiff rich click -c conda-forge -yq
         python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git
 
         create_openmm_systems \
           --input "regression_tests/small-molecule/input-topologies.json" \
           --output "regression_tests/small-molecule/" \
-          --using-toolkit \
+          --using-interchange \
           --force-field "openff-2.0.0.offxml" \
           --n-procs 2
 
