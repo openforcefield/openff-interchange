@@ -65,14 +65,14 @@ jobs:
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
-#   - name: Run mypy
-#     run: |
-#       mypy --namespace-packages -p "openff.interchange"
+    - name: Run mypy
+      run: |
+        mypy --namespace-packages -p "openff.interchange"
 
-#   - name: Run tests
-#     if: always()
-#     run: |
-#       python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
+    - name: Run tests
+      if: always()
+      run: |
+        python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
 
     - name: Run small molecule regression tests
       if: ${{ matrix.python-version == 3.9 && matrix.openeye == true }}

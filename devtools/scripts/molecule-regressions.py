@@ -1,7 +1,7 @@
 import json
 
-file_name = 'regression_tests/differences.json'
-input_path = 'regression_tests/small-molecule/input-topologies.json'
+file_name = "regression_tests/differences.json"
+input_path = "regression_tests/small-molecule/input-topologies.json"
 
 differences = dict()
 
