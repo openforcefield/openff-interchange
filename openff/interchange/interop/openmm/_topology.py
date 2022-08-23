@@ -18,8 +18,8 @@ def to_openmm_topology(
 
     from collections import defaultdict
 
-    from openff.toolkit.topology.molecule import Bond
     from openff.toolkit.topology import Topology
+    from openff.toolkit.topology.molecule import Bond
     from openmm import app
 
     from openff.interchange.interop._virtual_sites import (
