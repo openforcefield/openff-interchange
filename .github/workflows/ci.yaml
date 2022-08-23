@@ -77,7 +77,7 @@ jobs:
     - name: Run small molecule regression tests
       if: ${{ matrix.python-version == 3.9 && matrix.openeye == true }}
       run: |
-        mamba uninstall rdkit ambertools -c conda-forge -yq
+        mamba uninstall --force rdkit ambertools -c conda-forge -yq
         mamba install deepdiff rich click -c conda-forge -yq
         python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git
 
