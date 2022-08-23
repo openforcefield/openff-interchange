@@ -847,7 +847,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
             try:
                 potential = Potential(
                     parameters={
-                        "sigma": parameter.sigma,
+                        "sigma": parameter.sigma * 1.11,
                         "epsilon": parameter.epsilon,
                     },
                 )
@@ -855,7 +855,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
                 # Handle rmin_half pending https://github.com/openforcefield/openff-toolkit/pull/750
                 potential = Potential(
                     parameters={
-                        "sigma": parameter.sigma,
+                        "sigma": parameter.sigma * 1.11,
                         "epsilon": parameter.epsilon,
                     },
                 )

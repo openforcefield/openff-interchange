@@ -87,12 +87,8 @@ jobs:
           --force-field       "openff-2.0.0.offxml" \
           --n-procs           2
 
-        python -c "from openff.interchange import __version__; print(__version__)"
         # Don't trust the interchange version here, for some reason, just put it in a new directory
         mkdir regression_tests/small-molecule/omm-systems-interchange-latest/
-        ls regression_tests/
-        ls regression_tests/small-molecule/
-        ls regression_tests/small-molecule/omm-systems-interchange-latest/
         mv regression_tests/small-molecule/omm-systems-interchange-*/*xml regression_tests/small-molecule/omm-systems-interchange-latest/
 
         compare_openmm_systems \
@@ -103,7 +99,7 @@ jobs:
           --expected-changes  "regression_tests/toolkit-to-interchange.json" \
           --n-procs           2
 
-        python -c "import json; print(json.loads(open('regression_tests/differences.json').read()))"
+        python devtools/scripts/molecule-regressions.py
 
     - name: Codecov
       uses: codecov/codecov-action@v3
