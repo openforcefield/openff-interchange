@@ -380,6 +380,24 @@ class TestOpenMMVirtualSites(_BaseTest):
 
         return sage
 
+    def test_valence_term_paticle_index_offsets(self):
+        tip5p = ForceField(get_test_file_path("tip5p.offxml"))
+        water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+
+        out = Interchange.from_smirnoff(tip5p, [water, water]).to_openmm(
+            combine_nonbonded_forces=True
+        )
+
+        assert out.getNumForces() == 3
+
+        for force in out.getForces():
+            if isinstance(force, openmm.HarmonicAngleForce):
+                p1, p2, p3, _, _ = force.getAngleParameters(1)
+
+                assert p1 == 6
+                assert p2 == 5
+                assert p3 == 7
+
 
 class TestOpenMMVirtualSiteExclusions(_BaseTest):
     def test_tip5p_num_exceptions(self):
