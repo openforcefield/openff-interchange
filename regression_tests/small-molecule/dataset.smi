@@ -7,10 +7,4 @@ CC(=O)On1nc(-c2ccc(F)c(C)c2)cc1-c1ccccc1
 C[C@@H](CCCN)C(=O)NCc1ccc(Oc2ccc([C@H](C)O)cc2Cl)cc1
 COC(=O)c1scc(-c2cccc(-c3cc(C)ccc3O)n2)c1C
 NC(=O)c1cccc2cc(-c3cncc4c3COC[C@@H]4O)cnc12
-Cc1ccccc1-c1cn2c(nc3[nH]c(=O)[nH]c(=O)c32)[nH]1
-O=C1c2cnccc2Cc2[nH]c3ccccc3c21
-Oc1ccc(-c2noc3c(Cl)c4c(cc23)CCO4)cc1
-[H]/N=c1\cc2[nH]c3ccccc3nc-2cc1Nc1cccnc1C
-O=c1[nH]ccc2ncc(-c3nc(-c4ccccc4)no3)cc12
-c1cn2nc(-c3ccc(C4CCC4)cc3)ccc2n1
-c1ccc(-c2ccc(/N=c3\cc[nH]c4ccccc34)cc2)cc1
+COc1ccc(-c2nc3ncc4c(n3n2)NCC4)cc1

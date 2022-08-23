@@ -16,7 +16,8 @@ if len(differences) > 0:
     with open(input_path) as file:
         inputs = json.loads(file.read())
 
-    for molecule in differences.keys():
+    for molecule, difference in differences.items():
         print(inputs[int(molecule)])
+        print("\t" + str(difference))
 
     exit(1)
