@@ -58,20 +58,24 @@ def to_openmm(
         openmm_sys,
         combine_nonbonded_forces=combine_nonbonded_forces,
     )
+
     constrained_pairs = _process_constraints(openff_sys, openmm_sys, particle_map)
-    _process_torsion_forces(openff_sys, openmm_sys)
-    _process_improper_torsion_forces(openff_sys, openmm_sys)
+
+    _process_torsion_forces(openff_sys, openmm_sys, particle_map)
+    _process_improper_torsion_forces(openff_sys, openmm_sys, particle_map)
     _process_angle_forces(
         openff_sys,
         openmm_sys,
         add_constrained_forces=add_constrained_forces,
         constrained_pairs=constrained_pairs,
+        particle_map=particle_map,
     )
     _process_bond_forces(
         openff_sys,
         openmm_sys,
         add_constrained_forces=add_constrained_forces,
         constrained_pairs=constrained_pairs,
+        particle_map=particle_map,
     )
 
     return openmm_sys
