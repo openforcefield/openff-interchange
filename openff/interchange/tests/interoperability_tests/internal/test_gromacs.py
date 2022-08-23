@@ -173,6 +173,7 @@ class TestGROMACS(_BaseTest):
 
     @pytest.mark.slow()
     @skip_if_missing("intermol")
+    @pytest.mark.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
     def test_set_mixing_rule(self, ethanol_top, sage):
         from intermol.gromacs.gromacs_parser import GromacsParser
 
@@ -191,9 +192,7 @@ class TestGROMACS(_BaseTest):
         geometric = GromacsParser("geometric.top", "tmp.gro").read()
         assert geometric.combination_rule == "Multiply-Sigeps"
 
-    @pytest.mark.xfail(
-        reason="cannot test unsupported mixing rules in GROMACS with current SMIRNOFFvdWHandler model"
-    )
+    @pytest.mark.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
     def test_unsupported_mixing_rule(self, ethanol_top, sage):
         # TODO: Update this test when the model supports more mixing rules than GROMACS does
         openff_sys = Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
@@ -206,9 +205,14 @@ class TestGROMACS(_BaseTest):
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .top files."""
         import parmed
+        from openff.units.openmm import from_openmm
 
-        protein = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_HIE.pdb")
+        pdb_path = get_data_file_path("proteins/MainChain_HIE.pdb")
+
+        protein = Molecule.from_polymer_pdb(pdb_path)
+
+        box_vectors = from_openmm(
+            openmm.app.PDBFile(pdb_path).topology.getPeriodicBoxVectors()
         )
 
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
@@ -216,6 +220,7 @@ class TestGROMACS(_BaseTest):
         out = Interchange.from_smirnoff(
             force_field=ff14sb,
             topology=[protein],
+            box=box_vectors,
         )
 
         out.to_top("tmp.top")

@@ -10,7 +10,7 @@ from openmm import app
 from openmm import unit as openmm_unit
 
 from openff.interchange import Interchange
-from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
+from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import (
     MissingPositionsError,
     UnsupportedCutoffMethodError,
@@ -114,6 +114,7 @@ class TestOpenMM(_BaseTest):
         else:
             raise Exception("uh oh")
 
+    @pytest.mark.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
     def test_unsupported_mixing_rule(self):
         molecules = [create_ethanol()]
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
@@ -128,60 +129,6 @@ class TestOpenMM(_BaseTest):
 
         with pytest.raises(UnsupportedExportError, match="default NonbondedForce"):
             openff_sys.to_openmm(combine_nonbonded_forces=True)
-
-    @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
-    @pytest.mark.slow()
-    @pytest.mark.parametrize("n_mols", [1, 2])
-    @pytest.mark.parametrize(
-        "mol",
-        [
-            "C",
-            "CC",  # Adds a proper torsion term(s)
-            "OC=O",  # Simplest molecule with a multi-term torsion
-            "CCOC",  # This hits t86, which has a non-1.0 idivf
-            "C1COC(=O)O1",  # This adds an improper, i2
-        ],
-    )
-    def test_from_openmm_single_mols(sage, mol, n_mols):
-        """
-        Test that ForceField.create_openmm_system and Interchange.to_openmm produce
-        objects with similar energies
-
-        TODO: Tighten tolerances
-        TODO: Test periodic and non-periodic
-        """
-        mol = Molecule.from_smiles(mol)
-        mol.generate_conformers(n_conformers=1)
-        top = Topology.from_molecules(n_mols * [mol])
-        mol.conformers[0] -= numpy.min(mol.conformers)
-
-        top.box_vectors = 15 * numpy.eye(3) * unit.nanometer
-
-        if n_mols == 1:
-            positions = mol.conformers[0]
-        elif n_mols == 2:
-            positions = numpy.concatenate(
-                [mol.conformers[0], mol.conformers[0] + 3 * mol.conformers[0].units]
-            )
-
-        toolkit_system = sage.create_openmm_system(top)
-
-        native_system = Interchange.from_smirnoff(
-            force_field=sage, topology=top
-        ).to_openmm()
-
-        toolkit_energy = _get_openmm_energies(
-            omm_sys=toolkit_system,
-            box_vectors=toolkit_system.getDefaultPeriodicBoxVectors(),
-            positions=positions,
-        )
-        native_energy = _get_openmm_energies(
-            omm_sys=native_system,
-            box_vectors=native_system.getDefaultPeriodicBoxVectors(),
-            positions=positions,
-        )
-
-        toolkit_energy.compare(native_energy)
 
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
     @pytest.mark.slow()
@@ -554,7 +501,8 @@ class TestToOpenMMPositions(_BaseTest):
         assert positions.shape == (4, 3) if include_virtual_sites else (3, 3)
 
         numpy.testing.assert_allclose(
-            positions.to(unit.angstrom)[:3], water.conformers[0]
+            positions.to(unit.angstrom)[:3],
+            water.conformers[0].m_as(unit.angstrom),
         )
 
 

@@ -1,0 +1,16 @@
+[
+  {
+    "type": "value-changed",
+    "openmm_path": "Forces/NonbondedForce/useSwitchingFunction",
+    "deepdiff_path": null,
+    "old_value": 0,
+    "new_value": 1
+  },
+  {
+    "type": "value-changed",
+    "openmm_path": "Forces/NonbondedForce/switchingDistance",
+    "deepdiff_path": null,
+    "old_value": -1.0,
+    "new_value": 0.8
+  }
+]

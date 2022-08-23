@@ -173,7 +173,7 @@ class TestInterchange(_BaseTest):
         Interchange.from_smirnoff(force_field=sage, topology=topology)
         new = list(topology.molecules)[0].conformers[0]
 
-        assert np.sum(original - new) == pytest.approx(0 * unit.angstrom)
+        assert np.sum((original - new).m_as(unit.angstrom)) == pytest.approx(0)
 
     @pytest.mark.skip("LAMMPS export experimental")
     @needs_gmx
