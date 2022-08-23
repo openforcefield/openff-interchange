@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Union
 
 from openff.interchange.models import VirtualSiteKey
 
@@ -9,7 +9,8 @@ if TYPE_CHECKING:
 
 
 def to_openmm_topology(
-    interchange: "Interchange", ensure_unique_atom_names: bool = True
+    interchange: "Interchange",
+    ensure_unique_atom_names: Union[str, bool] = "residues",
 ) -> "app.Topology":
     """Create an OpenMM Topology containing some virtual site information (if appropriate)."""
     # Heavily cribbed from the toolkit
@@ -18,13 +19,15 @@ def to_openmm_topology(
     from collections import defaultdict
 
     from openff.toolkit.topology.molecule import Bond
+    from openff.toolkit.topology import Topology
     from openmm import app
 
     from openff.interchange.interop._virtual_sites import (
         _virtual_site_parent_molecule_mapping,
     )
 
-    topology = interchange.topology
+    # Copy topology to avoid modifying input (eg, when generating atom names)
+    topology = Topology(interchange.topology)
 
     virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(interchange)
 
@@ -41,10 +44,17 @@ def to_openmm_topology(
 
     openmm_topology = app.Topology()
 
+    # Create unique atom names (as requested)
     if ensure_unique_atom_names:
-        for ref_mol in topology.reference_molecules:
-            if not ref_mol.has_unique_atom_names:
-                ref_mol.generate_unique_atom_names()
+        for molecule in topology._molecules:
+            if isinstance(ensure_unique_atom_names, str) and hasattr(
+                molecule, ensure_unique_atom_names
+            ):
+                for hier_elem in getattr(molecule, ensure_unique_atom_names):
+                    if not hier_elem.has_unique_atom_names:
+                        hier_elem.generate_unique_atom_names()
+            elif not molecule.has_unique_atom_names:
+                molecule.generate_unique_atom_names()
 
     # Go through atoms in OpenFF to preserve the order.
     omm_atoms = []
