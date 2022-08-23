@@ -18,3 +18,5 @@ if len(differences) > 0:
 
     for molecule in differences.keys():
         print(inputs[int(molecule)])
+
+    exit(1)
