@@ -102,7 +102,7 @@ jobs:
           --expected-changes "regression_tests/toolkit-to-interchange.json" \
           --n-procs 2
 
-        python -c "import json; print(json.loads(open('regression_tests/small-molecule/differences.json').read()))"
+        python -c "import json; print(json.loads(open('regression_tests/differences.json').read()))"
 
     - name: Codecov
       uses: codecov/codecov-action@v3
