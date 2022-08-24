@@ -62,14 +62,12 @@ def _process_nonbonded_forces(
 
         virtual_site_molecule_map: Dict[
             VirtualSiteKey,
-            "Molecule",
+            int,
         ] = _virtual_site_parent_molecule_mapping(openff_sys)
 
         molecule_virtual_site_map: Dict[int, List[VirtualSiteKey]] = defaultdict(list)
 
-        for virtual_site_key, molecule in virtual_site_molecule_map.items():
-
-            molecule_index = openff_sys.topology.molecule_index(molecule)
+        for virtual_site_key, molecule_index in virtual_site_molecule_map.items():
             molecule_virtual_site_map[molecule_index].append(virtual_site_key)
 
     else:

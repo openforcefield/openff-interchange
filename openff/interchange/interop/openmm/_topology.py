@@ -33,10 +33,8 @@ def to_openmm_topology(
 
     molecule_virtual_site_map = defaultdict(list)
 
-    for virtual_site, molecule in virtual_site_molecule_map.items():
-        molecule_virtual_site_map[topology.molecule_index(molecule)].append(
-            virtual_site
-        )
+    for virtual_site, molecule_index in virtual_site_molecule_map.items():
+        molecule_virtual_site_map[molecule_index].append(virtual_site)
 
     has_virtual_sites = len(virtual_site_molecule_map) > 0
 

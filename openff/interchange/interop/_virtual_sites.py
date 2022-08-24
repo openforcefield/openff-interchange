@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Dict
 
 import numpy
-from openff.toolkit import Molecule
 from openff.units import unit
 
 from openff.interchange.models import VirtualSiteKey
@@ -12,8 +11,8 @@ if TYPE_CHECKING:
 
 def _virtual_site_parent_molecule_mapping(
     interchange: "Interchange",
-) -> Dict[VirtualSiteKey, Molecule]:
-    mapping: Dict[VirtualSiteKey, Molecule] = dict()
+) -> Dict[VirtualSiteKey, int]:
+    mapping: Dict[VirtualSiteKey, int] = dict()
 
     if "VirtualSites" not in interchange.handlers:
         return mapping
@@ -23,7 +22,7 @@ def _virtual_site_parent_molecule_mapping(
         parent_atom_index = virtual_site_key.orientation_atom_indices[0]
         parent_atom = interchange.topology.atom(parent_atom_index)
         parent_molecule = parent_atom.molecule
-        mapping[virtual_site_key] = parent_molecule
+        mapping[virtual_site_key] = interchange.topology.molecule_index(parent_molecule)
 
     return mapping
 
