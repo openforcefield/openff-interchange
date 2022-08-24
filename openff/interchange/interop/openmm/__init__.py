@@ -1,25 +1,21 @@
 """Interfaces with OpenMM."""
 from pathlib import Path
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import openmm
-from openff.toolkit.topology import Topology
-from openff.units import unit as off_unit
-from openff.units.openmm import from_openmm as from_openmm_quantity
 from openmm import unit
 
-from openff.interchange.components.potentials import Potential
-from openff.interchange.constants import _PME
 from openff.interchange.exceptions import UnsupportedImportError
-from openff.interchange.interop.openmm._nonbonded import _process_nonbonded_forces
-from openff.interchange.interop.openmm._valence import (
-    _process_angle_forces,
-    _process_bond_forces,
-    _process_constraints,
-    _process_improper_torsion_forces,
-    _process_torsion_forces,
-)
-from openff.interchange.models import PotentialKey, TopologyKey
+
+__all__ = [
+    "to_openmm",
+    "to_openmm_topology",
+    "to_openmm_positions",
+    "from_openmm",
+]
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology import Topology
 
 
 def to_openmm(
@@ -47,6 +43,17 @@ def to_openmm(
         The corresponding OpenMM System object
 
     """
+    from openff.units import unit as off_unit
+
+    from openff.interchange.interop.openmm._nonbonded import _process_nonbonded_forces
+    from openff.interchange.interop.openmm._valence import (
+        _process_angle_forces,
+        _process_bond_forces,
+        _process_constraints,
+        _process_improper_torsion_forces,
+        _process_torsion_forces,
+    )
+
     openmm_sys = openmm.System()
 
     if openff_sys.box is not None:
@@ -83,7 +90,18 @@ def to_openmm(
 
 def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
     """Create an Interchange object from OpenMM data."""
+    import warnings
+
     from openff.interchange import Interchange
+
+    warnings.warn(
+        "Importing from OpenMM `System` objects is EXPERIMENTAL, fragile, and "
+        "currently unlikely to produce expected results for all but the simplest "
+        "use cases. It is thereforce currently unsuitable for production work. "
+        "However, it is an area of active development; if this function would "
+        "enable key components of your workflows, feedback is welcome. Please "
+        'file an issue or create a new discussion (see the "Discussions" tab.'
+    )
 
     openff_sys = Interchange()
 
@@ -124,10 +142,15 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
 
 
 def _convert_nonbonded_force(force):
+    from openff.units.openmm import from_openmm as from_openmm_quantity
+
+    from openff.interchange.components.potentials import Potential
     from openff.interchange.components.smirnoff import (
         SMIRNOFFElectrostaticsHandler,
         SMIRNOFFvdWHandler,
     )
+    from openff.interchange.constants import _PME
+    from openff.interchange.models import PotentialKey, TopologyKey
 
     vdw_handler = SMIRNOFFvdWHandler()
     electrostatics = SMIRNOFFElectrostaticsHandler(version=0.4, scale_14=0.833333)
@@ -177,7 +200,11 @@ def _convert_nonbonded_force(force):
 
 
 def _convert_harmonic_bond_force(force):
+    from openff.units.openmm import from_openmm as from_openmm_quantity
+
+    from openff.interchange.components.potentials import Potential
     from openff.interchange.components.smirnoff import SMIRNOFFBondHandler
+    from openff.interchange.models import PotentialKey, TopologyKey
 
     bond_handler = SMIRNOFFBondHandler()
 
@@ -201,7 +228,11 @@ def _convert_harmonic_bond_force(force):
 
 
 def _convert_harmonic_angle_force(force):
+    from openff.units.openmm import from_openmm as from_openmm_quantity
+
+    from openff.interchange.components.potentials import Potential
     from openff.interchange.components.smirnoff import SMIRNOFFAngleHandler
+    from openff.interchange.models import PotentialKey, TopologyKey
 
     angle_handler = SMIRNOFFAngleHandler()
 
@@ -227,7 +258,11 @@ def _convert_harmonic_angle_force(force):
 def _convert_periodic_torsion_force(force):
     # TODO: Can impropers be separated out from a PeriodicTorsionForce?
     # Maybe by seeing if a quartet is in mol/top.propers or .impropers
+    from openff.units.openmm import from_openmm as from_openmm_quantity
+
+    from openff.interchange.components.potentials import Potential
     from openff.interchange.components.smirnoff import SMIRNOFFProperTorsionHandler
+    from openff.interchange.models import PotentialKey, TopologyKey
 
     proper_torsion_handler = SMIRNOFFProperTorsionHandler()
 
@@ -256,7 +291,7 @@ def _convert_periodic_torsion_force(force):
     return proper_torsion_handler
 
 
-def _to_pdb(file_path: Union[Path, str], topology: Topology, positions):
+def _to_pdb(file_path: Union[Path, str], topology: "Topology", positions):
     from openff.units.openmm import to_openmm
     from openmm import app
 
