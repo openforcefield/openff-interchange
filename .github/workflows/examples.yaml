@@ -66,4 +66,4 @@ jobs:
     - name: Run example notebooks
       if: always()
       run: |
-        python -m pytest examples/ --nbval-lax --ignore=examples/deprecated/ --ignore=examples/ligand_in_water/
+        python -m pytest examples/ --nbval-lax --ignore=examples/deprecated/
