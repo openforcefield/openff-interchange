@@ -10,7 +10,7 @@ from openmm import app
 from openmm import unit as openmm_unit
 
 from openff.interchange import Interchange
-from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
+from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import (
     MissingPositionsError,
     UnsupportedCutoffMethodError,
@@ -114,6 +114,7 @@ class TestOpenMM(_BaseTest):
         else:
             raise Exception("uh oh")
 
+    @pytest.mark.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
     def test_unsupported_mixing_rule(self):
         molecules = [create_ethanol()]
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
@@ -128,60 +129,6 @@ class TestOpenMM(_BaseTest):
 
         with pytest.raises(UnsupportedExportError, match="default NonbondedForce"):
             openff_sys.to_openmm(combine_nonbonded_forces=True)
-
-    @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
-    @pytest.mark.slow()
-    @pytest.mark.parametrize("n_mols", [1, 2])
-    @pytest.mark.parametrize(
-        "mol",
-        [
-            "C",
-            "CC",  # Adds a proper torsion term(s)
-            "OC=O",  # Simplest molecule with a multi-term torsion
-            "CCOC",  # This hits t86, which has a non-1.0 idivf
-            "C1COC(=O)O1",  # This adds an improper, i2
-        ],
-    )
-    def test_from_openmm_single_mols(sage, mol, n_mols):
-        """
-        Test that ForceField.create_openmm_system and Interchange.to_openmm produce
-        objects with similar energies
-
-        TODO: Tighten tolerances
-        TODO: Test periodic and non-periodic
-        """
-        mol = Molecule.from_smiles(mol)
-        mol.generate_conformers(n_conformers=1)
-        top = Topology.from_molecules(n_mols * [mol])
-        mol.conformers[0] -= numpy.min(mol.conformers)
-
-        top.box_vectors = 15 * numpy.eye(3) * unit.nanometer
-
-        if n_mols == 1:
-            positions = mol.conformers[0]
-        elif n_mols == 2:
-            positions = numpy.concatenate(
-                [mol.conformers[0], mol.conformers[0] + 3 * mol.conformers[0].units]
-            )
-
-        toolkit_system = sage.create_openmm_system(top)
-
-        native_system = Interchange.from_smirnoff(
-            force_field=sage, topology=top
-        ).to_openmm()
-
-        toolkit_energy = _get_openmm_energies(
-            omm_sys=toolkit_system,
-            box_vectors=toolkit_system.getDefaultPeriodicBoxVectors(),
-            positions=positions,
-        )
-        native_energy = _get_openmm_energies(
-            omm_sys=native_system,
-            box_vectors=native_system.getDefaultPeriodicBoxVectors(),
-            positions=positions,
-        )
-
-        toolkit_energy.compare(native_energy)
 
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
     @pytest.mark.slow()
@@ -433,6 +380,97 @@ class TestOpenMMVirtualSites(_BaseTest):
 
         return sage
 
+    def test_valence_term_paticle_index_offsets(self):
+        # Use a questionable version of TIP5P that includes angle parameters, since that's what's being tested
+        tip5p_offxml = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+        <LibraryCharge
+            name="tip5p"
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+            charge1="0.*elementary_charge"
+            charge2="0.*elementary_charge"
+            charge3="0.*elementary_charge"/>
+    </LibraryCharges>
+    <vdW
+        version="0.3"
+        potential="Lennard-Jones-12-6"
+        combining_rules="Lorentz-Berthelot"
+        scale12="0.0"
+        scale13="0.0"
+        scale14="0.5"
+        scale15="1.0"
+        switch_width="0.0 * angstrom"
+        cutoff="9.0 * angstrom" method="cutoff">
+            <Atom
+                smirks="[#1:1]-[#8X2H2+0]-[#1]"
+                epsilon="0.*mole**-1*kilojoule"
+                sigma="1.0 * nanometer"/>
+            <Atom
+                smirks="[#1]-[#8X2H2+0:1]-[#1]"
+                epsilon="0.66944*mole**-1*kilojoule"
+                sigma="0.312*nanometer"/>
+    </vdW>
+    <Bonds
+        version="0.4"
+        potential="harmonic"
+        fractional_bondorder_method="AM1-Wiberg"
+        fractional_bondorder_interpolation="linear">
+        <Bond
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1]"
+            length="0.9572*angstrom"
+            k="462750.4*nanometer**-2*mole**-1*kilojoule"/>
+    </Bonds>
+    <Angles version="0.3" potential="harmonic">
+        <Angle
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+            angle="1.82421813418*radian"
+            k="836.8*mole**-1*radian**-2*kilojoule"
+            id="a1"/>
+    </Angles>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="DivalentLonePair"
+            name="EP"
+            smirks="[#1:2]-[#8X2H2+0:1]-[#1:3]"
+            distance="0.70 * angstrom"
+            charge_increment1="0.0*elementary_charge"
+            charge_increment2="0.1205*elementary_charge"
+            charge_increment3="0.1205*elementary_charge"
+            sigma="10.0*angstrom"
+            epsilon="0.0*kilocalories_per_mole"
+            outOfPlaneAngle="54.71384225*degree"
+            match="all_permutations" >
+        </VirtualSite>
+    </VirtualSites>
+    <Electrostatics
+        version="0.3"
+        method="PME"
+        scale12="0.0"
+        scale13="0.0"
+        scale14="0.833333"
+        scale15="1.0"
+        switch_width="0.0 * angstrom"
+        cutoff="9.0 * angstrom"/>
+</SMIRNOFF>
+"""
+        tip5p = ForceField(tip5p_offxml)
+        water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+
+        out = Interchange.from_smirnoff(tip5p, [water, water]).to_openmm(
+            combine_nonbonded_forces=True
+        )
+
+        assert out.getNumForces() == 3
+
+        for force in out.getForces():
+            if isinstance(force, openmm.HarmonicAngleForce):
+                p1, p2, p3, _, _ = force.getAngleParameters(1)
+
+                assert p1 == 6
+                assert p2 == 5
+                assert p3 == 7
+
 
 class TestOpenMMVirtualSiteExclusions(_BaseTest):
     def test_tip5p_num_exceptions(self):
@@ -554,7 +592,8 @@ class TestToOpenMMPositions(_BaseTest):
         assert positions.shape == (4, 3) if include_virtual_sites else (3, 3)
 
         numpy.testing.assert_allclose(
-            positions.to(unit.angstrom)[:3], water.conformers[0]
+            positions.to(unit.angstrom)[:3],
+            water.conformers[0].m_as(unit.angstrom),
         )
 
 

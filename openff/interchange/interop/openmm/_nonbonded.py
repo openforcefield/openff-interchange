@@ -44,7 +44,9 @@ def _process_nonbonded_forces(
         if isinstance(handler, _SMIRNOFFNonbondedHandler):
             break
     else:
-        return dict()
+        # If there are no non-bonded handlers, assume here that there can be no virtual sites,
+        # so just return an i-i mapping between OpenFF and OpenMM indices
+        return {i: i for i in range(openff_sys.topology.n_atoms)}
 
     has_virtual_sites = "VirtualSites" in openff_sys.handlers
 
@@ -138,8 +140,7 @@ def _process_nonbonded_forces(
             c = to_openmm_quantity(params["C"])
             non_bonded_force.setParticleParameters(atom_idx, [a, b, c])
 
-        # TODO: In principle this is an i-i mapping between OpenFF and OpenMM atom indices
-        return dict()
+        openff_openmm_particle_map
 
     else:
         # Here we assume there are no vdW interactions in any handlers

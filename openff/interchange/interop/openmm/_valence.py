@@ -25,10 +25,8 @@ def _process_constraints(
 
     for top_key, pot_key in constraint_handler.slot_map.items():
         openff_indices = top_key.atom_indices
-        openmm_indices = (
-            particle_map[openff_indices[0]],
-            particle_map[openff_indices[1]],
-        )
+        openmm_indices = tuple(particle_map[index] for index in openff_indices)
+
         params = constraint_handler.constraints[pot_key].parameters
         distance = params["distance"]
         distance_omm = distance.m_as(off_unit.nanometer)
@@ -48,6 +46,7 @@ def _process_bond_forces(
     openmm_sys,
     add_constrained_forces: bool,
     constrained_pairs: List[Tuple[int]],
+    particle_map: Dict[Union[int, "VirtualSiteKey"], int],
 ):
     """
     Process the Bonds section of an Interchange object.
@@ -71,14 +70,16 @@ def _process_bond_forces(
 
     for top_key, pot_key in bond_handler.slot_map.items():
 
-        indices = top_key.atom_indices
+        openff_indices = top_key.atom_indices
+        openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
         if has_constraint_handler and not add_constrained_forces:
-            if _is_constrained(constrained_pairs, (indices[0], indices[1])):
+            if _is_constrained(
+                constrained_pairs, (openmm_indices[0], openmm_indices[1])
+            ):
                 # This bond's length is constrained, dpo so not add a bond force
                 continue
 
-        indices = top_key.atom_indices
         params = bond_handler.potentials[pot_key].parameters
         k = params["k"].m_as(
             off_unit.kilojoule / off_unit.nanometer**2 / off_unit.mol
@@ -86,8 +87,8 @@ def _process_bond_forces(
         length = params["length"].m_as(off_unit.nanometer)
 
         harmonic_bond_force.addBond(
-            particle1=indices[0],
-            particle2=indices[1],
+            particle1=openmm_indices[0],
+            particle2=openmm_indices[1],
             length=length,
             k=k,
         )
@@ -98,6 +99,7 @@ def _process_angle_forces(
     openmm_sys,
     add_constrained_forces: bool,
     constrained_pairs: List[Tuple[int]],
+    particle_map,
 ):
     """
     Process the Angles section of an Interchange object.
@@ -129,12 +131,19 @@ def _process_angle_forces(
 
     for top_key, pot_key in angle_handler.slot_map.items():
 
-        indices = top_key.atom_indices
+        openff_indices = top_key.atom_indices
+        openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
         if has_constraint_handler and not add_constrained_forces:
-            if _is_constrained(constrained_pairs, (indices[0], indices[2])):
-                if _is_constrained(constrained_pairs, (indices[0], indices[1])):
-                    if _is_constrained(constrained_pairs, (indices[1], indices[2])):
+            if _is_constrained(
+                constrained_pairs, (openmm_indices[0], openmm_indices[2])
+            ):
+                if _is_constrained(
+                    constrained_pairs, (openmm_indices[0], openmm_indices[1])
+                ):
+                    if _is_constrained(
+                        constrained_pairs, (openmm_indices[1], openmm_indices[2])
+                    ):
                         # This angle's geometry is fully subject to constraints, so do
                         # not an angle force
                         continue
@@ -147,9 +156,9 @@ def _process_angle_forces(
             ]
 
             harmonic_angle_force.addAngle(
-                indices[0],
-                indices[1],
-                indices[2],
+                openmm_indices[0],
+                openmm_indices[1],
+                openmm_indices[2],
                 parameter_values,
             )
 
@@ -159,22 +168,22 @@ def _process_angle_forces(
             angle = params["angle"].m_as(off_unit.radian)
 
             harmonic_angle_force.addAngle(
-                particle1=indices[0],
-                particle2=indices[1],
-                particle3=indices[2],
+                particle1=openmm_indices[0],
+                particle2=openmm_indices[1],
+                particle3=openmm_indices[2],
                 angle=angle,
                 k=k,
             )
 
 
-def _process_torsion_forces(openff_sys, openmm_sys):
+def _process_torsion_forces(openff_sys, openmm_sys, particle_map):
     if "ProperTorsions" in openff_sys.handlers:
-        _process_proper_torsion_forces(openff_sys, openmm_sys)
+        _process_proper_torsion_forces(openff_sys, openmm_sys, particle_map)
     if "RBTorsions" in openff_sys.handlers:
-        _process_rb_torsion_forces(openff_sys, openmm_sys)
+        _process_rb_torsion_forces(openff_sys, openmm_sys, particle_map)
 
 
-def _process_proper_torsion_forces(openff_sys, openmm_sys):
+def _process_proper_torsion_forces(openff_sys, openmm_sys, particle_map):
     """
     Process the Propers section of an Interchange object.
     """
@@ -184,7 +193,9 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
     proper_torsion_handler = openff_sys["ProperTorsions"]
 
     for top_key, pot_key in proper_torsion_handler.slot_map.items():
-        indices = top_key.atom_indices
+        openff_indices = top_key.atom_indices
+        openmm_indices = tuple(particle_map[index] for index in openff_indices)
+
         params = proper_torsion_handler.potentials[pot_key].parameters
 
         k = params["k"].m_as(off_unit.kilojoule / off_unit.mol)
@@ -209,17 +220,17 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys):
         if idivf == 0:
             raise RuntimeError("Found an idivf of 0.")
         torsion_force.addTorsion(
-            indices[0],
-            indices[1],
-            indices[2],
-            indices[3],
+            openmm_indices[0],
+            openmm_indices[1],
+            openmm_indices[2],
+            openmm_indices[3],
             periodicity,
             phase,
             k / idivf,
         )
 
 
-def _process_rb_torsion_forces(openff_sys, openmm_sys):
+def _process_rb_torsion_forces(openff_sys, openmm_sys, particle_map):
     """
     Process Ryckaert-Bellemans torsions.
     """
@@ -229,7 +240,9 @@ def _process_rb_torsion_forces(openff_sys, openmm_sys):
     rb_torsion_handler = openff_sys["RBTorsions"]
 
     for top_key, pot_key in rb_torsion_handler.slot_map.items():
-        indices = top_key.atom_indices
+        openff_indices = top_key.atom_indices
+        openmm_indices = tuple(particle_map[index] for index in openff_indices)
+
         params = rb_torsion_handler.potentials[pot_key].parameters
 
         c0 = params["C0"].m_as(off_unit.kilojoule / off_unit.mol)
@@ -240,10 +253,10 @@ def _process_rb_torsion_forces(openff_sys, openmm_sys):
         c5 = params["C5"].m_as(off_unit.kilojoule / off_unit.mol)
 
         rb_force.addTorsion(
-            indices[0],
-            indices[1],
-            indices[2],
-            indices[3],
+            openmm_indices[0],
+            openmm_indices[1],
+            openmm_indices[2],
+            openmm_indices[3],
             c0,
             c1,
             c2,
@@ -253,7 +266,7 @@ def _process_rb_torsion_forces(openff_sys, openmm_sys):
         )
 
 
-def _process_improper_torsion_forces(openff_sys, openmm_sys):
+def _process_improper_torsion_forces(openff_sys, openmm_sys, particle_map):
     """
     Process the Impropers section of an Interchange object.
     """
@@ -270,7 +283,9 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys):
     improper_torsion_handler = openff_sys["ImproperTorsions"]
 
     for top_key, pot_key in improper_torsion_handler.slot_map.items():
-        indices = top_key.atom_indices
+        openff_indices = top_key.atom_indices
+        openmm_indices = tuple(particle_map[index] for index in openff_indices)
+
         params = improper_torsion_handler.potentials[pot_key].parameters
 
         k = params["k"].m_as(off_unit.kilojoule / off_unit.mol)
@@ -279,10 +294,10 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys):
         idivf = int(params["idivf"])
 
         torsion_force.addTorsion(
-            indices[0],
-            indices[1],
-            indices[2],
-            indices[3],
+            openmm_indices[0],
+            openmm_indices[1],
+            openmm_indices[2],
+            openmm_indices[3],
             periodicity,
             phase,
             k / idivf,
