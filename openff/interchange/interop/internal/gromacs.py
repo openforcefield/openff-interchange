@@ -95,7 +95,7 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
 
         n_virtual_sites = 0
 
-        for molecule in openff_sys.topology.molecules:
+        for molecule_index, molecule in enumerate(openff_sys.topology.molecules):
             for atom in molecule.atoms:
 
                 residue_index, residue_name = _get_residue_info_from_atom(atom)
@@ -120,7 +120,7 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
 
             try:
                 virtual_site_keys: List[VirtualSiteKey] = molecule_virtual_site_map[
-                    openff_sys.topology.molecule_index(molecule)
+                    molecule_index
                 ]
             except KeyError:
                 # This molecule is not in the mapping between molecules and virtual site keys
