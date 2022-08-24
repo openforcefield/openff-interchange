@@ -6,6 +6,8 @@ import openmm
 from openmm import unit
 
 from openff.interchange.exceptions import UnsupportedImportError
+from openff.interchange.interop.openmm._positions import to_openmm_positions
+from openff.interchange.interop.openmm._topology import to_openmm_topology
 
 __all__ = [
     "to_openmm",
