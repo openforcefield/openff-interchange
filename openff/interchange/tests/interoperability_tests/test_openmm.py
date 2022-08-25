@@ -574,7 +574,7 @@ class TestToOpenMMTopology(_BaseTest):
         _compare_openmm_topologies(out.to_openmm_topology(), to_openmm_topology(out))
 
     @pytest.mark.parametrize("ensure_unique_atom_names", [True, "residues", "chains"])
-    def test_to_openmm_assign_unique_atom_names(self, ensure_unique_atom_names):
+    def test_assign_unique_atom_names(self, ensure_unique_atom_names):
         """
         Ensure that OFF topologies with no pre-existing atom names have unique
         atom names applied when being converted to openmm
@@ -603,7 +603,7 @@ class TestToOpenMMTopology(_BaseTest):
         assert len(atom_names) == 13
 
     @pytest.mark.parametrize("ensure_unique_atom_names", [True, "residues", "chains"])
-    def test_to_openmm_assign_some_unique_atom_names(self, ensure_unique_atom_names):
+    def test_assign_some_unique_atom_names(self, ensure_unique_atom_names):
         """
         Ensure that OFF topologies with some pre-existing atom names have unique
         atom names applied to the other atoms when being converted to openmm
@@ -635,9 +635,7 @@ class TestToOpenMMTopology(_BaseTest):
         assert len(atom_names) == 21
 
     @pytest.mark.parametrize("ensure_unique_atom_names", [True, "residues", "chains"])
-    def test_to_openmm_assign_unique_atom_names_some_duplicates(
-        self, ensure_unique_atom_names
-    ):
+    def test_assign_unique_atom_names_some_duplicates(self, ensure_unique_atom_names):
         """
         Ensure that OFF topologies where some molecules have invalid/duplicate
         atom names have unique atom names applied while the other molecules are unaffected.
@@ -679,7 +677,7 @@ class TestToOpenMMTopology(_BaseTest):
         # 1 unique O, and 6 unique Hs, for a total of 21 unique atom names
         assert len(atom_names) == 21
 
-    def test_to_openmm_do_not_assign_unique_atom_names(self):
+    def test_do_not_assign_unique_atom_names(self):
         """
         Test disabling unique atom name assignment in Topology.to_openmm
         """
@@ -703,7 +701,7 @@ class TestToOpenMMTopology(_BaseTest):
         assert len(atom_names) == 3
 
     @pytest.mark.parametrize("explicit_arg", [True, False])
-    def test_to_openmm_preserve_per_residue_unique_atom_names(self, explicit_arg):
+    def test_preserve_per_residue_unique_atom_names(self, explicit_arg):
         """
         Test that to_openmm preserves atom names that are unique per-residue by default
         """
@@ -744,9 +742,9 @@ class TestToOpenMMTopology(_BaseTest):
         assert final_atomnames == init_atomnames
 
     @pytest.mark.parametrize("explicit_arg", [True, False])
-    def test_to_openmm_generate_per_residue_unique_atom_names(self, explicit_arg):
+    def test_generate_per_residue_unique_atom_names(self, explicit_arg):
         """
-        Test that to_openmm preserves atom names that are unique per-residue by default
+        Test that to_openmm generates atom names that are unique per-residue
         """
         # Create a topology from a capped dialanine
         peptide = Molecule.from_polymer_pdb(
@@ -801,11 +799,12 @@ class TestToOpenMMTopology(_BaseTest):
         ), "There should be duplicate atom names in this output topology"
 
     @pytest.mark.parametrize("ensure_unique_atom_names", ["chains", True])
-    def test_to_openmm_generate_per_molecule_unique_atom_names_with_residues(
+    def test_generate_per_molecule_unique_atom_names_with_residues(
         self, ensure_unique_atom_names
     ):
         """
-        Test that to_openmm preserves atom names that are unique per-residue by default
+        Test that to_openmm can generate atom names that are unique per-molecule
+        when the topology has residues
         """
         # Create a topology from a capped dialanine
         peptide = Molecule.from_polymer_pdb(
@@ -863,8 +862,6 @@ class TestToOpenMMTopology(_BaseTest):
             atom.name = f"AT{atom.molecule_atom_index}"
         benzene = Molecule.from_smiles("c1ccccc1")
         off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
-        # Record the initial atom names to compare to later
-        init_atomnames = [str(atom.name) for atom in off_topology.atoms]
 
         # This test uses molecules with no hierarchy schemes, so the parametrized
         # ensure_unique_atom_names values should behave identically (except False).
@@ -874,6 +871,9 @@ class TestToOpenMMTopology(_BaseTest):
 
         sage = ForceField("openff-2.0.0.offxml")
         interchange = Interchange.from_smirnoff(sage, off_topology)
+
+        # Record the initial atom names to compare to later
+        init_atomnames = [str(atom.name) for atom in interchange.topology.atoms]
 
         omm_topology = interchange.to_openmm_topology(
             ensure_unique_atom_names=ensure_unique_atom_names
