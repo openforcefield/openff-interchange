@@ -694,9 +694,7 @@ class TestToOpenMMTopology(_BaseTest):
         sage = ForceField("openff-2.0.0.offxml")
         interchange = Interchange.from_smirnoff(sage, off_topology)
 
-        omm_topology = interchange.to_openmm_topology(
-            ensure_unique_atom_names=ensure_unique_atom_names
-        )
+        omm_topology = interchange.to_openmm_topology(ensure_unique_atom_names=False)
         atom_names = set()
         for atom in omm_topology.atoms():
             atom_names.add(atom.name)
