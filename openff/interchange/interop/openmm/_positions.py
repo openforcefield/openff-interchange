@@ -41,10 +41,8 @@ def to_openmm_positions(
 
         molecule_virtual_site_map = defaultdict(list)
 
-        for virtual_site, molecule in virtual_site_molecule_map.items():
-            molecule_virtual_site_map[topology.molecule_index(molecule)].append(
-                virtual_site
-            )
+        for virtual_site, molecule_index in virtual_site_molecule_map.items():
+            molecule_virtual_site_map[molecule_index].append(virtual_site)
 
     particle_positions = off_unit.Quantity(
         numpy.empty(shape=(0, 3)), off_unit.nanometer
