@@ -43,10 +43,9 @@ def get_all_energies(interchange: "Interchange") -> Dict[str, EnergyReport]:
 @requires_package("pandas")
 def get_summary_data(interchange: "Interchange") -> "DataFrame":
     """Return a pandas DataFrame with summaries of energies from all available engines."""
-    from openff.units import unit
-    from pandas import DataFrame
+    import pandas
 
-    kj_mol = unit.kilojoule / unit.mol
+    from openff.interchange.constants import kj_mol
 
     energies = get_all_energies(interchange)
 
@@ -54,4 +53,4 @@ def get_summary_data(interchange: "Interchange") -> "DataFrame":
         for kk in v.energies:
             energies[k].energies[kk] = energies[k].energies[kk].m_as(kj_mol)  # type: ignore[union-attr]
 
-    return DataFrame({k: v.energies for k, v in energies.items()}).T
+    return pandas.DataFrame({k: v.energies for k, v in energies.items()}).T

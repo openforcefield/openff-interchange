@@ -1,8 +1,7 @@
 """Storing and processing results of energy evaluations."""
 import warnings
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
-import pandas as pd
 from openff.units import unit
 from pydantic import validator
 
@@ -87,7 +86,7 @@ class EnergyReport(DefaultModel):
             tolerances.update(custom_tolerances)
 
         tolerances = self.validate_energies(tolerances)
-        errors = pd.DataFrame()
+        errors: List[Dict] = list()
 
         for key in self.energies:
 
@@ -112,15 +111,15 @@ class EnergyReport(DefaultModel):
                 tolerance = tolerances[key]
 
                 if abs(diff) > tolerance:
-                    data: Dict = {
+                    error: Dict[str, List] = {
                         "key": [key],
                         "diff": [diff],
                         "tol": [tolerance],
                         "ener1": [self.energies[key]],
                         "ener2": [other.energies[key]],
                     }
-                    error = pd.DataFrame.from_dict(data)
-                    errors = errors.append(error)
+
+                    errors.append(error)
 
                 continue
 
@@ -134,25 +133,22 @@ class EnergyReport(DefaultModel):
                     raise e
 
             if abs(diff) > tolerance:
-                data: Dict = {  # type: ignore[no-redef]
+                error = {
                     "key": ["Nonbonded"],
                     "diff": [diff],
                     "tol": [tolerance],
                     "ener1": [this_nonbonded],
                     "ener2": [other_nonbonded],
                 }
-                error = pd.DataFrame.from_dict(data)
-                errors = errors.append(error)
+                errors.append(error)
 
         if len(errors) > 0:
-            for col_name in ["diff", "tol", "ener1", "ener2"]:
-                col_mod = [x.m_as(kj_mol) for x in errors[col_name]]
-                errors[col_name] = col_mod
+            import pandas
 
             raise EnergyError(
                 "\nSome energy difference(s) exceed tolerances! "
                 "\nAll values are reported in kJ/mol:"
-                "\n" + str(errors.to_string(index=False))
+                f"\n + {pandas.DataFrame.from_dict(errors).to_string()}"  # type: ignore[arg-type]
             )
 
         # TODO: Return energy differences even if none are greater than tolerance
