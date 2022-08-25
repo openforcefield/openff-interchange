@@ -16,8 +16,11 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
-from openff.interchange.interop.openmm import from_openmm
-from openff.interchange.interop.openmm._topology import to_openmm_topology
+from openff.interchange.interop.openmm import (
+    from_openmm,
+    to_openmm_positions,
+    to_openmm_topology,
+)
 from openff.interchange.tests import _BaseTest, get_test_file_path
 
 # WISHLIST: Add tests for reaction-field if implemented
@@ -547,7 +550,6 @@ class TestOpenMMVirtualSiteExclusions(_BaseTest):
 
 class TestToOpenMMTopology(_BaseTest):
     def test_num_virtual_sites(self):
-        from openff.interchange.interop.openmm._topology import to_openmm_topology
 
         tip4p = ForceField("openff-2.0.0.offxml", get_test_file_path("tip4p.offxml"))
         water = Molecule.from_smiles("O")
@@ -577,8 +579,6 @@ class TestToOpenMMTopology(_BaseTest):
 class TestToOpenMMPositions(_BaseTest):
     @pytest.mark.parametrize("include_virtual_sites", [True, False])
     def test_positions(self, include_virtual_sites):
-        from openff.interchange.interop.openmm._positions import to_openmm_positions
-
         tip4p = ForceField("openff-2.0.0.offxml", get_test_file_path("tip4p.offxml"))
         water = Molecule.from_smiles("O")
         water.generate_conformers(n_conformers=1)
