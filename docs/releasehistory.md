@@ -16,7 +16,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 The 0.2.x line of Interchange targets biopolymer support alongside version 0.11.0 of the OpenFF Toolkit.
 Due to the scope of changes, versions 0.2.0 and newer will not generally be compatible with the 0.1.x line or versions of the OpenFF Toolkit less than 0.11.0.
-In lieu of a changelog entry for this release, below is a brief summary of the current capabilities of Interchange.
+In lieu of a changelog entry for this release, **below is a brief summary of the current capabilities of Interchange.**
 Future releases will continue with conventional changelog entries.
 
 Imports from OpenFF Toolkit objects:
@@ -26,7 +26,7 @@ Imports from OpenFF Toolkit objects:
   * See the [Molecule Cookbook](https://docs.openforcefield.org/projects/toolkit/en/stable/users/molecule_cookbook.html) for information on preparing molecule inputs and [`Molecule`](https://docs.openforcefield.org/projects/toolkit/en/stable/api/generated/openff.toolkit.topology.Molecule.html#openff.toolkit.topology.Molecule) API docs for more information.
 
 Imports from MoSDeF objects:
-  * `Interchange.from_
+  * `Interchange.from_foyer`
 Exports to OpenMM objects:
   * `Interchange.to_openmm` for `openmm.System` objects
   * `Interchange.to_openmm_topology` for `openmm.app.Topology` objects
