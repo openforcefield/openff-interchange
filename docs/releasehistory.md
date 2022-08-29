@@ -9,12 +9,49 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## 0.2.0 - Development
+## 0.2.1 - Current development
 
-The v0.2.x line of Interchange targets biopolymer support and consistitutes several significant
-changes compared to older versions. Because of this, versions v0.2.0 and newer will not generally be compatible with the 0.1.x line or versions of the OpenFF Toolkit older than v0.11.0.
 
-The default branch has been renamed from `master` to `main`.
+## 0.2.0 - 2022-08-29
+
+The 0.2.x line of Interchange targets biopolymer support alongside version 0.11.0 of the OpenFF Toolkit.
+Due to the scope of changes, versions 0.2.0 and newer will not generally be compatible with the 0.1.x line or versions of the OpenFF Toolkit less than 0.11.0.
+In lieu of a changelog entry for this release, **below is a brief summary of the current capabilities of Interchange.**
+Future releases will continue with conventional changelog entries.
+
+Imports from OpenFF Toolkit objects:
+  * `Interchange.from_smirnoff`, consuming SMIRNOFF force fields and OpenFF `Topology` objects, including
+    * WBO-based bond order interpolation of valence parameters
+    * Virtual sites
+  * See the [Molecule Cookbook](https://docs.openforcefield.org/projects/toolkit/en/stable/users/molecule_cookbook.html) for information on preparing molecule inputs and [`Molecule`](https://docs.openforcefield.org/projects/toolkit/en/stable/api/generated/openff.toolkit.topology.Molecule.html#openff.toolkit.topology.Molecule) API docs for more information.
+
+Imports from MoSDeF objects:
+  * `Interchange.from_foyer`
+Exports to OpenMM objects:
+  * `Interchange.to_openmm` for `openmm.System` objects
+  * `Interchange.to_openmm_topology` for `openmm.app.Topology` objects
+
+Exports to GROMACS files:
+  * `Interchange.to_top` for `.top` topology files
+  * `Interchange.to_gro` for `.gro` coordinate files
+
+Exports to AMBER files (EXPERIMENTAL):
+  * `Interchange.to_prmtop` for `.prmtop` parameter/topology files
+  * `Interchange.to_inpcrd` for `.inpcrd` coordinate files
+
+Exports to LAMMPS files (EXPERIMENTAL):
+  * `Interchange.to_lammps` for `.data` data files
+
+Exports to JAX arrays:
+  * Call `.get_force_field_parameters` or `.get_system_parameters` on a `PotentialHandler` subclass to get a [JAX array](https://jax.readthedocs.io/en/latest/_autosummary/jax.numpy.array.html) of force field or "system" parameters associated with that handler.
+
+Known issues and limitations:
+  * Residue hierarchy information may not be preserved in GROMACS and AMBER exports
+  * Some operations are slow and not yet optimized for performance, including
+    * `Interchange.from_smirnoff`, particularly for large systems with many valence terms
+    * `Interchange.to_top`, particularly for systems with polymers, including proteins
+
+During development of this release, the default branch has been renamed from `master` to `main`.
 
 ## 0.1.4 - 2022-01-11
 
