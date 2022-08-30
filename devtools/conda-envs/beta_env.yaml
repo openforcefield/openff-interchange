@@ -16,13 +16,7 @@ dependencies:
   - pydantic <2.0.0a0
   - openmm >=7.6
   # OpenFF stack
-  - openff-toolkit >=0.11.0rc3
-  - openff-utilities >=0.1.5
-  - openff-units >=0.1.6
-  - openff-amber-ff-ports >=0.0.3
-  - cached-property
-  - cachetools
-  - python-constraint
+  - openff-toolkit >=0.11.0
   # Optional features
   - jax
   - jaxlib
@@ -30,11 +24,9 @@ dependencies:
   - mbuild
   - foyer >=0.8.1
   # Testing
-  - mdtraj
   - intermol
   - openff-evaluator
   - openeye-toolkits
-  - pytest-timeout
   - pytest-cov
   - pytest-xdist
   - conda

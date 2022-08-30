@@ -9,16 +9,8 @@ dependencies:
   - pip
   - pydantic
   - pint
-  - openff-toolkit-base
-  - openff-units >=0.1.6
-  - openff-utilities >=0.1.5
-  - cached-property
-  - cachetools
-  - python-constraint
-  - openmm >=7.6
+  - openff-toolkit-base >=0.11.0
   - intermol
-  - pytest
-  - mdtraj
   - jax
   - jaxlib
   # readthedocs dependencies
@@ -30,4 +22,3 @@ dependencies:
   - sphinx-notfound-page
   - pip:
     - git+https://github.com/openforcefield/openff-sphinx-theme.git@main
-    - git+https://github.com/openforcefield/openff-toolkit.git@main
