@@ -22,8 +22,8 @@ jobs:
           - macOS-latest
           - ubuntu-latest
         python-version:
-          - "3.8"
-          - "3.9"
+          - 3.8
+          - 3.9
         openeye:
           - true
           - false
@@ -78,7 +78,7 @@ jobs:
         python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
 
     - name: Run small molecule regression tests
-      if: ${{ matrix.python-version == "3.9" && matrix.openeye == true }}
+      if: ${{ matrix.python-version == 3.9 && matrix.openeye == true }}
       run: |
         mamba install deepdiff rich click -c conda-forge -yq
         python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git
