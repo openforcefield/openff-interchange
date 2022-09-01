@@ -2,6 +2,7 @@
 import ast
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union
 
+import numpy
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, PrivateAttr, validator
@@ -11,10 +12,7 @@ from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
 from openff.interchange.types import ArrayQuantity, FloatQuantity
 
 if has_package("jax"):
-    from jax import numpy
-else:
-    # Known mypy bug/limitation: https://github.com/python/mypy/issues/1153
-    import numpy  # type: ignore[no-redef]
+    from jax import numpy as jax_numpy
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
@@ -140,7 +138,7 @@ class PotentialHandler(DefaultModel):
             f"associated with atoms {atom_indices}"
         )
 
-    def get_force_field_parameters(self) -> "ArrayLike":
+    def get_force_field_parameters(self, use_jax: bool = False) -> "ArrayLike":
         """Return a flattened representation of the force field parameters."""
         # TODO: Handle WrappedPotential
         if any(
@@ -149,9 +147,14 @@ class PotentialHandler(DefaultModel):
         ):
             raise NotImplementedError
 
-        return numpy.array(
-            [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
-        )
+        if use_jax:
+            return jax_numpy.array(
+                [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
+            )
+        else:
+            return numpy.array(
+                [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
+            )
 
     def set_force_field_parameters(self, new_p: "ArrayLike") -> None:
         """Set the force field parameters from a flattened representation."""
@@ -172,7 +175,7 @@ class PotentialHandler(DefaultModel):
                     modified_parameter * parameter_units
                 )
 
-    def get_system_parameters(self, p=None) -> numpy.ndarray:
+    def get_system_parameters(self, p=None, use_jax: bool = False) -> numpy.ndarray:
         """
         Return a flattened representation of system parameters.
 
@@ -194,7 +197,10 @@ class PotentialHandler(DefaultModel):
             index = mapping[potential_key]
             q.append(p[index])
 
-        return numpy.array(q)
+        if use_jax:
+            return jax_numpy.array(q)
+        else:
+            return numpy.array(q)
 
     def get_mapping(self) -> Dict[PotentialKey, int]:
         """Get a mapping between potentials and array indices."""
