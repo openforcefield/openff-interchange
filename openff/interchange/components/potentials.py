@@ -189,7 +189,7 @@ class PotentialHandler(DefaultModel):
             raise NotImplementedError
 
         if p is None:
-            p = self.get_force_field_parameters()
+            p = self.get_force_field_parameters(use_jax=use_jax)
         mapping = self.get_mapping()
 
         q: List = list()
@@ -213,12 +213,12 @@ class PotentialHandler(DefaultModel):
 
         return mapping
 
-    def parametrize(self, p=None) -> numpy.ndarray:
+    def parametrize(self, p=None, use_jax: bool = True) -> numpy.ndarray:
         """Return an array of system parameters, given an array of force field parameters."""
         if p is None:
-            p = self.get_force_field_parameters()
+            p = self.get_force_field_parameters(use_jax=use_jax)
 
-        return self.get_system_parameters(p=p)
+        return self.get_system_parameters(p=p, use_jax=use_jax)
 
     def parametrize_partial(self):
         """Return a function that will call `self.parametrize()` with arguments specified by `self.mapping`."""
@@ -236,7 +236,7 @@ class PotentialHandler(DefaultModel):
 
         import jax
 
-        p = self.get_force_field_parameters()
+        p = self.get_force_field_parameters(use_jax=True)
 
         parametrize_partial = partial(
             self.parametrize,
