@@ -790,12 +790,12 @@ class TestMatrixRepresentations(_BaseTest):
         else:
             raise NotImplementedError()
 
-        p = handler.get_force_field_parameters()
+        p = handler.get_force_field_parameters(use_jax=True)
 
         assert isinstance(p, jax.interpreters.xla.DeviceArray)
         assert np.prod(p.shape) == n_ff_terms
 
-        q = handler.get_system_parameters()
+        q = handler.get_system_parameters(use_jax=True)
 
         assert isinstance(q, jax.interpreters.xla.DeviceArray)
         assert np.prod(q.shape) == n_sys_terms
@@ -823,12 +823,12 @@ class TestMatrixRepresentations(_BaseTest):
             topology=ethanol.to_topology(),
         )
 
-        original = bond_handler.get_force_field_parameters()
+        original = bond_handler.get_force_field_parameters(use_jax=True)
         modified = original * jax.numpy.array([1.1, 0.5])
 
         bond_handler.set_force_field_parameters(modified)
 
-        assert (bond_handler.get_force_field_parameters() == modified).all()
+        assert (bond_handler.get_force_field_parameters(use_jax=True) == modified).all()
 
 
 class TestParameterInterpolation(_BaseTest):
