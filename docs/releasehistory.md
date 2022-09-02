@@ -9,7 +9,19 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## 0.2.1 - Current development
+## 0.2.2 - Current development
+
+
+## 0.2.1 - 2022-09-02
+
+This pre-release of Interchange includes performance improvements in exporters.
+
+### Performance improvements
+* #519 Improve runtime of `Interchange.to_top` by bypassing JAX broadcasting
+* #520 Improve runtime of `Interchange.to_top` by using a set to track constrained atom pairs
+
+### Behavior changes
+* #519 Exports to array representations no longer use `jax.numpy` by default.
 
 
 ## 0.2.0 - 2022-08-29
