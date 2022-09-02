@@ -41,8 +41,10 @@ dependencies:
   - types-pkg_resources
   - pandas-stubs >=1.2.0.56
   # Development tools
-  - mamba
   - jupyterlab
+  - nglview
+  - ipywidgets =7
+  - pdbfixer
   - ipdb
   - pre-commit
   - black

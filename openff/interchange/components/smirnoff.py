@@ -665,7 +665,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
             getattr(p, "k_bondorder", None) is not None
             for p in parameter_handler.parameters
         ):
-            for ref_mol in topology.reference_molecules:
+            for ref_mol in topology.unique_molecules:
                 if _check_partial_bond_orders(
                     ref_mol, partial_bond_orders_from_molecules
                 ):
