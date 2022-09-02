@@ -10,6 +10,7 @@ dependencies:
   - pydantic
   - pint
   - openff-toolkit-base >=0.11.0
+  - openmm >=7.6
   - intermol
   - jax
   - jaxlib
