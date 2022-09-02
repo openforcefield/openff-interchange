@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Set, Tuple, Union
 
 import openmm
 from openff.units import unit as off_unit
@@ -12,16 +12,16 @@ if TYPE_CHECKING:
 
 def _process_constraints(
     openff_sys, openmm_sys, particle_map: Dict[Union[int, "VirtualSiteKey"], int]
-):
+) -> Set[Tuple[int, ...]]:
     """
     Process the Constraints section of an Interchange object.
     """
     try:
         constraint_handler = openff_sys["Constraints"]
     except LookupError:
-        return
+        return set()
 
-    constrained_pairs = list()
+    constrained_pairs: Set[Tuple[int, ...]] = set()
 
     for top_key, pot_key in constraint_handler.slot_map.items():
         openff_indices = top_key.atom_indices
@@ -31,7 +31,7 @@ def _process_constraints(
         distance = params["distance"]
         distance_omm = distance.m_as(off_unit.nanometer)
 
-        constrained_pairs.append(tuple(sorted(openmm_indices)))
+        constrained_pairs.add(tuple(sorted(openmm_indices)))
         openmm_sys.addConstraint(
             openmm_indices[0],
             openmm_indices[1],
@@ -45,7 +45,7 @@ def _process_bond_forces(
     openff_sys,
     openmm_sys,
     add_constrained_forces: bool,
-    constrained_pairs: List[Tuple[int]],
+    constrained_pairs: Set[Tuple[int, ...]],
     particle_map: Dict[Union[int, "VirtualSiteKey"], int],
 ):
     """
@@ -98,7 +98,7 @@ def _process_angle_forces(
     openff_sys,
     openmm_sys,
     add_constrained_forces: bool,
-    constrained_pairs: List[Tuple[int]],
+    constrained_pairs: Set[Tuple[int, ...]],
     particle_map,
 ):
     """
@@ -304,7 +304,9 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys, particle_map):
         )
 
 
-def _is_constrained(constrained_pairs: List[Tuple[int]], pair: Tuple[int, int]) -> bool:
+def _is_constrained(
+    constrained_pairs: Set[Tuple[int, ...]], pair: Tuple[int, int]
+) -> bool:
     if (pair[0], pair[1]) in constrained_pairs:
         return True
     if (pair[1], pair[0]) in constrained_pairs:
