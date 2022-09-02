@@ -21,7 +21,7 @@ This pre-release of Interchange includes performance improvements in exporters.
 * #520 Improve runtime of `Interchange.to_top` by using a set to track constrained atom pairs
 
 ### Behavior changes
-* #519 Exports to array representations no longer use `jax.numpy` by default.
+* #519 Exports to array representations no longer use `jax.numpy` by default
 
 
 ## 0.2.0 - 2022-08-29
