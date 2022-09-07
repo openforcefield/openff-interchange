@@ -122,9 +122,11 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
             elif isinstance(force, openmm.PeriodicTorsionForce):
                 proper_torsion_handler = _convert_periodic_torsion_force(force)
                 openff_sys.handlers["ProperTorsions"] = proper_torsion_handler
+            elif isinstance(force, openmm.CMMotionRemover):
+                pass
             else:
                 raise UnsupportedImportError(
-                    "Unsupported OpenMM Force type ({type(force)}) found.",
+                    f"Unsupported OpenMM Force type ({type(force)}) found.",
                 )
 
     if topology is not None:
@@ -143,7 +145,7 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
     return openff_sys
 
 
-def _convert_nonbonded_force(force):
+def _convert_nonbonded_force(force: openmm.NonbondedForce):
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.components.potentials import Potential
@@ -153,6 +155,11 @@ def _convert_nonbonded_force(force):
     )
     from openff.interchange.constants import _PME
     from openff.interchange.models import PotentialKey, TopologyKey
+
+    if force.getNonbondedMethod() != 0:
+        raise UnsupportedImportError(
+            "Importing from OpenMM only currently supported with `openmm.NonbondedForce.PME`."
+        )
 
     vdw_handler = SMIRNOFFvdWHandler()
     electrostatics = SMIRNOFFElectrostaticsHandler(version=0.4, scale_14=0.833333)
@@ -191,8 +198,8 @@ def _convert_nonbonded_force(force):
         electrostatics.periodic_potential = "reaction-field"
         vdw_handler.method = "cutoff"
     elif force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff:
-        electrostatics.periodic_potential = "Coulomb"
-        vdw_handler.method = "Coulomb"
+        electrostatics.periodic_potential = "no-cutoff"
+        vdw_handler.method = "no-cutoff"
 
     if vdw_handler.method == "cutoff":
         vdw_handler.cutoff = force.getCutoffDistance()
