@@ -153,7 +153,6 @@ def _convert_nonbonded_force(force: openmm.NonbondedForce):
         SMIRNOFFElectrostaticsHandler,
         SMIRNOFFvdWHandler,
     )
-    from openff.interchange.constants import _PME
     from openff.interchange.models import PotentialKey, TopologyKey
 
     if force.getNonbondedMethod() != 0:
@@ -184,26 +183,15 @@ def _convert_nonbonded_force(force: openmm.NonbondedForce):
             {pot_key: Potential(parameters={"charge": from_openmm_quantity(charge)})},
         )
 
-    if force.getNonbondedMethod() == openmm.NonbondedForce.PME:
-        electrostatics.periodic_potential = _PME
+    # 0 == openmm.NonbondedForce.PME:
+    if force.getNonbondedMethod() == 0:
+        electrostatics.periodic_potential = "Ewald3D-ConductingBoundary"
         vdw_handler.method = "cutoff"
-    if force.getNonbondedMethod() == openmm.NonbondedForce.LJPME:
-        electrostatics.periodic_potential = _PME
-        vdw_handler.method = "PME"
-    elif force.getNonbondedMethod() in {
-        openmm.NonbondedForce.CutoffPeriodic,
-        openmm.NonbondedForce.CutoffNonPeriodic,
-    }:
-        # TODO: Store reaction-field dielectric
-        electrostatics.periodic_potential = "reaction-field"
-        vdw_handler.method = "cutoff"
-    elif force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff:
-        electrostatics.periodic_potential = "no-cutoff"
-        vdw_handler.method = "no-cutoff"
-
-    if vdw_handler.method == "cutoff":
         vdw_handler.cutoff = force.getCutoffDistance()
-    electrostatics.cutoff = force.getCutoffDistance()
+    else:
+        raise UnsupportedImportError(
+            f"Parsing a non-bonded force of type {type(force)} with {force.getNonbondedMethod()} not yet supported.",
+        )
 
     return vdw_handler, electrostatics
 

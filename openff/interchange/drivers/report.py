@@ -87,7 +87,7 @@ class EnergyReport(DefaultModel):
             tolerances.update(custom_tolerances)
 
         tolerances = self.validate_energies(tolerances)
-        errors = pd.DataFrame()
+        errors: pd.DataFrame = pd.DataFrame()
 
         for key in self.energies:
 
@@ -119,8 +119,8 @@ class EnergyReport(DefaultModel):
                         "ener1": [self.energies[key]],
                         "ener2": [other.energies[key]],
                     }
-                    error = pd.DataFrame.from_dict(data)
-                    errors = errors.append(error)
+                    error: pd.DataFrame = pd.DataFrame.from_dict(data)
+                    errors = errors.append(error)  # type: ignore[operator]
 
                 continue
 
@@ -142,7 +142,7 @@ class EnergyReport(DefaultModel):
                     "ener2": [other_nonbonded],
                 }
                 error = pd.DataFrame.from_dict(data)
-                errors = errors.append(error)
+                errors = errors.append(error)  # type: ignore[operator]
 
         if len(errors) > 0:
             for col_name in ["diff", "tol", "ener1", "ener2"]:
