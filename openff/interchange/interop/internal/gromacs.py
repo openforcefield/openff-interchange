@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from openff.interchange.components.potentials import PotentialHandler
 
 
-def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
+def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int = 3):
     """
     Write a GROMACS coordinate (.gro) file.
 
@@ -531,7 +531,7 @@ def _write_atomtypes_lj(
 
         top_file.write(
             "{:<11s} {:6d} {:.16g} {:.16g} {:5s} {:.16g} {:.16g}\n".format(
-                atom_type,  # atom type
+                atom_type,
                 # "XX",  # atom "bonding type", i.e. bond class
                 atomic_number,
                 mass,
