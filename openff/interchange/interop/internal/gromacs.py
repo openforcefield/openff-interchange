@@ -528,10 +528,10 @@ def _write_atomtypes_lj(
             )
         )
 
-    for virtual_site_index, virtual_site_key in enumerate(virtual_site_map):
+    for virtual_site_key in virtual_site_map:
         # TODO: This can produce some silly-looking output because it does not attempt to condense virtual sites
         #       from different molecules with the same parameters. Should probably de-deuplicate across moleculces
-        atom_type = f"VS{virtual_site_index+1}"
+        atom_type = "VS"
         atomic_number = 0
         mass = 0.0
 

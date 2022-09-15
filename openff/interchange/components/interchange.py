@@ -476,7 +476,7 @@ class Interchange(DefaultModel):
             ) from error
         return nglview.show_file("_tmp_pdb_file.pdb")
 
-    def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 5):
+    def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 3):
         """Export this Interchange object to a .gro file."""
         # TODO: Enum-style class for handling writer arg?
         if writer == "parmed":
