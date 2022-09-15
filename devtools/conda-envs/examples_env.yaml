@@ -17,7 +17,7 @@ dependencies:
   - jaxlib
   - unyt
   - mbuild
-  - foyer >=0.8.1
+  - foyer >=0.11.3
   # Examples
   - intermol
   - openff-evaluator-base

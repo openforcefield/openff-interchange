@@ -781,7 +781,7 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
             self.potentials[potential_key] = potential
 
 
-class _SMIRNOFFNonbondedHandler(SMIRNOFFPotentialHandler, abc.ABC):
+class _SMIRNOFFNonbondedHandler(SMIRNOFFPotentialHandler, abc.ABC):  # noqa
     """Base class for handlers storing non-bonded potentials produced by SMIRNOFF force fields."""
 
     type: str = "nonbonded"
