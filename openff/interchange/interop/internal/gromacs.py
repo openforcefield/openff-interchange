@@ -344,26 +344,36 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
             int, List
         ] = openff_sys.topology.identical_molecule_groups
 
-        for unique_molecule_index in unique_molecule_map:
-            molecule = openff_sys.topology.molecule(unique_molecule_index)
+        for (
+            unique_molecule_index,
+            duplicate_molecule_data,
+        ) in unique_molecule_map.items():
+            unique_molecule = openff_sys.topology.molecule(unique_molecule_index)
 
-            if molecule.name == "":
-                molecule.name = str(molecule.name) + "x" + str(unique_molecule_index)
+            if unique_molecule.name == "":
+                unique_molecule.name = "x" + str(unique_molecule_index)
 
-            _write_moleculetype(top_file, molecule.name)
+            for row in duplicate_molecule_data:
+                (duplciate_molecule_index, _) = row
+
+                openff_sys.topology.molecule(
+                    duplciate_molecule_index
+                ).name = unique_molecule.name
+
+            _write_moleculetype(top_file, unique_molecule.name)
             _write_atoms(
                 top_file,
                 openff_sys,
-                molecule,
+                unique_molecule,
                 typemap,
                 virtual_site_map,
                 _cached_parameters=lj_parameters,
             )
-            _write_valence(top_file, openff_sys, molecule)
+            _write_valence(top_file, openff_sys, unique_molecule)
             _write_virtual_sites(
                 top_file,
                 openff_sys,
-                molecule,
+                unique_molecule,
                 virtual_site_map,
             )
 
@@ -518,8 +528,10 @@ def _write_atomtypes_lj(
             )
         )
 
-    for virtual_site_key in virtual_site_map:
-        atom_type = "VS"
+    for virtual_site_index, virtual_site_key in enumerate(virtual_site_map):
+        # TODO: This can produce some silly-looking output because it does not attempt to condense virtual sites
+        #       from different molecules with the same parameters. Should probably de-deuplicate across moleculces
+        atom_type = f"VS{virtual_site_index+1}"
         atomic_number = 0
         mass = 0.0
 
@@ -1228,15 +1240,9 @@ def _write_system(
     top_file.write("[ molecules ]\n")
     top_file.write("; Compound\tnmols\n")
 
-    for unique_molecule_index in uniqe_molecule_map:
-        unique_molecule = openff_sys.topology.molecule(unique_molecule_index)
+    for molecule in openff_sys.topology.molecules:
 
-        if unique_molecule.name == "":
-            raise Exception("Molecule missing a name")
-
-        top_file.write(
-            f"{unique_molecule.name}\t{len(uniqe_molecule_map[unique_molecule_index])}\n"
-        )
+        top_file.write(f"{molecule.name}\t1\n")
 
     top_file.write("\n")
 
