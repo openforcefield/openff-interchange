@@ -14,7 +14,7 @@ dependencies:
   # Optional features
   - unyt
   - mbuild
-  - foyer >=0.8.1
+  - foyer >=0.11.3
   # Examples
   - nglview
   - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
