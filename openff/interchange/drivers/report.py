@@ -119,7 +119,7 @@ class EnergyReport(DefaultModel):
                         "ener1": [self.energies[key]],
                         "ener2": [other.energies[key]],
                     }
-                    error: pd.DataFrame = pd.DataFrame.from_dict(data)
+                    error = pd.DataFrame.from_dict(data)
                     errors = errors.append(error)  # type: ignore[operator]
 
                 continue
