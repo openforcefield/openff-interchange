@@ -1215,9 +1215,9 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             ),
             (
                 VirtualSiteMocking.bond_charge_parameter("[C:1]#[C:2]"),
-                "[H:1][C:2]#[C:3][C:4]",
+                '[H:3][C:1]#[C:2][H:4]',
                 VirtualSiteMocking.sp1_conformer(),
-                (2, 3),
+                (1, 0),
                 unit.Quantity(
                     np.array([[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]]), unit.angstrom
                 ),
