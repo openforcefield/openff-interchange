@@ -45,5 +45,3 @@ dependencies:
   - types-setuptools
   - types-pkg_resources
   - pandas-stubs >=1.2.0.56
-  - pip:
-    - git+https://github.com/openforcefield/openff-evaluator.git@main
