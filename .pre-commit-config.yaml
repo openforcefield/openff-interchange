@@ -8,7 +8,7 @@ repos:
     exclude: '\.(pdb|gro|top|sdf)$'
   - id: debug-statements
 - repo: https://github.com/psf/black
-  rev: 22.8.0
+  rev: 22.10.0
   hooks:
   - id: black
     files: ^openff|devtools
@@ -31,7 +31,7 @@ repos:
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.38.2
+  rev: v3.0.0
   hooks:
   - id: pyupgrade
     files: ^openff/interchange
