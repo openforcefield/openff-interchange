@@ -1,4 +1,5 @@
 import MDAnalysis
+import mdtraj
 import numpy as np
 import parmed
 import pytest
@@ -89,14 +90,19 @@ class TestPRMTOP(_BaseTest):
         pdb_object = app.PDBFile(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
         openmm_object = app.AmberPrmtopFile("atom_names.prmtop")
         mdanalysis_object = MDAnalysis.Universe("atom_names.prmtop")
+        # This may not be useful, see
+        # https://github.com/mdtraj/mdtraj/blob/6bb35a8d78a5758ff1f72b3af1fc21d2e38f1029/mdtraj/formats/prmtop.py#L47-L49
+        mdtraj_object = mdtraj.load_prmtop("atom_names.prmtop")
 
         pdb_atom_names = [atom.name for atom in pdb_object.topology.atoms()]
 
         openmm_atom_names = [atom.name for atom in openmm_object.topology.atoms()]
         mdanalysis_atom_names = [atom.name for atom in mdanalysis_object.atoms]
+        mdtraj_atom_names = [atom.name for atom in mdtraj_object.atoms]
 
         assert openmm_atom_names == pdb_atom_names
         assert mdanalysis_atom_names == pdb_atom_names
+        assert mdtraj_atom_names == pdb_atom_names
 
 
 class TestAmberResidues(_BaseTest):
