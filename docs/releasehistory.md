@@ -9,7 +9,22 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## 0.2.2 - Current development
+## 0.2.3 - Current development
+
+
+## 0.2.2 - 2022-10-12
+
+This pre-release of Interchange includes improvements in metadata in the Amber export.
+
+### Behavior changes
+* #536 Use atom names provided by the toolkit, or element symbols if not provided, in Amber export
+
+### Bugfixes
+* #539 Fix case of single-molecule export to Amber with ambiguous residue information
+
+### Examples added
+* #533 Add experimental example using `openmmforcefields` to generate ligand parameters
+* #524 Add experimental example using `from_openmm` to import a system prepared with OpenMM tools
 
 
 ## 0.2.1 - 2022-09-02
