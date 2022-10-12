@@ -494,7 +494,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
                 for residue in interchange.topology.hierarchy_iterator("residues")
             ]
             if NRES > 1
-            else [1]
+            else [0]
         )
         prmtop.write("%FLAG RESIDUE_POINTER\n" "%FORMAT(10I8)\n")
         text_blob = "".join([str(val + 1).rjust(8) for val in residue_pointers])

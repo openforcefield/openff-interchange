@@ -1,5 +1,5 @@
 import numpy as np
-import parmed as pmd
+import parmed
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import unit
@@ -25,8 +25,8 @@ class TestAmber(_BaseTest):
         out.to_inpcrd("internal.inpcrd")
         out._to_parmed().save("parmed.inpcrd")
 
-        coords1 = pmd.load_file("internal.inpcrd").coordinates
-        coords2 = pmd.load_file("parmed.inpcrd").coordinates
+        coords1 = parmed.load_file("internal.inpcrd").coordinates
+        coords2 = parmed.load_file("parmed.inpcrd").coordinates
 
         np.testing.assert_equal(coords1, coords2)
 
@@ -70,3 +70,16 @@ class TestAmber(_BaseTest):
                 "Electrostatics": 0.01 * kj_mol,
             },
         )
+
+
+class TestAmberResidues(_BaseTest):
+    def test_single_residue_system(self, sage, ethanol):
+        """
+        Ensure a single-molecule system without specified residues writes something that ParmEd can read.
+
+        See https://github.com/openforcefield/openff-interchange/pull/538#issue-1404910624
+        """
+        Interchange.from_smirnoff(sage, [ethanol]).to_prmtop("molecule.prmtop")
+
+        # Use ParmEd as a soft validator of this file format
+        parmed.amber.AmberParm("molecule.prmtop")
