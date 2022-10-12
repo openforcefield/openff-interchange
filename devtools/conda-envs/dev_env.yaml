@@ -27,6 +27,7 @@ dependencies:
   - nbval
   - qcportal
   - openff-qcsubmit
+  - mdanalysis
   # Remove after new Evaluator release
   - pymbar >=3.0.5
   - cmiles

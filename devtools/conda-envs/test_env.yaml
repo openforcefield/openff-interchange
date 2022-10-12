@@ -29,6 +29,7 @@ dependencies:
   - nbval
   - nglview
   - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
+  - mdanalysis
   # Drivers
   - gromacs >=2021=nompi*
   - lammps >=2021
