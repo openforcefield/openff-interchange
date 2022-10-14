@@ -1215,7 +1215,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             ),
             (
                 VirtualSiteMocking.bond_charge_parameter("[C:1]#[C:2]"),
-                "[H:1][C:2]#[C:3][C:4]",
+                "[H:1][C:2]#[C:3][H:4]",
                 VirtualSiteMocking.sp1_conformer(),
                 (2, 3),
                 unit.Quantity(

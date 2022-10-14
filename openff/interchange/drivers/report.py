@@ -87,7 +87,7 @@ class EnergyReport(DefaultModel):
             tolerances.update(custom_tolerances)
 
         tolerances = self.validate_energies(tolerances)
-        errors = pd.DataFrame()
+        errors: pd.DataFrame = pd.DataFrame()
 
         for key in self.energies:
 

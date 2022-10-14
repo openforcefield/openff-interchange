@@ -1,8 +1,12 @@
+import MDAnalysis
+import mdtraj
 import numpy as np
-import parmed as pmd
+import parmed
 import pytest
-from openff.toolkit.topology import Molecule
+from openff.toolkit import ForceField, Molecule
+from openff.toolkit.tests.utils import get_data_file_path
 from openff.units import unit
+from openmm import app
 
 from openff.interchange import Interchange
 from openff.interchange.constants import kj_mol
@@ -25,8 +29,8 @@ class TestAmber(_BaseTest):
         out.to_inpcrd("internal.inpcrd")
         out._to_parmed().save("parmed.inpcrd")
 
-        coords1 = pmd.load_file("internal.inpcrd").coordinates
-        coords2 = pmd.load_file("parmed.inpcrd").coordinates
+        coords1 = parmed.load_file("internal.inpcrd").coordinates
+        coords2 = parmed.load_file("parmed.inpcrd").coordinates
 
         np.testing.assert_equal(coords1, coords2)
 
@@ -70,3 +74,45 @@ class TestAmber(_BaseTest):
                 "Electrostatics": 0.01 * kj_mol,
             },
         )
+
+
+class TestPRMTOP(_BaseTest):
+    def test_atom_names_pdb(self):
+        peptide = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
+
+        Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_prmtop(
+            "atom_names.prmtop"
+        )
+
+        pdb_object = app.PDBFile(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
+        openmm_object = app.AmberPrmtopFile("atom_names.prmtop")
+        mdanalysis_object = MDAnalysis.Universe("atom_names.prmtop")
+        # This may not be useful, see
+        # https://github.com/mdtraj/mdtraj/blob/6bb35a8d78a5758ff1f72b3af1fc21d2e38f1029/mdtraj/formats/prmtop.py#L47-L49
+        mdtraj_object = mdtraj.load_prmtop("atom_names.prmtop")
+
+        pdb_atom_names = [atom.name for atom in pdb_object.topology.atoms()]
+
+        openmm_atom_names = [atom.name for atom in openmm_object.topology.atoms()]
+        mdanalysis_atom_names = [atom.name for atom in mdanalysis_object.atoms]
+        mdtraj_atom_names = [atom.name for atom in mdtraj_object.atoms]
+
+        assert openmm_atom_names == pdb_atom_names
+        assert mdanalysis_atom_names == pdb_atom_names
+        assert mdtraj_atom_names == pdb_atom_names
+
+
+class TestAmberResidues(_BaseTest):
+    def test_single_residue_system(self, sage, ethanol):
+        """
+        Ensure a single-molecule system without specified residues writes something that ParmEd can read.
+
+        See https://github.com/openforcefield/openff-interchange/pull/538#issue-1404910624
+        """
+        Interchange.from_smirnoff(sage, [ethanol]).to_prmtop("molecule.prmtop")
+
+        # Use ParmEd as a soft validator of this file format
+        parmed.amber.AmberParm("molecule.prmtop")

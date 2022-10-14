@@ -14,8 +14,6 @@ kj_mol = unit.kilojoule_per_mole
 def get_openmm_energies(
     off_sys: Interchange,
     round_positions: Optional[int] = None,
-    hard_cutoff: bool = False,
-    electrostatics: bool = True,
     combine_nonbonded_forces: bool = False,
 ) -> EnergyReport:
     """
@@ -33,13 +31,6 @@ def get_openmm_energies(
     writer : str, default="internal"
         A string key identifying the backend to be used to write OpenMM files. The
         default value of `"internal"` results in this package's exporters being used.
-    hard_cutoff : bool, default=True
-        Whether or not to apply a hard cutoff (no switching function or disperson correction)
-        to the `openmm.NonbondedForce` in the generated `openmm.System`. Note that this will
-        truncate electrostatics to the non-bonded cutoff.
-    electrostatics : bool, default=True
-        A boolean indicating whether or not electrostatics should be included in the energy
-        calculation.
     combine_nonbonded_forces : bool, default=False
         Whether or not to combine all non-bonded interactions (vdW, short- and long-range
         ectrostaelectrostatics, and 1-4 interactions) into a single openmm.NonbondedForce.
@@ -75,8 +66,6 @@ def get_openmm_energies(
         box_vectors=off_sys.box,
         positions=positions,
         round_positions=round_positions,
-        hard_cutoff=hard_cutoff,
-        electrostatics=electrostatics,
     )
 
 
@@ -85,19 +74,8 @@ def _get_openmm_energies(
     box_vectors,
     positions,
     round_positions=None,
-    hard_cutoff=False,
-    electrostatics: bool = True,
 ) -> EnergyReport:
     """Given a prepared `openmm.System`, run a single-point energy calculation."""
-    """\
-    if hard_cutoff:
-        omm_sys = _set_nonbonded_method(
-            omm_sys, "cutoff", electrostatics=electrostatics
-        )
-    else:
-        omm_sys = _set_nonbonded_method(omm_sys, "PME")
-    """
-
     for idx, force in enumerate(omm_sys.getForces()):
         force.setForceGroup(idx)
 
