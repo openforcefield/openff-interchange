@@ -292,6 +292,23 @@ class TestGROMACS(_BaseTest):
         with pytest.raises(GMXMdrunError):
             get_gromacs_energies(out, mdp="cutoff_buck")
 
+    def test_nonconsecutive_isomorphic_molecules(self, sage_unconstrained):
+        molecules = [Molecule.from_smiles(smiles) for smiles in ["CC", "CCO", "CC"]]
+
+        for index, molecule in enumerate(molecules):
+            molecule.generate_conformers(n_conformers=1)
+            molecule.conformers[0] += unit.Quantity(3 * [5 * index], unit.angstrom)
+
+        topology = Topology.from_molecules(molecules)
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        out = Interchange.from_smirnoff(sage_unconstrained, topology)
+
+        get_gromacs_energies(out).compare(
+            get_openmm_energies(out),
+            custom_tolerances={"Electrostatics": 0.005e-3 * unit.kilojoule_per_mole},
+        )
+
 
 @needs_gmx
 class TestGROMACSVirtualSites(_BaseTest):
