@@ -306,7 +306,7 @@ class TestGROMACS(_BaseTest):
 
         get_gromacs_energies(out).compare(
             get_openmm_energies(out),
-            custom_tolerances={"Electrostatics": 0.005e-3 * unit.kilojoule_per_mole},
+            custom_tolerances={"Electrostatics": 0.5 * unit.kilojoule_per_mole},
         )
 
 
