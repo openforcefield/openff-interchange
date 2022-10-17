@@ -75,8 +75,6 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int 
             f"{n_particles} positions in `.positions` attribute."
         )
 
-    typemap = _build_typemap(openff_sys)
-
     virtual_site_map = _build_virtual_site_map(openff_sys)
     n_particles += len(virtual_site_map)
 
@@ -102,7 +100,8 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int 
 
                 topology_index = openff_sys.topology.atom_index(atom)
 
-                atom_name = typemap[topology_index]
+                atom_name = atom.name if atom.name else atom.symbol
+
                 gmx_atom_index = (topology_index + 1 + n_virtual_sites) % 100000
 
                 gro.write(
@@ -616,6 +615,7 @@ def _write_atoms(
             )
         )
         atom_type = typemap[topology_index]
+        atom_name = atom.name if atom.name else atom.symbol
 
         try:
             res_idx = atom.metadata["residue_number"]
@@ -636,7 +636,7 @@ def _write_atoms(
                 atom_type,
                 int(res_idx),
                 res_name,
-                atom_type,
+                atom_name,
                 molecule_index + 1,
                 charge,
                 mass,
