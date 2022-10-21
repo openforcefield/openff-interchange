@@ -62,9 +62,10 @@ jobs:
         conda info
         conda list
 
-    - name: License OpenEye
+    - name: Install and license OpenEye Toolkits
       if: ${{ matrix.openeye == true }}
       run: |
+        micromamba install openeye-toolkits -c openeye -yq
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
       env:

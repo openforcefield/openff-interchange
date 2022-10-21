@@ -11,6 +11,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## 0.2.3 - Current development
 
+### Bugfixes
+* #545 List the central atom first in CVFF style dihedrals in LAMMPS export
 
 ## 0.2.2 - 2022-10-12
 
