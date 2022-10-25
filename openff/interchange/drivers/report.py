@@ -45,7 +45,7 @@ class EnergyReport(DefaultModel):
         if item in self.energies.keys():
             return self.energies[item]
         if item.lower() == "total":
-            return sum(self.energies.values())  # type: ignore[type-var]
+            return sum(self.energies.values())  # type: ignore
         else:
             return None
 
@@ -87,7 +87,7 @@ class EnergyReport(DefaultModel):
             tolerances.update(custom_tolerances)
 
         tolerances = self.validate_energies(tolerances)
-        errors = pd.DataFrame()
+        errors: pd.DataFrame = pd.DataFrame()
 
         for key in self.energies:
 
@@ -120,7 +120,7 @@ class EnergyReport(DefaultModel):
                         "ener2": [other.energies[key]],
                     }
                     error = pd.DataFrame.from_dict(data)
-                    errors = errors.append(error)
+                    errors = errors.append(error)  # type: ignore[operator]
 
                 continue
 
@@ -142,7 +142,7 @@ class EnergyReport(DefaultModel):
                     "ener2": [other_nonbonded],
                 }
                 error = pd.DataFrame.from_dict(data)
-                errors = errors.append(error)
+                errors = errors.append(error)  # type: ignore[operator]
 
         if len(errors) > 0:
             for col_name in ["diff", "tol", "ener1", "ener2"]:

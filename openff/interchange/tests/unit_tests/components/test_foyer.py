@@ -23,10 +23,7 @@ from openff.interchange.tests import (
 if has_package("foyer"):
     import foyer
 
-    from openff.interchange.components.foyer import (
-        _RBTorsionHandler,
-        _topology_graph_from_openff_topology,
-    )
+    from openff.interchange.components.foyer import _RBTorsionHandler
 
 if HAS_GROMACS:
     from openff.interchange.drivers.gromacs import (
@@ -242,14 +239,3 @@ class TestRBTorsions(TestFoyer):
         ]
 
         assert (omm - rb_torsion_energy_from_foyer).m_as(kj_mol) < 1e-6
-
-
-@skip_if_missing("foyer")
-def test_from_openff_topology():
-    from openff.toolkit.topology import Molecule
-
-    topology = Molecule.from_smiles("CCO").to_topology()
-    topology_graph = _topology_graph_from_openff_topology(topology)
-
-    assert topology_graph.number_of_nodes() == topology.n_atoms
-    assert topology_graph.number_of_edges() == topology.n_bonds

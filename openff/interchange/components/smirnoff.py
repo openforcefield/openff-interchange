@@ -125,6 +125,11 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
         """Return a list of parameter attributes supported by this handler."""
         raise NotImplementedError()
 
+    @classmethod
+    def _potential_parameters(cls):
+        """Return a subset of `supported_parameters` that are meant to be included in potentials."""
+        raise NotImplementedError()
+
     #    @classmethod
     #    @abc.abstractmethod
     #    def valence_terms(cls, topology):
@@ -285,7 +290,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
             self.potentials = dict()
         for topology_key, potential_key in self.slot_map.items():
             smirks = potential_key.id
-            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.parameters[smirks]
             if topology_key.bond_order:
                 bond_order = topology_key.bond_order
                 if parameter.k_bondorder:
@@ -484,7 +489,9 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
     """Handler storing angle potentials as produced by a SMIRNOFF force field."""
 
     type: Literal["Angles"] = "Angles"
-    expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
+    expression: Literal[
+        "k/2*(theta-angle)**2", "k/2*(cos(theta)-cos(angle))**2"
+    ] = "k/2*(theta-angle)**2"
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -495,6 +502,13 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
     def supported_parameters(cls):
         """Return a list of supported parameter attributes."""
         return ["smirks", "id", "k", "angle"]
+
+    @classmethod
+    def _potential_parameters(cls):
+        """Return a list of supported parameter attribute names."""
+        return [
+            val for val in cls.supported_parameters() if val not in ["id", "smirks"]
+        ]
 
     @classmethod
     def valence_terms(cls, topology):
@@ -508,32 +522,14 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
         """
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
-            # ParameterHandler.get_parameter returns a list, although this
-            # should only ever be length 1
-            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.parameters[smirks]
             potential = Potential(
                 parameters={
-                    "k": parameter.k,
-                    "angle": parameter.angle,
-                },
+                    parameter_name: getattr(parameter, parameter_name)
+                    for parameter_name in self._potential_parameters()
+                }
             )
             self.potentials[potential_key] = potential
-
-    @classmethod
-    def f_from_toolkit(
-        cls: Type[T],
-        parameter_handler: "AngleHandler",
-        topology: "Topology",
-    ) -> T:
-        """
-        Create a SMIRNOFFAngleHandler from toolkit data.
-
-        """
-        handler = cls()
-        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
-        handler.store_potentials(parameter_handler=parameter_handler)
-
-        return handler
 
 
 class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
@@ -610,7 +606,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
         for topology_key, potential_key in self.slot_map.items():
             smirks = potential_key.id
             n = potential_key.mult
-            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.parameters[smirks]
             # n_terms = len(parameter.k)
             if topology_key.bond_order:
                 bond_order = topology_key.bond_order
@@ -669,7 +665,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
             getattr(p, "k_bondorder", None) is not None
             for p in parameter_handler.parameters
         ):
-            for ref_mol in topology.reference_molecules:
+            for ref_mol in topology.unique_molecules:
                 if _check_partial_bond_orders(
                     ref_mol, partial_bond_orders_from_molecules
                 ):
@@ -759,7 +755,7 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
             n = potential_key.mult
-            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.parameters[smirks]
             if parameter.idivf is None:
                 idivf = None
             else:
@@ -785,7 +781,7 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
             self.potentials[potential_key] = potential
 
 
-class _SMIRNOFFNonbondedHandler(SMIRNOFFPotentialHandler, abc.ABC):
+class _SMIRNOFFNonbondedHandler(SMIRNOFFPotentialHandler, abc.ABC):  # noqa
     """Base class for handlers storing non-bonded potentials produced by SMIRNOFF force fields."""
 
     type: str = "nonbonded"
@@ -817,7 +813,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
 
     method: Literal["cutoff", "pme", "no-cutoff"] = Field("cutoff")
 
-    mixing_rule: Literal["lorentz-berthelot", "geometric"] = Field(
+    mixing_rule: Literal["lorentz-berthelot"] = Field(
         "lorentz-berthelot",
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )
@@ -847,7 +843,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
 
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
-            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.parameters[smirks]
             try:
                 potential = Potential(
                     parameters={
@@ -1668,6 +1664,11 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
     A handler which stores the information necessary to construct virtual sites (virtual particles).
     """
 
+    slot_map: Dict[VirtualSiteKey, PotentialKey] = Field(
+        dict(),
+        description="A mapping between VirtualSiteKey objects and PotentialKey objects.",
+    )  # type: ignore[assignment]
+
     type: Literal["VirtualSites"] = "VirtualSites"
     expression: Literal[""] = ""
     virtual_site_key_topology_index_map: Dict["VirtualSiteKey", int] = Field(
@@ -1737,7 +1738,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                         ),
                         associated_handler="VirtualSites",
                     )
-                    self.slot_map[virtual_site_key] = potential_key  # type: ignore
+                    self.slot_map[virtual_site_key] = potential_key
                     self.virtual_site_key_topology_index_map[
                         virtual_site_key
                     ] = virtual_site_index
@@ -1755,7 +1756,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         for virtual_site_key, potential_key in self.slot_map.items():
             # TODO: This logic assumes no spaces in the SMIRKS pattern, name or `match` attribute
             smirks, _, _ = potential_key.id.split(" ")
-            parameter = parameter_handler.get_parameter({"smirks": smirks})[0]
+            parameter = parameter_handler.parameters[smirks]
 
             virtual_site_potential = Potential(
                 parameters={
@@ -1776,7 +1777,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                     "epsilon": parameter.epsilon,
                 },
             )
-            vdw_handler.slot_map[virtual_site_key] = vdw_key
+            vdw_handler.slot_map[virtual_site_key] = vdw_key  # type: ignore[index]
             vdw_handler.potentials[vdw_key] = vdw_potential
 
             electrostatics_key = PotentialKey(
@@ -1789,7 +1790,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
                     ),
                 }
             )
-            electrostatics_handler.slot_map[virtual_site_key] = electrostatics_key
+            electrostatics_handler.slot_map[virtual_site_key] = electrostatics_key  # type: ignore[index]
             electrostatics_handler.potentials[
                 electrostatics_key
             ] = electrostatics_potential
@@ -1815,7 +1816,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         return origin_weight, x_direction, y_direction
 
     def _get_local_frame_position(self, virtual_site_key: "VirtualSiteKey"):
-        potential_key = self.slot_map[virtual_site_key]  # type: ignore
+        potential_key = self.slot_map[virtual_site_key]
         potential = self.potentials[potential_key]
         if virtual_site_key.type == "BondCharge":
             distance = potential.parameters["distance"]

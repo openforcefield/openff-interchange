@@ -7,6 +7,9 @@ on:
   pull_request:
     branches:
       - main
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
 
 defaults:
   run:
@@ -35,16 +38,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - uses: conda-incubator/setup-miniconda@v2.1.1
+    - name: Install conda environment
+      uses: mamba-org/provision-with-micromamba@main
       with:
-        python-version: "${{ matrix.python-version }}"
         environment-file: devtools/conda-envs/test_env.yaml
-        activate-environment: test
-        auto-activate-base: false
-        mamba-version: "*"
-        miniforge-version: latest
-        miniforge-variant: Mambaforge
-        use-mamba: true
+        extra-specs: |
+          python=${{ matrix.python-version }}
 
     - name: Additional info about the build
       run: |
@@ -54,6 +53,9 @@ jobs:
 
     - name: Install package
       run: |
+        # These packages are brought in by conda (via the toolkit) and must be removed manually
+        # since pip doesn't know about the -base split and does not uninstall the -base package
+        conda remove --force openff-interchange openff-interchange-base
         python setup.py develop --no-deps
 
     - name: Environment Information
@@ -61,22 +63,51 @@ jobs:
         conda info
         conda list
 
-    - name: License OpenEye
+    - name: Install and license OpenEye Toolkits
       if: ${{ matrix.openeye == true }}
       run: |
+        micromamba install openeye-toolkits -c openeye -yq
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     - name: Run mypy
+      continue-on-error: true
       run: |
-        mypy --namespace-packages -p "openff.interchange"
+        mypy --show-error-codes --namespace-packages -p "openff.interchange"
 
-    - name: Run all tests
+    - name: Run tests
       if: always()
       run: |
         python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
+
+    - name: Run small molecule regression tests
+      if: ${{ matrix.python-version == 3.9 && matrix.openeye == true }}
+      run: |
+        micromamba install deepdiff rich click -c conda-forge -yq
+        python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git
+
+        create_openmm_systems \
+          --input             "regression_tests/small-molecule/input-topologies.json" \
+          --output            "regression_tests/small-molecule/" \
+          --using-interchange \
+          --force-field       "openff-2.0.0.offxml" \
+          --n-procs           2
+
+        # Don't trust the interchange version here, for some reason, just put it in a new directory
+        mkdir regression_tests/small-molecule/omm-systems-interchange-latest/
+        mv regression_tests/small-molecule/omm-systems-interchange-*/*xml regression_tests/small-molecule/omm-systems-interchange-latest/
+
+        compare_openmm_systems \
+          --input-dir-a       "regression_tests/small-molecule/omm-systems-toolkit-0.10.6" \
+          --input-dir-b       "regression_tests/small-molecule/omm-systems-interchange-latest" \
+          --output            "regression_tests/differences.json" \
+          --settings          "regression_tests/default-comparison-settings.json" \
+          --expected-changes  "regression_tests/toolkit-to-interchange.json" \
+          --n-procs           2
+
+        python devtools/scripts/molecule-regressions.py
 
     - name: Codecov
       uses: codecov/codecov-action@v3

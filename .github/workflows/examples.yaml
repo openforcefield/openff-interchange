@@ -7,6 +7,9 @@ on:
   pull_request:
     branches:
       - main
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
 
 defaults:
   run:
@@ -29,16 +32,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - uses: conda-incubator/setup-miniconda@v2.1.1
+    - name: Install conda environment
+      uses: mamba-org/provision-with-micromamba@main
       with:
-        python-version: "${{ matrix.python-version }}"
         environment-file: devtools/conda-envs/examples_env.yaml
-        activate-environment: interchange-examples-env
-        auto-activate-base: false
-        mamba-version: "*"
-        miniforge-version: latest
-        miniforge-variant: Mambaforge
-        use-mamba: true
+        extra-specs: |
+          python=${{ matrix.python-version }}
 
     - name: Additional info about the build
       run: |
@@ -48,6 +47,9 @@ jobs:
 
     - name: Install package
       run: |
+        # These packages are brought in by conda (via the toolkit) and must be removed manually
+        # since pip doesn't know about the -base split and does not uninstall the -base package
+        conda remove --force openff-interchange openff-interchange-base
         python setup.py develop --no-deps
 
     - name: Environment Information

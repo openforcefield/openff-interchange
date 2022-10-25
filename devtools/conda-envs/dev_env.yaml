@@ -10,31 +10,24 @@ dependencies:
   - pydantic
   - openmm
   # OpenFF stack
-  - openff-toolkit =0.10.3
-  - openff-utilities >=0.1.5
-  - openff-units >=0.1.6
-  - cached-property
-  - cachetools
-  - python-constraint
+  - openff-toolkit >=0.11.2
   # Optional features
+  - jax
+  - jaxlib
   - unyt
   - mbuild
-  - foyer >=0.8.1
-  - jax >=0.3.0
-  - jaxlib >=0.3.0
+  - foyer >=0.11.3
   # Testing
-  - mdtraj
   - intermol
   - openff-recharge
   - openeye-toolkits
   - pytest
-  - pytest-timeout
   - pytest-cov
   - pytest-xdist
   - nbval
-  - conda-tree
   - qcportal
   - openff-qcsubmit
+  - mdanalysis
   # Remove after new Evaluator release
   - pymbar >=3.0.5
   - cmiles
@@ -49,8 +42,10 @@ dependencies:
   - types-pkg_resources
   - pandas-stubs >=1.2.0.56
   # Development tools
-  - mamba
   - jupyterlab
+  - nglview
+  - ipywidgets =7
+  - pdbfixer
   - ipdb
   - pre-commit
   - black
@@ -58,7 +53,3 @@ dependencies:
   - flake8
   - snakeviz
   - tuna
-  - rich
-  - pip:
-    - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor
-    - git+https://github.com/mattwthompson/openff-evaluator.git

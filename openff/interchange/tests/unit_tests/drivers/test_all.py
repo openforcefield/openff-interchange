@@ -1,7 +1,7 @@
 """
 Test the behavior of the drivers.all module
 """
-from distutils.spawn import find_executable
+from shutil import which
 
 import pytest
 
@@ -29,7 +29,7 @@ class TestDriversAll(_BaseTest):
         summary = get_all_energies(out)
         assert ("GROMACS" in summary) == (_find_gromacs_executable() is not None)
 
-        assert ("Amber" in summary) == (find_executable("sander") is not None)
+        assert ("Amber" in summary) == (which("sander") is not None)
 
         # FIXME: Add back when LAMMPS export fixed
         # assert ("LAMMPS" in summary) == (_find_lammps_executable() is not None)

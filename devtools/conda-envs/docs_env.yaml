@@ -9,18 +9,11 @@ dependencies:
   - pip
   - pydantic
   - pint
-  - openff-toolkit-base
-  - openff-units >=0.1.6
-  - openff-utilities >=0.1.5
-  - cached-property
-  - cachetools
-  - python-constraint
+  - openff-toolkit-base >=0.11.2
   - openmm >=7.6
   - intermol
-  - pytest
-  - mdtraj
-  - jax >=0.3.0
-  - jaxlib >=0.3.0
+  - jax
+  - jaxlib
   # readthedocs dependencies
   - myst-parser
   - numpydoc
@@ -30,4 +23,3 @@ dependencies:
   - sphinx-notfound-page
   - pip:
     - git+https://github.com/openforcefield/openff-sphinx-theme.git@main
-    - git+https://github.com/openforcefield/openff-toolkit.git@topology-biopolymer-refactor

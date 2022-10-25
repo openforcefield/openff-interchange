@@ -1,8 +1,8 @@
-import numpy as np
+import numpy
 import openmm
 import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol
-from openff.toolkit.tests.utils import compare_system_parameters, get_data_file_path
+from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.units import unit
@@ -10,14 +10,17 @@ from openmm import app
 from openmm import unit as openmm_unit
 
 from openff.interchange import Interchange
-from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
-from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
+from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import (
     MissingPositionsError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
-from openff.interchange.interop.openmm import from_openmm
+from openff.interchange.interop.openmm import (
+    from_openmm,
+    to_openmm_positions,
+    to_openmm_topology,
+)
 from openff.interchange.tests import _BaseTest, get_test_file_path
 
 # WISHLIST: Add tests for reaction-field if implemented
@@ -48,6 +51,21 @@ nonbonded_methods = [
         "result": UnsupportedCutoffMethodError,
     },
 ]
+
+
+def _get_num_virtual_sites(openmm_topology: app.Topology) -> int:
+    return sum(atom.element is None for atom in openmm_topology.atoms())
+
+
+def _compare_openmm_topologies(top1: app.Topology, top2: app.Topology):
+    """
+    In lieu of first-class serializaiton in OpenMM (https://github.com/openmm/openmm/issues/1543),
+    do some quick heuristics to roughly compare two OpenMM Topology objects.
+    """
+    for method_name in ["getNumAtoms", "getNumBonds", "getNumChains", "getNumResidues"]:
+        assert getattr(top1, method_name)() == getattr(top2, method_name)()
+
+    assert (top1.getPeriodicBoxVectors() == top2.getPeriodicBoxVectors()).all()
 
 
 class TestOpenMM(_BaseTest):
@@ -99,6 +117,7 @@ class TestOpenMM(_BaseTest):
         else:
             raise Exception("uh oh")
 
+    @pytest.mark.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
     def test_unsupported_mixing_rule(self):
         molecules = [create_ethanol()]
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
@@ -113,60 +132,6 @@ class TestOpenMM(_BaseTest):
 
         with pytest.raises(UnsupportedExportError, match="default NonbondedForce"):
             openff_sys.to_openmm(combine_nonbonded_forces=True)
-
-    @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
-    @pytest.mark.slow()
-    @pytest.mark.parametrize("n_mols", [1, 2])
-    @pytest.mark.parametrize(
-        "mol",
-        [
-            "C",
-            "CC",  # Adds a proper torsion term(s)
-            "OC=O",  # Simplest molecule with a multi-term torsion
-            "CCOC",  # This hits t86, which has a non-1.0 idivf
-            "C1COC(=O)O1",  # This adds an improper, i2
-        ],
-    )
-    def test_from_openmm_single_mols(sage, mol, n_mols):
-        """
-        Test that ForceField.create_openmm_system and Interchange.to_openmm produce
-        objects with similar energies
-
-        TODO: Tighten tolerances
-        TODO: Test periodic and non-periodic
-        """
-        mol = Molecule.from_smiles(mol)
-        mol.generate_conformers(n_conformers=1)
-        top = Topology.from_molecules(n_mols * [mol])
-        mol.conformers[0] -= np.min(mol.conformers)
-
-        top.box_vectors = 15 * np.eye(3) * unit.nanometer
-
-        if n_mols == 1:
-            positions = mol.conformers[0]
-        elif n_mols == 2:
-            positions = np.concatenate(
-                [mol.conformers[0], mol.conformers[0] + 3 * mol.conformers[0].units]
-            )
-
-        toolkit_system = sage.create_openmm_system(top)
-
-        native_system = Interchange.from_smirnoff(
-            force_field=sage, topology=top
-        ).to_openmm()
-
-        toolkit_energy = _get_openmm_energies(
-            omm_sys=toolkit_system,
-            box_vectors=toolkit_system.getDefaultPeriodicBoxVectors(),
-            positions=positions,
-        )
-        native_energy = _get_openmm_energies(
-            omm_sys=native_system,
-            box_vectors=native_system.getDefaultPeriodicBoxVectors(),
-            positions=positions,
-        )
-
-        toolkit_energy.compare(native_energy)
 
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
     @pytest.mark.slow()
@@ -244,6 +209,21 @@ class TestOpenMM(_BaseTest):
         else:
             raise Exception("No HarmonicAngleForce found")
 
+    def test_nonharmonic_angle(self, sage, ethanol_top):
+        out = Interchange.from_smirnoff(sage, ethanol_top)
+        out["Angles"].expression = "k/2*(cos(theta)-cos(angle))**2"
+
+        system = out.to_openmm()
+
+        def _is_custom_angle(force):
+            return isinstance(force, openmm.CustomAngleForce)
+
+        assert len([f for f in system.getForces() if _is_custom_angle(f)]) == 1
+
+        for force in system.getForces():
+            if _is_custom_angle(force):
+                assert force.getEnergyFunction() == "k/2*(cos(theta)-cos(angle))^2"
+
     def test_openmm_no_valence_forces_with_no_handler(self, sage):
         ethanol = create_ethanol()
 
@@ -283,6 +263,8 @@ class TestOpenMM(_BaseTest):
     def test_nonstandard_cutoffs_match(self):
         """Test that multiple nonbonded forces use the same cutoff."""
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
+        topology = Molecule.from_smiles("C").to_topology()
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
 
         cutoff = unit.Quantity(1.555, unit.nanometer)
 
@@ -290,7 +272,7 @@ class TestOpenMM(_BaseTest):
 
         interchange = Interchange.from_smirnoff(
             force_field=force_field,
-            topology=[Molecule.from_smiles("C")],
+            topology=topology,
         )
 
         system = interchange.to_openmm(combine_nonbonded_forces=False)
@@ -314,7 +296,9 @@ class TestOpenMMSwitchingFunction(_BaseTest):
             if isinstance(force, openmm.NonbondedForce):
                 found_force = True
                 assert force.getUseSwitchingFunction()
-                assert force.getSwitchingDistance() == 8 * openmm_unit.angstrom
+                assert force.getSwitchingDistance().value_in_unit(
+                    openmm_unit.angstrom
+                ) == pytest.approx(8), force.getSwitchingDistance()
 
         assert found_force, "NonbondedForce not found in system"
 
@@ -357,11 +341,11 @@ class TestOpenMMSwitchingFunction(_BaseTest):
 class TestOpenMMVirtualSites(_BaseTest):
     @pytest.fixture()
     def sage_with_sigma_hole(self, sage):
-        """Fixture that loads an SMIRNOFF XML for argon"""
+        """Fixture that loads an SMIRNOFF XML with a C-Cl sigma hole."""
         # TODO: Move this into BaseTest to that GROMACS and others can access it
         virtual_site_handler = VirtualSiteHandler(version=0.3)
 
-        sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
+        sigma_type = VirtualSiteHandler.VirtualSiteType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
             distance=1.4 * unit.angstrom,
@@ -399,79 +383,99 @@ class TestOpenMMVirtualSites(_BaseTest):
 
         return sage
 
-    @pytest.mark.skip(reason="virtual sites in development")
-    def test_sigma_hole_example(self, sage_with_sigma_hole):
-        """Test that a single-molecule sigma hole example runs"""
-        mol = Molecule.from_smiles("CCl")
-        mol.generate_conformers(n_conformers=1)
+    def test_valence_term_paticle_index_offsets(self):
+        # Use a questionable version of TIP5P that includes angle parameters, since that's what's being tested
+        tip5p_offxml = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+        <LibraryCharge
+            name="tip5p"
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+            charge1="0.*elementary_charge"
+            charge2="0.*elementary_charge"
+            charge3="0.*elementary_charge"/>
+    </LibraryCharges>
+    <vdW
+        version="0.3"
+        potential="Lennard-Jones-12-6"
+        combining_rules="Lorentz-Berthelot"
+        scale12="0.0"
+        scale13="0.0"
+        scale14="0.5"
+        scale15="1.0"
+        switch_width="0.0 * angstrom"
+        cutoff="9.0 * angstrom" method="cutoff">
+            <Atom
+                smirks="[#1:1]-[#8X2H2+0]-[#1]"
+                epsilon="0.*mole**-1*kilojoule"
+                sigma="1.0 * nanometer"/>
+            <Atom
+                smirks="[#1]-[#8X2H2+0:1]-[#1]"
+                epsilon="0.66944*mole**-1*kilojoule"
+                sigma="0.312*nanometer"/>
+    </vdW>
+    <Bonds
+        version="0.4"
+        potential="harmonic"
+        fractional_bondorder_method="AM1-Wiberg"
+        fractional_bondorder_interpolation="linear">
+        <Bond
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1]"
+            length="0.9572*angstrom"
+            k="462750.4*nanometer**-2*mole**-1*kilojoule"/>
+    </Bonds>
+    <Angles version="0.3" potential="harmonic">
+        <Angle
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+            angle="1.82421813418*radian"
+            k="836.8*mole**-1*radian**-2*kilojoule"
+            id="a1"/>
+    </Angles>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="DivalentLonePair"
+            name="EP"
+            smirks="[#1:2]-[#8X2H2+0:1]-[#1:3]"
+            distance="0.70 * angstrom"
+            charge_increment1="0.0*elementary_charge"
+            charge_increment2="0.1205*elementary_charge"
+            charge_increment3="0.1205*elementary_charge"
+            sigma="10.0*angstrom"
+            epsilon="0.0*kilocalories_per_mole"
+            outOfPlaneAngle="54.71384225*degree"
+            match="all_permutations" >
+        </VirtualSite>
+    </VirtualSites>
+    <Electrostatics
+        version="0.3"
+        method="PME"
+        scale12="0.0"
+        scale13="0.0"
+        scale14="0.833333"
+        scale15="1.0"
+        switch_width="0.0 * angstrom"
+        cutoff="9.0 * angstrom"/>
+</SMIRNOFF>
+"""
+        tip5p = ForceField(tip5p_offxml)
+        water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
 
-        out = Interchange.from_smirnoff(
-            force_field=sage_with_sigma_hole, topology=mol.to_topology()
-        )
-        out.box = [4, 4, 4]
-        out.positions = mol.conformers[0]
-        out.handlers["VirtualSites"] = SMIRNOFFVirtualSiteHandler._from_toolkit(
-            parameter_handler=sage_with_sigma_hole["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["vdW"]._from_toolkit_virtual_sites(
-            parameter_handler=sage_with_sigma_hole["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["Electrostatics"]._from_toolkit_virtual_sites(
-            parameter_handler=sage_with_sigma_hole["VirtualSites"],
-            topology=mol.to_topology(),
+        out = Interchange.from_smirnoff(tip5p, [water, water]).to_openmm(
+            combine_nonbonded_forces=True
         )
 
-        # TODO: Sanity-check reported energies
-        get_openmm_energies(out, combine_nonbonded_forces=True)
+        assert out.getNumForces() == 3
 
-        compare_system_parameters(
-            out.to_openmm(combine_nonbonded_forces=True),
-            sage_with_sigma_hole.create_openmm_system(mol.to_topology()),
-        )
-        """
-        import numpy as np
-        import parmed as pmd
+        for force in out.getForces():
+            if isinstance(force, openmm.HarmonicAngleForce):
+                p1, p2, p3, _, _ = force.getAngleParameters(1)
 
-        out.to_top("sigma.top")
-        gmx_top = pmd.load_file("sigma.top")
+                assert p1 == 6
+                assert p2 == 5
+                assert p3 == 7
 
-        assert abs(np.sum([p.charge for p in gmx_top.atoms])) < 1e-3
-        """
 
-    @pytest.mark.skip(reason="virtual sites in development")
-    def test_carbonyl_example(self, sage_with_monovalent_lone_pair):
-        """Test that a single-molecule DivalentLonePair example runs"""
-        mol = Molecule.from_smiles("CC=O")
-        mol.generate_conformers(n_conformers=1)
-
-        out = Interchange.from_smirnoff(
-            force_field=sage_with_monovalent_lone_pair, topology=mol.to_topology()
-        )
-        out.box = [4, 4, 4]
-        out.positions = mol.conformers[0]
-        out.handlers["VirtualSites"] = SMIRNOFFVirtualSiteHandler._from_toolkit(
-            parameter_handler=sage_with_monovalent_lone_pair["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["vdW"]._from_toolkit_virtual_sites(
-            parameter_handler=sage_with_monovalent_lone_pair["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-        out["Electrostatics"]._from_toolkit_virtual_sites(
-            parameter_handler=sage_with_monovalent_lone_pair["VirtualSites"],
-            topology=mol.to_topology(),
-        )
-
-        # TODO: Sanity-check reported energies
-        get_openmm_energies(out, combine_nonbonded_forces=True)
-
-        compare_system_parameters(
-            out.to_openmm(combine_nonbonded_forces=True),
-            sage_with_monovalent_lone_pair.create_openmm_system(mol.to_topology()),
-        )
-
+class TestOpenMMVirtualSiteExclusions(_BaseTest):
     def test_tip5p_num_exceptions(self):
         tip5p = ForceField(get_test_file_path("tip5p.offxml"))
         water = Molecule.from_smiles("O")
@@ -481,9 +485,443 @@ class TestOpenMMVirtualSites(_BaseTest):
             combine_nonbonded_forces=True
         )
 
+        # In a TIP5P water    expected exceptions include (total 10)
+        #
+        # V(3)  V(4)          Oxygen to hydrogens and particles (4)
+        #    \ /                - (0, 1), (0, 2), (0, 3), (0, 4)
+        #     O(0)            Hyrogens to virtual particles (4)
+        #    / \                - (1, 3), (1, 4), (2, 3), (2, 4)
+        # H(1)  H(2)          Hydrogens and virtual particles to each other (2)
+        #                       - (1, 2), (3, 4)
+
         for force in out.getForces():
             if isinstance(force, openmm.NonbondedForce):
-                assert force.getNumExceptions() == 12
+                assert force.getNumExceptions() == 10
+
+    def test_dichloroethane_exceptions(self, sage):
+        """Test a case in which a parent's 1-4 exceptions must be 'imported'."""
+        from openff.toolkit.tests.mocking import VirtualSiteMocking
+
+        # This molecule has heavy atoms with indices (1-indexed) CL1, C2, C3, Cl4,
+        # resulting in 1-4 interactions between the Cl-Cl pair and some Cl-H pairs
+        dichloroethane = Molecule.from_mapped_smiles(
+            "[Cl:1][C:2]([H:5])([H:6])[C:3]([H:7])([H:8])[Cl:4]"
+        )
+
+        # This parameter pulls 0.1 and 0.2e from Cl (parent) and C, respectively, and has
+        # LJ parameters of 4 A, 3 kJ/mol
+        parameter = VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]")
+
+        handler = VirtualSiteHandler(version="0.3")
+        handler.add_parameter(parameter=parameter)
+
+        sage.register_parameter_handler(handler)
+
+        system: openmm.System = Interchange.from_smirnoff(
+            sage, [dichloroethane]
+        ).to_openmm(combine_nonbonded_forces=True)
+
+        assert system.isVirtualSite(8)
+        assert system.isVirtualSite(9)
+
+        non_bonded_force: openmm.NonbondedForce = [
+            f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)
+        ][0]
+
+        for exception_index in range(non_bonded_force.getNumExceptions()):
+            p1, p2, q, sigma, epsilon = non_bonded_force.getExceptionParameters(
+                exception_index
+            )
+            if p2 == 8:
+                # Parent Cl, adjacent C and its bonded H, and the 1-3 C
+                if p1 in (0, 1, 2, 4, 5):
+                    assert q._value == epsilon._value == 0.0
+                # 1-4 Cl or 1-4 Hs
+                if p1 in (3, 6, 7):
+                    for value in (q, sigma, epsilon):
+                        assert value._value != 0, (q, sigma, epsilon)
+            if p2 == 9:
+                if p1 in (3, 1, 2, 6, 7):
+                    assert q._value == epsilon._value == 0.0
+                if p1 in (0, 4, 5):
+                    for value in (q, sigma, epsilon):
+                        assert value._value != 0, (q, sigma, epsilon)
+
+
+class TestToOpenMMTopology(_BaseTest):
+    def test_num_virtual_sites(self):
+
+        tip4p = ForceField("openff-2.0.0.offxml", get_test_file_path("tip4p.offxml"))
+        water = Molecule.from_smiles("O")
+
+        out = Interchange.from_smirnoff(tip4p, [water])
+
+        assert _get_num_virtual_sites(to_openmm_topology(out)) == 1
+
+        # TODO: Monkeypatch Topology.to_openmm() and emit a warning when it seems
+        #       to be used while virtual sites are present in a handler
+        assert _get_num_virtual_sites(out.topology.to_openmm()) == 0
+
+    def test_interchange_method(self):
+        """
+        Ensure similar-ish behavior between `to_openmm_topology` as a standalone function
+        and as the wrapped method of the same name on the `Interchange` class.
+        """
+        tip4p = ForceField("openff-2.0.0.offxml", get_test_file_path("tip4p.offxml"))
+        topology = Molecule.from_smiles("O").to_topology()
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        out = Interchange.from_smirnoff(tip4p, topology)
+
+        _compare_openmm_topologies(out.to_openmm_topology(), to_openmm_topology(out))
+
+    @pytest.mark.parametrize("ensure_unique_atom_names", [True, "residues", "chains"])
+    def test_assign_unique_atom_names(self, ensure_unique_atom_names):
+        """
+        Ensure that OFF topologies with no pre-existing atom names have unique
+        atom names applied when being converted to openmm
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles("CCO")
+        benzene = Molecule.from_smiles("c1ccccc1")
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+
+        # This test uses molecules with no hierarchy schemes, so the parametrized
+        # ensure_unique_atom_names values should behave identically.
+        assert not any(
+            [mol._hierarchy_schemes for mol in off_topology.molecules]
+        ), "Test assumes no hierarchy schemes"
+
+        sage = ForceField("openff-2.0.0.offxml")
+        interchange = Interchange.from_smirnoff(sage, off_topology)
+
+        omm_topology = interchange.to_openmm_topology(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        # There should be 6 unique Cs, 6 unique Hs, and 1 unique O, for a total of 13 unique atom names
+        assert len(atom_names) == 13
+
+    @pytest.mark.parametrize("ensure_unique_atom_names", [True, "residues", "chains"])
+    def test_assign_some_unique_atom_names(self, ensure_unique_atom_names):
+        """
+        Ensure that OFF topologies with some pre-existing atom names have unique
+        atom names applied to the other atoms when being converted to openmm
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles("CCO")
+        for atom in ethanol.atoms:
+            atom.name = f"AT{atom.molecule_atom_index}"
+        benzene = Molecule.from_smiles("c1ccccc1")
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+
+        # This test uses molecules with no hierarchy schemes, so the parametrized
+        # ensure_unique_atom_names values should behave identically.
+        assert not any(
+            [mol._hierarchy_schemes for mol in off_topology.molecules]
+        ), "Test assumes no hierarchy schemes"
+
+        sage = ForceField("openff-2.0.0.offxml")
+        interchange = Interchange.from_smirnoff(sage, off_topology)
+
+        omm_topology = interchange.to_openmm_topology(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        # There should be 9 "ATOM#"-labeled atoms, 6 unique Cs, and 6 unique Hs,
+        # for a total of 21 unique atom names
+        assert len(atom_names) == 21
+
+    @pytest.mark.parametrize("ensure_unique_atom_names", [True, "residues", "chains"])
+    def test_assign_unique_atom_names_some_duplicates(self, ensure_unique_atom_names):
+        """
+        Ensure that OFF topologies where some molecules have invalid/duplicate
+        atom names have unique atom names applied while the other molecules are unaffected.
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles("CCO")
+
+        # Assign duplicate atom names in ethanol (two AT0s)
+        ethanol_atom_names_with_duplicates = [f"AT{i}" for i in range(ethanol.n_atoms)]
+        ethanol_atom_names_with_duplicates[1] = "AT0"
+        for atom, atom_name in zip(ethanol.atoms, ethanol_atom_names_with_duplicates):
+            atom.name = atom_name
+
+        # Assign unique atom names in benzene
+        benzene = Molecule.from_smiles("c1ccccc1")
+        benzene_atom_names = [f"AT{i}" for i in range(benzene.n_atoms)]
+        for atom, atom_name in zip(benzene.atoms, benzene_atom_names):
+            atom.name = atom_name
+
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+
+        # This test uses molecules with no hierarchy schemes, so the parametrized
+        # ensure_unique_atom_names values should behave identically.
+        assert not any(
+            [mol._hierarchy_schemes for mol in off_topology.molecules]
+        ), "Test assumes no hierarchy schemes"
+
+        sage = ForceField("openff-2.0.0.offxml")
+        interchange = Interchange.from_smirnoff(sage, off_topology)
+
+        omm_topology = interchange.to_openmm_topology(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+
+        # There should be  12 "AT#"-labeled atoms (from benzene), 2 unique Cs,
+        # 1 unique O, and 6 unique Hs, for a total of 21 unique atom names
+        assert len(atom_names) == 21
+
+    def test_do_not_assign_unique_atom_names(self):
+        """
+        Test disabling unique atom name assignment in Topology.to_openmm
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles("CCO")
+        for atom in ethanol.atoms:
+            atom.name = "eth_test"
+        benzene = Molecule.from_smiles("c1ccccc1")
+        benzene.atoms[0].name = "bzn_test"
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+
+        sage = ForceField("openff-2.0.0.offxml")
+        interchange = Interchange.from_smirnoff(sage, off_topology)
+
+        omm_topology = interchange.to_openmm_topology(ensure_unique_atom_names=False)
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        # There should be 9 atom named "eth_test", 1 atom named "bzn_test",
+        # and 12 atoms named "", for a total of 3 unique atom names
+        assert len(atom_names) == 3
+
+    @pytest.mark.parametrize("explicit_arg", [True, False])
+    def test_preserve_per_residue_unique_atom_names(self, explicit_arg):
+        """
+        Test that to_openmm preserves atom names that are unique per-residue by default
+        """
+        # Create a topology from a capped dialanine
+        peptide = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        off_topology = Topology.from_molecules([peptide])
+
+        # Assert the test's assumptions
+        _ace, ala1, ala2, _nme = off_topology.hierarchy_iterator("residues")
+        assert [a.name for a in ala1.atoms] == [
+            a.name for a in ala2.atoms
+        ], "Test assumes both alanines have same atom names"
+
+        for res in off_topology.hierarchy_iterator("residues"):
+            res_atomnames = [atom.name for atom in res.atoms]
+            assert len(set(res_atomnames)) == len(
+                res_atomnames
+            ), f"Test assumes atom names are already unique per-residue in {res}"
+
+        # Record the initial atom names
+        init_atomnames = [str(atom.name) for atom in off_topology.atoms]
+
+        sage = ForceField("openff-2.0.0.offxml")
+        interchange = Interchange.from_smirnoff(sage, off_topology)
+
+        # Perform the test
+        if explicit_arg:
+            omm_topology = interchange.to_openmm_topology(
+                ensure_unique_atom_names="residues"
+            )
+        else:
+            omm_topology = interchange.to_openmm_topology()
+
+        # Check that the atom names were preserved
+        final_atomnames = [str(atom.name) for atom in omm_topology.atoms()]
+        assert final_atomnames == init_atomnames
+
+    @pytest.mark.parametrize("explicit_arg", [True, False])
+    def test_generate_per_residue_unique_atom_names(self, explicit_arg):
+        """
+        Test that to_openmm generates atom names that are unique per-residue
+        """
+        # Create a topology from a capped dialanine
+        peptide = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        off_topology = Topology.from_molecules([peptide])
+
+        # Remove atom names from some residues, make others have duplicate atom names
+        ace, ala1, ala2, nme = off_topology.hierarchy_iterator("residues")
+        for atom in ace.atoms:
+            atom._name = None
+        for atom in ala1.atoms:
+            atom.name = ""
+        for atom in ala2.atoms:
+            atom.name = "ATX2"
+        for atom in nme.atoms:
+            if atom.name == "H2":
+                atom.name = "H1"
+                break
+
+        # Assert assumptions
+        for res in off_topology.hierarchy_iterator("residues"):
+            res_atomnames = [atom.name for atom in res.atoms]
+            assert len(set(res_atomnames)) != len(
+                res_atomnames
+            ), f"Test assumes atom names are not unique per-residue in {res}"
+        assert off_topology.n_atoms == 32, "Test assumes topology has 32 atoms"
+
+        sage = ForceField("openff-2.0.0.offxml")
+        interchange = Interchange.from_smirnoff(sage, off_topology)
+
+        # Perform the test
+        if explicit_arg:
+            omm_topology = interchange.to_openmm_topology(
+                ensure_unique_atom_names="residues"
+            )
+        else:
+            omm_topology = interchange.to_openmm_topology()
+
+        # Check that the atom names are now unique per-residue but not per-molecule
+        for res in omm_topology.residues():
+            res_atomnames = [atom.name for atom in res.atoms()]
+            assert len(set(res_atomnames)) == len(
+                res_atomnames
+            ), f"Final atom names are not unique in residue {res}"
+
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        assert (
+            len(atom_names) < 32
+        ), "There should be duplicate atom names in this output topology"
+
+    @pytest.mark.parametrize("ensure_unique_atom_names", ["chains", True])
+    def test_generate_per_molecule_unique_atom_names_with_residues(
+        self, ensure_unique_atom_names
+    ):
+        """
+        Test that to_openmm can generate atom names that are unique per-molecule
+        when the topology has residues
+        """
+        # Create a topology from a capped dialanine
+        peptide = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        off_topology = Topology.from_molecules([peptide])
+
+        # Remove atom names from some residues, make others have duplicate atom names
+        ace, ala1, ala2, nme = off_topology.hierarchy_iterator("residues")
+        for atom in ace.atoms:
+            atom._name = None
+        for atom in ala1.atoms:
+            atom.name = ""
+        for atom in ala2.atoms:
+            atom.name = "ATX2"
+        for atom in nme.atoms:
+            if atom.name == "H2":
+                atom.name = "H1"
+                break
+
+        # Assert assumptions
+        for res in off_topology.hierarchy_iterator("residues"):
+            res_atomnames = [atom.name for atom in res.atoms]
+            assert len(set(res_atomnames)) != len(
+                res_atomnames
+            ), f"Test assumes atom names are not unique per-residue in {res}"
+        assert off_topology.n_atoms == 32, "Test assumes topology has 32 atoms"
+
+        sage = ForceField("openff-2.0.0.offxml")
+        interchange = Interchange.from_smirnoff(sage, off_topology)
+
+        # Perform the test
+        omm_topology = interchange.to_openmm_topology(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
+
+        # Check that the atom names are now unique across the topology (of 1 molecule)
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        assert (
+            len(atom_names) == 32
+        ), "There should not be duplicate atom names in this output topology"
+
+    @pytest.mark.parametrize(
+        "ensure_unique_atom_names", [True, "residues", "chains", False]
+    )
+    def test_to_openmm_copies_molecules(self, ensure_unique_atom_names):
+        """
+        Check that generating new atom names doesn't affect the input topology
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles("CCO")
+        for atom in ethanol.atoms:
+            atom.name = f"AT{atom.molecule_atom_index}"
+        benzene = Molecule.from_smiles("c1ccccc1")
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+
+        # This test uses molecules with no hierarchy schemes, so the parametrized
+        # ensure_unique_atom_names values should behave identically (except False).
+        assert not any(
+            [mol._hierarchy_schemes for mol in off_topology.molecules]
+        ), "Test assumes no hierarchy schemes"
+
+        sage = ForceField("openff-2.0.0.offxml")
+        interchange = Interchange.from_smirnoff(sage, off_topology)
+
+        # Record the initial atom names to compare to later
+        init_atomnames = [str(atom.name) for atom in interchange.topology.atoms]
+
+        omm_topology = interchange.to_openmm_topology(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
+
+        # Get the atom names back from the initial molecules after calling to_openmm
+        final_atomnames_mols = [
+            atom.name for atom in [*ethanol.atoms, *benzene.atoms, *benzene.atoms]
+        ]
+        # Get the atom names back from the initial topology after calling to_openmm
+        final_atomnames_offtop = [atom.name for atom in off_topology.atoms]
+        # Get the atom names back from the new OpenMM topology
+        final_atomnames_ommtop = [atom.name for atom in omm_topology.atoms()]
+
+        # Check the appropriate properties!
+        assert (
+            init_atomnames == final_atomnames_mols
+        ), "Molecules' atom names were changed"
+        assert (
+            init_atomnames == final_atomnames_offtop
+        ), "Topology's atom names were changed"
+        if ensure_unique_atom_names:
+            assert (
+                init_atomnames != final_atomnames_ommtop
+            ), "New atom names should've been generated but weren't"
+
+
+class TestToOpenMMPositions(_BaseTest):
+    @pytest.mark.parametrize("include_virtual_sites", [True, False])
+    def test_positions(self, include_virtual_sites):
+        tip4p = ForceField("openff-2.0.0.offxml", get_test_file_path("tip4p.offxml"))
+        water = Molecule.from_smiles("O")
+        water.generate_conformers(n_conformers=1)
+
+        out = Interchange.from_smirnoff(tip4p, [water])
+
+        positions = to_openmm_positions(
+            out, include_virtual_sites=include_virtual_sites
+        )
+
+        assert positions.shape == (4, 3) if include_virtual_sites else (3, 3)
+
+        numpy.testing.assert_allclose(
+            positions.to(unit.angstrom)[:3],
+            water.conformers[0].m_as(unit.angstrom),
+        )
 
 
 class TestOpenMMToPDB(_BaseTest):

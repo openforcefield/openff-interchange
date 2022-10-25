@@ -1,5 +1,4 @@
 import itertools
-from copy import deepcopy
 from typing import List, Tuple
 
 import numpy as np
@@ -361,67 +360,6 @@ class TestSMIRNOFFHandlers(_BaseTest):
             assert not uses_elf10
             np.testing.assert_allclose(partial_charges, assigned_charges)
 
-    # TODO: Remove xfail after openff-toolkit 0.10.0
-    @pytest.mark.xfail()
-    def test_charges_with_virtual_site(self, sage):
-        mol = Molecule.from_smiles("CCl")
-        mol.generate_conformers(n_conformers=1)
-        mol.partial_charges = unit.Quantity(
-            np.array([0.5, -0.8, 0.1, 0.1, 0.1]), unit.elementary_charge
-        )
-
-        sage = deepcopy(sage)
-        sage.deregister_parameter_handler(sage["ToolkitAM1BCC"])
-        sage.deregister_parameter_handler(sage["LibraryCharges"])
-
-        library_charge_handler = LibraryChargeHandler(version=0.3)
-
-        library_charge_type = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
-        library_charge_handler.add_parameter(parameter=library_charge_type)
-
-        sage.register_parameter_handler(library_charge_handler)
-
-        virtual_site_handler = VirtualSiteHandler(version=0.3)
-
-        sigma_type = VirtualSiteHandler.VirtualSiteBondChargeType(
-            name="EP",
-            smirks="[#6:1]-[#17:2]",
-            distance=1.4 * unit.angstrom,
-            type="BondCharge",
-            match="once",
-            charge_increment1=0.2 * unit.elementary_charge,
-            charge_increment2=0.1 * unit.elementary_charge,
-        )
-
-        virtual_site_handler.add_parameter(parameter=sigma_type)
-        sage.register_parameter_handler(virtual_site_handler)
-
-        out = Interchange.from_smirnoff(force_field=sage, topology=mol.to_topology())
-        out["Electrostatics"]._from_toolkit_virtual_sites(
-            parameter_handler=sage["VirtualSites"], topology=mol.to_topology()
-        )
-
-        via_toolkit = sage.create_openmm_system(mol.to_topology())
-
-        charges = []
-        for force in via_toolkit.getForces():
-            if type(force) == openmm.NonbondedForce:
-                for i in range(6):
-                    charges.append(force.getParticleParameters(i)[0]._value)
-
-        # Final charges are
-        #   [0.5, -0.8, 0.1, 0.1, 0.1]
-        # + [0.2, 0.1, 0.0, 0.0, 0.0, -0.3]
-        # = [0.7, -0.7, 0.1, 0.1, 0.1, -0.3]
-        np.testing.assert_allclose(
-            charges,
-            [v.m for v in out["Electrostatics"].charges_with_virtual_sites.values()],
-        )
-
-        np.testing.assert_allclose(
-            charges[:5], [v.m for v in out["Electrostatics"].charges.values()]
-        )
-
 
 class TestInterchangeFromSMIRNOFF(_BaseTest):
     """General tests for Interchange.from_smirnoff. Some are ported from the toolkit."""
@@ -769,7 +707,7 @@ class TestBondOrderInterpolation(_BaseTest):
         ):
             k1 = bonds.potentials[pot_key1].parameters["k"].m_as(kcal_mol_a2)
             k2 = bonds_mod.potentials[pot_key2].parameters["k"].m_as(kcal_mol_a2)
-            assert k1 == pytest.approx(k2)
+            assert k1 == pytest.approx(k2, rel=1e-5), (k1, k2)
 
     def test_input_conformers_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
@@ -802,7 +740,7 @@ class TestBondOrderInterpolation(_BaseTest):
         for key1, key2 in zip(bonds.potentials, bonds_mod.potentials):
             k1 = bonds.potentials[key1].parameters["k"].m_as(kcal_mol_a2)
             k2 = bonds_mod.potentials[key2].parameters["k"].m_as(kcal_mol_a2)
-            assert k1 == pytest.approx(k2), (k1, k2)
+            assert k1 == pytest.approx(k2, rel=1e-5), (k1, k2)
 
     def test_fractional_bondorder_invalid_interpolation_method(self):
         """
@@ -852,12 +790,12 @@ class TestMatrixRepresentations(_BaseTest):
         else:
             raise NotImplementedError()
 
-        p = handler.get_force_field_parameters()
+        p = handler.get_force_field_parameters(use_jax=True)
 
         assert isinstance(p, jax.interpreters.xla.DeviceArray)
         assert np.prod(p.shape) == n_ff_terms
 
-        q = handler.get_system_parameters()
+        q = handler.get_system_parameters(use_jax=True)
 
         assert isinstance(q, jax.interpreters.xla.DeviceArray)
         assert np.prod(q.shape) == n_sys_terms
@@ -885,12 +823,12 @@ class TestMatrixRepresentations(_BaseTest):
             topology=ethanol.to_topology(),
         )
 
-        original = bond_handler.get_force_field_parameters()
+        original = bond_handler.get_force_field_parameters(use_jax=True)
         modified = original * jax.numpy.array([1.1, 0.5])
 
         bond_handler.set_force_field_parameters(modified)
 
-        assert (bond_handler.get_force_field_parameters() == modified).all()
+        assert (bond_handler.get_force_field_parameters(use_jax=True) == modified).all()
 
 
 class TestParameterInterpolation(_BaseTest):
@@ -1249,6 +1187,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             openmm.VerletIntegrator(1.0 * openmm_unit.femtosecond),
             openmm.Platform.getPlatformByName("Reference"),
         )
+
         context.setPositions(to_openmm(input_conformer))
         context.computeVirtualSites()
 
@@ -1276,7 +1215,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             ),
             (
                 VirtualSiteMocking.bond_charge_parameter("[C:1]#[C:2]"),
-                "[H:1][C:2]#[C:3][C:4]",
+                "[H:1][C:2]#[C:3][H:4]",
                 VirtualSiteMocking.sp1_conformer(),
                 (2, 3),
                 unit.Quantity(
@@ -1401,12 +1340,12 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-0.3 * _E, 4.0 * _A, 3.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
-                    (-0.3 * _E, 4.0 * _A, 3.0 * _KJ),
                     (-0.3 * _E, 4.0 * _A, 3.0 * _KJ),
                 ],
                 2,
@@ -1434,12 +1373,12 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     (0.7 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-0.45 * _E, 6.0 * _A, 4.5 * _KJ),  # C=O vsite
+                    (-0.6 * _E, 8.0 * _A, 6.0 * _KJ),  # CX3=O vsite
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.7 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.35 * _E, 10.0 * _A, 0.0 * _KJ),
-                    (-0.45 * _E, 6.0 * _A, 4.5 * _KJ),  # C=O vsite
-                    (-0.6 * _E, 8.0 * _A, 6.0 * _KJ),  # CX3=O vsite
                     (-0.45 * _E, 6.0 * _A, 4.5 * _KJ),  # C=O vsite
                     (-0.6 * _E, 8.0 * _A, 6.0 * _KJ),  # CX3=O vsite
                 ],
@@ -1459,12 +1398,12 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     (0.4 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
+                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.4 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
-                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
-                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                     (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                     (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                 ],
@@ -1487,10 +1426,10 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
-                    (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                     (-0.6 * _E, 4.0 * _A, 5.0 * _KJ),
                 ],
                 2,
@@ -1509,11 +1448,11 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.4 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-1.0 * _E, 5.0 * _A, 6.0 * _KJ),
                     (0.4 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.2 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.3 * _E, 10.0 * _A, 0.0 * _KJ),
                     (0.1 * _E, 10.0 * _A, 0.0 * _KJ),
-                    (-1.0 * _E, 5.0 * _A, 6.0 * _KJ),
                     (-1.0 * _E, 5.0 * _A, 6.0 * _KJ),
                 ],
                 2,
@@ -1567,10 +1506,8 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
 
         assert system.getNumParticles() == expected_n_total
 
-        assert all(not system.isVirtualSite(i) for i in range(topology.n_atoms))
-        assert all(
-            system.isVirtualSite(i) for i in range(topology.n_atoms, expected_n_v_sites)
-        )
+        # TODO: Explicitly ensure virtual sites are collated between moleucles
+        #       This is implicitly tested in the construction of the parameter arrays
 
         assert system.getNumForces() == 1
         force: openmm.NonbondedForce = next(iter(system.getForces()))
@@ -1583,9 +1520,9 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             charge, sigma, epsilon = force.getParticleParameters(i)
 
             # Make sure v-sites are massless.
-            assert np.isclose(
-                system.getParticleMass(i).value_in_unit(openmm_unit.amu), 0.0
-            ) == (False if i < topology.n_atoms else True)
+            assert (
+                np.isclose(system.getParticleMass(i)._value, 0.0)
+            ) == system.isVirtualSite(i)
 
             assert np.isclose(
                 expected_charge.m_as(unit.elementary_charge),

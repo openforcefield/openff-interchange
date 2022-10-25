@@ -26,6 +26,7 @@ class TestOpenMM:
         del sage._parameter_handlers["vdW"]
 
         water = Molecule.from_smiles("C")
+
         openmm_system = Interchange.from_smirnoff(sage, [water]).to_openmm()
 
         for force in openmm_system.getForces():
