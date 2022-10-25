@@ -20,7 +20,7 @@ dependencies:
   - openff-evaluator
   - jax
   - jaxlib
-  - pytest
+  - pytest =7.1
   - pytest-cov
   - pytest-xdist
   - pytest-randomly

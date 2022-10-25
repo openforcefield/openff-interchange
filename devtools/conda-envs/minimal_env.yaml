@@ -10,6 +10,6 @@ dependencies:
   # OpenFF stack
   - openff-toolkit >=0.11.0
   # Testing
-  - pytest
+  - pytest =7.1
   - pytest-cov
   - pytest-xdist

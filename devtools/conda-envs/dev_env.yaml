@@ -21,7 +21,7 @@ dependencies:
   - intermol
   - openff-recharge
   - openeye-toolkits
-  - pytest
+  - pytest =7.1
   - pytest-cov
   - pytest-xdist
   - nbval
