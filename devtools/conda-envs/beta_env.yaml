@@ -1,11 +1,6 @@
 name: beta-env
 channels:
-  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge/label/openmm_rc
-  - conda-forge/label/openff-toolkit_rc
-  - conda-forge/label/openff-interchange_rc
-  - openeye/label/beta
-  - openeye/label/rc
   - conda-forge
   - openeye
 dependencies:
@@ -37,7 +32,7 @@ dependencies:
   # Examples
   - nglview
   - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
-  - pytest <7.0.0
+  - pytest =7.1.0
   - nbval
   # Typing
   - mypy >=0.971
