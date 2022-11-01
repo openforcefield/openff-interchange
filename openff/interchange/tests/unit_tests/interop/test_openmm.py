@@ -1,7 +1,9 @@
-import numpy as np
+import numpy
 import pytest
 from openff.toolkit import ForceField, Molecule
 from openff.toolkit.tests.utils import get_14_scaling_factors
+from openff.units import unit
+from openff.units.openmm import ensure_quantity
 from openmm import (
     HarmonicAngleForce,
     HarmonicBondForce,
@@ -10,9 +12,10 @@ from openmm import (
 )
 
 from openff.interchange import Interchange
+from openff.interchange.tests import _BaseTest
 
 
-class TestOpenMM:
+class TestOpenMM(_BaseTest):
     def test_no_nonbonded_force(self):
         """
         Ensure a SMIRNOFF-style force field can be exported to OpenMM even if no nonbonded handlers are present. For
@@ -54,7 +57,7 @@ class TestOpenMM:
             top,
         ).to_openmm(combine_nonbonded_forces=True)
 
-        np.testing.assert_almost_equal(
+        numpy.testing.assert_almost_equal(
             actual=get_14_scaling_factors(out)[1],
             desired=ff_no_electrostatics["vdW"].scale14,
             decimal=8,
@@ -72,8 +75,34 @@ class TestOpenMM:
             top,
         ).to_openmm(combine_nonbonded_forces=True)
 
-        np.testing.assert_almost_equal(
+        numpy.testing.assert_almost_equal(
             actual=get_14_scaling_factors(out)[0],
             desired=ff_no_vdw["Electrostatics"].scale14,
             decimal=8,
+        )
+
+    def test_to_pdb_box_vectors(self, sage):
+        """Reproduce https://github.com/openforcefield/openff-interchange/issues/548."""
+        from openmm.app import PDBFile
+
+        molecule = Molecule.from_smiles("CC")
+        molecule.generate_conformers(n_conformers=1)
+        box_vectors = unit.Quantity(
+            10.0 * numpy.eye(3),
+            unit.angstrom,
+        )
+
+        interchange = Interchange.from_smirnoff(
+            topology=[molecule],
+            force_field=sage,
+            box=box_vectors,
+        )
+
+        interchange.to_pdb("temp.pdb")
+
+        parsed_box_vectors = PDBFile("temp.pdb").topology.getPeriodicBoxVectors()
+
+        numpy.testing.assert_allclose(
+            box_vectors.m_as(unit.angstrom),
+            ensure_quantity(parsed_box_vectors, "openff").m_as(unit.angstrom),
         )

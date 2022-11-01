@@ -559,7 +559,10 @@ class Interchange(DefaultModel):
         if writer == "openmm":
             from openff.interchange.interop.openmm import _to_pdb
 
-            _to_pdb(file_path, self.topology, self.positions)
+            _topology = Topology(other=self.topology)
+            _topology.box_vectors = self.box
+
+            _to_pdb(file_path, _topology, self.positions)
         else:
             raise UnsupportedExportError
 
