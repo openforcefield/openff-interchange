@@ -476,7 +476,7 @@ class Interchange(DefaultModel):
             ) from error
         return nglview.show_file("_tmp_pdb_file.pdb")
 
-    def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 8):
+    def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 3):
         """Export this Interchange object to a .gro file."""
         # TODO: Enum-style class for handling writer arg?
         if writer == "parmed":
@@ -559,7 +559,10 @@ class Interchange(DefaultModel):
         if writer == "openmm":
             from openff.interchange.interop.openmm import _to_pdb
 
-            _to_pdb(file_path, self.topology, self.positions)
+            _topology = Topology(other=self.topology)
+            _topology.box_vectors = self.box
+
+            _to_pdb(file_path, _topology, self.positions)
         else:
             raise UnsupportedExportError
 

@@ -25,6 +25,7 @@ dependencies:
   - pytest-cov
   - pytest-xdist
   - conda
+  - mdanalysis
   # Drivers
   - gromacs >=2021=nompi*
   - lammps >=2021

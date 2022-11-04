@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from openff.interchange.components.potentials import PotentialHandler
 
 
-def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
+def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int = 3):
     """
     Write a GROMACS coordinate (.gro) file.
 
@@ -75,8 +75,6 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
             f"{n_particles} positions in `.positions` attribute."
         )
 
-    typemap = _build_typemap(openff_sys)
-
     virtual_site_map = _build_virtual_site_map(openff_sys)
     n_particles += len(virtual_site_map)
 
@@ -102,7 +100,8 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal=8):
 
                 topology_index = openff_sys.topology.atom_index(atom)
 
-                atom_name = typemap[topology_index]
+                atom_name = atom.name if atom.name else atom.symbol
+
                 gmx_atom_index = (topology_index + 1 + n_virtual_sites) % 100000
 
                 gro.write(
@@ -344,26 +343,36 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
             int, List
         ] = openff_sys.topology.identical_molecule_groups
 
-        for unique_molecule_index in unique_molecule_map:
-            molecule = openff_sys.topology.molecule(unique_molecule_index)
+        for (
+            unique_molecule_index,
+            duplicate_molecule_data,
+        ) in unique_molecule_map.items():
+            unique_molecule = openff_sys.topology.molecule(unique_molecule_index)
 
-            if molecule.name == "":
-                molecule.name = str(molecule.name) + "x" + str(unique_molecule_index)
+            if unique_molecule.name == "":
+                unique_molecule.name = "x" + str(unique_molecule_index)
 
-            _write_moleculetype(top_file, molecule.name)
+            for row in duplicate_molecule_data:
+                (duplciate_molecule_index, _) = row
+
+                openff_sys.topology.molecule(
+                    duplciate_molecule_index
+                ).name = unique_molecule.name
+
+            _write_moleculetype(top_file, unique_molecule.name)
             _write_atoms(
                 top_file,
                 openff_sys,
-                molecule,
+                unique_molecule,
                 typemap,
                 virtual_site_map,
                 _cached_parameters=lj_parameters,
             )
-            _write_valence(top_file, openff_sys, molecule)
+            _write_valence(top_file, openff_sys, unique_molecule)
             _write_virtual_sites(
                 top_file,
                 openff_sys,
-                molecule,
+                unique_molecule,
                 virtual_site_map,
             )
 
@@ -519,6 +528,8 @@ def _write_atomtypes_lj(
         )
 
     for virtual_site_key in virtual_site_map:
+        # TODO: This can produce some silly-looking output because it does not attempt to condense virtual sites
+        #       from different molecules with the same parameters. Should probably de-deuplicate across moleculces
         atom_type = "VS"
         atomic_number = 0
         mass = 0.0
@@ -531,7 +542,7 @@ def _write_atomtypes_lj(
 
         top_file.write(
             "{:<11s} {:6d} {:.16g} {:.16g} {:5s} {:.16g} {:.16g}\n".format(
-                atom_type,  # atom type
+                atom_type,
                 # "XX",  # atom "bonding type", i.e. bond class
                 atomic_number,
                 mass,
@@ -604,6 +615,7 @@ def _write_atoms(
             )
         )
         atom_type = typemap[topology_index]
+        atom_name = atom.name if atom.name else atom.symbol
 
         try:
             res_idx = atom.metadata["residue_number"]
@@ -624,7 +636,7 @@ def _write_atoms(
                 atom_type,
                 int(res_idx),
                 res_name,
-                atom_type,
+                atom_name,
                 molecule_index + 1,
                 charge,
                 mass,
@@ -1228,15 +1240,9 @@ def _write_system(
     top_file.write("[ molecules ]\n")
     top_file.write("; Compound\tnmols\n")
 
-    for unique_molecule_index in uniqe_molecule_map:
-        unique_molecule = openff_sys.topology.molecule(unique_molecule_index)
+    for molecule in openff_sys.topology.molecules:
 
-        if unique_molecule.name == "":
-            raise Exception("Molecule missing a name")
-
-        top_file.write(
-            f"{unique_molecule.name}\t{len(uniqe_molecule_map[unique_molecule_index])}\n"
-        )
+        top_file.write(f"{molecule.name}\t1\n")
 
     top_file.write("\n")
 

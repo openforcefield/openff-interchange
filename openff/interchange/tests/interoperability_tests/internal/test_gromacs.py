@@ -1,13 +1,15 @@
 from math import exp
 
-import numpy as np
+import numpy
 import openmm
+import parmed
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from openmm import app
 from openmm import unit as openmm_unit
 from pkg_resources import resource_filename
 
@@ -33,15 +35,15 @@ class TestGROMACSGROFile(_BaseTest):
         internal_box = from_gro(file).box.m_as(unit.nanometer)
 
         openmm_gro = openmm.app.GromacsGroFile(file)
-        openmm_coords = np.array(
+        openmm_coords = numpy.array(
             openmm_gro.getPositions().value_in_unit(openmm_unit.nanometer)
         )
-        openmm_box = np.array(
+        openmm_box = numpy.array(
             openmm_gro.getPeriodicBoxVectors().value_in_unit(openmm_unit.nanometer)
         )
 
-        assert np.allclose(internal_coords, openmm_coords)
-        assert np.allclose(internal_box, openmm_box)
+        assert numpy.allclose(internal_coords, openmm_coords)
+        assert numpy.allclose(internal_box, openmm_box)
 
     @skip_if_missing("intermol")
     def test_load_gro_nonstandard_precision(self):
@@ -63,11 +65,11 @@ class TestGROMACSGROFile(_BaseTest):
         def converter(x):
             return x.value_in_unit(openmm_unit.nanometer)
 
-        other_coords = np.frompyfunc(converter, 1, 1)(intermol_gro.positions).astype(
+        other_coords = numpy.frompyfunc(converter, 1, 1)(intermol_gro.positions).astype(
             float
         )
 
-        assert np.allclose(internal_coords, other_coords)
+        assert numpy.allclose(internal_coords, other_coords)
 
         # This file happens to have 12 digits of preicion; what really matters is that
         # the convential precision of 3 was not used.
@@ -111,6 +113,23 @@ class TestGROMACSGROFile(_BaseTest):
             assert found_residue.name == original_residue.residue_name
             assert str(found_residue.resSeq) == original_residue.residue_number
 
+    def test_atom_names_pdb(self):
+        peptide = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
+
+        Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_gro(
+            "atom_names.gro"
+        )
+
+        pdb_object = app.PDBFile(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
+        pdb_atom_names = [atom.name for atom in pdb_object.topology.atoms()]
+
+        openmm_atom_names = app.GromacsGroFile("atom_names.gro").atomNames
+
+        assert openmm_atom_names == pdb_atom_names
+
 
 @needs_gmx
 class TestGROMACS(_BaseTest):
@@ -144,8 +163,8 @@ class TestGROMACS(_BaseTest):
 
         converted = Interchange.from_gromacs("out.top", "out.gro", reader=reader)
 
-        assert np.allclose(out.positions, converted.positions)
-        assert np.allclose(out.box, converted.box)
+        assert numpy.allclose(out.positions, converted.positions)
+        assert numpy.allclose(out.box, converted.box)
 
         get_gromacs_energies(out).compare(
             get_gromacs_energies(converted),
@@ -159,15 +178,13 @@ class TestGROMACS(_BaseTest):
     def test_num_impropers(self, sage):
         top = Molecule.from_smiles("CC1=CC=CC=C1").to_topology()
         out = Interchange.from_smirnoff(sage, top)
-        out.box = unit.Quantity(4 * np.eye(3), units=unit.nanometer)
+        out.box = unit.Quantity(4 * numpy.eye(3), units=unit.nanometer)
         out.to_top("tmp.top")
 
         # Sanity check; toluene should have some improper(s)
         assert len(out["ImproperTorsions"].slot_map) > 0
 
-        import parmed as pmd
-
-        struct = pmd.load_file("tmp.top")
+        struct = parmed.load_file("tmp.top")
         n_impropers_parmed = len([d for d in struct.dihedrals if d.improper])
         assert n_impropers_parmed == len(out["ImproperTorsions"].slot_map)
 
@@ -178,7 +195,7 @@ class TestGROMACS(_BaseTest):
         from intermol.gromacs.gromacs_parser import GromacsParser
 
         openff_sys = Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
-        openff_sys.positions = np.zeros((ethanol_top.n_atoms, 3))
+        openff_sys.positions = numpy.zeros((ethanol_top.n_atoms, 3))
         openff_sys.to_gro("tmp.gro")
 
         openff_sys.box = [4, 4, 4]
@@ -292,6 +309,47 @@ class TestGROMACS(_BaseTest):
         with pytest.raises(GMXMdrunError):
             get_gromacs_energies(out, mdp="cutoff_buck")
 
+    def test_nonconsecutive_isomorphic_molecules(self, sage_unconstrained):
+        molecules = [Molecule.from_smiles(smiles) for smiles in ["CC", "CCO", "CC"]]
+
+        for index, molecule in enumerate(molecules):
+            molecule.generate_conformers(n_conformers=1)
+            molecule.conformers[0] += unit.Quantity(3 * [5 * index], unit.angstrom)
+
+        topology = Topology.from_molecules(molecules)
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        out = Interchange.from_smirnoff(sage_unconstrained, topology)
+
+        get_gromacs_energies(out).compare(
+            get_openmm_energies(out),
+            custom_tolerances={"Electrostatics": 0.5 * unit.kilojoule_per_mole},
+        )
+
+
+class TestGROMACSMetadata(_BaseTest):
+    def test_atom_names_pdb(self):
+        peptide = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
+
+        Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_gro(
+            "atom_names.gro"
+        )
+        Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_top(
+            "atom_names.top"
+        )
+
+        pdb_object = app.PDBFile(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
+        openmm_object = app.GromacsTopFile("atom_names.top")
+
+        pdb_atom_names = [atom.name for atom in pdb_object.topology.atoms()]
+
+        openmm_atom_names = [atom.name for atom in openmm_object.topology.atoms()]
+
+        assert openmm_atom_names == pdb_atom_names
+
 
 @needs_gmx
 class TestGROMACSVirtualSites(_BaseTest):
@@ -348,13 +406,10 @@ class TestGROMACSVirtualSites(_BaseTest):
         # TODO: Sanity-check reported energies
         get_gromacs_energies(out)
 
-        import numpy as np
-        import parmed as pmd
-
         out.to_top("sigma.top")
-        gmx_top = pmd.load_file("sigma.top")
+        gmx_top = parmed.load_file("sigma.top")
 
-        assert abs(np.sum([p.charge for p in gmx_top.atoms])) < 1e-3
+        assert abs(numpy.sum([p.charge for p in gmx_top.atoms])) < 1e-3
 
     def test_carbonyl_example(self, sage_with_monovalent_lone_pair):
         """Test that a single-molecule DivalentLonePair example runs"""

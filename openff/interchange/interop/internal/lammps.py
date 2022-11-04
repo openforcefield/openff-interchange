@@ -409,12 +409,15 @@ def _write_impropers(lmp_file: IO, openff_sys: Interchange):
 
                 improper_type_idx = improper_type_map_inv[pot_key]
 
+                # https://github.com/openforcefield/openff-interchange/issues/544
+                # LAMMPS, at least with `improper_style cvff`, lists the
+                # central atom FIRST, whereas `indices` lists it SECOND
                 lmp_file.write(
                     "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
                         improper_idx + 1,
                         improper_type_idx + 1,
-                        indices[0] + 1,
                         indices[1] + 1,
+                        indices[0] + 1,
                         indices[2] + 1,
                         indices[3] + 1,
                     )
