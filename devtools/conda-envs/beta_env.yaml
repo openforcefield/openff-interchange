@@ -11,8 +11,7 @@ dependencies:
   - pydantic <2.0.0a0
   - openmm >=7.6
   # OpenFF stack
-  - openff-toolkit ==0.11.1
-  - pint =0.19
+  - openff-toolkit >=0.11.3
   # Optional features
   - jax
   - jaxlib
@@ -32,8 +31,8 @@ dependencies:
   - panedr
   # Examples
   - nglview
-  - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
-  - pytest =7.1.0
+  - ipywidgets =7
+  - pytest =7.1
   - nbval
   # Typing
   - mypy >=0.971
