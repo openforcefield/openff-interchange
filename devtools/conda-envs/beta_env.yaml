@@ -1,11 +1,6 @@
 name: beta-env
 channels:
-  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge/label/openmm_rc
-  - conda-forge/label/openff-toolkit_rc
-  - conda-forge/label/openff-interchange_rc
-  - openeye/label/beta
-  - openeye/label/rc
   - conda-forge
   - openeye
 dependencies:
@@ -16,7 +11,7 @@ dependencies:
   - pydantic <2.0.0a0
   - openmm >=7.6
   # OpenFF stack
-  - openff-toolkit >=0.11.0
+  - openff-toolkit >=0.11.3
   # Optional features
   - jax
   - jaxlib
@@ -37,8 +32,8 @@ dependencies:
   - panedr
   # Examples
   - nglview
-  - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
-  - pytest <7.0.0
+  - ipywidgets =7
+  - pytest =7.1
   - nbval
   # Typing
   - mypy >=0.971
@@ -46,5 +41,3 @@ dependencies:
   - types-setuptools
   - types-pkg_resources
   - pandas-stubs >=1.2.0.56
-  - pip:
-    - git+https://github.com/openforcefield/openff-evaluator.git@main
