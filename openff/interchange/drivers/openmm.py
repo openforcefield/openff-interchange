@@ -15,6 +15,7 @@ def get_openmm_energies(
     off_sys: Interchange,
     round_positions: Optional[int] = None,
     combine_nonbonded_forces: bool = False,
+    platform: str = "Reference",
 ) -> EnergyReport:
     """
     Given an OpenFF Interchange object, return single-point energies as computed by OpenMM.
@@ -34,6 +35,8 @@ def get_openmm_energies(
     combine_nonbonded_forces : bool, default=False
         Whether or not to combine all non-bonded interactions (vdW, short- and long-range
         ectrostaelectrostatics, and 1-4 interactions) into a single openmm.NonbondedForce.
+    platform : str, default="Reference"
+        The name of the platform (`openmm.Platform`) used by OpenMM in this calculation.
 
     Returns
     -------
@@ -66,6 +69,7 @@ def get_openmm_energies(
         box_vectors=off_sys.box,
         positions=positions,
         round_positions=round_positions,
+        platform=platform,
     )
 
 
@@ -74,13 +78,18 @@ def _get_openmm_energies(
     box_vectors,
     positions,
     round_positions=None,
+    platform=None,
 ) -> EnergyReport:
     """Given a prepared `openmm.System`, run a single-point energy calculation."""
     for idx, force in enumerate(omm_sys.getForces()):
         force.setForceGroup(idx)
 
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
-    context = openmm.Context(omm_sys, integrator)
+    context = openmm.Context(
+        omm_sys,
+        integrator,
+        openmm.Platform.getPlatformByName(platform),
+    )
 
     if box_vectors is not None:
         if not isinstance(box_vectors, (unit.Quantity, list)):
