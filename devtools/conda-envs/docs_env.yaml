@@ -8,8 +8,8 @@ dependencies:
   - python
   - pip
   - pydantic
-  - pint =0.19
-  - openff-toolkit-base >=0.11.2
+  - pint
+  - openff-toolkit-base >=0.11.3
   - openmm >=7.6
   - intermol
   - jax
