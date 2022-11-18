@@ -11,8 +11,12 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## 0.2.3 - Current development
 
+### Behavior changes
+* #554 `Interchange.to_openmm` now uses `combine_nonbonded_forces=True` by default.
+
 ### Bugfixes
 * #545 List the central atom first in CVFF style dihedrals in LAMMPS export
+
 
 ## 0.2.2 - 2022-10-12
 
