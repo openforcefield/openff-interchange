@@ -9,7 +9,10 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## 0.2.3 - Current development
+## Current development
+
+
+## 0.2.3 - 2022-11-21
 
 ### Behavior changes
 * #554 `Interchange.to_openmm` now uses `combine_nonbonded_forces=True` by default.
