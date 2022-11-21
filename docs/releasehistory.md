@@ -9,13 +9,23 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## 0.2.3 - Current development
+## Current development
+
+
+## 0.2.3 - 2022-11-21
 
 ### Behavior changes
 * #554 `Interchange.to_openmm` now uses `combine_nonbonded_forces=True` by default.
 
+### New features
+* #534 An `openmm.Platform` can be specified as an argument to the OpenMM driver.
+
+### Documentation improvements
+* #553 Adds a solvation example.
+
 ### Bugfixes
 * #545 List the central atom first in CVFF style dihedrals in LAMMPS export
+* #551 Use `Interchange.box` to define periodicity when exporting to PDB files.
 
 
 ## 0.2.2 - 2022-10-12
