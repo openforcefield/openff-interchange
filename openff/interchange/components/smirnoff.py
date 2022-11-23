@@ -844,21 +844,14 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
             parameter = parameter_handler.parameters[smirks]
-            try:
-                potential = Potential(
-                    parameters={
-                        "sigma": parameter.sigma,
-                        "epsilon": parameter.epsilon,
-                    },
-                )
-            except AttributeError:
-                # Handle rmin_half pending https://github.com/openforcefield/openff-toolkit/pull/750
-                potential = Potential(
-                    parameters={
-                        "sigma": parameter.sigma,
-                        "epsilon": parameter.epsilon,
-                    },
-                )
+
+            potential = Potential(
+                parameters={
+                    "sigma": parameter.sigma,
+                    "epsilon": parameter.epsilon,
+                },
+            )
+
             self.potentials[potential_key] = potential
 
     @classmethod
