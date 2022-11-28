@@ -29,4 +29,10 @@ setup(
     packages=find_namespace_packages(),
     include_package_data=True,
     setup_requires=[] + pytest_runner,
+    entry_points={
+        "openff.toolkit.plugins.handlers": [
+            "LennardJones14 = openff.interchange.handlers.plugins.nonbonded:LennardJones14",
+        ]
+    },
+
 )
