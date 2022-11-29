@@ -32,3 +32,5 @@ dependencies:
   - gromacs >=2021=nompi*
   - lammps >=2021
   - panedr
+  - pip:
+    - git+https://github.com/openforcefield/openff-toolkit@main
