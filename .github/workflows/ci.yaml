@@ -55,7 +55,7 @@ jobs:
         # These packages are brought in by conda (via the toolkit) and must be removed manually
         # since pip doesn't know about the -base split and does not uninstall the -base package
         conda remove --force openff-interchange openff-interchange-base
-        python setup.py develop --no-deps
+        python -m pip install .
 
     - name: Environment Information
       run: |
