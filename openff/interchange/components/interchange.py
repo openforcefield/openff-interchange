@@ -317,6 +317,10 @@ class Interchange(DefaultModel):
                     "Molecules in this list must be unique."
                 )
 
+        from openff.interchange.handlers.plugins import load_plugins
+
+        [SMIRNOFF_POTENTIAL_HANDLERS.append(plugin) for plugin in load_plugins()]
+
         for potential_handler_type in SMIRNOFF_POTENTIAL_HANDLERS:
 
             parameter_handlers = [

@@ -1,5 +1,7 @@
-from openff.toolkit import ForceField
+from openff.toolkit import ForceField, Molecule
 from openff.units import unit
+
+from openff.interchange import Interchange
 
 
 def test_lj_14_handler():
@@ -38,3 +40,11 @@ def test_lj_14_handler():
         "ChargeIncrementModel",
         {"version": "0.3", "partial_charge_method": "am1bcc"},
     )
+
+    out = Interchange.from_smirnoff(
+        force_field=force_field,
+        topology=Molecule.from_smiles("O").to_topology(),
+    )
+
+    assert "LennardJones14" in out.handlers
+    assert len(out.handlers["LennardJones14"].slot_map) == 3

@@ -28,7 +28,10 @@ class _CustomNonbondedHandler(ParameterHandler, abc.ABC):
     def check_handler_compatibility(self, other_handler):
         raise NotImplementedError()
 
+    scale12 = ParameterAttribute(default=0.0, converter=float)
+    scale13 = ParameterAttribute(default=0.0, converter=float)
     scale14 = ParameterAttribute(default=0.5, converter=float)
+    scale15 = ParameterAttribute(default=1.0, converter=float)
 
     cutoff = ParameterAttribute(
         default=unit.Quantity(9.0, unit.angstroms),
@@ -60,6 +63,9 @@ class LennardJones14Handler(_CustomNonbondedHandler):
 
     potential = ParameterAttribute(
         "Lennard-Jones-14-6", converter=_allow_only("Lennard-Jones-14-6")
+    )
+    combining_rules = ParameterAttribute(
+        default="Lorentz-Berthelot", converter=_allow_only(["Lorentz-Berthelot"])
     )
 
 
