@@ -55,7 +55,7 @@ def test_lj_14_handler():
     with pytest.raises(UnsupportedExportError, match="Custom vdW"):
         out.to_openmm(combine_nonbonded_forces=True)
 
-    openmm_system = out.to_openmm(combine_nonbonded_forces=True)
+    openmm_system = out.to_openmm(combine_nonbonded_forces=False)
 
     expression = "4*epsilon*((sigma/r)^14-(sigma/r)^6); sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); "
     for force in openmm_system.getForces():

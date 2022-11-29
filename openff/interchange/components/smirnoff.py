@@ -807,9 +807,8 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
 
     type: Literal["vdW"] = "vdW"
 
-    expression: Literal[
-        "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
-    ] = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
+    expression: str = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
+    potential_parameters: List[str] = ["sigma", "epsilon"]
 
     method: Literal["cutoff", "pme", "no-cutoff"] = Field("cutoff")
 
@@ -847,9 +846,8 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
 
             potential = Potential(
                 parameters={
-                    "sigma": parameter.sigma,
-                    "epsilon": parameter.epsilon,
-                },
+                    key: getattr(parameter, key) for key in self.potential_parameters
+                }
             )
 
             self.potentials[potential_key] = potential
@@ -927,11 +925,11 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
             )
             pot = Potential(
                 parameters={
-                    "sigma": virtual_site_type.sigma,
-                    "epsilon": virtual_site_type.epsilon,
-                    # "distance": virtual_site_type.distance,
+                    key: getattr(virtual_site_type, key)
+                    for key in self.potential_parameters
                 }
             )
+            # "distance": virtual_site_type.distance,
             # if virtual_site_type.type in {"MonovalentLonePair", "DivalentLonePair"}:
             #     pot.parameters.update(
             #         {

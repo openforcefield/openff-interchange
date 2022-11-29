@@ -265,9 +265,11 @@ class TestUnimplementedSMIRNOFFCases(_BaseTest):
     def test_bogus_smirnoff_handler(self, sage):
         top = Molecule.from_smiles("CC").to_topology()
 
-        bogus_parameter_handler = ParameterHandler(version=0.3)
-        bogus_parameter_handler._TAGNAME = "bogus"
-        sage.register_parameter_handler(bogus_parameter_handler)
+        class BogusHandler(ParameterHandler):
+            _TAGNAME = "bogus"
+
+        sage.register_parameter_handler(BogusHandler(version=0.3))
+
         with pytest.raises(
             SMIRNOFFHandlersNotImplementedError, match="SMIRNOFF.*bogus"
         ):

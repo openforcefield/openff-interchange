@@ -105,21 +105,23 @@ def _process_nonbonded_forces(
     if len(electrostatics_handlers) > 1:
         raise UnsupportedExportError("Multiple vdW handlers found.")
 
-    if len(electrostatics_handlers) * len(vdw_handlers) == 0:
+    if len(electrostatics_handlers) == len(vdw_handlers) == 0:
         raise UnsupportedExportError("No non-bonded handlers found.")
 
     # TODO: Process ElectrostaticsHandler.exception_potential
     if "vdW" in openff_sys.handlers or "Electrostatics" in openff_sys.handlers:
 
         _data = _prepare_input_data(openff_sys)
-        _data["vdw_handler"] = vdw_handlers[0]
+        if len(vdw_handlers) > 0:
+            _data["vdw_handler"] = vdw_handlers[0]
+            if combine_nonbonded_forces:
+                if _data["vdw_handler"].type != "vdW":
+                    raise UnsupportedExportError(
+                        "Custom vdW handlers are not compatible with `openmm.NonbondedForce`."
+                        "Use `combine_nonbonded_forces=False`."
+                    )
 
         if combine_nonbonded_forces:
-            if _data["vdw_handler"].type != "vdW":
-                raise UnsupportedExportError(
-                    "Custom vdW handlers are not compatible with `openmm.NonbondedForce`."
-                    "Use `combine_nonbonded_forces=False`."
-                )
             _func = _create_single_nonbonded_force
         else:
             _func = _create_multiple_nonbonded_forces
@@ -719,10 +721,15 @@ def _create_multiple_nonbonded_forces(
     # 1 / * (4pi * eps0) * elementary_charge ** 2 / nanometer ** 2
     coul_const = 138.935456  # kJ/nm
 
-    vdw_14_force = openmm.CustomBondForce("4*epsilon*((sigma/r)^12-(sigma/r)^6)")
-    vdw_14_force.addPerBondParameter("sigma")
-    vdw_14_force.addPerBondParameter("epsilon")
+    vdw_handler = data["vdw_handler"]
+
+    vdw_14_force = openmm.CustomBondForce(vdw_handler.expression.replace("^", "**"))
+    [
+        vdw_14_force.addPerBondParameter(parameter)
+        for parameter in vdw_handler.potential_parameters
+    ]
     vdw_14_force.setUsesPeriodicBoundaryConditions(True)
+
     coul_14_force = openmm.CustomBondForce(f"{coul_const}*qq/r")
     coul_14_force.addPerBondParameter("qq")
     coul_14_force.setUsesPeriodicBoundaryConditions(True)

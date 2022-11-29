@@ -2,7 +2,7 @@
 Custom non-bonded handlers.
 """
 import abc
-from typing import Literal
+from typing import List, Literal
 
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterAttribute,
@@ -74,9 +74,13 @@ class SMIRNOFFLennardJones14Handler(SMIRNOFFvdWHandler):
 
     type: Literal["LennardJones14"] = "LennardJones14"
 
-    expression: Literal[
-        "4*epsilon*((sigma/r)**14-(sigma/r)**6)"
-    ] = "4*epsilon*((sigma/r)**14-(sigma/r)**6)"
+    expression: str = "4*epsilon*((sigma/r)**14-(sigma/r)**6)"
+    potential_parameters: List[str] = ["sigma", "epsilon"]
+
+    @classmethod
+    def supported_parameters(cls):
+        """Return a list of supported parameter attributes."""
+        return ["smirks", "id", "sigma", "epsilon"]
 
     @classmethod
     def allowed_parameter_handlers(cls):
