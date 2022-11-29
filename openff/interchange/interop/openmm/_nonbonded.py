@@ -6,6 +6,11 @@ from openff.units import unit as off_unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openmm import unit
 
+from openff.interchange.components.smirnoff import (
+    SMIRNOFFElectrostaticsHandler,
+    SMIRNOFFvdWHandler,
+    _SMIRNOFFNonbondedHandler,
+)
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InternalInconsistencyError,
@@ -38,8 +43,6 @@ def _process_nonbonded_forces(
     `combine_nonbondoed_forces=False`.
 
     """
-    from openff.interchange.components.smirnoff import _SMIRNOFFNonbondedHandler
-
     for handler in openff_sys.handlers.values():
         if isinstance(handler, _SMIRNOFFNonbondedHandler):
             break
@@ -85,12 +88,38 @@ def _process_nonbonded_forces(
         molecule_virtual_site_map,
     )
 
+    vdw_handlers = [
+        handler
+        for handler in openff_sys.handlers.values()
+        if isinstance(handler, SMIRNOFFvdWHandler)
+    ]
+    electrostatics_handlers = [
+        handler
+        for handler in openff_sys.handlers.values()
+        if isinstance(handler, SMIRNOFFElectrostaticsHandler)
+    ]
+
+    if len(vdw_handlers) > 1:
+        raise UnsupportedExportError("Multiple vdW handlers found.")
+
+    if len(electrostatics_handlers) > 1:
+        raise UnsupportedExportError("Multiple vdW handlers found.")
+
+    if len(electrostatics_handlers) * len(vdw_handlers) == 0:
+        raise UnsupportedExportError("No non-bonded handlers found.")
+
     # TODO: Process ElectrostaticsHandler.exception_potential
     if "vdW" in openff_sys.handlers or "Electrostatics" in openff_sys.handlers:
 
         _data = _prepare_input_data(openff_sys)
+        _data["vdw_handler"] = vdw_handlers[0]
 
         if combine_nonbonded_forces:
+            if _data["vdw_handler"].type != "vdW":
+                raise UnsupportedExportError(
+                    "Custom vdW handlers are not compatible with `openmm.NonbondedForce`."
+                    "Use `combine_nonbonded_forces=False`."
+                )
             _func = _create_single_nonbonded_force
         else:
             _func = _create_multiple_nonbonded_forces
@@ -152,14 +181,14 @@ def _process_nonbonded_forces(
                 "please raise an issue describing the functionality you wish to see.",
             )
 
-        try:
-            electrostatics_handler = openff_sys["Electrostatics"]
-        except LookupError:
+        if len(electrostatics_handlers) == 0:
             raise InternalInconsistencyError(
                 "In a confused state, could not find any vdW interactions but also failed to find "
                 "any electrostatics handler. This is a supported use case but should have been caught "
                 "earlier in this function. Please file an issue with a minimal reproducing example.",
             )
+
+        electrostatics_handler = electrostatics_handlers[0]
 
         electrostatics_method = (
             electrostatics_handler.periodic_potential
@@ -224,9 +253,11 @@ def _add_particles_to_system(
 
 
 def _prepare_input_data(openff_sys):
-    try:
-        vdw_handler = openff_sys["vdW"]
-    except LookupError:
+    for handler in openff_sys.handlers.values():
+        if isinstance(handler, SMIRNOFFvdWHandler):
+            vdw_handler = handler
+            break
+    else:
         vdw_handler = None
 
     if vdw_handler:

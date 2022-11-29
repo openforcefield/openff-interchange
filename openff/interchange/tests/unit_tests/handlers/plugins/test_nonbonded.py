@@ -1,7 +1,10 @@
+import openmm
+import pytest
 from openff.toolkit import ForceField, Molecule
 from openff.units import unit
 
 from openff.interchange import Interchange
+from openff.interchange.exceptions import UnsupportedExportError
 
 
 def test_lj_14_handler():
@@ -48,3 +51,16 @@ def test_lj_14_handler():
 
     assert "LennardJones14" in out.handlers
     assert len(out.handlers["LennardJones14"].slot_map) == 3
+
+    with pytest.raises(UnsupportedExportError, match="Custom vdW"):
+        out.to_openmm(combine_nonbonded_forces=True)
+
+    openmm_system = out.to_openmm(combine_nonbonded_forces=True)
+
+    expression = "4*epsilon*((sigma/r)^14-(sigma/r)^6); sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); "
+    for force in openmm_system.getForces():
+        if isinstance(force, openmm.CustomNonbondedForce):
+            assert force.getEnergyFunction() == expression
+            break
+    else:
+        raise Exception("Could not find custom non-bonded force")
