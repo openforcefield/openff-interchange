@@ -591,9 +591,9 @@ def _create_multiple_nonbonded_forces(
     molecule_virtual_site_map: Dict,
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int],
 ):
-    vdw_force = openmm.CustomNonbondedForce(
-        data["vdw_expression"] + "; " + data["mixing_rule_expression"],
-    )
+    expression = data["vdw_expression"] + "; " + data["mixing_rule_expression"]
+
+    vdw_force = openmm.CustomNonbondedForce(expression.replace("**", "^"))
     vdw_force.addPerParticleParameter("sigma")
     vdw_force.addPerParticleParameter("epsilon")
 
@@ -723,7 +723,7 @@ def _create_multiple_nonbonded_forces(
 
     vdw_handler = data["vdw_handler"]
 
-    vdw_14_force = openmm.CustomBondForce(vdw_handler.expression.replace("^", "**"))
+    vdw_14_force = openmm.CustomBondForce(vdw_handler.expression.replace("**", "^"))
     [
         vdw_14_force.addPerBondParameter(parameter)
         for parameter in vdw_handler.potential_parameters

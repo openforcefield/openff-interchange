@@ -192,6 +192,7 @@ class Interchange(DefaultModel):
                 # force_field.parameter_handler_classes[handler_name] might work after
                 # https://github.com/openforcefield/openff-toolkit/issues/1475
                 handler_class = type(force_field._parameter_handlers[handler_name])
+
                 if handler_class not in force_field._plugin_parameter_handler_classes:
                     unsupported.append(handler_name)
 
