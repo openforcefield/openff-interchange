@@ -189,7 +189,9 @@ class Interchange(DefaultModel):
             if handler_name in {"ToolkitAM1BCC"}:
                 continue
             if handler_name not in _SUPPORTED_SMIRNOFF_HANDLERS:
-                unsupported.append(handler_name)
+                handler_class = force_field._parameter_handler_classes[handler_name]
+                if handler_class not in force_field._plugin_parameter_handler_classes:
+                    unsupported.append(handler_name)
 
         if unsupported:
             raise SMIRNOFFHandlersNotImplementedError(unsupported)

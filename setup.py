@@ -31,7 +31,7 @@ setup(
     setup_requires=[] + pytest_runner,
     entry_points={
         "openff.toolkit.plugins.handlers": [
-            "LennardJones14 = openff.interchange.handlers.plugins.nonbonded:LennardJones14",
+            "LennardJones14 = openff.interchange.handlers.plugins.nonbonded:LennardJones14Handler",
         ]
     },
 

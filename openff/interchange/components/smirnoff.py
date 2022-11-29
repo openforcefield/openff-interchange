@@ -54,6 +54,7 @@ from openff.interchange.exceptions import (
     SMIRNOFFParameterAttributeNotImplementedError,
     SMIRNOFFVersionNotSupportedError,
 )
+from openff.interchange.handlers.plugins import load_plugins
 from openff.interchange.models import (
     ChargeIncrementTopologyKey,
     ChargeModelTopologyKey,
@@ -1887,6 +1888,7 @@ SMIRNOFF_POTENTIAL_HANDLERS = [
     SMIRNOFFvdWHandler,
     SMIRNOFFElectrostaticsHandler,
     SMIRNOFFVirtualSiteHandler,
+    *load_plugins(),
 ]
 
 
