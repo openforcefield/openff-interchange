@@ -11,8 +11,10 @@ dependencies:
   - pydantic
   - openmm
   # OpenFF stack
-  - openff-toolkit >=0.11.3
-  - openff-evaluator
+  - openff-toolkit-base >=0.11.3
+  - rdkit
+  - ambertools
+  - openff-evaluator-base
   # Optional features
   - jax
   - jaxlib
@@ -20,6 +22,7 @@ dependencies:
   - mbuild
   - foyer >=0.11.3
   # Examples
+  - mdtraj
   - intermol
   - openff-evaluator-base
   - nglview
