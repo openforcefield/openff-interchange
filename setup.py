@@ -34,7 +34,7 @@ setup(
             "LennardJones14 = openff.interchange.handlers.plugins.nonbonded:LennardJones14Handler",
         ],
         "openff.interchange.plugins.handlers": [
-            "LennardJones14 = openff.interchange.handlers.plugins.nonbonded:SMIRNOFFLennardJones14Handler",
+            "SMIRNOFFLennardJones14 = openff.interchange.handlers.plugins.nonbonded:SMIRNOFFLennardJones14Handler",
         ],
     },
 
