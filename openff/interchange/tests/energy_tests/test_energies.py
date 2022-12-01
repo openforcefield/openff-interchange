@@ -1,11 +1,8 @@
-import foyer
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
-from openff.utilities.testing import skip_if_missing
-from openmm import unit as openmm_unit
 
 from openff.interchange import Interchange
 from openff.interchange.constants import kj_mol
@@ -21,11 +18,7 @@ from openff.interchange.tests import (
 )
 
 if HAS_GROMACS:
-    from openff.interchange.drivers.gromacs import (
-        _get_mdp_file,
-        _run_gmx_energy,
-        get_gromacs_energies,
-    )
+    from openff.interchange.drivers.gromacs import get_gromacs_energies
 if HAS_LAMMPS:
     from openff.interchange.drivers.lammps import get_lammps_energies
 
@@ -56,101 +49,6 @@ def test_energy_report():
 
 
 class TestEnergies(_BaseTest):
-    @pytest.fixture(scope="session")
-    def oplsaa(self):
-        return foyer.forcefields.load_OPLSAA()
-
-    @skip_if_missing("mbuild")
-    @needs_gmx
-    @needs_lmp
-    @pytest.mark.xfail()
-    @pytest.mark.slow()
-    @pytest.mark.parametrize("constrained", [True, False])
-    @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
-    def test_energies_single_mol(self, constrained, sage, sage_unconstrained, mol_smi):
-        import mbuild as mb
-
-        mol = Molecule.from_smiles(mol_smi)
-        mol.generate_conformers(n_conformers=1)
-        mol.name = "FOO"
-
-        force_field = sage if constrained else sage_unconstrained
-
-        off_sys = Interchange.from_smirnoff(force_field, [mol])
-
-        off_sys.handlers["Electrostatics"].periodic_potential = "cutoff"
-
-        mol.to_file("out.xyz", file_format="xyz")
-        compound: mb.Compound = mb.load("out.xyz")
-        packed_box: mb.Compound = mb.fill_box(
-            compound=compound, n_compounds=1, box=mb.Box(lengths=[10, 10, 10])
-        )
-
-        positions = packed_box.xyz * unit.nanometer
-        off_sys.positions = positions
-
-        omm_energies = get_openmm_energies(off_sys, round_positions=8)
-
-        mdp = "cutoff_hbonds" if constrained else "auto"
-        # Compare GROMACS writer and OpenMM export
-        gmx_energies = get_gromacs_energies(off_sys, mdp=mdp)
-
-        custom_tolerances = {
-            "Bond": 2e-5 * openmm_unit.kilojoule_per_mole,
-            "Electrostatics": 2 * openmm_unit.kilojoule_per_mole,
-            "vdW": 2 * openmm_unit.kilojoule_per_mole,
-            "Nonbonded": 2 * openmm_unit.kilojoule_per_mole,
-            "Angle": 1e-4 * openmm_unit.kilojoule_per_mole,
-        }
-
-        gmx_energies.compare(
-            omm_energies,
-            custom_tolerances=custom_tolerances,
-        )
-
-        if not constrained:
-            other_energies = get_openmm_energies(
-                off_sys,
-                round_positions=8,
-                hard_cutoff=True,
-                electrostatics=True,
-            )
-            lmp_energies = get_lammps_energies(off_sys)
-            custom_tolerances = {
-                "vdW": 5.0 * openmm_unit.kilojoule_per_mole,
-                "Electrostatics": 5.0 * openmm_unit.kilojoule_per_mole,
-            }
-            lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
-
-    @needs_gmx
-    @skip_if_missing("foyer")
-    @skip_if_missing("mbuild")
-    @pytest.mark.slow()
-    def test_process_rb_torsions(self, oplsaa):
-        """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
-        from mbuild import Box
-
-        from openff.interchange.components.mbuild import offmol_to_compound
-
-        ethanol = Molecule.from_smiles("CCO")
-        ethanol.generate_conformers(n_conformers=1)
-        ethanol.generate_unique_atom_names()
-
-        my_compound = offmol_to_compound(ethanol)
-        my_compound.box = Box(lengths=[4, 4, 4])
-
-        struct = oplsaa.apply(my_compound)
-
-        struct.save("eth.top", overwrite=True)
-        struct.save("eth.gro", overwrite=True)
-
-        # Get single-point energies using GROMACS
-        oplsaa_energies = _run_gmx_energy(
-            top_file="eth.top", gro_file="eth.gro", mdp_file=_get_mdp_file("default")
-        )
-
-        assert oplsaa_energies.energies["Torsion"].m != 0.0
-
     @needs_gmx
     def test_gmx_14_energies_exist(self, sage):
         # TODO: Make sure 1-4 energies are accurate, not just existent

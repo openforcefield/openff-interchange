@@ -11,10 +11,6 @@ dependencies:
   - openmm
   # OpenFF stack
   - openff-toolkit >=0.11.3
-  # Optional features
-  - unyt
-  - mbuild
-  - foyer >=0.11.3
   # Testing
   - intermol
   - openff-evaluator

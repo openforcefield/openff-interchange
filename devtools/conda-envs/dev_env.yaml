@@ -14,9 +14,6 @@ dependencies:
   # Optional features
   - jax
   - jaxlib
-  - unyt
-  - mbuild
-  - foyer >=0.11.3
   # Testing
   - intermol
   - openff-recharge

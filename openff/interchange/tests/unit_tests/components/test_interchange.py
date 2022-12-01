@@ -21,7 +21,7 @@ from openff.interchange.exceptions import (
     MissingPositionsError,
     SMIRNOFFHandlersNotImplementedError,
 )
-from openff.interchange.tests import _BaseTest, get_test_file_path, needs_gmx, needs_lmp
+from openff.interchange.tests import _BaseTest
 
 
 @pytest.mark.slow()
@@ -174,37 +174,6 @@ class TestInterchange(_BaseTest):
         new = list(topology.molecules)[0].conformers[0]
 
         assert np.sum((original - new).m_as(unit.angstrom)) == pytest.approx(0)
-
-    @pytest.mark.skip("LAMMPS export experimental")
-    @needs_gmx
-    @needs_lmp
-    @pytest.mark.slow()
-    @skip_if_missing("foyer")
-    def test_atom_ordering(self):
-        """Test that atom indices in bonds are ordered consistently between the slot map and topology"""
-        import foyer
-
-        from openff.interchange import Interchange
-        from openff.interchange.drivers import (
-            get_gromacs_energies,
-            get_lammps_energies,
-            get_openmm_energies,
-        )
-
-        oplsaa = foyer.forcefields.load_OPLSAA()
-
-        benzene = Molecule.from_file(get_test_file_path("benzene.sdf"))
-        benzene.name = "BENZ"
-        out = Interchange.from_foyer(force_field=oplsaa, topology=benzene.to_topology())
-        out.box = [4, 4, 4]
-        out.positions = benzene.conformers[0]
-
-        # Violates OPLS-AA, but the point here is just to make sure everything runs
-        out["vdW"].mixing_rule = "lorentz-berthelot"
-
-        get_gromacs_energies(out)
-        get_openmm_energies(out)
-        get_lammps_energies(out)
 
     def test_from_sage(self, sage):
 

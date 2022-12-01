@@ -46,8 +46,6 @@ if TYPE_CHECKING:
         SMIRNOFFVirtualSiteHandler,
     )
 
-    if has_package("foyer"):
-        from foyer.forcefield import Forcefield as FoyerForcefield
     if has_package("nglview"):
         import nglview
 
@@ -602,82 +600,6 @@ class Interchange(DefaultModel):
         return _from_parmed(cls, structure)
 
     @classmethod
-    @requires_package("foyer")
-    def from_foyer(
-        cls, force_field: "FoyerForcefield", topology: "Topology", **kwargs
-    ) -> "Interchange":
-        """
-        Create an Interchange object from a Foyer force field and an OpenFF topology.
-
-        Examples
-        --------
-        Generate an Interchange object from a single-molecule (OpenFF) topology and
-        the Foyer implementation of OPLS-AA
-
-        .. code-block:: pycon
-
-            >>> from openff.interchange import Interchange
-            >>> from openff.toolkit.topology import Molecule, Topology
-            >>> from foyer import Forcefield
-            >>> mol = Molecule.from_smiles("CC")
-            >>> mol.generate_conformers(n_conformers=1)
-            >>> top = Topology.from_molecules([mol])
-            >>> oplsaa = Forcefield(name="oplsaa")
-            >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
-            >>> interchange
-            Interchange with 8 atoms, non-periodic topology
-
-        """
-        from openff.interchange.components.foyer import get_handlers_callable
-
-        system = cls()
-        system.topology = topology
-
-        # This block is from a mega merge, unclear if it's still needed
-        for name, Handler in get_handlers_callable().items():
-            if name == "Electrostatics":
-                handler = Handler(scale_14=force_field.coulomb14scale)
-            if name == "vdW":
-                handler = Handler(scale_14=force_field.lj14scale)
-            else:
-                handler = Handler()
-
-            system.handlers[name] = handler
-
-        system["vdW"].store_matches(force_field, topology=system.topology)
-        system["vdW"].store_potentials(force_field=force_field)  # type: ignore[call-arg]
-
-        atom_slots = system["vdW"].slot_map
-
-        system["Electrostatics"].store_charges(  # type: ignore
-            atom_slots=atom_slots,
-            force_field=force_field,
-        )
-
-        system["vdW"].scale_14 = force_field.lj14scale  # type: ignore[assignment]
-        system["Electrostatics"].scale_14 = force_field.coulomb14scale  # type: ignore[assignment]
-
-        for name, handler in system.handlers.items():
-            if name not in ["vdW", "Electrostatics"]:
-                handler.store_matches(atom_slots, topology=system.topology)
-                handler.store_potentials(force_field)
-
-        # FIXME: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
-
-        charges = system["Electrostatics"].charges
-
-        for molecule in system.topology.molecules:
-            molecule_charges = [
-                charges[TopologyKey(atom_indices=(system.topology.atom_index(atom),))].m
-                for atom in molecule.atoms
-            ]
-            molecule.partial_charges = unit.Quantity(
-                molecule_charges, unit.elementary_charge
-            )
-
-        return system
-
-    @classmethod
     @requires_package("intermol")
     def from_gromacs(
         cls,
@@ -851,18 +773,7 @@ class Interchange(DefaultModel):
         self_copy.topology = _combine_topologies(self.topology, other.topology)
         atom_offset = self.topology.n_atoms
 
-        """
-        for handler_name in self.handlers:
-            if type(self.handlers[handler_name]).__name__ == "FoyerElectrostaticsHandler":
-                self.handlers[handler_name].slot_map = self.handlers[handler_name].charges
-        """
-
         for handler_name, handler in other.handlers.items():
-
-            """
-            if type(handler).__name__ == "FoyerElectrostaticsHandler":
-                handler.slot_map = handler.charges
-            """
 
             # TODO: Actually specify behavior in this case
             try:

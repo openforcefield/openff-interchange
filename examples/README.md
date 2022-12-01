@@ -13,8 +13,6 @@ Jupyter notebooks demonstrating use cases.
     OpenFF tools and compare the results of OpenMM, GROMACS, Amber, and LAMMPS.
   * `openmm/openmm.ipynb`: Prepare a box of organic species for a simulation with OpenMM.
   * `lammps/lammps.ipynb`: Prepare a box of organic species for a simulation with LAMMPS.
-  * `foyer-showcase/solvated-nanoparticle.ipynb`: Use [`mBuild`](https://mbuild.mosdef.org/) to
-    construct a silica nanoparticle solvated in tetrahydrofuran and then parametrize the nanoparticle with OPLS-AA via [`Foyer`](https://foyer.mosdef.org/) and Sage.
 
 These can all be run in a web browser with [binder](https://mybinder.org/v2/gh/openforcefield/openff-interchange/main?filepath=%2Fexamples%2F) without inatlling anything on your computer.
 

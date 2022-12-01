@@ -75,7 +75,7 @@ OpenFF Interchange aims to provide a robust API for producing identical,
 simulation-ready systems for all major molecular mechanics codes with the Open
 Force Field software stack. Interchange aims to support systems created with
 the [OpenFF Toolkit], which can be converted to `Interchange` objects by
-applying a SMIRNOFF force field from the Toolkit or a [Foyer] force field. The
+applying a SMIRNOFF force field from the Toolkit. The
 `Interchange` object can then produce input files for downstream molecular
 mechanics software suites. At present, it supports Amber and OpenMM. GROMACS,
 and LAMMPS support is in place but experimental, and support for CHARMM is
@@ -127,5 +127,4 @@ units compatible with SI:
 [`openff-units`]: https://github.com/openforcefield/openff-units
 [`openmm.units`]: http://docs.openmm.org/latest/api-python/app.html#units
 [`unyt`]: https://github.com/yt-project/unyt
-[Foyer]: https://github.com/mosdef-hub/foyer
 [ParmEd]: https://parmed.github.io/ParmEd/html/index.html
