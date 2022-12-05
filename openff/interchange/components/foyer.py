@@ -3,12 +3,12 @@ from abc import abstractmethod
 from copy import copy
 from typing import TYPE_CHECKING, Dict, Type
 
+from openff.models.types import FloatQuantity
 from openff.units import unit
 
 from openff.interchange.components.potentials import Potential, PotentialHandler
 from openff.interchange.constants import _PME
 from openff.interchange.models import PotentialKey, TopologyKey
-from openff.interchange.types import FloatQuantity
 
 if TYPE_CHECKING:
     from foyer.forcefield import Forcefield

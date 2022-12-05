@@ -3,13 +3,13 @@ import warnings
 from typing import Dict, Optional
 
 import pandas as pd
+from openff.models.models import DefaultModel
+from openff.models.types import FloatQuantity
 from openff.units import unit
 from pydantic import validator
 
 from openff.interchange.constants import kj_mol
 from openff.interchange.exceptions import EnergyError, MissingEnergyError
-from openff.interchange.models import DefaultModel
-from openff.interchange.types import FloatQuantity
 
 
 class EnergyReport(DefaultModel):

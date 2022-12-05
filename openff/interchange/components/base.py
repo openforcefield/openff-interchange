@@ -1,12 +1,12 @@
 """
 Base models for engine- and force field-agnostic components.
 """
+from openff.models.types import FloatQuantity
 from openff.units import unit
 from pydantic import Field
 from typing_extensions import Literal
 
 from openff.interchange.components.potentials import PotentialHandler
-from openff.interchange.types import FloatQuantity
 
 
 class BaseBondHandler(PotentialHandler):

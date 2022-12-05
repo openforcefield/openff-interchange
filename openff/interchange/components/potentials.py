@@ -3,13 +3,14 @@ import ast
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union
 
 import numpy
+from openff.models.models import DefaultModel
+from openff.models.types import ArrayQuantity, FloatQuantity
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, PrivateAttr, validator
 
 from openff.interchange.exceptions import MissingParametersError
-from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
-from openff.interchange.types import ArrayQuantity, FloatQuantity
+from openff.interchange.models import PotentialKey, TopologyKey
 
 if has_package("jax"):
     from jax import numpy as jax_numpy

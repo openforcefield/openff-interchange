@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union, overload
 
 import numpy as np
+from openff.models.models import DefaultModel
+from openff.models.types import ArrayQuantity, QuantityEncoder, custom_quantity_encoder
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
@@ -26,13 +28,7 @@ from openff.interchange.exceptions import (
     UnsupportedCombinationError,
     UnsupportedExportError,
 )
-from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
-from openff.interchange.types import (
-    ArrayQuantity,
-    QuantityEncoder,
-    TopologyEncoder,
-    custom_quantity_encoder,
-)
+from openff.interchange.models import PotentialKey, TopologyKey
 
 if TYPE_CHECKING:
     from openff.interchange.components.smirnoff import (
@@ -75,6 +71,17 @@ def _sanitize(o):
     elif isinstance(o, unit.Quantity):
         return custom_quantity_encoder(o)
     return o
+
+
+class TopologyEncoder(json.JSONEncoder):
+    """Custom encoder for `Topology` objects."""
+
+    def default(self, obj: "Topology"):  # noqa
+        _topology = copy.deepcopy(obj)
+        for molecule in _topology.molecules:
+            molecule._conformers = None
+
+        return _topology.to_json()
 
 
 def interchange_dumps(v, *, default):
