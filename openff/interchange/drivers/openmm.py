@@ -155,7 +155,7 @@ def _get_openmm_energies(
 
     report = EnergyReport()
 
-    report.update_energies(
+    report.update(
         {
             "Bond": omm_energies.get("HarmonicBondForce", 0.0 * kj_mol),
             "Angle": omm_energies.get("HarmonicAngleForce", 0.0 * kj_mol),
@@ -164,14 +164,12 @@ def _get_openmm_energies(
     )
 
     if "Nonbonded" in omm_energies:
-        report.update_energies(
-            {"Nonbonded": _canonicalize_nonbonded_energies(omm_energies)}
-        )
+        report.update({"Nonbonded": _canonicalize_nonbonded_energies(omm_energies)})
         report.energies.pop("vdW")
         report.energies.pop("Electrostatics")
     else:
-        report.update_energies({"vdW": omm_energies.get("vdW", 0.0 * kj_mol)})
-        report.update_energies(
+        report.update({"vdW": omm_energies.get("vdW", 0.0 * kj_mol)})
+        report.update(
             {"Electrostatics": omm_energies.get("Electrostatics", 0.0 * kj_mol)}
         )
 

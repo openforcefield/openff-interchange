@@ -168,7 +168,7 @@ class TestGROMACS(_BaseTest):
 
         get_gromacs_energies(out).compare(
             get_gromacs_energies(converted),
-            custom_tolerances={
+            tolerances={
                 "Bond": 0.002 * molecule.n_bonds * unit.kilojoule / unit.mol,
                 "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
             },
@@ -323,7 +323,7 @@ class TestGROMACS(_BaseTest):
 
         get_gromacs_energies(out).compare(
             get_openmm_energies(out),
-            custom_tolerances={"Electrostatics": 0.5 * unit.kilojoule_per_mole},
+            {"Electrostatics": 0.5 * unit.kilojoule_per_mole},
         )
 
 

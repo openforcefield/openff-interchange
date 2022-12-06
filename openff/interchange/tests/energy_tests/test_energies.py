@@ -10,7 +10,6 @@ from openmm import unit as openmm_unit
 from openff.interchange import Interchange
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
-from openff.interchange.drivers.report import EnergyError, EnergyReport
 from openff.interchange.tests import (
     HAS_GROMACS,
     HAS_LAMMPS,
@@ -28,31 +27,6 @@ if HAS_GROMACS:
     )
 if HAS_LAMMPS:
     from openff.interchange.drivers.lammps import get_lammps_energies
-
-
-def test_energy_report():
-    """Test that multiple failing energies are captured in the EnergyError"""
-    a = EnergyReport(
-        energies={
-            "a": 1 * kj_mol,
-            "_FLAG": 2 * kj_mol,
-            "KEY_": 1.2 * kj_mol,
-        }
-    )
-    b = EnergyReport(
-        energies={
-            "a": -1 * kj_mol,
-            "_FLAG": -2 * kj_mol,
-            "KEY_": -0.1 * kj_mol,
-        }
-    )
-    custom_tolerances = {
-        "a": 1 * kj_mol,
-        "_FLAG": 1 * kj_mol,
-        "KEY_": 1 * kj_mol,
-    }
-    with pytest.raises(EnergyError, match=r"_FLAG[\s\S]*KEY_"):
-        a.compare(b, custom_tolerances=custom_tolerances)
 
 
 class TestEnergies(_BaseTest):
@@ -95,7 +69,7 @@ class TestEnergies(_BaseTest):
         # Compare GROMACS writer and OpenMM export
         gmx_energies = get_gromacs_energies(off_sys, mdp=mdp)
 
-        custom_tolerances = {
+        tolerances = {
             "Bond": 2e-5 * openmm_unit.kilojoule_per_mole,
             "Electrostatics": 2 * openmm_unit.kilojoule_per_mole,
             "vdW": 2 * openmm_unit.kilojoule_per_mole,
@@ -105,7 +79,7 @@ class TestEnergies(_BaseTest):
 
         gmx_energies.compare(
             omm_energies,
-            custom_tolerances=custom_tolerances,
+            tolerances,
         )
 
         if not constrained:
@@ -116,11 +90,11 @@ class TestEnergies(_BaseTest):
                 electrostatics=True,
             )
             lmp_energies = get_lammps_energies(off_sys)
-            custom_tolerances = {
+            tolerances = {
                 "vdW": 5.0 * openmm_unit.kilojoule_per_mole,
                 "Electrostatics": 5.0 * openmm_unit.kilojoule_per_mole,
             }
-            lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
+            lmp_energies.compare(other_energies, tolerances)
 
     @needs_gmx
     @skip_if_missing("foyer")
