@@ -2,12 +2,12 @@
 import warnings
 from typing import Dict, Optional, Set
 
+from openff.models.models import DefaultModel
+from openff.models.types import FloatQuantity
 from pydantic import validator
 
 from openff.interchange.constants import kj_mol
 from openff.interchange.exceptions import EnergyError
-from openff.interchange.models import DefaultModel
-from openff.interchange.types import FloatQuantity
 
 _KNOWN_ENERGY_TERMS: Set[str] = {
     "Bond",

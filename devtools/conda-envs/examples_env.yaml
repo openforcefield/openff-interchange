@@ -12,6 +12,7 @@ dependencies:
   - openmm
   # OpenFF stack
   - openff-toolkit >=0.11.3
+  - openff-models
   - openff-evaluator
   # Optional features
   - jax

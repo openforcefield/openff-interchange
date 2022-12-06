@@ -18,6 +18,7 @@ from typing import (
 )
 
 import numpy as np
+from openff.models.types import FloatQuantity, custom_quantity_encoder, json_loader
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
@@ -62,7 +63,6 @@ from openff.interchange.models import (
     TopologyKey,
     VirtualSiteKey,
 )
-from openff.interchange.types import FloatQuantity, custom_quantity_encoder, json_loader
 
 kcal_mol = openmm_unit.kilocalorie_per_mole
 kcal_mol_angstroms = kcal_mol / openmm_unit.angstrom**2
