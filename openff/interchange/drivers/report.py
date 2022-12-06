@@ -8,7 +8,7 @@ from openff.units import unit
 from pydantic import validator
 
 from openff.interchange.constants import kj_mol
-from openff.interchange.exceptions import EnergyError
+from openff.interchange.exceptions import EnergyError, IncompatibleTolerancesError
 
 _KNOWN_ENERGY_TERMS: Set[str] = {
     "Bond",
@@ -98,7 +98,7 @@ class EnergyReport(DefaultModel):
 
         if ("Nonbonded" in tolerances) != ("Nonbonded" in energy_differences):
 
-            raise ValueError(
+            raise IncompatibleTolerancesError(
                 "Mismatch between energy reports and tolerances with respect to whether nonbonded "
                 "interactions are collapsed into a single value."
             )

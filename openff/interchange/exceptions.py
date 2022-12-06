@@ -258,7 +258,7 @@ class EnergyError(BaseException):
     """
 
 
-class MissingEnergyError(BaseException):
+class IncompatibleTolerancesError(BaseException):
     """
     Exception for when one report has a value for an energy group but the other does not.
     """

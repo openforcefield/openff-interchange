@@ -4,7 +4,7 @@ from openff.units.openmm import ensure_quantity
 
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.exceptions import EnergyError
+from openff.interchange.exceptions import EnergyError, IncompatibleTolerancesError
 from openff.interchange.tests import _BaseTest
 
 
@@ -164,3 +164,10 @@ class TestEnergyReport(_BaseTest):
             match="Bond.*Torsion.*vdW",
         ):
             report.compare(other)
+
+    def test_compare_incompatible_tolerances(self, report):
+        with pytest.raises(
+            IncompatibleTolerancesError,
+            match="whether nonbonded",
+        ):
+            report.compare(report, {"Nonbonded": 0.0 * kj_mol})
