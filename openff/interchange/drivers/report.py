@@ -1,21 +1,28 @@
 """Storing and processing results of energy evaluations."""
 import warnings
-from typing import Dict, Optional
+from typing import Dict, Optional, Set
 
-import pandas as pd
-from openff.units import unit
 from pydantic import validator
 
 from openff.interchange.constants import kj_mol
-from openff.interchange.exceptions import EnergyError, MissingEnergyError
+from openff.interchange.exceptions import EnergyError
 from openff.interchange.models import DefaultModel
 from openff.interchange.types import FloatQuantity
+
+_KNOWN_ENERGY_TERMS: Set[str] = {
+    "Bond",
+    "Angle",
+    "Torsion",
+    "vdW",
+    "Electrostatics",
+    "Nonbonded",
+}
 
 
 class EnergyReport(DefaultModel):
     """A lightweight class containing single-point energies as computed by energy tests."""
 
-    # TODO: Use FloatQuantity, not float
+    # TODO: Should the default by None or 0.0 kj_mol?
     energies: Dict[str, Optional[FloatQuantity]] = {
         "Bond": None,
         "Angle": None,
@@ -26,9 +33,9 @@ class EnergyReport(DefaultModel):
 
     @validator("energies")
     def validate_energies(cls, v: Dict) -> Dict:
-        for key, val in v.items():
-            if not isinstance(val, unit.Quantity):
-                v[key] = FloatQuantity.validate_type(val)
+        for key in v:
+            if key not in _KNOWN_ENERGY_TERMS:
+                raise Exception(f"Energy type {key} not understood.")
         return v
 
     @property
@@ -53,110 +60,104 @@ class EnergyReport(DefaultModel):
         """Update the energies in this report with new value(s)."""
         self.energies.update(self.validate_energies(new_energies))
 
-    # TODO: Better way of exposing tolerances
     def compare(
         self,
         other: "EnergyReport",
-        custom_tolerances: Optional[Dict[str, FloatQuantity]] = None,
-    ) -> None:
+        tolerances: Optional[Dict[str, FloatQuantity]] = None,
+    ):
         """
-        Compare this `EnergyReport` to another `EnergyReport`.
-
-        Energies are grouped into four categories (bond, angle, torsion, and nonbonded) with
-        default tolerances for each set to 1e-3 kJ/mol.
-
-        .. warning :: This API is experimental and subject to change.
+        Compare two energy reports.
 
         Parameters
         ----------
         other: EnergyReport
             The other `EnergyReport` to compare energies against
-        custom_tolerances: dict of str: `FloatQuantity`, optional
-            Custom energy tolerances to use to use in comparisons.
+
+        tolerances: dict of str: `FloatQuantity`
+            Per-key allowed differences in energies
 
         """
-        tolerances: Dict[str, FloatQuantity] = {
-            "Bond": 1e-3 * kj_mol,
-            "Angle": 1e-3 * kj_mol,
-            "Torsion": 1e-3 * kj_mol,
-            "vdW": 1e-3 * kj_mol,
-            "Electrostatics": 1e-3 * kj_mol,
-        }
+        if not tolerances:
 
-        if custom_tolerances is not None:
-            tolerances.update(custom_tolerances)
+            tolerances = {
+                "Bond": 1e-3 * kj_mol,
+                "Angle": 1e-3 * kj_mol,
+                "Torsion": 1e-3 * kj_mol,
+                "vdW": 1e-3 * kj_mol,
+                "Electrostatics": 1e-3 * kj_mol,
+            }
 
-        tolerances = self.validate_energies(tolerances)
-        errors: pd.DataFrame = pd.DataFrame()
+        energy_differences = self.diff(other)
+
+        if ("Nonbonded" in tolerances) != ("Nonbonded" in energy_differences):
+            raise ValueError(
+                "Mismatch between energy reports and tolerances with respect to whether nonbonded "
+                "interactions are collapsed into a single value."
+            )
+
+        for key, diff in energy_differences.items():
+            print(energy_differences[key], tolerances[key])
+            if abs(energy_differences[key]) > tolerances[key]:
+                raise EnergyError(key, diff)
+
+    def diff(
+        self,
+        other: "EnergyReport",
+    ) -> Dict[str, FloatQuantity]:
+        """
+        Return the per-key energy differences between these reports.
+
+        Parameters
+        ----------
+        other: EnergyReport
+            The other `EnergyReport` to compare energies against
+
+        Returns
+        -------
+        energy_differences : dict of str: `FloatQuantity`
+            Per-key energy differences
+
+        """
+        energy_differences: Dict[str, FloatQuantity] = dict()
+
+        nonbondeds_processed = False
 
         for key in self.energies:
 
-            if self.energies[key] is None and other.energies[key] is None:
-                continue
-            if self.energies[key] is None and other.energies[key] is None:
-                raise MissingEnergyError
+            if key in ("Bond", "Angle", "Torsion"):
 
-            # TODO: Remove this when OpenMM's NonbondedForce is split out
-            if key == "Nonbonded":
-                if "Nonbonded" in other.energies:
-                    this_nonbonded = self.energies["Nonbonded"]
-                    other_nonbonded = other.energies["Nonbonded"]
-                else:
-                    this_nonbonded = self.energies["Nonbonded"]
-                    other_nonbonded = other.energies["vdW"] + other.energies["Electrostatics"]  # type: ignore
-            elif key in ["vdW", "Electrostatics"] and key not in other.energies:
-                this_nonbonded = self.energies["vdW"] + self.energies["Electrostatics"]  # type: ignore
-                other_nonbonded = other.energies["Nonbonded"]
-            else:
-                diff = self.energies[key] - other.energies[key]  # type: ignore[operator]
-                tolerance = tolerances[key]
-
-                if abs(diff) > tolerance:
-                    data: Dict = {
-                        "key": [key],
-                        "diff": [diff],
-                        "tol": [tolerance],
-                        "ener1": [self.energies[key]],
-                        "ener2": [other.energies[key]],
-                    }
-                    error = pd.DataFrame.from_dict(data)
-                    errors = errors.append(error)  # type: ignore[operator]
+                energy_differences[key]: FloatQuantity = self[key] - other[key]
 
                 continue
 
-            diff = this_nonbonded - other_nonbonded  # type: ignore
-            try:
-                tolerance = tolerances[key]
-            except KeyError as e:
-                if "Nonbonded" in str(e):
-                    tolerance = tolerances["vdW"] + tolerances["Electrostatics"]
+            if key in ("Nonbonded", "vdW", "Electrostatics"):
+
+                if nonbondeds_processed:
+                    continue
+
+                if (self["vdW"] and other["vdW"]) and (
+                    self["Electrostatics"] and other["Electrostatics"]
+                ):
+
+                    for key in ("vdW", "Electrostatics"):
+                        energy_differences[key]: FloatQuantity = self[key] - other[key]
+                        energy_differences[key]: FloatQuantity = self[key] - other[key]
+
+                        nonbondeds_processed = True
+
+                        continue
+
                 else:
-                    raise e
 
-            if abs(diff) > tolerance:
-                data: Dict = {  # type: ignore[no-redef]
-                    "key": ["Nonbonded"],
-                    "diff": [diff],
-                    "tol": [tolerance],
-                    "ener1": [this_nonbonded],
-                    "ener2": [other_nonbonded],
-                }
-                error = pd.DataFrame.from_dict(data)
-                errors = errors.append(error)  # type: ignore[operator]
+                    energy_differences["Nonbonded"] = (
+                        self._get_nonbonded_energy() - other._get_nonbonded_energy()
+                    )
 
-        if len(errors) > 0:
-            for col_name in ["diff", "tol", "ener1", "ener2"]:
-                col_mod = [x.m_as(kj_mol) for x in errors[col_name]]
-                errors[col_name] = col_mod
+                    nonbondeds_processed = True
 
-            raise EnergyError(
-                "\nSome energy difference(s) exceed tolerances! "
-                "\nAll values are reported in kJ/mol:"
-                "\n" + str(errors.to_string(index=False))
-            )
+                    continue
 
-        # TODO: Return energy differences even if none are greater than tolerance
-        # This might result in mis-matched keys
+        return energy_differences
 
     def __sub__(self, other: "EnergyReport") -> Dict[str, FloatQuantity]:
         diff = dict()
@@ -178,3 +179,11 @@ class EnergyReport(DefaultModel):
             f"vdW:           \t\t{self['vdW']}\n"
             f"Electrostatics:\t\t{self['Electrostatics']}\n"
         )
+
+    def _get_nonbonded_energy(self) -> FloatQuantity:
+        nonbonded_energy = 0.0 * kj_mol
+        for key in ("Nonbonded", "vdW", "Electrostatics"):
+            if key in self.energies is not None:
+                nonbonded_energy += self.energies[key]
+
+        return nonbonded_energy
