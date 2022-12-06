@@ -4,6 +4,7 @@ from typing import Dict, Optional, Set
 
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
+from openff.units import unit
 from pydantic import validator
 
 from openff.interchange.constants import kj_mol
@@ -22,7 +23,7 @@ _KNOWN_ENERGY_TERMS: Set[str] = {
 class EnergyReport(DefaultModel):
     """A lightweight class containing single-point energies as computed by energy tests."""
 
-    # TODO: Should the default by None or 0.0 kj_mol?
+    # TODO: Should the default be None or 0.0 kj_mol?
     energies: Dict[str, Optional[FloatQuantity]] = {
         "Bond": None,
         "Angle": None,
@@ -33,9 +34,11 @@ class EnergyReport(DefaultModel):
 
     @validator("energies")
     def validate_energies(cls, v: Dict) -> Dict:
-        for key in v:
+        for key, val in v.items():
             if key not in _KNOWN_ENERGY_TERMS:
                 raise Exception(f"Energy type {key} not understood.")
+            if not isinstance(val, unit.Quantity):
+                v[key] = FloatQuantity.validate_type(val)
         return v
 
     @property
@@ -56,7 +59,7 @@ class EnergyReport(DefaultModel):
         else:
             return None
 
-    def update_energies(self, new_energies: Dict) -> None:
+    def update(self, new_energies: Dict) -> None:
         """Update the energies in this report with new value(s)."""
         self.energies.update(self.validate_energies(new_energies))
 
@@ -77,28 +80,37 @@ class EnergyReport(DefaultModel):
             Per-key allowed differences in energies
 
         """
-        if not tolerances:
+        default_tolerances = {
+            "Bond": 1e-3 * kj_mol,
+            "Angle": 1e-3 * kj_mol,
+            "Torsion": 1e-3 * kj_mol,
+            "vdW": 1e-3 * kj_mol,
+            "Electrostatics": 1e-3 * kj_mol,
+        }
 
-            tolerances = {
-                "Bond": 1e-3 * kj_mol,
-                "Angle": 1e-3 * kj_mol,
-                "Torsion": 1e-3 * kj_mol,
-                "vdW": 1e-3 * kj_mol,
-                "Electrostatics": 1e-3 * kj_mol,
-            }
+        # Replace with `default_tolerances | tolerances` when Python 3.9+ (PEP 584)
+        if tolerances:
+            default_tolerances.update(tolerances)
+
+        tolerances = default_tolerances
 
         energy_differences = self.diff(other)
 
         if ("Nonbonded" in tolerances) != ("Nonbonded" in energy_differences):
+
             raise ValueError(
                 "Mismatch between energy reports and tolerances with respect to whether nonbonded "
                 "interactions are collapsed into a single value."
             )
 
+        errors = dict()
+
         for key, diff in energy_differences.items():
-            print(energy_differences[key], tolerances[key])
             if abs(energy_differences[key]) > tolerances[key]:
-                raise EnergyError(key, diff)
+                errors[key] = diff
+
+        if errors:
+            raise EnergyError(errors)
 
     def diff(
         self,
@@ -135,9 +147,9 @@ class EnergyReport(DefaultModel):
                 if nonbondeds_processed:
                     continue
 
-                if (self["vdW"] and other["vdW"]) and (
+                if (self["vdW"] and other["vdW"]) is not None and (
                     self["Electrostatics"] and other["Electrostatics"]
-                ):
+                ) is not None:
 
                     for key in ("vdW", "Electrostatics"):
                         energy_differences[key]: FloatQuantity = self[key] - other[key]

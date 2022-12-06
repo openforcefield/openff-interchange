@@ -69,7 +69,7 @@ class TestAmber(_BaseTest):
 
         omm_energies.compare(
             amb_energies,
-            custom_tolerances={
+            {
                 "vdW": 0.018 * kj_mol,
                 "Electrostatics": 0.01 * kj_mol,
             },

@@ -71,7 +71,7 @@ class TestLammps(_BaseTest):
 
         lmp_energies.compare(
             reference,
-            custom_tolerances={
+            {
                 "Nonbonded": 100 * unit.kilojoule_per_mole,
                 "Electrostatics": 100 * unit.kilojoule_per_mole,
                 "vdW": 100 * unit.kilojoule_per_mole,

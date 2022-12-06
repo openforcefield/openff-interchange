@@ -52,13 +52,27 @@ class TestEnergyReport(_BaseTest):
 
     def test_update(self, report):
         assert report["Bond"].m == 10.0
-        report.update_energies({"Bond": -200.0 * kj_mol})
+        report.update({"Bond": -200.0 * kj_mol})
 
         assert report["Bond"].m == -200.0
 
+    @pytest.mark.parametrize(
+        "unit_system",
+        ["openff", "openmm"],
+    )
+    def test_update_unit_types(self, report, unit_system):
+        report.update(
+            {
+                "Bond": ensure_quantity(55.55 * kj_mol, unit_system),
+            }
+        )
+
+        assert isinstance(report["Bond"], unit.Quantity)
+        assert report["Bond"].m_as(kj_mol) == pytest.approx(55.55)
+
     def test_bad_update(self, report):
         with pytest.raises(Exception, match="foo not understood."):
-            report.update_energies({"foo": 1 * kj_mol})
+            report.update({"foo": 1 * kj_mol})
 
     def test_sub(self):
         a = EnergyReport(energies={"Torsion": 10 * kj_mol})
@@ -98,6 +112,22 @@ class TestEnergyReport(_BaseTest):
 
         assert abs(differences["Nonbonded"].m) == 2
 
+    def test_diff_multiple(self, report):
+        other = EnergyReport(
+            energies={
+                "Bond": -4 * kj_mol,
+                "Angle": 10 * kj_mol,
+                "Torsion": -2 * kj_mol,
+                "vdW": 10 * kj_mol,
+                "Electrostatics": -10 * kj_mol,
+            }
+        )
+
+        diff = report.diff(other)
+
+        assert len(diff) == 5
+        assert len([val for val in diff.values() if val.m != 0]) == 3
+
     def test_compare_identical(self, report):
         report.compare(report)
 
@@ -116,4 +146,21 @@ class TestEnergyReport(_BaseTest):
         )
 
         with pytest.raises(EnergyError):
+            report.compare(other)
+
+    def test_compare_multiple(self, report):
+        other = EnergyReport(
+            energies={
+                "Bond": -4 * kj_mol,
+                "Angle": 10 * kj_mol,
+                "Torsion": -2 * kj_mol,
+                "vdW": 10 * kj_mol,
+                "Electrostatics": -10 * kj_mol,
+            }
+        )
+
+        with pytest.raises(
+            EnergyError,
+            match="Bond.*Torsion.*vdW",
+        ):
             report.compare(other)

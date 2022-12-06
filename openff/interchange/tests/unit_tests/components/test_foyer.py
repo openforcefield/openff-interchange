@@ -112,7 +112,7 @@ class TestFoyer(_BaseTest):
 
         gmx_energies.compare(
             omm_energies,
-            custom_tolerances={
+            {
                 "vdW": 12.0 * unit.kilojoule / unit.mole,
                 "Electrostatics": 12.0 * unit.kilojoule / unit.mole,
             },
@@ -145,10 +145,9 @@ class TestFoyer(_BaseTest):
         # TODO: Revisit after https://github.com/mosdef-hub/foyer/issues/431
         openff_energy.compare(
             through_foyer,
-            custom_tolerances={
+            {
                 "Bond": 1e-3 * unit.kilojoule / unit.mole,
                 "Angle": 1e-3 * unit.kilojoule / unit.mole,
-                "Nonbonded": 1e-3 * unit.kilojoule / unit.mole,
                 "Torsion": 1e-3 * unit.kilojoule / unit.mole,
                 "vdW": 5 * unit.kilojoule / unit.mole,
                 "Electrostatics": 1 * unit.kilojoule / unit.mole,
