@@ -1,5 +1,5 @@
 """Models for non-standard non-bonded treatments."""
-from typing_extensions import Literal
+from typing import Literal
 
 from openff.interchange.components.potentials import PotentialHandler
 

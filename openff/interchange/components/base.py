@@ -1,10 +1,11 @@
 """
 Base models for engine- and force field-agnostic components.
 """
+from typing import Literal
+
 from openff.models.types import FloatQuantity
 from openff.units import unit
 from pydantic import Field
-from typing_extensions import Literal
 
 from openff.interchange.components.potentials import PotentialHandler
 
@@ -43,13 +44,16 @@ class _BaseNonbondedHandler(PotentialHandler):
     type: str = "Nonbonded"
 
     scale_13: float = Field(
-        0.0, description="The scaling factor applied to 1-3 interactions"
+        0.0,
+        description="The scaling factor applied to 1-3 interactions",
     )
     scale_14: float = Field(
-        0.5, description="The scaling factor applied to 1-4 interactions"
+        0.5,
+        description="The scaling factor applied to 1-4 interactions",
     )
     scale_15: float = Field(
-        1.0, description="The scaling factor applied to 1-5 interactions"
+        1.0,
+        description="The scaling factor applied to 1-5 interactions",
     )
 
     cutoff: FloatQuantity["angstrom"] = Field(

@@ -1,3 +1,6 @@
+"""
+Common helpers for exporting virtual sites.
+"""
 from typing import TYPE_CHECKING, Dict
 
 import numpy
@@ -28,21 +31,24 @@ def _virtual_site_parent_molecule_mapping(
 
 
 def _get_virtual_site_positions(
-    virtual_site_key: VirtualSiteKey, interchange: "Interchange"
+    virtual_site_key: VirtualSiteKey,
+    interchange: "Interchange",
 ) -> unit.Quantity:
     # TODO: Move this behavior elsewhere, possibly to a non-GROMACS location
     if virtual_site_key.type == "BondCharge":
         return _get_bond_charge_virtual_site_positions(virtual_site_key, interchange)
     if virtual_site_key.type == "DivalentLonePair":
         return _get_divalent_lone_pair_virtual_site_positions(
-            virtual_site_key, interchange
+            virtual_site_key,
+            interchange,
         )
     else:
         raise Exception(f"Virtual site type {virtual_site_key.type} not implemented.")
 
 
 def _get_bond_charge_virtual_site_positions(
-    virtual_site_key, interchange
+    virtual_site_key,
+    interchange,
 ) -> unit.Quantity:
     r0 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
     r1 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
@@ -58,7 +64,8 @@ def _get_bond_charge_virtual_site_positions(
 
 
 def _get_divalent_lone_pair_virtual_site_positions(
-    virtual_site_key, interchange
+    virtual_site_key,
+    interchange,
 ) -> unit.Quantity:
     r0 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
     r1 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
@@ -71,7 +78,7 @@ def _get_divalent_lone_pair_virtual_site_positions(
 
     if abs(r0_r1_bond_length - r0_r2_bond_length) > unit.Quantity(1e-3, unit.nanometer):
         raise Exception(
-            "Only symmetric geometries (i.e. r2 - r0 = r1 - r0) are currently supported"
+            "Only symmetric geometries (i.e. r2 - r0 = r1 - r0) are currently supported",
         )
 
     potential_key = interchange["VirtualSites"].slot_map[virtual_site_key]

@@ -57,7 +57,9 @@ class TestEnergies(_BaseTest):
         mol.to_file("out.xyz", file_format="xyz")
         compound: mb.Compound = mb.load("out.xyz")
         packed_box: mb.Compound = mb.fill_box(
-            compound=compound, n_compounds=1, box=mb.Box(lengths=[10, 10, 10])
+            compound=compound,
+            n_compounds=1,
+            box=mb.Box(lengths=[10, 10, 10]),
         )
 
         positions = packed_box.xyz * unit.nanometer
@@ -120,7 +122,9 @@ class TestEnergies(_BaseTest):
 
         # Get single-point energies using GROMACS
         oplsaa_energies = _run_gmx_energy(
-            top_file="eth.top", gro_file="eth.gro", mdp_file=_get_mdp_file("default")
+            top_file="eth.top",
+            gro_file="eth.gro",
+            mdp_file=_get_mdp_file("default"),
         )
 
         assert oplsaa_energies.energies["Torsion"].m != 0.0
@@ -162,7 +166,7 @@ class TestEnergies(_BaseTest):
             [
                 Molecule.from_smiles("[#3+]"),
                 Molecule.from_smiles("[#17-]"),
-            ]
+            ],
         )
         out = Interchange.from_smirnoff(ion_ff, ions)
         out.box = [4, 4, 4] * unit.nanometer
@@ -177,12 +181,12 @@ class TestEnergies(_BaseTest):
 
             out["Electrostatics"].periodic_potential = "cutoff"
             gmx.append(
-                get_gromacs_energies(out, mdp="auto").energies["Electrostatics"].m
+                get_gromacs_energies(out, mdp="auto").energies["Electrostatics"].m,
             )
             lmp.append(
                 get_lammps_energies(out)
                 .energies["Electrostatics"]
-                .m_as(unit.kilojoule / unit.mol)
+                .m_as(unit.kilojoule / unit.mol),
             )
 
         assert np.sum(np.sqrt(np.square(np.asarray(lmp) - np.asarray(gmx)))) < 1e-3
@@ -224,7 +228,8 @@ class TestEnergies(_BaseTest):
 
         for key in ["Bond", "Torsion"]:
             interchange_energy = get_openmm_energies(
-                out, combine_nonbonded_forces=True
+                out,
+                combine_nonbonded_forces=True,
             ).energies[key]
 
             gromacs_energy = get_gromacs_energies(out).energies[key]
@@ -234,9 +239,9 @@ class TestEnergies(_BaseTest):
                 pass
             elif energy_diff < 1e-2:
                 pytest.xpass(
-                    f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports"
+                    f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports",
                 )
             else:
                 pytest.xfail(
-                    f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports"
+                    f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports",
                 )

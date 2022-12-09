@@ -1,3 +1,6 @@
+"""
+Helper functions for producing `openmm.Force` objects for non-bonded terms.
+"""
 from collections import defaultdict
 from typing import TYPE_CHECKING, DefaultDict, Dict, List, Union
 
@@ -511,12 +514,17 @@ def _create_exceptions(
 
                 if charge_prod._value == epsilon._value == 0.0:
                     non_bonded_force.addException(
-                        virtual_particle_of_p1, p2, 0.0, 0.0, 0.0, replace=True
+                        virtual_particle_of_p1,
+                        p2,
+                        0.0,
+                        0.0,
+                        0.0,
+                        replace=True,
                     )
                 else:
                     # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
                     v1_parameters = non_bonded_force.getParticleParameters(
-                        virtual_particle_of_p1
+                        virtual_particle_of_p1,
                     )
                     p2_parameters = non_bonded_force.getParticleParameters(p2)
                     non_bonded_force.addException(
@@ -534,12 +542,17 @@ def _create_exceptions(
 
                 if charge_prod._value == epsilon._value == 0.0:
                     non_bonded_force.addException(
-                        virtual_particle_of_p2, p1, 0.0, 0.0, 0.0, replace=True
+                        virtual_particle_of_p2,
+                        p1,
+                        0.0,
+                        0.0,
+                        0.0,
+                        replace=True,
                     )
                 else:
                     # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
                     v2_parameters = non_bonded_force.getParticleParameters(
-                        virtual_particle_of_p2
+                        virtual_particle_of_p2,
                     )
                     p1_parameters = non_bonded_force.getParticleParameters(p1)
                     non_bonded_force.addException(

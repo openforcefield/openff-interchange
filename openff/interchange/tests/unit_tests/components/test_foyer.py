@@ -43,7 +43,7 @@ class TestFoyer(_BaseTest):
     def oplsaa_interchange_ethanol(self, oplsaa):
 
         molecule = Molecule.from_file(
-            get_test_files_dir_path("foyer_test_molecules") + "/ethanol.sdf"
+            get_test_files_dir_path("foyer_test_molecules") + "/ethanol.sdf",
         )
         molecule.name = "ETH"
 
@@ -75,11 +75,11 @@ class TestFoyer(_BaseTest):
                     tuple(
                         molecule.conformers[0].m_as(unit.nanometer)
                         for molecule in molecule_or_molecules
-                    )
+                    ),
                 )
             else:
                 openff_interchange.positions = molecule_or_molecules.conformers[0].m_as(
-                    unit.nanometer
+                    unit.nanometer,
                 )
 
             openff_interchange.box = [4, 4, 4]
@@ -102,7 +102,7 @@ class TestFoyer(_BaseTest):
     @needs_gmx
     @pytest.mark.slow()
     @pytest.mark.skip(
-        reason="Exporting to OpenMM with geometric mixing rules not yet implemented"
+        reason="Exporting to OpenMM with geometric mixing rules not yet implemented",
     )
     def test_ethanol_energies(self, oplsaa_interchange_ethanol):
         from openff.interchange.drivers import get_gromacs_energies
@@ -130,7 +130,9 @@ class TestFoyer(_BaseTest):
         openff_interchange, pmd_structure = get_interchanges(molecule_path)
         parameterized_pmd_structure = oplsaa.apply(pmd_structure)
         openff_energy = get_gromacs_energies(
-            openff_interchange, decimal=3, mdp="cutoff_hbonds"
+            openff_interchange,
+            decimal=3,
+            mdp="cutoff_hbonds",
         )
 
         parameterized_pmd_structure.save("from_foyer.gro")
@@ -186,7 +188,7 @@ class TestRBTorsions(TestFoyer):
                 "C3": -2.5104 * kj_mol,
                 "C4": 0.0 * kj_mol,
                 "C5": 0.0 * kj_mol,
-            }
+            },
         )
 
         rb_torsions.potentials.update({pot_key: pot})

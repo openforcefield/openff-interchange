@@ -84,7 +84,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
     if interchange.box is None:
         if interchange["Electrostatics"].periodic_potential != _PME:
             raise UnsupportedExportError(
-                f'Electrostatics method PME (`"{_PME}"`) is not valid for a non-periodic system. '
+                f'Electrostatics method PME (`"{_PME}"`) is not valid for a non-periodic system. ',
             )
 
     with open(path, "w") as prmtop:
@@ -97,7 +97,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             f"{now.hour:02d}:{now.minute:02d}:{now.second:02d}\n"
             "%FLAG TITLE\n"
             "%FORMAT(20a4)\n"
-            "\n"
+            "\n",
         )
 
         from openff.interchange.interop.internal.gromacs import _build_typemap
@@ -297,7 +297,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
                 dihedrals_list.append(dihedral_type_index + 1)
 
         number_excluded_atoms, excluded_atoms_list = _get_exclusion_lists(
-            interchange.topology
+            interchange.topology,
         )
 
         # total number of atoms
@@ -396,7 +396,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             [
                 atom.name.ljust(4) if atom.name else atom.symbol.ljust(4)
                 for atom in interchange.topology.atoms
-            ]
+            ],
         )
         _write_text_blob(prmtop, text_blob)
 

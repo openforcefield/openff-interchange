@@ -99,7 +99,7 @@ def _run_sander(
     if not which("sander"):
         raise AmberExecutableNotFoundError(
             "Unable to find the 'sander' executable. Please ensure that "
-            "the Amber executables are installed and in your PATH."
+            "the Amber executables are installed and in your PATH.",
         )
 
     sander_cmd = (
@@ -128,7 +128,7 @@ def _run_sander(
             "Torsion": energies["DIHED"],
             "vdW": _get_amber_energy_vdw(energies),
             "Electrostatics": _get_amber_energy_coul(energies),
-        }
+        },
     )
 
     return energy_report
@@ -157,7 +157,7 @@ def _group_energy_terms(mdinfo: str) -> Dict[str, openmm_unit.Quantity]:
     else:
         raise AmberError(
             "Unable to detect where energy info starts in AMBER "
-            "output file: {}".format(mdinfo)
+            "output file: {}".format(mdinfo),
         )
 
     # Strange ranges for amber file data.

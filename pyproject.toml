@@ -9,4 +9,4 @@ ignore-module = false
 ignore-nested-functions = false
 ignore-nested-classes = true
 ignore-setters = true
-ignore-regex = ["^test_.*", "Test.*"]
+ignore-regex = ["^Test.*", "^test_.*", "^_.*"]

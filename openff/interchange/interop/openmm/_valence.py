@@ -1,3 +1,6 @@
+"""
+Helper functions for producing `openmm.Force` objects for valence terms.
+"""
 from typing import TYPE_CHECKING, Dict, Set, Tuple, Union
 
 import openmm
@@ -11,7 +14,9 @@ if TYPE_CHECKING:
 
 
 def _process_constraints(
-    openff_sys, openmm_sys, particle_map: Dict[Union[int, "VirtualSiteKey"], int]
+    openff_sys,
+    openmm_sys,
+    particle_map: Dict[Union[int, "VirtualSiteKey"], int],
 ) -> Set[Tuple[int, ...]]:
     """
     Process the Constraints section of an Interchange object.
@@ -61,7 +66,7 @@ def _process_bond_forces(
     else:
         raise UnsupportedExportError(
             "Found an unsupported functional form in the bond handler:\n\t"
-            f"{bond_handler.expression=}"
+            f"{bond_handler.expression=}",
         )
 
     openmm_sys.addForce(harmonic_bond_force)
@@ -75,14 +80,15 @@ def _process_bond_forces(
 
         if has_constraint_handler and not add_constrained_forces:
             if _is_constrained(
-                constrained_pairs, (openmm_indices[0], openmm_indices[1])
+                constrained_pairs,
+                (openmm_indices[0], openmm_indices[1]),
             ):
                 # This bond's length is constrained, dpo so not add a bond force
                 continue
 
         params = bond_handler.potentials[pot_key].parameters
         k = params["k"].m_as(
-            off_unit.kilojoule / off_unit.nanometer**2 / off_unit.mol
+            off_unit.kilojoule / off_unit.nanometer**2 / off_unit.mol,
         )
         length = params["length"].m_as(off_unit.nanometer)
 
@@ -115,14 +121,14 @@ def _process_angle_forces(
     elif angle_handler.expression == "k/2*(cos(theta)-cos(angle))**2":
         custom = True
         harmonic_angle_force = openmm.CustomAngleForce(
-            angle_handler.expression.replace("**", "^")
+            angle_handler.expression.replace("**", "^"),
         )
         for parameter_name in angle_handler._potential_parameters():
             harmonic_angle_force.addPerAngleParameter(parameter_name)
     else:
         raise UnsupportedExportError(
             "Found an unsupported functional form in the angle handler:\n\t"
-            f"{angle_handler.expression=}"
+            f"{angle_handler.expression=}",
         )
 
     openmm_sys.addForce(harmonic_angle_force)
@@ -136,13 +142,16 @@ def _process_angle_forces(
 
         if has_constraint_handler and not add_constrained_forces:
             if _is_constrained(
-                constrained_pairs, (openmm_indices[0], openmm_indices[2])
+                constrained_pairs,
+                (openmm_indices[0], openmm_indices[2]),
             ):
                 if _is_constrained(
-                    constrained_pairs, (openmm_indices[0], openmm_indices[1])
+                    constrained_pairs,
+                    (openmm_indices[0], openmm_indices[1]),
                 ):
                     if _is_constrained(
-                        constrained_pairs, (openmm_indices[1], openmm_indices[2])
+                        constrained_pairs,
+                        (openmm_indices[1], openmm_indices[2]),
                     ):
                         # This angle's geometry is fully subject to constraints, so do
                         # not an angle force
@@ -305,7 +314,8 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys, particle_map):
 
 
 def _is_constrained(
-    constrained_pairs: Set[Tuple[int, ...]], pair: Tuple[int, int]
+    constrained_pairs: Set[Tuple[int, ...]],
+    pair: Tuple[int, int],
 ) -> bool:
     if (pair[0], pair[1]) in constrained_pairs:
         return True

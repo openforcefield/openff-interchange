@@ -18,7 +18,7 @@ class TestEnergyReport(_BaseTest):
                 "Torsion": 2 * kj_mol,
                 "vdW": 20 * kj_mol,
                 "Electrostatics": -10 * kj_mol,
-            }
+            },
         )
 
     def test_coerce_to_quantity(self):
@@ -26,7 +26,7 @@ class TestEnergyReport(_BaseTest):
             EnergyReport(
                 energies={
                     "Bond": ensure_quantity(10 * kj_mol, "openmm"),
-                }
+                },
             )["Bond"],
             unit.Quantity,
         )
@@ -47,7 +47,7 @@ class TestEnergyReport(_BaseTest):
             EnergyReport(
                 energies={
                     "foo": 1 * kj_mol,
-                }
+                },
             )
 
     def test_update(self, report):
@@ -64,7 +64,7 @@ class TestEnergyReport(_BaseTest):
         report.update(
             {
                 "Bond": ensure_quantity(55.55 * kj_mol, unit_system),
-            }
+            },
         )
 
         assert isinstance(report["Bond"], unit.Quantity)
@@ -102,7 +102,7 @@ class TestEnergyReport(_BaseTest):
                 "Angle": 10 * kj_mol,
                 "Torsion": 2 * kj_mol,
                 "Nonbonded": 8 * kj_mol,
-            }
+            },
         )
 
         differences = report.diff(single_nonbonded)
@@ -120,7 +120,7 @@ class TestEnergyReport(_BaseTest):
                 "Torsion": -2 * kj_mol,
                 "vdW": 10 * kj_mol,
                 "Electrostatics": -10 * kj_mol,
-            }
+            },
         )
 
         diff = report.diff(other)
@@ -142,7 +142,7 @@ class TestEnergyReport(_BaseTest):
                     "vdW": 20 * kj_mol,
                     "Electrostatics": -10 * kj_mol,
                 }.items()
-            }
+            },
         )
 
         with pytest.raises(EnergyError):
@@ -156,7 +156,7 @@ class TestEnergyReport(_BaseTest):
                 "Torsion": -2 * kj_mol,
                 "vdW": 10 * kj_mol,
                 "Electrostatics": -10 * kj_mol,
-            }
+            },
         )
 
         with pytest.raises(

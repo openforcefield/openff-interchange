@@ -1,9 +1,8 @@
 """Custom Pydantic models."""
-from typing import Optional, Tuple
+from typing import Literal, Optional, Tuple
 
 from openff.models.models import DefaultModel
 from pydantic import Field
-from typing_extensions import Literal
 
 
 class TopologyKey(DefaultModel):
@@ -47,10 +46,12 @@ class TopologyKey(DefaultModel):
     """
 
     atom_indices: Tuple[int, ...] = Field(
-        tuple(), description="The indices of the atoms occupied by this interaction"
+        tuple(),
+        description="The indices of the atoms occupied by this interaction",
     )
     mult: Optional[int] = Field(
-        None, description="The index of this duplicate interaction"
+        None,
+        description="The index of this duplicate interaction",
     )
     bond_order: Optional[float] = Field(
         None,
@@ -64,7 +65,7 @@ class TopologyKey(DefaultModel):
     def __repr__(self) -> str:
         return (
             f"TopologyKey with atom indices {self.atom_indices}"
-            f"{'' if self.mult is None else ', mult' + str(self.mult)}"
+            f"{'' if self.mult is None else ', mult ' + str(self.mult)}"
             f"{'' if self.bond_order is None else ', bond order ' + str(self.bond_order)}"
         )
 
@@ -125,13 +126,14 @@ class VirtualSiteKey(DefaultModel):
     """A unique identifier of a virtual site in the scope of a chemical topology."""
 
     orientation_atom_indices: Tuple[int, ...] = Field(
-        description="The indices of the 'orientation atoms' which are used to define the position of this "
-        "virtual site. The first atom is the 'parent atom' which defines which atom the virtual site is 'attached' to."
+        description="The indices of the 'orientation atoms' which are used to define the position "
+        "of this virtual site. The first atom is the 'parent atom' which defines which atom the "
+        "virtual site is 'attached' to.",
     )
     type: str = Field(description="The type of this virtual site parameter.")
     name: str = Field(description="The name of this virtual site parameter.")
     match: Literal["once", "all_permutations"] = Field(
-        description="The `match` attribute of the associated virtual site type"
+        description="The `match` attribute of the associated virtual site type",
     )
 
     def __hash__(self) -> int:
@@ -141,7 +143,7 @@ class VirtualSiteKey(DefaultModel):
                 self.name,
                 self.type,
                 self.match,
-            )
+            ),
         )
 
 
@@ -185,7 +187,8 @@ class PotentialKey(DefaultModel):
         description="A unique identifier of this potential, i.e. a SMARTS pattern or an atom type",
     )
     mult: Optional[int] = Field(
-        None, description="The index of this duplicate interaction"
+        None,
+        description="The index of this duplicate interaction",
     )
     associated_handler: Optional[str] = Field(
         None,
@@ -204,6 +207,6 @@ class PotentialKey(DefaultModel):
     def __repr__(self) -> str:
         return (
             f"PotentialKey associated with handler '{self.associated_handler}' with id '{self.id}'"
-            f"{'' if self.mult is None else ', mult' + str(self.mult)}"
+            f"{'' if self.mult is None else ', mult ' + str(self.mult)}"
             f"{'' if self.bond_order is None else ', bond order ' + str(self.bond_order)}"
         )

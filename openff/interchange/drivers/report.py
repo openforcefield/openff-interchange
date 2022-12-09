@@ -34,6 +34,7 @@ class EnergyReport(DefaultModel):
 
     @validator("energies")
     def validate_energies(cls, v: Dict) -> Dict:
+        """Validate the structure of a dict mapping keys to energies."""
         for key, val in v.items():
             if key not in _KNOWN_ENERGY_TERMS:
                 raise Exception(f"Energy type {key} not understood.")
@@ -50,7 +51,7 @@ class EnergyReport(DefaultModel):
         if type(item) != str:
             raise LookupError(
                 "Only str arguments can be currently be used for lookups.\n"
-                f"Found item {item} of type {type(item)}"
+                f"Found item {item} of type {type(item)}",
             )
         if item in self.energies.keys():
             return self.energies[item]
@@ -100,7 +101,7 @@ class EnergyReport(DefaultModel):
 
             raise IncompatibleTolerancesError(
                 "Mismatch between energy reports and tolerances with respect to whether nonbonded "
-                "interactions are collapsed into a single value."
+                "interactions are collapsed into a single value.",
             )
 
         errors = dict()

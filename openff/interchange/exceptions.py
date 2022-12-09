@@ -1,8 +1,5 @@
 """Custom exceptions used in Interchange."""
-from typing import TYPE_CHECKING, List, Union
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology import Molecule
+from typing import List, Union
 
 
 class SMIRNOFFParameterAttributeNotImplementedError(Exception):
@@ -37,22 +34,6 @@ class SMIRNOFFVersionNotSupportedError(Exception):
     """
     Exception for when a parameter handler's version is not supported.
     """
-
-
-class ToolkitTopologyConformersNotFoundError(Exception):
-    """
-    Exception for when reference molecules in a toolkit topology lack conformers.
-    """
-
-    def __init__(self, *args: "Molecule") -> None:
-        if args:
-            self.mol = str(args[0])
-
-    def __str__(self) -> str:
-        msg = "A reference molecule in the topology does not contain any conformers"
-        if self.mol:
-            msg += f"The molecule lacking a conformer is {self.mol}"
-        return msg
 
 
 class InvalidParameterHandlerError(ValueError):
@@ -264,7 +245,23 @@ class IncompatibleTolerancesError(BaseException):
     """
 
 
-class NonIntegralMoleculeChargeException(BaseException):
+class NonIntegralMoleculeChargeError(BaseException):
     """
     Exception raised when the partial charges on a molecule do not sum up to its formal charge.
     """
+
+
+class UnassignedValenceError(BaseException):
+    """Exception raised when there are valence terms for which a ParameterHandler did not find matches."""
+
+
+class UnassignedBondError(UnassignedValenceError):
+    """Exception raised when there are bond terms for which a ParameterHandler did not find matches."""
+
+
+class UnassignedAngleError(UnassignedValenceError):
+    """Exception raised when there are angle terms for which a ParameterHandler did not find matches."""
+
+
+class UnassignedTorsionError(UnassignedValenceError):
+    """Exception raised when there are torsion terms for which a ParameterHandler did not find matches."""

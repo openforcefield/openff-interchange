@@ -102,7 +102,7 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
         "use cases. It is thereforce currently unsuitable for production work. "
         "However, it is an area of active development; if this function would "
         "enable key components of your workflows, feedback is welcome. Please "
-        'file an issue or create a new discussion (see the "Discussions" tab.'
+        'file an issue or create a new discussion (see the "Discussions" tab.',
     )
 
     openff_sys = Interchange()
@@ -157,7 +157,7 @@ def _convert_nonbonded_force(force: openmm.NonbondedForce):
 
     if force.getNonbondedMethod() != 0:
         raise UnsupportedImportError(
-            "Importing from OpenMM only currently supported with `openmm.NonbondedForce.PME`."
+            "Importing from OpenMM only currently supported with `openmm.NonbondedForce.PME`.",
         )
 
     vdw_handler = SMIRNOFFvdWHandler()

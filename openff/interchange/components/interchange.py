@@ -3,7 +3,7 @@ import copy
 import json
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union, overload
+from typing import TYPE_CHECKING, Dict, List, Literal, Optional, Tuple, Union, overload
 
 import numpy as np
 from openff.models.models import DefaultModel
@@ -12,7 +12,6 @@ from openff.toolkit import ForceField, Molecule, Topology
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
-from typing_extensions import Literal
 
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.components.potentials import PotentialHandler
@@ -92,7 +91,7 @@ def interchange_dumps(v, *, default):
             "box": QuantityEncoder().default(v["box"]),
             "topology": TopologyEncoder().default(v["topology"]),
             "handlers": {
-                "Bonds": json.dumps(_sanitize(v["handlers"]["Bonds"]), default=default)
+                "Bonds": json.dumps(_sanitize(v["handlers"]["Bonds"]), default=default),
             },
         },
         default=default,
@@ -159,7 +158,7 @@ class Interchange(DefaultModel):
         else:
             raise InvalidBoxError(
                 f"Failed to convert value {value} to 3x3 box vectors. Please file an issue if you think this "
-                "input should be supported and the failure is an error."
+                "input should be supported and the failure is an error.",
             )
 
         return box
@@ -184,7 +183,7 @@ class Interchange(DefaultModel):
         else:
             raise InvalidTopologyError(
                 "Could not process topology argument, expected openff.toolkit.topology.Topology. "
-                f"Found object of type {type(value)}."
+                f"Found object of type {type(value)}.",
             )
 
     @classmethod
@@ -215,7 +214,7 @@ class Interchange(DefaultModel):
                 return None
 
         return np.concatenate(
-            [molecule.conformers[0] for molecule in self.topology.molecules]
+            [molecule.conformers[0] for molecule in self.topology.molecules],
         )
 
     @classmethod
@@ -296,7 +295,7 @@ class Interchange(DefaultModel):
             if _check_electrostatics_handlers(force_field):
                 raise MissingParameterHandlerError(
                     "Force field contains parameter handler(s) that may assign/modify "
-                    "partial charges, but no ElectrostaticsHandler was found."
+                    "partial charges, but no ElectrostaticsHandler was found.",
                 )
 
         parameter_handlers_by_type = {
@@ -307,19 +306,19 @@ class Interchange(DefaultModel):
         }
 
         if len(parameter_handlers_by_type) != len(
-            force_field.registered_parameter_handlers
+            force_field.registered_parameter_handlers,
         ):
 
             raise NotImplementedError(
                 "Only force fields that contain one instance of each parameter handler "
-                "type are currently supported."
+                "type are currently supported.",
             )
 
         if partial_bond_orders_from_molecules is not None:
             if not _assert_all_isomorphic(partial_bond_orders_from_molecules):
                 raise NonUniqueMoleculesError(
                     "At least two molecules in `partial_bond_orders_from_molecules` are (likely) isomorphic. "
-                    "Molecules in this list must be unique."
+                    "Molecules in this list must be unique.",
                 )
 
         for potential_handler_type in SMIRNOFF_POTENTIAL_HANDLERS:
@@ -346,7 +345,7 @@ class Interchange(DefaultModel):
                     warnings.warn(
                         "Automatically up-converting BondHandler from version 0.3 to 0.4. Consider manually upgrading "
                         "this BondHandler (or <Bonds> section in an OFFXML file) to 0.4 or newer. For more details, "
-                        "see https://openforcefield.github.io/standards/standards/smirnoff/#bonds."
+                        "see https://openforcefield.github.io/standards/standards/smirnoff/#bonds.",
                     )
 
                     _upconvert_bondhandler(parameter_handler)
@@ -364,7 +363,7 @@ class Interchange(DefaultModel):
                 sys_out.handlers.update({"Bonds": bond_handler})
             elif potential_handler_type == SMIRNOFFProperTorsionHandler:
                 SMIRNOFFProperTorsionHandler.check_supported_parameters(
-                    force_field["ProperTorsions"]
+                    force_field["ProperTorsions"],
                 )
                 potential_handler = SMIRNOFFProperTorsionHandler._from_toolkit(
                     parameter_handler=force_field["ProperTorsions"],
@@ -479,7 +478,7 @@ class Interchange(DefaultModel):
             self.to_pdb("_tmp_pdb_file.pdb", writer="openmm")
         except MissingPositionsError as error:
             raise MissingPositionsError(
-                "Cannot visualize system without positions."
+                "Cannot visualize system without positions.",
             ) from error
         return nglview.show_file("_tmp_pdb_file.pdb")
 
@@ -560,7 +559,7 @@ class Interchange(DefaultModel):
         """Export this Interchange to a .pdb file."""
         if self.positions is None:
             raise MissingPositionsError(
-                "Positions are required to write a `.pdb` file but found None."
+                "Positions are required to write a `.pdb` file but found None.",
             )
 
         if writer == "openmm":
@@ -611,7 +610,10 @@ class Interchange(DefaultModel):
     @classmethod
     @requires_package("foyer")
     def from_foyer(
-        cls, force_field: "FoyerForcefield", topology: "Topology", **kwargs
+        cls,
+        force_field: "FoyerForcefield",
+        topology: "Topology",
+        **kwargs,
     ) -> "Interchange":
         """
         Create an Interchange object from a Foyer force field and an OpenFF topology.
@@ -679,7 +681,8 @@ class Interchange(DefaultModel):
                 for atom in molecule.atoms
             ]
             molecule.partial_charges = unit.Quantity(
-                molecule_charges, unit.elementary_charge
+                molecule_charges,
+                unit.elementary_charge,
             )
 
         return system
@@ -748,7 +751,7 @@ class Interchange(DefaultModel):
             if handler == handler_name:
                 return self[handler_name]._get_parameters(atom_indices=atom_indices)  # type: ignore
         raise MissingParameterHandlerError(
-            f"Could not find parameter handler of name {handler_name}"
+            f"Could not find parameter handler of name {handler_name}",
         )
 
     def _get_nonbonded_methods(self):
@@ -801,25 +804,29 @@ class Interchange(DefaultModel):
 
     @overload
     def __getitem__(
-        self, item: Literal["ProperTorsions"]
+        self,
+        item: Literal["ProperTorsions"],
     ) -> "SMIRNOFFProperTorsionHandler":
         ...
 
     @overload
     def __getitem__(
-        self, item: Literal["ImproperTorsions"]
+        self,
+        item: Literal["ImproperTorsions"],
     ) -> "SMIRNOFFImproperTorsionHandler":
         ...
 
     @overload
     def __getitem__(
-        self, item: Literal["VirtualSites"]
+        self,
+        item: Literal["VirtualSites"],
     ) -> "SMIRNOFFVirtualSiteHandler":
         ...
 
     @overload
     def __getitem__(
-        self, item: Literal["Electrostatics"]
+        self,
+        item: Literal["Electrostatics"],
     ) -> "SMIRNOFFElectrostaticsHandler":
         ...
 
@@ -828,7 +835,7 @@ class Interchange(DefaultModel):
         if type(item) != str:
             raise LookupError(
                 "Only str arguments can be currently be used for lookups.\n"
-                f"Found item {item} of type {type(item)}"
+                f"Found item {item} of type {type(item)}",
             )
         if item == "positions":
             return self.positions
@@ -839,7 +846,7 @@ class Interchange(DefaultModel):
         else:
             raise LookupError(
                 f"Could not find component {item}. This object has the following "
-                f"potential handlers registered:\n\t{[*self.handlers.keys()]}"
+                f"potential handlers registered:\n\t{[*self.handlers.keys()]}",
             )
 
     def __add__(self, other):
@@ -850,7 +857,7 @@ class Interchange(DefaultModel):
             "Interchange object combination is experimental and likely to produce "
             "strange results. Any workflow using this method is not guaranteed to "
             "be suitable for production. Use with extreme caution and thoroughly "
-            "validate results!"
+            "validate results!",
         )
 
         self_copy = copy.deepcopy(self)
@@ -878,7 +885,7 @@ class Interchange(DefaultModel):
                 self_copy.handlers[handler_name] = handler
                 warnings.warn(
                     f"'other' Interchange object has handler with name {handler_name} not "
-                    f"found in 'self,' but it has now been added."
+                    f"found in 'self,' but it has now been added.",
                 )
                 continue
 
@@ -897,11 +904,11 @@ class Interchange(DefaultModel):
                 self_handler.slot_map.update({new_top_key: pot_key})
                 if handler_name == "Constraints":
                     self_handler.constraints.update(
-                        {pot_key: handler.constraints[pot_key]}
+                        {pot_key: handler.constraints[pot_key]},
                     )
                 else:
                     self_handler.potentials.update(
-                        {pot_key: handler.potentials[pot_key]}
+                        {pot_key: handler.potentials[pot_key]},
                     )
 
             self_copy.handlers[handler_name] = self_handler
@@ -911,13 +918,13 @@ class Interchange(DefaultModel):
             self_copy.positions = new_positions
         else:
             warnings.warn(
-                "Setting positions to None because one or both objects added together were missing positions."
+                "Setting positions to None because one or both objects added together were missing positions.",
             )
             self_copy.positions = None
 
         if not np.all(self_copy.box == other.box):
             raise UnsupportedCombinationError(
-                "Combination with unequal box vectors is not curretnly supported"
+                "Combination with unequal box vectors is not curretnly supported",
             )
 
         return self_copy

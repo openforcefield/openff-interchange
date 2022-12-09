@@ -32,7 +32,8 @@ class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
         out.positions = mol.conformers[0]
 
         interchange_bond_energy = get_openmm_energies(
-            out, combine_nonbonded_forces=True
+            out,
+            combine_nonbonded_forces=True,
         ).energies["Bond"]
         toolkit_bond_energy = _get_openmm_energies(
             forcefield.create_openmm_system(top),

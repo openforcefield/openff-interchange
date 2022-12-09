@@ -1,3 +1,6 @@
+"""
+Helper functions for exporting virutal sites to OpenMM.
+"""
 from typing import TYPE_CHECKING, Dict, List, Union
 
 import openmm
@@ -17,7 +20,7 @@ def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteHandler"):
     if handler.exclusion_policy not in _SUPPORTED_EXCLUSION_POLICIES:
         raise UnsupportedExportError(
             f"Found unsupported exclusion policy {handler.exclusion_policy}. "
-            f"Supported exclusion policies are {_SUPPORTED_EXCLUSION_POLICIES}"
+            f"Supported exclusion policies are {_SUPPORTED_EXCLUSION_POLICIES}",
         )
 
 
@@ -43,7 +46,11 @@ def _create_openmm_virtual_site(
     ]
 
     return openmm.LocalCoordinatesSite(
-        openmm_indices, originwt, xdir, ydir, to_openmm(pos)  # type: ignore[has-type]
+        openmm_indices,
+        originwt,
+        xdir,
+        ydir,
+        to_openmm(pos),  # type: ignore[has-type]
     )
 
 

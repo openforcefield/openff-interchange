@@ -13,7 +13,8 @@ from openff.interchange.tests import _BaseTest
 
 class TestToolkitUtils(_BaseTest):
     @pytest.mark.parametrize(
-        ("smiles", "num_pairs"), [("C#C", 1), ("CCO", 12), ("C1=CC=CC=C1", 24)]
+        ("smiles", "num_pairs"),
+        [("C#C", 1), ("CCO", 12), ("C1=CC=CC=C1", 24)],
     )
     def test_get_14_pairs(self, smiles, num_pairs):
         mol = Molecule.from_smiles(smiles)
@@ -55,5 +56,6 @@ class TestToolkitUtils(_BaseTest):
         ):
             attr = "n_" + attr
             assert getattr(combined, attr) == getattr(ethanol_topology, attr) + getattr(
-                water_topology, attr
+                water_topology,
+                attr,
             )
