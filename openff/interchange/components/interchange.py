@@ -17,7 +17,6 @@ from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.components.potentials import PotentialHandler
 from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
-    InternalInconsistencyError,
     InvalidBoxError,
     InvalidTopologyError,
     MissingParameterHandlerError,
@@ -317,6 +316,8 @@ class Interchange(DefaultModel):
             )
 
         if partial_bond_orders_from_molecules is not None:
+            from openff.interchange.components.toolkit import _assert_all_isomorphic
+
             if not _assert_all_isomorphic(partial_bond_orders_from_molecules):
                 raise NonUniqueMoleculesError(
                     "At least two molecules in `partial_bond_orders_from_molecules` are (likely) isomorphic. "
@@ -756,38 +757,6 @@ class Interchange(DefaultModel):
             f"Could not find parameter handler of name {handler_name}",
         )
 
-    def _get_nonbonded_methods(self):
-        if "vdW" in self.handlers:
-            nonbonded_handler = "vdW"
-        elif "Buckingham-6" in self.handlers:
-            nonbonded_handler = "Buckingham-6"
-        else:
-            raise InternalInconsistencyError("Found no non-bonded handlers")
-
-        nonbonded_ = {
-            "electrostatics_periodic_potential": self.handlers[
-                "Electrostatics"
-            ].periodic_potential,
-            "vdw_method": self.handlers[nonbonded_handler].method,
-            "periodic_topology": self.box is not None,
-        }
-
-        return nonbonded_
-
-    # TODO: Does this cause any strange behaviors with Pydantic?
-    # Taken from https://stackoverflow.com/a/4017638/4248961
-    _aliases = {"box_vectors": "x", "coordinates": "positions", "top": "topology"}
-
-    # FIXME: These were turned off because they were screwing up the automatic use of validators
-    #        when assigning valeus to fields. Remove the appended `f`s to try to turn back on.
-    def __setattr__f(self, name, value):  # noqa
-        name = self._aliases.get(name, name)
-        object.__setattr__(self, name, value)
-
-    def __getattr__f(self, name):  # noqa
-        name = self._aliases.get(name, name)
-        return object.__getattribute__(self, name)
-
     @overload
     def __getitem__(self, item: Literal["Bonds"]) -> "SMIRNOFFBondHandler":
         ...
@@ -938,18 +907,3 @@ class Interchange(DefaultModel):
             f"Interchange with {len(self.handlers)} potential handlers, "
             f"{'' if periodic else 'non-'}periodic topology with {n_atoms} atoms."
         )
-
-
-# This is to re-implement:
-#   https://github.com/openforcefield/openff-toolkit/blob/60014820e6a333bed04e8bf5181d177da066da4d/
-#   openff/toolkit/typing/engines/smirnoff/parameters.py#L2509-L2515
-# It doesn't seem ideal to assume that matching SMILES === isomorphism?
-class _HashedMolecule(Molecule):
-    def __hash__(self):
-        return hash(self.to_smiles())
-
-
-def _assert_all_isomorphic(molecule_list: List[Molecule]) -> bool:
-    hashed_molecules = {_HashedMolecule(molecule) for molecule in molecule_list}
-
-    return len(hashed_molecules) == len(molecule_list)

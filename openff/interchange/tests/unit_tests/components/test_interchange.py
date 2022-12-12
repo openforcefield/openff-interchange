@@ -224,6 +224,14 @@ class TestInterchange(_BaseTest):
         assert type(out.topology) == Topology
         assert isinstance(out.topology, Topology)
 
+    def test_validate_simple_topology(self, sage):
+        from openff.interchange.components.toolkit import _simple_topology_from_openmm
+
+        tmp = Interchange()
+        tmp.topology = _simple_topology_from_openmm(
+            Molecule.from_smiles("CCO").to_topology().to_openmm(),
+        )
+
     def test_from_sage_molecule_list(self, sage):
 
         out = Interchange.from_smirnoff(

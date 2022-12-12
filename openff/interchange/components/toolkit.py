@@ -1,13 +1,12 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, List, Union
 
 import networkx as nx
 import numpy as np
-from openff.toolkit.topology import Topology
+from openff.toolkit import Molecule, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology import Molecule
     from openff.toolkit.typing.engines.smirnonff import ForceField
     from openff.toolkit.utils.collections import ValidatedList
     from openff.units.unit import Quantity
@@ -136,3 +135,18 @@ def _simple_topology_from_graph(graph: nx.Graph) -> Topology:
         topology.add_molecule(_SimpleMolecule._from_subgraph(subgraph))
 
     return topology
+
+
+# This is to re-implement:
+#   https://github.com/openforcefield/openff-toolkit/blob/60014820e6a333bed04e8bf5181d177da066da4d/
+#   openff/toolkit/typing/engines/smirnoff/parameters.py#L2509-L2515
+# It doesn't seem ideal to assume that matching SMILES === isomorphism?
+class _HashedMolecule(Molecule):
+    def __hash__(self):
+        return hash(self.to_smiles())
+
+
+def _assert_all_isomorphic(molecule_list: List[Molecule]) -> bool:
+    hashed_molecules = {_HashedMolecule(molecule) for molecule in molecule_list}
+
+    return len(hashed_molecules) == len(molecule_list)

@@ -1,12 +1,13 @@
 import pytest
-from openff.toolkit.topology.molecule import Molecule
-from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
 from openff.interchange.components.toolkit import (
     _check_electrostatics_handlers,
     _combine_topologies,
     _get_14_pairs,
     _get_num_h_bonds,
+    _simple_topology_from_openmm,
 )
 from openff.interchange.tests import _BaseTest
 
@@ -14,7 +15,15 @@ from openff.interchange.tests import _BaseTest
 class TestToolkitUtils(_BaseTest):
     @pytest.mark.parametrize(
         ("smiles", "num_pairs"),
-        [("C#C", 1), ("CCO", 12), ("C1=CC=CC=C1", 24)],
+        [
+            ("C#C", 1),
+            ("CCO", 12),
+            ("C1=CC=CC=C1", 24),
+            ("C=1=C=C1", 0),
+            ("C=1=C=C=C1", 0),
+            ("C=1(Cl)-C(Cl)=C1", 1),
+            ("C=1=C(Cl)C(=C=1)Cl", 5),
+        ],
     )
     def test_get_14_pairs(self, smiles, num_pairs):
         mol = Molecule.from_smiles(smiles)
@@ -59,3 +68,23 @@ class TestToolkitUtils(_BaseTest):
                 water_topology,
                 attr,
             )
+
+    def test_simple_topology_from_openmm(self):
+        simple_topology: Topology = _simple_topology_from_openmm(
+            Topology.from_molecules(
+                [
+                    Molecule.from_smiles("O"),
+                    Molecule.from_smiles("CCO"),
+                ],
+            ).to_openmm(),
+        )
+
+        assert all(
+            isinstance(molecule, _SimpleMolecule)
+            for molecule in simple_topology.molecules
+        )
+
+        assert sorted(molecule.n_atoms for molecule in simple_topology.molecules) == [
+            3,
+            9,
+        ]
