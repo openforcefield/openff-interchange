@@ -453,7 +453,9 @@ def _process_single_dihedral(
         pot = Potential(parameters={"k": k, "periodicity": periodicity, "phase": phase})
 
         if pot_key in handler.potentials:
-            raise Exception("fudging dihedral indices")
+            raise Exception(
+                "This dihedral already exists, indices are probably messed up.",
+            )
 
         handler.slot_map.update({top_key: pot_key})
         handler.potentials.update({pot_key: pot})

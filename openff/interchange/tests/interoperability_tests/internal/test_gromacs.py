@@ -17,7 +17,11 @@ from openff.interchange import Interchange
 from openff.interchange.components.nonbonded import BuckinghamvdWHandler
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
-from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
+from openff.interchange.exceptions import (
+    GMXMdrunError,
+    UnsupportedExportError,
+    VirtualSiteTypeNotImplementedError,
+)
 from openff.interchange.interop.internal.gromacs import from_gro
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.tests import _BaseTest, needs_gmx
@@ -430,6 +434,9 @@ class TestGROMACSVirtualSites(_BaseTest):
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
 
-        with pytest.raises(Exception, match="MonovalentLonePair not implemented."):
+        with pytest.raises(
+            VirtualSiteTypeNotImplementedError,
+            match="MonovalentLonePair not implemented.",
+        ):
             # TODO: Sanity-check reported energies
             get_gromacs_energies(out)

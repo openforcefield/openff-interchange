@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Dict
 import numpy
 from openff.units import unit
 
+from openff.interchange.exceptions import VirtualSiteTypeNotImplementedError
 from openff.interchange.models import VirtualSiteKey
 
 if TYPE_CHECKING:
@@ -43,7 +44,9 @@ def _get_virtual_site_positions(
             interchange,
         )
     else:
-        raise Exception(f"Virtual site type {virtual_site_key.type} not implemented.")
+        raise VirtualSiteTypeNotImplementedError(
+            f"Virtual site type {virtual_site_key.type} not implemented.",
+        )
 
 
 def _get_bond_charge_virtual_site_positions(
@@ -77,7 +80,7 @@ def _get_divalent_lone_pair_virtual_site_positions(
     rmid_distance = numpy.sqrt(numpy.sum((r0 - rmid) ** 2))
 
     if abs(r0_r1_bond_length - r0_r2_bond_length) > unit.Quantity(1e-3, unit.nanometer):
-        raise Exception(
+        raise VirtualSiteTypeNotImplementedError(
             "Only symmetric geometries (i.e. r2 - r0 = r1 - r0) are currently supported",
         )
 
@@ -87,6 +90,8 @@ def _get_divalent_lone_pair_virtual_site_positions(
     out_of_plane_angle = potential.parameters["outOfPlaneAngle"]
 
     if out_of_plane_angle.m_as(unit.degree) != 0.0:
-        raise Exception("Only planar `DivalentLonePairType` is currently supported.")
+        raise VirtualSiteTypeNotImplementedError(
+            "Only planar `DivalentLonePairType` is currently supported.",
+        )
 
     return r0 + (r0 - rmid) * (distance) / (rmid_distance)

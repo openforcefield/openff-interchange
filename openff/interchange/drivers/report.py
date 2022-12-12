@@ -8,7 +8,11 @@ from openff.units import unit
 from pydantic import validator
 
 from openff.interchange.constants import kj_mol
-from openff.interchange.exceptions import EnergyError, IncompatibleTolerancesError
+from openff.interchange.exceptions import (
+    EnergyError,
+    IncompatibleTolerancesError,
+    InvalidEnergyError,
+)
 
 _KNOWN_ENERGY_TERMS: Set[str] = {
     "Bond",
@@ -37,7 +41,7 @@ class EnergyReport(DefaultModel):
         """Validate the structure of a dict mapping keys to energies."""
         for key, val in v.items():
             if key not in _KNOWN_ENERGY_TERMS:
-                raise Exception(f"Energy type {key} not understood.")
+                raise InvalidEnergyError(f"Energy type {key} not understood.")
             if not isinstance(val, unit.Quantity):
                 v[key] = FloatQuantity.validate_type(val)
         return v

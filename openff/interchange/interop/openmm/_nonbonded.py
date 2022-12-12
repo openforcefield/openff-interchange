@@ -11,6 +11,7 @@ from openmm import unit
 
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
+    CannotSetSwitchingFunctionError,
     InternalInconsistencyError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
@@ -412,7 +413,7 @@ def _create_single_nonbonded_force(
             vdw_key = vdw_handler.slot_map.get(virtual_site_key)  # type: ignore[call-overload]
             coul_key = coul_handler.slot_map.get(virtual_site_key)  # type: ignore[call-overload]
             if vdw_key is None or coul_key is None:
-                raise Exception(
+                raise InternalInconsistencyError(
                     f"Virtual site {virtual_site_key} is not associated with any "
                     "vdW and/or electrostatics interactions",
                 )
@@ -759,7 +760,7 @@ def _create_multiple_nonbonded_forces(
 
 def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
     if not hasattr(force, "setUseSwitchingFunction"):
-        raise ValueError(
+        raise CannotSetSwitchingFunctionError(
             "Attempting to set switching funcntion on an OpenMM force that does nont support it."
             f"Passed force of type {type(force)}.",
         )

@@ -15,7 +15,10 @@ from openff.interchange.constants import (
     kcal_mol_a2,
     kcal_mol_rad2,
 )
-from openff.interchange.exceptions import UnsupportedExportError
+from openff.interchange.exceptions import (
+    UnsupportedExportError,
+    UnsupportedMixingRuleError,
+)
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
@@ -79,7 +82,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         path = file_path
 
     if interchange["vdW"].mixing_rule != "lorentz-berthelot":
-        raise Exception
+        raise UnsupportedMixingRuleError(interchange["vdW"].mixing_rule)
 
     if interchange.box is None:
         if interchange["Electrostatics"].periodic_potential != _PME:

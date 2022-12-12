@@ -1355,7 +1355,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
         molecule_name, nrexcl = fields
 
         if nrexcl != "3":
-            raise Exception()
+            raise Exception
 
         molecule = Molecule()
         molecule.name = molecule_name

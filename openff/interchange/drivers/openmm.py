@@ -7,6 +7,7 @@ from openmm import unit
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
+from openff.interchange.exceptions import CannotInferNonbondedEnergyError
 
 kj_mol = unit.kilojoule_per_mole
 
@@ -210,7 +211,7 @@ def _infer_nonbonded_energy_type(force):
         else:
             return "vdW"
 
-    raise Exception(type(force))
+    raise CannotInferNonbondedEnergyError(type(force))
 
 
 def _canonicalize_nonbonded_energies(energies: Dict):

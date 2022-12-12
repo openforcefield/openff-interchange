@@ -4,7 +4,11 @@ from openff.units.openmm import ensure_quantity
 
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.exceptions import EnergyError, IncompatibleTolerancesError
+from openff.interchange.exceptions import (
+    EnergyError,
+    IncompatibleTolerancesError,
+    InvalidEnergyError,
+)
 from openff.interchange.tests import _BaseTest
 
 
@@ -43,7 +47,7 @@ class TestEnergyReport(_BaseTest):
         assert report.total_energy == report["Total"]
 
     def test_bad_constructor(self):
-        with pytest.raises(Exception, match="foo not understood."):
+        with pytest.raises(InvalidEnergyError, match="foo not understood."):
             EnergyReport(
                 energies={
                     "foo": 1 * kj_mol,
@@ -71,7 +75,7 @@ class TestEnergyReport(_BaseTest):
         assert report["Bond"].m_as(kj_mol) == pytest.approx(55.55)
 
     def test_bad_update(self, report):
-        with pytest.raises(Exception, match="foo not understood."):
+        with pytest.raises(InvalidEnergyError, match="foo not understood."):
             report.update({"foo": 1 * kj_mol})
 
     def test_sub(self):

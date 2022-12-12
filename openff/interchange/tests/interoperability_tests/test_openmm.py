@@ -119,7 +119,7 @@ class TestOpenMM(_BaseTest):
             with pytest.raises(exception):
                 interchange.to_openmm(combine_nonbonded_forces=True)
         else:
-            raise Exception("uh oh")
+            raise Exception
 
     @pytest.mark.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
     def test_unsupported_mixing_rule(self):

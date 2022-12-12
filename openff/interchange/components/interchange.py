@@ -198,7 +198,9 @@ class Interchange(DefaultModel):
                 unsupported.append(handler_name)
 
         if unsupported:
-            raise SMIRNOFFHandlersNotImplementedError(unsupported)
+            raise SMIRNOFFHandlersNotImplementedError(
+                "SMIRNOFF handlers not implemented here:" + "\n".join(unsupported),
+            )
 
     def _infer_positions(self) -> Optional[ArrayQuantity]:
         """

@@ -48,6 +48,7 @@ from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     MissingParametersError,
+    MissingPartialChargesError,
     NonIntegralMoleculeChargeError,
     SMIRNOFFParameterAttributeNotImplementedError,
     SMIRNOFFVersionNotSupportedError,
@@ -1870,7 +1871,7 @@ def library_charge_from_molecule(
 ) -> LibraryChargeHandler.LibraryChargeType:
     """Given an OpenFF Molecule with charges, generate a corresponding LibraryChargeType."""
     if molecule.partial_charges is None:
-        raise ValueError("Input molecule is missing partial charges.")
+        raise MissingPartialChargesError
 
     smirks = molecule.to_smiles(mapped=True)
     charges = molecule.partial_charges

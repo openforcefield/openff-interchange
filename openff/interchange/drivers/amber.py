@@ -15,6 +15,7 @@ from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import (
     AmberError,
     AmberExecutableNotFoundError,
+    InvalidWriterError,
     SanderError,
 )
 
@@ -55,7 +56,7 @@ def get_amber_energies(
                 struct.save("out.inpcrd")
                 struct.save("out.prmtop")
             else:
-                raise Exception(f"Unsupported `writer` argument {writer}")
+                raise InvalidWriterError(f"Unsupported `writer` argument {writer}")
 
             mdconfig = MDConfig.from_interchange(off_sys)
             mdconfig.write_sander_input_file("run.in")
