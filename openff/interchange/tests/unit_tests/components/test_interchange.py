@@ -123,7 +123,8 @@ class TestInterchange(_BaseTest):
         def make_interchange(molecule: Molecule) -> Interchange:
             molecule.generate_conformers(n_conformers=1)
             interchange = Interchange.from_smirnoff(
-                force_field=sage_unconstrained, topology=[molecule]
+                force_field=sage_unconstrained,
+                topology=[molecule],
             )
             interchange.positions = molecule.conformers[0]
 
@@ -178,7 +179,7 @@ class TestInterchange(_BaseTest):
     def test_from_sage(self, sage):
 
         top = Topology.from_molecules(
-            [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")]
+            [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")],
         )
 
         out = Interchange.from_smirnoff(sage, top)
@@ -191,6 +192,14 @@ class TestInterchange(_BaseTest):
 
         assert type(out.topology) == Topology
         assert isinstance(out.topology, Topology)
+
+    def test_validate_simple_topology(self, sage):
+        from openff.interchange.components.toolkit import _simple_topology_from_openmm
+
+        tmp = Interchange()
+        tmp.topology = _simple_topology_from_openmm(
+            Molecule.from_smiles("CCO").to_topology().to_openmm(),
+        )
 
     def test_from_sage_molecule_list(self, sage):
 
@@ -220,7 +229,8 @@ class TestInterchange(_BaseTest):
         )
 
         with pytest.raises(
-            MissingPositionsError, match="Cannot visualize system without positions."
+            MissingPositionsError,
+            match="Cannot visualize system without positions.",
         ):
             out.visualize()
 
@@ -238,7 +248,8 @@ class TestUnimplementedSMIRNOFFCases(_BaseTest):
         bogus_parameter_handler._TAGNAME = "bogus"
         sage.register_parameter_handler(bogus_parameter_handler)
         with pytest.raises(
-            SMIRNOFFHandlersNotImplementedError, match="SMIRNOFF.*bogus"
+            SMIRNOFFHandlersNotImplementedError,
+            match="SMIRNOFF.*bogus",
         ):
             Interchange.from_smirnoff(force_field=sage, topology=top)
 
@@ -252,7 +263,8 @@ class TestBadExports(_BaseTest):
         # In some configurations, Pydantic may pre-emptively raise ValidationError because of the type mismatch
         # with pytest.raises(ValidationError):
         with pytest.raises(
-            InvalidTopologyError, match="Could not process topology argument.*openmm.*"
+            InvalidTopologyError,
+            match="Could not process topology argument.*openmm.*",
         ):
             Interchange.from_smirnoff(force_field=sage, topology=top)
 
@@ -263,10 +275,21 @@ class TestBadExports(_BaseTest):
 
     def test_gro_file_all_zero_positions(self, sage):
         zero_positions = Interchange.from_smirnoff(
-            force_field=sage, topology=[Molecule.from_smiles("CC")]
+            force_field=sage,
+            topology=[Molecule.from_smiles("CC")],
         )
         zero_positions.positions = unit.Quantity(
-            np.zeros((zero_positions.topology.n_atoms, 3)), unit.nanometer
+            np.zeros((zero_positions.topology.n_atoms, 3)),
+            unit.nanometer,
         )
         with pytest.warns(UserWarning, match="seem to all be zero"):
             zero_positions.to_gro("foo.gro")
+
+    def test_json_roundtrip(self, sage):
+        # TODO: Inspect contents
+        Interchange.parse_raw(
+            Interchange.from_smirnoff(
+                force_field=sage,
+                topology=[Molecule.from_smiles("O")],
+            ).json(),
+        )

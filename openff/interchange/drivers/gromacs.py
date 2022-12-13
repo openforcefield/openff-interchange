@@ -235,14 +235,14 @@ def _parse_gmx_energy(edr_path: str) -> EnergyReport:
 
     report = EnergyReport()
 
-    report.update_energies(
+    report.update(
         {
             "Bond": energies["Bond"],
             "Angle": energies["Angle"],
             "Torsion": _get_gmx_energy_torsion(energies),
             "vdW": _get_gmx_energy_vdw(energies),
             "Electrostatics": _get_gmx_energy_coul(energies),
-        }
+        },
     )
 
     return report

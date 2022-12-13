@@ -23,10 +23,10 @@ class TestWrappedPotential(_BaseTest):
         )
 
         pot1 = Potential(
-            parameters={"k": bt.k_bondorder[1], "length": bt.length_bondorder[1]}
+            parameters={"k": bt.k_bondorder[1], "length": bt.length_bondorder[1]},
         )
         pot2 = Potential(
-            parameters={"k": bt.k_bondorder[2], "length": bt.length_bondorder[2]}
+            parameters={"k": bt.k_bondorder[2], "length": bt.length_bondorder[2]},
         )
 
         interp_pot = WrappedPotential(data={pot1: 0.2, pot2: 0.8})

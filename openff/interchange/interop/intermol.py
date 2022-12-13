@@ -43,7 +43,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
         vdw_handler.mixing_rule = "geometric"
 
     electrostatics_handler = BaseElectrostaticsHandler(
-        scale_14=intermol_system.coulomb_correction
+        scale_14=intermol_system.coulomb_correction,
     )
 
     bond_handler = BaseBondHandler()
@@ -58,7 +58,8 @@ def from_intermol_system(intermol_system: System) -> Interchange:
         topology_key = TopologyKey(atom_indices=(atom.index - 1,))
         vdw_key = PotentialKey(id=atom.atomtype[0], associated_handler="vdW")
         electrostatics_key = PotentialKey(
-            id=atom.atomtype[0], associated_handler="Electrostatics"
+            id=atom.atomtype[0],
+            associated_handler="Electrostatics",
         )
 
         # Intermol has an abstraction layer for multiple states, though only one is implemented
@@ -70,10 +71,10 @@ def from_intermol_system(intermol_system: System) -> Interchange:
         electrostatics_handler.slot_map[topology_key] = electrostatics_key
 
         vdw_handler.potentials[vdw_key] = Potential(
-            parameters={"sigma": sigma, "epsilon": epsilon}
+            parameters={"sigma": sigma, "epsilon": epsilon},
         )
         electrostatics_handler.potentials[electrostatics_key] = Potential(
-            parameters={"charge": charge}
+            parameters={"charge": charge},
         )
 
     for molecule_type in intermol_system.molecule_types.values():
@@ -98,7 +99,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                     parameters={
                         "k": from_openmm(bond_force.k),
                         "length": from_openmm(bond_force.length),
-                    }
+                    },
                 )
 
                 bond_handler.potentials[potential_key] = potential
@@ -134,7 +135,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                     parameters={
                         "k": from_openmm(angle_force.k),
                         "angle": from_openmm(angle_force.theta),
-                    }
+                    },
                 )
 
                 angle_handler.potentials[potential_key] = potential
@@ -156,7 +157,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                         "fc5": dihedral_force.fc5,
                         "fc6": dihedral_force.fc6,
                         "phi": dihedral_force.phi,
-                    }
+                    },
                 )
 
                 if len(dihedral_parameters) != 1:
@@ -210,7 +211,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                         "periodicity": dihedral_parameters["multiplicity"],
                         "weight": dihedral_parameters["weight"],
                         "k": dihedral_parameters["k"],
-                    }
+                    },
                 )
 
                 if dihedral_force.improper:

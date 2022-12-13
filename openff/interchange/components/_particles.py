@@ -5,10 +5,9 @@ import abc
 import math
 from typing import List, Literal, Tuple
 
+from openff.models.models import DefaultModel
+from openff.models.types import FloatQuantity
 from openff.units import unit
-
-from openff.interchange.models import DefaultModel
-from openff.interchange.types import FloatQuantity
 
 
 class _VirtualSite(DefaultModel, abc.ABC):

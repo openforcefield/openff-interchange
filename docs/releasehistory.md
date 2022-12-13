@@ -11,6 +11,9 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### Behavior changes
+* #566 Refactors `EnergyReport` to more explicitly handle comparisons.
+
 
 ## 0.2.3 - 2022-11-21
 

@@ -7,15 +7,20 @@ repos:
   - id: trailing-whitespace
     exclude: '\.(pdb|gro|top|sdf)$'
   - id: debug-statements
+- repo: https://github.com/asottile/add-trailing-comma
+  rev: v2.3.0
+  hooks:
+  - id: add-trailing-comma
+    args: ["--py36-plus"]
 - repo: https://github.com/psf/black
-  rev: 22.10.0
+  rev: 22.12.0
   hooks:
   - id: black
     files: ^openff|devtools
   - id: black-jupyter
     files: ^examples
 - repo: https://github.com/PyCQA/isort
-  rev: 5.10.1
+  rev: 5.11.0
   hooks:
   - id: isort
     files: ^openff|devtools
@@ -31,12 +36,12 @@ repos:
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.2.2
+  rev: v3.3.1
   hooks:
   - id: pyupgrade
     files: ^openff/interchange
     exclude: openff/interchange/_version.py|setup.py
-    args: [--py37-plus]
+    args: [--py38-plus]
 - repo: https://github.com/pycqa/pydocstyle
   rev: 6.1.1
   hooks:
@@ -47,20 +52,19 @@ repos:
   rev: 1.5.0
   hooks:
     - id: interrogate
-      args: [--fail-under=60, openff/interchange/]
+      args: [openff/interchange/]
 - repo: https://github.com/asottile/blacken-docs
   rev: v1.12.1
   hooks:
   - id: blacken-docs
     files: ^docs/
-    additional_dependencies: [black==21.6b0]
 - repo: https://github.com/nbQA-dev/nbQA
   rev: 1.5.3
   hooks:
     - id: nbqa-pyupgrade
       files: ^examples
       args:
-        - --py37-plus
+        - --py38-plus
     - id: nbqa-isort
       files: ^examples
 - repo: https://github.com/kynan/nbstripout

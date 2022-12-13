@@ -39,7 +39,7 @@ def get_test_files_dir_path(dirname):
         return test_dir.as_posix()
     else:
         raise NotADirectoryError(
-            f"Provided directory {dirname} doesn't exist in {dir_path}"
+            f"Provided directory {dirname} doesn't exist in {dir_path}",
         )
 
 
@@ -252,7 +252,8 @@ def _get_charges_from_openmm_system(omm_sys: openmm.System):
 
 
 def _get_sigma_from_nonbonded_force(
-    n_particles: int, nonbond_force: openmm.NonbondedForce
+    n_particles: int,
+    nonbond_force: openmm.NonbondedForce,
 ):
     for idx in range(n_particles):
         param = nonbond_force.getParticleParameters(idx)
@@ -260,7 +261,8 @@ def _get_sigma_from_nonbonded_force(
 
 
 def _get_epsilon_from_nonbonded_force(
-    n_particles: int, nonbond_force: openmm.NonbondedForce
+    n_particles: int,
+    nonbond_force: openmm.NonbondedForce,
 ):
     for idx in range(n_particles):
         param = nonbond_force.getParticleParameters(idx)

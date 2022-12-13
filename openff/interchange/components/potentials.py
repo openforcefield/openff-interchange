@@ -3,13 +3,14 @@ import ast
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union
 
 import numpy
+from openff.models.models import DefaultModel
+from openff.models.types import ArrayQuantity, FloatQuantity
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, PrivateAttr, validator
 
 from openff.interchange.exceptions import MissingParametersError
-from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
-from openff.interchange.types import ArrayQuantity, FloatQuantity
+from openff.interchange.models import PotentialKey, TopologyKey
 
 if has_package("jax"):
     from jax import numpy as jax_numpy
@@ -30,7 +31,8 @@ class Potential(DefaultModel):
 
     @validator("parameters")
     def validate_parameters(
-        cls, v: Dict[str, Union[ArrayQuantity, FloatQuantity]]
+        cls,
+        v: Dict[str, Union[ArrayQuantity, FloatQuantity]],
     ) -> Dict[str, FloatQuantity]:
         for key, val in v.items():
             if isinstance(val, list):
@@ -74,8 +76,8 @@ class WrappedPotential(DefaultModel):
                     key: sum(
                         coeff * pot.parameters[key]
                         for pot, coeff in self._inner_data.data.items()
-                    )
-                }
+                    ),
+                },
             )
         return params
 
@@ -135,7 +137,7 @@ class PotentialHandler(DefaultModel):
                 return parameters
         raise MissingParametersError(
             f"Could not find parameter in parameter in handler {self.type} "
-            f"associated with atoms {atom_indices}"
+            f"associated with atoms {atom_indices}",
         )
 
     def get_force_field_parameters(self, use_jax: bool = False) -> "ArrayLike":
@@ -149,11 +151,17 @@ class PotentialHandler(DefaultModel):
 
         if use_jax:
             return jax_numpy.array(
-                [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
+                [
+                    [v.m for v in p.parameters.values()]
+                    for p in self.potentials.values()
+                ],
             )
         else:
             return numpy.array(
-                [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
+                [
+                    [v.m for v in p.parameters.values()]
+                    for p in self.potentials.values()
+                ],
             )
 
     def set_force_field_parameters(self, new_p: "ArrayLike") -> None:
