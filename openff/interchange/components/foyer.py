@@ -19,7 +19,9 @@ POTENTIAL_KEY_SEPARATOR = "-"
 
 
 def _copy_params(
-    params: Dict[str, float], *drop_keys: str, param_units: Dict = None
+    params: Dict[str, float],
+    *drop_keys: str,
+    param_units: Dict = None,
 ) -> Dict:
     """Copy parameters from a dictionary."""
     params_copy = copy(params)
@@ -84,7 +86,8 @@ class FoyerVDWHandler(PotentialHandler):
         """Extract specific force field potentials a Forcefield object."""
         for top_key in self.slot_map:
             atom_params = force_field.get_parameters(
-                self.type, key=self.slot_map[top_key].id
+                self.type,
+                key=self.slot_map[top_key].id,
             )
 
             atom_params = _copy_params(
@@ -153,7 +156,7 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
             )
 
             self.slot_map[top_key] = PotentialKey(
-                id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids)
+                id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 
     def store_potentials(self, force_field: "Forcefield") -> None:
@@ -163,7 +166,8 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
         for pot_key in self.slot_map.values():
             try:
                 params = force_field.get_parameters(
-                    self.type, key=pot_key.id.split(POTENTIAL_KEY_SEPARATOR)
+                    self.type,
+                    key=pot_key.id.split(POTENTIAL_KEY_SEPARATOR),
                 )
                 params = self.get_params_with_units(params)
                 self.potentials[pot_key] = Potential(parameters=params)
@@ -216,7 +220,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
             )
 
             self.slot_map[top_key] = PotentialKey(
-                id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids)
+                id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 
 
@@ -252,7 +256,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
             )
 
             self.slot_map[top_key] = PotentialKey(
-                id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids)
+                id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 
 
@@ -289,7 +293,7 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
             )
 
             self.slot_map[top_key] = PotentialKey(
-                id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids)
+                id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 
 

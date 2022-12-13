@@ -1,8 +1,4 @@
 """Custom exceptions used in Interchange."""
-from typing import TYPE_CHECKING, List, Union
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology import Molecule
 
 
 class SMIRNOFFParameterAttributeNotImplementedError(Exception):
@@ -19,40 +15,11 @@ class SMIRNOFFHandlersNotImplementedError(Exception):
     Exception for when some parameter handlers in the SMIRNOFF specification are not implemented here.
     """
 
-    def __init__(self, *args: Union[List, str]) -> None:
-        if args:
-            if isinstance(args[0], str):
-                self.names = [args[0]]
-            elif isinstance(args[0], list):
-                self.names = args[0]
-
-    def __str__(self) -> str:
-        msg = "SMIRNOFF parameters not implemented here: "
-        for name in self.names:
-            msg += f"\t{name}"
-        return msg
-
 
 class SMIRNOFFVersionNotSupportedError(Exception):
     """
     Exception for when a parameter handler's version is not supported.
     """
-
-
-class ToolkitTopologyConformersNotFoundError(Exception):
-    """
-    Exception for when reference molecules in a toolkit topology lack conformers.
-    """
-
-    def __init__(self, *args: "Molecule") -> None:
-        if args:
-            self.mol = str(args[0])
-
-    def __str__(self) -> str:
-        msg = "A reference molecule in the topology does not contain any conformers"
-        if self.mol:
-            msg += f"The molecule lacking a conformer is {self.mol}"
-        return msg
 
 
 class InvalidParameterHandlerError(ValueError):
@@ -97,6 +64,12 @@ class UnimplementedCutoffMethodError(BaseException):
     """
 
 
+class UnsupportedMixingRuleError(BaseException):
+    """
+    Raised when attempting to use a mixing rule is invalid, unsupported or otherwise not implemented.
+    """
+
+
 class UnsupportedParameterError(ValueError):
     """
     Exception for parameters having unsupported values, i.e. non-1.0 idivf.
@@ -120,20 +93,33 @@ class UnsupportedExportError(BaseException):
     Exception for attempting to write to an unsupported file format.
     """
 
-    def __init__(self, *args: str) -> None:
-        if args:
-            self.file_ext = args[0]
-
-    def __str__(self) -> str:
-        if self.file_ext:
-            msg = f"Writing file format {self.file_ext} not supported."
-        else:
-            msg = "Writing unknown file format"
-        return msg
-
 
 class UnsupportedCombinationError(BaseException):
     """General exception for something going wrong in Interchange object combination."""
+
+
+class CannotSetSwitchingFunctionError(BaseException):
+    """
+    Unable to set a switching function.
+    """
+
+
+class CannotInferEnergyError(BaseException):
+    """
+    Failed to infer a physical interpretation of this energy term.
+    """
+
+
+class CannotInferNonbondedEnergyError(CannotInferEnergyError):
+    """
+    Failed to infer a physical interpretation of this non-bonded energy.
+    """
+
+
+class InvalidWriterError(BaseException):
+    """
+    An unknown or unimplemnted writer was specified.
+    """
 
 
 class ConversionError(BaseException):
@@ -258,13 +244,47 @@ class EnergyError(BaseException):
     """
 
 
+class InvalidEnergyError(BaseException):
+    """
+    Energy type not understood.
+    """
+
+
 class IncompatibleTolerancesError(BaseException):
     """
     Exception for when one report has a value for an energy group but the other does not.
     """
 
 
-class NonIntegralMoleculeChargeException(BaseException):
+class VirtualSiteTypeNotImplementedError(BaseException):
+    """
+    Raised when this type of virtual site is not yet implemented.
+    """
+
+
+class NonIntegralMoleculeChargeError(BaseException):
     """
     Exception raised when the partial charges on a molecule do not sum up to its formal charge.
     """
+
+
+class MissingPartialChargesError(BaseException):
+    """
+    A molecule is missing partial charges.
+    """
+
+
+class UnassignedValenceError(BaseException):
+    """Exception raised when there are valence terms for which a ParameterHandler did not find matches."""
+
+
+class UnassignedBondError(UnassignedValenceError):
+    """Exception raised when there are bond terms for which a ParameterHandler did not find matches."""
+
+
+class UnassignedAngleError(UnassignedValenceError):
+    """Exception raised when there are angle terms for which a ParameterHandler did not find matches."""
+
+
+class UnassignedTorsionError(UnassignedValenceError):
+    """Exception raised when there are torsion terms for which a ParameterHandler did not find matches."""

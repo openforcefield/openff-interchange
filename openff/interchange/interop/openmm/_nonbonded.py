@@ -1,3 +1,6 @@
+"""
+Helper functions for producing `openmm.Force` objects for non-bonded terms.
+"""
 from collections import defaultdict
 from typing import TYPE_CHECKING, DefaultDict, Dict, List, Union
 
@@ -8,6 +11,7 @@ from openmm import unit
 
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
+    CannotSetSwitchingFunctionError,
     InternalInconsistencyError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
@@ -409,7 +413,7 @@ def _create_single_nonbonded_force(
             vdw_key = vdw_handler.slot_map.get(virtual_site_key)  # type: ignore[call-overload]
             coul_key = coul_handler.slot_map.get(virtual_site_key)  # type: ignore[call-overload]
             if vdw_key is None or coul_key is None:
-                raise Exception(
+                raise InternalInconsistencyError(
                     f"Virtual site {virtual_site_key} is not associated with any "
                     "vdW and/or electrostatics interactions",
                 )
@@ -511,12 +515,17 @@ def _create_exceptions(
 
                 if charge_prod._value == epsilon._value == 0.0:
                     non_bonded_force.addException(
-                        virtual_particle_of_p1, p2, 0.0, 0.0, 0.0, replace=True
+                        virtual_particle_of_p1,
+                        p2,
+                        0.0,
+                        0.0,
+                        0.0,
+                        replace=True,
                     )
                 else:
                     # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
                     v1_parameters = non_bonded_force.getParticleParameters(
-                        virtual_particle_of_p1
+                        virtual_particle_of_p1,
                     )
                     p2_parameters = non_bonded_force.getParticleParameters(p2)
                     non_bonded_force.addException(
@@ -534,12 +543,17 @@ def _create_exceptions(
 
                 if charge_prod._value == epsilon._value == 0.0:
                     non_bonded_force.addException(
-                        virtual_particle_of_p2, p1, 0.0, 0.0, 0.0, replace=True
+                        virtual_particle_of_p2,
+                        p1,
+                        0.0,
+                        0.0,
+                        0.0,
+                        replace=True,
                     )
                 else:
                     # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
                     v2_parameters = non_bonded_force.getParticleParameters(
-                        virtual_particle_of_p2
+                        virtual_particle_of_p2,
                     )
                     p1_parameters = non_bonded_force.getParticleParameters(p1)
                     non_bonded_force.addException(
@@ -746,7 +760,7 @@ def _create_multiple_nonbonded_forces(
 
 def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
     if not hasattr(force, "setUseSwitchingFunction"):
-        raise ValueError(
+        raise CannotSetSwitchingFunctionError(
             "Attempting to set switching funcntion on an OpenMM force that does nont support it."
             f"Passed force of type {type(force)}.",
         )

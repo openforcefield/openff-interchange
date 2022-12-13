@@ -1,3 +1,6 @@
+"""
+Helper functions for exporting the topology to OpenMM.
+"""
 from typing import TYPE_CHECKING, List, Union
 
 from openff.interchange.models import VirtualSiteKey
@@ -46,7 +49,8 @@ def to_openmm_topology(
     if ensure_unique_atom_names:
         for molecule in topology._molecules:
             if isinstance(ensure_unique_atom_names, str) and hasattr(
-                molecule, ensure_unique_atom_names
+                molecule,
+                ensure_unique_atom_names,
             ):
                 for hier_elem in getattr(molecule, ensure_unique_atom_names):
                     if not hier_elem.has_unique_atom_names:
@@ -102,7 +106,7 @@ def to_openmm_topology(
                     (last_residue.name == atom_residue_name),
                     (int(last_residue.id) == int(atom_residue_number)),
                     (chain.id == last_chain.id),
-                )
+                ),
             ):
                 residue = last_residue
             else:
@@ -142,7 +146,7 @@ def to_openmm_topology(
         for bond in molecule.bonds:
             atom1, atom2 = bond.atoms
             atom1_idx, atom2_idx = topology.atom_index(atom1), topology.atom_index(
-                atom2
+                atom2,
             )
             if isinstance(bond, Bond):
                 if bond.is_aromatic:
@@ -153,7 +157,7 @@ def to_openmm_topology(
             else:
                 raise RuntimeError(
                     "Unexpected bond type found while iterating over Topology.bonds."
-                    f"Found {type(bond)}, allowed is Bond."
+                    f"Found {type(bond)}, allowed is Bond.",
                 )
 
             openmm_topology.addBond(

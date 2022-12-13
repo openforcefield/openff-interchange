@@ -15,7 +15,10 @@ from openff.interchange.constants import (
     kcal_mol_a2,
     kcal_mol_rad2,
 )
-from openff.interchange.exceptions import UnsupportedExportError
+from openff.interchange.exceptions import (
+    UnsupportedExportError,
+    UnsupportedMixingRuleError,
+)
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
@@ -79,12 +82,12 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         path = file_path
 
     if interchange["vdW"].mixing_rule != "lorentz-berthelot":
-        raise Exception
+        raise UnsupportedMixingRuleError(interchange["vdW"].mixing_rule)
 
     if interchange.box is None:
         if interchange["Electrostatics"].periodic_potential != _PME:
             raise UnsupportedExportError(
-                f'Electrostatics method PME (`"{_PME}"`) is not valid for a non-periodic system. '
+                f'Electrostatics method PME (`"{_PME}"`) is not valid for a non-periodic system. ',
             )
 
     with open(path, "w") as prmtop:
@@ -97,7 +100,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             f"{now.hour:02d}:{now.minute:02d}:{now.second:02d}\n"
             "%FLAG TITLE\n"
             "%FORMAT(20a4)\n"
-            "\n"
+            "\n",
         )
 
         from openff.interchange.interop.internal.gromacs import _build_typemap
@@ -297,7 +300,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
                 dihedrals_list.append(dihedral_type_index + 1)
 
         number_excluded_atoms, excluded_atoms_list = _get_exclusion_lists(
-            interchange.topology
+            interchange.topology,
         )
 
         # total number of atoms
@@ -396,7 +399,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             [
                 atom.name.ljust(4) if atom.name else atom.symbol.ljust(4)
                 for atom in interchange.topology.atoms
-            ]
+            ],
         )
         _write_text_blob(prmtop, text_blob)
 

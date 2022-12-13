@@ -101,7 +101,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
                     atom2=structure.atoms[idx_2],
                     atom3=structure.atoms[idx_3],
                     type=angle_type,
-                )
+                ),
             )
             structure.angle_types.append(angle_type)
 
@@ -143,7 +143,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
                     atom3=structure.atoms[idx_3],
                     atom4=structure.atoms[idx_4],
                     type=dihedral_type,
-                )
+                ),
             )
             structure.dihedral_types.append(dihedral_type)
 
@@ -158,12 +158,16 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             sig = sig.m_as(unit.angstrom)
             eps = eps.m_as(kcal_mol)
             nbtype = pmd.NonbondedExceptionType(
-                rmin=sig * 2 ** (1 / 6), epsilon=eps * vdw_14, chgscale=coul_14
+                rmin=sig * 2 ** (1 / 6),
+                epsilon=eps * vdw_14,
+                chgscale=coul_14,
             )
             structure.adjusts.append(
                 pmd.NonbondedException(
-                    structure.atoms[idx_1], structure.atoms[idx_4], type=nbtype
-                )
+                    structure.atoms[idx_1],
+                    structure.atoms[idx_4],
+                    type=nbtype,
+                ),
             )
             structure.adjust_types.append(nbtype)
 
@@ -199,7 +203,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
         structure.combining_rule = "geometric"
     else:
         raise UnsupportedExportError(
-            f"ParmEd likely does not support mixing rule {vdw_handler.mixing_rule}"
+            f"ParmEd likely does not support mixing rule {vdw_handler.mixing_rule}",
         )
 
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
@@ -263,7 +267,7 @@ def _from_parmed(cls, structure) -> "Interchange":
         if any(structure.box[3:] != 3 * [90.0]):
             raise UnsupportedBoxError(
                 f"Found box with angles {structure.box[3:]}. Only"
-                "rectangular boxes are currently supported."
+                "rectangular boxes are currently supported.",
             )
 
         out.box = structure.box[:3] * unit.angstrom
@@ -289,7 +293,7 @@ def _from_parmed(cls, structure) -> "Interchange":
         scale_14_coul = 0.83333
     elif len(_scale_14_coul) > 1:
         raise ConversionError(
-            "Found multiple values of the 1-4 scaling factor for electrostatics"
+            "Found multiple values of the 1-4 scaling factor for electrostatics",
         )
     else:
         scale_14_coul = [*_scale_14_coul][0]
@@ -320,7 +324,7 @@ def _from_parmed(cls, structure) -> "Interchange":
 
         coul_handler.slot_map.update({top_key: pot_key})
         coul_handler.potentials.update(
-            {pot_key: Potential(parameters={"charge": charge})}
+            {pot_key: Potential(parameters={"charge": charge})},
         )
 
     bond_handler = SMIRNOFFBondHandler()
@@ -363,17 +367,26 @@ def _from_parmed(cls, structure) -> "Interchange":
         if isinstance(dihedral.type, pmd.DihedralType):
             if dihedral.improper:
                 _process_single_dihedral(
-                    dihedral, dihedral.type, improper_torsion_handler, 0
+                    dihedral,
+                    dihedral.type,
+                    improper_torsion_handler,
+                    0,
                 )
             else:
                 _process_single_dihedral(
-                    dihedral, dihedral.type, proper_torsion_handler, 0
+                    dihedral,
+                    dihedral.type,
+                    proper_torsion_handler,
+                    0,
                 )
         elif isinstance(dihedral.type, pmd.DihedralTypeList):
             for dih_idx, dihedral_type in enumerate(dihedral.type):
                 if dihedral.improper:
                     _process_single_dihedral(
-                        dihedral, dihedral_type, improper_torsion_handler, dih_idx
+                        dihedral,
+                        dihedral_type,
+                        improper_torsion_handler,
+                        dih_idx,
                     )
                 else:
                     _process_single_dihedral(
@@ -440,7 +453,9 @@ def _process_single_dihedral(
         pot = Potential(parameters={"k": k, "periodicity": periodicity, "phase": phase})
 
         if pot_key in handler.potentials:
-            raise Exception("fudging dihedral indices")
+            raise Exception(
+                "This dihedral already exists, indices are probably messed up.",
+            )
 
         handler.slot_map.update({top_key: pot_key})
         handler.potentials.update({pot_key: pot})

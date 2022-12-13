@@ -28,7 +28,8 @@ class TestLammps(_BaseTest):
             ),  # Simplest molecule with a multi-term torsion
             "CCOC",  # This hits t86, which has a non-1.0 idivf
             pytest.param(
-                "C1COC(=O)O1", marks=pytest.mark.xfail
+                "C1COC(=O)O1",
+                marks=pytest.mark.xfail,
             ),  # This adds an improper, i2
         ],
     )
@@ -50,7 +51,7 @@ class TestLammps(_BaseTest):
             positions = mol.conformers[0]
         elif n_mols == 2:
             positions = np.concatenate(
-                [mol.conformers[0], mol.conformers[0] + 3 * unit.nanometer]
+                [mol.conformers[0], mol.conformers[0] + 3 * unit.nanometer],
             )
 
         openff_sys = Interchange.from_smirnoff(sage_unconstrained, top)

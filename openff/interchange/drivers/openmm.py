@@ -7,6 +7,7 @@ from openmm import unit
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
+from openff.interchange.exceptions import CannotInferNonbondedEnergyError
 
 kj_mol = unit.kilojoule_per_mole
 
@@ -50,7 +51,7 @@ def get_openmm_energies(
         if len(off_sys["VirtualSites"].slot_map) > 0:
             if not combine_nonbonded_forces:
                 raise NotImplementedError(
-                    "Cannot yet split out NonbondedForce components while virtual sites are present."
+                    "Cannot yet split out NonbondedForce components while virtual sites are present.",
                 )
 
             n_virtual_sites = len(off_sys["VirtualSites"].slot_map)
@@ -61,7 +62,7 @@ def get_openmm_energies(
             positions = np.vstack([positions, virtual_site_positions])
 
     omm_sys: openmm.System = off_sys.to_openmm(
-        combine_nonbonded_forces=combine_nonbonded_forces
+        combine_nonbonded_forces=combine_nonbonded_forces,
     )
 
     return _get_openmm_energies(
@@ -160,7 +161,7 @@ def _get_openmm_energies(
             "Bond": omm_energies.get("HarmonicBondForce", 0.0 * kj_mol),
             "Angle": omm_energies.get("HarmonicAngleForce", 0.0 * kj_mol),
             "Torsion": _canonicalize_torsion_energies(omm_energies),
-        }
+        },
     )
 
     if "Nonbonded" in omm_energies:
@@ -170,7 +171,7 @@ def _get_openmm_energies(
     else:
         report.update({"vdW": omm_energies.get("vdW", 0.0 * kj_mol)})
         report.update(
-            {"Electrostatics": omm_energies.get("Electrostatics", 0.0 * kj_mol)}
+            {"Electrostatics": omm_energies.get("Electrostatics", 0.0 * kj_mol)},
         )
 
     return report
@@ -210,7 +211,7 @@ def _infer_nonbonded_energy_type(force):
         else:
             return "vdW"
 
-    raise Exception(type(force))
+    raise CannotInferNonbondedEnergyError(type(force))
 
 
 def _canonicalize_nonbonded_energies(energies: Dict):

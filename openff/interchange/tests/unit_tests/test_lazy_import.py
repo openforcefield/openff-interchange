@@ -16,6 +16,7 @@ def test_lazy_load_top_level_module():
 
 def test_lazy_load_error():
     with pytest.raises(
-        ImportError, match="cannot import name 'Blah' from 'openff.interchange"
+        ImportError,
+        match="cannot import name 'Blah' from 'openff.interchange",
     ):
         from openff.interchange import Blah  # noqa

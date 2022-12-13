@@ -80,7 +80,8 @@ trimmed_mol_names = [
 
 
 mini_drug_bank = Molecule.from_file(
-    get_data_file_path("molecules/MiniDrugBank.sdf"), allow_undefined_stereo=True
+    get_data_file_path("molecules/MiniDrugBank.sdf"),
+    allow_undefined_stereo=True,
 )
 mols = [mol for mol in mini_drug_bank if mol.name in trimmed_mol_names]
 

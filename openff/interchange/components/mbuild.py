@@ -69,5 +69,5 @@ def offtop_to_compound(off_top: "Topology") -> "mb.Compound":
 
     """
     return mb.Compound(
-        subcompounds=[offmol_to_compound(molecule) for molecule in off_top.molecules]
+        subcompounds=[offmol_to_compound(molecule) for molecule in off_top.molecules],
     )

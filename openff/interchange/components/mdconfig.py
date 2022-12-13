@@ -33,10 +33,12 @@ class MDConfig(DefaultModel):
         description="Whether or not the system is periodic.",
     )
     constraints: Literal["none", "h-bonds", "all-bonds", "all-angles"] = Field(
-        "none", description="The type of constraints to be used in the simulation."
+        "none",
+        description="The type of constraints to be used in the simulation.",
     )
     vdw_method: str = Field(
-        None, description="The method used to calculate the vdW interactions."
+        None,
+        description="The method used to calculate the vdW interactions.",
     )
     vdw_cutoff: FloatQuantity["angstrom"] = Field(
         None,
@@ -114,7 +116,7 @@ class MDConfig(DefaultModel):
             elif self.coul_method == _PME:
                 if not self.periodic:
                     raise UnsupportedCutoffMethodError(
-                        "PME is not valid with a non-periodic system."
+                        "PME is not valid with a non-periodic system.",
                     )
                 mdp.write("coulombtype = PME\n")
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
@@ -123,7 +125,7 @@ class MDConfig(DefaultModel):
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
             else:
                 raise UnsupportedExportError(
-                    f"Electrostatics method {self.coul_method} not supported"
+                    f"Electrostatics method {self.coul_method} not supported",
                 )
 
             if self.vdw_method == "cutoff":
@@ -132,7 +134,7 @@ class MDConfig(DefaultModel):
                 mdp.write("vdwtype = PME\n")
             else:
                 raise UnsupportedExportError(
-                    f"vdW method {self.vdw_method} not supported"
+                    f"vdW method {self.vdw_method} not supported",
                 )
 
             vdw_cutoff = round(self.vdw_cutoff.m_as(unit.nanometer), 4)
@@ -150,7 +152,7 @@ class MDConfig(DefaultModel):
                 "units real\n"
                 "atom_style full\n"
                 "\n"
-                "dimension 3\nboundary p p p\n\n"
+                "dimension 3\nboundary p p p\n\n",
             )
 
             lmp.write("bond_style hybrid harmonic\n")
@@ -182,7 +184,7 @@ class MDConfig(DefaultModel):
                 f"{scale_factors['Electrostatics']['1-2']} "
                 f"{scale_factors['Electrostatics']['1-3']} "
                 f"{scale_factors['Electrostatics']['1-4']} "
-                "\n"
+                "\n",
             )
 
             vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)
@@ -193,7 +195,7 @@ class MDConfig(DefaultModel):
                 lmp.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")
             else:
                 raise UnsupportedExportError(
-                    f"Unsupported electrostatics method {self.coul_method}"
+                    f"Unsupported electrostatics method {self.coul_method}",
                 )
 
             if self.mixing_rule == "lorentz-berthelot":
@@ -202,11 +204,11 @@ class MDConfig(DefaultModel):
                 lmp.write("pair_modify mix geometric tail yes\n\n")
             else:
                 raise UnsupportedExportError(
-                    f"Mixing rule {self.mixing_rule} not supported"
+                    f"Mixing rule {self.mixing_rule} not supported",
                 )
             lmp.write("read_data out.lmp\n\n")
             lmp.write(
-                "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n"
+                "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n",
             )
 
             if self.coul_method == "pme":
@@ -232,7 +234,7 @@ class MDConfig(DefaultModel):
             # TODO: Is there a clear analog to GROMACS's all-bonds?
             elif self.constraints == "angles":
                 raise UnsupportedExportError(
-                    "Unclear how to constrain angles with sander"
+                    "Unclear how to constrain angles with sander",
                 )
 
             if self.vdw_method == "cutoff":
@@ -240,7 +242,7 @@ class MDConfig(DefaultModel):
                 sander.write(f"cut={vdw_cutoff},\n")
             else:
                 raise UnsupportedExportError(
-                    f"vdW method {self.vdw_method} not supported"
+                    f"vdW method {self.vdw_method} not supported",
                 )
 
             if self.coul_method == "pme":
@@ -277,7 +279,7 @@ def _infer_constraints(interchange: "Interchange") -> str:
                 import warnings
 
                 warnings.warn(
-                    "Ambiguous failure while processing constraints. Constraining h-bonds as a stopgap."
+                    "Ambiguous failure while processing constraints. Constraining h-bonds as a stopgap.",
                 )
 
                 return "h-bonds"

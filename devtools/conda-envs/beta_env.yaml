@@ -25,7 +25,6 @@ dependencies:
   - openeye-toolkits
   - pytest-cov
   - pytest-xdist
-  - conda
   - mdanalysis
   # Drivers
   - gromacs >=2021=nompi*

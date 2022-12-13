@@ -51,11 +51,11 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
             lmp_file.write(f"\n{len(openff_sys['Angles'].potentials)} angle types")
         if n_propers > 0:
             lmp_file.write(
-                f"\n{len(openff_sys['ProperTorsions'].potentials)} dihedral types"
+                f"\n{len(openff_sys['ProperTorsions'].potentials)} dihedral types",
             )
         if n_impropers > 0:
             lmp_file.write(
-                f"\n{len(openff_sys['ImproperTorsions'].potentials)} improper types"
+                f"\n{len(openff_sys['ImproperTorsions'].potentials)} improper types",
             )
 
         lmp_file.write("\n")
@@ -63,7 +63,8 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
         # write types section
 
         x_min, y_min, z_min = np.min(
-            openff_sys.positions.to(unit.angstrom), axis=0
+            openff_sys.positions.to(unit.angstrom),
+            axis=0,
         ).magnitude
         if openff_sys.box is None:
             L_x, L_y, L_z = 100, 100, 100
@@ -80,7 +81,7 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
                 y_min + L_y,
                 z_min,
                 z_min + L_z,
-            )
+            ),
         )
 
         lmp_file.write("0.0 0.0 0.0 xy xz yz\n")
@@ -102,7 +103,9 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
         lmp_file.write("\n\n")
 
         _write_pair_coeffs(
-            lmp_file=lmp_file, openff_sys=openff_sys, atom_type_map=atom_type_map
+            lmp_file=lmp_file,
+            openff_sys=openff_sys,
+            atom_type_map=atom_type_map,
         )
 
         if n_bonds > 0:
@@ -115,7 +118,9 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
             _write_improper_coeffs(lmp_file=lmp_file, openff_sys=openff_sys)
 
         _write_atoms(
-            lmp_file=lmp_file, openff_sys=openff_sys, atom_type_map=atom_type_map
+            lmp_file=lmp_file,
+            openff_sys=openff_sys,
+            atom_type_map=atom_type_map,
         )
         if n_bonds > 0:
             _write_bonds(lmp_file=lmp_file, openff_sys=openff_sys)
@@ -199,7 +204,7 @@ def _write_proper_coeffs(lmp_file: IO, openff_sys: Interchange):
         k = k / idivf
 
         lmp_file.write(
-            f"{proper_type_idx+1:d} fourier 1\t{k:.16g}\t{n:d}\t{phase:.16g}\n"
+            f"{proper_type_idx+1:d} fourier 1\t{k:.16g}\t{n:d}\t{phase:.16g}\n",
         )
 
     lmp_file.write("\n")
@@ -245,11 +250,11 @@ def _write_improper_coeffs(lmp_file: IO, openff_sys: Interchange):
         else:
             raise UnsupportedExportError(
                 "Improper exports to LAMMPS are funky and not well-supported, the only compatibility"
-                "found between periodidic impropers is with improper_style cvff when phase = 0 or 180 degrees"
+                "found between periodidic impropers is with improper_style cvff when phase = 0 or 180 degrees",
             )
 
         lmp_file.write(
-            f"{improper_type_idx+1:d} {k_cvff:.16g}\t{d_cvff:d}\t{n_cvff:.16g}\n"
+            f"{improper_type_idx+1:d} {k_cvff:.16g}\t{d_cvff:d}\t{n_cvff:.16g}\n",
         )
 
     lmp_file.write("\n")
@@ -291,7 +296,7 @@ def _write_atoms(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
                 pos[0],
                 pos[1],
                 pos[2],
-            )
+            ),
         )
 
 
@@ -325,7 +330,7 @@ def _write_bonds(lmp_file: IO, openff_sys: Interchange):
                 bond_type + 1,
                 indices[0] + 1,
                 indices[1] + 1,
-            )
+            ),
         )
 
 
@@ -352,7 +357,7 @@ def _write_angles(lmp_file: IO, openff_sys: Interchange):
                 indices[0] + 1,
                 indices[1] + 1,
                 indices[2] + 1,
-            )
+            ),
         )
 
 
@@ -382,7 +387,7 @@ def _write_propers(lmp_file: IO, openff_sys: Interchange):
                         indices[1] + 1,
                         indices[2] + 1,
                         indices[3] + 1,
-                    )
+                    ),
                 )
 
 
@@ -420,5 +425,5 @@ def _write_impropers(lmp_file: IO, openff_sys: Interchange):
                         indices[0] + 1,
                         indices[2] + 1,
                         indices[3] + 1,
-                    )
+                    ),
                 )

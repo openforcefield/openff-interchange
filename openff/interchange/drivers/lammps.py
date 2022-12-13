@@ -88,7 +88,7 @@ def get_lammps_energies(
             "Torsion": parsed_energies[2] + parsed_energies[3],
             "vdW": parsed_energies[5] + parsed_energies[8],
             "Electrostatics": parsed_energies[6] + parsed_energies[7],
-        }
+        },
     )
 
     return report

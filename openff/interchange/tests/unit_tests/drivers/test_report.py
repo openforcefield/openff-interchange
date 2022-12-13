@@ -4,7 +4,11 @@ from openff.units.openmm import ensure_quantity
 
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.exceptions import EnergyError, IncompatibleTolerancesError
+from openff.interchange.exceptions import (
+    EnergyError,
+    IncompatibleTolerancesError,
+    InvalidEnergyError,
+)
 from openff.interchange.tests import _BaseTest
 
 
@@ -18,7 +22,7 @@ class TestEnergyReport(_BaseTest):
                 "Torsion": 2 * kj_mol,
                 "vdW": 20 * kj_mol,
                 "Electrostatics": -10 * kj_mol,
-            }
+            },
         )
 
     def test_coerce_to_quantity(self):
@@ -26,7 +30,7 @@ class TestEnergyReport(_BaseTest):
             EnergyReport(
                 energies={
                     "Bond": ensure_quantity(10 * kj_mol, "openmm"),
-                }
+                },
             )["Bond"],
             unit.Quantity,
         )
@@ -43,11 +47,11 @@ class TestEnergyReport(_BaseTest):
         assert report.total_energy == report["Total"]
 
     def test_bad_constructor(self):
-        with pytest.raises(Exception, match="foo not understood."):
+        with pytest.raises(InvalidEnergyError, match="foo not understood."):
             EnergyReport(
                 energies={
                     "foo": 1 * kj_mol,
-                }
+                },
             )
 
     def test_update(self, report):
@@ -64,14 +68,14 @@ class TestEnergyReport(_BaseTest):
         report.update(
             {
                 "Bond": ensure_quantity(55.55 * kj_mol, unit_system),
-            }
+            },
         )
 
         assert isinstance(report["Bond"], unit.Quantity)
         assert report["Bond"].m_as(kj_mol) == pytest.approx(55.55)
 
     def test_bad_update(self, report):
-        with pytest.raises(Exception, match="foo not understood."):
+        with pytest.raises(InvalidEnergyError, match="foo not understood."):
             report.update({"foo": 1 * kj_mol})
 
     def test_sub(self):
@@ -102,7 +106,7 @@ class TestEnergyReport(_BaseTest):
                 "Angle": 10 * kj_mol,
                 "Torsion": 2 * kj_mol,
                 "Nonbonded": 8 * kj_mol,
-            }
+            },
         )
 
         differences = report.diff(single_nonbonded)
@@ -120,7 +124,7 @@ class TestEnergyReport(_BaseTest):
                 "Torsion": -2 * kj_mol,
                 "vdW": 10 * kj_mol,
                 "Electrostatics": -10 * kj_mol,
-            }
+            },
         )
 
         diff = report.diff(other)
@@ -142,7 +146,7 @@ class TestEnergyReport(_BaseTest):
                     "vdW": 20 * kj_mol,
                     "Electrostatics": -10 * kj_mol,
                 }.items()
-            }
+            },
         )
 
         with pytest.raises(EnergyError):
@@ -156,7 +160,7 @@ class TestEnergyReport(_BaseTest):
                 "Torsion": -2 * kj_mol,
                 "vdW": 10 * kj_mol,
                 "Electrostatics": -10 * kj_mol,
-            }
+            },
         )
 
         with pytest.raises(

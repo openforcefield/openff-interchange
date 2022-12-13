@@ -17,8 +17,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     LibraryChargeHandler,
     ParameterHandler,
     ToolkitAM1BCCHandler,
-    UnassignedProperTorsionParameterException,
-    UnassignedValenceParameterException,
     VirtualSiteHandler,
     vdWHandler,
 )
@@ -39,7 +37,12 @@ from openff.interchange.components.smirnoff import (
     SMIRNOFFvdWHandler,
     library_charge_from_molecule,
 )
-from openff.interchange.exceptions import InvalidParameterHandlerError
+from openff.interchange.exceptions import (
+    InvalidParameterHandlerError,
+    UnassignedAngleError,
+    UnassignedBondError,
+    UnassignedTorsionError,
+)
 from openff.interchange.models import TopologyKey
 from openff.interchange.tests import _BaseTest, get_test_file_path
 
@@ -50,7 +53,7 @@ kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
 
 def hydrogen_cyanide(reversed: bool = False) -> Molecule:
     return Molecule.from_mapped_smiles(
-        "[H:3][C:2]#[N:1]" if reversed else "[H:1][C:2]#[N:3]"
+        "[H:3][C:2]#[N:1]" if reversed else "[H:1][C:2]#[N:3]",
     )
 
 
@@ -64,14 +67,14 @@ def hydrogen_cyanide_charge_increments() -> ChargeIncrementModelHandler:
             "smirks": "[H:1][C:2]",
             "charge_increment1": -0.111 * unit.elementary_charge,
             "charge_increment2": 0.111 * unit.elementary_charge,
-        }
+        },
     )
     handler.add_parameter(
         {
             "smirks": "[C:1]#[N:2]",
             "charge_increment1": 0.5 * unit.elementary_charge,
             "charge_increment2": -0.5 * unit.elementary_charge,
-        }
+        },
     )
 
     return handler
@@ -179,7 +182,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
                 periodicity1=2,
                 phase1=180.0 * unit.degree,
                 k1=1.1 * unit.kilocalorie_per_mole,
-            )
+            ),
         )
 
         potential_handler = SMIRNOFFImproperTorsionHandler()
@@ -199,7 +202,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
 
     def test_store_nonstandard_improper_idivf(self):
         acetaldehyde = Molecule.from_mapped_smiles(
-            "[C:1]([C:2](=[O:3])[H:7])([H:4])([H:5])[H:6]"
+            "[C:1]([C:2](=[O:3])[H:7])([H:4])([H:5])[H:6]",
         )
         topology = acetaldehyde.to_topology()
 
@@ -212,11 +215,12 @@ class TestSMIRNOFFHandlers(_BaseTest):
                 "k1": 1.1 * unit.kilocalorie_per_mole,
                 "idivf1": 1.234 * unit.dimensionless,
                 "id": "i1",
-            }
+            },
         )
 
         potential_handler = SMIRNOFFImproperTorsionHandler._from_toolkit(
-            parameter_handler=handler, topology=topology
+            parameter_handler=handler,
+            topology=topology,
         )
 
         handler = ImproperTorsionHandler(version=0.3)
@@ -228,11 +232,12 @@ class TestSMIRNOFFHandlers(_BaseTest):
                 "phase1": 180.0 * unit.degree,
                 "k1": 1.1 * unit.kilocalorie_per_mole,
                 "id": "i1",
-            }
+            },
         )
 
         potential_handler = SMIRNOFFImproperTorsionHandler._from_toolkit(
-            parameter_handler=handler, topology=topology
+            parameter_handler=handler,
+            topology=topology,
         )
 
         assert [*potential_handler.potentials.values()][0].parameters[
@@ -254,7 +259,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         ]
 
         electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
-            parameter_handlers, top
+            parameter_handlers,
+            top,
         )
         np.testing.assert_allclose(
             [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
@@ -270,7 +276,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
                 "smirks": "[#6X4:1]-[#1:2]",
                 "charge1": -0.1 * unit.elementary_charge,
                 "charge2": 0.025 * unit.elementary_charge,
-            }
+            },
         )
 
         parameter_handlers = [
@@ -279,7 +285,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         ]
 
         electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
-            parameter_handlers, top
+            parameter_handlers,
+            top,
         )
 
         np.testing.assert_allclose(
@@ -303,7 +310,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
                 "smirks": "[#17:1]-[#1:2]",
                 "charge_increment1": 0.1 * unit.elementary_charge,
                 "charge_increment2": -0.1 * unit.elementary_charge,
-            }
+            },
         )
 
         parameter_handlers = [
@@ -312,7 +319,8 @@ class TestSMIRNOFFHandlers(_BaseTest):
         ]
 
         electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
-            parameter_handlers, top
+            parameter_handlers,
+            top,
         )
 
         # AM1-Mulliken charges are [-0.168,  0.168], increments are [0.1, -0.1],
@@ -415,7 +423,7 @@ class TestUnassignedParameters(_BaseTest):
         sage.deregister_parameter_handler(sage["Constraints"])
 
         with pytest.raises(
-            UnassignedValenceParameterException,
+            UnassignedBondError,
             match="BondHandler was not able to find par",
         ):
             Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
@@ -425,7 +433,7 @@ class TestUnassignedParameters(_BaseTest):
             param.smirks = "[#99:1]-[#99:2]-[#99:3]"
 
         with pytest.raises(
-            UnassignedValenceParameterException,
+            UnassignedAngleError,
             match="AngleHandler was not able to find par",
         ):
             Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
@@ -435,7 +443,7 @@ class TestUnassignedParameters(_BaseTest):
             param.smirks = "[#99:1]-[#99:2]-[#99:3]-[#99:4]"
 
         with pytest.raises(
-            UnassignedProperTorsionParameterException,
+            UnassignedTorsionError,
             match="- Topology indices [(]5, 0, 1, 6[)]: "
             r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
         ):
@@ -472,7 +480,8 @@ class TestConstraints(_BaseTest):
         topology.box_vectors = [4, 4, 4] * unit.nanometer
 
         constraints = SMIRNOFFConstraintHandler._from_toolkit(
-            parameter_handler=tip3p["Constraints"], topology=topology
+            parameter_handler=tip3p["Constraints"],
+            topology=topology,
         )
 
         assert len(constraints.slot_map) == 3
@@ -550,11 +559,14 @@ class TestChargeFromMolecules(_BaseTest):
         # -0.3, 0.0, 0.3
         molecule_with_charges = hydrogen_cyanide(reversed=True)
         molecule_with_charges.partial_charges = unit.Quantity(
-            [-0.3, 0.0, 0.3], unit.elementary_charge
+            [-0.3, 0.0, 0.3],
+            unit.elementary_charge,
         )
 
         out = Interchange.from_smirnoff(
-            sage, molecule.to_topology(), charge_from_molecules=[molecule_with_charges]
+            sage,
+            molecule.to_topology(),
+            charge_from_molecules=[molecule_with_charges],
         )
 
         expected_charges = [0.3, 0.0, -0.3]
@@ -650,7 +662,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
         )
 
         assert _get_interpolated_bond_k(default["Bonds"]) == pytest.approx(
-            _get_interpolated_bond_k(empty["Bonds"])
+            _get_interpolated_bond_k(empty["Bonds"]),
         )
 
     def test_partial_bond_order_from_molecules_no_matches(self):
@@ -670,7 +682,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
         )
 
         assert _get_interpolated_bond_k(default["Bonds"]) == pytest.approx(
-            _get_interpolated_bond_k(uses["Bonds"])
+            _get_interpolated_bond_k(uses["Bonds"]),
         )
 
 
@@ -696,14 +708,17 @@ class TestBondOrderInterpolation(_BaseTest):
         )
 
         bonds = SMIRNOFFBondHandler._from_toolkit(
-            parameter_handler=forcefield["Bonds"], topology=top
+            parameter_handler=forcefield["Bonds"],
+            topology=top,
         )
         bonds_mod = SMIRNOFFBondHandler._from_toolkit(
-            parameter_handler=forcefield["Bonds"], topology=mod_top
+            parameter_handler=forcefield["Bonds"],
+            topology=mod_top,
         )
 
         for pot_key1, pot_key2 in zip(
-            bonds.slot_map.values(), bonds_mod.slot_map.values()
+            bonds.slot_map.values(),
+            bonds_mod.slot_map.values(),
         ):
             k1 = bonds.potentials[pot_key1].parameters["k"].m_as(kcal_mol_a2)
             k2 = bonds_mod.potentials[pot_key2].parameters["k"].m_as(kcal_mol_a2)
@@ -731,10 +746,12 @@ class TestBondOrderInterpolation(_BaseTest):
         )
 
         bonds = SMIRNOFFBondHandler._from_toolkit(
-            parameter_handler=forcefield["Bonds"], topology=top
+            parameter_handler=forcefield["Bonds"],
+            topology=top,
         )
         bonds_mod = SMIRNOFFBondHandler._from_toolkit(
-            parameter_handler=forcefield["Bonds"], topology=mod_top
+            parameter_handler=forcefield["Bonds"],
+            topology=mod_top,
         )
 
         for key1, key2 in zip(bonds.potentials, bonds_mod.potentials):
@@ -768,7 +785,12 @@ class TestMatrixRepresentations(_BaseTest):
         [("vdW", 10, 72), ("Bonds", 8, 64), ("Angles", 6, 104)],
     )
     def test_to_force_field_to_system_parameters(
-        self, sage, ethanol_top, handler_name, n_ff_terms, n_sys_terms
+        self,
+        sage,
+        ethanol_top,
+        handler_name,
+        n_ff_terms,
+        n_sys_terms,
     ):
         import jax
 
@@ -812,7 +834,8 @@ class TestMatrixRepresentations(_BaseTest):
         # TODO: Update with other handlers that can safely be assumed to follow 1:1 slot:smirks mapping
         if handler_name in ["vdW", "Bonds", "Angles"]:
             assert np.allclose(
-                np.sum(param_matrix, axis=1), np.ones(param_matrix.shape[0])
+                np.sum(param_matrix, axis=1),
+                np.ones(param_matrix.shape[0]),
             )
 
     def test_set_force_field_parameters(self, sage, ethanol):
@@ -857,7 +880,8 @@ class TestParameterInterpolation(_BaseTest):
     @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
     def test_bond_order_interpolation(self):
         forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
+            "test_forcefields/test_forcefield.offxml",
+            self.xml_ff_bo,
         )
 
         mol = Molecule.from_smiles("CCO")
@@ -883,7 +907,8 @@ class TestParameterInterpolation(_BaseTest):
         """Test that key mappings do not get confused when two bonds having similar SMIRKS matches
         have different bond orders"""
         forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
+            "test_forcefields/test_forcefield.offxml",
+            self.xml_ff_bo,
         )
 
         # TODO: Construct manually to avoid relying on atom ordering
@@ -965,7 +990,8 @@ class TestParameterInterpolation(_BaseTest):
         """
         mol = get_molecule()
         forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml", self.xml_ff_bo
+            "test_forcefields/test_forcefield.offxml",
+            self.xml_ff_bo,
         )
         topology = Topology.from_molecules(mol)
 
@@ -1022,7 +1048,10 @@ class TestParameterInterpolation(_BaseTest):
             ):
                 k = params[-1]
                 np.testing.assert_allclose(
-                    k / k.unit, k_torsion_interpolated, atol=0, rtol=2e-6
+                    k / k.unit,
+                    k_torsion_interpolated,
+                    atol=0,
+                    rtol=2e-6,
                 )
 
 
@@ -1043,7 +1072,8 @@ class TestSMIRNOFFChargeIncrements(_BaseTest):
 
         sage.deregister_parameter_handler("ToolkitAM1BCC")
         no_increments = ChargeIncrementModelHandler(
-            version=0.3, partial_charge_method="gasteiger"
+            version=0.3,
+            partial_charge_method="gasteiger",
         )
         sage.register_parameter_handler(no_increments)
 
@@ -1062,14 +1092,15 @@ class TestSMIRNOFFChargeIncrements(_BaseTest):
         sage = ForceField("openff-2.0.0.offxml")
         sage.deregister_parameter_handler("ToolkitAM1BCC")
         charge_handler = ChargeIncrementModelHandler(
-            version=0.3, partial_charge_method="formal_charge"
+            version=0.3,
+            partial_charge_method="formal_charge",
         )
         charge_handler.add_parameter(
             {
                 "smirks": "[C:1][H:2]",
                 "charge_increment1": 0.111 * unit.elementary_charge,
                 "charge_increment2": -0.111 * unit.elementary_charge,
-            }
+            },
         )
         sage.register_parameter_handler(charge_handler)
         assert 0.0 == pytest.approx(
@@ -1078,7 +1109,7 @@ class TestSMIRNOFFChargeIncrements(_BaseTest):
                 for v in Interchange.from_smirnoff(sage, [molecule])[
                     "Electrostatics"
                 ].charges.values()
-            )
+            ),
         )
 
     def test_charge_increment_forwawrd_reverse_molecule(self, sage):
@@ -1086,7 +1117,7 @@ class TestSMIRNOFFChargeIncrements(_BaseTest):
         sage.register_parameter_handler(hydrogen_cyanide_charge_increments())
 
         topology = Topology.from_molecules(
-            [hydrogen_cyanide(reversed=False), hydrogen_cyanide(reversed=True)]
+            [hydrogen_cyanide(reversed=False), hydrogen_cyanide(reversed=True)],
         )
 
         out = Interchange.from_smirnoff(sage, topology)
@@ -1115,14 +1146,14 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 "smirks": "[*:1]~[*:2]",
                 "k": 0.0 * unit.kilojoule_per_mole / unit.angstrom**2,
                 "length": 0.0 * unit.angstrom,
-            }
+            },
         )
         force_field.get_parameter_handler("Angles").add_parameter(
             {
                 "smirks": "[*:1]~[*:2]~[*:3]",
                 "k": 0.0 * unit.kilojoule_per_mole / unit.degree**2,
                 "angle": 60.0 * unit.degree,
-            }
+            },
         )
         force_field.get_parameter_handler("ProperTorsions").add_parameter(
             {
@@ -1131,17 +1162,17 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 "phase": [0.0] * unit.degree,
                 "periodicity": [2],
                 "idivf": [1.0],
-            }
+            },
         )
         force_field.get_parameter_handler("vdW").add_parameter(
             {
                 "smirks": "[*:1]",
                 "epsilon": 0.0 * unit.kilojoule_per_mole,
                 "sigma": 1.0 * unit.angstrom,
-            }
+            },
         )
         force_field.get_parameter_handler("LibraryCharges").add_parameter(
-            {"smirks": "[*:1]", "charge": [0.0] * unit.elementary_charge}
+            {"smirks": "[*:1]", "charge": [0.0] * unit.elementary_charge},
         )
         force_field.get_parameter_handler("Electrostatics")
 
@@ -1165,7 +1196,8 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
         force_field = cls.build_force_field(handler)
 
         system = Interchange.from_smirnoff(
-            force_field=force_field, topology=molecule.to_topology()
+            force_field=force_field,
+            topology=molecule.to_topology(),
         ).to_openmm(combine_nonbonded_forces=True)
 
         n_v_sites = sum(
@@ -1177,7 +1209,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 [
                     input_conformer.m_as(unit.angstrom),
                     np.zeros((n_v_sites, 3)),
-                ]
+                ],
             ),
             unit.angstrom,
         )
@@ -1192,7 +1224,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
         context.computeVirtualSites()
 
         output_conformer = context.getState(getPositions=True).getPositions(
-            asNumpy=True
+            asNumpy=True,
         )
 
         return output_conformer[molecule.n_atoms :, :]
@@ -1219,7 +1251,8 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 VirtualSiteMocking.sp1_conformer(),
                 (2, 3),
                 unit.Quantity(
-                    np.array([[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]]), unit.angstrom
+                    np.array([[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]]),
+                    unit.angstrom,
                 ),
             ),
             (
@@ -1237,7 +1270,9 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             ),
             (
                 VirtualSiteMocking.divalent_parameter(
-                    "[H:2][O:1][H:3]", match="once", angle=0.0 * unit.degree
+                    "[H:2][O:1][H:3]",
+                    match="once",
+                    angle=0.0 * unit.degree,
                 ),
                 "[H:2][O:1][H:3]",
                 VirtualSiteMocking.sp2_conformer()[1:, :],
@@ -1258,7 +1293,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                         [
                             [np.sqrt(2), np.sqrt(2), 0.0],
                             [np.sqrt(2), -np.sqrt(2), 0.0],
-                        ]
+                        ],
                     ),
                     unit.angstrom,
                 ),
@@ -1295,13 +1330,15 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 {
                     old_index: new_index
                     for old_index, new_index in zip(atoms_to_shuffle, atom_permutation)
-                }
+                },
             )
 
             molecule = molecule.remap(shuffled_atom_order)
 
             output_coordinates = self.generate_v_site_coordinates(
-                molecule, molecule.conformers[0], parameter
+                molecule,
+                molecule.conformers[0],
+                parameter,
             )
 
             assert output_coordinates.shape == expected_coordinates.shape
@@ -1312,7 +1349,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 return x[np.lexsort((x[:, 2], x[:, 1], x[:, 0])), :]
 
             found = sort_coordinates(
-                output_coordinates.value_in_unit(openmm_unit.angstrom)
+                output_coordinates.value_in_unit(openmm_unit.angstrom),
             )
             expected = sort_coordinates(expected_coordinates.m_as(unit.angstrom))
 
@@ -1330,7 +1367,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     [
                         VirtualSiteMocking.chloromethane(reverse=False),
                         VirtualSiteMocking.chloromethane(reverse=True),
-                    ]
+                    ],
                 ),
                 [VirtualSiteMocking.bond_charge_parameter("[Cl:1][C:2]")],
                 [
@@ -1356,15 +1393,18 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     [
                         VirtualSiteMocking.formaldehyde(reverse=False),
                         VirtualSiteMocking.formaldehyde(reverse=True),
-                    ]
+                    ],
                 ),
                 [
                     VirtualSiteMocking.bond_charge_parameter("[O:1]=[*:2]"),
                     VirtualSiteMocking.bond_charge_parameter(
-                        "[O:1]=[C:2]", param_multiple=1.5
+                        "[O:1]=[C:2]",
+                        param_multiple=1.5,
                     ),
                     VirtualSiteMocking.bond_charge_parameter(
-                        "[O:1]=[CX3:2]", param_multiple=2.0, name="EP2"
+                        "[O:1]=[CX3:2]",
+                        param_multiple=2.0,
+                        name="EP2",
                     ),
                 ],
                 [
@@ -1389,7 +1429,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     [
                         VirtualSiteMocking.formaldehyde(reverse=False),
                         VirtualSiteMocking.formaldehyde(reverse=True),
-                    ]
+                    ],
                 ),
                 [VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[H:3]")],
                 [
@@ -1414,12 +1454,13 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     [
                         VirtualSiteMocking.hypochlorous_acid(reverse=False),
                         VirtualSiteMocking.hypochlorous_acid(reverse=True),
-                    ]
+                    ],
                 ),
                 [
                     VirtualSiteMocking.divalent_parameter(
-                        "[H:2][O:1][Cl:3]", match="all_permutations"
-                    )
+                        "[H:2][O:1][Cl:3]",
+                        match="all_permutations",
+                    ),
                 ],
                 [
                     # charge, sigma, epsilon
@@ -1439,7 +1480,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                     [
                         VirtualSiteMocking.fake_ammonia(reverse=False),
                         VirtualSiteMocking.fake_ammonia(reverse=True),
-                    ]
+                    ],
                 ),
                 [VirtualSiteMocking.trivalent_parameter("[N:1]([Br:2])([Cl:3])[H:4]")],
                 [
@@ -1486,7 +1527,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             {
                 "smirks": "[*:1]",
                 "charge": [0.0] * unit.elementary_charge,
-            }
+            },
         )
         force_field.register_parameter_handler(vdWHandler(version=0.3))
         force_field.get_parameter_handler("vdW").add_parameter(
@@ -1494,12 +1535,13 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 "smirks": "[*:1]",
                 "epsilon": 0.0 * unit.kilojoule_per_mole,
                 "sigma": 1.0 * unit.nanometer,
-            }
+            },
         )
         force_field.register_parameter_handler(handler)
 
         system: openmm.System = Interchange.from_smirnoff(
-            force_field, topology
+            force_field,
+            topology,
         ).to_openmm(
             combine_nonbonded_forces=True,
         )
@@ -1515,7 +1557,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
         total_charge = 0.0 * openmm_unit.elementary_charge
 
         for i, (expected_charge, expected_sigma, expected_epsilon) in enumerate(
-            expected_parameters
+            expected_parameters,
         ):
             charge, sigma, epsilon = force.getParticleParameters(i)
 
