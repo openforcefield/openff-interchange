@@ -13,8 +13,7 @@ dependencies:
   - openff-models
   - openmm >=7.6
   - intermol
-  - jax
-  - jaxlib
+  - jax =0.3
   # readthedocs dependencies
   - myst-parser
   - numpydoc
