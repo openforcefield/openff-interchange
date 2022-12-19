@@ -1,11 +1,12 @@
 """Custom Pydantic models."""
+import abc
 from typing import Literal, Optional, Tuple
 
 from openff.models.models import DefaultModel
-from pydantic import Field
+from pydantic import Field, conlist
 
 
-class TopologyKey(DefaultModel):
+class TopologyKey(DefaultModel, abc.ABC):
     """
     A unique identifier of a segment of a chemical topology.
 
@@ -35,44 +36,116 @@ class TopologyKey(DefaultModel):
         >>> this_atom
         TopologyKey with atom indices (4,)
 
-    Layer multiple TopologyKey objects that point to the same torsion
-
-    .. code-block:: pycon
-
-        >>> key1 = TopologyKey(atom_indices=(1, 2, 5, 6), mult=0)
-        >>> key2 = TopologyKey(atom_indices=(1, 2, 5, 6), mult=1)
-        >>> assert key1 != key2
-
     """
 
-    atom_indices: Tuple[int, ...] = Field(
-        tuple(),
+    # TODO: This can be switched to `pydantic.contuple` once 1.10.3 is released
+    atom_indices: conlist(int, min_items=0, max_items=4, unique_items=True) = Field(
         description="The indices of the atoms occupied by this interaction",
     )
+
+    def __hash__(self) -> int:
+        return hash(tuple(self.atom_indices))
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__} with atom indices {self.atom_indices}"
+
+
+class BondKey(TopologyKey):
+    """
+    A unique identifier of the atoms associated in a bond potential.
+    """
+
+    atom_indices: conlist(int, min_items=2, max_items=2, unique_items=True) = Field(
+        description="The indices of the atoms occupied by this interaction",
+    )
+
+    bond_order: Optional[float] = Field(
+        None,
+        description=(
+            "If this key represents as topology component subject to interpolation between "
+            "multiple parameters(s), the bond order determining the coefficients of the wrapped "
+            "potentials."
+        ),
+    )
+
+    def __hash__(self) -> int:
+        return hash((tuple(self.atom_indices), self.bond_order))
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__} with atom indices {self.atom_indices}"
+            f"{'' if self.bond_order is None else ', bond order ' + str(self.bond_order)}"
+        )
+
+
+class AngleKey(TopologyKey):
+    """
+    A unique identifier of the atoms associated in an angle potential.
+    """
+
+    atom_indices: conlist(int, min_items=3, max_items=3, unique_items=True) = Field(
+        description="The indices of the atoms occupied by this interaction",
+    )
+
+
+class ProperTorsionKey(TopologyKey):
+    """
+    A unique identifier of the atoms associated in a proper torsion potential.
+    """
+
+    atom_indices: conlist(int, min_items=4, max_items=4, unique_items=True) = Field(
+        description="The indices of the atoms occupied by this interaction",
+    )
+
     mult: Optional[int] = Field(
         None,
         description="The index of this duplicate interaction",
     )
+
+    phase: Optional[float] = Field(
+        None,
+        description="If this key represents as topology component subject to interpolation between "
+        "multiple parameters(s), the phase determining the coefficients of the wrapped "
+        "potentials.",
+    )
+
     bond_order: Optional[float] = Field(
         None,
-        description="If this key represents as topology component subject to interpolation "
-        "between multiple parameters(s), the bond order determining the coefficients of the wrapped potentials.",
+        description=(
+            "If this key represents as topology component subject to interpolation between "
+            "multiple parameters(s), the bond order determining the coefficients of the wrapped "
+            "potentials."
+        ),
     )
 
     def __hash__(self) -> int:
-        return hash((self.atom_indices, self.mult, self.bond_order))
+        return hash((tuple(self.atom_indices), self.mult, self.bond_order, self.phase))
 
     def __repr__(self) -> str:
         return (
-            f"TopologyKey with atom indices {self.atom_indices}"
+            f"{self.__class__.__name__} with atom indices {self.atom_indices}"
             f"{'' if self.mult is None else ', mult ' + str(self.mult)}"
             f"{'' if self.bond_order is None else ', bond order ' + str(self.bond_order)}"
         )
 
 
-class LibraryChargeTopologyKey(DefaultModel):
-    """Subclass of `TopologyKey` for use with library charges only."""
+class ImproperTorsionKey(ProperTorsionKey):
+    """
+    A unique identifier of the atoms associated in an improper torsion potential.
+    """
 
+    def get_central_atom(self) -> int:
+        """Get the index of the central atom of this improper torsion."""
+        return self.atom_indices[1]
+
+
+class LibraryChargeTopologyKey(DefaultModel):
+    """
+    A unique identifier of the atoms associated with a library charge.
+    """
+
+    # TODO: Store all atoms associated with this charge?
+    # TODO: Is there an upper bound on the number of atoms that can be associated with a LibraryChargeType?
     # TODO: Eventually rename this for coherence with `TopologyKey`
     this_atom_index: int
 
@@ -86,7 +159,9 @@ class LibraryChargeTopologyKey(DefaultModel):
 
 
 class SingleAtomChargeTopologyKey(LibraryChargeTopologyKey):
-    """Shim class for storing the result of charge_from_molecules."""
+    """
+    Shim class for storing the result of charge_from_molecules.
+    """
 
     pass
 

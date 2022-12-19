@@ -57,10 +57,13 @@ from openff.interchange.exceptions import (
     UnassignedTorsionError,
 )
 from openff.interchange.models import (
+    BondKey,
     ChargeIncrementTopologyKey,
     ChargeModelTopologyKey,
+    ImproperTorsionKey,
     LibraryChargeTopologyKey,
     PotentialKey,
+    ProperTorsionKey,
     TopologyKey,
     VirtualSiteKey,
 )
@@ -258,7 +261,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
                     )
             else:
                 fractional_bond_order = None
-            topology_key = TopologyKey(
+            topology_key = BondKey(
                 atom_indices=key,
                 bond_order=fractional_bond_order,
             )
@@ -581,7 +584,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
                         )
                 else:
                     fractional_bond_order = None
-                topology_key = TopologyKey(
+                topology_key = ProperTorsionKey(
                     atom_indices=key,
                     mult=n,
                     bond_order=fractional_bond_order,
@@ -741,7 +744,7 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
                     for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]
                 ]:
 
-                    topology_key = TopologyKey(
+                    topology_key = ImproperTorsionKey(
                         atom_indices=(key[1], *permuted_key),
                         mult=n,
                     )
