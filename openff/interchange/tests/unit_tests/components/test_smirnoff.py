@@ -814,12 +814,12 @@ class TestMatrixRepresentations(_BaseTest):
 
         p = handler.get_force_field_parameters(use_jax=True)
 
-        assert isinstance(p, jax.interpreters.xla.DeviceArray)
+        assert isinstance(p, jax.Array)
         assert np.prod(p.shape) == n_ff_terms
 
         q = handler.get_system_parameters(use_jax=True)
 
-        assert isinstance(q, jax.interpreters.xla.DeviceArray)
+        assert isinstance(q, jax.Array)
         assert np.prod(q.shape) == n_sys_terms
 
         assert jax.numpy.allclose(q, handler.parametrize(p))

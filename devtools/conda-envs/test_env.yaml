@@ -19,7 +19,7 @@ dependencies:
   # Testing
   - intermol
   - openff-evaluator
-  - jax =0.3
+  - jax
   - pytest
   - pytest-cov
   - pytest-xdist

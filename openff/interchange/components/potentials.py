@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from openff.toolkit.topology import Topology
 
     if has_package("jax"):
-        from jaxlib.xla_extension import DeviceArray
+        from jax import Array
 
 
 class Potential(DefaultModel):
@@ -238,7 +238,7 @@ class PotentialHandler(DefaultModel):
         )
 
     @requires_package("jax")
-    def get_param_matrix(self) -> "DeviceArray":
+    def get_param_matrix(self) -> "Array":
         """Get a matrix representing the mapping between force field and system parameters."""
         from functools import partial
 

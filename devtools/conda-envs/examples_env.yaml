@@ -15,7 +15,7 @@ dependencies:
   - openff-models
   - openff-evaluator
   # Optional features
-  - jax =0.3
+  - jax
   - unyt
   - mbuild
   - foyer >=0.11.3
