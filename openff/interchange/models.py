@@ -3,7 +3,9 @@ import abc
 from typing import Literal, Optional, Tuple
 
 from openff.models.models import DefaultModel
-from pydantic import Field, conlist
+from pydantic import Field
+
+from openff.interchange.pydantic import contuple
 
 
 class TopologyKey(DefaultModel, abc.ABC):
@@ -39,7 +41,7 @@ class TopologyKey(DefaultModel, abc.ABC):
     """
 
     # TODO: This can be switched to `pydantic.contuple` once 1.10.3 is released
-    atom_indices: conlist(int, min_items=0, max_items=4, unique_items=True) = Field(
+    atom_indices: contuple(int, min_length=0, max_length=4) = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
@@ -55,7 +57,7 @@ class BondKey(TopologyKey):
     A unique identifier of the atoms associated in a bond potential.
     """
 
-    atom_indices: conlist(int, min_items=2, max_items=2, unique_items=True) = Field(
+    atom_indices: contuple(int, min_length=2, max_length=2) = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
@@ -83,7 +85,7 @@ class AngleKey(TopologyKey):
     A unique identifier of the atoms associated in an angle potential.
     """
 
-    atom_indices: conlist(int, min_items=3, max_items=3, unique_items=True) = Field(
+    atom_indices: contuple(int, min_length=3, max_length=3) = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
@@ -93,7 +95,7 @@ class ProperTorsionKey(TopologyKey):
     A unique identifier of the atoms associated in a proper torsion potential.
     """
 
-    atom_indices: conlist(int, min_items=4, max_items=4, unique_items=True) = Field(
+    atom_indices: contuple(int, min_length=4, max_length=4) = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
