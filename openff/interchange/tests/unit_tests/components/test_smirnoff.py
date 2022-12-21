@@ -43,7 +43,7 @@ from openff.interchange.exceptions import (
     UnassignedBondError,
     UnassignedTorsionError,
 )
-from openff.interchange.models import TopologyKey
+from openff.interchange.models import AngleKey, BondKey, ImproperTorsionKey
 from openff.interchange.tests import _BaseTest, get_test_file_path
 
 kcal_mol = unit.Unit("kilocalorie / mol")
@@ -141,7 +141,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
             topology=Molecule.from_smiles("O").to_topology(),
         )
 
-        top_key = TopologyKey(atom_indices=(0, 1))
+        top_key = BondKey(atom_indices=(0, 1))
         pot_key = bond_potentials.slot_map[top_key]
         assert pot_key.associated_handler == "Bonds"
         pot = bond_potentials.potentials[pot_key]
@@ -165,7 +165,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
             topology=Molecule.from_smiles("CCC").to_topology(),
         )
 
-        top_key = TopologyKey(atom_indices=(0, 1, 2))
+        top_key = AngleKey(atom_indices=(0, 1, 2))
         pot_key = angle_potentials.slot_map[top_key]
         assert pot_key.associated_handler == "Angles"
         pot = angle_potentials.potentials[pot_key]
@@ -191,13 +191,16 @@ class TestSMIRNOFFHandlers(_BaseTest):
         assert len(potential_handler.slot_map) == 3
 
         assert (
-            TopologyKey(atom_indices=(0, 1, 2, 3), mult=0) in potential_handler.slot_map
+            ImproperTorsionKey(atom_indices=(0, 1, 2, 3), mult=0)
+            in potential_handler.slot_map
         )
         assert (
-            TopologyKey(atom_indices=(0, 2, 3, 1), mult=0) in potential_handler.slot_map
+            ImproperTorsionKey(atom_indices=(0, 2, 3, 1), mult=0)
+            in potential_handler.slot_map
         )
         assert (
-            TopologyKey(atom_indices=(0, 3, 1, 2), mult=0) in potential_handler.slot_map
+            ImproperTorsionKey(atom_indices=(0, 3, 1, 2), mult=0)
+            in potential_handler.slot_map
         )
 
     def test_store_nonstandard_improper_idivf(self):
@@ -624,7 +627,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
             partial_bond_orders_from_molecules=[mol],
         )
 
-        bond_key = TopologyKey(atom_indices=sorted_indices, bond_order=1.55)
+        bond_key = BondKey(atom_indices=sorted_indices, bond_order=1.55)
         bond_potential = out["Bonds"].slot_map[bond_key]
         found_bond_k = out["Bonds"].potentials[bond_potential].parameters["k"]
         found_bond_length = out["Bonds"].potentials[bond_potential].parameters["length"]
@@ -893,7 +896,7 @@ class TestParameterInterpolation(_BaseTest):
 
         out = Interchange.from_smirnoff(forcefield, mol.to_topology())
 
-        top_key = TopologyKey(
+        top_key = BondKey(
             atom_indices=(1, 2),
             bond_order=top.get_bond_between(1, 2).bond.fractional_bond_order,
         )
@@ -922,13 +925,13 @@ class TestParameterInterpolation(_BaseTest):
 
         out = Interchange.from_smirnoff(forcefield, top)
 
-        bond1_top_key = TopologyKey(
+        bond1_top_key = BondKey(
             atom_indices=(2, 3),
             bond_order=top.get_bond_between(2, 3).bond.fractional_bond_order,
         )
         bond1_pot_key = out["Bonds"].slot_map[bond1_top_key]
 
-        bond2_top_key = TopologyKey(
+        bond2_top_key = BondKey(
             atom_indices=(0, 4),
             bond_order=top.get_bond_between(0, 4).bond.fractional_bond_order,
         )

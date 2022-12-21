@@ -265,6 +265,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
                 atom_indices=key,
                 bond_order=fractional_bond_order,
             )
+
             potential_key = PotentialKey(
                 id=val.parameter_type.smirks,
                 associated_handler=parameter_handler_name,
@@ -458,7 +459,7 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
             bonds = None
 
         for key, match in constraint_matches.items():
-            topology_key = TopologyKey(atom_indices=key)
+            topology_key = BondKey(atom_indices=key)
             smirks = match.parameter_type.smirks
             distance = match.parameter_type.distance
             if distance is not None:
