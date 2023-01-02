@@ -1,4 +1,6 @@
 from openff.interchange.models import (
+    BondKey,
+    ImproperTorsionKey,
     PotentialKey,
     ProperTorsionKey,
     TopologyKey,
@@ -68,6 +70,12 @@ def test_virtualsitekey_hash_uniqueness():
     assert len({hash(k) for k in keys}) == len(keys)
 
 
+def test_central_atom_improper():
+    key = ImproperTorsionKey(id="foo", atom_indices=(2, 0, 1, 3))
+
+    assert key.get_central_atom_index() == 0
+
+
 def test_reprs():
 
     topology_key = TopologyKey(atom_indices=(10,))
@@ -76,9 +84,19 @@ def test_reprs():
     assert "bond order" not in repr(topology_key)
     assert "mult" not in repr(topology_key)
 
-    torsion_key = ProperTorsionKey(atom_indices=(0, 1), mult=2, bond_order=1.111)
+    bond_key = BondKey(atom_indices=(3, 4))
 
-    assert "atom indices (0, 1)" in repr(torsion_key)
+    assert "atom indices (3, 4)" in repr(bond_key)
+    assert "bond order" not in repr(bond_key)
+    assert "mult" not in repr(bond_key)
+
+    torsion_key = ProperTorsionKey(
+        atom_indices=(0, 1, 10, 11),
+        mult=2,
+        bond_order=1.111,
+    )
+
+    assert "atom indices (0, 1, 10, 11)" in repr(torsion_key)
     assert "mult 2" in repr(torsion_key)
     assert "bond order 1.111" in repr(torsion_key)
 

@@ -259,7 +259,7 @@ def _convert_periodic_torsion_force(force):
 
     from openff.interchange.components.potentials import Potential
     from openff.interchange.components.smirnoff import SMIRNOFFProperTorsionHandler
-    from openff.interchange.models import PotentialKey, TopologyKey
+    from openff.interchange.models import PotentialKey, ProperTorsionKey
 
     proper_torsion_handler = SMIRNOFFProperTorsionHandler()
 
@@ -268,7 +268,8 @@ def _convert_periodic_torsion_force(force):
     for idx in range(n_parametrized_torsions):
         atom1, atom2, atom3, atom4, per, phase, k = force.getTorsionParameters(idx)
         # TODO: Process layered torsions
-        top_key = TopologyKey(atom_indices=(atom1, atom2, atom3, atom4), mult=0)
+        # TODO: Check if this torsion is an improper
+        top_key = ProperTorsionKey(atom_indices=(atom1, atom2, atom3, atom4), mult=0)
         while top_key in proper_torsion_handler.slot_map:
             top_key.mult: int = top_key.mult + 1
 
