@@ -15,7 +15,7 @@ class _VirtualSite(DefaultModel, abc.ABC):
     distance: FloatQuantity["nanometer"]
     orientations: Tuple[int, ...]
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def local_frame_weights(self) -> Tuple[List[float], ...]:
         raise NotImplementedError
 

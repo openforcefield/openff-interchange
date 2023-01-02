@@ -10,7 +10,14 @@ from openff.interchange.exceptions import (
     UnsupportedBoxError,
     UnsupportedExportError,
 )
-from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.models import (
+    AngleKey,
+    BondKey,
+    ImproperTorsionKey,
+    PotentialKey,
+    ProperTorsionKey,
+    TopologyKey,
+)
 
 if TYPE_CHECKING:
 
@@ -92,8 +99,9 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             angle_type_map[pot_key] = angle_type
             structure.angle_types.append(angle_type)
 
-        for top_key, pot_key in angle_handler.slot_map.items():
-            idx_1, idx_2, idx_3 = top_key.atom_indices
+        for angle_key, pot_key in angle_handler.slot_map.items():
+
+            idx_1, idx_2, idx_3 = angle_key.atom_indices
             angle_type = angle_type_map[pot_key]
             structure.angles.append(
                 pmd.Angle(
@@ -133,8 +141,9 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             proper_type_map[pot_key] = proper_type
             structure.dihedral_types.append(proper_type)
 
-        for top_key, pot_key in proper_torsion_handler.slot_map.items():
-            idx_1, idx_2, idx_3, idx_4 = top_key.atom_indices
+        for proper_key, pot_key in proper_torsion_handler.slot_map.items():
+
+            idx_1, idx_2, idx_3, idx_4 = proper_key.atom_indices
             dihedral_type = proper_type_map[pot_key]
             structure.dihedrals.append(
                 pmd.Dihedral(
@@ -207,8 +216,8 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
         )
 
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
-        top_key = TopologyKey(atom_indices=(pmd_idx,))
-        smirks = vdw_handler.slot_map[top_key]
+        atom_key = TopologyKey(atom_indices=(pmd_idx,))
+        smirks = vdw_handler.slot_map[atom_key]
         potential = vdw_handler.potentials[smirks]
         element_symbol = atom.symbol
         sigma, epsilon = _lj_params_from_potential(potential)
@@ -232,8 +241,8 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
 
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         if has_electrostatics:
-            top_key = TopologyKey(atom_indices=(pmd_idx,))
-            partial_charge = charges[top_key]
+            charge_key = TopologyKey(atom_indices=(pmd_idx,))
+            partial_charge = charges[charge_key]
             unitless_ = partial_charge.to(unit.elementary_charge).magnitude
             pmd_atom.charge = float(unitless_)
             pmd_atom.atom_type.charge = float(unitless_)
@@ -334,7 +343,7 @@ def _from_parmed(cls, structure) -> "Interchange":
         atom2 = bond.atom2
         k = bond.type.k * kcal_mol_a2
         length = bond.type.req * unit.angstrom
-        top_key = TopologyKey(atom_indices=(atom1.idx, atom2.idx))
+        top_key = BondKey(atom_indices=(atom1.idx, atom2.idx))
         pot_key = PotentialKey(id=f"{atom1.idx}-{atom2.idx}")
         pot = Potential(parameters={"k": k * 2, "length": length})
 
@@ -353,7 +362,7 @@ def _from_parmed(cls, structure) -> "Interchange":
         atom3 = angle.atom3
         k = angle.type.k * kcal_mol_rad2
         theta = angle.type.theteq * unit.degree
-        top_key = TopologyKey(atom_indices=(atom1.idx, atom2.idx, atom3.idx))
+        top_key = AngleKey(atom_indices=(atom1.idx, atom2.idx, atom3.idx))
         pot_key = PotentialKey(id=f"{atom1.idx}-{atom2.idx}-{atom3.idx}")
         pot = Potential(parameters={"k": k * 2, "angle": theta})
 
@@ -442,7 +451,7 @@ def _process_single_dihedral(
         # SMIRNOFF stores the central atom _second_
         # https://parmed.github.io/ParmEd/html/topobj/parmed.topologyobjects.Dihedral.html#parmed-topologyobjects-dihedral
         # https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
-        top_key = TopologyKey(
+        improper_key = ImproperTorsionKey(
             atom_indices=(atom1.idx, atom2.idx, atom2.idx, atom4.idx),
             mult=mult,
         )
@@ -457,10 +466,10 @@ def _process_single_dihedral(
                 "This dihedral already exists, indices are probably messed up.",
             )
 
-        handler.slot_map.update({top_key: pot_key})
+        handler.slot_map.update({improper_key: pot_key})
         handler.potentials.update({pot_key: pot})
     else:
-        top_key = TopologyKey(
+        proper_key = ProperTorsionKey(
             atom_indices=(atom1.idx, atom2.idx, atom3.idx, atom4.idx),
             mult=1,
         )
@@ -471,8 +480,8 @@ def _process_single_dihedral(
         pot = Potential(parameters={"k": k, "periodicity": periodicity, "phase": phase})
 
         while pot_key in handler.potentials:
-            pot_key.mult += 1  # type: ignore[operator]
-            top_key.mult += 1  # type: ignore[operator]
+            pot_key.mult += 1  # type: ignore
+            proper_key.mult += 1  # type: ignore
 
-        handler.slot_map.update({top_key: pot_key})
+        handler.slot_map.update({proper_key: pot_key})
         handler.potentials.update({pot_key: pot})

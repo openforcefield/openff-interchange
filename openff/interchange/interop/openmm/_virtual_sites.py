@@ -30,7 +30,7 @@ def _create_openmm_virtual_site(
 ) -> openmm.LocalCoordinatesSite:
 
     # It is assumed that the first "orientation" atom is the "parent" atom.
-    originwt, xdir, ydir = virtual_site.local_frame_weights  # type: ignore[misc]
+    originwt, xdir, ydir = virtual_site.local_frame_weights
     pos = virtual_site.local_frame_positions
 
     # virtual_site.orientations is a list of the _openff_ indices, which is more or less
@@ -50,7 +50,7 @@ def _create_openmm_virtual_site(
         originwt,
         xdir,
         ydir,
-        to_openmm(pos),  # type: ignore[has-type]
+        to_openmm(pos),
     )
 
 

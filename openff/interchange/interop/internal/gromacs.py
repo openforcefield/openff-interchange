@@ -26,9 +26,10 @@ from openff.interchange.interop._virtual_sites import (
     _get_virtual_site_positions,
     _virtual_site_parent_molecule_mapping,
 )
-from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
+from openff.interchange.models import BondKey, PotentialKey, TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
     from openff.units.unit import Quantity
 
     from openff.interchange import Interchange
@@ -505,13 +506,13 @@ def _write_atomtypes_lj(
     top_file.write("[ atomtypes ]\n")
     top_file.write(";type, bondingtype, mass, charge, ptype, sigma, epsilon\n")
 
-    lj_parameters = openff_sys["vdW"].get_system_parameters()
+    lj_parameters: "ArrayLike" = openff_sys["vdW"].get_system_parameters()
 
     for atom_idx, atom_type in typemap.items():
         atom = openff_sys.topology.atom(atom_idx)
         mass = atom.mass.m
         atomic_number = atom.atomic_number
-        sigma, epsilon = lj_parameters[atom_idx]
+        sigma, epsilon = lj_parameters[atom_idx]  # type: ignore
         # TODO: Sometimes a "bondingtype" can sneak in to as the second column. This
         #       seems to be used commonly in how OPLS groups atom types for valence
         #       terms, and InterMol attempts to parse it as such, but the GROMACS
@@ -698,7 +699,7 @@ def _write_atoms(
 
     if "vdW" in openff_sys.handlers:
         if _cached_parameters is None:
-            lj_parameters = openff_sys["vdW"].get_system_parameters()
+            lj_parameters: "ArrayLike" = openff_sys["vdW"].get_system_parameters()
         else:
             lj_parameters = _cached_parameters
     elif "Buckingham-6" in openff_sys.handlers:
@@ -710,8 +711,8 @@ def _write_atoms(
     for pair in pairs:
         molecule_indices = sorted(molecule.atom_index(atom) for atom in pair)
         topology_indices = sorted(openff_sys.topology.atom_index(atom) for atom in pair)
-        sigma1, epsilon1 = lj_parameters[topology_indices[0]]
-        sigma2, epsilon2 = lj_parameters[topology_indices[1]]
+        sigma1, epsilon1 = lj_parameters[topology_indices[0]]  # type: ignore
+        sigma2, epsilon2 = lj_parameters[topology_indices[1]]  # type: ignore
         epsilon_mix = (epsilon1 * epsilon2) ** 0.5
         if mixing_rule == "lorentz-berthelot":
             sigma_mix = (sigma1 + sigma2) * 0.5
@@ -895,7 +896,7 @@ def _write_virtual_sites(
 
             func = 1
 
-            bond1_key = TopologyKey(atom_indices=(atom1, atom2))
+            bond1_key = BondKey(atom_indices=(atom1, atom2))
             bond1_length = (
                 openff_sys["Bonds"]
                 .potentials[openff_sys["Bonds"].slot_map[bond1_key]]
@@ -903,7 +904,7 @@ def _write_virtual_sites(
                 .m_as(unit.nanometer)
             )
 
-            bond2_key = TopologyKey(atom_indices=(atom1, atom3))
+            bond2_key = BondKey(atom_indices=(atom1, atom3))
             bond2_length = (
                 openff_sys["Bonds"]
                 .potentials[openff_sys["Bonds"].slot_map[bond2_key]]

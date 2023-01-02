@@ -185,7 +185,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                 key: TopologyKey,
             ) -> None:
                 if key in handler.slot_map:
-                    key.mult += 1  # type: ignore[operator]
+                    key.mult += 1  # type: ignore[attr-defined]
                     ensure_unique_key(handler, key)
 
             ensure_unique_key(handler, topology_key)
@@ -194,7 +194,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                 id=(
                     f"{atomtypes[dihedral_force.atom1 - 1]}-{atomtypes[dihedral_force.atom2 - 1]}-"
                     f"{atomtypes[dihedral_force.atom3 - 1]}-{atomtypes[dihedral_force.atom4 - 1]}-"
-                    f"{topology_key.mult}"
+                    f"{topology_key.mult}"  # type: ignore[attr-defined]
                 ),
                 associated_handler="ImproperTorsions"
                 if dihedral_force.improper
