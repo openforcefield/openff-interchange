@@ -7,7 +7,7 @@ from openff.units import unit
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError
-from openff.interchange.models import TopologyKey
+from openff.interchange.models import AngleKey, BondKey
 
 
 def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
@@ -281,7 +281,7 @@ def _write_atoms(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
             #       "molecule index" somewhere?
             molecule_index = 0
 
-        top_key = TopologyKey(atom_indices=(atom_index,))
+        top_key = AngleKey(atom_indices=(atom_index,))
         pot_key = vdw_hander.slot_map[top_key]
         atom_type = atom_type_map_inv[pot_key]
 
@@ -315,11 +315,11 @@ def _write_bonds(lmp_file: IO, openff_sys: Interchange):
             openff_sys.topology.atom_index(bond.atom1),
             openff_sys.topology.atom_index(bond.atom2),
         )
-        top_key = TopologyKey(atom_indices=indices)
+        top_key = BondKey(atom_indices=indices)
         if top_key in bond_handler.slot_map:
             pot_key = bond_handler.slot_map[top_key]
         else:
-            top_key = TopologyKey(atom_indices=indices[::-1])
+            top_key = BondKey(atom_indices=indices[::-1])
             pot_key = bond_handler.slot_map[top_key]
 
         bond_type = bond_type_map_inv[pot_key]
@@ -346,7 +346,7 @@ def _write_angles(lmp_file: IO, openff_sys: Interchange):
     for angle_idx, angle in enumerate(openff_sys.topology.angles):
         # These are "topology indices"
         indices = tuple(openff_sys.topology.atom_index(a) for a in angle)
-        top_key = TopologyKey(atom_indices=indices)
+        top_key = AngleKey(atom_indices=indices)
         pot_key = angle_handler.slot_map[top_key]
         angle_type = angle_type_map_inv[pot_key]
 
