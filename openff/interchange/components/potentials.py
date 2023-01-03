@@ -140,7 +140,10 @@ class PotentialHandler(DefaultModel):
             f"associated with atoms {atom_indices}",
         )
 
-    def get_force_field_parameters(self, use_jax: bool = False) -> "ArrayLike":
+    def get_force_field_parameters(
+        self,
+        use_jax: bool = False,
+    ) -> Union["ArrayLike", "Array"]:
         """Return a flattened representation of the force field parameters."""
         # TODO: Handle WrappedPotential
         if any(
@@ -183,7 +186,11 @@ class PotentialHandler(DefaultModel):
                     modified_parameter * parameter_units
                 )
 
-    def get_system_parameters(self, p=None, use_jax: bool = False) -> numpy.ndarray:
+    def get_system_parameters(
+        self,
+        p=None,
+        use_jax: bool = False,
+    ) -> Union["ArrayLike", "Array"]:
         """
         Return a flattened representation of system parameters.
 
@@ -221,7 +228,11 @@ class PotentialHandler(DefaultModel):
 
         return mapping
 
-    def parametrize(self, p=None, use_jax: bool = True) -> numpy.ndarray:
+    def parametrize(
+        self,
+        p=None,
+        use_jax: bool = True,
+    ) -> Union["ArrayLike", "Array"]:
         """Return an array of system parameters, given an array of force field parameters."""
         if p is None:
             p = self.get_force_field_parameters(use_jax=use_jax)
@@ -238,7 +249,7 @@ class PotentialHandler(DefaultModel):
         )
 
     @requires_package("jax")
-    def get_param_matrix(self) -> "Array":
+    def get_param_matrix(self) -> Union["Array", "ArrayLike"]:
         """Get a matrix representing the mapping between force field and system parameters."""
         from functools import partial
 

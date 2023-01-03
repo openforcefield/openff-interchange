@@ -1,7 +1,7 @@
 """Models and utilities for processing Foyer data."""
 from abc import abstractmethod
 from copy import copy
-from typing import TYPE_CHECKING, Dict, Type
+from typing import TYPE_CHECKING, Dict, Optional, Type
 
 from openff.models.types import FloatQuantity
 from openff.units import unit
@@ -21,7 +21,7 @@ POTENTIAL_KEY_SEPARATOR = "-"
 def _copy_params(
     params: Dict[str, float],
     *drop_keys: str,
-    param_units: Dict = None,
+    param_units: Optional[Dict] = None,
 ) -> Dict:
     """Copy parameters from a dictionary."""
     params_copy = copy(params)

@@ -9,7 +9,7 @@ dependencies:
   - pydantic <2.0.0a0
   # OpenFF stack
   - openff-toolkit >=0.11.3
-  - openff-models
+  - openff-models >=0.0.4
   # Testing
   - pytest
   - pytest-cov

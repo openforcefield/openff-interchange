@@ -158,7 +158,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
         if self.slot_map:
             # TODO: Should the slot_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
-            self.slot_map = dict()
+            self.slot_map: Dict[TopologyKey, PotentialKey] = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             topology_key = TopologyKey(atom_indices=key)
@@ -247,7 +247,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         if self.slot_map:
             # TODO: Should the slot_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
-            self.slot_map = dict()
+            self.slot_map: Dict[BondKey, PotentialKey] = dict()  # type: ignore[assignment]
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             param = val.parameter_type
@@ -284,7 +284,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
     def store_potentials(self, parameter_handler: "BondHandler") -> None:
         """
-        Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
+        Populate self.potentials with key-val pairs of [BondKey, PotentialKey].
 
         """
         if self.potentials:
@@ -523,7 +523,7 @@ class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
 
     def store_potentials(self, parameter_handler: "AngleHandler") -> None:
         """
-        Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
+        Populate self.potentials with key-val pairs of [AngleKey, PotentialKey].
 
         """
         for potential_key in self.slot_map.values():
@@ -568,7 +568,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
 
         """
         if self.slot_map:
-            self.slot_map = dict()
+            self.slot_map: Dict[ProperTorsionKey, PotentialKey] = dict()  # type: ignore[assignment]
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             param = val.parameter_type
@@ -607,7 +607,7 @@ class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
 
     def store_potentials(self, parameter_handler: "ProperTorsionHandler") -> None:
         """
-        Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
+        Populate self.potentials with key-val pairs of [ProperTorsionKey, PotentialKey].
 
         """
         for topology_key, potential_key in self.slot_map.items():
@@ -758,7 +758,7 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
 
     def store_potentials(self, parameter_handler: "ImproperTorsionHandler") -> None:
         """
-        Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
+        Populate self.potentials with key-val pairs of [ImproperTorsionKey, PotentialKey].
 
         """
         _default_idivf = parameter_handler.default_idivf
@@ -1180,7 +1180,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 # TODO: Better way of dedupliciating this case (charge increments from multiple different
                 #       virtual sites are applied to the same atom)
                 while topology_key in self.slot_map:
-                    topology_key.mult += 1000  # type: ignore[operator]
+                    topology_key.mult += 1000  # type: ignore[attr-defined]
 
                 potential_key = PotentialKey(
                     id=virtual_site_type.smirks,

@@ -143,7 +143,7 @@ class EnergyReport(DefaultModel):
 
             if key in ("Bond", "Angle", "Torsion"):
 
-                energy_differences[key]: FloatQuantity = self[key] - other[key]
+                energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
 
                 continue
 
@@ -157,8 +157,8 @@ class EnergyReport(DefaultModel):
                 ) is not None:
 
                     for key in ("vdW", "Electrostatics"):
-                        energy_differences[key]: FloatQuantity = self[key] - other[key]
-                        energy_differences[key]: FloatQuantity = self[key] - other[key]
+                        energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
+                        energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
 
                         nonbondeds_processed = True
 
