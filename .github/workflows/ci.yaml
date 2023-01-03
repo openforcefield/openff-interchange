@@ -71,11 +71,6 @@ jobs:
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
-    - name: Run mypy
-      continue-on-error: true
-      run: |
-        mypy --show-error-codes --namespace-packages -p "openff.interchange"
-
     - name: Run tests
       if: always()
       run: |
@@ -107,6 +102,14 @@ jobs:
           --n-procs           2
 
         python devtools/scripts/molecule-regressions.py
+
+    - name: Run mypy
+      continue-on-error: true
+      run: |
+        # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
+        # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
+        micromamba uninstall jax -c conda-forge -yq
+        mypy --show-error-codes --namespace-packages -p "openff.interchange"
 
     - name: Codecov
       uses: codecov/codecov-action@v3
