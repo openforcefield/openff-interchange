@@ -827,7 +827,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
 
     method: Literal["cutoff", "pme", "no-cutoff"] = Field("cutoff")
 
-    mixing_rule: Literal["lorentz-berthelot"] = Field(
+    mixing_rule: str = Field(
         "lorentz-berthelot",
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )

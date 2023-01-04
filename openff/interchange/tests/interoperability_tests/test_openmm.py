@@ -121,22 +121,86 @@ class TestOpenMM(_BaseTest):
         else:
             raise Exception
 
-    @pytest.mark.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
-    def test_unsupported_mixing_rule(self):
-        molecules = [create_ethanol()]
-        pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-
+    def test_combine_nonbonded_forces_nondefault_mixing_rule(self):
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         openff_sys = Interchange.from_smirnoff(
             force_field=forcefield,
-            topology=topology,
+            topology=[create_ethanol()],
+        )
+
+        openff_sys["vdW"].mixing_rule = "foo"
+
+        with pytest.raises(UnsupportedExportError, match="Unsupported mixing rule foo"):
+            openff_sys.to_openmm(combine_nonbonded_forces=True)
+
+    def test_geometric_mixing_rule(self):
+        # Molecule.from_smiles("ClCCBr").to_smiles(mapped=True)
+        molecule = Molecule.from_mapped_smiles(
+            "[H:5][C:2]([H:6])([C:3]([H:7])([H:8])[Br:4])[Cl:1]",
+        )
+
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+
+        # The toolkit doesn't allow
+        # >>> forcefield["vdW"].combining_rules = "Geometric"
+        # so we have to do this instead set it after parameterization.
+        # https://github.com/openforcefield/openff-toolkit/blob/0.11.4/openff/toolkit/typing/engines/smirnoff/parameters.py#L2844-L2846
+
+        openff_sys = Interchange.from_smirnoff(
+            force_field=forcefield,
+            topology=[molecule],
         )
 
         openff_sys["vdW"].mixing_rule = "geometric"
 
-        with pytest.raises(UnsupportedExportError, match="default NonbondedForce"):
-            openff_sys.to_openmm(combine_nonbonded_forces=True)
+        system = openff_sys.to_openmm(combine_nonbonded_forces=False)
+
+        for force in system.getForces():
+            if isinstance(force, openmm.CustomNonbondedForce):
+                vdw_force = force
+                break
+        else:
+            raise RuntimeError("Could not find custom non-bonded force.")
+
+        for force in system.getForces():
+            if isinstance(force, openmm.CustomBondForce):
+                if "epsilon" in force.getEnergyFunction():
+                    vdw_14_force = force
+                    break
+        else:
+            raise RuntimeError("Could not find 1-4 vdW force.")
+
+        cl_parameters = vdw_force.getParticleParameters(0)
+        br_parameters = vdw_force.getParticleParameters(3)
+
+        assert cl_parameters[0] == forcefield["vdW"].get_parameter(
+            {"smirks": "[#17:1]"},
+        )[0].sigma.m_as(unit.nanometer)
+        assert cl_parameters[1] == forcefield["vdW"].get_parameter(
+            {"smirks": "[#17:1]"},
+        )[0].epsilon.m_as(unit.kilojoule_per_mole)
+
+        assert br_parameters[0] == forcefield["vdW"].get_parameter(
+            {"smirks": "[#35:1]"},
+        )[0].sigma.m_as(unit.nanometer)
+        assert br_parameters[1] == forcefield["vdW"].get_parameter(
+            {"smirks": "[#35:1]"},
+        )[0].epsilon.m_as(unit.kilojoule_per_mole)
+
+        for index in range(vdw_14_force.getNumBonds()):
+
+            particle1, particle2, parameters = vdw_14_force.getBondParameters(index)
+
+            if particle1 == 0 and particle2 == 3:
+                expected_sigma = numpy.sqrt(cl_parameters[0] * br_parameters[0])
+                expected_epsilon = forcefield["vdW"].scale14 * numpy.sqrt(
+                    cl_parameters[1] * br_parameters[1],
+                )
+                assert parameters[0] == expected_sigma
+                assert parameters[1] == expected_epsilon
+                break
+            else:
+                raise Exception("Did not find 1-4 Cl-Br interaction.")
 
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
     @pytest.mark.slow()

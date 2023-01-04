@@ -44,7 +44,7 @@ class MDConfig(DefaultModel):
         None,
         description="The distance at which pairwise interactions are truncated",
     )
-    mixing_rule: Literal["lorentz-berthelot", "geometric"] = Field(
+    mixing_rule: str = Field(
         None,
         description="The mixing rule (combination rule, combining rule) used in computing pairwise vdW interactions",
     )

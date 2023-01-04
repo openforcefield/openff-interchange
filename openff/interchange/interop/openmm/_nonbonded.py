@@ -2,7 +2,7 @@
 Helper functions for producing `openmm.Force` objects for non-bonded terms.
 """
 from collections import defaultdict
-from typing import TYPE_CHECKING, DefaultDict, Dict, List, Union
+from typing import TYPE_CHECKING, DefaultDict, Dict, List, Tuple, Union
 
 import openmm
 from openff.units import unit as off_unit
@@ -25,7 +25,12 @@ if TYPE_CHECKING:
     from openff.interchange import Interchange
 
 
-_LORENTZ_BERTHELOT = "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); "
+# TODO: Currently, these are not used since the openmm.CustomNonbondedForce does not handle 1-4 interactions and
+#       instead they are handleded by an openmm.CustomBondForce in which the scaled parameters are manually computed.
+_MIXING_RULES: Dict[str, str] = {
+    "lorentz-berthelot": "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); ",
+    "geometric": "sigma=sqrt(sigma1*sigma2); epsilon=sqrt(epsilon1*epsilon2) ",
+}
 
 
 def _process_nonbonded_forces(
@@ -258,13 +263,21 @@ def _prepare_input_data(openff_sys):
         else:
             electrostatics_method = electrostatics_handler.periodic_potential
 
+    if vdw_handler is not None:
+        if vdw_handler.mixing_rule not in _MIXING_RULES:
+            raise UnsupportedExportError(
+                f"Unsupported mixing rule {vdw_handler.mixing_rule}",
+            )
+
     return {
         "vdw_handler": vdw_handler,
         "vdw_cutoff": vdw_cutoff,
         "vdw_method": vdw_method,
         "vdw_expression": vdw_expression,
         "mixing_rule": mixing_rule,
-        "mixing_rule_expression": _LORENTZ_BERTHELOT,
+        "mixing_rule_expression": _MIXING_RULES[vdw_handler.mixing_rule]
+        if vdw_handler is not None
+        else None,
         "electrostatics_handler": electrostatics_handler,
         "electrostatics_method": electrostatics_method,
         "periodic": openff_sys.box is None,
@@ -282,6 +295,7 @@ def _create_single_nonbonded_force(
     if data["mixing_rule"] not in ("lorentz-berthelot", None):
         raise UnsupportedExportError(
             "OpenMM's default NonbondedForce only supports Lorentz-Berthelot mixing rules."
+            f"Found {data['mixing_rule']}."
             "Try setting `combine_nonbonded_forces=False`.",
         )
 
@@ -572,6 +586,7 @@ def _create_multiple_nonbonded_forces(
     molecule_virtual_site_map: Dict,
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int],
 ):
+    # See note at _MIXING_RULES
     vdw_force = openmm.CustomNonbondedForce(
         data["vdw_expression"] + "; " + data["mixing_rule_expression"],
     )
@@ -731,8 +746,22 @@ def _create_multiple_nonbonded_forces(
         lj14Scale=vdw_14,
     )
 
+    def _apply_mixing_rule(
+        mixing_rule: str,
+        sigma1: float,
+        sigma2: float,
+        epsilon1: float,
+        epsilon2: float,
+    ) -> Tuple[float, float]:
+        if mixing_rule == "lorentz-berthelot":
+            return (sigma1 + sigma2) * 0.5, (epsilon1 * epsilon2) ** 0.5
+        if mixing_rule == "geometric":
+            return (sigma1 * sigma2) ** 0.5, (epsilon1 * epsilon2) ** 0.5
+
+        raise ValueError(f"Unsupported mixing rule {mixing_rule}")
+
     for i in range(electrostatics_force.getNumExceptions()):
-        (p1, p2, q, sig, eps) = electrostatics_force.getExceptionParameters(i)
+        (p1, p2, q, _, eps) = electrostatics_force.getExceptionParameters(i)
 
         # If the interactions are both zero, assume this is a 1-2 or 1-3 interaction
         if q._value == 0 and eps._value == 0:
@@ -745,9 +774,15 @@ def _create_multiple_nonbonded_forces(
             q1, _, _ = electrostatics_force.getParticleParameters(p1)
             q2, _, _ = electrostatics_force.getParticleParameters(p2)
 
-            # manually compute and set the 1-4 interactions
-            sig_14 = (sig1 + sig2) * 0.5
-            eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
+            sig_14, eps_14 = _apply_mixing_rule(
+                data["mixing_rule"],
+                sig1,
+                sig2,
+                eps1,
+                eps2,
+            )
+            eps_14 *= vdw_14
+
             qq = q1 * q2 * coul_14
 
             vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
@@ -761,7 +796,7 @@ def _create_multiple_nonbonded_forces(
 def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
     if not hasattr(force, "setUseSwitchingFunction"):
         raise CannotSetSwitchingFunctionError(
-            "Attempting to set switching funcntion on an OpenMM force that does nont support it."
+            "Attempting to set switching function on an OpenMM force that does nont support it."
             f"Passed force of type {type(force)}.",
         )
     if getattr(vdw_handler, "switch_width", None) is None:
