@@ -8,7 +8,7 @@ dependencies:
   - pip
   - pydantic <2.0.0a0
   # OpenFF stack
-  - openff-toolkit-base >=0.11.3
+  - openff-toolkit-base >=0.12
   - openmm
   - rdkit
   - ambertools
@@ -17,5 +17,3 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-xdist
-  - pip:
-    - git+https://github.com/openforcefield/openff-toolkit@main
