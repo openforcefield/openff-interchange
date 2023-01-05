@@ -129,7 +129,7 @@ class Interchange(DefaultModel):
     .. warning :: This API is experimental and subject to change.
     """
 
-    handlers: Dict[str, PotentialHandler] = Field(dict())
+    blobs: Dict[str, PotentialHandler] = Field(dict())
     topology: Topology = Field(None)
     mdconfig: MDConfig = Field(None)
     box: ArrayQuantity["nanometer"] = Field(None)

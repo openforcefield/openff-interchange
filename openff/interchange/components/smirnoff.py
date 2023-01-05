@@ -443,9 +443,13 @@ class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
         if self.slot_map:
             self.slot_map = dict()
 
-        constraint_handler = [
-            p for p in parameter_handlers if type(p) == ConstraintHandler
-        ][0]
+        try:
+            constraint_handler = [
+                p for p in parameter_handlers if type(p) == ConstraintHandler
+            ][0]
+        except IndexError:
+            return
+
         constraint_matches = constraint_handler.find_matches(topology)
 
         if any([type(p) == BondHandler for p in parameter_handlers]):
