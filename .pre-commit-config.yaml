@@ -43,7 +43,7 @@ repos:
     exclude: openff/interchange/_version.py|setup.py
     args: [--py38-plus]
 - repo: https://github.com/pycqa/pydocstyle
-  rev: 6.1.1
+  rev: 6.2.3
   hooks:
   - id: pydocstyle
     files: ^openff/interchange
@@ -54,12 +54,12 @@ repos:
     - id: interrogate
       args: [openff/interchange/]
 - repo: https://github.com/asottile/blacken-docs
-  rev: v1.12.1
+  rev: 1.13.0
   hooks:
   - id: blacken-docs
     files: ^docs/
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.6.0
+  rev: 1.6.1
   hooks:
     - id: nbqa-pyupgrade
       files: ^examples
