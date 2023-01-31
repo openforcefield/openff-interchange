@@ -12,5 +12,12 @@
     "deepdiff_path": null,
     "old_value": -1.0,
     "new_value": 0.8
+  },
+  {
+    "type": "value-changed",
+    "openmm_path": "openmmVersion",
+    "deepdiff_path": null,
+    "old_value": 7.7,
+    "new_value": 8.0
   }
 ]
