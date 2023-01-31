@@ -73,7 +73,7 @@ class MDConfig(DefaultModel):
             periodic=interchange.box is not None,
             constraints=_infer_constraints(interchange),
         )
-        if "vdW" in interchange.handlers:
+        if "vdW" in interchange.collections:
             vdw_handler = interchange["vdW"]
             mdconfig.vdw_cutoff = vdw_handler.cutoff
             mdconfig.vdw_method = vdw_handler.method
@@ -90,7 +90,7 @@ class MDConfig(DefaultModel):
             else:
                 mdconfig.switching_function = False
 
-        if "Electrostatics" in interchange.handlers:
+        if "Electrostatics" in interchange.collections:
             mdconfig.coul_method = interchange["Electrostatics"].periodic_potential
             mdconfig.coul_cutoff = interchange["Electrostatics"].cutoff
 
@@ -252,9 +252,9 @@ class MDConfig(DefaultModel):
 
 
 def _infer_constraints(interchange: "Interchange") -> str:
-    if "Constraints" not in interchange.handlers:
+    if "Constraints" not in interchange.collections:
         return "none"
-    elif "Bonds" not in interchange.handlers:
+    elif "Bonds" not in interchange.collections:
         return "none"
     else:
         num_constraints = len(interchange["Constraints"].slot_map)

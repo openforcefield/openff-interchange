@@ -125,7 +125,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         dihedral_potentials = dict()
         for key in ["ProperTorsions", "ImproperTorsions"]:
-            if key in interchange.handlers:
+            if key in interchange.collections:
                 dihedral_potentials.update(deepcopy(interchange[key].potentials))  # type: ignore
                 dihedral_potentials.update(deepcopy(interchange[key].potentials))  # type: ignore
 
@@ -199,7 +199,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         dihedrals_inc_hydrogen: List[int] = list()
         dihedrals_without_hydrogen: List[int] = list()
 
-        if "ProperTorsions" in interchange.handlers:
+        if "ProperTorsions" in interchange.collections:
             for dihedral, proper_key in interchange["ProperTorsions"].slot_map.items():
                 dihedral_type_index = potential_key_to_dihedral_type_mapping[proper_key]
 
@@ -256,7 +256,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
                 dihedrals_list.append(atom4_index * 3)
                 dihedrals_list.append(dihedral_type_index + 1)
 
-        if "ImproperTorsions" in interchange.handlers:
+        if "ImproperTorsions" in interchange.collections:
             for dihedral, improper_key in interchange["ImproperTorsions"].slot_map.items():  # type: ignore[assignment]
                 dihedral_type_index = potential_key_to_dihedral_type_mapping[
                     improper_key

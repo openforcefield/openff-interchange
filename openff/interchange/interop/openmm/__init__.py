@@ -111,17 +111,17 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
         for force in system.getForces():
             if isinstance(force, openmm.NonbondedForce):
                 vdw, coul = _convert_nonbonded_force(force)
-                openff_sys.handlers["vdW"] = vdw
-                openff_sys.handlers["Electrostatics"] = coul
+                openff_sys.collections["vdW"] = vdw
+                openff_sys.collections["Electrostatics"] = coul
             elif isinstance(force, openmm.HarmonicBondForce):
                 bond_handler = _convert_harmonic_bond_force(force)
-                openff_sys.handlers["Bonds"] = bond_handler
+                openff_sys.collections["Bonds"] = bond_handler
             elif isinstance(force, openmm.HarmonicAngleForce):
                 angle_handler = _convert_harmonic_angle_force(force)
-                openff_sys.handlers["Angles"] = angle_handler
+                openff_sys.collections["Angles"] = angle_handler
             elif isinstance(force, openmm.PeriodicTorsionForce):
                 proper_torsion_handler = _convert_periodic_torsion_force(force)
-                openff_sys.handlers["ProperTorsions"] = proper_torsion_handler
+                openff_sys.collections["ProperTorsions"] = proper_torsion_handler
             elif isinstance(force, openmm.CMMotionRemover):
                 pass
             else:

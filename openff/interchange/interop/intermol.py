@@ -219,12 +219,12 @@ def from_intermol_system(intermol_system: System) -> Interchange:
 
                 handler.potentials[potential_key] = potential
 
-    interchange.handlers["vdW"] = vdw_handler
-    interchange.handlers["Electrostatics"] = electrostatics_handler
-    interchange.handlers["Bonds"] = bond_handler
-    interchange.handlers["Angles"] = angle_handler
-    interchange.handlers["ProperTorsions"] = proper_handler
-    interchange.handlers["ImproperTorsions"] = improper_handler
+    interchange.collections["vdW"] = vdw_handler
+    interchange.collections["Electrostatics"] = electrostatics_handler
+    interchange.collections["Bonds"] = bond_handler
+    interchange.collections["Angles"] = angle_handler
+    interchange.collections["ProperTorsions"] = proper_handler
+    interchange.collections["ImproperTorsions"] = improper_handler
 
     return interchange
 

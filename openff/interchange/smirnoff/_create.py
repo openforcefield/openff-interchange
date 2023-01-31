@@ -35,6 +35,36 @@ def _create_interchange(
 
     interchange.box = box
 
+    _bonds(interchange, force_field, _topology, partial_bond_orders_from_molecules)
+    _constraints(interchange, force_field, _topology)
+    _angles(interchange, force_field, _topology)
+    _propers(interchange, force_field, _topology, partial_bond_orders_from_molecules)
+    _impropers(interchange, force_field, _topology)
+
+    _vdw(interchange, force_field, _topology)
+    _electrostatics(
+        interchange,
+        force_field,
+        _topology,
+        charge_from_molecules,
+        allow_nonintegral_charges,
+    )
+    _virtual_sites(interchange, force_field, _topology)
+
+    interchange.topology = _topology
+
+    return interchange
+
+
+def _bonds(
+    interchange: Interchange,
+    force_field: ForceField,
+    _topology: Topology,
+    partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
+):
+    if "Bonds" not in force_field.registered_parameter_handlers:
+        return
+
     if force_field["Bonds"].version == Version("0.3"):
         from openff.interchange.smirnoff._valence import _upconvert_bondhandler
 
@@ -50,6 +80,8 @@ def _create_interchange(
         },
     )
 
+
+def _constraints(interchange: Interchange, force_field: ForceField, topology: Topology):
     interchange.collections.update(
         {
             "Constraints": SMIRNOFFConstraintHandler._from_toolkit(
@@ -61,10 +93,15 @@ def _create_interchange(
                     ]
                     if handler is not None
                 ],
-                topology=_topology,
+                topology=topology,
             ),
         },
     )
+
+
+def _angles(interchange, force_field, _topology):
+    if "Angles" not in force_field.registered_parameter_handlers:
+        return
 
     interchange.collections.update(
         {
@@ -74,6 +111,16 @@ def _create_interchange(
             ),
         },
     )
+
+
+def _propers(
+    interchange,
+    force_field,
+    _topology,
+    partial_bond_orders_from_molecules=None,
+):
+    if "ProperTorsions" not in force_field.registered_parameter_handlers:
+        return
 
     interchange.collections.update(
         {
@@ -85,6 +132,11 @@ def _create_interchange(
         },
     )
 
+
+def _impropers(interchange, force_field, _topology):
+    if "ImproperTorsions" not in force_field.registered_parameter_handlers:
+        return
+
     interchange.collections.update(
         {
             "ImproperTorsions": SMIRNOFFImproperTorsionHandler._from_toolkit(
@@ -94,14 +146,30 @@ def _create_interchange(
         },
     )
 
+
+def _vdw(interchange: Interchange, force_field: ForceField, topology: Topology):
+    if "vdW" not in force_field.registered_parameter_handlers:
+        return
+
     interchange.collections.update(
         {
             "vdW": SMIRNOFFvdWHandler._from_toolkit(
                 parameter_handler=force_field["vdW"],
-                topology=_topology,
+                topology=topology,
             ),
         },
     )
+
+
+def _electrostatics(
+    interchange: Interchange,
+    force_field: ForceField,
+    topology: Topology,
+    charge_from_molecules: Optional[List[Molecule]] = None,
+    allow_nonintegral_charges: bool = False,
+):
+    if "Electrostatics" not in force_field.registered_parameter_handlers:
+        return
 
     interchange.collections.update(
         {
@@ -119,29 +187,35 @@ def _create_interchange(
                     ]
                     if handler is not None
                 ],
-                topology=_topology,
+                topology=topology,
                 charge_from_molecules=charge_from_molecules,
                 allow_nonintegral_charges=allow_nonintegral_charges,
             ),
         },
     )
 
-    if "VirtualSites" in force_field.registered_parameter_handlers:
-        virtual_site_handler = SMIRNOFFVirtualSiteHandler()
-        virtual_site_handler.exclusion_policy = force_field[
-            "VirtualSites"
-        ].exclusion_policy
-        virtual_site_handler.store_matches(
-            parameter_handler=force_field["VirtualSites"],
-            topology=_topology,
-        )
-        virtual_site_handler.store_potentials(
-            parameter_handler=force_field["VirtualSites"],
-            vdw_handler=interchange["vdW"],
-            electrostatics_handler=interchange["Electrostatics"],
-        )
-        interchange.collections.update({"VirtualSites": virtual_site_handler})
 
-    interchange.topology = _topology
+def _virtual_sites(
+    interchange: Interchange,
+    force_field: ForceField,
+    topology: Topology,
+):
+    if "VirtualSites" not in force_field.registered_parameter_handlers:
+        return
 
-    return interchange
+    virtual_site_handler = SMIRNOFFVirtualSiteHandler()
+
+    virtual_site_handler.exclusion_policy = force_field["VirtualSites"].exclusion_policy
+
+    virtual_site_handler.store_matches(
+        parameter_handler=force_field["VirtualSites"],
+        topology=topology,
+    )
+
+    virtual_site_handler.store_potentials(
+        parameter_handler=force_field["VirtualSites"],
+        vdw_handler=interchange["vdW"],
+        electrostatics_handler=interchange["Electrostatics"],
+    )
+
+    interchange.collections.update({"VirtualSites": virtual_site_handler})

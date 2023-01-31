@@ -62,10 +62,14 @@ def _compare_openmm_topologies(top1: app.Topology, top2: app.Topology):
     In lieu of first-class serializaiton in OpenMM (https://github.com/openmm/openmm/issues/1543),
     do some quick heuristics to roughly compare two OpenMM Topology objects.
     """
-    for method_name in ["getNumAtoms", "getNumBonds", "getNumChains", "getNumResidues"]:
+    for method_name in [
+        "getNumAtoms",
+        "getNumBonds",
+        "getNumChains",
+        "getNumResidues",
+        "getPeriodicBoxVectors",
+    ]:
         assert getattr(top1, method_name)() == getattr(top2, method_name)()
-
-    assert (top1.getPeriodicBoxVectors() == top2.getPeriodicBoxVectors()).all()
 
 
 class TestOpenMM(_BaseTest):

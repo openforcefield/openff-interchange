@@ -18,19 +18,19 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
         path = file_path
 
     n_atoms = openff_sys.topology.n_atoms
-    if "Bonds" in openff_sys.handlers:
+    if "Bonds" in openff_sys.collections:
         n_bonds = len(openff_sys["Bonds"].slot_map.keys())
     else:
         n_bonds = 0
-    if "Angles" in openff_sys.handlers:
+    if "Angles" in openff_sys.collections:
         n_angles = len(openff_sys["Angles"].slot_map.keys())
     else:
         n_angles = 0
-    if "ProperTorsions" in openff_sys.handlers:
+    if "ProperTorsions" in openff_sys.collections:
         n_propers = len(openff_sys["ProperTorsions"].slot_map.keys())
     else:
         n_propers = 0
-    if "ImproperTorsions" in openff_sys.handlers:
+    if "ImproperTorsions" in openff_sys.collections:
         n_impropers = len(openff_sys["ImproperTorsions"].slot_map.keys())
     else:
         n_impropers = 0

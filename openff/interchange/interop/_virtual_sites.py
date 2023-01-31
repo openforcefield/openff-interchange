@@ -18,7 +18,7 @@ def _virtual_site_parent_molecule_mapping(
 ) -> Dict[VirtualSiteKey, int]:
     mapping: Dict[VirtualSiteKey, int] = dict()
 
-    if "VirtualSites" not in interchange.handlers:
+    if "VirtualSites" not in interchange.collections:
         return mapping
 
     for virtual_site_key in interchange["VirtualSites"].slot_map:

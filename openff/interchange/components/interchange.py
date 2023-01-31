@@ -87,8 +87,11 @@ def interchange_dumps(v, *, default):
             "positions": QuantityEncoder().default(v["positions"]),
             "box": QuantityEncoder().default(v["box"]),
             "topology": TopologyEncoder().default(v["topology"]),
-            "handlers": {
-                "Bonds": json.dumps(_sanitize(v["handlers"]["Bonds"]), default=default),
+            "collections": {
+                "Bonds": json.dumps(
+                    _sanitize(v["collections"]["Bonds"]),
+                    default=default,
+                ),
             },
         },
         default=default,
@@ -102,7 +105,7 @@ def interchange_loader(data: str) -> dict:
         "velocities": None,
         "box": None,
         "topology": None,
-        "handlers": {},
+        "collections": {},
     }
     for key, val in json.loads(data).items():
         if val is None:
@@ -196,7 +199,8 @@ class Interchange(DefaultModel):
 
         if unsupported:
             raise SMIRNOFFHandlersNotImplementedError(
-                "SMIRNOFF handlers not implemented here:" + "\n".join(unsupported),
+                "SMIRNOFF section(s) not implemented in Interchange:"
+                "\n".join(unsupported),
             )
 
     def _infer_positions(self) -> Optional[ArrayQuantity]:
@@ -638,7 +642,7 @@ class Interchange(DefaultModel):
         ...
 
     def __getitem__(self, item: str):  # noqa
-        """Syntax sugar for looking up potential handlers or other components."""
+        """Syntax sugar for looking up collections or other components."""
         if type(item) != str:
             raise LookupError(
                 "Only str arguments can be currently be used for lookups.\n"
@@ -653,7 +657,7 @@ class Interchange(DefaultModel):
         else:
             raise LookupError(
                 f"Could not find component {item}. This object has the following "
-                f"potential handlers registered:\n\t{[*self.collections.keys()]}",
+                f"collections registered:\n\t{[*self.collections.keys()]}",
             )
 
     def __add__(self, other):
@@ -729,6 +733,6 @@ class Interchange(DefaultModel):
         periodic = self.box is not None
         n_atoms = self.topology.n_atoms
         return (
-            f"Interchange with {len(self.collections)} potential handlers, "
+            f"Interchange with {len(self.collections)} collections, "
             f"{'' if periodic else 'non-'}periodic topology with {n_atoms} atoms."
         )
