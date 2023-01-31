@@ -27,28 +27,20 @@ def _create_interchange(
     partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
     allow_nonintegral_charges: bool = False,
 ) -> Interchange:
-
-    # Create empty Interchange
     interchange = Interchange()
 
-    # Copy topology
     _topology = Interchange.validate_topology(topology)
 
-    # Set positions
     interchange.positions = _infer_positions(positions, _topology)
 
-    # Set box
     interchange.box = box
 
-    # Create ParameterBlobs, one by one
-
-    # Bonds
     if force_field["Bonds"].version == Version("0.3"):
         from openff.interchange.smirnoff._valence import _upconvert_bondhandler
 
         _upconvert_bondhandler(force_field["Bonds"])
 
-    interchange.blobs.update(
+    interchange.collections.update(
         {
             "Bonds": SMIRNOFFBondHandler._from_toolkit(
                 parameter_handler=force_field["Bonds"],
@@ -58,8 +50,7 @@ def _create_interchange(
         },
     )
 
-    # Constraints
-    interchange.blobs.update(
+    interchange.collections.update(
         {
             "Constraints": SMIRNOFFConstraintHandler._from_toolkit(
                 parameter_handler=[
@@ -75,8 +66,7 @@ def _create_interchange(
         },
     )
 
-    # Angles
-    interchange.blobs.update(
+    interchange.collections.update(
         {
             "Angles": SMIRNOFFAngleHandler._from_toolkit(
                 parameter_handler=force_field["Angles"],
@@ -85,8 +75,7 @@ def _create_interchange(
         },
     )
 
-    # Proper torsions
-    interchange.blobs.update(
+    interchange.collections.update(
         {
             "ProperTorsions": SMIRNOFFProperTorsionHandler._from_toolkit(
                 parameter_handler=force_field["ProperTorsions"],
@@ -96,8 +85,7 @@ def _create_interchange(
         },
     )
 
-    # Improper torsions
-    interchange.blobs.update(
+    interchange.collections.update(
         {
             "ImproperTorsions": SMIRNOFFImproperTorsionHandler._from_toolkit(
                 parameter_handler=force_field["ImproperTorsions"],
@@ -106,8 +94,7 @@ def _create_interchange(
         },
     )
 
-    # vdW
-    interchange.blobs.update(
+    interchange.collections.update(
         {
             "vdW": SMIRNOFFvdWHandler._from_toolkit(
                 parameter_handler=force_field["vdW"],
@@ -116,8 +103,7 @@ def _create_interchange(
         },
     )
 
-    # Electrostatics
-    interchange.blobs.update(
+    interchange.collections.update(
         {
             "Electrostatics": SMIRNOFFElectrostaticsHandler._from_toolkit(
                 parameter_handler=[
@@ -140,21 +126,22 @@ def _create_interchange(
         },
     )
 
-    # Virtual sites
-    virtual_site_handler = SMIRNOFFVirtualSiteHandler()
-    virtual_site_handler.exclusion_policy = force_field["VirtualSites"].exclusion_policy
-    virtual_site_handler.store_matches(
-        parameter_handler=force_field["VirtualSites"],
-        topology=_topology,
-    )
-    virtual_site_handler.store_potentials(
-        parameter_handler=force_field["VirtualSites"],
-        vdw_handler=interchange["vdW"],
-        electrostatics_handler=interchange["Electrostatics"],
-    )
-    interchange.blobs.update({"VirtualSites": virtual_site_handler})
+    if "VirtualSites" in force_field.registered_parameter_handlers:
+        virtual_site_handler = SMIRNOFFVirtualSiteHandler()
+        virtual_site_handler.exclusion_policy = force_field[
+            "VirtualSites"
+        ].exclusion_policy
+        virtual_site_handler.store_matches(
+            parameter_handler=force_field["VirtualSites"],
+            topology=_topology,
+        )
+        virtual_site_handler.store_potentials(
+            parameter_handler=force_field["VirtualSites"],
+            vdw_handler=interchange["vdW"],
+            electrostatics_handler=interchange["Electrostatics"],
+        )
+        interchange.collections.update({"VirtualSites": virtual_site_handler})
 
-    # Set topology
     interchange.topology = _topology
 
     return interchange
