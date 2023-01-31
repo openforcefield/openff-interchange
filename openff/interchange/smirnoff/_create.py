@@ -15,7 +15,41 @@ from openff.interchange.components.smirnoff import (
     SMIRNOFFvdWHandler,
     SMIRNOFFVirtualSiteHandler,
 )
+from openff.interchange.components.toolkit import _check_electrostatics_handlers
+from openff.interchange.exceptions import (
+    MissingParameterHandlerError,
+    SMIRNOFFHandlersNotImplementedError,
+)
 from openff.interchange.smirnoff._positions import _infer_positions
+
+_SUPPORTED_SMIRNOFF_HANDLERS = {
+    "Constraints",
+    "Bonds",
+    "Angles",
+    "ProperTorsions",
+    "ImproperTorsions",
+    "vdW",
+    "Electrostatics",
+    "LibraryCharges",
+    "ChargeIncrementModel",
+    "VirtualSites",
+}
+
+
+def _check_supported_handlers(force_field: ForceField):
+
+    unsupported = list()
+
+    for handler_name in force_field.registered_parameter_handlers:
+        if handler_name in {"ToolkitAM1BCC"}:
+            continue
+        if handler_name not in _SUPPORTED_SMIRNOFF_HANDLERS:
+            unsupported.append(handler_name)
+
+    if unsupported:
+        raise SMIRNOFFHandlersNotImplementedError(
+            f"SMIRNOFF section(s) not implemented in Interchange: {unsupported}",
+        )
 
 
 def _create_interchange(
@@ -27,13 +61,15 @@ def _create_interchange(
     partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
     allow_nonintegral_charges: bool = False,
 ) -> Interchange:
+    _check_supported_handlers(force_field)
+
     interchange = Interchange()
 
     _topology = Interchange.validate_topology(topology)
 
     interchange.positions = _infer_positions(positions, _topology)
 
-    interchange.box = box
+    interchange.box = _topology.box_vectors if box is None else box
 
     _bonds(interchange, force_field, _topology, partial_bond_orders_from_molecules)
     _constraints(interchange, force_field, _topology)
@@ -169,7 +205,14 @@ def _electrostatics(
     allow_nonintegral_charges: bool = False,
 ):
     if "Electrostatics" not in force_field.registered_parameter_handlers:
-        return
+        if _check_electrostatics_handlers(force_field):
+            raise MissingParameterHandlerError(
+                "Force field contains parameter handler(s) that may assign/modify "
+                "partial charges, but no ElectrostaticsHandler was found.",
+            )
+
+        else:
+            return
 
     interchange.collections.update(
         {

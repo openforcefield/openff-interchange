@@ -47,7 +47,7 @@ def get_openmm_energies(
     """
     positions = off_sys.positions
 
-    if "VirtualSites" in off_sys.handlers:
+    if "VirtualSites" in off_sys.collections:
         if len(off_sys["VirtualSites"].slot_map) > 0:
             if not combine_nonbonded_forces:
                 raise NotImplementedError(

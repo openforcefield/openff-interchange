@@ -67,9 +67,10 @@ def _compare_openmm_topologies(top1: app.Topology, top2: app.Topology):
         "getNumBonds",
         "getNumChains",
         "getNumResidues",
-        "getPeriodicBoxVectors",
     ]:
         assert getattr(top1, method_name)() == getattr(top2, method_name)()
+
+    assert (top1.getPeriodicBoxVectors() == top2.getPeriodicBoxVectors()).all()
 
 
 class TestOpenMM(_BaseTest):

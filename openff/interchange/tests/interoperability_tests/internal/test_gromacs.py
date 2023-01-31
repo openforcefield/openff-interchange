@@ -299,8 +299,8 @@ class TestGROMACS(_BaseTest):
         buck.potentials[pot_key] = pot
 
         out = Interchange()
-        out.handlers["Buckingham-6"] = buck
-        out.handlers["Electrostatics"] = coul
+        out.collections["Buckingham-6"] = buck
+        out.collections["Electrostatics"] = coul
         out.topology = top
         out.box = [10, 10, 10] * unit.nanometer
         out.positions = [[0, 0, 0], [0.3, 0, 0]] * unit.nanometer

@@ -154,7 +154,6 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
         topology: "Topology",
     ) -> None:
         """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
-        parameter_handler_name = getattr(parameter_handler, "_TAGNAME", None)
         if self.slot_map:
             # TODO: Should the slot_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
@@ -164,7 +163,7 @@ class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
             topology_key = TopologyKey(atom_indices=key)
             potential_key = PotentialKey(
                 id=val.parameter_type.smirks,
-                associated_handler=parameter_handler_name,
+                associated_handler=parameter_handler.TAGNAME,
             )
             self.slot_map[topology_key] = potential_key
 
@@ -243,7 +242,6 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
         """
         Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
         """
-        parameter_handler_name = getattr(parameter_handler, "_TAGNAME", None)
         if self.slot_map:
             # TODO: Should the slot_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
@@ -268,7 +266,7 @@ class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
 
             potential_key = PotentialKey(
                 id=val.parameter_type.smirks,
-                associated_handler=parameter_handler_name,
+                associated_handler=parameter_handler.TAGNAME,
                 bond_order=fractional_bond_order,
             )
             self.slot_map[topology_key] = potential_key
@@ -1111,7 +1109,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         ][0]
 
         handler = cls(
-            type=toolkit_handler_with_metadata._TAGNAME,
+            type=toolkit_handler_with_metadata.TAGNAME,
             scale_13=toolkit_handler_with_metadata.scale13,
             scale_14=toolkit_handler_with_metadata.scale14,
             scale_15=toolkit_handler_with_metadata.scale15,
@@ -1571,7 +1569,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         """
         # Reshape the parameter handlers into a dictionary for easier referencing.
         parameter_handlers = {
-            handler._TAGNAME: handler
+            handler.TAGNAME: handler
             for handler in (
                 parameter_handler
                 if isinstance(parameter_handler, list)

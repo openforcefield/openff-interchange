@@ -52,7 +52,7 @@ class TestEnergies(_BaseTest):
 
         off_sys = Interchange.from_smirnoff(force_field, [mol])
 
-        off_sys.handlers["Electrostatics"].periodic_potential = "cutoff"
+        off_sys.collections["Electrostatics"].periodic_potential = "cutoff"
 
         mol.to_file("out.xyz", file_format="xyz")
         compound: mb.Compound = mb.load("out.xyz")

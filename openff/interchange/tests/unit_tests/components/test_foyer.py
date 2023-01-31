@@ -93,7 +93,7 @@ class TestFoyer(_BaseTest):
         return interchanges_from_path
 
     def test_handlers_exist(self, oplsaa_interchange_ethanol):
-        for _, handler in oplsaa_interchange_ethanol.handlers.items():
+        for _, handler in oplsaa_interchange_ethanol.collections.items():
             assert handler
 
         assert oplsaa_interchange_ethanol["vdW"].scale_14 == 0.5
@@ -193,8 +193,8 @@ class TestRBTorsions(TestFoyer):
 
         rb_torsions.potentials.update({pot_key: pot})
 
-        out.handlers.update({"RBTorsions": rb_torsions})
-        out.handlers.pop("ProperTorsions")
+        out.collections.update({"RBTorsions": rb_torsions})
+        out.collections.pop("ProperTorsions")
 
         return out
 

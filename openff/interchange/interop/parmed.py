@@ -41,7 +41,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     structure = pmd.Structure()
     _convert_box(off_system.box, structure)
 
-    if "Electrostatics" in off_system.handlers.keys():
+    if "Electrostatics" in off_system.collections.keys():
         has_electrostatics = True
         electrostatics_handler = off_system["Electrostatics"]
     else:
@@ -66,7 +66,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             resnum,
         )
 
-    if "Bonds" in off_system.handlers.keys():
+    if "Bonds" in off_system.collections.keys():
         bond_handler = off_system["Bonds"]
         bond_type_map: Dict = dict()
         for pot_key, pot in bond_handler.potentials.items():
@@ -88,7 +88,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
 
     structure.bond_types.claim()
 
-    if "Angles" in off_system.handlers.keys():
+    if "Angles" in off_system.collections.keys():
         angle_handler = off_system["Angles"]
         angle_type_map: Dict = dict()
         for pot_key, pot in angle_handler.potentials.items():
@@ -124,7 +124,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     else:
         coul_14 = 1.0
     vdw_handler = off_system["vdW"]
-    if "ProperTorsions" in off_system.handlers.keys():
+    if "ProperTorsions" in off_system.collections.keys():
         proper_torsion_handler = off_system["ProperTorsions"]
         proper_type_map: Dict = dict()
         for pot_key, pot in proper_torsion_handler.potentials.items():
@@ -350,9 +350,9 @@ def _from_parmed(cls, structure) -> "Interchange":
         bond_handler.slot_map.update({top_key: pot_key})
         bond_handler.potentials.update({pot_key: pot})
 
-    out.handlers.update({"vdW": vdw_handler})
-    out.handlers.update({"Electrostatics": coul_handler})
-    out.handlers.update({"Bonds": bond_handler})
+    out.collections.update({"vdW": vdw_handler})
+    out.collections.update({"Electrostatics": coul_handler})
+    out.collections.update({"Bonds": bond_handler})
 
     angle_handler = SMIRNOFFAngleHandler()
 
@@ -405,10 +405,10 @@ def _from_parmed(cls, structure) -> "Interchange":
                         dih_idx,
                     )
 
-    out.handlers.update({"Electrostatics": coul_handler})
-    out.handlers.update({"Bonds": bond_handler})
-    out.handlers.update({"Angles": angle_handler})
-    out.handlers.update({"ProperTorsions": proper_torsion_handler})
+    out.collections.update({"Electrostatics": coul_handler})
+    out.collections.update({"Bonds": bond_handler})
+    out.collections.update({"Angles": angle_handler})
+    out.collections.update({"ProperTorsions": proper_torsion_handler})
 
     return out
 

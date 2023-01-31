@@ -20,7 +20,6 @@ from openff.interchange.exceptions import (
     InvalidTopologyError,
     MissingParameterHandlerError,
     MissingPositionsError,
-    SMIRNOFFHandlersNotImplementedError,
     UnsupportedCombinationError,
     UnsupportedExportError,
 )
@@ -42,19 +41,6 @@ if TYPE_CHECKING:
         from foyer.forcefield import Forcefield as FoyerForcefield
     if has_package("nglview"):
         import nglview
-
-_SUPPORTED_SMIRNOFF_HANDLERS = {
-    "Constraints",
-    "Bonds",
-    "Angles",
-    "ProperTorsions",
-    "ImproperTorsions",
-    "vdW",
-    "Electrostatics",
-    "LibraryCharges",
-    "ChargeIncrementModel",
-    "VirtualSites",
-}
 
 
 def _sanitize(o):
@@ -184,23 +170,6 @@ class Interchange(DefaultModel):
             raise InvalidTopologyError(
                 "Could not process topology argument, expected openff.toolkit.topology.Topology. "
                 f"Found object of type {type(value)}.",
-            )
-
-    @classmethod
-    def _check_supported_handlers(cls, force_field: ForceField):
-
-        unsupported = list()
-
-        for handler_name in force_field.registered_parameter_handlers:
-            if handler_name in {"ToolkitAM1BCC"}:
-                continue
-            if handler_name not in _SUPPORTED_SMIRNOFF_HANDLERS:
-                unsupported.append(handler_name)
-
-        if unsupported:
-            raise SMIRNOFFHandlersNotImplementedError(
-                "SMIRNOFF section(s) not implemented in Interchange:"
-                "\n".join(unsupported),
             )
 
     def _infer_positions(self) -> Optional[ArrayQuantity]:
