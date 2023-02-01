@@ -187,7 +187,6 @@ class Interchange(DefaultModel):
 
     @classmethod
     def _check_supported_handlers(cls, force_field: ForceField):
-
         unsupported = list()
 
         for handler_name in force_field.registered_parameter_handlers:
@@ -309,7 +308,6 @@ class Interchange(DefaultModel):
         if len(parameter_handlers_by_type) != len(
             force_field.registered_parameter_handlers,
         ):
-
             raise NotImplementedError(
                 "Only force fields that contain one instance of each parameter handler "
                 "type are currently supported.",
@@ -325,7 +323,6 @@ class Interchange(DefaultModel):
                 )
 
         for potential_handler_type in SMIRNOFF_POTENTIAL_HANDLERS:
-
             parameter_handlers = [
                 parameter_handlers_by_type[allowed_type]
                 for allowed_type in potential_handler_type.allowed_parameter_handlers()
@@ -843,7 +840,6 @@ class Interchange(DefaultModel):
         """
 
         for handler_name, handler in other.handlers.items():
-
             """
             if type(handler).__name__ == "FoyerElectrostaticsHandler":
                 handler.slot_map = handler.charges
@@ -861,7 +857,6 @@ class Interchange(DefaultModel):
                 continue
 
             for top_key, pot_key in handler.slot_map.items():
-
                 new_atom_indices = tuple(
                     idx + atom_offset for idx in top_key.atom_indices
                 )

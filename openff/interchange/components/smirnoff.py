@@ -69,7 +69,6 @@ from openff.interchange.models import (
 )
 
 if TYPE_CHECKING:
-
     from openff.toolkit.topology import Topology
     from openff.units.unit import Quantity
 
@@ -732,7 +731,6 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
             )
             n_terms = len(val.parameter_type.k)
             for n in range(n_terms):
-
                 smirks = val.parameter_type.smirks
                 non_central_indices = [key[0], key[2], key[3]]
 
@@ -744,7 +742,6 @@ class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
                     )
                     for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]
                 ]:
-
                     topology_key = ImproperTorsionKey(
                         atom_indices=(key[1], *permuted_key),
                         mult=n,
@@ -1028,13 +1025,10 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         )
 
         for topology_key, potential_key in self.slot_map.items():
-
             potential = self.potentials[potential_key]
 
             for parameter_key, parameter_value in potential.parameters.items():
-
                 if parameter_key == "charge_increments":
-
                     if type(topology_key) != VirtualSiteKey:
                         raise RuntimeError
 
@@ -1318,18 +1312,15 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         matches, potentials = {}, {}
 
         for key, val in parameter_matches.items():
-
             parameter = val.parameter_type
 
             if isinstance(parameter_handler, LibraryChargeHandler):
-
                 (
                     parameter_matches,
                     parameter_potentials,
                 ) = cls._library_charge_to_potentials(key, parameter)
 
             elif isinstance(parameter_handler, ChargeIncrementModelHandler):
-
                 (
                     parameter_matches,
                     parameter_potentials,
@@ -1392,7 +1383,6 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         potentials = {}
 
         for atom_index, partial_charge in enumerate(partial_charges):
-
             # These arguments make this object specific to this atom (by index) in this molecule ONLY
             # (assuming an isomeric, mapped, explicit hydrogen SMILES is unique, which seems true).
             potential_key = PotentialKey(
@@ -1423,7 +1413,6 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         expected_matches = {i for i in range(unique_molecule.n_atoms)}
 
         for handler_type in cls.parameter_handler_precedence():
-
             if handler_type not in parameter_handlers:
                 continue
 
@@ -1434,14 +1423,12 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             am1_potentials: Dict = {}
 
             if handler_type in ["LibraryCharges", "ChargeIncrementModel"]:
-
                 slot_matches, slot_potentials = cls._find_slot_matches(
                     parameter_handler,
                     unique_molecule,
                 )
 
             if handler_type in ["ToolkitAM1BCC", "ChargeIncrementModel"]:
-
                 (
                     partial_charge_method,
                     am1_matches,
@@ -1455,7 +1442,6 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 raise NotImplementedError()
 
             elif slot_matches is not None and am1_matches is not None:
-
                 am1_matches = {
                     ChargeModelTopologyKey(  # type: ignore[misc]
                         this_atom_index=topology_key.atom_indices[0],
@@ -1496,7 +1482,6 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         found_matches = {index for key in matches for index in key.atom_indices}
 
         if found_matches != expected_matches:
-
             raise RuntimeError(
                 f"{unique_molecule.to_smiles(explicit_hydrogens=False)} could "
                 "not be fully assigned charges. Charges were assigned to atoms "
@@ -1581,7 +1566,6 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         groups = topology.identical_molecule_groups
 
         for unique_molecule_index, group in groups.items():
-
             unique_molecule = topology.molecule(unique_molecule_index)
 
             flag, matches, potentials = self._assign_charges_from_molecules(
@@ -1650,7 +1634,6 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
             formal_sum = molecule.total_charge.m
 
             if abs(charge_sum - formal_sum) > 0.01:
-
                 if allow_nonintegral_charges:
                     # TODO: Is it worth communicating this as a warning, or would it simply be bloat?
                     pass
@@ -1748,7 +1731,6 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         for parent_index, parameters in matches_by_parent.items():
             for parameter, orientations in parameters:
                 for orientation in orientations:
-
                     orientation_indices = orientation.topology_atom_indices
 
                     virtual_site_key = VirtualSiteKey(
@@ -1954,7 +1936,6 @@ def _compute_lj_sigma(
     sigma: Optional[unit.Quantity],
     rmin_half: Optional[unit.Quantity],
 ) -> unit.Quantity:
-
     return sigma if sigma is not None else (2.0 * rmin_half / (2.0 ** (1.0 / 6.0)))  # type: ignore
 
 
@@ -1988,7 +1969,6 @@ def _check_all_valence_terms_assigned(
     err_msg = ""
 
     if len(unassigned_terms) > 0:
-
         unassigned_atom_tuples = []
 
         unassigned_str = ""
@@ -2023,7 +2003,6 @@ def _check_all_valence_terms_assigned(
             not_found_str=not_found_str,
         )
     if err_msg:
-
         err_msg += "\n"
 
         if isinstance(handler, BondHandler):

@@ -77,7 +77,6 @@ def test_central_atom_improper():
 
 
 def test_reprs():
-
     topology_key = TopologyKey(atom_indices=(10,))
 
     assert "atom indices (10,)" in repr(topology_key)

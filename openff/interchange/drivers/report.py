@@ -102,7 +102,6 @@ class EnergyReport(DefaultModel):
         energy_differences = self.diff(other)
 
         if ("Nonbonded" in tolerances) != ("Nonbonded" in energy_differences):
-
             raise IncompatibleTolerancesError(
                 "Mismatch between energy reports and tolerances with respect to whether nonbonded "
                 "interactions are collapsed into a single value.",
@@ -140,22 +139,18 @@ class EnergyReport(DefaultModel):
         nonbondeds_processed = False
 
         for key in self.energies:
-
             if key in ("Bond", "Angle", "Torsion"):
-
                 energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
 
                 continue
 
             if key in ("Nonbonded", "vdW", "Electrostatics"):
-
                 if nonbondeds_processed:
                     continue
 
                 if (self["vdW"] and other["vdW"]) is not None and (
                     self["Electrostatics"] and other["Electrostatics"]
                 ) is not None:
-
                     for key in ("vdW", "Electrostatics"):
                         energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
                         energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
@@ -165,7 +160,6 @@ class EnergyReport(DefaultModel):
                         continue
 
                 else:
-
                     energy_differences["Nonbonded"] = (
                         self._get_nonbonded_energy() - other._get_nonbonded_energy()
                     )

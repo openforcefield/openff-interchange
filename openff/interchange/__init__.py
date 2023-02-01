@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Dict, List
 from openff.interchange._version import get_versions  # type: ignore
 
 if TYPE_CHECKING:
-
     from openff.interchange.components.interchange import Interchange
 
 # Handle versioneer

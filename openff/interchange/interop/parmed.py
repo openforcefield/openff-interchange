@@ -20,7 +20,6 @@ from openff.interchange.models import (
 )
 
 if TYPE_CHECKING:
-
     import parmed as pmd
 
     from openff.interchange import Interchange
@@ -100,7 +99,6 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             structure.angle_types.append(angle_type)
 
         for angle_key, pot_key in angle_handler.slot_map.items():
-
             idx_1, idx_2, idx_3 = angle_key.atom_indices
             angle_type = angle_type_map[pot_key]
             structure.angles.append(
@@ -142,7 +140,6 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             structure.dihedral_types.append(proper_type)
 
         for proper_key, pot_key in proper_torsion_handler.slot_map.items():
-
             idx_1, idx_2, idx_3, idx_4 = proper_key.atom_indices
             dihedral_type = proper_type_map[pot_key]
             structure.dihedrals.append(
