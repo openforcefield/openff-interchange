@@ -272,7 +272,6 @@ def _write_atoms(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
     charges = electrostatics_handler.charges
 
     for atom in openff_sys.topology.atoms:
-
         atom_index = openff_sys.topology.atom_index(atom)
         try:
             molecule_index = int(atom.metadata["residue_number"])
@@ -310,7 +309,6 @@ def _write_bonds(lmp_file: IO, openff_sys: Interchange):
     bond_type_map_inv = dict({v: k for k, v in bond_type_map.items()})
 
     for bond_idx, bond in enumerate(openff_sys.topology.bonds):
-
         indices = (
             openff_sys.topology.atom_index(bond.atom1),
             openff_sys.topology.atom_index(bond.atom2),
@@ -371,12 +369,10 @@ def _write_propers(lmp_file: IO, openff_sys: Interchange):
     proper_type_map_inv = dict({v: k for k, v in proper_type_map.items()})
 
     for proper_idx, proper in enumerate(openff_sys.topology.propers):
-
         indices = tuple(openff_sys.topology.atom_index(a) for a in proper)
 
         for top_key, pot_key in proper_handler.slot_map.items():
             if indices == top_key.atom_indices:
-
                 proper_type_idx = proper_type_map_inv[pot_key]
 
                 lmp_file.write(
@@ -402,7 +398,6 @@ def _write_impropers(lmp_file: IO, openff_sys: Interchange):
 
     # Molecule/Topology.impropers lists the central atom **second** ...
     for improper_idx, improper in enumerate(openff_sys.topology.impropers):
-
         indices = tuple(openff_sys.topology.atom_index(a) for a in improper)
 
         # ... so the tuple must be modified to list the central atom **first**,
@@ -411,7 +406,6 @@ def _write_impropers(lmp_file: IO, openff_sys: Interchange):
 
         for top_key, pot_key in improper_handler.slot_map.items():
             if _indices == top_key.atom_indices:
-
                 improper_type_idx = improper_type_map_inv[pot_key]
 
                 # https://github.com/openforcefield/openff-interchange/issues/544

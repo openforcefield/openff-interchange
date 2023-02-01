@@ -41,7 +41,6 @@ class TestFoyer(_BaseTest):
 
     @pytest.fixture(scope="session")
     def oplsaa_interchange_ethanol(self, oplsaa):
-
         molecule = Molecule.from_file(
             get_test_files_dir_path("foyer_test_molecules") + "/ethanol.sdf",
         )

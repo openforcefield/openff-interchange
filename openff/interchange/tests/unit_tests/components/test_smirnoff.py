@@ -510,7 +510,6 @@ def test_library_charges_from_molecule():
 
 class TestChargeFromMolecules(_BaseTest):
     def test_charge_from_molecules_basic(self, sage):
-
         molecule = Molecule.from_smiles("CCO")
         molecule.assign_partial_charges(partial_charge_method="am1bcc")
         molecule.partial_charges *= -1
@@ -1141,7 +1140,6 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
 
     @classmethod
     def build_force_field(cls, v_site_handler: VirtualSiteHandler) -> ForceField:
-
         force_field = ForceField()
 
         force_field.get_parameter_handler("Bonds").add_parameter(
@@ -1190,7 +1188,6 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
         input_conformer: unit.Quantity,
         parameter: VirtualSiteHandler.VirtualSiteType,
     ) -> unit.Quantity:
-
         # Compute the coordinates of the virtual site. Unfortunately OpenMM does not
         # seem to offer a more compact way to do this currently.
         handler = VirtualSiteHandler(version="0.3")
@@ -1322,7 +1319,6 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
         parent atoms"""
 
         for atom_permutation in itertools.permutations(atoms_to_shuffle):
-
             molecule = Molecule.from_mapped_smiles(smiles, allow_undefined_stereo=True)
             molecule._conformers = [input_conformer]
 
@@ -1512,7 +1508,6 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
         ],
         expected_n_v_sites: int,
     ):
-
         expected_n_total = topology.n_atoms + expected_n_v_sites
         # sanity check the test input
         assert len(expected_parameters) == expected_n_total

@@ -208,7 +208,6 @@ class TestInterchange(_BaseTest):
         get_lammps_energies(out)
 
     def test_from_sage(self, sage):
-
         top = Topology.from_molecules(
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")],
         )
@@ -233,7 +232,6 @@ class TestInterchange(_BaseTest):
         )
 
     def test_from_sage_molecule_list(self, sage):
-
         out = Interchange.from_smirnoff(
             sage,
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")],

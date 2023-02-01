@@ -34,7 +34,6 @@ def _write_text_blob(file, blob):
 
 
 def _get_exclusion_lists(topology):
-
     number_excluded_atoms: List[int] = list()
     excluded_atoms_list: List[int] = list()
 
@@ -439,7 +438,6 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         for key_i, i in potential_key_to_atom_type_mapping.items():
             for key_j, j in potential_key_to_atom_type_mapping.items():
-
                 if j < i:
                     # Only need to handle the lower triangle as everything symmetric.
                     continue

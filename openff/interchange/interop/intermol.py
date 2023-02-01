@@ -204,7 +204,6 @@ def from_intermol_system(intermol_system: System) -> Interchange:
             handler.slot_map[topology_key] = potential_key
 
             if potential_key not in handler.potentials:
-
                 potential = Potential(
                     parameters={
                         "phase": dihedral_parameters["phi"],
