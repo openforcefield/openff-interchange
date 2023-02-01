@@ -14,7 +14,7 @@ from openmm import unit as openmm_unit
 from pkg_resources import resource_filename
 
 from openff.interchange import Interchange
-from openff.interchange.components.nonbonded import BuckinghamvdWHandler
+from openff.interchange.components.nonbonded import BuckinghamvdWCollection
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import (
@@ -277,7 +277,7 @@ class TestGROMACS(_BaseTest):
 
         r = 0.3 * unit.nanometer
 
-        buck = BuckinghamvdWHandler()
+        buck = BuckinghamvdWCollection()
         coul = SMIRNOFFElectrostaticsCollection(method="pme")
 
         pot_key = PotentialKey(id="[#18]")

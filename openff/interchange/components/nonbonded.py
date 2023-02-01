@@ -4,7 +4,7 @@ from typing import Literal
 from openff.interchange.components.potentials import Collection
 
 
-class BuckinghamvdWHandler(Collection):
+class BuckinghamvdWCollection(Collection):
     """Handler storing Buckingham-style vdW potentials."""
 
     type: Literal["Buckingham-6"] = "Buckingham-6"

@@ -13,6 +13,11 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### Behavior changes
 * #566 Refactors `EnergyReport` to more explicitly handle comparisons.
+* #583 Changes some code paths of internal objects.
+  * `PotentialHandler`s and subclasses are now `Collection`s.
+  * `Interchange.handlers` is now `Interchange.collections`.
+  * Classes found in `openff.interchange.components.smirnoff` are now in `openff.interchange.smirnoff`
+  * Classes found in `openff.interchange.components.foyer` are now in `openff.interchange.foyer`
 
 
 ## 0.2.3 - 2022-11-21
