@@ -1,806 +1,84 @@
-"""Models and utilities for processing SMIRNOFF data."""
 import abc
 import copy
 import functools
-import json
 from collections import defaultdict
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    DefaultDict,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, DefaultDict, Dict, List, Literal, Optional, Tuple, Type, Union
 
-import numpy as np
-from openff.models.types import FloatQuantity, custom_quantity_encoder, json_loader
-from openff.toolkit.topology import Molecule
+import numpy
+from openff.models.types import FloatQuantity
+from openff.toolkit import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
-    AngleHandler,
-    BondHandler,
     ChargeIncrementModelHandler,
-    ConstraintHandler,
     ElectrostaticsHandler,
-    ImproperTorsionHandler,
     LibraryChargeHandler,
     ParameterHandler,
-    ProperTorsionHandler,
     ToolkitAM1BCCHandler,
     VirtualSiteHandler,
     vdWHandler,
 )
-from openff.units import unit
+from openff.units import Quantity, unit
 from pydantic import Field
 
-from openff.interchange.components.potentials import (
-    Potential,
-    PotentialHandler,
-    WrappedPotential,
-)
+from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import _validated_list_to_array
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
-    MissingParametersError,
     MissingPartialChargesError,
     NonIntegralMoleculeChargeError,
-    SMIRNOFFParameterAttributeNotImplementedError,
     SMIRNOFFVersionNotSupportedError,
-    UnassignedAngleError,
-    UnassignedBondError,
-    UnassignedTorsionError,
 )
 from openff.interchange.models import (
-    BondKey,
     ChargeIncrementTopologyKey,
     ChargeModelTopologyKey,
-    ImproperTorsionKey,
     LibraryChargeTopologyKey,
     PotentialKey,
-    ProperTorsionKey,
     TopologyKey,
     VirtualSiteKey,
 )
+from openff.interchange.smirnoff._base import SMIRNOFFCollection, T
 
-if TYPE_CHECKING:
+ElectrostaticsHandlerType = Union[
+    ElectrostaticsHandler,
+    ToolkitAM1BCCHandler,
+    ChargeIncrementModelHandler,
+    LibraryChargeHandler,
+]
 
-    from openff.toolkit.topology import Topology
-    from openff.units.unit import Quantity
 
-    ElectrostaticsHandlerType = Union[
-        ElectrostaticsHandler,
-        ChargeIncrementModelHandler,
-        LibraryChargeHandler,
-        ToolkitAM1BCCHandler,
-    ]
+def _compute_lj_sigma(
+    sigma: Optional[unit.Quantity],
+    rmin_half: Optional[unit.Quantity],
+) -> unit.Quantity:
 
+    return sigma if sigma is not None else (2.0 * rmin_half / (2.0 ** (1.0 / 6.0)))  # type: ignore
 
-T = TypeVar("T", bound="SMIRNOFFPotentialHandler")
-TP = TypeVar("TP", bound="PotentialHandler")
 
+def library_charge_from_molecule(
+    molecule: "Molecule",
+) -> LibraryChargeHandler.LibraryChargeType:
+    """Given an OpenFF Molecule with charges, generate a corresponding LibraryChargeType."""
+    if molecule.partial_charges is None:
+        raise MissingPartialChargesError
 
-def _sanitize(o):
-    # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
-    # for the mapping dicts `slot_map` and `potentials`.
-    if isinstance(o, dict):
-        return {_sanitize(k): _sanitize(v) for k, v in o.items()}
-    elif isinstance(o, (PotentialKey, TopologyKey)):
-        return o.json()
-    elif isinstance(o, unit.Quantity):
-        return custom_quantity_encoder(o)
-    return o
+    smirks = molecule.to_smiles(mapped=True)
+    charges = molecule.partial_charges
 
+    library_charge_type = LibraryChargeHandler.LibraryChargeType(
+        smirks=smirks,
+        charge=charges,
+    )
 
-def handler_dumps(v, *, default):
-    """Dump a SMIRNOFFPotentialHandler to JSON after converting to compatible types."""
-    return json.dumps(_sanitize(v), default=default)
+    return library_charge_type
 
 
-class SMIRNOFFPotentialHandler(PotentialHandler, abc.ABC):
-    """Base class for handlers storing potentials produced by SMIRNOFF force fields."""
-
-    class Config:
-        """Default configuration options for SMIRNOFF potential handlers."""
-
-        json_dumps = handler_dumps
-        json_loads = json_loader
-        validate_assignment = True
-        arbitrary_types_allowed = True
-
-    @classmethod
-    @abc.abstractmethod
-    def allowed_parameter_handlers(cls):
-        """Return a list of allowed types of ParameterHandler classes."""
-        raise NotImplementedError()
-
-    @classmethod
-    @abc.abstractmethod
-    def supported_parameters(cls):
-        """Return a list of parameter attributes supported by this handler."""
-        raise NotImplementedError()
-
-    @classmethod
-    def _potential_parameters(cls):
-        """Return a subset of `supported_parameters` that are meant to be included in potentials."""
-        raise NotImplementedError()
-
-    #    @classmethod
-    #    @abc.abstractmethod
-    #    def valence_terms(cls, topology):
-    #        """Return an interable of all of one type of valence term in this topology."""
-    #        raise NotImplementedError()
-
-    @classmethod
-    def check_supported_parameters(cls, parameter_handler: ParameterHandler):
-        """Verify that a parameter handler is in an allowed list of handlers."""
-        for parameter in parameter_handler.parameters:
-            for parameter_attribute in parameter._get_defined_parameter_attributes():
-                if parameter_attribute == "parent_id":
-                    continue
-                if parameter_attribute not in cls.supported_parameters():
-                    raise SMIRNOFFParameterAttributeNotImplementedError(
-                        parameter_attribute,
-                    )
-
-    def store_matches(
-        self,
-        parameter_handler: ParameterHandler,
-        topology: "Topology",
-    ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
-        if self.slot_map:
-            # TODO: Should the slot_map always be reset, or should we be able to partially
-            # update it? Also Note the duplicated code in the child classes
-            self.slot_map: Dict[TopologyKey, PotentialKey] = dict()
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            topology_key = TopologyKey(atom_indices=key)
-            potential_key = PotentialKey(
-                id=val.parameter_type.smirks,
-                associated_handler=parameter_handler.TAGNAME,
-            )
-            self.slot_map[topology_key] = potential_key
-
-        if self.__class__.__name__ in ["SMIRNOFFBondHandler", "SMIRNOFFAngleHandler"]:
-            valence_terms = self.valence_terms(topology)  # type: ignore[attr-defined]
-
-            _check_all_valence_terms_assigned(
-                handler=parameter_handler,
-                assigned_terms=matches,
-                topology=topology,
-                valence_terms=valence_terms,
-            )
-
-    @classmethod
-    def _from_toolkit(
-        cls: Type[T],
-        parameter_handler: TP,
-        topology: "Topology",
-    ) -> T:
-        """
-        Create a SMIRNOFFPotentialHandler from toolkit data.
-
-        """
-        if type(parameter_handler) not in cls.allowed_parameter_handlers():
-            raise InvalidParameterHandlerError(type(parameter_handler))
-
-        handler = cls()
-        if hasattr(handler, "fractional_bondorder_method"):
-            if getattr(parameter_handler, "fractional_bondorder_method", None):
-                handler.fractional_bond_order_method = (  # type: ignore[attr-defined]
-                    parameter_handler.fractional_bondorder_method  # type: ignore[attr-defined]
-                )
-                handler.fractional_bond_order_interpolation = (  # type: ignore[attr-defined]
-                    parameter_handler.fractional_bondorder_interpolation  # type: ignore[attr-defined]
-                )
-        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
-        handler.store_potentials(parameter_handler=parameter_handler)
-
-        return handler
-
-    def __repr__(self) -> str:
-        return (
-            f"Handler '{self.type}' with expression '{self.expression}', {len(self.slot_map)} slots, "
-            f"and {len(self.potentials)} potentials"
-        )
-
-
-class SMIRNOFFBondHandler(SMIRNOFFPotentialHandler):
-    """Handler storing bond potentials as produced by a SMIRNOFF force field."""
-
-    type: Literal["Bonds"] = "Bonds"
-    expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
-    fractional_bond_order_method: Literal["AM1-Wiberg", "None", "none"] = "AM1-Wiberg"
-    fractional_bond_order_interpolation: Literal["linear"] = "linear"
-
-    @classmethod
-    def allowed_parameter_handlers(cls):
-        """Return a list of allowed types of ParameterHandler classes."""
-        return [BondHandler]
-
-    @classmethod
-    def supported_parameters(cls):
-        """Return a list of supported parameter attribute names."""
-        return ["smirks", "id", "k", "length", "k_bondorder", "length_bondorder"]
-
-    @classmethod
-    def valence_terms(cls, topology):
-        """Return all bonds in this topology."""
-        return [tuple(b.atoms) for b in topology.bonds]
-
-    def store_matches(
-        self,
-        parameter_handler: ParameterHandler,
-        topology: "Topology",
-    ) -> None:
-        """
-        Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
-        """
-        if self.slot_map:
-            # TODO: Should the slot_map always be reset, or should we be able to partially
-            # update it? Also Note the duplicated code in the child classes
-            self.slot_map: Dict[BondKey, PotentialKey] = dict()  # type: ignore[assignment]
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            param = val.parameter_type
-            if param.k_bondorder or param.length_bondorder:
-                bond = topology.get_bond_between(*key)
-                fractional_bond_order = bond.fractional_bond_order
-                if not fractional_bond_order:
-                    assert self._get_uses_interpolation(parameter_handler)
-                    raise RuntimeError(
-                        "Bond orders should already be assigned at this point",
-                    )
-            else:
-                fractional_bond_order = None
-            topology_key = BondKey(
-                atom_indices=key,
-                bond_order=fractional_bond_order,
-            )
-
-            potential_key = PotentialKey(
-                id=val.parameter_type.smirks,
-                associated_handler=parameter_handler.TAGNAME,
-                bond_order=fractional_bond_order,
-            )
-            self.slot_map[topology_key] = potential_key
-
-        valence_terms = self.valence_terms(topology)
-
-        _check_all_valence_terms_assigned(
-            handler=parameter_handler,
-            topology=topology,
-            assigned_terms=matches,
-            valence_terms=valence_terms,
-        )
-
-    def store_potentials(self, parameter_handler: "BondHandler") -> None:
-        """
-        Populate self.potentials with key-val pairs of [BondKey, PotentialKey].
-
-        """
-        if self.potentials:
-            self.potentials = dict()
-        for topology_key, potential_key in self.slot_map.items():
-            smirks = potential_key.id
-            parameter = parameter_handler.parameters[smirks]
-            if topology_key.bond_order:
-                bond_order = topology_key.bond_order
-                if parameter.k_bondorder:
-                    data = parameter.k_bondorder
-                else:
-                    data = parameter.length_bondorder
-                coeffs = _get_interpolation_coeffs(
-                    fractional_bond_order=bond_order,
-                    data=data,
-                )
-                pots = []
-                map_keys = [*data.keys()]
-                for map_key in map_keys:
-                    pots.append(
-                        Potential(
-                            parameters={
-                                "k": parameter.k_bondorder[map_key],
-                                "length": parameter.length_bondorder[map_key],
-                            },
-                            map_key=map_key,
-                        ),
-                    )
-                potential = WrappedPotential(
-                    {pot: coeff for pot, coeff in zip(pots, coeffs)},
-                )
-            else:
-                potential = Potential(  # type: ignore[assignment]
-                    parameters={
-                        "k": parameter.k,
-                        "length": parameter.length,
-                    },
-                )
-            self.potentials[potential_key] = potential
-
-    def _get_uses_interpolation(self, parameter_handler: "BondHandler") -> bool:
-        if (
-            any(
-                getattr(p, "k_bondorder", None) is not None
-                for p in parameter_handler.parameters
-            )
-        ) or (
-            any(
-                getattr(p, "length_bondorder", None) is not None
-                for p in parameter_handler.parameters
-            )
-        ):
-            return True
-        else:
-            return False
-
-    @classmethod
-    def _from_toolkit(
-        cls: Type[T],
-        parameter_handler: "BondHandler",
-        topology: "Topology",
-        partial_bond_orders_from_molecules=None,
-    ) -> T:
-        """
-        Create a SMIRNOFFBondHandler from toolkit data.
-
-        """
-        # TODO: This method overrides SMIRNOFFPotentialHandler.from_toolkit in order to gobble up
-        # a ConstraintHandler. This seems like a good solution for the interdependence, but is also
-        # not a great practice. A better solution would involve not overriding the method with a
-        # different function signature.
-        if type(parameter_handler) not in cls.allowed_parameter_handlers():
-            raise InvalidParameterHandlerError
-
-        handler: T = cls(
-            type="Bonds",
-            expression="k/2*(r-length)**2",
-            fractional_bond_order_method=parameter_handler.fractional_bondorder_method,
-            fractional_bond_order_interpolation=parameter_handler.fractional_bondorder_interpolation,
-        )
-
-        if handler._get_uses_interpolation(parameter_handler):  # type: ignore[attr-defined]
-            for molecule in topology.molecules:
-                if _check_partial_bond_orders(
-                    molecule,
-                    partial_bond_orders_from_molecules,
-                ):
-                    continue
-                # TODO: expose conformer generation and fractional bond order assigment
-                # knobs to user via API
-                molecule.generate_conformers(n_conformers=1)
-                molecule.assign_fractional_bond_orders(
-                    bond_order_model=handler.fractional_bond_order_method.lower(),  # type: ignore[attr-defined]
-                )
-
-        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
-        handler.store_potentials(parameter_handler=parameter_handler)
-
-        return handler
-
-
-class SMIRNOFFConstraintHandler(SMIRNOFFPotentialHandler):
-    """Handler storing constraint potentials as produced by a SMIRNOFF force field."""
-
-    type: Literal["Constraints"] = "Constraints"
-    expression: Literal[""] = ""
-    constraints: Dict[
-        PotentialKey,
-        bool,
-    ] = dict()  # should this be named potentials for consistency?
-
-    @classmethod
-    def allowed_parameter_handlers(cls):
-        """Return a list of allowed types of ParameterHandler classes."""
-        return [BondHandler, ConstraintHandler]
-
-    @classmethod
-    def supported_parameters(cls):
-        """Return a list of supported parameter attribute names."""
-        return ["smirks", "id", "k", "length", "distance"]
-
-    @classmethod
-    def _from_toolkit(  # type: ignore[override]
-        cls: Type[T],
-        parameter_handler: List,
-        topology: "Topology",
-    ) -> T:
-        """
-        Create a SMIRNOFFPotentialHandler from toolkit data.
-
-        """
-        if isinstance(parameter_handler, list):
-            parameter_handlers = parameter_handler
-        else:
-            parameter_handlers = [parameter_handler]
-
-        for parameter_handler in parameter_handlers:
-            if type(parameter_handler) not in cls.allowed_parameter_handlers():
-                raise InvalidParameterHandlerError(type(parameter_handler))
-
-        handler = cls()
-        handler.store_constraints(  # type: ignore[attr-defined]
-            parameter_handlers=parameter_handlers,
-            topology=topology,
-        )
-
-        return handler
-
-    def store_constraints(
-        self,
-        parameter_handlers: Any,
-        topology: "Topology",
-    ) -> None:
-        """Store constraints."""
-        if self.slot_map:
-            self.slot_map = dict()
-
-        try:
-            constraint_handler = [
-                p for p in parameter_handlers if type(p) == ConstraintHandler
-            ][0]
-        except IndexError:
-            return
-
-        constraint_matches = constraint_handler.find_matches(topology)
-
-        if any([type(p) == BondHandler for p in parameter_handlers]):
-            bond_handler = [p for p in parameter_handlers if type(p) == BondHandler][0]
-            bonds = SMIRNOFFBondHandler._from_toolkit(
-                parameter_handler=bond_handler,
-                topology=topology,
-            )
-        else:
-            bond_handler = None
-            bonds = None
-
-        for key, match in constraint_matches.items():
-            topology_key = BondKey(atom_indices=key)
-            smirks = match.parameter_type.smirks
-            distance = match.parameter_type.distance
-            if distance is not None:
-                # This constraint parameter is fully specified
-                potential_key = PotentialKey(
-                    id=smirks,
-                    associated_handler="Constraints",
-                )
-                self.slot_map[topology_key] = potential_key
-                distance = match.parameter_type.distance
-            else:
-                # This constraint parameter depends on the BondHandler ...
-                if bond_handler is None:
-                    raise MissingParametersError(
-                        f"Constraint with SMIRKS pattern {smirks} found with no distance "
-                        "specified, and no corresponding bond parameters were found. The distance "
-                        "of this constraint is not specified.",
-                    )
-                # ... so use the same PotentialKey instance as the BondHandler to look up the distance
-                potential_key = bonds.slot_map[topology_key]  # type: ignore[union-attr]
-                self.slot_map[topology_key] = potential_key
-                distance = bonds.potentials[potential_key].parameters["length"]  # type: ignore[union-attr]
-            potential = Potential(
-                parameters={
-                    "distance": distance,
-                },
-            )
-            self.constraints[potential_key] = potential  # type: ignore[assignment]
-
-
-class SMIRNOFFAngleHandler(SMIRNOFFPotentialHandler):
-    """Handler storing angle potentials as produced by a SMIRNOFF force field."""
-
-    type: Literal["Angles"] = "Angles"
-    expression: Literal[
-        "k/2*(theta-angle)**2",
-        "k/2*(cos(theta)-cos(angle))**2",
-    ] = "k/2*(theta-angle)**2"
-
-    @classmethod
-    def allowed_parameter_handlers(cls):
-        """Return a list of allowed types of ParameterHandler classes."""
-        return [AngleHandler]
-
-    @classmethod
-    def supported_parameters(cls):
-        """Return a list of supported parameter attributes."""
-        return ["smirks", "id", "k", "angle"]
-
-    @classmethod
-    def _potential_parameters(cls):
-        """Return a list of supported parameter attribute names."""
-        return [
-            val for val in cls.supported_parameters() if val not in ["id", "smirks"]
-        ]
-
-    @classmethod
-    def valence_terms(cls, topology):
-        """Return all angles in this topology."""
-        return list(topology.angles)
-
-    def store_potentials(self, parameter_handler: "AngleHandler") -> None:
-        """
-        Populate self.potentials with key-val pairs of [AngleKey, PotentialKey].
-
-        """
-        for potential_key in self.slot_map.values():
-            smirks = potential_key.id
-            parameter = parameter_handler.parameters[smirks]
-            potential = Potential(
-                parameters={
-                    parameter_name: getattr(parameter, parameter_name)
-                    for parameter_name in self._potential_parameters()
-                },
-            )
-            self.potentials[potential_key] = potential
-
-
-class SMIRNOFFProperTorsionHandler(SMIRNOFFPotentialHandler):
-    """Handler storing proper torsions potentials as produced by a SMIRNOFF force field."""
-
-    type: Literal["ProperTorsions"] = "ProperTorsions"
-    expression: Literal[
-        "k*(1+cos(periodicity*theta-phase))"
-    ] = "k*(1+cos(periodicity*theta-phase))"
-    fractional_bond_order_method: Literal["AM1-Wiberg"] = "AM1-Wiberg"
-    fractional_bond_order_interpolation: Literal["linear"] = "linear"
-
-    @classmethod
-    def allowed_parameter_handlers(cls):
-        """Return a list of allowed types of ParameterHandler classes."""
-        return [ProperTorsionHandler]
-
-    @classmethod
-    def supported_parameters(cls):
-        """Return a list of supported parameter attribute names."""
-        return ["smirks", "id", "k", "periodicity", "phase", "idivf", "k_bondorder"]
-
-    def store_matches(
-        self,
-        parameter_handler: "ProperTorsionHandler",
-        topology: "Topology",
-    ) -> None:
-        """
-        Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
-
-        """
-        if self.slot_map:
-            self.slot_map: Dict[ProperTorsionKey, PotentialKey] = dict()  # type: ignore[assignment]
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            param = val.parameter_type
-            n_terms = len(val.parameter_type.phase)
-            for n in range(n_terms):
-                smirks = param.smirks
-                if param.k_bondorder:
-                    # The relevant bond order is that of the _central_ bond in the torsion
-                    bond = topology.get_bond_between(key[1], key[2])
-                    fractional_bond_order = bond.fractional_bond_order
-                    if not fractional_bond_order:
-                        raise RuntimeError(
-                            "Bond orders should already be assigned at this point",
-                        )
-                else:
-                    fractional_bond_order = None
-                topology_key = ProperTorsionKey(
-                    atom_indices=key,
-                    mult=n,
-                    bond_order=fractional_bond_order,
-                )
-                potential_key = PotentialKey(
-                    id=smirks,
-                    mult=n,
-                    associated_handler="ProperTorsions",
-                    bond_order=fractional_bond_order,
-                )
-                self.slot_map[topology_key] = potential_key
-
-        _check_all_valence_terms_assigned(
-            handler=parameter_handler,
-            topology=topology,
-            assigned_terms=matches,
-            valence_terms=list(topology.propers),
-        )
-
-    def store_potentials(self, parameter_handler: "ProperTorsionHandler") -> None:
-        """
-        Populate self.potentials with key-val pairs of [ProperTorsionKey, PotentialKey].
-
-        """
-        for topology_key, potential_key in self.slot_map.items():
-            smirks = potential_key.id
-            n = potential_key.mult
-            parameter = parameter_handler.parameters[smirks]
-            # n_terms = len(parameter.k)
-            if topology_key.bond_order:
-                bond_order = topology_key.bond_order
-                data = parameter.k_bondorder[n]
-                coeffs = _get_interpolation_coeffs(
-                    fractional_bond_order=bond_order,
-                    data=data,
-                )
-                pots = []
-                map_keys = [*data.keys()]
-                for map_key in map_keys:
-                    parameters = {
-                        "k": parameter.k_bondorder[n][map_key],
-                        "periodicity": parameter.periodicity[n] * unit.dimensionless,
-                        "phase": parameter.phase[n],
-                        "idivf": parameter.idivf[n] * unit.dimensionless,
-                    }
-                    pots.append(
-                        Potential(
-                            parameters=parameters,
-                            map_key=map_key,
-                        ),
-                    )
-                potential = WrappedPotential(
-                    {pot: coeff for pot, coeff in zip(pots, coeffs)},
-                )
-            else:
-                parameters = {
-                    "k": parameter.k[n],
-                    "periodicity": parameter.periodicity[n] * unit.dimensionless,
-                    "phase": parameter.phase[n],
-                    "idivf": parameter.idivf[n] * unit.dimensionless,
-                }
-                potential = Potential(parameters=parameters)  # type: ignore[assignment]
-            self.potentials[potential_key] = potential
-
-    @classmethod
-    def _from_toolkit(
-        cls: Type[T],
-        parameter_handler: "ProperTorsionHandler",
-        topology: "Topology",
-        partial_bond_orders_from_molecules=None,
-    ) -> T:
-        """
-        Create a SMIRNOFFProperTorsionHandler from toolkit data.
-
-        """
-        handler: T = cls(
-            type="ProperTorsions",
-            expression="k*(1+cos(periodicity*theta-phase))",
-            fractional_bond_order_method=parameter_handler.fractional_bondorder_method,
-            fractional_bond_order_interpolation=parameter_handler.fractional_bondorder_interpolation,
-        )
-
-        if any(
-            getattr(p, "k_bondorder", None) is not None
-            for p in parameter_handler.parameters
-        ):
-            for ref_mol in topology.unique_molecules:
-                if _check_partial_bond_orders(
-                    ref_mol,
-                    partial_bond_orders_from_molecules,
-                ):
-                    continue
-                # TODO: expose conformer generation and fractional bond order assigment knobs via API?
-                ref_mol.generate_conformers(n_conformers=1)
-                ref_mol.assign_fractional_bond_orders(
-                    bond_order_model=handler.fractional_bond_order_method.lower(),  # type: ignore[attr-defined]
-                )
-
-        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
-        handler.store_potentials(parameter_handler=parameter_handler)
-
-        return handler
-
-
-class SMIRNOFFImproperTorsionHandler(SMIRNOFFPotentialHandler):
-    """Handler storing improper torsions potentials as produced by a SMIRNOFF force field."""
-
-    type: Literal["ImproperTorsions"] = "ImproperTorsions"
-    expression: Literal[
-        "k*(1+cos(periodicity*theta-phase))"
-    ] = "k*(1+cos(periodicity*theta-phase))"
-    # TODO: Consider whether or not default_idivf should be stored here
-
-    @classmethod
-    def allowed_parameter_handlers(cls):
-        """Return a list of allowed types of ParameterHandler classes."""
-        return [ImproperTorsionHandler]
-
-    @classmethod
-    def supported_parameters(cls):
-        """Return a list of supported parameter attribute names."""
-        return ["smirks", "id", "k", "periodicity", "phase", "idivf"]
-
-    def store_matches(
-        self,
-        parameter_handler: "ImproperTorsionHandler",
-        topology: "Topology",
-    ) -> None:
-        """
-        Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
-
-        """
-        if self.slot_map:
-            self.slot_map = dict()
-        matches = parameter_handler.find_matches(topology)
-        for key, val in matches.items():
-            parameter_handler._assert_correct_connectivity(
-                val,
-                [
-                    (0, 1),
-                    (1, 2),
-                    (1, 3),
-                ],
-            )
-            n_terms = len(val.parameter_type.k)
-            for n in range(n_terms):
-
-                smirks = val.parameter_type.smirks
-                non_central_indices = [key[0], key[2], key[3]]
-
-                for permuted_key in [
-                    (
-                        non_central_indices[i],
-                        non_central_indices[j],
-                        non_central_indices[k],
-                    )
-                    for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]
-                ]:
-
-                    topology_key = ImproperTorsionKey(
-                        atom_indices=(key[1], *permuted_key),
-                        mult=n,
-                    )
-                    potential_key = PotentialKey(
-                        id=smirks,
-                        mult=n,
-                        associated_handler="ImproperTorsions",
-                    )
-                    self.slot_map[topology_key] = potential_key
-
-    def store_potentials(self, parameter_handler: "ImproperTorsionHandler") -> None:
-        """
-        Populate self.potentials with key-val pairs of [ImproperTorsionKey, PotentialKey].
-
-        """
-        _default_idivf = parameter_handler.default_idivf
-
-        for potential_key in self.slot_map.values():
-            smirks = potential_key.id
-            n = potential_key.mult
-            parameter = parameter_handler.parameters[smirks]
-            if parameter.idivf is None:
-                idivf = None
-            else:
-                # Assumed to be list here
-                idivf = parameter.idivf[n]
-                if idivf is not None:
-                    idivf = idivf * unit.dimensionless
-
-            if idivf is None:
-                if _default_idivf == "auto":
-                    idivf = 3.0 * unit.dimensionless
-                else:
-                    # Assumed to be a numerical value
-                    idivf = _default_idivf * unit.dimensionless
-
-            parameters = {
-                "k": parameter.k[n],
-                "periodicity": parameter.periodicity[n] * unit.dimensionless,
-                "phase": parameter.phase[n],
-                "idivf": idivf,
-            }
-            potential = Potential(parameters=parameters)
-            self.potentials[potential_key] = potential
-
-
-class _SMIRNOFFNonbondedHandler(SMIRNOFFPotentialHandler, abc.ABC):  # noqa
+class _SMIRNOFFNonbondedCollection(SMIRNOFFCollection, abc.ABC):  # noqa
     """Base class for handlers storing non-bonded potentials produced by SMIRNOFF force fields."""
 
     type: str = "nonbonded"
 
-    cutoff: FloatQuantity["angstrom"] = Field(
-        9.0 * unit.angstrom,
+    cutoff: FloatQuantity["angstrom"] = Field(  # noqa
+        unit.Quantity(9.0, unit.angstrom),
         description="The distance at which pairwise interactions are truncated",
     )
 
@@ -818,7 +96,7 @@ class _SMIRNOFFNonbondedHandler(SMIRNOFFPotentialHandler, abc.ABC):  # noqa
     )
 
 
-class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
+class SMIRNOFFvdWCollection(_SMIRNOFFNonbondedCollection):
     """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
 
     type: Literal["vdW"] = "vdW"
@@ -834,8 +112,8 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )
 
-    switch_width: FloatQuantity["angstrom"] = Field(
-        1.0 * unit.angstrom,
+    switch_width: FloatQuantity["angstrom"] = Field(  # noqa
+        unit.Quantity(1.0, unit.angstrom),
         description="The width over which the switching function is applied",
     )
 
@@ -871,10 +149,10 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
             self.potentials[potential_key] = potential
 
     @classmethod
-    def _from_toolkit(
+    def create(
         cls: Type[T],
-        parameter_handler: "vdWHandler",
-        topology: "Topology",
+        parameter_handler: vdWHandler,
+        topology: Topology,
     ) -> T:
         """
         Create a SMIRNOFFvdWHandler from toolkit data.
@@ -913,12 +191,13 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
         """
         return ["vdw", "VirtualSites"]
 
-    def _from_toolkit_virtual_sites(
+    def create_virtual_sites(
         self,
-        parameter_handler: "VirtualSiteHandler",
-        topology: "Topology",
+        parameter_handler: VirtualSiteHandler,
+        topology: Topology,
     ):
-        # TODO: Merge this logic into _from_toolkit
+        """create() but with virtual sites."""
+        # TODO: Merge this logic into create()
 
         if not all(
             isinstance(
@@ -966,7 +245,7 @@ class SMIRNOFFvdWHandler(_SMIRNOFFNonbondedHandler):
             self.potentials.update({pot_key: pot})
 
 
-class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
+class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
     """
     A handler which stores any electrostatic parameters applied to a topology.
 
@@ -1009,21 +288,21 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         pass
 
     @property
-    def charges(self) -> Dict[Union[TopologyKey, VirtualSiteKey], "Quantity"]:
+    def charges(self) -> Dict[Union[TopologyKey, VirtualSiteKey], Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
         return self.get_charges(include_virtual_sites=False)
 
     @property
     def charges_with_virtual_sites(
         self,
-    ) -> Dict[Union[VirtualSiteKey, TopologyKey], "Quantity"]:
+    ) -> Dict[Union[VirtualSiteKey, TopologyKey], Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         return self.get_charges(include_virtual_sites=True)
 
     def get_charges(
         self,
         include_virtual_sites=False,
-    ) -> Dict[Union[VirtualSiteKey, TopologyKey], "Quantity"]:
+    ) -> Dict[Union[VirtualSiteKey, TopologyKey], Quantity]:
         """Get the total partial charge on each atom or particle."""
         charges: DefaultDict[Union[TopologyKey, VirtualSiteKey], float] = defaultdict(
             lambda: 0.0,
@@ -1040,7 +319,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                     if type(topology_key) != VirtualSiteKey:
                         raise RuntimeError
 
-                    total_charge = np.sum(parameter_value)
+                    total_charge = numpy.sum(parameter_value)
                     # assumes virtual sites can only have charges determined in one step
                     # here, topology_key is actually a VirtualSiteKey
                     charges[topology_key] = -1.0 * total_charge
@@ -1059,7 +338,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
                 else:
                     raise NotImplementedError()
 
-        returned_charges: Dict[Union[VirtualSiteKey, TopologyKey], "Quantity"] = dict()
+        returned_charges: Dict[Union[VirtualSiteKey, TopologyKey], Quantity] = dict()
 
         for index, charge in charges.items():
             if isinstance(index, int):
@@ -1078,10 +357,10 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         return ["LibraryCharges", "ChargeIncrementModel", "ToolkitAM1BCC"]
 
     @classmethod
-    def _from_toolkit(
+    def create(
         cls: Type[T],
         parameter_handler: Any,
-        topology: "Topology",
+        topology: Topology,
         charge_from_molecules=None,
         allow_nonintegral_charges: bool = False,
     ) -> T:
@@ -1128,12 +407,13 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
 
         return handler
 
-    def _from_toolkit_virtual_sites(
+    def create_virtual_sites(
         self,
-        parameter_handler: "VirtualSiteHandler",
-        topology: "Topology",
+        parameter_handler: VirtualSiteHandler,
+        topology: Topology,
     ):
-        # TODO: Merge this logic into _from_toolkit
+        """create() but with virtual sites."""
+        # TODO: Merge this logic into create()
 
         if not all(
             isinstance(
@@ -1413,7 +693,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     @classmethod
     def _find_reference_matches(
         cls,
-        parameter_handlers: Dict[str, "ElectrostaticsHandlerType"],
+        parameter_handlers: Dict[str, ElectrostaticsHandlerType],
         unique_molecule: Molecule,
     ) -> Tuple[Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
         """
@@ -1510,7 +790,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     @classmethod
     def _assign_charges_from_molecules(
         cls,
-        topology: "Topology",
+        topology: Topology,
         unique_molecule: Molecule,
         charge_from_molecules=Optional[List[Molecule]],
     ) -> Tuple[bool, Dict, Dict]:
@@ -1557,10 +837,10 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     def store_matches(
         self,
         parameter_handler: Union[
-            "ElectrostaticsHandlerType",
-            List["ElectrostaticsHandlerType"],
+            ElectrostaticsHandlerType,
+            List[ElectrostaticsHandlerType],
         ],
-        topology: "Topology",
+        topology: Topology,
         charge_from_molecules=None,
         allow_nonintegral_charges: bool = False,
     ) -> None:
@@ -1670,8 +950,8 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
     def store_potentials(
         self,
         parameter_handler: Union[
-            "ElectrostaticsHandlerType",
-            List["ElectrostaticsHandlerType"],
+            ElectrostaticsHandlerType,
+            List[ElectrostaticsHandlerType],
         ],
     ) -> None:
         """
@@ -1683,7 +963,7 @@ class SMIRNOFFElectrostaticsHandler(_SMIRNOFFNonbondedHandler):
         pass
 
 
-class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
+class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
     """
     A handler which stores the information necessary to construct virtual sites (virtual particles).
     """
@@ -1695,7 +975,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
 
     type: Literal["VirtualSites"] = "VirtualSites"
     expression: Literal[""] = ""
-    virtual_site_key_topology_index_map: Dict["VirtualSiteKey", int] = Field(
+    virtual_site_key_topology_index_map: Dict[VirtualSiteKey, int] = Field(
         dict(),
         description="A mapping between VirtualSiteKey objects (stored analogously to TopologyKey objects"
         "in other handlers) and topology indices describing the associated virtual site",
@@ -1736,7 +1016,7 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
     def store_matches(
         self,
         parameter_handler: ParameterHandler,
-        topology: "Topology",
+        topology: Topology,
     ) -> None:
         """Populate self.slot_map with key-val pairs of [VirtualSiteKey, PotentialKey]."""
         if self.slot_map:
@@ -1777,8 +1057,8 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
     def store_potentials(  # type: ignore[override]
         self,
         parameter_handler: VirtualSiteHandler,
-        vdw_handler: SMIRNOFFvdWHandler,
-        electrostatics_handler: SMIRNOFFElectrostaticsHandler,
+        vdw_handler: SMIRNOFFvdWCollection,
+        electrostatics_handler: SMIRNOFFElectrostaticsCollection,
     ) -> None:
         """Store VirtualSite-specific parameter-like data."""
         if self.potentials:
@@ -1851,195 +1131,26 @@ class SMIRNOFFVirtualSiteHandler(SMIRNOFFPotentialHandler):
         potential = self.potentials[potential_key]
         if virtual_site_key.type == "BondCharge":
             distance = potential.parameters["distance"]
-            local_frame_position = np.asarray([-1.0, 0.0, 0.0]) * distance
+            local_frame_position = numpy.asarray([-1.0, 0.0, 0.0]) * distance
         elif virtual_site_key.type == "MonovalentLonePair":
             distance = potential.parameters["distance"]
             theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
             psi = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
-            factor = np.array(
-                [np.cos(theta) * np.cos(psi), np.sin(theta) * np.cos(psi), np.sin(psi)],
+            factor = numpy.array(
+                [
+                    numpy.cos(theta) * numpy.cos(psi),
+                    numpy.sin(theta) * numpy.cos(psi),
+                    numpy.sin(psi),
+                ],
             )
             local_frame_position = factor * distance
         elif virtual_site_key.type == "DivalentLonePair":
             distance = potential.parameters["distance"]
             theta = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
-            factor = np.asarray([-1.0 * np.cos(theta), 0.0, np.sin(theta)])
+            factor = numpy.asarray([-1.0 * numpy.cos(theta), 0.0, numpy.sin(theta)])
             local_frame_position = factor * distance
         elif virtual_site_key.type == "TrivalentLonePair":
             distance = potential.parameters["distance"]
-            local_frame_position = np.asarray([-1.0, 0.0, 0.0]) * distance
+            local_frame_position = numpy.asarray([-1.0, 0.0, 0.0]) * distance
 
         return local_frame_position
-
-
-def library_charge_from_molecule(
-    molecule: "Molecule",
-) -> LibraryChargeHandler.LibraryChargeType:
-    """Given an OpenFF Molecule with charges, generate a corresponding LibraryChargeType."""
-    if molecule.partial_charges is None:
-        raise MissingPartialChargesError
-
-    smirks = molecule.to_smiles(mapped=True)
-    charges = molecule.partial_charges
-
-    library_charge_type = LibraryChargeHandler.LibraryChargeType(
-        smirks=smirks,
-        charge=charges,
-    )
-
-    return library_charge_type
-
-
-def _get_interpolation_coeffs(fractional_bond_order, data):
-    x1, x2 = data.keys()
-    coeff1 = (x2 - fractional_bond_order) / (x2 - x1)
-    coeff2 = (fractional_bond_order - x1) / (x2 - x1)
-
-    return coeff1, coeff2
-
-
-def _check_partial_bond_orders(
-    reference_molecule: Molecule,
-    molecule_list: List[Molecule],
-) -> bool:
-    """Check if the reference molecule is isomorphic with any molecules in a provided list."""
-    if molecule_list is None:
-        return False
-
-    if len(molecule_list) == 0:
-        return False
-
-    for molecule in molecule_list:
-        if reference_molecule.is_isomorphic_with(molecule):
-            # TODO: Here is where a check for "all bonds in this molecule must have partial bond orders assigned"
-            #       would go. That seems like a difficult mangled state to end up in, so not implemented for now.
-            return True
-
-    return False
-
-
-SMIRNOFF_POTENTIAL_HANDLERS = [
-    SMIRNOFFBondHandler,
-    SMIRNOFFConstraintHandler,
-    SMIRNOFFAngleHandler,
-    SMIRNOFFProperTorsionHandler,
-    SMIRNOFFImproperTorsionHandler,
-    SMIRNOFFvdWHandler,
-    SMIRNOFFElectrostaticsHandler,
-    SMIRNOFFVirtualSiteHandler,
-]
-
-
-def _upconvert_bondhandler(bond_handler: BondHandler):
-    """Given a BondHandler with version 0.3, up-convert to 0.4."""
-    from packaging.version import Version
-
-    assert bond_handler.version == Version(
-        "0.3",
-    ), "This up-converter only works with version 0.3."
-
-    bond_handler.version = Version("0.4")
-    bond_handler.potential = "(k/2)*(r-length)^2"
-
-
-def _slow_key_lookup_by_atom_index(matches: Dict, atom_index: int) -> List[TopologyKey]:
-    matched_keys = list()
-    for key in matches:
-        if (getattr(key, "this_atom_index", None) == atom_index) or (
-            getattr(key, "atom_indices", [None])[0] == atom_index
-        ):
-            matched_keys.append(key)
-    return matched_keys
-
-
-def _compute_lj_sigma(
-    sigma: Optional[unit.Quantity],
-    rmin_half: Optional[unit.Quantity],
-) -> unit.Quantity:
-
-    return sigma if sigma is not None else (2.0 * rmin_half / (2.0 ** (1.0 / 6.0)))  # type: ignore
-
-
-# Coped from the toolkit, see
-# https://github.com/openforcefield/openff-toolkit/blob/0133414d3ab51e1af0996bcebe0cc1bdddc6431b/
-# openff/toolkit/typing/engines/smirnoff/parameters.py#L2318
-def _check_all_valence_terms_assigned(
-    handler,
-    assigned_terms,
-    topology,
-    valence_terms,
-):
-    """Check that all valence terms have been assigned."""
-    if len(assigned_terms) == len(valence_terms):
-        return
-
-    # Convert the valence term to a valence dictionary to make sure
-    # the order of atom indices doesn't matter for comparison.
-    valence_terms_dict = assigned_terms.__class__()
-    for atoms in valence_terms:
-        atom_indices = (topology.atom_index(a) for a in atoms)
-        valence_terms_dict[atom_indices] = atoms
-
-    # Check that both valence dictionaries have the same keys (i.e. terms).
-    assigned_terms_set = set(assigned_terms.keys())
-    valence_terms_set = set(valence_terms_dict.keys())
-    unassigned_terms = valence_terms_set.difference(assigned_terms_set)
-    not_found_terms = assigned_terms_set.difference(valence_terms_set)
-
-    # Raise an error if there are unassigned terms.
-    err_msg = ""
-
-    if len(unassigned_terms) > 0:
-
-        unassigned_atom_tuples = []
-
-        unassigned_str = ""
-        for unassigned_tuple in unassigned_terms:
-            unassigned_str += "\n- Topology indices " + str(unassigned_tuple)
-            unassigned_str += ": names and elements "
-
-            unassigned_atoms = []
-
-            # Pull and add additional helpful info on missing terms
-            for atom_idx in unassigned_tuple:
-                atom = topology.atom(atom_idx)
-                unassigned_atoms.append(atom)
-                unassigned_str += f"({atom.name} {atom.symbol}), "
-            unassigned_atom_tuples.append(tuple(unassigned_atoms))
-        err_msg += (
-            "{parameter_handler} was not able to find parameters for the following valence terms:\n"
-            "{unassigned_str}"
-        ).format(
-            parameter_handler=handler.__class__.__name__,
-            unassigned_str=unassigned_str,
-        )
-    if len(not_found_terms) > 0:
-        if err_msg != "":
-            err_msg += "\n"
-        not_found_str = "\n- ".join([str(x) for x in not_found_terms])
-        err_msg += (
-            "{parameter_handler} assigned terms that were not found in the topology:\n"
-            "- {not_found_str}"
-        ).format(
-            parameter_handler=handler.__class__.__name__,
-            not_found_str=not_found_str,
-        )
-    if err_msg:
-
-        err_msg += "\n"
-
-        if isinstance(handler, BondHandler):
-            exception_class = UnassignedBondError
-        elif isinstance(handler, AngleHandler):
-            exception_class = UnassignedAngleError
-        elif isinstance(handler, (ProperTorsionHandler, ImproperTorsionHandler)):
-            exception_class = UnassignedTorsionError
-        else:
-            raise RuntimeError(
-                f"Could not find an exception class for handler {handler}",
-            )
-
-        exception = exception_class(err_msg)
-        exception.unassigned_topology_atom_tuples = unassigned_atom_tuples
-        exception.handler_class = handler.__class__
-        raise exception

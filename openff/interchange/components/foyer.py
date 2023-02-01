@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Dict, Optional, Type
 from openff.models.types import FloatQuantity
 from openff.units import unit
 
-from openff.interchange.components.potentials import Potential, PotentialHandler
+from openff.interchange.components.potentials import Collection, Potential
 from openff.interchange.constants import _PME
 from openff.interchange.models import PotentialKey, TopologyKey
 
@@ -39,7 +39,7 @@ def _get_potential_key_id(atom_slots: Dict[TopologyKey, PotentialKey], idx):
     return atom_slots[top_key].id
 
 
-def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
+def get_handlers_callable() -> Dict[str, Type[Collection]]:
     """Map Foyer-style handlers from string identifiers."""
     return {
         "vdW": FoyerVDWHandler,
@@ -53,7 +53,7 @@ def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
     }
 
 
-class FoyerVDWHandler(PotentialHandler):
+class FoyerVDWHandler(Collection):
     """Handler storing vdW potentials as produced by a Foyer force field."""
 
     type: str = "atoms"
@@ -99,7 +99,7 @@ class FoyerVDWHandler(PotentialHandler):
             self.potentials[self.slot_map[top_key]] = Potential(parameters=atom_params)
 
 
-class FoyerElectrostaticsHandler(PotentialHandler):
+class FoyerElectrostaticsHandler(Collection):
     """Handler storing electrostatics potentials as produced by a Foyer force field."""
 
     type: str = "Electrostatics"
@@ -131,7 +131,7 @@ class FoyerElectrostaticsHandler(PotentialHandler):
             self.potentials[pot_key] = Potential(parameters={"charge": charge})
 
 
-class FoyerConnectedAtomsHandler(PotentialHandler):
+class FoyerConnectedAtomsHandler(Collection):
     """Base class for handlers storing valence potentials produced by a Foyer force field."""
 
     connection_attribute: str = ""
@@ -331,7 +331,7 @@ class FoyerPeriodicImproperHandler(FoyerPeriodicProperHandler):
     connection_attribute: str = "impropers"
 
 
-class _RBTorsionHandler(PotentialHandler):
+class _RBTorsionHandler(Collection):
     # TODO: Is this class superceded by FoyerRBProperHandler? Should it be removed?
     type = "Ryckaert-Bellemans"
     expression = (

@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from openff.units.unit import Quantity
 
     from openff.interchange import Interchange
-    from openff.interchange.components.potentials import PotentialHandler
+    from openff.interchange.components.potentials import Collection
 
 
 def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int = 3):
@@ -1094,15 +1094,15 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
     top_file.write(";    i      j      k      l   func\n")
 
     # FIXME: RB Impropers are probably missed here
-    rb_torsion_handler: Optional["PotentialHandler"] = openff_sys.collections.get(
+    rb_torsion_handler: Optional["Collection"] = openff_sys.collections.get(
         "RBTorsions",
         None,
     )
-    proper_torsion_handler: Optional["PotentialHandler"] = openff_sys.collections.get(
+    proper_torsion_handler: Optional["Collection"] = openff_sys.collections.get(
         "ProperTorsions",
         None,
     )
-    improper_torsion_handler: Optional["PotentialHandler"] = openff_sys.collections.get(
+    improper_torsion_handler: Optional["Collection"] = openff_sys.collections.get(
         "ImproperTorsions",
         None,
     )

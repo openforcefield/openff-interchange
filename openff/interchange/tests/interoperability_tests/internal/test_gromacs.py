@@ -261,7 +261,9 @@ class TestGROMACS(_BaseTest):
     @pytest.mark.slow()
     def test_argon_buck(self):
         """Test that Buckingham potentials are supported and can be exported"""
-        from openff.interchange.components.smirnoff import SMIRNOFFElectrostaticsHandler
+        from openff.interchange.smirnoff._nonbonded import (
+            SMIRNOFFElectrostaticsCollection,
+        )
 
         mol = Molecule.from_smiles("[#18]")
         mol.name = "Argon"
@@ -276,7 +278,7 @@ class TestGROMACS(_BaseTest):
         r = 0.3 * unit.nanometer
 
         buck = BuckinghamvdWHandler()
-        coul = SMIRNOFFElectrostaticsHandler(method="pme")
+        coul = SMIRNOFFElectrostaticsCollection(method="pme")
 
         pot_key = PotentialKey(id="[#18]")
         pot = Potential(parameters={"A": A, "B": B, "C": C})

@@ -14,7 +14,7 @@ from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
 
 from openff.interchange.components.mdconfig import MDConfig
-from openff.interchange.components.potentials import PotentialHandler
+from openff.interchange.components.potentials import Collection
 from openff.interchange.exceptions import (
     InvalidBoxError,
     InvalidTopologyError,
@@ -26,15 +26,17 @@ from openff.interchange.exceptions import (
 from openff.interchange.models import PotentialKey, TopologyKey
 
 if TYPE_CHECKING:
-    from openff.interchange.components.smirnoff import (
-        SMIRNOFFAngleHandler,
-        SMIRNOFFBondHandler,
-        SMIRNOFFConstraintHandler,
-        SMIRNOFFElectrostaticsHandler,
-        SMIRNOFFImproperTorsionHandler,
-        SMIRNOFFProperTorsionHandler,
-        SMIRNOFFvdWHandler,
-        SMIRNOFFVirtualSiteHandler,
+    from openff.interchange.smirnoff._nonbonded import (
+        SMIRNOFFElectrostaticsCollection,
+        SMIRNOFFvdWCollection,
+        SMIRNOFFVirtualSiteCollection,
+    )
+    from openff.interchange.smirnoff._valence import (
+        SMIRNOFFAngleCollection,
+        SMIRNOFFBondCollection,
+        SMIRNOFFConstraintCollection,
+        SMIRNOFFImproperTorsionCollection,
+        SMIRNOFFProperTorsionCollection,
     )
 
     if has_package("foyer"):
@@ -116,7 +118,7 @@ class Interchange(DefaultModel):
     .. warning :: This API is experimental and subject to change.
     """
 
-    collections: Dict[str, PotentialHandler] = Field(dict())
+    collections: Dict[str, Collection] = Field(dict())
     topology: Topology = Field(None)
     mdconfig: MDConfig = Field(None)
     box: ArrayQuantity["nanometer"] = Field(None)
@@ -567,47 +569,50 @@ class Interchange(DefaultModel):
         )
 
     @overload
-    def __getitem__(self, item: Literal["Bonds"]) -> "SMIRNOFFBondHandler":
+    def __getitem__(self, item: Literal["Bonds"]) -> "SMIRNOFFBondCollection":
         ...
 
     @overload
-    def __getitem__(self, item: Literal["Constraints"]) -> "SMIRNOFFConstraintHandler":
+    def __getitem__(
+        self,
+        item: Literal["Constraints"],
+    ) -> "SMIRNOFFConstraintCollection":
         ...
 
     @overload
-    def __getitem__(self, item: Literal["Angles"]) -> "SMIRNOFFAngleHandler":
+    def __getitem__(self, item: Literal["Angles"]) -> "SMIRNOFFAngleCollection":
         ...
 
     @overload
-    def __getitem__(self, item: Literal["vdW"]) -> "SMIRNOFFvdWHandler":
+    def __getitem__(self, item: Literal["vdW"]) -> "SMIRNOFFvdWCollection":
         ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["ProperTorsions"],
-    ) -> "SMIRNOFFProperTorsionHandler":
+    ) -> "SMIRNOFFProperTorsionCollection":
         ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["ImproperTorsions"],
-    ) -> "SMIRNOFFImproperTorsionHandler":
+    ) -> "SMIRNOFFImproperTorsionCollection":
         ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["VirtualSites"],
-    ) -> "SMIRNOFFVirtualSiteHandler":
+    ) -> "SMIRNOFFVirtualSiteCollection":
         ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["Electrostatics"],
-    ) -> "SMIRNOFFElectrostaticsHandler":
+    ) -> "SMIRNOFFElectrostaticsCollection":
         ...
 
     def __getitem__(self, item: str):  # noqa

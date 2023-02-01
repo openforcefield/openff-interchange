@@ -7,38 +7,38 @@ from openff.models.types import FloatQuantity
 from openff.units import unit
 from pydantic import Field
 
-from openff.interchange.components.potentials import PotentialHandler
+from openff.interchange.components.potentials import Collection
 
 
-class BaseBondHandler(PotentialHandler):
+class BaseBondHandler(Collection):
     """Base handler for storing generic bond interactions."""
 
     type: str = "Bonds"
     expression: str = "k/2*(r-length)**2"
 
 
-class BaseAngleHandler(PotentialHandler):
+class BaseAngleHandler(Collection):
     """Base handler for storing generic angle interactions."""
 
     type: str = "Angle"
     expression: str = "k/2*(theta-angle)**2"
 
 
-class BaseProperTorsionHandler(PotentialHandler):
+class BaseProperTorsionHandler(Collection):
     """Base handler for storing generic proper torsion interactions."""
 
     type: str = "ProperTorsions"
     expression: str = "k*(1+cos(periodicity*theta-phase))"
 
 
-class BaseImproperTorsionHandler(PotentialHandler):
+class BaseImproperTorsionHandler(Collection):
     """Base handler for storing generic improper torsion interactions."""
 
     type: str = "ImproperTorsions"
     expression: str = "k*(1+cos(periodicity*theta-phase))"
 
 
-class _BaseNonbondedHandler(PotentialHandler):
+class _BaseNonbondedHandler(Collection):
     """Base handler for storing generic nonbonded interactions."""
 
     type: str = "Nonbonded"

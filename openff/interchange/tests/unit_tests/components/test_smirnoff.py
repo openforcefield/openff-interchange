@@ -27,16 +27,6 @@ from openmm import unit as openmm_unit
 from pydantic import ValidationError
 
 from openff.interchange import Interchange
-from openff.interchange.components.smirnoff import (
-    SMIRNOFFAngleHandler,
-    SMIRNOFFBondHandler,
-    SMIRNOFFConstraintHandler,
-    SMIRNOFFElectrostaticsHandler,
-    SMIRNOFFImproperTorsionHandler,
-    SMIRNOFFPotentialHandler,
-    SMIRNOFFvdWHandler,
-    library_charge_from_molecule,
-)
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     UnassignedAngleError,
@@ -44,6 +34,18 @@ from openff.interchange.exceptions import (
     UnassignedTorsionError,
 )
 from openff.interchange.models import AngleKey, BondKey, ImproperTorsionKey
+from openff.interchange.smirnoff._base import SMIRNOFFCollection
+from openff.interchange.smirnoff._nonbonded import (
+    SMIRNOFFElectrostaticsCollection,
+    SMIRNOFFvdWCollection,
+    library_charge_from_molecule,
+)
+from openff.interchange.smirnoff._valence import (
+    SMIRNOFFAngleCollection,
+    SMIRNOFFBondCollection,
+    SMIRNOFFConstraintCollection,
+    SMIRNOFFImproperTorsionCollection,
+)
 from openff.interchange.tests import _BaseTest, get_test_file_path
 
 kcal_mol = unit.Unit("kilocalorie / mol")
@@ -80,12 +82,12 @@ def hydrogen_cyanide_charge_increments() -> ChargeIncrementModelHandler:
     return handler
 
 
-class TestSMIRNOFFPotentialHandler(_BaseTest):
+class TestSMIRNOFFCollection(_BaseTest):
     def test_allowed_parameter_handler_types(self):
         class DummyParameterHandler(ParameterHandler):
             pass
 
-        class DummySMIRNOFFHandler(SMIRNOFFPotentialHandler):
+        class DummySMIRNOFFCollection(SMIRNOFFCollection):
             type = "Bonds"
             expression = "1+1"
 
@@ -97,26 +99,26 @@ class TestSMIRNOFFPotentialHandler(_BaseTest):
             def supported_parameters(cls):
                 return list()
 
-        dummy_handler = DummySMIRNOFFHandler()
+        dummy_handler = DummySMIRNOFFCollection()
         angle_Handler = AngleHandler(version=0.3)
 
         assert DummyParameterHandler in dummy_handler.allowed_parameter_handlers()
         assert AngleHandler not in dummy_handler.allowed_parameter_handlers()
         assert (
             DummyParameterHandler
-            not in SMIRNOFFAngleHandler.allowed_parameter_handlers()
+            not in SMIRNOFFAngleCollection.allowed_parameter_handlers()
         )
 
         dummy_handler = DummyParameterHandler(version=0.3)
 
         with pytest.raises(InvalidParameterHandlerError):
-            SMIRNOFFAngleHandler._from_toolkit(
+            SMIRNOFFAngleCollection.create(
                 parameter_handler=dummy_handler,
                 topology=Topology(),
             )
 
         with pytest.raises(InvalidParameterHandlerError):
-            DummySMIRNOFFHandler._from_toolkit(
+            DummySMIRNOFFCollection.create(
                 parameter_handler=angle_Handler,
                 topology=Topology(),
             )
@@ -136,7 +138,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(bond_handler)
-        bond_potentials = SMIRNOFFBondHandler._from_toolkit(
+        bond_potentials = SMIRNOFFBondCollection.create(
             parameter_handler=forcefield["Bonds"],
             topology=Molecule.from_smiles("O").to_topology(),
         )
@@ -160,7 +162,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
 
         forcefield = ForceField()
         forcefield.register_parameter_handler(angle_handler)
-        angle_potentials = SMIRNOFFAngleHandler._from_toolkit(
+        angle_potentials = SMIRNOFFAngleCollection.create(
             parameter_handler=forcefield["Angles"],
             topology=Molecule.from_smiles("CCC").to_topology(),
         )
@@ -185,7 +187,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
             ),
         )
 
-        potential_handler = SMIRNOFFImproperTorsionHandler()
+        potential_handler = SMIRNOFFImproperTorsionCollection()
         potential_handler.store_matches(parameter_handler, formaldehyde.to_topology())
 
         assert len(potential_handler.slot_map) == 3
@@ -221,7 +223,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
             },
         )
 
-        potential_handler = SMIRNOFFImproperTorsionHandler._from_toolkit(
+        potential_handler = SMIRNOFFImproperTorsionCollection.create(
             parameter_handler=handler,
             topology=topology,
         )
@@ -238,7 +240,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
             },
         )
 
-        potential_handler = SMIRNOFFImproperTorsionHandler._from_toolkit(
+        potential_handler = SMIRNOFFImproperTorsionCollection.create(
             parameter_handler=handler,
             topology=topology,
         )
@@ -261,7 +263,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
             ToolkitAM1BCCHandler(version=0.3),
         ]
 
-        electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
+        electrostatics_handler = SMIRNOFFElectrostaticsCollection.create(
             parameter_handlers,
             top,
         )
@@ -287,7 +289,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
             library_charge_handler,
         ]
 
-        electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
+        electrostatics_handler = SMIRNOFFElectrostaticsCollection.create(
             parameter_handlers,
             top,
         )
@@ -321,7 +323,7 @@ class TestSMIRNOFFHandlers(_BaseTest):
             charge_increment_handler,
         ]
 
-        electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
+        electrostatics_handler = SMIRNOFFElectrostaticsCollection.create(
             parameter_handlers,
             top,
         )
@@ -467,7 +469,7 @@ class TestConstraints(_BaseTest):
 
         topology = Molecule.from_smiles(mol).to_topology()
 
-        constraints = SMIRNOFFConstraintHandler._from_toolkit(
+        constraints = SMIRNOFFConstraintCollection.create(
             parameter_handler=[
                 val for val in [bond_handler, constraint_handler] if val is not None
             ],
@@ -482,7 +484,7 @@ class TestConstraints(_BaseTest):
         topology = Molecule.from_smiles("O").to_topology()
         topology.box_vectors = [4, 4, 4] * unit.nanometer
 
-        constraints = SMIRNOFFConstraintHandler._from_toolkit(
+        constraints = SMIRNOFFConstraintCollection.create(
             parameter_handler=tip3p["Constraints"],
             topology=topology,
         )
@@ -710,11 +712,11 @@ class TestBondOrderInterpolation(_BaseTest):
             self.xml_ff_bo_bonds,
         )
 
-        bonds = SMIRNOFFBondHandler._from_toolkit(
+        bonds = SMIRNOFFBondCollection.create(
             parameter_handler=forcefield["Bonds"],
             topology=top,
         )
-        bonds_mod = SMIRNOFFBondHandler._from_toolkit(
+        bonds_mod = SMIRNOFFBondCollection.create(
             parameter_handler=forcefield["Bonds"],
             topology=mod_top,
         )
@@ -748,11 +750,11 @@ class TestBondOrderInterpolation(_BaseTest):
             self.xml_ff_bo_bonds,
         )
 
-        bonds = SMIRNOFFBondHandler._from_toolkit(
+        bonds = SMIRNOFFBondCollection.create(
             parameter_handler=forcefield["Bonds"],
             topology=top,
         )
-        bonds_mod = SMIRNOFFBondHandler._from_toolkit(
+        bonds_mod = SMIRNOFFBondCollection.create(
             parameter_handler=forcefield["Bonds"],
             topology=mod_top,
         )
@@ -798,17 +800,17 @@ class TestMatrixRepresentations(_BaseTest):
         import jax
 
         if handler_name == "Bonds":
-            handler = SMIRNOFFBondHandler._from_toolkit(
+            handler = SMIRNOFFBondCollection.create(
                 parameter_handler=sage["Bonds"],
                 topology=ethanol_top,
             )
         elif handler_name == "Angles":
-            handler = SMIRNOFFAngleHandler._from_toolkit(
+            handler = SMIRNOFFAngleCollection.create(
                 parameter_handler=sage[handler_name],
                 topology=ethanol_top,
             )
         elif handler_name == "vdW":
-            handler = SMIRNOFFvdWHandler._from_toolkit(
+            handler = SMIRNOFFvdWCollection.create(
                 parameter_handler=sage[handler_name],
                 topology=ethanol_top,
             )
@@ -844,7 +846,7 @@ class TestMatrixRepresentations(_BaseTest):
     def test_set_force_field_parameters(self, sage, ethanol):
         import jax
 
-        bond_handler = SMIRNOFFBondHandler._from_toolkit(
+        bond_handler = SMIRNOFFBondCollection.create(
             parameter_handler=sage["Bonds"],
             topology=ethanol.to_topology(),
         )

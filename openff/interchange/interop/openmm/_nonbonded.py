@@ -42,10 +42,10 @@ def _process_nonbonded_forces(
     `combine_nonbondoed_forces=False`.
 
     """
-    from openff.interchange.components.smirnoff import _SMIRNOFFNonbondedHandler
+    from openff.interchange.smirnoff._nonbonded import _SMIRNOFFNonbondedCollection
 
     for handler in openff_sys.collections.values():
-        if isinstance(handler, _SMIRNOFFNonbondedHandler):
+        if isinstance(handler, _SMIRNOFFNonbondedCollection):
             break
     else:
         # If there are no non-bonded collections, assume here that there can be no virtual sites,

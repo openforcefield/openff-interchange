@@ -1,10 +1,10 @@
 """Models for non-standard non-bonded treatments."""
 from typing import Literal
 
-from openff.interchange.components.potentials import PotentialHandler
+from openff.interchange.components.potentials import Collection
 
 
-class BuckinghamvdWHandler(PotentialHandler):
+class BuckinghamvdWHandler(Collection):
     """Handler storing Buckingham-style vdW potentials."""
 
     type: Literal["Buckingham-6"] = "Buckingham-6"

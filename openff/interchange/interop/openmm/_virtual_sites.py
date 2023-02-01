@@ -11,10 +11,10 @@ from openff.interchange.models import VirtualSiteKey
 
 if TYPE_CHECKING:
     from openff.interchange.components._particles import _VirtualSite
-    from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
+    from openff.interchange.smirnoff._nonbonded import SMIRNOFFVirtualSiteCollection
 
 
-def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteHandler"):
+def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteCollection"):
     _SUPPORTED_EXCLUSION_POLICIES = ("parents",)
 
     if handler.exclusion_policy not in _SUPPORTED_EXCLUSION_POLICIES:

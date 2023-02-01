@@ -5,22 +5,24 @@ from openff.units import Quantity
 from packaging.version import Version
 
 from openff.interchange import Interchange
-from openff.interchange.components.smirnoff import (
-    SMIRNOFFAngleHandler,
-    SMIRNOFFBondHandler,
-    SMIRNOFFConstraintHandler,
-    SMIRNOFFElectrostaticsHandler,
-    SMIRNOFFImproperTorsionHandler,
-    SMIRNOFFProperTorsionHandler,
-    SMIRNOFFvdWHandler,
-    SMIRNOFFVirtualSiteHandler,
-)
 from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
     MissingParameterHandlerError,
     SMIRNOFFHandlersNotImplementedError,
 )
+from openff.interchange.smirnoff._nonbonded import (
+    SMIRNOFFElectrostaticsCollection,
+    SMIRNOFFvdWCollection,
+    SMIRNOFFVirtualSiteCollection,
+)
 from openff.interchange.smirnoff._positions import _infer_positions
+from openff.interchange.smirnoff._valence import (
+    SMIRNOFFAngleCollection,
+    SMIRNOFFBondCollection,
+    SMIRNOFFConstraintCollection,
+    SMIRNOFFImproperTorsionCollection,
+    SMIRNOFFProperTorsionCollection,
+)
 
 _SUPPORTED_SMIRNOFF_HANDLERS = {
     "Constraints",
@@ -108,7 +110,7 @@ def _bonds(
 
     interchange.collections.update(
         {
-            "Bonds": SMIRNOFFBondHandler._from_toolkit(
+            "Bonds": SMIRNOFFBondCollection.create(
                 parameter_handler=force_field["Bonds"],
                 topology=_topology,
                 partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
@@ -120,7 +122,7 @@ def _bonds(
 def _constraints(interchange: Interchange, force_field: ForceField, topology: Topology):
     interchange.collections.update(
         {
-            "Constraints": SMIRNOFFConstraintHandler._from_toolkit(
+            "Constraints": SMIRNOFFConstraintCollection.create(
                 parameter_handler=[
                     handler
                     for handler in [
@@ -141,7 +143,7 @@ def _angles(interchange, force_field, _topology):
 
     interchange.collections.update(
         {
-            "Angles": SMIRNOFFAngleHandler._from_toolkit(
+            "Angles": SMIRNOFFAngleCollection.create(
                 parameter_handler=force_field["Angles"],
                 topology=_topology,
             ),
@@ -160,7 +162,7 @@ def _propers(
 
     interchange.collections.update(
         {
-            "ProperTorsions": SMIRNOFFProperTorsionHandler._from_toolkit(
+            "ProperTorsions": SMIRNOFFProperTorsionCollection.create(
                 parameter_handler=force_field["ProperTorsions"],
                 topology=_topology,
                 partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
@@ -175,7 +177,7 @@ def _impropers(interchange, force_field, _topology):
 
     interchange.collections.update(
         {
-            "ImproperTorsions": SMIRNOFFImproperTorsionHandler._from_toolkit(
+            "ImproperTorsions": SMIRNOFFImproperTorsionCollection.create(
                 parameter_handler=force_field["ImproperTorsions"],
                 topology=_topology,
             ),
@@ -189,7 +191,7 @@ def _vdw(interchange: Interchange, force_field: ForceField, topology: Topology):
 
     interchange.collections.update(
         {
-            "vdW": SMIRNOFFvdWHandler._from_toolkit(
+            "vdW": SMIRNOFFvdWCollection.create(
                 parameter_handler=force_field["vdW"],
                 topology=topology,
             ),
@@ -216,7 +218,7 @@ def _electrostatics(
 
     interchange.collections.update(
         {
-            "Electrostatics": SMIRNOFFElectrostaticsHandler._from_toolkit(
+            "Electrostatics": SMIRNOFFElectrostaticsCollection.create(
                 parameter_handler=[
                     handler
                     for handler in [
@@ -246,7 +248,7 @@ def _virtual_sites(
     if "VirtualSites" not in force_field.registered_parameter_handlers:
         return
 
-    virtual_site_handler = SMIRNOFFVirtualSiteHandler()
+    virtual_site_handler = SMIRNOFFVirtualSiteCollection()
 
     virtual_site_handler.exclusion_policy = force_field["VirtualSites"].exclusion_policy
 
