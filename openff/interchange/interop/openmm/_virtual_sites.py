@@ -28,7 +28,6 @@ def _create_openmm_virtual_site(
     virtual_site: "_VirtualSite",
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int],
 ) -> openmm.LocalCoordinatesSite:
-
     # It is assumed that the first "orientation" atom is the "parent" atom.
     originwt, xdir, ydir = virtual_site.local_frame_weights
     pos = virtual_site.local_frame_positions

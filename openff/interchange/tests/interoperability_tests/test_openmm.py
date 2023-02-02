@@ -174,7 +174,6 @@ class TestOpenMM(_BaseTest):
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
     @pytest.mark.slow()
     def test_combine_nonbonded_forces(self, sage):
-
         mol = Molecule.from_smiles("ClC#CCl")
         mol.name = "HPER"
         mol.generate_conformers(n_conformers=1)
@@ -562,7 +561,6 @@ class TestOpenMMVirtualSiteExclusions(_BaseTest):
 
 class TestToOpenMMTopology(_BaseTest):
     def test_num_virtual_sites(self):
-
         tip4p = ForceField("openff-2.0.0.offxml", get_test_file_path("tip4p.offxml"))
         water = Molecule.from_smiles("O")
 

@@ -74,7 +74,6 @@ def _process_bond_forces(
     has_constraint_handler = "Constraints" in openff_sys.collections
 
     for top_key, pot_key in bond_handler.slot_map.items():
-
         openff_indices = top_key.atom_indices
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
@@ -136,7 +135,6 @@ def _process_angle_forces(
     has_constraint_handler = "Constraints" in openff_sys.collections
 
     for top_key, pot_key in angle_handler.slot_map.items():
-
         openff_indices = top_key.atom_indices
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 

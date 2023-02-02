@@ -91,7 +91,6 @@ def _process_nonbonded_forces(
 
     # TODO: Process ElectrostaticsHandler.exception_potential
     if "vdW" in openff_sys.collections or "Electrostatics" in openff_sys.collections:
-
         _data = _prepare_input_data(openff_sys)
 
         if combine_nonbonded_forces:
@@ -175,7 +174,6 @@ def _process_nonbonded_forces(
         openmm_sys.addForce(non_bonded_force)
 
         for molecule in openff_sys.topology.molecules:
-
             for _ in molecule.atoms:
                 non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
@@ -201,13 +199,11 @@ def _add_particles_to_system(
     openmm_sys: openmm.System,
     molecule_virtual_site_map,
 ) -> Dict[Union[int, VirtualSiteKey], int]:
-
     has_virtual_sites = molecule_virtual_site_map not in (None, dict())
 
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int] = dict()
 
     for molecule in openff_sys.topology.molecules:
-
         for atom in molecule.atoms:
             atom_index = openff_sys.topology.atom_index(atom)
 
@@ -347,9 +343,7 @@ def _create_single_nonbonded_force(
     parent_virtual_particle_mapping: DefaultDict[int, List[int]] = defaultdict(list)
 
     for molecule in openff_sys.topology.molecules:
-
         for atom in molecule.atoms:
-
             non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
             atom_index = openff_sys.topology.atom_index(atom)

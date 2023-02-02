@@ -77,7 +77,6 @@ def _check_all_valence_terms_assigned(
     err_msg = ""
 
     if len(unassigned_terms) > 0:
-
         unassigned_atom_tuples = []
 
         unassigned_str = ""
@@ -112,7 +111,6 @@ def _check_all_valence_terms_assigned(
             not_found_str=not_found_str,
         )
     if err_msg:
-
         err_msg += "\n"
 
         if isinstance(handler, BondHandler):

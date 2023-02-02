@@ -39,7 +39,6 @@ _SUPPORTED_SMIRNOFF_HANDLERS = {
 
 
 def _check_supported_handlers(force_field: ForceField):
-
     unsupported = list()
 
     for handler_name in force_field.registered_parameter_handlers:

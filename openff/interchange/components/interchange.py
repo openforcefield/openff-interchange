@@ -651,7 +651,6 @@ class Interchange(DefaultModel):
         atom_offset = self.topology.n_atoms
 
         for handler_name, handler in other.collections.items():
-
             # TODO: Actually specify behavior in this case
             try:
                 self_handler = self_copy.collections[handler_name]
@@ -664,7 +663,6 @@ class Interchange(DefaultModel):
                 continue
 
             for top_key, pot_key in handler.slot_map.items():
-
                 new_atom_indices = tuple(
                     idx + atom_offset for idx in top_key.atom_indices
                 )

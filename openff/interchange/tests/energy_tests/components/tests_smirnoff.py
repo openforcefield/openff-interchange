@@ -17,7 +17,6 @@ from openff.interchange.tests.unit_tests.components.test_smirnoff import (
 class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
     @pytest.mark.slow()
     def test_basic_bond_order_interpolation_energies(self):
-
         forcefield = ForceField(
             "test_forcefields/test_forcefield.offxml",
             self.xml_ff_bo_bonds,

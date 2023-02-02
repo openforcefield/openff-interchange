@@ -96,7 +96,6 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int 
 
         for molecule_index, molecule in enumerate(openff_sys.topology.molecules):
             for atom in molecule.atoms:
-
                 residue_index, residue_name = _get_residue_info_from_atom(atom)
 
                 topology_index = openff_sys.topology.atom_index(atom)
@@ -234,7 +233,6 @@ def _read_coordinates(file_path: Union[Path, str]) -> np.ndarray:
 
 
 def _read_box(file_path: Union[Path, str]) -> np.ndarray:
-
     with open(file_path) as gro_file:
         # Throw away comment / name line
         gro_file.readline()
@@ -997,7 +995,6 @@ def _write_bonds(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
     bond_handler = openff_sys["Bonds"]
 
     for bond in molecule.bonds:
-
         topology_indices = tuple(
             sorted(openff_sys.topology.atom_index(a) for a in bond.atoms),
         )
@@ -1109,12 +1106,10 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
 
     # TODO: Ensure number of torsions written matches what is expected
     for proper in molecule.propers:
-
         topology_indices = tuple(openff_sys.topology.atom_index(a) for a in proper)
         molecule_indices = tuple(molecule.atom_index(a) for a in proper)
 
         if proper_torsion_handler:
-
             for top_key in proper_torsion_handler.slot_map:
                 if top_key.atom_indices[0] != topology_indices[0]:
                     continue
@@ -1185,10 +1180,8 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
 
     # TODO: Ensure number of torsions written matches what is expected
     if improper_torsion_handler:
-
         # Molecule/Topology.impropers lists the central atom **second** ...
         for improper in molecule.smirnoff_impropers:
-
             topology_indices = tuple(
                 openff_sys.topology.atom_index(a) for a in improper
             )
@@ -1254,7 +1247,6 @@ def _write_system(
     top_file.write("; Compound\tnmols\n")
 
     for molecule in openff_sys.topology.molecules:
-
         top_file.write(f"{molecule.name}\t1\n")
 
     top_file.write("\n")
@@ -1633,7 +1625,6 @@ def _this_key_is_in_molecule(
 
 
 def _get_residue_info_from_atom(atom) -> Tuple[int, str]:
-
     try:
         # TODO: Unclear if OpenFF will make residues start at 1 or 0
         residue_idx = int(atom.metadata["residue_number"]) % 100000
