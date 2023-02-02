@@ -34,10 +34,10 @@ def _upconvert_bondhandler(bond_handler: BondHandler):
     """Given a BondHandler with version 0.3, up-convert to 0.4."""
     from packaging.version import Version
 
-    if bond_handler.version == Version("0.3"):
+    if bond_handler.version >= Version("0.4"):
         return
 
-    elif bond_handler.version > Version("0.4"):
+    elif bond_handler.version == Version("0.3"):
         warnings.warn(
             "Automatically up-converting BondHandler from version 0.3 to 0.4. Consider manually upgrading "
             "this BondHandler (or <Bonds> section in an OFFXML file) to 0.4 or newer. For more details, "

@@ -13,7 +13,6 @@ from openff.interchange.exceptions import (
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     SMIRNOFFvdWCollection,
-    SMIRNOFFVirtualSiteCollection,
 )
 from openff.interchange.smirnoff._positions import _infer_positions
 from openff.interchange.smirnoff._valence import (
@@ -23,6 +22,7 @@ from openff.interchange.smirnoff._valence import (
     SMIRNOFFImproperTorsionCollection,
     SMIRNOFFProperTorsionCollection,
 )
+from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 
 _SUPPORTED_SMIRNOFF_HANDLERS = {
     "Constraints",
@@ -68,7 +68,7 @@ def _create_interchange(
 
     _topology = Interchange.validate_topology(topology)
 
-    interchange.positions = _infer_positions(positions, _topology)
+    interchange.positions = _infer_positions(_topology, positions)
 
     interchange.box = _topology.box_vectors if box is None else box
 

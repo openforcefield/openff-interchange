@@ -6,8 +6,8 @@ from openff.units import Quantity
 
 
 def _infer_positions(
-    positions: Quantity,
     topology: Topology,
+    positions: Optional[Quantity] = None,
 ) -> Optional[Quantity]:
     if positions is not None:
         return positions

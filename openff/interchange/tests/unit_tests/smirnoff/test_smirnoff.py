@@ -1,22 +1,16 @@
 import itertools
 from typing import List, Tuple
 
-import numpy as np
+import numpy
 import openmm
 import pytest
-from openff.toolkit.tests.test_forcefield import create_ethanol, create_reversed_ethanol
-from openff.toolkit.tests.utils import get_data_file_path, requires_openeye
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
-    BondHandler,
-    ChargeIncrementModelHandler,
     ElectrostaticsHandler,
-    ImproperTorsionHandler,
     LibraryChargeHandler,
     ParameterHandler,
-    ToolkitAM1BCCHandler,
     VirtualSiteHandler,
     vdWHandler,
 )
@@ -24,7 +18,6 @@ from openff.units import unit
 from openff.units.openmm import to_openmm
 from openff.utilities.testing import skip_if_missing
 from openmm import unit as openmm_unit
-from pydantic import ValidationError
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import (
@@ -33,18 +26,15 @@ from openff.interchange.exceptions import (
     UnassignedBondError,
     UnassignedTorsionError,
 )
-from openff.interchange.models import AngleKey, BondKey, ImproperTorsionKey
+from openff.interchange.models import BondKey
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
 from openff.interchange.smirnoff._nonbonded import (
-    SMIRNOFFElectrostaticsCollection,
     SMIRNOFFvdWCollection,
     library_charge_from_molecule,
 )
 from openff.interchange.smirnoff._valence import (
     SMIRNOFFAngleCollection,
     SMIRNOFFBondCollection,
-    SMIRNOFFConstraintCollection,
-    SMIRNOFFImproperTorsionCollection,
 )
 from openff.interchange.tests import _BaseTest, get_test_file_path
 
@@ -53,33 +43,13 @@ kcal_mol_a2 = unit.Unit("kilocalorie / (angstrom ** 2 * mole)")
 kcal_mol_rad2 = unit.Unit("kilocalorie / (mole * radian ** 2)")
 
 
-def hydrogen_cyanide(reversed: bool = False) -> Molecule:
-    return Molecule.from_mapped_smiles(
-        "[H:3][C:2]#[N:1]" if reversed else "[H:1][C:2]#[N:3]",
-    )
-
-
-def hydrogen_cyanide_charge_increments() -> ChargeIncrementModelHandler:
-    handler = ChargeIncrementModelHandler(
-        version=0.4,
-        partial_charge_method="formal_charge",
-    )
-    handler.add_parameter(
-        {
-            "smirks": "[H:1][C:2]",
-            "charge_increment1": -0.111 * unit.elementary_charge,
-            "charge_increment2": 0.111 * unit.elementary_charge,
-        },
-    )
-    handler.add_parameter(
-        {
-            "smirks": "[C:1]#[N:2]",
-            "charge_increment1": 0.5 * unit.elementary_charge,
-            "charge_increment2": -0.5 * unit.elementary_charge,
-        },
-    )
-
-    return handler
+def _get_interpolated_bond_k(bond_handler) -> float:
+    for key in bond_handler.slot_map:
+        if key.bond_order is not None:
+            topology_key = key
+            break
+    potential_key = bond_handler.slot_map[topology_key]
+    return bond_handler.potentials[potential_key].parameters["k"].m
 
 
 class TestSMIRNOFFCollection(_BaseTest):
@@ -124,256 +94,6 @@ class TestSMIRNOFFCollection(_BaseTest):
             )
 
 
-class TestSMIRNOFFHandlers(_BaseTest):
-    def test_bond_potential_handler(self):
-        bond_handler = BondHandler(version=0.3)
-        bond_handler.fractional_bondorder_method = "AM1-Wiberg"
-        bond_parameter = BondHandler.BondType(
-            smirks="[*:1]~[*:2]",
-            k=1.5 * unit.kilocalorie_per_mole / unit.angstrom**2,
-            length=1.5 * unit.angstrom,
-            id="b1000",
-        )
-        bond_handler.add_parameter(bond_parameter.to_dict())
-
-        forcefield = ForceField()
-        forcefield.register_parameter_handler(bond_handler)
-        bond_potentials = SMIRNOFFBondCollection.create(
-            parameter_handler=forcefield["Bonds"],
-            topology=Molecule.from_smiles("O").to_topology(),
-        )
-
-        top_key = BondKey(atom_indices=(0, 1))
-        pot_key = bond_potentials.slot_map[top_key]
-        assert pot_key.associated_handler == "Bonds"
-        pot = bond_potentials.potentials[pot_key]
-
-        assert pot.parameters["k"].to(kcal_mol_a2).magnitude == pytest.approx(1.5)
-
-    def test_angle_potential_handler(self):
-        angle_handler = AngleHandler(version=0.3)
-        angle_parameter = AngleHandler.AngleType(
-            smirks="[*:1]~[*:2]~[*:3]",
-            k=2.5 * unit.kilocalorie_per_mole / unit.radian**2,
-            angle=100 * unit.degree,
-            id="b1000",
-        )
-        angle_handler.add_parameter(angle_parameter.to_dict())
-
-        forcefield = ForceField()
-        forcefield.register_parameter_handler(angle_handler)
-        angle_potentials = SMIRNOFFAngleCollection.create(
-            parameter_handler=forcefield["Angles"],
-            topology=Molecule.from_smiles("CCC").to_topology(),
-        )
-
-        top_key = AngleKey(atom_indices=(0, 1, 2))
-        pot_key = angle_potentials.slot_map[top_key]
-        assert pot_key.associated_handler == "Angles"
-        pot = angle_potentials.potentials[pot_key]
-
-        assert pot.parameters["k"].to(kcal_mol_rad2).magnitude == pytest.approx(2.5)
-
-    def test_store_improper_torsion_matches(self):
-        formaldehyde: Molecule = Molecule.from_mapped_smiles("[H:3][C:1]([H:4])=[O:2]")
-
-        parameter_handler = ImproperTorsionHandler(version=0.3)
-        parameter_handler.add_parameter(
-            parameter=ImproperTorsionHandler.ImproperTorsionType(
-                smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]",
-                periodicity1=2,
-                phase1=180.0 * unit.degree,
-                k1=1.1 * unit.kilocalorie_per_mole,
-            ),
-        )
-
-        potential_handler = SMIRNOFFImproperTorsionCollection()
-        potential_handler.store_matches(parameter_handler, formaldehyde.to_topology())
-
-        assert len(potential_handler.slot_map) == 3
-
-        assert (
-            ImproperTorsionKey(atom_indices=(0, 1, 2, 3), mult=0)
-            in potential_handler.slot_map
-        )
-        assert (
-            ImproperTorsionKey(atom_indices=(0, 2, 3, 1), mult=0)
-            in potential_handler.slot_map
-        )
-        assert (
-            ImproperTorsionKey(atom_indices=(0, 3, 1, 2), mult=0)
-            in potential_handler.slot_map
-        )
-
-    def test_store_nonstandard_improper_idivf(self):
-        acetaldehyde = Molecule.from_mapped_smiles(
-            "[C:1]([C:2](=[O:3])[H:7])([H:4])([H:5])[H:6]",
-        )
-        topology = acetaldehyde.to_topology()
-
-        handler = ImproperTorsionHandler(version=0.3)
-        handler.add_parameter(
-            {
-                "smirks": "[*:1]~[#6:2](~[#8:3])~[*:4]",
-                "periodicity1": 2,
-                "phase1": 180.0 * unit.degree,
-                "k1": 1.1 * unit.kilocalorie_per_mole,
-                "idivf1": 1.234 * unit.dimensionless,
-                "id": "i1",
-            },
-        )
-
-        potential_handler = SMIRNOFFImproperTorsionCollection.create(
-            parameter_handler=handler,
-            topology=topology,
-        )
-
-        handler = ImproperTorsionHandler(version=0.3)
-        handler.default_idivf = 5.555
-        handler.add_parameter(
-            {
-                "smirks": "[*:1]~[#6:2](~[#8:3])~[*:4]",
-                "periodicity1": 2,
-                "phase1": 180.0 * unit.degree,
-                "k1": 1.1 * unit.kilocalorie_per_mole,
-                "id": "i1",
-            },
-        )
-
-        potential_handler = SMIRNOFFImproperTorsionCollection.create(
-            parameter_handler=handler,
-            topology=topology,
-        )
-
-        assert [*potential_handler.potentials.values()][0].parameters[
-            "idivf"
-        ] == 5.555 * unit.dimensionless
-
-    def test_electrostatics_am1_handler(self):
-        molecule = Molecule.from_smiles("C")
-        molecule.assign_partial_charges(partial_charge_method="am1bcc")
-
-        # Explicitly store these, since results differ RDKit/AmberTools vs. OpenEye
-        reference_charges = [c.m for c in molecule.partial_charges]
-
-        top = molecule.to_topology()
-
-        parameter_handlers = [
-            ElectrostaticsHandler(version=0.3),
-            ToolkitAM1BCCHandler(version=0.3),
-        ]
-
-        electrostatics_handler = SMIRNOFFElectrostaticsCollection.create(
-            parameter_handlers,
-            top,
-        )
-        np.testing.assert_allclose(
-            [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
-            reference_charges,
-        )
-
-    def test_electrostatics_library_charges(self):
-        top = Molecule.from_smiles("C").to_topology()
-
-        library_charge_handler = LibraryChargeHandler(version=0.3)
-        library_charge_handler.add_parameter(
-            {
-                "smirks": "[#6X4:1]-[#1:2]",
-                "charge1": -0.1 * unit.elementary_charge,
-                "charge2": 0.025 * unit.elementary_charge,
-            },
-        )
-
-        parameter_handlers = [
-            ElectrostaticsHandler(version=0.3),
-            library_charge_handler,
-        ]
-
-        electrostatics_handler = SMIRNOFFElectrostaticsCollection.create(
-            parameter_handlers,
-            top,
-        )
-
-        np.testing.assert_allclose(
-            [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
-            [-0.1, 0.025, 0.025, 0.025, 0.025],
-        )
-
-    def test_electrostatics_charge_increments(self):
-        molecule = Molecule.from_mapped_smiles("[Cl:1][H:2]")
-        top = molecule.to_topology()
-
-        molecule.assign_partial_charges(partial_charge_method="am1-mulliken")
-
-        reference_charges = [c.m for c in molecule.partial_charges]
-        reference_charges[0] += 0.1
-        reference_charges[1] -= 0.1
-
-        charge_increment_handler = ChargeIncrementModelHandler(version=0.3)
-        charge_increment_handler.add_parameter(
-            {
-                "smirks": "[#17:1]-[#1:2]",
-                "charge_increment1": 0.1 * unit.elementary_charge,
-                "charge_increment2": -0.1 * unit.elementary_charge,
-            },
-        )
-
-        parameter_handlers = [
-            ElectrostaticsHandler(version=0.3),
-            charge_increment_handler,
-        ]
-
-        electrostatics_handler = SMIRNOFFElectrostaticsCollection.create(
-            parameter_handlers,
-            top,
-        )
-
-        # AM1-Mulliken charges are [-0.168,  0.168], increments are [0.1, -0.1],
-        # sum is [-0.068,  0.068]
-        np.testing.assert_allclose(
-            [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
-            reference_charges,
-        )
-
-    def test_toolkit_am1bcc_uses_elf10_if_oe_is_available(self, sage):
-        """
-        Ensure that the ToolkitAM1BCCHandler assigns ELF10 charges if OpenEye is available.
-
-        Taken from https://github.com/openforcefield/openff-toolkit/pull/1214,
-        """
-        molecule = Molecule.from_smiles("OCCCCCCO")
-
-        try:
-            molecule.assign_partial_charges(partial_charge_method="am1bccelf10")
-            uses_elf10 = True
-        except ValueError:
-            molecule.assign_partial_charges(partial_charge_method="am1bcc")
-            uses_elf10 = False
-
-        partial_charges = [c.m for c in molecule.partial_charges]
-
-        assigned_charges = [
-            v.m
-            for v in Interchange.from_smirnoff(sage, [molecule])[
-                "Electrostatics"
-            ].charges.values()
-        ]
-
-        try:
-            from openeye import oechem
-
-            openeye_available = oechem.OEChemIsLicensed()
-        except ImportError:
-            openeye_available = False
-
-        if openeye_available:
-            assert uses_elf10
-            np.testing.assert_allclose(partial_charges, assigned_charges)
-        else:
-            assert not uses_elf10
-            np.testing.assert_allclose(partial_charges, assigned_charges)
-
-
 class TestInterchangeFromSMIRNOFF(_BaseTest):
     """General tests for Interchange.from_smirnoff. Some are ported from the toolkit."""
 
@@ -402,7 +122,7 @@ class TestInterchangeFromSMIRNOFF(_BaseTest):
         out = Interchange.from_smirnoff(force_field=sage, topology=topology)
         found_charges = [v.m for v in out["Electrostatics"].charges.values()]
 
-        assert np.allclose(found_charges, [-0.834, 0.417, 0.417])
+        assert numpy.allclose(found_charges, [-0.834, 0.417, 0.417])
 
     def test_infer_positions(self, sage):
         from openff.toolkit.tests.create_molecules import create_ethanol
@@ -455,44 +175,6 @@ class TestUnassignedParameters(_BaseTest):
             Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
 
 
-class TestConstraints(_BaseTest):
-    @pytest.mark.parametrize(
-        ("mol", "n_constraints"),
-        [
-            ("C", 4),
-            ("CC", 6),
-        ],
-    )
-    def test_num_constraints(self, sage, mol, n_constraints):
-        bond_handler = sage["Bonds"]
-        constraint_handler = sage["Constraints"]
-
-        topology = Molecule.from_smiles(mol).to_topology()
-
-        constraints = SMIRNOFFConstraintCollection.create(
-            parameter_handler=[
-                val for val in [bond_handler, constraint_handler] if val is not None
-            ],
-            topology=topology,
-        )
-
-        assert len(constraints.slot_map) == n_constraints
-
-    def test_constraints_with_distance(self, tip3p_xml):
-        tip3p = ForceField(tip3p_xml)
-
-        topology = Molecule.from_smiles("O").to_topology()
-        topology.box_vectors = [4, 4, 4] * unit.nanometer
-
-        constraints = SMIRNOFFConstraintCollection.create(
-            parameter_handler=tip3p["Constraints"],
-            topology=topology,
-        )
-
-        assert len(constraints.slot_map) == 3
-        assert len(constraints.constraints) == 2
-
-
 # TODO: Remove xfail after openff-toolkit 0.10.0
 @pytest.mark.xfail()
 def test_library_charges_from_molecule():
@@ -501,7 +183,7 @@ def test_library_charges_from_molecule():
     with pytest.raises(ValueError, match="missing partial"):
         library_charge_from_molecule(mol)
 
-    mol.partial_charges = np.linspace(-0.3, 0.3, 4) * unit.elementary_charge
+    mol.partial_charges = numpy.linspace(-0.3, 0.3, 4) * unit.elementary_charge
 
     library_charges = library_charge_from_molecule(mol)
 
@@ -528,15 +210,15 @@ class TestChargeFromMolecules(_BaseTest):
         ]
         found_charges_uses = [v.m for v in uses["Electrostatics"].charges.values()]
 
-        assert not np.allclose(found_charges_no_uses, found_charges_uses)
+        assert not numpy.allclose(found_charges_no_uses, found_charges_uses)
 
-        assert np.allclose(found_charges_uses, molecule.partial_charges.m)
+        assert numpy.allclose(found_charges_uses, molecule.partial_charges.m)
 
     def test_charges_on_molecules_in_topology(self, sage):
         ethanol = Molecule.from_smiles("CCO")
         water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
-        ethanol_charges = np.linspace(-1, 1, 9) * 0.4
-        water_charges = np.linspace(-1, 1, 3)
+        ethanol_charges = numpy.linspace(-1, 1, 9) * 0.4
+        water_charges = numpy.linspace(-1, 1, 3)
 
         ethanol.partial_charges = unit.Quantity(ethanol_charges, unit.elementary_charge)
         water.partial_charges = unit.Quantity(water_charges, unit.elementary_charge)
@@ -549,19 +231,24 @@ class TestChargeFromMolecules(_BaseTest):
 
         for molecule in out.topology.molecules:
             if "C" in molecule.to_smiles():
-                assert np.allclose(molecule.partial_charges.m, ethanol_charges)
+                assert numpy.allclose(molecule.partial_charges.m, ethanol_charges)
             else:
-                assert np.allclose(molecule.partial_charges.m, water_charges)
+                assert numpy.allclose(molecule.partial_charges.m, water_charges)
 
-    def test_charges_from_molecule_reordered(self, sage):
+    def test_charges_from_molecule_reordered(
+        self,
+        sage,
+        hydrogen_cyanide,
+        hydrogen_cyanide_reversed,
+    ):
         """Test the behavior of charge_from_molecules when the atom ordering differs with the topology"""
 
         # H - C # N
-        molecule = hydrogen_cyanide(reversed=False)
+        molecule = hydrogen_cyanide
 
         #  N  # C  - H
         # -0.3, 0.0, 0.3
-        molecule_with_charges = hydrogen_cyanide(reversed=True)
+        molecule_with_charges = hydrogen_cyanide_reversed
         molecule_with_charges.partial_charges = unit.Quantity(
             [-0.3, 0.0, 0.3],
             unit.elementary_charge,
@@ -576,7 +263,7 @@ class TestChargeFromMolecules(_BaseTest):
         expected_charges = [0.3, 0.0, -0.3]
         found_charges = [v.m for v in out["Electrostatics"].charges.values()]
 
-        assert np.allclose(expected_charges, found_charges)
+        assert numpy.allclose(expected_charges, found_charges)
 
 
 class TestPartialBondOrdersFromMolecules(_BaseTest):
@@ -690,98 +377,6 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
         )
 
 
-class TestBondOrderInterpolation(_BaseTest):
-    @pytest.mark.slow()
-    def test_input_bond_orders_ignored(self):
-        """Test that conformers existing in the topology are not considered in the bond order interpolation
-        part of the parametrization process"""
-        from openff.toolkit.tests.test_forcefield import create_ethanol
-
-        mol = create_ethanol()
-        mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
-        mod_mol = Molecule(mol)
-        for bond in mod_mol.bonds:
-            bond.fractional_bond_order += 0.1
-
-        top = Topology.from_molecules(mol)
-        mod_top = Topology.from_molecules(mod_mol)
-
-        forcefield = ForceField(
-            get_data_file_path("test_forcefields/test_forcefield.offxml"),
-            self.xml_ff_bo_bonds,
-        )
-
-        bonds = SMIRNOFFBondCollection.create(
-            parameter_handler=forcefield["Bonds"],
-            topology=top,
-        )
-        bonds_mod = SMIRNOFFBondCollection.create(
-            parameter_handler=forcefield["Bonds"],
-            topology=mod_top,
-        )
-
-        for pot_key1, pot_key2 in zip(
-            bonds.slot_map.values(),
-            bonds_mod.slot_map.values(),
-        ):
-            k1 = bonds.potentials[pot_key1].parameters["k"].m_as(kcal_mol_a2)
-            k2 = bonds_mod.potentials[pot_key2].parameters["k"].m_as(kcal_mol_a2)
-            assert k1 == pytest.approx(k2, rel=1e-5), (k1, k2)
-
-    def test_input_conformers_ignored(self):
-        """Test that conformers existing in the topology are not considered in the bond order interpolation
-        part of the parametrization process"""
-        from openff.toolkit.tests.test_forcefield import create_ethanol
-
-        mol = create_ethanol()
-        mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
-        mod_mol = Molecule(mol)
-        mod_mol.generate_conformers()
-        tmp = mod_mol._conformers[0][0][0]
-        mod_mol._conformers[0][0][0] = mod_mol._conformers[0][1][0]
-        mod_mol._conformers[0][1][0] = tmp
-
-        top = Topology.from_molecules(mol)
-        mod_top = Topology.from_molecules(mod_mol)
-
-        forcefield = ForceField(
-            get_data_file_path("test_forcefields/test_forcefield.offxml"),
-            self.xml_ff_bo_bonds,
-        )
-
-        bonds = SMIRNOFFBondCollection.create(
-            parameter_handler=forcefield["Bonds"],
-            topology=top,
-        )
-        bonds_mod = SMIRNOFFBondCollection.create(
-            parameter_handler=forcefield["Bonds"],
-            topology=mod_top,
-        )
-
-        for key1, key2 in zip(bonds.potentials, bonds_mod.potentials):
-            k1 = bonds.potentials[key1].parameters["k"].m_as(kcal_mol_a2)
-            k2 = bonds_mod.potentials[key2].parameters["k"].m_as(kcal_mol_a2)
-            assert k1 == pytest.approx(k2, rel=1e-5), (k1, k2)
-
-    def test_fractional_bondorder_invalid_interpolation_method(self):
-        """
-        Ensure that requesting an invalid interpolation method leads to a
-        FractionalBondOrderInterpolationMethodUnsupportedError
-        """
-        mol = Molecule.from_smiles("CCO")
-
-        forcefield = ForceField(
-            get_data_file_path("test_forcefields/test_forcefield.offxml"),
-            self.xml_ff_bo_bonds,
-        )
-        forcefield["Bonds"]._fractional_bondorder_interpolation = "invalid method name"
-        topology = Topology.from_molecules([mol])
-
-        # TODO: Make this a more descriptive custom exception
-        with pytest.raises(ValidationError):
-            Interchange.from_smirnoff(forcefield, topology)
-
-
 @skip_if_missing("jax")
 class TestMatrixRepresentations(_BaseTest):
     @pytest.mark.parametrize(
@@ -819,12 +414,12 @@ class TestMatrixRepresentations(_BaseTest):
         p = handler.get_force_field_parameters(use_jax=True)
 
         assert isinstance(p, jax.Array)
-        assert np.prod(p.shape) == n_ff_terms
+        assert numpy.prod(p.shape) == n_ff_terms
 
         q = handler.get_system_parameters(use_jax=True)
 
         assert isinstance(q, jax.Array)
-        assert np.prod(q.shape) == n_sys_terms
+        assert numpy.prod(q.shape) == n_sys_terms
 
         assert jax.numpy.allclose(q, handler.parametrize(p))
 
@@ -837,9 +432,9 @@ class TestMatrixRepresentations(_BaseTest):
 
         # TODO: Update with other handlers that can safely be assumed to follow 1:1 slot:smirks mapping
         if handler_name in ["vdW", "Bonds", "Angles"]:
-            assert np.allclose(
-                np.sum(param_matrix, axis=1),
-                np.ones(param_matrix.shape[0]),
+            assert numpy.allclose(
+                numpy.sum(param_matrix, axis=1),
+                numpy.ones(param_matrix.shape[0]),
             )
 
     def test_set_force_field_parameters(self, sage, ethanol):
@@ -856,284 +451,6 @@ class TestMatrixRepresentations(_BaseTest):
         bond_handler.set_force_field_parameters(modified)
 
         assert (bond_handler.get_force_field_parameters(use_jax=True) == modified).all()
-
-
-class TestParameterInterpolation(_BaseTest):
-    xml_ff_bo = """<?xml version='1.0' encoding='ASCII'?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-      <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg"
-        fractional_bondorder_interpolation="linear">
-        <Bond
-          smirks="[#6X4:1]~[#8X2:2]"
-          id="bbo1"
-          k_bondorder1="101.0 * kilocalories_per_mole/angstrom**2"
-          k_bondorder2="123.0 * kilocalories_per_mole/angstrom**2"
-          length_bondorder1="1.4 * angstrom"
-          length_bondorder2="1.3 * angstrom"
-          />
-      </Bonds>
-      <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
-        <Proper smirks="[*:1]~[#6X3:2]~[#6X3:3]~[*:4]" id="tbo1" periodicity1="2" phase1="0.0 * degree"
-        k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
-        <Proper smirks="[*:1]~[#6X4:2]~[#8X2:3]~[*:4]" id="tbo2" periodicity1="2" phase1="0.0 * degree"
-        k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
-      </ProperTorsions>
-    </SMIRNOFF>
-    """
-
-    @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
-    def test_bond_order_interpolation(self):
-        forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml",
-            self.xml_ff_bo,
-        )
-
-        mol = Molecule.from_smiles("CCO")
-        mol.generate_conformers(n_conformers=1)
-
-        mol.bonds[1].fractional_bond_order = 1.5
-
-        top = mol.to_topology()
-
-        out = Interchange.from_smirnoff(forcefield, mol.to_topology())
-
-        top_key = BondKey(
-            atom_indices=(1, 2),
-            bond_order=top.get_bond_between(1, 2).bond.fractional_bond_order,
-        )
-        assert out["Bonds"].potentials[out["Bonds"].slot_map[top_key]].parameters[
-            "k"
-        ] == 300 * unit.Unit("kilocalories / mol / angstrom ** 2")
-
-    @pytest.mark.slow()
-    @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
-    def test_bond_order_interpolation_similar_bonds(self):
-        """Test that key mappings do not get confused when two bonds having similar SMIRKS matches
-        have different bond orders"""
-        forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml",
-            self.xml_ff_bo,
-        )
-
-        # TODO: Construct manually to avoid relying on atom ordering
-        mol = Molecule.from_smiles("C(CCO)O")
-        mol.generate_conformers(n_conformers=1)
-
-        mol.bonds[2].fractional_bond_order = 1.5
-        mol.bonds[3].fractional_bond_order = 1.2
-
-        top = mol.to_topology()
-
-        out = Interchange.from_smirnoff(forcefield, top)
-
-        bond1_top_key = BondKey(
-            atom_indices=(2, 3),
-            bond_order=top.get_bond_between(2, 3).bond.fractional_bond_order,
-        )
-        bond1_pot_key = out["Bonds"].slot_map[bond1_top_key]
-
-        bond2_top_key = BondKey(
-            atom_indices=(0, 4),
-            bond_order=top.get_bond_between(0, 4).bond.fractional_bond_order,
-        )
-        bond2_pot_key = out["Bonds"].slot_map[bond2_top_key]
-
-        assert np.allclose(
-            out["Bonds"].potentials[bond1_pot_key].parameters["k"],
-            300.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
-        )
-
-        assert np.allclose(
-            out["Bonds"].potentials[bond2_pot_key].parameters["k"],
-            180.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
-        )
-
-    @requires_openeye
-    @pytest.mark.parametrize(
-        (
-            "get_molecule",
-            "k_torsion_interpolated",
-            "k_bond_interpolated",
-            "length_bond_interpolated",
-            "central_atoms",
-        ),
-        [
-            (create_ethanol, 4.16586914, 42208.5402, 0.140054167256, (1, 2)),
-            (create_reversed_ethanol, 4.16564555, 42207.9252, 0.14005483525, (7, 6)),
-        ],
-    )
-    def test_fractional_bondorder_from_molecule(
-        self,
-        get_molecule,
-        k_torsion_interpolated,
-        k_bond_interpolated,
-        length_bond_interpolated,
-        central_atoms,
-    ):
-        """Copied from the toolkit with modified reference constants.
-        Force constant computed by interpolating (k1, k2) = (101, 123) kcal/A**2/mol
-        with bond order 1.00093035 (AmberTools 21.4, Python 3.8, macOS):
-            101 + (123 - 101) * (0.00093035) = 101.0204677 kcal/A**2/mol
-            = 42266.9637 kJ/nm**2/mol
-
-        Same process with bond length (1.4, 1.3) A gives 0.1399906965 nm
-        Same process with torsion k (1.0, 1.8) kcal/mol gives 4.18711406752 kJ/mol
-
-        Using OpenEye (openeye-toolkits 2021.1.1, Python 3.8, macOS):
-            bond order 0.9945832743790813
-            bond k = 42208.5402 kJ/nm**2/mol
-            bond length = 0.14005416725620918 nm
-            torsion k = 4.16586914 kilojoules kJ/mol
-
-        ... except OpenEye has a different fractional bond order for reversed ethanol
-            bond order 0.9945164749654242
-            bond k = 42207.9252 kJ/nm**2/mol
-            bond length = 0.14005483525034576 nm
-            torsion k = 4.16564555 kJ/mol
-
-        """
-        mol = get_molecule()
-        forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml",
-            self.xml_ff_bo,
-        )
-        topology = Topology.from_molecules(mol)
-
-        out = Interchange.from_smirnoff(forcefield, topology)
-        out.box = unit.Quantity(4 * np.eye(3), unit.nanometer)
-        omm_system = out.to_openmm(combine_nonbonded_forces=True)
-
-        # Verify that the assigned bond parameters were correctly interpolated
-        off_bond_force = [
-            force
-            for force in omm_system.getForces()
-            if isinstance(force, openmm.HarmonicBondForce)
-        ][0]
-
-        for idx in range(off_bond_force.getNumBonds()):
-            params = off_bond_force.getBondParameters(idx)
-
-            atom1, atom2 = params[0], params[1]
-            atom1_mol, atom2_mol = central_atoms
-
-            if ((atom1 == atom1_mol) and (atom2 == atom2_mol)) or (
-                (atom1 == atom2_mol) and (atom2 == atom1_mol)
-            ):
-                k = params[-1]
-                length = params[-2]
-                np.testing.assert_allclose(
-                    k / k.unit,
-                    k_bond_interpolated,
-                    atol=0,
-                    rtol=2e-6,
-                )
-                np.testing.assert_allclose(
-                    length / length.unit,
-                    length_bond_interpolated,
-                    atol=0,
-                    rtol=2e-6,
-                )
-
-        # Verify that the assigned torsion parameters were correctly interpolated
-        off_torsion_force = [
-            force
-            for force in omm_system.getForces()
-            if isinstance(force, openmm.PeriodicTorsionForce)
-        ][0]
-
-        for idx in range(off_torsion_force.getNumTorsions()):
-            params = off_torsion_force.getTorsionParameters(idx)
-
-            atom2, atom3 = params[1], params[2]
-            atom2_mol, atom3_mol = central_atoms
-
-            if ((atom2 == atom2_mol) and (atom3 == atom3_mol)) or (
-                (atom2 == atom3_mol) and (atom3 == atom2_mol)
-            ):
-                k = params[-1]
-                np.testing.assert_allclose(
-                    k / k.unit,
-                    k_torsion_interpolated,
-                    atol=0,
-                    rtol=2e-6,
-                )
-
-
-def _get_interpolated_bond_k(bond_handler) -> float:
-    for key in bond_handler.slot_map:
-        if key.bond_order is not None:
-            topology_key = key
-            break
-    potential_key = bond_handler.slot_map[topology_key]
-    return bond_handler.potentials[potential_key].parameters["k"].m
-
-
-class TestSMIRNOFFChargeIncrements(_BaseTest):
-    def test_no_charge_increments_applied(self, sage):
-        molecule = Molecule.from_smiles("OCCCCCCO")
-        molecule.assign_partial_charges(partial_charge_method="gasteiger")
-        gastiger_charges = molecule.partial_charges.m
-
-        sage.deregister_parameter_handler("ToolkitAM1BCC")
-        no_increments = ChargeIncrementModelHandler(
-            version=0.3,
-            partial_charge_method="gasteiger",
-        )
-        sage.register_parameter_handler(no_increments)
-
-        assert len(sage["ChargeIncrementModel"].parameters) == 0
-
-        out = Interchange.from_smirnoff(sage, [molecule])
-        assert np.allclose(
-            np.asarray([v.m for v in out["Electrostatics"].charges.values()]),
-            gastiger_charges,
-        )
-
-    def test_overlapping_increments(self, sage):
-        """Test that separate charge increments can be properly applied to the same atom."""
-        molecule = Molecule.from_smiles("C")
-
-        sage = ForceField("openff-2.0.0.offxml")
-        sage.deregister_parameter_handler("ToolkitAM1BCC")
-        charge_handler = ChargeIncrementModelHandler(
-            version=0.3,
-            partial_charge_method="formal_charge",
-        )
-        charge_handler.add_parameter(
-            {
-                "smirks": "[C:1][H:2]",
-                "charge_increment1": 0.111 * unit.elementary_charge,
-                "charge_increment2": -0.111 * unit.elementary_charge,
-            },
-        )
-        sage.register_parameter_handler(charge_handler)
-        assert 0.0 == pytest.approx(
-            sum(
-                v.m
-                for v in Interchange.from_smirnoff(sage, [molecule])[
-                    "Electrostatics"
-                ].charges.values()
-            ),
-        )
-
-    def test_charge_increment_forwawrd_reverse_molecule(self, sage):
-        sage.deregister_parameter_handler("ToolkitAM1BCC")
-        sage.register_parameter_handler(hydrogen_cyanide_charge_increments())
-
-        topology = Topology.from_molecules(
-            [hydrogen_cyanide(reversed=False), hydrogen_cyanide(reversed=True)],
-        )
-
-        out = Interchange.from_smirnoff(sage, topology)
-
-        expected_charges = [-0.111, 0.611, -0.5, -0.5, 0.611, -0.111]
-
-        # TODO: Fix get_charges to return the atoms in order
-        found_charges = [0.0] * topology.n_atoms
-        for key, val in out["Electrostatics"].get_charges().items():
-            found_charges[key.atom_indices[0]] = val.m
-
-        assert np.allclose(expected_charges, found_charges)
 
 
 class TestSMIRNOFFVirtualSites(_BaseTest):
@@ -1207,10 +524,10 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
         )
 
         input_conformer = unit.Quantity(
-            np.vstack(
+            numpy.vstack(
                 [
                     input_conformer.m_as(unit.angstrom),
-                    np.zeros((n_v_sites, 3)),
+                    numpy.zeros((n_v_sites, 3)),
                 ],
             ),
             unit.angstrom,
@@ -1245,7 +562,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 "[Cl:1][C:2]([H:3])([H:4])[H:5]",
                 VirtualSiteMocking.sp3_conformer(),
                 (0, 1),
-                unit.Quantity(np.array([[0.0, 3.0, 0.0]]), unit.angstrom),
+                unit.Quantity(numpy.array([[0.0, 3.0, 0.0]]), unit.angstrom),
             ),
             (
                 VirtualSiteMocking.bond_charge_parameter("[C:1]#[C:2]"),
@@ -1253,7 +570,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 VirtualSiteMocking.sp1_conformer(),
                 (2, 3),
                 unit.Quantity(
-                    np.array([[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]]),
+                    numpy.array([[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]]),
                     unit.angstrom,
                 ),
             ),
@@ -1265,7 +582,9 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 (
                     VirtualSiteMocking.sp2_conformer()[0]
                     + unit.Quantity(  # noqa
-                        np.array([[1.0, np.sqrt(2), 1.0], [1.0, -np.sqrt(2), -1.0]]),
+                        numpy.array(
+                            [[1.0, numpy.sqrt(2), 1.0], [1.0, -numpy.sqrt(2), -1.0]],
+                        ),
                         unit.angstrom,
                     )
                 ),
@@ -1279,7 +598,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 "[H:2][O:1][H:3]",
                 VirtualSiteMocking.sp2_conformer()[1:, :],
                 (0, 1, 2),
-                np.array([[2.0, 0.0, 0.0]]) * unit.angstrom,
+                numpy.array([[2.0, 0.0, 0.0]]) * unit.angstrom,
             ),
             (
                 VirtualSiteMocking.divalent_parameter(
@@ -1291,10 +610,10 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 VirtualSiteMocking.sp2_conformer()[1:, :],
                 (0, 1, 2),
                 unit.Quantity(
-                    np.array(
+                    numpy.array(
                         [
-                            [np.sqrt(2), np.sqrt(2), 0.0],
-                            [np.sqrt(2), -np.sqrt(2), 0.0],
+                            [numpy.sqrt(2), numpy.sqrt(2), 0.0],
+                            [numpy.sqrt(2), -numpy.sqrt(2), 0.0],
                         ],
                     ),
                     unit.angstrom,
@@ -1305,7 +624,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 "[N:1]([H:2])([H:3])[H:4]",
                 VirtualSiteMocking.sp3_conformer()[1:, :],
                 (0, 1, 2, 3),
-                np.array([[0.0, 2.0, 0.0]]) * unit.angstrom,
+                numpy.array([[0.0, 2.0, 0.0]]) * unit.angstrom,
             ),
         ],
     )
@@ -1344,17 +663,17 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
 
             assert output_coordinates.shape == expected_coordinates.shape
 
-            def sort_coordinates(x: np.ndarray) -> np.ndarray:
+            def sort_coordinates(x: numpy.ndarray) -> numpy.ndarray:
                 # Sort the rows by first, then second, then third columns as row
                 # as the order of v-sites is not deterministic.
-                return x[np.lexsort((x[:, 2], x[:, 1], x[:, 0])), :]
+                return x[numpy.lexsort((x[:, 2], x[:, 1], x[:, 0])), :]
 
             found = sort_coordinates(
                 output_coordinates.value_in_unit(openmm_unit.angstrom),
             )
             expected = sort_coordinates(expected_coordinates.m_as(unit.angstrom))
 
-            assert np.allclose(found, expected), expected - found
+            assert numpy.allclose(found, expected), expected - found
 
     _E = unit.elementary_charge
     _A = unit.angstrom
@@ -1563,18 +882,18 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
 
             # Make sure v-sites are massless.
             assert (
-                np.isclose(system.getParticleMass(i)._value, 0.0)
+                numpy.isclose(system.getParticleMass(i)._value, 0.0)
             ) == system.isVirtualSite(i)
 
-            assert np.isclose(
+            assert numpy.isclose(
                 expected_charge.m_as(unit.elementary_charge),
                 charge.value_in_unit(openmm_unit.elementary_charge),
             )
-            assert np.isclose(
+            assert numpy.isclose(
                 expected_sigma.m_as(unit.angstrom),
                 sigma.value_in_unit(openmm_unit.angstrom),
             )
-            assert np.isclose(
+            assert numpy.isclose(
                 expected_epsilon.m_as(unit.kilojoule_per_mole),
                 epsilon.value_in_unit(openmm_unit.kilojoule_per_mole),
             )
@@ -1586,7 +905,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             for molecule in topology.molecules
         )
 
-        assert np.isclose(
+        assert numpy.isclose(
             expected_total_charge,
             total_charge.value_in_unit(openmm_unit.elementary_charge),
         )

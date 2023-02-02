@@ -231,6 +231,22 @@ class _BaseTest:
     </SMIRNOFF>
     """
 
+    @pytest.fixture()
+    def methane(self):
+        return Molecule.from_smiles("C")
+
+    @pytest.fixture()
+    def parsley(self):
+        return ForceField("openff-1.0.0.offxml")
+
+    @pytest.fixture()
+    def hydrogen_cyanide(self):
+        return Molecule.from_mapped_smiles("[H:1][C:2]#[N:3]")
+
+    @pytest.fixture()
+    def hydrogen_cyanide_reversed(self):
+        return Molecule.from_mapped_smiles("[H:3][C:2]#[N:1]")
+
 
 HAS_GROMACS = _find_gromacs_executable() is not None
 HAS_LAMMPS = _find_lammps_executable() is not None
