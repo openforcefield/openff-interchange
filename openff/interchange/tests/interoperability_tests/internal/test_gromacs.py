@@ -14,7 +14,7 @@ from openmm import unit as openmm_unit
 from pkg_resources import resource_filename
 
 from openff.interchange import Interchange
-from openff.interchange.components.nonbonded import BuckinghamvdWHandler
+from openff.interchange.components.nonbonded import BuckinghamvdWCollection
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import (
@@ -261,7 +261,9 @@ class TestGROMACS(_BaseTest):
     @pytest.mark.slow()
     def test_argon_buck(self):
         """Test that Buckingham potentials are supported and can be exported"""
-        from openff.interchange.components.smirnoff import SMIRNOFFElectrostaticsHandler
+        from openff.interchange.smirnoff._nonbonded import (
+            SMIRNOFFElectrostaticsCollection,
+        )
 
         mol = Molecule.from_smiles("[#18]")
         mol.name = "Argon"
@@ -275,8 +277,8 @@ class TestGROMACS(_BaseTest):
 
         r = 0.3 * unit.nanometer
 
-        buck = BuckinghamvdWHandler()
-        coul = SMIRNOFFElectrostaticsHandler(method="pme")
+        buck = BuckinghamvdWCollection()
+        coul = SMIRNOFFElectrostaticsCollection(method="pme")
 
         pot_key = PotentialKey(id="[#18]")
         pot = Potential(parameters={"A": A, "B": B, "C": C})
@@ -299,8 +301,8 @@ class TestGROMACS(_BaseTest):
         buck.potentials[pot_key] = pot
 
         out = Interchange()
-        out.handlers["Buckingham-6"] = buck
-        out.handlers["Electrostatics"] = coul
+        out.collections["Buckingham-6"] = buck
+        out.collections["Electrostatics"] = coul
         out.topology = top
         out.box = [10, 10, 10] * unit.nanometer
         out.positions = [[0, 0, 0], [0.3, 0, 0]] * unit.nanometer

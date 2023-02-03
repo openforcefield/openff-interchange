@@ -37,7 +37,7 @@ class TestInterchange(_BaseTest):
         np.testing.assert_equal(out["box"].m, (4 * np.eye(3) * unit.nanometer).m)
         np.testing.assert_equal(out["box"].m, out["box_vectors"].m)
 
-        assert out["Bonds"] == out.handlers["Bonds"]
+        assert out["Bonds"] == out.collections["Bonds"]
 
         with pytest.raises(LookupError, match="Only str"):
             out[1]
@@ -214,11 +214,11 @@ class TestInterchange(_BaseTest):
 
         out = Interchange.from_smirnoff(sage, top)
 
-        assert "Constraints" in out.handlers.keys()
-        assert "Bonds" in out.handlers.keys()
-        assert "Angles" in out.handlers.keys()
-        assert "ProperTorsions" in out.handlers.keys()
-        assert "vdW" in out.handlers.keys()
+        assert "Constraints" in out.collections.keys()
+        assert "Bonds" in out.collections.keys()
+        assert "Angles" in out.collections.keys()
+        assert "ProperTorsions" in out.collections.keys()
+        assert "vdW" in out.collections.keys()
 
         assert type(out.topology) == Topology
         assert isinstance(out.topology, Topology)
@@ -237,11 +237,11 @@ class TestInterchange(_BaseTest):
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")],
         )
 
-        assert "Constraints" in out.handlers.keys()
-        assert "Bonds" in out.handlers.keys()
-        assert "Angles" in out.handlers.keys()
-        assert "ProperTorsions" in out.handlers.keys()
-        assert "vdW" in out.handlers.keys()
+        assert "Constraints" in out.collections.keys()
+        assert "Bonds" in out.collections.keys()
+        assert "Angles" in out.collections.keys()
+        assert "ProperTorsions" in out.collections.keys()
+        assert "vdW" in out.collections.keys()
 
         assert type(out.topology) == Topology
         assert isinstance(out.topology, Topology)
@@ -278,7 +278,7 @@ class TestUnimplementedSMIRNOFFCases(_BaseTest):
         sage.register_parameter_handler(bogus_parameter_handler)
         with pytest.raises(
             SMIRNOFFHandlersNotImplementedError,
-            match="SMIRNOFF.*bogus",
+            match="not implemented in Interchange:.*bogus",
         ):
             Interchange.from_smirnoff(force_field=sage, topology=top)
 

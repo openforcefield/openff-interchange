@@ -57,7 +57,7 @@ def _process_bond_forces(
     Process the Bonds section of an Interchange object.
     """
     try:
-        bond_handler = openff_sys.handlers["Bonds"]
+        bond_handler = openff_sys.collections["Bonds"]
     except KeyError:
         return
 
@@ -71,7 +71,7 @@ def _process_bond_forces(
 
     openmm_sys.addForce(harmonic_bond_force)
 
-    has_constraint_handler = "Constraints" in openff_sys.handlers
+    has_constraint_handler = "Constraints" in openff_sys.collections
 
     for top_key, pot_key in bond_handler.slot_map.items():
         openff_indices = top_key.atom_indices
@@ -110,7 +110,7 @@ def _process_angle_forces(
     Process the Angles section of an Interchange object.
     """
     try:
-        angle_handler = openff_sys.handlers["Angles"]
+        angle_handler = openff_sys.collections["Angles"]
     except KeyError:
         return
 
@@ -132,7 +132,7 @@ def _process_angle_forces(
 
     openmm_sys.addForce(harmonic_angle_force)
 
-    has_constraint_handler = "Constraints" in openff_sys.handlers
+    has_constraint_handler = "Constraints" in openff_sys.collections
 
     for top_key, pot_key in angle_handler.slot_map.items():
         openff_indices = top_key.atom_indices
@@ -184,9 +184,9 @@ def _process_angle_forces(
 
 
 def _process_torsion_forces(openff_sys, openmm_sys, particle_map):
-    if "ProperTorsions" in openff_sys.handlers:
+    if "ProperTorsions" in openff_sys.collections:
         _process_proper_torsion_forces(openff_sys, openmm_sys, particle_map)
-    if "RBTorsions" in openff_sys.handlers:
+    if "RBTorsions" in openff_sys.collections:
         _process_rb_torsion_forces(openff_sys, openmm_sys, particle_map)
 
 
@@ -277,7 +277,7 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys, particle_map):
     """
     Process the Impropers section of an Interchange object.
     """
-    if "ImproperTorsions" not in openff_sys.handlers.keys():
+    if "ImproperTorsions" not in openff_sys.collections.keys():
         return
 
     for force in openmm_sys.getForces():

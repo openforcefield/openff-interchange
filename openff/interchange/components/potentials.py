@@ -85,7 +85,7 @@ class WrappedPotential(DefaultModel):
         return str(self._inner_data.data)
 
 
-class PotentialHandler(DefaultModel):
+class Collection(DefaultModel):
     """Base class for storing parametrized force field data."""
 
     type: str = Field(..., description="The type of potentials this handler stores.")

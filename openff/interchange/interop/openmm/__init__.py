@@ -111,17 +111,17 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
         for force in system.getForces():
             if isinstance(force, openmm.NonbondedForce):
                 vdw, coul = _convert_nonbonded_force(force)
-                openff_sys.handlers["vdW"] = vdw
-                openff_sys.handlers["Electrostatics"] = coul
+                openff_sys.collections["vdW"] = vdw
+                openff_sys.collections["Electrostatics"] = coul
             elif isinstance(force, openmm.HarmonicBondForce):
                 bond_handler = _convert_harmonic_bond_force(force)
-                openff_sys.handlers["Bonds"] = bond_handler
+                openff_sys.collections["Bonds"] = bond_handler
             elif isinstance(force, openmm.HarmonicAngleForce):
                 angle_handler = _convert_harmonic_angle_force(force)
-                openff_sys.handlers["Angles"] = angle_handler
+                openff_sys.collections["Angles"] = angle_handler
             elif isinstance(force, openmm.PeriodicTorsionForce):
                 proper_torsion_handler = _convert_periodic_torsion_force(force)
-                openff_sys.handlers["ProperTorsions"] = proper_torsion_handler
+                openff_sys.collections["ProperTorsions"] = proper_torsion_handler
             elif isinstance(force, openmm.CMMotionRemover):
                 pass
             else:
@@ -149,19 +149,19 @@ def _convert_nonbonded_force(force: openmm.NonbondedForce):
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.components.potentials import Potential
-    from openff.interchange.components.smirnoff import (
-        SMIRNOFFElectrostaticsHandler,
-        SMIRNOFFvdWHandler,
-    )
     from openff.interchange.models import PotentialKey, TopologyKey
+    from openff.interchange.smirnoff._nonbonded import (
+        SMIRNOFFElectrostaticsCollection,
+        SMIRNOFFvdWCollection,
+    )
 
     if force.getNonbondedMethod() != 0:
         raise UnsupportedImportError(
             "Importing from OpenMM only currently supported with `openmm.NonbondedForce.PME`.",
         )
 
-    vdw_handler = SMIRNOFFvdWHandler()
-    electrostatics = SMIRNOFFElectrostaticsHandler(version=0.4, scale_14=0.833333)
+    vdw_handler = SMIRNOFFvdWCollection()
+    electrostatics = SMIRNOFFElectrostaticsCollection(version=0.4, scale_14=0.833333)
 
     n_parametrized_particles = force.getNumParticles()
 
@@ -200,10 +200,10 @@ def _convert_harmonic_bond_force(force):
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.components.potentials import Potential
-    from openff.interchange.components.smirnoff import SMIRNOFFBondHandler
     from openff.interchange.models import PotentialKey, TopologyKey
+    from openff.interchange.smirnoff._valence import SMIRNOFFBondCollection
 
-    bond_handler = SMIRNOFFBondHandler()
+    bond_handler = SMIRNOFFBondCollection()
 
     n_parametrized_bonds = force.getNumBonds()
 
@@ -228,10 +228,10 @@ def _convert_harmonic_angle_force(force):
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.components.potentials import Potential
-    from openff.interchange.components.smirnoff import SMIRNOFFAngleHandler
     from openff.interchange.models import PotentialKey, TopologyKey
+    from openff.interchange.smirnoff._valence import SMIRNOFFAngleCollection
 
-    angle_handler = SMIRNOFFAngleHandler()
+    angle_handler = SMIRNOFFAngleCollection()
 
     n_parametrized_angles = force.getNumAngles()
 
@@ -258,10 +258,10 @@ def _convert_periodic_torsion_force(force):
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.components.potentials import Potential
-    from openff.interchange.components.smirnoff import SMIRNOFFProperTorsionHandler
     from openff.interchange.models import PotentialKey, ProperTorsionKey
+    from openff.interchange.smirnoff._valence import SMIRNOFFProperTorsionCollection
 
-    proper_torsion_handler = SMIRNOFFProperTorsionHandler()
+    proper_torsion_handler = SMIRNOFFProperTorsionCollection()
 
     n_parametrized_torsions = force.getNumTorsions()
 

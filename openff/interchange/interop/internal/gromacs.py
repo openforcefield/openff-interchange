@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from openff.units.unit import Quantity
 
     from openff.interchange import Interchange
-    from openff.interchange.components.potentials import PotentialHandler
+    from openff.interchange.components.potentials import Collection
 
 
 def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int = 3):
@@ -279,7 +279,7 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
     https://github.com/shirtsgroup/InterMol/tree/v0.1/intermol/gromacs
 
     """
-    if "VirtualSites" in openff_sys.handlers:
+    if "VirtualSites" in openff_sys.collections:
         if len(openff_sys["VirtualSites"].slot_map) > 0:
             warnings.warn(
                 "Exporting virtual sites to GROMACS is EXPERIMENTAL and not yet thoroughly validated.",
@@ -300,27 +300,27 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
     # introduces an overhead but should pay off by allowing the blind use of
     # `Quantity.magnitdue` without the default unit-checking work.
 
-    if "vdW" in openff_sys.handlers:
+    if "vdW" in openff_sys.collections:
         for potential in openff_sys["vdW"].potentials.values():
             potential.parameters["sigma"].ito(unit.nanometer)
             potential.parameters["epsilon"].ito(kj_mol)
 
-    if "Bonds" in openff_sys.handlers:
+    if "Bonds" in openff_sys.collections:
         for potential in openff_sys["Bonds"].potentials.values():
             potential.parameters["k"].ito(kj_mol / unit.nanometer**2)
             potential.parameters["length"].ito(unit.nanometer)
 
-    if "Angles" in openff_sys.handlers:
+    if "Angles" in openff_sys.collections:
         for potential in openff_sys["Angles"].potentials.values():
             potential.parameters["k"].ito(kj_mol / unit.radian * 2)
             potential.parameters["angle"].ito(unit.degree)
 
-    if "ProperTorsions" in openff_sys.handlers:
+    if "ProperTorsions" in openff_sys.collections:
         for potential in openff_sys["ProperTorsions"].potentials.values():
             potential.parameters["k"].ito(kj_mol)
             potential.parameters["phase"].ito(unit.degree)
 
-    if "ImproperTorsions" in openff_sys.handlers:
+    if "ImproperTorsions" in openff_sys.collections:
         for potential in openff_sys["ImproperTorsions"].potentials.values():
             potential.parameters["k"].ito(kj_mol)
             potential.parameters["phase"].ito(unit.degree)
@@ -384,12 +384,12 @@ def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
     top_file.write("[ defaults ]\n")
     top_file.write("; nbfunc\tcomb-rule\tgen-pairs\tfudgeLJ\tfudgeQQ\n")
 
-    if "vdW" in openff_sys.handlers:
+    if "vdW" in openff_sys.collections:
         nbfunc = 1
         scale_lj = openff_sys["vdW"].scale_14
         gen_pairs = "no"
         handler_key = "vdW"
-    elif "Buckingham-6" in openff_sys.handlers:
+    elif "Buckingham-6" in openff_sys.collections:
         nbfunc = 2
         gen_pairs = "no"
         scale_lj = openff_sys["Buckingham-6"].scale_14  # type: ignore
@@ -397,7 +397,7 @@ def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
     else:
         raise UnsupportedExportError(
             "Could not find a handler for short-ranged vdW interactions that is compatible "
-            "with GROMACS. Looked for handlers named `vdW` and `Buckingham-6`.",
+            "with GROMACS. Looked for collections named `vdW` and `Buckingham-6`.",
         )
 
     mixing_rule = openff_sys[handler_key].mixing_rule.lower()  # type: ignore
@@ -458,7 +458,7 @@ def _build_virtual_site_map(interchange: "Interchange") -> Dict[VirtualSiteKey, 
     """
     virtual_site_topology_index_map: Dict[VirtualSiteKey, int] = dict()
 
-    if "VirtualSites" not in interchange.handlers:
+    if "VirtualSites" not in interchange.collections:
         return virtual_site_topology_index_map
 
     n_atoms = interchange.topology.n_atoms
@@ -478,15 +478,15 @@ def _write_atomtypes(
     virtual_site_map: Dict,
 ):
     """Write [ atomtypes ] section."""
-    if "vdW" in openff_sys.handlers:
-        if "Buckingham-6" in openff_sys.handlers:
+    if "vdW" in openff_sys.collections:
+        if "Buckingham-6" in openff_sys.collections:
             raise UnsupportedExportError(
                 "Cannot mix 12-6 and Buckingham potentials in GROMACS",
             )
         else:
             _write_atomtypes_lj(openff_sys, top_file, typemap, virtual_site_map)
     else:
-        if "Buckingham-6" in openff_sys.handlers:
+        if "Buckingham-6" in openff_sys.collections:
             _write_atomtypes_buck(openff_sys, top_file, typemap)
         else:
             raise UnsupportedExportError("No vdW interactions found")
@@ -695,12 +695,12 @@ def _write_atoms(
     # Use a set to de-duplicate
     pairs: Set[Tuple] = {*_get_14_pairs(molecule)}
 
-    if "vdW" in openff_sys.handlers:
+    if "vdW" in openff_sys.collections:
         if _cached_parameters is None:
             lj_parameters: "ArrayLike" = openff_sys["vdW"].get_system_parameters()
         else:
             lj_parameters = _cached_parameters
-    elif "Buckingham-6" in openff_sys.handlers:
+    elif "Buckingham-6" in openff_sys.collections:
         warnings.warn("Not writing a [ pairs ] section with Buckingham interactions.")
         top_file.write("\n")
         return
@@ -735,7 +735,7 @@ def _write_virtual_sites(
     molecule: "Molecule",
     virtual_site_map: Dict,
 ):
-    if "VirtualSites" not in openff_sys.handlers:
+    if "VirtualSites" not in openff_sys.collections:
         return
 
     virtual_site_handler = openff_sys["VirtualSites"]
@@ -986,7 +986,7 @@ def _write_valence(
 
 
 def _write_bonds(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
-    if "Bonds" not in openff_sys.handlers.keys():
+    if "Bonds" not in openff_sys.collections.keys():
         return
 
     top_file.write("[ bonds ]\n")
@@ -1044,7 +1044,7 @@ def _write_bonds(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
 
 
 def _write_angles(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
-    if "Angles" not in openff_sys.handlers.keys():
+    if "Angles" not in openff_sys.collections.keys():
         return
 
     top_file.write("[ angles ]\n")
@@ -1082,24 +1082,24 @@ def _write_angles(top_file: IO, openff_sys: "Interchange", molecule: "Molecule")
 
 
 def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
-    if "ProperTorsions" not in openff_sys.handlers:
-        if "RBTorsions" not in openff_sys.handlers:
-            if "ImproperTorsions" not in openff_sys.handlers:
+    if "ProperTorsions" not in openff_sys.collections:
+        if "RBTorsions" not in openff_sys.collections:
+            if "ImproperTorsions" not in openff_sys.collections:
                 return
 
     top_file.write("[ dihedrals ]\n")
     top_file.write(";    i      j      k      l   func\n")
 
     # FIXME: RB Impropers are probably missed here
-    rb_torsion_handler: Optional["PotentialHandler"] = openff_sys.handlers.get(
+    rb_torsion_handler: Optional["Collection"] = openff_sys.collections.get(
         "RBTorsions",
         None,
     )
-    proper_torsion_handler: Optional["PotentialHandler"] = openff_sys.handlers.get(
+    proper_torsion_handler: Optional["Collection"] = openff_sys.collections.get(
         "ProperTorsions",
         None,
     )
-    improper_torsion_handler: Optional["PotentialHandler"] = openff_sys.handlers.get(
+    improper_torsion_handler: Optional["Collection"] = openff_sys.collections.get(
         "ImproperTorsions",
         None,
     )
@@ -1412,7 +1412,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
         if len(fields) != 5:
             raise Exception
 
-        if "Bonds" not in interchange.handlers:
+        if "Bonds" not in interchange.collections:
             bond_handler = BaseBondHandler()
             interchange.add_handler("Bonds", bond_handler)
 
@@ -1445,7 +1445,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
         if len(fields) != 6:
             raise Exception
 
-        if "Angles" not in interchange.handlers:
+        if "Angles" not in interchange.collections:
             angle_handler = BaseAngleHandler()
             interchange.add_handler("Angles", angle_handler)
 
@@ -1474,11 +1474,11 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
         if len(fields) != 8:
             raise Exception
 
-        if "ProperTorsions" not in interchange.handlers:
+        if "ProperTorsions" not in interchange.collections:
             proper_handler = BaseProperTorsionHandler()
             interchange.add_handler("ProperTorsions", proper_handler)
 
-        if "ImproperTorsions" not in interchange.handlers:
+        if "ImproperTorsions" not in interchange.collections:
             improper_handler = BaseImproperTorsionHandler()
             interchange.add_handler("ImproperTorsions", improper_handler)
 

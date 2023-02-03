@@ -2,8 +2,8 @@ from openff.toolkit.typing.engines.smirnoff.parameters import BondHandler
 from openff.units import unit
 
 from openff.interchange.components.potentials import (
+    Collection,
     Potential,
-    PotentialHandler,
     WrappedPotential,
 )
 from openff.interchange.tests import _BaseTest
@@ -40,9 +40,9 @@ class TestWrappedPotential(_BaseTest):
         assert simple.parameters == pot2.parameters
 
 
-class TestPotentialHandlerSubclassing(_BaseTest):
-    def test_dummy_potential_handler(self):
-        handler = PotentialHandler(
+class TestCollectionSubclassing(_BaseTest):
+    def test_dummy_collection(self):
+        handler = Collection(
             type="foo",
             expression="m*x+b",
         )

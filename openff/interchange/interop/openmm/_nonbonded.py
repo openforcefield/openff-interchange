@@ -34,7 +34,7 @@ def _process_nonbonded_forces(
     combine_nonbonded_forces=False,
 ) -> Dict[Union[int, VirtualSiteKey], int]:
     """
-    Process the non-bonded handlers in an Interchange into corresponding openmm objects.
+    Process the non-bonded collections in an Interchange into corresponding openmm objects.
 
     This typically involves processing the vdW and Electrostatics sections of an Interchange object
     into a corresponding openmm.NonbondedForce (if `combine_nonbonded_forces=True`) or a
@@ -42,17 +42,17 @@ def _process_nonbonded_forces(
     `combine_nonbondoed_forces=False`.
 
     """
-    from openff.interchange.components.smirnoff import _SMIRNOFFNonbondedHandler
+    from openff.interchange.smirnoff._nonbonded import _SMIRNOFFNonbondedCollection
 
-    for handler in openff_sys.handlers.values():
-        if isinstance(handler, _SMIRNOFFNonbondedHandler):
+    for handler in openff_sys.collections.values():
+        if isinstance(handler, _SMIRNOFFNonbondedCollection):
             break
     else:
-        # If there are no non-bonded handlers, assume here that there can be no virtual sites,
+        # If there are no non-bonded collections, assume here that there can be no virtual sites,
         # so just return an i-i mapping between OpenFF and OpenMM indices
         return {i: i for i in range(openff_sys.topology.n_atoms)}
 
-    has_virtual_sites = "VirtualSites" in openff_sys.handlers
+    has_virtual_sites = "VirtualSites" in openff_sys.collections
 
     if has_virtual_sites:
         from openff.interchange.interop._virtual_sites import (
@@ -90,7 +90,7 @@ def _process_nonbonded_forces(
     )
 
     # TODO: Process ElectrostaticsHandler.exception_potential
-    if "vdW" in openff_sys.handlers or "Electrostatics" in openff_sys.handlers:
+    if "vdW" in openff_sys.collections or "Electrostatics" in openff_sys.collections:
         _data = _prepare_input_data(openff_sys)
 
         if combine_nonbonded_forces:
@@ -106,7 +106,7 @@ def _process_nonbonded_forces(
             openff_openmm_particle_map,
         )
 
-    elif "Buckingham-6" in openff_sys.handlers:
+    elif "Buckingham-6" in openff_sys.collections:
         if has_virtual_sites:
             raise UnsupportedExportError(
                 "Virtual sites with Buckingham-6 potential not supported. If this use case is important to you, "
@@ -146,7 +146,7 @@ def _process_nonbonded_forces(
         openff_openmm_particle_map
 
     else:
-        # Here we assume there are no vdW interactions in any handlers
+        # Here we assume there are no vdW interactions in any collections
         # vdw_handler = None
 
         if has_virtual_sites:
@@ -274,7 +274,7 @@ def _create_single_nonbonded_force(
     molecule_virtual_site_map: Dict["Molecule", List[VirtualSiteKey]],
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int],
 ):
-    """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site handlers."""
+    """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site collections."""
     if data["mixing_rule"] not in ("lorentz-berthelot", None):
         raise UnsupportedExportError(
             "OpenMM's default NonbondedForce only supports Lorentz-Berthelot mixing rules."

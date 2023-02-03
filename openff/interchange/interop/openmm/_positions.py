@@ -28,7 +28,7 @@ def to_openmm_positions(
 
     atom_positions = to_openmm_quantity(interchange.positions)
 
-    if "VirtualSites" not in interchange.handlers:
+    if "VirtualSites" not in interchange.collections:
         return atom_positions
     elif len(interchange["VirtualSites"].slot_map) == 0:
         return atom_positions
