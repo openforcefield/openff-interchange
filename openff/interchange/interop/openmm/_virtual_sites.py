@@ -11,7 +11,7 @@ from openff.interchange.models import VirtualSiteKey
 
 if TYPE_CHECKING:
     from openff.interchange.components._particles import _VirtualSite
-    from openff.interchange.smirnoff._nonbonded import SMIRNOFFVirtualSiteCollection
+    from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 
 
 def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteCollection"):

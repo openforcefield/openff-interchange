@@ -75,9 +75,7 @@ class TestSMIRNOFFValenceCollections(_BaseTest):
 
         assert pot.parameters["k"].to(kcal_mol_rad2).magnitude == pytest.approx(2.5)
 
-    def test_store_improper_torsion_matches(self):
-        formaldehyde: Molecule = Molecule.from_mapped_smiles("[H:3][C:1]([H:4])=[O:2]")
-
+    def test_store_improper_torsion_matches(self, formaldehyde):
         parameter_handler = ImproperTorsionHandler(version=0.3)
         parameter_handler.add_parameter(
             parameter=ImproperTorsionHandler.ImproperTorsionType(
@@ -101,12 +99,7 @@ class TestSMIRNOFFValenceCollections(_BaseTest):
             key = ImproperTorsionKey(atom_indices=indices, mult=0)
             assert key in collection.slot_map
 
-    def test_store_nonstandard_improper_idivf(self):
-        acetaldehyde = Molecule.from_mapped_smiles(
-            "[C:1]([C:2](=[O:3])[H:7])([H:4])([H:5])[H:6]",
-        )
-        topology = acetaldehyde.to_topology()
-
+    def test_store_nonstandard_improper_idivf(self, acetaldehyde):
         handler = ImproperTorsionHandler(version=0.3)
         handler.add_parameter(
             {
@@ -121,7 +114,7 @@ class TestSMIRNOFFValenceCollections(_BaseTest):
 
         collection = SMIRNOFFImproperTorsionCollection.create(
             parameter_handler=handler,
-            topology=topology,
+            topology=acetaldehyde.to_topology(),
         )
 
         handler = ImproperTorsionHandler(version=0.3)
@@ -138,7 +131,7 @@ class TestSMIRNOFFValenceCollections(_BaseTest):
 
         collection = SMIRNOFFImproperTorsionCollection.create(
             parameter_handler=handler,
-            topology=topology,
+            topology=acetaldehyde.to_topology(),
         )
 
         assert [*collection.potentials.values()][0].parameters[
@@ -181,10 +174,8 @@ class TestConstraintCollection(_BaseTest):
 
         assert len(constraints.slot_map) == n_constraints
 
-    def test_constraints_with_distance(self, tip3p_xml):
-        tip3p = ForceField(tip3p_xml)
-
-        topology = Molecule.from_smiles("O").to_topology()
+    def test_constraints_with_distance(self, tip3p, water):
+        topology = water.to_topology()
         topology.box_vectors = [4, 4, 4] * unit.nanometer
 
         constraints = SMIRNOFFConstraintCollection.create(
@@ -269,23 +260,20 @@ class TestBondOrderInterpolation(_BaseTest):
             k2 = bonds_mod.potentials[key2].parameters["k"].m_as(kcal_mol_a2)
             assert k1 == pytest.approx(k2, rel=1e-5), (k1, k2)
 
-    def test_fractional_bondorder_invalid_interpolation_method(self):
+    def test_fractional_bondorder_invalid_interpolation_method(self, ethanol):
         """
         Ensure that requesting an invalid interpolation method leads to a
         FractionalBondOrderInterpolationMethodUnsupportedError
         """
-        mol = Molecule.from_smiles("CCO")
-
         forcefield = ForceField(
             get_data_file_path("test_forcefields/test_forcefield.offxml"),
             self.xml_ff_bo_bonds,
         )
         forcefield["Bonds"]._fractional_bondorder_interpolation = "invalid method name"
-        topology = Topology.from_molecules([mol])
 
         # TODO: Make this a more descriptive custom exception
         with pytest.raises(ValidationError):
-            Interchange.from_smirnoff(forcefield, topology)
+            Interchange.from_smirnoff(forcefield, [ethanol])
 
 
 class TestParameterInterpolation(_BaseTest):
@@ -312,28 +300,29 @@ class TestParameterInterpolation(_BaseTest):
     """
 
     @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
-    def test_bond_order_interpolation(self):
+    def test_bond_order_interpolation(self, ethanol):
         forcefield = ForceField(
             "test_forcefields/test_forcefield.offxml",
             self.xml_ff_bo,
         )
 
-        mol = Molecule.from_smiles("CCO")
-        mol.generate_conformers(n_conformers=1)
+        ethanol.generate_conformers(n_conformers=1)
 
-        mol.bonds[1].fractional_bond_order = 1.5
+        ethanol.bonds[1].fractional_bond_order = 1.5
 
-        top = mol.to_topology()
+        top = ethanol.to_topology()
 
-        out = Interchange.from_smirnoff(forcefield, mol.to_topology())
+        out = Interchange.from_smirnoff(forcefield, ethanol.to_topology())
 
         top_key = BondKey(
             atom_indices=(1, 2),
             bond_order=top.get_bond_between(1, 2).bond.fractional_bond_order,
         )
-        assert out["Bonds"].potentials[out["Bonds"].slot_map[top_key]].parameters[
-            "k"
-        ] == 300 * unit.Unit("kilocalories / mol / angstrom ** 2")
+
+        found_k = (
+            out["Bonds"].potentials[out["Bonds"].slot_map[top_key]].parameters["k"]
+        )
+        assert found_k == 300 * kcal_mol_a2
 
     @pytest.mark.slow()
     @pytest.mark.xfail(reason="Not yet implemented using input bond orders")

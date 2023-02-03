@@ -1,6 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import Topology
 from openff.toolkit.typing.engines.smirnoff import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
@@ -15,14 +15,11 @@ from openff.interchange.tests import _BaseTest
 
 
 class TestNonbonded(_BaseTest):
-    def test_electrostatics_am1_handler(self):
-        molecule = Molecule.from_smiles("C")
-        molecule.assign_partial_charges(partial_charge_method="am1bcc")
+    def test_electrostatics_am1_handler(self, methane):
+        methane.assign_partial_charges(partial_charge_method="am1bcc")
 
         # Explicitly store these, since results differ RDKit/AmberTools vs. OpenEye
-        reference_charges = [c.m for c in molecule.partial_charges]
-
-        top = molecule.to_topology()
+        reference_charges = [c.m for c in methane.partial_charges]
 
         parameter_handlers = [
             ElectrostaticsHandler(version=0.3),
@@ -31,16 +28,14 @@ class TestNonbonded(_BaseTest):
 
         electrostatics_handler = SMIRNOFFElectrostaticsCollection.create(
             parameter_handlers,
-            top,
+            methane.to_topology(),
         )
         numpy.testing.assert_allclose(
             [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
             reference_charges,
         )
 
-    def test_electrostatics_library_charges(self):
-        top = Molecule.from_smiles("C").to_topology()
-
+    def test_electrostatics_library_charges(self, methane):
         library_charge_handler = LibraryChargeHandler(version=0.3)
         library_charge_handler.add_parameter(
             {
@@ -57,7 +52,7 @@ class TestNonbonded(_BaseTest):
 
         electrostatics_handler = SMIRNOFFElectrostaticsCollection.create(
             parameter_handlers,
-            top,
+            methane.to_topology(),
         )
 
         numpy.testing.assert_allclose(
@@ -65,13 +60,10 @@ class TestNonbonded(_BaseTest):
             [-0.1, 0.025, 0.025, 0.025, 0.025],
         )
 
-    def test_electrostatics_charge_increments(self):
-        molecule = Molecule.from_mapped_smiles("[Cl:1][H:2]")
-        top = molecule.to_topology()
+    def test_electrostatics_charge_increments(self, hydrogen_chloride):
+        hydrogen_chloride.assign_partial_charges(partial_charge_method="am1-mulliken")
 
-        molecule.assign_partial_charges(partial_charge_method="am1-mulliken")
-
-        reference_charges = [c.m for c in molecule.partial_charges]
+        reference_charges = [c.m for c in hydrogen_chloride.partial_charges]
         reference_charges[0] += 0.1
         reference_charges[1] -= 0.1
 
@@ -91,7 +83,7 @@ class TestNonbonded(_BaseTest):
 
         electrostatics_handler = SMIRNOFFElectrostaticsCollection.create(
             parameter_handlers,
-            top,
+            hydrogen_chloride.to_topology(),
         )
 
         # AM1-Mulliken charges are [-0.168,  0.168], increments are [0.1, -0.1],
@@ -101,26 +93,26 @@ class TestNonbonded(_BaseTest):
             reference_charges,
         )
 
-    def test_toolkit_am1bcc_uses_elf10_if_oe_is_available(self, sage):
+    def test_toolkit_am1bcc_uses_elf10_if_oe_is_available(self, sage, hexane_diol):
         """
         Ensure that the ToolkitAM1BCCHandler assigns ELF10 charges if OpenEye is available.
 
         Taken from https://github.com/openforcefield/openff-toolkit/pull/1214,
         """
-        molecule = Molecule.from_smiles("OCCCCCCO")
-
         try:
-            molecule.assign_partial_charges(partial_charge_method="am1bccelf10")
+            hexane_diol.assign_partial_charges(partial_charge_method="am1bccelf10")
             uses_elf10 = True
         except ValueError:
-            molecule.assign_partial_charges(partial_charge_method="am1bcc")
+            # This assumes that the ValueError stems from "am1bccelf10" and not other sources; the
+            # toolkit should implement a failure mode that does not clash with other `ValueError`s
+            hexane_diol.assign_partial_charges(partial_charge_method="am1bcc")
             uses_elf10 = False
 
-        partial_charges = [c.m for c in molecule.partial_charges]
+        partial_charges = [c.m for c in hexane_diol.partial_charges]
 
         assigned_charges = [
             v.m
-            for v in Interchange.from_smirnoff(sage, [molecule])[
+            for v in Interchange.from_smirnoff(sage, [hexane_diol])[
                 "Electrostatics"
             ].charges.values()
         ]
@@ -164,12 +156,10 @@ class TestSMIRNOFFChargeIncrements(_BaseTest):
 
         return handler
 
-    def test_no_charge_increments_applied(self, sage):
-        molecule = Molecule.from_smiles("OCCCCCCO")
-        molecule.assign_partial_charges(partial_charge_method="gasteiger")
-        gastiger_charges = molecule.partial_charges.m
-
+    def test_no_charge_increments_applied(self, sage, hexane_diol):
+        gastiger_charges = [c.m for c in hexane_diol.partial_charges]
         sage.deregister_parameter_handler("ToolkitAM1BCC")
+
         no_increments = ChargeIncrementModelHandler(
             version=0.3,
             partial_charge_method="gasteiger",
@@ -178,17 +168,14 @@ class TestSMIRNOFFChargeIncrements(_BaseTest):
 
         assert len(sage["ChargeIncrementModel"].parameters) == 0
 
-        out = Interchange.from_smirnoff(sage, [molecule])
+        out = Interchange.from_smirnoff(sage, [hexane_diol])
         assert numpy.allclose(
             numpy.asarray([v.m for v in out["Electrostatics"].charges.values()]),
             gastiger_charges,
         )
 
-    def test_overlapping_increments(self, sage):
+    def test_overlapping_increments(self, sage, methane):
         """Test that separate charge increments can be properly applied to the same atom."""
-        molecule = Molecule.from_smiles("C")
-
-        sage = ForceField("openff-2.0.0.offxml")
         sage.deregister_parameter_handler("ToolkitAM1BCC")
         charge_handler = ChargeIncrementModelHandler(
             version=0.3,
@@ -205,7 +192,7 @@ class TestSMIRNOFFChargeIncrements(_BaseTest):
         assert 0.0 == pytest.approx(
             sum(
                 v.m
-                for v in Interchange.from_smirnoff(sage, [molecule])[
+                for v in Interchange.from_smirnoff(sage, [methane])[
                     "Electrostatics"
                 ].charges.values()
             ),

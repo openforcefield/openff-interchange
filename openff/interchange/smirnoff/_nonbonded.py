@@ -146,7 +146,7 @@ class SMIRNOFFvdWCollection(_SMIRNOFFNonbondedCollection):
         topology: Topology,
     ) -> T:
         """
-        Create a SMIRNOFFvdWHandler from toolkit data.
+        Create a SMIRNOFFvdWCollection from toolkit data.
 
         """
         if isinstance(parameter_handler, list):
@@ -247,7 +247,7 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
     * partial charges which have been assigned by a ``ToolkitAM1BCC``,
       ``LibraryCharges``, or a ``ChargeIncrementModel`` parameter
       handler.
-    * charge corrections applied by a ``SMIRNOFFChargeIncrementHandler``.
+    * charge corrections applied by a ``SMIRNOFFChargeIncrementCollection``.
 
     rather than having each in their own handler.
     """
@@ -353,7 +353,7 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
         allow_nonintegral_charges: bool = False,
     ) -> T:
         """
-        Create a SMIRNOFFElectrostaticsHandler from toolkit data.
+        Create a SMIRNOFFElectrostaticsCollection from toolkit data.
 
         """
         from packaging.version import Version

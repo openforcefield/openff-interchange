@@ -213,7 +213,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
         partial_bond_orders_from_molecules=None,
     ) -> T:
         """
-        Create a SMIRNOFFBondHandler from toolkit data.
+        Create a SMIRNOFFBondCollection from toolkit data.
 
         """
         # TODO: This method overrides SMIRNOFFCollection.from_toolkit in order to gobble up
@@ -525,7 +525,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
         partial_bond_orders_from_molecules=None,
     ) -> T:
         """
-        Create a SMIRNOFFProperTorsionHandler from toolkit data.
+        Create a SMIRNOFFProperTorsionCollection from toolkit data.
 
         """
         handler: T = cls(

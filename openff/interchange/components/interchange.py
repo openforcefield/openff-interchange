@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     from openff.interchange.smirnoff._nonbonded import (
         SMIRNOFFElectrostaticsCollection,
         SMIRNOFFvdWCollection,
-        SMIRNOFFVirtualSiteCollection,
     )
     from openff.interchange.smirnoff._valence import (
         SMIRNOFFAngleCollection,
@@ -38,6 +37,7 @@ if TYPE_CHECKING:
         SMIRNOFFImproperTorsionCollection,
         SMIRNOFFProperTorsionCollection,
     )
+    from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 
     if has_package("foyer"):
         from foyer.forcefield import Forcefield as FoyerForcefield

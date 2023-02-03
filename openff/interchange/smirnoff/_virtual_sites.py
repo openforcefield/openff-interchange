@@ -23,7 +23,7 @@ def _compute_lj_sigma(
     sigma: Optional[unit.Quantity],
     rmin_half: Optional[unit.Quantity],
 ) -> unit.Quantity:
-    return sigma if sigma is not None else (2.0 * rmin_half / (2.0 ** (1.0 / 6.0)))  # type: ignore
+    return sigma if rmin_half is None else (2.0 * rmin_half / (2.0 ** (1.0 / 6.0)))
 
 
 class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
