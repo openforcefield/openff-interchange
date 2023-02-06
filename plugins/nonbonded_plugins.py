@@ -101,7 +101,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
             self.potentials[potential_key] = potential
 
     @classmethod
-    def create(
+    def create(  # type: ignore[override]
         cls: Type[T],
         parameter_handler: BuckinghamHandler,
         topology: Topology,
@@ -110,17 +110,11 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
         Create a SMIRNOFFvdWCollection from toolkit data.
 
         """
-        if isinstance(parameter_handler, list):
-            parameter_handlers = parameter_handler
-        else:
-            parameter_handlers = [parameter_handler]
-
-        for parameter_handler in parameter_handlers:
-            if type(parameter_handler) not in cls.allowed_parameter_handlers():
-                raise InvalidParameterHandlerError(
-                    f"Found parameter handler type {type(parameter_handler)}, which is not "
-                    f"supported by potential type {type(cls)}",
-                )
+        if type(parameter_handler) not in cls.allowed_parameter_handlers():
+            raise InvalidParameterHandlerError(
+                f"Found parameter handler type {type(parameter_handler)}, which is not "
+                f"supported by potential type {type(cls)}",
+            )
 
         handler = cls(
             scale_13=parameter_handler.scale13,
