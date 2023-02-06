@@ -57,6 +57,8 @@ jobs:
         conda remove --force openff-interchange openff-interchange-base
         python -m pip install .
 
+        python -m pip install -e plugins/
+
     - name: Environment Information
       run: |
         conda info

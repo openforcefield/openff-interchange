@@ -11,8 +11,8 @@ setup(
         "openff.toolkit.plugins.handlers": [
             "BuckinghamHandler = nonbonded_plugins:BuckinghamHandler",
         ],
-        "openff.interchange.plugins.handlers": [
-            "BuckinghamCollection = nonbonded_plugins:BuckinghamCollection",
+        "openff.interchange.plugins.collections": [
+            "BuckinghamCollection = nonbonded_plugins:SMIRNOFFBuckinghamCollection",
         ],
     },
 )

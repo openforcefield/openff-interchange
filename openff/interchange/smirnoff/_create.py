@@ -1,6 +1,7 @@
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Type, Union
 
 from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 from openff.units import Quantity
 from packaging.version import Version
 
@@ -10,6 +11,7 @@ from openff.interchange.exceptions import (
     MissingParameterHandlerError,
     SMIRNOFFHandlersNotImplementedError,
 )
+from openff.interchange.plugins import load_smirnoff_plugins
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     SMIRNOFFvdWCollection,
@@ -24,7 +26,12 @@ from openff.interchange.smirnoff._valence import (
 )
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 
-_SUPPORTED_SMIRNOFF_HANDLERS = {
+if TYPE_CHECKING:
+    from openff.toolkit.typing.engines.smirnoff import ParameterHandler
+
+    from openff.interchange.smirnoff._base import SMIRNOFFCollection
+
+_SUPPORTED_PARAMETER_HANDLERS: Set[str] = {
     "Constraints",
     "Bonds",
     "Angles",
@@ -37,6 +44,23 @@ _SUPPORTED_SMIRNOFF_HANDLERS = {
     "VirtualSites",
 }
 
+_PLUGIN_CLASS_MAPPING: Dict[
+    Type["ParameterHandler"],
+    Type["SMIRNOFFCollection"],
+] = dict()
+
+for collection_plugin in load_smirnoff_plugins():
+    parameter_handlers: List[
+        Type["ParameterHandler"]
+    ] = collection_plugin.allowed_parameter_handlers()
+
+    if len(parameter_handlers) != 1:
+        raise RuntimeError
+
+    if parameter_handlers[0] in load_handler_plugins():
+        _SUPPORTED_PARAMETER_HANDLERS.add(parameter_handlers[0]._TAGNAME)
+        _PLUGIN_CLASS_MAPPING[parameter_handlers[0]] = collection_plugin
+
 
 def _check_supported_handlers(force_field: ForceField):
     unsupported = list()
@@ -44,7 +68,7 @@ def _check_supported_handlers(force_field: ForceField):
     for handler_name in force_field.registered_parameter_handlers:
         if handler_name in {"ToolkitAM1BCC"}:
             continue
-        if handler_name not in _SUPPORTED_SMIRNOFF_HANDLERS:
+        if handler_name not in _SUPPORTED_PARAMETER_HANDLERS:
             unsupported.append(handler_name)
 
     if unsupported:
@@ -87,6 +111,8 @@ def _create_interchange(
         allow_nonintegral_charges,
     )
     _virtual_sites(interchange, force_field, _topology)
+
+    _plugins(interchange, force_field, _topology)
 
     interchange.topology = _topology
 
@@ -263,3 +289,24 @@ def _virtual_sites(
     )
 
     interchange.collections.update({"VirtualSites": virtual_site_handler})
+
+
+def _plugins(
+    interchange: Interchange,
+    force_field: ForceField,
+    topology: Topology,
+):
+    for handler_class, collection_class in _PLUGIN_CLASS_MAPPING.items():
+        if handler_class._TAGNAME not in force_field.registered_parameter_handlers:
+            continue
+
+        collection = collection_class.create(
+            parameter_handler=force_field[handler_class._TAGNAME],
+            topology=topology,
+        )
+
+        interchange.collections.update(
+            {
+                handler_class._TAGNAME: collection,
+            },
+        )
