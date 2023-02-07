@@ -25,6 +25,7 @@ using/construction.rst
 using/output.md
 using/handlers.md
 using/migrating.md
+using/plugins.md
 
 ```
 
