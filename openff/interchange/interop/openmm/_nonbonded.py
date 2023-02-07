@@ -133,7 +133,7 @@ def _process_nonbonded_forces(
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
             non_bonded_force.setCutoffDistance(buck_handler.cutoff * unit.angstrom)
 
-        for top_key, pot_key in buck_handler.slot_map.items():
+        for top_key, pot_key in buck_handler.key_map.items():
             atom_idx = top_key.atom_indices[0]
 
             # TODO: Add electrostatics
@@ -356,7 +356,7 @@ def _create_single_nonbonded_force(
                 partial_charge = 0.0
 
             if data["vdw_handler"] is not None:
-                pot_key = data["vdw_handler"].slot_map[top_key]
+                pot_key = data["vdw_handler"].key_map[top_key]
                 sigma, epsilon = _lj_params_from_potential(
                     data["vdw_handler"].potentials[pot_key],
                 )
@@ -387,7 +387,7 @@ def _create_single_nonbonded_force(
                 _create_virtual_site_object,
             )
 
-            _potential_key = openff_sys["VirtualSites"].slot_map[virtual_site_key]
+            _potential_key = openff_sys["VirtualSites"].key_map[virtual_site_key]
             virtual_site_potential = openff_sys["VirtualSites"].potentials[
                 _potential_key
             ]
@@ -404,8 +404,8 @@ def _create_single_nonbonded_force(
             vdw_handler = openff_sys["vdW"]
             coul_handler = openff_sys["Electrostatics"]
 
-            vdw_key = vdw_handler.slot_map.get(virtual_site_key)  # type: ignore[call-overload]
-            coul_key = coul_handler.slot_map.get(virtual_site_key)  # type: ignore[call-overload]
+            vdw_key = vdw_handler.key_map.get(virtual_site_key)
+            coul_key = coul_handler.key_map.get(virtual_site_key)
             if vdw_key is None or coul_key is None:
                 raise InternalInconsistencyError(
                     f"Virtual site {virtual_site_key} is not associated with any "
@@ -673,7 +673,7 @@ def _create_multiple_nonbonded_forces(
                 partial_charge = 0.0
 
             if data["vdw_handler"] is not None:
-                pot_key = data["vdw_handler"].slot_map[top_key]
+                pot_key = data["vdw_handler"].key_map[top_key]
                 sigma, epsilon = _lj_params_from_potential(
                     data["vdw_handler"].potentials[pot_key],
                 )

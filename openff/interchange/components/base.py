@@ -92,5 +92,5 @@ class BaseElectrostaticsHandler(_BaseNonbondedHandler):
         """Get the total partial charge on each atom, excluding virtual sites."""
         return {
             topology_key: self.potentials[potential_key].parameters["charge"]
-            for topology_key, potential_key in self.slot_map.items()
+            for topology_key, potential_key in self.key_map.items()
         }

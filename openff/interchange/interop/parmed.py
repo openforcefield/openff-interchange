@@ -2,7 +2,7 @@
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
 import numpy as np
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.exceptions import (
@@ -75,7 +75,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             bond_type_map[pot_key] = bond_type
             structure.bond_types.append(bond_type)
 
-        for top_key, pot_key in bond_handler.slot_map.items():
+        for top_key, pot_key in bond_handler.key_map.items():
             idx_1, idx_2 = top_key.atom_indices
             bond_type = bond_type_map[pot_key]
             bond = pmd.Bond(
@@ -98,7 +98,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             angle_type_map[pot_key] = angle_type
             structure.angle_types.append(angle_type)
 
-        for angle_key, pot_key in angle_handler.slot_map.items():
+        for angle_key, pot_key in angle_handler.key_map.items():
             idx_1, idx_2, idx_3 = angle_key.atom_indices
             angle_type = angle_type_map[pot_key]
             structure.angles.append(
@@ -139,7 +139,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             proper_type_map[pot_key] = proper_type
             structure.dihedral_types.append(proper_type)
 
-        for proper_key, pot_key in proper_torsion_handler.slot_map.items():
+        for proper_key, pot_key in proper_torsion_handler.key_map.items():
             idx_1, idx_2, idx_3, idx_4 = proper_key.atom_indices
             dihedral_type = proper_type_map[pot_key]
             structure.dihedrals.append(
@@ -155,8 +155,8 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
 
             key1 = TopologyKey(atom_indices=(idx_1,))
             key4 = TopologyKey(atom_indices=(idx_4,))
-            vdw1 = vdw_handler.potentials[vdw_handler.slot_map[key1]]
-            vdw4 = vdw_handler.potentials[vdw_handler.slot_map[key4]]
+            vdw1 = vdw_handler.potentials[vdw_handler.key_map[key1]]
+            vdw4 = vdw_handler.potentials[vdw_handler.key_map[key4]]
             sig1, eps1 = _lj_params_from_potential(vdw1)
             sig4, eps4 = _lj_params_from_potential(vdw4)
             sig = (sig1 + sig4) * 0.5
@@ -214,7 +214,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
 
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         atom_key = TopologyKey(atom_indices=(pmd_idx,))
-        smirks = vdw_handler.slot_map[atom_key]
+        smirks = vdw_handler.key_map[atom_key]
         potential = vdw_handler.potentials[smirks]
         element_symbol = atom.symbol
         sigma, epsilon = _lj_params_from_potential(potential)
@@ -239,7 +239,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         if has_electrostatics:
             charge_key = TopologyKey(atom_indices=(pmd_idx,))
-            partial_charge = charges[charge_key]
+            partial_charge: Quantity = charges[charge_key]
             unitless_ = partial_charge.to(unit.elementary_charge).magnitude
             pmd_atom.charge = float(unitless_)
             pmd_atom.atom_type.charge = float(unitless_)
@@ -330,10 +330,10 @@ def _from_parmed(cls, structure) -> "Interchange":
         pot_key = PotentialKey(id=str(atom_idx))
         pot = Potential(parameters={"sigma": sigma, "epsilon": epsilon})
 
-        vdw_handler.slot_map.update({top_key: pot_key})
+        vdw_handler.key_map.update({top_key: pot_key})
         vdw_handler.potentials.update({pot_key: pot})
 
-        coul_handler.slot_map.update({top_key: pot_key})
+        coul_handler.key_map.update({top_key: pot_key})
         coul_handler.potentials.update(
             {pot_key: Potential(parameters={"charge": charge})},
         )
@@ -349,7 +349,7 @@ def _from_parmed(cls, structure) -> "Interchange":
         pot_key = PotentialKey(id=f"{atom1.idx}-{atom2.idx}")
         pot = Potential(parameters={"k": k * 2, "length": length})
 
-        bond_handler.slot_map.update({top_key: pot_key})
+        bond_handler.key_map.update({top_key: pot_key})
         bond_handler.potentials.update({pot_key: pot})
 
     out.collections.update({"vdW": vdw_handler})
@@ -368,7 +368,7 @@ def _from_parmed(cls, structure) -> "Interchange":
         pot_key = PotentialKey(id=f"{atom1.idx}-{atom2.idx}-{atom3.idx}")
         pot = Potential(parameters={"k": k * 2, "angle": theta})
 
-        angle_handler.slot_map.update({top_key: pot_key})
+        angle_handler.key_map.update({top_key: pot_key})
         angle_handler.potentials.update({pot_key: pot})
 
     proper_torsion_handler = SMIRNOFFProperTorsionCollection()
@@ -471,7 +471,7 @@ def _process_single_dihedral(
                 "This dihedral already exists, indices are probably messed up.",
             )
 
-        collection.slot_map.update({improper_key: pot_key})
+        collection.key_map.update({improper_key: pot_key})
         collection.potentials.update({pot_key: pot})
     else:
         proper_key = ProperTorsionKey(
@@ -488,5 +488,5 @@ def _process_single_dihedral(
             pot_key.mult += 1  # type: ignore
             proper_key.mult += 1  # type: ignore
 
-        collection.slot_map.update({proper_key: pot_key})
+        collection.key_map.update({proper_key: pot_key})
         collection.potentials.update({pot_key: pot})

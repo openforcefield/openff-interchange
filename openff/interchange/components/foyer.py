@@ -71,7 +71,7 @@ class FoyerVDWHandler(Collection):
         force_field: "Forcefield",
         topology: "Topology",
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         from foyer.atomtyper import find_atomtypes
         from foyer.topology_graph import TopologyGraph
 
@@ -80,14 +80,14 @@ class FoyerVDWHandler(Collection):
         type_map = find_atomtypes(top_graph, forcefield=force_field)
         for key, val in type_map.items():
             top_key = TopologyKey(atom_indices=(key,))
-            self.slot_map[top_key] = PotentialKey(id=val["atomtype"])
+            self.key_map[top_key] = PotentialKey(id=val["atomtype"])
 
     def store_potentials(self, force_field: "Forcefield") -> None:
         """Extract specific force field potentials a Forcefield object."""
-        for top_key in self.slot_map:
+        for top_key in self.key_map:
             atom_params = force_field.get_parameters(
                 self.type,
-                key=self.slot_map[top_key].id,
+                key=self.key_map[top_key].id,
             )
 
             atom_params = _copy_params(
@@ -96,7 +96,7 @@ class FoyerVDWHandler(Collection):
                 param_units={"epsilon": unit.kJ / unit.mol, "sigma": unit.nm},
             )
 
-            self.potentials[self.slot_map[top_key]] = Potential(parameters=atom_params)
+            self.potentials[self.key_map[top_key]] = Potential(parameters=atom_params)
 
 
 class FoyerElectrostaticsHandler(Collection):
@@ -127,7 +127,7 @@ class FoyerElectrostaticsHandler(Collection):
             charge = foyer_params["charge"]
             charge = charge * unit.elementary_charge
             self.charges[top_key] = charge
-            self.slot_map[top_key] = pot_key
+            self.key_map[top_key] = pot_key
             self.potentials[pot_key] = Potential(parameters={"charge": charge})
 
 
@@ -142,7 +142,7 @@ class FoyerConnectedAtomsHandler(Collection):
         atom_slots: Dict[TopologyKey, PotentialKey],
         topology: "Topology",
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for connection in getattr(topology, self.connection_attribute):
             try:
                 atoms_iterable = connection.atoms
@@ -155,7 +155,7 @@ class FoyerConnectedAtomsHandler(Collection):
                 _get_potential_key_id(atom_slots, idx) for idx in atom_indices
             )
 
-            self.slot_map[top_key] = PotentialKey(
+            self.key_map[top_key] = PotentialKey(
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 
@@ -163,7 +163,7 @@ class FoyerConnectedAtomsHandler(Collection):
         """Populate self.potentials with key-val pairs of [PotentialKey, Potential]."""
         from foyer.exceptions import MissingForceError, MissingParametersError
 
-        for pot_key in self.slot_map.values():
+        for pot_key in self.key_map.values():
             try:
                 params = force_field.get_parameters(
                     self.type,
@@ -173,7 +173,7 @@ class FoyerConnectedAtomsHandler(Collection):
                 self.potentials[pot_key] = Potential(parameters=params)
             except MissingForceError:
                 # Here, we can safely assume that the ForceGenerator is Missing
-                self.slot_map = {}
+                self.key_map = {}
                 self.potentials = {}
                 return
             except MissingParametersError as e:
@@ -207,7 +207,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
         atom_slots: Dict[TopologyKey, PotentialKey],
         topology: "Topology",
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for bond in topology.bonds:
             atom_indices = (
                 topology.atom_index(bond.atom1),
@@ -219,7 +219,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
                 _get_potential_key_id(atom_slots, idx) for idx in atom_indices
             )
 
-            self.slot_map[top_key] = PotentialKey(
+            self.key_map[top_key] = PotentialKey(
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 
@@ -246,7 +246,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
         atom_slots: Dict[TopologyKey, PotentialKey],
         topology: "Topology",
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for angle in topology.angles:
             atom_indices = tuple(topology.atom_index(atom) for atom in angle)
             top_key = TopologyKey(atom_indices=atom_indices)
@@ -255,7 +255,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
                 _get_potential_key_id(atom_slots, idx) for idx in atom_indices
             )
 
-            self.slot_map[top_key] = PotentialKey(
+            self.key_map[top_key] = PotentialKey(
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 
@@ -283,7 +283,7 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
         atom_slots: Dict[TopologyKey, PotentialKey],
         topology: "Topology",
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for proper in topology.propers:
             atom_indices = tuple(topology.atom_index(atom) for atom in proper)
             top_key = TopologyKey(atom_indices=atom_indices)
@@ -292,7 +292,7 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
                 _get_potential_key_id(atom_slots, idx) for idx in atom_indices
             )
 
-            self.slot_map[top_key] = PotentialKey(
+            self.key_map[top_key] = PotentialKey(
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 

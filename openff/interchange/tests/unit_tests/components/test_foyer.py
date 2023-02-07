@@ -175,7 +175,7 @@ class TestRBTorsions(TestFoyer):
         pot_key = PotentialKey(id=smirks)
         for proper in top.propers:
             top_key = TopologyKey(atom_indices=tuple(top.atom_index(a) for a in proper))
-            rb_torsions.slot_map.update({top_key: pot_key})
+            rb_torsions.key_map.update({top_key: pot_key})
 
         # Values from HC-CT-CT-HC RB torsion
         # https://github.com/mosdef-hub/foyer/blob/7816bf53a127502520a18d76c81510f96adfdbed/foyer/forcefields/xml/oplsaa.xml#L2585

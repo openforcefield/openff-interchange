@@ -12,10 +12,12 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ## Current development
 
 ### Behavior changes
+
 * #566 Refactors `EnergyReport` to more explicitly handle comparisons.
-* #583 Changes some code paths of internal objects.
-  * `PotentialHandler`s and subclasses are now `Collection`s.
-  * `Interchange.handlers` is now `Interchange.collections`.
+* #583, #588 Changes some code paths of internal objects.
+  * `PotentialHandler` is deprecated for `Collection`.
+  * `Interchange.handlers` is deprecated for `Interchange.collections`.
+  * `PotentialHandler.slot_map` is deprecated for `Collection.key_map`.
   * Classes found in `openff.interchange.components.smirnoff` are now in `openff.interchange.smirnoff`
   * Classes found in `openff.interchange.components.foyer` are now in `openff.interchange.foyer`
 

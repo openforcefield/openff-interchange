@@ -175,10 +175,10 @@ def _convert_nonbonded_force(force: openmm.NonbondedForce):
                 "epsilon": from_openmm_quantity(epsilon),
             },
         )
-        vdw_handler.slot_map.update({top_key: pot_key})
+        vdw_handler.key_map.update({top_key: pot_key})
         vdw_handler.potentials.update({pot_key: pot})
 
-        electrostatics.slot_map.update({top_key: pot_key})
+        electrostatics.key_map.update({top_key: pot_key})
         electrostatics.potentials.update(
             {pot_key: Potential(parameters={"charge": from_openmm_quantity(charge)})},
         )
@@ -218,7 +218,7 @@ def _convert_harmonic_bond_force(force):
             },
         )
 
-        bond_handler.slot_map.update({top_key: pot_key})
+        bond_handler.key_map.update({top_key: pot_key})
         bond_handler.potentials.update({pot_key: pot})
 
     return bond_handler
@@ -246,7 +246,7 @@ def _convert_harmonic_angle_force(force):
             },
         )
 
-        angle_handler.slot_map.update({top_key: pot_key})
+        angle_handler.key_map.update({top_key: pot_key})
         angle_handler.potentials.update({pot_key: pot})
 
     return angle_handler
@@ -270,7 +270,7 @@ def _convert_periodic_torsion_force(force):
         # TODO: Process layered torsions
         # TODO: Check if this torsion is an improper
         top_key = ProperTorsionKey(atom_indices=(atom1, atom2, atom3, atom4), mult=0)
-        while top_key in proper_torsion_handler.slot_map:
+        while top_key in proper_torsion_handler.key_map:
             top_key.mult: int = top_key.mult + 1
 
         pot_key = PotentialKey(id=f"{atom1}-{atom2}-{atom3}-{atom4}", mult=top_key.mult)
@@ -283,7 +283,7 @@ def _convert_periodic_torsion_force(force):
             },
         )
 
-        proper_torsion_handler.slot_map.update({top_key: pot_key})
+        proper_torsion_handler.key_map.update({top_key: pot_key})
         proper_torsion_handler.potentials.update({pot_key: pot})
 
     return proper_torsion_handler
