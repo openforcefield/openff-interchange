@@ -28,8 +28,8 @@ if TYPE_CHECKING:
 def __getattr__(name: str):
     if name == "PotentialHandler":
         warnings.warn(
-            "PotentialHandler has been renamed to Collection. "
-            "Importing Collection instead.",
+            "`PotentialHandler` has been renamed to `Collection`. "
+            "Importing `Collection` instead.",
             InterchangeDeprecationWarning,
         )
         return Collection
