@@ -32,7 +32,7 @@ dependencies:
   # Examples
   - nglview
   - ipywidgets =7
-  - pytest =7.1
+  - pytest
   - nbval
   # Typing
   - mypy >=0.971

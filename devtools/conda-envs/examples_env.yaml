@@ -25,7 +25,7 @@ dependencies:
   - nglview
   - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
   - openeye-toolkits
-  - pytest <7.0.0
+  - pytest
   - nbval
   - openmmforcefields >=0.11.2
   # Drivers
