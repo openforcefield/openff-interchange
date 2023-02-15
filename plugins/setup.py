@@ -5,6 +5,7 @@ from setuptools import setup
 
 setup(
     name="nonbonded_plugins",
+    version="0.0.0",
     package_data={
         "nonbonded_plugins": ["py.typed"],
     },
