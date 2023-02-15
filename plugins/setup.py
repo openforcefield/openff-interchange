@@ -6,9 +6,6 @@ from setuptools import setup
 setup(
     name="nonbonded_plugins",
     version="0.0.0",
-    package_data={
-        "nonbonded_plugins": ["py.typed"],
-    },
     include_package_data=True,
     entry_points={
         "openff.toolkit.plugins.handlers": [

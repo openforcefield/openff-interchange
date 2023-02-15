@@ -30,5 +30,5 @@ dependencies:
   - openmmforcefields >=0.11.2
   # Drivers
   - gromacs >=2021=nompi*
-  - lammps >=2021
+  # https://github.com/conda-forge/quippy-feedstock/issues/15
   - panedr
