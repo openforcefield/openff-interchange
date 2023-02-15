@@ -1,44 +1,49 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.3.0
+  rev: v4.4.0
   hooks:
   - id: check-yaml
   - id: end-of-file-fixer
   - id: trailing-whitespace
     exclude: '\.(pdb|gro|top|sdf)$'
   - id: debug-statements
+- repo: https://github.com/asottile/add-trailing-comma
+  rev: v2.4.0
+  hooks:
+  - id: add-trailing-comma
+    args: ["--py36-plus"]
 - repo: https://github.com/psf/black
-  rev: 22.10.0
+  rev: 23.1.0
   hooks:
   - id: black
     files: ^openff|devtools
   - id: black-jupyter
     files: ^examples
 - repo: https://github.com/PyCQA/isort
-  rev: 5.10.1
+  rev: 5.12.0
   hooks:
   - id: isort
     files: ^openff|devtools
 - repo: https://github.com/PyCQA/flake8
-  rev: 5.0.4
+  rev: 6.0.0
   hooks:
   - id: flake8
     files: ^openff
     additional_dependencies: [
-        'flake8-bugbear',
+        'flake8-bugbear>=23.1.20',
         'flake8-absolute-import',
         'flake8-pytest-style',
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.1.0
+  rev: v3.3.1
   hooks:
   - id: pyupgrade
     files: ^openff/interchange
     exclude: openff/interchange/_version.py|setup.py
-    args: [--py37-plus]
+    args: [--py38-plus]
 - repo: https://github.com/pycqa/pydocstyle
-  rev: 6.1.1
+  rev: 6.3.0
   hooks:
   - id: pydocstyle
     files: ^openff/interchange
@@ -47,20 +52,19 @@ repos:
   rev: 1.5.0
   hooks:
     - id: interrogate
-      args: [--fail-under=60, openff/interchange/]
+      args: [openff/interchange/]
 - repo: https://github.com/asottile/blacken-docs
-  rev: v1.12.1
+  rev: 1.13.0
   hooks:
   - id: blacken-docs
     files: ^docs/
-    additional_dependencies: [black==21.6b0]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.5.2
+  rev: 1.6.1
   hooks:
     - id: nbqa-pyupgrade
       files: ^examples
       args:
-        - --py37-plus
+        - --py38-plus
     - id: nbqa-isort
       files: ^examples
 - repo: https://github.com/kynan/nbstripout

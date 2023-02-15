@@ -9,7 +9,7 @@ from openmm import unit as openmm_unit
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
-from openff.interchange.tests.unit_tests.components.test_smirnoff import (
+from openff.interchange.tests.unit_tests.smirnoff.test_valence import (
     TestBondOrderInterpolation,
 )
 
@@ -17,7 +17,6 @@ from openff.interchange.tests.unit_tests.components.test_smirnoff import (
 class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
     @pytest.mark.slow()
     def test_basic_bond_order_interpolation_energies(self):
-
         forcefield = ForceField(
             "test_forcefields/test_forcefield.offxml",
             self.xml_ff_bo_bonds,
@@ -32,7 +31,8 @@ class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
         out.positions = mol.conformers[0]
 
         interchange_bond_energy = get_openmm_energies(
-            out, combine_nonbonded_forces=True
+            out,
+            combine_nonbonded_forces=True,
         ).energies["Bond"]
         toolkit_bond_energy = _get_openmm_energies(
             forcefield.create_openmm_system(top),

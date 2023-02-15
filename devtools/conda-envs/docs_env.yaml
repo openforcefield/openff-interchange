@@ -9,11 +9,11 @@ dependencies:
   - pip
   - pydantic
   - pint
-  - openff-toolkit-base >=0.11.2
+  - openff-toolkit-base >=0.11.3
+  - openff-models >=0.0.4
   - openmm >=7.6
   - intermol
   - jax
-  - jaxlib
   # readthedocs dependencies
   - myst-parser
   - numpydoc

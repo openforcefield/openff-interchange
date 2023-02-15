@@ -8,8 +8,9 @@ dependencies:
   - pip
   - pydantic <2.0.0a0
   # OpenFF stack
-  - openff-toolkit >=0.11.0
+  - openff-toolkit >=0.11.3
+  - openff-models >=0.0.4
   # Testing
-  - pytest =7.1
+  - pytest
   - pytest-cov
   - pytest-xdist

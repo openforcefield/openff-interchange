@@ -7,7 +7,7 @@ from openff.units import unit
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError
-from openff.interchange.models import TopologyKey
+from openff.interchange.models import AngleKey, BondKey
 
 
 def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
@@ -18,20 +18,20 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
         path = file_path
 
     n_atoms = openff_sys.topology.n_atoms
-    if "Bonds" in openff_sys.handlers:
-        n_bonds = len(openff_sys["Bonds"].slot_map.keys())
+    if "Bonds" in openff_sys.collections:
+        n_bonds = len(openff_sys["Bonds"].key_map.keys())
     else:
         n_bonds = 0
-    if "Angles" in openff_sys.handlers:
-        n_angles = len(openff_sys["Angles"].slot_map.keys())
+    if "Angles" in openff_sys.collections:
+        n_angles = len(openff_sys["Angles"].key_map.keys())
     else:
         n_angles = 0
-    if "ProperTorsions" in openff_sys.handlers:
-        n_propers = len(openff_sys["ProperTorsions"].slot_map.keys())
+    if "ProperTorsions" in openff_sys.collections:
+        n_propers = len(openff_sys["ProperTorsions"].key_map.keys())
     else:
         n_propers = 0
-    if "ImproperTorsions" in openff_sys.handlers:
-        n_impropers = len(openff_sys["ImproperTorsions"].slot_map.keys())
+    if "ImproperTorsions" in openff_sys.collections:
+        n_impropers = len(openff_sys["ImproperTorsions"].key_map.keys())
     else:
         n_impropers = 0
 
@@ -51,11 +51,11 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
             lmp_file.write(f"\n{len(openff_sys['Angles'].potentials)} angle types")
         if n_propers > 0:
             lmp_file.write(
-                f"\n{len(openff_sys['ProperTorsions'].potentials)} dihedral types"
+                f"\n{len(openff_sys['ProperTorsions'].potentials)} dihedral types",
             )
         if n_impropers > 0:
             lmp_file.write(
-                f"\n{len(openff_sys['ImproperTorsions'].potentials)} improper types"
+                f"\n{len(openff_sys['ImproperTorsions'].potentials)} improper types",
             )
 
         lmp_file.write("\n")
@@ -63,7 +63,8 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
         # write types section
 
         x_min, y_min, z_min = np.min(
-            openff_sys.positions.to(unit.angstrom), axis=0
+            openff_sys.positions.to(unit.angstrom),
+            axis=0,
         ).magnitude
         if openff_sys.box is None:
             L_x, L_y, L_z = 100, 100, 100
@@ -80,7 +81,7 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
                 y_min + L_y,
                 z_min,
                 z_min + L_z,
-            )
+            ),
         )
 
         lmp_file.write("0.0 0.0 0.0 xy xz yz\n")
@@ -89,11 +90,11 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
 
         vdw_handler = openff_sys["vdW"]
         atom_type_map = dict(enumerate(vdw_handler.potentials))
-        slot_map_inv = dict({v: k for k, v in vdw_handler.slot_map.items()})
+        key_map_inv = dict({v: k for k, v in vdw_handler.key_map.items()})
 
         for atom_type_idx, smirks in atom_type_map.items():
             # Find just one topology atom matching this SMIRKS by vdW
-            matched_atom_idx = slot_map_inv[smirks].atom_indices[0]
+            matched_atom_idx = key_map_inv[smirks].atom_indices[0]
             matched_atom = openff_sys.topology.atom(matched_atom_idx)
             mass = matched_atom.mass.m
 
@@ -102,7 +103,9 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
         lmp_file.write("\n\n")
 
         _write_pair_coeffs(
-            lmp_file=lmp_file, openff_sys=openff_sys, atom_type_map=atom_type_map
+            lmp_file=lmp_file,
+            openff_sys=openff_sys,
+            atom_type_map=atom_type_map,
         )
 
         if n_bonds > 0:
@@ -115,7 +118,9 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
             _write_improper_coeffs(lmp_file=lmp_file, openff_sys=openff_sys)
 
         _write_atoms(
-            lmp_file=lmp_file, openff_sys=openff_sys, atom_type_map=atom_type_map
+            lmp_file=lmp_file,
+            openff_sys=openff_sys,
+            atom_type_map=atom_type_map,
         )
         if n_bonds > 0:
             _write_bonds(lmp_file=lmp_file, openff_sys=openff_sys)
@@ -199,7 +204,7 @@ def _write_proper_coeffs(lmp_file: IO, openff_sys: Interchange):
         k = k / idivf
 
         lmp_file.write(
-            f"{proper_type_idx+1:d} fourier 1\t{k:.16g}\t{n:d}\t{phase:.16g}\n"
+            f"{proper_type_idx+1:d} fourier 1\t{k:.16g}\t{n:d}\t{phase:.16g}\n",
         )
 
     lmp_file.write("\n")
@@ -245,11 +250,11 @@ def _write_improper_coeffs(lmp_file: IO, openff_sys: Interchange):
         else:
             raise UnsupportedExportError(
                 "Improper exports to LAMMPS are funky and not well-supported, the only compatibility"
-                "found between periodidic impropers is with improper_style cvff when phase = 0 or 180 degrees"
+                "found between periodidic impropers is with improper_style cvff when phase = 0 or 180 degrees",
             )
 
         lmp_file.write(
-            f"{improper_type_idx+1:d} {k_cvff:.16g}\t{d_cvff:d}\t{n_cvff:.16g}\n"
+            f"{improper_type_idx+1:d} {k_cvff:.16g}\t{d_cvff:d}\t{n_cvff:.16g}\n",
         )
 
     lmp_file.write("\n")
@@ -267,7 +272,6 @@ def _write_atoms(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
     charges = electrostatics_handler.charges
 
     for atom in openff_sys.topology.atoms:
-
         atom_index = openff_sys.topology.atom_index(atom)
         try:
             molecule_index = int(atom.metadata["residue_number"])
@@ -276,11 +280,11 @@ def _write_atoms(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
             #       "molecule index" somewhere?
             molecule_index = 0
 
-        top_key = TopologyKey(atom_indices=(atom_index,))
-        pot_key = vdw_hander.slot_map[top_key]
+        top_key = AngleKey(atom_indices=(atom_index,))
+        pot_key = vdw_hander.key_map[top_key]
         atom_type = atom_type_map_inv[pot_key]
 
-        charge = charges[top_key].m_as(unit.e)
+        charge = charges[top_key].m_as(unit.e)  # type: ignore[union-attr]
         pos = openff_sys.positions[atom_index].to(unit.angstrom).magnitude
         lmp_file.write(
             "{:d}\t{:d}\t{:d}\t{:.8g}\t{:.8g}\t{:.8g}\t{:.8g}\n".format(
@@ -291,7 +295,7 @@ def _write_atoms(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
                 pos[0],
                 pos[1],
                 pos[2],
-            )
+            ),
         )
 
 
@@ -305,17 +309,16 @@ def _write_bonds(lmp_file: IO, openff_sys: Interchange):
     bond_type_map_inv = dict({v: k for k, v in bond_type_map.items()})
 
     for bond_idx, bond in enumerate(openff_sys.topology.bonds):
-
         indices = (
             openff_sys.topology.atom_index(bond.atom1),
             openff_sys.topology.atom_index(bond.atom2),
         )
-        top_key = TopologyKey(atom_indices=indices)
-        if top_key in bond_handler.slot_map:
-            pot_key = bond_handler.slot_map[top_key]
+        top_key = BondKey(atom_indices=indices)
+        if top_key in bond_handler.key_map:
+            pot_key = bond_handler.key_map[top_key]
         else:
-            top_key = TopologyKey(atom_indices=indices[::-1])
-            pot_key = bond_handler.slot_map[top_key]
+            top_key = BondKey(atom_indices=indices[::-1])
+            pot_key = bond_handler.key_map[top_key]
 
         bond_type = bond_type_map_inv[pot_key]
 
@@ -325,7 +328,7 @@ def _write_bonds(lmp_file: IO, openff_sys: Interchange):
                 bond_type + 1,
                 indices[0] + 1,
                 indices[1] + 1,
-            )
+            ),
         )
 
 
@@ -341,8 +344,8 @@ def _write_angles(lmp_file: IO, openff_sys: Interchange):
     for angle_idx, angle in enumerate(openff_sys.topology.angles):
         # These are "topology indices"
         indices = tuple(openff_sys.topology.atom_index(a) for a in angle)
-        top_key = TopologyKey(atom_indices=indices)
-        pot_key = angle_handler.slot_map[top_key]
+        top_key = AngleKey(atom_indices=indices)
+        pot_key = angle_handler.key_map[top_key]
         angle_type = angle_type_map_inv[pot_key]
 
         lmp_file.write(
@@ -352,7 +355,7 @@ def _write_angles(lmp_file: IO, openff_sys: Interchange):
                 indices[0] + 1,
                 indices[1] + 1,
                 indices[2] + 1,
-            )
+            ),
         )
 
 
@@ -366,12 +369,10 @@ def _write_propers(lmp_file: IO, openff_sys: Interchange):
     proper_type_map_inv = dict({v: k for k, v in proper_type_map.items()})
 
     for proper_idx, proper in enumerate(openff_sys.topology.propers):
-
         indices = tuple(openff_sys.topology.atom_index(a) for a in proper)
 
-        for top_key, pot_key in proper_handler.slot_map.items():
+        for top_key, pot_key in proper_handler.key_map.items():
             if indices == top_key.atom_indices:
-
                 proper_type_idx = proper_type_map_inv[pot_key]
 
                 lmp_file.write(
@@ -382,7 +383,7 @@ def _write_propers(lmp_file: IO, openff_sys: Interchange):
                         indices[1] + 1,
                         indices[2] + 1,
                         indices[3] + 1,
-                    )
+                    ),
                 )
 
 
@@ -397,16 +398,14 @@ def _write_impropers(lmp_file: IO, openff_sys: Interchange):
 
     # Molecule/Topology.impropers lists the central atom **second** ...
     for improper_idx, improper in enumerate(openff_sys.topology.impropers):
-
         indices = tuple(openff_sys.topology.atom_index(a) for a in improper)
 
         # ... so the tuple must be modified to list the central atom **first**,
         # which is how the improper handler's slot map is built up
         _indices = tuple((indices[1], indices[0], indices[2], indices[3]))
 
-        for top_key, pot_key in improper_handler.slot_map.items():
+        for top_key, pot_key in improper_handler.key_map.items():
             if _indices == top_key.atom_indices:
-
                 improper_type_idx = improper_type_map_inv[pot_key]
 
                 # https://github.com/openforcefield/openff-interchange/issues/544
@@ -420,5 +419,5 @@ def _write_impropers(lmp_file: IO, openff_sys: Interchange):
                         indices[0] + 1,
                         indices[2] + 1,
                         indices[3] + 1,
-                    )
+                    ),
                 )

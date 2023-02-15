@@ -45,7 +45,7 @@ jobs:
 
     - name: Install package
       run: |
-        python setup.py develop --no-deps
+        python -m pip install .
 
     - name: Environment Information
       run: |

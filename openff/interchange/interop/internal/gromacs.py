@@ -26,13 +26,14 @@ from openff.interchange.interop._virtual_sites import (
     _get_virtual_site_positions,
     _virtual_site_parent_molecule_mapping,
 )
-from openff.interchange.models import PotentialKey, TopologyKey, VirtualSiteKey
+from openff.interchange.models import BondKey, PotentialKey, TopologyKey, VirtualSiteKey
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
     from openff.units.unit import Quantity
 
     from openff.interchange import Interchange
-    from openff.interchange.components.potentials import PotentialHandler
+    from openff.interchange.components.potentials import Collection
 
 
 def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int = 3):
@@ -53,7 +54,7 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int 
 
     if openff_sys.positions is None:
         raise MissingPositionsError(
-            "Positions are required to write a `.gro` file but found None."
+            "Positions are required to write a `.gro` file but found None.",
         )
     elif np.allclose(openff_sys.positions, 0):
         warnings.warn(
@@ -72,7 +73,7 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int 
         raise MissingPositionsError(
             "Found a mismatch in the number of atoms in the provided topology and positions "
             f"matrix. Detected {openff_sys.topology.n_atoms} atoms in the topology but found "
-            f"{n_particles} positions in `.positions` attribute."
+            f"{n_particles} positions in `.positions` attribute.",
         )
 
     virtual_site_map = _build_virtual_site_map(openff_sys)
@@ -95,7 +96,6 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int 
 
         for molecule_index, molecule in enumerate(openff_sys.topology.molecules):
             for atom in molecule.atoms:
-
                 residue_index, residue_name = _get_residue_info_from_atom(atom)
 
                 topology_index = openff_sys.topology.atom_index(atom)
@@ -114,7 +114,7 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int 
                         rounded_positions[topology_index, 0],
                         rounded_positions[topology_index, 1],
                         rounded_positions[topology_index, 2],
-                    )
+                    ),
                 )
 
             try:
@@ -154,7 +154,7 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int 
                         r_virtual_site_nm[0],
                         r_virtual_site_nm[1],
                         r_virtual_site_nm[2],
-                    )
+                    ),
                 )
 
                 n_virtual_sites += 1
@@ -164,7 +164,7 @@ def to_gro(openff_sys: "Interchange", file_path: Union[Path, str], decimal: int 
                 "WARNING: System defined with no box vectors, which GROMACS does not offically "
                 "support in versions 2020 or newer (see "
                 "https://gitlab.com/gromacs/gromacs/-/issues/3526). Setting box vectors to a 5 "
-                " nm cube."
+                " nm cube.",
             )
             box = 5 * np.eye(3)
         else:
@@ -233,7 +233,6 @@ def _read_coordinates(file_path: Union[Path, str]) -> np.ndarray:
 
 
 def _read_box(file_path: Union[Path, str]) -> np.ndarray:
-
     with open(file_path) as gro_file:
         # Throw away comment / name line
         gro_file.readline()
@@ -280,10 +279,10 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
     https://github.com/shirtsgroup/InterMol/tree/v0.1/intermol/gromacs
 
     """
-    if "VirtualSites" in openff_sys.handlers:
-        if len(openff_sys["VirtualSites"].slot_map) > 0:
+    if "VirtualSites" in openff_sys.collections:
+        if len(openff_sys["VirtualSites"].key_map) > 0:
             warnings.warn(
-                "Exporting virtual sites to GROMACS is EXPERIMENTAL and not yet thoroughly validated."
+                "Exporting virtual sites to GROMACS is EXPERIMENTAL and not yet thoroughly validated.",
             )
 
     if isinstance(file_path, str):
@@ -294,34 +293,34 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
     if openff_sys.box is None:
         if openff_sys["Electrostatics"].periodic_potential != _PME:
             raise UnsupportedExportError(
-                f'Electrostatics method PME (`"{_PME}"`) is not valid for a non-periodic system. '
+                f'Electrostatics method PME (`"{_PME}"`) is not valid for a non-periodic system. ',
             )
 
     # For performance, immediately convert everything into GROMACS units.  This
     # introduces an overhead but should pay off by allowing the blind use of
     # `Quantity.magnitdue` without the default unit-checking work.
 
-    if "vdW" in openff_sys.handlers:
+    if "vdW" in openff_sys.collections:
         for potential in openff_sys["vdW"].potentials.values():
             potential.parameters["sigma"].ito(unit.nanometer)
             potential.parameters["epsilon"].ito(kj_mol)
 
-    if "Bonds" in openff_sys.handlers:
+    if "Bonds" in openff_sys.collections:
         for potential in openff_sys["Bonds"].potentials.values():
             potential.parameters["k"].ito(kj_mol / unit.nanometer**2)
             potential.parameters["length"].ito(unit.nanometer)
 
-    if "Angles" in openff_sys.handlers:
+    if "Angles" in openff_sys.collections:
         for potential in openff_sys["Angles"].potentials.values():
             potential.parameters["k"].ito(kj_mol / unit.radian * 2)
             potential.parameters["angle"].ito(unit.degree)
 
-    if "ProperTorsions" in openff_sys.handlers:
+    if "ProperTorsions" in openff_sys.collections:
         for potential in openff_sys["ProperTorsions"].potentials.values():
             potential.parameters["k"].ito(kj_mol)
             potential.parameters["phase"].ito(unit.degree)
 
-    if "ImproperTorsions" in openff_sys.handlers:
+    if "ImproperTorsions" in openff_sys.collections:
         for potential in openff_sys["ImproperTorsions"].potentials.values():
             potential.parameters["k"].ito(kj_mol)
             potential.parameters["phase"].ito(unit.degree)
@@ -340,7 +339,8 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
             lj_parameters = None
 
         unique_molecule_map: Dict[
-            int, List
+            int,
+            List,
         ] = openff_sys.topology.identical_molecule_groups
 
         for (
@@ -356,7 +356,7 @@ def to_top(openff_sys: "Interchange", file_path: Union[Path, str]):
                 (duplciate_molecule_index, _) = row
 
                 openff_sys.topology.molecule(
-                    duplciate_molecule_index
+                    duplciate_molecule_index,
                 ).name = unique_molecule.name
 
             _write_moleculetype(top_file, unique_molecule.name)
@@ -384,23 +384,23 @@ def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
     top_file.write("[ defaults ]\n")
     top_file.write("; nbfunc\tcomb-rule\tgen-pairs\tfudgeLJ\tfudgeQQ\n")
 
-    if "vdW" in openff_sys.handlers:
+    if "vdW" in openff_sys.collections:
         nbfunc = 1
         scale_lj = openff_sys["vdW"].scale_14
         gen_pairs = "no"
         handler_key = "vdW"
-    elif "Buckingham-6" in openff_sys.handlers:
+    elif "Buckingham-6" in openff_sys.collections:
         nbfunc = 2
         gen_pairs = "no"
-        scale_lj = openff_sys["Buckingham-6"].scale_14  # type: ignore
+        scale_lj = openff_sys["Buckingham-6"].scale_14
         handler_key = "Buckingham-6"
     else:
         raise UnsupportedExportError(
             "Could not find a handler for short-ranged vdW interactions that is compatible "
-            "with GROMACS. Looked for handlers named `vdW` and `Buckingham-6`."
+            "with GROMACS. Looked for collections named `vdW` and `Buckingham-6`.",
         )
 
-    mixing_rule = openff_sys[handler_key].mixing_rule.lower()  # type: ignore
+    mixing_rule = openff_sys[handler_key].mixing_rule.lower()
     if mixing_rule == "lorentz-berthelot":
         comb_rule = 2
     elif mixing_rule == "geometric":
@@ -416,7 +416,7 @@ def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
     else:
         raise UnsupportedExportError(
             f"Mixing rule `{mixing_rule} not compatible with GROMACS and/or not supported "
-            "by current exporter. Supported values are `lorentz-berthelot` and `geometric`."
+            "by current exporter. Supported values are `lorentz-berthelot` and `geometric`.",
         )
 
     top_file.write(
@@ -426,7 +426,7 @@ def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
             gen_pairs,
             scale_lj,
             openff_sys["Electrostatics"].scale_14,
-        )
+        ),
     )
 
 
@@ -458,14 +458,15 @@ def _build_virtual_site_map(interchange: "Interchange") -> Dict[VirtualSiteKey, 
     """
     virtual_site_topology_index_map: Dict[VirtualSiteKey, int] = dict()
 
-    if "VirtualSites" not in interchange.handlers:
+    if "VirtualSites" not in interchange.collections:
         return virtual_site_topology_index_map
 
     n_atoms = interchange.topology.n_atoms
 
     for index, virtual_site_key in enumerate(
-        interchange["VirtualSites"].slot_map.keys()
+        interchange["VirtualSites"].key_map.keys(),
     ):
+        assert isinstance(virtual_site_key, VirtualSiteKey)
         virtual_site_topology_index_map[virtual_site_key] = n_atoms + 1 + index
 
     return virtual_site_topology_index_map
@@ -478,15 +479,15 @@ def _write_atomtypes(
     virtual_site_map: Dict,
 ):
     """Write [ atomtypes ] section."""
-    if "vdW" in openff_sys.handlers:
-        if "Buckingham-6" in openff_sys.handlers:
+    if "vdW" in openff_sys.collections:
+        if "Buckingham-6" in openff_sys.collections:
             raise UnsupportedExportError(
-                "Cannot mix 12-6 and Buckingham potentials in GROMACS"
+                "Cannot mix 12-6 and Buckingham potentials in GROMACS",
             )
         else:
             _write_atomtypes_lj(openff_sys, top_file, typemap, virtual_site_map)
     else:
-        if "Buckingham-6" in openff_sys.handlers:
+        if "Buckingham-6" in openff_sys.collections:
             _write_atomtypes_buck(openff_sys, top_file, typemap)
         else:
             raise UnsupportedExportError("No vdW interactions found")
@@ -504,13 +505,13 @@ def _write_atomtypes_lj(
     top_file.write("[ atomtypes ]\n")
     top_file.write(";type, bondingtype, mass, charge, ptype, sigma, epsilon\n")
 
-    lj_parameters = openff_sys["vdW"].get_system_parameters()
+    lj_parameters: "ArrayLike" = openff_sys["vdW"].get_system_parameters()
 
     for atom_idx, atom_type in typemap.items():
         atom = openff_sys.topology.atom(atom_idx)
         mass = atom.mass.m
         atomic_number = atom.atomic_number
-        sigma, epsilon = lj_parameters[atom_idx]
+        sigma, epsilon = lj_parameters[atom_idx]  # type: ignore
         # TODO: Sometimes a "bondingtype" can sneak in to as the second column. This
         #       seems to be used commonly in how OPLS groups atom types for valence
         #       terms, and InterMol attempts to parse it as such, but the GROMACS
@@ -524,7 +525,7 @@ def _write_atomtypes_lj(
                 "A",  # ptype
                 sigma,
                 epsilon,
-            )
+            ),
         )
 
     for virtual_site_key in virtual_site_map:
@@ -535,7 +536,7 @@ def _write_atomtypes_lj(
         mass = 0.0
 
         vdw_handler = openff_sys["vdW"]
-        pot_key = vdw_handler.slot_map[virtual_site_key]
+        pot_key = vdw_handler.key_map[virtual_site_key]
         parameters = vdw_handler.potentials[pot_key].parameters
         sigma = parameters["sigma"].m
         epsilon = parameters["epsilon"].m
@@ -550,7 +551,7 @@ def _write_atomtypes_lj(
                 "A",  # ptype
                 sigma,
                 epsilon,
-            )
+            ),
         )
 
 
@@ -558,7 +559,7 @@ def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict
     """Write the [ atomtypes ] section when all atoms use the Buckingham-6 potential."""
     top_file.write("[ atomtypes ]\n")
     top_file.write(
-        ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n"
+        ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n",
     )
 
     for atom_idx, atom_type in typemap.items():
@@ -579,7 +580,7 @@ def _write_atomtypes_buck(openff_sys: "Interchange", top_file: IO, typemap: Dict
                 a,
                 b,
                 c,
-            )
+            ),
         )
         top_file.write("\n")
 
@@ -640,14 +641,16 @@ def _write_atoms(
                 molecule_index + 1,
                 charge,
                 mass,
-            )
+            ),
         )
 
     index = molecule.n_atoms + 1
 
     for virtual_site_key in virtual_site_map:
         if not _this_key_is_in_molecule(
-            virtual_site_key, openff_sys.topology, molecule
+            virtual_site_key,
+            openff_sys.topology,
+            molecule,
         ):
             continue
 
@@ -658,7 +661,7 @@ def _write_atoms(
         charge
         charge_handler = openff_sys["Electrostatics"]
         charge = charge_handler.charges_with_virtual_sites[virtual_site_key].m_as(
-            unit.e
+            unit.e,
         )
         mass = 0.0
 
@@ -673,7 +676,7 @@ def _write_atoms(
                 atom_idx,
                 charge,
                 mass,
-            )
+            ),
         )
 
         index += 1
@@ -687,18 +690,18 @@ def _write_atoms(
         mixing_rule = openff_sys["vdW"].mixing_rule.lower()
         scale_lj = openff_sys["vdW"].scale_14
     except LookupError:
-        mixing_rule = openff_sys["Buckingham-6"].mixing_rule.lower()  # type: ignore
-        scale_lj = openff_sys["Buckingham-6"].scale_14  # type: ignore
+        mixing_rule = openff_sys["Buckingham-6"].mixing_rule.lower()
+        scale_lj = openff_sys["Buckingham-6"].scale_14
 
     # Use a set to de-duplicate
     pairs: Set[Tuple] = {*_get_14_pairs(molecule)}
 
-    if "vdW" in openff_sys.handlers:
+    if "vdW" in openff_sys.collections:
         if _cached_parameters is None:
-            lj_parameters = openff_sys["vdW"].get_system_parameters()
+            lj_parameters: "ArrayLike" = openff_sys["vdW"].get_system_parameters()
         else:
             lj_parameters = _cached_parameters
-    elif "Buckingham-6" in openff_sys.handlers:
+    elif "Buckingham-6" in openff_sys.collections:
         warnings.warn("Not writing a [ pairs ] section with Buckingham interactions.")
         top_file.write("\n")
         return
@@ -707,8 +710,8 @@ def _write_atoms(
     for pair in pairs:
         molecule_indices = sorted(molecule.atom_index(atom) for atom in pair)
         topology_indices = sorted(openff_sys.topology.atom_index(atom) for atom in pair)
-        sigma1, epsilon1 = lj_parameters[topology_indices[0]]
-        sigma2, epsilon2 = lj_parameters[topology_indices[1]]
+        sigma1, epsilon1 = lj_parameters[topology_indices[0]]  # type: ignore
+        sigma2, epsilon2 = lj_parameters[topology_indices[1]]  # type: ignore
         epsilon_mix = (epsilon1 * epsilon2) ** 0.5
         if mixing_rule == "lorentz-berthelot":
             sigma_mix = (sigma1 + sigma2) * 0.5
@@ -721,7 +724,7 @@ def _write_atoms(
                 1,
                 sigma_mix,
                 epsilon_mix * scale_lj,
-            )
+            ),
         )
 
     top_file.write("\n")
@@ -733,14 +736,14 @@ def _write_virtual_sites(
     molecule: "Molecule",
     virtual_site_map: Dict,
 ):
-    if "VirtualSites" not in openff_sys.handlers:
+    if "VirtualSites" not in openff_sys.collections:
         return
 
     virtual_site_handler = openff_sys["VirtualSites"]
 
     if not all(
         k.type in ["BondCharge", "MonovalentLonePair", "DivalentLonePair"]
-        for k in virtual_site_handler.slot_map
+        for k in virtual_site_handler.key_map
     ):
         raise NotImplementedError("Only BondCharge virtual sites are implemented")
 
@@ -749,7 +752,7 @@ def _write_virtual_sites(
     # TODO: Cleaner implementation than filter + sort? Maybe split it up into each type
     # and do them sequentially?
 
-    slot_map: Dict[VirtualSiteKey, PotentialKey] = virtual_site_handler.slot_map
+    key_map: Dict[VirtualSiteKey, PotentialKey] = virtual_site_handler.key_map
 
     # TODO: Consolidate this logic with identical code in coordinate writer
 
@@ -761,7 +764,7 @@ def _write_virtual_sites(
     virtual_site_index = molecule.n_atoms + 1
 
     for virtual_site_key in sorted(
-        (k for k in slot_map if type(k) == VirtualSiteKey),
+        (k for k in key_map if type(k) == VirtualSiteKey),
         key=lambda x: x.type,
     ):
         if virtual_site_key.type == "BondCharge":
@@ -770,7 +773,8 @@ def _write_virtual_sites(
                 started_virtual_sites2 = True
 
             orientation_atom_indices: Tuple[
-                int, ...
+                int,
+                ...,
             ] = virtual_site_key.orientation_atom_indices
 
             if len(orientation_atom_indices) != 2:
@@ -785,7 +789,7 @@ def _write_virtual_sites(
             func = 2
 
             distance = (
-                virtual_site_handler.potentials[slot_map[virtual_site_key]]
+                virtual_site_handler.potentials[key_map[virtual_site_key]]
                 .parameters["distance"]
                 .m_as(unit.nanometer)
             )
@@ -794,7 +798,7 @@ def _write_virtual_sites(
 
             top_file.write(
                 f"{virtual_site_index}\t\t{atom1-offset}\t{atom2-offset}\t"
-                f"{func}\t{a}\n"
+                f"{func}\t{a}\n",
             )
 
             used_keys.update({virtual_site_index: virtual_site_key})
@@ -802,7 +806,7 @@ def _write_virtual_sites(
         if virtual_site_key.type == "MonovalentLonePair":
             if not started_virtual_sites3:
                 top_file.write(
-                    "\n[ virtual_sites3 ]\n; site  ai  aj  ak funct   a   b\n"
+                    "\n[ virtual_sites3 ]\n; site  ai  aj  ak funct   a   b\n",
                 )
                 started_virtual_sites3 = True
 
@@ -817,31 +821,33 @@ def _write_virtual_sites(
             atom3 = reference_atoms[2]
 
             if not _this_key_is_in_molecule(
-                virtual_site_key, openff_sys.topology, molecule
+                virtual_site_key,
+                openff_sys.topology,
+                molecule,
             ):
                 continue
 
             func = 3  # "3fad"
 
             out_of_plane_angle = (
-                virtual_site_handler.potentials[slot_map[virtual_site_key]]
+                virtual_site_handler.potentials[key_map[virtual_site_key]]
                 .parameters["outOfPlaneAngle"]
                 .m_as(unit.radian)
             )
 
             if out_of_plane_angle != 0.0:
                 raise NotImplementedError(
-                    "Unclear how to do MonovalentLonePair virtual sites with GROMACS"
+                    "Unclear how to do MonovalentLonePair virtual sites with GROMACS",
                 )
 
             distance = (
-                virtual_site_handler.potentials[slot_map[virtual_site_key]]
+                virtual_site_handler.potentials[key_map[virtual_site_key]]
                 .parameters["distance"]
                 .m_as(unit.nanometer)
             )
 
             in_plane_angle = (
-                virtual_site_handler.potentials[slot_map[virtual_site_key]]
+                virtual_site_handler.potentials[key_map[virtual_site_key]]
                 .parameters["inPlaneAngle"]
                 .m_as(unit.degree)
             )
@@ -850,7 +856,7 @@ def _write_virtual_sites(
 
             top_file.write(
                 f"{virtual_site_index}\t\t{atom1 -offset}\t{atom2 -offset}\t{atom3 -offset}\t"
-                f"{func}\t{in_plane_angle_transformed}\t{distance}\n"
+                f"{func}\t{in_plane_angle_transformed}\t{distance}\n",
             )
 
             used_keys.update({virtual_site_index: virtual_site_key})
@@ -858,7 +864,7 @@ def _write_virtual_sites(
         if virtual_site_key.type == "DivalentLonePair":
             if not started_virtual_sites3:
                 top_file.write(
-                    "\n[ virtual_sites3 ]\n; site  ai  aj  ak funct   a   b\n"
+                    "\n[ virtual_sites3 ]\n; site  ai  aj  ak funct   a   b\n",
                 )
                 started_virtual_sites3 = True
 
@@ -879,7 +885,9 @@ def _write_virtual_sites(
             atom3 = reference_atoms[2]
 
             if _this_key_is_in_molecule(
-                virtual_site_key, openff_sys.topology, molecule
+                virtual_site_key,
+                openff_sys.topology,
+                molecule,
             ):
                 pass
             else:
@@ -887,18 +895,18 @@ def _write_virtual_sites(
 
             func = 1
 
-            bond1_key = TopologyKey(atom_indices=(atom1, atom2))
+            bond1_key = BondKey(atom_indices=(atom1, atom2))
             bond1_length = (
                 openff_sys["Bonds"]
-                .potentials[openff_sys["Bonds"].slot_map[bond1_key]]
+                .potentials[openff_sys["Bonds"].key_map[bond1_key]]
                 .parameters["length"]
                 .m_as(unit.nanometer)
             )
 
-            bond2_key = TopologyKey(atom_indices=(atom1, atom3))
+            bond2_key = BondKey(atom_indices=(atom1, atom3))
             bond2_length = (
                 openff_sys["Bonds"]
-                .potentials[openff_sys["Bonds"].slot_map[bond2_key]]
+                .potentials[openff_sys["Bonds"].key_map[bond2_key]]
                 .parameters["length"]
                 .m_as(unit.nanometer)
             )
@@ -909,19 +917,19 @@ def _write_virtual_sites(
             angle_key = TopologyKey(atom_indices=(atom2, atom1, atom3))
             angle = (
                 openff_sys["Angles"]
-                .potentials[openff_sys["Angles"].slot_map[angle_key]]
+                .potentials[openff_sys["Angles"].key_map[angle_key]]
                 .parameters["angle"]
                 .m_as(unit.radian)
             )
 
             distance = (
-                virtual_site_handler.potentials[slot_map[virtual_site_key]]
+                virtual_site_handler.potentials[key_map[virtual_site_key]]
                 .parameters["distance"]
                 .m_as(unit.nanometer)
             )
 
             out_of_plane_angle = (
-                virtual_site_handler.potentials[slot_map[virtual_site_key]]
+                virtual_site_handler.potentials[key_map[virtual_site_key]]
                 .parameters["outOfPlaneAngle"]
                 .m_as(unit.radian)
             )
@@ -933,7 +941,7 @@ def _write_virtual_sites(
 
                 top_file.write(
                     f"{virtual_site_index}\t\t{atom1 -offset }\t{atom2 -offset}\t{atom3-offset}"
-                    f"\t{func}\t{a}\t{a}\n"
+                    f"\t{func}\t{a}\t{a}\n",
                 )
 
                 used_keys.update({virtual_site_index: virtual_site_key})
@@ -949,7 +957,7 @@ def _write_virtual_sites(
 
                 top_file.write(
                     f"{virtual_site_index}\t\t{atom1-offset}\t{atom2-offset}\t{atom3-offset}"
-                    f"\t{func}\t{a}\t{a}\t{c}\n"
+                    f"\t{func}\t{a}\t{a}\t{c}\n",
                 )
 
                 used_keys.update({virtual_site_index: virtual_site_key})
@@ -979,7 +987,7 @@ def _write_valence(
 
 
 def _write_bonds(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
-    if "Bonds" not in openff_sys.handlers.keys():
+    if "Bonds" not in openff_sys.collections.keys():
         return
 
     top_file.write("[ bonds ]\n")
@@ -988,24 +996,23 @@ def _write_bonds(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
     bond_handler = openff_sys["Bonds"]
 
     for bond in molecule.bonds:
-
         topology_indices = tuple(
-            sorted(openff_sys.topology.atom_index(a) for a in bond.atoms)
+            sorted(openff_sys.topology.atom_index(a) for a in bond.atoms),
         )
         molecule_indices = tuple(sorted(molecule.atom_index(a) for a in bond.atoms))
         topology_indices = tuple(
-            sorted(openff_sys.topology.atom_index(atom) for atom in bond.atoms)
+            sorted(openff_sys.topology.atom_index(atom) for atom in bond.atoms),
         )
 
         found_match = False
-        for top_key in bond_handler.slot_map:
+        for top_key in bond_handler.key_map:
             top_key: TopologyKey  # type: ignore[no-redef]
             if top_key.atom_indices == topology_indices:
-                pot_key = bond_handler.slot_map[top_key]
+                pot_key = bond_handler.key_map[top_key]
                 found_match = True
                 break
             elif top_key.atom_indices == topology_indices[::-1]:
-                pot_key = bond_handler.slot_map[top_key]
+                pot_key = bond_handler.key_map[top_key]
                 found_match = True
                 break
             else:
@@ -1013,7 +1020,7 @@ def _write_bonds(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
 
         if not found_match:
             print(
-                f"Failed to find parameters for bond with topology indices {topology_indices}"
+                f"Failed to find parameters for bond with topology indices {topology_indices}",
             )
             continue
 
@@ -1029,7 +1036,7 @@ def _write_bonds(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
                 str(1),  # bond type (functional form)
                 length,
                 k,
-            )
+            ),
         )
 
         del pot_key
@@ -1038,7 +1045,7 @@ def _write_bonds(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
 
 
 def _write_angles(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
-    if "Angles" not in openff_sys.handlers.keys():
+    if "Angles" not in openff_sys.collections.keys():
         return
 
     top_file.write("[ angles ]\n")
@@ -1053,9 +1060,9 @@ def _write_angles(top_file: IO, openff_sys: "Interchange", molecule: "Molecule")
         topology_indices = tuple(openff_sys.topology.atom_index(a) for a in angle)
         molecule_indices = tuple(molecule.atom_index(a) for a in angle)
 
-        for top_key in angle_handler.slot_map:
+        for top_key in angle_handler.key_map:
             if top_key.atom_indices == topology_indices:
-                pot_key = angle_handler.slot_map[top_key]
+                pot_key = angle_handler.key_map[top_key]
 
         params = angle_handler.potentials[pot_key].parameters
         k = params["k"].m
@@ -1069,42 +1076,42 @@ def _write_angles(top_file: IO, openff_sys: "Interchange", molecule: "Molecule")
                 str(1),  # angle type (functional form)
                 theta,
                 k,
-            )
+            ),
         )
 
     top_file.write("\n")
 
 
 def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecule"):
-    if "ProperTorsions" not in openff_sys.handlers:
-        if "RBTorsions" not in openff_sys.handlers:
-            if "ImproperTorsions" not in openff_sys.handlers:
+    if "ProperTorsions" not in openff_sys.collections:
+        if "RBTorsions" not in openff_sys.collections:
+            if "ImproperTorsions" not in openff_sys.collections:
                 return
 
     top_file.write("[ dihedrals ]\n")
     top_file.write(";    i      j      k      l   func\n")
 
     # FIXME: RB Impropers are probably missed here
-    rb_torsion_handler: Optional["PotentialHandler"] = openff_sys.handlers.get(
+    rb_torsion_handler: Optional["Collection"] = openff_sys.collections.get(
         "RBTorsions",
         None,
     )
-    proper_torsion_handler: Optional["PotentialHandler"] = openff_sys.handlers.get(
-        "ProperTorsions", None
+    proper_torsion_handler: Optional["Collection"] = openff_sys.collections.get(
+        "ProperTorsions",
+        None,
     )
-    improper_torsion_handler: Optional["PotentialHandler"] = openff_sys.handlers.get(
-        "ImproperTorsions", None
+    improper_torsion_handler: Optional["Collection"] = openff_sys.collections.get(
+        "ImproperTorsions",
+        None,
     )
 
     # TODO: Ensure number of torsions written matches what is expected
     for proper in molecule.propers:
-
         topology_indices = tuple(openff_sys.topology.atom_index(a) for a in proper)
         molecule_indices = tuple(molecule.atom_index(a) for a in proper)
 
         if proper_torsion_handler:
-
-            for top_key in proper_torsion_handler.slot_map:
+            for top_key in proper_torsion_handler.key_map:
                 if top_key.atom_indices[0] != topology_indices[0]:
                     continue
                 if top_key.atom_indices[1] != topology_indices[1]:
@@ -1114,7 +1121,7 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
                 if top_key.atom_indices[3] != topology_indices[3]:
                     continue
                 if top_key.atom_indices == topology_indices:
-                    pot_key = proper_torsion_handler.slot_map[top_key]
+                    pot_key = proper_torsion_handler.key_map[top_key]
                     params = proper_torsion_handler.potentials[pot_key].parameters
 
                     k = params["k"].m
@@ -1131,11 +1138,11 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
                             phase,
                             k / idivf,
                             periodicity,
-                        )
+                        ),
                     )
         # This should be `if` if a single quartet can be subject to both proper and RB torsions
         if rb_torsion_handler:
-            for top_key in rb_torsion_handler.slot_map:
+            for top_key in rb_torsion_handler.key_map:
                 if top_key.atom_indices[0] != topology_indices[0]:
                     continue
                 if top_key.atom_indices[1] != topology_indices[1]:
@@ -1145,7 +1152,7 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
                 if top_key.atom_indices[3] != topology_indices[3]:
                     continue
                 if top_key.atom_indices == topology_indices:
-                    pot_key = rb_torsion_handler.slot_map[top_key]
+                    pot_key = rb_torsion_handler.key_map[top_key]
                     params = rb_torsion_handler.potentials[pot_key].parameters
 
                     c0 = params["C0"].m_as(kj_mol)
@@ -1169,15 +1176,13 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
                             c3,
                             c4,
                             c5,
-                        )
+                        ),
                     )
 
     # TODO: Ensure number of torsions written matches what is expected
     if improper_torsion_handler:
-
         # Molecule/Topology.impropers lists the central atom **second** ...
         for improper in molecule.smirnoff_impropers:
-
             topology_indices = tuple(
                 openff_sys.topology.atom_index(a) for a in improper
             )
@@ -1195,7 +1200,7 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
             # Now, indices_to_match has the central atom listed **first**,
             # but it's still listed second in molecule_indices
 
-            for top_key in improper_torsion_handler.slot_map:
+            for top_key in improper_torsion_handler.key_map:
                 if top_key.atom_indices[0] != indices_to_match[0]:
                     continue
                 if top_key.atom_indices[1] != indices_to_match[1]:
@@ -1205,7 +1210,7 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
                 if top_key.atom_indices[3] != indices_to_match[3]:
                     continue
                 if indices_to_match == top_key.atom_indices:
-                    key = improper_torsion_handler.slot_map[top_key]
+                    key = improper_torsion_handler.key_map[top_key]
                     params = improper_torsion_handler.potentials[key].parameters
 
                     k = params["k"].m
@@ -1223,14 +1228,16 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
                             phase,
                             k / idivf,
                             periodicity,
-                        )
+                        ),
                     )
 
     top_file.write("\n")
 
 
 def _write_system(
-    top_file: IO, openff_sys: "Interchange", uniqe_molecule_map: Dict[int, List]
+    top_file: IO,
+    openff_sys: "Interchange",
+    uniqe_molecule_map: Dict[int, List],
 ):
     """Write the [ system ] section."""
     top_file.write("[ system ]\n")
@@ -1241,7 +1248,6 @@ def _write_system(
     top_file.write("; Compound\tnmols\n")
 
     for molecule in openff_sys.topology.molecules:
-
         top_file.write(f"{molecule.name}\t1\n")
 
     top_file.write("\n")
@@ -1250,7 +1256,7 @@ def _write_system(
 def _get_lj_parameters(openff_sys: "Interchange", atom_idx: int) -> Dict:
     vdw_hander = openff_sys["vdW"]
     atom_key = TopologyKey(atom_indices=(atom_idx,))
-    identifier = vdw_hander.slot_map[atom_key]
+    identifier = vdw_hander.key_map[atom_key]
     potential = vdw_hander.potentials[identifier]
     parameters = potential.parameters
 
@@ -1258,9 +1264,9 @@ def _get_lj_parameters(openff_sys: "Interchange", atom_idx: int) -> Dict:
 
 
 def _get_buck_parameters(openff_sys: "Interchange", atom_idx: int) -> Dict:
-    buck_hander = openff_sys["Buckingham-6"]  # type: ignore
+    buck_hander = openff_sys["Buckingham-6"]
     atom_key = TopologyKey(atom_indices=(atom_idx,))
-    identifier = buck_hander.slot_map[atom_key]
+    identifier = buck_hander.key_map[atom_key]
     potential = buck_hander.potentials[identifier]
     parameters = potential.parameters
 
@@ -1282,7 +1288,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
 
     current_directive = None
 
-    def process_defaults(interchange: Interchange, line: str):
+    def _process_defaults(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 5:
             raise Exception(fields)
@@ -1293,7 +1299,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
             vdw_handler = BasevdWHandler()
         elif nbfunc == "2":
             raise NotImplementedError(
-                "Parsing GROMACS files with the Buckingham-6 potential is not supported"
+                "Parsing GROMACS files with the Buckingham-6 potential is not supported",
             )
 
         if comb_rule == "1":
@@ -1313,7 +1319,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
         interchange.add_handler("vdW", vdw_handler)
         interchange.add_handler("Electrostatics", electrostatics_handler)
 
-    def process_atomtype(interchange: Interchange, line: str):
+    def _process_atomtype(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 7:
             raise Exception
@@ -1328,12 +1334,12 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
             parameters={
                 "sigma": float(sigma) * unit.nanometer,
                 "epsilon": float(epsilon) * unit.kilojoule / unit.mole,
-            }
+            },
         )
 
         interchange["vdW"].potentials.update({potential_key: potential})
 
-    def process_moleculetype(interchange: Interchange, line: str):
+    def _process_moleculetype(interchange: Interchange, line: str):
         from openff.toolkit.topology.molecule import Molecule
 
         fields = line.split()
@@ -1343,7 +1349,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
         molecule_name, nrexcl = fields
 
         if nrexcl != "3":
-            raise Exception()
+            raise Exception
 
         molecule = Molecule()
         molecule.name = molecule_name
@@ -1355,7 +1361,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
 
         interchange.topology = topology
 
-    def process_atom(interchange: Interchange, line: str):
+    def _process_atom(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 8:
             raise Exception
@@ -1387,27 +1393,27 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
             raise RuntimeError(
                 f"Found atom type {atom_type} in an atoms directive but "
                 "either did not find or failed to process an atom type of the same name "
-                "in the atomtypes directive."
+                "in the atomtypes directive.",
             )
 
         charge: "Quantity" = unit.Quantity(float(_charge), units=unit.elementary_charge)
 
-        interchange["vdW"].slot_map.update({topology_key: potential_key})
+        interchange["vdW"].key_map.update({topology_key: potential_key})
         # The vdw .potentials was constructed while parsing [ atomtypes ]
-        interchange["Electrostatics"].slot_map.update({topology_key: potential_key})
+        interchange["Electrostatics"].key_map.update({topology_key: potential_key})
         interchange["Electrostatics"].potentials.update(
-            {potential_key: Potential(parameters={"charge": charge})}
+            {potential_key: Potential(parameters={"charge": charge})},
         )
 
-    def process_pair(interchange: Interchange, line: str):
+    def _process_pair(interchange: Interchange, line: str):
         pass
 
-    def process_bond(interchange: Interchange, line: str):
+    def _process_bond(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 5:
             raise Exception
 
-        if "Bonds" not in interchange.handlers:
+        if "Bonds" not in interchange.collections:
             bond_handler = BaseBondHandler()
             interchange.add_handler("Bonds", bond_handler)
 
@@ -1421,7 +1427,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
 
         topology_key = TopologyKey(atom_indices=(int(atom1) - 1, int(atom2) - 1))
         potential_key = PotentialKey(
-            id="-".join(str(i) for i in topology_key.atom_indices)
+            id="-".join(str(i) for i in topology_key.atom_indices),
         )
 
         # TODO: De-depulicate identical bond parameters into "types"
@@ -1429,28 +1435,28 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
             parameters={
                 "length": float(length) * unit.nanometer,
                 "k": float(k) * unit.kilojoule / unit.mole / unit.nanometer**2,
-            }
+            },
         )
 
-        interchange["Bonds"].slot_map.update({topology_key: potential_key})
+        interchange["Bonds"].key_map.update({topology_key: potential_key})
         interchange["Bonds"].potentials.update({potential_key: potential})
 
-    def process_angle(interchange: Interchange, line: str):
+    def _process_angle(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 6:
             raise Exception
 
-        if "Angles" not in interchange.handlers:
+        if "Angles" not in interchange.collections:
             angle_handler = BaseAngleHandler()
             interchange.add_handler("Angles", angle_handler)
 
         atom1, atom2, atom3, func, theta, k = fields
 
         topology_key = TopologyKey(
-            atom_indices=(int(i) - 1 for i in [atom1, atom2, atom3])
+            atom_indices=(int(i) - 1 for i in [atom1, atom2, atom3]),
         )
         potential_key = PotentialKey(
-            id="-".join(str(i) for i in topology_key.atom_indices)
+            id="-".join(str(i) for i in topology_key.atom_indices),
         )
 
         # TODO: De-depulicate identical angle parameters into "types"
@@ -1458,22 +1464,22 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
             parameters={
                 "angle": float(theta) * unit.degree,
                 "k": float(k) * unit.kilojoule / unit.mole / unit.radian**2,
-            }
+            },
         )
 
-        interchange["Angles"].slot_map.update({topology_key: potential_key})
+        interchange["Angles"].key_map.update({topology_key: potential_key})
         interchange["Angles"].potentials.update({potential_key: potential})
 
-    def process_dihedral(interchange: Interchange, line: str):
+    def _process_dihedral(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 8:
             raise Exception
 
-        if "ProperTorsions" not in interchange.handlers:
+        if "ProperTorsions" not in interchange.collections:
             proper_handler = BaseProperTorsionHandler()
             interchange.add_handler("ProperTorsions", proper_handler)
 
-        if "ImproperTorsions" not in interchange.handlers:
+        if "ImproperTorsions" not in interchange.collections:
             improper_handler = BaseImproperTorsionHandler()
             interchange.add_handler("ImproperTorsions", improper_handler)
 
@@ -1488,7 +1494,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
             handler: Union[BaseProperTorsionHandler, BaseImproperTorsionHandler],
             key: TopologyKey,
         ):
-            if key in handler.slot_map:
+            if key in handler.key_map:
                 key.mult += 1
                 ensure_unique_key(handler, key)
 
@@ -1506,10 +1512,10 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
                     "k": float(k) * unit.kilojoule / unit.mole,
                     "periodicity": int(periodicity) * unit.dimensionless,
                     "idivf": 1 * unit.dimensionless,
-                }
+                },
             )
 
-            interchange["ProperTorsions"].slot_map.update({topology_key: potential_key})
+            interchange["ProperTorsions"].key_map.update({topology_key: potential_key})
             interchange["ProperTorsions"].potentials.update({potential_key: potential})
 
         elif func == "4":
@@ -1522,17 +1528,17 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
                     "k": float(k) * unit.kilojoule / unit.mole,
                     "periodicity": int(periodicity) * unit.dimensionless,
                     "idivf": 1 * unit.dimensionless,
-                }
+                },
             )
 
-            interchange["ImproperTorsions"].slot_map.update(
-                {topology_key: potential_key}
+            interchange["ImproperTorsions"].key_map.update(
+                {topology_key: potential_key},
             )
             interchange["ImproperTorsions"].potentials.update(
-                {potential_key: potential}
+                {potential_key: potential},
             )
 
-    def process_molecule(interchange: Interchange, line: str):
+    def _process_molecule(interchange: Interchange, line: str):
         fields = line.split()
         if len(fields) != 2:
             raise Exception
@@ -1541,23 +1547,23 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
 
         if n_molecules != "1":
             raise NotImplementedError(
-                "Only single-molecule topologies are currently supported"
+                "Only single-molecule topologies are currently supported",
             )
 
-    def process_system(interchange: Interchange, line: str):
+    def _process_system(interchange: Interchange, line: str):
         interchange.name = line
 
     supported_directives: Dict[str, Callable] = {
-        "defaults": process_defaults,
-        "atomtypes": process_atomtype,
-        "moleculetype": process_moleculetype,
-        "atoms": process_atom,
-        "pairs": process_pair,
-        "bonds": process_bond,
-        "angles": process_angle,
-        "dihedrals": process_dihedral,
-        "molecules": process_molecule,
-        "system": process_system,
+        "defaults": _process_defaults,
+        "atomtypes": _process_atomtype,
+        "moleculetype": _process_moleculetype,
+        "atoms": _process_atom,
+        "pairs": _process_pair,
+        "bonds": _process_bond,
+        "angles": _process_angle,
+        "dihedrals": _process_dihedral,
+        "molecules": _process_molecule,
+        "system": _process_system,
     }
 
     with open(top_file) as opened_top:
@@ -1573,7 +1579,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
                 raise NotImplementedError(
                     "Parsing GROMACS files with preprocessor commands "
                     "is not yet supported. Found a line with contents "
-                    f"{line}"
+                    f"{line}",
                 )
 
             elif line.startswith("["):
@@ -1587,7 +1593,7 @@ def from_top(top_file: Union[Path, str], gro_file: Union[Path, str]):
                 raise RuntimeError(
                     "Found bad top file or unsupported directive. "
                     f"Current directive is: {current_directive}\n"
-                    f"Current line is: '{line}'"
+                    f"Current line is: '{line}'",
                 )
 
     return interchange
@@ -1620,7 +1626,6 @@ def _this_key_is_in_molecule(
 
 
 def _get_residue_info_from_atom(atom) -> Tuple[int, str]:
-
     try:
         # TODO: Unclear if OpenFF will make residues start at 1 or 0
         residue_idx = int(atom.metadata["residue_number"]) % 100000

@@ -69,7 +69,7 @@ class TestAmber(_BaseTest):
 
         omm_energies.compare(
             amb_energies,
-            custom_tolerances={
+            {
                 "vdW": 0.018 * kj_mol,
                 "Electrostatics": 0.01 * kj_mol,
             },
@@ -79,12 +79,12 @@ class TestAmber(_BaseTest):
 class TestPRMTOP(_BaseTest):
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
         )
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
         Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_prmtop(
-            "atom_names.prmtop"
+            "atom_names.prmtop",
         )
 
         pdb_object = app.PDBFile(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))

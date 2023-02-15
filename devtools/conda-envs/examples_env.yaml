@@ -11,11 +11,11 @@ dependencies:
   - pydantic
   - openmm
   # OpenFF stack
-  - openff-toolkit >=0.11.0
+  - openff-toolkit >=0.11.3
+  - openff-models >=0.0.4
   - openff-evaluator
   # Optional features
   - jax
-  - jaxlib
   - unyt
   - mbuild
   - foyer >=0.11.3
@@ -25,7 +25,7 @@ dependencies:
   - nglview
   - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
   - openeye-toolkits
-  - pytest <7.0.0
+  - pytest
   - nbval
   - openmmforcefields >=0.11.2
   # Drivers

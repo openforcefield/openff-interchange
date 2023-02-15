@@ -10,7 +10,6 @@ from openmm import unit as openmm_unit
 from openff.interchange import Interchange
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
-from openff.interchange.drivers.report import EnergyError, EnergyReport
 from openff.interchange.tests import (
     HAS_GROMACS,
     HAS_LAMMPS,
@@ -28,31 +27,6 @@ if HAS_GROMACS:
     )
 if HAS_LAMMPS:
     from openff.interchange.drivers.lammps import get_lammps_energies
-
-
-def test_energy_report():
-    """Test that multiple failing energies are captured in the EnergyError"""
-    a = EnergyReport(
-        energies={
-            "a": 1 * kj_mol,
-            "_FLAG": 2 * kj_mol,
-            "KEY_": 1.2 * kj_mol,
-        }
-    )
-    b = EnergyReport(
-        energies={
-            "a": -1 * kj_mol,
-            "_FLAG": -2 * kj_mol,
-            "KEY_": -0.1 * kj_mol,
-        }
-    )
-    custom_tolerances = {
-        "a": 1 * kj_mol,
-        "_FLAG": 1 * kj_mol,
-        "KEY_": 1 * kj_mol,
-    }
-    with pytest.raises(EnergyError, match=r"_FLAG[\s\S]*KEY_"):
-        a.compare(b, custom_tolerances=custom_tolerances)
 
 
 class TestEnergies(_BaseTest):
@@ -78,12 +52,14 @@ class TestEnergies(_BaseTest):
 
         off_sys = Interchange.from_smirnoff(force_field, [mol])
 
-        off_sys.handlers["Electrostatics"].periodic_potential = "cutoff"
+        off_sys.collections["Electrostatics"].periodic_potential = "cutoff"
 
         mol.to_file("out.xyz", file_format="xyz")
         compound: mb.Compound = mb.load("out.xyz")
         packed_box: mb.Compound = mb.fill_box(
-            compound=compound, n_compounds=1, box=mb.Box(lengths=[10, 10, 10])
+            compound=compound,
+            n_compounds=1,
+            box=mb.Box(lengths=[10, 10, 10]),
         )
 
         positions = packed_box.xyz * unit.nanometer
@@ -95,7 +71,7 @@ class TestEnergies(_BaseTest):
         # Compare GROMACS writer and OpenMM export
         gmx_energies = get_gromacs_energies(off_sys, mdp=mdp)
 
-        custom_tolerances = {
+        tolerances = {
             "Bond": 2e-5 * openmm_unit.kilojoule_per_mole,
             "Electrostatics": 2 * openmm_unit.kilojoule_per_mole,
             "vdW": 2 * openmm_unit.kilojoule_per_mole,
@@ -105,7 +81,7 @@ class TestEnergies(_BaseTest):
 
         gmx_energies.compare(
             omm_energies,
-            custom_tolerances=custom_tolerances,
+            tolerances,
         )
 
         if not constrained:
@@ -116,11 +92,11 @@ class TestEnergies(_BaseTest):
                 electrostatics=True,
             )
             lmp_energies = get_lammps_energies(off_sys)
-            custom_tolerances = {
+            tolerances = {
                 "vdW": 5.0 * openmm_unit.kilojoule_per_mole,
                 "Electrostatics": 5.0 * openmm_unit.kilojoule_per_mole,
             }
-            lmp_energies.compare(other_energies, custom_tolerances=custom_tolerances)
+            lmp_energies.compare(other_energies, tolerances)
 
     @needs_gmx
     @skip_if_missing("foyer")
@@ -146,7 +122,9 @@ class TestEnergies(_BaseTest):
 
         # Get single-point energies using GROMACS
         oplsaa_energies = _run_gmx_energy(
-            top_file="eth.top", gro_file="eth.gro", mdp_file=_get_mdp_file("default")
+            top_file="eth.top",
+            gro_file="eth.gro",
+            mdp_file=_get_mdp_file("default"),
         )
 
         assert oplsaa_energies.energies["Torsion"].m != 0.0
@@ -188,7 +166,7 @@ class TestEnergies(_BaseTest):
             [
                 Molecule.from_smiles("[#3+]"),
                 Molecule.from_smiles("[#17-]"),
-            ]
+            ],
         )
         out = Interchange.from_smirnoff(ion_ff, ions)
         out.box = [4, 4, 4] * unit.nanometer
@@ -203,12 +181,12 @@ class TestEnergies(_BaseTest):
 
             out["Electrostatics"].periodic_potential = "cutoff"
             gmx.append(
-                get_gromacs_energies(out, mdp="auto").energies["Electrostatics"].m
+                get_gromacs_energies(out, mdp="auto").energies["Electrostatics"].m,
             )
             lmp.append(
                 get_lammps_energies(out)
                 .energies["Electrostatics"]
-                .m_as(unit.kilojoule / unit.mol)
+                .m_as(unit.kilojoule / unit.mol),
             )
 
         assert np.sum(np.sqrt(np.square(np.asarray(lmp) - np.asarray(gmx)))) < 1e-3
@@ -250,7 +228,8 @@ class TestEnergies(_BaseTest):
 
         for key in ["Bond", "Torsion"]:
             interchange_energy = get_openmm_energies(
-                out, combine_nonbonded_forces=True
+                out,
+                combine_nonbonded_forces=True,
             ).energies[key]
 
             gromacs_energy = get_gromacs_energies(out).energies[key]
@@ -260,9 +239,9 @@ class TestEnergies(_BaseTest):
                 pass
             elif energy_diff < 1e-2:
                 pytest.xpass(
-                    f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports"
+                    f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports",
                 )
             else:
                 pytest.xfail(
-                    f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports"
+                    f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports",
                 )

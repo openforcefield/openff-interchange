@@ -1,3 +1,6 @@
+"""
+Helper functions for exporting positions to OpenMM.
+"""
 from typing import TYPE_CHECKING
 
 from openff.units import unit as off_unit
@@ -20,14 +23,14 @@ def to_openmm_positions(
 
     if interchange.positions is None:
         raise MissingPositionsError(
-            f"Positions are required found {interchange.positions=}."
+            f"Positions are required found {interchange.positions=}.",
         )
 
     atom_positions = to_openmm_quantity(interchange.positions)
 
-    if "VirtualSites" not in interchange.handlers:
+    if "VirtualSites" not in interchange.collections:
         return atom_positions
-    elif len(interchange["VirtualSites"].slot_map) == 0:
+    elif len(interchange["VirtualSites"].key_map) == 0:
         return atom_positions
 
     topology = interchange.topology
@@ -45,7 +48,8 @@ def to_openmm_positions(
             molecule_virtual_site_map[molecule_index].append(virtual_site)
 
     particle_positions = off_unit.Quantity(
-        numpy.empty(shape=(0, 3)), off_unit.nanometer
+        numpy.empty(shape=(0, 3)),
+        off_unit.nanometer,
     )
 
     for molecule in topology.molecules:
@@ -60,17 +64,18 @@ def to_openmm_positions(
 
         if include_virtual_sites:
             n_virtual_sites_in_this_molecule: int = len(
-                molecule_virtual_site_map[molecule_index]
+                molecule_virtual_site_map[molecule_index],
             )
             this_molecule_virtual_site_positions = off_unit.Quantity(
-                numpy.zeros((n_virtual_sites_in_this_molecule, 3)), off_unit.nanometer
+                numpy.zeros((n_virtual_sites_in_this_molecule, 3)),
+                off_unit.nanometer,
             )
             particle_positions = numpy.concatenate(
                 [
                     particle_positions,
                     this_molecule_atom_positions,
                     this_molecule_virtual_site_positions,
-                ]
+                ],
             )
 
         else:
@@ -78,7 +83,7 @@ def to_openmm_positions(
                 [
                     particle_positions,
                     this_molecule_atom_positions,
-                ]
+                ],
             )
 
     return particle_positions

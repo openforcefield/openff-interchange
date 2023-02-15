@@ -1,6 +1,8 @@
 """Runtime settings for MD simulations."""
 from typing import TYPE_CHECKING, Literal
 
+from openff.models.models import DefaultModel
+from openff.models.types import FloatQuantity
 from openff.units import unit
 from pydantic import Field
 
@@ -9,8 +11,6 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
-from openff.interchange.models import DefaultModel
-from openff.interchange.types import FloatQuantity
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
@@ -33,10 +33,12 @@ class MDConfig(DefaultModel):
         description="Whether or not the system is periodic.",
     )
     constraints: Literal["none", "h-bonds", "all-bonds", "all-angles"] = Field(
-        "none", description="The type of constraints to be used in the simulation."
+        "none",
+        description="The type of constraints to be used in the simulation.",
     )
     vdw_method: str = Field(
-        None, description="The method used to calculate the vdW interactions."
+        None,
+        description="The method used to calculate the vdW interactions.",
     )
     vdw_cutoff: FloatQuantity["angstrom"] = Field(
         None,
@@ -71,11 +73,11 @@ class MDConfig(DefaultModel):
             periodic=interchange.box is not None,
             constraints=_infer_constraints(interchange),
         )
-        if "vdW" in interchange.handlers:
+        if "vdW" in interchange.collections:
             vdw_handler = interchange["vdW"]
             mdconfig.vdw_cutoff = vdw_handler.cutoff
             mdconfig.vdw_method = vdw_handler.method
-            mdconfig.mixing_rule = vdw_handler.mixing_rule
+            mdconfig.mixing_rule = vdw_handler.mixing_rule  # type: ignore[assignment]
 
             if vdw_handler.switch_width is not None:
                 if vdw_handler.switch_width.m == 0:
@@ -88,7 +90,7 @@ class MDConfig(DefaultModel):
             else:
                 mdconfig.switching_function = False
 
-        if "Electrostatics" in interchange.handlers:
+        if "Electrostatics" in interchange.collections:
             mdconfig.coul_method = interchange["Electrostatics"].periodic_potential
             mdconfig.coul_cutoff = interchange["Electrostatics"].cutoff
 
@@ -114,7 +116,7 @@ class MDConfig(DefaultModel):
             elif self.coul_method == _PME:
                 if not self.periodic:
                     raise UnsupportedCutoffMethodError(
-                        "PME is not valid with a non-periodic system."
+                        "PME is not valid with a non-periodic system.",
                     )
                 mdp.write("coulombtype = PME\n")
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
@@ -123,7 +125,7 @@ class MDConfig(DefaultModel):
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
             else:
                 raise UnsupportedExportError(
-                    f"Electrostatics method {self.coul_method} not supported"
+                    f"Electrostatics method {self.coul_method} not supported",
                 )
 
             if self.vdw_method == "cutoff":
@@ -132,7 +134,7 @@ class MDConfig(DefaultModel):
                 mdp.write("vdwtype = PME\n")
             else:
                 raise UnsupportedExportError(
-                    f"vdW method {self.vdw_method} not supported"
+                    f"vdW method {self.vdw_method} not supported",
                 )
 
             vdw_cutoff = round(self.vdw_cutoff.m_as(unit.nanometer), 4)
@@ -150,7 +152,7 @@ class MDConfig(DefaultModel):
                 "units real\n"
                 "atom_style full\n"
                 "\n"
-                "dimension 3\nboundary p p p\n\n"
+                "dimension 3\nboundary p p p\n\n",
             )
 
             lmp.write("bond_style hybrid harmonic\n")
@@ -182,7 +184,7 @@ class MDConfig(DefaultModel):
                 f"{scale_factors['Electrostatics']['1-2']} "
                 f"{scale_factors['Electrostatics']['1-3']} "
                 f"{scale_factors['Electrostatics']['1-4']} "
-                "\n"
+                "\n",
             )
 
             vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)
@@ -193,7 +195,7 @@ class MDConfig(DefaultModel):
                 lmp.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")
             else:
                 raise UnsupportedExportError(
-                    f"Unsupported electrostatics method {self.coul_method}"
+                    f"Unsupported electrostatics method {self.coul_method}",
                 )
 
             if self.mixing_rule == "lorentz-berthelot":
@@ -202,11 +204,11 @@ class MDConfig(DefaultModel):
                 lmp.write("pair_modify mix geometric tail yes\n\n")
             else:
                 raise UnsupportedExportError(
-                    f"Mixing rule {self.mixing_rule} not supported"
+                    f"Mixing rule {self.mixing_rule} not supported",
                 )
             lmp.write("read_data out.lmp\n\n")
             lmp.write(
-                "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n"
+                "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n",
             )
 
             if self.coul_method == "pme":
@@ -232,7 +234,7 @@ class MDConfig(DefaultModel):
             # TODO: Is there a clear analog to GROMACS's all-bonds?
             elif self.constraints == "angles":
                 raise UnsupportedExportError(
-                    "Unclear how to constrain angles with sander"
+                    "Unclear how to constrain angles with sander",
                 )
 
             if self.vdw_method == "cutoff":
@@ -240,7 +242,7 @@ class MDConfig(DefaultModel):
                 sander.write(f"cut={vdw_cutoff},\n")
             else:
                 raise UnsupportedExportError(
-                    f"vdW method {self.vdw_method} not supported"
+                    f"vdW method {self.vdw_method} not supported",
                 )
 
             if self.coul_method == "pme":
@@ -250,12 +252,12 @@ class MDConfig(DefaultModel):
 
 
 def _infer_constraints(interchange: "Interchange") -> str:
-    if "Constraints" not in interchange.handlers:
+    if "Constraints" not in interchange.collections:
         return "none"
-    elif "Bonds" not in interchange.handlers:
+    elif "Bonds" not in interchange.collections:
         return "none"
     else:
-        num_constraints = len(interchange["Constraints"].slot_map)
+        num_constraints = len(interchange["Constraints"].key_map)
         if num_constraints == 0:
             return "none"
         else:
@@ -263,12 +265,12 @@ def _infer_constraints(interchange: "Interchange") -> str:
 
             num_h_bonds = _get_num_h_bonds(interchange.topology)
 
-            num_bonds = len(interchange["Bonds"].slot_map)
-            num_angles = len(interchange["Angles"].slot_map)
+            num_bonds = len(interchange["Bonds"].key_map)
+            num_angles = len(interchange["Angles"].key_map)
 
             if num_constraints == num_h_bonds:
                 return "h-bonds"
-            elif num_constraints == len(interchange["Bonds"].slot_map):
+            elif num_constraints == len(interchange["Bonds"].key_map):
                 return "all-bonds"
             elif num_constraints == (num_bonds + num_angles):
                 return "all-angles"
@@ -277,7 +279,7 @@ def _infer_constraints(interchange: "Interchange") -> str:
                 import warnings
 
                 warnings.warn(
-                    "Ambiguous failure while processing constraints. Constraining h-bonds as a stopgap."
+                    "Ambiguous failure while processing constraints. Constraining h-bonds as a stopgap.",
                 )
 
                 return "h-bonds"

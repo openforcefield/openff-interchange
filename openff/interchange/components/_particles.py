@@ -5,10 +5,9 @@ import abc
 import math
 from typing import List, Literal, Tuple
 
+from openff.models.models import DefaultModel
+from openff.models.types import FloatQuantity
 from openff.units import unit
-
-from openff.interchange.models import DefaultModel
-from openff.interchange.types import FloatQuantity
 
 
 class _VirtualSite(DefaultModel, abc.ABC):
@@ -16,7 +15,7 @@ class _VirtualSite(DefaultModel, abc.ABC):
     distance: FloatQuantity["nanometer"]
     orientations: Tuple[int, ...]
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def local_frame_weights(self) -> Tuple[List[float], ...]:
         raise NotImplementedError
 
@@ -31,7 +30,6 @@ class _BondChargeVirtualSite(_VirtualSite):
 
     @property
     def local_frame_weights(self) -> Tuple[List[float], ...]:
-
         originwt = [1.0, 0.0]  # first atom is origin
         xdir = [-1.0, 1.0]
         ydir = [-1.0, 1.0]
@@ -56,7 +54,6 @@ class _MonovalentLonePairVirtualSite(_VirtualSite):
 
     @property
     def local_frame_weights(self) -> Tuple[List[float], ...]:
-
         originwt = [1.0, 0.0, 0.0]
         xdir = [-1.0, 1.0, 0.0]
         ydir = [-1.0, 0.0, 1.0]
@@ -88,7 +85,6 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
 
     @property
     def local_frame_weights(self) -> Tuple[List[float], ...]:
-
         originwt = [1.0, 0.0, 0.0]
         xdir = [-1.0, 0.5, 0.5]
         ydir = [-1.0, 1.0, 0.0]
@@ -118,7 +114,6 @@ class _TrivalentLonePairVirtualSite(_VirtualSite):
 
     @property
     def local_frame_weights(self) -> Tuple[List[float], ...]:
-
         originwt = [1.0, 0.0, 0.0, 0.0]
         xdir = [-1.0, 1 / 3, 1 / 3, 1 / 3]
         ydir = [-1.0, 1.0, 0.0, 0.0]  # Not used

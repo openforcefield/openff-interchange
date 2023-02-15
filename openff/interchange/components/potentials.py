@@ -1,15 +1,18 @@
 """Models for storing applied force field parameters."""
 import ast
+import warnings
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union
 
 import numpy
+from openff.models.models import DefaultModel
+from openff.models.types import ArrayQuantity, FloatQuantity
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, PrivateAttr, validator
 
 from openff.interchange.exceptions import MissingParametersError
-from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
-from openff.interchange.types import ArrayQuantity, FloatQuantity
+from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if has_package("jax"):
     from jax import numpy as jax_numpy
@@ -19,7 +22,19 @@ if TYPE_CHECKING:
     from openff.toolkit.topology import Topology
 
     if has_package("jax"):
-        from jaxlib.xla_extension import DeviceArray
+        from jax import Array
+
+
+def __getattr__(name: str):
+    if name == "PotentialHandler":
+        warnings.warn(
+            "`PotentialHandler` has been renamed to `Collection`. "
+            "Importing `Collection` instead.",
+            InterchangeDeprecationWarning,
+        )
+        return Collection
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 class Potential(DefaultModel):
@@ -30,7 +45,8 @@ class Potential(DefaultModel):
 
     @validator("parameters")
     def validate_parameters(
-        cls, v: Dict[str, Union[ArrayQuantity, FloatQuantity]]
+        cls,
+        v: Dict[str, Union[ArrayQuantity, FloatQuantity]],
     ) -> Dict[str, FloatQuantity]:
         for key, val in v.items():
             if isinstance(val, list):
@@ -74,8 +90,8 @@ class WrappedPotential(DefaultModel):
                     key: sum(
                         coeff * pot.parameters[key]
                         for pot, coeff in self._inner_data.data.items()
-                    )
-                }
+                    ),
+                },
             )
         return params
 
@@ -83,7 +99,7 @@ class WrappedPotential(DefaultModel):
         return str(self._inner_data.data)
 
 
-class PotentialHandler(DefaultModel):
+class Collection(DefaultModel):
     """Base class for storing parametrized force field data."""
 
     type: str = Field(..., description="The type of potentials this handler stores.")
@@ -91,7 +107,7 @@ class PotentialHandler(DefaultModel):
         ...,
         description="The analytical expression governing the potentials in this handler.",
     )
-    slot_map: Dict[TopologyKey, PotentialKey] = Field(
+    key_map: Dict[TopologyKey, PotentialKey] = Field(
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )
@@ -118,7 +134,7 @@ class PotentialHandler(DefaultModel):
         parameter_handler: ParameterHandler,
         topology: "Topology",
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         raise NotImplementedError
 
     def store_potentials(self, parameter_handler: ParameterHandler) -> None:
@@ -126,19 +142,21 @@ class PotentialHandler(DefaultModel):
         raise NotImplementedError
 
     def _get_parameters(self, atom_indices: Tuple[int]) -> Dict:
-        topology_key: TopologyKey
-        for topology_key in self.slot_map:
+        for topology_key in self.key_map:
             if topology_key.atom_indices == atom_indices:
-                potential_key = self.slot_map[topology_key]
+                potential_key = self.key_map[topology_key]
                 potential = self.potentials[potential_key]
                 parameters = potential.parameters
                 return parameters
         raise MissingParametersError(
             f"Could not find parameter in parameter in handler {self.type} "
-            f"associated with atoms {atom_indices}"
+            f"associated with atoms {atom_indices}",
         )
 
-    def get_force_field_parameters(self, use_jax: bool = False) -> "ArrayLike":
+    def get_force_field_parameters(
+        self,
+        use_jax: bool = False,
+    ) -> Union["ArrayLike", "Array"]:
         """Return a flattened representation of the force field parameters."""
         # TODO: Handle WrappedPotential
         if any(
@@ -149,11 +167,17 @@ class PotentialHandler(DefaultModel):
 
         if use_jax:
             return jax_numpy.array(
-                [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
+                [
+                    [v.m for v in p.parameters.values()]
+                    for p in self.potentials.values()
+                ],
             )
         else:
             return numpy.array(
-                [[v.m for v in p.parameters.values()] for p in self.potentials.values()]
+                [
+                    [v.m for v in p.parameters.values()]
+                    for p in self.potentials.values()
+                ],
             )
 
     def set_force_field_parameters(self, new_p: "ArrayLike") -> None:
@@ -175,7 +199,11 @@ class PotentialHandler(DefaultModel):
                     modified_parameter * parameter_units
                 )
 
-    def get_system_parameters(self, p=None, use_jax: bool = False) -> numpy.ndarray:
+    def get_system_parameters(
+        self,
+        p=None,
+        use_jax: bool = False,
+    ) -> Union["ArrayLike", "Array"]:
         """
         Return a flattened representation of system parameters.
 
@@ -193,7 +221,7 @@ class PotentialHandler(DefaultModel):
         mapping = self.get_mapping()
 
         q: List = list()
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             index = mapping[potential_key]
             q.append(p[index])
 
@@ -206,14 +234,18 @@ class PotentialHandler(DefaultModel):
         """Get a mapping between potentials and array indices."""
         mapping: Dict = dict()
         index = 0
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             if potential_key not in mapping:
                 mapping[potential_key] = index
                 index += 1
 
         return mapping
 
-    def parametrize(self, p=None, use_jax: bool = True) -> numpy.ndarray:
+    def parametrize(
+        self,
+        p=None,
+        use_jax: bool = True,
+    ) -> Union["ArrayLike", "Array"]:
         """Return an array of system parameters, given an array of force field parameters."""
         if p is None:
             p = self.get_force_field_parameters(use_jax=use_jax)
@@ -230,7 +262,7 @@ class PotentialHandler(DefaultModel):
         )
 
     @requires_package("jax")
-    def get_param_matrix(self) -> "DeviceArray":
+    def get_param_matrix(self) -> Union["Array", "ArrayLike"]:
         """Get a matrix representing the mapping between force field and system parameters."""
         from functools import partial
 
@@ -246,3 +278,13 @@ class PotentialHandler(DefaultModel):
         jac_res = jac_parametrize(p)
 
         return jac_res.reshape(-1, p.flatten().shape[0])  # type: ignore[union-attr]
+
+    def __getattr__(self, attr: str):
+        if attr == "slot_map":
+            warnings.warn(
+                "The `slot_map` attribute is deprecated. Use `key_map` instead.",
+                InterchangeDeprecationWarning,
+            )
+            return self.key_map
+        else:
+            return super().__getattribute__(attr)

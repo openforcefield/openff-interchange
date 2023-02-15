@@ -39,7 +39,9 @@ class ParmEdWrapper(InteroperabilityWrapper):
 
         file_ext = path.suffix.lower()
         if file_ext not in self._write_formats:
-            raise UnsupportedExportError(file_ext)
+            raise UnsupportedExportError(
+                f"Writing file format {file_ext} not supported.",
+            )
 
         if openff_sys.positions is None and file_ext in [".gro", ".crd", ".inpcrd"]:
             raise MissingPositionsError

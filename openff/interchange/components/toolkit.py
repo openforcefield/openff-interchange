@@ -1,13 +1,12 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
-from typing import TYPE_CHECKING, Dict, Union
+from typing import TYPE_CHECKING, List, Union
 
 import networkx as nx
 import numpy as np
-from openff.toolkit.topology import Topology
+from openff.toolkit import Molecule, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology import Molecule
     from openff.toolkit.typing.engines.smirnonff import ForceField
     from openff.toolkit.utils.collections import ValidatedList
     from openff.units.unit import Quantity
@@ -23,31 +22,6 @@ def _get_num_h_bonds(topology: "Topology") -> int:
             n_bonds_containing_hydrogen += 1
 
     return n_bonds_containing_hydrogen
-
-
-def _get_number_excluded_atoms(topology: "Topology", n=3) -> Dict[int, int]:
-    exclusions = {a.topology_atom_index: 0 for a in topology.atoms}
-
-    import networkx as nx
-
-    for topology_molecule in topology.topology_molecules:
-
-        mol_graph = topology_molecule.reference_molecule.to_networkx()
-
-        for node_i in mol_graph.nodes:
-            for node_j in mol_graph.nodes:
-                if node_i >= node_j:
-                    continue
-
-                path_length = nx.shortest_path_length(mol_graph, node_i, node_j)
-
-                if path_length <= n:
-                    exclusions[
-                        node_i + topology_molecule.atom_start_topology_index
-                    ] += 1
-                    # exclusions[node_j+topology_molecule.atom_start_topology_index] += 1
-
-    return exclusions
 
 
 def _get_14_pairs(topology_or_molecule: Union["Topology", "Molecule"]):
@@ -69,16 +43,16 @@ def _get_14_pairs(topology_or_molecule: Union["Topology", "Molecule"]):
                     continue
 
                 if {*atom_i_partner.bonded_atoms}.intersection(
-                    {*atom_j_partner.bonded_atoms}
+                    {*atom_j_partner.bonded_atoms},
                 ):
                     continue
 
                 else:
                     atom_i_partner_index = topology_or_molecule.atom_index(
-                        atom_i_partner
+                        atom_i_partner,
                     )
                     atom_j_partner_index = topology_or_molecule.atom_index(
-                        atom_j_partner
+                        atom_j_partner,
                     )
                     if atom_i_partner_index > atom_j_partner_index:
                         yield (atom_j_partner, atom_i_partner)
@@ -161,3 +135,18 @@ def _simple_topology_from_graph(graph: nx.Graph) -> Topology:
         topology.add_molecule(_SimpleMolecule._from_subgraph(subgraph))
 
     return topology
+
+
+# This is to re-implement:
+#   https://github.com/openforcefield/openff-toolkit/blob/60014820e6a333bed04e8bf5181d177da066da4d/
+#   openff/toolkit/typing/engines/smirnoff/parameters.py#L2509-L2515
+# It doesn't seem ideal to assume that matching SMILES === isomorphism?
+class _HashedMolecule(Molecule):
+    def __hash__(self):
+        return hash(self.to_smiles())
+
+
+def _assert_all_isomorphic(molecule_list: List[Molecule]) -> bool:
+    hashed_molecules = {_HashedMolecule(molecule) for molecule in molecule_list}
+
+    return len(hashed_molecules) == len(molecule_list)

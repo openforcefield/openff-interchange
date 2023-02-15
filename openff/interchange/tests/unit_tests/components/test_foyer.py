@@ -41,9 +41,8 @@ class TestFoyer(_BaseTest):
 
     @pytest.fixture(scope="session")
     def oplsaa_interchange_ethanol(self, oplsaa):
-
         molecule = Molecule.from_file(
-            get_test_files_dir_path("foyer_test_molecules") + "/ethanol.sdf"
+            get_test_files_dir_path("foyer_test_molecules") + "/ethanol.sdf",
         )
         molecule.name = "ETH"
 
@@ -75,11 +74,11 @@ class TestFoyer(_BaseTest):
                     tuple(
                         molecule.conformers[0].m_as(unit.nanometer)
                         for molecule in molecule_or_molecules
-                    )
+                    ),
                 )
             else:
                 openff_interchange.positions = molecule_or_molecules.conformers[0].m_as(
-                    unit.nanometer
+                    unit.nanometer,
                 )
 
             openff_interchange.box = [4, 4, 4]
@@ -93,7 +92,7 @@ class TestFoyer(_BaseTest):
         return interchanges_from_path
 
     def test_handlers_exist(self, oplsaa_interchange_ethanol):
-        for _, handler in oplsaa_interchange_ethanol.handlers.items():
+        for _, handler in oplsaa_interchange_ethanol.collections.items():
             assert handler
 
         assert oplsaa_interchange_ethanol["vdW"].scale_14 == 0.5
@@ -102,7 +101,7 @@ class TestFoyer(_BaseTest):
     @needs_gmx
     @pytest.mark.slow()
     @pytest.mark.skip(
-        reason="Exporting to OpenMM with geometric mixing rules not yet implemented"
+        reason="Exporting to OpenMM with geometric mixing rules not yet implemented",
     )
     def test_ethanol_energies(self, oplsaa_interchange_ethanol):
         from openff.interchange.drivers import get_gromacs_energies
@@ -112,7 +111,7 @@ class TestFoyer(_BaseTest):
 
         gmx_energies.compare(
             omm_energies,
-            custom_tolerances={
+            {
                 "vdW": 12.0 * unit.kilojoule / unit.mole,
                 "Electrostatics": 12.0 * unit.kilojoule / unit.mole,
             },
@@ -130,7 +129,9 @@ class TestFoyer(_BaseTest):
         openff_interchange, pmd_structure = get_interchanges(molecule_path)
         parameterized_pmd_structure = oplsaa.apply(pmd_structure)
         openff_energy = get_gromacs_energies(
-            openff_interchange, decimal=3, mdp="cutoff_hbonds"
+            openff_interchange,
+            decimal=3,
+            mdp="cutoff_hbonds",
         )
 
         parameterized_pmd_structure.save("from_foyer.gro")
@@ -145,10 +146,9 @@ class TestFoyer(_BaseTest):
         # TODO: Revisit after https://github.com/mosdef-hub/foyer/issues/431
         openff_energy.compare(
             through_foyer,
-            custom_tolerances={
+            {
                 "Bond": 1e-3 * unit.kilojoule / unit.mole,
                 "Angle": 1e-3 * unit.kilojoule / unit.mole,
-                "Nonbonded": 1e-3 * unit.kilojoule / unit.mole,
                 "Torsion": 1e-3 * unit.kilojoule / unit.mole,
                 "vdW": 5 * unit.kilojoule / unit.mole,
                 "Electrostatics": 1 * unit.kilojoule / unit.mole,
@@ -175,7 +175,7 @@ class TestRBTorsions(TestFoyer):
         pot_key = PotentialKey(id=smirks)
         for proper in top.propers:
             top_key = TopologyKey(atom_indices=tuple(top.atom_index(a) for a in proper))
-            rb_torsions.slot_map.update({top_key: pot_key})
+            rb_torsions.key_map.update({top_key: pot_key})
 
         # Values from HC-CT-CT-HC RB torsion
         # https://github.com/mosdef-hub/foyer/blob/7816bf53a127502520a18d76c81510f96adfdbed/foyer/forcefields/xml/oplsaa.xml#L2585
@@ -187,13 +187,13 @@ class TestRBTorsions(TestFoyer):
                 "C3": -2.5104 * kj_mol,
                 "C4": 0.0 * kj_mol,
                 "C5": 0.0 * kj_mol,
-            }
+            },
         )
 
         rb_torsions.potentials.update({pot_key: pot})
 
-        out.handlers.update({"RBTorsions": rb_torsions})
-        out.handlers.pop("ProperTorsions")
+        out.collections.update({"RBTorsions": rb_torsions})
+        out.collections.pop("ProperTorsions")
 
         return out
 

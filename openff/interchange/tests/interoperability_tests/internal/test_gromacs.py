@@ -14,10 +14,14 @@ from openmm import unit as openmm_unit
 from pkg_resources import resource_filename
 
 from openff.interchange import Interchange
-from openff.interchange.components.nonbonded import BuckinghamvdWHandler
+from openff.interchange.components.nonbonded import BuckinghamvdWCollection
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
-from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
+from openff.interchange.exceptions import (
+    GMXMdrunError,
+    UnsupportedExportError,
+    VirtualSiteTypeNotImplementedError,
+)
 from openff.interchange.interop.internal.gromacs import from_gro
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.tests import _BaseTest, needs_gmx
@@ -28,7 +32,8 @@ class TestGROMACSGROFile(_BaseTest):
     @skip_if_missing("intermol")
     def test_load_gro(self):
         file = resource_filename(
-            "intermol", "tests/gromacs/unit_tests/angle10_vacuum/angle10_vacuum.gro"
+            "intermol",
+            "tests/gromacs/unit_tests/angle10_vacuum/angle10_vacuum.gro",
         )
 
         internal_coords = from_gro(file).positions.m_as(unit.nanometer)
@@ -36,10 +41,10 @@ class TestGROMACSGROFile(_BaseTest):
 
         openmm_gro = openmm.app.GromacsGroFile(file)
         openmm_coords = numpy.array(
-            openmm_gro.getPositions().value_in_unit(openmm_unit.nanometer)
+            openmm_gro.getPositions().value_in_unit(openmm_unit.nanometer),
         )
         openmm_box = numpy.array(
-            openmm_gro.getPeriodicBoxVectors().value_in_unit(openmm_unit.nanometer)
+            openmm_gro.getPeriodicBoxVectors().value_in_unit(openmm_unit.nanometer),
         )
 
         assert numpy.allclose(internal_coords, openmm_coords)
@@ -48,7 +53,8 @@ class TestGROMACSGROFile(_BaseTest):
     @skip_if_missing("intermol")
     def test_load_gro_nonstandard_precision(self):
         file = resource_filename(
-            "intermol", "tests/gromacs/unit_tests/lj3_bulk/lj3_bulk.gro"
+            "intermol",
+            "tests/gromacs/unit_tests/lj3_bulk/lj3_bulk.gro",
         )
         internal_coords = from_gro(file).positions.m_as(unit.nanometer)
 
@@ -66,7 +72,7 @@ class TestGROMACSGROFile(_BaseTest):
             return x.value_in_unit(openmm_unit.nanometer)
 
         other_coords = numpy.frompyfunc(converter, 1, 1)(intermol_gro.positions).astype(
-            float
+            float,
         )
 
         assert numpy.allclose(internal_coords, other_coords)
@@ -93,7 +99,7 @@ class TestGROMACSGROFile(_BaseTest):
         import mdtraj
 
         protein = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_HIE.pdb")
+            get_data_file_path("proteins/MainChain_HIE.pdb"),
         )
 
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
@@ -108,19 +114,20 @@ class TestGROMACSGROFile(_BaseTest):
         mdtraj_topology: mdtraj.Topology = mdtraj.load("tmp.gro").topology
 
         for found_residue, original_residue in zip(
-            mdtraj_topology.residues, out.topology.hierarchy_iterator("residues")
+            mdtraj_topology.residues,
+            out.topology.hierarchy_iterator("residues"),
         ):
             assert found_residue.name == original_residue.residue_name
             assert str(found_residue.resSeq) == original_residue.residue_number
 
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
         )
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
         Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_gro(
-            "atom_names.gro"
+            "atom_names.gro",
         )
 
         pdb_object = app.PDBFile(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
@@ -168,7 +175,7 @@ class TestGROMACS(_BaseTest):
 
         get_gromacs_energies(out).compare(
             get_gromacs_energies(converted),
-            custom_tolerances={
+            tolerances={
                 "Bond": 0.002 * molecule.n_bonds * unit.kilojoule / unit.mol,
                 "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
             },
@@ -182,11 +189,11 @@ class TestGROMACS(_BaseTest):
         out.to_top("tmp.top")
 
         # Sanity check; toluene should have some improper(s)
-        assert len(out["ImproperTorsions"].slot_map) > 0
+        assert len(out["ImproperTorsions"].key_map) > 0
 
         struct = parmed.load_file("tmp.top")
         n_impropers_parmed = len([d for d in struct.dihedrals if d.improper])
-        assert n_impropers_parmed == len(out["ImproperTorsions"].slot_map)
+        assert n_impropers_parmed == len(out["ImproperTorsions"].key_map)
 
     @pytest.mark.slow()
     @skip_if_missing("intermol")
@@ -229,7 +236,7 @@ class TestGROMACS(_BaseTest):
         protein = Molecule.from_polymer_pdb(pdb_path)
 
         box_vectors = from_openmm(
-            openmm.app.PDBFile(pdb_path).topology.getPeriodicBoxVectors()
+            openmm.app.PDBFile(pdb_path).topology.getPeriodicBoxVectors(),
         )
 
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
@@ -245,7 +252,8 @@ class TestGROMACS(_BaseTest):
         parmed_structure: parmed.Structure = parmed.load_file("tmp.top")
 
         for found_residue, original_residue in zip(
-            parmed_structure.residues, out.topology.hierarchy_iterator("residues")
+            parmed_structure.residues,
+            out.topology.hierarchy_iterator("residues"),
         ):
             assert found_residue.name == original_residue.residue_name
             assert str(found_residue.number + 1) == original_residue.residue_number
@@ -253,7 +261,9 @@ class TestGROMACS(_BaseTest):
     @pytest.mark.slow()
     def test_argon_buck(self):
         """Test that Buckingham potentials are supported and can be exported"""
-        from openff.interchange.components.smirnoff import SMIRNOFFElectrostaticsHandler
+        from openff.interchange.smirnoff._nonbonded import (
+            SMIRNOFFElectrostaticsCollection,
+        )
 
         mol = Molecule.from_smiles("[#18]")
         mol.name = "Argon"
@@ -267,31 +277,32 @@ class TestGROMACS(_BaseTest):
 
         r = 0.3 * unit.nanometer
 
-        buck = BuckinghamvdWHandler()
-        coul = SMIRNOFFElectrostaticsHandler(method="pme")
+        buck = BuckinghamvdWCollection()
+        coul = SMIRNOFFElectrostaticsCollection(method="pme")
 
         pot_key = PotentialKey(id="[#18]")
         pot = Potential(parameters={"A": A, "B": B, "C": C})
 
         for atom in top.atoms:
             top_key = TopologyKey(atom_indices=(top.atom_index(atom),))
-            buck.slot_map.update({top_key: pot_key})
+            buck.key_map.update({top_key: pot_key})
 
-            coul.slot_map.update({top_key: pot_key})
+            coul.key_map.update({top_key: pot_key})
             coul.potentials.update(
-                {pot_key: Potential(parameters={"charge": 0 * unit.elementary_charge})}
+                {pot_key: Potential(parameters={"charge": 0 * unit.elementary_charge})},
             )
 
         for molecule in top.molecules:
             molecule.partial_charges = unit.Quantity(
-                molecule.n_atoms * [0], unit.elementary_charge
+                molecule.n_atoms * [0],
+                unit.elementary_charge,
             )
 
         buck.potentials[pot_key] = pot
 
         out = Interchange()
-        out.handlers["Buckingham-6"] = buck
-        out.handlers["Electrostatics"] = coul
+        out.collections["Buckingham-6"] = buck
+        out.collections["Electrostatics"] = coul
         out.topology = top
         out.box = [10, 10, 10] * unit.nanometer
         out.positions = [[0, 0, 0], [0.3, 0, 0]] * unit.nanometer
@@ -323,22 +334,22 @@ class TestGROMACS(_BaseTest):
 
         get_gromacs_energies(out).compare(
             get_openmm_energies(out),
-            custom_tolerances={"Electrostatics": 0.5 * unit.kilojoule_per_mole},
+            {"Electrostatics": 0.5 * unit.kilojoule_per_mole},
         )
 
 
 class TestGROMACSMetadata(_BaseTest):
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
         )
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
         Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_gro(
-            "atom_names.gro"
+            "atom_names.gro",
         )
         Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_top(
-            "atom_names.top"
+            "atom_names.top",
         )
 
         pdb_object = app.PDBFile(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
@@ -398,7 +409,8 @@ class TestGROMACSVirtualSites(_BaseTest):
         mol.generate_conformers(n_conformers=1)
 
         out = Interchange.from_smirnoff(
-            force_field=sage_with_sigma_hole, topology=mol.to_topology()
+            force_field=sage_with_sigma_hole,
+            topology=mol.to_topology(),
         )
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
@@ -418,11 +430,15 @@ class TestGROMACSVirtualSites(_BaseTest):
         mol.generate_conformers(n_conformers=1)
 
         out = Interchange.from_smirnoff(
-            force_field=sage_with_monovalent_lone_pair, topology=mol.to_topology()
+            force_field=sage_with_monovalent_lone_pair,
+            topology=mol.to_topology(),
         )
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
 
-        with pytest.raises(Exception, match="MonovalentLonePair not implemented."):
+        with pytest.raises(
+            VirtualSiteTypeNotImplementedError,
+            match="MonovalentLonePair not implemented.",
+        ):
             # TODO: Sanity-check reported energies
             get_gromacs_energies(out)

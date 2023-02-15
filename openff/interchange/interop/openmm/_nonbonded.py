@@ -1,3 +1,6 @@
+"""
+Helper functions for producing `openmm.Force` objects for non-bonded terms.
+"""
 from collections import defaultdict
 from typing import TYPE_CHECKING, DefaultDict, Dict, List, Union
 
@@ -8,6 +11,7 @@ from openmm import unit
 
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
+    CannotSetSwitchingFunctionError,
     InternalInconsistencyError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
@@ -30,7 +34,7 @@ def _process_nonbonded_forces(
     combine_nonbonded_forces=False,
 ) -> Dict[Union[int, VirtualSiteKey], int]:
     """
-    Process the non-bonded handlers in an Interchange into corresponding openmm objects.
+    Process the non-bonded collections in an Interchange into corresponding openmm objects.
 
     This typically involves processing the vdW and Electrostatics sections of an Interchange object
     into a corresponding openmm.NonbondedForce (if `combine_nonbonded_forces=True`) or a
@@ -38,17 +42,17 @@ def _process_nonbonded_forces(
     `combine_nonbondoed_forces=False`.
 
     """
-    from openff.interchange.components.smirnoff import _SMIRNOFFNonbondedHandler
+    from openff.interchange.smirnoff._nonbonded import _SMIRNOFFNonbondedCollection
 
-    for handler in openff_sys.handlers.values():
-        if isinstance(handler, _SMIRNOFFNonbondedHandler):
+    for handler in openff_sys.collections.values():
+        if isinstance(handler, _SMIRNOFFNonbondedCollection):
             break
     else:
-        # If there are no non-bonded handlers, assume here that there can be no virtual sites,
+        # If there are no non-bonded collections, assume here that there can be no virtual sites,
         # so just return an i-i mapping between OpenFF and OpenMM indices
         return {i: i for i in range(openff_sys.topology.n_atoms)}
 
-    has_virtual_sites = "VirtualSites" in openff_sys.handlers
+    has_virtual_sites = "VirtualSites" in openff_sys.collections
 
     if has_virtual_sites:
         from openff.interchange.interop._virtual_sites import (
@@ -86,8 +90,7 @@ def _process_nonbonded_forces(
     )
 
     # TODO: Process ElectrostaticsHandler.exception_potential
-    if "vdW" in openff_sys.handlers or "Electrostatics" in openff_sys.handlers:
-
+    if "vdW" in openff_sys.collections or "Electrostatics" in openff_sys.collections:
         _data = _prepare_input_data(openff_sys)
 
         if combine_nonbonded_forces:
@@ -103,7 +106,7 @@ def _process_nonbonded_forces(
             openff_openmm_particle_map,
         )
 
-    elif "Buckingham-6" in openff_sys.handlers:
+    elif "Buckingham-6" in openff_sys.collections:
         if has_virtual_sites:
             raise UnsupportedExportError(
                 "Virtual sites with Buckingham-6 potential not supported. If this use case is important to you, "
@@ -130,7 +133,7 @@ def _process_nonbonded_forces(
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
             non_bonded_force.setCutoffDistance(buck_handler.cutoff * unit.angstrom)
 
-        for top_key, pot_key in buck_handler.slot_map.items():
+        for top_key, pot_key in buck_handler.key_map.items():
             atom_idx = top_key.atom_indices[0]
 
             # TODO: Add electrostatics
@@ -143,7 +146,7 @@ def _process_nonbonded_forces(
         openff_openmm_particle_map
 
     else:
-        # Here we assume there are no vdW interactions in any handlers
+        # Here we assume there are no vdW interactions in any collections
         # vdw_handler = None
 
         if has_virtual_sites:
@@ -171,7 +174,6 @@ def _process_nonbonded_forces(
         openmm_sys.addForce(non_bonded_force)
 
         for molecule in openff_sys.topology.molecules:
-
             for _ in molecule.atoms:
                 non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
@@ -197,13 +199,11 @@ def _add_particles_to_system(
     openmm_sys: openmm.System,
     molecule_virtual_site_map,
 ) -> Dict[Union[int, VirtualSiteKey], int]:
-
     has_virtual_sites = molecule_virtual_site_map not in (None, dict())
 
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int] = dict()
 
     for molecule in openff_sys.topology.molecules:
-
         for atom in molecule.atoms:
             atom_index = openff_sys.topology.atom_index(atom)
 
@@ -274,7 +274,7 @@ def _create_single_nonbonded_force(
     molecule_virtual_site_map: Dict["Molecule", List[VirtualSiteKey]],
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int],
 ):
-    """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site handlers."""
+    """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site collections."""
     if data["mixing_rule"] not in ("lorentz-berthelot", None):
         raise UnsupportedExportError(
             "OpenMM's default NonbondedForce only supports Lorentz-Berthelot mixing rules."
@@ -343,9 +343,7 @@ def _create_single_nonbonded_force(
     parent_virtual_particle_mapping: DefaultDict[int, List[int]] = defaultdict(list)
 
     for molecule in openff_sys.topology.molecules:
-
         for atom in molecule.atoms:
-
             non_bonded_force.addParticle(0.0, 1.0, 0.0)
 
             atom_index = openff_sys.topology.atom_index(atom)
@@ -358,7 +356,7 @@ def _create_single_nonbonded_force(
                 partial_charge = 0.0
 
             if data["vdw_handler"] is not None:
-                pot_key = data["vdw_handler"].slot_map[top_key]
+                pot_key = data["vdw_handler"].key_map[top_key]
                 sigma, epsilon = _lj_params_from_potential(
                     data["vdw_handler"].potentials[pot_key],
                 )
@@ -389,7 +387,7 @@ def _create_single_nonbonded_force(
                 _create_virtual_site_object,
             )
 
-            _potential_key = openff_sys["VirtualSites"].slot_map[virtual_site_key]
+            _potential_key = openff_sys["VirtualSites"].key_map[virtual_site_key]
             virtual_site_potential = openff_sys["VirtualSites"].potentials[
                 _potential_key
             ]
@@ -406,10 +404,10 @@ def _create_single_nonbonded_force(
             vdw_handler = openff_sys["vdW"]
             coul_handler = openff_sys["Electrostatics"]
 
-            vdw_key = vdw_handler.slot_map.get(virtual_site_key)  # type: ignore[call-overload]
-            coul_key = coul_handler.slot_map.get(virtual_site_key)  # type: ignore[call-overload]
+            vdw_key = vdw_handler.key_map.get(virtual_site_key)
+            coul_key = coul_handler.key_map.get(virtual_site_key)
             if vdw_key is None or coul_key is None:
-                raise Exception(
+                raise InternalInconsistencyError(
                     f"Virtual site {virtual_site_key} is not associated with any "
                     "vdW and/or electrostatics interactions",
                 )
@@ -511,12 +509,17 @@ def _create_exceptions(
 
                 if charge_prod._value == epsilon._value == 0.0:
                     non_bonded_force.addException(
-                        virtual_particle_of_p1, p2, 0.0, 0.0, 0.0, replace=True
+                        virtual_particle_of_p1,
+                        p2,
+                        0.0,
+                        0.0,
+                        0.0,
+                        replace=True,
                     )
                 else:
                     # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
                     v1_parameters = non_bonded_force.getParticleParameters(
-                        virtual_particle_of_p1
+                        virtual_particle_of_p1,
                     )
                     p2_parameters = non_bonded_force.getParticleParameters(p2)
                     non_bonded_force.addException(
@@ -534,12 +537,17 @@ def _create_exceptions(
 
                 if charge_prod._value == epsilon._value == 0.0:
                     non_bonded_force.addException(
-                        virtual_particle_of_p2, p1, 0.0, 0.0, 0.0, replace=True
+                        virtual_particle_of_p2,
+                        p1,
+                        0.0,
+                        0.0,
+                        0.0,
+                        replace=True,
                     )
                 else:
                     # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
                     v2_parameters = non_bonded_force.getParticleParameters(
-                        virtual_particle_of_p2
+                        virtual_particle_of_p2,
                     )
                     p1_parameters = non_bonded_force.getParticleParameters(p1)
                     non_bonded_force.addException(
@@ -665,7 +673,7 @@ def _create_multiple_nonbonded_forces(
                 partial_charge = 0.0
 
             if data["vdw_handler"] is not None:
-                pot_key = data["vdw_handler"].slot_map[top_key]
+                pot_key = data["vdw_handler"].key_map[top_key]
                 sigma, epsilon = _lj_params_from_potential(
                     data["vdw_handler"].potentials[pot_key],
                 )
@@ -746,7 +754,7 @@ def _create_multiple_nonbonded_forces(
 
 def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
     if not hasattr(force, "setUseSwitchingFunction"):
-        raise ValueError(
+        raise CannotSetSwitchingFunctionError(
             "Attempting to set switching funcntion on an OpenMM force that does nont support it."
             f"Passed force of type {type(force)}.",
         )

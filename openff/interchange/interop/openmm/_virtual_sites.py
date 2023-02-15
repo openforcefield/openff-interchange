@@ -1,3 +1,6 @@
+"""
+Helper functions for exporting virutal sites to OpenMM.
+"""
 from typing import TYPE_CHECKING, Dict, List, Union
 
 import openmm
@@ -8,16 +11,16 @@ from openff.interchange.models import VirtualSiteKey
 
 if TYPE_CHECKING:
     from openff.interchange.components._particles import _VirtualSite
-    from openff.interchange.components.smirnoff import SMIRNOFFVirtualSiteHandler
+    from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 
 
-def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteHandler"):
+def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteCollection"):
     _SUPPORTED_EXCLUSION_POLICIES = ("parents",)
 
     if handler.exclusion_policy not in _SUPPORTED_EXCLUSION_POLICIES:
         raise UnsupportedExportError(
             f"Found unsupported exclusion policy {handler.exclusion_policy}. "
-            f"Supported exclusion policies are {_SUPPORTED_EXCLUSION_POLICIES}"
+            f"Supported exclusion policies are {_SUPPORTED_EXCLUSION_POLICIES}",
         )
 
 
@@ -25,9 +28,8 @@ def _create_openmm_virtual_site(
     virtual_site: "_VirtualSite",
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int],
 ) -> openmm.LocalCoordinatesSite:
-
     # It is assumed that the first "orientation" atom is the "parent" atom.
-    originwt, xdir, ydir = virtual_site.local_frame_weights  # type: ignore[misc]
+    originwt, xdir, ydir = virtual_site.local_frame_weights
     pos = virtual_site.local_frame_positions
 
     # virtual_site.orientations is a list of the _openff_ indices, which is more or less
@@ -43,7 +45,11 @@ def _create_openmm_virtual_site(
     ]
 
     return openmm.LocalCoordinatesSite(
-        openmm_indices, originwt, xdir, ydir, to_openmm(pos)  # type: ignore[has-type]
+        openmm_indices,
+        originwt,
+        xdir,
+        ydir,
+        to_openmm(pos),
     )
 
 

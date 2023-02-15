@@ -39,7 +39,7 @@ def get_test_files_dir_path(dirname):
         return test_dir.as_posix()
     else:
         raise NotADirectoryError(
-            f"Provided directory {dirname} doesn't exist in {dir_path}"
+            f"Provided directory {dirname} doesn't exist in {dir_path}",
         )
 
 
@@ -181,6 +181,10 @@ class _BaseTest:
 </SMIRNOFF>"""
 
     @pytest.fixture()
+    def tip3p(self, tip3p_xml):
+        return ForceField(tip3p_xml)
+
+    @pytest.fixture()
     def tip3p_missing_electrostatics_xml(self):
         # Stripped from below, follow link for details
         # https://github.com/openforcefield/openff-toolkit/blob/0.10.2/openff/toolkit/data/test_forcefields/tip3p.offxml
@@ -231,6 +235,47 @@ class _BaseTest:
     </SMIRNOFF>
     """
 
+    @pytest.fixture()
+    def methane(self):
+        return Molecule.from_smiles("C")
+
+    @pytest.fixture()
+    def parsley(self):
+        return ForceField("openff-1.0.0.offxml")
+
+    @pytest.fixture()
+    def hydrogen_cyanide(self):
+        return Molecule.from_mapped_smiles("[H:1][C:2]#[N:3]")
+
+    @pytest.fixture()
+    def hydrogen_cyanide_reversed(self):
+        return Molecule.from_mapped_smiles("[H:3][C:2]#[N:1]")
+
+    @pytest.fixture()
+    def hexane_diol(self):
+        molecule = Molecule.from_smiles("OCCCCCCO")
+        molecule.assign_partial_charges(partial_charge_method="gasteiger")
+        molecule.partial_charges.m
+        return molecule
+
+    @pytest.fixture()
+    def hydrogen_chloride(self):
+        return Molecule.from_mapped_smiles("[Cl:1][H:2]")
+
+    @pytest.fixture()
+    def formaldehyde(self):
+        return Molecule.from_mapped_smiles("[H:3][C:1]([H:4])=[O:2]")
+
+    @pytest.fixture()
+    def acetaldehyde(self):
+        return Molecule.from_mapped_smiles(
+            "[C:1]([C:2](=[O:3])[H:7])([H:4])([H:5])[H:6]",
+        )
+
+    @pytest.fixture()
+    def water(self):
+        return Molecule.from_mapped_smiles("[H:1][O:2][H:3]")
+
 
 HAS_GROMACS = _find_gromacs_executable() is not None
 HAS_LAMMPS = _find_lammps_executable() is not None
@@ -252,7 +297,8 @@ def _get_charges_from_openmm_system(omm_sys: openmm.System):
 
 
 def _get_sigma_from_nonbonded_force(
-    n_particles: int, nonbond_force: openmm.NonbondedForce
+    n_particles: int,
+    nonbond_force: openmm.NonbondedForce,
 ):
     for idx in range(n_particles):
         param = nonbond_force.getParticleParameters(idx)
@@ -260,7 +306,8 @@ def _get_sigma_from_nonbonded_force(
 
 
 def _get_epsilon_from_nonbonded_force(
-    n_particles: int, nonbond_force: openmm.NonbondedForce
+    n_particles: int,
+    nonbond_force: openmm.NonbondedForce,
 ):
     for idx in range(n_particles):
         param = nonbond_force.getParticleParameters(idx)

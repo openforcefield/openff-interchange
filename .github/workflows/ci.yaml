@@ -60,7 +60,7 @@ jobs:
         # These packages are brought in by conda (via the toolkit) and must be removed manually
         # since pip doesn't know about the -base split and does not uninstall the -base package
         conda remove --force openff-interchange openff-interchange-base
-        python setup.py develop --no-deps
+        python -m pip install .
 
     - name: Environment Information
       run: |
@@ -75,11 +75,6 @@ jobs:
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
-
-    - name: Run mypy
-      continue-on-error: true
-      run: |
-        mypy --show-error-codes --namespace-packages -p "openff.interchange"
 
     - name: Run tests
       if: always()
@@ -112,6 +107,14 @@ jobs:
           --n-procs           2
 
         python devtools/scripts/molecule-regressions.py
+
+    - name: Run mypy
+      continue-on-error: true
+      run: |
+        # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
+        # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
+        micromamba remove jax -yq
+        mypy --show-error-codes --namespace-packages -p "openff.interchange"
 
     - name: Codecov
       uses: codecov/codecov-action@v3

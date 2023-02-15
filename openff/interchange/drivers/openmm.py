@@ -7,6 +7,7 @@ from openmm import unit
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
+from openff.interchange.exceptions import CannotInferNonbondedEnergyError
 
 kj_mol = unit.kilojoule_per_mole
 
@@ -15,6 +16,7 @@ def get_openmm_energies(
     off_sys: Interchange,
     round_positions: Optional[int] = None,
     combine_nonbonded_forces: bool = False,
+    platform: str = "Reference",
 ) -> EnergyReport:
     """
     Given an OpenFF Interchange object, return single-point energies as computed by OpenMM.
@@ -34,6 +36,8 @@ def get_openmm_energies(
     combine_nonbonded_forces : bool, default=False
         Whether or not to combine all non-bonded interactions (vdW, short- and long-range
         ectrostaelectrostatics, and 1-4 interactions) into a single openmm.NonbondedForce.
+    platform : str, default="Reference"
+        The name of the platform (`openmm.Platform`) used by OpenMM in this calculation.
 
     Returns
     -------
@@ -43,14 +47,14 @@ def get_openmm_energies(
     """
     positions = off_sys.positions
 
-    if "VirtualSites" in off_sys.handlers:
-        if len(off_sys["VirtualSites"].slot_map) > 0:
+    if "VirtualSites" in off_sys.collections:
+        if len(off_sys["VirtualSites"].key_map) > 0:
             if not combine_nonbonded_forces:
                 raise NotImplementedError(
-                    "Cannot yet split out NonbondedForce components while virtual sites are present."
+                    "Cannot yet split out NonbondedForce components while virtual sites are present.",
                 )
 
-            n_virtual_sites = len(off_sys["VirtualSites"].slot_map)
+            n_virtual_sites = len(off_sys["VirtualSites"].key_map)
 
             # TODO: Actually compute virtual site positions based on initial conformers
             virtual_site_positions = np.zeros((n_virtual_sites, 3))
@@ -58,7 +62,7 @@ def get_openmm_energies(
             positions = np.vstack([positions, virtual_site_positions])
 
     omm_sys: openmm.System = off_sys.to_openmm(
-        combine_nonbonded_forces=combine_nonbonded_forces
+        combine_nonbonded_forces=combine_nonbonded_forces,
     )
 
     return _get_openmm_energies(
@@ -66,6 +70,7 @@ def get_openmm_energies(
         box_vectors=off_sys.box,
         positions=positions,
         round_positions=round_positions,
+        platform=platform,
     )
 
 
@@ -74,13 +79,18 @@ def _get_openmm_energies(
     box_vectors,
     positions,
     round_positions=None,
+    platform=None,
 ) -> EnergyReport:
     """Given a prepared `openmm.System`, run a single-point energy calculation."""
     for idx, force in enumerate(omm_sys.getForces()):
         force.setForceGroup(idx)
 
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
-    context = openmm.Context(omm_sys, integrator)
+    context = openmm.Context(
+        omm_sys,
+        integrator,
+        openmm.Platform.getPlatformByName(platform),
+    )
 
     if box_vectors is not None:
         if not isinstance(box_vectors, (unit.Quantity, list)):
@@ -146,24 +156,22 @@ def _get_openmm_energies(
 
     report = EnergyReport()
 
-    report.update_energies(
+    report.update(
         {
             "Bond": omm_energies.get("HarmonicBondForce", 0.0 * kj_mol),
             "Angle": omm_energies.get("HarmonicAngleForce", 0.0 * kj_mol),
             "Torsion": _canonicalize_torsion_energies(omm_energies),
-        }
+        },
     )
 
     if "Nonbonded" in omm_energies:
-        report.update_energies(
-            {"Nonbonded": _canonicalize_nonbonded_energies(omm_energies)}
-        )
+        report.update({"Nonbonded": _canonicalize_nonbonded_energies(omm_energies)})
         report.energies.pop("vdW")
         report.energies.pop("Electrostatics")
     else:
-        report.update_energies({"vdW": omm_energies.get("vdW", 0.0 * kj_mol)})
-        report.update_energies(
-            {"Electrostatics": omm_energies.get("Electrostatics", 0.0 * kj_mol)}
+        report.update({"vdW": omm_energies.get("vdW", 0.0 * kj_mol)})
+        report.update(
+            {"Electrostatics": omm_energies.get("Electrostatics", 0.0 * kj_mol)},
         )
 
     return report
@@ -203,7 +211,7 @@ def _infer_nonbonded_energy_type(force):
         else:
             return "vdW"
 
-    raise Exception(type(force))
+    raise CannotInferNonbondedEnergyError(type(force))
 
 
 def _canonicalize_nonbonded_energies(energies: Dict):

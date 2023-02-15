@@ -9,10 +9,34 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## 0.2.3 - Current development
+## Current development
+
+### Behavior changes
+
+* #566 Refactors `EnergyReport` to more explicitly handle comparisons.
+* #583, #588 Changes some code paths of internal objects.
+  * `PotentialHandler` is deprecated for `Collection`.
+  * `Interchange.handlers` is deprecated for `Interchange.collections`.
+  * `PotentialHandler.slot_map` is deprecated for `Collection.key_map`.
+  * Classes found in `openff.interchange.components.smirnoff` are now in `openff.interchange.smirnoff`
+  * Classes found in `openff.interchange.components.foyer` are now in `openff.interchange.foyer`
+
+
+## 0.2.3 - 2022-11-21
+
+### Behavior changes
+* #554 `Interchange.to_openmm` now uses `combine_nonbonded_forces=True` by default.
+
+### New features
+* #534 An `openmm.Platform` can be specified as an argument to the OpenMM driver.
+
+### Documentation improvements
+* #553 Adds a solvation example.
 
 ### Bugfixes
 * #545 List the central atom first in CVFF style dihedrals in LAMMPS export
+* #551 Use `Interchange.box` to define periodicity when exporting to PDB files.
+
 
 ## 0.2.2 - 2022-10-12
 

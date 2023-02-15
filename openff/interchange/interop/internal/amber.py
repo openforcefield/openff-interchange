@@ -15,7 +15,10 @@ from openff.interchange.constants import (
     kcal_mol_a2,
     kcal_mol_rad2,
 )
-from openff.interchange.exceptions import UnsupportedExportError
+from openff.interchange.exceptions import (
+    UnsupportedExportError,
+    UnsupportedMixingRuleError,
+)
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
@@ -31,7 +34,6 @@ def _write_text_blob(file, blob):
 
 
 def _get_exclusion_lists(topology):
-
     number_excluded_atoms: List[int] = list()
     excluded_atoms_list: List[int] = list()
 
@@ -79,12 +81,12 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         path = file_path
 
     if interchange["vdW"].mixing_rule != "lorentz-berthelot":
-        raise Exception
+        raise UnsupportedMixingRuleError(interchange["vdW"].mixing_rule)
 
     if interchange.box is None:
         if interchange["Electrostatics"].periodic_potential != _PME:
             raise UnsupportedExportError(
-                f'Electrostatics method PME (`"{_PME}"`) is not valid for a non-periodic system. '
+                f'Electrostatics method PME (`"{_PME}"`) is not valid for a non-periodic system. ',
             )
 
     with open(path, "w") as prmtop:
@@ -97,7 +99,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             f"{now.hour:02d}:{now.minute:02d}:{now.second:02d}\n"
             "%FLAG TITLE\n"
             "%FORMAT(20a4)\n"
-            "\n"
+            "\n",
         )
 
         from openff.interchange.interop.internal.gromacs import _build_typemap
@@ -109,7 +111,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         }
         atom_type_indices = [
             potential_key_to_atom_type_mapping[potential_key]
-            for potential_key in interchange["vdW"].slot_map.values()
+            for potential_key in interchange["vdW"].key_map.values()
         ]
 
         potential_key_to_bond_type_mapping: Dict[PotentialKey, int] = {
@@ -122,9 +124,9 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         dihedral_potentials = dict()
         for key in ["ProperTorsions", "ImproperTorsions"]:
-            if key in interchange.handlers:
-                dihedral_potentials.update(deepcopy(interchange[key].potentials))  # type: ignore
-                dihedral_potentials.update(deepcopy(interchange[key].potentials))  # type: ignore
+            if key in interchange.collections:
+                dihedral_potentials.update(deepcopy(interchange[key].potentials))
+                dihedral_potentials.update(deepcopy(interchange[key].potentials))
 
         potential_key_to_dihedral_type_mapping: Dict[PotentialKey, int] = {
             key: i for i, key in enumerate(dihedral_potentials)
@@ -137,7 +139,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         bonds_inc_hydrogen: List[int] = list()
         bonds_without_hydrogen: List[int] = list()
 
-        for bond, key_ in interchange["Bonds"].slot_map.items():
+        for bond, key_ in interchange["Bonds"].key_map.items():
             bond_type_index = potential_key_to_bond_type_mapping[key_]
 
             atom1 = interchange.topology.atom(bond.atom_indices[0])
@@ -161,7 +163,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         angles_inc_hydrogen: List[int] = list()
         angles_without_hydrogen: List[int] = list()
 
-        for angle, key_ in interchange["Angles"].slot_map.items():
+        for angle, key_ in interchange["Angles"].key_map.items():
             angle_type_index = potential_key_to_angle_type_mapping[key_]
 
             atom1 = interchange.topology.atom(angle.atom_indices[0])
@@ -196,9 +198,9 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         dihedrals_inc_hydrogen: List[int] = list()
         dihedrals_without_hydrogen: List[int] = list()
 
-        if "ProperTorsions" in interchange.handlers:
-            for dihedral, key_ in interchange["ProperTorsions"].slot_map.items():
-                dihedral_type_index = potential_key_to_dihedral_type_mapping[key_]
+        if "ProperTorsions" in interchange.collections:
+            for dihedral, proper_key in interchange["ProperTorsions"].key_map.items():
+                dihedral_type_index = potential_key_to_dihedral_type_mapping[proper_key]
 
                 atom1 = interchange.topology.atom(dihedral.atom_indices[0])
                 atom2 = interchange.topology.atom(dihedral.atom_indices[1])
@@ -253,14 +255,18 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
                 dihedrals_list.append(atom4_index * 3)
                 dihedrals_list.append(dihedral_type_index + 1)
 
-        if "ImproperTorsions" in interchange.handlers:
-            for dihedral, key_ in interchange["ImproperTorsions"].slot_map.items():
-                dihedral_type_index = potential_key_to_dihedral_type_mapping[key_]
+        if "ImproperTorsions" in interchange.collections:
+            for improper, improper_key in interchange[
+                "ImproperTorsions"
+            ].key_map.items():
+                dihedral_type_index = potential_key_to_dihedral_type_mapping[
+                    improper_key
+                ]
 
-                atom1 = interchange.topology.atom(dihedral.atom_indices[0])
-                atom2 = interchange.topology.atom(dihedral.atom_indices[1])
-                atom3 = interchange.topology.atom(dihedral.atom_indices[2])
-                atom4 = interchange.topology.atom(dihedral.atom_indices[3])
+                atom1 = interchange.topology.atom(improper.atom_indices[0])
+                atom2 = interchange.topology.atom(improper.atom_indices[1])
+                atom3 = interchange.topology.atom(improper.atom_indices[2])
+                atom4 = interchange.topology.atom(improper.atom_indices[3])
 
                 atom1_index = interchange.topology.atom_index(atom1)
                 atom2_index = interchange.topology.atom_index(atom2)
@@ -297,7 +303,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
                 dihedrals_list.append(dihedral_type_index + 1)
 
         number_excluded_atoms, excluded_atoms_list = _get_exclusion_lists(
-            interchange.topology
+            interchange.topology,
         )
 
         # total number of atoms
@@ -396,13 +402,13 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             [
                 atom.name.ljust(4) if atom.name else atom.symbol.ljust(4)
                 for atom in interchange.topology.atoms
-            ]
+            ],
         )
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG CHARGE\n" "%FORMAT(5E16.8)\n")
         charges = [
-            charge.m_as(unit.e) * AMBER_COULOMBS_CONSTANT
+            charge.m_as(unit.e) * AMBER_COULOMBS_CONSTANT  # type: ignore[union-attr]
             for charge in interchange["Electrostatics"].charges.values()
         ]
         text_blob = "".join([f"{val:16.8E}" for val in charges])
@@ -434,7 +440,6 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         for key_i, i in potential_key_to_atom_type_mapping.items():
             for key_j, j in potential_key_to_atom_type_mapping.items():
-
                 if j < i:
                     # Only need to handle the lower triangle as everything symmetric.
                     continue

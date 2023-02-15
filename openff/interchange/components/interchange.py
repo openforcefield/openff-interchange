@@ -3,71 +3,56 @@ import copy
 import json
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union, overload
+from typing import TYPE_CHECKING, Dict, List, Literal, Optional, Tuple, Union, overload
 
 import numpy as np
+from openff.models.models import DefaultModel
+from openff.models.types import ArrayQuantity, QuantityEncoder, custom_quantity_encoder
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
-from typing_extensions import Literal
 
 from openff.interchange.components.mdconfig import MDConfig
-from openff.interchange.components.potentials import PotentialHandler
-from openff.interchange.components.toolkit import _check_electrostatics_handlers
+from openff.interchange.components.potentials import Collection
 from openff.interchange.exceptions import (
-    InternalInconsistencyError,
     InvalidBoxError,
     InvalidTopologyError,
     MissingParameterHandlerError,
     MissingPositionsError,
-    NonUniqueMoleculesError,
-    SMIRNOFFHandlersNotImplementedError,
     UnsupportedCombinationError,
     UnsupportedExportError,
 )
-from openff.interchange.models import DefaultModel, PotentialKey, TopologyKey
-from openff.interchange.types import (
-    ArrayQuantity,
-    QuantityEncoder,
-    TopologyEncoder,
-    custom_quantity_encoder,
-)
+from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if TYPE_CHECKING:
-    from openff.interchange.components.smirnoff import (
-        SMIRNOFFAngleHandler,
-        SMIRNOFFBondHandler,
-        SMIRNOFFConstraintHandler,
-        SMIRNOFFElectrostaticsHandler,
-        SMIRNOFFImproperTorsionHandler,
-        SMIRNOFFProperTorsionHandler,
-        SMIRNOFFvdWHandler,
-        SMIRNOFFVirtualSiteHandler,
+    from openff.interchange.components.foyer import (
+        FoyerElectrostaticsHandler,
+        FoyerVDWHandler,
     )
+    from openff.interchange.smirnoff._nonbonded import (
+        SMIRNOFFElectrostaticsCollection,
+        SMIRNOFFvdWCollection,
+    )
+    from openff.interchange.smirnoff._valence import (
+        SMIRNOFFAngleCollection,
+        SMIRNOFFBondCollection,
+        SMIRNOFFConstraintCollection,
+        SMIRNOFFImproperTorsionCollection,
+        SMIRNOFFProperTorsionCollection,
+    )
+    from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 
     if has_package("foyer"):
         from foyer.forcefield import Forcefield as FoyerForcefield
     if has_package("nglview"):
         import nglview
 
-_SUPPORTED_SMIRNOFF_HANDLERS = {
-    "Constraints",
-    "Bonds",
-    "Angles",
-    "ProperTorsions",
-    "ImproperTorsions",
-    "vdW",
-    "Electrostatics",
-    "LibraryCharges",
-    "ChargeIncrementModel",
-    "VirtualSites",
-}
-
 
 def _sanitize(o):
     # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
-    # for the mapping dicts `slot_map` and `potentials`.
+    # for the mapping dicts `key_map` and `potentials`.
     if isinstance(o, dict):
         return {_sanitize(k): _sanitize(v) for k, v in o.items()}
     elif isinstance(o, (PotentialKey, TopologyKey)):
@@ -77,6 +62,17 @@ def _sanitize(o):
     return o
 
 
+class TopologyEncoder(json.JSONEncoder):
+    """Custom encoder for `Topology` objects."""
+
+    def default(self, obj: "Topology"):  # noqa
+        _topology = copy.deepcopy(obj)
+        for molecule in _topology.molecules:
+            molecule._conformers = None
+
+        return _topology.to_json()
+
+
 def interchange_dumps(v, *, default):
     """Dump an Interchange to JSON after converting to compatible types."""
     return json.dumps(
@@ -84,8 +80,11 @@ def interchange_dumps(v, *, default):
             "positions": QuantityEncoder().default(v["positions"]),
             "box": QuantityEncoder().default(v["box"]),
             "topology": TopologyEncoder().default(v["topology"]),
-            "handlers": {
-                "Bonds": json.dumps(_sanitize(v["handlers"]["Bonds"]), default=default)
+            "collections": {
+                "Bonds": json.dumps(
+                    _sanitize(v["collections"]["Bonds"]),
+                    default=default,
+                ),
             },
         },
         default=default,
@@ -99,7 +98,7 @@ def interchange_loader(data: str) -> dict:
         "velocities": None,
         "box": None,
         "topology": None,
-        "handlers": {},
+        "collections": {},
     }
     for key, val in json.loads(data).items():
         if val is None:
@@ -124,7 +123,7 @@ class Interchange(DefaultModel):
     .. warning :: This API is experimental and subject to change.
     """
 
-    handlers: Dict[str, PotentialHandler] = Field(dict())
+    collections: Dict[str, Collection] = Field(dict())
     topology: Topology = Field(None)
     mdconfig: MDConfig = Field(None)
     box: ArrayQuantity["nanometer"] = Field(None)
@@ -152,7 +151,7 @@ class Interchange(DefaultModel):
         else:
             raise InvalidBoxError(
                 f"Failed to convert value {value} to 3x3 box vectors. Please file an issue if you think this "
-                "input should be supported and the failure is an error."
+                "input should be supported and the failure is an error.",
             )
 
         return box
@@ -177,22 +176,8 @@ class Interchange(DefaultModel):
         else:
             raise InvalidTopologyError(
                 "Could not process topology argument, expected openff.toolkit.topology.Topology. "
-                f"Found object of type {type(value)}."
+                f"Found object of type {type(value)}.",
             )
-
-    @classmethod
-    def _check_supported_handlers(cls, force_field: ForceField):
-
-        unsupported = list()
-
-        for handler_name in force_field.registered_parameter_handlers:
-            if handler_name in {"ToolkitAM1BCC"}:
-                continue
-            if handler_name not in _SUPPORTED_SMIRNOFF_HANDLERS:
-                unsupported.append(handler_name)
-
-        if unsupported:
-            raise SMIRNOFFHandlersNotImplementedError(unsupported)
 
     def _infer_positions(self) -> Optional[ArrayQuantity]:
         """
@@ -208,7 +193,7 @@ class Interchange(DefaultModel):
                 return None
 
         return np.concatenate(
-            [molecule.conformers[0] for molecule in self.topology.molecules]
+            [molecule.conformers[0] for molecule in self.topology.molecules],
         )
 
     @classmethod
@@ -217,6 +202,7 @@ class Interchange(DefaultModel):
         force_field: ForceField,
         topology: Union[Topology, List[Molecule]],
         box=None,
+        positions=None,
         charge_from_molecules: Optional[List[Molecule]] = None,
         partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
         allow_nonintegral_charges: bool = False,
@@ -234,6 +220,9 @@ class Interchange(DefaultModel):
         box : `openff.unit.Quantity`, optional
             The box vectors associated with the ``Interchange``. If ``None``,
             box vectors are taken from the topology, if present.
+        positions : `openff.unit.Quantity`, optional
+            The positions associated with atoms in the input topology. If ``None``,
+            positions are taken from the molecules in topology, if present on all molecules.
         charge_from_molecules : `List[openff.toolkit.molecule.Molecule]`, optional
             If specified, partial charges will be taken from the given molecules
             instead of being determined by the force field.
@@ -266,180 +255,17 @@ class Interchange(DefaultModel):
             Interchange with 8 atoms, non-periodic topology
 
         """
-        from openff.interchange.components.smirnoff import (
-            SMIRNOFF_POTENTIAL_HANDLERS,
-            SMIRNOFFBondHandler,
-            SMIRNOFFConstraintHandler,
-            SMIRNOFFElectrostaticsHandler,
-            SMIRNOFFProperTorsionHandler,
-            SMIRNOFFVirtualSiteHandler,
+        from openff.interchange.smirnoff._create import _create_interchange
+
+        return _create_interchange(
+            force_field=force_field,
+            topology=topology,
+            box=box,
+            positions=positions,
+            charge_from_molecules=charge_from_molecules,
+            partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
+            allow_nonintegral_charges=allow_nonintegral_charges,
         )
-
-        sys_out = Interchange()
-
-        # FIXME: Figure out why setting `.topology` does not pass it through the validator
-        #       (despite `validate_assignment=True`)
-        sys_out.topology = Interchange.validate_topology(topology)
-
-        sys_out.positions = sys_out._infer_positions()
-
-        cls._check_supported_handlers(force_field)
-
-        if "Electrostatics" not in force_field.registered_parameter_handlers:
-            if _check_electrostatics_handlers(force_field):
-                raise MissingParameterHandlerError(
-                    "Force field contains parameter handler(s) that may assign/modify "
-                    "partial charges, but no ElectrostaticsHandler was found."
-                )
-
-        parameter_handlers_by_type = {
-            force_field[parameter_handler_name].__class__: force_field[
-                parameter_handler_name
-            ]
-            for parameter_handler_name in force_field.registered_parameter_handlers
-        }
-
-        if len(parameter_handlers_by_type) != len(
-            force_field.registered_parameter_handlers
-        ):
-
-            raise NotImplementedError(
-                "Only force fields that contain one instance of each parameter handler "
-                "type are currently supported."
-            )
-
-        if partial_bond_orders_from_molecules is not None:
-            if not _assert_all_isomorphic(partial_bond_orders_from_molecules):
-                raise NonUniqueMoleculesError(
-                    "At least two molecules in `partial_bond_orders_from_molecules` are (likely) isomorphic. "
-                    "Molecules in this list must be unique."
-                )
-
-        for potential_handler_type in SMIRNOFF_POTENTIAL_HANDLERS:
-
-            parameter_handlers = [
-                parameter_handlers_by_type[allowed_type]
-                for allowed_type in potential_handler_type.allowed_parameter_handlers()
-                if allowed_type in parameter_handlers_by_type
-            ]
-
-            if len(parameter_handlers) == 0:
-                continue
-
-            # TODO: Might be simpler to rework the bond handler to be self-contained and
-            #       move back to the constraint handler dealing with the logic (and
-            #       depending on the bond handler)
-            if potential_handler_type == SMIRNOFFBondHandler:
-                parameter_handler = force_field["Bonds"]
-                if str(parameter_handler.version) == "0.3":
-                    from openff.interchange.components.smirnoff import (
-                        _upconvert_bondhandler,
-                    )
-
-                    warnings.warn(
-                        "Automatically up-converting BondHandler from version 0.3 to 0.4. Consider manually upgrading "
-                        "this BondHandler (or <Bonds> section in an OFFXML file) to 0.4 or newer. For more details, "
-                        "see https://openforcefield.github.io/standards/standards/smirnoff/#bonds."
-                    )
-
-                    _upconvert_bondhandler(parameter_handler)
-                    assert str(parameter_handler.version) == "0.4"
-                    assert parameter_handler.potential != "harmonic"
-
-                SMIRNOFFBondHandler.check_supported_parameters(parameter_handler)
-
-                bond_handler = SMIRNOFFBondHandler._from_toolkit(
-                    parameter_handler=force_field["Bonds"],
-                    topology=sys_out.topology,
-                    # constraint_handler=constraint_handler,
-                    partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
-                )
-                sys_out.handlers.update({"Bonds": bond_handler})
-            elif potential_handler_type == SMIRNOFFProperTorsionHandler:
-                SMIRNOFFProperTorsionHandler.check_supported_parameters(
-                    force_field["ProperTorsions"]
-                )
-                potential_handler = SMIRNOFFProperTorsionHandler._from_toolkit(
-                    parameter_handler=force_field["ProperTorsions"],
-                    topology=sys_out.topology,
-                    partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
-                )
-                sys_out.handlers.update({"ProperTorsions": potential_handler})
-            elif potential_handler_type == SMIRNOFFConstraintHandler:
-                (bond_handler, constraint_handler) = (
-                    force_field._parameter_handlers.get(val, None)
-                    for val in ["Bonds", "Constraints"]
-                )
-                if constraint_handler is None:
-                    continue
-                constraints = SMIRNOFFConstraintHandler._from_toolkit(
-                    parameter_handler=[
-                        val
-                        for val in [bond_handler, constraint_handler]
-                        if val is not None
-                    ],
-                    topology=sys_out.topology,
-                )
-                sys_out.handlers.update({"Constraints": constraints})
-            elif potential_handler_type == SMIRNOFFElectrostaticsHandler:
-                electrostatics_handler = SMIRNOFFElectrostaticsHandler._from_toolkit(
-                    parameter_handler=parameter_handlers,
-                    topology=sys_out.topology,
-                    charge_from_molecules=charge_from_molecules,
-                    allow_nonintegral_charges=allow_nonintegral_charges,
-                )
-                sys_out.handlers.update({"Electrostatics": electrostatics_handler})
-            elif potential_handler_type == SMIRNOFFVirtualSiteHandler:
-                virtual_site_handler = SMIRNOFFVirtualSiteHandler()
-                virtual_site_handler.exclusion_policy = force_field[
-                    "VirtualSites"
-                ].exclusion_policy
-                virtual_site_handler.store_matches(
-                    parameter_handler=force_field["VirtualSites"],
-                    topology=sys_out.topology,
-                )
-                virtual_site_handler.store_potentials(
-                    parameter_handler=force_field["VirtualSites"],
-                    vdw_handler=sys_out["vdW"],
-                    electrostatics_handler=sys_out["Electrostatics"],
-                )
-                sys_out.handlers.update({"VirtualSites": virtual_site_handler})
-                # sys_out["vdW"]._from_toolkit_virtual_sites(
-                #     parameter_handler=force_field["VirtualSites"],
-                #     topology=sys_out.topology,
-                # )
-                # sys_out["Electrostatics"]._from_toolkit_virtual_sites(
-                #     parameter_handler=force_field["VirtualSites"],
-                #     topology=sys_out.topology,
-                # )
-            elif len(potential_handler_type.allowed_parameter_handlers()) > 1:
-                potential_handler = potential_handler_type._from_toolkit(  # type: ignore
-                    parameter_handler=parameter_handlers,
-                    topology=sys_out.topology,
-                )
-                sys_out.handlers.update({potential_handler.type: potential_handler})
-            else:
-                potential_handler_type.check_supported_parameters(parameter_handlers[0])
-                potential_handler = potential_handler_type._from_toolkit(  # type: ignore
-                    parameter_handler=parameter_handlers[0],
-                    topology=sys_out.topology,
-                )
-                sys_out.handlers.update({potential_handler.type: potential_handler})
-
-        # FIXME: Figure out why setting `.box` does not pass it through the validator
-        # `box` argument is only overriden if passed `None` and the input topology
-        # is a `Topology` (could be `List[Molecule]`) and has box vectors
-        if box is None:
-            if isinstance(topology, Topology):
-                sys_out.box = topology.box_vectors
-            else:
-                sys_out.box = None
-        else:
-            sys_out.box = box
-
-        # FIXME: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
-
-        return sys_out
 
     def visualize(self, backend: str = "nglview"):
         """
@@ -472,7 +298,7 @@ class Interchange(DefaultModel):
             self.to_pdb("_tmp_pdb_file.pdb", writer="openmm")
         except MissingPositionsError as error:
             raise MissingPositionsError(
-                "Cannot visualize system without positions."
+                "Cannot visualize system without positions.",
             ) from error
         return nglview.show_file("_tmp_pdb_file.pdb")
 
@@ -516,7 +342,7 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
-    def to_openmm(self, combine_nonbonded_forces: bool = False):
+    def to_openmm(self, combine_nonbonded_forces: bool = True):
         """Export this Interchange to an OpenMM System."""
         from openff.interchange.interop.openmm import to_openmm as to_openmm_
 
@@ -553,13 +379,16 @@ class Interchange(DefaultModel):
         """Export this Interchange to a .pdb file."""
         if self.positions is None:
             raise MissingPositionsError(
-                "Positions are required to write a `.pdb` file but found None."
+                "Positions are required to write a `.pdb` file but found None.",
             )
 
         if writer == "openmm":
             from openff.interchange.interop.openmm import _to_pdb
 
-            _to_pdb(file_path, self.topology, self.positions)
+            _topology = Topology(other=self.topology)
+            _topology.box_vectors = self.box
+
+            _to_pdb(file_path, _topology, self.positions)
         else:
             raise UnsupportedExportError
 
@@ -601,7 +430,10 @@ class Interchange(DefaultModel):
     @classmethod
     @requires_package("foyer")
     def from_foyer(
-        cls, force_field: "FoyerForcefield", topology: "Topology", **kwargs
+        cls,
+        force_field: "FoyerForcefield",
+        topology: "Topology",
+        **kwargs,
     ) -> "Interchange":
         """
         Create an Interchange object from a Foyer force field and an OpenFF topology.
@@ -639,38 +471,45 @@ class Interchange(DefaultModel):
             else:
                 handler = Handler()
 
-            system.handlers[name] = handler
+            system.collections[name] = handler
 
-        system["vdW"].store_matches(force_field, topology=system.topology)
-        system["vdW"].store_potentials(force_field=force_field)  # type: ignore[call-arg]
+        vdw_handler: FoyerVDWHandler = system["vdW"]  # type: ignore[assignment]
 
-        atom_slots = system["vdW"].slot_map
+        vdw_handler.store_matches(force_field, topology=system.topology)
+        vdw_handler.store_potentials(force_field=force_field)
 
-        system["Electrostatics"].store_charges(  # type: ignore
+        atom_slots = vdw_handler.key_map
+
+        electrostatics: FoyerElectrostaticsHandler = system["Electrostatics"]  # type: ignore[assignment]
+        electrostatics.store_charges(
             atom_slots=atom_slots,
             force_field=force_field,
         )
 
-        system["vdW"].scale_14 = force_field.lj14scale  # type: ignore[assignment]
-        system["Electrostatics"].scale_14 = force_field.coulomb14scale  # type: ignore[assignment]
+        vdw_handler.scale_14 = force_field.lj14scale  # type: ignore[assignment]
+        electrostatics.scale_14 = force_field.coulomb14scale  # type: ignore[assignment]
 
-        for name, handler in system.handlers.items():
+        for name, handler in system.collections.items():
             if name not in ["vdW", "Electrostatics"]:
                 handler.store_matches(atom_slots, topology=system.topology)
                 handler.store_potentials(force_field)
 
         # FIXME: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
 
-        charges = system["Electrostatics"].charges
+        charges = electrostatics.charges
 
         for molecule in system.topology.molecules:
             molecule_charges = [
-                charges[TopologyKey(atom_indices=(system.topology.atom_index(atom),))].m
+                charges[TopologyKey(atom_indices=(system.topology.atom_index(atom),))].m  # type: ignore[attr-defined]
                 for atom in molecule.atoms
             ]
             molecule.partial_charges = unit.Quantity(
-                molecule_charges, unit.elementary_charge
+                molecule_charges,
+                unit.elementary_charge,
             )
+
+        system.collections["vdW"] = vdw_handler
+        system.collections["Electrostatics"] = electrostatics
 
         return system
 
@@ -707,7 +546,7 @@ class Interchange(DefaultModel):
 
             via_internal.positions = _read_coordinates(gro_file)
             via_internal.box = _read_box(gro_file)
-            for key in via_intermol.handlers:
+            for key in via_intermol.collections:
                 if key not in [
                     "Bonds",
                     "Angles",
@@ -717,7 +556,6 @@ class Interchange(DefaultModel):
                     "Electrostatics",
                 ]:
                     raise Exception(f"Found unexpected handler with name {key}")
-                    via_internal.handlers[key] = via_intermol.handlers[key]
 
             return via_internal
 
@@ -734,102 +572,94 @@ class Interchange(DefaultModel):
         Note: This method only checks for equality of atom indices and will likely fail on complex cases
         involved layered parameters with multiple topology keys sharing identical atom indices.
         """
-        for handler in self.handlers:
+        for handler in self.collections:
             if handler == handler_name:
-                return self[handler_name]._get_parameters(atom_indices=atom_indices)  # type: ignore
+                return self[handler_name]._get_parameters(atom_indices=atom_indices)
         raise MissingParameterHandlerError(
-            f"Could not find parameter handler of name {handler_name}"
+            f"Could not find parameter handler of name {handler_name}",
         )
 
-    def _get_nonbonded_methods(self):
-        if "vdW" in self.handlers:
-            nonbonded_handler = "vdW"
-        elif "Buckingham-6" in self.handlers:
-            nonbonded_handler = "Buckingham-6"
+    def __getattr__(self, attr: str):
+        if attr == "handlers":
+            warnings.warn(
+                "The `handlers` attribute is deprecated. Use `collections` instead.",
+                InterchangeDeprecationWarning,
+            )
+            return self.collections
         else:
-            raise InternalInconsistencyError("Found no non-bonded handlers")
-
-        nonbonded_ = {
-            "electrostatics_periodic_potential": self.handlers[
-                "Electrostatics"
-            ].periodic_potential,
-            "vdw_method": self.handlers[nonbonded_handler].method,
-            "periodic_topology": self.box is not None,
-        }
-
-        return nonbonded_
-
-    # TODO: Does this cause any strange behaviors with Pydantic?
-    # Taken from https://stackoverflow.com/a/4017638/4248961
-    _aliases = {"box_vectors": "x", "coordinates": "positions", "top": "topology"}
-
-    # FIXME: These were turned off because they were screwing up the automatic use of validators
-    #        when assigning valeus to fields. Remove the appended `f`s to try to turn back on.
-    def __setattr__f(self, name, value):  # noqa
-        name = self._aliases.get(name, name)
-        object.__setattr__(self, name, value)
-
-    def __getattr__f(self, name):  # noqa
-        name = self._aliases.get(name, name)
-        return object.__getattribute__(self, name)
+            return super().__getattribute__(attr)
 
     @overload
-    def __getitem__(self, item: Literal["Bonds"]) -> "SMIRNOFFBondHandler":
-        ...
-
-    @overload
-    def __getitem__(self, item: Literal["Constraints"]) -> "SMIRNOFFConstraintHandler":
-        ...
-
-    @overload
-    def __getitem__(self, item: Literal["Angles"]) -> "SMIRNOFFAngleHandler":
-        ...
-
-    @overload
-    def __getitem__(self, item: Literal["vdW"]) -> "SMIRNOFFvdWHandler":
+    def __getitem__(self, item: Literal["Bonds"]) -> "SMIRNOFFBondCollection":
         ...
 
     @overload
     def __getitem__(
-        self, item: Literal["ProperTorsions"]
-    ) -> "SMIRNOFFProperTorsionHandler":
+        self,
+        item: Literal["Constraints"],
+    ) -> "SMIRNOFFConstraintCollection":
+        ...
+
+    @overload
+    def __getitem__(self, item: Literal["Angles"]) -> "SMIRNOFFAngleCollection":
         ...
 
     @overload
     def __getitem__(
-        self, item: Literal["ImproperTorsions"]
-    ) -> "SMIRNOFFImproperTorsionHandler":
+        self,
+        item: Literal["vdW"],
+    ) -> Union["SMIRNOFFvdWCollection", "FoyerVDWHandler"]:
         ...
 
     @overload
     def __getitem__(
-        self, item: Literal["VirtualSites"]
-    ) -> "SMIRNOFFVirtualSiteHandler":
+        self,
+        item: Literal["ProperTorsions"],
+    ) -> "SMIRNOFFProperTorsionCollection":
         ...
 
     @overload
     def __getitem__(
-        self, item: Literal["Electrostatics"]
-    ) -> "SMIRNOFFElectrostaticsHandler":
+        self,
+        item: Literal["ImproperTorsions"],
+    ) -> "SMIRNOFFImproperTorsionCollection":
+        ...
+
+    @overload
+    def __getitem__(
+        self,
+        item: Literal["VirtualSites"],
+    ) -> "SMIRNOFFVirtualSiteCollection":
+        ...
+
+    @overload
+    def __getitem__(
+        self,
+        item: Literal["Electrostatics"],
+    ) -> Union["SMIRNOFFElectrostaticsCollection", "FoyerElectrostaticsHandler"]:
+        ...
+
+    @overload
+    def __getitem__(self, item: str) -> Collection:
         ...
 
     def __getitem__(self, item: str):  # noqa
-        """Syntax sugar for looking up potential handlers or other components."""
+        """Syntax sugar for looking up collections or other components."""
         if type(item) != str:
             raise LookupError(
                 "Only str arguments can be currently be used for lookups.\n"
-                f"Found item {item} of type {type(item)}"
+                f"Found item {item} of type {type(item)}",
             )
         if item == "positions":
             return self.positions
         elif item in {"box", "box_vectors"}:
             return self.box
-        elif item in self.handlers:
-            return self.handlers[item]
+        elif item in self.collections:
+            return self.collections[item]
         else:
             raise LookupError(
                 f"Could not find component {item}. This object has the following "
-                f"potential handlers registered:\n\t{[*self.handlers.keys()]}"
+                f"collections registered:\n\t{[*self.collections.keys()]}",
             )
 
     def __add__(self, other):
@@ -840,7 +670,7 @@ class Interchange(DefaultModel):
             "Interchange object combination is experimental and likely to produce "
             "strange results. Any workflow using this method is not guaranteed to "
             "be suitable for production. Use with extreme caution and thoroughly "
-            "validate results!"
+            "validate results!",
         )
 
         self_copy = copy.deepcopy(self)
@@ -848,32 +678,19 @@ class Interchange(DefaultModel):
         self_copy.topology = _combine_topologies(self.topology, other.topology)
         atom_offset = self.topology.n_atoms
 
-        """
-        for handler_name in self.handlers:
-            if type(self.handlers[handler_name]).__name__ == "FoyerElectrostaticsHandler":
-                self.handlers[handler_name].slot_map = self.handlers[handler_name].charges
-        """
-
-        for handler_name, handler in other.handlers.items():
-
-            """
-            if type(handler).__name__ == "FoyerElectrostaticsHandler":
-                handler.slot_map = handler.charges
-            """
-
+        for handler_name, handler in other.collections.items():
             # TODO: Actually specify behavior in this case
             try:
-                self_handler = self_copy.handlers[handler_name]
+                self_handler = self_copy.collections[handler_name]
             except KeyError:
-                self_copy.handlers[handler_name] = handler
+                self_copy.collections[handler_name] = handler
                 warnings.warn(
                     f"'other' Interchange object has handler with name {handler_name} not "
-                    f"found in 'self,' but it has now been added."
+                    f"found in 'self,' but it has now been added.",
                 )
                 continue
 
-            for top_key, pot_key in handler.slot_map.items():
-
+            for top_key, pot_key in handler.key_map.items():
                 new_atom_indices = tuple(
                     idx + atom_offset for idx in top_key.atom_indices
                 )
@@ -884,30 +701,30 @@ class Interchange(DefaultModel):
                     assert len(new_atom_indices) == 1
                     new_top_key.this_atom_index = new_atom_indices[0]
 
-                self_handler.slot_map.update({new_top_key: pot_key})
+                self_handler.key_map.update({new_top_key: pot_key})
                 if handler_name == "Constraints":
                     self_handler.constraints.update(
-                        {pot_key: handler.constraints[pot_key]}
+                        {pot_key: handler.constraints[pot_key]},
                     )
                 else:
                     self_handler.potentials.update(
-                        {pot_key: handler.potentials[pot_key]}
+                        {pot_key: handler.potentials[pot_key]},
                     )
 
-            self_copy.handlers[handler_name] = self_handler
+            self_copy.collections[handler_name] = self_handler
 
         if self_copy.positions is not None and other.positions is not None:
             new_positions = np.vstack([self_copy.positions, other.positions])
             self_copy.positions = new_positions
         else:
             warnings.warn(
-                "Setting positions to None because one or both objects added together were missing positions."
+                "Setting positions to None because one or both objects added together were missing positions.",
             )
             self_copy.positions = None
 
         if not np.all(self_copy.box == other.box):
             raise UnsupportedCombinationError(
-                "Combination with unequal box vectors is not curretnly supported"
+                "Combination with unequal box vectors is not curretnly supported",
             )
 
         return self_copy
@@ -916,21 +733,6 @@ class Interchange(DefaultModel):
         periodic = self.box is not None
         n_atoms = self.topology.n_atoms
         return (
-            f"Interchange with {len(self.handlers)} potential handlers, "
+            f"Interchange with {len(self.collections)} collections, "
             f"{'' if periodic else 'non-'}periodic topology with {n_atoms} atoms."
         )
-
-
-# This is to re-implement:
-#   https://github.com/openforcefield/openff-toolkit/blob/60014820e6a333bed04e8bf5181d177da066da4d/
-#   openff/toolkit/typing/engines/smirnoff/parameters.py#L2509-L2515
-# It doesn't seem ideal to assume that matching SMILES === isomorphism?
-class _HashedMolecule(Molecule):
-    def __hash__(self):
-        return hash(self.to_smiles())
-
-
-def _assert_all_isomorphic(molecule_list: List[Molecule]) -> bool:
-    hashed_molecules = {_HashedMolecule(molecule) for molecule in molecule_list}
-
-    return len(hashed_molecules) == len(molecule_list)
