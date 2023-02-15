@@ -105,12 +105,12 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
         topology: Topology,
     ) -> None:
         """
-        Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
+        Populate self.key_map with key-val pairs of slots and unique potential identifiers.
         """
-        if self.slot_map:
-            # TODO: Should the slot_map always be reset, or should we be able to partially
+        if self.key_map:
+            # TODO: Should the key_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
-            self.slot_map: Dict[BondKey, PotentialKey] = dict()  # type: ignore[assignment]
+            self.key_map: Dict[BondKey, PotentialKey] = dict()  # type: ignore[assignment]
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             param = val.parameter_type
@@ -134,7 +134,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
                 associated_handler=parameter_handler.TAGNAME,
                 bond_order=fractional_bond_order,
             )
-            self.slot_map[topology_key] = potential_key
+            self.key_map[topology_key] = potential_key
 
         valence_terms = self.valence_terms(topology)
 
@@ -152,7 +152,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
         """
         if self.potentials:
             self.potentials = dict()
-        for topology_key, potential_key in self.slot_map.items():
+        for topology_key, potential_key in self.key_map.items():
             smirks = potential_key.id
             parameter = parameter_handler.parameters[smirks]
             if topology_key.bond_order:
@@ -230,7 +230,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
             fractional_bond_order_interpolation=parameter_handler.fractional_bondorder_interpolation,
         )
 
-        if handler._get_uses_interpolation(parameter_handler):  # type: ignore[attr-defined]
+        if handler._get_uses_interpolation(parameter_handler):
             for molecule in topology.molecules:
                 if _check_partial_bond_orders(
                     molecule,
@@ -241,7 +241,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
                 # knobs to user via API
                 molecule.generate_conformers(n_conformers=1)
                 molecule.assign_fractional_bond_orders(
-                    bond_order_model=handler.fractional_bond_order_method.lower(),  # type: ignore[attr-defined]
+                    bond_order_model=handler.fractional_bond_order_method.lower(),
                 )
 
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
@@ -290,7 +290,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
                 raise InvalidParameterHandlerError(type(parameter_handler))
 
         handler = cls()
-        handler.store_constraints(  # type: ignore[attr-defined]
+        handler.store_constraints(
             parameter_handlers=parameter_handlers,
             topology=topology,
         )
@@ -303,8 +303,8 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
         topology: Topology,
     ) -> None:
         """Store constraints."""
-        if self.slot_map:
-            self.slot_map = dict()
+        if self.key_map:
+            self.key_map = dict()
 
         try:
             constraint_handler = [
@@ -335,7 +335,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
                     id=smirks,
                     associated_handler="Constraints",
                 )
-                self.slot_map[topology_key] = potential_key
+                self.key_map[topology_key] = potential_key
                 distance = match.parameter_type.distance
             else:
                 # This constraint parameter depends on the BondHandler ...
@@ -346,8 +346,8 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
                         "of this constraint is not specified.",
                     )
                 # ... so use the same PotentialKey instance as the BondHandler to look up the distance
-                potential_key = bonds.slot_map[topology_key]  # type: ignore[union-attr]
-                self.slot_map[topology_key] = potential_key
+                potential_key = bonds.key_map[topology_key]  # type: ignore[union-attr]
+                self.key_map[topology_key] = potential_key
                 distance = bonds.potentials[potential_key].parameters["length"]  # type: ignore[union-attr]
             potential = Potential(
                 parameters={
@@ -393,7 +393,7 @@ class SMIRNOFFAngleCollection(SMIRNOFFCollection):
         Populate self.potentials with key-val pairs of [AngleKey, PotentialKey].
 
         """
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             smirks = potential_key.id
             parameter = parameter_handler.parameters[smirks]
             potential = Potential(
@@ -431,11 +431,11 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
         topology: Topology,
     ) -> None:
         """
-        Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
+        Populate self.key_map with key-val pairs of slots and unique potential identifiers.
 
         """
-        if self.slot_map:
-            self.slot_map: Dict[ProperTorsionKey, PotentialKey] = dict()  # type: ignore[assignment]
+        if self.key_map:
+            self.key_map: Dict[ProperTorsionKey, PotentialKey] = dict()  # type: ignore[assignment]
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             param = val.parameter_type
@@ -463,7 +463,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
                     associated_handler="ProperTorsions",
                     bond_order=fractional_bond_order,
                 )
-                self.slot_map[topology_key] = potential_key
+                self.key_map[topology_key] = potential_key
 
         _check_all_valence_terms_assigned(
             handler=parameter_handler,
@@ -477,7 +477,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
         Populate self.potentials with key-val pairs of [ProperTorsionKey, PotentialKey].
 
         """
-        for topology_key, potential_key in self.slot_map.items():
+        for topology_key, potential_key in self.key_map.items():
             smirks = potential_key.id
             n = potential_key.mult
             parameter = parameter_handler.parameters[smirks]
@@ -548,7 +548,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
                 # TODO: expose conformer generation and fractional bond order assigment knobs via API?
                 ref_mol.generate_conformers(n_conformers=1)
                 ref_mol.assign_fractional_bond_orders(
-                    bond_order_model=handler.fractional_bond_order_method.lower(),  # type: ignore[attr-defined]
+                    bond_order_model=handler.fractional_bond_order_method.lower(),
                 )
 
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
@@ -582,11 +582,11 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection):
         topology: Topology,
     ) -> None:
         """
-        Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
+        Populate self.key_map with key-val pairs of slots and unique potential identifiers.
 
         """
-        if self.slot_map:
-            self.slot_map = dict()
+        if self.key_map:
+            self.key_map = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             parameter_handler._assert_correct_connectivity(
@@ -619,7 +619,7 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection):
                         mult=n,
                         associated_handler="ImproperTorsions",
                     )
-                    self.slot_map[topology_key] = potential_key
+                    self.key_map[topology_key] = potential_key
 
     def store_potentials(self, parameter_handler: ImproperTorsionHandler) -> None:
         """
@@ -628,7 +628,7 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection):
         """
         _default_idivf = parameter_handler.default_idivf
 
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             smirks = potential_key.id
             n = potential_key.mult
             parameter = parameter_handler.parameters[smirks]

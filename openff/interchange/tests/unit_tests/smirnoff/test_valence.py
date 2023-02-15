@@ -45,7 +45,7 @@ class TestSMIRNOFFValenceCollections(_BaseTest):
         )
 
         top_key = BondKey(atom_indices=(0, 1))
-        pot_key = bond_potentials.slot_map[top_key]
+        pot_key = bond_potentials.key_map[top_key]
         assert pot_key.associated_handler == "Bonds"
         pot = bond_potentials.potentials[pot_key]
 
@@ -69,7 +69,7 @@ class TestSMIRNOFFValenceCollections(_BaseTest):
         )
 
         top_key = AngleKey(atom_indices=(0, 1, 2))
-        pot_key = angle_potentials.slot_map[top_key]
+        pot_key = angle_potentials.key_map[top_key]
         assert pot_key.associated_handler == "Angles"
         pot = angle_potentials.potentials[pot_key]
 
@@ -89,7 +89,7 @@ class TestSMIRNOFFValenceCollections(_BaseTest):
         collection = SMIRNOFFImproperTorsionCollection()
         collection.store_matches(parameter_handler, formaldehyde.to_topology())
 
-        assert len(collection.slot_map) == 3
+        assert len(collection.key_map) == 3
 
         for indices in [
             (0, 1, 2, 3),
@@ -97,7 +97,7 @@ class TestSMIRNOFFValenceCollections(_BaseTest):
             (0, 3, 1, 2),
         ]:
             key = ImproperTorsionKey(atom_indices=indices, mult=0)
-            assert key in collection.slot_map
+            assert key in collection.key_map
 
     def test_store_nonstandard_improper_idivf(self, acetaldehyde):
         handler = ImproperTorsionHandler(version=0.3)
@@ -172,7 +172,7 @@ class TestConstraintCollection(_BaseTest):
             topology=topology,
         )
 
-        assert len(constraints.slot_map) == n_constraints
+        assert len(constraints.key_map) == n_constraints
 
     def test_constraints_with_distance(self, tip3p, water):
         topology = water.to_topology()
@@ -183,7 +183,7 @@ class TestConstraintCollection(_BaseTest):
             topology=topology,
         )
 
-        assert len(constraints.slot_map) == 3
+        assert len(constraints.key_map) == 3
         assert len(constraints.constraints) == 2
 
 
@@ -218,8 +218,8 @@ class TestBondOrderInterpolation(_BaseTest):
         )
 
         for pot_key1, pot_key2 in zip(
-            bonds.slot_map.values(),
-            bonds_mod.slot_map.values(),
+            bonds.key_map.values(),
+            bonds_mod.key_map.values(),
         ):
             k1 = bonds.potentials[pot_key1].parameters["k"].m_as(kcal_mol_a2)
             k2 = bonds_mod.potentials[pot_key2].parameters["k"].m_as(kcal_mol_a2)
@@ -319,9 +319,7 @@ class TestParameterInterpolation(_BaseTest):
             bond_order=top.get_bond_between(1, 2).bond.fractional_bond_order,
         )
 
-        found_k = (
-            out["Bonds"].potentials[out["Bonds"].slot_map[top_key]].parameters["k"]
-        )
+        found_k = out["Bonds"].potentials[out["Bonds"].key_map[top_key]].parameters["k"]
         assert found_k == 300 * kcal_mol_a2
 
     @pytest.mark.slow()
@@ -349,13 +347,13 @@ class TestParameterInterpolation(_BaseTest):
             atom_indices=(2, 3),
             bond_order=top.get_bond_between(2, 3).bond.fractional_bond_order,
         )
-        bond1_pot_key = out["Bonds"].slot_map[bond1_top_key]
+        bond1_pot_key = out["Bonds"].key_map[bond1_top_key]
 
         bond2_top_key = BondKey(
             atom_indices=(0, 4),
             bond_order=top.get_bond_between(0, 4).bond.fractional_bond_order,
         )
-        bond2_pot_key = out["Bonds"].slot_map[bond2_top_key]
+        bond2_pot_key = out["Bonds"].key_map[bond2_top_key]
 
         assert numpy.allclose(
             out["Bonds"].potentials[bond1_pot_key].parameters["k"],

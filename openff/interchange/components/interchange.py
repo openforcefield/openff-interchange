@@ -24,8 +24,13 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
 )
 from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if TYPE_CHECKING:
+    from openff.interchange.components.foyer import (
+        FoyerElectrostaticsHandler,
+        FoyerVDWHandler,
+    )
     from openff.interchange.smirnoff._nonbonded import (
         SMIRNOFFElectrostaticsCollection,
         SMIRNOFFvdWCollection,
@@ -47,7 +52,7 @@ if TYPE_CHECKING:
 
 def _sanitize(o):
     # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
-    # for the mapping dicts `slot_map` and `potentials`.
+    # for the mapping dicts `key_map` and `potentials`.
     if isinstance(o, dict):
         return {_sanitize(k): _sanitize(v) for k, v in o.items()}
     elif isinstance(o, (PotentialKey, TopologyKey)):
@@ -468,18 +473,21 @@ class Interchange(DefaultModel):
 
             system.collections[name] = handler
 
-        system["vdW"].store_matches(force_field, topology=system.topology)
-        system["vdW"].store_potentials(force_field=force_field)  # type: ignore[call-arg]
+        vdw_handler: FoyerVDWHandler = system["vdW"]  # type: ignore[assignment]
 
-        atom_slots = system["vdW"].slot_map
+        vdw_handler.store_matches(force_field, topology=system.topology)
+        vdw_handler.store_potentials(force_field=force_field)
 
-        system["Electrostatics"].store_charges(  # type: ignore
+        atom_slots = vdw_handler.key_map
+
+        electrostatics: FoyerElectrostaticsHandler = system["Electrostatics"]  # type: ignore[assignment]
+        electrostatics.store_charges(
             atom_slots=atom_slots,
             force_field=force_field,
         )
 
-        system["vdW"].scale_14 = force_field.lj14scale  # type: ignore[assignment]
-        system["Electrostatics"].scale_14 = force_field.coulomb14scale  # type: ignore[assignment]
+        vdw_handler.scale_14 = force_field.lj14scale  # type: ignore[assignment]
+        electrostatics.scale_14 = force_field.coulomb14scale  # type: ignore[assignment]
 
         for name, handler in system.collections.items():
             if name not in ["vdW", "Electrostatics"]:
@@ -488,17 +496,20 @@ class Interchange(DefaultModel):
 
         # FIXME: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
 
-        charges = system["Electrostatics"].charges
+        charges = electrostatics.charges
 
         for molecule in system.topology.molecules:
             molecule_charges = [
-                charges[TopologyKey(atom_indices=(system.topology.atom_index(atom),))].m
+                charges[TopologyKey(atom_indices=(system.topology.atom_index(atom),))].m  # type: ignore[attr-defined]
                 for atom in molecule.atoms
             ]
             molecule.partial_charges = unit.Quantity(
                 molecule_charges,
                 unit.elementary_charge,
             )
+
+        system.collections["vdW"] = vdw_handler
+        system.collections["Electrostatics"] = electrostatics
 
         return system
 
@@ -563,10 +574,20 @@ class Interchange(DefaultModel):
         """
         for handler in self.collections:
             if handler == handler_name:
-                return self[handler_name]._get_parameters(atom_indices=atom_indices)  # type: ignore
+                return self[handler_name]._get_parameters(atom_indices=atom_indices)
         raise MissingParameterHandlerError(
             f"Could not find parameter handler of name {handler_name}",
         )
+
+    def __getattr__(self, attr: str):
+        if attr == "handlers":
+            warnings.warn(
+                "The `handlers` attribute is deprecated. Use `collections` instead.",
+                InterchangeDeprecationWarning,
+            )
+            return self.collections
+        else:
+            return super().__getattribute__(attr)
 
     @overload
     def __getitem__(self, item: Literal["Bonds"]) -> "SMIRNOFFBondCollection":
@@ -584,7 +605,10 @@ class Interchange(DefaultModel):
         ...
 
     @overload
-    def __getitem__(self, item: Literal["vdW"]) -> "SMIRNOFFvdWCollection":
+    def __getitem__(
+        self,
+        item: Literal["vdW"],
+    ) -> Union["SMIRNOFFvdWCollection", "FoyerVDWHandler"]:
         ...
 
     @overload
@@ -612,7 +636,11 @@ class Interchange(DefaultModel):
     def __getitem__(
         self,
         item: Literal["Electrostatics"],
-    ) -> "SMIRNOFFElectrostaticsCollection":
+    ) -> Union["SMIRNOFFElectrostaticsCollection", "FoyerElectrostaticsHandler"]:
+        ...
+
+    @overload
+    def __getitem__(self, item: str) -> Collection:
         ...
 
     def __getitem__(self, item: str):  # noqa
@@ -662,7 +690,7 @@ class Interchange(DefaultModel):
                 )
                 continue
 
-            for top_key, pot_key in handler.slot_map.items():
+            for top_key, pot_key in handler.key_map.items():
                 new_atom_indices = tuple(
                     idx + atom_offset for idx in top_key.atom_indices
                 )
@@ -673,7 +701,7 @@ class Interchange(DefaultModel):
                     assert len(new_atom_indices) == 1
                     new_top_key.this_atom_index = new_atom_indices[0]
 
-                self_handler.slot_map.update({new_top_key: pot_key})
+                self_handler.key_map.update({new_top_key: pot_key})
                 if handler_name == "Constraints":
                     self_handler.constraints.update(
                         {pot_key: handler.constraints[pot_key]},

@@ -126,7 +126,7 @@ class SMIRNOFFvdWCollection(_SMIRNOFFNonbondedCollection):
         self.method = parameter_handler.method.lower()
         self.cutoff = parameter_handler.cutoff
 
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             smirks = potential_key.id
             parameter = parameter_handler.parameters[smirks]
 
@@ -232,7 +232,7 @@ class SMIRNOFFvdWCollection(_SMIRNOFFNonbondedCollection):
             #         }
             #     )
 
-            self.slot_map.update({top_key: pot_key})  # type: ignore[dict-item]
+            self.key_map.update({top_key: pot_key})
             self.potentials.update({pot_key: pot})
 
 
@@ -299,7 +299,7 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
             lambda: 0.0,
         )
 
-        for topology_key, potential_key in self.slot_map.items():
+        for topology_key, potential_key in self.key_map.items():
             potential = self.potentials[potential_key]
 
             for parameter_key, parameter_value in potential.parameters.items():
@@ -441,7 +441,7 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
                 },
             )
 
-            self.slot_map.update({virtual_site_key: virtual_site_potential_key})  # type: ignore[dict-item]
+            self.key_map.update({virtual_site_key: virtual_site_potential_key})
             self.potentials.update({virtual_site_potential_key: virtual_site_potential})
 
             for i, atom_index in enumerate(atom_indices):  # noqa
@@ -449,7 +449,7 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
 
                 # TODO: Better way of dedupliciating this case (charge increments from multiple different
                 #       virtual sites are applied to the same atom)
-                while topology_key in self.slot_map:
+                while topology_key in self.key_map:
                     topology_key.mult += 1000  # type: ignore[attr-defined]
 
                 potential_key = PotentialKey(
@@ -465,7 +465,7 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
 
                 potential = Potential(parameters={"charge_increment": charge_increment})
 
-                self.slot_map[topology_key] = potential_key
+                self.key_map[topology_key] = potential_key
                 self.potentials[potential_key] = potential
 
     @classmethod
@@ -824,7 +824,7 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
         allow_nonintegral_charges: bool = False,
     ) -> None:
         """
-        Populate self.slot_map with key-val pairs of slots and unique potential identifiers.
+        Populate self.key_map with key-val pairs of slots and unique potential identifiers.
         """
         # Reshape the parameter handlers into a dictionary for easier referencing.
         parameter_handlers = {
@@ -837,7 +837,7 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
         }
 
         self.potentials = dict()
-        self.slot_map = dict()
+        self.key_map = dict()
 
         groups = topology.identical_molecule_groups
 
@@ -882,13 +882,13 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
 
                             # Have this new key (on a duplicate molecule) point to the same potential
                             # as the old key (on a unique/reference molecule)
-                            self.slot_map[new_key] = matches[key]
+                            self.key_map[new_key] = matches[key]
 
                     # for key in _slow_key_lookup_by_atom_index(
                     #     matches,
                     #     topology_atom_index,
                     # ):
-                    #     self.slot_map[key] = matches[key]
+                    #     self.key_map[key] = matches[key]
 
         topology_charges = [0.0] * topology.n_atoms
         for key, val in self.get_charges().items():

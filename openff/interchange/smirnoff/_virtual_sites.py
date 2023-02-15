@@ -31,7 +31,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
     A handler which stores the information necessary to construct virtual sites (virtual particles).
     """
 
-    slot_map: Dict[VirtualSiteKey, PotentialKey] = Field(
+    key_map: Dict[VirtualSiteKey, PotentialKey] = Field(
         dict(),
         description="A mapping between VirtualSiteKey objects and PotentialKey objects.",
     )  # type: ignore[assignment]
@@ -81,9 +81,9 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
         parameter_handler: ParameterHandler,
         topology: Topology,
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [VirtualSiteKey, PotentialKey]."""
-        if self.slot_map:
-            self.slot_map = dict()
+        """Populate self.key_map with key-val pairs of [VirtualSiteKey, PotentialKey]."""
+        if self.key_map:
+            self.key_map = dict()
 
         # Initialze the virtual site index to begin after the topoogy's atoms (0-indexed)
         virtual_site_index = topology.n_atoms
@@ -110,7 +110,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                         ),
                         associated_handler="VirtualSites",
                     )
-                    self.slot_map[virtual_site_key] = potential_key
+                    self.key_map[virtual_site_key] = potential_key
                     self.virtual_site_key_topology_index_map[
                         virtual_site_key
                     ] = virtual_site_index
@@ -125,7 +125,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
         """Store VirtualSite-specific parameter-like data."""
         if self.potentials:
             self.potentials = dict()
-        for virtual_site_key, potential_key in self.slot_map.items():
+        for virtual_site_key, potential_key in self.key_map.items():
             # TODO: This logic assumes no spaces in the SMIRKS pattern, name or `match` attribute
             smirks, _, _ = potential_key.id.split(" ")
             parameter = parameter_handler.parameters[smirks]
@@ -149,7 +149,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                     "epsilon": parameter.epsilon,
                 },
             )
-            vdw_handler.slot_map[virtual_site_key] = vdw_key  # type: ignore[index]
+            vdw_handler.key_map[virtual_site_key] = vdw_key
             vdw_handler.potentials[vdw_key] = vdw_potential
 
             electrostatics_key = PotentialKey(
@@ -163,7 +163,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                     ),
                 },
             )
-            electrostatics_handler.slot_map[virtual_site_key] = electrostatics_key  # type: ignore[index]
+            electrostatics_handler.key_map[virtual_site_key] = electrostatics_key
             electrostatics_handler.potentials[
                 electrostatics_key
             ] = electrostatics_potential
@@ -189,7 +189,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
         return origin_weight, x_direction, y_direction
 
     def _get_local_frame_position(self, virtual_site_key: "VirtualSiteKey"):
-        potential_key = self.slot_map[virtual_site_key]
+        potential_key = self.key_map[virtual_site_key]
         potential = self.potentials[potential_key]
         if virtual_site_key.type == "BondCharge":
             distance = potential.parameters["distance"]

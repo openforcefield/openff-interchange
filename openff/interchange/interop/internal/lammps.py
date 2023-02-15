@@ -19,19 +19,19 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
 
     n_atoms = openff_sys.topology.n_atoms
     if "Bonds" in openff_sys.collections:
-        n_bonds = len(openff_sys["Bonds"].slot_map.keys())
+        n_bonds = len(openff_sys["Bonds"].key_map.keys())
     else:
         n_bonds = 0
     if "Angles" in openff_sys.collections:
-        n_angles = len(openff_sys["Angles"].slot_map.keys())
+        n_angles = len(openff_sys["Angles"].key_map.keys())
     else:
         n_angles = 0
     if "ProperTorsions" in openff_sys.collections:
-        n_propers = len(openff_sys["ProperTorsions"].slot_map.keys())
+        n_propers = len(openff_sys["ProperTorsions"].key_map.keys())
     else:
         n_propers = 0
     if "ImproperTorsions" in openff_sys.collections:
-        n_impropers = len(openff_sys["ImproperTorsions"].slot_map.keys())
+        n_impropers = len(openff_sys["ImproperTorsions"].key_map.keys())
     else:
         n_impropers = 0
 
@@ -90,11 +90,11 @@ def to_lammps(openff_sys: Interchange, file_path: Union[Path, str]):
 
         vdw_handler = openff_sys["vdW"]
         atom_type_map = dict(enumerate(vdw_handler.potentials))
-        slot_map_inv = dict({v: k for k, v in vdw_handler.slot_map.items()})
+        key_map_inv = dict({v: k for k, v in vdw_handler.key_map.items()})
 
         for atom_type_idx, smirks in atom_type_map.items():
             # Find just one topology atom matching this SMIRKS by vdW
-            matched_atom_idx = slot_map_inv[smirks].atom_indices[0]
+            matched_atom_idx = key_map_inv[smirks].atom_indices[0]
             matched_atom = openff_sys.topology.atom(matched_atom_idx)
             mass = matched_atom.mass.m
 
@@ -281,10 +281,10 @@ def _write_atoms(lmp_file: IO, openff_sys: Interchange, atom_type_map: Dict):
             molecule_index = 0
 
         top_key = AngleKey(atom_indices=(atom_index,))
-        pot_key = vdw_hander.slot_map[top_key]
+        pot_key = vdw_hander.key_map[top_key]
         atom_type = atom_type_map_inv[pot_key]
 
-        charge = charges[top_key].m_as(unit.e)
+        charge = charges[top_key].m_as(unit.e)  # type: ignore[union-attr]
         pos = openff_sys.positions[atom_index].to(unit.angstrom).magnitude
         lmp_file.write(
             "{:d}\t{:d}\t{:d}\t{:.8g}\t{:.8g}\t{:.8g}\t{:.8g}\n".format(
@@ -314,11 +314,11 @@ def _write_bonds(lmp_file: IO, openff_sys: Interchange):
             openff_sys.topology.atom_index(bond.atom2),
         )
         top_key = BondKey(atom_indices=indices)
-        if top_key in bond_handler.slot_map:
-            pot_key = bond_handler.slot_map[top_key]
+        if top_key in bond_handler.key_map:
+            pot_key = bond_handler.key_map[top_key]
         else:
             top_key = BondKey(atom_indices=indices[::-1])
-            pot_key = bond_handler.slot_map[top_key]
+            pot_key = bond_handler.key_map[top_key]
 
         bond_type = bond_type_map_inv[pot_key]
 
@@ -345,7 +345,7 @@ def _write_angles(lmp_file: IO, openff_sys: Interchange):
         # These are "topology indices"
         indices = tuple(openff_sys.topology.atom_index(a) for a in angle)
         top_key = AngleKey(atom_indices=indices)
-        pot_key = angle_handler.slot_map[top_key]
+        pot_key = angle_handler.key_map[top_key]
         angle_type = angle_type_map_inv[pot_key]
 
         lmp_file.write(
@@ -371,7 +371,7 @@ def _write_propers(lmp_file: IO, openff_sys: Interchange):
     for proper_idx, proper in enumerate(openff_sys.topology.propers):
         indices = tuple(openff_sys.topology.atom_index(a) for a in proper)
 
-        for top_key, pot_key in proper_handler.slot_map.items():
+        for top_key, pot_key in proper_handler.key_map.items():
             if indices == top_key.atom_indices:
                 proper_type_idx = proper_type_map_inv[pot_key]
 
@@ -404,7 +404,7 @@ def _write_impropers(lmp_file: IO, openff_sys: Interchange):
         # which is how the improper handler's slot map is built up
         _indices = tuple((indices[1], indices[0], indices[2], indices[3]))
 
-        for top_key, pot_key in improper_handler.slot_map.items():
+        for top_key, pot_key in improper_handler.key_map.items():
             if _indices == top_key.atom_indices:
                 improper_type_idx = improper_type_map_inv[pot_key]
 

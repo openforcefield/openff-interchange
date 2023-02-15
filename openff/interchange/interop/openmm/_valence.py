@@ -28,7 +28,7 @@ def _process_constraints(
 
     constrained_pairs: Set[Tuple[int, ...]] = set()
 
-    for top_key, pot_key in constraint_handler.slot_map.items():
+    for top_key, pot_key in constraint_handler.key_map.items():
         openff_indices = top_key.atom_indices
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
@@ -73,7 +73,7 @@ def _process_bond_forces(
 
     has_constraint_handler = "Constraints" in openff_sys.collections
 
-    for top_key, pot_key in bond_handler.slot_map.items():
+    for top_key, pot_key in bond_handler.key_map.items():
         openff_indices = top_key.atom_indices
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
@@ -134,7 +134,7 @@ def _process_angle_forces(
 
     has_constraint_handler = "Constraints" in openff_sys.collections
 
-    for top_key, pot_key in angle_handler.slot_map.items():
+    for top_key, pot_key in angle_handler.key_map.items():
         openff_indices = top_key.atom_indices
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
@@ -199,7 +199,7 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys, particle_map):
 
     proper_torsion_handler = openff_sys["ProperTorsions"]
 
-    for top_key, pot_key in proper_torsion_handler.slot_map.items():
+    for top_key, pot_key in proper_torsion_handler.key_map.items():
         openff_indices = top_key.atom_indices
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
@@ -246,7 +246,7 @@ def _process_rb_torsion_forces(openff_sys, openmm_sys, particle_map):
 
     rb_torsion_handler = openff_sys["RBTorsions"]
 
-    for top_key, pot_key in rb_torsion_handler.slot_map.items():
+    for top_key, pot_key in rb_torsion_handler.key_map.items():
         openff_indices = top_key.atom_indices
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
@@ -289,7 +289,7 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys, particle_map):
 
     improper_torsion_handler = openff_sys["ImproperTorsions"]
 
-    for top_key, pot_key in improper_torsion_handler.slot_map.items():
+    for top_key, pot_key in improper_torsion_handler.key_map.items():
         openff_indices = top_key.atom_indices
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 

@@ -189,11 +189,11 @@ class TestGROMACS(_BaseTest):
         out.to_top("tmp.top")
 
         # Sanity check; toluene should have some improper(s)
-        assert len(out["ImproperTorsions"].slot_map) > 0
+        assert len(out["ImproperTorsions"].key_map) > 0
 
         struct = parmed.load_file("tmp.top")
         n_impropers_parmed = len([d for d in struct.dihedrals if d.improper])
-        assert n_impropers_parmed == len(out["ImproperTorsions"].slot_map)
+        assert n_impropers_parmed == len(out["ImproperTorsions"].key_map)
 
     @pytest.mark.slow()
     @skip_if_missing("intermol")
@@ -285,9 +285,9 @@ class TestGROMACS(_BaseTest):
 
         for atom in top.atoms:
             top_key = TopologyKey(atom_indices=(top.atom_index(atom),))
-            buck.slot_map.update({top_key: pot_key})
+            buck.key_map.update({top_key: pot_key})
 
-            coul.slot_map.update({top_key: pot_key})
+            coul.key_map.update({top_key: pot_key})
             coul.potentials.update(
                 {pot_key: Potential(parameters={"charge": 0 * unit.elementary_charge})},
             )

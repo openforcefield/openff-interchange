@@ -48,13 +48,13 @@ def get_openmm_energies(
     positions = off_sys.positions
 
     if "VirtualSites" in off_sys.collections:
-        if len(off_sys["VirtualSites"].slot_map) > 0:
+        if len(off_sys["VirtualSites"].key_map) > 0:
             if not combine_nonbonded_forces:
                 raise NotImplementedError(
                     "Cannot yet split out NonbondedForce components while virtual sites are present.",
                 )
 
-            n_virtual_sites = len(off_sys["VirtualSites"].slot_map)
+            n_virtual_sites = len(off_sys["VirtualSites"].key_map)
 
             # TODO: Actually compute virtual site positions based on initial conformers
             virtual_site_positions = np.zeros((n_virtual_sites, 3))
