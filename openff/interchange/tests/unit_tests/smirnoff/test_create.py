@@ -307,6 +307,29 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
         )
 
 
+class TestCreateWithPlugins(_BaseTest):
+    def test_setup_plugins(self):
+        from nonbonded_plugins import BuckinghamHandler, SMIRNOFFBuckinghamCollection
+
+        from openff.interchange.smirnoff._create import _PLUGIN_CLASS_MAPPING
+
+        assert _PLUGIN_CLASS_MAPPING[BuckinghamHandler] == SMIRNOFFBuckinghamCollection
+
+    def test_create_buckingham(self):
+        force_field = ForceField(
+            get_test_file_path("buckingham.offxml"),
+            load_plugins=True,
+        )
+
+        out = Interchange.from_smirnoff(
+            force_field,
+            Molecule.from_smiles("O").to_topology(),
+        )
+
+        assert "Buckingham" in out.collections
+        assert len(out["Buckingham"].potentials) == 2
+
+
 @skip_if_missing("jax")
 class TestMatrixRepresentations(_BaseTest):
     @pytest.mark.parametrize(
