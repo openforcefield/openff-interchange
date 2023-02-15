@@ -26,11 +26,11 @@ from openff.interchange.tests import _BaseTest, get_test_file_path
 
 
 def _get_interpolated_bond_k(bond_handler) -> float:
-    for key in bond_handler.slot_map:
+    for key in bond_handler.key_map:
         if key.bond_order is not None:
             topology_key = key
             break
-    potential_key = bond_handler.slot_map[topology_key]
+    potential_key = bond_handler.key_map[topology_key]
     return bond_handler.potentials[potential_key].parameters["k"].m
 
 
@@ -249,7 +249,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
         )
 
         bond_key = BondKey(atom_indices=sorted_indices, bond_order=1.55)
-        bond_potential = out["Bonds"].slot_map[bond_key]
+        bond_potential = out["Bonds"].key_map[bond_key]
         found_bond_k = out["Bonds"].potentials[bond_potential].parameters["k"]
         found_bond_length = out["Bonds"].potentials[bond_potential].parameters["length"]
 
@@ -257,14 +257,14 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
         assert found_bond_length.m_as(unit.angstrom) == pytest.approx(1.345)
 
         # TODO: There should be a better way of plucking this torsion's TopologyKey
-        for topology_key in out["ProperTorsions"].slot_map.keys():
+        for topology_key in out["ProperTorsions"].key_map.keys():
             if (
                 tuple(sorted(topology_key.atom_indices))[1:3] == sorted_indices
             ) and topology_key.bond_order == 1.55:
                 torsion_key = topology_key
                 break
 
-        torsion_potential = out["ProperTorsions"].slot_map[torsion_key]
+        torsion_potential = out["ProperTorsions"].key_map[torsion_key]
         found_torsion_k = (
             out["ProperTorsions"].potentials[torsion_potential].parameters["k"]
         )

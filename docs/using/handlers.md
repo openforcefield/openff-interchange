@@ -45,7 +45,7 @@ potential key. For classically atom-typed force fields, a key can be
 constructed using atom types or combinations thereof.
 
 These objects are strung together with two mappings, each stored as dictionary
-attributes of a `Collection`. The `.slot_map` attribute maps segments of
+attributes of a `Collection`. The `.key_map` attribute maps segments of
 a topology to the potential keys (`TopologyKey` to `PotentialKey` mapping). The
 `.potentials` attribute maps the potential keys to the potentials
 (`PotentialKey` to `Potential`). This allows many topology keys to map to the
@@ -86,7 +86,7 @@ dict_keys(['Bonds', 'Constraints', 'Angles', 'ProperTorsions',
 >>> interchange.handlers['ImproperTorsions']  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
 SMIRNOFFImproperTorsionCollection(type='ImproperTorsions',
     expression='k*(1+cos(periodicity*theta-phase))',
-    slot_map={},
+    key_map={},
     potentials={})
 
 ```
@@ -97,7 +97,7 @@ carbon-hydrogen bonds. It's clear from the SMIRKS codes that atoms 0 and 1 are
 the carbon atoms, and atoms 2 through 7 are the hydrogens:
 
 ```pycon
->>> interchange.handlers['Bonds'].slot_map  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
+>>> interchange.handlers['Bonds'].key_map  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
 {TopologyKey(atom_indices=(0, 1), ...): PotentialKey(id='[#6X4:1]-[#6X4:2]', ...),
  TopologyKey(atom_indices=(0, 2), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
  TopologyKey(atom_indices=(0, 3), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
@@ -135,7 +135,7 @@ the bonds have been updated:
 >>> from openff.units import unit
 >>> # Get the potential from the first C-H bond
 >>> top_key = TopologyKey(atom_indices=(0, 2))
->>> pot_key = interchange.handlers['Bonds'].slot_map[top_key]
+>>> pot_key = interchange.handlers['Bonds'].key_map[top_key]
 >>> potential = interchange.handlers['Bonds'].potentials[pot_key]
 >>> # Modify the potential
 >>> potential.parameters['length'] = 3.1415926 * unit.nanometer

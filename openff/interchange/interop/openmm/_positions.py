@@ -30,7 +30,7 @@ def to_openmm_positions(
 
     if "VirtualSites" not in interchange.collections:
         return atom_positions
-    elif len(interchange["VirtualSites"].slot_map) == 0:
+    elif len(interchange["VirtualSites"].key_map) == 0:
         return atom_positions
 
     topology = interchange.topology

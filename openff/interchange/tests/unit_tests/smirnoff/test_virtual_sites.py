@@ -21,11 +21,11 @@ from openff.interchange.tests import _BaseTest
 
 
 def _get_interpolated_bond_k(bond_handler) -> float:
-    for key in bond_handler.slot_map:
+    for key in bond_handler.key_map:
         if key.bond_order is not None:
             topology_key = key
             break
-    potential_key = bond_handler.slot_map[topology_key]
+    potential_key = bond_handler.key_map[topology_key]
     return bond_handler.potentials[potential_key].parameters["k"].m
 
 

@@ -67,8 +67,8 @@ def from_intermol_system(intermol_system: System) -> Interchange:
         sigma = atom.sigma[0]
         epsilon = atom.epsilon[0]
 
-        vdw_handler.slot_map[topology_key] = vdw_key
-        electrostatics_handler.slot_map[topology_key] = electrostatics_key
+        vdw_handler.key_map[topology_key] = vdw_key
+        electrostatics_handler.key_map[topology_key] = electrostatics_key
 
         vdw_handler.potentials[vdw_key] = Potential(
             parameters={"sigma": sigma, "epsilon": epsilon},
@@ -92,7 +92,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                 associated_handler="Bonds",
             )
 
-            bond_handler.slot_map[topology_key] = potential_key
+            bond_handler.key_map[topology_key] = potential_key
 
             if potential_key not in bond_handler.potentials:
                 potential = Potential(
@@ -128,7 +128,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                 associated_handler="Angles",
             )
 
-            angle_handler.slot_map[topology_key] = potential_key
+            angle_handler.key_map[topology_key] = potential_key
 
             if potential_key not in angle_handler.potentials:
                 potential = Potential(
@@ -184,7 +184,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                 handler: Union[BaseProperTorsionHandler, BaseImproperTorsionHandler],
                 key: TopologyKey,
             ) -> None:
-                if key in handler.slot_map:
+                if key in handler.key_map:
                     key.mult += 1  # type: ignore[attr-defined]
                     ensure_unique_key(handler, key)
 
@@ -201,7 +201,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
                 else "ProperTorsions",
             )
 
-            handler.slot_map[topology_key] = potential_key
+            handler.key_map[topology_key] = potential_key
 
             if potential_key not in handler.potentials:
                 potential = Potential(

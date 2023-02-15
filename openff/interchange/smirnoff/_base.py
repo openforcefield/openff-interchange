@@ -32,7 +32,7 @@ TP = TypeVar("TP", bound="Collection")
 
 def _sanitize(o):
     # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
-    # for the mapping dicts `slot_map` and `potentials`.
+    # for the mapping dicts `key_map` and `potentials`.
     if isinstance(o, dict):
         return {_sanitize(k): _sanitize(v) for k, v in o.items()}
     elif isinstance(o, (PotentialKey, TopologyKey)):
@@ -175,11 +175,11 @@ class SMIRNOFFCollection(Collection, abc.ABC):
         parameter_handler: ParameterHandler,
         topology: "Topology",
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
-        if self.slot_map:
-            # TODO: Should the slot_map always be reset, or should we be able to partially
+        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        if self.key_map:
+            # TODO: Should the key_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
-            self.slot_map: Dict[TopologyKey, PotentialKey] = dict()
+            self.key_map: Dict[TopologyKey, PotentialKey] = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             topology_key = TopologyKey(atom_indices=key)
@@ -187,13 +187,13 @@ class SMIRNOFFCollection(Collection, abc.ABC):
                 id=val.parameter_type.smirks,
                 associated_handler=parameter_handler.TAGNAME,
             )
-            self.slot_map[topology_key] = potential_key
+            self.key_map[topology_key] = potential_key
 
         if self.__class__.__name__ in [
             "SMIRNOFFBondCollection",
             "SMIRNOFFAngleCollection",
         ]:
-            valence_terms = self.valence_terms(topology)  # type: ignore[attr-defined]
+            valence_terms = self.valence_terms(topology)
 
             _check_all_valence_terms_assigned(
                 handler=parameter_handler,
@@ -219,10 +219,10 @@ class SMIRNOFFCollection(Collection, abc.ABC):
         if hasattr(handler, "fractional_bondorder_method"):
             if getattr(parameter_handler, "fractional_bondorder_method", None):
                 handler.fractional_bond_order_method = (  # type: ignore[attr-defined]
-                    parameter_handler.fractional_bondorder_method  # type: ignore[attr-defined]
+                    parameter_handler.fractional_bondorder_method
                 )
                 handler.fractional_bond_order_interpolation = (  # type: ignore[attr-defined]
-                    parameter_handler.fractional_bondorder_interpolation  # type: ignore[attr-defined]
+                    parameter_handler.fractional_bondorder_interpolation
                 )
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
         handler.store_potentials(parameter_handler=parameter_handler)
@@ -231,6 +231,6 @@ class SMIRNOFFCollection(Collection, abc.ABC):
 
     def __repr__(self) -> str:
         return (
-            f"Handler '{self.type}' with expression '{self.expression}', {len(self.slot_map)} slots, "
+            f"Handler '{self.type}' with expression '{self.expression}', {len(self.key_map)} slots, "
             f"and {len(self.potentials)} potentials"
         )

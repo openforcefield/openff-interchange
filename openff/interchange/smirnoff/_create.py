@@ -282,10 +282,13 @@ def _virtual_sites(
         topology=topology,
     )
 
+    vdw: SMIRNOFFvdWCollection = interchange["vdW"]  # type: ignore[assignment]
+    electrostatics: SMIRNOFFElectrostaticsCollection = interchange["Electrostatics"]  # type: ignore[assignment]
+
     virtual_site_handler.store_potentials(
         parameter_handler=force_field["VirtualSites"],
-        vdw_handler=interchange["vdW"],
-        electrostatics_handler=interchange["Electrostatics"],
+        vdw_handler=vdw,
+        electrostatics_handler=electrostatics,
     )
 
     interchange.collections.update({"VirtualSites": virtual_site_handler})

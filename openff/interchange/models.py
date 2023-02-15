@@ -199,8 +199,13 @@ class ChargeIncrementTopologyKey(DefaultModel):
         return hash((self.this_atom_index, self.other_atom_indices))
 
 
-class VirtualSiteKey(DefaultModel):
+class VirtualSiteKey(TopologyKey):
     """A unique identifier of a virtual site in the scope of a chemical topology."""
+
+    # TODO: Overriding the attribute of a parent class is clumsy, but less grief than
+    #       having this not inherit from `TopologyKey`. It might be useful to just have
+    #       orientation_atom_indices point to the same thing.
+    atom_indices: Optional[Tuple[int]] = None  # type: ignore[assignment]
 
     orientation_atom_indices: Tuple[int, ...] = Field(
         description="The indices of the 'orientation atoms' which are used to define the position "

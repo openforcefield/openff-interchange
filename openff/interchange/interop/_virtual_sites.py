@@ -21,8 +21,8 @@ def _virtual_site_parent_molecule_mapping(
     if "VirtualSites" not in interchange.collections:
         return mapping
 
-    for virtual_site_key in interchange["VirtualSites"].slot_map:
-        virtual_site_key: VirtualSiteKey  # type: ignore[no-redef]
+    for virtual_site_key in interchange["VirtualSites"].key_map:
+        assert isinstance(virtual_site_key, VirtualSiteKey)
         parent_atom_index = virtual_site_key.orientation_atom_indices[0]
         parent_atom = interchange.topology.atom(parent_atom_index)
         parent_molecule = parent_atom.molecule
@@ -59,7 +59,7 @@ def _get_bond_charge_virtual_site_positions(
     # numpy.linalg.norm(r0 - r1) requires something unimplemented with __array_function__
     r1_r0_bond_length = numpy.sqrt(numpy.sum((r0 - r1) ** 2))
 
-    potential_key = interchange["VirtualSites"].slot_map[virtual_site_key]
+    potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
     potential = interchange["VirtualSites"].potentials[potential_key]
     distance = potential.parameters["distance"]
 
@@ -84,7 +84,7 @@ def _get_divalent_lone_pair_virtual_site_positions(
             "Only symmetric geometries (i.e. r2 - r0 = r1 - r0) are currently supported",
         )
 
-    potential_key = interchange["VirtualSites"].slot_map[virtual_site_key]
+    potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
     potential = interchange["VirtualSites"].potentials[potential_key]
     distance = potential.parameters["distance"]
     out_of_plane_angle = potential.parameters["outOfPlaneAngle"]
