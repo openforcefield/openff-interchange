@@ -118,6 +118,11 @@ class SMIRNOFFvdWCollection(_SMIRNOFFNonbondedCollection):
         """Return a list of supported parameter attributes."""
         return ["smirks", "id", "sigma", "epsilon", "rmin_half"]
 
+    @classmethod
+    def potential_parameters(cls):
+        """Return a list of names of parameters included in each potential in this colletion."""
+        return ["sigma", "epsilon"]
+
     def store_potentials(self, parameter_handler: vdWHandler) -> None:
         """
         Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
@@ -128,12 +133,12 @@ class SMIRNOFFvdWCollection(_SMIRNOFFNonbondedCollection):
 
         for potential_key in self.key_map.values():
             smirks = potential_key.id
-            parameter = parameter_handler.parameters[smirks]
+            force_field_parameters = parameter_handler.parameters[smirks]
 
             potential = Potential(
                 parameters={
-                    "sigma": parameter.sigma,
-                    "epsilon": parameter.epsilon,
+                    parameter: getattr(force_field_parameters, parameter)
+                    for parameter in self.potential_parameters()
                 },
             )
 
