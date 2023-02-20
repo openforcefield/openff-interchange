@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict, List, Literal, Type
+from typing import Dict, List, Literal, Type, Union
 
 from openff.toolkit import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -175,7 +175,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
                 map_keys = [*data.keys()]
                 for map_key in map_keys:
                     pots.append(
-                        potential=Potential(
+                        Potential(
                             parameters={
                                 parameter: getattr(
                                     force_field_parameters,
@@ -187,7 +187,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
                         ),
                     )
 
-                potential = WrappedPotential(
+                potential: Union[Potential, WrappedPotential] = WrappedPotential(
                     {pot: coeff for pot, coeff in zip(pots, coeffs)},
                 )
 
