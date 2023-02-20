@@ -474,3 +474,54 @@ class TestParameterInterpolation(_BaseTest):
                     atol=0,
                     rtol=2e-6,
                 )
+
+
+def test_get_uses_interpolation():
+    handler_no_interpolation = BondHandler(version=0.4)
+    handler_all_interpolation = BondHandler(version=0.4)
+    handler_some_interpolation = BondHandler(version=0.4)
+    handler_partial_interpolation = BondHandler(version=0.4)
+
+    for handler in [
+        handler_no_interpolation,
+        handler_some_interpolation,
+    ]:
+        handler.add_parameter(
+            {
+                "smirks": "[#1:1]-[*:2]",
+                "k": 400 * kcal_mol_a2,
+                "length": 1 * unit.angstrom,
+            },
+        )
+
+    for handler in [
+        handler_all_interpolation,
+        handler_some_interpolation,
+    ]:
+        handler.add_parameter(
+            {
+                "smirks": "[#6:1]-[#6:2]",
+                "k_bondorder1": 400 * kcal_mol_a2,
+                "length_bondorder1": 1 * unit.angstrom,
+                "k_bondorder2": 500 * kcal_mol_a2,
+                "length_bondorder2": 1.2 * unit.angstrom,
+            },
+        )
+
+    handler_partial_interpolation.add_parameter(
+        {
+            "smirks": "[#6:1]-[#7:2]",
+            "k": 400 * kcal_mol_a2,
+            "length_bondorder1": 1 * unit.angstrom,
+            "length_bondorder2": 0.5 * unit.angstrom,
+        },
+    )
+
+    assert not SMIRNOFFBondCollection()._get_uses_interpolation(
+        handler_no_interpolation,
+    )
+    assert SMIRNOFFBondCollection()._get_uses_interpolation(handler_some_interpolation)
+    assert SMIRNOFFBondCollection()._get_uses_interpolation(handler_all_interpolation)
+    assert SMIRNOFFBondCollection()._get_uses_interpolation(
+        handler_partial_interpolation,
+    )

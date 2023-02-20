@@ -201,6 +201,8 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
 
             self.potentials[potential_key] = potential
 
+    # This could probably be a static or class method if it's used heavily, or maybe
+    # even a standalone function overloaded to the different handlers it takes in
     def _get_uses_interpolation(self, parameter_handler: BondHandler) -> bool:
         for parameter in parameter_handler.parameters:
             if parameter.k_bondorder is not None:
