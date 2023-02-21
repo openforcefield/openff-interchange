@@ -103,6 +103,10 @@ class Collection(DefaultModel):
     """Base class for storing parametrized force field data."""
 
     type: str = Field(..., description="The type of potentials this handler stores.")
+    is_plugin: bool = Field(
+        False,
+        description="Whether this collection is defined as a plugin.",
+    )
     expression: str = Field(
         ...,
         description="The analytical expression governing the potentials in this handler.",

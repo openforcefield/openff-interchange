@@ -96,6 +96,8 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 
     type: Literal["Buckingham"] = "Buckingham"
 
+    is_plugin: bool = True
+
     expression: str = "a*exp(-b*r)-c/r**6"
 
     method: str = "cutoff"
@@ -191,6 +193,8 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     type: Literal["DoubleExponential"] = "DoubleExponential"
 
+    is_plugin: bool = True
+
     expression: str = "a*exp(-b*r)-c/r**6"
 
     expression: str = (
@@ -227,6 +231,11 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
     def global_parameters(cls):
         """Return a list of global parameters, i.e. not per-potential parameters."""
         return ["alpha", "beta"]
+
+    @classmethod
+    def check_openmm_requirements(cls, combine_nonbonded_forces: bool) -> None:
+        """Run through a list of assertions about what is compatible when exporting this to OpenMM."""
+        assert combine_nonbonded_forces is False
 
     def store_potentials(self, parameter_handler: DoubleExponentialHandler) -> None:
         """
