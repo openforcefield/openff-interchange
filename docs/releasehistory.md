@@ -21,6 +21,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
   * Classes found in `openff.interchange.components.smirnoff` are now in `openff.interchange.smirnoff`
   * Classes found in `openff.interchange.components.foyer` are now in `openff.interchange.foyer`
 
+### New features
+* #589 For convenience, per-parameter variables are now stored on `SMIRNOFFCollection.potential_parameters` and its subclasses.
 
 ## 0.2.3 - 2022-11-21
 

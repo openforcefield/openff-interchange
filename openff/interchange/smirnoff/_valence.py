@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict, List, Literal, Type
+from typing import Dict, List, Literal, Type, Union
 
 from openff.toolkit import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -95,6 +95,11 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
         return ["smirks", "id", "k", "length", "k_bondorder", "length_bondorder"]
 
     @classmethod
+    def potential_parameters(cls):
+        """Return a list of names of parameters included in each potential in this colletion."""
+        return ["k", "length"]
+
+    @classmethod
     def valence_terms(cls, topology):
         """Return all bonds in this topology."""
         return [tuple(b.atoms) for b in topology.bonds]
@@ -154,13 +159,14 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
             self.potentials = dict()
         for topology_key, potential_key in self.key_map.items():
             smirks = potential_key.id
-            parameter = parameter_handler.parameters[smirks]
+            force_field_parameters = parameter_handler.parameters[smirks]
+
             if topology_key.bond_order:
                 bond_order = topology_key.bond_order
-                if parameter.k_bondorder:
-                    data = parameter.k_bondorder
+                if force_field_parameters.k_bondorder:
+                    data = force_field_parameters.k_bondorder
                 else:
-                    data = parameter.length_bondorder
+                    data = force_field_parameters.length_bondorder
                 coeffs = _get_interpolation_coeffs(
                     fractional_bond_order=bond_order,
                     data=data,
@@ -171,39 +177,40 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
                     pots.append(
                         Potential(
                             parameters={
-                                "k": parameter.k_bondorder[map_key],
-                                "length": parameter.length_bondorder[map_key],
+                                parameter: getattr(
+                                    force_field_parameters,
+                                    parameter + "_bondorder",
+                                )[map_key]
+                                for parameter in self.potential_parameters()
                             },
                             map_key=map_key,
                         ),
                     )
-                potential = WrappedPotential(
+
+                potential: Union[Potential, WrappedPotential] = WrappedPotential(
                     {pot: coeff for pot, coeff in zip(pots, coeffs)},
                 )
+
             else:
-                potential = Potential(  # type: ignore[assignment]
+                potential = Potential(
                     parameters={
-                        "k": parameter.k,
-                        "length": parameter.length,
+                        parameter: getattr(force_field_parameters, parameter)
+                        for parameter in self.potential_parameters()
                     },
                 )
+
             self.potentials[potential_key] = potential
 
+    # This could probably be a static or class method if it's used heavily, or maybe
+    # even a standalone function overloaded to the different handlers it takes in
     def _get_uses_interpolation(self, parameter_handler: BondHandler) -> bool:
-        if (
-            any(
-                getattr(p, "k_bondorder", None) is not None
-                for p in parameter_handler.parameters
-            )
-        ) or (
-            any(
-                getattr(p, "length_bondorder", None) is not None
-                for p in parameter_handler.parameters
-            )
-        ):
-            return True
-        else:
-            return False
+        for parameter in parameter_handler.parameters:
+            if parameter.k_bondorder is not None:
+                return True
+            if parameter.length_bondorder is not None:
+                return True
+
+        return False
 
     @classmethod
     def create(
@@ -268,7 +275,12 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
     @classmethod
     def supported_parameters(cls):
         """Return a list of supported parameter attribute names."""
-        return ["smirks", "id", "k", "length", "distance"]
+        return ["smirks", "id", "length", "distance"]
+
+    @classmethod
+    def potential_parameters(cls):
+        """Return a list of names of parameters included in each potential in this colletion."""
+        return ["length", "distance"]
 
     @classmethod
     def create(  # type: ignore[override]
@@ -377,11 +389,9 @@ class SMIRNOFFAngleCollection(SMIRNOFFCollection):
         return ["smirks", "id", "k", "angle"]
 
     @classmethod
-    def _potential_parameters(cls):
-        """Return a list of supported parameter attribute names."""
-        return [
-            val for val in cls.supported_parameters() if val not in ["id", "smirks"]
-        ]
+    def potential_parameters(cls):
+        """Return a list of names of parameters included in each potential in this colletion."""
+        return ["k", "angle"]
 
     @classmethod
     def valence_terms(cls, topology):
@@ -399,7 +409,7 @@ class SMIRNOFFAngleCollection(SMIRNOFFCollection):
             potential = Potential(
                 parameters={
                     parameter_name: getattr(parameter, parameter_name)
-                    for parameter_name in self._potential_parameters()
+                    for parameter_name in self.potential_parameters()
                 },
             )
             self.potentials[potential_key] = potential
@@ -424,6 +434,11 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
     def supported_parameters(cls):
         """Return a list of supported parameter attribute names."""
         return ["smirks", "id", "k", "periodicity", "phase", "idivf", "k_bondorder"]
+
+    @classmethod
+    def potential_parameters(cls):
+        """Return a list of names of parameters included in each potential in this colletion."""
+        return ["k", "periodicity", "phase", "idivf"]
 
     def store_matches(
         self,
@@ -575,6 +590,11 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection):
     def supported_parameters(cls):
         """Return a list of supported parameter attribute names."""
         return ["smirks", "id", "k", "periodicity", "phase", "idivf"]
+
+    @classmethod
+    def potential_parameters(cls):
+        """Return a list of names of parameters included in each potential in this colletion."""
+        return ["k", "periodicity", "phase", "idivf"]
 
     def store_matches(
         self,

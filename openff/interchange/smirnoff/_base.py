@@ -154,7 +154,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
         raise NotImplementedError()
 
     @classmethod
-    def _potential_parameters(cls):
+    def potential_parameters(cls):
         """Return a subset of `supported_parameters` that are meant to be included in potentials."""
         raise NotImplementedError()
 

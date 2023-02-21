@@ -122,7 +122,7 @@ def _process_angle_forces(
         harmonic_angle_force = openmm.CustomAngleForce(
             angle_handler.expression.replace("**", "^"),
         )
-        for parameter_name in angle_handler._potential_parameters():
+        for parameter_name in angle_handler.potential_parameters():
             harmonic_angle_force.addPerAngleParameter(parameter_name)
     else:
         raise UnsupportedExportError(
@@ -159,7 +159,7 @@ def _process_angle_forces(
             params = angle_handler.potentials[pot_key].parameters
             parameter_values = [
                 to_openmm_quantity(params[val])
-                for val in angle_handler._potential_parameters()
+                for val in angle_handler.potential_parameters()
             ]
 
             harmonic_angle_force.addAngle(
