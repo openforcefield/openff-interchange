@@ -98,6 +98,8 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 
     is_plugin: bool = True
 
+    acts_as: str = "vdW"
+
     expression: str = "a*exp(-b*r)-c/r**6"
 
     method: str = "cutoff"
@@ -195,6 +197,8 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     is_plugin: bool = True
 
+    acts_as: str = "vdW"
+
     expression: str = "a*exp(-b*r)-c/r**6"
 
     expression: str = (
@@ -208,7 +212,7 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     method: str = "cutoff"
 
-    mixing_rule: str = "DoubleExponential"
+    mixing_rule: str = ""
 
     switch_width: FloatQuantity["angstrom"] = unit.Quantity(1.0, unit.angstrom)  # noqa
 

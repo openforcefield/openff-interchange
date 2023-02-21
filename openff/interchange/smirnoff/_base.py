@@ -170,6 +170,11 @@ class SMIRNOFFCollection(Collection, abc.ABC):
                         parameter_attribute,
                     )
 
+    @classmethod
+    def check_openmm_requirements(cls, *args) -> None:
+        """Run through a list of assertions about what is compatible when exporting this to OpenMM."""
+        pass
+
     def store_matches(
         self,
         parameter_handler: ParameterHandler,

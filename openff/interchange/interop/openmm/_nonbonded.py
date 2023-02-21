@@ -25,7 +25,9 @@ if TYPE_CHECKING:
     from openff.interchange import Interchange
 
 
-_LORENTZ_BERTHELOT = "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); "
+_MIXING_RULE_EXPRESSIONS: Dict[str, str] = {
+    "lorentz-berthelot": "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); ",
+}
 
 
 def _process_nonbonded_forces(
@@ -90,6 +92,7 @@ def _process_nonbonded_forces(
     )
 
     # TODO: Process ElectrostaticsHandler.exception_potential
+    # TODO: Improve logic to be less reliant on these names
     if "vdW" in openff_sys.collections or "Electrostatics" in openff_sys.collections:
         _data = _prepare_input_data(openff_sys)
 
@@ -227,7 +230,13 @@ def _prepare_input_data(openff_sys):
     try:
         vdw_handler = openff_sys["vdW"]
     except LookupError:
-        vdw_handler = None
+        for collection in openff_sys.collections.values():
+            if collection.is_plugin:
+                if collection.acts_as == "vdW":
+                    vdw_handler = collection
+                    break
+        else:
+            vdw_handler = None
 
     if vdw_handler:
         vdw_cutoff = vdw_handler.cutoff
@@ -260,7 +269,7 @@ def _prepare_input_data(openff_sys):
         "vdw_method": vdw_method,
         "vdw_expression": vdw_expression,
         "mixing_rule": mixing_rule,
-        "mixing_rule_expression": _LORENTZ_BERTHELOT,
+        "mixing_rule_expression": _MIXING_RULE_EXPRESSIONS.get(mixing_rule, ""),
         "electrostatics_handler": electrostatics_handler,
         "electrostatics_method": electrostatics_method,
         "periodic": openff_sys.box is None,
@@ -576,7 +585,7 @@ def _create_multiple_nonbonded_forces(
         has_virtual_sites,
     )
 
-    electrostatics_force = _create_electrostatics_force(
+    electrostatics_force: openmm.NonbondedForce = _create_electrostatics_force(
         data,
         openmm_sys,
         openff_sys,
@@ -682,6 +691,16 @@ def _create_vdw_force(
     )
     vdw_force.addPerParticleParameter("sigma")
     vdw_force.addPerParticleParameter("epsilon")
+
+    if data["vdw_handler"].is_plugin:
+        for global_parameter in data["vdw_handler"].global_parameters:
+            vdw_force.addGlobalParameter(
+                global_parameter,
+                getattr(data["vdw_handler"], global_parameter),
+            )
+
+        # TODO: Also do this sort of thing for pre-computed terms
+        # https://github.com/openforcefield/smirnoff-plugins/blob/979907fc93e8b6217d40e6f469809c230b86b012/smirnoff_plugins/handlers/nonbonded.py#L218-L219
 
     for molecule in openff_sys.topology.molecules:
         for _ in molecule.atoms:
@@ -804,17 +823,31 @@ def _set_particle_parameters(
 
             if data["vdw_handler"] is not None:
                 pot_key = data["vdw_handler"].key_map[top_key]
-                sigma, epsilon = _lj_params_from_potential(
-                    data["vdw_handler"].potentials[pot_key],
-                )
-                sigma = sigma.m_as(off_unit.nanometer)
-                epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
+                # import ipdb; ipdb.set_trace()
+                if data["vdw_handler"].is_plugin:
+                    # This assumes ordering can be trusted, i.e.
+                    # [*parameters.keys()] == data["vdw_handler"].potential_parameters()
+                    parameters: Dict[str, unit.Quantity] = {
+                        key: val.to_openmm()
+                        for key, val in data["vdw_handler"]
+                        .potentials[pot_key]
+                        .parameters.items()
+                    }
+                else:
+                    sigma, epsilon = _lj_params_from_potential(
+                        data["vdw_handler"].potentials[pot_key],
+                    )
+                    sigma = sigma.m_as(off_unit.nanometer)
+                    epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
             else:
                 sigma = unit.Quantity(0.0, unit.nanometer)
                 epsilon = unit.Quantity(0.0, unit.kilojoules_per_mole)
 
             if vdw_force is not None:
-                vdw_force.setParticleParameters(atom_index, [sigma, epsilon])
+                if data["vdw_handler"].is_plugin:
+                    vdw_force.setParticleParameters(atom_index, [*parameters.values()])
+                else:
+                    vdw_force.setParticleParameters(atom_index, [sigma, epsilon])
 
             if electrostatics_force is not None:
                 electrostatics_force.setParticleParameters(
