@@ -106,3 +106,27 @@ class TestOpenMM(_BaseTest):
             box_vectors.m_as(unit.angstrom),
             ensure_quantity(parsed_box_vectors, "openff").m_as(unit.angstrom),
         )
+
+
+class TestOpenMMMissingHandlers(_BaseTest):
+    def test_missing_vdw_combine_energies(self):
+        from openff.interchange.drivers import get_openmm_energies
+
+        molecule = Molecule.from_smiles("CC")
+        molecule.generate_conformers(n_conformers=1)
+
+        ff_no_vdw = ForceField("openff-2.0.0.offxml")
+        ff_no_vdw.deregister_parameter_handler("vdW")
+
+        out = Interchange.from_smirnoff(
+            ff_no_vdw,
+            [molecule],
+        )
+
+        energy1 = get_openmm_energies(out, combine_nonbonded_forces=True).total_energy
+        energy2 = get_openmm_energies(out, combine_nonbonded_forces=False).total_energy
+
+        assert abs(energy2 - energy1) < unit.Quantity(
+            1e-6,
+            unit.kilojoule_per_mole,
+        )
