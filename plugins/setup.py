@@ -10,9 +10,11 @@ setup(
     entry_points={
         "openff.toolkit.plugins.handlers": [
             "BuckinghamHandler = nonbonded_plugins:BuckinghamHandler",
+            "DoubleExponentialHandler = nonbonded_plugins:DoubleExponentialHandler",
         ],
         "openff.interchange.plugins.collections": [
             "BuckinghamCollection = nonbonded_plugins:SMIRNOFFBuckinghamCollection",
+            "DoubleExponentialCollection = nonbonded_plugins:SMIRNOFFDoubleExponentialCollection",
         ],
     },
 )

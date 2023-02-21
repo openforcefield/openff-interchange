@@ -55,6 +55,42 @@ class BuckinghamHandler(ParameterHandler):
     )
 
 
+class DoubleExponentialHandler(ParameterHandler):
+    """A custom SMIRNOFF handler for double exponential interactions."""
+
+    class DoubleExponentialType(ParameterType):
+        """A custom SMIRNOFF type for double exponential interactions."""
+
+        _VALENCE_TYPE = "Atom"
+        _ELEMENT_NAME = "Atom"
+
+        r_min = ParameterAttribute(default=None, unit=unit.nanometers)
+        epsilon = ParameterAttribute(default=None, unit=unit.kilojoule_per_mole)
+
+    _TAGNAME = "DoubleExponential"
+    _INFOTYPE = DoubleExponentialType
+
+    scale12 = ParameterAttribute(default=0.0, converter=float)
+    scale13 = ParameterAttribute(default=0.0, converter=float)
+    scale14 = ParameterAttribute(default=0.5, converter=float)
+    scale15 = ParameterAttribute(default=1.0, converter=float)
+
+    alpha = ParameterAttribute(default=18.7)
+    beta = ParameterAttribute(default=3.3)
+
+    cutoff = ParameterAttribute(default=9.0 * unit.angstroms, unit=unit.angstrom)
+    switch_width = ParameterAttribute(default=1.0 * unit.angstroms, unit=unit.angstrom)
+    method = ParameterAttribute(
+        default="cutoff",
+        converter=_allow_only(["cutoff", "PME"]),
+    )
+
+    combining_rules = ParameterAttribute(
+        default="Lorentz-Berthelot",
+        converter=_allow_only(["Lorentz-Berthelot"]),
+    )
+
+
 class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
     """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
 
@@ -104,6 +140,116 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
     def create(  # type: ignore[override]
         cls: Type[T],
         parameter_handler: BuckinghamHandler,
+        topology: Topology,
+    ) -> T:
+        """
+        Create a SMIRNOFFvdWCollection from toolkit data.
+
+        """
+        if type(parameter_handler) not in cls.allowed_parameter_handlers():
+            raise InvalidParameterHandlerError(
+                f"Found parameter handler type {type(parameter_handler)}, which is not "
+                f"supported by potential type {type(cls)}",
+            )
+
+        handler = cls(
+            scale_13=parameter_handler.scale13,
+            scale_14=parameter_handler.scale14,
+            scale_15=parameter_handler.scale15,
+            cutoff=parameter_handler.cutoff,
+            mixing_rule=parameter_handler.combining_rules.lower(),
+            method=parameter_handler.method.lower(),
+            switch_width=parameter_handler.switch_width,
+        )
+        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
+        handler.store_potentials(parameter_handler=parameter_handler)
+
+        return handler
+
+    @classmethod
+    def parameter_handler_precedence(cls) -> List[str]:
+        """
+        Return the order in which parameter handlers take precedence when computing charges.
+        """
+        return ["vdw", "VirtualSites"]
+
+    def create_virtual_sites(
+        self,
+        parameter_handler: VirtualSiteHandler,
+        topology: Topology,
+    ):
+        """create() but with virtual sites."""
+        raise NotImplementedError()
+
+
+class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
+    """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
+
+    type: Literal["DoubleExponential"] = "DoubleExponential"
+
+    expression: str = "a*exp(-b*r)-c/r**6"
+
+    expression: str = (
+        "CombinedEpsilon*RepulsionFactor*RepulsionExp-CombinedEpsilon*AttractionFactor*AttractionExp;"
+        "CombinedEpsilon=epsilon1*epsilon2;"
+        "RepulsionExp=exp(-alpha*ExpDistance);"
+        "AttractionExp=exp(-beta*ExpDistance);"
+        "ExpDistance=r/CombinedR;"
+        "CombinedR=r_min1+r_min2;"
+    )
+
+    method: str = "cutoff"
+
+    mixing_rule: str = "DoubleExponential"
+
+    switch_width: FloatQuantity["angstrom"] = unit.Quantity(1.0, unit.angstrom)  # noqa
+
+    @classmethod
+    def allowed_parameter_handlers(cls):
+        """Return a list of allowed types of ParameterHandler classes."""
+        return [DoubleExponentialHandler]
+
+    @classmethod
+    def supported_parameters(cls):
+        """Return a list of supported parameter attributes."""
+        return ["smirks", "id", "rmin", "epsilon"]
+
+    @classmethod
+    def potential_parameters(cls):
+        """Return a subset of `supported_parameters` that are meant to be included in potentials."""
+        return ["rmin_half", "epsilon"]
+
+    @classmethod
+    def global_parameters(cls):
+        """Return a list of global parameters, i.e. not per-potential parameters."""
+        return ["alpha", "beta"]
+
+    def store_potentials(self, parameter_handler: DoubleExponentialHandler) -> None:
+        """
+        Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
+
+        """
+        self.method = parameter_handler.method.lower()
+        self.cutoff = parameter_handler.cutoff
+
+        for potential_key in self.slot_map.values():
+            smirks = potential_key.id
+            parameter = parameter_handler.parameters[smirks]
+
+            potential = Potential(
+                parameters={
+                    "a": parameter.a,
+                    "b": parameter.b,
+                    "c": parameter.c,
+                },
+            )
+
+            self.potentials[potential_key] = potential
+
+    @classmethod
+    def create(  # type: ignore[override]
+        cls: Type[T],
+        parameter_handler: DoubleExponentialHandler,
         topology: Topology,
     ) -> T:
         """
