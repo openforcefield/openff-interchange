@@ -2,7 +2,7 @@
 Helper functions for producing `openmm.Force` objects for non-bonded terms.
 """
 from collections import defaultdict
-from typing import TYPE_CHECKING, DefaultDict, Dict, List, Union
+from typing import TYPE_CHECKING, DefaultDict, Dict, List, Optional, Tuple, Union
 
 import openmm
 from openff.units import unit as off_unit
@@ -239,7 +239,7 @@ def _prepare_input_data(openff_sys):
         vdw_cutoff = None
         vdw_method = None
         mixing_rule = None
-        vdw_expression = "(no handler found)"
+        vdw_expression = None
 
     try:
         electrostatics_handler = openff_sys["Electrostatics"]
@@ -566,15 +566,122 @@ def _create_multiple_nonbonded_forces(
     molecule_virtual_site_map: Dict,
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int],
 ):
+    has_virtual_sites = molecule_virtual_site_map not in (None, dict())
+
+    vdw_force = _create_vdw_force(
+        data,
+        openmm_sys,
+        openff_sys,
+        molecule_virtual_site_map,
+        has_virtual_sites,
+    )
+
+    electrostatics_force = _create_electrostatics_force(
+        data,
+        openmm_sys,
+        openff_sys,
+        molecule_virtual_site_map,
+        has_virtual_sites,
+    )
+
+    _set_particle_parameters(
+        data,
+        vdw_force,
+        electrostatics_force,
+        openff_sys,
+        has_virtual_sites,
+    )
+
+    # Attempting to match the value used internally by OpenMM; The source of this value is likely
+    # https://github.com/openmm/openmm/issues/1149#issuecomment-250299854
+    # 1 / * (4pi * eps0) * elementary_charge ** 2 / nanometer ** 2
+    coul_const = 138.935456  # kJ/nm
+
+    if vdw_force is not None:
+        vdw_14_force = openmm.CustomBondForce(data["vdw_expression"])
+
+        for parameter in data["vdw_handler"].potential_parameters():
+            vdw_14_force.addPerBondParameter(parameter)
+
+        vdw_14_force.setUsesPeriodicBoundaryConditions(True)
+
+    else:
+        vdw_14_force = None
+
+    coul_14_force = openmm.CustomBondForce(f"{coul_const}*qq/r")
+    coul_14_force.addPerBondParameter("qq")
+    coul_14_force.setUsesPeriodicBoundaryConditions(True)
+
+    bonds = [
+        sorted(openff_sys.topology.atom_index(a) for a in bond.atoms)
+        for bond in openff_sys.topology.bonds
+    ]
+
+    coul_14, vdw_14 = _get_14_scaling_factors(data)
+
+    electrostatics_force.createExceptionsFromBonds(
+        bonds=bonds,
+        coulomb14Scale=coul_14,
+        lj14Scale=vdw_14,
+    )
+
+    for i in range(electrostatics_force.getNumExceptions()):
+        (p1, p2, q, sig, eps) = electrostatics_force.getExceptionParameters(i)
+
+        # If the interactions are both zero, assume this is a 1-2 or 1-3 interaction
+        if q._value == 0 and eps._value == 0:
+            pass
+        else:
+            # Assume this is a 1-4 interaction
+
+            if vdw_force is not None:
+                # Look up the vdW parameters for each particle
+                sig1, eps1 = vdw_force.getParticleParameters(p1)
+                sig2, eps2 = vdw_force.getParticleParameters(p2)
+
+                # manually compute ...
+                sig_14 = (sig1 + sig2) * 0.5
+                eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
+
+                # ... and set the 1-4 interactions
+                vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
+
+            # Look up the partial charges for each particle
+            q1 = electrostatics_force.getParticleParameters(p1)[0]
+            q2 = electrostatics_force.getParticleParameters(p2)[0]
+
+            # manually compute ...
+            qq = q1 * q2 * coul_14
+
+            # ... and set the 1-4 interactions
+            coul_14_force.addBond(p1, p2, [qq])
+
+        if vdw_force is not None:
+            vdw_force.addExclusion(p1, p2)
+
+        if electrostatics_force is not None:
+            electrostatics_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
+
+    for force in [vdw_force, electrostatics_force, vdw_14_force, coul_14_force]:
+        if force is not None:
+            openmm_sys.addForce(force)
+
+
+def _create_vdw_force(
+    data,
+    openmm_sys,
+    openff_sys,
+    molecule_virtual_site_map,
+    has_virtual_sites: bool,
+) -> Optional[openmm.CustomNonbondedForce]:
+    if data["vdw_handler"] is None:
+        return None
+
     vdw_force = openmm.CustomNonbondedForce(
         data["vdw_expression"] + "; " + data["mixing_rule_expression"],
     )
     vdw_force.addPerParticleParameter("sigma")
     vdw_force.addPerParticleParameter("epsilon")
-
-    openmm_sys.addForce(vdw_force)
-
-    has_virtual_sites = molecule_virtual_site_map not in (None, dict())
 
     for molecule in openff_sys.topology.molecules:
         for _ in molecule.atoms:
@@ -609,9 +716,20 @@ def _create_multiple_nonbonded_forces(
                 "forces with LJPME, please file an feature request.",
             )
 
-    electrostatics_force = openmm.NonbondedForce()
+    return vdw_force
 
-    openmm_sys.addForce(electrostatics_force)
+
+def _create_electrostatics_force(
+    data,
+    openmm_sys,
+    openff_sys,
+    molecule_virtual_site_map,
+    has_virtual_sites: bool,
+) -> Optional[openmm.NonbondedForce]:
+    if data["electrostatics_handler"] is None:
+        return None
+
+    electrostatics_force = openmm.NonbondedForce()
 
     for molecule in openff_sys.topology.molecules:
         for _ in molecule.atoms:
@@ -620,7 +738,7 @@ def _create_multiple_nonbonded_forces(
         if has_virtual_sites:
             molecule_index = openff_sys.topology.molecule_index(molecule)
             for _ in molecule_virtual_site_map[molecule_index]:
-                vdw_force.addParticle(0.0, 1.0, 0.0)
+                electrostatics_force.addParticle(0.0, 1.0, 0.0)
 
     if data["electrostatics_method"] == "reaction-field":
         raise UnsupportedExportError(
@@ -654,11 +772,23 @@ def _create_multiple_nonbonded_forces(
             f"Electrostatics method {data['electrostatics_method']} not supported",
         )
 
-    if data["electrostatics_handler"] is not None:
-        try:
+    return electrostatics_force
+
+
+def _set_particle_parameters(
+    data,
+    vdw_force,
+    electrostatics_force,
+    openff_sys,
+    has_virtual_sites,
+):
+    if electrostatics_force is not None:
+        if has_virtual_sites:
             partial_charges = data["electrostatics_handler"].charges_with_virtual_sites
-        except AttributeError:
+        else:
             partial_charges = data["electrostatics_handler"].charges
+    else:
+        partial_charges = None
 
     for molecule in openff_sys.topology.molecules:
         for atom in molecule.atoms:
@@ -667,7 +797,7 @@ def _create_multiple_nonbonded_forces(
 
             top_key = TopologyKey(atom_indices=(atom_index,))
 
-            if data["electrostatics_handler"] is not None:
+            if partial_charges is not None:
                 partial_charge = partial_charges[top_key].m_as(off_unit.e)
             else:
                 partial_charge = 0.0
@@ -683,73 +813,30 @@ def _create_multiple_nonbonded_forces(
                 sigma = unit.Quantity(0.0, unit.nanometer)
                 epsilon = unit.Quantity(0.0, unit.kilojoules_per_mole)
 
-            vdw_force.setParticleParameters(atom_index, [sigma, epsilon])
-            electrostatics_force.setParticleParameters(
-                atom_index,
-                partial_charge,
-                0.0,
-                0.0,
-            )
+            if vdw_force is not None:
+                vdw_force.setParticleParameters(atom_index, [sigma, epsilon])
 
-    # Attempting to match the value used internally by OpenMM; The source of this value is likely
-    # https://github.com/openmm/openmm/issues/1149#issuecomment-250299854
-    # 1 / * (4pi * eps0) * elementary_charge ** 2 / nanometer ** 2
-    coul_const = 138.935456  # kJ/nm
+            if electrostatics_force is not None:
+                electrostatics_force.setParticleParameters(
+                    atom_index,
+                    partial_charge,
+                    0.0,
+                    0.0,
+                )
 
-    vdw_14_force = openmm.CustomBondForce("4*epsilon*((sigma/r)^12-(sigma/r)^6)")
-    vdw_14_force.addPerBondParameter("sigma")
-    vdw_14_force.addPerBondParameter("epsilon")
-    vdw_14_force.setUsesPeriodicBoundaryConditions(True)
-    coul_14_force = openmm.CustomBondForce(f"{coul_const}*qq/r")
-    coul_14_force.addPerBondParameter("qq")
-    coul_14_force.setUsesPeriodicBoundaryConditions(True)
 
-    openmm_sys.addForce(vdw_14_force)
-    openmm_sys.addForce(coul_14_force)
+def _get_14_scaling_factors(data) -> Tuple[float, float]:
+    if data.get("electrostatics_handler", None) is not None:
+        coul_14 = data["electrostatics_handler"].scale_14
+    else:
+        coul_14 = 1.0
 
-    bonds = [
-        sorted(openff_sys.topology.atom_index(a) for a in bond.atoms)
-        for bond in openff_sys.topology.bonds
-    ]
+    if data.get("vdw_handler", None) is not None:
+        vdw_14 = data["vdw_handler"].scale_14
+    else:
+        vdw_14 = 1.0
 
-    coul_14 = (
-        data["electrostatics_handler"].scale_14
-        if "electrostatics_handler" in data
-        else 1.0
-    )
-    vdw_14 = data["vdw_handler"].scale_14 if "vdw_handler" in data else 1.0
-
-    electrostatics_force.createExceptionsFromBonds(
-        bonds=bonds,
-        coulomb14Scale=coul_14,
-        lj14Scale=vdw_14,
-    )
-
-    for i in range(electrostatics_force.getNumExceptions()):
-        (p1, p2, q, sig, eps) = electrostatics_force.getExceptionParameters(i)
-
-        # If the interactions are both zero, assume this is a 1-2 or 1-3 interaction
-        if q._value == 0 and eps._value == 0:
-            pass
-        else:
-            # Assume this is a 1-4 interaction
-            # Look up the vdW parameters for each particle
-            sig1, eps1 = vdw_force.getParticleParameters(p1)
-            sig2, eps2 = vdw_force.getParticleParameters(p2)
-            q1, _, _ = electrostatics_force.getParticleParameters(p1)
-            q2, _, _ = electrostatics_force.getParticleParameters(p2)
-
-            # manually compute and set the 1-4 interactions
-            sig_14 = (sig1 + sig2) * 0.5
-            eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
-            qq = q1 * q2 * coul_14
-
-            vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
-            coul_14_force.addBond(p1, p2, [qq])
-        vdw_force.addExclusion(p1, p2)
-        # electrostatics_force.addExclusion(p1, p2)
-        electrostatics_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
-        # vdw_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
+    return coul_14, vdw_14
 
 
 def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
