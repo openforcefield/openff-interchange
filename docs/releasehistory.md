@@ -21,6 +21,9 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
   * Classes found in `openff.interchange.components.smirnoff` are now in `openff.interchange.smirnoff`
   * Classes found in `openff.interchange.components.foyer` are now in `openff.interchange.foyer`
 
+### Bugfixes
+* #593 Fix a #592 in which OpenMM exports fail to create multiple non-bonded forces without a vdW handler
+
 ### New features
 * #589 For convenience, per-parameter variables are now stored on `SMIRNOFFCollection.potential_parameters` and its subclasses.
 
