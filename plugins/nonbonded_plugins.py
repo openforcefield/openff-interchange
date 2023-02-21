@@ -124,13 +124,12 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
-            parameter = parameter_handler.parameters[smirks]
+            force_field_parameters = parameter_handler.parameters[smirks]
 
             potential = Potential(
                 parameters={
-                    "a": parameter.a,
-                    "b": parameter.b,
-                    "c": parameter.c,
+                    parameter: getattr(force_field_parameters, parameter)
+                    for parameter in self.potential_parameters()
                 },
             )
 
@@ -212,12 +211,12 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
     @classmethod
     def supported_parameters(cls):
         """Return a list of supported parameter attributes."""
-        return ["smirks", "id", "rmin", "epsilon"]
+        return ["smirks", "id", "r_min", "epsilon"]
 
     @classmethod
     def potential_parameters(cls):
         """Return a subset of `supported_parameters` that are meant to be included in potentials."""
-        return ["rmin_half", "epsilon"]
+        return ["r_min", "epsilon"]
 
     @classmethod
     def global_parameters(cls):
@@ -234,13 +233,12 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
         for potential_key in self.slot_map.values():
             smirks = potential_key.id
-            parameter = parameter_handler.parameters[smirks]
+            force_field_parameters = parameter_handler.parameters[smirks]
 
             potential = Potential(
                 parameters={
-                    "a": parameter.a,
-                    "b": parameter.b,
-                    "c": parameter.c,
+                    parameter: getattr(force_field_parameters, parameter)
+                    for parameter in self.potential_parameters()
                 },
             )
 

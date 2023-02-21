@@ -5,8 +5,10 @@ from nonbonded_plugins import (
     SMIRNOFFBuckinghamCollection,
     SMIRNOFFDoubleExponentialCollection,
 )
+from openff.toolkit import ForceField, Molecule
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 
+from openff.interchange import Interchange
 from openff.interchange.plugins import load_smirnoff_plugins
 
 
@@ -25,9 +27,14 @@ def test_load_smirnoff_plugins():
     assert SMIRNOFFDoubleExponentialCollection in available_plugins
 
 
-@pytest.mark.importorskip("deforcefields")
 class TestDoubleExponential:
-    def test_loadable(self):
-        from openff.toolkit import ForceField
+    pytest.importorskip("deforcefields")
 
+    def test_loadable(self):
         ForceField("de-force-1.0.0.offxml", load_plugins=True)
+
+    def test_create_interchange(self):
+        Interchange.from_smirnoff(
+            ForceField("de-force-1.0.0.offxml", load_plugins=True),
+            Molecule.from_smiles("CO").to_topology(),
+        )
