@@ -114,6 +114,11 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
         """Return a list of supported parameter attributes."""
         return ["smirks", "id", "a", "b", "c"]
 
+    @classmethod
+    def potential_parameters(cls):
+        """Return a subset of `supported_parameters` that are meant to be included in potentials."""
+        return ["a", "b", "c"]
+
     def store_potentials(self, parameter_handler: BuckinghamHandler) -> None:
         """
         Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
