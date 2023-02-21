@@ -13,6 +13,7 @@ from openff.interchange import Interchange
 from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import (
     MissingPositionsError,
+    PluginCompatibilityError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
@@ -22,6 +23,9 @@ from openff.interchange.interop.openmm import (
     to_openmm_topology,
 )
 from openff.interchange.tests import _BaseTest, get_test_file_path
+from openff.interchange.tests.unit_tests.plugins.test_smirnoff_plugins import (
+    TestDoubleExponential,
+)
 
 # WISHLIST: Add tests for reaction-field if implemented
 
@@ -345,6 +349,24 @@ class TestOpenMMSwitchingFunction(_BaseTest):
                 ) < 1e-10 * openmm_unit.angstrom
 
         assert found_force, "NonbondedForce not found in system"
+
+
+class TestOpenMMWithPlugins(TestDoubleExponential):
+    pytest.importorskip("deforcefields")
+
+    def test_combine_compatibility(self, de_force_field):
+        out = Interchange.from_smirnoff(
+            force_field=de_force_field,
+            topology=[Molecule.from_smiles("CO")],
+        )
+
+        with pytest.raises(
+            PluginCompatibilityError,
+            match="failed a compatibility check",
+        ) as exception:
+            out.to_openmm(combine_nonbonded_forces=True)
+
+        assert isinstance(exception.value.__cause__, AssertionError)
 
 
 @pytest.mark.slow()

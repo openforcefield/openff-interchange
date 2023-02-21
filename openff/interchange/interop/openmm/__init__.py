@@ -6,7 +6,7 @@ import openmm
 from openmm import unit
 
 from openff.interchange.exceptions import (
-    PluginIncompatibilityError,
+    PluginCompatibilityError,
     UnsupportedImportError,
 )
 from openff.interchange.interop.openmm._positions import to_openmm_positions
@@ -64,7 +64,7 @@ def to_openmm(
             try:
                 collection.check_openmm_requirements(combine_nonbonded_forces)
             except AssertionError as error:
-                raise PluginIncompatibilityError(
+                raise PluginCompatibilityError(
                     f"Collection of type {type(collection)} failed a compatibility check.",
                 ) from error
 

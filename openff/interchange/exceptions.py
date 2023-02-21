@@ -98,7 +98,7 @@ class UnsupportedCombinationError(BaseException):
     """General exception for something going wrong in Interchange object combination."""
 
 
-class PluginIncompatibilityError(BaseException):
+class PluginCompatibilityError(BaseException):
     """A plugin is incompatible with the current version of Interchange in the way it is called."""
 
 
