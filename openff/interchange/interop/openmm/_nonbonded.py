@@ -629,9 +629,7 @@ def _create_multiple_nonbonded_forces(
                 vdw_14_force.addGlobalParameter(term, value)
 
         else:
-            vdw_14_force = openmm.CustomBondForce(
-                _get_scaled_potential_function(data["vdw_expression"]),
-            )
+            vdw_14_force = openmm.CustomBondForce(data["vdw_expression"])
 
             for parameter in data["vdw_handler"].potential_parameters():
                 vdw_14_force.addPerBondParameter(parameter)

@@ -396,7 +396,7 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
         state = simulation.context.getState(getEnergy=True)
         energy = state.getPotentialEnergy().in_units_of(openmm_unit.kilojoule_per_mole)
 
-        assert abs(energy - 13.591709748611304) < 1e-6
+        assert abs(energy._value - 13.591709748611304) < 1e-6
 
 
 @pytest.mark.slow()
