@@ -368,6 +368,36 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
 
         assert isinstance(exception.value.__cause__, AssertionError)
 
+    def test_double_exponential_create_simulation(self, de_force_field):
+        molecule = Molecule.from_smiles("CCO")
+        molecule.generate_conformers(n_conformers=1)
+        topology = molecule.to_topology()
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        out = Interchange.from_smirnoff(
+            de_force_field,
+            topology,
+        )
+
+        system = out.to_openmm(combine_nonbonded_forces=False)
+
+        simulation = openmm.app.Simulation(
+            to_openmm_topology(out),
+            system,
+            openmm.LangevinIntegrator(300, 1, 0.002),
+            openmm.Platform.getPlatformByName("CPU"),
+        )
+
+        simulation.context.setPositions(
+            to_openmm_positions(out, include_virtual_sites=False),
+        )
+        simulation.context.setPeriodicBoxVectors(*out.box.to_openmm())
+
+        state = simulation.context.getState(getEnergy=True)
+        energy = state.getPotentialEnergy().in_units_of(openmm_unit.kilojoule_per_mole)
+
+        assert abs(energy - 13.591709748611304) < 1e-6
+
 
 @pytest.mark.slow()
 class TestOpenMMVirtualSites(_BaseTest):

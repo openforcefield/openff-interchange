@@ -607,19 +607,43 @@ def _create_multiple_nonbonded_forces(
     coul_const = 138.935456  # kJ/nm
 
     if vdw_force is not None:
-        vdw_14_force = openmm.CustomBondForce(data["vdw_expression"])
+        if data["vdw_handler"].is_plugin:
+            vdw_14_force = openmm.CustomBondForce(
+                _get_scaled_potential_function(data["vdw_expression"]),
+            )
 
-        for parameter in data["vdw_handler"].potential_parameters():
-            vdw_14_force.addPerBondParameter(parameter)
+            # feed in r_min1, epsilon1, ..., r_min2, epsilon2, ... each as individual parameters
+            for index in [1, 2]:
+                for parameter in data["vdw_handler"].potential_parameters():
+                    vdw_14_force.addPerBondParameter(f"{parameter}{str(index)}")
 
-        vdw_14_force.setUsesPeriodicBoundaryConditions(True)
+            vdw_14_force.addGlobalParameter("scale14", data["vdw_handler"].scale_14)
+
+            for global_parameter in data["vdw_handler"].global_parameters():
+                vdw_14_force.addGlobalParameter(
+                    global_parameter,
+                    getattr(data["vdw_handler"], global_parameter),
+                )
+
+            for term, value in data["vdw_handler"]._pre_computed_terms().items():
+                vdw_14_force.addGlobalParameter(term, value)
+
+        else:
+            vdw_14_force = openmm.CustomBondForce(
+                _get_scaled_potential_function(data["vdw_expression"]),
+            )
+
+            for parameter in data["vdw_handler"].potential_parameters():
+                vdw_14_force.addPerBondParameter(parameter)
+
+        vdw_14_force.setUsesPeriodicBoundaryConditions(openff_sys.box is not None)
 
     else:
         vdw_14_force = None
 
     coul_14_force = openmm.CustomBondForce(f"{coul_const}*qq/r")
     coul_14_force.addPerBondParameter("qq")
-    coul_14_force.setUsesPeriodicBoundaryConditions(True)
+    coul_14_force.setUsesPeriodicBoundaryConditions(openff_sys.box is not None)
 
     bonds = [
         sorted(openff_sys.topology.atom_index(a) for a in bond.atoms)
@@ -644,16 +668,25 @@ def _create_multiple_nonbonded_forces(
             # Assume this is a 1-4 interaction
 
             if vdw_force is not None:
-                # Look up the vdW parameters for each particle
-                sig1, eps1 = vdw_force.getParticleParameters(p1)
-                sig2, eps2 = vdw_force.getParticleParameters(p2)
+                if data["vdw_handler"].is_plugin:
+                    # Since we fed in in r_min1, epsilon1, ..., r_min2, epsilon2, ...
+                    # each as individual parameters, we need to prepare a list of
+                    # length 2 * len(potential_parameters) to this constructor
+                    parameters1 = vdw_force.getParticleParameters(p1)
+                    parameters2 = vdw_force.getParticleParameters(p2)
+                    vdw_14_force.addBond(p1, p2, [*parameters1, *parameters2])
 
-                # manually compute ...
-                sig_14 = (sig1 + sig2) * 0.5
-                eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
+                else:
+                    # Look up the vdW parameters for each particle
+                    sig1, eps1 = vdw_force.getParticleParameters(p1)
+                    sig2, eps2 = vdw_force.getParticleParameters(p2)
 
-                # ... and set the 1-4 interactions
-                vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
+                    # manually compute ...
+                    sig_14 = (sig1 + sig2) * 0.5
+                    eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
+
+                    # ... and set the 1-4 interactions
+                    vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
 
             # Look up the partial charges for each particle
             q1 = electrostatics_force.getParticleParameters(p1)[0]
@@ -675,6 +708,17 @@ def _create_multiple_nonbonded_forces(
         if force is not None:
             openmm_sys.addForce(force)
 
+    if vdw_force is not None and electrostatics_force is not None:
+        if (vdw_force.getNonbondedMethod() > 0) ^ (
+            electrostatics_force.getNonbondedMethod() > 0
+        ):
+            raise UnsupportedCutoffMethodError(
+                "When using `openmm.CustomNonbondedForce`, vdW and electrostatics cutoff methods "
+                "must agree on whether or not periodic boundary conditions should be used."
+                f"OpenMM will throw an error. Found vdw method {vdw_force.getNonbondedMethod()}, "
+                f"and electrostatics method {electrostatics_force.getNonbondedMethod()}, ",
+            )
+
 
 def _create_vdw_force(
     data,
@@ -689,18 +733,20 @@ def _create_vdw_force(
     vdw_force = openmm.CustomNonbondedForce(
         data["vdw_expression"] + "; " + data["mixing_rule_expression"],
     )
-    vdw_force.addPerParticleParameter("sigma")
-    vdw_force.addPerParticleParameter("epsilon")
+
+    for potential_parameter in data["vdw_handler"].potential_parameters():
+        vdw_force.addPerParticleParameter(potential_parameter)
 
     if data["vdw_handler"].is_plugin:
-        for global_parameter in data["vdw_handler"].global_parameters:
+        # TODO: Move this block outside of the plugin conditional
+        for global_parameter in data["vdw_handler"].global_parameters():
             vdw_force.addGlobalParameter(
                 global_parameter,
                 getattr(data["vdw_handler"], global_parameter),
             )
 
-        # TODO: Also do this sort of thing for pre-computed terms
-        # https://github.com/openforcefield/smirnoff-plugins/blob/979907fc93e8b6217d40e6f469809c230b86b012/smirnoff_plugins/handlers/nonbonded.py#L218-L219
+        for term, value in data["vdw_handler"]._pre_computed_terms().items():
+            vdw_force.addGlobalParameter(term, value)
 
     for molecule in openff_sys.topology.molecules:
         for _ in molecule.atoms:
@@ -833,6 +879,7 @@ def _set_particle_parameters(
                         .potentials[pot_key]
                         .parameters.items()
                     }
+
                 else:
                     sigma, epsilon = _lj_params_from_potential(
                         data["vdw_handler"].potentials[pot_key],
@@ -896,3 +943,14 @@ def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
 
         force.setUseSwitchingFunction(True)
         force.setSwitchingDistance(switching_distance)
+
+
+def _get_scaled_potential_function(potential: str) -> str:
+    # https://github.com/openforcefield/smirnoff-plugins/blob/979907fc93e8b6217d40e6f469809c230b86b012/smirnoff_plugins/handlers/nonbonded.py#L63-L83
+    split_potential = potential.split(";")
+    for i, expression in enumerate(split_potential):
+        if "=" not in expression:
+            # This is the actual expression, final energy so modify
+            split_potential[i] = f"({expression})*scale14"
+            break
+    return ";".join(split_potential)

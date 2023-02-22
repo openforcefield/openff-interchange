@@ -1,5 +1,6 @@
 """Custom classes exposed as plugins."""
-from typing import List, Literal, Type
+import math
+from typing import Dict, List, Literal, Type
 
 from openff.models.types import FloatQuantity
 from openff.toolkit import Topology
@@ -75,6 +76,8 @@ class DoubleExponentialHandler(ParameterHandler):
     scale14 = ParameterAttribute(default=0.5, converter=float)
     scale15 = ParameterAttribute(default=1.0, converter=float)
 
+    # These are defined as dimensionless, we should consider enforcing global parameters
+    # as being unit-bearing even if that means using `unit.dimensionless`
     alpha = ParameterAttribute(default=18.7)
     beta = ParameterAttribute(default=3.3)
 
@@ -203,11 +206,11 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     expression: str = (
         "CombinedEpsilon*RepulsionFactor*RepulsionExp-CombinedEpsilon*AttractionFactor*AttractionExp;"
-        "CombinedEpsilon=epsilon1*epsilon2;"
+        "CombinedEpsilon=sqrt(epsilon1*epsilon2);"
         "RepulsionExp=exp(-alpha*ExpDistance);"
         "AttractionExp=exp(-beta*ExpDistance);"
         "ExpDistance=r/CombinedR;"
-        "CombinedR=r_min1+r_min2;"
+        "CombinedR=(r_min1+r_min2)/2;"
     )
 
     method: str = "cutoff"
@@ -215,6 +218,9 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
     mixing_rule: str = ""
 
     switch_width: FloatQuantity["angstrom"] = unit.Quantity(1.0, unit.angstrom)  # noqa
+
+    alpha: FloatQuantity["dimensionless"]  # noqa
+    beta: FloatQuantity["dimensionless"]  # noqa
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -235,6 +241,15 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
     def global_parameters(cls):
         """Return a list of global parameters, i.e. not per-potential parameters."""
         return ["alpha", "beta"]
+
+    def _pre_computed_terms(self) -> Dict[str, float]:
+        alpha_min_beta = self.alpha - self.beta
+
+        return {
+            "AlphaMinBeta": alpha_min_beta,
+            "RepulsionFactor": self.beta * math.exp(self.alpha) / alpha_min_beta,
+            "AttractionFactor": self.alpha * math.exp(self.beta) / alpha_min_beta,
+        }
 
     @classmethod
     def check_openmm_requirements(cls, combine_nonbonded_forces: bool) -> None:
@@ -279,6 +294,8 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
             )
 
         handler = cls(
+            alpha=parameter_handler.alpha,
+            beta=parameter_handler.beta,
             scale_13=parameter_handler.scale13,
             scale_14=parameter_handler.scale14,
             scale_15=parameter_handler.scale15,
