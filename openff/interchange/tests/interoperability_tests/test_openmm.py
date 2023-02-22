@@ -369,6 +369,8 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
         assert isinstance(exception.value.__cause__, AssertionError)
 
     def test_double_exponential_create_simulation(self, de_force_field):
+        from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
+
         molecule = Molecule.from_smiles("CCO")
         molecule.generate_conformers(n_conformers=1)
         topology = molecule.to_topology()
@@ -396,7 +398,14 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
         state = simulation.context.getState(getEnergy=True)
         energy = state.getPotentialEnergy().in_units_of(openmm_unit.kilojoule_per_mole)
 
-        assert abs(energy._value - 13.591709748611304) < 1e-6
+        if OpenEyeToolkitWrapper.is_available():
+            expected_energy = 13.591709748611304
+        else:
+            expected_energy = 37.9516622967221
+
+        # Different operating systems report different energies around 0.001 kJ/mol,
+        # locally testing this should enable something like 1e-6 kJ/mol
+        assert abs(energy._value - expected_energy) < 3e-3
 
 
 @pytest.mark.slow()
