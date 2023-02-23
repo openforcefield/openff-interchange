@@ -1,6 +1,6 @@
 """Custom classes exposed as plugins."""
 import math
-from typing import Dict, List, Literal, Type
+from typing import Dict, Iterable, List, Literal, Type
 
 from openff.models.types import FloatQuantity
 from openff.toolkit import Topology
@@ -112,17 +112,17 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
     switch_width: FloatQuantity["angstrom"] = unit.Quantity(1.0, unit.angstrom)  # noqa
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> List[Type[ParameterHandler]]:
         """Return a list of allowed types of ParameterHandler classes."""
         return [BuckinghamHandler]
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attributes."""
         return ["smirks", "id", "a", "b", "c"]
 
     @classmethod
-    def potential_parameters(cls):
+    def potential_parameters(cls) -> Iterable[str]:
         """Return a subset of `supported_parameters` that are meant to be included in potentials."""
         return ["a", "b", "c"]
 
@@ -202,8 +202,6 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     acts_as: str = "vdW"
 
-    expression: str = "a*exp(-b*r)-c/r**6"
-
     expression: str = (
         "CombinedEpsilon*RepulsionFactor*RepulsionExp-CombinedEpsilon*AttractionFactor*AttractionExp;"
         "CombinedEpsilon=epsilon1*epsilon2;"
@@ -223,22 +221,22 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
     beta: FloatQuantity["dimensionless"]  # noqa
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> Iterable[Type[ParameterHandler]]:
         """Return a list of allowed types of ParameterHandler classes."""
         return [DoubleExponentialHandler]
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attributes."""
         return ["smirks", "id", "r_min", "epsilon"]
 
     @classmethod
-    def potential_parameters(cls):
+    def potential_parameters(cls) -> Iterable[str]:
         """Return a subset of `supported_parameters` that are meant to be included in potentials."""
         return ["r_min", "epsilon"]
 
     @classmethod
-    def global_parameters(cls):
+    def global_parameters(cls) -> Iterable[str]:
         """Return a list of global parameters, i.e. not per-potential parameters."""
         return ["alpha", "beta"]
 

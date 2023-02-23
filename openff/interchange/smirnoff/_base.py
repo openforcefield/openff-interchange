@@ -171,7 +171,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
                     )
 
     @classmethod
-    def check_openmm_requirements(cls, *args) -> None:
+    def check_openmm_requirements(cls, combine_nonbonded_forces: bool) -> None:
         """Run through a list of assertions about what is compatible when exporting this to OpenMM."""
         pass
 
