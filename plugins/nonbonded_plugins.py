@@ -255,9 +255,11 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
         original_parameters: Dict[str, unit.Quantity],
     ) -> Dict[str, unit.Quantity]:
         """Optionally modify parameters prior to their being stored in a force."""
+        # It's important that these keys are in the order of self.potential_parameters(),
+        # consider adding a check somewhere that this is the case.
         return {
-            "epsilon": original_parameters["epsilon"] ** 0.5,
             "r_min": original_parameters["r_min"] * 0.5,
+            "epsilon": original_parameters["epsilon"] ** 0.5,
         }
 
     @classmethod
