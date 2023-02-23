@@ -98,6 +98,10 @@ class UnsupportedCombinationError(BaseException):
     """General exception for something going wrong in Interchange object combination."""
 
 
+class PluginCompatibilityError(BaseException):
+    """A plugin is incompatible with the current version of Interchange in the way it is called."""
+
+
 class CannotSetSwitchingFunctionError(BaseException):
     """
     Unable to set a switching function.

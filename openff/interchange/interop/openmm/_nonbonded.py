@@ -8,6 +8,7 @@ import openmm
 from openff.units import unit as off_unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openmm import unit
+from typing_extensions import TypeAlias
 
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
@@ -23,15 +24,21 @@ if TYPE_CHECKING:
     from openff.toolkit import Molecule
 
     from openff.interchange import Interchange
+    from openff.interchange.smirnoff._base import SMIRNOFFCollection
+    from openff.interchange.smirnoff._nonbonded import SMIRNOFFElectrostaticsCollection
 
 
-_LORENTZ_BERTHELOT = "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); "
+_DATA_DICT: TypeAlias = Dict[str, Union[None, str, bool, "SMIRNOFFCollection"]]
+
+_MIXING_RULE_EXPRESSIONS: Dict[str, str] = {
+    "lorentz-berthelot": "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); ",
+}
 
 
 def _process_nonbonded_forces(
-    openff_sys,
-    openmm_sys,
-    combine_nonbonded_forces=False,
+    openff_sys: "Interchange",
+    openmm_sys: openmm.System,
+    combine_nonbonded_forces: bool = False,
 ) -> Dict[Union[int, VirtualSiteKey], int]:
     """
     Process the non-bonded collections in an Interchange into corresponding openmm objects.
@@ -90,6 +97,7 @@ def _process_nonbonded_forces(
     )
 
     # TODO: Process ElectrostaticsHandler.exception_potential
+    # TODO: Improve logic to be less reliant on these names
     if "vdW" in openff_sys.collections or "Electrostatics" in openff_sys.collections:
         _data = _prepare_input_data(openff_sys)
 
@@ -147,7 +155,6 @@ def _process_nonbonded_forces(
 
     else:
         # Here we assume there are no vdW interactions in any collections
-        # vdw_handler = None
 
         if has_virtual_sites:
             raise UnsupportedExportError(
@@ -223,18 +230,23 @@ def _add_particles_to_system(
     return openff_openmm_particle_map
 
 
-def _prepare_input_data(openff_sys):
+def _prepare_input_data(openff_sys: "Interchange") -> _DATA_DICT:
     try:
-        vdw_handler = openff_sys["vdW"]
+        vdw_handler: Optional["SMIRNOFFCollection"] = openff_sys["vdW"]  # type: ignore[assignment]
     except LookupError:
-        vdw_handler = None
+        for collection in openff_sys.collections.values():
+            if collection.is_plugin:
+                if collection.acts_as == "vdW":
+                    vdw_handler = collection  # type: ignore[assignment]
+                    break
+        else:
+            vdw_handler = None
 
     if vdw_handler:
-        vdw_cutoff = vdw_handler.cutoff
-        vdw_method = vdw_handler.method.lower()
-        mixing_rule = getattr(vdw_handler, "mixing_rule", None)
-        vdw_expression = vdw_handler.expression
-        vdw_expression = vdw_expression.replace("**", "^")
+        vdw_cutoff: Optional[unit.Quanaity] = vdw_handler.cutoff
+        vdw_method: Optional[str] = vdw_handler.method.lower()
+        mixing_rule: Optional[str] = getattr(vdw_handler, "mixing_rule", None)
+        vdw_expression: Optional[str] = vdw_handler.expression.replace("**", "^")
     else:
         vdw_cutoff = None
         vdw_method = None
@@ -242,12 +254,16 @@ def _prepare_input_data(openff_sys):
         vdw_expression = None
 
     try:
-        electrostatics_handler = openff_sys["Electrostatics"]
+        electrostatics_handler: Optional[
+            "SMIRNOFFElectrostaticsCollection"
+        ] = openff_sys[
+            "Electrostatics"
+        ]  # type: ignore[assignment]
     except LookupError:
         electrostatics_handler = None
 
     if electrostatics_handler is None:
-        electrostatics_method = None
+        electrostatics_method: Optional[str] = None
     else:
         if openff_sys.box is None:
             electrostatics_method = electrostatics_handler.nonperiodic_potential
@@ -260,7 +276,9 @@ def _prepare_input_data(openff_sys):
         "vdw_method": vdw_method,
         "vdw_expression": vdw_expression,
         "mixing_rule": mixing_rule,
-        "mixing_rule_expression": _LORENTZ_BERTHELOT,
+        "mixing_rule_expression": _MIXING_RULE_EXPRESSIONS.get(mixing_rule, "")
+        if isinstance(mixing_rule, str)
+        else None,
         "electrostatics_handler": electrostatics_handler,
         "electrostatics_method": electrostatics_method,
         "periodic": openff_sys.box is None,
@@ -342,6 +360,8 @@ def _create_single_nonbonded_force(
     # if no virtual sites at all, this remains an empty dict
     parent_virtual_particle_mapping: DefaultDict[int, List[int]] = defaultdict(list)
 
+    vdw_collection = data["vdw_handler"]
+
     for molecule in openff_sys.topology.molecules:
         for atom in molecule.atoms:
             non_bonded_force.addParticle(0.0, 1.0, 0.0)
@@ -355,10 +375,10 @@ def _create_single_nonbonded_force(
             else:
                 partial_charge = 0.0
 
-            if data["vdw_handler"] is not None:
-                pot_key = data["vdw_handler"].key_map[top_key]
+            if vdw_collection is not None:
+                pot_key = vdw_collection.key_map[top_key]
                 sigma, epsilon = _lj_params_from_potential(
-                    data["vdw_handler"].potentials[pot_key],
+                    vdw_collection.potentials[pot_key],
                 )
                 sigma = sigma.m_as(off_unit.nanometer)
                 epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
@@ -441,7 +461,6 @@ def _create_single_nonbonded_force(
         data,
         non_bonded_force,
         openff_sys,
-        openmm_sys,
         openff_openmm_particle_map,
         parent_virtual_particle_mapping,
     )
@@ -453,7 +472,6 @@ def _create_exceptions(
     data: Dict,
     non_bonded_force: openmm.NonbondedForce,
     openff_sys: "Interchange",
-    openmm_sys,
     openff_openmm_particle_map: Dict,
     parent_virtual_particle_mapping: DefaultDict[int, List[int]],
 ):
@@ -570,15 +588,13 @@ def _create_multiple_nonbonded_forces(
 
     vdw_force = _create_vdw_force(
         data,
-        openmm_sys,
         openff_sys,
         molecule_virtual_site_map,
         has_virtual_sites,
     )
 
-    electrostatics_force = _create_electrostatics_force(
+    electrostatics_force: openmm.NonbondedForce = _create_electrostatics_force(
         data,
-        openmm_sys,
         openff_sys,
         molecule_virtual_site_map,
         has_virtual_sites,
@@ -598,19 +614,41 @@ def _create_multiple_nonbonded_forces(
     coul_const = 138.935456  # kJ/nm
 
     if vdw_force is not None:
-        vdw_14_force = openmm.CustomBondForce(data["vdw_expression"])
+        if data["vdw_handler"].is_plugin:
+            vdw_14_force = openmm.CustomBondForce(
+                _get_scaled_potential_function(data["vdw_expression"]),
+            )
 
-        for parameter in data["vdw_handler"].potential_parameters():
-            vdw_14_force.addPerBondParameter(parameter)
+            # feed in r_min1, epsilon1, ..., r_min2, epsilon2, ... each as individual parameters
+            for index in [1, 2]:
+                for parameter in data["vdw_handler"].potential_parameters():
+                    vdw_14_force.addPerBondParameter(f"{parameter}{str(index)}")
 
-        vdw_14_force.setUsesPeriodicBoundaryConditions(True)
+            vdw_14_force.addGlobalParameter("scale14", data["vdw_handler"].scale_14)
+
+            for global_parameter in data["vdw_handler"].global_parameters():
+                vdw_14_force.addGlobalParameter(
+                    global_parameter,
+                    getattr(data["vdw_handler"], global_parameter),
+                )
+
+            for term, value in data["vdw_handler"].pre_computed_terms().items():
+                vdw_14_force.addGlobalParameter(term, value)
+
+        else:
+            vdw_14_force = openmm.CustomBondForce(data["vdw_expression"])
+
+            for parameter in data["vdw_handler"].potential_parameters():
+                vdw_14_force.addPerBondParameter(parameter)
+
+        vdw_14_force.setUsesPeriodicBoundaryConditions(openff_sys.box is not None)
 
     else:
         vdw_14_force = None
 
     coul_14_force = openmm.CustomBondForce(f"{coul_const}*qq/r")
     coul_14_force.addPerBondParameter("qq")
-    coul_14_force.setUsesPeriodicBoundaryConditions(True)
+    coul_14_force.setUsesPeriodicBoundaryConditions(openff_sys.box is not None)
 
     bonds = [
         sorted(openff_sys.topology.atom_index(a) for a in bond.atoms)
@@ -635,16 +673,25 @@ def _create_multiple_nonbonded_forces(
             # Assume this is a 1-4 interaction
 
             if vdw_force is not None:
-                # Look up the vdW parameters for each particle
-                sig1, eps1 = vdw_force.getParticleParameters(p1)
-                sig2, eps2 = vdw_force.getParticleParameters(p2)
+                if data["vdw_handler"].is_plugin:
+                    # Since we fed in in r_min1, epsilon1, ..., r_min2, epsilon2, ...
+                    # each as individual parameters, we need to prepare a list of
+                    # length 2 * len(potential_parameters) to this constructor
+                    parameters1 = vdw_force.getParticleParameters(p1)
+                    parameters2 = vdw_force.getParticleParameters(p2)
+                    vdw_14_force.addBond(p1, p2, [*parameters1, *parameters2])
 
-                # manually compute ...
-                sig_14 = (sig1 + sig2) * 0.5
-                eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
+                else:
+                    # Look up the vdW parameters for each particle
+                    sig1, eps1 = vdw_force.getParticleParameters(p1)
+                    sig2, eps2 = vdw_force.getParticleParameters(p2)
 
-                # ... and set the 1-4 interactions
-                vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
+                    # manually compute ...
+                    sig_14 = (sig1 + sig2) * 0.5
+                    eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
+
+                    # ... and set the 1-4 interactions
+                    vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
 
             # Look up the partial charges for each particle
             q1 = electrostatics_force.getParticleParameters(p1)[0]
@@ -666,22 +713,49 @@ def _create_multiple_nonbonded_forces(
         if force is not None:
             openmm_sys.addForce(force)
 
+    if vdw_force is not None and electrostatics_force is not None:
+        if (vdw_force.getNonbondedMethod() > 0) ^ (
+            electrostatics_force.getNonbondedMethod() > 0
+        ):
+            raise UnsupportedCutoffMethodError(
+                "When using `openmm.CustomNonbondedForce`, vdW and electrostatics cutoff methods "
+                "must agree on whether or not periodic boundary conditions should be used."
+                f"OpenMM will throw an error. Found vdw method {vdw_force.getNonbondedMethod()}, "
+                f"and electrostatics method {electrostatics_force.getNonbondedMethod()}, ",
+            )
+
 
 def _create_vdw_force(
-    data,
-    openmm_sys,
-    openff_sys,
-    molecule_virtual_site_map,
+    data: _DATA_DICT,
+    openff_sys: "Interchange",
+    molecule_virtual_site_map: Dict[int, List[VirtualSiteKey]],
     has_virtual_sites: bool,
 ) -> Optional[openmm.CustomNonbondedForce]:
-    if data["vdw_handler"] is None:
+    vdw_collection: Optional["SMIRNOFFCollection"] = data["vdw_handler"]  # type: ignore[assignment]
+
+    if vdw_collection is None:
         return None
 
+    vdw_expression: str = data["vdw_expression"]  # type: ignore[assignment]
+    mixing_rule_expression: str = data["mixing_rule_expression"]  # type: ignore[assignment]
+
     vdw_force = openmm.CustomNonbondedForce(
-        data["vdw_expression"] + "; " + data["mixing_rule_expression"],
+        f"{vdw_expression}; {mixing_rule_expression}",
     )
-    vdw_force.addPerParticleParameter("sigma")
-    vdw_force.addPerParticleParameter("epsilon")
+
+    for potential_parameter in vdw_collection.potential_parameters():
+        vdw_force.addPerParticleParameter(potential_parameter)
+
+    if vdw_collection.is_plugin:
+        # TODO: Move this block outside of the plugin conditional
+        for global_parameter in vdw_collection.global_parameters():
+            vdw_force.addGlobalParameter(
+                global_parameter,
+                getattr(vdw_collection, global_parameter),
+            )
+
+        for term, value in vdw_collection.pre_computed_terms().items():
+            vdw_force.addGlobalParameter(term, value)
 
     for molecule in openff_sys.topology.molecules:
         for _ in molecule.atoms:
@@ -700,7 +774,7 @@ def _create_vdw_force(
         vdw_force.setUseLongRangeCorrection(True)
         vdw_force.setCutoffDistance(to_openmm_quantity(data["vdw_cutoff"]))
 
-        _apply_switching_function(data["vdw_handler"], vdw_force)
+        _apply_switching_function(vdw_collection, vdw_force)
 
     elif data["vdw_method"] == "pme":
         if openff_sys.box is None:
@@ -720,10 +794,9 @@ def _create_vdw_force(
 
 
 def _create_electrostatics_force(
-    data,
-    openmm_sys,
-    openff_sys,
-    molecule_virtual_site_map,
+    data: _DATA_DICT,
+    openff_sys: "Interchange",
+    molecule_virtual_site_map: Dict[int, List[VirtualSiteKey]],
     has_virtual_sites: bool,
 ) -> Optional[openmm.NonbondedForce]:
     if data["electrostatics_handler"] is None:
@@ -776,19 +849,26 @@ def _create_electrostatics_force(
 
 
 def _set_particle_parameters(
-    data,
-    vdw_force,
-    electrostatics_force,
-    openff_sys,
-    has_virtual_sites,
+    data: _DATA_DICT,
+    vdw_force: openmm.CustomNonbondedForce,
+    electrostatics_force: openmm.NonbondedForce,
+    openff_sys: "Interchange",
+    has_virtual_sites: bool,
 ):
     if electrostatics_force is not None:
-        if has_virtual_sites:
-            partial_charges = data["electrostatics_handler"].charges_with_virtual_sites
-        else:
-            partial_charges = data["electrostatics_handler"].charges
+        electrostatics: SMIRNOFFElectrostaticsCollection = data[  # type: ignore[assignment]
+            "electrostatics_handler"
+        ]
+
+        partial_charges = getattr(
+            electrostatics,
+            "charges_with_virtual_sites" if has_virtual_sites else "charges",
+        )
+
     else:
         partial_charges = None
+
+    vdw_collection: "SMIRNOFFCollection" = data["vdw_handler"]  # type: ignore[assignment]
 
     for molecule in openff_sys.topology.molecules:
         for atom in molecule.atoms:
@@ -802,19 +882,34 @@ def _set_particle_parameters(
             else:
                 partial_charge = 0.0
 
-            if data["vdw_handler"] is not None:
-                pot_key = data["vdw_handler"].key_map[top_key]
-                sigma, epsilon = _lj_params_from_potential(
-                    data["vdw_handler"].potentials[pot_key],
-                )
-                sigma = sigma.m_as(off_unit.nanometer)
-                epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
+            if vdw_collection is not None:
+                pot_key = vdw_collection.key_map[top_key]
+
+                if vdw_collection.is_plugin:
+                    potential_parameters = vdw_collection.potentials[pot_key].parameters
+
+                    parameters: Dict[str, unit.Quantity] = {
+                        key: val.to_openmm()
+                        for key, val in potential_parameters.items()
+                    }
+
+                    if hasattr(vdw_collection, "modify_parameters"):
+                        parameters = vdw_collection.modify_parameters(parameters)
+                else:
+                    sigma, epsilon = _lj_params_from_potential(
+                        vdw_collection.potentials[pot_key],
+                    )
+                    sigma = sigma.m_as(off_unit.nanometer)
+                    epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
             else:
                 sigma = unit.Quantity(0.0, unit.nanometer)
                 epsilon = unit.Quantity(0.0, unit.kilojoules_per_mole)
 
             if vdw_force is not None:
-                vdw_force.setParticleParameters(atom_index, [sigma, epsilon])
+                if vdw_collection.is_plugin:
+                    vdw_force.setParticleParameters(atom_index, [*parameters.values()])
+                else:
+                    vdw_force.setParticleParameters(atom_index, [sigma, epsilon])
 
             if electrostatics_force is not None:
                 electrostatics_force.setParticleParameters(
@@ -825,24 +920,27 @@ def _set_particle_parameters(
                 )
 
 
-def _get_14_scaling_factors(data) -> Tuple[float, float]:
+def _get_14_scaling_factors(data: _DATA_DICT) -> Tuple[float, float]:
     if data.get("electrostatics_handler", None) is not None:
-        coul_14 = data["electrostatics_handler"].scale_14
+        coul_14 = data["electrostatics_handler"].scale_14  # type: ignore[union-attr]
     else:
         coul_14 = 1.0
 
     if data.get("vdw_handler", None) is not None:
-        vdw_14 = data["vdw_handler"].scale_14
+        vdw_14 = data["vdw_handler"].scale_14  # type: ignore[union-attr]
     else:
         vdw_14 = 1.0
 
     return coul_14, vdw_14
 
 
-def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
+def _apply_switching_function(
+    vdw_handler: "SMIRNOFFCollection",
+    force: openmm.NonbondedForce,
+):
     if not hasattr(force, "setUseSwitchingFunction"):
         raise CannotSetSwitchingFunctionError(
-            "Attempting to set switching funcntion on an OpenMM force that does nont support it."
+            "Attempting to set switching function on an OpenMM force that does nont support it."
             f"Passed force of type {type(force)}.",
         )
     if getattr(vdw_handler, "switch_width", None) is None:
@@ -863,3 +961,16 @@ def _apply_switching_function(vdw_handler, force: openmm.NonbondedForce):
 
         force.setUseSwitchingFunction(True)
         force.setSwitchingDistance(switching_distance)
+
+
+def _get_scaled_potential_function(potential: str) -> str:
+    # https://github.com/openforcefield/smirnoff-plugins/blob/979907fc93e8b6217d40e6f469809c230b86b012/smirnoff_plugins/handlers/nonbonded.py#L63-L83
+    split_potential = potential.split(";")
+
+    for i, expression in enumerate(split_potential):
+        if "=" not in expression:
+            # This is the actual expression, final energy so modify
+            split_potential[i] = f"({expression})*scale14"
+            break
+
+    return ";".join(split_potential)

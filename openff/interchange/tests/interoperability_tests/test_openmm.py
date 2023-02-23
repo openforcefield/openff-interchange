@@ -13,6 +13,7 @@ from openff.interchange import Interchange
 from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import (
     MissingPositionsError,
+    PluginCompatibilityError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
@@ -22,6 +23,9 @@ from openff.interchange.interop.openmm import (
     to_openmm_topology,
 )
 from openff.interchange.tests import _BaseTest, get_test_file_path
+from openff.interchange.tests.unit_tests.plugins.test_smirnoff_plugins import (
+    TestDoubleExponential,
+)
 
 # WISHLIST: Add tests for reaction-field if implemented
 
@@ -345,6 +349,63 @@ class TestOpenMMSwitchingFunction(_BaseTest):
                 ) < 1e-10 * openmm_unit.angstrom
 
         assert found_force, "NonbondedForce not found in system"
+
+
+class TestOpenMMWithPlugins(TestDoubleExponential):
+    pytest.importorskip("deforcefields")
+
+    def test_combine_compatibility(self, de_force_field):
+        out = Interchange.from_smirnoff(
+            force_field=de_force_field,
+            topology=[Molecule.from_smiles("CO")],
+        )
+
+        with pytest.raises(
+            PluginCompatibilityError,
+            match="failed a compatibility check",
+        ) as exception:
+            out.to_openmm(combine_nonbonded_forces=True)
+
+        assert isinstance(exception.value.__cause__, AssertionError)
+
+    def test_double_exponential_create_simulation(self, de_force_field):
+        from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
+
+        molecule = Molecule.from_smiles("CCO")
+        molecule.generate_conformers(n_conformers=1)
+        topology = molecule.to_topology()
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        out = Interchange.from_smirnoff(
+            de_force_field,
+            topology,
+        )
+
+        system = out.to_openmm(combine_nonbonded_forces=False)
+
+        simulation = openmm.app.Simulation(
+            to_openmm_topology(out),
+            system,
+            openmm.LangevinIntegrator(300, 1, 0.002),
+            openmm.Platform.getPlatformByName("CPU"),
+        )
+
+        simulation.context.setPositions(
+            to_openmm_positions(out, include_virtual_sites=False),
+        )
+        simulation.context.setPeriodicBoxVectors(*out.box.to_openmm())
+
+        state = simulation.context.getState(getEnergy=True)
+        energy = state.getPotentialEnergy().in_units_of(openmm_unit.kilojoule_per_mole)
+
+        if OpenEyeToolkitWrapper.is_available():
+            expected_energy = 13.591709748611304
+        else:
+            expected_energy = 37.9516622967221
+
+        # Different operating systems report different energies around 0.001 kJ/mol,
+        # locally testing this should enable something like 1e-6 kJ/mol
+        assert abs(energy._value - expected_energy) < 3e-3
 
 
 @pytest.mark.slow()

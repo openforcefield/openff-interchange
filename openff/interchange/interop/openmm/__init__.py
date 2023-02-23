@@ -5,7 +5,10 @@ from typing import TYPE_CHECKING, Union
 import openmm
 from openmm import unit
 
-from openff.interchange.exceptions import UnsupportedImportError
+from openff.interchange.exceptions import (
+    PluginCompatibilityError,
+    UnsupportedImportError,
+)
 from openff.interchange.interop.openmm._positions import to_openmm_positions
 from openff.interchange.interop.openmm._topology import to_openmm_topology
 
@@ -55,6 +58,15 @@ def to_openmm(
         _process_improper_torsion_forces,
         _process_torsion_forces,
     )
+
+    for collection in openff_sys.collections.values():
+        if collection.is_plugin:
+            try:
+                collection.check_openmm_requirements(combine_nonbonded_forces)
+            except AssertionError as error:
+                raise PluginCompatibilityError(
+                    f"Collection of type {type(collection)} failed a compatibility check.",
+                ) from error
 
     openmm_sys = openmm.System()
 
