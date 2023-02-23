@@ -625,7 +625,7 @@ def _create_multiple_nonbonded_forces(
                     getattr(data["vdw_handler"], global_parameter),
                 )
 
-            for term, value in data["vdw_handler"]._pre_computed_terms().items():
+            for term, value in data["vdw_handler"].pre_computed_terms().items():
                 vdw_14_force.addGlobalParameter(term, value)
 
         else:
@@ -743,7 +743,7 @@ def _create_vdw_force(
                 getattr(data["vdw_handler"], global_parameter),
             )
 
-        for term, value in data["vdw_handler"]._pre_computed_terms().items():
+        for term, value in data["vdw_handler"].pre_computed_terms().items():
             vdw_force.addGlobalParameter(term, value)
 
     for molecule in openff_sys.topology.molecules:
@@ -867,17 +867,19 @@ def _set_particle_parameters(
 
             if data["vdw_handler"] is not None:
                 pot_key = data["vdw_handler"].key_map[top_key]
-                # import ipdb; ipdb.set_trace()
+
                 if data["vdw_handler"].is_plugin:
-                    # This assumes ordering can be trusted, i.e.
-                    # [*parameters.keys()] == data["vdw_handler"].potential_parameters()
+                    potential_parameters = (
+                        data["vdw_handler"].potentials[pot_key].parameters
+                    )
+
                     parameters: Dict[str, unit.Quantity] = {
                         key: val.to_openmm()
-                        for key, val in data["vdw_handler"]
-                        .potentials[pot_key]
-                        .parameters.items()
+                        for key, val in potential_parameters.items()
                     }
 
+                    if hasattr(data["vdw_handler"], "modify_parameters"):
+                        parameters = data["vdw_handler"].modify_parameters(parameters)
                 else:
                     sigma, epsilon = _lj_params_from_potential(
                         data["vdw_handler"].potentials[pot_key],

@@ -206,11 +206,11 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     expression: str = (
         "CombinedEpsilon*RepulsionFactor*RepulsionExp-CombinedEpsilon*AttractionFactor*AttractionExp;"
-        "CombinedEpsilon=sqrt(epsilon1*epsilon2);"
+        "CombinedEpsilon=epsilon1*epsilon2;"
         "RepulsionExp=exp(-alpha*ExpDistance);"
         "AttractionExp=exp(-beta*ExpDistance);"
         "ExpDistance=r/CombinedR;"
-        "CombinedR=(r_min1+r_min2)/2;"
+        "CombinedR=r_min1+r_min2;"
     )
 
     method: str = "cutoff"
@@ -242,13 +242,24 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
         """Return a list of global parameters, i.e. not per-potential parameters."""
         return ["alpha", "beta"]
 
-    def _pre_computed_terms(self) -> Dict[str, float]:
+    def pre_computed_terms(self) -> Dict[str, float]:
+        """Return a dictionary of pre-computed terms for use in the expression."""
         alpha_min_beta = self.alpha - self.beta
 
         return {
             "AlphaMinBeta": alpha_min_beta,
             "RepulsionFactor": self.beta * math.exp(self.alpha) / alpha_min_beta,
             "AttractionFactor": self.alpha * math.exp(self.beta) / alpha_min_beta,
+        }
+
+    def modify_parameters(
+        self,
+        original_parameters: Dict[str, unit.Quantity],
+    ) -> Dict[str, unit.Quantity]:
+        """Optionally modify parameters prior to their being stored in a force."""
+        return {
+            "epsilon": original_parameters["epsilon"] ** 0.5,
+            "r_min": original_parameters["r_min"] * 0.5,
         }
 
     @classmethod
