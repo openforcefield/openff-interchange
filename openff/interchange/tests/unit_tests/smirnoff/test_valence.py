@@ -2,7 +2,11 @@ import numpy
 import openmm
 import pytest
 from openff.toolkit import ForceField, Molecule, Topology
-from openff.toolkit.tests.test_forcefield import create_ethanol, create_reversed_ethanol
+from openff.toolkit.tests.test_forcefield import (
+    create_cyclohexane,
+    create_ethanol,
+    create_reversed_ethanol,
+)
 from openff.toolkit.tests.utils import get_data_file_path, requires_openeye
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
@@ -14,6 +18,7 @@ from pydantic import ValidationError
 
 from openff.interchange import Interchange
 from openff.interchange.constants import kcal_mol_a2, kcal_mol_rad2
+from openff.interchange.exceptions import DuplicateMoleculeError
 from openff.interchange.models import AngleKey, BondKey, ImproperTorsionKey
 from openff.interchange.smirnoff._create import _create_interchange
 from openff.interchange.smirnoff._valence import (
@@ -21,6 +26,7 @@ from openff.interchange.smirnoff._valence import (
     SMIRNOFFBondCollection,
     SMIRNOFFConstraintCollection,
     SMIRNOFFImproperTorsionCollection,
+    _check_molecule_uniqueness,
 )
 from openff.interchange.tests import _BaseTest
 
@@ -525,3 +531,13 @@ def test_get_uses_interpolation():
     assert SMIRNOFFBondCollection()._get_uses_interpolation(
         handler_partial_interpolation,
     )
+
+
+def test_check_molecule_uniqueness():
+    ethanol = create_ethanol()
+    _check_molecule_uniqueness(ethanol, None)
+    _check_molecule_uniqueness(ethanol, list())
+    _check_molecule_uniqueness(ethanol, [create_cyclohexane()])
+
+    with pytest.raises(DuplicateMoleculeError, match="Duplicate molecules"):
+        _check_molecule_uniqueness(ethanol, 2 * [create_ethanol()])

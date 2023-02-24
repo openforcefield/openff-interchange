@@ -162,7 +162,7 @@ class MissingBondOrdersError(BaseException):
     """
 
 
-class NonUniqueMoleculesError(ValueError):
+class DuplicateMoleculeError(ValueError):
     """
     Exception for when molecules are not unique.
     """

@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict, List, Literal, Type, Union
+from typing import Dict, List, Literal, Optional, Type, Union
 
 from openff.toolkit import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -14,6 +14,7 @@ from openff.units import unit
 
 from openff.interchange.components.potentials import Potential, WrappedPotential
 from openff.interchange.exceptions import (
+    DuplicateMoleculeError,
     InvalidParameterHandlerError,
     MissingParametersError,
 )
@@ -48,24 +49,24 @@ def _upconvert_bondhandler(bond_handler: BondHandler):
         bond_handler.potential = "(k/2)*(r-length)^2"
 
 
-def _check_partial_bond_orders(
+def _check_molecule_uniqueness(
     reference_molecule: Molecule,
-    molecule_list: List[Molecule],
-) -> bool:
+    molecule_list: Optional[List[Molecule]],
+):
     """Check if the reference molecule is isomorphic with any molecules in a provided list."""
+    # TODO: This could all be replaced by MoleculeSet
     if molecule_list is None:
-        return False
-
-    if len(molecule_list) == 0:
-        return False
+        return
 
     for molecule in molecule_list:
         if reference_molecule.is_isomorphic_with(molecule):
-            # TODO: Here is where a check for "all bonds in this molecule must have partial bond orders assigned"
-            #       would go. That seems like a difficult mangled state to end up in, so not implemented for now.
-            return True
+            # The toolkit used to enforce that `partial_bond_orders_from_molecules` must not have isomorphic
+            # duplicates in its list, raising `ValueError` if any fail.
 
-    return False
+            raise DuplicateMoleculeError(
+                "Duplicate molecules found in `partial_bond_orders_from_molecules` list. "
+                "Please ensure that each molecule in this list is isomorphically unique.",
+            )
 
 
 def _get_interpolation_coeffs(fractional_bond_order, data):
@@ -239,11 +240,11 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
 
         if handler._get_uses_interpolation(parameter_handler):
             for molecule in topology.molecules:
-                if _check_partial_bond_orders(
+                _check_molecule_uniqueness(
                     molecule,
                     partial_bond_orders_from_molecules,
-                ):
-                    continue
+                )
+
                 # TODO: expose conformer generation and fractional bond order assigment
                 # knobs to user via API
                 molecule.generate_conformers(n_conformers=1)
@@ -555,11 +556,11 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
             for p in parameter_handler.parameters
         ):
             for ref_mol in topology.unique_molecules:
-                if _check_partial_bond_orders(
+                _check_molecule_uniqueness(
                     ref_mol,
                     partial_bond_orders_from_molecules,
-                ):
-                    continue
+                )
+
                 # TODO: expose conformer generation and fractional bond order assigment knobs via API?
                 ref_mol.generate_conformers(n_conformers=1)
                 ref_mol.assign_fractional_bond_orders(
