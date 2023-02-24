@@ -173,10 +173,9 @@ class TestConstraintCollection(_BaseTest):
         topology = Molecule.from_smiles(mol).to_topology()
 
         constraints = SMIRNOFFConstraintCollection.create(
-            parameter_handler=[
-                val for val in [bond_handler, constraint_handler] if val is not None
-            ],
+            parameter_handler=[bond_handler, constraint_handler],
             topology=topology,
+            bonds=SMIRNOFFBondCollection.create(bond_handler, topology),
         )
 
         assert len(constraints.key_map) == n_constraints

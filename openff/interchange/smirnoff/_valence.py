@@ -232,7 +232,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
         cls: Type[T],
         parameter_handler: BondHandler,
         topology: Topology,
-        partial_bond_orders_from_molecules=None,
+        partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
     ) -> T:
         """
         Create a SMIRNOFFBondCollection from toolkit data.
@@ -255,7 +255,8 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
         if handler._get_uses_interpolation(parameter_handler):
             _check_molecule_uniqueness(partial_bond_orders_from_molecules)
 
-            for molecule in topology.unique_molecules:
+            for molecule in topology.molecules:
+                # TODO: This loop could be sped up by iterating over `unique_molecules` and later copy the
                 if _molecule_is_in_list(molecule, partial_bond_orders_from_molecules):
                     continue
 
@@ -301,6 +302,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
         cls: Type[T],
         parameter_handler: List,
         topology: Topology,
+        bonds: Optional[SMIRNOFFBondCollection] = None,
     ) -> T:
         """
         Create a SMIRNOFFCollection from toolkit data.
@@ -319,6 +321,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
         handler.store_constraints(
             parameter_handlers=parameter_handlers,
             topology=topology,
+            bonds=bonds,
         )
 
         return handler
@@ -327,6 +330,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
         self,
         parameter_handlers: List,
         topology: Topology,
+        bonds: Optional[SMIRNOFFBondCollection] = None,
     ) -> None:
         """Store constraints."""
         if self.key_map:
@@ -343,10 +347,8 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
 
         if any([type(p) == BondHandler for p in parameter_handlers]):
             bond_handler = [p for p in parameter_handlers if type(p) == BondHandler][0]
-            bonds = SMIRNOFFBondCollection.create(
-                parameter_handler=bond_handler,
-                topology=topology,
-            )
+            # This should be passed in as a parameter
+            assert bonds is not None
         else:
             bond_handler = None
             bonds = None
@@ -570,7 +572,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
         ):
             _check_molecule_uniqueness(partial_bond_orders_from_molecules)
 
-            for molecule in topology.unique_molecules:
+            for molecule in topology.molecules:
                 if _molecule_is_in_list(molecule, partial_bond_orders_from_molecules):
                     continue
 
