@@ -48,9 +48,10 @@ class TestOpenMM(_BaseTest):
         # Ported from the toolkit after #1276
         top = Molecule.from_smiles("CCCC").to_topology()
 
-        ff_no_electrostatics = ForceField("test_forcefields/test_forcefield.offxml")
+        ff_no_electrostatics = ForceField("openff-2.0.0.offxml")
         ff_no_electrostatics.deregister_parameter_handler("Electrostatics")
         ff_no_electrostatics.deregister_parameter_handler("ToolkitAM1BCC")
+        ff_no_electrostatics.deregister_parameter_handler("LibraryCharges")
 
         out = Interchange.from_smirnoff(
             ff_no_electrostatics,
@@ -67,7 +68,7 @@ class TestOpenMM(_BaseTest):
         # Ported from the toolkit after #1276
         top = Molecule.from_smiles("CCCC").to_topology()
 
-        ff_no_vdw = ForceField("test_forcefields/test_forcefield.offxml")
+        ff_no_vdw = ForceField("openff-2.0.0.offxml")
         ff_no_vdw.deregister_parameter_handler("vdW")
 
         out = Interchange.from_smirnoff(

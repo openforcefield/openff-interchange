@@ -2,8 +2,13 @@ import numpy
 import openmm
 import pytest
 from openff.toolkit import ForceField, Molecule, Topology
-from openff.toolkit.tests.test_forcefield import create_ethanol, create_reversed_ethanol
-from openff.toolkit.tests.utils import get_data_file_path, requires_openeye
+from openff.toolkit.tests.test_forcefield import (
+    create_cyclohexane,
+    create_ethanol,
+    create_reversed_ethanol,
+    create_water,
+)
+from openff.toolkit.tests.utils import requires_openeye
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -14,6 +19,7 @@ from pydantic import ValidationError
 
 from openff.interchange import Interchange
 from openff.interchange.constants import kcal_mol_a2, kcal_mol_rad2
+from openff.interchange.exceptions import DuplicateMoleculeError
 from openff.interchange.models import AngleKey, BondKey, ImproperTorsionKey
 from openff.interchange.smirnoff._create import _create_interchange
 from openff.interchange.smirnoff._valence import (
@@ -21,6 +27,7 @@ from openff.interchange.smirnoff._valence import (
     SMIRNOFFBondCollection,
     SMIRNOFFConstraintCollection,
     SMIRNOFFImproperTorsionCollection,
+    _check_molecule_uniqueness,
 )
 from openff.interchange.tests import _BaseTest
 
@@ -166,10 +173,9 @@ class TestConstraintCollection(_BaseTest):
         topology = Molecule.from_smiles(mol).to_topology()
 
         constraints = SMIRNOFFConstraintCollection.create(
-            parameter_handler=[
-                val for val in [bond_handler, constraint_handler] if val is not None
-            ],
+            parameter_handler=[bond_handler, constraint_handler],
             topology=topology,
+            bonds=SMIRNOFFBondCollection.create(bond_handler, topology),
         )
 
         assert len(constraints.key_map) == n_constraints
@@ -192,7 +198,6 @@ class TestBondOrderInterpolation(_BaseTest):
     def test_input_bond_orders_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
-        from openff.toolkit.tests.test_forcefield import create_ethanol
 
         mol = create_ethanol()
         mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
@@ -204,7 +209,7 @@ class TestBondOrderInterpolation(_BaseTest):
         mod_top = Topology.from_molecules(mod_mol)
 
         forcefield = ForceField(
-            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            "openff-2.0.0.offxml",
             self.xml_ff_bo_bonds,
         )
 
@@ -242,7 +247,7 @@ class TestBondOrderInterpolation(_BaseTest):
         mod_top = Topology.from_molecules(mod_mol)
 
         forcefield = ForceField(
-            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            "openff-2.0.0.offxml",
             self.xml_ff_bo_bonds,
         )
 
@@ -266,7 +271,7 @@ class TestBondOrderInterpolation(_BaseTest):
         FractionalBondOrderInterpolationMethodUnsupportedError
         """
         forcefield = ForceField(
-            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            "openff-2.0.0.offxml",
             self.xml_ff_bo_bonds,
         )
         forcefield["Bonds"]._fractional_bondorder_interpolation = "invalid method name"
@@ -302,7 +307,7 @@ class TestParameterInterpolation(_BaseTest):
     @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
     def test_bond_order_interpolation(self, ethanol):
         forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml",
+            "openff-2.0.0.offxml",
             self.xml_ff_bo,
         )
 
@@ -328,7 +333,7 @@ class TestParameterInterpolation(_BaseTest):
         """Test that key mappings do not get confused when two bonds having similar SMIRKS matches
         have different bond orders"""
         forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml",
+            "openff-2.0.0.offxml",
             self.xml_ff_bo,
         )
 
@@ -411,7 +416,7 @@ class TestParameterInterpolation(_BaseTest):
         """
         mol = get_molecule()
         forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml",
+            "openff-2.0.0.offxml",
             self.xml_ff_bo,
         )
         topology = Topology.from_molecules(mol)
@@ -525,3 +530,17 @@ def test_get_uses_interpolation():
     assert SMIRNOFFBondCollection()._get_uses_interpolation(
         handler_partial_interpolation,
     )
+
+
+def test_check_molecule_uniqueness():
+    _check_molecule_uniqueness(None)
+    _check_molecule_uniqueness(list())
+    _check_molecule_uniqueness([create_ethanol()])
+    _check_molecule_uniqueness([create_cyclohexane()])
+    _check_molecule_uniqueness([create_ethanol(), create_cyclohexane(), create_water()])
+
+    with pytest.raises(DuplicateMoleculeError, match="Duplicate molecules"):
+        _check_molecule_uniqueness(2 * [create_ethanol()])
+
+    with pytest.raises(DuplicateMoleculeError, match="Duplicate molecules"):
+        _check_molecule_uniqueness([create_ethanol(), create_reversed_ethanol()])

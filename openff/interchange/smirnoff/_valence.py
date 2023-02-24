@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict, List, Literal, Type, Union
+from typing import Dict, List, Literal, Optional, Type, Union
 
 from openff.toolkit import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -14,6 +14,7 @@ from openff.units import unit
 
 from openff.interchange.components.potentials import Potential, WrappedPotential
 from openff.interchange.exceptions import (
+    DuplicateMoleculeError,
     InvalidParameterHandlerError,
     MissingParametersError,
 )
@@ -48,21 +49,35 @@ def _upconvert_bondhandler(bond_handler: BondHandler):
         bond_handler.potential = "(k/2)*(r-length)^2"
 
 
-def _check_partial_bond_orders(
-    reference_molecule: Molecule,
-    molecule_list: List[Molecule],
-) -> bool:
+def _check_molecule_uniqueness(molecule_list: Optional[List[Molecule]]):
     """Check if the reference molecule is isomorphic with any molecules in a provided list."""
+    # TODO: This could all be replaced by MoleculeSet
+    if molecule_list is None:
+        return
+
+    for index, molecule in enumerate(molecule_list):
+        for other_index, other_molecule in enumerate(molecule_list):
+            if other_index <= index:
+                continue
+            if other_molecule.is_isomorphic_with(molecule):
+                # The toolkit used to enforce that `partial_bond_orders_from_molecules` must not have isomorphic
+                # duplicates in its list, raising `ValueError` if any fail.
+
+                raise DuplicateMoleculeError(
+                    "Duplicate molecules found in `partial_bond_orders_from_molecules` list. "
+                    "Please ensure that each molecule in this list is isomorphically unique.",
+                )
+
+
+def _molecule_is_in_list(
+    molecule: Molecule,
+    molecule_list: Optional[List[Molecule]],
+) -> bool:
     if molecule_list is None:
         return False
 
-    if len(molecule_list) == 0:
-        return False
-
-    for molecule in molecule_list:
-        if reference_molecule.is_isomorphic_with(molecule):
-            # TODO: Here is where a check for "all bonds in this molecule must have partial bond orders assigned"
-            #       would go. That seems like a difficult mangled state to end up in, so not implemented for now.
+    for list_molecule in molecule_list:
+        if molecule.is_isomorphic_with(list_molecule):
             return True
 
     return False
@@ -217,7 +232,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
         cls: Type[T],
         parameter_handler: BondHandler,
         topology: Topology,
-        partial_bond_orders_from_molecules=None,
+        partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
     ) -> T:
         """
         Create a SMIRNOFFBondCollection from toolkit data.
@@ -238,14 +253,14 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
         )
 
         if handler._get_uses_interpolation(parameter_handler):
+            _check_molecule_uniqueness(partial_bond_orders_from_molecules)
+
             for molecule in topology.molecules:
-                if _check_partial_bond_orders(
-                    molecule,
-                    partial_bond_orders_from_molecules,
-                ):
+                # TODO: This loop could be sped up by iterating over `unique_molecules` and later copy the
+                if _molecule_is_in_list(molecule, partial_bond_orders_from_molecules):
                     continue
-                # TODO: expose conformer generation and fractional bond order assigment
-                # knobs to user via API
+
+                # TODO: expose conformer generation and fractional bond order assigment knobs to user via API
                 molecule.generate_conformers(n_conformers=1)
                 molecule.assign_fractional_bond_orders(
                     bond_order_model=handler.fractional_bond_order_method.lower(),
@@ -287,6 +302,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
         cls: Type[T],
         parameter_handler: List,
         topology: Topology,
+        bonds: Optional[SMIRNOFFBondCollection] = None,
     ) -> T:
         """
         Create a SMIRNOFFCollection from toolkit data.
@@ -305,6 +321,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
         handler.store_constraints(
             parameter_handlers=parameter_handlers,
             topology=topology,
+            bonds=bonds,
         )
 
         return handler
@@ -313,6 +330,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
         self,
         parameter_handlers: List,
         topology: Topology,
+        bonds: Optional[SMIRNOFFBondCollection] = None,
     ) -> None:
         """Store constraints."""
         if self.key_map:
@@ -329,10 +347,8 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
 
         if any([type(p) == BondHandler for p in parameter_handlers]):
             bond_handler = [p for p in parameter_handlers if type(p) == BondHandler][0]
-            bonds = SMIRNOFFBondCollection.create(
-                parameter_handler=bond_handler,
-                topology=topology,
-            )
+            # This should be passed in as a parameter
+            assert bonds is not None
         else:
             bond_handler = None
             bonds = None
@@ -554,15 +570,15 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
             getattr(p, "k_bondorder", None) is not None
             for p in parameter_handler.parameters
         ):
-            for ref_mol in topology.unique_molecules:
-                if _check_partial_bond_orders(
-                    ref_mol,
-                    partial_bond_orders_from_molecules,
-                ):
+            _check_molecule_uniqueness(partial_bond_orders_from_molecules)
+
+            for molecule in topology.molecules:
+                if _molecule_is_in_list(molecule, partial_bond_orders_from_molecules):
                     continue
+
                 # TODO: expose conformer generation and fractional bond order assigment knobs via API?
-                ref_mol.generate_conformers(n_conformers=1)
-                ref_mol.assign_fractional_bond_orders(
+                molecule.generate_conformers(n_conformers=1)
+                molecule.assign_fractional_bond_orders(
                     bond_order_model=handler.fractional_bond_order_method.lower(),
                 )
 

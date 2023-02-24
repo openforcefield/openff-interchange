@@ -239,7 +239,10 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
 
         from openff.toolkit.tests.test_forcefield import xml_ff_bo
 
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+        forcefield = ForceField(
+            "openff-2.0.0.offxml",
+            xml_ff_bo,
+        )
         topology = Topology.from_molecules(mol)
 
         out = Interchange.from_smirnoff(
@@ -274,7 +277,10 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
     def test_partial_bond_order_from_molecules_empty(self, ethanol):
         from openff.toolkit.tests.test_forcefield import xml_ff_bo
 
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+        forcefield = ForceField(
+            "openff-2.0.0.offxml",
+            xml_ff_bo,
+        )
 
         default = Interchange.from_smirnoff(forcefield, ethanol.to_topology())
         empty = Interchange.from_smirnoff(
@@ -290,7 +296,10 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
     def test_partial_bond_order_from_molecules_no_matches(self, ethanol):
         from openff.toolkit.tests.test_forcefield import xml_ff_bo
 
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+        forcefield = ForceField(
+            "openff-2.0.0.offxml",
+            xml_ff_bo,
+        )
 
         decoy = Molecule.from_smiles("C#N")
         decoy.assign_fractional_bond_orders(bond_order_model="am1-wiberg")

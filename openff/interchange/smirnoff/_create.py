@@ -97,7 +97,12 @@ def _create_interchange(
     interchange.box = _topology.box_vectors if box is None else box
 
     _bonds(interchange, force_field, _topology, partial_bond_orders_from_molecules)
-    _constraints(interchange, force_field, _topology)
+    _constraints(
+        interchange,
+        force_field,
+        _topology,
+        bonds=interchange.collections.get("Bonds", None),  # type: ignore[arg-type]
+    )
     _angles(interchange, force_field, _topology)
     _propers(interchange, force_field, _topology, partial_bond_orders_from_molecules)
     _impropers(interchange, force_field, _topology)
@@ -144,7 +149,12 @@ def _bonds(
     )
 
 
-def _constraints(interchange: Interchange, force_field: ForceField, topology: Topology):
+def _constraints(
+    interchange: Interchange,
+    force_field: ForceField,
+    topology: Topology,
+    bonds: Optional[SMIRNOFFBondCollection] = None,
+):
     interchange.collections.update(
         {
             "Constraints": SMIRNOFFConstraintCollection.create(
@@ -157,6 +167,7 @@ def _constraints(interchange: Interchange, force_field: ForceField, topology: To
                     if handler is not None
                 ],
                 topology=topology,
+                bonds=bonds,
             ),
         },
     )
