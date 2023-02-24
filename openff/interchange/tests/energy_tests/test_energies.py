@@ -218,7 +218,7 @@ class TestEnergies(_BaseTest):
         mol.generate_conformers(n_conformers=1)
 
         forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml",
+            "openff-2.0.0.offxml",
             xml_ff_bo_all_heavy_bonds,
         )
 

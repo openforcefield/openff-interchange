@@ -79,7 +79,7 @@ def _compare_openmm_topologies(top1: app.Topology, top2: app.Topology):
 
 class TestOpenMM(_BaseTest):
     @pytest.mark.parametrize("inputs", nonbonded_methods)
-    def test_openmm_nonbonded_methods(self, inputs):
+    def test_openmm_nonbonded_methods(self, inputs, sage):
         """See test_nonbonded_method_resolution in openff/toolkit/tests/test_forcefield.py"""
         vdw_method = inputs["vdw_method"]
         electrostatics_method = inputs["electrostatics_periodic"]
@@ -87,7 +87,6 @@ class TestOpenMM(_BaseTest):
         result = inputs["result"]
 
         molecules = [create_ethanol()]
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
@@ -95,25 +94,25 @@ class TestOpenMM(_BaseTest):
         if not periodic:
             topology.box_vectors = None
 
-        forcefield.get_parameter_handler("vdW", {}).method = vdw_method
-        forcefield.get_parameter_handler(
+        sage.get_parameter_handler("vdW", {}).method = vdw_method
+        sage.get_parameter_handler(
             "Electrostatics",
             {},
         ).periodic_potential = electrostatics_method
         interchange = Interchange.from_smirnoff(
-            force_field=forcefield,
+            force_field=sage,
             topology=topology,
         )
         if type(result) == int:
             nonbonded_method = result
             # The method is validated and may raise an exception if it's not supported.
-            forcefield.get_parameter_handler("vdW", {}).method = vdw_method
-            forcefield.get_parameter_handler(
+            sage.get_parameter_handler("vdW", {}).method = vdw_method
+            sage.get_parameter_handler(
                 "Electrostatics",
                 {},
             ).periodic_potential = electrostatics_method
             interchange = Interchange.from_smirnoff(
-                force_field=forcefield,
+                force_field=sage,
                 topology=topology,
             )
             openmm_system = interchange.to_openmm(combine_nonbonded_forces=True)
@@ -131,14 +130,13 @@ class TestOpenMM(_BaseTest):
             raise Exception
 
     @pytest.mark.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
-    def test_unsupported_mixing_rule(self):
+    def test_unsupported_mixing_rule(self, sage):
         molecules = [create_ethanol()]
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         openff_sys = Interchange.from_smirnoff(
-            force_field=forcefield,
+            force_field=sage,
             topology=topology,
         )
 
@@ -274,18 +272,17 @@ class TestOpenMM(_BaseTest):
         assert system.getForce(0).getParticleParameters(0)[0]._value == 1.0
         assert system.getForce(0).getParticleParameters(1)[0]._value == -1.0
 
-    def test_nonstandard_cutoffs_match(self):
+    def test_nonstandard_cutoffs_match(self, sage):
         """Test that multiple nonbonded forces use the same cutoff."""
-        force_field = ForceField("test_forcefields/test_forcefield.offxml")
         topology = Molecule.from_smiles("C").to_topology()
         topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
 
         cutoff = unit.Quantity(1.555, unit.nanometer)
 
-        force_field["vdW"].cutoff = cutoff
+        sage["vdW"].cutoff = cutoff
 
         interchange = Interchange.from_smirnoff(
-            force_field=force_field,
+            force_field=sage,
             topology=topology,
         )
 
