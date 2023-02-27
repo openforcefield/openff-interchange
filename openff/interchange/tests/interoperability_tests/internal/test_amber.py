@@ -106,13 +106,14 @@ class TestPRMTOP(_BaseTest):
 
 
 class TestAmberResidues(_BaseTest):
-    def test_single_residue_system(self, sage, ethanol):
-        """
-        Ensure a single-molecule system without specified residues writes something that ParmEd can read.
+    def test_single_residue_system_residue_name(self, tmp_path, sage, ethanol):
+        for atom in ethanol.atoms:
+            atom.metadata["residue_name"] = "YUP"
 
-        See https://github.com/openforcefield/openff-interchange/pull/538#issue-1404910624
-        """
-        Interchange.from_smirnoff(sage, [ethanol]).to_prmtop("molecule.prmtop")
+        ethanol.add_default_hierarchy_schemes()
 
-        # Use ParmEd as a soft validator of this file format
-        parmed.amber.AmberParm("molecule.prmtop")
+        Interchange.from_smirnoff(sage, [ethanol]).to_prmtop("test.prmtop")
+
+        residue_names = [r.name for r in parmed.load_file("test.prmtop").residues]
+
+        assert residue_names == ["YUP"]

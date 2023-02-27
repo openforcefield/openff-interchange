@@ -486,14 +486,10 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         text_blob = "".join([str(val).rjust(8) for val in nonbonded_parm_indices])
         _write_text_blob(prmtop, text_blob)
 
-        residue_names = (
-            [
-                residue.residue_name
-                for residue in interchange.topology.hierarchy_iterator("residues")
-            ]
-            if NRES > 1
-            else ["RES"]
-        )
+        residue_names = [
+            getattr(residue, "residue_name", "RES")
+            for residue in interchange.topology.hierarchy_iterator("residues")
+        ]
         prmtop.write("%FLAG RESIDUE_LABEL\n" "%FORMAT(20a4)\n")
         text_blob = "".join([val.ljust(4) for val in residue_names])
         _write_text_blob(prmtop, text_blob)
