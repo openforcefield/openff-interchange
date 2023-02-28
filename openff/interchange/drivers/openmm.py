@@ -15,7 +15,7 @@ kj_mol = unit.kilojoule_per_mole
 def get_openmm_energies(
     off_sys: Interchange,
     round_positions: Optional[int] = None,
-    combine_nonbonded_forces: bool = False,
+    combine_nonbonded_forces: bool = True,
     platform: str = "Reference",
 ) -> EnergyReport:
     """

@@ -420,14 +420,12 @@ def _write_top_defaults(openff_sys: "Interchange", top_file: IO):
         )
 
     top_file.write(
-        "{:6d}\t{:6d}\t{:6s} {:8.6f} {:8.6f}\n\n".format(
-            nbfunc,
-            comb_rule,
-            gen_pairs,
-            scale_lj,
-            openff_sys["Electrostatics"].scale_14,
-        ),
-    )
+        f"{nbfunc:6d}\t"
+        f"{comb_rule:6d}\t"
+        f"{gen_pairs:6s}\t"
+        f"{scale_lj:8.6f}\t"
+        f"{openff_sys['Electrostatics'].scale_14:8.6f}\n\n",
+    ),
 
 
 def _build_typemap(openff_sys: "Interchange") -> Dict[int, str]:
@@ -718,7 +716,7 @@ def _write_atoms(
         elif mixing_rule == "geometric":
             sigma_mix = (sigma1 * sigma2) ** 0.5
         top_file.write(
-            "{:7d} {:7d} {:6d} {:16g} {:16g}\n".format(
+            "{:7d} {:7d} {:6d} {:.16g} {:.16g}\n".format(
                 molecule_indices[0] + 1,
                 molecule_indices[1] + 1,
                 1,
@@ -1129,16 +1127,14 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
                     phase = params["phase"].m
                     idivf = int(params["idivf"]) if "idivf" in params else 1
                     top_file.write(
-                        "{:7d} {:7d} {:7d} {:7d} {:6d} {:16g} {:16g} {:7d}\n".format(
-                            molecule_indices[0] + 1,
-                            molecule_indices[1] + 1,
-                            molecule_indices[2] + 1,
-                            molecule_indices[3] + 1,
-                            1,
-                            phase,
-                            k / idivf,
-                            periodicity,
-                        ),
+                        f"{molecule_indices[0] + 1:7d}\t"
+                        f"{molecule_indices[1] + 1:7d}\t"
+                        f"{molecule_indices[2] + 1:7d}\t"
+                        f"{molecule_indices[3] + 1:7d}\t"
+                        f"{1:6d}\t"
+                        f"{phase:.16g}\t"
+                        f"{k / idivf:.16g}\t"
+                        f"{periodicity:7d}\n",
                     )
         # This should be `if` if a single quartet can be subject to both proper and RB torsions
         if rb_torsion_handler:
@@ -1164,7 +1160,7 @@ def _write_dihedrals(top_file: IO, openff_sys: "Interchange", molecule: "Molecul
 
                     top_file.write(
                         "{:7d} {:7d} {:7d} {:7d} {:6d} "
-                        "{:16g} {:16g} {:16g} {:16g} {:16g} {:16g} \n".format(
+                        "{:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} \n".format(
                             molecule_indices[0] + 1,
                             molecule_indices[1] + 1,
                             molecule_indices[2] + 1,
