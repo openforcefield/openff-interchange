@@ -64,7 +64,7 @@ class TestAmber(_BaseTest):
         off_sys.box = [4, 4, 4]
         off_sys.positions = mol.conformers[0]
 
-        omm_energies = get_openmm_energies(off_sys)
+        omm_energies = get_openmm_energies(off_sys, combine_nonbonded_forces=False)
         amb_energies = get_amber_energies(off_sys)
 
         omm_energies.compare(
