@@ -20,9 +20,12 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
   * `PotentialHandler.slot_map` is deprecated for `Collection.key_map`.
   * Classes found in `openff.interchange.components.smirnoff` are now in `openff.interchange.smirnoff`
   * Classes found in `openff.interchange.components.foyer` are now in `openff.interchange.foyer`
+* #601 Groups GROMACS improper torsion energies in the `"Torsions"` key
 
 ### Bugfixes
 * #593 Fix a #592 in which OpenMM exports fail to create multiple non-bonded forces without a vdW handler
+* #601 Fixes #600 in which some parameters were rounded to 6 digits in `Interchange.to_top`
+* #598 Fixes #597 in which residue names were incorrectly written to Amber files for single-residue systems.
 
 ### New features
 * #589 For convenience, per-parameter variables are now stored on `SMIRNOFFCollection.potential_parameters` and its subclasses.

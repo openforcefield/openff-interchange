@@ -185,7 +185,8 @@ def _get_gmx_energy_coul(gmx_energies: Dict) -> "Quantity":
 def _get_gmx_energy_torsion(gmx_energies: Dict) -> "Quantity":
     """Canonicalize torsion energies from a set of GROMACS energies."""
     gmx_torsion = 0.0 * kj_mol
-    for key in ["Torsion", "Ryckaert-Bell.", "Proper Dih."]:
+
+    for key in ["Torsion", "Ryckaert-Bell.", "Proper Dih.", "Per. Imp. Dih."]:
         try:
             gmx_torsion += gmx_energies[key]
         except KeyError:
