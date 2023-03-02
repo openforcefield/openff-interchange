@@ -35,7 +35,7 @@ def _write_text_blob(file, blob):
             file.write(line + "\n")
 
 
-def _get_exclusion_lists(topology: Topology) -> Tuple[List[int], List[int]]:
+def _get_exclusion_lists(topology: "Topology") -> Tuple[List[int], List[int]]:
     number_excluded_atoms: List[int] = list()
     excluded_atoms_list: List[int] = list()
 

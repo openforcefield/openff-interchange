@@ -333,8 +333,8 @@ class TestGROMACS(_BaseTest):
         out = Interchange.from_smirnoff(sage_unconstrained, topology)
 
         get_gromacs_energies(out).compare(
-            get_openmm_energies(out, combine_nonbonded_forces=False),
-            {"Electrostatics": 0.5 * unit.kilojoule_per_mole},
+            get_openmm_energies(out, combine_nonbonded_forces=True),
+            {"Nonbonded": 0.5 * unit.kilojoule_per_mole},
         )
 
 

@@ -275,7 +275,7 @@ def _prepare_input_data(interchange: "Interchange") -> _DATA_DICT:
         "mixing_rule_expression": _MIXING_RULE_EXPRESSIONS.get(mixing_rule, "")
         if isinstance(mixing_rule, str)
         else None,
-        "electrostatics_handler": electrostatics,
+        "electrostatics_collection": electrostatics,
         "electrostatics_method": electrostatics_method,
         "periodic": interchange.box is None,
     }
@@ -345,11 +345,13 @@ def _create_single_nonbonded_force(
                 f"`combine_nonbonded_forces=True` and `.box={interchange.box}`.",
             )
 
-    if data["electrostatics_handler"] is not None:
+    if data["electrostatics_collection"] is not None:
         try:
-            partial_charges = data["electrostatics_handler"].charges_with_virtual_sites
+            partial_charges = data[
+                "electrostatics_collection"
+            ].charges_with_virtual_sites
         except AttributeError:
-            partial_charges = data["electrostatics_handler"].charges
+            partial_charges = data["electrostatics_collection"].charges
 
     # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
     #   of that parent atom (if any)
@@ -366,7 +368,7 @@ def _create_single_nonbonded_force(
 
             top_key = TopologyKey(atom_indices=(atom_index,))
 
-            if data["electrostatics_handler"] is not None:
+            if data["electrostatics_collection"] is not None:
                 partial_charge = partial_charges[top_key].m_as(off_unit.e)
             else:
                 partial_charge = 0.0
@@ -630,13 +632,13 @@ def _create_multiple_nonbonded_forces(
                     getattr(vdw, global_parameter),
                 )
 
-            for term, value in data["vdw_handler"].pre_computed_terms().items():
+            for term, value in data["vdw_collection"].pre_computed_terms().items():
                 vdw_14_force.addGlobalParameter(term, value)
 
         else:
             vdw_14_force = openmm.CustomBondForce(data["vdw_expression"])
 
-            for parameter in data["vdw_handler"].potential_parameters():
+            for parameter in data["vdw_collection"].potential_parameters():
                 vdw_14_force.addPerBondParameter(parameter)
 
         vdw_14_force.setUsesPeriodicBoundaryConditions(interchange.box is not None)
@@ -671,7 +673,7 @@ def _create_multiple_nonbonded_forces(
             # Assume this is a 1-4 interaction
 
             if vdw_force is not None:
-                if data["vdw_handler"].is_plugin:
+                if data["vdw_collection"].is_plugin:
                     # Since we fed in in r_min1, epsilon1, ..., r_min2, epsilon2, ...
                     # each as individual parameters, we need to prepare a list of
                     # length 2 * len(potential_parameters) to this constructor
@@ -729,7 +731,7 @@ def _create_vdw_force(
     molecule_virtual_site_map: Dict[int, List[VirtualSiteKey]],
     has_virtual_sites: bool,
 ) -> Optional[openmm.CustomNonbondedForce]:
-    vdw_collection: Optional["SMIRNOFFCollection"] = data["vdw_handler"]  # type: ignore[assignment]
+    vdw_collection: Optional["SMIRNOFFCollection"] = data["vdw_collection"]  # type: ignore[assignment]
 
     if vdw_collection is None:
         return None
@@ -797,7 +799,7 @@ def _create_electrostatics_force(
     molecule_virtual_site_map: Dict[int, List[VirtualSiteKey]],
     has_virtual_sites: bool,
 ) -> Optional[openmm.NonbondedForce]:
-    if data["electrostatics_handler"] is None:
+    if data["electrostatics_collection"] is None:
         return None
 
     electrostatics_force = openmm.NonbondedForce()
@@ -855,7 +857,7 @@ def _set_particle_parameters(
 ):
     if electrostatics_force is not None:
         electrostatics: SMIRNOFFElectrostaticsCollection = data[  # type: ignore[assignment]
-            "electrostatics_handler"
+            "electrostatics_collection"
         ]
 
         partial_charges = getattr(
@@ -866,7 +868,7 @@ def _set_particle_parameters(
     else:
         partial_charges = None
 
-    vdw: "SMIRNOFFCollection" = data["vdw_handler"]  # type: ignore[assignment]
+    vdw: "SMIRNOFFCollection" = data["vdw_collection"]  # type: ignore[assignment]
 
     for molecule in interchange.topology.molecules:
         for atom in molecule.atoms:
@@ -919,13 +921,13 @@ def _set_particle_parameters(
 
 
 def _get_14_scaling_factors(data: _DATA_DICT) -> Tuple[float, float]:
-    if data.get("electrostatics_handler", None) is not None:
-        coul_14 = data["electrostatics_handler"].scale_14  # type: ignore[union-attr]
+    if data.get("electrostatics_collection", None) is not None:
+        coul_14 = data["electrostatics_collection"].scale_14  # type: ignore[union-attr]
     else:
         coul_14 = 1.0
 
     if data.get("vdw_handler", None) is not None:
-        vdw_14 = data["vdw_handler"].scale_14  # type: ignore[union-attr]
+        vdw_14 = data["vdw_collection"].scale_14  # type: ignore[union-attr]
     else:
         vdw_14 = 1.0
 
