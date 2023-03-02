@@ -111,7 +111,7 @@ class TestGROMACSGROFile(_BaseTest):
 
         out.to_gro("tmp.gro")
 
-        mdtraj_topology: mdtraj.Topology = mdtraj.load("tmp.gro").topology
+        mdtraj_topology = mdtraj.load("tmp.gro").topology
 
         for found_residue, original_residue in zip(
             mdtraj_topology.residues,
@@ -249,7 +249,7 @@ class TestGROMACS(_BaseTest):
 
         out.to_top("tmp.top")
 
-        parmed_structure: parmed.Structure = parmed.load_file("tmp.top")
+        parmed_structure = parmed.load_file("tmp.top")
 
         for found_residue, original_residue in zip(
             parmed_structure.residues,

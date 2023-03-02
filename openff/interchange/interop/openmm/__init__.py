@@ -20,6 +20,7 @@ __all__ = [
 ]
 
 if TYPE_CHECKING:
+    import openmm.app
     from openff.toolkit.topology import Topology
 
     from openff.interchange.smirnoff._nonbonded import (
@@ -113,7 +114,7 @@ def to_openmm(
 
 
 def from_openmm(
-    topology: Optional[openmm.app.Topology] = None,
+    topology: Optional["openmm.app.Topology"] = None,
     system: Optional[openmm.System] = None,
     positions=None,
     box_vectors=None,

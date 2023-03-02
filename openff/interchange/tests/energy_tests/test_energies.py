@@ -55,8 +55,8 @@ class TestEnergies(_BaseTest):
         interchange.collections["Electrostatics"].periodic_potential = "cutoff"
 
         mol.to_file("out.xyz", file_format="xyz")
-        compound: mb.Compound = mb.load("out.xyz")
-        packed_box: mb.Compound = mb.fill_box(
+        compound = mb.load("out.xyz")
+        packed_box = mb.fill_box(
             compound=compound,
             n_compounds=1,
             box=mb.Box(lengths=[10, 10, 10]),

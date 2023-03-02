@@ -61,12 +61,12 @@ def get_openmm_energies(
             virtual_site_positions *= interchange.positions.units
             positions = np.vstack([positions, virtual_site_positions])
 
-    omm_sys: openmm.System = interchange.to_openmm(
+    system: openmm.System = interchange.to_openmm(
         combine_nonbonded_forces=combine_nonbonded_forces,
     )
 
     return _get_openmm_energies(
-        omm_sys=omm_sys,
+        system=system,
         box_vectors=interchange.box,
         positions=positions,
         round_positions=round_positions,
@@ -75,19 +75,19 @@ def get_openmm_energies(
 
 
 def _get_openmm_energies(
-    omm_sys: openmm.System,
+    system: openmm.System,
     box_vectors,
     positions,
     round_positions=None,
     platform=None,
 ) -> EnergyReport:
     """Given a prepared `openmm.System`, run a single-point energy calculation."""
-    for idx, force in enumerate(omm_sys.getForces()):
+    for idx, force in enumerate(system.getForces()):
         force.setForceGroup(idx)
 
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context = openmm.Context(
-        omm_sys,
+        system,
         integrator,
         openmm.Platform.getPlatformByName(platform),
     )
@@ -112,14 +112,14 @@ def _get_openmm_energies(
     raw_energies = dict()
     omm_energies = dict()
 
-    for idx in range(omm_sys.getNumForces()):
+    for idx in range(system.getNumForces()):
         state = context.getState(getEnergy=True, groups={idx})
         raw_energies[idx] = state.getPotentialEnergy()
         del state
 
     # This assumes that only custom forces will have duplicate instances
     for key in raw_energies:
-        force = omm_sys.getForce(key)
+        force = system.getForce(key)
         if type(force) == openmm.HarmonicBondForce:
             omm_energies["HarmonicBondForce"] = raw_energies[key]
         elif type(force) == openmm.HarmonicAngleForce:

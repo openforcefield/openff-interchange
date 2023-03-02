@@ -152,18 +152,15 @@ class TestOpenMM(_BaseTest):
         mol = Molecule.from_smiles(mol_smi)
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
-        omm_top = top.to_openmm()
 
         interchange = Interchange.from_smirnoff(sage, top)
 
         interchange.box = [4, 4, 4]
         interchange.positions = mol.conformers[0].value_in_unit(openmm_unit.nanometer)
 
-        omm_sys = interchange.to_openmm(combine_nonbonded_forces=True)
-
         converted = from_openmm(
-            topology=omm_top,
-            system=omm_sys,
+            topology=interchange.to_openmm_topology(),
+            system=interchange.to_openmm(combine_nonbonded_forces=True),
         )
 
         converted.box = interchange.box
@@ -585,15 +582,14 @@ class TestOpenMMVirtualSiteExclusions(_BaseTest):
 
         sage.register_parameter_handler(handler)
 
-        system: openmm.System = Interchange.from_smirnoff(
-            sage,
-            [dichloroethane],
-        ).to_openmm(combine_nonbonded_forces=True)
+        system = Interchange.from_smirnoff(sage, [dichloroethane]).to_openmm(
+            combine_nonbonded_forces=True,
+        )
 
         assert system.isVirtualSite(8)
         assert system.isVirtualSite(9)
 
-        non_bonded_force: openmm.NonbondedForce = [
+        non_bonded_force = [
             f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)
         ][0]
 
