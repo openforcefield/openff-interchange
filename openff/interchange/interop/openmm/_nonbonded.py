@@ -86,10 +86,9 @@ def _process_nonbonded_forces(
     else:
         molecule_virtual_site_map = defaultdict(list)
 
-    # Mapping between OpenFF "particles" and OpenMM particles (via inddex). OpenFF objects
+    # Mapping between OpenFF "particles" and OpenMM particles (via index). OpenFF objects
     # (keys) are either atom indices (if atoms) or `VirtualSitesKey`s if virtual sites
     # openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int] = dict()
-
     openff_openmm_particle_map = _add_particles_to_system(
         openff_sys,
         openmm_sys,
@@ -113,45 +112,6 @@ def _process_nonbonded_forces(
             molecule_virtual_site_map,
             openff_openmm_particle_map,
         )
-
-    elif "Buckingham-6" in openff_sys.collections:
-        if has_virtual_sites:
-            raise UnsupportedExportError(
-                "Virtual sites with Buckingham-6 potential not supported. If this use case is important to you, "
-                "please raise an issue describing the functionality you wish to see.",
-            )
-
-        buck_handler = openff_sys["Buckingham-6"]
-
-        non_bonded_force = openmm.CustomNonbondedForce(
-            "A * exp(-B * r) - C * r ^ -6; A = sqrt(A1 * A2); B = 2 / (1 / B1 + 1 / B2); C = sqrt(C1 * C2)",
-        )
-        non_bonded_force.addPerParticleParameter("A")
-        non_bonded_force.addPerParticleParameter("B")
-        non_bonded_force.addPerParticleParameter("C")
-        openmm_sys.addForce(non_bonded_force)
-
-        for molecule in openff_sys.topology.molecules:
-            for _ in molecule.atoms:
-                non_bonded_force.addParticle([0.0, 0.0, 0.0])
-
-        if openff_sys.box is None:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-        else:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
-            non_bonded_force.setCutoffDistance(buck_handler.cutoff * unit.angstrom)
-
-        for top_key, pot_key in buck_handler.key_map.items():
-            atom_idx = top_key.atom_indices[0]
-
-            # TODO: Add electrostatics
-            params = buck_handler.potentials[pot_key].parameters
-            a = to_openmm_quantity(params["A"])
-            b = to_openmm_quantity(params["B"])
-            c = to_openmm_quantity(params["C"])
-            non_bonded_force.setParticleParameters(atom_idx, [a, b, c])
-
-        openff_openmm_particle_map
 
     else:
         # Here we assume there are no vdW interactions in any collections

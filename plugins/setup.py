@@ -5,16 +5,18 @@ from setuptools import setup
 
 setup(
     name="nonbonded_plugins",
+    packages=["nonbonded_plugins"],
     version="0.0.0",
     include_package_data=True,
     entry_points={
         "openff.toolkit.plugins.handlers": [
-            "BuckinghamHandler = nonbonded_plugins:BuckinghamHandler",
-            "DoubleExponentialHandler = nonbonded_plugins:DoubleExponentialHandler",
+            "BuckinghamHandler = nonbonded_plugins.nonbonded:BuckinghamHandler",
+            "BuckinghamVirtualSiteHandler = nonbonded_plugins.virtual_sites:BuckinghamVirtualSiteHandler",
+            "DoubleExponentialHandler = nonbonded_plugins.nonbonded:DoubleExponentialHandler",
         ],
         "openff.interchange.plugins.collections": [
-            "BuckinghamCollection = nonbonded_plugins:SMIRNOFFBuckinghamCollection",
-            "DoubleExponentialCollection = nonbonded_plugins:SMIRNOFFDoubleExponentialCollection",
+            "BuckinghamCollection = nonbonded_plugins.nonbonded:SMIRNOFFBuckinghamCollection",
+            "DoubleExponentialCollection = nonbonded_plugins.nonbonded:SMIRNOFFDoubleExponentialCollection",
         ],
     },
 )

@@ -103,7 +103,9 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 
     acts_as: str = "vdW"
 
-    expression: str = "a*exp(-b*r)-c/r**6"
+    expression: str = (
+        "a*exp(-b*r)-c*r^-6;" "a=sqrt(a1*a2);" "b=2/(1/b1+1/b2);" "c=sqrt(c1*c2);"
+    )
 
     method: str = "cutoff"
 
