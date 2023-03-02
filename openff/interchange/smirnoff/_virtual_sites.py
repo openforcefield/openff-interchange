@@ -1,4 +1,4 @@
-from typing import Dict, Literal, Optional
+from typing import Dict, Literal
 
 import numpy
 from openff.toolkit.topology import Topology
@@ -17,13 +17,6 @@ from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     SMIRNOFFvdWCollection,
 )
-
-
-def _compute_lj_sigma(
-    sigma: Optional[unit.Quantity],
-    rmin_half: Optional[unit.Quantity],
-) -> unit.Quantity:
-    return sigma if rmin_half is None else (2.0 * rmin_half / (2.0 ** (1.0 / 6.0)))
 
 
 class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
@@ -145,7 +138,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
             vdw_key = PotentialKey(id=potential_key.id, associated_handler="vdw")
             vdw_potential = Potential(
                 parameters={
-                    "sigma": _compute_lj_sigma(parameter.sigma, parameter.rmin_half),
+                    "sigma": parameter.sigma,
                     "epsilon": parameter.epsilon,
                 },
             )
