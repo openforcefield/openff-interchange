@@ -119,8 +119,8 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
     def store_potentials(  # type: ignore[override]
         self,
         parameter_handler: VirtualSiteHandler,
-        vdw_handler: SMIRNOFFvdWCollection,
-        electrostatics_handler: SMIRNOFFElectrostaticsCollection,
+        vdw_collection: SMIRNOFFvdWCollection,
+        electrostatics_collection: SMIRNOFFElectrostaticsCollection,
     ) -> None:
         """Store VirtualSite-specific parameter-like data."""
         if self.potentials:
@@ -149,8 +149,8 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                     "epsilon": parameter.epsilon,
                 },
             )
-            vdw_handler.key_map[virtual_site_key] = vdw_key
-            vdw_handler.potentials[vdw_key] = vdw_potential
+            vdw_collection.key_map[virtual_site_key] = vdw_key
+            vdw_collection.potentials[vdw_key] = vdw_potential
 
             electrostatics_key = PotentialKey(
                 id=potential_key.id,
@@ -163,8 +163,8 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                     ),
                 },
             )
-            electrostatics_handler.key_map[virtual_site_key] = electrostatics_key
-            electrostatics_handler.potentials[
+            electrostatics_collection.key_map[virtual_site_key] = electrostatics_key
+            electrostatics_collection.potentials[
                 electrostatics_key
             ] = electrostatics_potential
 

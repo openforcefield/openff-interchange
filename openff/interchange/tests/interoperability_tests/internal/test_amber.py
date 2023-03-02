@@ -59,13 +59,13 @@ class TestAmber(_BaseTest):
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
 
-        off_sys = Interchange.from_smirnoff(sage_unconstrained, top)
+        interchange = Interchange.from_smirnoff(sage_unconstrained, top)
 
-        off_sys.box = [4, 4, 4]
-        off_sys.positions = mol.conformers[0]
+        interchange.box = [4, 4, 4]
+        interchange.positions = mol.conformers[0]
 
-        omm_energies = get_openmm_energies(off_sys, combine_nonbonded_forces=False)
-        amb_energies = get_amber_energies(off_sys)
+        omm_energies = get_openmm_energies(interchange, combine_nonbonded_forces=False)
+        amb_energies = get_amber_energies(interchange)
 
         omm_energies.compare(
             amb_energies,

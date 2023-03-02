@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 def _process_constraints(
-    openff_sys,
+    interchange,
     openmm_sys,
     particle_map: Dict[Union[int, "VirtualSiteKey"], int],
 ) -> Set[Tuple[int, ...]]:
@@ -22,7 +22,7 @@ def _process_constraints(
     Process the Constraints section of an Interchange object.
     """
     try:
-        constraint_handler = openff_sys["Constraints"]
+        constraint_handler = interchange["Constraints"]
     except LookupError:
         return set()
 
@@ -47,7 +47,7 @@ def _process_constraints(
 
 
 def _process_bond_forces(
-    openff_sys,
+    interchange,
     openmm_sys,
     add_constrained_forces: bool,
     constrained_pairs: Set[Tuple[int, ...]],
@@ -57,7 +57,7 @@ def _process_bond_forces(
     Process the Bonds section of an Interchange object.
     """
     try:
-        bond_handler = openff_sys.collections["Bonds"]
+        bond_handler = interchange.collections["Bonds"]
     except KeyError:
         return
 
@@ -71,7 +71,7 @@ def _process_bond_forces(
 
     openmm_sys.addForce(harmonic_bond_force)
 
-    has_constraint_handler = "Constraints" in openff_sys.collections
+    has_constraint_handler = "Constraints" in interchange.collections
 
     for top_key, pot_key in bond_handler.key_map.items():
         openff_indices = top_key.atom_indices
@@ -100,7 +100,7 @@ def _process_bond_forces(
 
 
 def _process_angle_forces(
-    openff_sys,
+    interchange,
     openmm_sys,
     add_constrained_forces: bool,
     constrained_pairs: Set[Tuple[int, ...]],
@@ -110,7 +110,7 @@ def _process_angle_forces(
     Process the Angles section of an Interchange object.
     """
     try:
-        angle_handler = openff_sys.collections["Angles"]
+        angle_handler = interchange.collections["Angles"]
     except KeyError:
         return
 
@@ -132,7 +132,7 @@ def _process_angle_forces(
 
     openmm_sys.addForce(harmonic_angle_force)
 
-    has_constraint_handler = "Constraints" in openff_sys.collections
+    has_constraint_handler = "Constraints" in interchange.collections
 
     for top_key, pot_key in angle_handler.key_map.items():
         openff_indices = top_key.atom_indices
@@ -183,21 +183,21 @@ def _process_angle_forces(
             )
 
 
-def _process_torsion_forces(openff_sys, openmm_sys, particle_map):
-    if "ProperTorsions" in openff_sys.collections:
-        _process_proper_torsion_forces(openff_sys, openmm_sys, particle_map)
-    if "RBTorsions" in openff_sys.collections:
-        _process_rb_torsion_forces(openff_sys, openmm_sys, particle_map)
+def _process_torsion_forces(interchange, openmm_sys, particle_map):
+    if "ProperTorsions" in interchange.collections:
+        _process_proper_torsion_forces(interchange, openmm_sys, particle_map)
+    if "RBTorsions" in interchange.collections:
+        _process_rb_torsion_forces(interchange, openmm_sys, particle_map)
 
 
-def _process_proper_torsion_forces(openff_sys, openmm_sys, particle_map):
+def _process_proper_torsion_forces(interchange, openmm_sys, particle_map):
     """
     Process the Propers section of an Interchange object.
     """
     torsion_force = openmm.PeriodicTorsionForce()
     openmm_sys.addForce(torsion_force)
 
-    proper_torsion_handler = openff_sys["ProperTorsions"]
+    proper_torsion_handler = interchange["ProperTorsions"]
 
     for top_key, pot_key in proper_torsion_handler.key_map.items():
         openff_indices = top_key.atom_indices
@@ -237,14 +237,14 @@ def _process_proper_torsion_forces(openff_sys, openmm_sys, particle_map):
         )
 
 
-def _process_rb_torsion_forces(openff_sys, openmm_sys, particle_map):
+def _process_rb_torsion_forces(interchange, openmm_sys, particle_map):
     """
     Process Ryckaert-Bellemans torsions.
     """
     rb_force = openmm.RBTorsionForce()
     openmm_sys.addForce(rb_force)
 
-    rb_torsion_handler = openff_sys["RBTorsions"]
+    rb_torsion_handler = interchange["RBTorsions"]
 
     for top_key, pot_key in rb_torsion_handler.key_map.items():
         openff_indices = top_key.atom_indices
@@ -273,11 +273,11 @@ def _process_rb_torsion_forces(openff_sys, openmm_sys, particle_map):
         )
 
 
-def _process_improper_torsion_forces(openff_sys, openmm_sys, particle_map):
+def _process_improper_torsion_forces(interchange, openmm_sys, particle_map):
     """
     Process the Impropers section of an Interchange object.
     """
-    if "ImproperTorsions" not in openff_sys.collections.keys():
+    if "ImproperTorsions" not in interchange.collections.keys():
         return
 
     for force in openmm_sys.getForces():
@@ -287,7 +287,7 @@ def _process_improper_torsion_forces(openff_sys, openmm_sys, particle_map):
     else:
         torsion_force = openmm.PeriodicTorsionForce()
 
-    improper_torsion_handler = openff_sys["ImproperTorsions"]
+    improper_torsion_handler = interchange["ImproperTorsions"]
 
     for top_key, pot_key in improper_torsion_handler.key_map.items():
         openff_indices = top_key.atom_indices

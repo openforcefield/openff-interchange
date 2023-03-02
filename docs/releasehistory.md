@@ -14,12 +14,13 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### Behavior changes
 
 * #566 Refactors `EnergyReport` to more explicitly handle comparisons.
-* #583, #588 Changes some code paths of internal objects.
+* #583, #588, #603 Change some code paths of internal objects.
   * `PotentialHandler` is deprecated for `Collection`.
   * `Interchange.handlers` is deprecated for `Interchange.collections`.
   * `PotentialHandler.slot_map` is deprecated for `Collection.key_map`.
   * Classes found in `openff.interchange.components.smirnoff` are now in `openff.interchange.smirnoff`
   * Classes found in `openff.interchange.components.foyer` are now in `openff.interchange.foyer`
+  * Some arguments with `handler` in their names are replaced with `collection`
 * #601 Groups GROMACS improper torsion energies in the `"Torsions"` key
 
 ### Bugfixes

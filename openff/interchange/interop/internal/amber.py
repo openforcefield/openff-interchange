@@ -2,7 +2,7 @@
 import textwrap
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from openff.units import unit
@@ -21,6 +21,8 @@ from openff.interchange.exceptions import (
 )
 
 if TYPE_CHECKING:
+    from openff.toolkit import Topology
+
     from openff.interchange import Interchange
     from openff.interchange.models import PotentialKey
 
@@ -33,7 +35,7 @@ def _write_text_blob(file, blob):
             file.write(line + "\n")
 
 
-def _get_exclusion_lists(topology):
+def _get_exclusion_lists(topology: Topology) -> Tuple[List[int], List[int]]:
     number_excluded_atoms: List[int] = list()
     excluded_atoms_list: List[int] = list()
 

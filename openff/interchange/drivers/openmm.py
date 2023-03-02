@@ -13,7 +13,7 @@ kj_mol = unit.kilojoule_per_mole
 
 
 def get_openmm_energies(
-    off_sys: Interchange,
+    interchange: Interchange,
     round_positions: Optional[int] = None,
     combine_nonbonded_forces: bool = True,
     platform: str = "Reference",
@@ -25,7 +25,7 @@ def get_openmm_energies(
 
     Parameters
     ----------
-    off_sys : openff.interchange.Interchange
+    interchange : openff.interchange.Interchange
         An OpenFF Interchange object to compute the single-point energy of
     round_positions : int, optional
         The number of decimal places, in nanometers, to round positions. This can be useful when
@@ -45,29 +45,29 @@ def get_openmm_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
-    positions = off_sys.positions
+    positions = interchange.positions
 
-    if "VirtualSites" in off_sys.collections:
-        if len(off_sys["VirtualSites"].key_map) > 0:
+    if "VirtualSites" in interchange.collections:
+        if len(interchange["VirtualSites"].key_map) > 0:
             if not combine_nonbonded_forces:
                 raise NotImplementedError(
                     "Cannot yet split out NonbondedForce components while virtual sites are present.",
                 )
 
-            n_virtual_sites = len(off_sys["VirtualSites"].key_map)
+            n_virtual_sites = len(interchange["VirtualSites"].key_map)
 
             # TODO: Actually compute virtual site positions based on initial conformers
             virtual_site_positions = np.zeros((n_virtual_sites, 3))
-            virtual_site_positions *= off_sys.positions.units
+            virtual_site_positions *= interchange.positions.units
             positions = np.vstack([positions, virtual_site_positions])
 
-    omm_sys: openmm.System = off_sys.to_openmm(
+    omm_sys: openmm.System = interchange.to_openmm(
         combine_nonbonded_forces=combine_nonbonded_forces,
     )
 
     return _get_openmm_energies(
         omm_sys=omm_sys,
-        box_vectors=off_sys.box,
+        box_vectors=interchange.box,
         positions=positions,
         round_positions=round_positions,
         platform=platform,

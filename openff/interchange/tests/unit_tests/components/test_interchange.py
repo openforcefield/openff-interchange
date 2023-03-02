@@ -98,17 +98,17 @@ class TestInterchange(_BaseTest):
         mol.generate_conformers(n_conformers=1)
         top = Topology.from_molecules([mol])
 
-        openff_sys = Interchange.from_smirnoff(sage_unconstrained, top)
+        interchange = Interchange.from_smirnoff(sage_unconstrained, top)
 
-        openff_sys.box = [4, 4, 4] * np.eye(3)
-        openff_sys.positions = mol.conformers[0]
+        interchange.box = [4, 4, 4] * np.eye(3)
+        interchange.positions = mol.conformers[0]
 
         # Copy and translate atoms by [1, 1, 1]
         other = Interchange()
-        other = deepcopy(openff_sys)
+        other = deepcopy(interchange)
         other.positions += 1.0 * unit.nanometer
 
-        combined = openff_sys + other
+        combined = interchange + other
 
         # Just see if it can be converted into OpenMM and run
         get_openmm_energies(combined)

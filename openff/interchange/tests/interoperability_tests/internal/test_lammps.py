@@ -54,21 +54,21 @@ class TestLammps(_BaseTest):
                 [mol.conformers[0], mol.conformers[0] + 3 * unit.nanometer],
             )
 
-        openff_sys = Interchange.from_smirnoff(sage_unconstrained, top)
-        openff_sys.positions = positions
-        openff_sys.box = top.box_vectors
+        interchange = Interchange.from_smirnoff(sage_unconstrained, top)
+        interchange.positions = positions
+        interchange.box = top.box_vectors
 
         reference = get_openmm_energies(
-            off_sys=openff_sys,
+            interchange=interchange,
             round_positions=3,
         )
 
         lmp_energies = get_lammps_energies(
-            off_sys=openff_sys,
+            interchange=interchange,
             round_positions=3,
         )
 
-        openff_sys.mdconfig.write_lammps_input("tmp.in")
+        interchange.mdconfig.write_lammps_input("tmp.in")
 
         lmp_energies.compare(
             reference,

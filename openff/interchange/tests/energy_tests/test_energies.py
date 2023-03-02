@@ -50,9 +50,9 @@ class TestEnergies(_BaseTest):
 
         force_field = sage if constrained else sage_unconstrained
 
-        off_sys = Interchange.from_smirnoff(force_field, [mol])
+        interchange = Interchange.from_smirnoff(force_field, [mol])
 
-        off_sys.collections["Electrostatics"].periodic_potential = "cutoff"
+        interchange.collections["Electrostatics"].periodic_potential = "cutoff"
 
         mol.to_file("out.xyz", file_format="xyz")
         compound: mb.Compound = mb.load("out.xyz")
@@ -63,13 +63,13 @@ class TestEnergies(_BaseTest):
         )
 
         positions = packed_box.xyz * unit.nanometer
-        off_sys.positions = positions
+        interchange.positions = positions
 
-        omm_energies = get_openmm_energies(off_sys, round_positions=8)
+        omm_energies = get_openmm_energies(interchange, round_positions=8)
 
         mdp = "cutoff_hbonds" if constrained else "auto"
         # Compare GROMACS writer and OpenMM export
-        gmx_energies = get_gromacs_energies(off_sys, mdp=mdp)
+        gmx_energies = get_gromacs_energies(interchange, mdp=mdp)
 
         tolerances = {
             "Bond": 2e-5 * openmm_unit.kilojoule_per_mole,
@@ -86,12 +86,12 @@ class TestEnergies(_BaseTest):
 
         if not constrained:
             other_energies = get_openmm_energies(
-                off_sys,
+                interchange,
                 round_positions=8,
                 hard_cutoff=True,
                 electrostatics=True,
             )
-            lmp_energies = get_lammps_energies(off_sys)
+            lmp_energies = get_lammps_energies(interchange)
             tolerances = {
                 "vdW": 5.0 * openmm_unit.kilojoule_per_mole,
                 "Electrostatics": 5.0 * openmm_unit.kilojoule_per_mole,
