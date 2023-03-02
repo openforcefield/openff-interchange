@@ -47,7 +47,7 @@ def _get_mdp_file(key: str = "auto") -> str:
 
 
 def get_gromacs_energies(
-    off_sys: "Interchange",
+    interchange: "Interchange",
     mdp: str = "auto",
     writer: str = "internal",
     decimal: int = 8,
@@ -59,7 +59,7 @@ def get_gromacs_energies(
 
     Parameters
     ----------
-    off_sys : openff.interchange.Interchange
+    interchange : openff.interchange.Interchange
         An OpenFF Interchange object to compute the single-point energy of
     mdp : str, default="cutoff"
         A string key identifying the GROMACS `.mdp` file to be used. See `_get_mdp_file`.
@@ -77,10 +77,10 @@ def get_gromacs_energies(
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
-            off_sys.to_gro("out.gro", writer=writer, decimal=decimal)
-            off_sys.to_top("out.top", writer=writer)
+            interchange.to_gro("out.gro", writer=writer, decimal=decimal)
+            interchange.to_top("out.top", writer=writer)
             if mdp == "auto":
-                mdconfig = MDConfig.from_interchange(off_sys)
+                mdconfig = MDConfig.from_interchange(interchange)
                 mdconfig.write_mdp_file("tmp.mdp")
                 mdp_file = "tmp.mdp"
             else:

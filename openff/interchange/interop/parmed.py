@@ -33,20 +33,20 @@ kcal_mol_a2 = unit.Unit("kilocalories / mol / angstrom ** 2")
 kcal_mol_rad2 = unit.Unit("kilocalories / mol / rad ** 2")
 
 
-def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
+def _to_parmed(interchangetem: "Interchange") -> "pmd.Structure":
     """Convert an OpenFF Interchange to a ParmEd Structure."""
     import parmed as pmd
 
     structure = pmd.Structure()
-    _convert_box(off_system.box, structure)
+    _convert_box(interchangetem.box, structure)
 
-    if "Electrostatics" in off_system.collections.keys():
+    if "Electrostatics" in interchangetem.collections.keys():
         has_electrostatics = True
-        electrostatics_handler = off_system["Electrostatics"]
+        electrostatics_handler = interchangetem["Electrostatics"]
     else:
         has_electrostatics = False
 
-    for atom in off_system.topology.atoms:
+    for atom in interchangetem.topology.atoms:
         atomic_number = atom.atomic_number
         mass = atom.mass.m
         try:
@@ -65,8 +65,8 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             resnum,
         )
 
-    if "Bonds" in off_system.collections.keys():
-        bond_handler = off_system["Bonds"]
+    if "Bonds" in interchangetem.collections.keys():
+        bond_handler = interchangetem["Bonds"]
         bond_type_map: Dict = dict()
         for pot_key, pot in bond_handler.potentials.items():
             k = pot.parameters["k"].to(kcal_mol_a2).magnitude / 2
@@ -87,8 +87,8 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
 
     structure.bond_types.claim()
 
-    if "Angles" in off_system.collections.keys():
-        angle_handler = off_system["Angles"]
+    if "Angles" in interchangetem.collections.keys():
+        angle_handler = interchangetem["Angles"]
         angle_type_map: Dict = dict()
         for pot_key, pot in angle_handler.potentials.items():
             k = pot.parameters["k"].to(kcal_mol_rad2).magnitude / 2
@@ -116,14 +116,14 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     # ParmEd treats 1-4 scaling factors at the level of each DihedralType,
     # whereas SMIRNOFF captures them at the level of the non-bonded handler,
     # so they need to be stored here for processing dihedrals
-    vdw_14 = off_system["vdW"].scale_14
+    vdw_14 = interchangetem["vdW"].scale_14
     if has_electrostatics:
-        coul_14 = off_system["Electrostatics"].scale_14
+        coul_14 = interchangetem["Electrostatics"].scale_14
     else:
         coul_14 = 1.0
-    vdw_handler = off_system["vdW"]
-    if "ProperTorsions" in off_system.collections.keys():
-        proper_torsion_handler = off_system["ProperTorsions"]
+    vdw_handler = interchangetem["vdW"]
+    if "ProperTorsions" in interchangetem.collections.keys():
+        proper_torsion_handler = interchangetem["ProperTorsions"]
         proper_type_map: Dict = dict()
         for pot_key, pot in proper_torsion_handler.potentials.items():
             k = pot.parameters["k"].to(kcal_mol).magnitude
@@ -180,8 +180,8 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     structure.dihedral_types.claim()
     structure.adjust_types.claim()
 
-    #    if False:  # "ImroperTorsions" in off_system.term_collection.terms:
-    #        improper_term = off_system.term_collection.terms["ImproperTorsions"]
+    #    if False:  # "ImroperTorsions" in interchangetem.term_collection.terms:
+    #        improper_term = interchangetem.term_collection.terms["ImproperTorsions"]
     #        for improper, smirks in improper_term.smirks_map.items():
     #            idx_1, idx_2, idx_3, idx_4 = improper
     #            pot = improper_term.potentials[improper_term.smirks_map[improper]]
@@ -202,7 +202,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     #                )
     #            )
 
-    vdw_handler = off_system["vdW"]
+    vdw_handler = interchangetem["vdW"]
     if vdw_handler.mixing_rule == "lorentz-berthelot":
         structure.combining_rule = "lorentz"
     elif vdw_handler.mixing_rule == "geometric":
@@ -250,8 +250,8 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     for res in structure.residues:
         res.name = "FOO"
 
-    if off_system.positions is not None:
-        structure.positions = off_system.positions.to(unit.angstrom).magnitude
+    if interchangetem.positions is not None:
+        structure.positions = interchangetem.positions.to(unit.angstrom).magnitude
 
         for idx, pos in enumerate(structure.positions):
             structure.atoms[idx].xx = pos._value[0]

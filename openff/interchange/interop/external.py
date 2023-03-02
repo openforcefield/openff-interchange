@@ -27,7 +27,7 @@ class ParmEdWrapper(InteroperabilityWrapper):
     def __init__(self) -> None:
         self._write_formats = [".gro", ".top", ".prmtop", ".crd", ".inpcrd"]
 
-    def to_file(self, openff_sys: Interchange, file_path: Union[str, Path]) -> None:
+    def to_file(self, interchange: Interchange, file_path: Union[str, Path]) -> None:
         """
         Convert an Interchange object to a ParmEd Structure and write it to a file.
 
@@ -43,12 +43,12 @@ class ParmEdWrapper(InteroperabilityWrapper):
                 f"Writing file format {file_ext} not supported.",
             )
 
-        if openff_sys.positions is None and file_ext in [".gro", ".crd", ".inpcrd"]:
+        if interchange.positions is None and file_ext in [".gro", ".crd", ".inpcrd"]:
             raise MissingPositionsError
 
-        if openff_sys.box is None and file_ext in [".gro"]:
+        if interchange.box is None and file_ext in [".gro"]:
             raise MissingBoxError
 
-        struct = openff_sys._to_parmed()
+        struct = interchange._to_parmed()
 
         struct.save(path.as_posix(), overwrite=True)

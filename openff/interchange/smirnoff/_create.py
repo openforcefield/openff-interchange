@@ -298,8 +298,8 @@ def _virtual_sites(
 
     virtual_site_handler.store_potentials(
         parameter_handler=force_field["VirtualSites"],
-        vdw_handler=vdw,
-        electrostatics_handler=electrostatics,
+        vdw_collection=vdw,
+        electrostatics_collection=electrostatics,
     )
 
     interchange.collections.update({"VirtualSites": virtual_site_handler})

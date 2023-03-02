@@ -21,7 +21,7 @@ from openff.interchange.exceptions import (
 
 
 def get_amber_energies(
-    off_sys: Interchange,
+    interchange: Interchange,
     writer: str = "internal",
     electrostatics: bool = True,
 ) -> EnergyReport:
@@ -32,7 +32,7 @@ def get_amber_energies(
 
     Parameters
     ----------
-    off_sys : openff.interchange.components.interchange.Interchange
+    interchange : openff.interchange.components.interchange.Interchange
         An OpenFF Interchange object to compute the single-point energy of
     writer : str, default="internal"
         A string key identifying the backend to be used to write Amber files.
@@ -49,16 +49,16 @@ def get_amber_energies(
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             if writer == "internal":
-                off_sys.to_inpcrd("out.inpcrd")
-                off_sys.to_prmtop("out.prmtop")
+                interchange.to_inpcrd("out.inpcrd")
+                interchange.to_prmtop("out.prmtop")
             elif writer == "parmed":
-                struct = off_sys._to_parmed()
+                struct = interchange._to_parmed()
                 struct.save("out.inpcrd")
                 struct.save("out.prmtop")
             else:
                 raise InvalidWriterError(f"Unsupported `writer` argument {writer}")
 
-            mdconfig = MDConfig.from_interchange(off_sys)
+            mdconfig = MDConfig.from_interchange(interchange)
             mdconfig.write_sander_input_file("run.in")
 
             report = _run_sander(
