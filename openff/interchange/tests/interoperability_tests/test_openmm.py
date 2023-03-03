@@ -135,15 +135,15 @@ class TestOpenMM(_BaseTest):
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
-        openff_sys = Interchange.from_smirnoff(
+        interchange = Interchange.from_smirnoff(
             force_field=sage,
             topology=topology,
         )
 
-        openff_sys["vdW"].mixing_rule = "geometric"
+        interchange["vdW"].mixing_rule = "geometric"
 
         with pytest.raises(UnsupportedExportError, match="default NonbondedForce"):
-            openff_sys.to_openmm(combine_nonbonded_forces=True)
+            interchange.to_openmm(combine_nonbonded_forces=True)
 
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
     @pytest.mark.slow()
@@ -152,24 +152,21 @@ class TestOpenMM(_BaseTest):
         mol = Molecule.from_smiles(mol_smi)
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
-        omm_top = top.to_openmm()
 
-        off_sys = Interchange.from_smirnoff(sage, top)
+        interchange = Interchange.from_smirnoff(sage, top)
 
-        off_sys.box = [4, 4, 4]
-        off_sys.positions = mol.conformers[0].value_in_unit(openmm_unit.nanometer)
-
-        omm_sys = off_sys.to_openmm(combine_nonbonded_forces=True)
+        interchange.box = [4, 4, 4]
+        interchange.positions = mol.conformers[0].value_in_unit(openmm_unit.nanometer)
 
         converted = from_openmm(
-            topology=omm_top,
-            system=omm_sys,
+            topology=interchange.to_openmm_topology(),
+            system=interchange.to_openmm(combine_nonbonded_forces=True),
         )
 
-        converted.box = off_sys.box
-        converted.positions = off_sys.positions
+        converted.box = interchange.box
+        converted.positions = interchange.positions
 
-        get_openmm_energies(off_sys).compare(
+        get_openmm_energies(interchange).compare(
             get_openmm_energies(converted, combine_nonbonded_forces=True),
         )
 
@@ -585,15 +582,14 @@ class TestOpenMMVirtualSiteExclusions(_BaseTest):
 
         sage.register_parameter_handler(handler)
 
-        system: openmm.System = Interchange.from_smirnoff(
-            sage,
-            [dichloroethane],
-        ).to_openmm(combine_nonbonded_forces=True)
+        system = Interchange.from_smirnoff(sage, [dichloroethane]).to_openmm(
+            combine_nonbonded_forces=True,
+        )
 
         assert system.isVirtualSite(8)
         assert system.isVirtualSite(9)
 
-        non_bonded_force: openmm.NonbondedForce = [
+        non_bonded_force = [
             f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)
         ][0]
 

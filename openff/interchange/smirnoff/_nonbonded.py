@@ -2,7 +2,18 @@ import abc
 import copy
 import functools
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Literal, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    DefaultDict,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+)
 
 import numpy
 from openff.models.types import FloatQuantity
@@ -117,6 +128,11 @@ class SMIRNOFFvdWCollection(_SMIRNOFFNonbondedCollection):
     def supported_parameters(cls):
         """Return a list of supported parameter attributes."""
         return ["smirks", "id", "sigma", "epsilon", "rmin_half"]
+
+    @classmethod
+    def default_parameter_values(cls) -> Iterable[float]:
+        """Per-particle parameter values passed to Force.addParticle()."""
+        return [1.0, 0.0]
 
     @classmethod
     def potential_parameters(cls):

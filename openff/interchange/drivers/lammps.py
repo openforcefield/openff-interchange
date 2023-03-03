@@ -24,7 +24,7 @@ def _find_lammps_executable() -> Optional[str]:
 
 
 def get_lammps_energies(
-    off_sys: Interchange,
+    interchange: Interchange,
     round_positions: Optional[int] = None,
     writer: str = "internal",
 ) -> EnergyReport:
@@ -37,7 +37,7 @@ def get_lammps_energies(
 
     Parameters
     ----------
-    off_sys : openff.interchange.Interchange
+    interchange : openff.interchange.Interchange
         An OpenFF Interchange object to compute the single-point energy of
     round_positions : int, optional
         The number of decimal places, in nanometers, to round positions. This can be useful when
@@ -55,10 +55,10 @@ def get_lammps_energies(
     lmp = _find_lammps_executable()
 
     if round_positions is not None:
-        off_sys.positions = np.round(off_sys.positions, round_positions)
+        interchange.positions = np.round(interchange.positions, round_positions)
 
-    off_sys.to_lammps("out.lmp")
-    mdconfig = MDConfig.from_interchange(off_sys)
+    interchange.to_lammps("out.lmp")
+    mdconfig = MDConfig.from_interchange(interchange)
     mdconfig.write_lammps_input(
         input_file="tmp.in",
     )

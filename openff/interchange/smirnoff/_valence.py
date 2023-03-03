@@ -298,7 +298,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
         return ["length", "distance"]
 
     @classmethod
-    def create(  # type: ignore[override]
+    def create(
         cls: Type[T],
         parameter_handler: List,
         topology: Topology,

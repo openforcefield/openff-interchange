@@ -96,6 +96,8 @@ def _create_interchange(
 
     interchange.box = _topology.box_vectors if box is None else box
 
+    _plugins(interchange, force_field, _topology)
+
     _bonds(interchange, force_field, _topology, partial_bond_orders_from_molecules)
     _constraints(
         interchange,
@@ -116,8 +118,6 @@ def _create_interchange(
         allow_nonintegral_charges,
     )
     _virtual_sites(interchange, force_field, _topology)
-
-    _plugins(interchange, force_field, _topology)
 
     interchange.topology = _topology
 
@@ -293,13 +293,25 @@ def _virtual_sites(
         topology=topology,
     )
 
-    vdw: SMIRNOFFvdWCollection = interchange["vdW"]  # type: ignore[assignment]
+    try:
+        vdw = interchange["vdW"]
+    except LookupError:
+        # There might not be a handler named "vdW" but there could be a plugin that
+        # is directed to act as it
+        for collection in interchange.collections.values():
+            if collection.is_plugin:
+                if collection.acts_as == "vdW":
+                    vdw = collection
+                    break
+        else:
+            vdw = None
+
     electrostatics: SMIRNOFFElectrostaticsCollection = interchange["Electrostatics"]  # type: ignore[assignment]
 
     virtual_site_handler.store_potentials(
         parameter_handler=force_field["VirtualSites"],
-        vdw_handler=vdw,
-        electrostatics_handler=electrostatics,
+        vdw_collection=vdw,
+        electrostatics_collection=electrostatics,
     )
 
     interchange.collections.update({"VirtualSites": virtual_site_handler})

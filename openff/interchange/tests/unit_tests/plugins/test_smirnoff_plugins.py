@@ -1,5 +1,5 @@
 import pytest
-from nonbonded_plugins import (
+from nonbonded_plugins.nonbonded import (
     BuckinghamHandler,
     DoubleExponentialHandler,
     SMIRNOFFBuckinghamCollection,

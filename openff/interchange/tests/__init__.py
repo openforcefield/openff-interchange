@@ -325,8 +325,8 @@ def _get_lj_params_from_openmm_system(omm_sys: openmm.System):
     return sigmas, epsilons
 
 
-def _get_charges_from_openff_interchange(off_sys: Interchange):
-    charges_ = [*off_sys["Electrostatics"].charges.values()]
+def _get_charges_from_openff_interchange(interchange: Interchange):
+    charges_ = [*interchange["Electrostatics"].charges.values()]
     charges = np.asarray([charge.magnitude for charge in charges_])
     return charges
 
