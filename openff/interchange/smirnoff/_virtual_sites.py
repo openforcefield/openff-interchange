@@ -1,4 +1,4 @@
-from typing import Dict, Literal, Optional
+from typing import Dict, List, Literal, Type
 
 import numpy
 from openff.toolkit.topology import Topology
@@ -17,13 +17,6 @@ from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     SMIRNOFFvdWCollection,
 )
-
-
-def _compute_lj_sigma(
-    sigma: Optional[unit.Quantity],
-    rmin_half: Optional[unit.Quantity],
-) -> unit.Quantity:
-    return sigma if rmin_half is None else (2.0 * rmin_half / (2.0 ** (1.0 / 6.0)))
 
 
 class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
@@ -54,12 +47,12 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
     ] = "parents"
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> List[Type[ParameterHandler]]:
         """Return a list of allowed types of ParameterHandler classes."""
         return [VirtualSiteHandler]
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> List[str]:
         """Return a list of parameter attributes supported by this handler."""
         return [
             "type",
@@ -75,6 +68,11 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
             "outOfPlaneAngle",
             "inPlaneAngle",
         ]
+
+    @classmethod
+    def nonbonded_parameters(cls) -> List[str]:
+        """Return a list of parameter attributes handling vdW interactions."""
+        return ["sigma", "epsilon"]
 
     def store_matches(
         self,
@@ -145,8 +143,8 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
             vdw_key = PotentialKey(id=potential_key.id, associated_handler="vdw")
             vdw_potential = Potential(
                 parameters={
-                    "sigma": _compute_lj_sigma(parameter.sigma, parameter.rmin_half),
-                    "epsilon": parameter.epsilon,
+                    parameter_name: getattr(parameter, parameter_name)
+                    for parameter_name in self.nonbonded_parameters()
                 },
             )
             vdw_collection.key_map[virtual_site_key] = vdw_key

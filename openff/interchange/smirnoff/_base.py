@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 
 T = TypeVar("T", bound="SMIRNOFFCollection")
-TP = TypeVar("TP", bound="Collection")
+TP = TypeVar("TP", bound="ParameterHandler")
 
 
 def _sanitize(o):
