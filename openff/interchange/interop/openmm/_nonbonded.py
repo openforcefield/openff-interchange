@@ -222,7 +222,7 @@ def _add_particles_to_system(
                 _create_virtual_site_object,
             )
 
-            system_index = openmm_sys.addParticle(mass=0.0)
+            index_system = openmm_sys.addParticle(mass=0.0)
 
             openff_openmm_particle_map[virtual_site_key] = system_index
 
@@ -239,7 +239,8 @@ def _add_particles_to_system(
                 virtual_site_object,
                 openff_openmm_particle_map,
             )
-            openmm_sys.setVirtualSite(system_index, openmm_particle)
+
+            openmm_sys.setVirtualSite(index_system, openmm_particle)
 
     return openff_openmm_particle_map
 
@@ -612,6 +613,7 @@ def _create_multiple_nonbonded_forces(
         interchange,
         molecule_virtual_site_map,
         has_virtual_sites,
+        openff_openmm_particle_map,
     )
 
     _set_particle_parameters(
@@ -668,18 +670,7 @@ def _create_multiple_nonbonded_forces(
     coul_14_force.addPerBondParameter("qq")
     coul_14_force.setUsesPeriodicBoundaryConditions(interchange.box is not None)
 
-    bonds = [
-        sorted(interchange.topology.atom_index(a) for a in bond.atoms)
-        for bond in interchange.topology.bonds
-    ]
-
     coul_14, vdw_14 = _get_14_scaling_factors(data)
-
-    electrostatics_force.createExceptionsFromBonds(
-        bonds=bonds,
-        coulomb14Scale=coul_14,
-        lj14Scale=vdw_14,
-    )
 
     for i in range(electrostatics_force.getNumExceptions()):
         (p1, p2, q, sig, eps) = electrostatics_force.getExceptionParameters(i)
@@ -816,11 +807,17 @@ def _create_electrostatics_force(
     interchange: "Interchange",
     molecule_virtual_site_map: Dict[int, List[VirtualSiteKey]],
     has_virtual_sites: bool,
+    openff_openmm_particle_map,
 ) -> Optional[openmm.NonbondedForce]:
     if data["electrostatics_collection"] is None:
         return None
 
     electrostatics_force = openmm.NonbondedForce()
+
+    # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
+    #   of that parent atom (if any)
+    # if no virtual sites at all, this remains an empty dict
+    parent_virtual_particle_mapping: DefaultDict[int, List[int]] = defaultdict(list)
 
     for molecule in interchange.topology.molecules:
         for _ in molecule.atoms:
@@ -828,8 +825,11 @@ def _create_electrostatics_force(
 
         if has_virtual_sites:
             molecule_index = interchange.topology.molecule_index(molecule)
-            for _ in molecule_virtual_site_map[molecule_index]:
-                electrostatics_force.addParticle(0.0, 1.0, 0.0)
+            for virtual_site_key in molecule_virtual_site_map[molecule_index]:
+                index_force = electrostatics_force.addParticle(0.0, 1.0, 0.0)
+
+                parent_atom_index = virtual_site_key.orientation_atom_indices[0]
+                parent_virtual_particle_mapping[parent_atom_index].append(index_force)
 
     if data["electrostatics_method"] == "reaction-field":
         raise UnsupportedExportError(
@@ -863,6 +863,13 @@ def _create_electrostatics_force(
             f"Electrostatics method {data['electrostatics_method']} not supported",
         )
 
+    _create_exceptions(
+        data,
+        electrostatics_force,
+        interchange,
+        openff_openmm_particle_map,
+        parent_virtual_particle_mapping,
+    )
     return electrostatics_force
 
 
