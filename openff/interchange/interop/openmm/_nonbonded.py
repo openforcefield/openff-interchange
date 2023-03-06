@@ -222,7 +222,7 @@ def _add_particles_to_system(
                 _create_virtual_site_object,
             )
 
-            index_system = openmm_sys.addParticle(mass=0.0)
+            system_index = openmm_sys.addParticle(mass=0.0)
 
             openff_openmm_particle_map[virtual_site_key] = system_index
 
@@ -240,7 +240,7 @@ def _add_particles_to_system(
                 openff_openmm_particle_map,
             )
 
-            openmm_sys.setVirtualSite(index_system, openmm_particle)
+            openmm_sys.setVirtualSite(system_index, openmm_particle)
 
     return openff_openmm_particle_map
 
@@ -456,10 +456,10 @@ def _create_single_nonbonded_force(
             sigma = to_openmm_quantity(vdw_parameters["sigma"])
             epsilon = to_openmm_quantity(vdw_parameters["epsilon"])
 
-            index_system: int = openff_openmm_particle_map[virtual_site_key]
-            index_force = non_bonded_force.addParticle(charge, sigma, epsilon)
+            system_index: int = openff_openmm_particle_map[virtual_site_key]
+            force_index = non_bonded_force.addParticle(charge, sigma, epsilon)
 
-            if index_system != index_force:
+            if system_index != force_index:
                 raise InternalInconsistencyError(
                     "Mismatch in system and force indexing",
                 )
@@ -468,9 +468,9 @@ def _create_single_nonbonded_force(
                 virtual_site_object.orientations[0]
             ]
 
-            parent_virtual_particle_mapping[parent_atom_index].append(index_force)
+            parent_virtual_particle_mapping[parent_atom_index].append(force_index)
 
-            openmm_sys.setVirtualSite(index_system, openmm_particle)
+            openmm_sys.setVirtualSite(system_index, openmm_particle)
 
     _create_exceptions(
         data,
@@ -599,6 +599,8 @@ def _create_multiple_nonbonded_forces(
     molecule_virtual_site_map: Dict,
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int],
 ):
+    from openff.interchange.components.toolkit import _get_14_pairs
+
     has_virtual_sites = molecule_virtual_site_map not in (None, dict())
 
     vdw_force = _create_vdw_force(
@@ -672,15 +674,25 @@ def _create_multiple_nonbonded_forces(
 
     coul_14, vdw_14 = _get_14_scaling_factors(data)
 
+    openmm_pairs = list()
+
+    for atom1, atom2 in _get_14_pairs(interchange.topology):
+        openff_indices = (
+            interchange.topology.atom_index(atom1),
+            interchange.topology.atom_index(atom2),
+        )
+
+        openmm_indices = (
+            openff_openmm_particle_map[openff_indices[0]],
+            openff_openmm_particle_map[openff_indices[1]],
+        )
+
+        openmm_pairs.append(openmm_indices)
+
     for i in range(electrostatics_force.getNumExceptions()):
-        (p1, p2, q, sig, eps) = electrostatics_force.getExceptionParameters(i)
+        (p1, p2, _, _, _) = electrostatics_force.getExceptionParameters(i)
 
-        # If the interactions are both zero, assume this is a 1-2 or 1-3 interaction
-        if q._value == 0 and eps._value == 0:
-            pass
-        else:
-            # Assume this is a 1-4 interaction
-
+        if (p1, p2) in openmm_pairs or (p2, p1) in openmm_pairs:
             if vdw_force is not None:
                 if data["vdw_collection"].is_plugin:
                     # Since we fed in in r_min1, epsilon1, ..., r_min2, epsilon2, ...
@@ -826,10 +838,10 @@ def _create_electrostatics_force(
         if has_virtual_sites:
             molecule_index = interchange.topology.molecule_index(molecule)
             for virtual_site_key in molecule_virtual_site_map[molecule_index]:
-                index_force = electrostatics_force.addParticle(0.0, 1.0, 0.0)
+                force_index = electrostatics_force.addParticle(0.0, 1.0, 0.0)
 
                 parent_atom_index = virtual_site_key.orientation_atom_indices[0]
-                parent_virtual_particle_mapping[parent_atom_index].append(index_force)
+                parent_virtual_particle_mapping[parent_atom_index].append(force_index)
 
     if data["electrostatics_method"] == "reaction-field":
         raise UnsupportedExportError(

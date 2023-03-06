@@ -301,7 +301,7 @@ def _virtual_sites(
         for collection in interchange.collections.values():
             if collection.is_plugin:
                 if collection.acts_as == "vdW":
-                    vdw = collection
+                    vdw = collection  # type: ignore[assignment]
                     break
         else:
             vdw = None
@@ -310,7 +310,7 @@ def _virtual_sites(
 
     virtual_site_handler.store_potentials(
         parameter_handler=force_field["VirtualSites"],
-        vdw_collection=vdw,
+        vdw_collection=vdw,  # type: ignore[arg-type]
         electrostatics_collection=electrostatics,
     )
 
