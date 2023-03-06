@@ -1018,7 +1018,7 @@ class TestOpenMMToPDB(_BaseTest):
 class TestBuckingham:
     def test_water_with_virtual_sites(self):
         force_field = ForceField(
-            get_test_file_path("buckingham.offxml"),
+            get_test_file_path("buckingham_virtual_sites.offxml"),
             load_plugins=True,
         )
 
