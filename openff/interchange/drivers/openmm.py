@@ -52,7 +52,7 @@ def get_openmm_energies(
         if len(interchange["VirtualSites"].key_map) > 0:
             if not combine_nonbonded_forces:
                 warnings.warn(
-                    "Using split forces with virtual sites is experimental",
+                    "Collecting energies from split forces with virtual sites is experimental",
                     UserWarning,
                     stacklevel=2,
                 )
