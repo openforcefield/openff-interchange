@@ -772,7 +772,7 @@ def _create_vdw_force(
         for global_parameter in vdw_collection.global_parameters():
             vdw_force.addGlobalParameter(
                 global_parameter,
-                getattr(vdw_collection, global_parameter),
+                getattr(vdw_collection, global_parameter).m,
             )
 
         for term, value in vdw_collection.pre_computed_terms().items():
