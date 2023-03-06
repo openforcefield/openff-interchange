@@ -318,7 +318,10 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
 
 class TestCreateWithPlugins(_BaseTest):
     def test_setup_plugins(self):
-        from nonbonded_plugins import BuckinghamHandler, SMIRNOFFBuckinghamCollection
+        from nonbonded_plugins.nonbonded import (
+            BuckinghamHandler,
+            SMIRNOFFBuckinghamCollection,
+        )
 
         from openff.interchange.smirnoff._create import _PLUGIN_CLASS_MAPPING
 

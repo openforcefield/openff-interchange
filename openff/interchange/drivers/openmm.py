@@ -1,4 +1,5 @@
 """Functions for running energy evluations with OpenMM."""
+import warnings
 from typing import Dict, Optional
 
 import numpy as np
@@ -50,8 +51,10 @@ def get_openmm_energies(
     if "VirtualSites" in interchange.collections:
         if len(interchange["VirtualSites"].key_map) > 0:
             if not combine_nonbonded_forces:
-                raise NotImplementedError(
-                    "Cannot yet split out NonbondedForce components while virtual sites are present.",
+                warnings.warn(
+                    "Collecting energies from split forces with virtual sites is experimental",
+                    UserWarning,
+                    stacklevel=2,
                 )
 
             n_virtual_sites = len(interchange["VirtualSites"].key_map)

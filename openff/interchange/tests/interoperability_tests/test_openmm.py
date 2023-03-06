@@ -1,3 +1,5 @@
+import math
+
 import numpy
 import openmm
 import pytest
@@ -1011,3 +1013,83 @@ class TestOpenMMToPDB(_BaseTest):
 
         with pytest.raises(UnsupportedExportError):
             out.to_pdb("file_should_not_exist.pdb", writer="magik")
+
+
+class TestBuckingham:
+    def test_water_with_virtual_sites(self):
+        force_field = ForceField(
+            get_test_file_path("buckingham_virtual_sites.offxml"),
+            load_plugins=True,
+        )
+
+        water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+        water.generate_conformers(n_conformers=1)
+        topology = water.to_topology()
+
+        interchange = Interchange.from_smirnoff(
+            force_field=force_field,
+            topology=topology,
+            box=[4, 4, 4],
+        )
+
+        with pytest.raises(PluginCompatibilityError):
+            interchange.to_openmm(combine_nonbonded_forces=True)
+
+        system = interchange.to_openmm(combine_nonbonded_forces=False)
+
+        assert system.getNumForces() == 4
+
+        for force in system.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                electrostatics = force
+                continue
+            elif isinstance(force, openmm.CustomNonbondedForce):
+                vdw = force
+                continue
+            elif isinstance(force, openmm.CustomBondForce):
+                if "qq" in force.getEnergyFunction():
+                    electrostatics14 = force
+                    continue
+
+        assert system.getNumParticles() == 4
+
+        masses = [15.99943, 1.007947, 1.007947, 0.0]
+
+        for particle_index in range(system.getNumParticles()):
+            assert system.isVirtualSite(particle_index) == (particle_index == 3)
+            assert system.getParticleMass(particle_index)._value == pytest.approx(
+                masses[particle_index],
+            )
+
+        charges = openmm.unit.Quantity(
+            [0.0, 0.53254, 0.53254, -1.06508],
+            openmm.unit.elementary_charge,
+        )
+
+        for index, charge in enumerate(charges):
+            assert electrostatics.getParticleParameters(index)[0] == charge
+
+        for index in range(vdw.getNumParticles()):
+            parameters = vdw.getParticleParameters(index)
+            for p in parameters:
+                assert (p == 0) == (index > 0)
+
+        assert vdw.getParticleParameters(0) == (1600000.0, 42.0, 0.003)
+
+        # This test should be replaced with one that uses a more complex
+        # system than a single water molecule and look at vdw14 force
+        assert electrostatics14.getNumBonds() == 0
+
+        with pytest.raises(PluginCompatibilityError):
+            get_openmm_energies(interchange, combine_nonbonded_forces=True)
+
+        with pytest.warns(
+            UserWarning,
+            match="energies from split forces with virtual sites",
+        ):
+            assert not math.isnan(
+                get_openmm_energies(
+                    interchange,
+                    combine_nonbonded_forces=False,
+                ).total_energy.m,
+            )

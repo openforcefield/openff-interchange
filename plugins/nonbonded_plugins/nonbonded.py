@@ -103,7 +103,9 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 
     acts_as: str = "vdW"
 
-    expression: str = "a*exp(-b*r)-c/r**6"
+    expression: str = (
+        "a*exp(-b*r)-c*r^-6;" "a=sqrt(a1*a2);" "b=2/(1/b1+1/b2);" "c=sqrt(c1*c2);"
+    )
 
     method: str = "cutoff"
 
@@ -122,9 +124,30 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
         return ["smirks", "id", "a", "b", "c"]
 
     @classmethod
+    def default_parameter_values(cls) -> Iterable[float]:
+        """Per-particle parameter values passed to Force.addParticle()."""
+        return [0.0, 0.0, 0.0]
+
+    @classmethod
     def potential_parameters(cls) -> Iterable[str]:
         """Return a subset of `supported_parameters` that are meant to be included in potentials."""
         return ["a", "b", "c"]
+
+    @classmethod
+    def global_parameters(cls) -> Iterable[str]:
+        """Return a list of global parameters, i.e. not per-potential parameters."""
+        return list()
+
+    def pre_computed_terms(self) -> Dict[str, float]:
+        """Return a dictionary of pre-computed terms for use in the expression."""
+        return dict()
+
+    @classmethod
+    def check_openmm_requirements(cls, combine_nonbonded_forces: bool) -> None:
+        """Run through a list of assertions about what is compatible when exporting this to OpenMM."""
+        assert (
+            not combine_nonbonded_forces
+        ), "Custom non-bonded functional forms require `combine_nonbonded_forces=False`."
 
     def store_potentials(self, parameter_handler: BuckinghamHandler) -> None:
         """
@@ -231,6 +254,11 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
         return ["smirks", "id", "r_min", "epsilon"]
 
     @classmethod
+    def default_parameter_values(cls) -> Iterable[float]:
+        """Per-particle parameter values passed to Force.addParticle()."""
+        return [0.0, 0.0]
+
+    @classmethod
     def potential_parameters(cls) -> Iterable[str]:
         """Return a subset of `supported_parameters` that are meant to be included in potentials."""
         return ["r_min", "epsilon"]
@@ -265,7 +293,9 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
     @classmethod
     def check_openmm_requirements(cls, combine_nonbonded_forces: bool) -> None:
         """Run through a list of assertions about what is compatible when exporting this to OpenMM."""
-        assert combine_nonbonded_forces is False
+        assert (
+            not combine_nonbonded_forces
+        ), "Custom non-bonded functional forms require `combine_nonbonded_forces=False`."
 
     def store_potentials(self, parameter_handler: DoubleExponentialHandler) -> None:
         """
