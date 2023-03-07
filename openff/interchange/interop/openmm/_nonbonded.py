@@ -651,7 +651,7 @@ def _create_multiple_nonbonded_forces(
             for global_parameter in vdw.global_parameters():
                 vdw_14_force.addGlobalParameter(
                     global_parameter,
-                    getattr(vdw, global_parameter),
+                    getattr(vdw, global_parameter).m,
                 )
 
             for term, value in data["vdw_collection"].pre_computed_terms().items():
@@ -925,15 +925,15 @@ def _set_particle_parameters(
                 pot_key = vdw.key_map[top_key]
 
                 if vdw.is_plugin:
-                    potential_parameters = vdw.potentials[pot_key].parameters
-
-                    parameters: Dict[str, unit.Quantity] = {
-                        key: val.to_openmm()
-                        for key, val in potential_parameters.items()
-                    }
+                    parameters = vdw.potentials[pot_key].parameters
 
                     if hasattr(vdw, "modify_parameters"):
+                        # This method strips units ..
                         parameters = vdw.modify_parameters(parameters)
+                    else:
+                        # so manually strip them if the method is not present
+                        parameters = {key: val.m for key, val in parameters.items()}
+
                 else:
                     sigma, epsilon = _lj_params_from_potential(
                         vdw.potentials[pot_key],

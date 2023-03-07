@@ -281,13 +281,16 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
     def modify_parameters(
         self,
         original_parameters: Dict[str, unit.Quantity],
-    ) -> Dict[str, unit.Quantity]:
+    ) -> Dict[str, float]:
         """Optionally modify parameters prior to their being stored in a force."""
         # It's important that these keys are in the order of self.potential_parameters(),
         # consider adding a check somewhere that this is the case.
+        _units = {"r_min": unit.nanometer, "epsilon": unit.kilojoule_per_mole}
         return {
-            "r_min": original_parameters["r_min"] * 0.5,
-            "epsilon": original_parameters["epsilon"] ** 0.5,
+            "r_min": original_parameters["r_min"].m_as(_units["r_min"]) * 0.5,
+            "epsilon": math.sqrt(
+                original_parameters["epsilon"].m_as(_units["epsilon"]),
+            ),
         }
 
     @classmethod
