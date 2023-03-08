@@ -761,7 +761,9 @@ def _create_vdw_force(
     mixing_rule_expression: str = data["mixing_rule_expression"]  # type: ignore[assignment]
 
     vdw_force = openmm.CustomNonbondedForce(
-        f"{vdw_expression}; {mixing_rule_expression}",
+        f"{vdw_expression}"
+        if mixing_rule_expression in (None, "")
+        else f"{vdw_expression}; {mixing_rule_expression}",
     )
 
     for potential_parameter in vdw_collection.potential_parameters():
