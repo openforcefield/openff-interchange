@@ -95,6 +95,13 @@ The accompanying OpenMM topology can be constructed with the
 openmm_top = interchange.topology.to_openmm()
 ```
 
+Recall that all unit-bearing attributes within `Interchange` objects are `openff.units.Quantity` objects, which can be converted out to `openmm.unit.Quantity` objects via their `.to_openmm()` method. For example:
+
+```python
+openmm_positions: openmm.unit.Quantity = interchange.positions.to_openmm()
+openmm_box: openmm.unit.Quantity = interchange.box.to_openmm()
+```
+
 ## Amber
 
 An `Interchange` object can be written to Amber parameter/topology and
