@@ -2,8 +2,8 @@
 
 These instructions assume that the `conda` package manager is installed. It can be obtained either from the [Anaconda](https://www.anaconda.com/products/individual#Downloads) Python distribution or a lightweight stand-in such as [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Miniforge](https://github.com/conda-forge/miniforge#readme).
 
-
 ## Quick Installation
+
 Install the latest release from `conda-forge`:
 
 ```shell

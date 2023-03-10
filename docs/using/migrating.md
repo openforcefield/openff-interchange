@@ -75,7 +75,6 @@ From here, the `Interchange` object can be exported to any supported files or ob
 
 Below is a minimal but complete example parameterizing an ethanol molecule with a Foyer force field and creating an OpenMM System alongside GROMACS files:
 
-
 ```python
 from foyer import Forcefield
 import mdtraj as md

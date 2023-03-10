@@ -27,9 +27,12 @@ box vectors. As with all numerical inputs to OpenFF software, OpenFF recommends
 assigning units; see [](interchange_units).
 
 :::{mermaid}
+
 ---
+
 alt: "Flowchart describing the construction and use of an Interchange (See textual description below)"
 align: center
+
 ---
 flowchart LR
     OFFXML
@@ -67,7 +70,6 @@ flowchart LR
     Velocities -...-> Interchange
 :::
 
-
 `from_smirnoff()` also includes some convenience tools for assigning box vectors
 and positions. If every `Molecule` passed to `from_smirnoff()` has at least one
 conformer defined, atom positions for the new `Interchange` are taken from the
@@ -87,20 +89,10 @@ import numpy as np
 mol = Molecule.from_smiles("CC")
 mol.generate_conformers()
 sage = ForceField("openff-2.0.0.offxml")
-cubic_box = (
-    np.array(
-        [
-            [10.0, 0.0, 0.0],
-            [0.0, 10.0, 0.0],
-            [0.0, 0.0, 10.0],
-        ]
-    )
-    * unit.angstrom
-)
+cubic_box = unit.Quantity(30 * np.eye(3), unit.angstrom)
 
 interchange = Interchange.from_smirnoff(topology=[mol], force_field=sage, box=cubic_box)
 ```
-
 
 ## Content of an Interchange object
 
@@ -117,15 +109,15 @@ organized in 3D space. An `Interchange` object has four components:
 
 None are strictly required; an `Interchange` object can be constructed containing none of the above components:
 
-```pycon
->>> from openff.interchange import Interchange
->>> empty_interchange = Interchange()
->>> empty_interchange.topology
->>> empty_interchange.handlers
-{}
->>> empty_interchange.positions
->>> empty_interchange.box
->>> empty_interchange.velocities
+```python
+from openff.interchange import Interchange
+
+empty_interchange = Interchange()
+assert empty_interchange.topology is None
+assert empty_interchange.handlers is {}
+assert empty_interchange.positions is None
+assert empty_interchange.box is None
+assert empty_interchange.velocities is None
 ```
 
 An empty `Interchange` is not useful in itself, but a meaningful object can be
@@ -269,7 +261,6 @@ array([[28.,  0.,  0.],
        [ 0., 28.,  0.],
        [ 0.,  0., 28.]])
 ```
-
 
 [`Interchange`]: openff.interchange.Interchange
 [`Interchange.from_smirnoff()`]: openff.interchange.Interchange.from_smirnoff
