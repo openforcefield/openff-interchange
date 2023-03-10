@@ -110,6 +110,19 @@ def to_openmm(
         particle_map=particle_map,
     )
 
+    for collection in interchange.collections.values():
+        if collection.is_plugin:
+            try:
+                collection.modify_openmm_forces(
+                    interchange,
+                    openmm_sys,
+                    add_constrained_forces=add_constrained_forces,
+                    constrained_pairs=constrained_pairs,
+                    particle_map=particle_map,
+                )
+            except NotImplementedError:
+                continue
+
     return openmm_sys
 
 
