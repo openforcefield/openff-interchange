@@ -1,6 +1,6 @@
 """Custom classes exposed as plugins."""
 import math
-from typing import Dict, Iterable, List, Literal, Type
+from typing import Dict, Iterable, Literal, Type
 
 from openff.models.types import FloatQuantity
 from openff.toolkit import Topology
@@ -114,29 +114,29 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
     switch_width: FloatQuantity["angstrom"] = unit.Quantity(1.0, unit.angstrom)  # noqa
 
     @classmethod
-    def allowed_parameter_handlers(cls) -> List[Type[ParameterHandler]]:
+    def allowed_parameter_handlers(cls) -> Iterable[Type[ParameterHandler]]:
         """Return a list of allowed types of ParameterHandler classes."""
-        return [BuckinghamHandler]
+        return (BuckinghamHandler,)
 
     @classmethod
     def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attributes."""
-        return ["smirks", "id", "a", "b", "c"]
+        return "smirks", "id", "a", "b", "c"
 
     @classmethod
     def default_parameter_values(cls) -> Iterable[float]:
         """Per-particle parameter values passed to Force.addParticle()."""
-        return [0.0, 0.0, 0.0]
+        return 0.0, 0.0, 0.0
 
     @classmethod
     def potential_parameters(cls) -> Iterable[str]:
         """Return a subset of `supported_parameters` that are meant to be included in potentials."""
-        return ["a", "b", "c"]
+        return "a", "b", "c"
 
     @classmethod
     def global_parameters(cls) -> Iterable[str]:
         """Return a list of global parameters, i.e. not per-potential parameters."""
-        return list()
+        return tuple()
 
     def pre_computed_terms(self) -> Dict[str, float]:
         """Return a dictionary of pre-computed terms for use in the expression."""
@@ -171,7 +171,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
             self.potentials[potential_key] = potential
 
     @classmethod
-    def create(  # type: ignore[override]
+    def create(
         cls: Type[T],
         parameter_handler: BuckinghamHandler,
         topology: Topology,
@@ -201,11 +201,11 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
         return handler
 
     @classmethod
-    def parameter_handler_precedence(cls) -> List[str]:
+    def parameter_handler_precedence(cls) -> Iterable[str]:
         """
         Return the order in which parameter handlers take precedence when computing charges.
         """
-        return ["vdw", "VirtualSites"]
+        return "vdw", "VirtualSites"
 
     def create_virtual_sites(
         self,
@@ -246,27 +246,27 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
     @classmethod
     def allowed_parameter_handlers(cls) -> Iterable[Type[ParameterHandler]]:
         """Return a list of allowed types of ParameterHandler classes."""
-        return [DoubleExponentialHandler]
+        return (DoubleExponentialHandler,)
 
     @classmethod
     def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attributes."""
-        return ["smirks", "id", "r_min", "epsilon"]
+        return "smirks", "id", "r_min", "epsilon"
 
     @classmethod
     def default_parameter_values(cls) -> Iterable[float]:
         """Per-particle parameter values passed to Force.addParticle()."""
-        return [0.0, 0.0]
+        return 0.0, 0.0
 
     @classmethod
     def potential_parameters(cls) -> Iterable[str]:
         """Return a subset of `supported_parameters` that are meant to be included in potentials."""
-        return ["r_min", "epsilon"]
+        return "r_min", "epsilon"
 
     @classmethod
     def global_parameters(cls) -> Iterable[str]:
         """Return a list of global parameters, i.e. not per-potential parameters."""
-        return ["alpha", "beta"]
+        return "alpha", "beta"
 
     def pre_computed_terms(self) -> Dict[str, float]:
         """Return a dictionary of pre-computed terms for use in the expression."""
@@ -281,13 +281,16 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
     def modify_parameters(
         self,
         original_parameters: Dict[str, unit.Quantity],
-    ) -> Dict[str, unit.Quantity]:
+    ) -> Dict[str, float]:
         """Optionally modify parameters prior to their being stored in a force."""
         # It's important that these keys are in the order of self.potential_parameters(),
         # consider adding a check somewhere that this is the case.
+        _units = {"r_min": unit.nanometer, "epsilon": unit.kilojoule_per_mole}
         return {
-            "r_min": original_parameters["r_min"] * 0.5,
-            "epsilon": original_parameters["epsilon"] ** 0.5,
+            "r_min": original_parameters["r_min"].m_as(_units["r_min"]) * 0.5,
+            "epsilon": math.sqrt(
+                original_parameters["epsilon"].m_as(_units["epsilon"]),
+            ),
         }
 
     @classmethod
@@ -319,7 +322,7 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
             self.potentials[potential_key] = potential
 
     @classmethod
-    def create(  # type: ignore[override]
+    def create(
         cls: Type[T],
         parameter_handler: DoubleExponentialHandler,
         topology: Topology,
@@ -351,11 +354,11 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
         return handler
 
     @classmethod
-    def parameter_handler_precedence(cls) -> List[str]:
+    def parameter_handler_precedence(cls) -> Iterable[str]:
         """
         Return the order in which parameter handlers take precedence when computing charges.
         """
-        return ["vdw", "VirtualSites"]
+        return "vdw", "VirtualSites"
 
     def create_virtual_sites(
         self,
