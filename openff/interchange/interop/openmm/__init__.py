@@ -55,7 +55,7 @@ def to_openmm(
 
     Returns
     -------
-    openmm_sys : openmm.System
+    system : openmm.System
         The corresponding OpenMM System object
 
     """
@@ -79,32 +79,32 @@ def to_openmm(
                     f"Collection of type {type(collection)} failed a compatibility check.",
                 ) from error
 
-    openmm_sys = openmm.System()
+    system = openmm.System()
 
     if interchange.box is not None:
         box = interchange.box.m_as(off_unit.nanometer)
-        openmm_sys.setDefaultPeriodicBoxVectors(*box)
+        system.setDefaultPeriodicBoxVectors(*box)
 
     particle_map = _process_nonbonded_forces(
         interchange,
-        openmm_sys,
+        system,
         combine_nonbonded_forces=combine_nonbonded_forces,
     )
 
-    constrained_pairs = _process_constraints(interchange, openmm_sys, particle_map)
+    constrained_pairs = _process_constraints(interchange, system, particle_map)
 
-    _process_torsion_forces(interchange, openmm_sys, particle_map)
-    _process_improper_torsion_forces(interchange, openmm_sys, particle_map)
+    _process_torsion_forces(interchange, system, particle_map)
+    _process_improper_torsion_forces(interchange, system, particle_map)
     _process_angle_forces(
         interchange,
-        openmm_sys,
+        system,
         add_constrained_forces=add_constrained_forces,
         constrained_pairs=constrained_pairs,
         particle_map=particle_map,
     )
     _process_bond_forces(
         interchange,
-        openmm_sys,
+        system,
         add_constrained_forces=add_constrained_forces,
         constrained_pairs=constrained_pairs,
         particle_map=particle_map,
@@ -115,7 +115,7 @@ def to_openmm(
             try:
                 collection.modify_openmm_forces(
                     interchange,
-                    openmm_sys,
+                    system,
                     add_constrained_forces=add_constrained_forces,
                     constrained_pairs=constrained_pairs,
                     particle_map=particle_map,
@@ -123,7 +123,7 @@ def to_openmm(
             except NotImplementedError:
                 continue
 
-    return openmm_sys
+    return system
 
 
 def from_openmm(
@@ -350,7 +350,7 @@ def _to_pdb(file_path: Union[Path, str], topology: "Topology", positions):
         app.PDBFile.writeFile(openmm_topology, positions, outfile)
 
 
-def _get_nonbonded_force_from_openmm_system(
+def _get_nonbonded_force_from_systemtem(
     system: openmm.System,
 ) -> openmm.NonbondedForce:
     """Get a single NonbondedForce object with an OpenMM System."""
@@ -359,11 +359,11 @@ def _get_nonbonded_force_from_openmm_system(
             return force
 
 
-def _get_partial_charges_from_openmm_system(system: openmm.System) -> List[float]:
+def _get_partial_charges_from_systemtem(system: openmm.System) -> List[float]:
     """Get partial charges from an OpenMM interchange as a unit.Quantity array."""
     # TODO: deal with virtual sites
     n_particles = system.getNumParticles()
-    force = _get_nonbonded_force_from_openmm_system(system)
+    force = _get_nonbonded_force_from_systemtem(system)
     # TODO: don't assume the partial charge will always be parameter 0
     # partial_charges = [openmm_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)]
     partial_charges = [

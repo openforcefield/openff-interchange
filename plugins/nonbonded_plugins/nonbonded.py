@@ -94,6 +94,24 @@ class DoubleExponentialHandler(ParameterHandler):
     )
 
 
+class C4IonHandler(ParameterHandler):
+    """A custom SMIRNOFF handler adding C4 interactions from 10.1021/jp505875v."""
+
+    class C4IonType(ParameterType):
+        """A custom SMIRNOFF type for C4 ion interactions."""
+
+        _VALENCE_TYPE = "Atom"
+        _ELEMENT_NAME = "Atom"
+
+        c = ParameterAttribute(
+            default=None,
+            unit=unit.kilojoule_per_mole * unit.nanometer**4,
+        )
+
+    _TAGNAME = "C4Ion"
+    _INFOTYPE = C4IonType
+
+
 class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
     """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
 
@@ -367,3 +385,127 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
     ):
         """create() but with virtual sites."""
         raise NotImplementedError()
+
+
+class SMIRNOFFC4IonCollection(_SMIRNOFFNonbondedCollection):
+    """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
+
+    type: Literal["C4Ion"] = "C4Ion"
+
+    is_plugin: bool = True
+
+    expression: str = "c*r^-4;c=sqrt(c1*c2);"
+
+    @classmethod
+    def allowed_parameter_handlers(cls) -> Iterable[Type[ParameterHandler]]:
+        """Return a list of allowed types of ParameterHandler classes."""
+        return (C4IonHandler,)
+
+    @classmethod
+    def supported_parameters(cls) -> Iterable[str]:
+        """Return a list of supported parameter attributes."""
+        return "smirks", "id", "c"
+
+    @classmethod
+    def default_parameter_values(cls) -> Iterable[float]:
+        """Per-particle parameter values passed to Force.addParticle()."""
+        return 0.0
+
+    @classmethod
+    def potential_parameters(cls) -> Iterable[str]:
+        """Return a subset of `supported_parameters` that are meant to be included in potentials."""
+        return "c"
+
+    @classmethod
+    def check_openmm_requirements(cls, combine_nonbonded_forces: bool) -> None:
+        """Run through a list of assertions about what is compatible when exporting this to OpenMM."""
+        assert (
+            combine_nonbonded_forces
+        ), "The r ** -4 term is only implemented with a single `NonbondedForce`."
+
+    def store_potentials(self, parameter_handler: DoubleExponentialHandler) -> None:
+        """
+        Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
+
+        """
+        for potential_key in self.slot_map.values():
+            smirks = potential_key.id
+            force_field_parameters = parameter_handler.parameters[smirks]
+
+            potential = Potential(
+                parameters={
+                    parameter: getattr(force_field_parameters, parameter)
+                    for parameter in self.potential_parameters()
+                },
+            )
+
+            self.potentials[potential_key] = potential
+
+    def modify_openmm_forces(
+        self,
+        interchange,
+        system,
+        add_constrained_forces,
+        constrained_pairs,
+        particle_map,
+    ):
+        """Add a `openmm.CustomNonbondedForce` to handle the C/r^4 term. See 10.1021/jp505875v."""
+        import openmm
+
+        from openff.interchange.models import TopologyKey
+
+        non_bonded_forces = [
+            force
+            for force in system.getForces()
+            if isinstance(force, (openmm.NonbondedForce, openmm.CustomNonbondedForce))
+        ]
+
+        if len(non_bonded_forces) != 1:
+            raise NotImplementedError(
+                "This handler is only compatible with a single NonbondedForce/CustomNonbondedForce.",
+            )
+
+        if type(non_bonded_forces[0]) == openmm.CustomNonbondedForce:
+            raise NotImplementedError(
+                "This handler is only compatible with a single NonbondedForce/CustomNonbondedForce.",
+            )
+
+        non_bonded_force = non_bonded_forces[0]
+
+        c4_force = openmm.CustomNonbondedForce(self.expression)
+
+        system.addForce(c4_force)
+
+        c4_force.addPerParticleParameter("c")
+
+        for molecule in interchange.topology.molecules:
+            for atom in molecule.atoms:
+                atom_index = interchange.topology.atom_index(atom)
+
+                top_key = TopologyKey(atom_indices=(atom_index,))
+
+                if top_key not in self.potentials:
+                    # This handler only adds interactions to highly-charged ions, so many
+                    # atom indices will not be found in the key map. OpenMM requires all
+                    # forces have as many particles as are found in the system, so just add
+                    # this particle with a zeroed (numerator) parameters.
+                    c4_force.addParticle([0.0])
+
+                else:
+                    c4_force.addParticle(
+                        [self.potentials[top_key].parameters["c"]],
+                    )
+
+        # OpenMM requires "All Forces must have identical exclusions", so just copy them over
+        for exception_index in range(non_bonded_force.getNumExceptions()):
+            p1, p2, *_ = non_bonded_force.getExceptionParameters(exception_index)
+            c4_force.addExclusion(p1, p2)
+
+        # Copy non-bonded settings from the main `NonbondedForce`
+        c4_force.setNonbondedMethod(non_bonded_force.getNonbondedMethod())
+        c4_force.setCutoffDistance(non_bonded_force.getCutoffDistance())
+        c4_force.setUseSwitchingFunction(non_bonded_force.getUseSwitchingFunction())
+        c4_force.setSwitchingDistance(non_bonded_force.getSwitchingDistance())
+        c4_force.setUseLongRangeCorrection(
+            non_bonded_force.getUseDispersionCorrection(),
+        )

@@ -135,8 +135,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
 
     is_plugin: bool = False
 
-    @classmethod
-    def modify_openmm_forces(cls, *args, **kwargs):
+    def modify_openmm_forces(self, *args, **kwargs):
         """Optionally modify, create, or delete forces. Currently only available to plugins."""
         raise NotImplementedError()
 
