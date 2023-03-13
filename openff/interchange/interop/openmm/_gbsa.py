@@ -14,6 +14,11 @@ def _process_gbsa(
     import openmm.unit
     from openff.units import unit
 
+    try:
+        collection = interchange.collections["GBSA"]
+    except KeyError:
+        return
+
     existing_forces = [
         force
         for force in system.getForces()
@@ -30,11 +35,6 @@ def _process_gbsa(
         amber_cutoff = None
     else:
         amber_cutoff = non_bonded_force.getCutoffDistance()
-
-    try:
-        collection = interchange.collections["GBSA"]
-    except KeyError:
-        return
 
     if collection.gb_model == "OBC2":
         force = openmm.GBSAOBCForce()
