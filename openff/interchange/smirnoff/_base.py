@@ -133,6 +133,12 @@ def _check_all_valence_terms_assigned(
 class SMIRNOFFCollection(Collection, abc.ABC):
     """Base class for handlers storing potentials produced by SMIRNOFF force fields."""
 
+    is_plugin: bool = False
+
+    def modify_openmm_forces(self, *args, **kwargs):
+        """Optionally modify, create, or delete forces. Currently only available to plugins."""
+        raise NotImplementedError()
+
     class Config:
         """Default configuration options for SMIRNOFF potential handlers."""
 

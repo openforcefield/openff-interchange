@@ -517,12 +517,14 @@ def _create_exceptions(
             virtual_particles_of_this_parent,
         ) in parent_virtual_particle_mapping.items():
             for virtual_particle in virtual_particles_of_this_parent:
+                # These indices are of the OpenMM particles, so no need to use map
                 non_bonded_force.addException(
                     parent,
                     virtual_particle,
                     0.0,
+                    1.0,
                     0.0,
-                    0.0,
+                    True,
                 )
 
         for exception_index in range(non_bonded_force.getNumExceptions()):
@@ -542,11 +544,11 @@ def _create_exceptions(
 
                 if charge_prod._value == epsilon._value == 0.0:
                     non_bonded_force.addException(
-                        virtual_particle_of_p1,
-                        p2,
-                        0.0,
-                        0.0,
-                        0.0,
+                        particle1=virtual_particle_of_p1,
+                        particle2=p2,
+                        chargeProd=0.0,
+                        sigma=1.0,
+                        epsilon=0.0,
                         replace=True,
                     )
                 else:
@@ -570,11 +572,11 @@ def _create_exceptions(
 
                 if charge_prod._value == epsilon._value == 0.0:
                     non_bonded_force.addException(
-                        virtual_particle_of_p2,
-                        p1,
-                        0.0,
-                        0.0,
-                        0.0,
+                        particle1=virtual_particle_of_p2,
+                        particle2=p1,
+                        chargeProd=0.0,
+                        sigma=1.0,
+                        epsilon=0.0,
                         replace=True,
                     )
                 else:
@@ -843,7 +845,9 @@ def _create_electrostatics_force(
                 force_index = electrostatics_force.addParticle(0.0, 1.0, 0.0)
 
                 parent_atom_index = virtual_site_key.orientation_atom_indices[0]
-                parent_virtual_particle_mapping[parent_atom_index].append(force_index)
+                parent_virtual_particle_mapping[
+                    openff_openmm_particle_map[parent_atom_index]
+                ].append(force_index)
 
     if data["electrostatics_method"] == "reaction-field":
         raise UnsupportedExportError(
@@ -914,6 +918,7 @@ def _set_particle_parameters(
     for molecule in interchange.topology.molecules:
         for atom in molecule.atoms:
             atom_index = interchange.topology.atom_index(atom)
+            particle_index = openff_openmm_particle_map[atom_index]
             # TODO: Actually process virtual site vdW parameters here
 
             top_key = TopologyKey(atom_indices=(atom_index,))
@@ -948,13 +953,16 @@ def _set_particle_parameters(
 
             if vdw_force is not None:
                 if vdw.is_plugin:
-                    vdw_force.setParticleParameters(atom_index, [*parameters.values()])
+                    vdw_force.setParticleParameters(
+                        particle_index,
+                        [*parameters.values()],
+                    )
                 else:
-                    vdw_force.setParticleParameters(atom_index, [sigma, epsilon])
+                    vdw_force.setParticleParameters(particle_index, [sigma, epsilon])
 
             if electrostatics_force is not None:
                 electrostatics_force.setParticleParameters(
-                    atom_index,
+                    particle_index,
                     partial_charge,
                     0.0,
                     0.0,
@@ -965,12 +973,13 @@ def _set_particle_parameters(
         ]:
             # TODO: Also set the vdW parameters, including figuring out how to wire up
             #       custom non-bonded functional forms
+            particle_index = openff_openmm_particle_map[virtual_site_key]
 
             partial_charge = partial_charges[virtual_site_key].m_as(off_unit.e)
 
             if electrostatics_force is not None:
                 electrostatics_force.setParticleParameters(
-                    openff_openmm_particle_map[virtual_site_key],
+                    particle_index,
                     partial_charges[virtual_site_key].m_as(off_unit.e),
                     0.0,
                     0.0,

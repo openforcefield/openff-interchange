@@ -13,10 +13,12 @@ setup(
             "BuckinghamHandler = nonbonded_plugins.nonbonded:BuckinghamHandler",
             "BuckinghamVirtualSiteHandler = nonbonded_plugins.virtual_sites:BuckinghamVirtualSiteHandler",
             "DoubleExponentialHandler = nonbonded_plugins.nonbonded:DoubleExponentialHandler",
+            "C4IonHandler = nonbonded_plugins.nonbonded:C4IonHandler",
         ],
         "openff.interchange.plugins.collections": [
             "BuckinghamCollection = nonbonded_plugins.nonbonded:SMIRNOFFBuckinghamCollection",
             "DoubleExponentialCollection = nonbonded_plugins.nonbonded:SMIRNOFFDoubleExponentialCollection",
+            "C4IonCollection = nonbonded_plugins.nonbonded:SMIRNOFFC4IonCollection",
         ],
     },
 )
