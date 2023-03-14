@@ -37,7 +37,7 @@ _MIXING_RULE_EXPRESSIONS: Dict[str, str] = {
 
 def _process_nonbonded_forces(
     interchange: "Interchange",
-    openmm_sys: openmm.System,
+    system: openmm.System,
     combine_nonbonded_forces: bool = False,
 ) -> Dict[Union[int, VirtualSiteKey], int]:
     """
@@ -91,7 +91,7 @@ def _process_nonbonded_forces(
     # openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int] = dict()
     openff_openmm_particle_map = _add_particles_to_system(
         interchange,
-        openmm_sys,
+        system,
         molecule_virtual_site_map,
     )
 
@@ -108,7 +108,7 @@ def _process_nonbonded_forces(
         _func(
             _data,
             interchange,
-            openmm_sys,
+            system,
             molecule_virtual_site_map,
             openff_openmm_particle_map,
         )
@@ -128,7 +128,7 @@ def _process_nonbonded_forces(
         non_bonded_force.addPerParticleParameter("A")
         non_bonded_force.addPerParticleParameter("B")
         non_bonded_force.addPerParticleParameter("C")
-        openmm_sys.addForce(non_bonded_force)
+        system.addForce(non_bonded_force)
 
         for molecule in interchange.topology.molecules:
             for _ in molecule.atoms:
@@ -175,7 +175,7 @@ def _process_nonbonded_forces(
         )
 
         non_bonded_force = openmm.NonbondedForce()
-        openmm_sys.addForce(non_bonded_force)
+        system.addForce(non_bonded_force)
 
         for molecule in interchange.topology.molecules:
             for _ in molecule.atoms:
@@ -200,7 +200,7 @@ def _process_nonbonded_forces(
 
 def _add_particles_to_system(
     interchange: "Interchange",
-    openmm_sys: openmm.System,
+    system: openmm.System,
     molecule_virtual_site_map,
 ) -> Dict[Union[int, VirtualSiteKey], int]:
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int] = dict()
@@ -210,7 +210,7 @@ def _add_particles_to_system(
             atom_index = interchange.topology.atom_index(atom)
 
             # Skip unit check for speed, trust that the toolkit reports mass in Dalton
-            system_index = openmm_sys.addParticle(mass=atom.mass.m)
+            system_index = system.addParticle(mass=atom.mass.m)
 
             openff_openmm_particle_map[atom_index] = system_index
 
@@ -222,7 +222,7 @@ def _add_particles_to_system(
                 _create_virtual_site_object,
             )
 
-            system_index = openmm_sys.addParticle(mass=0.0)
+            system_index = system.addParticle(mass=0.0)
 
             openff_openmm_particle_map[virtual_site_key] = system_index
 
@@ -240,7 +240,7 @@ def _add_particles_to_system(
                 openff_openmm_particle_map,
             )
 
-            openmm_sys.setVirtualSite(system_index, openmm_particle)
+            system.setVirtualSite(system_index, openmm_particle)
 
     return openff_openmm_particle_map
 
@@ -301,7 +301,7 @@ def _prepare_input_data(interchange: "Interchange") -> _DATA_DICT:
 def _create_single_nonbonded_force(
     data: Dict,
     interchange: "Interchange",
-    openmm_sys: openmm.System,
+    system: openmm.System,
     molecule_virtual_site_map: Dict["Molecule", List[VirtualSiteKey]],
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int],
 ):
@@ -315,7 +315,7 @@ def _create_single_nonbonded_force(
     has_virtual_sites = molecule_virtual_site_map not in (None, dict())
 
     non_bonded_force = openmm.NonbondedForce()
-    openmm_sys.addForce(non_bonded_force)
+    system.addForce(non_bonded_force)
 
     if interchange.box is None:
         if (data["vdw_method"] in ("cutoff", None)) and (
@@ -470,7 +470,7 @@ def _create_single_nonbonded_force(
 
             parent_virtual_particle_mapping[parent_atom_index].append(force_index)
 
-            openmm_sys.setVirtualSite(system_index, openmm_particle)
+            system.setVirtualSite(system_index, openmm_particle)
 
     _create_exceptions(
         data,
@@ -595,7 +595,7 @@ def _create_exceptions(
 def _create_multiple_nonbonded_forces(
     data: Dict,
     interchange: "Interchange",
-    openmm_sys: openmm.System,
+    system: openmm.System,
     molecule_virtual_site_map: Dict,
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int],
 ):
@@ -732,7 +732,7 @@ def _create_multiple_nonbonded_forces(
 
     for force in [vdw_force, electrostatics_force, vdw_14_force, coul_14_force]:
         if force is not None:
-            openmm_sys.addForce(force)
+            system.addForce(force)
 
     if vdw_force is not None and electrostatics_force is not None:
         if (vdw_force.getNonbondedMethod() > 0) ^ (

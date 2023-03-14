@@ -1093,3 +1093,22 @@ class TestBuckingham:
                     combine_nonbonded_forces=False,
                 ).total_energy.m,
             )
+
+
+class TestGBSA(_BaseTest):
+    def test_create_gbsa(self):
+        force_field = ForceField(
+            "openff-2.0.0.offxml",
+            get_test_file_path("gbsa.offxml"),
+        )
+
+        molecule = Molecule.from_smiles("CCO")
+        molecule.generate_conformers(n_conformers=1)
+
+        interchange = Interchange.from_smirnoff(
+            force_field=force_field,
+            topology=molecule.to_topology(),
+            box=[4, 4, 4] * unit.nanometer,
+        )
+
+        assert get_openmm_energies(interchange).total_energy is not None

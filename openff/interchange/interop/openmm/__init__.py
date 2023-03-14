@@ -55,12 +55,13 @@ def to_openmm(
 
     Returns
     -------
-    openmm_sys : openmm.System
+    system : openmm.System
         The corresponding OpenMM System object
 
     """
     from openff.units import unit as off_unit
 
+    from openff.interchange.interop.openmm._gbsa import _process_gbsa
     from openff.interchange.interop.openmm._nonbonded import _process_nonbonded_forces
     from openff.interchange.interop.openmm._valence import (
         _process_angle_forces,
@@ -79,38 +80,43 @@ def to_openmm(
                     f"Collection of type {type(collection)} failed a compatibility check.",
                 ) from error
 
-    openmm_sys = openmm.System()
+    system = openmm.System()
 
     if interchange.box is not None:
         box = interchange.box.m_as(off_unit.nanometer)
-        openmm_sys.setDefaultPeriodicBoxVectors(*box)
+        system.setDefaultPeriodicBoxVectors(*box)
 
     particle_map = _process_nonbonded_forces(
         interchange,
-        openmm_sys,
+        system,
         combine_nonbonded_forces=combine_nonbonded_forces,
     )
 
-    constrained_pairs = _process_constraints(interchange, openmm_sys, particle_map)
+    constrained_pairs = _process_constraints(interchange, system, particle_map)
 
-    _process_torsion_forces(interchange, openmm_sys, particle_map)
-    _process_improper_torsion_forces(interchange, openmm_sys, particle_map)
+    _process_torsion_forces(interchange, system, particle_map)
+    _process_improper_torsion_forces(interchange, system, particle_map)
     _process_angle_forces(
         interchange,
-        openmm_sys,
+        system,
         add_constrained_forces=add_constrained_forces,
         constrained_pairs=constrained_pairs,
         particle_map=particle_map,
     )
     _process_bond_forces(
         interchange,
-        openmm_sys,
+        system,
         add_constrained_forces=add_constrained_forces,
         constrained_pairs=constrained_pairs,
         particle_map=particle_map,
     )
 
-    return openmm_sys
+    _process_gbsa(
+        interchange,
+        system,
+    )
+
+    return system
 
 
 def from_openmm(
