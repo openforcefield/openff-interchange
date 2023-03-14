@@ -12,6 +12,7 @@ from openff.interchange.exceptions import (
     SMIRNOFFHandlersNotImplementedError,
 )
 from openff.interchange.plugins import load_smirnoff_plugins
+from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     SMIRNOFFvdWCollection,
@@ -42,6 +43,7 @@ _SUPPORTED_PARAMETER_HANDLERS: Set[str] = {
     "LibraryCharges",
     "ChargeIncrementModel",
     "VirtualSites",
+    "GBSA",
 }
 
 _PLUGIN_CLASS_MAPPING: Dict[
@@ -118,6 +120,8 @@ def _create_interchange(
         allow_nonintegral_charges,
     )
     _virtual_sites(interchange, force_field, _topology)
+
+    _gbsa(interchange, force_field, _topology)
 
     interchange.topology = _topology
 
@@ -271,6 +275,24 @@ def _electrostatics(
                 topology=topology,
                 charge_from_molecules=charge_from_molecules,
                 allow_nonintegral_charges=allow_nonintegral_charges,
+            ),
+        },
+    )
+
+
+def _gbsa(
+    interchange: Interchange,
+    force_field: ForceField,
+    _topology: Topology,
+):
+    if "GBSA" not in force_field.registered_parameter_handlers:
+        return
+
+    interchange.collections.update(
+        {
+            "GBSA": SMIRNOFFGBSACollection.create(
+                parameter_handler=force_field["GBSA"],
+                topology=_topology,
             ),
         },
     )

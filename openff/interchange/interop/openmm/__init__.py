@@ -61,6 +61,7 @@ def to_openmm(
     """
     from openff.units import unit as off_unit
 
+    from openff.interchange.interop.openmm._gbsa import _process_gbsa
     from openff.interchange.interop.openmm._nonbonded import _process_nonbonded_forces
     from openff.interchange.interop.openmm._valence import (
         _process_angle_forces,
@@ -108,6 +109,11 @@ def to_openmm(
         add_constrained_forces=add_constrained_forces,
         constrained_pairs=constrained_pairs,
         particle_map=particle_map,
+    )
+
+    _process_gbsa(
+        interchange,
+        system,
     )
 
     for collection in interchange.collections.values():
