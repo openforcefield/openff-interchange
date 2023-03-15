@@ -14,8 +14,8 @@ Recent versions of the OpenFF Toolkit (0.11.0+) install Interchange by default t
 
 Interchange can also be installed manually via `conda`:
 
-```console
-$ conda install openff-interchange -c conda-forge
+```shell
+conda install openff-interchange -c conda-forge
 ```
 
 ## Getting started

@@ -158,7 +158,6 @@ the bonds have been updated:
 
 ```
 
-
 [`Collection`]: openff.interchange.components.potentials.Collection
 [`TopologyKey`]: openff.interchange.models.TopologyKey
 [`PotentialKey`]: openff.interchange.models.PotentialKey
