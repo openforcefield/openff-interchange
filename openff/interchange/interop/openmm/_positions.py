@@ -56,30 +56,20 @@ def to_openmm_positions(
 
         atom_indices = [topology.atom_index(atom) for atom in molecule.atoms]
         this_molecule_atom_positions = interchange.positions[atom_indices, :]
-        # Interchange.position is populated, but Molecule.conformers is not
 
-        if include_virtual_sites:
-            n_virtual_sites_in_this_molecule: int = len(
-                molecule_virtual_site_map[molecule_index],
-            )
-            this_molecule_virtual_site_positions = unit.Quantity(
-                numpy.zeros((n_virtual_sites_in_this_molecule, 3)),
-                unit.nanometer,
-            )
-            particle_positions = numpy.concatenate(
-                [
-                    particle_positions,
-                    this_molecule_atom_positions,
-                    this_molecule_virtual_site_positions,
-                ],
-            )
-
-        else:
-            particle_positions = numpy.concatenate(
-                [
-                    particle_positions,
-                    this_molecule_atom_positions,
-                ],
-            )
+        n_virtual_sites_in_this_molecule: int = len(
+            molecule_virtual_site_map[molecule_index],
+        )
+        this_molecule_virtual_site_positions = unit.Quantity(
+            numpy.zeros((n_virtual_sites_in_this_molecule, 3)),
+            unit.nanometer,
+        )
+        particle_positions = numpy.concatenate(
+            [
+                particle_positions,
+                this_molecule_atom_positions,
+                this_molecule_virtual_site_positions,
+            ],
+        )
 
     return particle_positions.to_openmm()
