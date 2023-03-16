@@ -28,6 +28,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #593 Fix a #592 in which OpenMM exports fail to create multiple non-bonded forces without a vdW handler
 * #601 Fixes #600 in which some parameters were rounded to 6 digits in `Interchange.to_top`
 * #598 Fixes #597 in which residue names were incorrectly written to Amber files for single-residue systems.
+* #618 Fixes #616 in which positions of multiple molecules were mangled with `to_openmm_positions`.
+* #618 Fixes #617 in which the return type of `to_openmm_positions` was inconsistent.
 
 ### New features
 
