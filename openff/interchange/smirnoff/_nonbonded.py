@@ -23,14 +23,12 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     LibraryChargeHandler,
     ToolkitAM1BCCHandler,
-    VirtualSiteHandler,
     vdWHandler,
 )
 from openff.units import Quantity, unit
 from pydantic import Field
 
 from openff.interchange.components.potentials import Potential
-from openff.interchange.components.toolkit import _validated_list_to_array
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
@@ -203,59 +201,6 @@ class SMIRNOFFvdWCollection(_SMIRNOFFNonbondedCollection):
         """
         return ["vdw", "VirtualSites"]
 
-    def create_virtual_sites(
-        self,
-        parameter_handler: VirtualSiteHandler,
-        topology: Topology,
-    ):
-        """create() but with virtual sites."""
-        # TODO: Merge this logic into create()
-
-        if not all(
-            isinstance(
-                p,
-                (VirtualSiteHandler.VirtualSiteType,),
-            )
-            for p in parameter_handler.parameters
-        ):
-            raise NotImplementedError("Found unsupported virtual site types")
-
-        matches = parameter_handler.find_matches(topology)
-        for atoms, parameter_match in matches.items():
-            virtual_site_type = parameter_match[0].parameter_type
-            top_key = VirtualSiteKey(
-                atom_indices=atoms,
-                type=virtual_site_type.type,
-                name=virtual_site_type.name,
-                match=virtual_site_type.match,
-            )
-            pot_key = PotentialKey(
-                id=virtual_site_type.smirks,
-                associated_handler=virtual_site_type.type,
-            )
-            pot = Potential(
-                parameters={
-                    "sigma": virtual_site_type.sigma,
-                    "epsilon": virtual_site_type.epsilon,
-                    # "distance": virtual_site_type.distance,
-                },
-            )
-            # if virtual_site_type.type in {"MonovalentLonePair", "DivalentLonePair"}:
-            #     pot.parameters.update(
-            #         {
-            #             "outOfPlaneAngle": virtual_site_type.outOfPlaneAngle,
-            #         }
-            #     )
-            # if virtual_site_type.type in {"MonovalentLonePair"}:
-            #     pot.parameters.update(
-            #         {
-            #             "inPlaneAngle": virtual_site_type.inPlaneAngle,
-            #         }
-            #     )
-
-            self.key_map.update({top_key: pot_key})
-            self.potentials.update({pot_key: pot})
-
 
 class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
     """
@@ -415,79 +360,6 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
         )
 
         return handler
-
-    def create_virtual_sites(
-        self,
-        parameter_handler: VirtualSiteHandler,
-        topology: Topology,
-    ):
-        """create() but with virtual sites."""
-        # TODO: Merge this logic into create()
-
-        if not all(
-            isinstance(
-                p,
-                (
-                    VirtualSiteHandler.VirtualSiteBondChargeType,
-                    VirtualSiteHandler.VirtualSiteMonovalentLonePairType,
-                    VirtualSiteHandler.VirtualSiteDivalentLonePairType,
-                    VirtualSiteHandler.VirtualSiteTrivalentLonePairType,
-                ),
-            )
-            for p in parameter_handler.parameters
-        ):
-            raise NotImplementedError("Found unsupported virtual site types")
-
-        matches = parameter_handler.find_matches(topology)
-        for atom_indices, parameter_match in matches.items():
-            virtual_site_type = parameter_match[0].parameter_type
-
-            virtual_site_key = VirtualSiteKey(
-                atom_indices=atom_indices,
-                type=virtual_site_type.type,
-                name=virtual_site_type.name,
-                match=virtual_site_type.match,
-            )
-
-            virtual_site_potential_key = PotentialKey(
-                id=virtual_site_type.smirks,
-                associated_handler="VirtualSiteHandler",
-            )
-
-            virtual_site_potential = Potential(
-                parameters={
-                    "charge_increments": _validated_list_to_array(
-                        virtual_site_type.charge_increment,
-                    ),
-                },
-            )
-
-            self.key_map.update({virtual_site_key: virtual_site_potential_key})
-            self.potentials.update({virtual_site_potential_key: virtual_site_potential})
-
-            for i, atom_index in enumerate(atom_indices):  # noqa
-                topology_key = TopologyKey(atom_indices=(atom_index,), mult=i)
-
-                # TODO: Better way of dedupliciating this case (charge increments from multiple different
-                #       virtual sites are applied to the same atom)
-                while topology_key in self.key_map:
-                    topology_key.mult += 1000  # type: ignore[attr-defined]
-
-                potential_key = PotentialKey(
-                    id=virtual_site_type.smirks,
-                    mult=i,
-                    associated_handler="VirtualSiteHandler",
-                )
-
-                charge_increment = getattr(
-                    virtual_site_type,
-                    f"charge_increment{i + 1}",
-                )
-
-                potential = Potential(parameters={"charge_increment": charge_increment})
-
-                self.key_map[topology_key] = potential_key
-                self.potentials[potential_key] = potential
 
     @classmethod
     @functools.lru_cache(None)
