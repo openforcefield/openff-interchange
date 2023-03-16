@@ -972,24 +972,83 @@ class TestToOpenMMTopology(_BaseTest):
 
 
 class TestToOpenMMPositions(_BaseTest):
+    def test_missing_positions(self):
+        with pytest.raises(
+            MissingPositionsError,
+            match=r"are required.*\.positions=None",
+        ):
+            to_openmm_positions(Interchange())
+
     @pytest.mark.parametrize("include_virtual_sites", [True, False])
-    def test_positions(self, include_virtual_sites):
-        tip4p = ForceField("openff-2.0.0.offxml", get_test_file_path("tip4p.offxml"))
+    def test_positions_basic(self, include_virtual_sites):
+        force_field = ForceField(
+            "openff-2.0.0.offxml",
+            get_test_file_path(
+                "tip4p.offxml" if include_virtual_sites else "tip3p.offxml",
+            ),
+        )
         water = Molecule.from_smiles("O")
         water.generate_conformers(n_conformers=1)
 
-        out = Interchange.from_smirnoff(tip4p, [water])
+        out = Interchange.from_smirnoff(force_field, [water])
 
         positions = to_openmm_positions(
             out,
             include_virtual_sites=include_virtual_sites,
         )
 
+        assert isinstance(positions, openmm.unit.Quantity)
         assert positions.shape == (4, 3) if include_virtual_sites else (3, 3)
 
         numpy.testing.assert_allclose(
-            positions.to(unit.angstrom)[:3],
+            positions.value_in_unit(openmm.unit.angstrom)[:3],
             water.conformers[0].m_as(unit.angstrom),
+        )
+
+    @pytest.mark.parametrize("include_virtual_sites", [True, False])
+    def test_given_positions(self, include_virtual_sites):
+        """Test issue #616"""
+        force_field = ForceField(
+            "openff-2.0.0.offxml",
+            get_test_file_path(
+                "tip4p.offxml" if include_virtual_sites else "tip3p.offxml",
+            ),
+        )
+
+        water = Molecule.from_smiles("O")
+        water.generate_conformers(n_conformers=1)
+
+        topology = Topology.from_molecules([water, water])
+        out = Interchange.from_smirnoff(force_field, topology)
+
+        # Approximate conformer position with a duplicate 5 A away in x
+        out.positions = unit.Quantity(
+            numpy.array(
+                [
+                    [0.85, 1.17, 0.84],
+                    [1.51, 0.47, 0.75],
+                    [0.0, 0.71, 0.76],
+                    [5.85, 1.17, 0.84],
+                    [6.51, 0.47, 0.75],
+                    [5.0, 0.71, 0.76],
+                ],
+            ),
+            unit.angstrom,
+        )
+
+        positions = to_openmm_positions(
+            out,
+            include_virtual_sites=include_virtual_sites,
+        )
+
+        assert isinstance(positions, openmm.unit.Quantity)
+
+        # Number of particles per molecule
+        n = 3 + int(include_virtual_sites)
+
+        assert numpy.allclose(
+            (positions[n:][:3] - positions[:n][:3]).value_in_unit(openmm.unit.angstrom),
+            numpy.array([[5, 0, 0], [5, 0, 0], [5, 0, 0]]),
         )
 
 
