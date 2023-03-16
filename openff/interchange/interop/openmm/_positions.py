@@ -24,7 +24,7 @@ def to_openmm_positions(
 
     if interchange.positions is None:
         raise MissingPositionsError(
-            f"Positions are required found {interchange.positions=}.",
+            f"Positions are required, found {interchange.positions=}.",
         )
 
     if "VirtualSites" not in interchange.collections:
