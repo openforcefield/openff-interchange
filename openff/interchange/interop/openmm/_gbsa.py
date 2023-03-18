@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING
 
+from openff.interchange.exceptions import UnsupportedExportError
+
 if TYPE_CHECKING:
     import openmm
 
@@ -25,9 +27,11 @@ def _process_gbsa(
         if isinstance(force, (openmm.NonbondedForce, openmm.CustomNonbondedForce))
     ]
 
-    assert (
-        len(existing_forces) == 1
-    ), "GBSA implementation assumes only one NonbondedForce is present."
+    if len(existing_forces) != 1:
+        raise UnsupportedExportError(
+            "GBSA implementation assumes exactly one NonbondedForce or CustomNonbondedForce is present."
+            f"Found these ({len(existing_forces)=}) forces: {existing_forces=}",
+        )
 
     non_bonded_force = existing_forces[0]
 

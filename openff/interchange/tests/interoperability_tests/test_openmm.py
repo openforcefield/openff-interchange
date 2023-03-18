@@ -1171,3 +1171,46 @@ class TestGBSA(_BaseTest):
         )
 
         assert get_openmm_energies(interchange).total_energy is not None
+
+    def test_cannot_split_nonbonded_forces(self):
+        force_field = ForceField(
+            "openff-2.0.0.offxml",
+            get_test_file_path("gbsa.offxml"),
+        )
+
+        force_field["Electrostatics"]
+        molecule = Molecule.from_smiles("CCO")
+        molecule.generate_conformers(n_conformers=1)
+
+        with pytest.raises(UnsupportedExportError, match="exactly one"):
+            Interchange.from_smirnoff(
+                force_field=force_field,
+                topology=molecule.to_topology(),
+                box=[4, 4, 4] * unit.nanometer,
+            ).to_openmm(combine_nonbonded_forces=False)
+
+    def test_no_cutoff(self):
+        force_field = ForceField(
+            "openff-2.0.0.offxml",
+            get_test_file_path("gbsa.offxml"),
+        )
+
+        force_field["Electrostatics"]
+        molecule = Molecule.from_smiles("CCO")
+        molecule.generate_conformers(n_conformers=1)
+
+        system = Interchange.from_smirnoff(
+            force_field=force_field,
+            topology=molecule.to_topology(),
+            box=None,
+        ).to_openmm(combine_nonbonded_forces=True)
+
+        for force in system.getForces():
+            if isinstance(force, openmm.CustomGBForce):
+                assert force.getNonbondedMethod() == openmm.CustomGBForce.NoCutoff
+                # This should be set to OpenMM's default, though not used
+                assert force.getCutoffDistance() == 1.0 * openmm.unit.nanometer
+                break
+
+        else:
+            raise Exception
