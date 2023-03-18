@@ -31,7 +31,7 @@ def _process_gbsa(
 
     non_bonded_force = existing_forces[0]
 
-    if non_bonded_force.getNonbondedMethod() != openmm.NonbondedForce.NoCutoff:
+    if non_bonded_force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff:
         amber_cutoff = None
     else:
         amber_cutoff = non_bonded_force.getCutoffDistance()
