@@ -70,7 +70,7 @@ def _process_gbsa(
         force.setSolventDielectric(collection.solvent_dielectric)
         force.setSoluteDielectric(collection.solute_dielectric)
         force.setSurfaceAreaEnergy(
-            collection.surface_area_penalty if collection.sa_model is not None else 0,
+            0 if collection.sa_model is None else collection.surface_area_penalty.to_openmm()
         )
 
     for topology_key, potential_key in collection.key_map.items():
