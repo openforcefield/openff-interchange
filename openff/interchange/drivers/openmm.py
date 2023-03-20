@@ -2,7 +2,7 @@
 import warnings
 from typing import Dict, Optional
 
-import numpy as np
+import numpy
 import openmm
 import openmm.unit
 from openff.units import unit
@@ -67,7 +67,7 @@ def get_openmm_energies(
     )
 
     box_vectors: openmm.unit.Quantity = (
-        interchange.box.to_openmm() if interchange.box else None
+        None if interchange.box is None else interchange.box.to_openmm()
     )
 
     positions: openmm.unit.Quantity = to_openmm_positions(
@@ -111,7 +111,7 @@ def _get_openmm_energies(
         context.setPeriodicBoxVectors(*box_vectors)
 
     context.setPositions(
-        np.round(positions, round_positions)
+        numpy.round(positions, round_positions)
         if round_positions is not None
         else positions,
     )
@@ -204,20 +204,26 @@ def _process(
 
     else:
         processed = {
-            "Bond": staged["Bond"],
-            "Angle": staged["Angle"],
-            "Torsion": staged["Torsion"],
-            "Nonbonded": sum(
-                staged[key]
-                for key in [
-                    "Nonbonded",
-                    "Electrostatics",
-                    "vdW",
-                    "Electrostatics 1-4",
-                    "vdW 1-4",
-                ]
-                if key in staged
-            ),
+            key: staged[key] for key in ["Bond", "Angle", "Torsion"] if key in staged
         }
+
+        nonbonded_energies = [
+            staged[key]
+            for key in [
+                "Nonbonded",
+                "Electrostatics",
+                "vdW",
+                "Electrostatics 1-4",
+                "vdW 1-4",
+            ]
+            if key in staged
+        ]
+
+        # Array inference acts up if given a 1-list of Quantity
+        processed["Nonbonded"] = (
+            nonbonded_energies[0]
+            if len(nonbonded_energies) == 1
+            else numpy.sum(nonbonded_energies)
+        )
 
     return EnergyReport(energies=processed)

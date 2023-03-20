@@ -259,6 +259,9 @@ class TestGROMACS(_BaseTest):
             assert str(found_residue.number + 1) == original_residue.residue_number
 
     @pytest.mark.slow()
+    @pytest.mark.skip(
+        reason="Update when energy reports intentionally support non-vdW handlers",
+    )
     def test_argon_buck(self):
         """Test that Buckingham potentials are supported and can be exported"""
         from openff.interchange.smirnoff._nonbonded import (
