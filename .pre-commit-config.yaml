@@ -65,7 +65,7 @@ repos:
     exclude: .github
     args: ["--disable", "MD013", "MD033", "MD024", "MD046", "--"]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.6.3
+  rev: 1.6.4
   hooks:
     - id: nbqa-pyupgrade
       files: ^examples
