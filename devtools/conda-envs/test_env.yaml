@@ -30,6 +30,7 @@ dependencies:
   - mdanalysis
   # Drivers
   - gromacs >=2021=nompi*
+  - lammps
   # https://github.com/conda-forge/quippy-feedstock/issues/15
   - panedr
   # Typing
