@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING
 
+from openff.interchange.exceptions import UnsupportedExportError
+
 if TYPE_CHECKING:
     import openmm
 
@@ -25,13 +27,15 @@ def _process_gbsa(
         if isinstance(force, (openmm.NonbondedForce, openmm.CustomNonbondedForce))
     ]
 
-    assert (
-        len(existing_forces) == 1
-    ), "GBSA implementation assumes only one NonbondedForce is present."
+    if len(existing_forces) != 1:
+        raise UnsupportedExportError(
+            "GBSA implementation assumes exactly one NonbondedForce or CustomNonbondedForce is present."
+            f"Found these ({len(existing_forces)=}) forces: {existing_forces=}",
+        )
 
     non_bonded_force = existing_forces[0]
 
-    if non_bonded_force.getNonbondedMethod() != openmm.NonbondedForce.NoCutoff:
+    if non_bonded_force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff:
         amber_cutoff = None
     else:
         amber_cutoff = non_bonded_force.getCutoffDistance()
@@ -66,7 +70,9 @@ def _process_gbsa(
         force.setSolventDielectric(collection.solvent_dielectric)
         force.setSoluteDielectric(collection.solute_dielectric)
         force.setSurfaceAreaEnergy(
-            collection.surface_area_penalty if collection.sa_model is not None else 0,
+            0
+            if collection.sa_model is None
+            else collection.surface_area_penalty.to_openmm(),
         )
 
     for topology_key, potential_key in collection.key_map.items():

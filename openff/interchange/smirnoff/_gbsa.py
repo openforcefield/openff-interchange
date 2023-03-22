@@ -1,4 +1,4 @@
-from typing import Iterable, Literal, Optional
+from typing import TYPE_CHECKING, Iterable, Literal, Optional
 
 from openff.models.types import FloatQuantity
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler
@@ -7,6 +7,9 @@ from openff.units import unit
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kcal_mol_a2
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
+
+if TYPE_CHECKING:
+    from openff.toolkit import Topology
 
 
 class SMIRNOFFGBSACollection(SMIRNOFFCollection):
@@ -65,3 +68,30 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
             )
 
             self.potentials[potential_key] = potential
+
+    @classmethod
+    def create(  # type: ignore[override]
+        cls,
+        parameter_handler: GBSAHandler,
+        topology: "Topology",
+    ):
+        """Instantiate a `SMIRNOFFGBSACollection` from a parameter handler and a topology."""
+        if type(parameter_handler) not in cls.allowed_parameter_handlers():
+            raise InvalidParameterHandlerError(
+                f"Found parameter handler type {type(parameter_handler)}, which is not "
+                f"supported by potential type {type(cls)}",
+            )
+
+        collection = cls(
+            gb_model=parameter_handler.gb_model,
+            solvent_dielectric=parameter_handler.solvent_dielectric,
+            solute_dielectric=parameter_handler.solute_dielectric,
+            solvent_radius=parameter_handler.solvent_radius,
+            sa_model=parameter_handler.sa_model,
+            surface_area_penalty=parameter_handler.surface_area_penalty,
+        )
+
+        collection.store_matches(parameter_handler=parameter_handler, topology=topology)
+        collection.store_potentials(parameter_handler=parameter_handler)
+
+        return collection
