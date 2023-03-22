@@ -1,9 +1,9 @@
 """Functions for running energy evluations with LAMMPS."""
 import subprocess
 from shutil import which
-from typing import List, Optional
+from typing import Dict, List, Optional
 
-import numpy as np
+import numpy
 from openff.units import unit
 
 from openff.interchange import Interchange
@@ -26,7 +26,7 @@ def _find_lammps_executable() -> Optional[str]:
 def get_lammps_energies(
     interchange: Interchange,
     round_positions: Optional[int] = None,
-    writer: str = "internal",
+    detailed: bool = False,
 ) -> EnergyReport:
     """
     Given an OpenFF Interchange object, return single-point energies as computed by LAMMPS.
@@ -42,9 +42,8 @@ def get_lammps_energies(
     round_positions : int, optional
         The number of decimal places, in nanometers, to round positions. This can be useful when
         comparing to i.e. GROMACS energies, in which positions may be rounded.
-    writer : str, default="internal"
-        A string key identifying the backend to be used to write LAMMPS files. The
-        default value of `"internal"` results in this package's exporters being used.
+    detailed : bool, optional
+        If True, return a detailed energy report containing all energy components.
 
     Returns
     -------
@@ -52,10 +51,20 @@ def get_lammps_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
+    return _process(
+        _get_lammps_energies(interchange, round_positions),
+        detailed,
+    )
+
+
+def _get_lammps_energies(
+    interchange: Interchange,
+    round_positions: Optional[int] = None,
+) -> Dict[str, unit.Quantity]:
     lmp = _find_lammps_executable()
 
     if round_positions is not None:
-        interchange.positions = np.round(interchange.positions, round_positions)
+        interchange.positions = numpy.round(interchange.positions, round_positions)
 
     interchange.to_lammps("out.lmp")
     mdconfig = MDConfig.from_interchange(interchange)
@@ -81,17 +90,36 @@ def get_lammps_energies(
     # thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe
     parsed_energies = unit.kilocalorie_per_mole * _parse_lammps_log("log.lammps")
 
-    report = EnergyReport(
+    return {
+        "Bond": parsed_energies[0],
+        "Angle": parsed_energies[1],
+        "ProperTorsion": parsed_energies[2],
+        "ImproperTorsion": parsed_energies[3],
+        "vdW": parsed_energies[5],
+        "DispersionCorrection": parsed_energies[8],
+        "ElectrostaticsShort": parsed_energies[6],
+        "ElectrostaticsLong": parsed_energies[7],
+    }
+
+
+def _process(
+    energies: Dict[str, unit.Quantity],
+    detailed: bool = False,
+) -> EnergyReport:
+    if detailed:
+        return EnergyReport(energies=energies)
+
+    return EnergyReport(
         energies={
-            "Bond": parsed_energies[0],
-            "Angle": parsed_energies[1],
-            "Torsion": parsed_energies[2] + parsed_energies[3],
-            "vdW": parsed_energies[5] + parsed_energies[8],
-            "Electrostatics": parsed_energies[6] + parsed_energies[7],
+            "Bond": energies["Bond"],
+            "Angle": energies["Angle"],
+            "Torsion": energies["ProperTorsion"] + energies["ImproperTorsion"],
+            "vdW": energies["vdW"] + energies["DispersionCorrection"],
+            "Electrostatics": (
+                energies["ElectrostaticsShort"] + energies["ElectrostaticsLong"]
+            ),
         },
     )
-
-    return report
 
 
 def _parse_lammps_log(file_in: str) -> List[float]:
