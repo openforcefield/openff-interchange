@@ -22,6 +22,7 @@ from openff.interchange.tests import (
 if HAS_GROMACS:
     from openff.interchange.drivers.gromacs import (
         _get_mdp_file,
+        _process,
         _run_gmx_energy,
         get_gromacs_energies,
     )
@@ -121,10 +122,12 @@ class TestEnergies(_BaseTest):
         struct.save("eth.gro", overwrite=True)
 
         # Get single-point energies using GROMACS
-        oplsaa_energies = _run_gmx_energy(
-            top_file="eth.top",
-            gro_file="eth.gro",
-            mdp_file=_get_mdp_file("default"),
+        oplsaa_energies = _process(
+            _run_gmx_energy(
+                top_file="eth.top",
+                gro_file="eth.gro",
+                mdp_file=_get_mdp_file("default"),
+            ),
         )
 
         assert oplsaa_energies.energies["Torsion"].m != 0.0
