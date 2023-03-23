@@ -7,6 +7,7 @@ import pytest
 
 from openff.interchange.drivers.all import get_all_energies
 from openff.interchange.drivers.gromacs import _find_gromacs_executable
+from openff.interchange.drivers.lammps import _find_lammps_executable
 from openff.interchange.tests import _BaseTest
 
 
@@ -27,11 +28,7 @@ class TestDriversAll(_BaseTest):
         out.box = [4, 4, 4]
 
         summary = get_all_energies(out)
+
         assert ("GROMACS" in summary) == (_find_gromacs_executable() is not None)
-
         assert ("Amber" in summary) == (which("sander") is not None)
-
-        # FIXME: Add back when LAMMPS export fixed
-        # assert ("LAMMPS" in summary) == (_find_lammps_executable() is not None)
-
-        assert len(summary) == 3
+        assert ("LAMMPS" in summary) == (_find_lammps_executable() is not None)

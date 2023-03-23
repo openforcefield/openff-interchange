@@ -130,7 +130,7 @@ class MDConfig(DefaultModel):
 
             if self.vdw_method == "cutoff":
                 mdp.write("vdwtype = cutoff\n")
-            elif self.vdw_method == "pme":
+            elif self.vdw_method == _PME:
                 mdp.write("vdwtype = PME\n")
             else:
                 raise UnsupportedExportError(
@@ -211,10 +211,10 @@ class MDConfig(DefaultModel):
                 "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n",
             )
 
-            if self.coul_method == "pme":
+            if self.coul_method == _PME:
                 # Note: LAMMPS will error out if using kspace on something with all zero charges,
                 # so this may not work if all partial charges are zero
-                lmp.write("kspace_style pppm 1e-6\n")
+                lmp.write("kspace_style pppm 1e-4\n")
 
             lmp.write("run 0\n")
 
@@ -245,7 +245,7 @@ class MDConfig(DefaultModel):
                     f"vdW method {self.vdw_method} not supported",
                 )
 
-            if self.coul_method == "pme":
+            if self.coul_method == _PME:
                 sander.write("/\n&ewald\norder=4\nskinnb=1.0\n/")
 
             sander.write("/\n")
