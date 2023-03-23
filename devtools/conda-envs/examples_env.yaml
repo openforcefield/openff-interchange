@@ -25,10 +25,10 @@ dependencies:
   - nglview
   - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
   - openeye-toolkits
-  - pytest <7.0.0
+  - pytest
   - nbval
   - openmmforcefields >=0.11.2
   # Drivers
   - gromacs >=2021=nompi*
-  - lammps >=2021
+  # https://github.com/conda-forge/quippy-feedstock/issues/15
   - panedr

@@ -70,7 +70,7 @@ class TestToolkitUtils(_BaseTest):
             )
 
     def test_simple_topology_from_openmm(self):
-        simple_topology: Topology = _simple_topology_from_openmm(
+        simple_topology = _simple_topology_from_openmm(
             Topology.from_molecules(
                 [
                     Molecule.from_smiles("O"),

@@ -1,4 +1,4 @@
-name: full_tests
+name: ci
 
 on:
   push:
@@ -27,9 +27,14 @@ jobs:
         python-version:
           - "3.8"
           - "3.9"
+          - "3.10"
         openeye:
           - true
           - false
+        exclude:
+          - python-version: "3.10"
+            os: macOS-latest
+
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
@@ -55,7 +60,7 @@ jobs:
         # These packages are brought in by conda (via the toolkit) and must be removed manually
         # since pip doesn't know about the -base split and does not uninstall the -base package
         conda remove --force openff-interchange openff-interchange-base
-        python -m pip install .
+        python -m pip install . plugins/
 
     - name: Environment Information
       run: |
@@ -110,6 +115,7 @@ jobs:
         # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
         micromamba remove jax -yq
         mypy --show-error-codes --namespace-packages -p "openff.interchange"
+        mypy --show-error-codes plugins/nonbonded_plugins/
 
     - name: Codecov
       uses: codecov/codecov-action@v3

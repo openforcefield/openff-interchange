@@ -73,11 +73,11 @@ class MDConfig(DefaultModel):
             periodic=interchange.box is not None,
             constraints=_infer_constraints(interchange),
         )
-        if "vdW" in interchange.handlers:
+        if "vdW" in interchange.collections:
             vdw_handler = interchange["vdW"]
             mdconfig.vdw_cutoff = vdw_handler.cutoff
             mdconfig.vdw_method = vdw_handler.method
-            mdconfig.mixing_rule = vdw_handler.mixing_rule
+            mdconfig.mixing_rule = vdw_handler.mixing_rule  # type: ignore[assignment]
 
             if vdw_handler.switch_width is not None:
                 if vdw_handler.switch_width.m == 0:
@@ -90,7 +90,7 @@ class MDConfig(DefaultModel):
             else:
                 mdconfig.switching_function = False
 
-        if "Electrostatics" in interchange.handlers:
+        if "Electrostatics" in interchange.collections:
             mdconfig.coul_method = interchange["Electrostatics"].periodic_potential
             mdconfig.coul_cutoff = interchange["Electrostatics"].cutoff
 
@@ -252,12 +252,12 @@ class MDConfig(DefaultModel):
 
 
 def _infer_constraints(interchange: "Interchange") -> str:
-    if "Constraints" not in interchange.handlers:
+    if "Constraints" not in interchange.collections:
         return "none"
-    elif "Bonds" not in interchange.handlers:
+    elif "Bonds" not in interchange.collections:
         return "none"
     else:
-        num_constraints = len(interchange["Constraints"].slot_map)
+        num_constraints = len(interchange["Constraints"].key_map)
         if num_constraints == 0:
             return "none"
         else:
@@ -265,12 +265,12 @@ def _infer_constraints(interchange: "Interchange") -> str:
 
             num_h_bonds = _get_num_h_bonds(interchange.topology)
 
-            num_bonds = len(interchange["Bonds"].slot_map)
-            num_angles = len(interchange["Angles"].slot_map)
+            num_bonds = len(interchange["Bonds"].key_map)
+            num_angles = len(interchange["Angles"].key_map)
 
             if num_constraints == num_h_bonds:
                 return "h-bonds"
-            elif num_constraints == len(interchange["Bonds"].slot_map):
+            elif num_constraints == len(interchange["Bonds"].key_map):
                 return "all-bonds"
             elif num_constraints == (num_bonds + num_angles):
                 return "all-angles"

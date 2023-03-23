@@ -3,19 +3,20 @@ Helper functions for exporting positions to OpenMM.
 """
 from typing import TYPE_CHECKING
 
-from openff.units import unit as off_unit
-from openff.units.openmm import to_openmm as to_openmm_quantity
+from openff.units import unit
 
 from openff.interchange.exceptions import MissingPositionsError
 
 if TYPE_CHECKING:
+    import openmm.unit
+
     from openff.interchange import Interchange
 
 
 def to_openmm_positions(
     interchange: "Interchange",
     include_virtual_sites: bool = True,
-) -> off_unit.Quantity:
+) -> "openmm.unit.Quantity":
     """Generate an array of positions of all particles, optionally including virtual sites."""
     from collections import defaultdict
 
@@ -23,15 +24,13 @@ def to_openmm_positions(
 
     if interchange.positions is None:
         raise MissingPositionsError(
-            f"Positions are required found {interchange.positions=}.",
+            f"Positions are required, found {interchange.positions=}.",
         )
 
-    atom_positions = to_openmm_quantity(interchange.positions)
-
-    if "VirtualSites" not in interchange.handlers:
-        return atom_positions
-    elif len(interchange["VirtualSites"].slot_map) == 0:
-        return atom_positions
+    if "VirtualSites" not in interchange.collections:
+        return interchange.positions.to_openmm()
+    elif len(interchange["VirtualSites"].key_map) == 0:
+        return interchange.positions.to_openmm()
 
     topology = interchange.topology
 
@@ -47,43 +46,30 @@ def to_openmm_positions(
         for virtual_site, molecule_index in virtual_site_molecule_map.items():
             molecule_virtual_site_map[molecule_index].append(virtual_site)
 
-    particle_positions = off_unit.Quantity(
+    particle_positions = unit.Quantity(
         numpy.empty(shape=(0, 3)),
-        off_unit.nanometer,
+        unit.nanometer,
     )
 
     for molecule in topology.molecules:
         molecule_index = topology.molecule_index(molecule)
 
-        try:
-            this_molecule_atom_positions = molecule.conformers[0]
-        except TypeError:
-            atom_indices = [topology.atom_index(atom) for atom in molecule.atoms]
-            this_molecule_atom_positions = interchange.positions[atom_indices, :]
-            # Interchange.position is populated, but Molecule.conformers is not
+        atom_indices = [topology.atom_index(atom) for atom in molecule.atoms]
+        this_molecule_atom_positions = interchange.positions[atom_indices, :]
 
-        if include_virtual_sites:
-            n_virtual_sites_in_this_molecule: int = len(
-                molecule_virtual_site_map[molecule_index],
-            )
-            this_molecule_virtual_site_positions = off_unit.Quantity(
-                numpy.zeros((n_virtual_sites_in_this_molecule, 3)),
-                off_unit.nanometer,
-            )
-            particle_positions = numpy.concatenate(
-                [
-                    particle_positions,
-                    this_molecule_atom_positions,
-                    this_molecule_virtual_site_positions,
-                ],
-            )
+        n_virtual_sites_in_this_molecule: int = len(
+            molecule_virtual_site_map[molecule_index],
+        )
+        this_molecule_virtual_site_positions = unit.Quantity(
+            numpy.zeros((n_virtual_sites_in_this_molecule, 3)),
+            unit.nanometer,
+        )
+        particle_positions = numpy.concatenate(
+            [
+                particle_positions,
+                this_molecule_atom_positions,
+                this_molecule_virtual_site_positions,
+            ],
+        )
 
-        else:
-            particle_positions = numpy.concatenate(
-                [
-                    particle_positions,
-                    this_molecule_atom_positions,
-                ],
-            )
-
-    return particle_positions
+    return particle_positions.to_openmm()

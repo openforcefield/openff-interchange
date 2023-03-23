@@ -37,7 +37,7 @@ class TestInterchange(_BaseTest):
         np.testing.assert_equal(out["box"].m, (4 * np.eye(3) * unit.nanometer).m)
         np.testing.assert_equal(out["box"].m, out["box_vectors"].m)
 
-        assert out["Bonds"] == out.handlers["Bonds"]
+        assert out["Bonds"] == out.collections["Bonds"]
 
         with pytest.raises(LookupError, match="Only str"):
             out[1]
@@ -98,17 +98,17 @@ class TestInterchange(_BaseTest):
         mol.generate_conformers(n_conformers=1)
         top = Topology.from_molecules([mol])
 
-        openff_sys = Interchange.from_smirnoff(sage_unconstrained, top)
+        interchange = Interchange.from_smirnoff(sage_unconstrained, top)
 
-        openff_sys.box = [4, 4, 4] * np.eye(3)
-        openff_sys.positions = mol.conformers[0]
+        interchange.box = [4, 4, 4] * np.eye(3)
+        interchange.positions = mol.conformers[0]
 
         # Copy and translate atoms by [1, 1, 1]
         other = Interchange()
-        other = deepcopy(openff_sys)
+        other = deepcopy(interchange)
         other.positions += 1.0 * unit.nanometer
 
-        combined = openff_sys + other
+        combined = interchange + other
 
         # Just see if it can be converted into OpenMM and run
         get_openmm_energies(combined)
@@ -208,18 +208,17 @@ class TestInterchange(_BaseTest):
         get_lammps_energies(out)
 
     def test_from_sage(self, sage):
-
         top = Topology.from_molecules(
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")],
         )
 
         out = Interchange.from_smirnoff(sage, top)
 
-        assert "Constraints" in out.handlers.keys()
-        assert "Bonds" in out.handlers.keys()
-        assert "Angles" in out.handlers.keys()
-        assert "ProperTorsions" in out.handlers.keys()
-        assert "vdW" in out.handlers.keys()
+        assert "Constraints" in out.collections.keys()
+        assert "Bonds" in out.collections.keys()
+        assert "Angles" in out.collections.keys()
+        assert "ProperTorsions" in out.collections.keys()
+        assert "vdW" in out.collections.keys()
 
         assert type(out.topology) == Topology
         assert isinstance(out.topology, Topology)
@@ -233,17 +232,16 @@ class TestInterchange(_BaseTest):
         )
 
     def test_from_sage_molecule_list(self, sage):
-
         out = Interchange.from_smirnoff(
             sage,
             [Molecule.from_smiles("CCO"), Molecule.from_smiles("CC")],
         )
 
-        assert "Constraints" in out.handlers.keys()
-        assert "Bonds" in out.handlers.keys()
-        assert "Angles" in out.handlers.keys()
-        assert "ProperTorsions" in out.handlers.keys()
-        assert "vdW" in out.handlers.keys()
+        assert "Constraints" in out.collections.keys()
+        assert "Bonds" in out.collections.keys()
+        assert "Angles" in out.collections.keys()
+        assert "ProperTorsions" in out.collections.keys()
+        assert "vdW" in out.collections.keys()
 
         assert type(out.topology) == Topology
         assert isinstance(out.topology, Topology)
@@ -280,7 +278,7 @@ class TestUnimplementedSMIRNOFFCases(_BaseTest):
         sage.register_parameter_handler(bogus_parameter_handler)
         with pytest.raises(
             SMIRNOFFHandlersNotImplementedError,
-            match="SMIRNOFF.*bogus",
+            match="not implemented in Interchange:.*bogus",
         ):
             Interchange.from_smirnoff(force_field=sage, topology=top)
 

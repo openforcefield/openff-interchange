@@ -7,6 +7,7 @@ source of truth is the rich chemical information in the `Interchange`
 object, and exported files are tools to perform some operation.
 
 (sec-mdconfig)=
+
 ## Run control/config files
 
 SMIRNOFF force fields include several parameters that many MD engines do not
@@ -95,6 +96,13 @@ The accompanying OpenMM topology can be constructed with the
 openmm_top = interchange.topology.to_openmm()
 ```
 
+Recall that all unit-bearing attributes within `Interchange` objects are `openff.units.Quantity` objects, which can be converted out to `openmm.unit.Quantity` objects via their `.to_openmm()` method. For example:
+
+```python
+openmm_positions: openmm.unit.Quantity = interchange.positions.to_openmm()
+openmm_box: openmm.unit.Quantity = interchange.box.to_openmm()
+```
+
 ## Amber
 
 An `Interchange` object can be written to Amber parameter/topology and
@@ -132,7 +140,5 @@ interchange.to_crd("out.to_crd")
 [`Interchange.to_openmm()`]: openff.interchange.components.interchange.Interchange.to_openmm
 [`Interchange.to_prmtop()`]: openff.interchange.components.interchange.Interchange.to_prmtop
 [`Interchange.to_inpcrd()`]: openff.interchange.components.interchange.Interchange.to_inpcrd
-[`Interchange.to_psf()`]: openff.interchange.components.interchange.Interchange.to_psf
-[`Interchange.to_crd()`]: openff.interchange.components.interchange.Interchange.to_crd
 [`Topology.to_openmm()`]: openff.toolkit.topology.Topology.to_openmm
 [MDConfig object]: sec-mdconfig

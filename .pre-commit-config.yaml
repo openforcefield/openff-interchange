@@ -13,24 +13,24 @@ repos:
   - id: add-trailing-comma
     args: ["--py36-plus"]
 - repo: https://github.com/psf/black
-  rev: 22.12.0
+  rev: 23.1.0
   hooks:
   - id: black
-    files: ^openff|devtools
+    files: ^openff|plugins
   - id: black-jupyter
     files: ^examples
 - repo: https://github.com/PyCQA/isort
-  rev: 5.11.4
+  rev: 5.12.0
   hooks:
   - id: isort
-    files: ^openff|devtools
+    files: ^openff|plugins
 - repo: https://github.com/PyCQA/flake8
   rev: 6.0.0
   hooks:
   - id: flake8
-    files: ^openff
+    files: ^openff|plugins
     additional_dependencies: [
-        'flake8-bugbear',
+        'flake8-bugbear>=23.1.20',
         'flake8-absolute-import',
         'flake8-pytest-style',
         'flake8-no-pep420',
@@ -39,14 +39,14 @@ repos:
   rev: v3.3.1
   hooks:
   - id: pyupgrade
-    files: ^openff/interchange
+    files: ^openff|plugins
     exclude: openff/interchange/_version.py|setup.py
     args: [--py38-plus]
 - repo: https://github.com/pycqa/pydocstyle
-  rev: 6.1.1
+  rev: 6.3.0
   hooks:
   - id: pydocstyle
-    files: ^openff/interchange
+    files: ^openff|plugins
     args: ["--config=setup.cfg"]
 - repo: https://github.com/econchick/interrogate
   rev: 1.5.0
@@ -54,12 +54,18 @@ repos:
     - id: interrogate
       args: [openff/interchange/]
 - repo: https://github.com/asottile/blacken-docs
-  rev: v1.12.1
+  rev: 1.13.0
   hooks:
   - id: blacken-docs
     files: ^docs/
+- repo: https://github.com/igorshubovych/markdownlint-cli
+  rev: v0.33.0
+  hooks:
+  - id: markdownlint
+    exclude: .github
+    args: ["--disable", "MD013", "MD033", "MD024", "MD046", "--"]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.6.0
+  rev: 1.6.4
   hooks:
     - id: nbqa-pyupgrade
       files: ^examples

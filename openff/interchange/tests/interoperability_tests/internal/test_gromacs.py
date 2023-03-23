@@ -14,7 +14,7 @@ from openmm import unit as openmm_unit
 from pkg_resources import resource_filename
 
 from openff.interchange import Interchange
-from openff.interchange.components.nonbonded import BuckinghamvdWHandler
+from openff.interchange.components.nonbonded import BuckinghamvdWCollection
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import (
@@ -111,7 +111,7 @@ class TestGROMACSGROFile(_BaseTest):
 
         out.to_gro("tmp.gro")
 
-        mdtraj_topology: mdtraj.Topology = mdtraj.load("tmp.gro").topology
+        mdtraj_topology = mdtraj.load("tmp.gro").topology
 
         for found_residue, original_residue in zip(
             mdtraj_topology.residues,
@@ -189,11 +189,11 @@ class TestGROMACS(_BaseTest):
         out.to_top("tmp.top")
 
         # Sanity check; toluene should have some improper(s)
-        assert len(out["ImproperTorsions"].slot_map) > 0
+        assert len(out["ImproperTorsions"].key_map) > 0
 
         struct = parmed.load_file("tmp.top")
         n_impropers_parmed = len([d for d in struct.dihedrals if d.improper])
-        assert n_impropers_parmed == len(out["ImproperTorsions"].slot_map)
+        assert n_impropers_parmed == len(out["ImproperTorsions"].key_map)
 
     @pytest.mark.slow()
     @skip_if_missing("intermol")
@@ -201,29 +201,29 @@ class TestGROMACS(_BaseTest):
     def test_set_mixing_rule(self, ethanol_top, sage):
         from intermol.gromacs.gromacs_parser import GromacsParser
 
-        openff_sys = Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
-        openff_sys.positions = numpy.zeros((ethanol_top.n_atoms, 3))
-        openff_sys.to_gro("tmp.gro")
+        interchange = Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
+        interchange.positions = numpy.zeros((ethanol_top.n_atoms, 3))
+        interchange.to_gro("tmp.gro")
 
-        openff_sys.box = [4, 4, 4]
-        openff_sys.to_top("lorentz.top")
+        interchange.box = [4, 4, 4]
+        interchange.to_top("lorentz.top")
         lorentz = GromacsParser("lorentz.top", "tmp.gro").read()
         assert lorentz.combination_rule == "Lorentz-Berthelot"
 
-        openff_sys["vdW"].mixing_rule = "geometric"
+        interchange["vdW"].mixing_rule = "geometric"
 
-        openff_sys.to_top("geometric.top")
+        interchange.to_top("geometric.top")
         geometric = GromacsParser("geometric.top", "tmp.gro").read()
         assert geometric.combination_rule == "Multiply-Sigeps"
 
     @pytest.mark.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
     def test_unsupported_mixing_rule(self, ethanol_top, sage):
         # TODO: Update this test when the model supports more mixing rules than GROMACS does
-        openff_sys = Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
-        openff_sys["vdW"].mixing_rule = "kong"
+        interchange = Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
+        interchange["vdW"].mixing_rule = "kong"
 
         with pytest.raises(UnsupportedExportError, match="rule `geometric` not compat"):
-            openff_sys.to_top("out.top")
+            interchange.to_top("out.top")
 
     @pytest.mark.slow()
     def test_residue_info(self, sage):
@@ -249,7 +249,7 @@ class TestGROMACS(_BaseTest):
 
         out.to_top("tmp.top")
 
-        parmed_structure: parmed.Structure = parmed.load_file("tmp.top")
+        parmed_structure = parmed.load_file("tmp.top")
 
         for found_residue, original_residue in zip(
             parmed_structure.residues,
@@ -261,7 +261,9 @@ class TestGROMACS(_BaseTest):
     @pytest.mark.slow()
     def test_argon_buck(self):
         """Test that Buckingham potentials are supported and can be exported"""
-        from openff.interchange.components.smirnoff import SMIRNOFFElectrostaticsHandler
+        from openff.interchange.smirnoff._nonbonded import (
+            SMIRNOFFElectrostaticsCollection,
+        )
 
         mol = Molecule.from_smiles("[#18]")
         mol.name = "Argon"
@@ -275,17 +277,17 @@ class TestGROMACS(_BaseTest):
 
         r = 0.3 * unit.nanometer
 
-        buck = BuckinghamvdWHandler()
-        coul = SMIRNOFFElectrostaticsHandler(method="pme")
+        buck = BuckinghamvdWCollection()
+        coul = SMIRNOFFElectrostaticsCollection(method="pme")
 
         pot_key = PotentialKey(id="[#18]")
         pot = Potential(parameters={"A": A, "B": B, "C": C})
 
         for atom in top.atoms:
             top_key = TopologyKey(atom_indices=(top.atom_index(atom),))
-            buck.slot_map.update({top_key: pot_key})
+            buck.key_map.update({top_key: pot_key})
 
-            coul.slot_map.update({top_key: pot_key})
+            coul.key_map.update({top_key: pot_key})
             coul.potentials.update(
                 {pot_key: Potential(parameters={"charge": 0 * unit.elementary_charge})},
             )
@@ -299,8 +301,8 @@ class TestGROMACS(_BaseTest):
         buck.potentials[pot_key] = pot
 
         out = Interchange()
-        out.handlers["Buckingham-6"] = buck
-        out.handlers["Electrostatics"] = coul
+        out.collections["Buckingham-6"] = buck
+        out.collections["Electrostatics"] = coul
         out.topology = top
         out.box = [10, 10, 10] * unit.nanometer
         out.positions = [[0, 0, 0], [0.3, 0, 0]] * unit.nanometer
@@ -331,8 +333,8 @@ class TestGROMACS(_BaseTest):
         out = Interchange.from_smirnoff(sage_unconstrained, topology)
 
         get_gromacs_energies(out).compare(
-            get_openmm_energies(out),
-            {"Electrostatics": 0.5 * unit.kilojoule_per_mole},
+            get_openmm_energies(out, combine_nonbonded_forces=True),
+            {"Nonbonded": 0.5 * unit.kilojoule_per_mole},
         )
 
 

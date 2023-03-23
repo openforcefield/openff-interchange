@@ -41,7 +41,6 @@ class TestFoyer(_BaseTest):
 
     @pytest.fixture(scope="session")
     def oplsaa_interchange_ethanol(self, oplsaa):
-
         molecule = Molecule.from_file(
             get_test_files_dir_path("foyer_test_molecules") + "/ethanol.sdf",
         )
@@ -93,7 +92,7 @@ class TestFoyer(_BaseTest):
         return interchanges_from_path
 
     def test_handlers_exist(self, oplsaa_interchange_ethanol):
-        for _, handler in oplsaa_interchange_ethanol.handlers.items():
+        for _, handler in oplsaa_interchange_ethanol.collections.items():
             assert handler
 
         assert oplsaa_interchange_ethanol["vdW"].scale_14 == 0.5
@@ -176,7 +175,7 @@ class TestRBTorsions(TestFoyer):
         pot_key = PotentialKey(id=smirks)
         for proper in top.propers:
             top_key = TopologyKey(atom_indices=tuple(top.atom_index(a) for a in proper))
-            rb_torsions.slot_map.update({top_key: pot_key})
+            rb_torsions.key_map.update({top_key: pot_key})
 
         # Values from HC-CT-CT-HC RB torsion
         # https://github.com/mosdef-hub/foyer/blob/7816bf53a127502520a18d76c81510f96adfdbed/foyer/forcefields/xml/oplsaa.xml#L2585
@@ -193,8 +192,8 @@ class TestRBTorsions(TestFoyer):
 
         rb_torsions.potentials.update({pot_key: pot})
 
-        out.handlers.update({"RBTorsions": rb_torsions})
-        out.handlers.pop("ProperTorsions")
+        out.collections.update({"RBTorsions": rb_torsions})
+        out.collections.pop("ProperTorsions")
 
         return out
 

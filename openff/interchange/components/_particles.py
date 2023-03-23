@@ -30,7 +30,6 @@ class _BondChargeVirtualSite(_VirtualSite):
 
     @property
     def local_frame_weights(self) -> Tuple[List[float], ...]:
-
         originwt = [1.0, 0.0]  # first atom is origin
         xdir = [-1.0, 1.0]
         ydir = [-1.0, 1.0]
@@ -55,7 +54,6 @@ class _MonovalentLonePairVirtualSite(_VirtualSite):
 
     @property
     def local_frame_weights(self) -> Tuple[List[float], ...]:
-
         originwt = [1.0, 0.0, 0.0]
         xdir = [-1.0, 1.0, 0.0]
         ydir = [-1.0, 0.0, 1.0]
@@ -87,7 +85,6 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
 
     @property
     def local_frame_weights(self) -> Tuple[List[float], ...]:
-
         originwt = [1.0, 0.0, 0.0]
         xdir = [-1.0, 0.5, 0.5]
         ydir = [-1.0, 1.0, 0.0]
@@ -117,7 +114,6 @@ class _TrivalentLonePairVirtualSite(_VirtualSite):
 
     @property
     def local_frame_weights(self) -> Tuple[List[float], ...]:
-
         originwt = [1.0, 0.0, 0.0, 0.0]
         xdir = [-1.0, 1 / 3, 1 / 3, 1 / 3]
         ydir = [-1.0, 1.0, 0.0, 0.0]  # Not used

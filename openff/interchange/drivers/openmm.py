@@ -1,4 +1,5 @@
 """Functions for running energy evluations with OpenMM."""
+import warnings
 from typing import Dict, Optional
 
 import numpy as np
@@ -13,9 +14,9 @@ kj_mol = unit.kilojoule_per_mole
 
 
 def get_openmm_energies(
-    off_sys: Interchange,
+    interchange: Interchange,
     round_positions: Optional[int] = None,
-    combine_nonbonded_forces: bool = False,
+    combine_nonbonded_forces: bool = True,
     platform: str = "Reference",
 ) -> EnergyReport:
     """
@@ -25,7 +26,7 @@ def get_openmm_energies(
 
     Parameters
     ----------
-    off_sys : openff.interchange.Interchange
+    interchange : openff.interchange.Interchange
         An OpenFF Interchange object to compute the single-point energy of
     round_positions : int, optional
         The number of decimal places, in nanometers, to round positions. This can be useful when
@@ -45,29 +46,31 @@ def get_openmm_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
-    positions = off_sys.positions
+    positions = interchange.positions
 
-    if "VirtualSites" in off_sys.handlers:
-        if len(off_sys["VirtualSites"].slot_map) > 0:
+    if "VirtualSites" in interchange.collections:
+        if len(interchange["VirtualSites"].key_map) > 0:
             if not combine_nonbonded_forces:
-                raise NotImplementedError(
-                    "Cannot yet split out NonbondedForce components while virtual sites are present.",
+                warnings.warn(
+                    "Collecting energies from split forces with virtual sites is experimental",
+                    UserWarning,
+                    stacklevel=2,
                 )
 
-            n_virtual_sites = len(off_sys["VirtualSites"].slot_map)
+            n_virtual_sites = len(interchange["VirtualSites"].key_map)
 
             # TODO: Actually compute virtual site positions based on initial conformers
             virtual_site_positions = np.zeros((n_virtual_sites, 3))
-            virtual_site_positions *= off_sys.positions.units
+            virtual_site_positions *= interchange.positions.units
             positions = np.vstack([positions, virtual_site_positions])
 
-    omm_sys: openmm.System = off_sys.to_openmm(
+    system: openmm.System = interchange.to_openmm(
         combine_nonbonded_forces=combine_nonbonded_forces,
     )
 
     return _get_openmm_energies(
-        omm_sys=omm_sys,
-        box_vectors=off_sys.box,
+        system=system,
+        box_vectors=interchange.box,
         positions=positions,
         round_positions=round_positions,
         platform=platform,
@@ -75,19 +78,19 @@ def get_openmm_energies(
 
 
 def _get_openmm_energies(
-    omm_sys: openmm.System,
+    system: openmm.System,
     box_vectors,
     positions,
     round_positions=None,
     platform=None,
 ) -> EnergyReport:
     """Given a prepared `openmm.System`, run a single-point energy calculation."""
-    for idx, force in enumerate(omm_sys.getForces()):
+    for idx, force in enumerate(system.getForces()):
         force.setForceGroup(idx)
 
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context = openmm.Context(
-        omm_sys,
+        system,
         integrator,
         openmm.Platform.getPlatformByName(platform),
     )
@@ -112,14 +115,14 @@ def _get_openmm_energies(
     raw_energies = dict()
     omm_energies = dict()
 
-    for idx in range(omm_sys.getNumForces()):
+    for idx in range(system.getNumForces()):
         state = context.getState(getEnergy=True, groups={idx})
         raw_energies[idx] = state.getPotentialEnergy()
         del state
 
     # This assumes that only custom forces will have duplicate instances
     for key in raw_energies:
-        force = omm_sys.getForce(key)
+        force = system.getForce(key)
         if type(force) == openmm.HarmonicBondForce:
             omm_energies["HarmonicBondForce"] = raw_energies[key]
         elif type(force) == openmm.HarmonicAngleForce:

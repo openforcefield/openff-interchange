@@ -23,9 +23,12 @@ simulation-ready input files to a number of molecular mechanics software package
 including Amber, OpenMM, GROMACS, and LAMMPS.
 
 :::{mermaid}
+
 ---
+
 alt: "Flowchart describing the construction and use of an Interchange (See textual description below)"
 align: center
+
 ---
 flowchart LR
     OFFXML
@@ -68,7 +71,6 @@ flowchart LR
     Interchange -.-> LAMMPS
 :::
 
-
 ## Interchange's goals
 
 OpenFF Interchange aims to provide a robust API for producing identical,
@@ -94,6 +96,7 @@ field modification.
 Converting in the reverse direction is a long term goal of the project.
 
 (interchange_units)=
+
 ## Units in Interchange
 
 As a best practice, Interchange always associates explicit units with numerical
@@ -128,4 +131,3 @@ units compatible with SI:
 [`openmm.units`]: http://docs.openmm.org/latest/api-python/app.html#units
 [`unyt`]: https://github.com/yt-project/unyt
 [Foyer]: https://github.com/mosdef-hub/foyer
-[ParmEd]: https://parmed.github.io/ParmEd/html/index.html

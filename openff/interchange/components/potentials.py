@@ -1,5 +1,6 @@
 """Models for storing applied force field parameters."""
 import ast
+import warnings
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union
 
 import numpy
@@ -11,6 +12,7 @@ from pydantic import Field, PrivateAttr, validator
 
 from openff.interchange.exceptions import MissingParametersError
 from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if has_package("jax"):
     from jax import numpy as jax_numpy
@@ -21,6 +23,18 @@ if TYPE_CHECKING:
 
     if has_package("jax"):
         from jax import Array
+
+
+def __getattr__(name: str):
+    if name == "PotentialHandler":
+        warnings.warn(
+            "`PotentialHandler` has been renamed to `Collection`. "
+            "Importing `Collection` instead.",
+            InterchangeDeprecationWarning,
+        )
+        return Collection
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 class Potential(DefaultModel):
@@ -85,15 +99,19 @@ class WrappedPotential(DefaultModel):
         return str(self._inner_data.data)
 
 
-class PotentialHandler(DefaultModel):
+class Collection(DefaultModel):
     """Base class for storing parametrized force field data."""
 
     type: str = Field(..., description="The type of potentials this handler stores.")
+    is_plugin: bool = Field(
+        False,
+        description="Whether this collection is defined as a plugin.",
+    )
     expression: str = Field(
         ...,
         description="The analytical expression governing the potentials in this handler.",
     )
-    slot_map: Dict[TopologyKey, PotentialKey] = Field(
+    key_map: Dict[TopologyKey, PotentialKey] = Field(
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )
@@ -120,7 +138,7 @@ class PotentialHandler(DefaultModel):
         parameter_handler: ParameterHandler,
         topology: "Topology",
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         raise NotImplementedError
 
     def store_potentials(self, parameter_handler: ParameterHandler) -> None:
@@ -128,10 +146,9 @@ class PotentialHandler(DefaultModel):
         raise NotImplementedError
 
     def _get_parameters(self, atom_indices: Tuple[int]) -> Dict:
-        topology_key: TopologyKey
-        for topology_key in self.slot_map:
+        for topology_key in self.key_map:
             if topology_key.atom_indices == atom_indices:
-                potential_key = self.slot_map[topology_key]
+                potential_key = self.key_map[topology_key]
                 potential = self.potentials[potential_key]
                 parameters = potential.parameters
                 return parameters
@@ -208,7 +225,7 @@ class PotentialHandler(DefaultModel):
         mapping = self.get_mapping()
 
         q: List = list()
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             index = mapping[potential_key]
             q.append(p[index])
 
@@ -221,7 +238,7 @@ class PotentialHandler(DefaultModel):
         """Get a mapping between potentials and array indices."""
         mapping: Dict = dict()
         index = 0
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             if potential_key not in mapping:
                 mapping[potential_key] = index
                 index += 1
@@ -265,3 +282,13 @@ class PotentialHandler(DefaultModel):
         jac_res = jac_parametrize(p)
 
         return jac_res.reshape(-1, p.flatten().shape[0])  # type: ignore[union-attr]
+
+    def __getattr__(self, attr: str):
+        if attr == "slot_map":
+            warnings.warn(
+                "The `slot_map` attribute is deprecated. Use `key_map` instead.",
+                InterchangeDeprecationWarning,
+            )
+            return self.key_map
+        else:
+            return super().__getattribute__(attr)

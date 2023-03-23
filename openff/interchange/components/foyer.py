@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Dict, Optional, Type
 from openff.models.types import FloatQuantity
 from openff.units import unit
 
-from openff.interchange.components.potentials import Potential, PotentialHandler
+from openff.interchange.components.potentials import Collection, Potential
 from openff.interchange.constants import _PME
 from openff.interchange.models import PotentialKey, TopologyKey
 
@@ -39,7 +39,7 @@ def _get_potential_key_id(atom_slots: Dict[TopologyKey, PotentialKey], idx):
     return atom_slots[top_key].id
 
 
-def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
+def get_handlers_callable() -> Dict[str, Type[Collection]]:
     """Map Foyer-style handlers from string identifiers."""
     return {
         "vdW": FoyerVDWHandler,
@@ -53,7 +53,7 @@ def get_handlers_callable() -> Dict[str, Type[PotentialHandler]]:
     }
 
 
-class FoyerVDWHandler(PotentialHandler):
+class FoyerVDWHandler(Collection):
     """Handler storing vdW potentials as produced by a Foyer force field."""
 
     type: str = "atoms"
@@ -71,7 +71,7 @@ class FoyerVDWHandler(PotentialHandler):
         force_field: "Forcefield",
         topology: "Topology",
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         from foyer.atomtyper import find_atomtypes
         from foyer.topology_graph import TopologyGraph
 
@@ -80,14 +80,14 @@ class FoyerVDWHandler(PotentialHandler):
         type_map = find_atomtypes(top_graph, forcefield=force_field)
         for key, val in type_map.items():
             top_key = TopologyKey(atom_indices=(key,))
-            self.slot_map[top_key] = PotentialKey(id=val["atomtype"])
+            self.key_map[top_key] = PotentialKey(id=val["atomtype"])
 
     def store_potentials(self, force_field: "Forcefield") -> None:
         """Extract specific force field potentials a Forcefield object."""
-        for top_key in self.slot_map:
+        for top_key in self.key_map:
             atom_params = force_field.get_parameters(
                 self.type,
-                key=self.slot_map[top_key].id,
+                key=self.key_map[top_key].id,
             )
 
             atom_params = _copy_params(
@@ -96,10 +96,10 @@ class FoyerVDWHandler(PotentialHandler):
                 param_units={"epsilon": unit.kJ / unit.mol, "sigma": unit.nm},
             )
 
-            self.potentials[self.slot_map[top_key]] = Potential(parameters=atom_params)
+            self.potentials[self.key_map[top_key]] = Potential(parameters=atom_params)
 
 
-class FoyerElectrostaticsHandler(PotentialHandler):
+class FoyerElectrostaticsHandler(Collection):
     """Handler storing electrostatics potentials as produced by a Foyer force field."""
 
     type: str = "Electrostatics"
@@ -127,11 +127,11 @@ class FoyerElectrostaticsHandler(PotentialHandler):
             charge = foyer_params["charge"]
             charge = charge * unit.elementary_charge
             self.charges[top_key] = charge
-            self.slot_map[top_key] = pot_key
+            self.key_map[top_key] = pot_key
             self.potentials[pot_key] = Potential(parameters={"charge": charge})
 
 
-class FoyerConnectedAtomsHandler(PotentialHandler):
+class FoyerConnectedAtomsHandler(Collection):
     """Base class for handlers storing valence potentials produced by a Foyer force field."""
 
     connection_attribute: str = ""
@@ -142,7 +142,7 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
         atom_slots: Dict[TopologyKey, PotentialKey],
         topology: "Topology",
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for connection in getattr(topology, self.connection_attribute):
             try:
                 atoms_iterable = connection.atoms
@@ -155,7 +155,7 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
                 _get_potential_key_id(atom_slots, idx) for idx in atom_indices
             )
 
-            self.slot_map[top_key] = PotentialKey(
+            self.key_map[top_key] = PotentialKey(
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 
@@ -163,7 +163,7 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
         """Populate self.potentials with key-val pairs of [PotentialKey, Potential]."""
         from foyer.exceptions import MissingForceError, MissingParametersError
 
-        for pot_key in self.slot_map.values():
+        for pot_key in self.key_map.values():
             try:
                 params = force_field.get_parameters(
                     self.type,
@@ -173,7 +173,7 @@ class FoyerConnectedAtomsHandler(PotentialHandler):
                 self.potentials[pot_key] = Potential(parameters=params)
             except MissingForceError:
                 # Here, we can safely assume that the ForceGenerator is Missing
-                self.slot_map = {}
+                self.key_map = {}
                 self.potentials = {}
                 return
             except MissingParametersError as e:
@@ -207,7 +207,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
         atom_slots: Dict[TopologyKey, PotentialKey],
         topology: "Topology",
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for bond in topology.bonds:
             atom_indices = (
                 topology.atom_index(bond.atom1),
@@ -219,7 +219,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
                 _get_potential_key_id(atom_slots, idx) for idx in atom_indices
             )
 
-            self.slot_map[top_key] = PotentialKey(
+            self.key_map[top_key] = PotentialKey(
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 
@@ -246,7 +246,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
         atom_slots: Dict[TopologyKey, PotentialKey],
         topology: "Topology",
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for angle in topology.angles:
             atom_indices = tuple(topology.atom_index(atom) for atom in angle)
             top_key = TopologyKey(atom_indices=atom_indices)
@@ -255,7 +255,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
                 _get_potential_key_id(atom_slots, idx) for idx in atom_indices
             )
 
-            self.slot_map[top_key] = PotentialKey(
+            self.key_map[top_key] = PotentialKey(
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 
@@ -283,7 +283,7 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
         atom_slots: Dict[TopologyKey, PotentialKey],
         topology: "Topology",
     ) -> None:
-        """Populate self.slot_map with key-val pairs of [TopologyKey, PotentialKey]."""
+        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for proper in topology.propers:
             atom_indices = tuple(topology.atom_index(atom) for atom in proper)
             top_key = TopologyKey(atom_indices=atom_indices)
@@ -292,7 +292,7 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
                 _get_potential_key_id(atom_slots, idx) for idx in atom_indices
             )
 
-            self.slot_map[top_key] = PotentialKey(
+            self.key_map[top_key] = PotentialKey(
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 
@@ -331,7 +331,7 @@ class FoyerPeriodicImproperHandler(FoyerPeriodicProperHandler):
     connection_attribute: str = "impropers"
 
 
-class _RBTorsionHandler(PotentialHandler):
+class _RBTorsionHandler(Collection):
     # TODO: Is this class superceded by FoyerRBProperHandler? Should it be removed?
     type = "Ryckaert-Bellemans"
     expression = (

@@ -2,7 +2,7 @@
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
 import numpy as np
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.exceptions import (
@@ -18,36 +18,35 @@ from openff.interchange.models import (
     ProperTorsionKey,
     TopologyKey,
 )
+from openff.interchange.smirnoff._valence import (
+    SMIRNOFFImproperTorsionCollection,
+    SMIRNOFFProperTorsionCollection,
+)
 
 if TYPE_CHECKING:
-
     import parmed as pmd
 
     from openff.interchange import Interchange
-    from openff.interchange.components.smirnoff import (
-        SMIRNOFFImproperTorsionHandler,
-        SMIRNOFFProperTorsionHandler,
-    )
 
 kcal_mol = unit.Unit("kilocalories / mol")
 kcal_mol_a2 = unit.Unit("kilocalories / mol / angstrom ** 2")
 kcal_mol_rad2 = unit.Unit("kilocalories / mol / rad ** 2")
 
 
-def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
+def _to_parmed(interchangetem: "Interchange") -> "pmd.Structure":
     """Convert an OpenFF Interchange to a ParmEd Structure."""
     import parmed as pmd
 
     structure = pmd.Structure()
-    _convert_box(off_system.box, structure)
+    _convert_box(interchangetem.box, structure)
 
-    if "Electrostatics" in off_system.handlers.keys():
+    if "Electrostatics" in interchangetem.collections.keys():
         has_electrostatics = True
-        electrostatics_handler = off_system["Electrostatics"]
+        electrostatics_handler = interchangetem["Electrostatics"]
     else:
         has_electrostatics = False
 
-    for atom in off_system.topology.atoms:
+    for atom in interchangetem.topology.atoms:
         atomic_number = atom.atomic_number
         mass = atom.mass.m
         try:
@@ -66,8 +65,8 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             resnum,
         )
 
-    if "Bonds" in off_system.handlers.keys():
-        bond_handler = off_system["Bonds"]
+    if "Bonds" in interchangetem.collections.keys():
+        bond_handler = interchangetem["Bonds"]
         bond_type_map: Dict = dict()
         for pot_key, pot in bond_handler.potentials.items():
             k = pot.parameters["k"].to(kcal_mol_a2).magnitude / 2
@@ -76,7 +75,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             bond_type_map[pot_key] = bond_type
             structure.bond_types.append(bond_type)
 
-        for top_key, pot_key in bond_handler.slot_map.items():
+        for top_key, pot_key in bond_handler.key_map.items():
             idx_1, idx_2 = top_key.atom_indices
             bond_type = bond_type_map[pot_key]
             bond = pmd.Bond(
@@ -88,8 +87,8 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
 
     structure.bond_types.claim()
 
-    if "Angles" in off_system.handlers.keys():
-        angle_handler = off_system["Angles"]
+    if "Angles" in interchangetem.collections.keys():
+        angle_handler = interchangetem["Angles"]
         angle_type_map: Dict = dict()
         for pot_key, pot in angle_handler.potentials.items():
             k = pot.parameters["k"].to(kcal_mol_rad2).magnitude / 2
@@ -99,8 +98,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             angle_type_map[pot_key] = angle_type
             structure.angle_types.append(angle_type)
 
-        for angle_key, pot_key in angle_handler.slot_map.items():
-
+        for angle_key, pot_key in angle_handler.key_map.items():
             idx_1, idx_2, idx_3 = angle_key.atom_indices
             angle_type = angle_type_map[pot_key]
             structure.angles.append(
@@ -118,14 +116,14 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     # ParmEd treats 1-4 scaling factors at the level of each DihedralType,
     # whereas SMIRNOFF captures them at the level of the non-bonded handler,
     # so they need to be stored here for processing dihedrals
-    vdw_14 = off_system["vdW"].scale_14
+    vdw_14 = interchangetem["vdW"].scale_14
     if has_electrostatics:
-        coul_14 = off_system["Electrostatics"].scale_14
+        coul_14 = interchangetem["Electrostatics"].scale_14
     else:
         coul_14 = 1.0
-    vdw_handler = off_system["vdW"]
-    if "ProperTorsions" in off_system.handlers.keys():
-        proper_torsion_handler = off_system["ProperTorsions"]
+    vdw_handler = interchangetem["vdW"]
+    if "ProperTorsions" in interchangetem.collections.keys():
+        proper_torsion_handler = interchangetem["ProperTorsions"]
         proper_type_map: Dict = dict()
         for pot_key, pot in proper_torsion_handler.potentials.items():
             k = pot.parameters["k"].to(kcal_mol).magnitude
@@ -141,8 +139,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
             proper_type_map[pot_key] = proper_type
             structure.dihedral_types.append(proper_type)
 
-        for proper_key, pot_key in proper_torsion_handler.slot_map.items():
-
+        for proper_key, pot_key in proper_torsion_handler.key_map.items():
             idx_1, idx_2, idx_3, idx_4 = proper_key.atom_indices
             dihedral_type = proper_type_map[pot_key]
             structure.dihedrals.append(
@@ -158,8 +155,8 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
 
             key1 = TopologyKey(atom_indices=(idx_1,))
             key4 = TopologyKey(atom_indices=(idx_4,))
-            vdw1 = vdw_handler.potentials[vdw_handler.slot_map[key1]]
-            vdw4 = vdw_handler.potentials[vdw_handler.slot_map[key4]]
+            vdw1 = vdw_handler.potentials[vdw_handler.key_map[key1]]
+            vdw4 = vdw_handler.potentials[vdw_handler.key_map[key4]]
             sig1, eps1 = _lj_params_from_potential(vdw1)
             sig4, eps4 = _lj_params_from_potential(vdw4)
             sig = (sig1 + sig4) * 0.5
@@ -183,8 +180,8 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     structure.dihedral_types.claim()
     structure.adjust_types.claim()
 
-    #    if False:  # "ImroperTorsions" in off_system.term_collection.terms:
-    #        improper_term = off_system.term_collection.terms["ImproperTorsions"]
+    #    if False:  # "ImroperTorsions" in interchangetem.term_collection.terms:
+    #        improper_term = interchangetem.term_collection.terms["ImproperTorsions"]
     #        for improper, smirks in improper_term.smirks_map.items():
     #            idx_1, idx_2, idx_3, idx_4 = improper
     #            pot = improper_term.potentials[improper_term.smirks_map[improper]]
@@ -205,7 +202,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     #                )
     #            )
 
-    vdw_handler = off_system["vdW"]
+    vdw_handler = interchangetem["vdW"]
     if vdw_handler.mixing_rule == "lorentz-berthelot":
         structure.combining_rule = "lorentz"
     elif vdw_handler.mixing_rule == "geometric":
@@ -217,7 +214,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
 
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         atom_key = TopologyKey(atom_indices=(pmd_idx,))
-        smirks = vdw_handler.slot_map[atom_key]
+        smirks = vdw_handler.key_map[atom_key]
         potential = vdw_handler.potentials[smirks]
         element_symbol = atom.symbol
         sigma, epsilon = _lj_params_from_potential(potential)
@@ -242,7 +239,7 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     for pmd_idx, pmd_atom in enumerate(structure.atoms):
         if has_electrostatics:
             charge_key = TopologyKey(atom_indices=(pmd_idx,))
-            partial_charge = charges[charge_key]
+            partial_charge: Quantity = charges[charge_key]
             unitless_ = partial_charge.to(unit.elementary_charge).magnitude
             pmd_atom.charge = float(unitless_)
             pmd_atom.atom_type.charge = float(unitless_)
@@ -253,8 +250,8 @@ def _to_parmed(off_system: "Interchange") -> "pmd.Structure":
     for res in structure.residues:
         res.name = "FOO"
 
-    if off_system.positions is not None:
-        structure.positions = off_system.positions.to(unit.angstrom).magnitude
+    if interchangetem.positions is not None:
+        structure.positions = interchangetem.positions.to(unit.angstrom).magnitude
 
         for idx, pos in enumerate(structure.positions):
             structure.atoms[idx].xx = pos._value[0]
@@ -288,13 +285,15 @@ def _from_parmed(cls, structure) -> "Interchange":
     else:
         raise ConversionError("ParmEd Structure missing an topology attribute")
 
-    from openff.interchange.components.smirnoff import (
-        SMIRNOFFAngleHandler,
-        SMIRNOFFBondHandler,
-        SMIRNOFFElectrostaticsHandler,
-        SMIRNOFFImproperTorsionHandler,
-        SMIRNOFFProperTorsionHandler,
-        SMIRNOFFvdWHandler,
+    from openff.interchange.smirnoff._nonbonded import (
+        SMIRNOFFElectrostaticsCollection,
+        SMIRNOFFvdWCollection,
+    )
+    from openff.interchange.smirnoff._valence import (
+        SMIRNOFFAngleCollection,
+        SMIRNOFFBondCollection,
+        SMIRNOFFImproperTorsionCollection,
+        SMIRNOFFProperTorsionCollection,
     )
 
     _scale_14_coul = {1 / d.scee for d in structure.dihedral_types if d.scee != 0}
@@ -316,8 +315,11 @@ def _from_parmed(cls, structure) -> "Interchange":
         scale_14_vdw = [*_scale_14_vdw][0]
 
     # TODO: Infer 1-4 scaling factors from exceptions/adjusts/dihedrals/something
-    vdw_handler = SMIRNOFFvdWHandler(scale_14=scale_14_vdw)
-    coul_handler = SMIRNOFFElectrostaticsHandler(scale_14=scale_14_coul, method="pme")
+    vdw_handler = SMIRNOFFvdWCollection(scale_14=scale_14_vdw)
+    coul_handler = SMIRNOFFElectrostaticsCollection(
+        scale_14=scale_14_coul,
+        method="pme",
+    )
 
     for atom in structure.atoms:
         atom_idx = atom.idx
@@ -328,15 +330,15 @@ def _from_parmed(cls, structure) -> "Interchange":
         pot_key = PotentialKey(id=str(atom_idx))
         pot = Potential(parameters={"sigma": sigma, "epsilon": epsilon})
 
-        vdw_handler.slot_map.update({top_key: pot_key})
+        vdw_handler.key_map.update({top_key: pot_key})
         vdw_handler.potentials.update({pot_key: pot})
 
-        coul_handler.slot_map.update({top_key: pot_key})
+        coul_handler.key_map.update({top_key: pot_key})
         coul_handler.potentials.update(
             {pot_key: Potential(parameters={"charge": charge})},
         )
 
-    bond_handler = SMIRNOFFBondHandler()
+    bond_handler = SMIRNOFFBondCollection()
 
     for bond in structure.bonds:
         atom1 = bond.atom1
@@ -347,14 +349,14 @@ def _from_parmed(cls, structure) -> "Interchange":
         pot_key = PotentialKey(id=f"{atom1.idx}-{atom2.idx}")
         pot = Potential(parameters={"k": k * 2, "length": length})
 
-        bond_handler.slot_map.update({top_key: pot_key})
+        bond_handler.key_map.update({top_key: pot_key})
         bond_handler.potentials.update({pot_key: pot})
 
-    out.handlers.update({"vdW": vdw_handler})
-    out.handlers.update({"Electrostatics": coul_handler})
-    out.handlers.update({"Bonds": bond_handler})
+    out.collections.update({"vdW": vdw_handler})
+    out.collections.update({"Electrostatics": coul_handler})
+    out.collections.update({"Bonds": bond_handler})
 
-    angle_handler = SMIRNOFFAngleHandler()
+    angle_handler = SMIRNOFFAngleCollection()
 
     for angle in structure.angles:
         atom1 = angle.atom1
@@ -366,11 +368,11 @@ def _from_parmed(cls, structure) -> "Interchange":
         pot_key = PotentialKey(id=f"{atom1.idx}-{atom2.idx}-{atom3.idx}")
         pot = Potential(parameters={"k": k * 2, "angle": theta})
 
-        angle_handler.slot_map.update({top_key: pot_key})
+        angle_handler.key_map.update({top_key: pot_key})
         angle_handler.potentials.update({pot_key: pot})
 
-    proper_torsion_handler = SMIRNOFFProperTorsionHandler()
-    improper_torsion_handler = SMIRNOFFImproperTorsionHandler()
+    proper_torsion_handler = SMIRNOFFProperTorsionCollection()
+    improper_torsion_handler = SMIRNOFFImproperTorsionCollection()
 
     for dihedral in structure.dihedrals:
         if isinstance(dihedral.type, pmd.DihedralType):
@@ -405,10 +407,10 @@ def _from_parmed(cls, structure) -> "Interchange":
                         dih_idx,
                     )
 
-    out.handlers.update({"Electrostatics": coul_handler})
-    out.handlers.update({"Bonds": bond_handler})
-    out.handlers.update({"Angles": angle_handler})
-    out.handlers.update({"ProperTorsions": proper_torsion_handler})
+    out.collections.update({"Electrostatics": coul_handler})
+    out.collections.update({"Bonds": bond_handler})
+    out.collections.update({"Angles": angle_handler})
+    out.collections.update({"ProperTorsions": proper_torsion_handler})
 
     return out
 
@@ -435,7 +437,10 @@ def _lj_params_from_potential(potential):
 def _process_single_dihedral(
     dihedral: "pmd.Dihedral",
     dihedral_type: "pmd.DihedralType",
-    handler: Union["SMIRNOFFImproperTorsionHandler", "SMIRNOFFProperTorsionHandler"],
+    collection: Union[
+        SMIRNOFFImproperTorsionCollection,
+        SMIRNOFFProperTorsionCollection,
+    ],
     mult: Optional[int] = None,
 ):
     atom1 = dihedral.atom1
@@ -461,13 +466,13 @@ def _process_single_dihedral(
         )
         pot = Potential(parameters={"k": k, "periodicity": periodicity, "phase": phase})
 
-        if pot_key in handler.potentials:
+        if pot_key in collection.potentials:
             raise Exception(
                 "This dihedral already exists, indices are probably messed up.",
             )
 
-        handler.slot_map.update({improper_key: pot_key})
-        handler.potentials.update({pot_key: pot})
+        collection.key_map.update({improper_key: pot_key})
+        collection.potentials.update({pot_key: pot})
     else:
         proper_key = ProperTorsionKey(
             atom_indices=(atom1.idx, atom2.idx, atom3.idx, atom4.idx),
@@ -479,9 +484,9 @@ def _process_single_dihedral(
         )
         pot = Potential(parameters={"k": k, "periodicity": periodicity, "phase": phase})
 
-        while pot_key in handler.potentials:
+        while pot_key in collection.potentials:
             pot_key.mult += 1  # type: ignore
             proper_key.mult += 1  # type: ignore
 
-        handler.slot_map.update({proper_key: pot_key})
-        handler.potentials.update({pot_key: pot})
+        collection.key_map.update({proper_key: pot_key})
+        collection.potentials.update({pot_key: pot})

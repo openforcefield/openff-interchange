@@ -1,11 +1,14 @@
 """Interfaces with OpenMM."""
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 import openmm
 from openmm import unit
 
-from openff.interchange.exceptions import UnsupportedImportError
+from openff.interchange.exceptions import (
+    PluginCompatibilityError,
+    UnsupportedImportError,
+)
 from openff.interchange.interop.openmm._positions import to_openmm_positions
 from openff.interchange.interop.openmm._topology import to_openmm_topology
 
@@ -17,11 +20,22 @@ __all__ = [
 ]
 
 if TYPE_CHECKING:
+    import openmm.app
     from openff.toolkit.topology import Topology
+
+    from openff.interchange.smirnoff._nonbonded import (
+        SMIRNOFFElectrostaticsCollection,
+        SMIRNOFFvdWCollection,
+    )
+    from openff.interchange.smirnoff._valence import (
+        SMIRNOFFAngleCollection,
+        SMIRNOFFBondCollection,
+        SMIRNOFFProperTorsionCollection,
+    )
 
 
 def to_openmm(
-    openff_sys,
+    interchange,
     combine_nonbonded_forces: bool = False,
     add_constrained_forces: bool = False,
 ) -> openmm.System:
@@ -30,7 +44,7 @@ def to_openmm(
 
     Parameters
     ----------
-    openff_sys : openff.interchange.Interchange
+    interchange : openff.interchange.Interchange
         An OpenFF Interchange object
     combine_nonbonded_forces : bool, default=False
         If True, an attempt will be made to combine all non-bonded interactions into a single openmm.NonbondedForce.
@@ -41,12 +55,13 @@ def to_openmm(
 
     Returns
     -------
-    openmm_sys : openmm.System
+    system : openmm.System
         The corresponding OpenMM System object
 
     """
     from openff.units import unit as off_unit
 
+    from openff.interchange.interop.openmm._gbsa import _process_gbsa
     from openff.interchange.interop.openmm._nonbonded import _process_nonbonded_forces
     from openff.interchange.interop.openmm._valence import (
         _process_angle_forces,
@@ -56,41 +71,73 @@ def to_openmm(
         _process_torsion_forces,
     )
 
-    openmm_sys = openmm.System()
+    for collection in interchange.collections.values():
+        if collection.is_plugin:
+            try:
+                collection.check_openmm_requirements(combine_nonbonded_forces)
+            except AssertionError as error:
+                raise PluginCompatibilityError(
+                    f"Collection of type {type(collection)} failed a compatibility check.",
+                ) from error
 
-    if openff_sys.box is not None:
-        box = openff_sys.box.m_as(off_unit.nanometer)
-        openmm_sys.setDefaultPeriodicBoxVectors(*box)
+    system = openmm.System()
+
+    if interchange.box is not None:
+        box = interchange.box.m_as(off_unit.nanometer)
+        system.setDefaultPeriodicBoxVectors(*box)
 
     particle_map = _process_nonbonded_forces(
-        openff_sys,
-        openmm_sys,
+        interchange,
+        system,
         combine_nonbonded_forces=combine_nonbonded_forces,
     )
 
-    constrained_pairs = _process_constraints(openff_sys, openmm_sys, particle_map)
+    constrained_pairs = _process_constraints(interchange, system, particle_map)
 
-    _process_torsion_forces(openff_sys, openmm_sys, particle_map)
-    _process_improper_torsion_forces(openff_sys, openmm_sys, particle_map)
+    _process_torsion_forces(interchange, system, particle_map)
+    _process_improper_torsion_forces(interchange, system, particle_map)
     _process_angle_forces(
-        openff_sys,
-        openmm_sys,
+        interchange,
+        system,
         add_constrained_forces=add_constrained_forces,
         constrained_pairs=constrained_pairs,
         particle_map=particle_map,
     )
     _process_bond_forces(
-        openff_sys,
-        openmm_sys,
+        interchange,
+        system,
         add_constrained_forces=add_constrained_forces,
         constrained_pairs=constrained_pairs,
         particle_map=particle_map,
     )
 
-    return openmm_sys
+    _process_gbsa(
+        interchange,
+        system,
+    )
+
+    for collection in interchange.collections.values():
+        if collection.is_plugin:
+            try:
+                collection.modify_openmm_forces(
+                    interchange,
+                    system,
+                    add_constrained_forces=add_constrained_forces,
+                    constrained_pairs=constrained_pairs,
+                    particle_map=particle_map,
+                )
+            except NotImplementedError:
+                continue
+
+    return system
 
 
-def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
+def from_openmm(
+    topology: Optional["openmm.app.Topology"] = None,
+    system: Optional[openmm.System] = None,
+    positions=None,
+    box_vectors=None,
+):
     """Create an Interchange object from OpenMM data."""
     import warnings
 
@@ -105,23 +152,23 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
         'file an issue or create a new discussion (see the "Discussions" tab.',
     )
 
-    openff_sys = Interchange()
+    interchange = Interchange()
 
     if system:
         for force in system.getForces():
             if isinstance(force, openmm.NonbondedForce):
                 vdw, coul = _convert_nonbonded_force(force)
-                openff_sys.handlers["vdW"] = vdw
-                openff_sys.handlers["Electrostatics"] = coul
+                interchange.collections["vdW"] = vdw
+                interchange.collections["Electrostatics"] = coul
             elif isinstance(force, openmm.HarmonicBondForce):
-                bond_handler = _convert_harmonic_bond_force(force)
-                openff_sys.handlers["Bonds"] = bond_handler
+                bonds = _convert_harmonic_bond_force(force)
+                interchange.collections["Bonds"] = bonds
             elif isinstance(force, openmm.HarmonicAngleForce):
-                angle_handler = _convert_harmonic_angle_force(force)
-                openff_sys.handlers["Angles"] = angle_handler
+                angles = _convert_harmonic_angle_force(force)
+                interchange.collections["Angles"] = angles
             elif isinstance(force, openmm.PeriodicTorsionForce):
-                proper_torsion_handler = _convert_periodic_torsion_force(force)
-                openff_sys.handlers["ProperTorsions"] = proper_torsion_handler
+                proper_torsions = _convert_periodic_torsion_force(force)
+                interchange.collections["ProperTorsions"] = proper_torsions
             elif isinstance(force, openmm.CMMotionRemover):
                 pass
             else:
@@ -134,34 +181,36 @@ def from_openmm(topology=None, system=None, positions=None, box_vectors=None):
 
         openff_topology = _simple_topology_from_openmm(topology)
 
-        openff_sys.topology = openff_topology
+        interchange.topology = openff_topology
 
     if positions is not None:
-        openff_sys.positions = positions
+        interchange.positions = positions
 
     if box_vectors is not None:
-        openff_sys.box = box_vectors
+        interchange.box = box_vectors
 
-    return openff_sys
+    return interchange
 
 
-def _convert_nonbonded_force(force: openmm.NonbondedForce):
+def _convert_nonbonded_force(
+    force: openmm.NonbondedForce,
+) -> Tuple["SMIRNOFFvdWCollection", "SMIRNOFFElectrostaticsCollection"]:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.components.potentials import Potential
-    from openff.interchange.components.smirnoff import (
-        SMIRNOFFElectrostaticsHandler,
-        SMIRNOFFvdWHandler,
-    )
     from openff.interchange.models import PotentialKey, TopologyKey
+    from openff.interchange.smirnoff._nonbonded import (
+        SMIRNOFFElectrostaticsCollection,
+        SMIRNOFFvdWCollection,
+    )
 
     if force.getNonbondedMethod() != 0:
         raise UnsupportedImportError(
             "Importing from OpenMM only currently supported with `openmm.NonbondedForce.PME`.",
         )
 
-    vdw_handler = SMIRNOFFvdWHandler()
-    electrostatics = SMIRNOFFElectrostaticsHandler(version=0.4, scale_14=0.833333)
+    vdw = SMIRNOFFvdWCollection()
+    electrostatics = SMIRNOFFElectrostaticsCollection(version=0.4, scale_14=0.833333)
 
     n_parametrized_particles = force.getNumParticles()
 
@@ -175,10 +224,10 @@ def _convert_nonbonded_force(force: openmm.NonbondedForce):
                 "epsilon": from_openmm_quantity(epsilon),
             },
         )
-        vdw_handler.slot_map.update({top_key: pot_key})
-        vdw_handler.potentials.update({pot_key: pot})
+        vdw.key_map.update({top_key: pot_key})
+        vdw.potentials.update({pot_key: pot})
 
-        electrostatics.slot_map.update({top_key: pot_key})
+        electrostatics.key_map.update({top_key: pot_key})
         electrostatics.potentials.update(
             {pot_key: Potential(parameters={"charge": from_openmm_quantity(charge)})},
         )
@@ -186,30 +235,32 @@ def _convert_nonbonded_force(force: openmm.NonbondedForce):
     # 0 == openmm.NonbondedForce.PME:
     if force.getNonbondedMethod() == 0:
         electrostatics.periodic_potential = "Ewald3D-ConductingBoundary"
-        vdw_handler.method = "cutoff"
-        vdw_handler.cutoff = force.getCutoffDistance()
+        vdw.method = "cutoff"
+        vdw.cutoff = force.getCutoffDistance()
     else:
         raise UnsupportedImportError(
             f"Parsing a non-bonded force of type {type(force)} with {force.getNonbondedMethod()} not yet supported.",
         )
 
-    return vdw_handler, electrostatics
+    return vdw, electrostatics
 
 
-def _convert_harmonic_bond_force(force):
+def _convert_harmonic_bond_force(
+    force: openmm.HarmonicBondForce,
+) -> "SMIRNOFFBondCollection":
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.components.potentials import Potential
-    from openff.interchange.components.smirnoff import SMIRNOFFBondHandler
-    from openff.interchange.models import PotentialKey, TopologyKey
+    from openff.interchange.models import BondKey, PotentialKey
+    from openff.interchange.smirnoff._valence import SMIRNOFFBondCollection
 
-    bond_handler = SMIRNOFFBondHandler()
+    bonds = SMIRNOFFBondCollection()
 
     n_parametrized_bonds = force.getNumBonds()
 
     for idx in range(n_parametrized_bonds):
         atom1, atom2, length, k = force.getBondParameters(idx)
-        top_key = TopologyKey(atom_indices=(atom1, atom2))
+        top_key = BondKey(atom_indices=(atom1, atom2))
         pot_key = PotentialKey(id=f"{atom1}-{atom2}")
         pot = Potential(
             parameters={
@@ -218,26 +269,28 @@ def _convert_harmonic_bond_force(force):
             },
         )
 
-        bond_handler.slot_map.update({top_key: pot_key})
-        bond_handler.potentials.update({pot_key: pot})
+        bonds.key_map.update({top_key: pot_key})
+        bonds.potentials.update({pot_key: pot})
 
-    return bond_handler
+    return bonds
 
 
-def _convert_harmonic_angle_force(force):
+def _convert_harmonic_angle_force(
+    force: openmm.HarmonicAngleForce,
+) -> "SMIRNOFFAngleCollection":
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.components.potentials import Potential
-    from openff.interchange.components.smirnoff import SMIRNOFFAngleHandler
-    from openff.interchange.models import PotentialKey, TopologyKey
+    from openff.interchange.models import AngleKey, PotentialKey
+    from openff.interchange.smirnoff._valence import SMIRNOFFAngleCollection
 
-    angle_handler = SMIRNOFFAngleHandler()
+    angles = SMIRNOFFAngleCollection()
 
     n_parametrized_angles = force.getNumAngles()
 
     for idx in range(n_parametrized_angles):
         atom1, atom2, atom3, angle, k = force.getAngleParameters(idx)
-        top_key = TopologyKey(atom_indices=(atom1, atom2, atom3))
+        top_key = AngleKey(atom_indices=(atom1, atom2, atom3))
         pot_key = PotentialKey(id=f"{atom1}-{atom2}-{atom3}")
         pot = Potential(
             parameters={
@@ -246,22 +299,24 @@ def _convert_harmonic_angle_force(force):
             },
         )
 
-        angle_handler.slot_map.update({top_key: pot_key})
-        angle_handler.potentials.update({pot_key: pot})
+        angles.key_map.update({top_key: pot_key})
+        angles.potentials.update({pot_key: pot})
 
-    return angle_handler
+    return angles
 
 
-def _convert_periodic_torsion_force(force):
+def _convert_periodic_torsion_force(
+    force: openmm.PeriodicTorsionForce,
+) -> "SMIRNOFFProperTorsionCollection":
     # TODO: Can impropers be separated out from a PeriodicTorsionForce?
     # Maybe by seeing if a quartet is in mol/top.propers or .impropers
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.components.potentials import Potential
-    from openff.interchange.components.smirnoff import SMIRNOFFProperTorsionHandler
     from openff.interchange.models import PotentialKey, ProperTorsionKey
+    from openff.interchange.smirnoff._valence import SMIRNOFFProperTorsionCollection
 
-    proper_torsion_handler = SMIRNOFFProperTorsionHandler()
+    proper_torsions = SMIRNOFFProperTorsionCollection()
 
     n_parametrized_torsions = force.getNumTorsions()
 
@@ -270,8 +325,8 @@ def _convert_periodic_torsion_force(force):
         # TODO: Process layered torsions
         # TODO: Check if this torsion is an improper
         top_key = ProperTorsionKey(atom_indices=(atom1, atom2, atom3, atom4), mult=0)
-        while top_key in proper_torsion_handler.slot_map:
-            top_key.mult: int = top_key.mult + 1
+        while top_key in proper_torsions.key_map:
+            top_key.mult = top_key.mult + 1  # type: ignore[operator]
 
         pot_key = PotentialKey(id=f"{atom1}-{atom2}-{atom3}-{atom4}", mult=top_key.mult)
         pot = Potential(
@@ -283,10 +338,10 @@ def _convert_periodic_torsion_force(force):
             },
         )
 
-        proper_torsion_handler.slot_map.update({top_key: pot_key})
-        proper_torsion_handler.potentials.update({pot_key: pot})
+        proper_torsions.key_map.update({top_key: pot_key})
+        proper_torsions.potentials.update({pot_key: pot})
 
-    return proper_torsion_handler
+    return proper_torsions
 
 
 def _to_pdb(file_path: Union[Path, str], topology: "Topology", positions):
@@ -301,18 +356,20 @@ def _to_pdb(file_path: Union[Path, str], topology: "Topology", positions):
         app.PDBFile.writeFile(openmm_topology, positions, outfile)
 
 
-def get_nonbonded_force_from_openmm_system(omm_system):
+def _get_nonbonded_force_from_systemtem(
+    system: openmm.System,
+) -> openmm.NonbondedForce:
     """Get a single NonbondedForce object with an OpenMM System."""
-    for force in omm_system.getForces():
+    for force in system.getForces():
         if type(force) == openmm.NonbondedForce:
             return force
 
 
-def get_partial_charges_from_openmm_system(omm_system):
+def _get_partial_charges_from_systemtem(system: openmm.System) -> List[float]:
     """Get partial charges from an OpenMM interchange as a unit.Quantity array."""
     # TODO: deal with virtual sites
-    n_particles = omm_system.getNumParticles()
-    force = get_nonbonded_force_from_openmm_system(omm_system)
+    n_particles = system.getNumParticles()
+    force = _get_nonbonded_force_from_systemtem(system)
     # TODO: don't assume the partial charge will always be parameter 0
     # partial_charges = [openmm_to_pint(force.getParticleParameters(idx)[0]) for idx in range(n_particles)]
     partial_charges = [

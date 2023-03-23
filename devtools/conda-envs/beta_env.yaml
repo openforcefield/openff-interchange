@@ -27,12 +27,12 @@ dependencies:
   - mdanalysis
   # Drivers
   - gromacs >=2021=nompi*
-  - lammps >=2021
+  # https://github.com/conda-forge/quippy-feedstock/issues/15
   - panedr
   # Examples
   - nglview
   - ipywidgets =7
-  - pytest =7.1
+  - pytest
   - nbval
   # Typing
   - mypy >=0.971
