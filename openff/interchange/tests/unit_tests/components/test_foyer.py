@@ -28,6 +28,7 @@ if has_package("foyer"):
 if HAS_GROMACS:
     from openff.interchange.drivers.gromacs import (
         _get_mdp_file,
+        _process,
         _run_gmx_energy,
         get_gromacs_energies,
     )
@@ -128,19 +129,22 @@ class TestFoyer(_BaseTest):
             pytest.skip("Foyer/ParmEd bug with this molecule")
         openff_interchange, pmd_structure = get_interchanges(molecule_path)
         parameterized_pmd_structure = oplsaa.apply(pmd_structure)
+
         openff_energy = get_gromacs_energies(
             openff_interchange,
-            decimal=3,
             mdp="cutoff_hbonds",
+            round_positions=3,
         )
 
         parameterized_pmd_structure.save("from_foyer.gro")
         parameterized_pmd_structure.save("from_foyer.top")
 
-        through_foyer = _run_gmx_energy(
-            top_file="from_foyer.top",
-            gro_file="from_foyer.gro",
-            mdp_file=_get_mdp_file("cutoff_hbonds"),
+        through_foyer = _process(
+            _run_gmx_energy(
+                top_file="from_foyer.top",
+                gro_file="from_foyer.gro",
+                mdp_file=_get_mdp_file("cutoff_hbonds"),
+            ),
         )
 
         # TODO: Revisit after https://github.com/mosdef-hub/foyer/issues/431
@@ -204,9 +208,10 @@ class TestRBTorsions(TestFoyer):
         omm = get_openmm_energies(ethanol_with_rb_torsions, round_positions=3).energies[
             "Torsion"
         ]
-        gmx = get_gromacs_energies(ethanol_with_rb_torsions, decimal=3).energies[
-            "Torsion"
-        ]
+        gmx = get_gromacs_energies(
+            ethanol_with_rb_torsions,
+            round_positions=3,
+        ).energies["Torsion"]
 
         assert (gmx - omm).m_as(kj_mol) < 1e-6
 
@@ -227,15 +232,18 @@ class TestRBTorsions(TestFoyer):
         from_foyer.save("from_foyer.top")
         from_foyer.save("from_foyer.gro")
 
-        rb_torsion_energy_from_foyer = _run_gmx_energy(
-            top_file="from_foyer.top",
-            gro_file="from_foyer.gro",
-            mdp_file=_get_mdp_file("default"),
+        rb_torsion_energy_from_foyer = _process(
+            _run_gmx_energy(
+                top_file="from_foyer.top",
+                gro_file="from_foyer.gro",
+                mdp_file=_get_mdp_file("default"),
+            ),
         ).energies["Torsion"]
 
         # GROMACS vs. OpenMM was already compared, so just use one
-        omm = get_gromacs_energies(ethanol_with_rb_torsions, decimal=3).energies[
-            "Torsion"
-        ]
+        omm = get_gromacs_energies(
+            ethanol_with_rb_torsions,
+            round_positions=3,
+        ).energies["Torsion"]
 
         assert (omm - rb_torsion_energy_from_foyer).m_as(kj_mol) < 1e-6
