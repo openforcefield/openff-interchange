@@ -18,9 +18,11 @@ _KNOWN_ENERGY_TERMS: Set[str] = {
     "Bond",
     "Angle",
     "Torsion",
+    "Nonbonded",
     "vdW",
     "Electrostatics",
-    "Nonbonded",
+    "vdW 1-4",
+    "Electrostatics 1-4",
 }
 
 
