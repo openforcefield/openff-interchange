@@ -287,7 +287,7 @@ needs_not_gmx = pytest.mark.skipif(
 )
 needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs LAMMPS")
 needs_not_lmp = pytest.mark.skipif(
-    HAS_GROMACS,
+    HAS_LAMMPS,
     reason="Needs LAMMPS to NOT be installed",
 )
 
