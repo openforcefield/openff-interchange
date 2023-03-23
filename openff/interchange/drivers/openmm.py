@@ -2,21 +2,22 @@
 import warnings
 from typing import Dict, Optional
 
-import numpy as np
+import numpy
 import openmm
-from openmm import unit
+import openmm.unit
+from openff.units import unit
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import CannotInferNonbondedEnergyError
-
-kj_mol = unit.kilojoule_per_mole
+from openff.interchange.interop.openmm._positions import to_openmm_positions
 
 
 def get_openmm_energies(
     interchange: Interchange,
     round_positions: Optional[int] = None,
     combine_nonbonded_forces: bool = True,
+    detailed: bool = False,
     platform: str = "Reference",
 ) -> EnergyReport:
     """
@@ -31,14 +32,14 @@ def get_openmm_energies(
     round_positions : int, optional
         The number of decimal places, in nanometers, to round positions. This can be useful when
         comparing to i.e. GROMACS energies, in which positions may be rounded.
-    writer : str, default="internal"
-        A string key identifying the backend to be used to write OpenMM files. The
-        default value of `"internal"` results in this package's exporters being used.
     combine_nonbonded_forces : bool, default=False
         Whether or not to combine all non-bonded interactions (vdW, short- and long-range
         ectrostaelectrostatics, and 1-4 interactions) into a single openmm.NonbondedForce.
     platform : str, default="Reference"
         The name of the platform (`openmm.Platform`) used by OpenMM in this calculation.
+    detailed : bool, default=False
+        Attempt to report energies with more granularity. Not guaranteed to be compatible with all values
+        of other arguments. Useful for debugging.
 
     Returns
     -------
@@ -46,8 +47,6 @@ def get_openmm_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
-    positions = interchange.positions
-
     if "VirtualSites" in interchange.collections:
         if len(interchange["VirtualSites"].key_map) > 0:
             if not combine_nonbonded_forces:
@@ -57,38 +56,51 @@ def get_openmm_energies(
                     stacklevel=2,
                 )
 
-            n_virtual_sites = len(interchange["VirtualSites"].key_map)
-
-            # TODO: Actually compute virtual site positions based on initial conformers
-            virtual_site_positions = np.zeros((n_virtual_sites, 3))
-            virtual_site_positions *= interchange.positions.units
-            positions = np.vstack([positions, virtual_site_positions])
+            has_virtual_sites = True
+        else:
+            has_virtual_sites = False
+    else:
+        has_virtual_sites = False
 
     system: openmm.System = interchange.to_openmm(
         combine_nonbonded_forces=combine_nonbonded_forces,
     )
 
-    return _get_openmm_energies(
+    box_vectors: openmm.unit.Quantity = (
+        None if interchange.box is None else interchange.box.to_openmm()
+    )
+
+    positions: openmm.unit.Quantity = to_openmm_positions(
+        interchange,
+        include_virtual_sites=has_virtual_sites,
+    )
+
+    return _process(
+        _get_openmm_energies(
+            system=system,
+            box_vectors=box_vectors,
+            positions=positions,
+            round_positions=round_positions,
+            platform=platform,
+        ),
+        combine_nonbonded_forces=combine_nonbonded_forces,
+        detailed=detailed,
         system=system,
-        box_vectors=interchange.box,
-        positions=positions,
-        round_positions=round_positions,
-        platform=platform,
     )
 
 
 def _get_openmm_energies(
     system: openmm.System,
-    box_vectors,
-    positions,
-    round_positions=None,
-    platform=None,
+    box_vectors: Optional[openmm.unit.Quantity],
+    positions: openmm.unit.Quantity,
+    round_positions: Optional[int],
+    platform: str,
 ) -> EnergyReport:
-    """Given a prepared `openmm.System`, run a single-point energy calculation."""
-    for idx, force in enumerate(system.getForces()):
-        force.setForceGroup(idx)
+    """Given prepared `openmm` objects, run a single-point energy calculation."""
+    for index, force in enumerate(system.getForces()):
+        force.setForceGroup(index)
 
-    integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+    integrator = openmm.VerletIntegrator(1.0 * openmm.unit.femtoseconds)
     context = openmm.Context(
         system,
         integrator,
@@ -96,149 +108,122 @@ def _get_openmm_energies(
     )
 
     if box_vectors is not None:
-        if not isinstance(box_vectors, (unit.Quantity, list)):
-            box_vectors = box_vectors.magnitude * unit.nanometer
         context.setPeriodicBoxVectors(*box_vectors)
 
-    if isinstance(positions, unit.Quantity):
-        # Convert list of Vec3 into a NumPy array
-        positions = np.asarray(positions.value_in_unit(unit.nanometer)) * unit.nanometer
-    else:
-        positions = positions.magnitude * unit.nanometer
+    context.setPositions(
+        numpy.round(positions, round_positions)
+        if round_positions is not None
+        else positions,
+    )
 
-    if round_positions is not None:
-        rounded = np.round(positions, round_positions)
-        context.setPositions(rounded)
-    else:
-        context.setPositions(positions)
+    raw_energies: Dict[int, openmm.Force] = dict()
 
-    raw_energies = dict()
-    omm_energies = dict()
-
-    for idx in range(system.getNumForces()):
-        state = context.getState(getEnergy=True, groups={idx})
-        raw_energies[idx] = state.getPotentialEnergy()
+    for index in range(system.getNumForces()):
+        state = context.getState(getEnergy=True, groups={index})
+        raw_energies[index] = state.getPotentialEnergy()
         del state
 
+    del context
+    del integrator
+
+    return raw_energies
+
+
+def _process(
+    raw_energies: Dict[int, openmm.Force],
+    system: openmm.System,
+    combine_nonbonded_forces: bool,
+    detailed: bool,
+) -> EnergyReport:
+    staged: Dict[str, unit.Quantity] = dict()
+
+    valence_map = {
+        openmm.HarmonicBondForce: "Bond",
+        openmm.HarmonicAngleForce: "Angle",
+        openmm.PeriodicTorsionForce: "Torsion",
+    }
+
+    n_rb = len(
+        [
+            force
+            for force in system.getForces()
+            if isinstance(force, openmm.RBTorsionForce)
+        ],
+    )
+    n_periodic = len(
+        [
+            force
+            for force in system.getForces()
+            if isinstance(force, openmm.PeriodicTorsionForce)
+        ],
+    )
+
+    if n_rb * n_periodic > 0:
+        raise NotImplementedError(
+            "Cannot process systems with both PeriodicTorsionForce and RBTorsionForce",
+        )
+
     # This assumes that only custom forces will have duplicate instances
-    for key in raw_energies:
-        force = system.getForce(key)
-        if type(force) == openmm.HarmonicBondForce:
-            omm_energies["HarmonicBondForce"] = raw_energies[key]
-        elif type(force) == openmm.HarmonicAngleForce:
-            omm_energies["HarmonicAngleForce"] = raw_energies[key]
-        elif type(force) == openmm.PeriodicTorsionForce:
-            omm_energies["PeriodicTorsionForce"] = raw_energies[key]
+    for index, raw_energy in raw_energies.items():
+        force = system.getForce(index)
+
+        if type(force) in valence_map:
+            staged[valence_map[type(force)]] = raw_energy
+
         elif type(force) in [
             openmm.NonbondedForce,
             openmm.CustomNonbondedForce,
             openmm.CustomBondForce,
         ]:
-            energy_type = _infer_nonbonded_energy_type(force)
+            if combine_nonbonded_forces:
+                assert isinstance(force, openmm.NonbondedForce)
 
-            if energy_type == "None":
+                staged["Nonbonded"] = raw_energy
+
                 continue
 
-            if energy_type in omm_energies:
-                omm_energies[energy_type] += raw_energies[key]
             else:
-                omm_energies[energy_type] = raw_energies[key]
+                if isinstance(force, openmm.NonbondedForce):
+                    staged["Electrostatics"] = raw_energy
 
-    # Fill in missing keys if interchange does not have all typical forces
-    for required_key in [
-        "HarmonicBondForce",
-        "HarmonicAngleForce",
-        "PeriodicTorsionForce",
-        "NonbondedForce",
-    ]:
-        if not any(required_key in val for val in omm_energies):
-            pass  # omm_energies[required_key] = 0.0 * kj_mol
+                elif isinstance(force, openmm.CustomNonbondedForce):
+                    staged["vdW"] = raw_energy
 
-    del context
-    del integrator
+                elif isinstance(force, openmm.CustomBondForce):
+                    print(force.getEnergyFunction())
+                    if "qq" in force.getEnergyFunction():
+                        staged["Electrostatics 1-4"] = raw_energy
+                    else:
+                        staged["vdW 1-4"] = raw_energy
 
-    report = EnergyReport()
+                else:
+                    raise CannotInferNonbondedEnergyError()
 
-    report.update(
-        {
-            "Bond": omm_energies.get("HarmonicBondForce", 0.0 * kj_mol),
-            "Angle": omm_energies.get("HarmonicAngleForce", 0.0 * kj_mol),
-            "Torsion": _canonicalize_torsion_energies(omm_energies),
-        },
-    )
+    if detailed:
+        processed = staged
 
-    if "Nonbonded" in omm_energies:
-        report.update({"Nonbonded": _canonicalize_nonbonded_energies(omm_energies)})
-        report.energies.pop("vdW")
-        report.energies.pop("Electrostatics")
     else:
-        report.update({"vdW": omm_energies.get("vdW", 0.0 * kj_mol)})
-        report.update(
-            {"Electrostatics": omm_energies.get("Electrostatics", 0.0 * kj_mol)},
+        processed = {
+            key: staged[key] for key in ["Bond", "Angle", "Torsion"] if key in staged
+        }
+
+        nonbonded_energies = [
+            staged[key]
+            for key in [
+                "Nonbonded",
+                "Electrostatics",
+                "vdW",
+                "Electrostatics 1-4",
+                "vdW 1-4",
+            ]
+            if key in staged
+        ]
+
+        # Array inference acts up if given a 1-list of Quantity
+        processed["Nonbonded"] = (
+            nonbonded_energies[0]
+            if len(nonbonded_energies) == 1
+            else numpy.sum(nonbonded_energies)
         )
 
-    return report
-
-
-def _infer_nonbonded_energy_type(force):
-    if type(force) == openmm.NonbondedForce:
-        has_electrostatics = False
-        has_vdw = False
-        for i in range(force.getNumParticles()):
-            if has_electrostatics and has_vdw:
-                continue
-            params = force.getParticleParameters(i)
-            if not has_electrostatics:
-                if params[0]._value != 0:
-                    has_electrostatics = True
-            if not has_vdw:
-                if params[2]._value != 0:
-                    has_vdw = True
-
-        if has_electrostatics and not has_vdw:
-            return "Electrostatics"
-        if has_vdw and not has_electrostatics:
-            return "vdW"
-        if has_vdw and has_electrostatics:
-            return "Nonbonded"
-        if not has_vdw and not has_electrostatics:
-            return "None"
-
-    if type(force) == openmm.CustomNonbondedForce:
-        if "epsilon" or "sigma" in force.getEnergyFunction():
-            return "vdW"
-
-    if type(force) == openmm.CustomBondForce:
-        if "qq" in force.getEnergyFunction():
-            return "Electrostatics"
-        else:
-            return "vdW"
-
-    raise CannotInferNonbondedEnergyError(type(force))
-
-
-def _canonicalize_nonbonded_energies(energies: Dict):
-    omm_nonbonded = 0.0 * kj_mol
-    for key in [
-        "Nonbonded",
-        "NonbondedForce",
-        "CustomNonbondedForce",
-        "CustomBondForce",
-    ]:
-        try:
-            omm_nonbonded += energies[key]
-        except KeyError:
-            pass
-
-    return omm_nonbonded
-
-
-def _canonicalize_torsion_energies(energies: Dict):
-    omm_torsion = 0.0 * kj_mol
-    for key in ["PeriodicTorsionForce", "RBTorsionForce"]:
-        try:
-            omm_torsion += energies[key]
-        except KeyError:
-            pass
-
-    return omm_torsion
+    return EnergyReport(energies=processed)

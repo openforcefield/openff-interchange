@@ -224,6 +224,12 @@ class GMXRunError(BaseException):
     """
 
 
+class GMXNotFoundError(GMXRunError):
+    """
+    Exception for when no GROMACS executable is found.
+    """
+
+
 class GMXGromppError(GMXRunError):
     """
     Exception for when `gmx grompp` fails.
