@@ -1,5 +1,5 @@
 """Runtime settings for MD simulations."""
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Optional
 
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
@@ -53,7 +53,7 @@ class MDConfig(DefaultModel):
         None,
         description="Whether or not to use a switching function for the vdw interactions",
     )
-    switching_distance: FloatQuantity["angstrom"] = Field(
+    switching_distance: Optional[FloatQuantity["angstrom"]] = Field(
         None,
         description="The distance at which the switching function is applied",
     )
@@ -113,7 +113,7 @@ class MDConfig(DefaultModel):
                 mdp.write("coulombtype = Cut-off\n")
                 mdp.write("coulomb-modifier = None\n")
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
-            elif self.coul_method == _PME:
+            elif self.coul_method in (_PME, "PME", "pme"):
                 if not self.periodic:
                     raise UnsupportedCutoffMethodError(
                         "PME is not valid with a non-periodic system.",
@@ -143,7 +143,12 @@ class MDConfig(DefaultModel):
             if self.switching_function:
                 mdp.write("vdw-modifier = Potential-switch\n")
                 distance = round(self.switching_distance.m_as(unit.nanometer), 4)
-                mdp.write(f"rvdwswitch = {distance}\n")
+                mdp.write(f"rvdw-switch = {distance}\n")
+            else:
+                mdp.write("vdw-modifier = None\n")
+                mdp.write("rvdwswitch = 0\n")
+
+            mdp.write("coulomb-modifier = None\n")
 
     def write_lammps_input(self, input_file: str = "run.in") -> None:
         """Write a LAMMPS input file for running single-point energies."""
@@ -283,3 +288,38 @@ def _infer_constraints(interchange: "Interchange") -> str:
                 )
 
                 return "h-bonds"
+
+
+def get_intermol_defaults(periodic: bool = False) -> MDConfig:
+    """
+    Return an `MDConfig` object that attempts to match settings used in InterMol tests.
+
+    These settings are poor choices for production but can be useful for testing. See also
+        - 10.1007/s10822-016-9977-1
+        - https://github.com/shirtsgroup/InterMol/blob/master/intermol/tests/
+            /gromacs/grompp_vacuum.mdp
+            /lammps/unit_tests/atom_style-full_vacuum/atom_style-full-data_vacuum.input
+            /amber/min_vacuum.in
+
+    Parameters
+    ----------
+    periodic: bool, default=False
+        Whether to use periodic boundary conditions.
+
+    Returns
+    -------
+    config: MDConfig
+        An `MDConfig` object with settings that match those used in InterMol tests.
+
+    """
+    return MDConfig(
+        periodic=periodic,
+        constraints="none",
+        vdw_method="cutoff",
+        vdw_cutoff=0.9 * unit.nanometer,
+        mixing_rule="lorentz-berthelot",
+        switching_function=False,
+        switching_distance=None,
+        coul_method="PME" if periodic else "cutoff",
+        coul_cutoff=(0.9 * unit.nanometer if periodic else 2.0 * unit.nanometer),
+    )
