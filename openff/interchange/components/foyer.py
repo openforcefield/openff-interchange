@@ -80,7 +80,7 @@ class FoyerVDWHandler(Collection):
         type_map = find_atomtypes(top_graph, forcefield=force_field)
         for key, val in type_map.items():
             top_key = TopologyKey(atom_indices=(key,))
-            self.key_map[top_key] = PotentialKey(id=val["atomtype"])  # type: ignore[arg-type]
+            self.key_map[top_key] = PotentialKey(id=val["atomtype"])
 
     def store_potentials(self, force_field: "Forcefield") -> None:
         """Extract specific force field potentials a Forcefield object."""
