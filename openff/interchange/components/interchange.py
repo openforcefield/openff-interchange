@@ -363,7 +363,7 @@ class Interchange(DefaultModel):
     def to_prmtop(self, file_path: Union[Path, str], writer="internal"):
         """Export this Interchange to an Amber .prmtop file."""
         if writer == "internal":
-            from openff.interchange.interop.internal.amber import to_prmtop
+            from openff.interchange.interop.amber.export import to_prmtop
 
             to_prmtop(self, file_path)
 
@@ -403,7 +403,7 @@ class Interchange(DefaultModel):
     def to_inpcrd(self, file_path: Union[Path, str], writer="internal"):
         """Export this Interchange to an Amber .inpcrd file."""
         if writer == "internal":
-            from openff.interchange.interop.internal.amber import to_inpcrd
+            from openff.interchange.interop.amber.export import to_inpcrd
 
             to_inpcrd(self, file_path)
 
