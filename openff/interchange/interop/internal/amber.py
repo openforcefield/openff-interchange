@@ -9,16 +9,12 @@ from openff.units import unit
 
 from openff.interchange.components.toolkit import _get_num_h_bonds
 from openff.interchange.constants import (
-    _PME,
     AMBER_COULOMBS_CONSTANT,
     kcal_mol,
     kcal_mol_a2,
     kcal_mol_rad2,
 )
-from openff.interchange.exceptions import (
-    UnsupportedExportError,
-    UnsupportedMixingRuleError,
-)
+from openff.interchange.exceptions import UnsupportedMixingRuleError
 
 if TYPE_CHECKING:
     from openff.toolkit import Topology
@@ -86,10 +82,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         raise UnsupportedMixingRuleError(interchange["vdW"].mixing_rule)
 
     if interchange.box is None:
-        if interchange["Electrostatics"].periodic_potential != _PME:
-            raise UnsupportedExportError(
-                f'Electrostatics method PME (`"{_PME}"`) is not valid for a non-periodic system. ',
-            )
+        assert interchange["Electrostatics"].nonperiodic_potential is not None
 
     with open(path, "w") as prmtop:
         import datetime

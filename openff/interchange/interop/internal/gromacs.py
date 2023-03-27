@@ -20,7 +20,7 @@ from openff.interchange.components.base import (
 )
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import _get_14_pairs
-from openff.interchange.constants import _PME, kj_mol
+from openff.interchange.constants import kj_mol
 from openff.interchange.exceptions import MissingPositionsError, UnsupportedExportError
 from openff.interchange.interop._virtual_sites import (
     _get_virtual_site_positions,
@@ -291,10 +291,7 @@ def to_top(interchange: "Interchange", file_path: Union[Path, str]):
         path = file_path
 
     if interchange.box is None:
-        if interchange["Electrostatics"].periodic_potential != _PME:
-            raise UnsupportedExportError(
-                f'Electrostatics method PME (`"{_PME}"`) is not valid for a non-periodic system. ',
-            )
+        assert interchange["Electrostatics"].nonperiodic_potential is not None
 
     # For performance, immediately convert everything into GROMACS units.  This
     # introduces an overhead but should pay off by allowing the blind use of
@@ -1019,8 +1016,9 @@ def _write_bonds(top_file: IO, interchange: "Interchange", molecule: "Molecule")
                 found_match = False
 
         if not found_match:
-            print(
+            warnings.warn(
                 f"Failed to find parameters for bond with topology indices {topology_indices}",
+                stacklevel=2,
             )
             continue
 

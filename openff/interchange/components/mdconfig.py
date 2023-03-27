@@ -1,5 +1,5 @@
 """Runtime settings for MD simulations."""
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Literal
 
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
@@ -53,8 +53,8 @@ class MDConfig(DefaultModel):
         None,
         description="Whether or not to use a switching function for the vdw interactions",
     )
-    switching_distance: Optional[FloatQuantity["angstrom"]] = Field(
-        None,
+    switching_distance: FloatQuantity["angstrom"] = Field(
+        0.0 * unit.angstrom,
         description="The distance at which the switching function is applied",
     )
     coul_method: str = Field(
@@ -74,27 +74,57 @@ class MDConfig(DefaultModel):
             constraints=_infer_constraints(interchange),
         )
         if "vdW" in interchange.collections:
-            vdw_handler = interchange["vdW"]
-            mdconfig.vdw_cutoff = vdw_handler.cutoff
-            mdconfig.vdw_method = vdw_handler.method
-            mdconfig.mixing_rule = vdw_handler.mixing_rule  # type: ignore[assignment]
+            vdw_collection = interchange["vdW"]
+            mdconfig.vdw_cutoff = vdw_collection.cutoff
+            mdconfig.vdw_method = vdw_collection.method
+            mdconfig.mixing_rule = vdw_collection.mixing_rule  # type: ignore[assignment]
 
-            if vdw_handler.switch_width is not None:
-                if vdw_handler.switch_width.m == 0:
+            if vdw_collection.switch_width is not None:
+                if vdw_collection.switch_width.m == 0:
                     mdconfig.switching_function = False
                 else:
                     mdconfig.switching_function = True
                     mdconfig.switching_distance = (
-                        mdconfig.vdw_cutoff - vdw_handler.switch_width
+                        mdconfig.vdw_cutoff - vdw_collection.switch_width
                     )
             else:
                 mdconfig.switching_function = False
 
         if "Electrostatics" in interchange.collections:
-            mdconfig.coul_method = interchange["Electrostatics"].periodic_potential
+            mdconfig.coul_method = getattr(
+                interchange["Electrostatics"],
+                "periodic_potential" if mdconfig.periodic else "nonperiodic_potential",
+            )
             mdconfig.coul_cutoff = interchange["Electrostatics"].cutoff
 
         return mdconfig
+
+    def apply(self, interchange: "Interchange"):
+        """Attempt to apply these settings to an Interchange object."""
+        if self.periodic:
+            if interchange.box is None:
+                interchange.box = [10, 10, 10] * unit.nanometer
+        else:
+            interchange.box = None
+
+        if "vdW" in interchange.collections:
+            vdw_collection = interchange["vdW"]
+            vdw_collection.cutoff = self.vdw_cutoff
+            vdw_collection.method = self.vdw_method
+            vdw_collection.mixing_rule = self.mixing_rule
+
+            if self.switching_function:
+                vdw_collection.switch_width = self.vdw_cutoff - self.switching_distance
+            else:
+                vdw_collection.switch_width = 0.0 * unit.angstrom
+
+        if "Electrostatics" in interchange.collections:
+            electrostatics = interchange["Electrostatics"]
+            if self.coul_method.lower() == "pme":
+                electrostatics.periodic_potential = _PME
+            else:
+                electrostatics.periodic_potential = self.coul_method
+            electrostatics.cutoff = self.coul_cutoff
 
     def write_mdp_file(self, mdp_file: str = "auto_generated.mdp") -> None:
         """Write a GROMACS `.mdp` file for running single-point energies."""
@@ -120,6 +150,7 @@ class MDConfig(DefaultModel):
                     )
                 mdp.write("coulombtype = PME\n")
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
+                mdp.write("coulomb-modifier = None\n")
             elif self.coul_method == "reactionfield":
                 mdp.write("coulombtype = Reaction-field\n")
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
@@ -147,8 +178,6 @@ class MDConfig(DefaultModel):
             else:
                 mdp.write("vdw-modifier = None\n")
                 mdp.write("rvdwswitch = 0\n")
-
-            mdp.write("coulomb-modifier = None\n")
 
     def write_lammps_input(self, input_file: str = "run.in") -> None:
         """Write a LAMMPS input file for running single-point energies."""
@@ -319,7 +348,7 @@ def get_intermol_defaults(periodic: bool = False) -> MDConfig:
         vdw_cutoff=0.9 * unit.nanometer,
         mixing_rule="lorentz-berthelot",
         switching_function=False,
-        switching_distance=None,
+        switching_distance=0.0,
         coul_method="PME" if periodic else "cutoff",
         coul_cutoff=(0.9 * unit.nanometer if periodic else 2.0 * unit.nanometer),
     )
