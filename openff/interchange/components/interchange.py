@@ -311,7 +311,7 @@ class Interchange(DefaultModel):
             ParmEdWrapper().to_file(self, file_path)
 
         elif writer == "internal":
-            from openff.interchange.interop.internal.gromacs import to_gro
+            from openff.interchange.interop.gromacs import to_gro
 
             to_gro(self, file_path, decimal=decimal)
 
@@ -326,7 +326,7 @@ class Interchange(DefaultModel):
             ParmEdWrapper().to_file(self, file_path)
 
         elif writer == "internal":
-            from openff.interchange.interop.internal.gromacs import to_top
+            from openff.interchange.interop.gromacs import to_top
 
             to_top(self, file_path)
 
