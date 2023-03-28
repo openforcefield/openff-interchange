@@ -71,7 +71,7 @@ Copyright (c) 2020, Open Force Field Initiative
 
 ## License
 
-The source code of Interchange is hosted at https://github.com/openforcefield/openff-interchange and is available under the MIT license (see the file LICENSE). Some parts inherit from code distributed under other licenses, as detailed in LICENSE-3RD-PARTY).
+The source code of Interchange is hosted [on GitHub](https://github.com/openforcefield/openff-interchange) and is available under the MIT license (see the file LICENSE). Some parts inherit from code distributed under other licenses, as detailed in LICENSE-3RD-PARTY.
 
 ## Acknowledgements
 

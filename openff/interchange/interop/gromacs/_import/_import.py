@@ -1,13 +1,122 @@
-from typing import Tuple
+from typing import Dict, List, Literal, Tuple
 
 from openff.models.models import DefaultModel
 from openff.units import unit
 from pydantic import Field, conint
 
 
+class GROMACSAtomType(DefaultModel):
+    """Base class for GROMACS atom types."""
+
+    name: str
+    bonding_type: str
+    atomic_number: conint(gt=0)
+    mass: unit.Quantity
+    charge: unit.Quantity
+    particle_type: str
+
+
+class LennardJonesAtomType(GROMACSAtomType):
+    """A Lennard-Jones atom type."""
+
+    sigma: unit.Quantity
+    epsilon: unit.Quantity
+
+
+class GROMACSAtom(DefaultModel):
+    """Base class for GROMACS atoms."""
+
+    index: conint(ge=1)
+    name: str
+    atom_type: str
+    residue_index: conint(ge=1)
+    residue_name: str
+    charge_group_number: conint(ge=1)
+    charge: unit.Quantity
+    mass: unit.Quantity
+
+
+class GROMACSBond(DefaultModel):
+    """A GROMACS bond."""
+
+    atom1: conint(ge=1) = Field(
+        description="The GROMACS index of the first atom in the bond.",
+    )
+    atom2: conint(ge=1) = Field(
+        description="The GROMACS index of the second atom in the bond.",
+    )
+    function: Literal[1]
+    length: unit.Quantity
+    k: unit.Quantity
+
+
+class GROMACSAngle(DefaultModel):
+    """A GROMACS angle."""
+
+    atom1: conint(ge=1) = Field(
+        description="The GROMACS index of the first atom in the angle.",
+    )
+    atom2: conint(ge=1) = Field(
+        description="The GROMACS index of the second atom in the angle.",
+    )
+    atom3: conint(ge=1) = Field(
+        description="The GROMACS index of the third atom in the angle.",
+    )
+    angle: unit.Quantity
+    k: unit.Quantity
+
+
+class GROMACSDihedral(DefaultModel):
+    """A GROMACS dihedral."""
+
+    atom1: conint(ge=1) = Field(
+        description="The GROMACS index of the first atom in the dihedral.",
+    )
+    atom2: conint(ge=1) = Field(
+        description="The GROMACS index of the second atom in the dihedral.",
+    )
+    atom3: conint(ge=1) = Field(
+        description="The GROMACS index of the third atom in the dihedral.",
+    )
+    atom4: conint(ge=1) = Field(
+        description="The GROMACS index of the fourth atom in the dihedral.",
+    )
+    phi: unit.Quantity
+    k: unit.Quantity
+    multiplicity: conint(ge=1)
+
+
+class GROMACSMolecule(DefaultModel):
+    """Base class for GROMACS molecules."""
+
+    name: str
+    nrexcl: Literal[3] = Field(
+        3,
+        description="The farthest neighbor distance whose interactions should be excluded.",
+    )
+
+    atoms: List[GROMACSAtom] = Field(
+        list(),
+        description="The atoms in this molecule.",
+    )
+    bonds: List[GROMACSBond] = Field(
+        list(),
+        description="The bonds in this molecule.",
+    )
+    angles: List[GROMACSAngle] = Field(
+        list(),
+        description="The angles in this molecule.",
+    )
+    dihedrals: List[GROMACSDihedral] = Field(
+        list(),
+        description="The dihedrals in this molecule.",
+    )
+
+
 class GROMACSSystem(DefaultModel):
     """A GROMACS system. Adapted from Intermol."""
 
+    name: str = ""
     nonbonded_function: conint(ge=1, le=2) = Field(
         1,
         description="The nonbonded function.",
@@ -21,6 +130,18 @@ class GROMACSSystem(DefaultModel):
     coul_14: float = Field(
         0.833333,
         description="The 1-4 scaling factor for electrostatic interactions.",
+    )
+    atom_types: Dict[str, GROMACSAtomType] = Field(
+        dict(),
+        description="Atom types, keyed by name.",
+    )
+    molecule_types: Dict[str, GROMACSMolecule] = Field(
+        dict(),
+        description="Molecule types, keyed by name.",
+    )
+    molecules: Dict[str, int] = Field(
+        dict(),
+        description="The number of each molecule type in the system, keyed by the name of each molecule.",
     )
 
     @classmethod
@@ -57,43 +178,60 @@ class GROMACSSystem(DefaultModel):
                         coul_14,
                     ) = _process_defaults(line)
 
+                    system = cls(
+                        nonbonded_function=nonbonded_function,
+                        combination_rule=combination_rule,
+                        gen_pairs=gen_pairs,
+                        vdw_14=vdw_14,
+                        coul_14=coul_14,
+                    )
+
                 elif current_directive == "atomtypes":
-                    atom_type = _process_atomtype(line)  # noqa
+                    atom_type = _process_atomtype(line)
+                    system.atom_types[atom_type.name] = atom_type
 
                 elif current_directive == "moleculetype":
-                    molecule_type = _process_moleculetype(line)  # noqa
+                    molecule_type = _process_moleculetype(line)
+                    system.molecule_types[molecule_type.name] = molecule_type
+
+                    current_molecule = molecule_type.name
 
                 elif current_directive == "atoms":
-                    atom = _process_atom(line)  # noqa
+                    system.molecule_types[current_molecule].atoms.append(
+                        _process_atom(line),
+                    )
 
                 elif current_directive == "pairs":
                     pair = _process_pair(line)  # noqa
 
                 elif current_directive == "bonds":
-                    bond = _process_bond(line)  # noqa
+                    system.molecule_types[current_molecule].bonds.append(
+                        _process_bond(line),
+                    )
 
                 elif current_directive == "angles":
-                    angle = _process_angle(line)  # noqa
+                    system.molecule_types[current_molecule].angles.append(
+                        _process_angle(line),
+                    )
 
                 elif current_directive == "dihedrals":
-                    dihedral = _process_dihedral(line)  # noqa
+                    system.molecule_types[current_molecule].dihedrals.append(
+                        _process_dihedral(line),
+                    )
+
+                elif current_directive == "system":
+                    system.name = _process_system(line)
 
                 elif current_directive == "molecules":
-                    molecule = _process_molecule(line)  # noqa
+                    molecule_name, number_of_copies = _process_molecule(line)
 
-                elif current_directive in ["settles", "system", "exclusions"]:
+                    system.molecules[molecule_name] = number_of_copies
+
+                elif current_directive in ["settles", "exclusions"]:
                     pass
 
                 else:
                     raise ValueError(f"Invalid directive {current_directive}")
-
-        system = cls(
-            nonbonded_function=nonbonded_function,
-            combination_rule=combination_rule,
-            gen_pairs=gen_pairs,
-            vdw_14=vdw_14,
-            coul_14=coul_14,
-        )
 
         return system
 
@@ -102,7 +240,15 @@ def _process_defaults(line: str) -> Tuple[int, int, str, float, float]:
     split = line.split()
 
     nonbonded_function = int(split[0])
+
+    if nonbonded_function != 1:
+        raise ValueError("Only LJ nonbonded functions are supported.")
+
     combination_rule = int(split[1])
+
+    if combination_rule != 2:
+        raise ValueError("Only Lorentz-Berthelot combination rules are supported.")
+
     gen_pairs = split[2]
     lj_14 = float(split[3])
     coul_14 = float(split[4])
@@ -112,14 +258,14 @@ def _process_defaults(line: str) -> Tuple[int, int, str, float, float]:
 
 def _process_atomtype(
     line: str,
-) -> Tuple[str, str, int, float, unit.Quantity, str, unit.Quantity, unit.Quantity]:
+) -> GROMACSAtomType:
     split = line.split()
 
     atom_type = split[0]
     bonding_type = split[1]
 
     atomic_number = int(split[2])
-    mass = float(split[3])
+    mass = unit.Quantity(float(split[3]), unit.dalton)
 
     charge = unit.Quantity(float(split[4]), unit.elementary_charge)
 
@@ -131,30 +277,30 @@ def _process_atomtype(
     else:
         raise ValueError(f"Particle type must be A, parsed {particle_type}.")
 
-    return (
-        atom_type,
-        bonding_type,
-        atomic_number,
-        mass,
-        charge,
-        particle_type,
-        sigma,
-        epsilon,
+    return LennardJonesAtomType(
+        name=atom_type,
+        bonding_type=bonding_type,
+        atomic_number=atomic_number,
+        mass=mass,
+        charge=charge,
+        particle_type=particle_type,
+        sigma=sigma,
+        epsilon=epsilon,
     )
 
 
-def _process_moleculetype(line: str) -> Tuple[str, int]:
+def _process_moleculetype(line: str) -> GROMACSMolecule:
     split = line.split()
 
     molecule_type = split[0]
     nrexcl = int(split[1])
 
-    return molecule_type, nrexcl
+    return GROMACSMolecule(name=molecule_type, nrexcl=nrexcl)
 
 
 def _process_atom(
     line: str,
-) -> Tuple[int, str, int, str, str, int, unit.Quantity, unit.Quantity]:
+) -> GROMACSAtom:
     split = line.split()
 
     atom_number = int(split[0])
@@ -166,15 +312,15 @@ def _process_atom(
     charge = unit.Quantity(float(split[6]), unit.elementary_charge)
     mass = unit.Quantity(float(split[7]), unit.amu)
 
-    return (
-        atom_number,
-        atom_type,
-        residue_number,
-        residue_name,
-        atom_name,
-        charge_group_number,
-        charge,
-        mass,
+    return GROMACSAtom(
+        index=atom_number,
+        atom_type=atom_type,
+        name=atom_name,
+        residue_index=residue_number,
+        residue_name=residue_name,
+        charge_group_number=charge_group_number,
+        charge=charge,
+        mass=mass,
     )
 
 
@@ -182,7 +328,7 @@ def _process_pair(line: str):
     pass
 
 
-def _process_bond(line: str) -> Tuple[int, int, int, unit.Quantity, unit.Quantity]:
+def _process_bond(line: str) -> GROMACSBond:
     #    ;   ai     aj funct  r               k
     #      1       2 1       1.21830000e-01    5.33627360e+05
     split = line.split()
@@ -198,15 +344,22 @@ def _process_bond(line: str) -> Tuple[int, int, int, unit.Quantity, unit.Quantit
             float(split[4]),
             unit.kilojoule_per_mole / unit.nanometer**2,
         )
+
+        return GROMACSBond(
+            atom1=atom1,
+            atom2=atom2,
+            function=bond_function,
+            length=bond_length,
+            k=bond_k,
+        )
+
     else:
         raise ValueError(f"Bond function must be 1, parsed {bond_function}.")
-
-    return atom1, atom2, bond_function, bond_length, bond_k
 
 
 def _process_angle(
     line: str,
-) -> Tuple[int, int, int, int, unit.Quantity, unit.Quantity]:
+) -> GROMACSAngle:
     split = line.split()
 
     atom1 = int(split[0])
@@ -221,12 +374,18 @@ def _process_angle(
     else:
         raise ValueError(f"Angle function must be 1, parsed {angle_function}.")
 
-    return atom1, atom2, atom3, angle_function, angle, k
+    return GROMACSAngle(
+        atom1,
+        atom2,
+        atom3,
+        angle,
+        k,
+    )
 
 
 def _process_dihedral(
     line: str,
-) -> Tuple[int, int, int, int, int, unit.Quantity, unit.Quantity]:
+) -> GROMACSDihedral:
     split = line.split()
 
     atom1 = int(split[0])
@@ -240,7 +399,17 @@ def _process_dihedral(
         phi = unit.Quantity(float(split[5]), unit.degrees)
         k = unit.Quantity(float(split[6]), unit.kilojoule_per_mole)
         multiplicity = int(float(split[7]))
-        return atom1, atom2, atom3, atom4, dihedral_function, phi, k, multiplicity
+
+        return GROMACSDihedral(
+            atom1,
+            atom2,
+            atom3,
+            atom4,
+            phi,
+            k,
+            multiplicity,
+        )
+
     else:
         # raise ValueError(f"Dihedral function must be 1, parsed {dihedral_function}.")
         print(f"Dihedral function must be 1, parsed {dihedral_function}.")
@@ -254,3 +423,11 @@ def _process_molecule(line: str) -> Tuple[str, int]:
     number_of_molecules = int(split[1])
 
     return molecule_name, number_of_molecules
+
+
+def _process_system(line: str) -> str:
+    split = line.split()
+
+    system_name = split[0]
+
+    return system_name
