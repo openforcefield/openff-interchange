@@ -95,7 +95,7 @@ def _get_openmm_energies(
     positions: openmm.unit.Quantity,
     round_positions: Optional[int],
     platform: str,
-) -> EnergyReport:
+) -> Dict[int, openmm.Force]:
     """Given prepared `openmm` objects, run a single-point energy calculation."""
     for index, force in enumerate(system.getForces()):
         force.setForceGroup(index)

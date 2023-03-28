@@ -6,6 +6,7 @@ from openff.units import unit
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kcal_mol_a2
+from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
 
 if TYPE_CHECKING:
@@ -70,7 +71,7 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
             self.potentials[potential_key] = potential
 
     @classmethod
-    def create(  # type: ignore[override]
+    def create(
         cls,
         parameter_handler: GBSAHandler,
         topology: "Topology",
