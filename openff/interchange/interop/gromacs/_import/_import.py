@@ -1,4 +1,4 @@
-from typing import Dict, List, Literal, Tuple
+from typing import Dict, List, Literal, Optional, Tuple
 
 from openff.models.models import DefaultModel
 from openff.units import unit
@@ -10,7 +10,7 @@ class GROMACSAtomType(DefaultModel):
 
     name: str
     bonding_type: str
-    atomic_number: PositiveInt
+    atomic_number: Optional[PositiveInt]
     mass: unit.Quantity
     charge: unit.Quantity
     particle_type: str
@@ -117,13 +117,13 @@ class GROMACSSystem(DefaultModel):
     """A GROMACS system. Adapted from Intermol."""
 
     name: str = ""
-    nonbonded_function: PositiveInt = Field(
+    nonbonded_function: int = Field(
         1,
         ge=1,
         le=2,
         description="The nonbonded function.",
     )
-    combination_rule: PositiveInt = Field(
+    combination_rule: int = Field(
         1,
         ge=1,
         le=3,
@@ -160,7 +160,7 @@ class GROMACSSystem(DefaultModel):
         """
         with open(file) as f:
             for line in f:
-                stripped = line.strip()
+                stripped = line.split(";")[0].strip()
 
                 if len(stripped) == 0:
                     continue
@@ -268,10 +268,27 @@ def _process_atomtype(
 ) -> GROMACSAtomType:
     split = line.split()
 
+    # The second (bonding type) and third (atomic number) columns are optional. Handle these cases
+    # explicitly by assuming that the ptype column is always a 1-length string.
+    # See https://github.com/shirtsgroup/InterMol/blob/v0.1.2/intermol/gromacs/gromacs_parser.py#L1357-L1368
+
+    if len(split[3]) == 1:
+        # Bonded type and atomic number are both missing.
+        split.insert(1, None)
+        split.insert(1, None)
+
+    elif len(split[4]) == 1 and len(split[5]) >= 1:
+        if split[1][0].isalpha():
+            # Atomic number is missing.
+            split.insert(2, None)
+        else:
+            # Bonded type is missing.
+            split.insert(1, None)
+
     atom_type = split[0]
     bonding_type = split[1]
 
-    atomic_number = int(split[2])
+    atomic_number = int(split[2]) if split[2] is not None else None
     mass = unit.Quantity(float(split[3]), unit.dalton)
 
     charge = unit.Quantity(float(split[4]), unit.elementary_charge)
