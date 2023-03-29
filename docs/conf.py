@@ -65,6 +65,8 @@ intersphinx_mapping = {
         None,
     ),
     "mdtraj": ("https://www.mdtraj.org/1.9.5/", None),
+    "setuptools": ("https://setuptools.pypa.io/en/latest/", None),
+    "openmm": ("http://docs.openmm.org/latest/api-python/", None),
 }
 
 mermaid_init_js = """mermaid.initialize({
