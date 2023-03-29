@@ -104,7 +104,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             "\n",
         )
 
-        from openff.interchange.interop.internal.gromacs import _build_typemap
+        from openff.interchange.interop.gromacs.export.export import _build_typemap
 
         typemap = _build_typemap(interchange)  # noqa
 

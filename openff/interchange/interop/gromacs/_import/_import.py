@@ -2,7 +2,7 @@ from typing import Dict, List, Literal, Tuple
 
 from openff.models.models import DefaultModel
 from openff.units import unit
-from pydantic import Field, conint
+from pydantic import Field, PositiveInt
 
 
 class GROMACSAtomType(DefaultModel):
@@ -10,7 +10,7 @@ class GROMACSAtomType(DefaultModel):
 
     name: str
     bonding_type: str
-    atomic_number: conint(gt=0)
+    atomic_number: PositiveInt
     mass: unit.Quantity
     charge: unit.Quantity
     particle_type: str
@@ -26,12 +26,12 @@ class LennardJonesAtomType(GROMACSAtomType):
 class GROMACSAtom(DefaultModel):
     """Base class for GROMACS atoms."""
 
-    index: conint(ge=1)
+    index: PositiveInt
     name: str
     atom_type: str
-    residue_index: conint(ge=1)
+    residue_index: PositiveInt
     residue_name: str
-    charge_group_number: conint(ge=1)
+    charge_group_number: PositiveInt
     charge: unit.Quantity
     mass: unit.Quantity
 
@@ -39,10 +39,10 @@ class GROMACSAtom(DefaultModel):
 class GROMACSBond(DefaultModel):
     """A GROMACS bond."""
 
-    atom1: conint(ge=1) = Field(
+    atom1: PositiveInt = Field(
         description="The GROMACS index of the first atom in the bond.",
     )
-    atom2: conint(ge=1) = Field(
+    atom2: PositiveInt = Field(
         description="The GROMACS index of the second atom in the bond.",
     )
     function: Literal[1]
@@ -53,13 +53,13 @@ class GROMACSBond(DefaultModel):
 class GROMACSAngle(DefaultModel):
     """A GROMACS angle."""
 
-    atom1: conint(ge=1) = Field(
+    atom1: PositiveInt = Field(
         description="The GROMACS index of the first atom in the angle.",
     )
-    atom2: conint(ge=1) = Field(
+    atom2: PositiveInt = Field(
         description="The GROMACS index of the second atom in the angle.",
     )
-    atom3: conint(ge=1) = Field(
+    atom3: PositiveInt = Field(
         description="The GROMACS index of the third atom in the angle.",
     )
     angle: unit.Quantity
@@ -69,21 +69,21 @@ class GROMACSAngle(DefaultModel):
 class GROMACSDihedral(DefaultModel):
     """A GROMACS dihedral."""
 
-    atom1: conint(ge=1) = Field(
+    atom1: PositiveInt = Field(
         description="The GROMACS index of the first atom in the dihedral.",
     )
-    atom2: conint(ge=1) = Field(
+    atom2: PositiveInt = Field(
         description="The GROMACS index of the second atom in the dihedral.",
     )
-    atom3: conint(ge=1) = Field(
+    atom3: PositiveInt = Field(
         description="The GROMACS index of the third atom in the dihedral.",
     )
-    atom4: conint(ge=1) = Field(
+    atom4: PositiveInt = Field(
         description="The GROMACS index of the fourth atom in the dihedral.",
     )
     phi: unit.Quantity
     k: unit.Quantity
-    multiplicity: conint(ge=1)
+    multiplicity: PositiveInt
 
 
 class GROMACSMolecule(DefaultModel):
@@ -117,11 +117,18 @@ class GROMACSSystem(DefaultModel):
     """A GROMACS system. Adapted from Intermol."""
 
     name: str = ""
-    nonbonded_function: conint(ge=1, le=2) = Field(
+    nonbonded_function: PositiveInt = Field(
         1,
+        ge=1,
+        le=2,
         description="The nonbonded function.",
     )
-    combination_rule: conint(ge=1, le=3) = Field(1, description="The combination rule.")
+    combination_rule: PositiveInt = Field(
+        1,
+        ge=1,
+        le=3,
+        description="The combination rule.",
+    )
     gen_pairs: bool = Field(True, description="Whether or not to generate pairs.")
     vdw_14: float = Field(
         0.5,
@@ -375,11 +382,11 @@ def _process_angle(
         raise ValueError(f"Angle function must be 1, parsed {angle_function}.")
 
     return GROMACSAngle(
-        atom1,
-        atom2,
-        atom3,
-        angle,
-        k,
+        atom1=atom1,
+        atom2=atom2,
+        atom3=atom3,
+        angle=angle,
+        k=k,
     )
 
 
@@ -401,19 +408,19 @@ def _process_dihedral(
         multiplicity = int(float(split[7]))
 
         return GROMACSDihedral(
-            atom1,
-            atom2,
-            atom3,
-            atom4,
-            phi,
-            k,
-            multiplicity,
+            atom1=atom1,
+            atom2=atom2,
+            atom3=atom3,
+            atom4=atom4,
+            phi=phi,
+            k=k,
+            multiplicity=multiplicity,
         )
 
     else:
         # raise ValueError(f"Dihedral function must be 1, parsed {dihedral_function}.")
         print(f"Dihedral function must be 1, parsed {dihedral_function}.")
-        return
+        return  # type: ignore[return-value]
 
 
 def _process_molecule(line: str) -> Tuple[str, int]:
