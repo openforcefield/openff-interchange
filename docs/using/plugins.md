@@ -13,7 +13,7 @@ Currently, systems using custom interactions can only be exported to OpenMM. The
 
 ## Creating a custom `ParameterHandler`
 
-There is no formal specification for a `ParameterHandler` as processed by the OpenFF Toolkit, but there are some guidelines that are expected to be followed. A parameter handler requires both a [`ParameterHandler`] class, which performs parametrization, and a [`ParameterType`] class, which stores the corresponding data. For more information, see the [Toolkit documentation](users/developing.md#modular-design-features). 
+There is no formal specification for a `ParameterHandler` as processed by the OpenFF Toolkit, but there are some guidelines that are expected to be followed. A parameter handler requires both a [`ParameterHandler`] class, which performs parametrization, and a [`ParameterType`] class, which stores the corresponding data. For more information, see the [Toolkit documentation](users/developing.md#modular-design-features).
 
 The high-level objectives of a parameter handler are to:
 
@@ -44,14 +44,14 @@ The high-level objectives of a parameter handler are to:
   * override methods like `__init__` for custom behavior if required (this should be avoided if possible)
   * define its own properties, class methods, etc. as needed
   * define optional attributes such as `id`
-  
+
 [`ParameterType`]: openff.toolkit.typing.engines.smirnoff.ParameterType
 [entry point group]: setuptools:userguide/entry_point
 [`check_handler_compatibility`]: openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.check_handler_compatibility
 
 ## Creating a custom `SMIRNOFFCollection`
 
-There is similarly no specification for these plugins yet, but some guidelines that should be followed. 
+There is similarly no specification for these plugins yet, but some guidelines that should be followed.
 
 A `SMIRNOFFCollection` is a subclass of [`Collection`] specific to SMIRNOFF force fields. The objectives of a collection are to:
 
@@ -350,5 +350,5 @@ def to_openmm(
 ```
 
 [`Interchange`]: openff.interchange.Interchange
-[`openmm.System`]: openmm.openmm.System 
+[`openmm.System`]: openmm.openmm.System
 [`Interchange.to_openmm()`]: openff.interchange.Interchange.to_openmm()
