@@ -50,6 +50,17 @@ class GROMACSBond(DefaultModel):
     k: unit.Quantity
 
 
+class GROMACSPair(DefaultModel):
+    """A GROMACS pair."""
+
+    atom1: PositiveInt = Field(
+        description="The GROMACS index of the first atom in the pair.",
+    )
+    atom2: PositiveInt = Field(
+        description="The GROMACS index of the second atom in the pair.",
+    )
+
+
 class GROMACSAngle(DefaultModel):
     """A GROMACS angle."""
 
@@ -98,6 +109,10 @@ class GROMACSMolecule(DefaultModel):
     atoms: List[GROMACSAtom] = Field(
         list(),
         description="The atoms in this molecule.",
+    )
+    pairs: List[GROMACSPair] = Field(
+        list(),
+        description="The pairs in this molecule.",
     )
     bonds: List[GROMACSBond] = Field(
         list(),
@@ -348,13 +363,26 @@ def _process_atom(
     )
 
 
-def _process_pair(line: str):
-    pass
+def _process_pair(line: str) -> GROMACSPair:
+    split = line.split()
+
+    atom1 = int(split[0])
+    atom2 = int(split[1])
+
+    nonbonded_function = int(split[2])
+
+    if nonbonded_function == 1:
+        return GROMACSPair(
+            atom1=atom1,
+            atom2=atom2,
+        )
+    else:
+        raise ValueError(
+            f"Nonbonded function must be 1, parsed a pair with {nonbonded_function}.",
+        )
 
 
 def _process_bond(line: str) -> GROMACSBond:
-    #    ;   ai     aj funct  r               k
-    #      1       2 1       1.21830000e-01    5.33627360e+05
     split = line.split()
 
     atom1 = int(split[0])
