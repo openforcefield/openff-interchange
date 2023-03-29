@@ -1,6 +1,7 @@
 from typing import Dict, List, Literal, Optional, Tuple
 
 from openff.models.models import DefaultModel
+from openff.models.types import FloatQuantity
 from openff.units import unit
 from pydantic import Field, PositiveInt
 
@@ -61,6 +62,22 @@ class GROMACSPair(DefaultModel):
     )
 
 
+class GROMACSSettles(DefaultModel):
+    """A settles-style constraint for water."""
+
+    first_atom: PositiveInt = Field(
+        description="The GROMACS index of the first atom in the water.",
+    )
+
+    oxygen_hydrogen_distance: FloatQuantity = Field(
+        description="The fixed distance between the oxygen and hydrogen.",
+    )
+
+    hydrogen_hydrogen_distance: FloatQuantity = Field(
+        description="The fixed distance between the oxygen and hydrogen.",
+    )
+
+
 class GROMACSAngle(DefaultModel):
     """A GROMACS angle."""
 
@@ -113,6 +130,10 @@ class GROMACSMolecule(DefaultModel):
     pairs: List[GROMACSPair] = Field(
         list(),
         description="The pairs in this molecule.",
+    )
+    settles: List[GROMACSSettles] = Field(
+        list(),
+        description="The settles in this molecule.",
     )
     bonds: List[GROMACSBond] = Field(
         list(),
@@ -226,6 +247,11 @@ class GROMACSSystem(DefaultModel):
                 elif current_directive == "pairs":
                     pair = _process_pair(line)  # noqa
 
+                elif current_directive == "settles":
+                    system.molecule_types[current_molecule].settles.append(
+                        _process_settles(line),
+                    )
+
                 elif current_directive == "bonds":
                     system.molecule_types[current_molecule].bonds.append(
                         _process_bond(line),
@@ -249,7 +275,7 @@ class GROMACSSystem(DefaultModel):
 
                     system.molecules[molecule_name] = number_of_copies
 
-                elif current_directive in ["settles", "exclusions"]:
+                elif current_directive in ["exclusions"]:
                     pass
 
                 else:
@@ -380,6 +406,21 @@ def _process_pair(line: str) -> GROMACSPair:
         raise ValueError(
             f"Nonbonded function must be 1, parsed a pair with {nonbonded_function}.",
         )
+
+
+def _process_settles(line: str) -> GROMACSSettles:
+    split = line.split()
+
+    first_atom = int(split[0])
+
+    oxygen_hydrogen_distance = unit.Quantity(float(split[2]), unit.nanometer)
+    hydrogen_hydrogen_distance = unit.Quantity(float(split[3]), unit.nanometer)
+
+    return GROMACSSettles(
+        first_atom=first_atom,
+        oxygen_hydrogen_distance=oxygen_hydrogen_distance,
+        hydrogen_hydrogen_distance=hydrogen_hydrogen_distance,
+    )
 
 
 def _process_bond(line: str) -> GROMACSBond:
