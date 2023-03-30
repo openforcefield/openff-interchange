@@ -29,8 +29,8 @@ def _create_topology_from_system(system: GROMACSSystem) -> Topology:
             assert molecule.atoms[1].atomic_number == 1
             assert molecule.atoms[2].atomic_number == 1
 
-            # How to handle H O H? The documentation is unclear about what the
-            # first atom index must refer to
+            # How to handle H O H? The documentation is unclear about what the first
+            # value index must refer to - oxygen or just whatever the first atom is?
             #  > The [ settles ] directive defines the first atom of the water molecule.
             #   https://manual.gromacs.org/current/reference-manual/topologies/constraint-algorithm-section.html#constraintalg
             assert settle.first_atom == 1

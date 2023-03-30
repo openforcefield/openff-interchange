@@ -109,6 +109,31 @@ class GROMACSDihedral(DefaultModel):
     atom4: PositiveInt = Field(
         description="The GROMACS index of the fourth atom in the dihedral.",
     )
+
+
+# TODO: Subclasses could define their allowed "function type" as an extra runtime safeguard?
+class PeriodicProperDihedral(GROMACSDihedral):
+    """A type 1 dihedral in GROMACS."""
+
+    phi: unit.Quantity
+    k: unit.Quantity
+    multiplicity: PositiveInt
+
+
+class RyckaertBellemansDihedral(GROMACSDihedral):
+    """A type 3 dihedral in GROMACS."""
+
+    c0: unit.Quantity
+    c1: unit.Quantity
+    c2: unit.Quantity
+    c3: unit.Quantity
+    c4: unit.Quantity
+    c5: unit.Quantity
+
+
+class PeriodicImproperDihedral(GROMACSDihedral):
+    """A type 4 dihedral in GROMACS."""
+
     phi: unit.Quantity
     k: unit.Quantity
     multiplicity: PositiveInt
@@ -315,16 +340,16 @@ def _process_atomtype(
 
     if len(split[3]) == 1:
         # Bonded type and atomic number are both missing.
-        split.insert(1, None)
-        split.insert(1, None)
+        split.insert(1, None)  # type: ignore[arg-type]
+        split.insert(1, None)  # type: ignore[arg-type]
 
     elif len(split[4]) == 1 and len(split[5]) >= 1:
         if split[1][0].isalpha():
             # Atomic number is missing.
-            split.insert(2, None)
+            split.insert(2, None)  # type: ignore[arg-type]
         else:
             # Bonded type is missing.
-            split.insert(1, None)
+            split.insert(1, None)  # type: ignore[arg-type]
 
     atom_type = split[0]
     bonding_type = split[1]
@@ -489,24 +514,45 @@ def _process_dihedral(
     dihedral_function = int(split[4])
 
     if dihedral_function == 1:
-        phi = unit.Quantity(float(split[5]), unit.degrees)
-        k = unit.Quantity(float(split[6]), unit.kilojoule_per_mole)
-        multiplicity = int(float(split[7]))
-
-        return GROMACSDihedral(
+        return PeriodicProperDihedral(
             atom1=atom1,
             atom2=atom2,
             atom3=atom3,
             atom4=atom4,
-            phi=phi,
-            k=k,
-            multiplicity=multiplicity,
+            phi=unit.Quantity(float(split[5]), unit.degrees),
+            k=unit.Quantity(float(split[6]), unit.kilojoule_per_mole),
+            multiplicity=int(float(split[7])),
+        )
+
+    elif dihedral_function == 3:
+        return RyckaertBellemansDihedral(
+            atom1=atom1,
+            atom2=atom2,
+            atom3=atom3,
+            atom4=atom4,
+            c0=unit.Quantity(float(split[5]), unit.kilojoule_per_mole),
+            c1=unit.Quantity(float(split[6]), unit.kilojoule_per_mole),
+            c2=unit.Quantity(float(split[7]), unit.kilojoule_per_mole),
+            c3=unit.Quantity(float(split[8]), unit.kilojoule_per_mole),
+            c4=unit.Quantity(float(split[9]), unit.kilojoule_per_mole),
+            c5=unit.Quantity(float(split[10]), unit.kilojoule_per_mole),
+        )
+
+    elif dihedral_function == 4:
+        return PeriodicProperDihedral(
+            atom1=atom1,
+            atom2=atom2,
+            atom3=atom3,
+            atom4=atom4,
+            phi=unit.Quantity(float(split[5]), unit.degrees),
+            k=unit.Quantity(float(split[6]), unit.kilojoule_per_mole),
+            multiplicity=int(float(split[7])),
         )
 
     else:
-        # raise ValueError(f"Dihedral function must be 1, parsed {dihedral_function}.")
-        print(f"Dihedral function must be 1, parsed {dihedral_function}.")
-        return  # type: ignore[return-value]
+        raise ValueError(
+            f"Dihedral functions 1, 3, and 4 supported, parsed {dihedral_function}.",
+        )
 
 
 def _process_molecule(line: str) -> Tuple[str, int]:
