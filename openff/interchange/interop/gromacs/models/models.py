@@ -2,7 +2,7 @@
 from typing import Dict, List, Literal, Optional
 
 from openff.models.models import DefaultModel
-from openff.models.types import FloatQuantity
+from openff.models.types import ArrayQuantity, FloatQuantity
 from openff.units import unit
 from pydantic import Field, PositiveInt
 
@@ -30,7 +30,7 @@ class GROMACSAtom(DefaultModel):
 
     index: PositiveInt
     name: str
-    atom_type: str
+    atom_type: str  # Maybe this should point to an object
     residue_index: PositiveInt
     residue_name: str
     charge_group_number: PositiveInt
@@ -77,6 +77,18 @@ class GROMACSSettles(DefaultModel):
     hydrogen_hydrogen_distance: FloatQuantity = Field(
         description="The fixed distance between the oxygen and hydrogen.",
     )
+
+
+class GROMACSExclusion(DefaultModel):
+    """An Exclusion between an atom and other(s)."""
+
+    # Extra exclusions within a molecule can be added manually in a [ exclusions ] section. Each
+    # line should start with one atom index, followed by one or more atom indices. All non-bonded
+    # interactions between the first atom and the other atoms will be excluded.
+
+    first_atom: PositiveInt
+
+    other_atoms: List[PositiveInt]
 
 
 class GROMACSAngle(DefaultModel):
@@ -173,10 +185,17 @@ class GROMACSMolecule(DefaultModel):
         list(),
         description="The dihedrals in this molecule.",
     )
+    exclusions: List[GROMACSExclusion] = Field(
+        list(),
+        description="The exclusions in this molecule.",
+    )
 
 
 class GROMACSSystem(DefaultModel):
     """A GROMACS system. Adapted from Intermol."""
+
+    positions: Optional[ArrayQuantity] = None
+    box: Optional[ArrayQuantity] = None
 
     name: str = ""
     nonbonded_function: int = Field(
@@ -214,8 +233,14 @@ class GROMACSSystem(DefaultModel):
     )
 
     @classmethod
-    def from_top(cls, file):
+    def from_files(cls, top_file, gro_file):
         """Parse a GROMACS topology file."""
-        from openff.interchange.interop.gromacs._import._import import from_top
+        from openff.interchange.interop.gromacs._import._import import from_files
 
-        return from_top(file, cls=cls)
+        return from_files(top_file, gro_file, cls=cls)
+
+    def to_top(self, file):
+        """Write a GROMACS topology file."""
+        from openff.interchange.interop.gromacs.export._export import to_top
+
+        return to_top(self, file)

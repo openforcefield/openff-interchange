@@ -68,3 +68,7 @@ struct.save('packed-argon.pdb')
 `complex.top`
 
 - [Source](https://raw.githubusercontent.com/samplchallenges/SAMPL6/master/host_guest/SAMPLing/CB8-G3-0/GROMACS/complex.top)
+
+`complex.gro`
+
+- [Source](https://raw.githubusercontent.com/samplchallenges/SAMPL6/master/host_guest/SAMPLing/CB8-G3-0/GROMACS/complex.gro)

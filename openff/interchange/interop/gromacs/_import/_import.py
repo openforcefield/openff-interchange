@@ -1,5 +1,5 @@
 import pathlib
-from typing import Tuple, Union
+from typing import Tuple
 
 import numpy
 from openff.units import unit
@@ -10,6 +10,7 @@ from openff.interchange.interop.gromacs.models.models import (
     GROMACSAtomType,
     GROMACSBond,
     GROMACSDihedral,
+    GROMACSExclusion,
     GROMACSMolecule,
     GROMACSPair,
     GROMACSSettles,
@@ -21,13 +22,13 @@ from openff.interchange.interop.gromacs.models.models import (
 )
 
 
-def from_top(file_path, cls=GROMACSSystem):
+def from_files(top_file, gro_file, cls=GROMACSSystem):
     """
     Parse a GROMACS topology file. Adapted from Intermol.
 
     https://github.com/shirtsgroup/InterMol/blob/v0.1.2/intermol/gromacs/gromacs_parser.py
     """
-    with open(file_path) as f:
+    with open(top_file) as f:
         for line in f:
             stripped = line.split(";")[0].strip()
 
@@ -78,7 +79,9 @@ def from_top(file_path, cls=GROMACSSystem):
                 )
 
             elif current_directive == "pairs":
-                pair = _process_pair(line)  # noqa
+                system.molecule_types[current_molecule].pairs.append(
+                    _process_pair(line),
+                )
 
             elif current_directive == "settles":
                 system.molecule_types[current_molecule].settles.append(
@@ -100,6 +103,11 @@ def from_top(file_path, cls=GROMACSSystem):
                     _process_dihedral(line),
                 )
 
+            elif current_directive in ["exclusions"]:
+                system.molecule_types[current_molecule].exclusions.append(
+                    _process_exclusion(line),
+                )
+
             elif current_directive == "system":
                 system.name = _process_system(line)
 
@@ -108,11 +116,11 @@ def from_top(file_path, cls=GROMACSSystem):
 
                 system.molecules[molecule_name] = number_of_copies
 
-            elif current_directive in ["exclusions"]:
-                pass
-
             else:
                 raise ValueError(f"Invalid directive {current_directive}")
+
+    system.positions = _read_coordinates(gro_file)
+    system.box = _read_box(gro_file)
 
     return system
 
@@ -363,6 +371,15 @@ def _process_dihedral(
         )
 
 
+def _process_exclusion(line: str) -> GROMACSExclusion:
+    split = line.split()
+
+    return GROMACSExclusion(
+        first_atom=int(split[0]),
+        other_atoms=[int(atom) for atom in split[1:]],
+    )
+
+
 def _process_molecule(line: str) -> Tuple[str, int]:
     split = line.split()
 
@@ -380,74 +397,64 @@ def _process_system(line: str) -> str:
     return system_name
 
 
-def from_gro(
-    file_path: Union[pathlib.Path, str],
-) -> Tuple[unit.Quantity, unit.Quantity]:
-    """Read coordinates and box information from a GROMACS GRO (.gro) file."""
-    if isinstance(file_path, str):
-        path = pathlib.Path(file_path)
-    if isinstance(file_path, pathlib.Path):
-        path = file_path
+def _read_coordinates(file_path: pathlib.Path) -> unit.Quantity:
+    def _infer_coord_precision(file_path: pathlib.Path) -> int:
+        """
+        Infer decimal precision of coordinates by parsing periods in atoms lines.
+        """
+        with open(file_path) as file_in:
+            file_in.readline()
+            file_in.readline()
+            atom_line = file_in.readline()
+            period_indices = [i for i, x in enumerate(atom_line) if x == "."]
+            spacing_between_periods = period_indices[-1] - period_indices[-2]
+            precision = spacing_between_periods - 5
+            return precision
 
-    def _read_coordinates(file_path: pathlib.Path) -> unit.Quantity:
-        def _infer_coord_precision(file_path: pathlib.Path) -> int:
-            """
-            Infer decimal precision of coordinates by parsing periods in atoms lines.
-            """
-            with open(file_path) as file_in:
-                file_in.readline()
-                file_in.readline()
-                atom_line = file_in.readline()
-                period_indices = [i for i, x in enumerate(atom_line) if x == "."]
-                spacing_between_periods = period_indices[-1] - period_indices[-2]
-                precision = spacing_between_periods - 5
-                return precision
+    precision = _infer_coord_precision(file_path)
+    coordinate_width = precision + 5
+    # Column numbers in file separating x, y, z coords of each atom.
+    # Default (3 decimals of precision -> 8 columns) are 20, 28, 36, 44
+    coordinate_columns = [
+        20,
+        20 + coordinate_width,
+        20 + 2 * coordinate_width,
+        20 + 3 * coordinate_width,
+    ]
 
-        precision = _infer_coord_precision(file_path)
-        coordinate_width = precision + 5
-        # Column numbers in file separating x, y, z coords of each atom.
-        # Default (3 decimals of precision -> 8 columns) are 20, 28, 36, 44
-        coordinate_columns = [
-            20,
-            20 + coordinate_width,
-            20 + 2 * coordinate_width,
-            20 + 3 * coordinate_width,
-        ]
+    with open(file_path) as gro_file:
+        # Throw away comment / name line
+        gro_file.readline()
+        n_atoms = int(gro_file.readline())
 
-        with open(file_path) as gro_file:
-            # Throw away comment / name line
-            gro_file.readline()
-            n_atoms = int(gro_file.readline())
+        unitless_coordinates = numpy.zeros((n_atoms, 3))
+        for coordinate_index in range(n_atoms):
+            line = gro_file.readline()
+            _ = int(line[:5])  # residue_index
+            _ = line[5:10]  # residue_name
+            _ = line[10:15]  # atom_name
+            _ = int(line[15:20])  # atom_index
+            x = float(line[coordinate_columns[0] : coordinate_columns[1]])
+            y = float(line[coordinate_columns[1] : coordinate_columns[2]])
+            z = float(line[coordinate_columns[2] : coordinate_columns[3]])
+            unitless_coordinates[coordinate_index] = numpy.array([x, y, z])
 
-            unitless_coordinates = numpy.zeros((n_atoms, 3))
-            for coordinate_index in range(n_atoms):
-                line = gro_file.readline()
-                _ = int(line[:5])  # residue_index
-                _ = line[5:10]  # residue_name
-                _ = line[10:15]  # atom_name
-                _ = int(line[15:20])  # atom_index
-                x = float(line[coordinate_columns[0] : coordinate_columns[1]])
-                y = float(line[coordinate_columns[1] : coordinate_columns[2]])
-                z = float(line[coordinate_columns[2] : coordinate_columns[3]])
-                unitless_coordinates[coordinate_index] = numpy.array([x, y, z])
+        coordinates = unitless_coordinates * unit.nanometer
 
-            coordinates = unitless_coordinates * unit.nanometer
+    return coordinates
 
-        return coordinates
 
-    def _read_box(file_path: pathlib.Path) -> unit.Quantity:
-        with open(file_path) as gro_file:
-            # Throw away comment / name line
-            gro_file.readline()
-            n_atoms = int(gro_file.readline())
+def _read_box(file_path: pathlib.Path) -> unit.Quantity:
+    with open(file_path) as gro_file:
+        # Throw away comment / name line
+        gro_file.readline()
+        n_atoms = int(gro_file.readline())
 
-            box_line = gro_file.readlines()[n_atoms]
+        box_line = gro_file.readlines()[n_atoms]
 
-        parsed_box = [float(val) for val in box_line.split()]
+    parsed_box = [float(val) for val in box_line.split()]
 
-        if len(parsed_box) == 3:
-            box = parsed_box * numpy.eye(3) * unit.nanometer
+    if len(parsed_box) == 3:
+        box = parsed_box * numpy.eye(3) * unit.nanometer
 
-        return box
-
-    return _read_coordinates(path), _read_box(path)
+    return box

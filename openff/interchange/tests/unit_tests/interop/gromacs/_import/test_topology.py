@@ -7,7 +7,10 @@ from openff.interchange.tests import get_test_file_path
 
 def test_complex():
     topology = _create_topology_from_system(
-        GROMACSSystem.from_top(get_test_file_path("complex.top")),
+        GROMACSSystem.from_files(
+            get_test_file_path("complex.top"),
+            get_test_file_path("complex.gro"),
+        ),
     )
 
     assert topology.n_molecules == 2165
