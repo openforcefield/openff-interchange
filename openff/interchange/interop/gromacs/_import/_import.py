@@ -1,312 +1,120 @@
-from typing import Dict, List, Literal, Optional, Tuple
+import pathlib
+from typing import Tuple, Union
 
-from openff.models.models import DefaultModel
-from openff.models.types import FloatQuantity
+import numpy
 from openff.units import unit
-from pydantic import Field, PositiveInt
 
+from openff.interchange.interop.gromacs.models.models import (
+    GROMACSAngle,
+    GROMACSAtom,
+    GROMACSAtomType,
+    GROMACSBond,
+    GROMACSDihedral,
+    GROMACSMolecule,
+    GROMACSPair,
+    GROMACSSettles,
+    GROMACSSystem,
+    LennardJonesAtomType,
+    PeriodicImproperDihedral,
+    PeriodicProperDihedral,
+    RyckaertBellemansDihedral,
+)
+
+
+def from_top(file_path, cls=GROMACSSystem):
+    """
+    Parse a GROMACS topology file. Adapted from Intermol.
+
+    https://github.com/shirtsgroup/InterMol/blob/v0.1.2/intermol/gromacs/gromacs_parser.py
+    """
+    with open(file_path) as f:
+        for line in f:
+            stripped = line.split(";")[0].strip()
+
+            if len(stripped) == 0:
+                continue
+
+            if stripped.startswith(";"):
+                continue
+
+            if stripped.startswith("["):
+                if not len(stripped.split()) == 3 and stripped.endswith("]"):
+                    raise ValueError("Invalid GROMACS topology file")
+
+                current_directive = stripped[1:-1].strip()
+
+                continue
+
+            if current_directive == "defaults":
+                (
+                    nonbonded_function,
+                    combination_rule,
+                    gen_pairs,
+                    vdw_14,
+                    coul_14,
+                ) = _process_defaults(line)
+
+                system = cls(
+                    nonbonded_function=nonbonded_function,
+                    combination_rule=combination_rule,
+                    gen_pairs=gen_pairs,
+                    vdw_14=vdw_14,
+                    coul_14=coul_14,
+                )
+
+            elif current_directive == "atomtypes":
+                atom_type = _process_atomtype(line)
+                system.atom_types[atom_type.name] = atom_type
+
+            elif current_directive == "moleculetype":
+                molecule_type = _process_moleculetype(line)
+                system.molecule_types[molecule_type.name] = molecule_type
+
+                current_molecule = molecule_type.name
+
+            elif current_directive == "atoms":
+                system.molecule_types[current_molecule].atoms.append(
+                    _process_atom(line),
+                )
+
+            elif current_directive == "pairs":
+                pair = _process_pair(line)  # noqa
+
+            elif current_directive == "settles":
+                system.molecule_types[current_molecule].settles.append(
+                    _process_settles(line),
+                )
+
+            elif current_directive == "bonds":
+                system.molecule_types[current_molecule].bonds.append(
+                    _process_bond(line),
+                )
+
+            elif current_directive == "angles":
+                system.molecule_types[current_molecule].angles.append(
+                    _process_angle(line),
+                )
+
+            elif current_directive == "dihedrals":
+                system.molecule_types[current_molecule].dihedrals.append(
+                    _process_dihedral(line),
+                )
+
+            elif current_directive == "system":
+                system.name = _process_system(line)
+
+            elif current_directive == "molecules":
+                molecule_name, number_of_copies = _process_molecule(line)
 
-class GROMACSAtomType(DefaultModel):
-    """Base class for GROMACS atom types."""
-
-    name: str
-    bonding_type: str
-    atomic_number: Optional[PositiveInt]
-    mass: unit.Quantity
-    charge: unit.Quantity
-    particle_type: str
+                system.molecules[molecule_name] = number_of_copies
 
+            elif current_directive in ["exclusions"]:
+                pass
 
-class LennardJonesAtomType(GROMACSAtomType):
-    """A Lennard-Jones atom type."""
+            else:
+                raise ValueError(f"Invalid directive {current_directive}")
 
-    sigma: unit.Quantity
-    epsilon: unit.Quantity
-
-
-class GROMACSAtom(DefaultModel):
-    """Base class for GROMACS atoms."""
-
-    index: PositiveInt
-    name: str
-    atom_type: str
-    residue_index: PositiveInt
-    residue_name: str
-    charge_group_number: PositiveInt
-    charge: unit.Quantity
-    mass: unit.Quantity
-
-
-class GROMACSBond(DefaultModel):
-    """A GROMACS bond."""
-
-    atom1: PositiveInt = Field(
-        description="The GROMACS index of the first atom in the bond.",
-    )
-    atom2: PositiveInt = Field(
-        description="The GROMACS index of the second atom in the bond.",
-    )
-    function: Literal[1]
-    length: unit.Quantity
-    k: unit.Quantity
-
-
-class GROMACSPair(DefaultModel):
-    """A GROMACS pair."""
-
-    atom1: PositiveInt = Field(
-        description="The GROMACS index of the first atom in the pair.",
-    )
-    atom2: PositiveInt = Field(
-        description="The GROMACS index of the second atom in the pair.",
-    )
-
-
-class GROMACSSettles(DefaultModel):
-    """A settles-style constraint for water."""
-
-    first_atom: PositiveInt = Field(
-        description="The GROMACS index of the first atom in the water.",
-    )
-
-    oxygen_hydrogen_distance: FloatQuantity = Field(
-        description="The fixed distance between the oxygen and hydrogen.",
-    )
-
-    hydrogen_hydrogen_distance: FloatQuantity = Field(
-        description="The fixed distance between the oxygen and hydrogen.",
-    )
-
-
-class GROMACSAngle(DefaultModel):
-    """A GROMACS angle."""
-
-    atom1: PositiveInt = Field(
-        description="The GROMACS index of the first atom in the angle.",
-    )
-    atom2: PositiveInt = Field(
-        description="The GROMACS index of the second atom in the angle.",
-    )
-    atom3: PositiveInt = Field(
-        description="The GROMACS index of the third atom in the angle.",
-    )
-    angle: unit.Quantity
-    k: unit.Quantity
-
-
-class GROMACSDihedral(DefaultModel):
-    """A GROMACS dihedral."""
-
-    atom1: PositiveInt = Field(
-        description="The GROMACS index of the first atom in the dihedral.",
-    )
-    atom2: PositiveInt = Field(
-        description="The GROMACS index of the second atom in the dihedral.",
-    )
-    atom3: PositiveInt = Field(
-        description="The GROMACS index of the third atom in the dihedral.",
-    )
-    atom4: PositiveInt = Field(
-        description="The GROMACS index of the fourth atom in the dihedral.",
-    )
-
-
-# TODO: Subclasses could define their allowed "function type" as an extra runtime safeguard?
-class PeriodicProperDihedral(GROMACSDihedral):
-    """A type 1 dihedral in GROMACS."""
-
-    phi: unit.Quantity
-    k: unit.Quantity
-    multiplicity: PositiveInt
-
-
-class RyckaertBellemansDihedral(GROMACSDihedral):
-    """A type 3 dihedral in GROMACS."""
-
-    c0: unit.Quantity
-    c1: unit.Quantity
-    c2: unit.Quantity
-    c3: unit.Quantity
-    c4: unit.Quantity
-    c5: unit.Quantity
-
-
-class PeriodicImproperDihedral(GROMACSDihedral):
-    """A type 4 dihedral in GROMACS."""
-
-    phi: unit.Quantity
-    k: unit.Quantity
-    multiplicity: PositiveInt
-
-
-class GROMACSMolecule(DefaultModel):
-    """Base class for GROMACS molecules."""
-
-    name: str
-    nrexcl: Literal[3] = Field(
-        3,
-        description="The farthest neighbor distance whose interactions should be excluded.",
-    )
-
-    atoms: List[GROMACSAtom] = Field(
-        list(),
-        description="The atoms in this molecule.",
-    )
-    pairs: List[GROMACSPair] = Field(
-        list(),
-        description="The pairs in this molecule.",
-    )
-    settles: List[GROMACSSettles] = Field(
-        list(),
-        description="The settles in this molecule.",
-    )
-    bonds: List[GROMACSBond] = Field(
-        list(),
-        description="The bonds in this molecule.",
-    )
-    angles: List[GROMACSAngle] = Field(
-        list(),
-        description="The angles in this molecule.",
-    )
-    dihedrals: List[GROMACSDihedral] = Field(
-        list(),
-        description="The dihedrals in this molecule.",
-    )
-
-
-class GROMACSSystem(DefaultModel):
-    """A GROMACS system. Adapted from Intermol."""
-
-    name: str = ""
-    nonbonded_function: int = Field(
-        1,
-        ge=1,
-        le=2,
-        description="The nonbonded function.",
-    )
-    combination_rule: int = Field(
-        1,
-        ge=1,
-        le=3,
-        description="The combination rule.",
-    )
-    gen_pairs: bool = Field(True, description="Whether or not to generate pairs.")
-    vdw_14: float = Field(
-        0.5,
-        description="The 1-4 scaling factor for dispersion interactions.",
-    )
-    coul_14: float = Field(
-        0.833333,
-        description="The 1-4 scaling factor for electrostatic interactions.",
-    )
-    atom_types: Dict[str, GROMACSAtomType] = Field(
-        dict(),
-        description="Atom types, keyed by name.",
-    )
-    molecule_types: Dict[str, GROMACSMolecule] = Field(
-        dict(),
-        description="Molecule types, keyed by name.",
-    )
-    molecules: Dict[str, int] = Field(
-        dict(),
-        description="The number of each molecule type in the system, keyed by the name of each molecule.",
-    )
-
-    @classmethod
-    def from_top(cls, file):
-        """
-        Parse a GROMACS topology file. Adapted from Intermol.
-
-        https://github.com/shirtsgroup/InterMol/blob/v0.1.2/intermol/gromacs/gromacs_parser.py
-        """
-        with open(file) as f:
-            for line in f:
-                stripped = line.split(";")[0].strip()
-
-                if len(stripped) == 0:
-                    continue
-
-                if stripped.startswith(";"):
-                    continue
-
-                if stripped.startswith("["):
-                    if not len(stripped.split()) == 3 and stripped.endswith("]"):
-                        raise ValueError("Invalid GROMACS topology file")
-
-                    current_directive = stripped[1:-1].strip()
-
-                    continue
-
-                if current_directive == "defaults":
-                    (
-                        nonbonded_function,
-                        combination_rule,
-                        gen_pairs,
-                        vdw_14,
-                        coul_14,
-                    ) = _process_defaults(line)
-
-                    system = cls(
-                        nonbonded_function=nonbonded_function,
-                        combination_rule=combination_rule,
-                        gen_pairs=gen_pairs,
-                        vdw_14=vdw_14,
-                        coul_14=coul_14,
-                    )
-
-                elif current_directive == "atomtypes":
-                    atom_type = _process_atomtype(line)
-                    system.atom_types[atom_type.name] = atom_type
-
-                elif current_directive == "moleculetype":
-                    molecule_type = _process_moleculetype(line)
-                    system.molecule_types[molecule_type.name] = molecule_type
-
-                    current_molecule = molecule_type.name
-
-                elif current_directive == "atoms":
-                    system.molecule_types[current_molecule].atoms.append(
-                        _process_atom(line),
-                    )
-
-                elif current_directive == "pairs":
-                    pair = _process_pair(line)  # noqa
-
-                elif current_directive == "settles":
-                    system.molecule_types[current_molecule].settles.append(
-                        _process_settles(line),
-                    )
-
-                elif current_directive == "bonds":
-                    system.molecule_types[current_molecule].bonds.append(
-                        _process_bond(line),
-                    )
-
-                elif current_directive == "angles":
-                    system.molecule_types[current_molecule].angles.append(
-                        _process_angle(line),
-                    )
-
-                elif current_directive == "dihedrals":
-                    system.molecule_types[current_molecule].dihedrals.append(
-                        _process_dihedral(line),
-                    )
-
-                elif current_directive == "system":
-                    system.name = _process_system(line)
-
-                elif current_directive == "molecules":
-                    molecule_name, number_of_copies = _process_molecule(line)
-
-                    system.molecules[molecule_name] = number_of_copies
-
-                elif current_directive in ["exclusions"]:
-                    pass
-
-                else:
-                    raise ValueError(f"Invalid directive {current_directive}")
-
-        return system
+    return system
 
 
 def _process_defaults(line: str) -> Tuple[int, int, str, float, float]:
@@ -539,7 +347,7 @@ def _process_dihedral(
         )
 
     elif dihedral_function == 4:
-        return PeriodicProperDihedral(
+        return PeriodicImproperDihedral(
             atom1=atom1,
             atom2=atom2,
             atom3=atom3,
@@ -570,3 +378,76 @@ def _process_system(line: str) -> str:
     system_name = split[0]
 
     return system_name
+
+
+def from_gro(
+    file_path: Union[pathlib.Path, str],
+) -> Tuple[unit.Quantity, unit.Quantity]:
+    """Read coordinates and box information from a GROMACS GRO (.gro) file."""
+    if isinstance(file_path, str):
+        path = pathlib.Path(file_path)
+    if isinstance(file_path, pathlib.Path):
+        path = file_path
+
+    def _read_coordinates(file_path: pathlib.Path) -> unit.Quantity:
+        def _infer_coord_precision(file_path: pathlib.Path) -> int:
+            """
+            Infer decimal precision of coordinates by parsing periods in atoms lines.
+            """
+            with open(file_path) as file_in:
+                file_in.readline()
+                file_in.readline()
+                atom_line = file_in.readline()
+                period_indices = [i for i, x in enumerate(atom_line) if x == "."]
+                spacing_between_periods = period_indices[-1] - period_indices[-2]
+                precision = spacing_between_periods - 5
+                return precision
+
+        precision = _infer_coord_precision(file_path)
+        coordinate_width = precision + 5
+        # Column numbers in file separating x, y, z coords of each atom.
+        # Default (3 decimals of precision -> 8 columns) are 20, 28, 36, 44
+        coordinate_columns = [
+            20,
+            20 + coordinate_width,
+            20 + 2 * coordinate_width,
+            20 + 3 * coordinate_width,
+        ]
+
+        with open(file_path) as gro_file:
+            # Throw away comment / name line
+            gro_file.readline()
+            n_atoms = int(gro_file.readline())
+
+            unitless_coordinates = numpy.zeros((n_atoms, 3))
+            for coordinate_index in range(n_atoms):
+                line = gro_file.readline()
+                _ = int(line[:5])  # residue_index
+                _ = line[5:10]  # residue_name
+                _ = line[10:15]  # atom_name
+                _ = int(line[15:20])  # atom_index
+                x = float(line[coordinate_columns[0] : coordinate_columns[1]])
+                y = float(line[coordinate_columns[1] : coordinate_columns[2]])
+                z = float(line[coordinate_columns[2] : coordinate_columns[3]])
+                unitless_coordinates[coordinate_index] = numpy.array([x, y, z])
+
+            coordinates = unitless_coordinates * unit.nanometer
+
+        return coordinates
+
+    def _read_box(file_path: pathlib.Path) -> unit.Quantity:
+        with open(file_path) as gro_file:
+            # Throw away comment / name line
+            gro_file.readline()
+            n_atoms = int(gro_file.readline())
+
+            box_line = gro_file.readlines()[n_atoms]
+
+        parsed_box = [float(val) for val in box_line.split()]
+
+        if len(parsed_box) == 3:
+            box = parsed_box * numpy.eye(3) * unit.nanometer
+
+        return box
+
+    return _read_coordinates(path), _read_box(path)
