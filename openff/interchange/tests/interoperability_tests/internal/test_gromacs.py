@@ -23,7 +23,10 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
     VirtualSiteTypeNotImplementedError,
 )
-from openff.interchange.interop.gromacs._import._import import from_gro
+from openff.interchange.interop.gromacs._import._import import (
+    _read_box,
+    _read_coordinates,
+)
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.tests import _BaseTest, needs_gmx
 
@@ -37,10 +40,11 @@ class TestGROMACSGROFile(_BaseTest):
             "tests/gromacs/unit_tests/angle10_vacuum/angle10_vacuum.gro",
         )
 
-        coords, box = from_gro(file)
+        positions = _read_coordinates(file)
+        box = _read_box(file)
 
         openmm_gro = openmm.app.GromacsGroFile(file)
-        openmm_coords = ensure_quantity(
+        openmm_positions = ensure_quantity(
             openmm_gro.getPositions(),
             "openff",
         )
@@ -49,7 +53,7 @@ class TestGROMACSGROFile(_BaseTest):
             "openff",
         )
 
-        assert numpy.allclose(coords, openmm_coords)
+        assert numpy.allclose(positions, openmm_positions)
         assert numpy.allclose(box, openmm_box)
 
     @skip_if_missing("intermol")
@@ -59,7 +63,7 @@ class TestGROMACSGROFile(_BaseTest):
             "tests/gromacs/unit_tests/lj3_bulk/lj3_bulk.gro",
         )
 
-        coords = from_gro(file)[0].m_as(unit.nanometer)
+        coords = _read_coordinates(file).m_as(unit.nanometer)
 
         # OpenMM seems to assume a precision of 3. Use InterMol instead here.
         from intermol.gromacs.grofile_parser import GromacsGroParser
