@@ -19,9 +19,16 @@ jobs:
           - macOS-latest
           - ubuntu-latest
         python-version:
-          - "3.8"
           - "3.9"
           - "3.10"
+          - "3.11"
+        openeye:
+          - true
+          - false
+        exclude:
+          - openeye: true
+            python-version: "3.11"  # Not packaged
+
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}

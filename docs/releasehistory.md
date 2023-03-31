@@ -13,6 +13,12 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### Behavior changes
 
+* #639 Drops support for Python 3.8, following [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html#support-table).
+
+## 0.3.0
+
+### Behavior changes
+
 * #566 Refactors `EnergyReport` to more explicitly handle comparisons.
 * #583, #588, #603 Change some code paths of internal objects.
   * `PotentialHandler` is deprecated for `Collection`.
