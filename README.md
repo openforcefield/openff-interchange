@@ -69,6 +69,10 @@ For more information, please consult the [full documentation](https://openff-int
 
 Copyright (c) 2020, Open Force Field Initiative
 
+## License
+
+The source code of Interchange is hosted [on GitHub](https://github.com/openforcefield/openff-interchange) and is available under the MIT license (see the file LICENSE). Some parts inherit from code distributed under other licenses, as detailed in LICENSE-3RD-PARTY.
+
 ## Acknowledgements
 
 Project based on the [Computational Molecular Science Python Cookiecutter](https://github.com/molssi/cookiecutter-cms) version 1.2.

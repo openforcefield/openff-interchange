@@ -13,6 +13,17 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### Behavior changes
 
+* #635 Moves and re-organizes the contents of `openff.interchange.interop.internal.gromacs` to a new submodule `openff.interchange.interop.gromacs`
+
+### New features
+
+* #635 Adds a dedicated class `GROMACSSystem` to represent GROMACS state.
+* #635 Adds parsing and exporting between GROMACS files and `GROMACSSystem` objects.
+
+## 0.3.0
+
+### Behavior changes
+
 * #566 Refactors `EnergyReport` to more explicitly handle comparisons.
 * #583, #588, #603 Change some code paths of internal objects.
   * `PotentialHandler` is deprecated for `Collection`.
