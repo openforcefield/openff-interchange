@@ -20,7 +20,7 @@ class GROMACSWriter(DefaultModel):
 
     def to_top(self):
         """Write a GROMACS topology file."""
-        with open(self.file, "w") as top:
+        with open(self.top_file, "w") as top:
             self._write_defaults(top)
             self._write_atomtypes(top)
 
