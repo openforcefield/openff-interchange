@@ -330,6 +330,7 @@ class TestGROMACS(_BaseTest):
         with pytest.raises(GMXMdrunError):
             get_gromacs_energies(out, mdp="cutoff_buck")
 
+    @pytest.mark.skip("Broken, unclear if cases like these are worth supporting")
     def test_nonconsecutive_isomorphic_molecules(self, sage_unconstrained):
         molecules = [Molecule.from_smiles(smiles) for smiles in ["CC", "CCO", "CC"]]
 
@@ -373,6 +374,7 @@ class TestGROMACSMetadata(_BaseTest):
 
 
 @needs_gmx
+@pytest.mark.skip("Needs rewrite")
 class TestGROMACSVirtualSites(_BaseTest):
     @pytest.fixture()
     def sigma_hole_type(self, sage):

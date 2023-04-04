@@ -297,8 +297,11 @@ class TestBadExports(_BaseTest):
         ):
             Interchange.from_smirnoff(force_field=sage, topology=top)
 
-    def test_gro_file_no_positions(self):
-        no_positions = Interchange()
+    def test_gro_file_no_positions(self, sage):
+        no_positions = Interchange.from_smirnoff(
+            force_field=sage,
+            topology=[Molecule.from_smiles("CC")],
+        )
         with pytest.raises(MissingPositionsError, match="Positions are req"):
             no_positions.to_gro("foo.gro")
 

@@ -1,7 +1,12 @@
 import pathlib
+import warnings
+from typing import Optional
 
+import numpy
 from openff.models.models import DefaultModel
+from openff.units import unit
 
+from openff.interchange.exceptions import MissingPositionsError
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSSystem,
     LennardJonesAtomType,
@@ -15,12 +20,15 @@ class GROMACSWriter(DefaultModel):
     """Thin wrapper for writing GROMACS systems."""
 
     system: GROMACSSystem
-    top_file: pathlib.Path
-    gro_file: pathlib.Path
+    top_file: Optional[pathlib.Path] = None
+    gro_file: Optional[pathlib.Path] = None
 
     def to_top(self):
         """Write a GROMACS topology file."""
-        with open(self.file, "w") as top:
+        if self.top_file is None:
+            raise ValueError("No TOP file specified.")
+
+        with open(self.top_file, "w") as top:
             self._write_defaults(top)
             self._write_atomtypes(top)
 
@@ -28,6 +36,14 @@ class GROMACSWriter(DefaultModel):
 
             self._write_system(top)
             self._write_molecules(top)
+
+    def to_gro(self, decimal: int = 3):
+        """Write a GROMACS coordinate file."""
+        if self.gro_file is None:
+            raise ValueError("No GRO file specified.")
+
+        with open(self.gro_file, "w") as gro:
+            self._write_gro(gro, decimal)
 
     def _write_defaults(self, top):
         top.write("[ defaults ]\n")
@@ -97,8 +113,8 @@ class GROMACSWriter(DefaultModel):
                 f"{atom.residue_name :8s} "
                 f"{atom.name :6s}"
                 f"{atom.charge_group_number :6d}"
-                f"{atom.charge.m :18.6f}"
-                f"{atom.mass.m :18.6f}\n",
+                f"{atom.charge.m :20.12f}"
+                f"{atom.mass.m :20.12f}\n",
             )
 
         top.write("\n")
@@ -127,8 +143,8 @@ class GROMACSWriter(DefaultModel):
                 f"{bond.atom1 :6d}"
                 f"{bond.atom2 :6d}"
                 f"{function :6d}"
-                f"{bond.length.m :18.6f}"
-                f"{bond.k.m :18.6f}",
+                f"{bond.length.m :20.12f}"
+                f"{bond.k.m :20.12f}",
             )
 
             top.write("\n")
@@ -147,8 +163,8 @@ class GROMACSWriter(DefaultModel):
                 f"{angle.atom2 :6d}"
                 f"{angle.atom3 :6d}"
                 f"{function :6d}"
-                f"{angle.angle.m :18.6f}"
-                f"{angle.k.m :18.6f}",
+                f"{angle.angle.m :20.12f}"
+                f"{angle.k.m :20.12f}",
             )
 
             top.write("\n")
@@ -178,19 +194,19 @@ class GROMACSWriter(DefaultModel):
 
             if function in [1, 4]:
                 top.write(
-                    f"{dihedral.phi.m :18.6f}"
-                    f"{dihedral.k.m :18.6f}"
+                    f"{dihedral.phi.m :20.12f}"
+                    f"{dihedral.k.m :20.12f}"
                     f"{dihedral.multiplicity :18d}",
                 )
 
             elif function == 3:
                 top.write(
-                    f"{dihedral.c0.m :18.6f}"
-                    f"{dihedral.c1.m :18.6f}"
-                    f"{dihedral.c2.m :18.6f}"
-                    f"{dihedral.c3.m :18.6f}"
-                    f"{dihedral.c4.m :18.6f}"
-                    f"{dihedral.c5.m :18.6f}",
+                    f"{dihedral.c0.m :20.12f}"
+                    f"{dihedral.c1.m :20.12f}"
+                    f"{dihedral.c2.m :20.12f}"
+                    f"{dihedral.c3.m :20.12f}"
+                    f"{dihedral.c4.m :20.12f}"
+                    f"{dihedral.c5.m :20.12f}",
                 )
 
             else:
@@ -227,8 +243,8 @@ class GROMACSWriter(DefaultModel):
             top.write(
                 f"{settle.first_atom :6d}\t"
                 f"{function :6d}\t"
-                f"{settle.oxygen_hydrogen_distance.m :18.6f}\t"
-                f"{settle.hydrogen_hydrogen_distance.m :18.6f}\n",
+                f"{settle.oxygen_hydrogen_distance.m :20.12f}\t"
+                f"{settle.hydrogen_hydrogen_distance.m :20.12f}\n",
             )
 
         top.write("\n")
@@ -249,3 +265,74 @@ class GROMACSWriter(DefaultModel):
             top.write(f"{molecule_name.replace(' ', '_')}\t{n_molecules}\n")
 
         top.write("\n")
+
+    def _write_gro(self, gro, decimal: int):
+        if self.system.positions is None:
+            raise MissingPositionsError(
+                "Positions are required to write a `.gro` file but found None.",
+            )
+        elif numpy.allclose(self.system.positions, 0):
+            warnings.warn(
+                "Positions seem to all be zero. Result coordinate file may be non-physical.",
+                UserWarning,
+            )
+
+        n_particles = sum(
+            len(molecule_type.atoms) * self.system.molecules[molecule_name]
+            for molecule_name, molecule_type in self.system.molecule_types.items()
+        )
+
+        assert n_particles == self.system.positions.shape[0]
+
+        # Explicitly round here to avoid ambiguous things in string formatting
+        positions = numpy.round(self.system.positions, decimal).m_as(unit.nanometer)
+
+        gro.write("Generated by Interchange\n")
+        gro.write(f"{n_particles}\n")
+
+        count = 0
+        for molecule_name, molecule in self.system.molecule_types.items():
+            n_copies = self.system.molecules[molecule_name]
+
+            for _ in range(n_copies):
+                for atom in molecule.atoms:
+                    gro.write(
+                        f"%5d%-5s%5s%5d"
+                        f"%{decimal+5}.{decimal}f"
+                        f"%{decimal+5}.{decimal}f"
+                        f"%{decimal+5}.{decimal}f\n"
+                        % (
+                            atom.residue_index,  # This needs to be looked up from a different data structure
+                            atom.residue_name,
+                            atom.name,
+                            count,
+                            positions[count, 0],
+                            positions[count, 1],
+                            positions[count, 2],
+                        ),
+                    )
+
+                    count += 1
+
+        if self.system.box is None:
+            warnings.warn(
+                "WARNING: System defined with no box vectors, which GROMACS does not offically "
+                "support in versions 2020 or newer (see "
+                "https://gitlab.com/gromacs/gromacs/-/issues/3526). Setting box vectors to a 5 "
+                " nm cube.",
+            )
+            box = 5 * numpy.eye(3)
+        else:
+            box = self.system.box.m_as(unit.nanometer)
+
+        # Check for rectangular
+        if (box == numpy.diag(numpy.diagonal(box))).all():
+            for i in range(3):
+                gro.write(f"{box[i, i]:11.7f}")
+        else:
+            raise NotImplementedError(
+                "Non-rectangular boxes are not yet tested. Please open an issue on GitHub if you "
+                "need this feature.",
+            )
+
+        gro.write("\n")

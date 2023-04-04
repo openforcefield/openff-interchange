@@ -190,7 +190,6 @@ def _process(
                     staged["vdW"] = raw_energy
 
                 elif isinstance(force, openmm.CustomBondForce):
-                    print(force.getEnergyFunction())
                     if "qq" in force.getEnergyFunction():
                         staged["Electrostatics 1-4"] = raw_energy
                     else:
