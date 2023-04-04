@@ -25,6 +25,9 @@ class GROMACSWriter(DefaultModel):
 
     def to_top(self):
         """Write a GROMACS topology file."""
+        if self.top_file is None:
+            raise ValueError("No TOP file specified.")
+
         with open(self.top_file, "w") as top:
             self._write_defaults(top)
             self._write_atomtypes(top)
@@ -36,6 +39,9 @@ class GROMACSWriter(DefaultModel):
 
     def to_gro(self, decimal: int = 3):
         """Write a GROMACS coordinate file."""
+        if self.gro_file is None:
+            raise ValueError("No GRO file specified.")
+
         with open(self.gro_file, "w") as gro:
             self._write_gro(gro, decimal)
 
@@ -324,11 +330,9 @@ class GROMACSWriter(DefaultModel):
             for i in range(3):
                 gro.write(f"{box[i, i]:11.7f}")
         else:
-            for i in range(3):
-                gro.write(f"{box[i, i]:11.7f}")
-            for i in range(3):
-                for j in range(3):
-                    if i != j:
-                        gro.write(f"{box[i, j]:11.7f}")
+            raise NotImplementedError(
+                "Non-rectangular boxes are not yet tested. Please open an issue on GitHub if you "
+                "need this feature.",
+            )
 
         gro.write("\n")

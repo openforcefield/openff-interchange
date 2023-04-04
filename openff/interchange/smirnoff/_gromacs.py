@@ -5,7 +5,11 @@ from openff.units.elements import MASSES, SYMBOLS
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.toolkit import _get_14_pairs
-from openff.interchange.exceptions import UnsupportedExportError
+from openff.interchange.exceptions import (
+    MissingAngleError,
+    MissingBondError,
+    UnsupportedExportError,
+)
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSAngle,
     GROMACSAtom,
@@ -74,7 +78,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
         vdw_collection = interchange["vdW"]
         electrostatics_collection = interchange["Electrostatics"]
     except KeyError:
-        raise UnsupportedExportError("Plugins not supported.")
+        raise UnsupportedExportError("Plugins not implemented.")
 
     for unique_molecule_index in unique_molecule_map:
         unique_molecule = interchange.topology.molecule(unique_molecule_index)
@@ -168,9 +172,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             [
                 molecule
                 for molecule in interchange.topology.molecules
-                if molecule.is_isomorphic_with(
-                    [*interchange.topology.unique_molecules][0],
-                )
+                if molecule.is_isomorphic_with(unique_molecule)
             ],
         )
 
@@ -210,10 +212,9 @@ def _convert_bonds(
                 found_match = False
 
         if not found_match:
-            print(
+            raise MissingBondError(
                 f"Failed to find parameters for bond with topology indices {topology_indices}",
             )
-            continue
 
         params = collection.potentials[pot_key].parameters
 
@@ -246,18 +247,13 @@ def _convert_angles(
                 pot_key = collection.key_map[top_key]
                 found_match = True
                 break
-            elif top_key.atom_indices == topology_indices[::-1]:
-                pot_key = collection.key_map[top_key]
-                found_match = True
-                break
             else:
                 found_match = False
 
         if not found_match:
-            print(
+            raise MissingAngleError(
                 f"Failed to find parameters for angle with topology indices {topology_indices}",
             )
-            continue
 
         params = collection.potentials[pot_key].parameters
 
