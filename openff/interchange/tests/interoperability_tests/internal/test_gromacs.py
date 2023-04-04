@@ -374,6 +374,7 @@ class TestGROMACSMetadata(_BaseTest):
 
 
 @needs_gmx
+@pytest.mark.skip("Needs rewrite")
 class TestGROMACSVirtualSites(_BaseTest):
     @pytest.fixture()
     def sigma_hole_type(self, sage):

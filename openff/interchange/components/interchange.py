@@ -302,21 +302,15 @@ class Interchange(DefaultModel):
             ) from error
         return nglview.show_file("_tmp_pdb_file.pdb")
 
-    def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 3):
+    def to_gro(self, file_path: Union[Path, str], decimal: int = 3):
         """Export this Interchange object to a .gro file."""
-        # TODO: Enum-style class for handling writer arg?
-        if writer == "parmed":
-            from openff.interchange.interop.external import ParmEdWrapper
+        from openff.interchange.interop.gromacs.export._export import GROMACSWriter
+        from openff.interchange.smirnoff._gromacs import _convert
 
-            ParmEdWrapper().to_file(self, file_path)
-
-        elif writer == "internal":
-            from openff.interchange.interop.gromacs import to_gro
-
-            to_gro(self, file_path, decimal=decimal)
-
-        else:
-            raise UnsupportedExportError
+        GROMACSWriter(
+            system=_convert(self),
+            gro_file=file_path,
+        ).to_gro(decimal=decimal)
 
     def to_top(self, file_path: Union[Path, str]):
         """Export this Interchange to a .top file."""
