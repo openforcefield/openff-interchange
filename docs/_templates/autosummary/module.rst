@@ -1,8 +1,9 @@
 {% if fullname == "openff." ~ objname -%}
-{{ fullname | escape | underline(line="=")}}
+{%- set title = fullname | escape -%}
 {%- else -%}
-{{ objname | escape | underline(line="=")}}
+{%- set title = objname | escape -%}
 {%- endif %}
+{{ ("``" ~ title ~ "``") | underline('=')}}
 
 .. automodule:: {{ fullname }}
    :no-members:
