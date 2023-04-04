@@ -1,4 +1,5 @@
 import pathlib
+from typing import Optional
 
 from openff.models.models import DefaultModel
 
@@ -15,8 +16,8 @@ class GROMACSWriter(DefaultModel):
     """Thin wrapper for writing GROMACS systems."""
 
     system: GROMACSSystem
-    top_file: pathlib.Path
-    gro_file: pathlib.Path
+    top_file: Optional[pathlib.Path] = None
+    gro_file: Optional[pathlib.Path] = None
 
     def to_top(self):
         """Write a GROMACS topology file."""
@@ -97,8 +98,8 @@ class GROMACSWriter(DefaultModel):
                 f"{atom.residue_name :8s} "
                 f"{atom.name :6s}"
                 f"{atom.charge_group_number :6d}"
-                f"{atom.charge.m :18.6f}"
-                f"{atom.mass.m :18.6f}\n",
+                f"{atom.charge.m :20.12f}"
+                f"{atom.mass.m :20.12f}\n",
             )
 
         top.write("\n")
@@ -127,8 +128,8 @@ class GROMACSWriter(DefaultModel):
                 f"{bond.atom1 :6d}"
                 f"{bond.atom2 :6d}"
                 f"{function :6d}"
-                f"{bond.length.m :18.6f}"
-                f"{bond.k.m :18.6f}",
+                f"{bond.length.m :20.12f}"
+                f"{bond.k.m :20.12f}",
             )
 
             top.write("\n")
@@ -147,8 +148,8 @@ class GROMACSWriter(DefaultModel):
                 f"{angle.atom2 :6d}"
                 f"{angle.atom3 :6d}"
                 f"{function :6d}"
-                f"{angle.angle.m :18.6f}"
-                f"{angle.k.m :18.6f}",
+                f"{angle.angle.m :20.12f}"
+                f"{angle.k.m :20.12f}",
             )
 
             top.write("\n")
@@ -178,19 +179,19 @@ class GROMACSWriter(DefaultModel):
 
             if function in [1, 4]:
                 top.write(
-                    f"{dihedral.phi.m :18.6f}"
-                    f"{dihedral.k.m :18.6f}"
+                    f"{dihedral.phi.m :20.12f}"
+                    f"{dihedral.k.m :20.12f}"
                     f"{dihedral.multiplicity :18d}",
                 )
 
             elif function == 3:
                 top.write(
-                    f"{dihedral.c0.m :18.6f}"
-                    f"{dihedral.c1.m :18.6f}"
-                    f"{dihedral.c2.m :18.6f}"
-                    f"{dihedral.c3.m :18.6f}"
-                    f"{dihedral.c4.m :18.6f}"
-                    f"{dihedral.c5.m :18.6f}",
+                    f"{dihedral.c0.m :20.12f}"
+                    f"{dihedral.c1.m :20.12f}"
+                    f"{dihedral.c2.m :20.12f}"
+                    f"{dihedral.c3.m :20.12f}"
+                    f"{dihedral.c4.m :20.12f}"
+                    f"{dihedral.c5.m :20.12f}",
                 )
 
             else:
@@ -227,8 +228,8 @@ class GROMACSWriter(DefaultModel):
             top.write(
                 f"{settle.first_atom :6d}\t"
                 f"{function :6d}\t"
-                f"{settle.oxygen_hydrogen_distance.m :18.6f}\t"
-                f"{settle.hydrogen_hydrogen_distance.m :18.6f}\n",
+                f"{settle.oxygen_hydrogen_distance.m :20.12f}\t"
+                f"{settle.hydrogen_hydrogen_distance.m :20.12f}\n",
             )
 
         top.write("\n")

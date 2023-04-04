@@ -318,20 +318,15 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
-    def to_top(self, file_path: Union[Path, str], writer="internal"):
+    def to_top(self, file_path: Union[Path, str]):
         """Export this Interchange to a .top file."""
-        if writer == "parmed":
-            from openff.interchange.interop.external import ParmEdWrapper
+        from openff.interchange.interop.gromacs.export._export import GROMACSWriter
+        from openff.interchange.smirnoff._gromacs import _convert
 
-            ParmEdWrapper().to_file(self, file_path)
-
-        elif writer == "internal":
-            from openff.interchange.interop.gromacs import to_top
-
-            to_top(self, file_path)
-
-        else:
-            raise UnsupportedExportError
+        GROMACSWriter(
+            system=_convert(self),
+            top_file=file_path,
+        ).to_top()
 
     def to_lammps(self, file_path: Union[Path, str], writer="internal"):
         """Export this Interchange to a LAMMPS data file."""

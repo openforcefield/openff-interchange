@@ -1,22 +1,29 @@
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 
 from openff.interchange.components.interchange import Interchange
+from openff.interchange.components.toolkit import _get_14_pairs
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSAngle,
     GROMACSAtom,
     GROMACSBond,
     GROMACSMolecule,
+    GROMACSPair,
     GROMACSSystem,
     LennardJonesAtomType,
+    PeriodicImproperDihedral,
+    PeriodicProperDihedral,
+    RyckaertBellemansDihedral,
 )
 from openff.interchange.models import TopologyKey
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Atom, Molecule
+
+    from openff.interchange.components.potentials import Collection
 
 
 def _convert(interchange: Interchange) -> GROMACSSystem:
@@ -45,6 +52,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
     scale_electrostatics = interchange["Electrostatics"].scale_14
 
     system = GROMACSSystem(
+        name="FOO",
         nonbonded_function=nonbonded_function,
         combination_rule=combination_rule,
         gen_pairs=gen_pairs,
@@ -75,7 +83,9 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             unique_molecule.name = "MOL" + str(unique_molecule_index)
 
         for atom in unique_molecule.atoms:
-            atom_type_name = f"{unique_molecule.name}{unique_molecule.atom_index(atom)}"
+            atom_type_name = (
+                f"{unique_molecule.name}_{unique_molecule.atom_index(atom)}"
+            )
             _atom_atom_type_map[atom] = atom_type_name
 
             topology_index = interchange.topology.atom_index(atom)
@@ -128,10 +138,27 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
                 ),
             )
 
+        # Use a set to de-duplicate
+        pairs: Set[Tuple] = {*_get_14_pairs(unique_molecule)}
+
+        for pair in pairs:
+            molecule_indices = sorted(unique_molecule.atom_index(atom) for atom in pair)
+
+            if system.gen_pairs:
+                molecule.pairs.append(
+                    GROMACSPair(
+                        atom1=molecule_indices[0] + 1,
+                        atom2=molecule_indices[1] + 1,
+                    ),
+                )
+
+            else:
+                raise NotImplementedError()
+
         _convert_bonds(molecule, unique_molecule, interchange)
         _convert_angles(molecule, unique_molecule, interchange)
         # pairs
-        # dihedrals
+        _convert_dihedrals(molecule, unique_molecule, interchange)
         # settles?
         # constraints?
 
@@ -243,3 +270,132 @@ def _convert_angles(
                 k=params["k"].to(unit.kilojoule_per_mole / unit.radian**2),
             ),
         )
+
+
+def _convert_dihedrals(
+    molecule: GROMACSMolecule,
+    unique_molecule: "Molecule",
+    interchange: Interchange,
+):
+    rb_torsion_handler: Optional["Collection"] = interchange.collections.get(
+        "RBTorsions",
+        None,
+    )
+    proper_torsion_handler: Optional["Collection"] = interchange.collections.get(
+        "ProperTorsions",
+        None,
+    )
+    improper_torsion_handler: Optional["Collection"] = interchange.collections.get(
+        "ImproperTorsions",
+        None,
+    )
+
+    # TODO: Ensure number of torsions written matches what is expected
+    for proper in unique_molecule.propers:
+        topology_indices = tuple(interchange.topology.atom_index(a) for a in proper)
+        molecule_indices = tuple(unique_molecule.atom_index(a) for a in proper)
+
+        if proper_torsion_handler:
+            for top_key in proper_torsion_handler.key_map:
+                if top_key.atom_indices[0] != topology_indices[0]:
+                    continue
+                if top_key.atom_indices[1] != topology_indices[1]:
+                    continue
+                if top_key.atom_indices[2] != topology_indices[2]:
+                    continue
+                if top_key.atom_indices[3] != topology_indices[3]:
+                    continue
+                if top_key.atom_indices == topology_indices:
+                    pot_key = proper_torsion_handler.key_map[top_key]
+                    params = proper_torsion_handler.potentials[pot_key].parameters
+
+                    idivf = int(params["idivf"]) if "idivf" in params else 1
+
+                    molecule.dihedrals.append(
+                        PeriodicProperDihedral(
+                            atom1=molecule_indices[0] + 1,
+                            atom2=molecule_indices[1] + 1,
+                            atom3=molecule_indices[2] + 1,
+                            atom4=molecule_indices[3] + 1,
+                            phi=params["phase"].to(unit.degree),
+                            k=params["k"].to(unit.kilojoule_per_mole) / idivf,
+                            multiplicity=int(params["periodicity"]),
+                        ),
+                    )
+
+        if rb_torsion_handler:
+            for top_key in rb_torsion_handler.key_map:
+                if top_key.atom_indices[0] != topology_indices[0]:
+                    continue
+                if top_key.atom_indices[1] != topology_indices[1]:
+                    continue
+                if top_key.atom_indices[2] != topology_indices[2]:
+                    continue
+                if top_key.atom_indices[3] != topology_indices[3]:
+                    continue
+                if top_key.atom_indices == topology_indices:
+                    pot_key = rb_torsion_handler.key_map[top_key]
+                    params = rb_torsion_handler.potentials[pot_key].parameters
+
+                    molecule.dihedrals.append(
+                        RyckaertBellemansDihedral(
+                            atom1=molecule_indices[0] + 1,
+                            atom2=molecule_indices[1] + 1,
+                            atom3=molecule_indices[2] + 1,
+                            atom4=molecule_indices[3] + 1,
+                            c0=params["C0"],
+                            c1=params["C1"],
+                            c2=params["C2"],
+                            c3=params["C3"],
+                            c4=params["C4"],
+                            c5=params["C5"],
+                        ),
+                    )
+
+    # TODO: Ensure number of torsions written matches what is expected
+    if improper_torsion_handler:
+        # Molecule/Topology.impropers lists the central atom **second** ...
+        for improper in unique_molecule.smirnoff_impropers:
+            topology_indices = tuple(
+                interchange.topology.atom_index(a) for a in improper
+            )
+            # ... so the tuple must be modified to list the central atom **first**,
+            # which is how the improper handler's slot map is built up
+            indices_to_match = (
+                topology_indices[1],
+                topology_indices[0],
+                topology_indices[2],
+                topology_indices[3],
+            )
+
+            molecule_indices = tuple(unique_molecule.atom_index(a) for a in improper)
+
+            # Now, indices_to_match has the central atom listed **first**,
+            # but it's still listed second in molecule_indices
+
+            for top_key in improper_torsion_handler.key_map:
+                if top_key.atom_indices[0] != indices_to_match[0]:
+                    continue
+                if top_key.atom_indices[1] != indices_to_match[1]:
+                    continue
+                if top_key.atom_indices[2] != indices_to_match[2]:
+                    continue
+                if top_key.atom_indices[3] != indices_to_match[3]:
+                    continue
+                if indices_to_match == top_key.atom_indices:
+                    key = improper_torsion_handler.key_map[top_key]
+                    params = improper_torsion_handler.potentials[key].parameters
+
+                    idivf = int(params["idivf"])
+
+                    molecule.dihedrals.append(
+                        PeriodicImproperDihedral(
+                            atom1=molecule_indices[1] + 1,
+                            atom2=molecule_indices[0] + 1,
+                            atom3=molecule_indices[2] + 1,
+                            atom4=molecule_indices[3] + 1,
+                            phi=params["phase"].to(unit.degree),
+                            k=params["k"].to(unit.kilojoule_per_mole) / idivf,
+                            multiplicity=int(params["periodicity"]),
+                        ),
+                    )
