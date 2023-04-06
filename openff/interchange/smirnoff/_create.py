@@ -56,12 +56,13 @@ for collection_plugin in load_smirnoff_plugins():
         Type["ParameterHandler"]
     ] = collection_plugin.allowed_parameter_handlers()
 
-    if len(parameter_handlers) != 1:
-        raise RuntimeError
-
-    if parameter_handlers[0] in load_handler_plugins():
-        _SUPPORTED_PARAMETER_HANDLERS.add(parameter_handlers[0]._TAGNAME)
-        _PLUGIN_CLASS_MAPPING[parameter_handlers[0]] = collection_plugin
+    # if len(parameter_handlers) != 1:
+    #     raise RuntimeError
+    
+    for parameter_handler in parameter_handlers:
+        if parameter_handler in load_handler_plugins():
+            _SUPPORTED_PARAMETER_HANDLERS.add(parameter_handler._TAGNAME)
+            _PLUGIN_CLASS_MAPPING[parameter_handler] = collection_plugin
 
 
 def _check_supported_handlers(force_field: ForceField):
