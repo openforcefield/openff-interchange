@@ -65,6 +65,10 @@ intersphinx_mapping = {
         None,
     ),
     "mdtraj": ("https://www.mdtraj.org/1.9.5/", None),
+    "openff.docs": (
+        "https://docs.openforcefield.org/",
+        None,
+    ),
 }
 
 mermaid_init_js = """mermaid.initialize({
