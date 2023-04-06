@@ -349,7 +349,7 @@ def _plugins(
         if handler_class._TAGNAME not in force_field.registered_parameter_handlers:
             continue
 
-    # In case where multiple handles co-exists in a collection (MPID)
+    # In case where multiple handlers co-exist in a collection (MPID)
     handlers = [force_field[handler_class._TAGNAME] for handler_class in _PLUGIN_CLASS_MAPPING.keys()] 
 
 
