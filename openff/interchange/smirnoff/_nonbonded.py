@@ -77,7 +77,7 @@ class _SMIRNOFFNonbondedCollection(SMIRNOFFCollection, abc.ABC):  # noqa
 
     type: str = "nonbonded"
 
-    cutoff: FloatQuantity["angstrom"] = Field(  # noqa
+    cutoff: Optional[FloatQuantity["angstrom"]] = Field(  # noqa
         unit.Quantity(9.0, unit.angstrom),
         description="The distance at which pairwise interactions are truncated",
     )

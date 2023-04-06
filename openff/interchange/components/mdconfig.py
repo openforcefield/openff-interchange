@@ -1,5 +1,5 @@
 """Runtime settings for MD simulations."""
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Optional
 
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
@@ -61,7 +61,7 @@ class MDConfig(DefaultModel):
         None,
         description="The method used to compute pairwise electrostatic interactions",
     )
-    coul_cutoff: FloatQuantity["angstrom"] = Field(
+    coul_cutoff: Optional[FloatQuantity["angstrom"]] = Field(
         None,
         description="The distance at which electrostatic interactions are truncated or transformed.",
     )
@@ -317,6 +317,20 @@ def _infer_constraints(interchange: "Interchange") -> str:
                 )
 
                 return "h-bonds"
+
+
+def get_smirnoff_defaults(periodic: bool = False) -> MDConfig:
+    """Return an `MDConfig` object that matches settings used in SMIRNOFF force fields (through Sage)."""
+    return MDConfig(
+        periodic=periodic,
+        constraints="h-bonds",
+        vdw_method="cutoff",
+        vdw_cutoff=0.9 * unit.nanometer,
+        mixing_rule="lorentz-berthelot",
+        switching_function=True,
+        switching_distance=0.8 * unit.nanometer,
+        coul_method="PME" if periodic else "Coulomb",
+    )
 
 
 def get_intermol_defaults(periodic: bool = False) -> MDConfig:
