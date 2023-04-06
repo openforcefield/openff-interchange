@@ -10,8 +10,8 @@ from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import (
     AmberError,
-    GMXRunError,
-    LAMMPSRunError,
+    GMXError,
+    LAMMPSError,
     UnsupportedCutoffMethodError,
 )
 
@@ -40,8 +40,8 @@ def get_all_energies(interchange: "Interchange") -> Dict[str, EnergyReport]:
 
     for engine_name, engine_driver, engine_exception in [
         ("Amber", get_amber_energies, AmberError),
-        ("GROMACS", get_gromacs_energies, GMXRunError),
-        ("LAMMPS", get_lammps_energies, LAMMPSRunError),
+        ("GROMACS", get_gromacs_energies, GMXError),
+        ("LAMMPS", get_lammps_energies, LAMMPSError),
     ]:
         try:
             all_energies[engine_name] = engine_driver(interchange)  # type: ignore[operator]

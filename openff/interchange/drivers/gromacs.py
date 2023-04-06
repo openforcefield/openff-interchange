@@ -13,7 +13,11 @@ from pkg_resources import resource_filename
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.exceptions import GMXGromppError, GMXMdrunError
+from openff.interchange.exceptions import (
+    GMXGromppError,
+    GMXMdrunError,
+    GMXNotFoundError,
+)
 
 if TYPE_CHECKING:
     from openff.units.unit import Quantity
@@ -21,7 +25,7 @@ if TYPE_CHECKING:
     from openff.interchange import Interchange
 
 
-def _find_gromacs_executable() -> Optional[str]:
+def _find_gromacs_executable(raise_exception: bool = False) -> Optional[str]:
     """Attempt to locate a GROMACS executable based on commonly-used names."""
     gromacs_executable_names = ["gmx", "gmx_mpi", "gmx_d", "gmx_mpi_d"]
 
@@ -29,7 +33,10 @@ def _find_gromacs_executable() -> Optional[str]:
         if which(name):
             return name
 
-    return None
+    if raise_exception:
+        raise GMXNotFoundError
+    else:
+        return None
 
 
 def _get_mdp_file(key: str = "auto") -> str:
@@ -133,7 +140,7 @@ def _run_gmx_energy(
         A dictionary of energies, keyed by the GROMACS energy term name.
 
     """
-    gmx = _find_gromacs_executable()
+    gmx = _find_gromacs_executable(raise_exception=True)
 
     grompp_cmd = f"{gmx} grompp --maxwarn {maxwarn} -o out.tpr"
     grompp_cmd += f" -f {mdp_file} -c {gro_file} -p {top_file}"

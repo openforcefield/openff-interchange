@@ -281,7 +281,15 @@ HAS_GROMACS = _find_gromacs_executable() is not None
 HAS_LAMMPS = _find_lammps_executable() is not None
 
 needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
-needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs GROMACS")
+needs_not_gmx = pytest.mark.skipif(
+    HAS_GROMACS,
+    reason="Needs GROMACS to NOT be installed",
+)
+needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs LAMMPS")
+needs_not_lmp = pytest.mark.skipif(
+    HAS_LAMMPS,
+    reason="Needs LAMMPS to NOT be installed",
+)
 
 kj_nm2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.nanometer**2
 kj_rad2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.radian**2

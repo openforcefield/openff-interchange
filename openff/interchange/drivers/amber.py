@@ -181,10 +181,8 @@ def _get_amber_energy_vdw(amber_energies: Dict) -> unit.Quantity:
     """Get the total nonbonded energy from a set of Amber energies."""
     amber_vdw = 0.0 * unit.kilojoule_per_mole
     for key in ["VDWAALS", "1-4 VDW", "1-4 NB"]:
-        try:
+        if key in amber_energies:
             amber_vdw += amber_energies[key]
-        except KeyError:
-            pass
 
     return amber_vdw
 
@@ -193,10 +191,8 @@ def _get_amber_energy_coul(amber_energies: Dict) -> unit.Quantity:
     """Get the total nonbonded energy from a set of Amber energies."""
     amber_coul = 0.0 * unit.kilojoule_per_mole
     for key in ["EEL", "1-4 EEL"]:
-        try:
+        if key in amber_energies:
             amber_coul += amber_energies[key]
-        except KeyError:
-            pass
 
     return amber_coul
 

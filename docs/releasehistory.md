@@ -13,7 +13,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### Behavior changes
 
-* #635 Moves and re-organizes the contents of `openff.interchange.interop.internal.gromacs` to a new submodule `openff.interchange.interop.gromacs`
+* #639 Drops support for Python 3.8, following [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html#support-table).
+* #635 Moves and re-organizes the contents of `openff.interchange.interop.internal.gromacs` to a new submodule `openff.interchange.interop.gromacs`.
 
 ### New features
 

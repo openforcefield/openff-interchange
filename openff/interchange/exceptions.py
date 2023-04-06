@@ -218,31 +218,43 @@ class SanderError(AmberError):
     """
 
 
-class GMXRunError(BaseException):
+class GMXError(BaseException):
     """
     Exception for when a GROMACS subprocess fails.
     """
 
 
-class GMXNotFoundError(GMXRunError):
+class GMXNotFoundError(GMXError):
     """
     Exception for when no GROMACS executable is found.
     """
 
 
-class GMXGromppError(GMXRunError):
+class GMXGromppError(GMXError):
     """
     Exception for when `gmx grompp` fails.
     """
 
 
-class GMXMdrunError(GMXRunError):
+class GMXMdrunError(GMXError):
     """
     Exception for when `gmx mdrun` fails.
     """
 
 
-class LAMMPSRunError(BaseException):
+class LAMMPSError(BaseException):
+    """
+    Base exception for handling LAMMPS-related errors.
+    """
+
+
+class LAMMPSNotFoundError(LAMMPSError):
+    """
+    Exception for when no LAMMPS executable is found.
+    """
+
+
+class LAMMPSRunError(LAMMPSError):
     """
     Exception for when a LAMMPS subprocess fails.
     """
