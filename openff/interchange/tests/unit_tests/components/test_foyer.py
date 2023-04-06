@@ -62,7 +62,7 @@ class TestFoyer(_BaseTest):
 
             if isinstance(molecule_or_molecules, list):
                 for idx, mol in enumerate(molecule_or_molecules):
-                    mol.name = f"{mol_name}_{idx}"
+                    mol.name = f"{mol_name}{idx}"
             else:
                 molecule_or_molecules.name = mol_name
                 molecule_or_molecules = [molecule_or_molecules]
