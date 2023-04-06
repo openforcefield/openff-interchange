@@ -21,7 +21,7 @@ jobs:
         os:
           - ubuntu-latest
         python-version:
-          - "3.11"
+          - "3.10"
 
     env:
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append

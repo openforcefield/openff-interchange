@@ -27,13 +27,9 @@ jobs:
         python-version:
           - "3.9"
           - "3.10"
-          - "3.11"
         openeye:
           - true
           - false
-        exclude:
-          - python-version: "3.11"
-            openeye: true
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
