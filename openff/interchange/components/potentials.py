@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union
 import numpy
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
-from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, PrivateAttr, validator
 
@@ -19,7 +18,6 @@ if has_package("jax"):
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
-    from openff.toolkit.topology import Topology
 
     if has_package("jax"):
         from jax import Array
@@ -132,18 +130,6 @@ class Collection(DefaultModel):
             if isinstance(node, ast.Name)
         }
         return vars_in_expression - vars_in_potentials
-
-    def store_matches(
-        self,
-        parameter_handler: ParameterHandler,
-        topology: "Topology",
-    ) -> None:
-        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
-        raise NotImplementedError
-
-    def store_potentials(self, parameter_handler: ParameterHandler) -> None:
-        """Populate self.potentials with key-val pairs of [PotentialKey, Potential]."""
-        raise NotImplementedError
 
     def _get_parameters(self, atom_indices: Tuple[int]) -> Dict:
         for topology_key in self.key_map:

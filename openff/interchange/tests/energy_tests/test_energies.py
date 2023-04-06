@@ -241,10 +241,10 @@ class TestEnergies(_BaseTest):
             if energy_diff < 1e-6:
                 pass
             elif energy_diff < 1e-2:
-                pytest.xpass(
+                pytest.xfail(
                     f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports",
                 )
             else:
-                pytest.xfail(
+                pytest.fail(
                     f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports",
                 )

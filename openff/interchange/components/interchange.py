@@ -302,36 +302,25 @@ class Interchange(DefaultModel):
             ) from error
         return nglview.show_file("_tmp_pdb_file.pdb")
 
-    def to_gro(self, file_path: Union[Path, str], writer="internal", decimal: int = 3):
+    def to_gro(self, file_path: Union[Path, str], decimal: int = 3):
         """Export this Interchange object to a .gro file."""
-        # TODO: Enum-style class for handling writer arg?
-        if writer == "parmed":
-            from openff.interchange.interop.external import ParmEdWrapper
+        from openff.interchange.interop.gromacs.export._export import GROMACSWriter
+        from openff.interchange.smirnoff._gromacs import _convert
 
-            ParmEdWrapper().to_file(self, file_path)
+        GROMACSWriter(
+            system=_convert(self),
+            gro_file=file_path,
+        ).to_gro(decimal=decimal)
 
-        elif writer == "internal":
-            from openff.interchange.interop.internal.gromacs import to_gro
-
-            to_gro(self, file_path, decimal=decimal)
-
-        else:
-            raise UnsupportedExportError
-
-    def to_top(self, file_path: Union[Path, str], writer="internal"):
+    def to_top(self, file_path: Union[Path, str]):
         """Export this Interchange to a .top file."""
-        if writer == "parmed":
-            from openff.interchange.interop.external import ParmEdWrapper
+        from openff.interchange.interop.gromacs.export._export import GROMACSWriter
+        from openff.interchange.smirnoff._gromacs import _convert
 
-            ParmEdWrapper().to_file(self, file_path)
-
-        elif writer == "internal":
-            from openff.interchange.interop.internal.gromacs import to_top
-
-            to_top(self, file_path)
-
-        else:
-            raise UnsupportedExportError
+        GROMACSWriter(
+            system=_convert(self),
+            top_file=file_path,
+        ).to_top()
 
     def to_lammps(self, file_path: Union[Path, str], writer="internal"):
         """Export this Interchange to a LAMMPS data file."""
@@ -525,42 +514,7 @@ class Interchange(DefaultModel):
         Create an Interchange object from GROMACS files.
 
         """
-        from intermol.gromacs.gromacs_parser import GromacsParser
-
-        from openff.interchange.interop.intermol import from_intermol_system
-
-        intermol_system = GromacsParser(topology_file, gro_file).read()
-        via_intermol = from_intermol_system(intermol_system)
-
-        if reader == "intermol":
-            return via_intermol
-
-        elif reader == "internal":
-            from openff.interchange.interop.internal.gromacs import (
-                _read_box,
-                _read_coordinates,
-                from_top,
-            )
-
-            via_internal = from_top(topology_file, gro_file)
-
-            via_internal.positions = _read_coordinates(gro_file)
-            via_internal.box = _read_box(gro_file)
-            for key in via_intermol.collections:
-                if key not in [
-                    "Bonds",
-                    "Angles",
-                    "ProperTorsions",
-                    "ImproperTorsions",
-                    "vdW",
-                    "Electrostatics",
-                ]:
-                    raise Exception(f"Found unexpected handler with name {key}")
-
-            return via_internal
-
-        else:
-            raise Exception(f"Reader {reader} is not implemented.")
+        raise NotImplementedError()
 
     def _get_parameters(self, handler_name: str, atom_indices: Tuple[int]) -> Dict:
         """

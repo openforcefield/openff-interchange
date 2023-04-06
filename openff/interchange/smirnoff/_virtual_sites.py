@@ -114,7 +114,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                     ] = virtual_site_index
                     virtual_site_index += 1
 
-    def store_potentials(  # type: ignore[override]
+    def store_potentials(
         self,
         parameter_handler: VirtualSiteHandler,
         vdw_collection: SMIRNOFFvdWCollection,
