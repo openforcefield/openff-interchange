@@ -349,13 +349,18 @@ def _plugins(
         if handler_class._TAGNAME not in force_field.registered_parameter_handlers:
             continue
 
-        collection = collection_class.create(
-            parameter_handler=force_field[handler_class._TAGNAME],
-            topology=topology,
-        )
+    # In case where multiple handles co-exists in a collection (MPID)
+    handlers = [force_field[handler_class._TAGNAME] for handler_class in _PLUGIN_CLASS_MAPPING.keys()] 
 
-        interchange.collections.update(
-            {
-                handler_class._TAGNAME: collection,
-            },
-        )
+
+    collection = collection_class.create(
+        parameter_handler=handlers,
+        topology=topology,
+    )
+
+    interchange.collections.update(
+        {
+            # handler_class._TAGNAME: collection,
+            collection.type: collection, # match collection instead of handler
+        },
+    )
