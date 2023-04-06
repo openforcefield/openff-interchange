@@ -310,3 +310,19 @@ class UnassignedAngleError(UnassignedValenceError):
 
 class UnassignedTorsionError(UnassignedValenceError):
     """Exception raised when there are torsion terms for which a ParameterHandler did not find matches."""
+
+
+class MissingValenceError(BaseException):
+    """Exception raised when there are valence interactions for which no parameters are found."""
+
+
+class MissingBondError(UnassignedValenceError):
+    """Exception raised when there exists a bond for which no parameters are found."""
+
+
+class MissingAngleError(UnassignedValenceError):
+    """Exception raised when there exists an angle for which no parameters are found."""
+
+
+class MissingTorsionError(UnassignedValenceError):
+    """Exception raised when there exists a torsion for which no parameters are found."""
