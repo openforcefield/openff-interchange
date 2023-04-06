@@ -4,7 +4,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from shutil import which
-from typing import TYPE_CHECKING, Dict, Union
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from openff.units import unit
 from openff.utilities.utilities import requires_package, temporary_cd
@@ -13,11 +13,7 @@ from pkg_resources import resource_filename
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.exceptions import (
-    GMXGromppError,
-    GMXMdrunError,
-    GMXNotFoundError,
-)
+from openff.interchange.exceptions import GMXGromppError, GMXMdrunError
 
 if TYPE_CHECKING:
     from openff.units.unit import Quantity
@@ -25,7 +21,7 @@ if TYPE_CHECKING:
     from openff.interchange import Interchange
 
 
-def _find_gromacs_executable() -> str:
+def _find_gromacs_executable() -> Optional[str]:
     """Attempt to locate a GROMACS executable based on commonly-used names."""
     gromacs_executable_names = ["gmx", "gmx_mpi", "gmx_d", "gmx_mpi_d"]
 
@@ -33,7 +29,7 @@ def _find_gromacs_executable() -> str:
         if which(name):
             return name
 
-    raise GMXNotFoundError
+    return None
 
 
 def _get_mdp_file(key: str = "auto") -> str:

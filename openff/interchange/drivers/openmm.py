@@ -95,7 +95,7 @@ def _get_openmm_energies(
     positions: openmm.unit.Quantity,
     round_positions: Optional[int],
     platform: str,
-) -> EnergyReport:
+) -> Dict[int, unit.Quantity]:
     """Given prepared `openmm` objects, run a single-point energy calculation."""
     for index, force in enumerate(system.getForces()):
         force.setForceGroup(index)
@@ -190,7 +190,6 @@ def _process(
                     staged["vdW"] = raw_energy
 
                 elif isinstance(force, openmm.CustomBondForce):
-                    print(force.getEnergyFunction())
                     if "qq" in force.getEnergyFunction():
                         staged["Electrostatics 1-4"] = raw_energy
                     else:
