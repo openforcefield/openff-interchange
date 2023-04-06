@@ -58,7 +58,7 @@ for collection_plugin in load_smirnoff_plugins():
 
     # if len(parameter_handlers) != 1:
     #     raise RuntimeError
-    
+
     for parameter_handler in parameter_handlers:
         if parameter_handler in load_handler_plugins():
             _SUPPORTED_PARAMETER_HANDLERS.add(parameter_handler._TAGNAME)
@@ -352,11 +352,12 @@ def _plugins(
         # Perhaps need to exit if there is a handler that is not in the collection
         # but I will leave this to developers.
 
-
     # In case where multiple handlers co-exist in a collection
     # Assuming only one collection gets to be loaded at a time
-    handlers = [force_field[handler_class._TAGNAME] for handler_class in _PLUGIN_CLASS_MAPPING.keys()] 
-
+    handlers = [
+        force_field[handler_class._TAGNAME]
+        for handler_class in _PLUGIN_CLASS_MAPPING.keys()
+    ]
 
     # Protect cases that are one handler per collection
     # Probably would not be necessary if `Collection.create` always take in List
@@ -364,7 +365,6 @@ def _plugins(
     if len(handlers) == 1:
         handlers = handlers[0]
 
-    
     collection = collection_class.create(
         parameter_handler=handlers,
         topology=topology,
@@ -373,6 +373,6 @@ def _plugins(
     interchange.collections.update(
         {
             # handler_class._TAGNAME: collection,
-            collection.type: collection, # Since handlers have different tagnames, I would match collection type instead of handler
+            collection.type: collection,  # Since handlers have different tagnames, I would match collection type instead of handler
         },
     )
