@@ -9,7 +9,7 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## 0.2.3 - 2023-04-10
+## 0.3.0 - 2023-04-10
 
 ### Behavior changes
 
