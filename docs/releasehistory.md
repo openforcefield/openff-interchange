@@ -9,7 +9,7 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.3.0 - 2023-04-10
 
 ### Behavior changes
 
@@ -30,24 +30,47 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
   * `PotentialHandler` is deprecated for `Collection`.
   * `Interchange.handlers` is deprecated for `Interchange.collections`.
   * `PotentialHandler.slot_map` is deprecated for `Collection.key_map`.
-  * Classes found in `openff.interchange.components.smirnoff` are now in `openff.interchange.smirnoff`
-  * Classes found in `openff.interchange.components.foyer` are now in `openff.interchange.foyer`
-  * Some arguments with `handler` in their names are replaced with `collection`
-* #601 Groups GROMACS improper torsion energies in the `"Torsions"` key
+  * Classes found in `openff.interchange.components.smirnoff` are now in `openff.interchange.smirnoff`.
+  * Classes found in `openff.interchange.components.foyer` are now in `openff.interchange.foyer`.
+  * Some arguments with `handler` in their names are replaced with `collection`.
+* #583 Refactors the internals of `Interchange.from_smirnoff` away from the chain-of-responsibility pattern.
+* #601 Groups GROMACS improper torsion energies in the `"Torsions"` key.
 
 ### Bugfixes
 
-* #593 Fix a #592 in which OpenMM exports fail to create multiple non-bonded forces without a vdW handler
-* #601 Fixes #600 in which some parameters were rounded to 6 digits in `Interchange.to_top`
+* #593 Fixes #592 in which OpenMM exports fail to create multiple non-bonded forces without a vdW handler.
+* #601 Fixes #600 in which some parameters were rounded to 6 digits in `Interchange.to_top`.
 * #598 Fixes #597 in which residue names were incorrectly written to Amber files for single-residue systems.
 * #618 Fixes #616 in which positions of multiple molecules were mangled with `to_openmm_positions`.
 * #618 Fixes #617 in which the return type of `to_openmm_positions` was inconsistent.
+* #582 Allows OpenMM version to change in regression tests.
+* #622 Fixes passing some settings to OpenMM's GBSA forces.
 
 ### New features
 
+* #569 Allows for quick importing `from openff.interchange import Interchange`.
+* #558 Removes a safeguard against a long-since fixed toolkit bug when looking up `rmin_half`.
+* #574 Adds more specific subclasses of `TopologyKey`.
 * #589 For convenience, per-parameter variables are now stored on `SMIRNOFFCollection.potential_parameters` and its subclasses.
-* #591 Adds support for custom `SMIRNOFFCollections` via a plugin interface.
-* #615 Adds support for GBSA parameters in SMIRNOFF force fields.
+* #591 Adds custom `SMIRNOFFCollection`s via a plugin interface.
+* #614 Adds support for GBSA parameters in SMIRNOFF force fields.
+* #586 #591 #605 #609 #613 Support custom SMIRNOFF sections with OpenMM.
+
+### Documentation
+
+* #634 Improves documentation for SMIRNOFF plugins.
+* #610 Adds duplicate documentation on how to covert to OpenMM-styled unit/quantity objects.
+* #699 Updates the project's README.
+
+### Maintenance
+
+* #400 Adds Python 3.10 to testing.
+* #561 #564 #572 #577 #580 #581 #590 #625 Update `pre-commit` configuration.
+* #562 Removes the use of `python setup.py`.
+* #565 Removes duplicate code in favor of `openff-models`.
+* #575 #576 Avoid installing old, incompatible versions of `jax` and/or `jaxlib`.
+* #578 Updates some type annotations.
+* #619 Removes duplicate OpenMM virtual site construction code.
 
 ## 0.2.3 - 2022-11-21
 
