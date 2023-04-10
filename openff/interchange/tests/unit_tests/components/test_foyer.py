@@ -1,4 +1,3 @@
-import glob
 from pathlib import Path
 
 import numpy as np
@@ -43,7 +42,7 @@ class TestFoyer(_BaseTest):
     @pytest.fixture(scope="session")
     def oplsaa_interchange_ethanol(self, oplsaa):
         molecule = Molecule.from_file(
-            get_test_files_dir_path("foyer_test_molecules") + "/ethanol.sdf",
+            get_test_files_dir_path("foyer_test_molecules") / "ethanol.sdf",
         )
         molecule.name = "ETH"
 
@@ -121,11 +120,11 @@ class TestFoyer(_BaseTest):
     @needs_gmx
     @pytest.mark.parametrize(
         argnames="molecule_path",
-        argvalues=glob.glob(get_test_files_dir_path("foyer_test_molecules") + "/*.sdf"),
+        argvalues=[*get_test_files_dir_path("foyer_test_molecules").glob("*.sdf")],
     )
     @pytest.mark.slow()
     def test_interchange_energies(self, molecule_path, get_interchanges, oplsaa):
-        if "ethanol" in molecule_path or "adamantane" in molecule_path:
+        if "ethanol" in str(molecule_path) or "adamantane" in str(molecule_path):
             pytest.skip("Foyer/ParmEd bug with this molecule")
         openff_interchange, pmd_structure = get_interchanges(molecule_path)
         parameterized_pmd_structure = oplsaa.apply(pmd_structure)

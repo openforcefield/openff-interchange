@@ -13,7 +13,7 @@ from openff.interchange.tests import _BaseTest, get_test_file_path
 class TestFromOpenMM(_BaseTest):
     @pytest.mark.slow()
     def test_from_openmm_pdbfile(self, argon_ff):
-        pdb_file_path = get_test_file_path("10-argons.pdb")
+        pdb_file_path = get_test_file_path("10-argons.pdb").as_posix()
         pdbfile = app.PDBFile(pdb_file_path)
 
         mol = Molecule.from_smiles("[#18]")
