@@ -1,4 +1,4 @@
-from importlib import resources
+import sys
 from math import exp
 
 import numpy
@@ -29,6 +29,11 @@ from openff.interchange.interop.gromacs._import._import import (
 )
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.tests import _BaseTest, needs_gmx
+
+if sys.version_info >= (3, 10):
+    from importlib import resources
+else:
+    import importlib_resources as resources
 
 
 @needs_gmx

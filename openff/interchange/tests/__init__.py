@@ -1,7 +1,7 @@
 """Assorted utilities used in tests."""
 import pathlib
+import sys
 from collections import defaultdict
-from importlib import resources
 from typing import DefaultDict, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -17,6 +17,11 @@ from openmm import unit as openmm_unit
 from openff.interchange import Interchange
 from openff.interchange.drivers.gromacs import _find_gromacs_executable
 from openff.interchange.drivers.lammps import _find_lammps_executable
+
+if sys.version_info >= (3, 10):
+    from importlib import resources
+else:
+    import importlib_resources as resources
 
 
 def get_test_file_path(test_file: str) -> pathlib.Path:

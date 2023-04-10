@@ -1,7 +1,7 @@
 """Functions for running energy evluations with GROMACS."""
 import subprocess
+import sys
 import tempfile
-from importlib import resources
 from pathlib import Path
 from shutil import which
 from typing import TYPE_CHECKING, Dict, Optional, Union
@@ -17,6 +17,11 @@ from openff.interchange.exceptions import (
     GMXMdrunError,
     GMXNotFoundError,
 )
+
+if sys.version_info >= (3, 10):
+    from importlib import resources
+else:
+    import importlib_resources as resources
 
 if TYPE_CHECKING:
     from openff.units.unit import Quantity
