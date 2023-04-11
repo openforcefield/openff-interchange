@@ -1,8 +1,8 @@
 # Creating custom interactions via plugins
 
-Custom interactions (i.e., interactions other than 12-6 Lennard-Jones, harmonic bonds, or harmonic angles) can be introduced into the OpenFF stack via plugin interfaces. To create a plugin, create a subclass of both [`ParameterHandler`] and [`SMIRNOFFCollection`] for each new type of physical interaction in the model, then expose them to Interchange via the `openff.toolkit.plugins.handlers` and `openff.interchange.plugins.collections` [SetupTools entry points], respectively.
+Custom interactions (i.e., interactions other than 12-6 Lennard-Jones, harmonic bonds, or harmonic angles) can be introduced into the OpenFF stack via plugin interfaces. To create a plugin, create a subclass(s) of both [`ParameterHandler`] and [`SMIRNOFFCollection`] for each new type of physical interaction in the model, then expose them to Interchange via the `openff.toolkit.plugins.handlers` and `openff.interchange.plugins.collections` [SetupTools entry points], respectively.
 
-Parameter handlers are responsible for the system- and engine-independent aspects of parametrization; in other words, they define the force field itself. By contrast, a SMIRNOFF collection handles the parametrization of a particular system and the preparation of that system for simulation with an external MD engine. The base classes for parameter handlers are defined in the OpenFF Toolkit, while collections are defined in Interchange.
+Parameter handlers are responsible for the system- and engine-independent aspects of parametrization; in other words, they define the force field itself. By contrast, a SMIRNOFF collection handles the parametrization of a particular system and the preparation of that system for simulation with an external MD engine. The base classes for parameter handlers are defined in the OpenFF Toolkit, while collections are defined in Interchange. Most use cases involve one parameter handler and one collection, though a collection can process multiple parameter handlers.
 
 Currently, systems using custom interactions can only be exported to OpenMM. There are two routes for this export: one using existing Interchange machinery and another that allows for completely custom behavior.
 
@@ -67,6 +67,7 @@ A `SMIRNOFFCollection` is a subclass of [`Collection`] specific to SMIRNOFF forc
   * define a class method [`allowed_parameter_handlers`] that returns an iterable of the `ParameterHandler` subclasses that it can process
   * define a class method [`supported_parameters`] that returns an iterable of parameters that it expects to store (i.e. `"smirks"`, `"k"`, `"length"`, etc.)
   * override other methods of [`SMIRNOFFCollection`] and  [`Collection`] ([`store_matches`], [`store_potentials`], [`create`]) as needed
+    * The argument `parameter_handler` to `create` can either be of type `ParameterHandler` or `List[ParameterHandler]`. If the collection can take multiple handlers (a case probably associated with `allowed_parameter_handlers` returning an iterable longer than 1) then `create` should assume the argument is a list containing multiple handlers. Otherwise, it will be passed a single handler.
 
 * The class _may_
   * define other optional fields, similar to optional attributes on its corresponding parameter handler
@@ -246,7 +247,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
         self.method = parameter_handler.method.lower()
         self.cutoff = parameter_handler.cutoff
 
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             smirks = potential_key.id
             parameter = parameter_handler.parameters[smirks]
 

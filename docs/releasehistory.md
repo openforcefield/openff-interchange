@@ -21,6 +21,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 * #635 Adds a dedicated class `GROMACSSystem` to represent GROMACS state.
 * #635 Adds parsing and exporting between GROMACS files and `GROMACSSystem` objects.
+* #651 Adds support for `SMIRNOFFCollection` plugins that depend on multiple `ParameterHandler`s.
 
 ## 0.3.0 - 2023-04-10
 
