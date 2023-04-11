@@ -825,7 +825,7 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
         ],
     ) -> None:
         """
-        Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
+        Populate self.potentials with key-val pairs of [PotentialKey, Potential].
 
         """
         # This logic is handled by ``store_matches`` as we may need to create potentials

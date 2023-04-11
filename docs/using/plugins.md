@@ -80,7 +80,7 @@ A `SMIRNOFFCollection` is a subclass of [`Collection`] specific to SMIRNOFF forc
 [`supported_parameters`]:openff.interchange.plugins.SMIRNOFFCollection.supported_parameters
 [`Collection`]: openff.interchange.components.potentials.Collection
 [`store_matches`]: openff.interchange.plugins.SMIRNOFFCollection.store_matches
-[`store_potentials`]: openff.interchange.components.potentials.Collection.store_potentials
+[`store_potentials`]: openff.interchange.plugins.SMIRNOFFCollection.store_potentials
 [`create`]: openff.interchange.plugins.SMIRNOFFCollection.create
 
 ## Examples
