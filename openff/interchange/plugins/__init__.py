@@ -3,6 +3,12 @@ Collections for custom SMIRNOFF handlers.
 """
 from typing import List
 
+from openff.interchange.smirnoff._base import SMIRNOFFCollection
+
+__all__ = [
+    "SMIRNOFFCollection",
+]
+
 
 def load_smirnoff_plugins() -> List:
     """Load external potential handlers as plugins."""

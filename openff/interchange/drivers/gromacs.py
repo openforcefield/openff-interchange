@@ -1,6 +1,6 @@
 """Functions for running energy evluations with GROMACS."""
-import pathlib
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from shutil import which
@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from openff.units import unit
 from openff.utilities.utilities import requires_package, temporary_cd
-from pkg_resources import resource_filename
 
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.constants import kj_mol
@@ -18,6 +17,11 @@ from openff.interchange.exceptions import (
     GMXMdrunError,
     GMXNotFoundError,
 )
+
+if sys.version_info >= (3, 10):
+    from importlib import resources
+else:
+    import importlib_resources as resources
 
 if TYPE_CHECKING:
     from openff.units.unit import Quantity
@@ -47,8 +51,8 @@ def _get_mdp_file(key: str = "auto") -> str:
         "cutoff_buck": "cutoff_buck.mdp",
     }
 
-    dir_path = resource_filename("openff.interchange", "tests/data/mdp")
-    return pathlib.Path(dir_path).joinpath(mapping[key]).as_posix()
+    dir_path = resources.files("openff.interchange.tests.data.mdp")
+    return str(dir_path / mapping[key])
 
 
 def get_gromacs_energies(
