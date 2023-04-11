@@ -56,13 +56,17 @@ for collection_plugin in load_smirnoff_plugins():
         Type["ParameterHandler"]
     ] = collection_plugin.allowed_parameter_handlers()
 
-    # if len(parameter_handlers) != 1:
-    #     raise RuntimeError
-
     for parameter_handler in parameter_handlers:
         if parameter_handler in load_handler_plugins():
             _SUPPORTED_PARAMETER_HANDLERS.add(parameter_handler._TAGNAME)
             _PLUGIN_CLASS_MAPPING[parameter_handler] = collection_plugin
+        else:
+            raise ValueError(
+                f"`SMIRNOFFCollection` plugin {collection_plugin} supports `ParameterHandler` "
+                f"plugin {parameter_handler}, but it was not found in the `openff.toolkit.plugins` "
+                "entry point. If this collection can use this handler but does not require it, "
+                "please raise an issue on GitHub describing your use case.",
+            )
 
 
 def _check_supported_handlers(force_field: ForceField):
@@ -345,34 +349,47 @@ def _plugins(
     force_field: ForceField,
     topology: Topology,
 ):
-    for handler_class, collection_class in _PLUGIN_CLASS_MAPPING.items():
-        if handler_class._TAGNAME not in force_field.registered_parameter_handlers:
+    for collection_class in _PLUGIN_CLASS_MAPPING.values():
+        # Track the handlers (keys) that map to this collection (value)
+        handler_classes = [
+            handler
+            for handler in _PLUGIN_CLASS_MAPPING
+            if _PLUGIN_CLASS_MAPPING[handler] == collection_class
+        ]
+
+        if not all(
+            [
+                handler_class._TAGNAME in force_field.registered_parameter_handlers
+                for handler_class in handler_classes
+            ],
+        ):
             continue
 
-        # Perhaps need to exit if there is a handler that is not in the collection
-        # but I will leave this to developers.
+        if len(handler_classes) == 0:
+            continue
 
-    # In case where multiple handlers co-exist in a collection
-    # Assuming only one collection gets to be loaded at a time
-    handlers = [
-        force_field[handler_class._TAGNAME]
-        for handler_class in _PLUGIN_CLASS_MAPPING.keys()
-    ]
+        if len(handler_classes) == 1:
+            handler_class = handler_classes[0]
+            collection = collection_class.create(
+                parameter_handler=force_field[handler_class._TAGNAME],
+                topology=topology,
+            )
 
-    # Protect cases that are one handler per collection
-    # Probably would not be necessary if `Collection.create` always take in List
-    # see file _base.py#L219
-    if len(handlers) == 1:
-        handlers = handlers[0]
+        else:
+            # If this collection takes multiple handlers, pass it a list. Consider making this type the default.
+            handlers: List[ParameterHandler] = [
+                force_field[handler_class._TAGNAME]
+                for handler_class in _PLUGIN_CLASS_MAPPING.keys()
+            ]
 
-    collection = collection_class.create(
-        parameter_handler=handlers,
-        topology=topology,
-    )
+            collection = collection_class.create(
+                parameter_handler=handlers,
+                topology=topology,
+            )
 
-    interchange.collections.update(
-        {
-            # handler_class._TAGNAME: collection,
-            collection.type: collection,  # Since handlers have different tagnames, I would match collection type instead of handler
-        },
-    )
+        # No matter if this collection takes one or multiple handlers, key it by its own name
+        interchange.collections.update(
+            {
+                collection.type: collection,
+            },
+        )
