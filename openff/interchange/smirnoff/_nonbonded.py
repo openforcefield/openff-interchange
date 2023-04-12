@@ -28,9 +28,9 @@ from openff.units import Quantity, unit
 from pydantic import Field
 
 from openff.interchange.common._nonbonded import (
-    _ElectrostaticsCollection,
+    ElectrostaticsCollection,
     _NonbondedCollection,
-    _vdWCollection,
+    vdWCollection,
 )
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import _PME
@@ -80,7 +80,7 @@ class _SMIRNOFFNonbondedCollection(SMIRNOFFCollection, _NonbondedCollection):
     """Base class for handlers storing non-bonded potentials produced by SMIRNOFF force fields."""
 
 
-class SMIRNOFFvdWCollection(_vdWCollection, SMIRNOFFCollection):
+class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
     """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
 
     method: Literal["cutoff", "pme", "no-cutoff"] = Field("cutoff")
@@ -175,7 +175,7 @@ class SMIRNOFFvdWCollection(_vdWCollection, SMIRNOFFCollection):
         return ["vdw", "VirtualSites"]
 
 
-class SMIRNOFFElectrostaticsCollection(_ElectrostaticsCollection, SMIRNOFFCollection):
+class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollection):
     """
     A handler which stores any electrostatic parameters applied to a topology.
 

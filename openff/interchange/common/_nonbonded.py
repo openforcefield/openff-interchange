@@ -30,7 +30,7 @@ class _NonbondedCollection(Collection, abc.ABC):  # noqa
     )
 
 
-class _vdWCollection(_NonbondedCollection):
+class vdWCollection(_NonbondedCollection):
     """Handler storing vdW potentials."""
 
     type: Literal["vdW"] = "vdW"
@@ -45,7 +45,7 @@ class _vdWCollection(_NonbondedCollection):
     )
 
 
-class _ElectrostaticsCollection(_NonbondedCollection):
+class ElectrostaticsCollection(_NonbondedCollection):
     """Handler storing electrostatics interactions."""
 
     type: Literal["Electrostatics"] = "Electrostatics"

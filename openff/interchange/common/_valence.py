@@ -1,6 +1,9 @@
-from typing import Literal
+from typing import TYPE_CHECKING, Iterable, List, Literal, Tuple
 
 from openff.interchange.components.potentials import Collection
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology.molecule import Atom
 
 
 class BondCollection(Collection):
@@ -10,12 +13,12 @@ class BondCollection(Collection):
     expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
 
     @classmethod
-    def potential_parameters(cls):
+    def potential_parameters(cls) -> Iterable[str]:
         """Return a list of names of parameters included in each potential in this colletion."""
-        return ["k", "length"]
+        return "k", "length"
 
     @classmethod
-    def valence_terms(cls, topology):
+    def valence_terms(cls, topology) -> List[Tuple["Atom", ...]]:
         """Return all bonds in this topology."""
         return [tuple(b.atoms) for b in topology.bonds]
 
@@ -24,12 +27,12 @@ class AngleCollection(Collection):
     """Collection storing Angle potentials."""
 
     type: Literal["Angles"] = "Angles"
-    expression: Literal["k/2*(r-length)**2"] = "k/2*(theta-angle)**2"
+    expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
 
     @classmethod
-    def potential_parameters(cls):
+    def potential_parameters(cls) -> Iterable[str]:
         """Return a list of names of parameters included in each potential in this colletion."""
-        return ["k", "angle"]
+        return "k", "angle"
 
     @classmethod
     def valence_terms(cls, topology):
