@@ -42,7 +42,7 @@ def get_test_files_dir_path(dirname: Optional[str] = None) -> pathlib.Path:
     dir_path = resources.files("openff.interchange.tests.data")
 
     if dirname:
-        test_dir: pathlib.PosixPath = dir_path / dirname  # type: ignore[assignment]
+        test_dir: pathlib.PosixPath = dir_path / dirname
     else:
         test_dir = dir_path
 
