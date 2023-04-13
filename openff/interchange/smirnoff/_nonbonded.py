@@ -41,6 +41,7 @@ from openff.interchange.models import (
     ChargeModelTopologyKey,
     LibraryChargeTopologyKey,
     PotentialKey,
+    SingleAtomChargeTopologyKey,
     TopologyKey,
     VirtualSiteKey,
 )
@@ -245,24 +246,24 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
         pass
 
     @property
-    def charges(self) -> Dict[Union[TopologyKey, VirtualSiteKey], Quantity]:
+    def charges(self) -> Dict[TopologyKey, Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
         return self.get_charges(include_virtual_sites=False)
 
     @property
     def charges_with_virtual_sites(
         self,
-    ) -> Dict[Union[VirtualSiteKey, TopologyKey], Quantity]:
+    ) -> Dict[TopologyKey, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         return self.get_charges(include_virtual_sites=True)
 
     def get_charges(
         self,
         include_virtual_sites=False,
-    ) -> Dict[Union[VirtualSiteKey, TopologyKey], Quantity]:
+    ) -> Dict[TopologyKey, Quantity]:
         """Get the total partial charge on each atom or particle."""
-        charges: DefaultDict[Union[TopologyKey, VirtualSiteKey], float] = defaultdict(
-            lambda: 0.0,
+        charges: DefaultDict[Union[TopologyKey, int], Quantity] = defaultdict(
+            lambda: Quantity(0.0, unit.elementary_charges),
         )
 
         for topology_key, potential_key in self.key_map.items():
@@ -288,11 +289,11 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
                 elif parameter_key in ["charge", "charge_increment"]:
                     charge = parameter_value
                     assert len(topology_key.atom_indices) == 1
-                    charges[topology_key.atom_indices[0]] += charge  # type: ignore
+                    charges[topology_key.atom_indices[0]] += charge
                 else:
                     raise NotImplementedError()
 
-        returned_charges: Dict[Union[VirtualSiteKey, TopologyKey], Quantity] = dict()
+        returned_charges: Dict[TopologyKey, Quantity] = dict()
 
         for index, charge in charges.items():
             if isinstance(index, int):
@@ -375,7 +376,10 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
         cls,
         atom_indices: Tuple[int, ...],
         parameter: LibraryChargeHandler.LibraryChargeType,
-    ) -> Tuple[Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
+    ) -> Tuple[
+        Dict[LibraryChargeTopologyKey, PotentialKey],
+        Dict[PotentialKey, Potential],
+    ]:
         """
         Map a matched library charge parameter to a set of potentials.
         """
@@ -394,14 +398,17 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
             matches[topology_key] = potential_key
             potentials[potential_key] = potential
 
-        return matches, potentials  # type: ignore[return-value]
+        return matches, potentials
 
     @classmethod
     def _charge_increment_to_potentials(
         cls,
         atom_indices: Tuple[int, ...],
         parameter: ChargeIncrementModelHandler.ChargeIncrementType,
-    ) -> Tuple[Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
+    ) -> Tuple[
+        Dict[ChargeIncrementTopologyKey, PotentialKey],
+        Dict[PotentialKey, Potential],
+    ]:
         """
         Map a matched charge increment parameter to a set of potentials.
         """
@@ -432,7 +439,7 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
             matches[topology_key] = potential_key
             potentials[potential_key] = potential
 
-        return matches, potentials  # type: ignore[return-value]
+        return matches, potentials
 
     @classmethod
     def _find_slot_matches(
@@ -513,10 +520,12 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
         cls,
         parameter_handler: Union["ToolkitAM1BCCHandler", ChargeIncrementModelHandler],
         unique_molecule: Molecule,
-    ) -> Tuple[str, Dict[TopologyKey, PotentialKey], Dict[PotentialKey, Potential]]:
+    ) -> Tuple[
+        str,
+        Dict[SingleAtomChargeTopologyKey, PotentialKey],
+        Dict[PotentialKey, Potential],
+    ]:
         """Construct a slot and potential map for a charge model based parameter handler."""
-        from openff.interchange.models import SingleAtomChargeTopologyKey
-
         unique_molecule = copy.deepcopy(unique_molecule)
         reference_smiles = unique_molecule.to_smiles(
             isomeric=True,
@@ -565,7 +574,7 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
                 SingleAtomChargeTopologyKey(this_atom_index=atom_index)
             ] = potential_key
 
-        return partial_charge_method, matches, potentials  # type: ignore[return-value]
+        return partial_charge_method, matches, potentials
 
     @classmethod
     def _find_reference_matches(
@@ -576,8 +585,8 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
         """
         Construct a slot and potential map for a particular reference molecule and set of parameter handlers.
         """
-        matches = {}
-        potentials = {}
+        matches: Dict[TopologyKey, PotentialKey] = dict()
+        potentials: Dict[PotentialKey, Potential] = dict()
 
         expected_matches = {i for i in range(unique_molecule.n_atoms)}
 
@@ -641,7 +650,7 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
                 continue
 
             matches.update(slot_matches if slot_matches is not None else {})
-            matches.update(am1_matches if am1_matches is not None else {})
+            matches.update(am1_matches if am1_matches is not None else {})  # type: ignore[arg-type]
 
             potentials.update(slot_potentials)
             potentials.update(am1_potentials)
@@ -777,16 +786,9 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
                             # as the old key (on a unique/reference molecule)
                             self.key_map[new_key] = matches[key]
 
-                    # for key in _slow_key_lookup_by_atom_index(
-                    #     matches,
-                    #     topology_atom_index,
-                    # ):
-                    #     self.key_map[key] = matches[key]
-
         topology_charges = [0.0] * topology.n_atoms
         for key, val in self.get_charges().items():
             topology_charges[key.atom_indices[0]] = val.m
-        # charges: List[float] = [v.m for v in self.get_charges().values()]
 
         # TODO: Better data structures in Topology.identical_molecule_groups will make this
         #       cleaner and possibly more performant
