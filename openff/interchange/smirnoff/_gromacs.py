@@ -36,7 +36,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
         nonbonded_function = 1
         scale_lj = interchange["vdW"].scale_14
         _combination_rule = interchange["vdW"].mixing_rule.lower()
-        gen_pairs = "yes"
+        gen_pairs = True
     else:
         raise UnsupportedExportError(
             "Could not find a handler for short-ranged vdW interactions that is compatible "

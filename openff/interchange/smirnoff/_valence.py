@@ -167,7 +167,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
 
     def store_potentials(self, parameter_handler: BondHandler) -> None:
         """
-        Populate self.potentials with key-val pairs of [BondKey, PotentialKey].
+        Populate self.potentials with key-val pairs of [PotentialKey, Potential].
 
         """
         if self.potentials:
@@ -416,7 +416,7 @@ class SMIRNOFFAngleCollection(SMIRNOFFCollection):
 
     def store_potentials(self, parameter_handler: AngleHandler) -> None:
         """
-        Populate self.potentials with key-val pairs of [AngleKey, PotentialKey].
+        Populate self.potentials with key-val pairs of [PotentialKey, Potential].
 
         """
         for potential_key in self.key_map.values():
@@ -505,7 +505,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
 
     def store_potentials(self, parameter_handler: ProperTorsionHandler) -> None:
         """
-        Populate self.potentials with key-val pairs of [ProperTorsionKey, PotentialKey].
+        Populate self.potentials with key-val pairs of [PotentialKey, Potential].
 
         """
         for topology_key, potential_key in self.key_map.items():
@@ -659,7 +659,7 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection):
 
     def store_potentials(self, parameter_handler: ImproperTorsionHandler) -> None:
         """
-        Populate self.potentials with key-val pairs of [ImproperTorsionKey, PotentialKey].
+        Populate self.potentials with key-val pairs of [PotentialKey, Potential].
 
         """
         _default_idivf = parameter_handler.default_idivf

@@ -114,13 +114,15 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                     ] = virtual_site_index
                     virtual_site_index += 1
 
-    def store_potentials(
+    def store_potentials(  # type: ignore[override]
         self,
         parameter_handler: VirtualSiteHandler,
         vdw_collection: SMIRNOFFvdWCollection,
         electrostatics_collection: SMIRNOFFElectrostaticsCollection,
-    ) -> None:
-        """Store VirtualSite-specific parameter-like data."""
+    ):
+        """
+        Populate self.potentials with key-val pairs of [PotentialKey, Potential].
+        """
         if self.potentials:
             self.potentials = dict()
         for virtual_site_key, potential_key in self.key_map.items():

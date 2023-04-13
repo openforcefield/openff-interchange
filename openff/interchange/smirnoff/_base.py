@@ -213,6 +213,12 @@ class SMIRNOFFCollection(Collection, abc.ABC):
                 valence_terms=valence_terms,
             )
 
+    def store_potentials(self, parameter_handler: TP):
+        """
+        Populate self.potentials with key-val pairs of [PotentialKey, Potential].
+        """
+        raise NotImplementedError()
+
     @classmethod
     def create(
         cls: Type[T],

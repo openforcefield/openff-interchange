@@ -51,7 +51,7 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
 
     def store_potentials(self, parameter_handler: GBSAHandler) -> None:
         """
-        Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
+        Populate self.potentials with key-val pairs of [PotentialKey, Potential].
 
         """
         for potential_key in self.key_map.values():

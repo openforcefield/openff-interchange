@@ -1,5 +1,5 @@
 """Classes used to represent GROMACS state."""
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Optional
 
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
@@ -47,7 +47,7 @@ class GROMACSBond(DefaultModel):
     atom2: PositiveInt = Field(
         description="The GROMACS index of the second atom in the bond.",
     )
-    function: Literal[1]
+    function: int = Field(1, const=True, description="The GROMACS bond function type.")
     length: unit.Quantity
     k: unit.Quantity
 
@@ -156,8 +156,9 @@ class GROMACSMolecule(DefaultModel):
     """Base class for GROMACS molecules."""
 
     name: str
-    nrexcl: Literal[3] = Field(
+    nrexcl: int = Field(
         3,
+        const=True,
         description="The farthest neighbor distance whose interactions should be excluded.",
     )
 

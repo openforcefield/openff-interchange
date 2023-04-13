@@ -124,6 +124,9 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
 
         return output_conformer[molecule.n_atoms :, :]
 
+    @pytest.mark.skip(
+        "Interchange does not allow this combination of non-bonded settings.",
+    )
     @pytest.mark.parametrize(
         (
             "parameter",
@@ -255,6 +258,9 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
     _A = unit.angstrom
     _KJ = unit.kilojoule_per_mole
 
+    @pytest.mark.skip(
+        "Interchange does not allow this combination of non-bonded settings.",
+    )
     @pytest.mark.parametrize(
         ("topology", "parameters", "expected_parameters", "expected_n_v_sites"),
         [
