@@ -24,11 +24,15 @@ if TYPE_CHECKING:
     from openff.toolkit import Molecule
 
     from openff.interchange import Interchange
+    from openff.interchange.common._nonbonded import (
+        ElectrostaticsCollection,
+        vdWCollection,
+    )
+    from openff.interchange.components.potentials import Collection
     from openff.interchange.smirnoff._base import SMIRNOFFCollection
-    from openff.interchange.smirnoff._nonbonded import SMIRNOFFElectrostaticsCollection
 
 
-_DATA_DICT: TypeAlias = Dict[str, Union[None, str, bool, "SMIRNOFFCollection"]]
+_DATA_DICT: TypeAlias = Dict[str, Union[None, str, bool, "Collection"]]
 
 _MIXING_RULE_EXPRESSIONS: Dict[str, str] = {
     "lorentz-berthelot": "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); ",
@@ -49,10 +53,10 @@ def _process_nonbonded_forces(
     `combine_nonbondoed_forces=False`.
 
     """
-    from openff.interchange.smirnoff._nonbonded import _SMIRNOFFNonbondedCollection
+    from openff.interchange.common._nonbonded import _NonbondedCollection
 
     for collection in interchange.collections.values():
-        if isinstance(collection, _SMIRNOFFNonbondedCollection):
+        if isinstance(collection, _NonbondedCollection):
             break
     else:
         # If there are no non-bonded collections, assume here that there can be no virtual sites,
@@ -247,19 +251,19 @@ def _add_particles_to_system(
 
 def _prepare_input_data(interchange: "Interchange") -> _DATA_DICT:
     try:
-        vdw: Optional["SMIRNOFFCollection"] = interchange["vdW"]  # type: ignore[assignment]
+        vdw: Optional["vdWCollection"] = interchange["vdW"]
     except LookupError:
         for collection in interchange.collections.values():
             if collection.is_plugin:
                 if collection.acts_as == "vdW":
-                    vdw = collection  # type: ignore[assignment]
+                    vdw = collection
                     break
         else:
             vdw = None
 
     if vdw:
         vdw_cutoff: Optional[unit.Quanaity] = vdw.cutoff
-        vdw_method: Optional[str] = vdw.method.lower()
+        vdw_method: Optional[str] = getattr(vdw, "method", "cutoff").lower()
         mixing_rule: Optional[str] = getattr(vdw, "mixing_rule", None)
         vdw_expression: Optional[str] = vdw.expression.replace("**", "^")
     else:
@@ -269,9 +273,9 @@ def _prepare_input_data(interchange: "Interchange") -> _DATA_DICT:
         vdw_expression = None
 
     try:
-        electrostatics: Optional["SMIRNOFFElectrostaticsCollection"] = interchange[
+        electrostatics: Optional["ElectrostaticsCollection"] = interchange[
             "Electrostatics"
-        ]  # type: ignore[assignment]
+        ]
     except LookupError:
         electrostatics = None
 
@@ -279,9 +283,13 @@ def _prepare_input_data(interchange: "Interchange") -> _DATA_DICT:
         electrostatics_method: Optional[str] = None
     else:
         if interchange.box is None:
-            electrostatics_method = electrostatics.nonperiodic_potential
+            electrostatics_method = getattr(
+                electrostatics,
+                "nonperiodic_potential",
+                "Coulomb",
+            )
         else:
-            electrostatics_method = electrostatics.periodic_potential
+            electrostatics_method = getattr(electrostatics, "periodic_potential", _PME)
 
     return {
         "vdw_collection": vdw,
@@ -754,7 +762,7 @@ def _create_vdw_force(
     molecule_virtual_site_map: Dict[int, List[VirtualSiteKey]],
     has_virtual_sites: bool,
 ) -> Optional[openmm.CustomNonbondedForce]:
-    vdw_collection: Optional["SMIRNOFFCollection"] = data["vdw_collection"]  # type: ignore[assignment]
+    vdw_collection: Optional["vdWCollection"] = data["vdw_collection"]  # type: ignore[assignment]
 
     if vdw_collection is None:
         return None
@@ -901,7 +909,7 @@ def _set_particle_parameters(
     openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int],
 ):
     if electrostatics_force is not None:
-        electrostatics: SMIRNOFFElectrostaticsCollection = data[  # type: ignore[assignment]
+        electrostatics: ElectrostaticsCollection = data[  # type: ignore[assignment]
             "electrostatics_collection"
         ]
 
@@ -913,7 +921,7 @@ def _set_particle_parameters(
     else:
         partial_charges = None
 
-    vdw: "SMIRNOFFCollection" = data["vdw_collection"]  # type: ignore[assignment]
+    vdw: "vdWCollection" = data["vdw_collection"]  # type: ignore[assignment]
 
     for molecule in interchange.topology.molecules:
         for atom in molecule.atoms:

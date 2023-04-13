@@ -1,4 +1,3 @@
-import abc
 import copy
 import functools
 from collections import defaultdict
@@ -28,6 +27,11 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from openff.units import Quantity, unit
 from pydantic import Field
 
+from openff.interchange.common._nonbonded import (
+    ElectrostaticsCollection,
+    _NonbondedCollection,
+    vdWCollection,
+)
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
@@ -73,45 +77,14 @@ def library_charge_from_molecule(
     return library_charge_type
 
 
-class _SMIRNOFFNonbondedCollection(SMIRNOFFCollection, abc.ABC):  # noqa
+class _SMIRNOFFNonbondedCollection(SMIRNOFFCollection, _NonbondedCollection):
     """Base class for handlers storing non-bonded potentials produced by SMIRNOFF force fields."""
 
-    type: str = "nonbonded"
 
-    cutoff: FloatQuantity["angstrom"] = Field(  # noqa
-        unit.Quantity(9.0, unit.angstrom),
-        description="The distance at which pairwise interactions are truncated",
-    )
-
-    scale_13: float = Field(
-        0.0,
-        description="The scaling factor applied to 1-3 interactions",
-    )
-    scale_14: float = Field(
-        0.5,
-        description="The scaling factor applied to 1-4 interactions",
-    )
-    scale_15: float = Field(
-        1.0,
-        description="The scaling factor applied to 1-5 interactions",
-    )
-
-
-class SMIRNOFFvdWCollection(_SMIRNOFFNonbondedCollection):
+class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
     """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
 
-    type: Literal["vdW"] = "vdW"
-
-    expression: Literal[
-        "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
-    ] = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
-
     method: Literal["cutoff", "pme", "no-cutoff"] = Field("cutoff")
-
-    mixing_rule: Literal["lorentz-berthelot"] = Field(
-        "lorentz-berthelot",
-        description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
-    )
 
     switch_width: FloatQuantity["angstrom"] = Field(  # noqa
         unit.Quantity(1.0, unit.angstrom),
@@ -203,7 +176,7 @@ class SMIRNOFFvdWCollection(_SMIRNOFFNonbondedCollection):
         return ["vdw", "VirtualSites"]
 
 
-class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
+class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollection):
     """
     A handler which stores any electrostatic parameters applied to a topology.
 
@@ -214,13 +187,10 @@ class SMIRNOFFElectrostaticsCollection(_SMIRNOFFNonbondedCollection):
     * partial charges which have been assigned by a ``ToolkitAM1BCC``,
       ``LibraryCharges``, or a ``ChargeIncrementModel`` parameter
       handler.
-    * charge corrections applied by a ``SMIRNOFFChargeIncrementCollection``.
+    * charge corrections applied by a ``ChargeIncrementHandler``
 
     rather than having each in their own handler.
     """
-
-    type: Literal["Electrostatics"] = "Electrostatics"
-    expression: Literal["coul"] = "coul"
 
     periodic_potential: Literal[
         "Ewald3D-ConductingBoundary",
