@@ -66,7 +66,7 @@ A `SMIRNOFFCollection` is a subclass of [`Collection`] specific to SMIRNOFF forc
   * define a field [`expression: str`], a mathematical formula defining how it contributes to the overall potential energy
   * define a class method [`allowed_parameter_handlers`] that returns an iterable of the `ParameterHandler` subclasses that it can process
   * define a class method [`supported_parameters`] that returns an iterable of parameters that it expects to store (i.e. `"smirks"`, `"k"`, `"length"`, etc.)
-  * override other methods of [`SMIRNOFFCollection`] and  [`Collection`] ([`store_matches`], [`store_potentials`], [`create`]) as needed
+  * override other methods of [`SMIRNOFFCollection`] and  [`Collection`] ([`store_matches`], [`create`]) as needed
     * The argument `parameter_handler` to `create` can either be of type `ParameterHandler` or `List[ParameterHandler]`. If the collection can take multiple handlers (a case probably associated with `allowed_parameter_handlers` returning an iterable longer than 1) then `create` should assume the argument is a list containing multiple handlers. Otherwise, it will be passed a single handler.
 
 * The class _may_
@@ -81,7 +81,6 @@ A `SMIRNOFFCollection` is a subclass of [`Collection`] specific to SMIRNOFF forc
 [`supported_parameters`]:openff.interchange.plugins.SMIRNOFFCollection.supported_parameters
 [`Collection`]: openff.interchange.components.potentials.Collection
 [`store_matches`]: openff.interchange.plugins.SMIRNOFFCollection.store_matches
-[`store_potentials`]: openff.interchange.components.potentials.Collection.store_potentials
 [`create`]: openff.interchange.plugins.SMIRNOFFCollection.create
 
 ## Examples
