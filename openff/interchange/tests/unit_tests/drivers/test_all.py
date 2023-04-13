@@ -24,13 +24,13 @@ from openff.interchange.tests import (
 @pytest.mark.slow()
 class TestDriversAll(_BaseTest):
     @pytest.fixture()
-    def basic_interchange(self, sage):
+    def basic_interchange(self, sage_unconstrained):
         molecule = Molecule.from_smiles("CCO")
         molecule.generate_conformers(n_conformers=1)
         molecule.name = "MOL"
         topology = molecule.to_topology()
 
-        out = Interchange.from_smirnoff(sage, topology)
+        out = Interchange.from_smirnoff(sage_unconstrained, topology)
         out.positions = molecule.conformers[0]
         out.box = [4, 4, 4]
 
@@ -57,6 +57,7 @@ class TestDriversAll(_BaseTest):
         assert ("Amber" in summary) == (which("sander") is not None)
         assert ("LAMMPS" in summary) == (_find_lammps_executable() is not None)
 
+    # TODO: Also run all of this with h-bond constraints
     def test_summary_data(self, basic_interchange):
         summary = get_summary_data(basic_interchange)
 
@@ -70,7 +71,8 @@ class TestDriversAll(_BaseTest):
 
         # Check that (some of) the data is reasonable, this tolerance should be greatly reduced
         # See https://github.com/openforcefield/openff-interchange/issues/632
-        assert summary.describe().loc["std", "Angle"] < 0.5
+        for key in ["Bond", "Angle", "Torsion"]:
+            assert summary.describe().loc["std", key] < 0.001
 
         # Check that (some of) the data did not NaN out
         for val in summary["Torsion"].to_dict().values():
