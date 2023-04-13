@@ -1,3 +1,4 @@
+import sys
 from math import exp
 
 import numpy
@@ -12,7 +13,6 @@ from openff.units.openmm import ensure_quantity
 from openff.utilities.testing import skip_if_missing
 from openmm import app
 from openmm import unit as openmm_unit
-from pkg_resources import resource_filename
 
 from openff.interchange import Interchange
 from openff.interchange.components.nonbonded import BuckinghamvdWCollection
@@ -30,15 +30,21 @@ from openff.interchange.interop.gromacs._import._import import (
 from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.tests import _BaseTest, needs_gmx
 
+if sys.version_info >= (3, 10):
+    from importlib import resources
+else:
+    import importlib_resources as resources
+
 
 @needs_gmx
 class TestGROMACSGROFile(_BaseTest):
+    _INTERMOL_PATH = resources.files(
+        "intermol.tests.gromacs.unit_tests",
+    )
+
     @skip_if_missing("intermol")
     def test_load_gro(self):
-        file = resource_filename(
-            "intermol",
-            "tests/gromacs/unit_tests/angle10_vacuum/angle10_vacuum.gro",
-        )
+        file = self._INTERMOL_PATH / "angle10_vacuum/angle10_vacuum.gro"
 
         positions = _read_coordinates(file)
         box = _read_box(file)
@@ -58,10 +64,7 @@ class TestGROMACSGROFile(_BaseTest):
 
     @skip_if_missing("intermol")
     def test_load_gro_nonstandard_precision(self):
-        file = resource_filename(
-            "intermol",
-            "tests/gromacs/unit_tests/lj3_bulk/lj3_bulk.gro",
-        )
+        file = self._INTERMOL_PATH / "lj3_bulk/lj3_bulk.gro"
 
         coords = _read_coordinates(file).m_as(unit.nanometer)
 

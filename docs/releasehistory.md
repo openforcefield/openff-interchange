@@ -9,19 +9,21 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## 0.3.0 - 2023-04-10
+## Current development
 
 ### Behavior changes
 
 * #639 Drops support for Python 3.8, following [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html#support-table).
 * #635 Moves and re-organizes the contents of `openff.interchange.interop.internal.gromacs` to a new submodule `openff.interchange.interop.gromacs`.
+* #649 Removes the use of `pkg_resources`, which is deprecated.
 
 ### New features
 
 * #635 Adds a dedicated class `GROMACSSystem` to represent GROMACS state.
 * #635 Adds parsing and exporting between GROMACS files and `GROMACSSystem` objects.
+* #651 Adds support for `SMIRNOFFCollection` plugins that depend on multiple `ParameterHandler`s.
 
-## 0.3.0
+## 0.3.0 - 2023-04-10
 
 ### Behavior changes
 
