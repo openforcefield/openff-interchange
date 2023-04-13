@@ -492,6 +492,11 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             getattr(residue, "residue_name", "RES")
             for residue in interchange.topology.hierarchy_iterator("residues")
         ]
+
+        # Avoid blank residue labels, though this is a band-aid. See issue #652
+        if residue_names == list():
+            residue_names = ["RES"]
+
         prmtop.write("%FLAG RESIDUE_LABEL\n" "%FORMAT(20a4)\n")
         text_blob = "".join([val.ljust(4) for val in residue_names])
         _write_text_blob(prmtop, text_blob)
