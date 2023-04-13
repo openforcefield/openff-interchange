@@ -1,6 +1,6 @@
 # Installation
 
-These instructions assume that the `conda` package manager is installed. If you do not have Conda installed, see the [ecosystem installation documentation](openff.docs:install).
+These instructions assume that the `conda` package manager is installed. If you do not have Conda installed, see the [OpenFF installation documentation](openff.docs:install).
 
 ## Quick Installation
 
