@@ -1,11 +1,13 @@
 import abc
-from typing import Literal
+from collections import defaultdict
+from typing import DefaultDict, Dict, Literal
 
 from openff.models.types import FloatQuantity
-from openff.units import unit
+from openff.units import Quantity, unit
 from pydantic import Field
 
 from openff.interchange.components.potentials import Collection
+from openff.interchange.models import TopologyKey
 
 
 class _NonbondedCollection(Collection, abc.ABC):  # noqa
@@ -51,3 +53,27 @@ class ElectrostaticsCollection(_NonbondedCollection):
     type: Literal["Electrostatics"] = "Electrostatics"
 
     expression: Literal["coul"] = "coul"
+
+    @property
+    def charges(self) -> Dict[TopologyKey, Quantity]:
+        """Get the total partial charge on each atom, excluding virtual sites."""
+        return self.get_charges(include_virtual_sites=False)
+
+    def get_charges(
+        self,
+        include_virtual_sites: bool = False,
+    ) -> Dict[TopologyKey, Quantity]:
+        """Get the total partial charge on each atom or particle."""
+        if include_virtual_sites:
+            raise NotImplementedError()
+
+        charges: DefaultDict[TopologyKey, Quantity] = defaultdict(
+            lambda: Quantity(0.0, unit.elementary_charge),
+        )
+
+        for topology_key, potential_key in self.key_map.items():
+            potential = self.potentials[potential_key]
+
+            charges[topology_key] = potential.parameters["charge"]
+
+        return charges

@@ -28,10 +28,11 @@ if TYPE_CHECKING:
         ElectrostaticsCollection,
         vdWCollection,
     )
+    from openff.interchange.components.potentials import Collection
     from openff.interchange.smirnoff._base import SMIRNOFFCollection
 
 
-_DATA_DICT: TypeAlias = Dict[str, Union[None, str, bool, "SMIRNOFFCollection"]]
+_DATA_DICT: TypeAlias = Dict[str, Union[None, str, bool, "Collection"]]
 
 _MIXING_RULE_EXPRESSIONS: Dict[str, str] = {
     "lorentz-berthelot": "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); ",
@@ -262,7 +263,7 @@ def _prepare_input_data(interchange: "Interchange") -> _DATA_DICT:
 
     if vdw:
         vdw_cutoff: Optional[unit.Quanaity] = vdw.cutoff
-        vdw_method: Optional[str] = vdw.method.lower()
+        vdw_method: Optional[str] = getattr(vdw, "method", "cutoff").lower()
         mixing_rule: Optional[str] = getattr(vdw, "mixing_rule", None)
         vdw_expression: Optional[str] = vdw.expression.replace("**", "^")
     else:
@@ -282,9 +283,13 @@ def _prepare_input_data(interchange: "Interchange") -> _DATA_DICT:
         electrostatics_method: Optional[str] = None
     else:
         if interchange.box is None:
-            electrostatics_method = electrostatics.nonperiodic_potential
+            electrostatics_method = getattr(
+                electrostatics,
+                "nonperiodic_potential",
+                "Coulomb",
+            )
         else:
-            electrostatics_method = electrostatics.periodic_potential
+            electrostatics_method = getattr(electrostatics, "periodic_potential", _PME)
 
     return {
         "vdw_collection": vdw,
