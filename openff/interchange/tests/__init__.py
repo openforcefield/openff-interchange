@@ -1,7 +1,8 @@
 """Assorted utilities used in tests."""
 import pathlib
+import sys
 from collections import defaultdict
-from typing import DefaultDict, Dict, List, Tuple
+from typing import DefaultDict, Dict, List, Optional, Tuple
 
 import numpy as np
 import openmm
@@ -12,31 +13,41 @@ from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openmm import unit as openmm_unit
-from pkg_resources import resource_filename
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.gromacs import _find_gromacs_executable
 from openff.interchange.drivers.lammps import _find_lammps_executable
 
+if sys.version_info >= (3, 10):
+    from importlib import resources
+else:
+    import importlib_resources as resources
 
-def get_test_file_path(test_file) -> str:
+
+def get_test_file_path(test_file: str) -> pathlib.Path:
     """Given a filename in the collection of data files, return its full path."""
-    dir_path = resource_filename("openff.interchange", "tests/data/")
-    test_file_path = pathlib.Path(dir_path).joinpath(test_file)
+    test_dir_path = get_test_files_dir_path()
+    test_file_path = test_dir_path / test_file
 
     if test_file_path.is_file():
-        return test_file_path.as_posix()
+        return test_file_path
     else:
-        raise FileNotFoundError(f"could not file file {test_file} in path {dir_path}")
+        raise FileNotFoundError(
+            f"could not file file {test_file} in path {test_file_path}",
+        )
 
 
-def get_test_files_dir_path(dirname):
+def get_test_files_dir_path(dirname: Optional[str] = None) -> pathlib.Path:
     """Given a directory with a collection of test data files, return its full path."""
-    dir_path = resource_filename("openff.interchange", "tests/data/")
-    test_dir = pathlib.Path(dir_path).joinpath(dirname)
+    dir_path = resources.files("openff.interchange.tests.data")
+
+    if dirname:
+        test_dir: pathlib.PosixPath = dir_path / dirname  # type: ignore[assignment]
+    else:
+        test_dir = dir_path
 
     if test_dir.is_dir():
-        return test_dir.as_posix()
+        return test_dir
     else:
         raise NotADirectoryError(
             f"Provided directory {dirname} doesn't exist in {dir_path}",
@@ -281,7 +292,15 @@ HAS_GROMACS = _find_gromacs_executable() is not None
 HAS_LAMMPS = _find_lammps_executable() is not None
 
 needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
-needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs GROMACS")
+needs_not_gmx = pytest.mark.skipif(
+    HAS_GROMACS,
+    reason="Needs GROMACS to NOT be installed",
+)
+needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs LAMMPS")
+needs_not_lmp = pytest.mark.skipif(
+    HAS_LAMMPS,
+    reason="Needs LAMMPS to NOT be installed",
+)
 
 kj_nm2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.nanometer**2
 kj_rad2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.radian**2

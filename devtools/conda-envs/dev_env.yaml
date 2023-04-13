@@ -37,10 +37,9 @@ dependencies:
   # https://github.com/conda-forge/quippy-feedstock/issues/15
   - panedr
   # Typing
-  - mypy >=0.942
+  - mypy =1.0.1
   - typing-extensions
   - types-setuptools
-  - types-pkg_resources
   - pandas-stubs >=1.2.0.56
   # Development tools
   - jupyterlab

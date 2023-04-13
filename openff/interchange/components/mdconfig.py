@@ -32,7 +32,7 @@ class MDConfig(DefaultModel):
         True,
         description="Whether or not the system is periodic.",
     )
-    constraints: Literal["none", "h-bonds", "all-bonds", "all-angles"] = Field(
+    constraints: str = Field(
         "none",
         description="The type of constraints to be used in the simulation.",
     )

@@ -69,6 +69,8 @@ intersphinx_mapping = {
         "https://docs.openforcefield.org/",
         None,
     ),
+    "setuptools": ("https://setuptools.pypa.io/en/latest/", None),
+    "openmm": ("http://docs.openmm.org/latest/api-python/", None),
 }
 
 mermaid_init_js = """mermaid.initialize({
@@ -96,7 +98,7 @@ napoleon_google_docstring = False
 napoleon_use_param = False
 napoleon_use_ivar = True
 
-autodoc_mock_imports = []
+autodoc_mock_imports = ["jax"]
 autodoc_default_options = {
     "member-order": "bysource",
     "undoc-members": True,

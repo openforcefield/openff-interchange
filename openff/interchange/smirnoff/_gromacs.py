@@ -87,9 +87,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             unique_molecule.name = "MOL" + str(unique_molecule_index)
 
         for atom in unique_molecule.atoms:
-            atom_type_name = (
-                f"{unique_molecule.name}_{unique_molecule.atom_index(atom)}"
-            )
+            atom_type_name = f"{unique_molecule.name}{unique_molecule.atom_index(atom)}"
             _atom_atom_type_map[atom] = atom_type_name
 
             topology_index = interchange.topology.atom_index(atom)
@@ -122,6 +120,20 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
         molecule = GROMACSMolecule(name=unique_molecule.name)
 
         for atom in unique_molecule.atoms:
+            unique_residue_names = {
+                atom.metadata.get("residue_name", None)
+                for atom in unique_molecule.atoms
+            }
+
+            if None in unique_residue_names:
+                if len(unique_residue_names) > 1:
+                    raise NotImplementedError(
+                        "If some atoms have residue names, all atoms must have residue names.",
+                    )
+                else:
+                    for atom in unique_molecule.atoms:
+                        atom.metadata["residue_name"] = unique_molecule.name
+
             name = SYMBOLS[atom.atomic_number] if atom.name == "" else atom.name
             charge = (
                 unit.Quantity(0.0, unit.elementary_charge)
@@ -134,8 +146,11 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
                     index=unique_molecule.atom_index(atom) + 1,
                     name=name,
                     atom_type=_atom_atom_type_map[atom],
-                    residue_index=atom.metadata.get("residue_number", 1),
-                    residue_name=atom.metadata.get("residue_name", "RES"),
+                    residue_index=atom.metadata.get(
+                        "residue_number",
+                        unique_molecule_index + 1,
+                    ),
+                    residue_name=atom.metadata["residue_name"],
                     charge_group_number=1,
                     charge=charge,
                     mass=MASSES[atom.atomic_number],

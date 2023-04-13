@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - v0.3.0-staging
   pull_request:
     branches:
       - main
+      - v0.3.0-staging
 
 defaults:
   run:
@@ -21,9 +23,8 @@ jobs:
         os:
           - ubuntu-latest
         python-version:
-          - "3.8"
-          - "3.9"
           - "3.10"
+
     env:
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 

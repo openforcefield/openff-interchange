@@ -36,8 +36,7 @@ dependencies:
   - pytest
   - nbval
   # Typing
-  - mypy >=0.971
+  - mypy =1.0.1
   - typing-extensions
   - types-setuptools
-  - types-pkg_resources
   - pandas-stubs >=1.2.0.56
