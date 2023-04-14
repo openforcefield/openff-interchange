@@ -17,6 +17,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #635 Moves and re-organizes the contents of `openff.interchange.interop.internal.gromacs` to a new submodule `openff.interchange.interop.gromacs`.
 * #649 Removes the use of `pkg_resources`, which is deprecated.
 
+### Bugfixes
+
+* #655 Fixes #652 by avoiding writing a blank `RESIDUE_LABEL` section in Amber files.
+
 ### New features
 
 * #635 Adds a dedicated class `GROMACSSystem` to represent GROMACS state.

@@ -106,14 +106,25 @@ class TestPRMTOP(_BaseTest):
 
 
 class TestAmberResidues(_BaseTest):
-    def test_single_residue_system_residue_name(self, tmp_path, sage, ethanol):
-        for atom in ethanol.atoms:
-            atom.metadata["residue_name"] = "YUP"
+    @pytest.mark.parametrize("patch_residue_name", [True, False])
+    def test_single_residue_system_residue_name(
+        self,
+        tmp_path,
+        sage,
+        ethanol,
+        patch_residue_name,
+    ):
+        if patch_residue_name:
+            for atom in ethanol.atoms:
+                atom.metadata["residue_name"] = "YUP"
 
-        ethanol.add_default_hierarchy_schemes()
+            ethanol.add_default_hierarchy_schemes()
 
         Interchange.from_smirnoff(sage, [ethanol]).to_prmtop("test.prmtop")
 
         residue_names = [r.name for r in parmed.load_file("test.prmtop").residues]
 
-        assert residue_names == ["YUP"]
+        if patch_residue_name:
+            assert residue_names == ["YUP"]
+        else:
+            assert residue_names == ["RES"]
