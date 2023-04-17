@@ -46,6 +46,11 @@ class vdWCollection(_NonbondedCollection):
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )
 
+    switch_width: FloatQuantity["angstrom"] = Field(  # noqa
+        unit.Quantity(1.0, unit.angstrom),
+        description="The width over which the switching function is applied",
+    )
+
 
 class ElectrostaticsCollection(_NonbondedCollection):
     """Handler storing electrostatics interactions."""

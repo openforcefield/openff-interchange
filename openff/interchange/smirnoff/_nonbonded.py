@@ -5,7 +5,6 @@ from collections.abc import Iterable
 from typing import Any, DefaultDict, Literal, Optional, Union
 
 import numpy
-from openff.models.types import FloatQuantity
 from openff.toolkit import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ChargeIncrementModelHandler,
@@ -75,11 +74,6 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
     """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
 
     method: Literal["cutoff", "pme", "no-cutoff"] = Field("cutoff")
-
-    switch_width: FloatQuantity["angstrom"] = Field(  # noqa
-        unit.Quantity(1.0, unit.angstrom),
-        description="The width over which the switching function is applied",
-    )
 
     @classmethod
     def allowed_parameter_handlers(cls):

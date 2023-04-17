@@ -29,7 +29,7 @@ def from_openmm(
         "use cases. It is thereforce currently unsuitable for production work. "
         "However, it is an area of active development; if this function would "
         "enable key components of your workflows, feedback is welcome. Please "
-        'file an issue or create a new discussion (see the "Discussions" tab.',
+        'file an issue or create a new discussion (see the "Discussions" tab).',
     )
 
     interchange = Interchange()
@@ -84,7 +84,7 @@ def _convert_nonbonded_force(
     from openff.interchange.components.potentials import Potential
     from openff.interchange.models import PotentialKey, TopologyKey
 
-    if force.getNonbondedMethod() != 0:
+    if force.getNonbondedMethod() != 4:
         raise UnsupportedImportError(
             "Importing from OpenMM only currently supported with `openmm.NonbondedForce.PME`.",
         )
@@ -112,12 +112,19 @@ def _convert_nonbonded_force(
             {pot_key: Potential(parameters={"charge": from_openmm_quantity(charge)})},
         )
 
-    if force.getNonbondedMethod() == 0:
+    if force.getNonbondedMethod() == 4:
         vdw.cutoff = force.getCutoffDistance()
     else:
         raise UnsupportedImportError(
             f"Parsing a non-bonded force of type {type(force)} with {force.getNonbondedMethod()} not yet supported.",
         )
+
+    if force.getUseSwitchingFunction():
+        vdw.switch_width = vdw.cutoff - from_openmm_quantity(
+            force.getSwitchingDistance(),
+        )
+    else:
+        vdw.switch_width = 0.0 * vdw.cutoff.units
 
     return vdw, electrostatics
 
