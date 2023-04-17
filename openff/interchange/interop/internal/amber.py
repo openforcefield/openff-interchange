@@ -400,12 +400,19 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG ATOM_NAME\n" "%FORMAT(20a4)\n")
-        text_blob = "".join(
-            [
-                atom.name.ljust(4) if atom.name else atom.symbol.ljust(4)
-                for atom in interchange.topology.atoms
-            ],
-        )
+
+        atom_names: List[str] = list()
+
+        for atom in interchange.topology.atoms:
+            if hasattr(atom, "name"):
+                if atom.name:
+                    atom_names.append(atom.name)
+                else:
+                    atom_names.append(atom.symbol)
+            else:
+                atom_names.append(atom.symbol)
+
+        text_blob = "".join([str(val).rjust(4) for val in atom_names])
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG CHARGE\n" "%FORMAT(5E16.8)\n")
