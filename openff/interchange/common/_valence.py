@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Iterable, List, Literal, Tuple
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Literal
 
 from openff.interchange.components.potentials import Collection
 
@@ -18,7 +19,7 @@ class BondCollection(Collection):
         return "k", "length"
 
     @classmethod
-    def valence_terms(cls, topology) -> List[Tuple["Atom", ...]]:
+    def valence_terms(cls, topology) -> list[tuple["Atom", ...]]:
         """Return all bonds in this topology."""
         return [tuple(b.atoms) for b in topology.bonds]
 

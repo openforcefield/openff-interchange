@@ -1,7 +1,7 @@
 """Models and utilities for processing Foyer data."""
 from abc import abstractmethod
 from copy import copy
-from typing import TYPE_CHECKING, Dict, Optional, Type
+from typing import TYPE_CHECKING, Optional
 
 from openff.models.types import FloatQuantity
 from openff.units import unit
@@ -19,10 +19,10 @@ POTENTIAL_KEY_SEPARATOR = "-"
 
 
 def _copy_params(
-    params: Dict[str, float],
+    params: dict[str, float],
     *drop_keys: str,
-    param_units: Optional[Dict] = None,
-) -> Dict:
+    param_units: Optional[dict] = None,
+) -> dict:
     """Copy parameters from a dictionary."""
     params_copy = copy(params)
     for drop_key in drop_keys:
@@ -33,13 +33,13 @@ def _copy_params(
     return params_copy
 
 
-def _get_potential_key_id(atom_slots: Dict[TopologyKey, PotentialKey], idx):
+def _get_potential_key_id(atom_slots: dict[TopologyKey, PotentialKey], idx):
     """From a dictionary of TopologyKey: PotentialKey, get the PotentialKey id."""
     top_key = TopologyKey(atom_indices=(idx,))
     return atom_slots[top_key].id
 
 
-def get_handlers_callable() -> Dict[str, Type[Collection]]:
+def get_handlers_callable() -> dict[str, type[Collection]]:
     """Map Foyer-style handlers from string identifiers."""
     return {
         "vdW": FoyerVDWHandler,
@@ -105,7 +105,7 @@ class FoyerElectrostaticsHandler(Collection):
     type: str = "Electrostatics"
     periodic_potential: str = _PME
     expression: str = "coul"
-    charges: Dict[TopologyKey, float] = dict()
+    charges: dict[TopologyKey, float] = dict()
     scale_13: float = 0.0
     scale_14: float = 0.5
     scale_15: float = 1.0
@@ -118,7 +118,7 @@ class FoyerElectrostaticsHandler(Collection):
 
     def store_charges(
         self,
-        atom_slots: Dict[TopologyKey, PotentialKey],
+        atom_slots: dict[TopologyKey, PotentialKey],
         force_field: "Forcefield",
     ):
         """Look up fixed charges (a.k.a. library charges) from the force field and store them in self.charges."""
@@ -139,7 +139,7 @@ class FoyerConnectedAtomsHandler(Collection):
 
     def store_matches(
         self,
-        atom_slots: Dict[TopologyKey, PotentialKey],
+        atom_slots: dict[TopologyKey, PotentialKey],
         topology: "Topology",
     ) -> None:
         """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
@@ -204,7 +204,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler):
 
     def store_matches(
         self,
-        atom_slots: Dict[TopologyKey, PotentialKey],
+        atom_slots: dict[TopologyKey, PotentialKey],
         topology: "Topology",
     ) -> None:
         """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
@@ -243,7 +243,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler):
 
     def store_matches(
         self,
-        atom_slots: Dict[TopologyKey, PotentialKey],
+        atom_slots: dict[TopologyKey, PotentialKey],
         topology: "Topology",
     ) -> None:
         """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
@@ -280,7 +280,7 @@ class FoyerRBProperHandler(FoyerConnectedAtomsHandler):
 
     def store_matches(
         self,
-        atom_slots: Dict[TopologyKey, PotentialKey],
+        atom_slots: dict[TopologyKey, PotentialKey],
         topology: "Topology",
     ) -> None:
         """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""

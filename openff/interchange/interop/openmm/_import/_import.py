@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional
 
 import openmm
 
@@ -76,7 +76,7 @@ def from_openmm(
 
 def _convert_nonbonded_force(
     force: openmm.NonbondedForce,
-) -> Tuple["vdWCollection", "ElectrostaticsCollection"]:
+) -> tuple["vdWCollection", "ElectrostaticsCollection"]:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.common._nonbonded import (

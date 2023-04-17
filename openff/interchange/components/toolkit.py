@@ -1,5 +1,5 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, Union
 
 import networkx as nx
 import numpy as np
@@ -146,7 +146,7 @@ class _HashedMolecule(Molecule):
         return hash(self.to_smiles())
 
 
-def _assert_all_isomorphic(molecule_list: List[Molecule]) -> bool:
+def _assert_all_isomorphic(molecule_list: list[Molecule]) -> bool:
     hashed_molecules = {_HashedMolecule(molecule) for molecule in molecule_list}
 
     return len(hashed_molecules) == len(molecule_list)

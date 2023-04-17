@@ -1,7 +1,7 @@
 """
 Helper functions for exporting the topology to OpenMM.
 """
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, Union
 
 from openff.interchange.models import VirtualSiteKey
 
@@ -125,7 +125,7 @@ def to_openmm_topology(
             last_residue = residue
 
         if has_virtual_sites:
-            virtual_sites_in_this_molecule: List[
+            virtual_sites_in_this_molecule: list[
                 VirtualSiteKey
             ] = molecule_virtual_site_map[molecule_index]
             for this_virtual_site in virtual_sites_in_this_molecule:

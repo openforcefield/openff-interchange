@@ -3,7 +3,7 @@ import copy
 import json
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Literal, Optional, Tuple, Union, overload
+from typing import TYPE_CHECKING, Literal, Optional, Union, overload
 
 import numpy as np
 from openff.models.models import DefaultModel
@@ -93,7 +93,7 @@ def interchange_dumps(v, *, default):
 
 def interchange_loader(data: str) -> dict:
     """Load a JSON representation of an Interchange object."""
-    tmp: Dict = {
+    tmp: dict = {
         "positions": None,
         "velocities": None,
         "box": None,
@@ -123,7 +123,7 @@ class Interchange(DefaultModel):
     .. warning :: This API is experimental and subject to change.
     """
 
-    collections: Dict[str, Collection] = Field(dict())
+    collections: dict[str, Collection] = Field(dict())
     topology: Topology = Field(None)
     mdconfig: MDConfig = Field(None)
     box: ArrayQuantity["nanometer"] = Field(None)
@@ -200,11 +200,11 @@ class Interchange(DefaultModel):
     def from_smirnoff(
         cls,
         force_field: ForceField,
-        topology: Union[Topology, List[Molecule]],
+        topology: Union[Topology, list[Molecule]],
         box=None,
         positions=None,
-        charge_from_molecules: Optional[List[Molecule]] = None,
-        partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
+        charge_from_molecules: Optional[list[Molecule]] = None,
+        partial_bond_orders_from_molecules: Optional[list[Molecule]] = None,
         allow_nonintegral_charges: bool = False,
     ) -> "Interchange":
         """
@@ -516,7 +516,7 @@ class Interchange(DefaultModel):
         """
         raise NotImplementedError()
 
-    def _get_parameters(self, handler_name: str, atom_indices: Tuple[int]) -> Dict:
+    def _get_parameters(self, handler_name: str, atom_indices: tuple[int]) -> dict:
         """
         Get parameter values of a specific potential.
 

@@ -1,5 +1,5 @@
 """Interfaces with InterMol."""
-from typing import List, Union
+from typing import Union
 
 from intermol.forces import (
     HarmonicAngle,
@@ -52,7 +52,7 @@ def from_intermol_system(intermol_system: System) -> Interchange:
     improper_handler = BaseImproperTorsionHandler()
 
     # TODO: Store atomtypes on a minimal topology, not as a list
-    atomtypes: List = [atom.atomtype[0] for atom in intermol_system.atoms]
+    atomtypes: list = [atom.atomtype[0] for atom in intermol_system.atoms]
 
     for atom in intermol_system.atoms:
         topology_key = TopologyKey(atom_indices=(atom.index - 1,))

@@ -1,4 +1,4 @@
-from typing import Dict, List, Literal, Type
+from typing import Literal
 
 import numpy
 from openff.toolkit.topology import Topology
@@ -24,14 +24,14 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
     A handler which stores the information necessary to construct virtual sites (virtual particles).
     """
 
-    key_map: Dict[VirtualSiteKey, PotentialKey] = Field(
+    key_map: dict[VirtualSiteKey, PotentialKey] = Field(
         dict(),
         description="A mapping between VirtualSiteKey objects and PotentialKey objects.",
     )  # type: ignore[assignment]
 
     type: Literal["VirtualSites"] = "VirtualSites"
     expression: Literal[""] = ""
-    virtual_site_key_topology_index_map: Dict[VirtualSiteKey, int] = Field(
+    virtual_site_key_topology_index_map: dict[VirtualSiteKey, int] = Field(
         dict(),
         description="A mapping between VirtualSiteKey objects (stored analogously to TopologyKey objects"
         "in other handlers) and topology indices describing the associated virtual site",
@@ -47,12 +47,12 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
     ] = "parents"
 
     @classmethod
-    def allowed_parameter_handlers(cls) -> List[Type[ParameterHandler]]:
+    def allowed_parameter_handlers(cls) -> list[type[ParameterHandler]]:
         """Return a list of allowed types of ParameterHandler classes."""
         return [VirtualSiteHandler]
 
     @classmethod
-    def supported_parameters(cls) -> List[str]:
+    def supported_parameters(cls) -> list[str]:
         """Return a list of parameter attributes supported by this handler."""
         return [
             "type",
@@ -70,7 +70,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
         ]
 
     @classmethod
-    def nonbonded_parameters(cls) -> List[str]:
+    def nonbonded_parameters(cls) -> list[str]:
         """Return a list of parameter attributes handling vdW interactions."""
         return ["sigma", "epsilon"]
 

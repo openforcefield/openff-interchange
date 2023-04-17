@@ -1,7 +1,7 @@
 """A project (and object) for storing, manipulating, and converting molecular mechanics data."""
 import importlib
 from types import ModuleType
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING
 
 from openff.interchange._version import get_versions  # type: ignore
 
@@ -14,11 +14,11 @@ __version__ = versions["version"]
 __git_revision__ = versions["full-revisionid"]
 del get_versions, versions
 
-__all__: List[str] = [
+__all__: list[str] = [
     "Interchange",
 ]
 
-_objects: Dict[str, str] = {
+_objects: dict[str, str] = {
     "Interchange": "openff.interchange.components.interchange",
 }
 

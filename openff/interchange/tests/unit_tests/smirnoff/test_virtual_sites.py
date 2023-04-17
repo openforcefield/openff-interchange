@@ -1,5 +1,4 @@
 import itertools
-from typing import List, Tuple
 
 import numpy
 import openmm
@@ -212,7 +211,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
         parameter: VirtualSiteHandler.VirtualSiteType,
         smiles: str,
         input_conformer: unit.Quantity,
-        atoms_to_shuffle: Tuple[int, ...],
+        atoms_to_shuffle: tuple[int, ...],
         expected_coordinates: unit.Quantity,
     ):
         """An integration test that virtual sites are placed correctly relative to the
@@ -405,9 +404,9 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
     def test_create_force(
         self,
         topology: Topology,
-        parameters: List[VirtualSiteHandler.VirtualSiteType],
-        expected_parameters: List[
-            Tuple[openmm_unit.Quantity, openmm_unit.Quantity, openmm_unit.Quantity]
+        parameters: list[VirtualSiteHandler.VirtualSiteType],
+        expected_parameters: list[
+            tuple[openmm_unit.Quantity, openmm_unit.Quantity, openmm_unit.Quantity]
         ],
         expected_n_v_sites: int,
     ):

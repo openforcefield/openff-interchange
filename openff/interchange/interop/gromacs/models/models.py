@@ -1,5 +1,5 @@
 """Classes used to represent GROMACS state."""
-from typing import Dict, List, Optional
+from typing import Optional
 
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
@@ -88,7 +88,7 @@ class GROMACSExclusion(DefaultModel):
 
     first_atom: PositiveInt
 
-    other_atoms: List[PositiveInt]
+    other_atoms: list[PositiveInt]
 
 
 class GROMACSAngle(DefaultModel):
@@ -162,31 +162,31 @@ class GROMACSMolecule(DefaultModel):
         description="The farthest neighbor distance whose interactions should be excluded.",
     )
 
-    atoms: List[GROMACSAtom] = Field(
+    atoms: list[GROMACSAtom] = Field(
         list(),
         description="The atoms in this molecule.",
     )
-    pairs: List[GROMACSPair] = Field(
+    pairs: list[GROMACSPair] = Field(
         list(),
         description="The pairs in this molecule.",
     )
-    settles: List[GROMACSSettles] = Field(
+    settles: list[GROMACSSettles] = Field(
         list(),
         description="The settles in this molecule.",
     )
-    bonds: List[GROMACSBond] = Field(
+    bonds: list[GROMACSBond] = Field(
         list(),
         description="The bonds in this molecule.",
     )
-    angles: List[GROMACSAngle] = Field(
+    angles: list[GROMACSAngle] = Field(
         list(),
         description="The angles in this molecule.",
     )
-    dihedrals: List[GROMACSDihedral] = Field(
+    dihedrals: list[GROMACSDihedral] = Field(
         list(),
         description="The dihedrals in this molecule.",
     )
-    exclusions: List[GROMACSExclusion] = Field(
+    exclusions: list[GROMACSExclusion] = Field(
         list(),
         description="The exclusions in this molecule.",
     )
@@ -220,15 +220,15 @@ class GROMACSSystem(DefaultModel):
         0.833333,
         description="The 1-4 scaling factor for electrostatic interactions.",
     )
-    atom_types: Dict[str, GROMACSAtomType] = Field(
+    atom_types: dict[str, GROMACSAtomType] = Field(
         dict(),
         description="Atom types, keyed by name.",
     )
-    molecule_types: Dict[str, GROMACSMolecule] = Field(
+    molecule_types: dict[str, GROMACSMolecule] = Field(
         dict(),
         description="Molecule types, keyed by name.",
     )
-    molecules: Dict[str, int] = Field(
+    molecules: dict[str, int] = Field(
         dict(),
         description="The number of each molecule type in the system, keyed by the name of each molecule.",
     )

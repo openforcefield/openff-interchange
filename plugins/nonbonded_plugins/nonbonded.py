@@ -1,6 +1,7 @@
 """Custom classes exposed as plugins."""
 import math
-from typing import Dict, Iterable, Literal, Type
+from collections.abc import Iterable
+from typing import Literal
 
 from openff.models.types import FloatQuantity
 from openff.toolkit import Topology
@@ -132,7 +133,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
     switch_width: FloatQuantity["angstrom"] = unit.Quantity(1.0, unit.angstrom)  # noqa
 
     @classmethod
-    def allowed_parameter_handlers(cls) -> Iterable[Type[ParameterHandler]]:
+    def allowed_parameter_handlers(cls) -> Iterable[type[ParameterHandler]]:
         """Return a list of allowed types of ParameterHandler classes."""
         return (BuckinghamHandler,)
 
@@ -156,7 +157,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
         """Return a list of global parameters, i.e. not per-potential parameters."""
         return tuple()
 
-    def pre_computed_terms(self) -> Dict[str, float]:
+    def pre_computed_terms(self) -> dict[str, float]:
         """Return a dictionary of pre-computed terms for use in the expression."""
         return dict()
 
@@ -190,7 +191,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 
     @classmethod
     def create(
-        cls: Type[T],
+        cls: type[T],
         parameter_handler: BuckinghamHandler,
         topology: Topology,
     ) -> T:
@@ -262,7 +263,7 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
     beta: FloatQuantity["dimensionless"]  # noqa
 
     @classmethod
-    def allowed_parameter_handlers(cls) -> Iterable[Type[ParameterHandler]]:
+    def allowed_parameter_handlers(cls) -> Iterable[type[ParameterHandler]]:
         """Return a list of allowed types of ParameterHandler classes."""
         return (DoubleExponentialHandler,)
 
@@ -286,7 +287,7 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
         """Return a list of global parameters, i.e. not per-potential parameters."""
         return "alpha", "beta"
 
-    def pre_computed_terms(self) -> Dict[str, float]:
+    def pre_computed_terms(self) -> dict[str, float]:
         """Return a dictionary of pre-computed terms for use in the expression."""
         alpha_min_beta = self.alpha - self.beta
 
@@ -298,8 +299,8 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     def modify_parameters(
         self,
-        original_parameters: Dict[str, unit.Quantity],
-    ) -> Dict[str, float]:
+        original_parameters: dict[str, unit.Quantity],
+    ) -> dict[str, float]:
         """Optionally modify parameters prior to their being stored in a force."""
         # It's important that these keys are in the order of self.potential_parameters(),
         # consider adding a check somewhere that this is the case.
@@ -341,7 +342,7 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     @classmethod
     def create(
-        cls: Type[T],
+        cls: type[T],
         parameter_handler: DoubleExponentialHandler,
         topology: Topology,
     ) -> T:
@@ -397,7 +398,7 @@ class SMIRNOFFC4IonCollection(_SMIRNOFFNonbondedCollection):
     expression: str = "c*r^-4;c=sqrt(c1*c2);"
 
     @classmethod
-    def allowed_parameter_handlers(cls) -> Iterable[Type[ParameterHandler]]:
+    def allowed_parameter_handlers(cls) -> Iterable[type[ParameterHandler]]:
         """Return a list of allowed types of ParameterHandler classes."""
         return (C4IonHandler,)
 

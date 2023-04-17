@@ -1,5 +1,5 @@
 """Functions for running energy evluations with all available engines."""
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 from openff.utilities.utilities import requires_package
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from openff.interchange import Interchange
 
 
-def get_all_energies(interchange: "Interchange") -> Dict[str, EnergyReport]:
+def get_all_energies(interchange: "Interchange") -> dict[str, EnergyReport]:
     """
     Given an Interchange object, return single-point energies as computed by all available engines.
     """

@@ -2,7 +2,7 @@
 import pathlib
 import sys
 from collections import defaultdict
-from typing import DefaultDict, Dict, List, Optional, Tuple
+from typing import DefaultDict, Optional
 
 import numpy as np
 import openmm
@@ -350,7 +350,7 @@ def _get_charges_from_openff_interchange(interchange: Interchange):
     return charges
 
 
-def _create_torsion_dict(torsion_force) -> Dict[Tuple[int], List[Tuple]]:
+def _create_torsion_dict(torsion_force) -> dict[tuple[int], list[tuple]]:
     torsions: DefaultDict = defaultdict(list)
 
     for i in range(torsion_force.getNumTorsions()):

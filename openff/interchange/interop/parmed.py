@@ -1,5 +1,5 @@
 """Interfaces with ParmEd."""
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 from openff.units import Quantity, unit
@@ -67,7 +67,7 @@ def _to_parmed(interchangetem: "Interchange") -> "pmd.Structure":
 
     if "Bonds" in interchangetem.collections.keys():
         bond_handler = interchangetem["Bonds"]
-        bond_type_map: Dict = dict()
+        bond_type_map: dict = dict()
         for pot_key, pot in bond_handler.potentials.items():
             k = pot.parameters["k"].to(kcal_mol_a2).magnitude / 2
             length = pot.parameters["length"].to(unit.angstrom).magnitude
@@ -89,7 +89,7 @@ def _to_parmed(interchangetem: "Interchange") -> "pmd.Structure":
 
     if "Angles" in interchangetem.collections.keys():
         angle_handler = interchangetem["Angles"]
-        angle_type_map: Dict = dict()
+        angle_type_map: dict = dict()
         for pot_key, pot in angle_handler.potentials.items():
             k = pot.parameters["k"].to(kcal_mol_rad2).magnitude / 2
             theta = pot.parameters["angle"].to(unit.degree).magnitude
@@ -124,7 +124,7 @@ def _to_parmed(interchangetem: "Interchange") -> "pmd.Structure":
     vdw_handler = interchangetem["vdW"]
     if "ProperTorsions" in interchangetem.collections.keys():
         proper_torsion_handler = interchangetem["ProperTorsions"]
-        proper_type_map: Dict = dict()
+        proper_type_map: dict = dict()
         for pot_key, pot in proper_torsion_handler.potentials.items():
             k = pot.parameters["k"].to(kcal_mol).magnitude
             periodicity = pot.parameters["periodicity"]

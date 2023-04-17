@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Iterable, Literal, Optional
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Literal, Optional
 
 from openff.models.types import FloatQuantity
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler

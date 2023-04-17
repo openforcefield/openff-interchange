@@ -1,6 +1,6 @@
 """Interfaces with LAMMPS."""
 from pathlib import Path
-from typing import IO, Dict, Union
+from typing import IO, Union
 
 import numpy as np
 from openff.units import unit
@@ -132,7 +132,7 @@ def to_lammps(interchange: Interchange, file_path: Union[Path, str]):
             _write_impropers(lmp_file=lmp_file, interchange=interchange)
 
 
-def _write_pair_coeffs(lmp_file: IO, interchange: Interchange, atom_type_map: Dict):
+def _write_pair_coeffs(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
     """Write the Pair Coeffs section of a LAMMPS data file."""
     lmp_file.write("Pair Coeffs\n\n")
 
@@ -260,7 +260,7 @@ def _write_improper_coeffs(lmp_file: IO, interchange: Interchange):
     lmp_file.write("\n")
 
 
-def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: Dict):
+def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
     """Write the Atoms section of a LAMMPS data file."""
     lmp_file.write("\nAtoms\n\n")
 

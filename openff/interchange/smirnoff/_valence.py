@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict, List, Literal, Optional, Type, Union
+from typing import Literal, Optional, Union
 
 from openff.toolkit import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -49,7 +49,7 @@ def _upconvert_bondhandler(bond_handler: BondHandler):
         bond_handler.potential = "(k/2)*(r-length)^2"
 
 
-def _check_molecule_uniqueness(molecule_list: Optional[List[Molecule]]):
+def _check_molecule_uniqueness(molecule_list: Optional[list[Molecule]]):
     """Check if the reference molecule is isomorphic with any molecules in a provided list."""
     # TODO: This could all be replaced by MoleculeSet
     if molecule_list is None:
@@ -71,7 +71,7 @@ def _check_molecule_uniqueness(molecule_list: Optional[List[Molecule]]):
 
 def _molecule_is_in_list(
     molecule: Molecule,
-    molecule_list: Optional[List[Molecule]],
+    molecule_list: Optional[list[Molecule]],
 ) -> bool:
     if molecule_list is None:
         return False
@@ -130,7 +130,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
         if self.key_map:
             # TODO: Should the key_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
-            self.key_map: Dict[BondKey, PotentialKey] = dict()  # type: ignore[assignment]
+            self.key_map: dict[BondKey, PotentialKey] = dict()  # type: ignore[assignment]
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             param = val.parameter_type
@@ -229,10 +229,10 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
 
     @classmethod
     def create(
-        cls: Type[T],
+        cls: type[T],
         parameter_handler: BondHandler,
         topology: Topology,
-        partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
+        partial_bond_orders_from_molecules: Optional[list[Molecule]] = None,
     ) -> T:
         """
         Create a SMIRNOFFBondCollection from toolkit data.
@@ -277,7 +277,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
 
     type: Literal["Constraints"] = "Constraints"
     expression: Literal[""] = ""
-    constraints: Dict[
+    constraints: dict[
         PotentialKey,
         bool,
     ] = dict()  # should this be named potentials for consistency?
@@ -299,8 +299,8 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
 
     @classmethod
     def create(
-        cls: Type[T],
-        parameter_handler: List,
+        cls: type[T],
+        parameter_handler: list,
         topology: Topology,
         bonds: Optional[SMIRNOFFBondCollection] = None,
     ) -> T:
@@ -328,7 +328,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
 
     def store_constraints(
         self,
-        parameter_handlers: List,
+        parameter_handlers: list,
         topology: Topology,
         bonds: Optional[SMIRNOFFBondCollection] = None,
     ) -> None:
@@ -466,7 +466,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
 
         """
         if self.key_map:
-            self.key_map: Dict[ProperTorsionKey, PotentialKey] = dict()  # type: ignore[assignment]
+            self.key_map: dict[ProperTorsionKey, PotentialKey] = dict()  # type: ignore[assignment]
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             param = val.parameter_type
@@ -550,7 +550,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
 
     @classmethod
     def create(
-        cls: Type[T],
+        cls: type[T],
         parameter_handler: ProperTorsionHandler,
         topology: Topology,
         partial_bond_orders_from_molecules=None,

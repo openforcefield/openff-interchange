@@ -1,7 +1,7 @@
 """
 Common helpers for exporting virtual sites.
 """
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 import numpy
 from openff.units import unit
@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 
 def _virtual_site_parent_molecule_mapping(
     interchange: "Interchange",
-) -> Dict[VirtualSiteKey, int]:
-    mapping: Dict[VirtualSiteKey, int] = dict()
+) -> dict[VirtualSiteKey, int]:
+    mapping: dict[VirtualSiteKey, int] = dict()
 
     if "VirtualSites" not in interchange.collections:
         return mapping
