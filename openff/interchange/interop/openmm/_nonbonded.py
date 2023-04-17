@@ -247,11 +247,9 @@ def _prepare_input_data(interchange: "Interchange") -> _DATA_DICT:
     except LookupError:
         for collection in interchange.collections.values():
             if collection.is_plugin:
-                if collection.acts_as == "vdW" and isinstance(
-                    collection,
-                    vdWCollection,
-                ):
-                    vdw = collection
+                if collection.acts_as == "vdW":
+                    # We can't be completely sure all plugins subclass out of vdWCollection here
+                    vdw = collection  # type: ignore[assignment]
                     break
         else:
             vdw = None  # type: ignore[assignment]

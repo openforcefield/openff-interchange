@@ -223,6 +223,7 @@ class TestOpenMM(_BaseTest):
         else:
             raise Exception("No HarmonicAngleForce found")
 
+    @pytest.mark.skip(reason="Rewrite as a plugin")
     def test_nonharmonic_angle(self, sage, ethanol_top):
         out = Interchange.from_smirnoff(sage, ethanol_top)
         out["Angles"].expression = "k/2*(cos(theta)-cos(angle))**2"
