@@ -1,8 +1,9 @@
 import abc
 import json
-from typing import TYPE_CHECKING, Dict, Type, TypeVar
+from typing import TypeVar
 
 from openff.models.types import custom_quantity_encoder, json_loader
+from openff.toolkit.topology import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -21,10 +22,6 @@ from openff.interchange.exceptions import (
     UnassignedTorsionError,
 )
 from openff.interchange.models import PotentialKey, TopologyKey
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology import Topology
-
 
 T = TypeVar("T", bound="SMIRNOFFCollection")
 TP = TypeVar("TP", bound="ParameterHandler")
@@ -179,7 +176,6 @@ class SMIRNOFFCollection(Collection, abc.ABC):
     @classmethod
     def check_openmm_requirements(cls, combine_nonbonded_forces: bool) -> None:
         """Run through a list of assertions about what is compatible when exporting this to OpenMM."""
-        pass
 
     def store_matches(
         self,
@@ -190,7 +186,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
         if self.key_map:
             # TODO: Should the key_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
-            self.key_map: Dict[TopologyKey, PotentialKey] = dict()
+            self.key_map: dict[TopologyKey, PotentialKey] = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             topology_key = TopologyKey(atom_indices=key)
@@ -221,7 +217,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
 
     @classmethod
     def create(
-        cls: Type[T],
+        cls: type[T],
         parameter_handler: TP,
         topology: "Topology",
     ) -> T:

@@ -1,6 +1,6 @@
 """Interfaces to external libraries (without explicitly writing to files)."""
 from pathlib import Path
-from typing import List, Union
+from typing import Union
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import (
@@ -13,10 +13,10 @@ from openff.interchange.exceptions import (
 class InteroperabilityWrapper:
     """Base class for writer wrappers."""
 
-    _write_formats: List[str] = []
+    _write_formats: list[str] = []
 
     @property
-    def write_formats(self) -> List[str]:
+    def write_formats(self) -> list[str]:
         """Return a list of supported writing formats."""
         return self._write_formats
 

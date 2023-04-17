@@ -1,6 +1,6 @@
 """Custom Pydantic models."""
 import abc
-from typing import Literal, Optional, Tuple
+from typing import Literal, Optional
 
 from openff.models.models import DefaultModel
 from pydantic import Field
@@ -39,7 +39,7 @@ class TopologyKey(DefaultModel, abc.ABC):
     """
 
     # TODO: Swith to `pydantic.contuple` once 1.10.3 or 2.0.0 is released
-    atom_indices: Tuple[int, ...] = Field(
+    atom_indices: tuple[int, ...] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
@@ -55,7 +55,7 @@ class BondKey(TopologyKey):
     A unique identifier of the atoms associated in a bond potential.
     """
 
-    atom_indices: Tuple[int, ...] = Field(
+    atom_indices: tuple[int, ...] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
@@ -83,7 +83,7 @@ class AngleKey(TopologyKey):
     A unique identifier of the atoms associated in an angle potential.
     """
 
-    atom_indices: Tuple[int, ...] = Field(
+    atom_indices: tuple[int, ...] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
@@ -93,7 +93,7 @@ class ProperTorsionKey(TopologyKey):
     A unique identifier of the atoms associated in a proper torsion potential.
     """
 
-    atom_indices: Tuple[int, ...] = Field(
+    atom_indices: tuple[int, ...] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
@@ -152,7 +152,7 @@ class LibraryChargeTopologyKey(DefaultModel):
     this_atom_index: int
 
     @property
-    def atom_indices(self) -> Tuple[int, ...]:
+    def atom_indices(self) -> tuple[int, ...]:
         """Alias for `this_atom_index`."""
         return (self.this_atom_index,)
 
@@ -165,8 +165,6 @@ class SingleAtomChargeTopologyKey(LibraryChargeTopologyKey):
     Shim class for storing the result of charge_from_molecules.
     """
 
-    pass
-
 
 class ChargeModelTopologyKey(DefaultModel):
     """Subclass of `TopologyKey` for use with charge models only."""
@@ -175,7 +173,7 @@ class ChargeModelTopologyKey(DefaultModel):
     partial_charge_method: str
 
     @property
-    def atom_indices(self) -> Tuple[int, ...]:
+    def atom_indices(self) -> tuple[int, ...]:
         """Alias for `this_atom_index`."""
         return (self.this_atom_index,)
 
@@ -188,10 +186,10 @@ class ChargeIncrementTopologyKey(DefaultModel):
 
     # TODO: Eventually rename this for coherence with `TopologyKey`
     this_atom_index: int
-    other_atom_indices: Tuple[int, ...]
+    other_atom_indices: tuple[int, ...]
 
     @property
-    def atom_indices(self) -> Tuple[int, ...]:
+    def atom_indices(self) -> tuple[int, ...]:
         """Alias for `this_atom_index`."""
         return (self.this_atom_index,)
 
@@ -205,9 +203,9 @@ class VirtualSiteKey(TopologyKey):
     # TODO: Overriding the attribute of a parent class is clumsy, but less grief than
     #       having this not inherit from `TopologyKey`. It might be useful to just have
     #       orientation_atom_indices point to the same thing.
-    atom_indices: Optional[Tuple[int]] = None  # type: ignore[assignment]
+    atom_indices: Optional[tuple[int]] = None  # type: ignore[assignment]
 
-    orientation_atom_indices: Tuple[int, ...] = Field(
+    orientation_atom_indices: tuple[int, ...] = Field(
         description="The indices of the 'orientation atoms' which are used to define the position "
         "of this virtual site. The first atom is the 'parent atom' which defines which atom the "
         "virtual site is 'attached' to.",

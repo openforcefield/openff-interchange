@@ -1,6 +1,6 @@
 import abc
 from collections import defaultdict
-from typing import DefaultDict, Dict, Literal
+from typing import DefaultDict, Literal
 
 from openff.models.types import FloatQuantity
 from openff.units import Quantity, unit
@@ -41,7 +41,7 @@ class vdWCollection(_NonbondedCollection):
         "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     ] = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
 
-    mixing_rule: Literal["lorentz-berthelot"] = Field(
+    mixing_rule: str = Field(
         "lorentz-berthelot",
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )
@@ -60,14 +60,14 @@ class ElectrostaticsCollection(_NonbondedCollection):
     expression: Literal["coul"] = "coul"
 
     @property
-    def charges(self) -> Dict[TopologyKey, Quantity]:
+    def charges(self) -> dict[TopologyKey, Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
         return self.get_charges(include_virtual_sites=False)
 
     def get_charges(
         self,
         include_virtual_sites: bool = False,
-    ) -> Dict[TopologyKey, Quantity]:
+    ) -> dict[TopologyKey, Quantity]:
         """Get the total partial charge on each atom or particle."""
         if include_virtual_sites:
             raise NotImplementedError()

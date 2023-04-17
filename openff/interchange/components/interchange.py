@@ -3,7 +3,7 @@ import copy
 import json
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Literal, Optional, Tuple, Union, overload
+from typing import Literal, Optional, Union, overload
 
 import numpy as np
 from openff.models.models import DefaultModel
@@ -13,6 +13,13 @@ from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
 
+from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
+from openff.interchange.common._valence import (
+    AngleCollection,
+    BondCollection,
+    ImproperTorsionCollection,
+    ProperTorsionCollection,
+)
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.components.potentials import Collection
 from openff.interchange.exceptions import (
@@ -24,30 +31,14 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
 )
 from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.smirnoff._valence import SMIRNOFFConstraintCollection
+from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
-if TYPE_CHECKING:
-    from openff.interchange.components.foyer import (
-        FoyerElectrostaticsHandler,
-        FoyerVDWHandler,
-    )
-    from openff.interchange.smirnoff._nonbonded import (
-        SMIRNOFFElectrostaticsCollection,
-        SMIRNOFFvdWCollection,
-    )
-    from openff.interchange.smirnoff._valence import (
-        SMIRNOFFAngleCollection,
-        SMIRNOFFBondCollection,
-        SMIRNOFFConstraintCollection,
-        SMIRNOFFImproperTorsionCollection,
-        SMIRNOFFProperTorsionCollection,
-    )
-    from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
-
-    if has_package("foyer"):
-        from foyer.forcefield import Forcefield as FoyerForcefield
-    if has_package("nglview"):
-        import nglview
+if has_package("foyer"):
+    from foyer.forcefield import Forcefield as FoyerForcefield
+if has_package("nglview"):
+    import nglview
 
 
 def _sanitize(o):
@@ -65,7 +56,7 @@ def _sanitize(o):
 class TopologyEncoder(json.JSONEncoder):
     """Custom encoder for `Topology` objects."""
 
-    def default(self, obj: "Topology"):  # noqa
+    def default(self, obj: Topology):  # noqa
         _topology = copy.deepcopy(obj)
         for molecule in _topology.molecules:
             molecule._conformers = None
@@ -93,7 +84,7 @@ def interchange_dumps(v, *, default):
 
 def interchange_loader(data: str) -> dict:
     """Load a JSON representation of an Interchange object."""
-    tmp: Dict = {
+    tmp: dict = {
         "positions": None,
         "velocities": None,
         "box": None,
@@ -123,12 +114,12 @@ class Interchange(DefaultModel):
     .. warning :: This API is experimental and subject to change.
     """
 
-    collections: Dict[str, Collection] = Field(dict())
+    collections: dict[str, Collection] = Field(dict())
     topology: Topology = Field(None)
     mdconfig: MDConfig = Field(None)
     box: ArrayQuantity["nanometer"] = Field(None)
     positions: ArrayQuantity["nanometer"] = Field(None)
-    velocities: ArrayQuantity["nanometer/picosecond"] = Field(None)
+    velocities: ArrayQuantity["nanometer / picosecond"] = Field(None)
 
     class Config:
         """Custom Pydantic-facing configuration for the Interchange class."""
@@ -200,11 +191,11 @@ class Interchange(DefaultModel):
     def from_smirnoff(
         cls,
         force_field: ForceField,
-        topology: Union[Topology, List[Molecule]],
+        topology: Union[Topology, list[Molecule]],
         box=None,
         positions=None,
-        charge_from_molecules: Optional[List[Molecule]] = None,
-        partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
+        charge_from_molecules: Optional[list[Molecule]] = None,
+        partial_bond_orders_from_molecules: Optional[list[Molecule]] = None,
         allow_nonintegral_charges: bool = False,
     ) -> "Interchange":
         """
@@ -421,7 +412,7 @@ class Interchange(DefaultModel):
     def from_foyer(
         cls,
         force_field: "FoyerForcefield",
-        topology: "Topology",
+        topology: Topology,
         **kwargs,
     ) -> "Interchange":
         """
@@ -446,61 +437,12 @@ class Interchange(DefaultModel):
             Interchange with 8 atoms, non-periodic topology
 
         """
-        from openff.interchange.components.foyer import get_handlers_callable
+        from openff.interchange.foyer._create import _create_interchange
 
-        system = cls()
-        system.topology = topology
-
-        # This block is from a mega merge, unclear if it's still needed
-        for name, Handler in get_handlers_callable().items():
-            if name == "Electrostatics":
-                handler = Handler(scale_14=force_field.coulomb14scale)
-            if name == "vdW":
-                handler = Handler(scale_14=force_field.lj14scale)
-            else:
-                handler = Handler()
-
-            system.collections[name] = handler
-
-        vdw_handler: FoyerVDWHandler = system["vdW"]  # type: ignore[assignment]
-
-        vdw_handler.store_matches(force_field, topology=system.topology)
-        vdw_handler.store_potentials(force_field=force_field)
-
-        atom_slots = vdw_handler.key_map
-
-        electrostatics: FoyerElectrostaticsHandler = system["Electrostatics"]  # type: ignore[assignment]
-        electrostatics.store_charges(
-            atom_slots=atom_slots,
+        return _create_interchange(
             force_field=force_field,
+            topology=topology,
         )
-
-        vdw_handler.scale_14 = force_field.lj14scale  # type: ignore[assignment]
-        electrostatics.scale_14 = force_field.coulomb14scale  # type: ignore[assignment]
-
-        for name, handler in system.collections.items():
-            if name not in ["vdW", "Electrostatics"]:
-                handler.store_matches(atom_slots, topology=system.topology)
-                handler.store_potentials(force_field)
-
-        # FIXME: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
-
-        charges = electrostatics.charges
-
-        for molecule in system.topology.molecules:
-            molecule_charges = [
-                charges[TopologyKey(atom_indices=(system.topology.atom_index(atom),))].m  # type: ignore[attr-defined]
-                for atom in molecule.atoms
-            ]
-            molecule.partial_charges = unit.Quantity(
-                molecule_charges,
-                unit.elementary_charge,
-            )
-
-        system.collections["vdW"] = vdw_handler
-        system.collections["Electrostatics"] = electrostatics
-
-        return system
 
     @classmethod
     @requires_package("intermol")
@@ -516,7 +458,7 @@ class Interchange(DefaultModel):
         """
         raise NotImplementedError()
 
-    def _get_parameters(self, handler_name: str, atom_indices: Tuple[int]) -> Dict:
+    def _get_parameters(self, handler_name: str, atom_indices: tuple[int]) -> dict:
         """
         Get parameter values of a specific potential.
 
@@ -544,7 +486,7 @@ class Interchange(DefaultModel):
             return super().__getattribute__(attr)
 
     @overload
-    def __getitem__(self, item: Literal["Bonds"]) -> "SMIRNOFFBondCollection":
+    def __getitem__(self, item: Literal["Bonds"]) -> "BondCollection":
         ...
 
     @overload
@@ -555,28 +497,28 @@ class Interchange(DefaultModel):
         ...
 
     @overload
-    def __getitem__(self, item: Literal["Angles"]) -> "SMIRNOFFAngleCollection":
+    def __getitem__(self, item: Literal["Angles"]) -> "AngleCollection":
         ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["vdW"],
-    ) -> Union["SMIRNOFFvdWCollection", "FoyerVDWHandler"]:
+    ) -> "vdWCollection":
         ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["ProperTorsions"],
-    ) -> "SMIRNOFFProperTorsionCollection":
+    ) -> "ProperTorsionCollection":
         ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["ImproperTorsions"],
-    ) -> "SMIRNOFFImproperTorsionCollection":
+    ) -> "ImproperTorsionCollection":
         ...
 
     @overload
@@ -590,11 +532,11 @@ class Interchange(DefaultModel):
     def __getitem__(
         self,
         item: Literal["Electrostatics"],
-    ) -> Union["SMIRNOFFElectrostaticsCollection", "FoyerElectrostaticsHandler"]:
+    ) -> "ElectrostaticsCollection":
         ...
 
     @overload
-    def __getitem__(self, item: str) -> Collection:
+    def __getitem__(self, item: str) -> "Collection":
         ...
 
     def __getitem__(self, item: str):  # noqa

@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict, List, Literal, Optional, Type, Union
+from typing import Literal, Optional, Union
 
 from openff.toolkit import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -12,6 +12,12 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 
+from openff.interchange.common._valence import (
+    AngleCollection,
+    BondCollection,
+    ImproperTorsionCollection,
+    ProperTorsionCollection,
+)
 from openff.interchange.components.potentials import Potential, WrappedPotential
 from openff.interchange.exceptions import (
     DuplicateMoleculeError,
@@ -29,6 +35,8 @@ from openff.interchange.smirnoff._base import (
     T,
     _check_all_valence_terms_assigned,
 )
+
+_CollectionAlias = type[T]
 
 
 def _upconvert_bondhandler(bond_handler: BondHandler):
@@ -49,7 +57,7 @@ def _upconvert_bondhandler(bond_handler: BondHandler):
         bond_handler.potential = "(k/2)*(r-length)^2"
 
 
-def _check_molecule_uniqueness(molecule_list: Optional[List[Molecule]]):
+def _check_molecule_uniqueness(molecule_list: Optional[list[Molecule]]):
     """Check if the reference molecule is isomorphic with any molecules in a provided list."""
     # TODO: This could all be replaced by MoleculeSet
     if molecule_list is None:
@@ -71,7 +79,7 @@ def _check_molecule_uniqueness(molecule_list: Optional[List[Molecule]]):
 
 def _molecule_is_in_list(
     molecule: Molecule,
-    molecule_list: Optional[List[Molecule]],
+    molecule_list: Optional[list[Molecule]],
 ) -> bool:
     if molecule_list is None:
         return False
@@ -91,7 +99,7 @@ def _get_interpolation_coeffs(fractional_bond_order, data):
     return coeff1, coeff2
 
 
-class SMIRNOFFBondCollection(SMIRNOFFCollection):
+class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
     """Collection storing bond potentials as produced by a SMIRNOFF force field."""
 
     type: Literal["Bonds"] = "Bonds"
@@ -130,7 +138,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
         if self.key_map:
             # TODO: Should the key_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
-            self.key_map: Dict[BondKey, PotentialKey] = dict()  # type: ignore[assignment]
+            self.key_map: dict[BondKey, PotentialKey] = dict()  # type: ignore[assignment]
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             param = val.parameter_type
@@ -229,11 +237,11 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
 
     @classmethod
     def create(
-        cls: Type[T],
+        cls: _CollectionAlias,
         parameter_handler: BondHandler,
         topology: Topology,
-        partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
-    ) -> T:
+        partial_bond_orders_from_molecules: Optional[list[Molecule]] = None,
+    ) -> "SMIRNOFFBondCollection":
         """
         Create a SMIRNOFFBondCollection from toolkit data.
 
@@ -245,7 +253,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection):
         if type(parameter_handler) not in cls.allowed_parameter_handlers():
             raise InvalidParameterHandlerError
 
-        handler: T = cls(
+        handler: "SMIRNOFFBondCollection" = cls(
             type="Bonds",
             expression="k/2*(r-length)**2",
             fractional_bond_order_method=parameter_handler.fractional_bondorder_method,
@@ -277,7 +285,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
 
     type: Literal["Constraints"] = "Constraints"
     expression: Literal[""] = ""
-    constraints: Dict[
+    constraints: dict[
         PotentialKey,
         bool,
     ] = dict()  # should this be named potentials for consistency?
@@ -299,11 +307,11 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
 
     @classmethod
     def create(
-        cls: Type[T],
-        parameter_handler: List,
+        cls: _CollectionAlias,
+        parameter_handler: list,
         topology: Topology,
         bonds: Optional[SMIRNOFFBondCollection] = None,
-    ) -> T:
+    ) -> "SMIRNOFFConstraintCollection":
         """
         Create a SMIRNOFFCollection from toolkit data.
 
@@ -317,18 +325,18 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
             if type(parameter_handler) not in cls.allowed_parameter_handlers():
                 raise InvalidParameterHandlerError(type(parameter_handler))
 
-        handler = cls()
-        handler.store_constraints(
+        collection = cls()
+        collection.store_constraints(
             parameter_handlers=parameter_handlers,
             topology=topology,
             bonds=bonds,
         )
 
-        return handler
+        return collection
 
     def store_constraints(
         self,
-        parameter_handlers: List,
+        parameter_handlers: list,
         topology: Topology,
         bonds: Optional[SMIRNOFFBondCollection] = None,
     ) -> None:
@@ -385,14 +393,11 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
             self.constraints[potential_key] = potential  # type: ignore[assignment]
 
 
-class SMIRNOFFAngleCollection(SMIRNOFFCollection):
+class SMIRNOFFAngleCollection(SMIRNOFFCollection, AngleCollection):
     """Handler storing angle potentials as produced by a SMIRNOFF force field."""
 
     type: Literal["Angles"] = "Angles"
-    expression: Literal[
-        "k/2*(theta-angle)**2",
-        "k/2*(cos(theta)-cos(angle))**2",
-    ] = "k/2*(theta-angle)**2"
+    expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -431,7 +436,7 @@ class SMIRNOFFAngleCollection(SMIRNOFFCollection):
             self.potentials[potential_key] = potential
 
 
-class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
+class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollection):
     """Handler storing proper torsions potentials as produced by a SMIRNOFF force field."""
 
     type: Literal["ProperTorsions"] = "ProperTorsions"
@@ -466,7 +471,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
 
         """
         if self.key_map:
-            self.key_map: Dict[ProperTorsionKey, PotentialKey] = dict()  # type: ignore[assignment]
+            self.key_map: dict[ProperTorsionKey, PotentialKey] = dict()  # type: ignore[assignment]
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             param = val.parameter_type
@@ -550,16 +555,16 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
 
     @classmethod
     def create(
-        cls: Type[T],
+        cls: _CollectionAlias,
         parameter_handler: ProperTorsionHandler,
         topology: Topology,
         partial_bond_orders_from_molecules=None,
-    ) -> T:
+    ) -> "SMIRNOFFProperTorsionCollection":
         """
         Create a SMIRNOFFProperTorsionCollection from toolkit data.
 
         """
-        handler: T = cls(
+        collection: "SMIRNOFFProperTorsionCollection" = cls(
             type="ProperTorsions",
             expression="k*(1+cos(periodicity*theta-phase))",
             fractional_bond_order_method=parameter_handler.fractional_bondorder_method,
@@ -579,16 +584,16 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection):
                 # TODO: expose conformer generation and fractional bond order assigment knobs via API?
                 molecule.generate_conformers(n_conformers=1)
                 molecule.assign_fractional_bond_orders(
-                    bond_order_model=handler.fractional_bond_order_method.lower(),
+                    bond_order_model=collection.fractional_bond_order_method.lower(),
                 )
 
-        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
-        handler.store_potentials(parameter_handler=parameter_handler)
+        collection.store_matches(parameter_handler=parameter_handler, topology=topology)
+        collection.store_potentials(parameter_handler=parameter_handler)
 
-        return handler
+        return collection
 
 
-class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection):
+class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection, ImproperTorsionCollection):
     """Handler storing improper torsions potentials as produced by a SMIRNOFF force field."""
 
     type: Literal["ImproperTorsions"] = "ImproperTorsions"

@@ -1,6 +1,7 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Type, Union
+from typing import Optional, Union
 
 from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff import ParameterHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 from openff.units import Quantity
 from packaging.version import Version
@@ -12,6 +13,7 @@ from openff.interchange.exceptions import (
     SMIRNOFFHandlersNotImplementedError,
 )
 from openff.interchange.plugins import load_smirnoff_plugins
+from openff.interchange.smirnoff._base import SMIRNOFFCollection
 from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
@@ -27,12 +29,7 @@ from openff.interchange.smirnoff._valence import (
 )
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 
-if TYPE_CHECKING:
-    from openff.toolkit.typing.engines.smirnoff import ParameterHandler
-
-    from openff.interchange.smirnoff._base import SMIRNOFFCollection
-
-_SUPPORTED_PARAMETER_HANDLERS: Set[str] = {
+_SUPPORTED_PARAMETER_HANDLERS: set[str] = {
     "Constraints",
     "Bonds",
     "Angles",
@@ -46,14 +43,14 @@ _SUPPORTED_PARAMETER_HANDLERS: Set[str] = {
     "GBSA",
 }
 
-_PLUGIN_CLASS_MAPPING: Dict[
-    Type["ParameterHandler"],
-    Type["SMIRNOFFCollection"],
+_PLUGIN_CLASS_MAPPING: dict[
+    type["ParameterHandler"],
+    type["SMIRNOFFCollection"],
 ] = dict()
 
 for collection_plugin in load_smirnoff_plugins():
-    parameter_handlers: List[
-        Type["ParameterHandler"]
+    parameter_handlers: list[
+        type["ParameterHandler"]
     ] = collection_plugin.allowed_parameter_handlers()
 
     for parameter_handler in parameter_handlers:
@@ -86,11 +83,11 @@ def _check_supported_handlers(force_field: ForceField):
 
 def _create_interchange(
     force_field: ForceField,
-    topology: Union[Topology, List[Molecule]],
+    topology: Union[Topology, list[Molecule]],
     box: Optional[Quantity] = None,
     positions: Optional[Quantity] = None,
-    charge_from_molecules: Optional[List[Molecule]] = None,
-    partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
+    charge_from_molecules: Optional[list[Molecule]] = None,
+    partial_bond_orders_from_molecules: Optional[list[Molecule]] = None,
     allow_nonintegral_charges: bool = False,
 ) -> Interchange:
     _check_supported_handlers(force_field)
@@ -137,7 +134,7 @@ def _bonds(
     interchange: Interchange,
     force_field: ForceField,
     _topology: Topology,
-    partial_bond_orders_from_molecules: Optional[List[Molecule]] = None,
+    partial_bond_orders_from_molecules: Optional[list[Molecule]] = None,
 ):
     if "Bonds" not in force_field.registered_parameter_handlers:
         return
@@ -248,7 +245,7 @@ def _electrostatics(
     interchange: Interchange,
     force_field: ForceField,
     topology: Topology,
-    charge_from_molecules: Optional[List[Molecule]] = None,
+    charge_from_molecules: Optional[list[Molecule]] = None,
     allow_nonintegral_charges: bool = False,
 ):
     if "Electrostatics" not in force_field.registered_parameter_handlers:
@@ -377,7 +374,7 @@ def _plugins(
 
         else:
             # If this collection takes multiple handlers, pass it a list. Consider making this type the default.
-            handlers: List[ParameterHandler] = [
+            handlers: list[ParameterHandler] = [
                 force_field[handler_class._TAGNAME]
                 for handler_class in _PLUGIN_CLASS_MAPPING.keys()
             ]

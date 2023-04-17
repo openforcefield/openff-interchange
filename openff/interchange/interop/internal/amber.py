@@ -2,11 +2,13 @@
 import textwrap
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
+from openff.toolkit import Topology
 from openff.units import unit
 
+from openff.interchange import Interchange
 from openff.interchange.components.toolkit import _get_num_h_bonds
 from openff.interchange.constants import (
     _PME,
@@ -19,12 +21,7 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
     UnsupportedMixingRuleError,
 )
-
-if TYPE_CHECKING:
-    from openff.toolkit import Topology
-
-    from openff.interchange import Interchange
-    from openff.interchange.models import PotentialKey
+from openff.interchange.models import PotentialKey
 
 
 def _write_text_blob(file, blob):
@@ -35,9 +32,9 @@ def _write_text_blob(file, blob):
             file.write(line + "\n")
 
 
-def _get_exclusion_lists(topology: "Topology") -> Tuple[List[int], List[int]]:
-    number_excluded_atoms: List[int] = list()
-    excluded_atoms_list: List[int] = list()
+def _get_exclusion_lists(topology: "Topology") -> tuple[list[int], list[int]]:
+    number_excluded_atoms: list[int] = list()
+    excluded_atoms_list: list[int] = list()
 
     for atom1 in topology.atoms:
         # Excluded atoms _on this atom_
@@ -108,7 +105,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         typemap = _build_typemap(interchange)  # noqa
 
-        potential_key_to_atom_type_mapping: Dict[PotentialKey, int] = {
+        potential_key_to_atom_type_mapping: dict[PotentialKey, int] = {
             key: i for i, key in enumerate(interchange["vdW"].potentials)
         }
         atom_type_indices = [
@@ -116,11 +113,11 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             for potential_key in interchange["vdW"].key_map.values()
         ]
 
-        potential_key_to_bond_type_mapping: Dict[PotentialKey, int] = {
+        potential_key_to_bond_type_mapping: dict[PotentialKey, int] = {
             key: i for i, key in enumerate(interchange["Bonds"].potentials)
         }
 
-        potential_key_to_angle_type_mapping: Dict[PotentialKey, int] = {
+        potential_key_to_angle_type_mapping: dict[PotentialKey, int] = {
             key: i for i, key in enumerate(interchange["Angles"].potentials)
         }
 
@@ -130,16 +127,16 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
                 dihedral_potentials.update(deepcopy(interchange[key].potentials))
                 dihedral_potentials.update(deepcopy(interchange[key].potentials))
 
-        potential_key_to_dihedral_type_mapping: Dict[PotentialKey, int] = {
+        potential_key_to_dihedral_type_mapping: dict[PotentialKey, int] = {
             key: i for i, key in enumerate(dihedral_potentials)
         }
 
         # Track bonds and angles here also to ensure the 1-2 and 1-3 exclusions are
         # properly applied.
-        known_14_pairs: List[List[int]] = list()
+        known_14_pairs: list[list[int]] = list()
 
-        bonds_inc_hydrogen: List[int] = list()
-        bonds_without_hydrogen: List[int] = list()
+        bonds_inc_hydrogen: list[int] = list()
+        bonds_without_hydrogen: list[int] = list()
 
         for bond, key_ in interchange["Bonds"].key_map.items():
             bond_type_index = potential_key_to_bond_type_mapping[key_]
@@ -162,8 +159,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             known_14_pairs.append(bond_indices)
             known_14_pairs.append(list(reversed(bond_indices)))
 
-        angles_inc_hydrogen: List[int] = list()
-        angles_without_hydrogen: List[int] = list()
+        angles_inc_hydrogen: list[int] = list()
+        angles_without_hydrogen: list[int] = list()
 
         for angle, key_ in interchange["Angles"].key_map.items():
             angle_type_index = potential_key_to_angle_type_mapping[key_]
@@ -197,8 +194,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             known_14_pairs.append([angle_indices[0], angle_indices[-1]])
             known_14_pairs.append([angle_indices[-1], angle_indices[0]])
 
-        dihedrals_inc_hydrogen: List[int] = list()
-        dihedrals_without_hydrogen: List[int] = list()
+        dihedrals_inc_hydrogen: list[int] = list()
+        dihedrals_without_hydrogen: list[int] = list()
 
         if "ProperTorsions" in interchange.collections:
             for dihedral, proper_key in interchange["ProperTorsions"].key_map.items():
@@ -401,7 +398,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         prmtop.write("%FLAG ATOM_NAME\n" "%FORMAT(20a4)\n")
 
-        atom_names: List[str] = list()
+        atom_names: list[str] = list()
 
         for atom in interchange.topology.atoms:
             if hasattr(atom, "name"):
@@ -417,7 +414,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         prmtop.write("%FLAG CHARGE\n" "%FORMAT(5E16.8)\n")
         charges = [
-            charge.m_as(unit.e) * AMBER_COULOMBS_CONSTANT  # type: ignore[union-attr]
+            charge.m_as(unit.e) * AMBER_COULOMBS_CONSTANT
             for charge in interchange["Electrostatics"].charges.values()
         ]
         text_blob = "".join([f"{val:16.8E}" for val in charges])
@@ -445,7 +442,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         acoefs = [None] * int((NTYPES + 1) * NTYPES / 2)
         bcoefs = [None] * int((NTYPES + 1) * NTYPES / 2)
 
-        nonbonded_parm_indices: List[Optional[int]] = [None] * (NTYPES * NTYPES)
+        nonbonded_parm_indices: list[Optional[int]] = [None] * (NTYPES * NTYPES)
 
         for key_i, i in potential_key_to_atom_type_mapping.items():
             for key_j, j in potential_key_to_atom_type_mapping.items():
@@ -557,9 +554,9 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         text_blob = "".join([f"{val:16.8E}" for val in angle_theta])
         _write_text_blob(prmtop, text_blob)
 
-        dihedral_k: List[int] = list()
-        dihedral_periodicity: List[int] = list()
-        dihedral_phase: List[int] = list()
+        dihedral_k: list[int] = list()
+        dihedral_periodicity: list[int] = list()
+        dihedral_phase: list[int] = list()
 
         for key_ in potential_key_to_dihedral_type_mapping:
             params = interchange[key_.associated_handler].potentials[key_].parameters  # type: ignore

@@ -1,9 +1,11 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
+from typing import Optional
 
+from openff.toolkit.topology.molecule import Atom, Molecule
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 
 from openff.interchange.components.interchange import Interchange
+from openff.interchange.components.potentials import Collection
 from openff.interchange.components.toolkit import _get_14_pairs
 from openff.interchange.exceptions import (
     MissingAngleError,
@@ -23,11 +25,6 @@ from openff.interchange.interop.gromacs.models.models import (
     RyckaertBellemansDihedral,
 )
 from openff.interchange.models import TopologyKey
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Atom, Molecule
-
-    from openff.interchange.components.potentials import Collection
 
 
 def _convert(interchange: Interchange) -> GROMACSSystem:
@@ -64,15 +61,15 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
         coul_14=scale_electrostatics,
     )
 
-    unique_molecule_map: Dict[
+    unique_molecule_map: dict[
         int,
-        List,
+        list,
     ] = interchange.topology.identical_molecule_groups
 
     # Give each atom in each unique molecule a unique name so that can act like an atom type
 
     # TODO: Virtual sites
-    _atom_atom_type_map: Dict["Atom", str] = dict()
+    _atom_atom_type_map: dict["Atom", str] = dict()
 
     try:
         vdw_collection = interchange["vdW"]
@@ -158,7 +155,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             )
 
         # Use a set to de-duplicate
-        pairs: Set[Tuple] = {*_get_14_pairs(unique_molecule)}
+        pairs: set[tuple] = {*_get_14_pairs(unique_molecule)}
 
         for pair in pairs:
             molecule_indices = sorted(unique_molecule.atom_index(atom) for atom in pair)

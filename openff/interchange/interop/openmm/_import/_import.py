@@ -1,6 +1,7 @@
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import Optional
 
 import openmm
+import openmm.app
 
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._valence import (
@@ -9,9 +10,6 @@ from openff.interchange.common._valence import (
     ProperTorsionCollection,
 )
 from openff.interchange.exceptions import UnsupportedImportError
-
-if TYPE_CHECKING:
-    import openmm.app
 
 
 def from_openmm(
@@ -76,7 +74,7 @@ def from_openmm(
 
 def _convert_nonbonded_force(
     force: openmm.NonbondedForce,
-) -> Tuple["vdWCollection", "ElectrostaticsCollection"]:
+) -> tuple["vdWCollection", "ElectrostaticsCollection"]:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.common._nonbonded import (

@@ -1,9 +1,9 @@
-from typing import TYPE_CHECKING, Iterable, List, Literal, Tuple
+from collections.abc import Iterable
+from typing import Literal
+
+from openff.toolkit.topology.molecule import Atom
 
 from openff.interchange.components.potentials import Collection
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Atom
 
 
 class BondCollection(Collection):
@@ -18,7 +18,7 @@ class BondCollection(Collection):
         return "k", "length"
 
     @classmethod
-    def valence_terms(cls, topology) -> List[Tuple["Atom", ...]]:
+    def valence_terms(cls, topology) -> list[tuple["Atom", ...]]:
         """Return all bonds in this topology."""
         return [tuple(b.atoms) for b in topology.bonds]
 
@@ -49,9 +49,25 @@ class ProperTorsionCollection(Collection):
     ] = "k*(1+cos(periodicity*theta-phase))"
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attribute names."""
-        return ["k", "periodicity", "phase"]
+        return "k", "periodicity", "phase"
+
+
+class RyckaertBellemansTorsionCollection(Collection):
+    """Handler storing Ryckaert-Bellemans torsion potentials."""
+
+    type: Literal["RBTorsions"] = "RBTorsions"
+    expression: str = (
+        "C0 + C1 * (cos(phi - 180)) "
+        "C2 * (cos(phi - 180)) ** 2 + C3 * (cos(phi - 180)) ** 3 "
+        "C4 * (cos(phi - 180)) ** 4 + C5 * (cos(phi - 180)) ** 5 "
+    )
+
+    @classmethod
+    def supported_parameters(cls) -> Iterable[str]:
+        """Return a list of supported parameter attribute names."""
+        return "C0", "C1", "C2", "C3", "C4", "C5"
 
 
 class ImproperTorsionCollection(Collection):
@@ -63,6 +79,6 @@ class ImproperTorsionCollection(Collection):
     ] = "k*(1+cos(periodicity*theta-phase))"
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attribute names."""
-        return ["k", "periodicity", "phase"]
+        return "k", "periodicity", "phase"

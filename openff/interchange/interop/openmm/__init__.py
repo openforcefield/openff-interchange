@@ -1,6 +1,6 @@
 """Interfaces with OpenMM."""
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
 import openmm
 
@@ -16,9 +16,8 @@ __all__ = [
     "from_openmm",
 ]
 
-if TYPE_CHECKING:
-    import openmm.app
-    from openff.toolkit.topology import Topology
+import openmm.app
+from openff.toolkit.topology import Topology
 
 
 def to_openmm(
@@ -121,11 +120,10 @@ def to_openmm(
 
 def _to_pdb(file_path: Union[Path, str], topology: "Topology", positions):
     from openff.units.openmm import to_openmm
-    from openmm import app
 
     openmm_topology = topology.to_openmm(ensure_unique_atom_names=False)
 
     positions = to_openmm(positions)
 
     with open(file_path, "w") as outfile:
-        app.PDBFile.writeFile(openmm_topology, positions, outfile)
+        openmm.app.PDBFile.writeFile(openmm_topology, positions, outfile)
