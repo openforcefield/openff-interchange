@@ -398,7 +398,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         prmtop.write("%FLAG ATOM_NAME\n" "%FORMAT(20a4)\n")
 
-        atom_names: List[str] = list()
+        atom_names: list[str] = list()
 
         for atom in interchange.topology.atoms:
             if hasattr(atom, "name"):

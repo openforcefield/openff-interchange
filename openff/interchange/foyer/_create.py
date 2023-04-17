@@ -1,6 +1,6 @@
-from foyer.forcefield import Forcefield
 from openff.toolkit import Topology
 from openff.units import unit
+from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
 from openff.interchange.components.potentials import Collection
@@ -17,6 +17,9 @@ from openff.interchange.foyer._valence import (
     FoyerRBProperHandler,
 )
 from openff.interchange.models import TopologyKey
+
+if has_package("foyer"):
+    from foyer.forcefield import Forcefield
 
 _CollectionAlias = type[Collection]
 
@@ -36,7 +39,7 @@ def get_handlers_callable() -> dict[str, _CollectionAlias]:
 
 
 def _create_interchange(
-    force_field: Forcefield,
+    force_field: "Forcefield",
     topology: Topology,
 ) -> Interchange:
     interchange = Interchange()
