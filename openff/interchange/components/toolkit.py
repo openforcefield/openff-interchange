@@ -1,16 +1,14 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
 import networkx as nx
 import numpy as np
 from openff.toolkit import Molecule, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
-
-if TYPE_CHECKING:
-    from openff.toolkit.typing.engines.smirnonff import ForceField
-    from openff.toolkit.utils.collections import ValidatedList
-    from openff.units.unit import Quantity
-    from openmm.app import Topology as OpenMMTopology
+from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.toolkit.utils.collections import ValidatedList
+from openff.units import Quantity
+from openmm.app import Topology as OpenMMTopology
 
 
 def _get_num_h_bonds(topology: "Topology") -> int:

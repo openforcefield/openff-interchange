@@ -1,16 +1,14 @@
 """
 Helper functions for producing `openmm.Force` objects for valence terms.
 """
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
 import openmm
 from openff.units import unit as off_unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 
 from openff.interchange.exceptions import UnsupportedExportError
-
-if TYPE_CHECKING:
-    from openff.interchange.models import VirtualSiteKey
+from openff.interchange.models import VirtualSiteKey
 
 
 def _process_constraints(

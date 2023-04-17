@@ -2,11 +2,13 @@
 import textwrap
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
+from openff.toolkit import Topology
 from openff.units import unit
 
+from openff.interchange import Interchange
 from openff.interchange.components.toolkit import _get_num_h_bonds
 from openff.interchange.constants import (
     _PME,
@@ -19,12 +21,7 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
     UnsupportedMixingRuleError,
 )
-
-if TYPE_CHECKING:
-    from openff.toolkit import Topology
-
-    from openff.interchange import Interchange
-    from openff.interchange.models import PotentialKey
+from openff.interchange.models import PotentialKey
 
 
 def _write_text_blob(file, blob):
@@ -410,7 +407,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         prmtop.write("%FLAG CHARGE\n" "%FORMAT(5E16.8)\n")
         charges = [
-            charge.m_as(unit.e) * AMBER_COULOMBS_CONSTANT  # type: ignore[union-attr]
+            charge.m_as(unit.e) * AMBER_COULOMBS_CONSTANT
             for charge in interchange["Electrostatics"].charges.values()
         ]
         text_blob = "".join([f"{val:16.8E}" for val in charges])

@@ -1,6 +1,7 @@
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 import openmm
+import openmm.app
 
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._valence import (
@@ -9,9 +10,6 @@ from openff.interchange.common._valence import (
     ProperTorsionCollection,
 )
 from openff.interchange.exceptions import UnsupportedImportError
-
-if TYPE_CHECKING:
-    import openmm.app
 
 
 def from_openmm(

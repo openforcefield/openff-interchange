@@ -1,6 +1,7 @@
-from typing import TYPE_CHECKING, Optional, Union
+from typing import Optional, Union
 
 from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff import ParameterHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 from openff.units import Quantity
 from packaging.version import Version
@@ -12,6 +13,7 @@ from openff.interchange.exceptions import (
     SMIRNOFFHandlersNotImplementedError,
 )
 from openff.interchange.plugins import load_smirnoff_plugins
+from openff.interchange.smirnoff._base import SMIRNOFFCollection
 from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
@@ -26,11 +28,6 @@ from openff.interchange.smirnoff._valence import (
     SMIRNOFFProperTorsionCollection,
 )
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
-
-if TYPE_CHECKING:
-    from openff.toolkit.typing.engines.smirnoff import ParameterHandler
-
-    from openff.interchange.smirnoff._base import SMIRNOFFCollection
 
 _SUPPORTED_PARAMETER_HANDLERS: set[str] = {
     "Constraints",

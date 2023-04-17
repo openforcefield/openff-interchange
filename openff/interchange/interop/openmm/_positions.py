@@ -1,16 +1,12 @@
 """
 Helper functions for exporting positions to OpenMM.
 """
-from typing import TYPE_CHECKING
 
+import openmm.unit
 from openff.units import unit
 
+from openff.interchange import Interchange
 from openff.interchange.exceptions import MissingPositionsError
-
-if TYPE_CHECKING:
-    import openmm.unit
-
-    from openff.interchange import Interchange
 
 
 def to_openmm_positions(

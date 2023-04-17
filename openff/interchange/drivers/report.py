@@ -95,7 +95,6 @@ class EnergyReport(DefaultModel):
             "Electrostatics": 1e-3 * kj_mol,
         }
 
-        # Replace with `default_tolerances | tolerances` when Python 3.9+ (PEP 584)
         if tolerances:
             default_tolerances.update(tolerances)
 

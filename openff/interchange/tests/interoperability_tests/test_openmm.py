@@ -2,14 +2,14 @@ import math
 
 import numpy
 import openmm
+import openmm.app
+import openmm.unit
 import pytest
 from openff.toolkit.tests.test_forcefield import create_ethanol
 from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.units import unit
-from openmm import app
-from openmm import unit as openmm_unit
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.openmm import get_openmm_energies
@@ -59,11 +59,11 @@ nonbonded_methods = [
 ]
 
 
-def _get_num_virtual_sites(openmm_topology: app.Topology) -> int:
+def _get_num_virtual_sites(openmm_topology: openmm.app.Topology) -> int:
     return sum(atom.element is None for atom in openmm_topology.atoms())
 
 
-def _compare_openmm_topologies(top1: app.Topology, top2: app.Topology):
+def _compare_openmm_topologies(top1: openmm.app.Topology, top2: openmm.app.Topology):
     """
     In lieu of first-class serializaiton in OpenMM (https://github.com/openmm/openmm/issues/1543),
     do some quick heuristics to roughly compare two OpenMM Topology objects.
@@ -90,7 +90,9 @@ class TestOpenMM(_BaseTest):
 
         molecules = [create_ethanol()]
 
-        pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
+        pdbfile = openmm.app.PDBFile(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"),
+        )
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         if not periodic:
@@ -134,7 +136,9 @@ class TestOpenMM(_BaseTest):
     @pytest.mark.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
     def test_unsupported_mixing_rule(self, sage):
         molecules = [create_ethanol()]
-        pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
+        pdbfile = openmm.app.PDBFile(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"),
+        )
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         interchange = Interchange.from_smirnoff(
@@ -158,7 +162,7 @@ class TestOpenMM(_BaseTest):
         interchange = Interchange.from_smirnoff(sage, top)
 
         interchange.box = [4, 4, 4]
-        interchange.positions = mol.conformers[0].value_in_unit(openmm_unit.nanometer)
+        interchange.positions = mol.conformers[0].value_in_unit(openmm.unit.nanometer)
 
         converted = from_openmm(
             topology=interchange.to_openmm_topology(),
@@ -291,7 +295,7 @@ class TestOpenMM(_BaseTest):
         for force in system.getForces():
             if type(force) in (openmm.NonbondedForce, openmm.CustomNonbondedForce):
                 assert force.getCutoffDistance().value_in_unit(
-                    openmm_unit.nanometer,
+                    openmm.unit.nanometer,
                 ) == pytest.approx(cutoff.m_as(unit.nanometer))
 
 
@@ -307,7 +311,7 @@ class TestOpenMMSwitchingFunction(_BaseTest):
                 found_force = True
                 assert force.getUseSwitchingFunction()
                 assert force.getSwitchingDistance().value_in_unit(
-                    openmm_unit.angstrom,
+                    openmm.unit.angstrom,
                 ) == pytest.approx(8), force.getSwitchingDistance()
 
         assert found_force, "NonbondedForce not found in system"
@@ -324,7 +328,7 @@ class TestOpenMMSwitchingFunction(_BaseTest):
             if isinstance(force, openmm.NonbondedForce):
                 found_force = True
                 assert not force.getUseSwitchingFunction()
-                assert force.getSwitchingDistance() == -1 * openmm_unit.nanometer
+                assert force.getSwitchingDistance() == -1 * openmm.unit.nanometer
 
         assert found_force, "NonbondedForce not found in system"
 
@@ -341,8 +345,8 @@ class TestOpenMMSwitchingFunction(_BaseTest):
                 found_force = True
                 assert force.getUseSwitchingFunction()
                 assert (
-                    force.getSwitchingDistance() - (9 - 0.12345) * openmm_unit.angstrom
-                ) < 1e-10 * openmm_unit.angstrom
+                    force.getSwitchingDistance() - (9 - 0.12345) * openmm.unit.angstrom
+                ) < 1e-10 * openmm.unit.angstrom
 
         assert found_force, "NonbondedForce not found in system"
 
@@ -392,7 +396,7 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
         simulation.context.setPeriodicBoxVectors(*out.box.to_openmm())
 
         state = simulation.context.getState(getEnergy=True)
-        energy = state.getPotentialEnergy().in_units_of(openmm_unit.kilojoule_per_mole)
+        energy = state.getPotentialEnergy().in_units_of(openmm.unit.kilojoule_per_mole)
 
         if OpenEyeToolkitWrapper.is_available():
             expected_energy = 13.591709748611304

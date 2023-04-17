@@ -1,17 +1,15 @@
 """
 Helper functions for exporting virutal sites to OpenMM.
 """
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
 import openmm
 from openff.units.openmm import to_openmm
 
+from openff.interchange.components._particles import _VirtualSite
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.models import VirtualSiteKey
-
-if TYPE_CHECKING:
-    from openff.interchange.components._particles import _VirtualSite
-    from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
+from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 
 
 def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteCollection"):

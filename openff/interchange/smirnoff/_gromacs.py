@@ -1,9 +1,11 @@
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
+from openff.toolkit.topology.molecule import Atom, Molecule
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 
 from openff.interchange.components.interchange import Interchange
+from openff.interchange.components.potentials import Collection
 from openff.interchange.components.toolkit import _get_14_pairs
 from openff.interchange.exceptions import (
     MissingAngleError,
@@ -23,11 +25,6 @@ from openff.interchange.interop.gromacs.models.models import (
     RyckaertBellemansDihedral,
 )
 from openff.interchange.models import TopologyKey
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Atom, Molecule
-
-    from openff.interchange.components.potentials import Collection
 
 
 def _convert(interchange: Interchange) -> GROMACSSystem:

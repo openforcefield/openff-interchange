@@ -1,10 +1,7 @@
 """Utilities for interoperability with multiple packages."""
-from typing import TYPE_CHECKING
 
+from openff.interchange import Interchange
 from openff.interchange.models import VirtualSiteKey
-
-if TYPE_CHECKING:
-    from openff.interchange import Interchange
 
 
 def _build_typemap(interchange: "Interchange") -> dict[int, str]:

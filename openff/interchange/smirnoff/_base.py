@@ -1,8 +1,9 @@
 import abc
 import json
-from typing import TYPE_CHECKING, TypeVar
+from typing import TypeVar
 
 from openff.models.types import custom_quantity_encoder, json_loader
+from openff.toolkit.topology import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -21,10 +22,6 @@ from openff.interchange.exceptions import (
     UnassignedTorsionError,
 )
 from openff.interchange.models import PotentialKey, TopologyKey
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology import Topology
-
 
 T = TypeVar("T", bound="SMIRNOFFCollection")
 TP = TypeVar("TP", bound="ParameterHandler")

@@ -1,7 +1,7 @@
 """Models for storing applied force field parameters."""
 import ast
 import warnings
-from typing import TYPE_CHECKING, Optional, Union
+from typing import Optional, Union
 
 import numpy
 from openff.models.models import DefaultModel
@@ -16,11 +16,10 @@ from openff.interchange.warnings import InterchangeDeprecationWarning
 if has_package("jax"):
     from jax import numpy as jax_numpy
 
-if TYPE_CHECKING:
-    from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike
 
-    if has_package("jax"):
-        from jax import Array
+if has_package("jax"):
+    from jax import Array
 
 
 def __getattr__(name: str):

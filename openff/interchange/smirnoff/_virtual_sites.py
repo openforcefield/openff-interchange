@@ -18,6 +18,9 @@ from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFvdWCollection,
 )
 
+# The use of `type` as a field name conflicts with the built-in `type()` when used with PEP 585
+_ListOfHandlerTypes = list[type[ParameterHandler]]
+
 
 class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
     """
@@ -47,7 +50,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
     ] = "parents"
 
     @classmethod
-    def allowed_parameter_handlers(cls) -> list[type[ParameterHandler]]:
+    def allowed_parameter_handlers(cls) -> _ListOfHandlerTypes:
         """Return a list of allowed types of ParameterHandler classes."""
         return [VirtualSiteHandler]
 

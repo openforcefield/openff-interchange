@@ -1,9 +1,11 @@
 """Interfaces with ParmEd."""
-from typing import TYPE_CHECKING, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
+import parmed as pmd
 from openff.units import Quantity, unit
 
+from openff.interchange import Interchange
 from openff.interchange.components.potentials import Potential
 from openff.interchange.exceptions import (
     ConversionError,
@@ -22,11 +24,6 @@ from openff.interchange.smirnoff._valence import (
     SMIRNOFFImproperTorsionCollection,
     SMIRNOFFProperTorsionCollection,
 )
-
-if TYPE_CHECKING:
-    import parmed as pmd
-
-    from openff.interchange import Interchange
 
 kcal_mol = unit.Unit("kilocalories / mol")
 kcal_mol_a2 = unit.Unit("kilocalories / mol / angstrom ** 2")

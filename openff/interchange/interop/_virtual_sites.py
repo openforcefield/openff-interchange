@@ -1,16 +1,13 @@
 """
 Common helpers for exporting virtual sites.
 """
-from typing import TYPE_CHECKING
 
 import numpy
 from openff.units import unit
 
+from openff.interchange import Interchange
 from openff.interchange.exceptions import VirtualSiteTypeNotImplementedError
 from openff.interchange.models import VirtualSiteKey
-
-if TYPE_CHECKING:
-    from openff.interchange import Interchange
 
 
 def _virtual_site_parent_molecule_mapping(

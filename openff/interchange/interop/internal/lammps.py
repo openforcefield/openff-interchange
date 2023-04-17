@@ -284,7 +284,7 @@ def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
         pot_key = vdw_hander.key_map[top_key]
         atom_type = atom_type_map_inv[pot_key]
 
-        charge = charges[top_key].m_as(unit.e)  # type: ignore[union-attr]
+        charge = charges[top_key].m_as(unit.e)
         pos = interchange.positions[atom_index].to(unit.angstrom).magnitude
         lmp_file.write(
             "{:d}\t{:d}\t{:d}\t{:.8g}\t{:.8g}\t{:.8g}\t{:.8g}\n".format(

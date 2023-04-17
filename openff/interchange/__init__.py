@@ -1,12 +1,9 @@
 """A project (and object) for storing, manipulating, and converting molecular mechanics data."""
 import importlib
 from types import ModuleType
-from typing import TYPE_CHECKING
 
 from openff.interchange._version import get_versions  # type: ignore
-
-if TYPE_CHECKING:
-    from openff.interchange.components.interchange import Interchange
+from openff.interchange.components.interchange import Interchange
 
 # Handle versioneer
 versions = get_versions()

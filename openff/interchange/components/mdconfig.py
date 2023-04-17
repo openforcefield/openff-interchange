@@ -1,5 +1,5 @@
 """Runtime settings for MD simulations."""
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
@@ -14,7 +14,6 @@ from openff.interchange.exceptions import (
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
-
 MDP_HEADER = """
 nsteps                   = 0
 nstenergy                = 1000
@@ -44,7 +43,7 @@ class MDConfig(DefaultModel):
         None,
         description="The distance at which pairwise interactions are truncated",
     )
-    mixing_rule: Literal["lorentz-berthelot", "geometric"] = Field(
+    mixing_rule: str = Field(
         None,
         description="The mixing rule (combination rule, combining rule) used in computing pairwise vdW interactions",
     )
@@ -77,7 +76,7 @@ class MDConfig(DefaultModel):
             vdw_handler = interchange["vdW"]
             mdconfig.vdw_cutoff = vdw_handler.cutoff
             mdconfig.vdw_method = vdw_handler.method
-            mdconfig.mixing_rule = vdw_handler.mixing_rule  # type: ignore[assignment]
+            mdconfig.mixing_rule = vdw_handler.mixing_rule
 
             if vdw_handler.switch_width is not None:
                 if vdw_handler.switch_width.m == 0:

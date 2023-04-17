@@ -2,14 +2,18 @@
 Helper functions for producing `openmm.Force` objects for non-bonded terms.
 """
 from collections import defaultdict
-from typing import TYPE_CHECKING, DefaultDict, Optional, Union
+from typing import DefaultDict, Optional, Union
 
 import openmm
+from openff.toolkit import Molecule
 from openff.units import unit as off_unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openmm import unit
 from typing_extensions import TypeAlias
 
+from openff.interchange import Interchange
+from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
+from openff.interchange.components.potentials import Collection
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     CannotSetSwitchingFunctionError,
@@ -19,18 +23,6 @@ from openff.interchange.exceptions import (
 )
 from openff.interchange.interop.parmed import _lj_params_from_potential
 from openff.interchange.models import TopologyKey, VirtualSiteKey
-
-if TYPE_CHECKING:
-    from openff.toolkit import Molecule
-
-    from openff.interchange import Interchange
-    from openff.interchange.common._nonbonded import (
-        ElectrostaticsCollection,
-        vdWCollection,
-    )
-    from openff.interchange.components.potentials import Collection
-    from openff.interchange.smirnoff._base import SMIRNOFFCollection
-
 
 _DATA_DICT: TypeAlias = dict[str, Union[None, str, bool, "Collection"]]
 
@@ -251,15 +243,18 @@ def _add_particles_to_system(
 
 def _prepare_input_data(interchange: "Interchange") -> _DATA_DICT:
     try:
-        vdw: Optional["vdWCollection"] = interchange["vdW"]
+        vdw: "vdWCollection" = interchange["vdW"]
     except LookupError:
         for collection in interchange.collections.values():
             if collection.is_plugin:
-                if collection.acts_as == "vdW":
+                if collection.acts_as == "vdW" and isinstance(
+                    collection,
+                    vdWCollection,
+                ):
                     vdw = collection
                     break
         else:
-            vdw = None
+            vdw = None  # type: ignore[assignment]
 
     if vdw:
         vdw_cutoff: Optional[unit.Quanaity] = vdw.cutoff
@@ -273,11 +268,9 @@ def _prepare_input_data(interchange: "Interchange") -> _DATA_DICT:
         vdw_expression = None
 
     try:
-        electrostatics: Optional["ElectrostaticsCollection"] = interchange[
-            "Electrostatics"
-        ]
+        electrostatics: "ElectrostaticsCollection" = interchange["Electrostatics"]
     except LookupError:
-        electrostatics = None
+        electrostatics = None  # type: ignore[assignment]
 
     if electrostatics is None:
         electrostatics_method: Optional[str] = None
@@ -1009,7 +1002,7 @@ def _get_14_scaling_factors(data: _DATA_DICT) -> tuple[float, float]:
 
 
 def _apply_switching_function(
-    vdw_collection: "SMIRNOFFCollection",
+    vdw_collection: "vdWCollection",
     force: openmm.NonbondedForce,
 ):
     if not hasattr(force, "setUseSwitchingFunction"):

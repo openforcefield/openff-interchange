@@ -1,7 +1,8 @@
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import Literal, Optional
 
 from openff.models.types import FloatQuantity
+from openff.toolkit import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler
 from openff.units import unit
 
@@ -9,9 +10,6 @@ from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kcal_mol_a2
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
-
-if TYPE_CHECKING:
-    from openff.toolkit import Topology
 
 
 class SMIRNOFFGBSACollection(SMIRNOFFCollection):
