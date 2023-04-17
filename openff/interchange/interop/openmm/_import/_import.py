@@ -121,6 +121,13 @@ def _convert_nonbonded_force(
             f"Parsing a non-bonded force of type {type(force)} with {force.getNonbondedMethod()} not yet supported.",
         )
 
+    if force.getUseSwitchingFunction():
+        vdw.switch_width = vdw.cutoff - from_openmm_quantity(
+            force.getSwitchingDistance(),
+        )
+    else:
+        vdw.switch_width = 0.0 * vdw.cutoff.units
+
     return vdw, electrostatics
 
 

@@ -1,10 +1,16 @@
+import random
+
+import openmm.unit
+import pytest
 from openff.toolkit.tests.create_molecules import create_ethanol
 from openff.units import unit
 
 from openff.interchange import Interchange
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.openmm import get_openmm_energies
+from openff.interchange.exceptions import UnsupportedImportError
 from openff.interchange.interop.openmm._import import from_openmm
+from openff.interchange.interop.openmm._import._import import _convert_nonbonded_force
 from openff.interchange.tests import _BaseTest
 
 
@@ -37,3 +43,49 @@ class TestFromOpenMM(_BaseTest):
                 "Nonbonded": 1e-3 * kj_mol,
             },
         )
+
+
+class TestConvertNonbondedForce:
+    @pytest.mark.parametrize(
+        "method",
+        [
+            openmm.NonbondedForce.NoCutoff,
+            openmm.NonbondedForce.CutoffNonPeriodic,
+            openmm.NonbondedForce.CutoffPeriodic,
+        ],
+    )
+    def test_unsupported_method(self, method):
+        force = openmm.NonbondedForce()
+        force.setNonbondedMethod(method)
+
+        with pytest.raises(UnsupportedImportError):
+            _convert_nonbonded_force(force)
+
+    def test_parse_switching_distance(self):
+        force = openmm.NonbondedForce()
+        force.setNonbondedMethod(openmm.NonbondedForce.PME)
+
+        cutoff = 1 + random.random() * 0.1
+        switch_width = random.random() * 0.1
+
+        force.setCutoffDistance(cutoff)
+        force.setUseSwitchingFunction(True)
+        force.setSwitchingDistance(cutoff - switch_width)
+
+        vdw, _ = _convert_nonbonded_force(force)
+
+        assert vdw.cutoff.m_as(unit.nanometer) == pytest.approx(cutoff)
+        assert vdw.switch_width.m_as(unit.nanometer) == pytest.approx(switch_width)
+
+    def test_parse_switching_distance_unused(self):
+        force = openmm.NonbondedForce()
+        force.setNonbondedMethod(openmm.NonbondedForce.PME)
+
+        cutoff = 1 + random.random() * 0.1
+
+        force.setCutoffDistance(cutoff)
+
+        vdw, _ = _convert_nonbonded_force(force)
+
+        assert vdw.cutoff.m_as(unit.nanometer) == pytest.approx(cutoff)
+        assert vdw.switch_width.m_as(unit.nanometer) == 0.0
