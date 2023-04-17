@@ -22,7 +22,7 @@ from openff.interchange.tests import (
 if has_package("foyer"):
     import foyer
 
-    from openff.interchange.components.foyer import _RBTorsionHandler
+    from openff.interchange.foyer._valence import _RBTorsionHandler
 
 if HAS_GROMACS:
     from openff.interchange.drivers.gromacs import (

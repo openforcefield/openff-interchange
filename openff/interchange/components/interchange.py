@@ -20,10 +20,6 @@ from openff.interchange.common._valence import (
     ImproperTorsionCollection,
     ProperTorsionCollection,
 )
-from openff.interchange.components.foyer import (
-    FoyerElectrostaticsHandler,
-    FoyerVDWHandler,
-)
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.components.potentials import Collection
 from openff.interchange.exceptions import (
@@ -441,61 +437,12 @@ class Interchange(DefaultModel):
             Interchange with 8 atoms, non-periodic topology
 
         """
-        from openff.interchange.components.foyer import get_handlers_callable
+        from openff.interchange.foyer._create import _create_interchange
 
-        system = cls()
-        system.topology = topology
-
-        # This block is from a mega merge, unclear if it's still needed
-        for name, Handler in get_handlers_callable().items():
-            if name == "Electrostatics":
-                handler = Handler(scale_14=force_field.coulomb14scale)
-            if name == "vdW":
-                handler = Handler(scale_14=force_field.lj14scale)
-            else:
-                handler = Handler()
-
-            system.collections[name] = handler
-
-        vdw_handler: FoyerVDWHandler = system["vdW"]  # type: ignore[assignment]
-
-        vdw_handler.store_matches(force_field, topology=system.topology)
-        vdw_handler.store_potentials(force_field=force_field)
-
-        atom_slots = vdw_handler.key_map
-
-        electrostatics: FoyerElectrostaticsHandler = system["Electrostatics"]  # type: ignore[assignment]
-        electrostatics.store_charges(
-            atom_slots=atom_slots,
+        return _create_interchange(
             force_field=force_field,
+            topology=topology,
         )
-
-        vdw_handler.scale_14 = force_field.lj14scale  # type: ignore[assignment]
-        electrostatics.scale_14 = force_field.coulomb14scale  # type: ignore[assignment]
-
-        for name, handler in system.collections.items():
-            if name not in ["vdW", "Electrostatics"]:
-                handler.store_matches(atom_slots, topology=system.topology)
-                handler.store_potentials(force_field)
-
-        # FIXME: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
-
-        charges = electrostatics.charges
-
-        for molecule in system.topology.molecules:
-            molecule_charges = [
-                charges[TopologyKey(atom_indices=(system.topology.atom_index(atom),))].m
-                for atom in molecule.atoms
-            ]
-            molecule.partial_charges = unit.Quantity(
-                molecule_charges,
-                unit.elementary_charge,
-            )
-
-        system.collections["vdW"] = vdw_handler
-        system.collections["Electrostatics"] = electrostatics
-
-        return system
 
     @classmethod
     @requires_package("intermol")
