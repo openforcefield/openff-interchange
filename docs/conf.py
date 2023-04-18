@@ -90,7 +90,7 @@ autosummary_context = {
     # Modules to exclude from API docs
     "exclude_modules": [
         "openff.interchange.conftest",
-        "openff.interchange.tests",
+        "openff.interchange._tests",  # Maybe this is excluded by default?
     ],
 }
 autosummary_ignore_module_all = False
