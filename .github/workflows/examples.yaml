@@ -70,7 +70,7 @@ jobs:
     - name: Run docexamples
       run: |
         # TODO: Add back /interchange.py when `TypedMolecule` is implemented
-        pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/tests --ignore=openff/interchange/components/interchange.py
+        pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/_tests --ignore=openff/interchange/components/interchange.py
 
     - name: Run example notebooks
       if: always()

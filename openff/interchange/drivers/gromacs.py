@@ -50,7 +50,7 @@ def _get_mdp_file(key: str = "auto") -> str:
         "cutoff_buck": "cutoff_buck.mdp",
     }
 
-    dir_path = resources.files("openff.interchange.tests.data.mdp")
+    dir_path = resources.files("openff.interchange._tests.data.mdp")
     return str(dir_path / mapping[key])
 
 
