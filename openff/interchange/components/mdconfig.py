@@ -1,5 +1,5 @@
 """Runtime settings for MD simulations."""
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Literal
 
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
@@ -14,7 +14,6 @@ from openff.interchange.exceptions import (
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
-
 MDP_HEADER = """
 nsteps                   = 0
 nstenergy                = 1000
@@ -36,34 +35,37 @@ class MDConfig(DefaultModel):
         "none",
         description="The type of constraints to be used in the simulation.",
     )
-    vdw_method: str = Field(
-        None,
+    vdw_method: Literal["cutoff", "pme", "no-cutoff"] = Field(
+        "cutoff",
         description="The method used to calculate the vdW interactions.",
     )
     vdw_cutoff: FloatQuantity["angstrom"] = Field(
-        None,
+        unit.Quantity(9.0, unit.angstrom),
         description="The distance at which pairwise interactions are truncated",
     )
-    mixing_rule: Literal["lorentz-berthelot", "geometric"] = Field(
-        None,
+    mixing_rule: str = Field(
+        "lorentz-berthelot",
         description="The mixing rule (combination rule, combining rule) used in computing pairwise vdW interactions",
     )
 
     switching_function: bool = Field(
-        None,
+        False,
         description="Whether or not to use a switching function for the vdw interactions",
     )
     switching_distance: FloatQuantity["angstrom"] = Field(
-        0.0 * unit.angstrom,
+        unit.Quantity(0.0, unit.angstrom),
         description="The distance at which the switching function is applied",
     )
     coul_method: str = Field(
         None,
         description="The method used to compute pairwise electrostatic interactions",
     )
-    coul_cutoff: Optional[FloatQuantity["angstrom"]] = Field(
-        None,
-        description="The distance at which electrostatic interactions are truncated or transformed.",
+    coul_cutoff: FloatQuantity["angstrom"] = Field(
+        unit.Quantity(9.0, unit.angstrom),
+        description=(
+            "The distance at which electrostatic interactions are truncated or transition from "
+            "short- to long-range."
+        ),
     )
 
     @classmethod
@@ -77,7 +79,7 @@ class MDConfig(DefaultModel):
             vdw_collection = interchange["vdW"]
             mdconfig.vdw_cutoff = vdw_collection.cutoff
             mdconfig.vdw_method = vdw_collection.method
-            mdconfig.mixing_rule = vdw_collection.mixing_rule  # type: ignore[assignment]
+            mdconfig.mixing_rule = vdw_collection.mixing_rule
 
             if vdw_collection.switch_width is not None:
                 if vdw_collection.switch_width.m == 0:
@@ -121,9 +123,9 @@ class MDConfig(DefaultModel):
         if "Electrostatics" in interchange.collections:
             electrostatics = interchange["Electrostatics"]
             if self.coul_method.lower() == "pme":
-                electrostatics.periodic_potential = _PME
+                electrostatics.periodic_potential = _PME  # type: ignore[assignment]
             else:
-                electrostatics.periodic_potential = self.coul_method
+                electrostatics.periodic_potential = self.coul_method  # type: ignore[assignment]
             electrostatics.cutoff = self.coul_cutoff
 
     def write_mdp_file(self, mdp_file: str = "auto_generated.mdp") -> None:
@@ -139,6 +141,7 @@ class MDConfig(DefaultModel):
             mdp.write(f"constraints = {self.constraints}\n")
 
             coul_cutoff = round(self.coul_cutoff.m_as(unit.nanometer), 4)
+
             if self.coul_method == "cutoff":
                 mdp.write("coulombtype = Cut-off\n")
                 mdp.write("coulomb-modifier = None\n")
@@ -223,6 +226,7 @@ class MDConfig(DefaultModel):
 
             vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)
             coul_cutoff = round(self.coul_cutoff.m_as(unit.angstrom), 4)
+
             if self.coul_method == _PME:
                 lmp.write(f"pair_style lj/cut/coul/long {vdw_cutoff} {coul_cutoff}\n")
             elif self.coul_method == "cutoff":

@@ -1,6 +1,6 @@
 import pathlib
 import warnings
-from typing import Optional
+from typing import Optional, Union
 
 import numpy
 from openff.models.models import DefaultModel
@@ -20,8 +20,8 @@ class GROMACSWriter(DefaultModel):
     """Thin wrapper for writing GROMACS systems."""
 
     system: GROMACSSystem
-    top_file: Optional[pathlib.Path] = None
-    gro_file: Optional[pathlib.Path] = None
+    top_file: Optional[Union[pathlib.Path, str]] = None
+    gro_file: Optional[Union[pathlib.Path, str]] = None
 
     def to_top(self):
         """Write a GROMACS topology file."""

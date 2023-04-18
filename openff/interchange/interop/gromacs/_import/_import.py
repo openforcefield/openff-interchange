@@ -1,5 +1,4 @@
 import pathlib
-from typing import Tuple
 
 import numpy
 from openff.units import unit
@@ -125,7 +124,7 @@ def from_files(top_file, gro_file, cls=GROMACSSystem):
     return system
 
 
-def _process_defaults(line: str) -> Tuple[int, int, str, float, float]:
+def _process_defaults(line: str) -> tuple[int, int, str, float, float]:
     split = line.split()
 
     nonbonded_function = int(split[0])
@@ -380,7 +379,7 @@ def _process_exclusion(line: str) -> GROMACSExclusion:
     )
 
 
-def _process_molecule(line: str) -> Tuple[str, int]:
+def _process_molecule(line: str) -> tuple[str, int]:
     split = line.split()
 
     molecule_name = split[0]

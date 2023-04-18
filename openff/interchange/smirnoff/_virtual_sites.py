@@ -1,4 +1,4 @@
-from typing import Dict, List, Literal, Type
+from typing import Literal
 
 import numpy
 from openff.toolkit.topology import Topology
@@ -18,20 +18,23 @@ from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFvdWCollection,
 )
 
+# The use of `type` as a field name conflicts with the built-in `type()` when used with PEP 585
+_ListOfHandlerTypes = list[type[ParameterHandler]]
+
 
 class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
     """
     A handler which stores the information necessary to construct virtual sites (virtual particles).
     """
 
-    key_map: Dict[VirtualSiteKey, PotentialKey] = Field(
+    key_map: dict[VirtualSiteKey, PotentialKey] = Field(
         dict(),
         description="A mapping between VirtualSiteKey objects and PotentialKey objects.",
     )  # type: ignore[assignment]
 
     type: Literal["VirtualSites"] = "VirtualSites"
     expression: Literal[""] = ""
-    virtual_site_key_topology_index_map: Dict[VirtualSiteKey, int] = Field(
+    virtual_site_key_topology_index_map: dict[VirtualSiteKey, int] = Field(
         dict(),
         description="A mapping between VirtualSiteKey objects (stored analogously to TopologyKey objects"
         "in other handlers) and topology indices describing the associated virtual site",
@@ -47,12 +50,12 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
     ] = "parents"
 
     @classmethod
-    def allowed_parameter_handlers(cls) -> List[Type[ParameterHandler]]:
+    def allowed_parameter_handlers(cls) -> _ListOfHandlerTypes:
         """Return a list of allowed types of ParameterHandler classes."""
         return [VirtualSiteHandler]
 
     @classmethod
-    def supported_parameters(cls) -> List[str]:
+    def supported_parameters(cls) -> list[str]:
         """Return a list of parameter attributes supported by this handler."""
         return [
             "type",
@@ -70,7 +73,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
         ]
 
     @classmethod
-    def nonbonded_parameters(cls) -> List[str]:
+    def nonbonded_parameters(cls) -> list[str]:
         """Return a list of parameter attributes handling vdW interactions."""
         return ["sigma", "epsilon"]
 
@@ -114,13 +117,15 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                     ] = virtual_site_index
                     virtual_site_index += 1
 
-    def store_potentials(
+    def store_potentials(  # type: ignore[override]
         self,
         parameter_handler: VirtualSiteHandler,
         vdw_collection: SMIRNOFFvdWCollection,
         electrostatics_collection: SMIRNOFFElectrostaticsCollection,
-    ) -> None:
-        """Store VirtualSite-specific parameter-like data."""
+    ):
+        """
+        Populate self.potentials with key-val pairs of [PotentialKey, Potential].
+        """
         if self.potentials:
             self.potentials = dict()
         for virtual_site_key, potential_key in self.key_map.items():

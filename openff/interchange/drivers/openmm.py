@@ -1,6 +1,6 @@
 """Functions for running energy evluations with OpenMM."""
 import warnings
-from typing import Dict, Optional
+from typing import Optional
 
 import numpy
 import openmm
@@ -95,7 +95,7 @@ def _get_openmm_energies(
     positions: openmm.unit.Quantity,
     round_positions: Optional[int],
     platform: str,
-) -> Dict[int, openmm.unit.Quantity]:
+) -> dict[int, openmm.unit.Quantity]:
     """Given prepared `openmm` objects, run a single-point energy calculation."""
     for index, force in enumerate(system.getForces()):
         force.setForceGroup(index)
@@ -116,7 +116,7 @@ def _get_openmm_energies(
         else positions,
     )
 
-    raw_energies: Dict[int, openmm.unit.Quantity] = dict()
+    raw_energies: dict[int, openmm.unit.Quantity] = dict()
 
     for index in range(system.getNumForces()):
         state = context.getState(getEnergy=True, groups={index})
@@ -130,12 +130,12 @@ def _get_openmm_energies(
 
 
 def _process(
-    raw_energies: Dict[int, openmm.unit.Quantity],
+    raw_energies: dict[int, openmm.unit.Quantity],
     system: openmm.System,
     combine_nonbonded_forces: bool,
     detailed: bool,
 ) -> EnergyReport:
-    staged: Dict[str, unit.Quantity] = dict()
+    staged: dict[str, unit.Quantity] = dict()
 
     valence_map = {
         openmm.HarmonicBondForce: "Bond",

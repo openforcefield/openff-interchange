@@ -58,7 +58,7 @@ two identical bonds will produce only one `Potential`, rather than two thousand.
 Each potential handler inherits from the base [`Collection`] class and
 describes a single type of parameter from a single source. Potential handlers
 for SMIRNOFF force fields are found in the [`openff.interchange.smirnoff`]
-module, while those for Foyer are found in the [`openff.interchange.components.foyer`]
+module, while those for Foyer are found in the [`openff.interchange.foyer`]
 module.
 
 ## Inspecting an assigned parameter
@@ -164,4 +164,4 @@ the bonds have been updated:
 [`Potential`]: openff.interchange.components.potentials.Potential
 [`Interchange.handlers`]: openff.interchange.Interchange.topology
 [`openff.interchange.smirnoff`]: openff.interchange.smirnoff
-[`openff.interchange.components.foyer`]: openff.interchange.components.foyer
+[`openff.interchange.foyer`]: openff.interchange.foyer

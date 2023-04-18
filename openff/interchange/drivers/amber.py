@@ -3,7 +3,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from shutil import which
-from typing import Dict, Union
+from typing import Union
 
 from openff.units import unit
 from openff.utilities.utilities import temporary_cd
@@ -56,7 +56,7 @@ def get_amber_energies(
 def _get_amber_energies(
     interchange: Interchange,
     writer: str = "internal",
-) -> Dict[str, unit.Quantity]:
+) -> dict[str, unit.Quantity]:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             if writer == "internal":
@@ -83,7 +83,7 @@ def _run_sander(
     inpcrd_file: Union[Path, str],
     prmtop_file: Union[Path, str],
     input_file: Union[Path, str],
-) -> Dict[str, unit.Quantity]:
+) -> dict[str, unit.Quantity]:
     """
     Given Amber files, return single-point energies as computed by Amber.
 
@@ -128,7 +128,7 @@ def _run_sander(
     return _parse_amber_energy("mdinfo")
 
 
-def _parse_amber_energy(mdinfo: str) -> Dict[str, unit.Quantity]:
+def _parse_amber_energy(mdinfo: str) -> dict[str, unit.Quantity]:
     """
     Parse AMBER output file and group the energy terms in a dict.
 
@@ -177,7 +177,7 @@ def _parse_amber_energy(mdinfo: str) -> Dict[str, unit.Quantity]:
     return e_out
 
 
-def _get_amber_energy_vdw(amber_energies: Dict) -> unit.Quantity:
+def _get_amber_energy_vdw(amber_energies: dict) -> unit.Quantity:
     """Get the total nonbonded energy from a set of Amber energies."""
     amber_vdw = 0.0 * unit.kilojoule_per_mole
     for key in ["VDWAALS", "1-4 VDW", "1-4 NB"]:
@@ -187,7 +187,7 @@ def _get_amber_energy_vdw(amber_energies: Dict) -> unit.Quantity:
     return amber_vdw
 
 
-def _get_amber_energy_coul(amber_energies: Dict) -> unit.Quantity:
+def _get_amber_energy_coul(amber_energies: dict) -> unit.Quantity:
     """Get the total nonbonded energy from a set of Amber energies."""
     amber_coul = 0.0 * unit.kilojoule_per_mole
     for key in ["EEL", "1-4 EEL"]:
@@ -198,7 +198,7 @@ def _get_amber_energy_coul(amber_energies: Dict) -> unit.Quantity:
 
 
 def _process(
-    energies: Dict[str, unit.Quantity],
+    energies: dict[str, unit.Quantity],
     detailed: bool = False,
 ) -> EnergyReport:
     if detailed:

@@ -1,10 +1,15 @@
 """
 Collections for custom SMIRNOFF handlers.
 """
-from typing import List
+
+from openff.interchange.smirnoff._base import SMIRNOFFCollection
+
+__all__ = [
+    "SMIRNOFFCollection",
+]
 
 
-def load_smirnoff_plugins() -> List:
+def load_smirnoff_plugins() -> list:
     """Load external potential handlers as plugins."""
     from importlib_metadata import entry_points
 

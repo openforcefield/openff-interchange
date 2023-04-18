@@ -1,11 +1,7 @@
-from typing import TYPE_CHECKING
+import openmm
 
+from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError
-
-if TYPE_CHECKING:
-    import openmm
-
-    from openff.interchange import Interchange
 
 
 def _process_gbsa(

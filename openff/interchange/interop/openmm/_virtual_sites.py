@@ -1,17 +1,15 @@
 """
 Helper functions for exporting virutal sites to OpenMM.
 """
-from typing import TYPE_CHECKING, Dict, List, Union
+from typing import Union
 
 import openmm
 from openff.units.openmm import to_openmm
 
+from openff.interchange.components._particles import _VirtualSite
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.models import VirtualSiteKey
-
-if TYPE_CHECKING:
-    from openff.interchange.components._particles import _VirtualSite
-    from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
+from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 
 
 def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteCollection"):
@@ -26,7 +24,7 @@ def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteCollection
 
 def _create_openmm_virtual_site(
     virtual_site: "_VirtualSite",
-    openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int],
+    openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int],
 ) -> openmm.LocalCoordinatesSite:
     # It is assumed that the first "orientation" atom is the "parent" atom.
     originwt, xdir, ydir = virtual_site.local_frame_weights
@@ -39,7 +37,7 @@ def _create_openmm_virtual_site(
     # and the openmm "index" is the atom's index, as a particle, in the openmm system. This
     # mapping has a different meaning if looking up a virtual site, but that should not happen here
     # as a virtual site's orientation atom should never be a virtual site
-    openmm_indices: List[int] = [
+    openmm_indices: list[int] = [
         openff_openmm_particle_map[openff_index]
         for openff_index in virtual_site.orientations
     ]
