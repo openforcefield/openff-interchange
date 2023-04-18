@@ -15,8 +15,6 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 * #639 Drops support for Python 3.8, following [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html#support-table).
 * #635 Moves and re-organizes the contents of `openff.interchange.interop.internal.gromacs` to a new submodule `openff.interchange.interop.gromacs`.
-* #649 Removes the use of `pkg_resources`, which is deprecated.
-* #660 Moves the contents of `openff.interchange.components.foyer` to `openff.interchange.foyer` while maintaining existing import paths.
 * #662 Moves tests and un-tested modules from the public API to pseudo-private.
 
 ### Bugfixes
@@ -30,6 +28,9 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #651 Adds support for `SMIRNOFFCollection` plugins that depend on multiple `ParameterHandler`s.
 * #654 Adds a module `openff.interchange.common` containing base classes for different types of `Collection`s.
 * #659 Improves testing for `from_openmm`.
+* #649 Removes the use of `pkg_resources`, which is deprecated.
+* #660 Moves the contents of `openff.interchange.components.foyer` to `openff.interchange.foyer` while maintaining existing import paths.
+* #663 Improves the performance of `Interchange.to_prmtop`.
 
 ## 0.3.0 - 2023-04-10
 
