@@ -70,7 +70,7 @@ def _get_exclusion_lists(topology: "Topology") -> tuple[list[int], list[int]]:
 
 def _get_bond_lists(
     interchange: "Interchange",
-    atomic_numbers: tuple[int],
+    atomic_numbers: tuple,
     potential_key_to_bond_type_mapping: dict[PotentialKey, int],
     known_14_pairs: list[list[int]],
 ) -> tuple[list[int], list[int]]:
@@ -103,7 +103,7 @@ def _get_bond_lists(
 
 def _get_angle_lists(
     interchange: "Interchange",
-    atomic_numbers: tuple[int],
+    atomic_numbers: tuple,
     potential_key_to_angle_type_mapping: dict[PotentialKey, int],
     known_14_pairs: list[list[int]],
 ) -> tuple[list[int], list[int]]:
@@ -144,7 +144,7 @@ def _get_angle_lists(
 
 def _get_dihedral_lists(
     interchange: "Interchange",
-    atomic_numbers: tuple[int],
+    atomic_numbers: tuple,
     potential_key_to_dihedral_type_mapping: dict[PotentialKey, int],
     known_14_pairs: list[list[int]],
 ) -> tuple[list[int], list[int]]:
@@ -221,7 +221,7 @@ def _get_dihedral_lists(
                 _14_tag = 1
 
             these_atomic_numbers = tuple(
-                atomic_numbers[index] for index in dihedral.atom_indices
+                atomic_numbers[index] for index in improper.atom_indices
             )
 
             dihedrals_list = (
@@ -306,8 +306,8 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         # properly applied.
         known_14_pairs: list[list[int]] = list()
 
-        atomic_numbers: tuple[int] = tuple(
-            a.atomic_number for a in interchange.topology.atoms
+        atomic_numbers = tuple(
+            atom.atomic_number for atom in interchange.topology.atoms
         )
 
         bonds_inc_hydrogen, bonds_without_hydrogen = _get_bond_lists(
