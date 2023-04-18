@@ -68,6 +68,177 @@ def _get_exclusion_lists(topology: "Topology") -> tuple[list[int], list[int]]:
     return number_excluded_atoms, excluded_atoms_list
 
 
+def _get_bond_lists(
+    interchange: "Interchange",
+    atomic_numbers: tuple[int],
+    potential_key_to_bond_type_mapping: dict[PotentialKey, int],
+    known_14_pairs: list[list[int]],
+) -> tuple[list[int], list[int]]:
+    bonds_inc_hydrogen: list[int] = list()
+    bonds_without_hydrogen: list[int] = list()
+
+    # TODO: Should probably build bond lists and exclusions without assuming bond physics
+    for bond, key_ in interchange["Bonds"].key_map.items():
+        bond_type_index = potential_key_to_bond_type_mapping[key_]
+
+        these_atomic_numbers = tuple(
+            atomic_numbers[index] for index in bond.atom_indices
+        )
+
+        bond_indices = sorted(bond.atom_indices)
+
+        bonds_list = (
+            bonds_inc_hydrogen if 1 in these_atomic_numbers else bonds_without_hydrogen
+        )
+
+        bonds_list.append(bond_indices[0] * 3)
+        bonds_list.append(bond_indices[1] * 3)
+        bonds_list.append(bond_type_index + 1)
+
+        known_14_pairs.append(bond_indices)
+        known_14_pairs.append(list(reversed(bond_indices)))
+
+    return bonds_inc_hydrogen, bonds_without_hydrogen
+
+
+def _get_angle_lists(
+    interchange: "Interchange",
+    atomic_numbers: tuple[int],
+    potential_key_to_angle_type_mapping: dict[PotentialKey, int],
+    known_14_pairs: list[list[int]],
+) -> tuple[list[int], list[int]]:
+    angles_inc_hydrogen: list[int] = list()
+    angles_without_hydrogen: list[int] = list()
+
+    for angle, key_ in interchange["Angles"].key_map.items():
+        angle_type_index = potential_key_to_angle_type_mapping[key_]
+
+        these_atomic_numbers = tuple(
+            atomic_numbers[index] for index in angle.atom_indices
+        )
+
+        angle_indices = list(angle.atom_indices)
+        angle_indices = (
+            angle_indices
+            if angle_indices[0] < angle_indices[-1]
+            else list(reversed(angle_indices))
+        )
+
+        angles_list = (
+            angles_inc_hydrogen
+            if 1 in these_atomic_numbers
+            else angles_without_hydrogen
+        )
+
+        angles_list.append(angle_indices[0] * 3)
+        angles_list.append(angle_indices[1] * 3)
+        angles_list.append(angle_indices[2] * 3)
+        angles_list.append(angle_type_index + 1)
+
+        # This seems wrong?
+        known_14_pairs.append([angle_indices[0], angle_indices[-1]])
+        known_14_pairs.append([angle_indices[-1], angle_indices[0]])
+
+    return angles_inc_hydrogen, angles_without_hydrogen
+
+
+def _get_dihedral_lists(
+    interchange: "Interchange",
+    atomic_numbers: tuple[int],
+    potential_key_to_dihedral_type_mapping: dict[PotentialKey, int],
+    known_14_pairs: list[list[int]],
+) -> tuple[list[int], list[int]]:
+    dihedrals_inc_hydrogen: list[int] = list()
+    dihedrals_without_hydrogen: list[int] = list()
+
+    if "ProperTorsions" in interchange.collections:
+        for dihedral, proper_key in interchange["ProperTorsions"].key_map.items():
+            dihedral_type_index = potential_key_to_dihedral_type_mapping[proper_key]
+
+            atom1_index, atom2_index, atom3_index, atom4_index = dihedral.atom_indices
+
+            # Since 0 can't be negative, attempt to re-arrange this torsion
+            # such that the third atom listed is negative.
+            # This should only be strictly necessary when _14_tag is -1, but
+            # ParmEd likes to always flip it, and always flipping should be harmless.
+            # Could put this in an if block if desired.
+            if atom3_index == 0:
+                atom1_index, atom2_index, atom3_index, atom4_index = reversed(
+                    (
+                        atom1_index,
+                        atom2_index,
+                        atom3_index,
+                        atom4_index,
+                    ),
+                )
+
+            these_atomic_numbers = tuple(
+                atomic_numbers[index] for index in dihedral.atom_indices
+            )
+
+            # Need to know _before_ building dihedral lists if this one will need its
+            # third atom tagged with a negative sign. From https://ambermd.org/prmtop.pdf:
+            # > If the third atom is negative, then the 1-4 non-bonded interactions
+            # > for this torsion is not calculated. This is required to avoid
+            # > double-counting these non-bonded interactions in some ring systems
+            # > and in multi-term torsions.
+            if ([atom1_index, atom4_index] in known_14_pairs) or (
+                [atom4_index, atom1_index] in known_14_pairs
+            ):
+                _14_tag = -1
+
+            else:
+                known_14_pairs.append([atom1_index, atom4_index])
+                _14_tag = 1
+
+            dihedrals_list = (
+                dihedrals_inc_hydrogen
+                if 1 in these_atomic_numbers
+                else dihedrals_without_hydrogen
+            )
+
+            dihedrals_list.append(atom1_index * 3)
+            dihedrals_list.append(atom2_index * 3)
+            dihedrals_list.append(atom3_index * 3 * _14_tag)
+            dihedrals_list.append(atom4_index * 3)
+            dihedrals_list.append(dihedral_type_index + 1)
+
+    if "ImproperTorsions" in interchange.collections:
+        for improper, improper_key in interchange["ImproperTorsions"].key_map.items():
+            dihedral_type_index = potential_key_to_dihedral_type_mapping[improper_key]
+
+            atom1_index, atom2_index, atom3_index, atom4_index = improper.atom_indices
+
+            if ([atom1_index, atom4_index] in known_14_pairs) or (
+                [atom4_index, atom1_index] in known_14_pairs
+            ):
+                _14_tag = -1
+            else:
+                # Probably no need to append 1-4 pairs here, since 1-4 pairs should not
+                # exist in impropers and should be covered when 1-2 bond and 1-3 angle
+                # pairs are appended to this list. Not actually sure a case in which
+                # an improper can hit this clause?
+                _14_tag = 1
+
+            these_atomic_numbers = tuple(
+                atomic_numbers[index] for index in dihedral.atom_indices
+            )
+
+            dihedrals_list = (
+                dihedrals_inc_hydrogen
+                if 1 in these_atomic_numbers
+                else dihedrals_without_hydrogen
+            )
+
+            dihedrals_list.append(atom1_index * 3)
+            dihedrals_list.append(atom2_index * 3)
+            dihedrals_list.append(atom3_index * 3 * _14_tag)
+            dihedrals_list.append(atom4_index * 3 * -1)
+            dihedrals_list.append(dihedral_type_index + 1)
+
+    return dihedrals_inc_hydrogen, dihedrals_without_hydrogen
+
+
 # TODO: Split this mono-function into smaller functions
 def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
     """
@@ -135,171 +306,30 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         # properly applied.
         known_14_pairs: list[list[int]] = list()
 
-        bonds_inc_hydrogen: list[int] = list()
-        bonds_without_hydrogen: list[int] = list()
+        atomic_numbers: tuple[int] = tuple(
+            a.atomic_number for a in interchange.topology.atoms
+        )
 
-        for bond, key_ in interchange["Bonds"].key_map.items():
-            bond_type_index = potential_key_to_bond_type_mapping[key_]
+        bonds_inc_hydrogen, bonds_without_hydrogen = _get_bond_lists(
+            interchange,
+            atomic_numbers,
+            potential_key_to_bond_type_mapping,
+            known_14_pairs,
+        )
 
-            atom1 = interchange.topology.atom(bond.atom_indices[0])
-            atom2 = interchange.topology.atom(bond.atom_indices[1])
+        angles_inc_hydrogen, angles_without_hydrogen = _get_angle_lists(
+            interchange,
+            atomic_numbers,
+            potential_key_to_angle_type_mapping,
+            known_14_pairs,
+        )
 
-            bond_indices = sorted(bond.atom_indices)
-
-            bonds_list = (
-                bonds_inc_hydrogen
-                if 1 in (atom1.atomic_number, atom2.atomic_number)
-                else bonds_without_hydrogen
-            )
-
-            bonds_list.append(bond_indices[0] * 3)
-            bonds_list.append(bond_indices[1] * 3)
-            bonds_list.append(bond_type_index + 1)
-
-            known_14_pairs.append(bond_indices)
-            known_14_pairs.append(list(reversed(bond_indices)))
-
-        angles_inc_hydrogen: list[int] = list()
-        angles_without_hydrogen: list[int] = list()
-
-        for angle, key_ in interchange["Angles"].key_map.items():
-            angle_type_index = potential_key_to_angle_type_mapping[key_]
-
-            atom1 = interchange.topology.atom(angle.atom_indices[0])
-            atom2 = interchange.topology.atom(angle.atom_indices[1])
-            atom3 = interchange.topology.atom(angle.atom_indices[2])
-
-            angle_indices = list(angle.atom_indices)
-            angle_indices = (
-                angle_indices
-                if angle_indices[0] < angle_indices[-1]
-                else list(reversed(angle_indices))
-            )
-
-            if 1 in [
-                atom1.atomic_number,
-                atom2.atomic_number,
-                atom3.atomic_number,
-            ]:
-                angles_inc_hydrogen.append(angle_indices[0] * 3)
-                angles_inc_hydrogen.append(angle_indices[1] * 3)
-                angles_inc_hydrogen.append(angle_indices[2] * 3)
-                angles_inc_hydrogen.append(angle_type_index + 1)
-            else:
-                angles_without_hydrogen.append(angle_indices[0] * 3)
-                angles_without_hydrogen.append(angle_indices[1] * 3)
-                angles_without_hydrogen.append(angle_indices[2] * 3)
-                angles_without_hydrogen.append(angle_type_index + 1)
-
-            known_14_pairs.append([angle_indices[0], angle_indices[-1]])
-            known_14_pairs.append([angle_indices[-1], angle_indices[0]])
-
-        dihedrals_inc_hydrogen: list[int] = list()
-        dihedrals_without_hydrogen: list[int] = list()
-
-        if "ProperTorsions" in interchange.collections:
-            for dihedral, proper_key in interchange["ProperTorsions"].key_map.items():
-                dihedral_type_index = potential_key_to_dihedral_type_mapping[proper_key]
-
-                atom1 = interchange.topology.atom(dihedral.atom_indices[0])
-                atom2 = interchange.topology.atom(dihedral.atom_indices[1])
-                atom3 = interchange.topology.atom(dihedral.atom_indices[2])
-                atom4 = interchange.topology.atom(dihedral.atom_indices[3])
-
-                # Since 0 can't be negative, attempt to re-arrange this torsion
-                # such that the third atom listed is negative.
-                # This should only be strictlye necessary when _14_tag is -1, but
-                # ParmEd likes to always flip it, and always flipping should be harmless.
-                # Could put this in an if block if desired.
-                atom3_index = interchange.topology.atom_index(atom3)
-
-                if atom3_index == 0:
-                    (atom4, atom3, atom2, atom1) = atom1, atom2, atom3, atom4
-
-                atom1_index = interchange.topology.atom_index(atom1)
-                atom2_index = interchange.topology.atom_index(atom2)
-                atom3_index = interchange.topology.atom_index(atom3)
-                atom4_index = interchange.topology.atom_index(atom4)
-
-                # Need to know _before_ building dihedral lists if this one will need its
-                # third atom tagged with a negative sign. From https://ambermd.org/prmtop.pdf:
-                # > If the third atom is negative, then the 1-4 non-bonded interactions
-                # > for this torsion is not calculated. This is required to avoid
-                # > double-counting these non-bonded interactions in some ring systems
-                # > and in multi-term torsions.
-                if ([atom1_index, atom4_index] in known_14_pairs) or (
-                    [atom4_index, atom1_index] in known_14_pairs
-                ):
-                    _14_tag = -1
-
-                else:
-                    known_14_pairs.append([atom1_index, atom4_index])
-                    _14_tag = 1
-
-                dihedrals_list = (
-                    dihedrals_inc_hydrogen
-                    if 1
-                    in [
-                        atom1.atomic_number,
-                        atom2.atomic_number,
-                        atom3.atomic_number,
-                        atom4.atomic_number,
-                    ]
-                    else dihedrals_without_hydrogen
-                )
-
-                dihedrals_list.append(atom1_index * 3)
-                dihedrals_list.append(atom2_index * 3)
-                dihedrals_list.append(atom3_index * 3 * _14_tag)
-                dihedrals_list.append(atom4_index * 3)
-                dihedrals_list.append(dihedral_type_index + 1)
-
-        if "ImproperTorsions" in interchange.collections:
-            for improper, improper_key in interchange[
-                "ImproperTorsions"
-            ].key_map.items():
-                dihedral_type_index = potential_key_to_dihedral_type_mapping[
-                    improper_key
-                ]
-
-                atom1 = interchange.topology.atom(improper.atom_indices[0])
-                atom2 = interchange.topology.atom(improper.atom_indices[1])
-                atom3 = interchange.topology.atom(improper.atom_indices[2])
-                atom4 = interchange.topology.atom(improper.atom_indices[3])
-
-                atom1_index = interchange.topology.atom_index(atom1)
-                atom2_index = interchange.topology.atom_index(atom2)
-                atom3_index = interchange.topology.atom_index(atom3)
-                atom4_index = interchange.topology.atom_index(atom4)
-
-                if ([atom1_index, atom4_index] in known_14_pairs) or (
-                    [atom4_index, atom1_index] in known_14_pairs
-                ):
-                    _14_tag = -1
-                else:
-                    # Probably no need to append 1-4 pairs here, since 1-4 pairs should not
-                    # exist in impropers and should be covered when 1-2 bond and 1-3 angle
-                    # pairs are appended to this list. Not actually sure a case in which
-                    # an improper can hit this clause?
-                    _14_tag = 1
-
-                dihedrals_list = (
-                    dihedrals_inc_hydrogen
-                    if 1
-                    in [
-                        atom1.atomic_number,
-                        atom2.atomic_number,
-                        atom3.atomic_number,
-                        atom4.atomic_number,
-                    ]
-                    else dihedrals_without_hydrogen
-                )
-
-                dihedrals_list.append(atom1_index * 3)
-                dihedrals_list.append(atom2_index * 3)
-                dihedrals_list.append(atom3_index * 3 * _14_tag)
-                dihedrals_list.append(atom4_index * 3 * -1)
-                dihedrals_list.append(dihedral_type_index + 1)
+        dihedrals_inc_hydrogen, dihedrals_without_hydrogen = _get_dihedral_lists(
+            interchange,
+            atomic_numbers,
+            potential_key_to_dihedral_type_mapping,
+            known_14_pairs,
+        )
 
         number_excluded_atoms, excluded_atoms_list = _get_exclusion_lists(
             interchange.topology,
@@ -421,7 +451,6 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG ATOMIC_NUMBER\n" "%FORMAT(10I8)\n")
-        atomic_numbers = [a.atomic_number for a in interchange.topology.atoms]
         text_blob = "".join([str(val).rjust(8) for val in atomic_numbers])
         _write_text_blob(prmtop, text_blob)
 
