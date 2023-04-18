@@ -17,6 +17,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #635 Moves and re-organizes the contents of `openff.interchange.interop.internal.gromacs` to a new submodule `openff.interchange.interop.gromacs`.
 * #649 Removes the use of `pkg_resources`, which is deprecated.
 * #660 Moves the contents of `openff.interchange.components.foyer` to `openff.interchange.foyer` while maintaining existing import paths.
+* #662 Moves tests and un-tested modules from the public API to pseudo-private.
 
 ### Bugfixes
 

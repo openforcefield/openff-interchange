@@ -348,7 +348,7 @@ class Interchange(DefaultModel):
             to_prmtop(self, file_path)
 
         elif writer == "parmed":
-            from openff.interchange.interop.external import ParmEdWrapper
+            from openff.interchange.interop._external import ParmEdWrapper
 
             ParmEdWrapper().to_file(self, file_path)
 
@@ -388,7 +388,7 @@ class Interchange(DefaultModel):
             to_inpcrd(self, file_path)
 
         elif writer == "parmed":
-            from openff.interchange.interop.external import ParmEdWrapper
+            from openff.interchange.interop._external import ParmEdWrapper
 
             ParmEdWrapper().to_file(self, file_path)
 
@@ -397,13 +397,13 @@ class Interchange(DefaultModel):
 
     def _to_parmed(self):
         """Export this Interchange to a ParmEd Structure."""
-        from openff.interchange.interop.parmed import _to_parmed
+        from openff.interchange.interop._parmed import _to_parmed
 
         return _to_parmed(self)
 
     @classmethod
     def _from_parmed(cls, structure):
-        from openff.interchange.interop.parmed import _from_parmed
+        from openff.interchange.interop._parmed import _from_parmed
 
         return _from_parmed(cls, structure)
 
