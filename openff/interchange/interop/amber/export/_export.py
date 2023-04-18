@@ -32,38 +32,86 @@ def _write_text_blob(file, blob):
             file.write(line + "\n")
 
 
-def _get_exclusion_lists(topology: "Topology") -> tuple[list[int], list[int]]:
-    number_excluded_atoms: list[int] = list()
-    excluded_atoms_list: list[int] = list()
+def _get_per_atom_exclusion_lists(topology: "Topology") -> dict[int, list[int]]:
+    """
+    Get the excluded atoms of each atom in this topology.
+
+    Parameters
+    ----------
+    topology: Topology
+        OpenFF Topology
+
+    Returns
+    -------
+    per_atom_exclusions: dict[int, list[int]]
+        keys: atom indices (OpenFF atoms, zero-indexed)
+        values: list of atom indices (OpenFF atoms, zero-indexed) that are excluded from this atom
+
+    """
+    per_atom_exclusions: dict[int, list[int]] = dict()
 
     for atom1 in topology.atoms:
         # Excluded atoms _on this atom_
-        tmp = list()
-        atom1_index = topology.atom_index(atom1)
+        this_atom_exclusions = list()
+        index1 = topology.atom_index(atom1)
 
         for atom2 in atom1.bonded_atoms:
-            atom2_index = topology.atom_index(atom2)
+            index2 = topology.atom_index(atom2)
 
-            if atom2_index > atom1_index and atom2_index + 1 not in tmp:
-                tmp.append(atom2_index + 1)
+            if index2 > index1 and index2 not in this_atom_exclusions:
+                this_atom_exclusions.append(index2)
 
             for atom3 in atom2.bonded_atoms:
                 atom3_index = topology.atom_index(atom3)
 
-                if atom3_index > atom1_index and atom3_index + 1 not in tmp:
-                    tmp.append(atom3_index + 1)
+                if atom3_index > index1 and atom3_index not in this_atom_exclusions:
+                    this_atom_exclusions.append(atom3_index)
 
                 for atom4 in atom3.bonded_atoms:
                     atom4_index = topology.atom_index(atom4)
-                    if atom4_index > atom1_index and atom4_index + 1 not in tmp:
-                        tmp.append(atom4_index + 1)
+                    if atom4_index > index1 and atom4_index not in this_atom_exclusions:
+                        this_atom_exclusions.append(atom4_index)
 
-        if len(tmp) == 0:
-            tmp.append(0)
+        per_atom_exclusions[index1] = this_atom_exclusions
 
-        number_excluded_atoms.append(len(tmp))
-        for _ in tmp:
-            excluded_atoms_list.append(_)
+    return per_atom_exclusions
+
+
+def _get_exclusion_lists(
+    per_atom_exclusions: dict[int, list[int]],
+) -> tuple[list[int], list[int]]:
+    """
+    Convert a per-atom exclusion dict to Amer structures.
+
+    Parameters
+    ----------
+    per_atom_exclusions: dict[int, list[int]]
+        keys: atom indices (OpenFF atoms, zero-indexed)
+        values: list of atom indices (OpenFF atoms, zero-indexed) that are excluded from this atom
+
+        See _getper_atom_exclusion_lists
+
+    Returns
+    -------
+    number_excluded_atoms: list[int]
+        Number of excluded atoms for each atom (OpenFF atoms, zero-indexed)
+    excluded_atoms_list: list[int]
+        Flattened list of per-atom exclusions (Amber atoms, one-indexed).
+        See EXCLUDED_ATOMS_LIST in https://ambermd.org/prmtop.pdf
+
+    """
+    excluded_atoms_list: list[int] = list()
+
+    for this_atom_exclusions in per_atom_exclusions.values():
+        if len(this_atom_exclusions) == 0:
+            excluded_atoms_list.append(0)
+
+        for other_atom in this_atom_exclusions:
+            excluded_atoms_list.append(other_atom + 1)
+
+    number_excluded_atoms: list[int] = [
+        len(val) for val in per_atom_exclusions.values()
+    ]
 
     return number_excluded_atoms, excluded_atoms_list
 
@@ -72,7 +120,6 @@ def _get_bond_lists(
     interchange: "Interchange",
     atomic_numbers: tuple,
     potential_key_to_bond_type_mapping: dict[PotentialKey, int],
-    known_14_pairs: list[list[int]],
 ) -> tuple[list[int], list[int]]:
     bonds_inc_hydrogen: list[int] = list()
     bonds_without_hydrogen: list[int] = list()
@@ -85,7 +132,7 @@ def _get_bond_lists(
             atomic_numbers[index] for index in bond.atom_indices
         )
 
-        bond_indices = sorted(bond.atom_indices)
+        bond_indices = tuple(sorted(bond.atom_indices))
 
         bonds_list = (
             bonds_inc_hydrogen if 1 in these_atomic_numbers else bonds_without_hydrogen
@@ -95,9 +142,6 @@ def _get_bond_lists(
         bonds_list.append(bond_indices[1] * 3)
         bonds_list.append(bond_type_index + 1)
 
-        known_14_pairs.append(bond_indices)
-        known_14_pairs.append(list(reversed(bond_indices)))
-
     return bonds_inc_hydrogen, bonds_without_hydrogen
 
 
@@ -105,7 +149,6 @@ def _get_angle_lists(
     interchange: "Interchange",
     atomic_numbers: tuple,
     potential_key_to_angle_type_mapping: dict[PotentialKey, int],
-    known_14_pairs: list[list[int]],
 ) -> tuple[list[int], list[int]]:
     angles_inc_hydrogen: list[int] = list()
     angles_without_hydrogen: list[int] = list()
@@ -135,10 +178,6 @@ def _get_angle_lists(
         angles_list.append(angle_indices[2] * 3)
         angles_list.append(angle_type_index + 1)
 
-        # This seems wrong?
-        known_14_pairs.append([angle_indices[0], angle_indices[-1]])
-        known_14_pairs.append([angle_indices[-1], angle_indices[0]])
-
     return angles_inc_hydrogen, angles_without_hydrogen
 
 
@@ -146,7 +185,7 @@ def _get_dihedral_lists(
     interchange: "Interchange",
     atomic_numbers: tuple,
     potential_key_to_dihedral_type_mapping: dict[PotentialKey, int],
-    known_14_pairs: list[list[int]],
+    known_14_pairs: list[tuple[int, ...]],
 ) -> tuple[list[int], list[int]]:
     dihedrals_inc_hydrogen: list[int] = list()
     dihedrals_without_hydrogen: list[int] = list()
@@ -182,14 +221,14 @@ def _get_dihedral_lists(
             # > for this torsion is not calculated. This is required to avoid
             # > double-counting these non-bonded interactions in some ring systems
             # > and in multi-term torsions.
-            if ([atom1_index, atom4_index] in known_14_pairs) or (
-                [atom4_index, atom1_index] in known_14_pairs
+            if _pair_in_known_14_pairs(
+                pair=(atom1_index, atom4_index),
+                known_14_pairs=known_14_pairs,
             ):
                 _14_tag = -1
-
             else:
-                known_14_pairs.append([atom1_index, atom4_index])
                 _14_tag = 1
+                known_14_pairs.append((atom1_index, atom4_index))
 
             dihedrals_list = (
                 dihedrals_inc_hydrogen
@@ -209,16 +248,7 @@ def _get_dihedral_lists(
 
             atom1_index, atom2_index, atom3_index, atom4_index = improper.atom_indices
 
-            if ([atom1_index, atom4_index] in known_14_pairs) or (
-                [atom4_index, atom1_index] in known_14_pairs
-            ):
-                _14_tag = -1
-            else:
-                # Probably no need to append 1-4 pairs here, since 1-4 pairs should not
-                # exist in impropers and should be covered when 1-2 bond and 1-3 angle
-                # pairs are appended to this list. Not actually sure a case in which
-                # an improper can hit this clause?
-                _14_tag = 1
+            # Assume that no improper torsions include 1-4 pairs, so don't check nor track them
 
             these_atomic_numbers = tuple(
                 atomic_numbers[index] for index in improper.atom_indices
@@ -230,6 +260,9 @@ def _get_dihedral_lists(
                 else dihedrals_without_hydrogen
             )
 
+            # There is probably no way for a 1-4 to exist in an improper?
+            _14_tag = 1
+
             dihedrals_list.append(atom1_index * 3)
             dihedrals_list.append(atom2_index * 3)
             dihedrals_list.append(atom3_index * 3 * _14_tag)
@@ -237,6 +270,19 @@ def _get_dihedral_lists(
             dihedrals_list.append(dihedral_type_index + 1)
 
     return dihedrals_inc_hydrogen, dihedrals_without_hydrogen
+
+
+def _pair_in_known_14_pairs(
+    pair: tuple[int, int],
+    known_14_pairs: list[tuple[int, ...]],
+) -> bool:
+    if pair in known_14_pairs:
+        return True
+
+    if tuple((pair[1], pair[0])) in known_14_pairs:
+        return True
+
+    return False
 
 
 # TODO: Split this mono-function into smaller functions
@@ -304,7 +350,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         # Track bonds and angles here also to ensure the 1-2 and 1-3 exclusions are
         # properly applied.
-        known_14_pairs: list[list[int]] = list()
+        known_14_pairs: list[tuple[int, ...]] = list()
 
         atomic_numbers = tuple(
             atom.atomic_number for atom in interchange.topology.atoms
@@ -314,14 +360,12 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             interchange,
             atomic_numbers,
             potential_key_to_bond_type_mapping,
-            known_14_pairs,
         )
 
         angles_inc_hydrogen, angles_without_hydrogen = _get_angle_lists(
             interchange,
             atomic_numbers,
             potential_key_to_angle_type_mapping,
-            known_14_pairs,
         )
 
         dihedrals_inc_hydrogen, dihedrals_without_hydrogen = _get_dihedral_lists(
@@ -331,8 +375,10 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             known_14_pairs,
         )
 
+        per_atom_exclusion_lists = _get_per_atom_exclusion_lists(interchange.topology)
+
         number_excluded_atoms, excluded_atoms_list = _get_exclusion_lists(
-            interchange.topology,
+            per_atom_exclusion_lists,
         )
 
         # total number of atoms
