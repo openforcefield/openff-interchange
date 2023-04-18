@@ -21,7 +21,7 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
-from openff.interchange.interop.parmed import _lj_params_from_potential
+from openff.interchange.interop._parmed import _lj_params_from_potential
 from openff.interchange.models import TopologyKey, VirtualSiteKey
 
 _DATA_DICT: TypeAlias = dict[str, Union[None, str, bool, "Collection"]]
