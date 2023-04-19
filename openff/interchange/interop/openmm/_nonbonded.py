@@ -354,6 +354,14 @@ def _create_single_nonbonded_force(
         elif data["vdw_method"] == "pme" and data["electrostatics_method"] == _PME:
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
             non_bonded_force.setEwaldErrorTolerance(1.0e-4)
+        elif data["vdw_method"] == data["electrostatics_method"] == "cutoff":
+            if data["vdw_cutoff"] != data["electrostatics_collection"].cutoff:
+                raise UnsupportedExportError(
+                    "If using cutoff vdW and electrostatics, cutoffs must match.",
+                )
+            non_bonded_force.setCutoffDistance(
+                to_openmm_quantity(data["vdw_cutoff"]),
+            )
         else:
             raise UnsupportedCutoffMethodError(
                 f"Combination of non-bonded cutoff methods {data['vdw_method']} (vdW) and "
