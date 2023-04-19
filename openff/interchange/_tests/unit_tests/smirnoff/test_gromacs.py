@@ -113,6 +113,6 @@ class TestSettles(_BaseTest):
                 tip3p_interchange,
             )
 
-        assert len(molecule.settles) == 0
+        assert len(molecule.settles) == 1
         assert len(molecule.angles) == 0
         assert len(molecule.bonds) == 0
