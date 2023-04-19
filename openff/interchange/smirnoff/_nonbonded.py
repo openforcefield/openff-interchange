@@ -73,8 +73,6 @@ class _SMIRNOFFNonbondedCollection(SMIRNOFFCollection, _NonbondedCollection):
 class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
     """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
 
-    method: Literal["cutoff", "pme", "no-cutoff"] = Field("cutoff")
-
     @classmethod
     def allowed_parameter_handlers(cls):
         """Return a list of allowed types of ParameterHandler classes."""

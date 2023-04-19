@@ -9,7 +9,12 @@ from openff.interchange.drivers.gromacs import get_gromacs_energies
 from openff.interchange.drivers.lammps import get_lammps_energies
 from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.exceptions import AmberError, GMXError, LAMMPSError
+from openff.interchange.exceptions import (
+    AmberError,
+    GMXError,
+    LAMMPSError,
+    UnsupportedCutoffMethodError,
+)
 
 
 def get_all_energies(interchange: "Interchange") -> dict[str, EnergyReport]:
@@ -19,9 +24,15 @@ def get_all_energies(interchange: "Interchange") -> dict[str, EnergyReport]:
     # TODO: Return something nan-like if one driver fails, but still return others that succeed
     # TODO: Have each driver return the version of the engine that was used
 
-    all_energies = {
-        "OpenMM": get_openmm_energies(interchange),
-    }
+    try:
+        # TODO: Worth wiring this argument up to this function? kwargs complexity is not fun
+        all_energies = {
+            "OpenMM": get_openmm_energies(interchange),
+        }
+    except UnsupportedCutoffMethodError:
+        all_energies = {
+            "OpenMM": get_openmm_energies(interchange, combine_nonbonded_forces=False),
+        }
 
     for engine_name, engine_driver, engine_exception in [
         ("Amber", get_amber_energies, AmberError),

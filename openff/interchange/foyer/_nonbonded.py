@@ -1,12 +1,13 @@
+from typing import Literal
+
 from openff.models.types import FloatQuantity
 from openff.toolkit.topology import Topology
 from openff.units import Quantity, unit
 from openff.utilities.utilities import has_package
-from pydantic import PrivateAttr
+from pydantic import Field, PrivateAttr
 
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.components.potentials import Potential
-from openff.interchange.constants import _PME
 from openff.interchange.foyer._base import _copy_params
 from openff.interchange.models import PotentialKey, TopologyKey
 
@@ -18,9 +19,8 @@ class FoyerVDWHandler(vdWCollection):
     """Handler storing vdW potentials as produced by a Foyer force field."""
 
     force_field_key: str = "atoms"
-    mixing_rule = "geometric"
-    method: str = "cutoff"
-    switch_width: FloatQuantity["angstrom"] = 0.0 * unit.angstrom
+    mixing_rule: Literal["lorentz-berthelot", "geometric"] = Field("geometric")
+    method: Literal["cutoff", "pme", "no-cutoff"] = Field("cutoff")
 
     def store_matches(
         self,
@@ -59,10 +59,6 @@ class FoyerElectrostaticsHandler(ElectrostaticsCollection):
     """Handler storing electrostatics potentials as produced by a Foyer force field."""
 
     force_field_key: str = "atoms"
-    periodic_potential: str = _PME
-    scale_13: float = 0.0
-    scale_14: float = 0.5
-    scale_15: float = 1.0
     cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom
 
     _charges: dict[TopologyKey, Quantity] = PrivateAttr(dict())

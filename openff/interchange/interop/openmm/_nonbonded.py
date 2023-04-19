@@ -872,9 +872,18 @@ def _create_electrostatics_force(
             )
 
     elif data["electrostatics_method"] == "cutoff":
-        raise UnsupportedCutoffMethodError(
-            "OpenMM does not clearly support cut-off electrostatics with no reaction-field attenuation.",
-        )
+        if interchange.box is None:
+            electrostatics_force.setNonbondedMethod(
+                openmm.NonbondedForce.CutoffNonPeriodic,
+            )
+            electrostatics_force.setCutoffDistance(2.0)
+        else:
+            electrostatics_force.setNonbondedMethod(
+                openmm.NonbondedForce.CutoffPeriodic,
+            )
+            electrostatics_force.setCutoffDistance(0.9)
+
+        # TODO: Wire through electrostatics cutoff?
     else:
         raise UnsupportedCutoffMethodError(
             f"Electrostatics method {data['electrostatics_method']} not supported",

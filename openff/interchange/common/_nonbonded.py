@@ -7,6 +7,7 @@ from openff.units import Quantity, unit
 from pydantic import Field
 
 from openff.interchange.components.potentials import Collection
+from openff.interchange.constants import _PME
 from openff.interchange.models import TopologyKey
 
 
@@ -51,6 +52,8 @@ class vdWCollection(_NonbondedCollection):
         description="The width over which the switching function is applied",
     )
 
+    method: Literal["cutoff", "no-cutoff", "pme"] = Field("cutoff")
+
 
 class ElectrostaticsCollection(_NonbondedCollection):
     """Handler storing electrostatics interactions."""
@@ -58,6 +61,14 @@ class ElectrostaticsCollection(_NonbondedCollection):
     type: Literal["Electrostatics"] = "Electrostatics"
 
     expression: Literal["coul"] = "coul"
+
+    periodic_potential: Literal[
+        "Ewald3D-ConductingBoundary",
+        "cutoff",
+        "no-cutoff",
+    ] = Field(_PME)
+    nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
+    exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     @property
     def charges(self) -> dict[TopologyKey, Quantity]:
