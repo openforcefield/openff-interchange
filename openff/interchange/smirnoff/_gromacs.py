@@ -1,3 +1,4 @@
+import itertools
 from typing import Optional
 
 from openff.toolkit.topology.molecule import Atom, Molecule
@@ -16,15 +17,17 @@ from openff.interchange.interop.gromacs.models.models import (
     GROMACSAngle,
     GROMACSAtom,
     GROMACSBond,
+    GROMACSExclusion,
     GROMACSMolecule,
     GROMACSPair,
+    GROMACSSettles,
     GROMACSSystem,
     LennardJonesAtomType,
     PeriodicImproperDihedral,
     PeriodicProperDihedral,
     RyckaertBellemansDihedral,
 )
-from openff.interchange.models import TopologyKey
+from openff.interchange.models import BondKey, TopologyKey
 
 
 def _convert(interchange: Interchange) -> GROMACSSystem:
@@ -171,12 +174,12 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             else:
                 raise NotImplementedError()
 
+        _convert_settles(molecule, unique_molecule, interchange)
         _convert_bonds(molecule, unique_molecule, interchange)
         _convert_angles(molecule, unique_molecule, interchange)
         # pairs
         _convert_dihedrals(molecule, unique_molecule, interchange)
-        # settles?
-        # constraints?
+        # other constraints?
 
         system.molecule_types[unique_molecule.name] = molecule
 
@@ -199,6 +202,9 @@ def _convert_bonds(
     unique_molecule: "Molecule",
     interchange: Interchange,
 ):
+    if len(molecule.settles) > 0:
+        return
+
     collection = interchange["Bonds"]
 
     for bond in unique_molecule.bonds:
@@ -246,6 +252,9 @@ def _convert_angles(
     unique_molecule: "Molecule",
     interchange: Interchange,
 ):
+    if len(molecule.settles) > 0:
+        return
+
     collection = interchange["Angles"]
 
     for angle in unique_molecule.angles:
@@ -407,3 +416,69 @@ def _convert_dihedrals(
                             multiplicity=int(params["periodicity"]),
                         ),
                     )
+
+
+def _convert_settles(
+    molecule: GROMACSMolecule,
+    unique_molecule: "Molecule",
+    interchange: Interchange,
+):
+    if not unique_molecule.is_isomorphic_with(Molecule.from_smiles("O")):
+        return
+
+    if unique_molecule.atom(0).atomic_number != 8:
+        raise Exception(
+            "Writing `[ settles ]` assumes water is ordered as OHH. Please raise an issue "
+            "if you would benefit from this assumption changing.",
+        )
+
+    topology_atom_indices = [
+        interchange.topology.atom_index(atom) for atom in unique_molecule.atoms
+    ]
+
+    constraint_lengths = set()
+
+    for atom_pair in itertools.combinations(topology_atom_indices, 2):
+        key = BondKey(atom_indices=atom_pair)
+
+        if key not in interchange["Constraints"].key_map:
+            return
+
+        try:
+            constraint_lengths.add(
+                interchange["Bonds"]
+                .potentials[interchange["Bonds"].key_map[key]]
+                .parameters["length"],
+            )
+        except KeyError:
+            constraint_lengths.add(
+                interchange["Constraints"]
+                .constraints[interchange["Constraints"].key_map[key]]
+                .parameters["distance"],
+            )
+
+    if len(constraint_lengths) != 2:
+        raise RuntimeError(
+            "Found three unique constraint lengths in constrained water.",
+        )
+
+    molecule.settles.append(
+        GROMACSSettles(
+            first_atom=1,  # TODO: documentation unclear on if this is first or oxygen
+            oxygen_hydrogen_distance=min(constraint_lengths),
+            hydrogen_hydrogen_distance=max(constraint_lengths),
+        ),
+    )
+
+    molecule.exclusions.append(
+        GROMACSExclusion(
+            first_atom=1,
+            other_atoms=[2, 3],
+        ),
+    )
+    molecule.exclusions.append(
+        GROMACSExclusion(
+            first_atom=2,
+            other_atoms=[3],
+        ),
+    )
