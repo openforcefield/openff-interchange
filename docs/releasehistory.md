@@ -31,6 +31,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #649 Removes the use of `pkg_resources`, which is deprecated.
 * #660 Moves the contents of `openff.interchange.components.foyer` to `openff.interchange.foyer` while maintaining existing import paths.
 * #663 Improves the performance of `Interchange.to_prmtop`.
+* #665 Properly write `[ settes ]` directive in GROMACS files.
 
 ## 0.3.0 - 2023-04-10
 

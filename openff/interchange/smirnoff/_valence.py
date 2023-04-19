@@ -287,7 +287,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
     expression: Literal[""] = ""
     constraints: dict[
         PotentialKey,
-        bool,
+        Potential,
     ] = dict()  # should this be named potentials for consistency?
 
     @classmethod
@@ -390,7 +390,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
                     "distance": distance,
                 },
             )
-            self.constraints[potential_key] = potential  # type: ignore[assignment]
+            self.constraints[potential_key] = potential
 
 
 class SMIRNOFFAngleCollection(SMIRNOFFCollection, AngleCollection):
