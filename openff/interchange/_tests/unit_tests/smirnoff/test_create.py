@@ -55,7 +55,7 @@ class TestCreate(_BaseTest):
         out = Interchange.from_smirnoff(force_field=sage, topology=[water])
         found_charges = [v.m for v in out["Electrostatics"].charges.values()]
 
-        assert numpy.allclose(found_charges, [0.417, -0.834, 0.417])
+        assert numpy.allclose(found_charges, [-0.834, 0.417, 0.417])
 
     def test_infer_positions(self, sage):
         from openff.toolkit.tests.create_molecules import create_ethanol

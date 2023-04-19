@@ -285,7 +285,7 @@ class _BaseTest:
 
     @pytest.fixture()
     def water(self):
-        return Molecule.from_mapped_smiles("[H:1][O:2][H:3]")
+        return Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
 
 
 HAS_GROMACS = _find_gromacs_executable() is not None

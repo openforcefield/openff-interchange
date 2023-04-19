@@ -2,7 +2,7 @@
 import importlib
 from types import ModuleType
 
-from openff.interchange._version import get_versions  # type: ignore
+from openff.interchange._version import get_versions
 from openff.interchange.components.interchange import Interchange
 
 # Handle versioneer

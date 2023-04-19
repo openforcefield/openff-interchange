@@ -423,6 +423,9 @@ def _convert_settles(
     unique_molecule: "Molecule",
     interchange: Interchange,
 ):
+    if "Constraints" not in interchange.collections:
+        return
+
     if not unique_molecule.is_isomorphic_with(Molecule.from_smiles("O")):
         return
 
@@ -450,7 +453,10 @@ def _convert_settles(
                 .potentials[interchange["Bonds"].key_map[key]]
                 .parameters["length"],
             )
-        except KeyError:
+        # KeyError (subclass of LookupErrorR) when this BondKey is not found in the bond collection
+        # LookupError for the Interchange not having a bond collection
+        # in either case, look to the constraint collection for this distance
+        except LookupError:
             constraint_lengths.add(
                 interchange["Constraints"]
                 .constraints[interchange["Constraints"].key_map[key]]
