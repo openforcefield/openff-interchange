@@ -6,7 +6,12 @@ from openff.units import unit
 from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest
 from openff.interchange.interop.gromacs.models.models import GROMACSMolecule
-from openff.interchange.smirnoff._gromacs import _convert, _convert_settles
+from openff.interchange.smirnoff._gromacs import (
+    _convert,
+    _convert_angles,
+    _convert_bonds,
+    _convert_settles,
+)
 
 
 class TestConvert(_BaseTest):
@@ -97,3 +102,17 @@ class TestSettles(_BaseTest):
         )
 
         assert len(molecule.settles) == 0
+
+    def test_no_bonds_or_angles_if_settle(self, tip3p_interchange):
+        molecule = GROMACSMolecule(name="foo")
+
+        for function in [_convert_settles, _convert_bonds, _convert_angles]:
+            function(
+                molecule,
+                tip3p_interchange.topology.molecule(0),
+                tip3p_interchange,
+            )
+
+        assert len(molecule.settles) == 0
+        assert len(molecule.angles) == 0
+        assert len(molecule.bonds) == 0
