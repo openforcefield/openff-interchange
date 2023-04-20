@@ -131,8 +131,9 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
                         "If some atoms have residue names, all atoms must have residue names.",
                     )
                 else:
-                    for atom in unique_molecule.atoms:
-                        atom.metadata["residue_name"] = unique_molecule.name
+                    # Use dummy since we're already iterating over this molecule's atoms
+                    for _atom in unique_molecule.atoms:
+                        _atom.metadata["residue_name"] = unique_molecule.name
 
             name = SYMBOLS[atom.atomic_number] if atom.name == "" else atom.name
             charge = (
