@@ -251,8 +251,10 @@ class GROMACSSystem(DefaultModel):
 
         return to_top(self, file)
 
-    def remove_molecule_type(self, molecule_name: str, n_copies: int):
+    def remove_molecule_type(self, molecule_name: str, n_copies: int = 1):
         """Remove a molecule type from the system."""
+        import numpy
+
         if molecule_name not in self.molecule_types:
             raise ValueError(
                 f"The molecule type {molecule_name} is not present in this system.",
@@ -263,6 +265,29 @@ class GROMACSSystem(DefaultModel):
                 f"Cannot remove {n_copies} copies of {molecule_name} from this system "
                 f"because only {self.molecules[molecule_name]} are present.",
             )
+
+        if n_copies != 1 or self.molecules[molecule_name] != 1:
+            raise NotImplementedError()
+
+        molecule_names = [*self.molecules.keys()]
+        molecules_before = molecule_names[: molecule_names.index(molecule_name)]
+        n_atoms_before = sum(
+            self.molecule_types[molecule_name].n_atoms * self.molecules[molecule_name]
+            for molecule_name in molecules_before
+        )
+
+        row_indices_to_delete = [
+            *range(
+                n_atoms_before,
+                n_atoms_before + len(self.molecule_types[molecule_name].atoms),
+            ),
+        ]
+
+        # Pint lacks __array_function__ needed here, so strip and then tag units
+        self.positions = unit.Quantity(
+            numpy.delete(self.positions.m, row_indices_to_delete, axis=0),
+            self.positions.units,
+        )
 
         self.molecule_types.pop(molecule_name)
         self.molecules[molecule_name] -= n_copies
