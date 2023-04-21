@@ -245,11 +245,38 @@ class GROMACSSystem(DefaultModel):
 
         return from_files(top_file, gro_file, cls=cls)
 
-    def to_top(self, file):
+    def to_files(self, prefix: str, decimal: int = 3):
         """Write a GROMACS topology file."""
-        from openff.interchange.interop.gromacs.export._export import to_top
+        from openff.interchange.interop.gromacs.export._export import GROMACSWriter
 
-        return to_top(self, file)
+        writer = GROMACSWriter(
+            system=self,
+            top_file=f"{prefix}.top",
+            gro_file=f"{prefix}.gro",
+        )
+
+        writer.to_top()
+        writer.to_gro(decimal=decimal)
+
+    def to_top(self, file: str):
+        """Write a GROMACS topology file."""
+        from openff.interchange.interop.gromacs.export._export import GROMACSWriter
+
+        GROMACSWriter(
+            system=self,
+            top_file=file,
+            gro_file="_.gro",
+        ).to_top()
+
+    def to_gro(self, file: str, decimal: int = 3):
+        """Write a GROMACS coordinate file."""
+        from openff.interchange.interop.gromacs.export._export import GROMACSWriter
+
+        GROMACSWriter(
+            system=self,
+            top_file="_.gro",
+            gro_file=file,
+        ).to_gro(decimal=decimal)
 
     def remove_molecule_type(self, molecule_name: str, n_copies: int = 1):
         """Remove a molecule type from the system."""

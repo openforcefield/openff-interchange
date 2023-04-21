@@ -11,6 +11,12 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### New features
+
+* #671 Adds `Interchange.to_gromacs` which writes both GROMACS topology and coordinate files.
+
+## 0.3.1 - 2023-04-19
+
 ### Behavior changes
 
 * #639 Drops support for Python 3.8, following [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html#support-table).
@@ -31,7 +37,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #649 Removes the use of `pkg_resources`, which is deprecated.
 * #660 Moves the contents of `openff.interchange.components.foyer` to `openff.interchange.foyer` while maintaining existing import paths.
 * #663 Improves the performance of `Interchange.to_prmtop`.
-* #665 Properly write `[ settes ]` directive in GROMACS files.
+* #665 Properly write `[ settles ]` directive in GROMACS files.
 
 ## 0.3.0 - 2023-04-10
 

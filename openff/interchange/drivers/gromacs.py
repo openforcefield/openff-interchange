@@ -99,8 +99,8 @@ def _get_gromacs_energies(
 ) -> dict[str, unit.Quantity]:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
-            interchange.to_gro("out.gro", decimal=round_positions)
-            interchange.to_top("out.top")
+            prefix = "_tmp"
+            interchange.to_gromacs(prefix=prefix, decimal=round_positions)
 
             if mdp == "auto":
                 mdconfig = MDConfig.from_interchange(interchange)
@@ -110,8 +110,8 @@ def _get_gromacs_energies(
                 mdp_file = _get_mdp_file(mdp)
 
             return _run_gmx_energy(
-                top_file="out.top",
-                gro_file="out.gro",
+                top_file="_tmp.top",
+                gro_file="_tmp.gro",
                 mdp_file=mdp_file,
                 maxwarn=2,
             )
