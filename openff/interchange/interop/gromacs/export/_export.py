@@ -282,7 +282,10 @@ class GROMACSWriter(DefaultModel):
             for molecule_name, molecule_type in self.system.molecule_types.items()
         )
 
-        assert n_particles == self.system.positions.shape[0]
+        assert n_particles == self.system.positions.shape[0], (
+            n_particles,
+            self.system.positions.shape[0],
+        )
 
         # Explicitly round here to avoid ambiguous things in string formatting
         positions = numpy.round(self.system.positions, decimal).m_as(unit.nanometer)
@@ -305,7 +308,7 @@ class GROMACSWriter(DefaultModel):
                             atom.residue_index,  # This needs to be looked up from a different data structure
                             atom.residue_name,
                             atom.name,
-                            count,
+                            count + 1,
                             positions[count, 0],
                             positions[count, 1],
                             positions[count, 2],

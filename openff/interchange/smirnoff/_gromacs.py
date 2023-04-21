@@ -87,7 +87,9 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             unique_molecule.name = "MOL" + str(unique_molecule_index)
 
         for atom in unique_molecule.atoms:
-            atom_type_name = f"{unique_molecule.name}{unique_molecule.atom_index(atom)}"
+            atom_type_name = (
+                f"{unique_molecule.name}_{unique_molecule.atom_index(atom)}"
+            )
             _atom_atom_type_map[atom] = atom_type_name
 
             topology_index = interchange.topology.atom_index(atom)
@@ -131,8 +133,9 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
                         "If some atoms have residue names, all atoms must have residue names.",
                     )
                 else:
-                    for atom in unique_molecule.atoms:
-                        atom.metadata["residue_name"] = unique_molecule.name
+                    # Use dummy since we're already iterating over this molecule's atoms
+                    for _atom in unique_molecule.atoms:
+                        _atom.metadata["residue_name"] = unique_molecule.name
 
             name = SYMBOLS[atom.atomic_number] if atom.name == "" else atom.name
             charge = (
@@ -156,6 +159,15 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
                     mass=MASSES[atom.atomic_number],
                 ),
             )
+
+            this_molecule_atom_type_names = tuple(
+                atom.atom_type for atom in molecule.atoms
+            )
+
+            molecule._contained_atom_types = {
+                atom_type_name: system.atom_types[atom_type_name]
+                for atom_type_name in this_molecule_atom_type_names
+            }
 
         # Use a set to de-duplicate
         pairs: set[tuple] = {*_get_14_pairs(unique_molecule)}
