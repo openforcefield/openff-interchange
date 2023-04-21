@@ -90,6 +90,7 @@ class TestAddRemoveMoleculeType(_BaseTest):
                 1,
             )
 
+    @needs_gmx
     def test_different_force_field_different_energies(
         self,
         combined_system,
