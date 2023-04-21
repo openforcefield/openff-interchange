@@ -9,7 +9,6 @@ from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest, needs_gmx
 from openff.interchange.components.mdconfig import get_intermol_defaults
 from openff.interchange.drivers.gromacs import _process, _run_gmx_energy
-from openff.interchange.interop.gromacs.export._export import GROMACSWriter
 from openff.interchange.smirnoff._gromacs import _convert
 
 
@@ -64,14 +63,7 @@ class TestAddRemoveMoleculeType(_BaseTest):
         combined_system.remove_molecule_type(molecule_name)
 
         # Just a sanity check
-        writer = GROMACSWriter(
-            system=combined_system,
-            top_file=f"{molecule_name}.top",
-            gro_file=f"{molecule_name}.gro",
-        )
-
-        writer.to_top()
-        writer.to_gro(decimal=8)
+        combined_system.to_files(prefix=molecule_name, decimal=8)
 
         get_intermol_defaults(periodic=True).write_mdp_file("tmp.mdp")
 
@@ -115,25 +107,15 @@ class TestAddRemoveMoleculeType(_BaseTest):
         parsley_system.positions = combined_system.positions
         sage_system.positions = combined_system.positions
 
-        writer1 = GROMACSWriter(
-            system=parsley_system,
-            top_file="tmp2.top",
-            gro_file="tmp2.gro",
-        )
-
-        writer2 = GROMACSWriter(
-            system=sage_system,
-            top_file="tmp1.top",
-            gro_file="tmp1.gro",
-        )
-
-        for writer in [writer1, writer2]:
-            writer.to_top()
-            writer.to_gro(decimal=8)
+        parsley_system.to_files(prefix="parsley", decimal=8)
+        sage_system.to_files(prefix="sage", decimal=8)
 
         get_intermol_defaults(periodic=True).write_mdp_file("tmp.mdp")
-        _parsley_energy = _process(_run_gmx_energy("tmp1.top", "tmp1.gro", "tmp.mdp"))
-        _sage_energy = _process(_run_gmx_energy("tmp2.top", "tmp2.gro", "tmp.mdp"))
+
+        _parsley_energy = _process(
+            _run_gmx_energy("parsley.top", "parsley.gro", "tmp.mdp"),
+        )
+        _sage_energy = _process(_run_gmx_energy("sage.top", "sage.gro", "tmp.mdp"))
 
         assert _parsley_energy != _sage_energy
 
@@ -148,21 +130,8 @@ class TestAddRemoveMoleculeType(_BaseTest):
         system2.add_molecule_type(system1.molecule_types["MOL1"], 1)
         system2.positions = positions2
 
-        writer1 = GROMACSWriter(
-            system=system1,
-            top_file="order1.top",
-            gro_file="order1.gro",
-        )
-
-        writer2 = GROMACSWriter(
-            system=system2,
-            top_file="order2.top",
-            gro_file="order2.gro",
-        )
-
-        for writer in [writer1, writer2]:
-            writer.to_top()
-            writer.to_gro(decimal=8)
+        system1.to_files(prefix="order1", decimal=8)
+        system2.to_files(prefix="order2", decimal=8)
 
         get_intermol_defaults(periodic=True).write_mdp_file("tmp.mdp")
 
