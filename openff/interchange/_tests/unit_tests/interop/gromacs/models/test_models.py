@@ -4,7 +4,7 @@ from openff.toolkit import Molecule, Topology
 from openff.units import unit
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest
+from openff.interchange._tests import _BaseTest, needs_gmx
 from openff.interchange.components.mdconfig import get_intermol_defaults
 from openff.interchange.drivers.gromacs import _process, _run_gmx_energy
 from openff.interchange.interop.gromacs.export._export import GROMACSWriter
@@ -56,6 +56,7 @@ class TestAddRemoveMoleculeType(_BaseTest):
             ),
         )
 
+    @needs_gmx
     @pytest.mark.parametrize("molecule_name", ["MOL1", "MOL2"])
     def test_remove_basic(self, combined_system, molecule_name):
         combined_system.remove_molecule_type(molecule_name)
@@ -87,6 +88,7 @@ class TestAddRemoveMoleculeType(_BaseTest):
                 1,
             )
 
+    @needs_gmx
     def test_molecule_order_independent(self, system1, system2):
         positions1 = numpy.vstack([system1.positions, system2.positions])
         positions2 = numpy.vstack([system2.positions, system1.positions])
