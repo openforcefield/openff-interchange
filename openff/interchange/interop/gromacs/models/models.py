@@ -276,18 +276,19 @@ class GROMACSSystem(DefaultModel):
             for name in molecules_before
         )
 
-        row_indices_to_delete = [
-            *range(
-                n_atoms_before,
-                n_atoms_before + len(self.molecule_types[molecule_name].atoms),
-            ),
-        ]
+        if self.positions is not None:
+            row_indices_to_delete = [
+                *range(
+                    n_atoms_before,
+                    n_atoms_before + len(self.molecule_types[molecule_name].atoms),
+                ),
+            ]
 
-        # Pint lacks __array_function__ needed here, so strip and then tag units
-        self.positions = unit.Quantity(
-            numpy.delete(self.positions.m, row_indices_to_delete, axis=0),
-            self.positions.units,
-        )
+            # Pint lacks __array_function__ needed here, so strip and then tag units
+            self.positions = unit.Quantity(
+                numpy.delete(self.positions.m, row_indices_to_delete, axis=0),
+                self.positions.units,
+            )
 
         self.molecule_types.pop(molecule_name)
         self.molecules[molecule_name] -= n_copies

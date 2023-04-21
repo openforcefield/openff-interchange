@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy
 import pytest
 from openff.toolkit import Molecule, Topology
@@ -87,6 +89,52 @@ class TestAddRemoveMoleculeType(_BaseTest):
                 combined_system.molecule_types[molecule_name],
                 1,
             )
+
+    def test_different_force_field_different_energies(
+        self,
+        combined_system,
+        system1,
+        molecule2,
+        sage,
+        parsley,
+    ):
+        box = 5 * numpy.eye(3) * unit.nanometer
+
+        parsley_system = deepcopy(system1)
+        sage_system = deepcopy(system1)
+
+        molecule2_parsley = _convert(
+            Interchange.from_smirnoff(parsley, [molecule2], box=box),
+        )
+        molecule2_sage = _convert(Interchange.from_smirnoff(sage, [molecule2], box=box))
+
+        parsley_system.add_molecule_type(molecule2_parsley.molecule_types["MOL2"], 1)
+        sage_system.add_molecule_type(molecule2_sage.molecule_types["MOL2"], 1)
+
+        parsley_system.positions = combined_system.positions
+        sage_system.positions = combined_system.positions
+
+        writer1 = GROMACSWriter(
+            system=parsley_system,
+            top_file="tmp2.top",
+            gro_file="tmp2.gro",
+        )
+
+        writer2 = GROMACSWriter(
+            system=sage_system,
+            top_file="tmp1.top",
+            gro_file="tmp1.gro",
+        )
+
+        for writer in [writer1, writer2]:
+            writer.to_top()
+            writer.to_gro(decimal=8)
+
+        get_intermol_defaults(periodic=True).write_mdp_file("tmp.mdp")
+        _parsley_energy = _process(_run_gmx_energy("tmp1.top", "tmp1.gro", "tmp.mdp"))
+        _sage_energy = _process(_run_gmx_energy("tmp2.top", "tmp2.gro", "tmp.mdp"))
+
+        assert _parsley_energy != _sage_energy
 
     @needs_gmx
     def test_molecule_order_independent(self, system1, system2):
