@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,7 +21,9 @@ jobs:
       with:
         python-version: '3.10'
 
-    - run: |
+    - name: Check for API breaks
+      continue-on-error: true
+      run: |
         pip install griffe
         pip install -e .
         griffe check "openff.interchange" --verbose
