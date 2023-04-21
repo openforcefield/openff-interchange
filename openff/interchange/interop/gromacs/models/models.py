@@ -11,7 +11,7 @@ class GROMACSAtomType(DefaultModel):
     """Base class for GROMACS atom types."""
 
     name: str
-    bonding_type: str
+    bonding_type: Optional[str] = None
     atomic_number: Optional[PositiveInt]
     mass: unit.Quantity
     charge: unit.Quantity

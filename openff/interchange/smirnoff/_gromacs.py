@@ -87,7 +87,9 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             unique_molecule.name = "MOL" + str(unique_molecule_index)
 
         for atom in unique_molecule.atoms:
-            atom_type_name = f"{unique_molecule.name}{unique_molecule.atom_index(atom)}"
+            atom_type_name = (
+                f"{unique_molecule.name}_{unique_molecule.atom_index(atom)}"
+            )
             _atom_atom_type_map[atom] = atom_type_name
 
             topology_index = interchange.topology.atom_index(atom)
