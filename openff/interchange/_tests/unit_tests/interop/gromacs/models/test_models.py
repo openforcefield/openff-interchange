@@ -12,51 +12,56 @@ from openff.interchange.drivers.gromacs import _process, _run_gmx_energy
 from openff.interchange.smirnoff._gromacs import _convert
 
 
+@pytest.fixture()
+def molecule1():
+    molecule = Molecule.from_smiles(
+        "[H][O][c]1[c]([H])[c]([O][H])[c]([H])[c]([O][H])[c]1[H]",
+    )
+    molecule.generate_conformers(n_conformers=1)
+    molecule.name = "MOL1"
+
+    return molecule
+
+
+@pytest.fixture()
+def molecule2():
+    molecule = Molecule.from_smiles("C1=C(C=C(C=C1C(=O)O)C(=O)O)C(=O)O")
+    molecule.generate_conformers(n_conformers=1)
+    molecule.name = "MOL2"
+
+    molecule.conformers[0] += numpy.array([5, 0, 0]) * unit.angstrom
+
+    return molecule
+
+
+@pytest.fixture()
+def system1(molecule1, sage):
+    box = 5 * numpy.eye(3) * unit.nanometer
+
+    return _convert(Interchange.from_smirnoff(sage, [molecule1], box=box))
+
+
+@pytest.fixture()
+def system2(molecule2, sage):
+    box = 5 * numpy.eye(3) * unit.nanometer
+
+    return _convert(Interchange.from_smirnoff(sage, [molecule2], box=box))
+
+
+@pytest.fixture()
+def combined_system(molecule1, molecule2, sage):
+    box = 5 * numpy.eye(3) * unit.nanometer
+
+    return _convert(
+        Interchange.from_smirnoff(
+            sage,
+            Topology.from_molecules([molecule1, molecule2]),
+            box=box,
+        ),
+    )
+
+
 class TestAddRemoveMoleculeType(_BaseTest):
-    @pytest.fixture()
-    def molecule1(self):
-        molecule = Molecule.from_smiles(
-            "[H][O][c]1[c]([H])[c]([O][H])[c]([H])[c]([O][H])[c]1[H]",
-        )
-        molecule.generate_conformers(n_conformers=1)
-        molecule.name = "MOL1"
-
-        return molecule
-
-    @pytest.fixture()
-    def molecule2(self):
-        molecule = Molecule.from_smiles("C1=C(C=C(C=C1C(=O)O)C(=O)O)C(=O)O")
-        molecule.generate_conformers(n_conformers=1)
-        molecule.name = "MOL2"
-
-        molecule.conformers[0] += numpy.array([5, 0, 0]) * unit.angstrom
-
-        return molecule
-
-    @pytest.fixture()
-    def system1(self, molecule1, sage):
-        box = 5 * numpy.eye(3) * unit.nanometer
-
-        return _convert(Interchange.from_smirnoff(sage, [molecule1], box=box))
-
-    @pytest.fixture()
-    def system2(self, molecule2, sage):
-        box = 5 * numpy.eye(3) * unit.nanometer
-
-        return _convert(Interchange.from_smirnoff(sage, [molecule2], box=box))
-
-    @pytest.fixture()
-    def combined_system(self, sage, molecule1, molecule2):
-        box = 5 * numpy.eye(3) * unit.nanometer
-
-        return _convert(
-            Interchange.from_smirnoff(
-                sage,
-                Topology.from_molecules([molecule1, molecule2]),
-                box=box,
-            ),
-        )
-
     @needs_gmx
     @pytest.mark.parametrize("molecule_name", ["MOL1", "MOL2"])
     def test_remove_basic(self, combined_system, molecule_name):
@@ -163,3 +168,18 @@ class TestAddRemoveMoleculeType(_BaseTest):
             match="The molecule type MOL2 is already present in this system.",
         ):
             system2.add_molecule_type(system2.molecule_types["MOL2"], 1)
+
+
+class TestToFiles(_BaseTest):
+    @needs_gmx
+    def test_identical_outputs(self, system1):
+        system1.to_files(prefix="1", decimal=8)
+
+        system1.to_top("2.top")
+        system1.to_gro("2.gro", decimal=8)
+
+        get_intermol_defaults(periodic=True).write_mdp_file("tmp.mdp")
+
+        _process(_run_gmx_energy("1.top", "1.gro", "tmp.mdp")).compare(
+            _process(_run_gmx_energy("2.top", "2.gro", "tmp.mdp")),
+        )
