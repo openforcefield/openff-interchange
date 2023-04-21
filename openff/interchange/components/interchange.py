@@ -293,18 +293,22 @@ class Interchange(DefaultModel):
             ) from error
         return nglview.show_file("_tmp_pdb_file.pdb")
 
-    def to_gro(self, file_path: Union[Path, str], decimal: int = 3):
-        """Export this Interchange object to a .gro file."""
+    def to_gromacs(self, prefix: str, decimal: int = 3):
+        """Export this Interchange object to GROMACS files."""
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
 
-        GROMACSWriter(
+        writer = GROMACSWriter(
             system=_convert(self),
-            gro_file=file_path,
-        ).to_gro(decimal=decimal)
+            top_file=prefix + ".top",
+            gro_file=prefix + ".gro",
+        )
+
+        writer.to_top()
+        writer.to_gro(decimal=decimal)
 
     def to_top(self, file_path: Union[Path, str]):
-        """Export this Interchange to a .top file."""
+        """Export this Interchange to a GROMACS topology file."""
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
 
@@ -312,6 +316,16 @@ class Interchange(DefaultModel):
             system=_convert(self),
             top_file=file_path,
         ).to_top()
+
+    def to_gro(self, file_path: Union[Path, str], decimal: int = 3):
+        """Export this Interchange object to a GROMACS coordinate file."""
+        from openff.interchange.interop.gromacs.export._export import GROMACSWriter
+        from openff.interchange.smirnoff._gromacs import _convert
+
+        GROMACSWriter(
+            system=_convert(self),
+            gro_file=file_path,
+        ).to_gro(decimal=decimal)
 
     def to_lammps(self, file_path: Union[Path, str], writer="internal"):
         """Export this Interchange to a LAMMPS data file."""
