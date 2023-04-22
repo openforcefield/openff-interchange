@@ -7,8 +7,8 @@ dependencies:
   - python
   - pip
   - numpy >=1.21
-  - pydantic
-  - openmm
+  - pydantic <2.0.0a0
+  - openmm >=7.6
   # OpenFF stack
   - openff-toolkit >=0.11.3
   - openff-models >=0.0.4
@@ -19,7 +19,7 @@ dependencies:
   - foyer >=0.11.3
   # Testing
   - intermol
-  - openff-evaluator
+  - openff-evaluator-base
   - jax
   - pytest
   - pytest-cov
