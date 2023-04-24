@@ -25,10 +25,13 @@ from openff.interchange.models import PotentialKey
 
 
 def _write_text_blob(file, blob):
+    def chunker(seq, size):
+        return (seq[pos : pos + size] for pos in range(0, len(seq), size))
+
     if blob == "":
         file.write("\n")
     else:
-        for line in textwrap.wrap(blob, width=80, drop_whitespace=False):
+        for line in chunker(blob, 80):
             file.write(line + "\n")
 
 
