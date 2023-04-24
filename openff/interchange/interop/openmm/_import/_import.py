@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import openmm
 import openmm.app
@@ -11,13 +11,16 @@ from openff.interchange.common._valence import (
 )
 from openff.interchange.exceptions import UnsupportedImportError
 
+if TYPE_CHECKING:
+    from openff.interchange import Interchange
+
 
 def from_openmm(
     topology: Optional["openmm.app.Topology"] = None,
     system: Optional[openmm.System] = None,
     positions=None,
     box_vectors=None,
-):
+) -> "Interchange":
     """Create an Interchange object from OpenMM data."""
     import warnings
 
