@@ -191,7 +191,16 @@ def to_interchange(
 
     interchange = Interchange()
 
-    interchange.collections.update({"vdW": vdw, "Electrostatics": electrostatics})
+    interchange.collections.update(
+        {
+            "vdW": vdw,
+            "Electrostatics": electrostatics,
+            "Bonds": bonds,
+            "Angles": angles,
+            "ProperTorsions": propers,
+            "ImproperTorsions": impropers,
+        },
+    )
 
     interchange.topology = _convert_topology(system)
     interchange.positions = system.positions
