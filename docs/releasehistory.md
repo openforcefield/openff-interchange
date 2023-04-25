@@ -14,6 +14,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### New features
 
 * #671 Adds `Interchange.to_gromacs` which writes both GROMACS topology and coordinate files.
+* #681 Ports a PACKMOL wrapper from OpenFF Evaluator.
 
 ### Bugfixes
 
