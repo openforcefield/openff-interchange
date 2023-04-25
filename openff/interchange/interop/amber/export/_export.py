@@ -25,10 +25,13 @@ from openff.interchange.models import PotentialKey
 
 
 def _write_text_blob(file, blob):
+    def chunker(seq, size):
+        return (seq[pos : pos + size] for pos in range(0, len(seq), size))
+
     if blob == "":
         file.write("\n")
     else:
-        for line in textwrap.wrap(blob, width=80, drop_whitespace=False):
+        for line in chunker(blob, 80):
             file.write(line + "\n")
 
 
@@ -109,8 +112,9 @@ def _get_exclusion_lists(
         for other_atom in this_atom_exclusions:
             excluded_atoms_list.append(other_atom + 1)
 
+    # For some reason, Amber expects this list to have a 1 in it when an atom has no exclusions
     number_excluded_atoms: list[int] = [
-        len(val) for val in per_atom_exclusions.values()
+        max(1, len(val)) for val in per_atom_exclusions.values()
     ]
 
     return number_excluded_atoms, excluded_atoms_list
