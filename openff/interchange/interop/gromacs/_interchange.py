@@ -140,17 +140,15 @@ def to_interchange(
                 angles.potentials.update({potential_key: potential})
 
             for dihedral in molecule_type.dihedrals:
-                if "Improper" in type(dihedral).__name__:
-                    key_type = ImproperTorsionKey
-                else:
-                    key_type = ProperTorsionKey  # type: ignore[assignment]
-
                 if isinstance(dihedral, PeriodicProperDihedral):
+                    key_type = ProperTorsionKey
                     collection = periodic_propers
                 elif isinstance(dihedral, RyckaertBellemansDihedral):
-                    collection = rb_torsions
+                    key_type = ProperTorsionKey
+                    collection = rb_torsions  # type: ignore[assignment]
                 elif isinstance(dihedral, PeriodicImproperDihedral):
-                    collection = impropers
+                    key_type = ImproperTorsionKey
+                    collection = impropers  # type: ignore[assignment]
                 else:
                     raise NotImplementedError(
                         f"Dihedral type {type(dihedral)} not implemented.",
@@ -161,7 +159,7 @@ def to_interchange(
                         dihedral.atom1 + molecule_start_index - 1,
                         dihedral.atom2 + molecule_start_index - 1,
                         dihedral.atom3 + molecule_start_index - 1,
-                        dihedral.atom3 + molecule_start_index - 1,
+                        dihedral.atom4 + molecule_start_index - 1,
                     ),
                 )
 
