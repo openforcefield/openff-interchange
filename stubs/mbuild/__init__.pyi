@@ -1,11 +1,11 @@
-from typing import Any, List, Optional, Sequence
+from typing import Any, Optional, Sequence
 
 class Particle(object):
     def __init__(self, name: Optional[str]) -> None: ...
 
 class Compound(object):
     def __init__(
-        self, name: str = "Compound", subcompounds: Optional[List] = None
+        self, name: str = "Compound", subcompounds: Optional[list] = None
     ) -> None: ...
     name: str
     xyz: Any

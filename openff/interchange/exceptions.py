@@ -326,3 +326,7 @@ class MissingAngleError(UnassignedValenceError):
 
 class MissingTorsionError(UnassignedValenceError):
     """Exception raised when there exists a torsion for which no parameters are found."""
+
+
+class PackmolRuntimeException(Exception):
+    """Exception raised when PACKMOL fails to execute / converge."""

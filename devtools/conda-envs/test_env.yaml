@@ -18,8 +18,8 @@ dependencies:
   - mbuild
   - foyer >=0.11.3
   # Testing
+  - mdtraj
   - intermol
-  - openff-evaluator-base
   - jax
   - pytest
   - pytest-cov
