@@ -20,7 +20,7 @@ from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.units import Quantity, unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
-from openff.interchange.exceptions import PackmolRuntimeException
+from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
 
 def _find_packmol() -> Optional[str]:
@@ -73,10 +73,12 @@ def _validate_inputs(
 
     """
     if box_size is None and mass_density is None:
-        raise ValueError("Either a `box_size` or `mass_density` must be specified.")
+        raise PACKMOLValueError(
+            "Either a `box_size` or `mass_density` must be specified.",
+        )
 
     if box_size is not None and len(box_size) != 3:
-        raise ValueError(
+        raise PACKMOLValueError(
             "`box_size` must be a openff.units.unit.Quantity wrapped list of length 3",
         )
 
@@ -85,7 +87,7 @@ def _validate_inputs(
         assert all(x > 0.0 for x in box_aspect_ratio)
 
     if len(molecules) != len(number_of_copies):
-        raise ValueError(
+        raise PACKMOLValueError(
             "The length of `molecules` and `number_of_copies` must be identical.",
         )
 
@@ -666,7 +668,7 @@ def pack_box(
 
     Raises
     ------
-    PackmolRuntimeException
+    PACKMOLRuntimeError
         When packmol fails to execute / converge.
 
     """
@@ -775,7 +777,7 @@ def pack_box(
             if temporary_directory and not retain_working_files:
                 shutil.rmtree(working_directory)
 
-            raise PackmolRuntimeException(result)
+            raise PACKMOLRuntimeError(result)
 
         # Add a 2 angstrom buffer to help alleviate PBC issues.
         box_size = [
