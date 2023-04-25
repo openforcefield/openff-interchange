@@ -211,7 +211,7 @@ class GROMACSSystem(DefaultModel):
         description="The nonbonded function.",
     )
     combination_rule: int = Field(
-        1,
+        2,
         ge=1,
         le=3,
         description="The combination rule.",

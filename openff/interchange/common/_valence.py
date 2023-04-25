@@ -59,15 +59,18 @@ class RyckaertBellemansTorsionCollection(Collection):
 
     type: Literal["RBTorsions"] = "RBTorsions"
     expression: str = (
-        "C0 + C1 * (cos(phi - 180)) "
-        "C2 * (cos(phi - 180)) ** 2 + C3 * (cos(phi - 180)) ** 3 "
-        "C4 * (cos(phi - 180)) ** 4 + C5 * (cos(phi - 180)) ** 5 "
+        "c0 + "
+        "c1 * (cos(phi - 180)) "
+        "c2 * (cos(phi - 180)) ** 2 + "
+        "c3 * (cos(phi - 180)) ** 3 + "
+        "c4 * (cos(phi - 180)) ** 4 + "
+        "c5 * (cos(phi - 180)) ** 5"
     )
 
     @classmethod
     def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attribute names."""
-        return "C0", "C1", "C2", "C3", "C4", "C5"
+        return "c0", "c1", "c2", "c3", "c4", "c5"
 
 
 class ImproperTorsionCollection(Collection):

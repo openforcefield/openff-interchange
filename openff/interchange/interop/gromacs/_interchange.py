@@ -9,6 +9,7 @@ from openff.interchange.common._valence import (
     BondCollection,
     ImproperTorsionCollection,
     ProperTorsionCollection,
+    RyckaertBellemansTorsionCollection,
 )
 from openff.interchange.components.potentials import Potential
 from openff.interchange.interop.gromacs.models.models import (
@@ -47,13 +48,19 @@ def to_interchange(
     if (system.nonbonded_function, system.gen_pairs) != (1, True):
         raise NotImplementedError()
 
-    vdw = vdWCollection(scale14=system.vdw_14)
+    if system.combination_rule == 2:
+        mixing_rule = "lorentz-berthelot"
+    elif system.combination_rule == 3:
+        mixing_rule = "geometric"
+
+    vdw = vdWCollection(scale14=system.vdw_14, mixing_rule=mixing_rule)
     electrostatics = ElectrostaticsCollection(version=0.4, scale_14=system.coul_14)
 
     bonds = BondCollection()
     angles = AngleCollection()
     # TODO: Split out periodic and RB/other styles?
-    propers = ProperTorsionCollection()
+    periodic_propers = ProperTorsionCollection()
+    rb_torsions = RyckaertBellemansTorsionCollection()
     impropers = ImproperTorsionCollection()
 
     vdw.potentials = {
@@ -135,10 +142,19 @@ def to_interchange(
             for dihedral in molecule_type.dihedrals:
                 if "Improper" in type(dihedral).__name__:
                     key_type = ImproperTorsionKey
-                    collection = impropers
                 else:
                     key_type = ProperTorsionKey  # type: ignore[assignment]
-                    collection = propers  # type: ignore[assignment]
+
+                if isinstance(dihedral, PeriodicProperDihedral):
+                    collection = periodic_propers
+                elif isinstance(dihedral, RyckaertBellemansDihedral):
+                    collection = rb_torsions
+                elif isinstance(dihedral, PeriodicImproperDihedral):
+                    collection = impropers
+                else:
+                    raise NotImplementedError(
+                        f"Dihedral type {type(dihedral)} not implemented.",
+                    )
 
                 topology_key = key_type(
                     atom_indices=(
@@ -197,7 +213,8 @@ def to_interchange(
             "Electrostatics": electrostatics,
             "Bonds": bonds,
             "Angles": angles,
-            "ProperTorsions": propers,
+            "ProperTorsions": periodic_propers,
+            "RBTorsions": rb_torsions,
             "ImproperTorsions": impropers,
         },
     )

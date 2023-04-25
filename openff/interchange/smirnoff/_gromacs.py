@@ -372,12 +372,12 @@ def _convert_dihedrals(
                             atom2=molecule_indices[1] + 1,
                             atom3=molecule_indices[2] + 1,
                             atom4=molecule_indices[3] + 1,
-                            c0=params["C0"],
-                            c1=params["C1"],
-                            c2=params["C2"],
-                            c3=params["C3"],
-                            c4=params["C4"],
-                            c5=params["C5"],
+                            c0=params["c0"],
+                            c1=params["c1"],
+                            c2=params["c2"],
+                            c3=params["c3"],
+                            c4=params["c4"],
+                            c5=params["c5"],
                         ),
                     )
 

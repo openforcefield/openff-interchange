@@ -141,27 +141,8 @@ def _process(
         openmm.HarmonicBondForce: "Bond",
         openmm.HarmonicAngleForce: "Angle",
         openmm.PeriodicTorsionForce: "Torsion",
+        openmm.RBTorsionForce: "RBTorsion",
     }
-
-    n_rb = len(
-        [
-            force
-            for force in system.getForces()
-            if isinstance(force, openmm.RBTorsionForce)
-        ],
-    )
-    n_periodic = len(
-        [
-            force
-            for force in system.getForces()
-            if isinstance(force, openmm.PeriodicTorsionForce)
-        ],
-    )
-
-    if n_rb * n_periodic > 0:
-        raise NotImplementedError(
-            "Cannot process systems with both PeriodicTorsionForce and RBTorsionForce",
-        )
 
     # This assumes that only custom forces will have duplicate instances
     for index, raw_energy in raw_energies.items():

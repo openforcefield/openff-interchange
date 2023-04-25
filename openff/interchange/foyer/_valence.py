@@ -98,11 +98,6 @@ class FoyerRBProperHandler(
 
     force_field_key = "rb_propers"
     type = "RBTorsions"
-    expression = (
-        "C0 * cos(phi)**0 + C1 * cos(phi)**1 + "
-        "C2 * cos(phi)**2 + C3 * cos(phi)**3 + "
-        "C4 * cos(phi)**4 + C5 * cos(phi)**5"
-    )
     connection_attribute: str = "propers"
     raise_on_missing_params: bool = False
 

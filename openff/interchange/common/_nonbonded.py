@@ -54,6 +54,16 @@ class vdWCollection(_NonbondedCollection):
 
     method: Literal["cutoff", "no-cutoff", "pme"] = Field("cutoff")
 
+    @classmethod
+    def default_parameter_values(cls) -> tuple[float]:
+        """Per-particle parameter values passed to Force.addParticle()."""
+        return 1.0, 0.0
+
+    @classmethod
+    def potential_parameters(cls) -> tuple[str]:
+        """Return a list of names of parameters included in each potential in this colletion."""
+        return "sigma", "epsilon"
+
 
 class ElectrostaticsCollection(_NonbondedCollection):
     """Handler storing electrostatics interactions."""
