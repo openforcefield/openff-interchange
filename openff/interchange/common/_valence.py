@@ -2,6 +2,7 @@ from collections.abc import Iterable
 from typing import Literal
 
 from openff.toolkit.topology.molecule import Atom
+from pydantic import Field
 
 from openff.interchange.components.potentials import Collection
 
@@ -58,13 +59,13 @@ class RyckaertBellemansTorsionCollection(Collection):
     """Handler storing Ryckaert-Bellemans torsion potentials."""
 
     type: Literal["RBTorsions"] = "RBTorsions"
-    expression: str = (
+    expression: str = Field(
         "c0 + "
         "c1 * (cos(phi - 180)) "
         "c2 * (cos(phi - 180)) ** 2 + "
         "c3 * (cos(phi - 180)) ** 3 + "
         "c4 * (cos(phi - 180)) ** 4 + "
-        "c5 * (cos(phi - 180)) ** 5"
+        "c5 * (cos(phi - 180)) ** 5",
     )
 
     @classmethod

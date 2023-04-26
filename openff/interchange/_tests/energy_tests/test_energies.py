@@ -130,7 +130,7 @@ class TestEnergies(_BaseTest):
             ),
         )
 
-        assert oplsaa_energies.energies["Torsion"].m != 0.0
+        assert oplsaa_energies.energies["RBTorsion"].m != 0.0
 
     @needs_gmx
     def test_gmx_14_energies_exist(self, sage):
