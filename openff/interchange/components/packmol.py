@@ -10,7 +10,6 @@ import tempfile
 import warnings
 from collections import defaultdict
 from distutils.spawn import find_executable
-from functools import reduce
 from typing import Optional
 
 import mdtraj
@@ -131,17 +130,11 @@ def _approximate_box_size_by_density(
         A list of the three box lengths in units compatible with angstroms.
 
     """
-    volume = 0.0 * unit.angstrom**3
-
+    total_mass = 0.0 * unit.dalton
     for molecule, number in zip(molecules, n_copies):
-        # The toolkit reports masses as daltons
-        molecule_mass = reduce(
-            (lambda x, y: x + y),
-            [atom.mass for atom in molecule.atoms],
-        )
-
-        molecule_volume = molecule_mass / mass_density
-        volume += molecule_volume * number
+        for atom in molecule.atoms:
+            total_mass += number * atom.mass
+    volume = total_mass / mass_density
 
     box_length = volume ** (1.0 / 3.0) * box_scaleup_factor
     box_length_angstrom = box_length.to(unit.angstrom).magnitude
