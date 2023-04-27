@@ -1,5 +1,7 @@
 """Interfaces with Amber."""
 import textwrap
+from collections import defaultdict
+from collections.abc import Iterable
 from copy import deepcopy
 from pathlib import Path
 from typing import Optional, Union
@@ -35,7 +37,13 @@ def _write_text_blob(file, blob):
             file.write(line + "\n")
 
 
-def _get_per_atom_exclusion_lists(topology: "Topology") -> dict[int, list[int]]:
+def _flatten(list_of_lists: Iterable[list[int]]) -> list[int]:
+    return [item for sublist in list_of_lists for item in sublist]
+
+
+def _get_per_atom_exclusion_lists(
+    topology: "Topology",
+) -> dict[int, defaultdict[int, list[int]]]:
     """
     Get the excluded atoms of each atom in this topology.
 
@@ -48,32 +56,38 @@ def _get_per_atom_exclusion_lists(topology: "Topology") -> dict[int, list[int]]:
     -------
     per_atom_exclusions: dict[int, list[int]]
         keys: atom indices (OpenFF atoms, zero-indexed)
-        values: list of atom indices (OpenFF atoms, zero-indexed) that are excluded from this atom
+        values: defaultdict[int, list[int]]
+            list of atom indices (OpenFF atoms, zero-indexed) that are excluded from this atom,
+            keyed by their separation distance in the graph (1 for bonded, 2 for in an angle, 3
+            for in a dihedral)
 
     """
-    per_atom_exclusions: dict[int, list[int]] = dict()
+    per_atom_exclusions: dict[int, defaultdict[int, list[int]]] = dict()
 
     for atom1 in topology.atoms:
         # Excluded atoms _on this atom_
-        this_atom_exclusions = list()
+        this_atom_exclusions = defaultdict(list)
         index1 = topology.atom_index(atom1)
 
         for atom2 in atom1.bonded_atoms:
             index2 = topology.atom_index(atom2)
 
-            if index2 > index1 and index2 not in this_atom_exclusions:
-                this_atom_exclusions.append(index2)
+            if index2 > index1:
+                # These atoms are bonded
+                this_atom_exclusions[1].append(index2)
 
             for atom3 in atom2.bonded_atoms:
                 atom3_index = topology.atom_index(atom3)
 
-                if atom3_index > index1 and atom3_index not in this_atom_exclusions:
-                    this_atom_exclusions.append(atom3_index)
+                if atom3_index > index1:
+                    # These atoms are included in an angle
+                    this_atom_exclusions[2].append(atom3_index)
 
                 for atom4 in atom3.bonded_atoms:
                     atom4_index = topology.atom_index(atom4)
-                    if atom4_index > index1 and atom4_index not in this_atom_exclusions:
-                        this_atom_exclusions.append(atom4_index)
+                    if atom4_index > index1 and atom4_index:
+                        # These atoms are included in a torsion
+                        this_atom_exclusions[3].append(atom4_index)
 
         per_atom_exclusions[index1] = this_atom_exclusions
 
@@ -81,7 +95,7 @@ def _get_per_atom_exclusion_lists(topology: "Topology") -> dict[int, list[int]]:
 
 
 def _get_exclusion_lists(
-    per_atom_exclusions: dict[int, list[int]],
+    per_atom_exclusions: dict[int, defaultdict[int, list[int]]],
 ) -> tuple[list[int], list[int]]:
     """
     Convert a per-atom exclusion dict to Amer structures.
@@ -104,18 +118,22 @@ def _get_exclusion_lists(
 
     """
     excluded_atoms_list: list[int] = list()
+    number_excluded_atoms: list[int] = list()
 
-    for this_atom_exclusions in per_atom_exclusions.values():
+    for this_atom, this_atom_exclusions in per_atom_exclusions.items():
         if len(this_atom_exclusions) == 0:
-            excluded_atoms_list.append(0)
+            # Amber expects this list to have a 1 in it, pointing to a non-existent
+            # atom with index 0, when an atom has no exclusions
+            tmp = {0}
 
-        for other_atom in this_atom_exclusions:
-            excluded_atoms_list.append(other_atom + 1)
+        else:
+            tmp = set()
+            for other_atom in _flatten(this_atom_exclusions.values()):
+                if other_atom > this_atom:
+                    tmp.add(other_atom + 1)
 
-    # For some reason, Amber expects this list to have a 1 in it when an atom has no exclusions
-    number_excluded_atoms: list[int] = [
-        max(1, len(val)) for val in per_atom_exclusions.values()
-    ]
+        [excluded_atoms_list.append(val) for val in sorted(tmp)]
+        number_excluded_atoms.append(len(tmp))
 
     return number_excluded_atoms, excluded_atoms_list
 
@@ -189,7 +207,8 @@ def _get_dihedral_lists(
     interchange: "Interchange",
     atomic_numbers: tuple,
     potential_key_to_dihedral_type_mapping: dict[PotentialKey, int],
-    known_14_pairs: list[tuple[int, ...]],
+    already_counted: list[tuple[int, ...]],
+    exclusions: dict[int, list[int]],  # per-atom exclusions
 ) -> tuple[list[int], list[int]]:
     dihedrals_inc_hydrogen: list[int] = list()
     dihedrals_without_hydrogen: list[int] = list()
@@ -219,20 +238,21 @@ def _get_dihedral_lists(
                 atomic_numbers[index] for index in dihedral.atom_indices
             )
 
-            # Need to know _before_ building dihedral lists if this one will need its
-            # third atom tagged with a negative sign. From https://ambermd.org/prmtop.pdf:
-            # > If the third atom is negative, then the 1-4 non-bonded interactions
-            # > for this torsion is not calculated. This is required to avoid
-            # > double-counting these non-bonded interactions in some ring systems
-            # > and in multi-term torsions.
-            if _pair_in_known_14_pairs(
-                pair=(atom1_index, atom4_index),
-                known_14_pairs=known_14_pairs,
-            ):
-                _14_tag = -1
+            # See if the non-bonded interactions of the first and fourth atoms need to be exluded
+
+            atom1_neighbors = exclusions[atom1_index][1] + exclusions[atom1_index][2]
+            atom4_neighbors = exclusions[atom4_index][1] + exclusions[atom4_index][2]
+
+            if atom4_index in atom1_neighbors or atom1_index in atom4_neighbors:
+                # Exclude because these atoms are separated by only one or two bonds
+                exclude_nonbonded = -1
+
+            elif sorted([atom1_index, atom4_index]) in already_counted:
+                # Exclude because these were already counted once in another torsion
+                exclude_nonbonded = -1
+
             else:
-                _14_tag = 1
-                known_14_pairs.append((atom1_index, atom4_index))
+                exclude_nonbonded = 1
 
             dihedrals_list = (
                 dihedrals_inc_hydrogen
@@ -242,9 +262,11 @@ def _get_dihedral_lists(
 
             dihedrals_list.append(atom1_index * 3)
             dihedrals_list.append(atom2_index * 3)
-            dihedrals_list.append(atom3_index * 3 * _14_tag)
+            dihedrals_list.append(atom3_index * 3 * exclude_nonbonded)
             dihedrals_list.append(atom4_index * 3)
             dihedrals_list.append(dihedral_type_index + 1)
+
+            already_counted.append(sorted([atom1_index, atom4_index]))
 
     if "ImproperTorsions" in interchange.collections:
         for improper, improper_key in interchange["ImproperTorsions"].key_map.items():
@@ -264,26 +286,23 @@ def _get_dihedral_lists(
                 else dihedrals_without_hydrogen
             )
 
-            # There is probably no way for a 1-4 to exist in an improper?
-            _14_tag = 1
-
             dihedrals_list.append(atom1_index * 3)
             dihedrals_list.append(atom2_index * 3)
-            dihedrals_list.append(atom3_index * 3 * _14_tag)
+            dihedrals_list.append(atom3_index * 3)
             dihedrals_list.append(atom4_index * 3 * -1)
             dihedrals_list.append(dihedral_type_index + 1)
 
     return dihedrals_inc_hydrogen, dihedrals_without_hydrogen
 
 
-def _pair_in_known_14_pairs(
+def _pair_in_already_counted(
     pair: tuple[int, int],
-    known_14_pairs: list[tuple[int, ...]],
+    already_counted: list[tuple[int, ...]],
 ) -> bool:
-    if pair in known_14_pairs:
+    if pair in already_counted:
         return True
 
-    if tuple((pair[1], pair[0])) in known_14_pairs:
+    if tuple((pair[1], pair[0])) in already_counted:
         return True
 
     return False
@@ -352,10 +371,16 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             key: i for i, key in enumerate(dihedral_potentials)
         }
 
-        # Track bonds and angles here also to ensure the 1-2 and 1-3 exclusions are
-        # properly applied.
-        known_14_pairs: list[tuple[int, ...]] = list()
+        from openff.interchange.components.toolkit import _get_14_pairs
 
+        already_counted = _get_14_pairs(interchange.topology)
+        already_counted: list[tuple[int, ...]] = list()
+
+        per_atom_exclusion_lists = _get_per_atom_exclusion_lists(interchange.topology)
+
+        number_excluded_atoms, excluded_atoms_list = _get_exclusion_lists(
+            per_atom_exclusion_lists,
+        )
         atomic_numbers = tuple(
             atom.atomic_number for atom in interchange.topology.atoms
         )
@@ -376,12 +401,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             interchange,
             atomic_numbers,
             potential_key_to_dihedral_type_mapping,
-            known_14_pairs,
-        )
-
-        per_atom_exclusion_lists = _get_per_atom_exclusion_lists(interchange.topology)
-
-        number_excluded_atoms, excluded_atoms_list = _get_exclusion_lists(
+            already_counted,
             per_atom_exclusion_lists,
         )
 
