@@ -629,34 +629,34 @@ def pack_box(
         The molecules in the system.
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
-        equal to the length of `molecules`.
+        equal to the length of ``molecules``.
     structure_to_solvate: str, optional
         A file path to the PDB coordinates of the structure to be solvated.
     center_solute: bool
-        If `True`, the structure to solvate will be centered in the
-        simulation box. This option is only applied when `structure_to_solvate`
-        is set.
+        If ``True``, the structure to solvate will be placed in the center of
+        thesimulation box. This option is only applied when
+        ``structure_to_solvate`` is set.
     tolerance : openff.units.Quantity
-        The minimum spacing between molecules during packing in units
-         compatible with angstroms.
+        The minimum spacing between molecules during packing in units of
+        distance.
     box_size : openff.units.Quantity, optional
         The size of the box to generate in units compatible with angstroms.
-        If `None`, `mass_density` must be provided.
+        If ``None``, ``mass_density`` must be provided.
     mass_density : openff.units.Quantity, optional
         Target mass density for final system with units compatible with g / mL.
-         If `None`, `box_size` must be provided.
+        If ``None``, ``box_size`` must be provided.
     box_aspect_ratio: list of float, optional
         The aspect ratio of the simulation box, used in conjunction with
-        the `mass_density` parameter. If none, an isotropic ratio (i.e.
-        [1.0, 1.0, 1.0]) is used.
+        the ``mass_density`` parameter. If none, an isotropic ratio (i.e.
+        ``[1.0, 1.0, 1.0]``) is used.
     verbose : bool
-        If True, verbose output is written.
+        If ``True``, verbose output is written.
     working_directory: str, optional
-        The directory in which to generate the temporary working files. If `None`,
-        a temporary one will be created.
+        The directory in which to generate the temporary working files. If
+        ``None``, a temporary one will be created.
     retain_working_files: bool
-        If True all of the working files, such as individual molecule coordinate
-        files, will be retained.
+        If ``True`` all of the working files, such as individual molecule
+        coordinate files, will be retained.
 
     Returns
     -------
