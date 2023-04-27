@@ -207,7 +207,7 @@ def _get_dihedral_lists(
     interchange: "Interchange",
     atomic_numbers: tuple,
     potential_key_to_dihedral_type_mapping: dict[PotentialKey, int],
-    already_counted: list[tuple[int, ...]],
+    already_counted: set[tuple[int, ...]],
     exclusions: dict[int, list[int]],  # per-atom exclusions
 ) -> tuple[list[int], list[int]]:
     dihedrals_inc_hydrogen: list[int] = list()
@@ -243,11 +243,17 @@ def _get_dihedral_lists(
             atom1_neighbors = exclusions[atom1_index][1] + exclusions[atom1_index][2]
             atom4_neighbors = exclusions[atom4_index][1] + exclusions[atom4_index][2]
 
-            if atom4_index in atom1_neighbors or atom1_index in atom4_neighbors:
+            _sorted = tuple(sorted([atom1_index, atom4_index]))
+
+            if atom4_index in atom1_neighbors:
                 # Exclude because these atoms are separated by only one or two bonds
                 exclude_nonbonded = -1
 
-            elif sorted([atom1_index, atom4_index]) in already_counted:
+            elif atom1_index in atom4_neighbors:
+                # Exclude because these atoms are separated by only one or two bonds
+                exclude_nonbonded = -1
+
+            elif _sorted in already_counted:
                 # Exclude because these were already counted once in another torsion
                 exclude_nonbonded = -1
 
@@ -266,7 +272,7 @@ def _get_dihedral_lists(
             dihedrals_list.append(atom4_index * 3)
             dihedrals_list.append(dihedral_type_index + 1)
 
-            already_counted.append(sorted([atom1_index, atom4_index]))
+            already_counted.add(_sorted)
 
     if "ImproperTorsions" in interchange.collections:
         for improper, improper_key in interchange["ImproperTorsions"].key_map.items():
@@ -293,19 +299,6 @@ def _get_dihedral_lists(
             dihedrals_list.append(dihedral_type_index + 1)
 
     return dihedrals_inc_hydrogen, dihedrals_without_hydrogen
-
-
-def _pair_in_already_counted(
-    pair: tuple[int, int],
-    already_counted: list[tuple[int, ...]],
-) -> bool:
-    if pair in already_counted:
-        return True
-
-    if tuple((pair[1], pair[0])) in already_counted:
-        return True
-
-    return False
 
 
 # TODO: Split this mono-function into smaller functions
@@ -371,10 +364,10 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
             key: i for i, key in enumerate(dihedral_potentials)
         }
 
-        from openff.interchange.components.toolkit import _get_14_pairs
-
-        already_counted = _get_14_pairs(interchange.topology)
-        already_counted: list[tuple[int, ...]] = list()
+        # This is only used to track 1-4 pairs that are already counted. Since we
+        # only care about membership and never indexing and the membership check
+        # will happen roughly once per dihedral, use a set for speed.
+        already_counted: set[tuple[int, ...]] = set()
 
         per_atom_exclusion_lists = _get_per_atom_exclusion_lists(interchange.topology)
 
