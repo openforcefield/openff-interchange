@@ -612,6 +612,7 @@ def pack_box(
     box_aspect_ratio: Optional[list[float]] = None,
     working_directory: Optional[str] = None,
     retain_working_files: bool = False,
+    add_box_buffers: bool = True,
 ) -> tuple[mdtraj.Trajectory, list[str]]:
     """
     Run packmol to generate a box containing a mixture of molecules.
@@ -650,6 +651,9 @@ def pack_box(
     retain_working_files: bool
         If ``True`` all of the working files, such as individual molecule
         coordinate files, will be retained.
+    add_box_buffers: bool
+        If ``True`` (the default), buffers will be added to the box size to
+        help reduce clashes.
 
     Returns
     -------
@@ -691,6 +695,7 @@ def pack_box(
             number_of_copies,
             mass_density,
             box_aspect_ratio,  # type: ignore[arg-type]
+            box_scaleup_factor=1.1 if add_box_buffers else 1.0,
         )
 
     # Set up the directory to create the working files in.
@@ -773,9 +778,10 @@ def pack_box(
             raise PACKMOLRuntimeError(result)
 
         # Add a 2 angstrom buffer to help alleviate PBC issues.
-        box_size = [
-            (x + 2.0 * unit.angstrom).to(unit.nanometer).magnitude for x in box_size
-        ]
+        if add_box_buffers:
+            box_size = [
+                (x + 2.0 * unit.angstrom).to(unit.nanometer).magnitude for x in box_size
+            ]
 
         # Append missing connect statements to the end of the
         # output file.
