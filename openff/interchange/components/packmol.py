@@ -628,7 +628,7 @@ def pack_box(
         A file path to the PDB coordinates of the structure to be solvated.
     center_solute: bool
         If ``True``, the structure to solvate will be placed in the center of
-        thesimulation box. This option is only applied when
+        the simulation box. This option is only applied when
         ``structure_to_solvate`` is set.
     tolerance : openff.units.Quantity
         The minimum spacing between molecules during packing in units of
