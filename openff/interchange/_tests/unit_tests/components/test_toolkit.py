@@ -35,7 +35,7 @@ def test_simple_topology_uniqueness(simple_methane, simple_water):
     assert len(topology.identical_molecule_groups) == 2
 
 
-class TektToolkitUtils(_BaseTest):
+class TestToolkitUtils(_BaseTest):
     @pytest.mark.parametrize(
         ("smiles", "num_pairs"),
         [

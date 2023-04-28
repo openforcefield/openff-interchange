@@ -322,6 +322,7 @@ def _convert_topology(
                 )
 
         molecule = _SimpleMolecule._from_subgraph(graph)
+        molecule.name = molecule_name
 
         for _ in range(n_molecules):
             topology.add_molecule(molecule)
