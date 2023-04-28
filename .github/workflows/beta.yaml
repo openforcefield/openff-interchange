@@ -48,6 +48,7 @@ jobs:
 
     - name: Install package
       run: |
+        micromamba remove --force openff-interchange openff-interchange-base
         python -m pip install . plugins/
 
     - name: Environment Information

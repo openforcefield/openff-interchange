@@ -46,7 +46,7 @@ jobs:
 
     - name: Install package
       run: |
-        python -m pip install .
+        micromamba remove --force openff-interchage openff-interchange-base
         python -m pip install -e ./plugins/
 
     - name: Environment Information
