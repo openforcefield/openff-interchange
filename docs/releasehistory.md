@@ -14,6 +14,12 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### New features
 
 * #671 Adds `Interchange.to_gromacs` which writes both GROMACS topology and coordinate files.
+* #681 Ports a PACKMOL wrapper from OpenFF Evaluator.
+
+### Bugfixes
+
+* #680 Fixes #678 in which, in some cases, text wrapping in Amber files was mangled.
+* #680 Fixes #679 in which atom exclusion lists in Amber files were written incorrectly.
 
 ## 0.3.1 - 2023-04-19
 

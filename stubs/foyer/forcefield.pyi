@@ -1,11 +1,11 @@
-from typing import Dict, List, Union, Any
+from typing import Any, Dict, Union
 
 class Forcefield(object):
     def __init__(self, name: int): ...
     def get_parameters(
         self,
         group: str,
-        key: Union[str, List[str]],
+        key: Union[str, list[str]],
         keys_are_atom_classes: bool = False,
     ) -> Dict[str, float]: ...
     @staticmethod

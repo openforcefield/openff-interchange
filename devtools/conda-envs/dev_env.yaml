@@ -10,7 +10,7 @@ dependencies:
   - pydantic
   - openmm
   # OpenFF stack
-  - openff-toolkit >=0.11.3
+  - openff-toolkit >=0.13
   - openff-models >=0.0.4
   # Optional features
   - jax
@@ -18,6 +18,7 @@ dependencies:
   - mbuild
   - foyer >=0.11.3
   # Testing
+  - mdtraj
   - intermol
   - openff-recharge
   - openeye-toolkits
