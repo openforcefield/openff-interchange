@@ -294,7 +294,7 @@ def _get_dihedral_lists(
 
             dihedrals_list.append(atom1_index * 3)
             dihedrals_list.append(atom2_index * 3)
-            dihedrals_list.append(atom3_index * 3)
+            dihedrals_list.append(atom3_index * 3 * -1)
             dihedrals_list.append(atom4_index * 3 * -1)
             dihedrals_list.append(dihedral_type_index + 1)
 
