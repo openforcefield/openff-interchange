@@ -1,11 +1,11 @@
 """
-Units tests for openff.interchange.components.packmol
+Units tests for openff.interchange.components._packmol
 """
 import numpy as np
 import pytest
 from openff.units import unit
 
-from openff.interchange.components.packmol import pack_box
+from openff.interchange.components._packmol import pack_box
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
 
