@@ -7,6 +7,18 @@ from pydantic import Field
 from openff.interchange.components.potentials import Collection
 
 
+class ConstraintCollection(Collection):
+    """Collection storing constraint potentials as produced by a SMIRNOFF force field."""
+
+    type: Literal["Constraints"] = "Constraints"
+    expression: Literal[""] = ""
+
+    @classmethod
+    def potential_parameters(cls) -> Iterable[str]:
+        """Return a list of names of parameters included in each potential in this colletion."""
+        return ("length",)
+
+
 class BondCollection(Collection):
     """Collection storing bond potentials."""
 

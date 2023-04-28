@@ -190,7 +190,7 @@ class TestConstraintCollection(_BaseTest):
         )
 
         assert len(constraints.key_map) == 3
-        assert len(constraints.constraints) == 2
+        assert len(constraints.potentials) == 2
 
 
 class TestBondOrderInterpolation(_BaseTest):

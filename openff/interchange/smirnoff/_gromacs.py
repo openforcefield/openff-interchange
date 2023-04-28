@@ -1,6 +1,7 @@
 import itertools
-from typing import Optional
+from typing import Optional, TypeAlias, Union
 
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.topology.molecule import Atom, Molecule
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
@@ -28,6 +29,11 @@ from openff.interchange.interop.gromacs.models.models import (
     RyckaertBellemansDihedral,
 )
 from openff.interchange.models import BondKey, TopologyKey
+
+MoleculeLike: TypeAlias = Union[Molecule, _SimpleMolecule]
+
+_WATER = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+_SIMPLE_WATER = _SimpleMolecule.from_molecule(_WATER)
 
 
 def _convert(interchange: Interchange) -> GROMACSSystem:
@@ -83,7 +89,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
     for unique_molecule_index in unique_molecule_map:
         unique_molecule = interchange.topology.molecule(unique_molecule_index)
 
-        if unique_molecule.name == "":
+        if getattr(unique_molecule, "name", "") == "":
             unique_molecule.name = "MOL" + str(unique_molecule_index)
 
         for atom in unique_molecule.atoms:
@@ -113,6 +119,11 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
 
             _atom_atom_type_map[atom] = atom_type_name
 
+    # Indexed by OpenFF topology indices
+    _partial_charges = {
+        k.atom_indices[0]: v for k, v in interchange["Electrostatics"].charges.items()
+    }
+
     for unique_molecule_index in unique_molecule_map:
         unique_molecule = interchange.topology.molecule(unique_molecule_index)
 
@@ -137,12 +148,13 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
                     for _atom in unique_molecule.atoms:
                         _atom.metadata["residue_name"] = unique_molecule.name
 
-            name = SYMBOLS[atom.atomic_number] if atom.name == "" else atom.name
-            charge = (
-                unit.Quantity(0.0, unit.elementary_charge)
-                if atom.partial_charge is None
-                else atom.partial_charge
+            name = (
+                SYMBOLS[atom.atomic_number]
+                if getattr(atom, "name", "") == ""
+                else atom.name
             )
+
+            charge = _partial_charges[interchange.topology.atom_index(atom)]
 
             molecule.atoms.append(
                 GROMACSAtom(
@@ -211,7 +223,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
 
 def _convert_bonds(
     molecule: GROMACSMolecule,
-    unique_molecule: "Molecule",
+    unique_molecule: MoleculeLike,
     interchange: Interchange,
 ):
     if len(molecule.settles) > 0:
@@ -261,7 +273,7 @@ def _convert_bonds(
 
 def _convert_angles(
     molecule: GROMACSMolecule,
-    unique_molecule: "Molecule",
+    unique_molecule: MoleculeLike,
     interchange: Interchange,
 ):
     if len(molecule.settles) > 0:
@@ -303,7 +315,7 @@ def _convert_angles(
 
 def _convert_dihedrals(
     molecule: GROMACSMolecule,
-    unique_molecule: "Molecule",
+    unique_molecule: MoleculeLike,
     interchange: Interchange,
 ):
     rb_torsion_handler: Optional["Collection"] = interchange.collections.get(
@@ -432,14 +444,18 @@ def _convert_dihedrals(
 
 def _convert_settles(
     molecule: GROMACSMolecule,
-    unique_molecule: "Molecule",
+    unique_molecule: MoleculeLike,
     interchange: Interchange,
 ):
     if "Constraints" not in interchange.collections:
         return
 
-    if not unique_molecule.is_isomorphic_with(Molecule.from_smiles("O")):
-        return
+    if isinstance(unique_molecule, Molecule):
+        if not unique_molecule.is_isomorphic_with(_WATER):
+            return
+    elif isinstance(unique_molecule, _SimpleMolecule):
+        if not unique_molecule.is_isomorphic_with(_SIMPLE_WATER):
+            return
 
     if unique_molecule.atom(0).atomic_number != 8:
         raise Exception(
@@ -471,13 +487,13 @@ def _convert_settles(
         except LookupError:
             constraint_lengths.add(
                 interchange["Constraints"]
-                .constraints[interchange["Constraints"].key_map[key]]
+                .potentials[interchange["Constraints"].key_map[key]]
                 .parameters["distance"],
             )
 
     if len(constraint_lengths) != 2:
         raise RuntimeError(
-            "Found three unique constraint lengths in constrained water.",
+            "Found unexpected number of unique constraint lengths in constrained water.",
         )
 
     molecule.settles.append(

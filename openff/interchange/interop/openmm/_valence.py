@@ -30,7 +30,7 @@ def _process_constraints(
         openff_indices = top_key.atom_indices
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
-        params = constraint_handler.constraints[pot_key].parameters
+        params = constraint_handler.potentials[pot_key].parameters
         distance = params["distance"]
         distance_omm = distance.m_as(off_unit.nanometer)
 

@@ -7,6 +7,7 @@ from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCo
 from openff.interchange.common._valence import (
     AngleCollection,
     BondCollection,
+    ConstraintCollection,
     ImproperTorsionCollection,
     ProperTorsionCollection,
     RyckaertBellemansTorsionCollection,
@@ -56,6 +57,7 @@ def to_interchange(
     vdw = vdWCollection(scale14=system.vdw_14, mixing_rule=mixing_rule)
     electrostatics = ElectrostaticsCollection(version=0.4, scale_14=system.coul_14)
 
+    constraints = ConstraintCollection()
     bonds = BondCollection()
     angles = AngleCollection()
     # TODO: Split out periodic and RB/other styles?
@@ -94,6 +96,69 @@ def to_interchange(
                     {electrostatics_key: Potential(parameters={"charge": atom.charge})},
                 )
 
+            if len(molecule_type.settles) > 0:
+                if [
+                    system.atom_types[a.atom_type].atomic_number
+                    for a in molecule_type.atoms
+                ] != [8, 1, 1]:
+                    raise NotImplementedError(
+                        "Settles have only been implemented for water with OHH ordering.",
+                    )
+
+            for settle in molecule_type.settles:
+                oxygen_hydrogen1 = BondKey(
+                    atom_indices=(
+                        1 + molecule_start_index - 1,
+                        2 + molecule_start_index - 1,
+                    ),
+                )
+                oxygen_hydrogen2 = BondKey(
+                    atom_indices=(
+                        1 + molecule_start_index - 1,
+                        3 + molecule_start_index - 1,
+                    ),
+                )
+                hydrogen_hydrogen = BondKey(
+                    atom_indices=(
+                        2 + molecule_start_index - 1,
+                        3 + molecule_start_index - 1,
+                    ),
+                )
+
+                # Could probably look up the key and potential instead of re-creating?
+                oxygen_hydrogen_key = PotentialKey(
+                    id="O-H-settles",
+                    associated_handler="Constraints",
+                )
+
+                hydrogen_hydrogen_key = PotentialKey(
+                    id="H-H-settles",
+                    associated_handler="Constraints",
+                )
+
+                oxygen_hydrogen_constraint = Potential(
+                    parameters={
+                        "distance": settle.oxygen_hydrogen_distance,
+                    },
+                )
+                hydrogen_hydrogen_constraint = Potential(
+                    parameters={
+                        "distance": settle.hydrogen_hydrogen_distance,
+                    },
+                )
+
+                constraints.key_map.update({oxygen_hydrogen1: oxygen_hydrogen_key})
+                constraints.key_map.update({oxygen_hydrogen2: oxygen_hydrogen_key})
+                constraints.key_map.update({hydrogen_hydrogen: hydrogen_hydrogen_key})
+
+                constraints.potentials.update(
+                    {oxygen_hydrogen_key: oxygen_hydrogen_constraint},
+                )
+                constraints.potentials.update(
+                    {hydrogen_hydrogen_key: hydrogen_hydrogen_constraint},
+                )
+
+            # TODO: Build constraints from settles
             for bond in molecule_type.bonds:
                 topology_key = BondKey(
                     atom_indices=(
@@ -112,7 +177,7 @@ def to_interchange(
                         "length": bond.length,
                     },
                 )
-
+                print(f"adding {topology_key=}")
                 bonds.key_map.update({topology_key: potential_key})
                 bonds.potentials.update({potential_key: potential})
 
@@ -209,6 +274,7 @@ def to_interchange(
         {
             "vdW": vdw,
             "Electrostatics": electrostatics,
+            "Constraints": constraints,
             "Bonds": bonds,
             "Angles": angles,
             "ProperTorsions": periodic_propers,
