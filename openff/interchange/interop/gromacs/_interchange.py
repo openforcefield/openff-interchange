@@ -177,7 +177,7 @@ def to_interchange(
                         "length": bond.length,
                     },
                 )
-                print(f"adding {topology_key=}")
+
                 bonds.key_map.update({topology_key: potential_key})
                 bonds.potentials.update({potential_key: potential})
 
