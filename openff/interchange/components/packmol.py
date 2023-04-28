@@ -10,7 +10,6 @@ import tempfile
 import warnings
 from collections import defaultdict
 from distutils.spawn import find_executable
-from functools import reduce
 from typing import Optional
 
 import mdtraj
@@ -131,17 +130,11 @@ def _approximate_box_size_by_density(
         A list of the three box lengths in units compatible with angstroms.
 
     """
-    volume = 0.0 * unit.angstrom**3
-
+    total_mass = 0.0 * unit.dalton
     for molecule, number in zip(molecules, n_copies):
-        # The toolkit reports masses as daltons
-        molecule_mass = reduce(
-            (lambda x, y: x + y),
-            [atom.mass for atom in molecule.atoms],
-        )
-
-        molecule_volume = molecule_mass / mass_density
-        volume += molecule_volume * number
+        for atom in molecule.atoms:
+            total_mass += number * atom.mass
+    volume = total_mass / mass_density
 
     box_length = volume ** (1.0 / 3.0) * box_scaleup_factor
     box_length_angstrom = box_length.to(unit.angstrom).magnitude
@@ -619,6 +612,7 @@ def pack_box(
     box_aspect_ratio: Optional[list[float]] = None,
     working_directory: Optional[str] = None,
     retain_working_files: bool = False,
+    add_box_buffers: bool = True,
 ) -> tuple[mdtraj.Trajectory, list[str]]:
     """
     Run packmol to generate a box containing a mixture of molecules.
@@ -629,34 +623,37 @@ def pack_box(
         The molecules in the system.
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
-        equal to the length of `molecules`.
+        equal to the length of ``molecules``.
     structure_to_solvate: str, optional
         A file path to the PDB coordinates of the structure to be solvated.
     center_solute: bool
-        If `True`, the structure to solvate will be centered in the
-        simulation box. This option is only applied when `structure_to_solvate`
-        is set.
+        If ``True``, the structure to solvate will be placed in the center of
+        the simulation box. This option is only applied when
+        ``structure_to_solvate`` is set.
     tolerance : openff.units.Quantity
-        The minimum spacing between molecules during packing in units
-         compatible with angstroms.
+        The minimum spacing between molecules during packing in units of
+        distance.
     box_size : openff.units.Quantity, optional
         The size of the box to generate in units compatible with angstroms.
-        If `None`, `mass_density` must be provided.
+        If ``None``, ``mass_density`` must be provided.
     mass_density : openff.units.Quantity, optional
         Target mass density for final system with units compatible with g / mL.
-         If `None`, `box_size` must be provided.
+        If ``None``, ``box_size`` must be provided.
     box_aspect_ratio: list of float, optional
         The aspect ratio of the simulation box, used in conjunction with
-        the `mass_density` parameter. If none, an isotropic ratio (i.e.
-        [1.0, 1.0, 1.0]) is used.
+        the ``mass_density`` parameter. If none, an isotropic ratio (i.e.
+        ``[1.0, 1.0, 1.0]``) is used.
     verbose : bool
-        If True, verbose output is written.
+        If ``True``, verbose output is written.
     working_directory: str, optional
-        The directory in which to generate the temporary working files. If `None`,
-        a temporary one will be created.
+        The directory in which to generate the temporary working files. If
+        ``None``, a temporary one will be created.
     retain_working_files: bool
-        If True all of the working files, such as individual molecule coordinate
-        files, will be retained.
+        If ``True`` all of the working files, such as individual molecule
+        coordinate files, will be retained.
+    add_box_buffers: bool
+        If ``True`` (the default), buffers will be added to the box size to
+        help reduce clashes.
 
     Returns
     -------
@@ -698,6 +695,7 @@ def pack_box(
             number_of_copies,
             mass_density,
             box_aspect_ratio,  # type: ignore[arg-type]
+            box_scaleup_factor=1.1 if add_box_buffers else 1.0,
         )
 
     # Set up the directory to create the working files in.
@@ -780,9 +778,10 @@ def pack_box(
             raise PACKMOLRuntimeError(result)
 
         # Add a 2 angstrom buffer to help alleviate PBC issues.
-        box_size = [
-            (x + 2.0 * unit.angstrom).to(unit.nanometer).magnitude for x in box_size
-        ]
+        if add_box_buffers:
+            box_size = [
+                (x + 2.0 * unit.angstrom).to(unit.nanometer).magnitude for x in box_size
+            ]
 
         # Append missing connect statements to the end of the
         # output file.

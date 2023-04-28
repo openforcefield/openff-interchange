@@ -45,7 +45,7 @@ The high-level objectives of a parameter handler are to:
   * define its own properties, class methods, etc. as needed
   * define optional attributes such as `id`
 
-[`ParameterType`]: openff.toolkit.typing.engines.smirnoff.ParameterType
+[`ParameterType`]: openff.toolkit.typing.engines.smirnoff.parameters.ParameterType
 [entry point group]: setuptools:userguide/entry_point
 [`check_handler_compatibility`]: openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.check_handler_compatibility
 
