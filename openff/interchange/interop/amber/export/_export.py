@@ -132,7 +132,9 @@ def _get_exclusion_lists(
                 if other_atom > this_atom:
                     tmp.add(other_atom + 1)
 
-        [excluded_atoms_list.append(val) for val in sorted(tmp)]
+        for val in sorted(tmp):
+            excluded_atoms_list.append(val)
+
         number_excluded_atoms.append(len(tmp))
 
     return number_excluded_atoms, excluded_atoms_list
@@ -208,7 +210,7 @@ def _get_dihedral_lists(
     atomic_numbers: tuple,
     potential_key_to_dihedral_type_mapping: dict[PotentialKey, int],
     already_counted: set[tuple[int, ...]],
-    exclusions: dict[int, list[int]],  # per-atom exclusions
+    exclusions: dict[int, defaultdict[int, list[int]]],  # per-atom exclusions
 ) -> tuple[list[int], list[int]]:
     dihedrals_inc_hydrogen: list[int] = list()
     dihedrals_without_hydrogen: list[int] = list()

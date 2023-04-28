@@ -221,16 +221,25 @@ def _process(
 
         # Array inference acts up if given a 1-list of Quantity
         if combine_nonbonded_forces:
-            processed["Nonbonded"] = numpy.sum(nonbonded_energies)
+            assert len(nonbonded_energies) == 1
+
+            processed["Nonbonded"] = nonbonded_energies[0]
 
         else:
+            zero = 0.0 * openmm.unit.kilojoule_per_mole
+
             processed["Electrostatics"] = ensure_quantity(
-                staged["Electrostatics 1-4"] + staged["Electrostatics"],
+                numpy.sum(
+                    [
+                        staged.get(key, zero)
+                        for key in ["Electrostatics", "Electrostatics 1-4"]
+                    ],
+                ),
                 "openff",
             )
 
             processed["vdW"] = ensure_quantity(
-                staged["vdW"] + staged["vdW 1-4"],
+                numpy.sum([staged.get(key, zero) for key in ["vdW", "vdW 1-4"]]),
                 "openff",
             )
 
