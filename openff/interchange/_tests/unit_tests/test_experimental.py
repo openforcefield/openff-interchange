@@ -7,6 +7,7 @@ from openff.interchange.exceptions import ExperimentalFeatureException
 def test_default():
     @experimental
     def f():
+        """Docstring of f."""
         pass
 
     with pytest.raises(ExperimentalFeatureException):
@@ -18,6 +19,7 @@ def test_experimental_opted_in(monkeypatch):
 
     @experimental
     def g():
+        """Docstring of g."""
         pass
 
     g()
@@ -28,6 +30,7 @@ def test_experimental_opted_in_bad_value(monkeypatch):
 
     @experimental
     def h():
+        """Docstring of h."""
         pass
 
     with pytest.raises(ExperimentalFeatureException):
