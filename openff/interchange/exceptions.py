@@ -334,3 +334,7 @@ class PACKMOLRuntimeError(Exception):
 
 class PACKMOLValueError(Exception):
     """Exception raised when a bad input is passed to a PACKMOL wrapper."""
+
+
+class ExperimentalFeatureException(Exception):
+    """Exception raised when an experimental feature is used without opt-in."""

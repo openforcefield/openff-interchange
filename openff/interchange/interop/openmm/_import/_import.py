@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Optional
 import openmm
 import openmm.app
 
+from openff.interchange._experimental import experimental
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._valence import (
     AngleCollection,
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
     from openff.interchange import Interchange
 
 
+@experimental
 def from_openmm(
     topology: Optional["openmm.app.Topology"] = None,
     system: Optional[openmm.System] = None,

@@ -38,7 +38,9 @@ class TestToInterchange(_BaseTest):
 
         return sage_unconstrained.create_interchange(topology)
 
-    def test_convert_basic_system(self, simple_interchange):
+    def test_convert_basic_system(self, monkeypatch, simple_interchange):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         converted = to_interchange(_convert(simple_interchange))
 
         assert numpy.allclose(converted.positions, simple_interchange.positions)
@@ -76,7 +78,8 @@ class TestConvertTopology(_BaseTest):
 
         return _convert(sage_unconstrained.create_interchange(topology))
 
-    def test_convert_basic_system(self, simple_system):
+    def test_convert_basic_system(self, monkeypatch, simple_system):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
         converted = _convert_topology(simple_system)
 
         assert converted.n_molecules == 1
