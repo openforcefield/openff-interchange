@@ -1,3 +1,5 @@
+from functools import wraps
+from inspect import cleandoc
 import os
 
 from openff.interchange.exceptions import ExperimentalFeatureException
@@ -10,6 +12,16 @@ def experimental(func):
     To use the wrapped function, set the environment variable INTERCHANGE_EXPERIMENTAL=1.
     """
 
+    firstline, _, remainder = cleandoc(func.__doc__).partition("\n")
+
+    func.__doc__ = (
+        "🧪 "
+        + firstline
+        + "\n\n.. admonition:: Experimental\n\n    This object is experimental and should not be used in production.\n"
+        + remainder
+    )
+
+    @wraps(func)
     def wrapper(*args, **kwargs):
         if os.environ.get("INTERCHANGE_EXPERIMENTAL", "0") != "1":
             raise ExperimentalFeatureException(
