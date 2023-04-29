@@ -74,14 +74,3 @@ class TestProcess:
         assert processed["Electrostatics 1-4"].m_as(kj_mol) == -3
         assert processed["vdW"].m_as(kj_mol) == -1
         assert processed["vdW 1-4"].m_as(kj_mol) == -2
-
-    def test_mixed_torsions_error(self, dummy_system):
-        dummy_system.addForce(openmm.RBTorsionForce())
-
-        with pytest.raises(NotImplementedError):
-            _process(
-                dict(),
-                dummy_system,
-                True,
-                False,
-            )

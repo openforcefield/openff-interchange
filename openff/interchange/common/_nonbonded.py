@@ -1,5 +1,6 @@
 import abc
 from collections import defaultdict
+from collections.abc import Iterable
 from typing import DefaultDict, Literal
 
 from openff.models.types import FloatQuantity
@@ -53,6 +54,16 @@ class vdWCollection(_NonbondedCollection):
     )
 
     method: Literal["cutoff", "no-cutoff", "pme"] = Field("cutoff")
+
+    @classmethod
+    def default_parameter_values(cls) -> Iterable[float]:
+        """Per-particle parameter values passed to Force.addParticle()."""
+        return 1.0, 0.0
+
+    @classmethod
+    def potential_parameters(cls) -> Iterable[str]:
+        """Return a list of names of parameters included in each potential in this colletion."""
+        return "sigma", "epsilon"
 
 
 class ElectrostaticsCollection(_NonbondedCollection):

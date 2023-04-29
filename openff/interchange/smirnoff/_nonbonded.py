@@ -79,7 +79,7 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
         return [vdWHandler]
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attributes."""
         return ["smirks", "id", "sigma", "epsilon", "rmin_half"]
 
@@ -89,7 +89,7 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
         return [1.0, 0.0]
 
     @classmethod
-    def potential_parameters(cls):
+    def potential_parameters(cls) -> Iterable[str]:
         """Return a list of names of parameters included in each potential in this colletion."""
         return ["sigma", "epsilon"]
 

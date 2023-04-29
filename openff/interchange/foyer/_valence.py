@@ -1,5 +1,6 @@
 from openff.toolkit.topology import Topology
 from openff.units import unit
+from pydantic import Field
 
 from openff.interchange.common._valence import (
     AngleCollection,
@@ -98,17 +99,20 @@ class FoyerRBProperHandler(
 
     force_field_key = "rb_propers"
     type = "RBTorsions"
-    expression = (
-        "C0 * cos(phi)**0 + C1 * cos(phi)**1 + "
-        "C2 * cos(phi)**2 + C3 * cos(phi)**3 + "
-        "C4 * cos(phi)**4 + C5 * cos(phi)**5"
+    expression: str = Field(
+        "c0 + "
+        "c1 * (cos(phi - 180)) "
+        "c2 * (cos(phi - 180)) ** 2 + "
+        "c3 * (cos(phi - 180)) ** 3 + "
+        "c4 * (cos(phi - 180)) ** 4 + "
+        "c5 * (cos(phi - 180)) ** 5",
     )
     connection_attribute: str = "propers"
     raise_on_missing_params: bool = False
 
     def get_params_with_units(self, params):
         """Get the parameters of this handler, tagged with units."""
-        rb_params = {k.upper(): v for k, v in params.items()}
+        rb_params = params
         param_units = {k: unit.kJ / unit.mol for k in rb_params}
         return _copy_params(rb_params, param_units=param_units)
 

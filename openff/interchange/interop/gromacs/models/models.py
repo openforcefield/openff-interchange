@@ -194,7 +194,7 @@ class GROMACSMolecule(DefaultModel):
     # TODO: This can desync between system- and molecule-level data, it might be better
     #       to not store atom types at the system level, instead storing them at the
     #       molecule and grouping up to system level at write time
-    _contained_atom_types: dict[str, GROMACSAtomType] = PrivateAttr()
+    _contained_atom_types: dict[str, LennardJonesAtomType] = PrivateAttr()
 
 
 class GROMACSSystem(DefaultModel):
@@ -207,11 +207,11 @@ class GROMACSSystem(DefaultModel):
     nonbonded_function: int = Field(
         1,
         ge=1,
-        le=2,
+        le=1,
         description="The nonbonded function.",
     )
     combination_rule: int = Field(
-        1,
+        2,
         ge=1,
         le=3,
         description="The combination rule.",
@@ -225,7 +225,7 @@ class GROMACSSystem(DefaultModel):
         0.833333,
         description="The 1-4 scaling factor for electrostatic interactions.",
     )
-    atom_types: dict[str, GROMACSAtomType] = Field(
+    atom_types: dict[str, LennardJonesAtomType] = Field(
         dict(),
         description="Atom types, keyed by name.",
     )

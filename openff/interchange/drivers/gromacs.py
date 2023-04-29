@@ -203,7 +203,7 @@ def _get_gmx_energy_torsion(gmx_energies: dict) -> Quantity:
     """Canonicalize torsion energies from a set of GROMACS energies."""
     gmx_torsion = 0.0 * kj_mol
 
-    for key in ["Torsion", "Ryckaert-Bell.", "Proper Dih.", "Per. Imp. Dih."]:
+    for key in ["Torsion", "Proper Dih.", "Per. Imp. Dih."]:
         if key in gmx_energies:
             gmx_torsion += gmx_energies[key]
 
@@ -257,9 +257,10 @@ def _process(
 
     return EnergyReport(
         energies={
-            "Bond": energies["Bond"] if "Bond" in energies else 0.0 * kj_mol,
+            "Bond": energies.get("Bond", 0.0 * kj_mol),
             "Angle": energies["Angle"],
             "Torsion": _get_gmx_energy_torsion(energies),
+            "RBTorsion": energies.get("Ryckaert-Bell.", 0.0 * kj_mol),
             "vdW": _get_gmx_energy_vdw(energies),
             "Electrostatics": _get_gmx_energy_coul(energies),
         },

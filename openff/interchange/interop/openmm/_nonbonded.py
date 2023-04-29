@@ -311,7 +311,12 @@ def _create_single_nonbonded_force(
             "Try setting `combine_nonbonded_forces=False`.",
         )
 
-    has_virtual_sites = molecule_virtual_site_map not in (None, dict())
+    if molecule_virtual_site_map in (None, dict()):
+        has_virtual_sites = False
+    elif all([len(v) == 0 for v in molecule_virtual_site_map.values()]):
+        has_virtual_sites = False
+    else:
+        has_virtual_sites = True
 
     non_bonded_force = openmm.NonbondedForce()
     system.addForce(non_bonded_force)
@@ -602,7 +607,12 @@ def _create_multiple_nonbonded_forces(
 ):
     from openff.interchange.components.toolkit import _get_14_pairs
 
-    has_virtual_sites = molecule_virtual_site_map not in (None, dict())
+    if molecule_virtual_site_map in (None, dict()):
+        has_virtual_sites = False
+    elif all([len(v) == 0 for v in molecule_virtual_site_map.values()]):
+        has_virtual_sites = False
+    else:
+        has_virtual_sites = True
 
     vdw_force = _create_vdw_force(
         data,

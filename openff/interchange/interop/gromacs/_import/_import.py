@@ -144,8 +144,8 @@ def _process_defaults(line: str) -> tuple[int, int, str, float, float]:
 
     combination_rule = int(split[1])
 
-    if combination_rule != 2:
-        raise ValueError("Only Lorentz-Berthelot combination rules are supported.")
+    if combination_rule not in (2, 3):
+        raise ValueError("combination rule 1 not supported.")
 
     gen_pairs = split[2]
     lj_14 = float(split[3])

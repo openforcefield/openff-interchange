@@ -12,6 +12,29 @@ from openff.interchange.components.toolkit import (
 )
 
 
+@pytest.fixture()
+def simple_methane():
+    return _SimpleMolecule.from_molecule(Molecule.from_smiles("C"))
+
+
+@pytest.fixture()
+def simple_water():
+    return _SimpleMolecule.from_molecule(Molecule.from_smiles("O"))
+
+
+def test_simple_topology_uniqueness(simple_methane, simple_water):
+    topology = Topology.from_molecules(
+        [
+            simple_methane,
+            simple_water,
+            simple_methane,
+            simple_methane,
+            simple_water,
+        ],
+    )
+    assert len(topology.identical_molecule_groups) == 2
+
+
 class TestToolkitUtils(_BaseTest):
     @pytest.mark.parametrize(
         ("smiles", "num_pairs"),
