@@ -10,15 +10,15 @@ def experimental(func):
     Decorate a function as experimental, requiring environment variable opt-in.
 
     To use the wrapped function, set the environment variable INTERCHANGE_EXPERIMENTAL=1.
-    """
 
+    """
     firstline, _, remainder = cleandoc(func.__doc__).partition("\n")
 
     func.__doc__ = (
         "🧪 "
-        + firstline
-        + "\n\n.. admonition:: Experimental\n\n    This object is experimental and should not be used in production.\n"
-        + remainder
+        f"{firstline}"
+        "\n\n.. admonition:: Experimental\n\n    This object is experimental and should not be used in production.\n"
+        f"{remainder}"
     )
 
     @wraps(func)
