@@ -1,6 +1,6 @@
+import os
 from functools import wraps
 from inspect import cleandoc
-import os
 
 from openff.interchange.exceptions import ExperimentalFeatureException
 
