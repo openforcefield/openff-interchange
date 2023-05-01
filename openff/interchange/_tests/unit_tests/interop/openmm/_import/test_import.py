@@ -15,7 +15,9 @@ from openff.interchange.interop.openmm._import._import import _convert_nonbonded
 
 
 class TestFromOpenMM(_BaseTest):
-    def test_simple_roundtrip(self, sage_unconstrained):
+    def test_simple_roundtrip(self, monkeypatch, sage_unconstrained):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         molecule = create_ethanol()
         molecule.generate_conformers(n_conformers=1)
 

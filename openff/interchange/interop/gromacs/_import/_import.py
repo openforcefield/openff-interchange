@@ -3,6 +3,7 @@ import pathlib
 import numpy
 from openff.units import unit
 
+from openff.interchange._experimental import experimental
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSAngle,
     GROMACSAtom,
@@ -21,6 +22,7 @@ from openff.interchange.interop.gromacs.models.models import (
 )
 
 
+@experimental
 def from_files(top_file, gro_file, cls=GROMACSSystem):
     """
     Parse a GROMACS topology file. Adapted from Intermol.

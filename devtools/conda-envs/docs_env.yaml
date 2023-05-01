@@ -5,7 +5,8 @@ channels:
   - conda-forge
 dependencies:
   # Base depends
-  - python
+  # https://docs.readthedocs.io/en/stable/config-file/v2.html#build-tools-python
+  - python =3.10
   - pip
   - numpy >=1.21
   - pydantic <2.0.0a0

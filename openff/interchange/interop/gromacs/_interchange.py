@@ -3,6 +3,7 @@ from openff.toolkit import Topology
 from openff.units import unit
 
 from openff.interchange import Interchange
+from openff.interchange._experimental import experimental
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._valence import (
     AngleCollection,
@@ -29,6 +30,7 @@ from openff.interchange.models import (
 )
 
 
+@experimental
 def to_interchange(
     system: GROMACSSystem,
 ) -> Interchange:

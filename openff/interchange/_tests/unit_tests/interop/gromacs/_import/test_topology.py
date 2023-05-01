@@ -5,7 +5,9 @@ from openff.interchange.interop.gromacs._import._topology import (
 )
 
 
-def test_complex():
+def test_complex(monkeypatch):
+    monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
     topology = _create_topology_from_system(
         GROMACSSystem.from_files(
             get_test_file_path("complex.top"),
