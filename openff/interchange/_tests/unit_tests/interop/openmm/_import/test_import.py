@@ -91,3 +91,21 @@ class TestConvertNonbondedForce:
 
         assert vdw.cutoff.m_as(unit.nanometer) == pytest.approx(cutoff)
         assert vdw.switch_width.m_as(unit.nanometer) == 0.0
+
+
+class TestConvertConstraints(_BaseTest):
+    def test_num_constraints(self, sage, basic_top):
+        """Test that the number of constraints is preserved when converting to and from OpenMM"""
+        interchange = sage.create_interchange(basic_top)
+
+        converted = from_openmm(
+            topology=interchange.topology.to_openmm(),
+            system=interchange.to_openmm(combine_nonbonded_forces=True),
+        )
+
+        assert "Constraints" in interchange.collections
+        assert "Constraints" in converted.collections
+
+        assert len(interchange["Constraints"].key_map) == len(
+            converted["Constraints"].key_map,
+        )
