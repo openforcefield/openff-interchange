@@ -94,8 +94,10 @@ class TestConvertNonbondedForce:
 
 
 class TestConvertConstraints(_BaseTest):
-    def test_num_constraints(self, sage, basic_top):
+    def test_num_constraints(self, monkeypatch, sage, basic_top):
         """Test that the number of constraints is preserved when converting to and from OpenMM"""
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         interchange = sage.create_interchange(basic_top)
 
         converted = from_openmm(
