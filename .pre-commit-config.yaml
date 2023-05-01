@@ -36,7 +36,7 @@ repos:
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.3.1
+  rev: v3.3.2
   hooks:
   - id: pyupgrade
     files: ^openff|plugins|stubs
@@ -59,7 +59,7 @@ repos:
   - id: blacken-docs
     files: ^docs/
 - repo: https://github.com/igorshubovych/markdownlint-cli
-  rev: v0.33.0
+  rev: v0.34.0
   hooks:
   - id: markdownlint
     exclude: .github
