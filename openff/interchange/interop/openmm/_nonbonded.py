@@ -104,25 +104,7 @@ def _process_nonbonded_forces(
                 has_vdw = True
                 break
 
-    if has_vdw:
-        _data = _prepare_input_data(interchange)
-
-        if combine_nonbonded_forces:
-            _func = _create_single_nonbonded_force
-        else:
-            _func = _create_multiple_nonbonded_forces
-
-        _func(
-            _data,
-            interchange,
-            system,
-            molecule_virtual_site_map,
-            openff_openmm_particle_map,
-        )
-
-    else:
-        # Here we assume there are no vdW interactions in any collections
-
+    if not has_vdw:
         if has_virtual_sites:
             raise UnsupportedExportError(
                 "Virtual sites with no vdW handler not currently supported. If this use case is "
@@ -131,7 +113,7 @@ def _process_nonbonded_forces(
             )
 
         try:
-            electrostatics = interchange["Electrostatics"]
+            interchange["Electrostatics"]
         except LookupError:
             raise InternalInconsistencyError(
                 "In a confused state, could not find any vdW interactions but also failed to find "
@@ -139,30 +121,20 @@ def _process_nonbonded_forces(
                 "earlier in this function. Please file an issue with a minimal reproducing example.",
             )
 
-        electrostatics_method = (
-            electrostatics.periodic_potential if electrostatics else None
-        )
+    _data = _prepare_input_data(interchange)
 
-        non_bonded_force = openmm.NonbondedForce()
-        system.addForce(non_bonded_force)
+    if combine_nonbonded_forces:
+        _func = _create_single_nonbonded_force
+    else:
+        _func = _create_multiple_nonbonded_forces
 
-        for molecule in interchange.topology.molecules:
-            for _ in molecule.atoms:
-                non_bonded_force.addParticle(0.0, 1.0, 0.0)
-
-        if electrostatics_method in ["Coulomb", None]:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-            # TODO: Would setting the dispersion correction here have any impact?
-        elif electrostatics_method == _PME:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-            non_bonded_force.setEwaldErrorTolerance(1.0e-4)
-        else:
-            raise UnsupportedCutoffMethodError(
-                f"Found no vdW interactions but an electrostatics method of {electrostatics_method}. "
-                "This is either unsupported or ambiguous. If you believe this exception has been raised "
-                "in error, please file an issue with a minimally reproducing example and your motivation "
-                "for this use case.",
-            )
+    _func(
+        _data,
+        interchange,
+        system,
+        molecule_virtual_site_map,
+        openff_openmm_particle_map,
+    )
 
     return openff_openmm_particle_map
 
