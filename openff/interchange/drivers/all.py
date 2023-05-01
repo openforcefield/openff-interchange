@@ -17,7 +17,10 @@ from openff.interchange.exceptions import (
 )
 
 
-def get_all_energies(interchange: "Interchange") -> dict[str, EnergyReport]:
+def get_all_energies(
+    interchange: "Interchange",
+    combine_nonbonded_forces: bool = False,
+) -> dict[str, EnergyReport]:
     """
     Given an Interchange object, return single-point energies as computed by all available engines.
     """
@@ -27,7 +30,10 @@ def get_all_energies(interchange: "Interchange") -> dict[str, EnergyReport]:
     try:
         # TODO: Worth wiring this argument up to this function? kwargs complexity is not fun
         all_energies = {
-            "OpenMM": get_openmm_energies(interchange),
+            "OpenMM": get_openmm_energies(
+                interchange,
+                combine_nonbonded_forces=combine_nonbonded_forces,
+            ),
         }
     except UnsupportedCutoffMethodError:
         all_energies = {

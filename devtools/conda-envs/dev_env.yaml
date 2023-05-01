@@ -1,5 +1,6 @@
 name: openff-interchange-env
 channels:
+  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
   - openeye
 dependencies:
@@ -7,11 +8,12 @@ dependencies:
   - python
   - pip
   - numpy >=1.21
-  - pydantic
+  - pydantic <2.0.0a0
   - openmm
   # OpenFF stack
   - openff-toolkit >=0.13
   - openff-models >=0.0.4
+  - openff-nagl
   # Optional features
   - jax
   - unyt
@@ -29,9 +31,6 @@ dependencies:
   - qcportal
   - openff-qcsubmit
   - mdanalysis
-  # Remove after new Evaluator release
-  - pymbar >=3.0.5
-  - cmiles
   # Drivers
   - gromacs >=2021=nompi*
   - lammps
@@ -43,6 +42,8 @@ dependencies:
   - types-setuptools
   - pandas-stubs >=1.2.0.56
   # Development tools
+  # https://github.com/mamba-org/mamba/issues/1523#issuecomment-1246591319
+  - micromamba
   - jupyterlab
   - nglview
   - ipywidgets =7

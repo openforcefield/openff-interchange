@@ -6,6 +6,7 @@ import numpy
 import openmm
 import openmm.unit
 from openff.units import unit
+from openff.units.openmm import ensure_quantity
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
@@ -200,10 +201,27 @@ def _process(
         ]
 
         # Array inference acts up if given a 1-list of Quantity
-        processed["Nonbonded"] = (
-            nonbonded_energies[0]
-            if len(nonbonded_energies) == 1
-            else numpy.sum(nonbonded_energies)
-        )
+        if combine_nonbonded_forces:
+            assert len(nonbonded_energies) == 1
+
+            processed["Nonbonded"] = nonbonded_energies[0]
+
+        else:
+            zero = 0.0 * openmm.unit.kilojoule_per_mole
+
+            processed["Electrostatics"] = ensure_quantity(
+                numpy.sum(
+                    [
+                        staged.get(key, zero)
+                        for key in ["Electrostatics", "Electrostatics 1-4"]
+                    ],
+                ),
+                "openff",
+            )
+
+            processed["vdW"] = ensure_quantity(
+                numpy.sum([staged.get(key, zero) for key in ["vdW", "vdW 1-4"]]),
+                "openff",
+            )
 
     return EnergyReport(energies=processed)

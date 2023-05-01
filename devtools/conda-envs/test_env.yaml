@@ -12,7 +12,6 @@ dependencies:
   # OpenFF stack
   - openff-toolkit >=0.13
   - openff-models >=0.0.4
-  - openff-nagl
   # Optional features
   - unyt
   - mbuild
