@@ -92,8 +92,19 @@ def _process_nonbonded_forces(
     )
 
     # TODO: Process ElectrostaticsHandler.exception_potential
-    # TODO: Improve logic to be less reliant on these names
-    if "vdW" in interchange.collections or "Electrostatics" in interchange.collections:
+    has_vdw = False
+
+    for name, collection in interchange.collections.items():
+        if name == "vdW":
+            has_vdw = True
+            break
+        if collection.is_plugin:
+            # TODO: Here is where to detect an electrostatics plugin, if one ever exists
+            if collection.acts_as == "vdW":
+                has_vdw = True
+                break
+
+    if has_vdw:
         _data = _prepare_input_data(interchange)
 
         if combine_nonbonded_forces:
@@ -109,52 +120,14 @@ def _process_nonbonded_forces(
             openff_openmm_particle_map,
         )
 
-    elif "Buckingham-6" in interchange.collections:
-        if has_virtual_sites:
-            raise UnsupportedExportError(
-                "Virtual sites with Buckingham-6 potential not supported. If this use case is important to you, "
-                "please raise an issue describing the functionality you wish to see.",
-            )
-
-        buck = interchange["Buckingham-6"]
-
-        non_bonded_force = openmm.CustomNonbondedForce(
-            "A * exp(-B * r) - C * r ^ -6; A = sqrt(A1 * A2); B = 2 / (1 / B1 + 1 / B2); C = sqrt(C1 * C2)",
-        )
-        non_bonded_force.addPerParticleParameter("A")
-        non_bonded_force.addPerParticleParameter("B")
-        non_bonded_force.addPerParticleParameter("C")
-        system.addForce(non_bonded_force)
-
-        for molecule in interchange.topology.molecules:
-            for _ in molecule.atoms:
-                non_bonded_force.addParticle([0.0, 0.0, 0.0])
-
-        if interchange.box is None:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-        else:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
-            non_bonded_force.setCutoffDistance(buck.cutoff * unit.angstrom)
-
-        for top_key, pot_key in buck.key_map.items():
-            atom_idx = top_key.atom_indices[0]
-
-            # TODO: Add electrostatics
-            params = buck.potentials[pot_key].parameters
-            a = to_openmm_quantity(params["A"])
-            b = to_openmm_quantity(params["B"])
-            c = to_openmm_quantity(params["C"])
-            non_bonded_force.setParticleParameters(atom_idx, [a, b, c])
-
-        openff_openmm_particle_map
-
     else:
         # Here we assume there are no vdW interactions in any collections
 
         if has_virtual_sites:
             raise UnsupportedExportError(
-                "Virtual sites with no vdW handler not currently supported. If this use case is important to you, "
-                "please raise an issue describing the functionality you wish to see.",
+                "Virtual sites with no vdW handler not currently supported. If this use case is "
+                "important to you, please raise an issue describing the functionality you wish to "
+                "see.",
             )
 
         try:
