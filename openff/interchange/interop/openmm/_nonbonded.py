@@ -645,46 +645,47 @@ def _create_multiple_nonbonded_forces(
 
         openmm_pairs.append(openmm_indices)
 
-    for i in range(electrostatics_force.getNumExceptions()):
-        (p1, p2, _, _, _) = electrostatics_force.getExceptionParameters(i)
+    if electrostatics_force is not None:
+        for i in range(electrostatics_force.getNumExceptions()):
+            (p1, p2, _, _, _) = electrostatics_force.getExceptionParameters(i)
 
-        if (p1, p2) in openmm_pairs or (p2, p1) in openmm_pairs:
+            if (p1, p2) in openmm_pairs or (p2, p1) in openmm_pairs:
+                if vdw_force is not None:
+                    if data["vdw_collection"].is_plugin:
+                        # Since we fed in in r_min1, epsilon1, ..., r_min2, epsilon2, ...
+                        # each as individual parameters, we need to prepare a list of
+                        # length 2 * len(potential_parameters) to this constructor
+                        parameters1 = vdw_force.getParticleParameters(p1)
+                        parameters2 = vdw_force.getParticleParameters(p2)
+                        vdw_14_force.addBond(p1, p2, [*parameters1, *parameters2])
+
+                    else:
+                        # Look up the vdW parameters for each particle
+                        sig1, eps1 = vdw_force.getParticleParameters(p1)
+                        sig2, eps2 = vdw_force.getParticleParameters(p2)
+
+                        # manually compute ...
+                        sig_14 = (sig1 + sig2) * 0.5
+                        eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
+
+                        # ... and set the 1-4 interactions
+                        vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
+
+                # Look up the partial charges for each particle
+                q1 = electrostatics_force.getParticleParameters(p1)[0]
+                q2 = electrostatics_force.getParticleParameters(p2)[0]
+
+                # manually compute ...
+                qq = q1 * q2 * coul_14
+
+                # ... and set the 1-4 interactions
+                coul_14_force.addBond(p1, p2, [qq])
+
             if vdw_force is not None:
-                if data["vdw_collection"].is_plugin:
-                    # Since we fed in in r_min1, epsilon1, ..., r_min2, epsilon2, ...
-                    # each as individual parameters, we need to prepare a list of
-                    # length 2 * len(potential_parameters) to this constructor
-                    parameters1 = vdw_force.getParticleParameters(p1)
-                    parameters2 = vdw_force.getParticleParameters(p2)
-                    vdw_14_force.addBond(p1, p2, [*parameters1, *parameters2])
+                vdw_force.addExclusion(p1, p2)
 
-                else:
-                    # Look up the vdW parameters for each particle
-                    sig1, eps1 = vdw_force.getParticleParameters(p1)
-                    sig2, eps2 = vdw_force.getParticleParameters(p2)
-
-                    # manually compute ...
-                    sig_14 = (sig1 + sig2) * 0.5
-                    eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
-
-                    # ... and set the 1-4 interactions
-                    vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
-
-            # Look up the partial charges for each particle
-            q1 = electrostatics_force.getParticleParameters(p1)[0]
-            q2 = electrostatics_force.getParticleParameters(p2)[0]
-
-            # manually compute ...
-            qq = q1 * q2 * coul_14
-
-            # ... and set the 1-4 interactions
-            coul_14_force.addBond(p1, p2, [qq])
-
-        if vdw_force is not None:
-            vdw_force.addExclusion(p1, p2)
-
-        if electrostatics_force is not None:
-            electrostatics_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
+            if electrostatics_force is not None:
+                electrostatics_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
 
     for force in [vdw_force, electrostatics_force, vdw_14_force, coul_14_force]:
         if force is not None:
