@@ -54,14 +54,20 @@ def get_all_energies(
 
 
 @requires_package("pandas")
-def get_summary_data(interchange: "Interchange") -> "DataFrame":
+def get_summary_data(
+    interchange: "Interchange",
+    combine_nonbonded_forces: bool = False,
+) -> "DataFrame":
     """Return a pandas DataFrame with summaries of energies from all available engines."""
     from openff.units import unit
     from pandas import DataFrame
 
     kj_mol = unit.kilojoule / unit.mol
 
-    energies = get_all_energies(interchange)
+    energies = get_all_energies(
+        interchange,
+        combine_nonbonded_forces=combine_nonbonded_forces,
+    )
 
     for k, v in energies.items():
         for kk in v.energies:
