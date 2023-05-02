@@ -8,6 +8,7 @@ from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCo
 from openff.interchange.common._valence import (
     AngleCollection,
     BondCollection,
+    ConstraintCollection,
     ProperTorsionCollection,
 )
 from openff.interchange.exceptions import UnsupportedImportError
@@ -24,22 +25,16 @@ def from_openmm(
     box_vectors=None,
 ) -> "Interchange":
     """Create an Interchange object from OpenMM data."""
-    import warnings
-
     from openff.interchange import Interchange
-
-    warnings.warn(
-        "Importing from OpenMM `System` objects is EXPERIMENTAL, fragile, and "
-        "currently unlikely to produce expected results for all but the simplest "
-        "use cases. It is thereforce currently unsuitable for production work. "
-        "However, it is an area of active development; if this function would "
-        "enable key components of your workflows, feedback is welcome. Please "
-        'file an issue or create a new discussion (see the "Discussions" tab).',
-    )
 
     interchange = Interchange()
 
     if system:
+        constraints = _convert_constraints(system)
+
+        if constraints is not None:
+            interchange.collections["Constraints"] = constraints
+
         for force in system.getForces():
             if isinstance(force, openmm.NonbondedForce):
                 vdw, coul = _convert_nonbonded_force(force)
@@ -75,6 +70,51 @@ def from_openmm(
         interchange.box = box_vectors
 
     return interchange
+
+
+def _convert_constraints(
+    system: openmm.System,
+) -> Optional[ConstraintCollection]:
+    from openff.units import unit
+
+    from openff.interchange.components.potentials import Potential
+    from openff.interchange.models import BondKey, PotentialKey
+
+    if system.getNumConstraints() == 0:
+        return None
+
+    constraints = ConstraintCollection()
+
+    # Map the unique distances (float, implicitly nanometer) to indices used for deduplication
+    unique_distances: dict[float, int] = {
+        distance: index
+        for index, distance in enumerate(
+            {
+                system.getConstraintParameters(index)[2].value_in_unit(
+                    openmm.unit.nanometer,
+                )
+                for index in range(system.getNumConstraints())
+            },
+        )
+    }
+
+    _keys: dict[float, PotentialKey] = dict()
+
+    for distance, index in unique_distances.items():
+        potential_key = PotentialKey(id=f"Constraint{index}")
+        _keys[distance] = potential_key
+        constraints.potentials[potential_key] = Potential(
+            parameters={"distance": distance * unit.nanometer},
+        )
+
+    for index in range(system.getNumConstraints()):
+        atom1, atom2, _distance = system.getConstraintParameters(index)
+
+        distance = _distance.value_in_unit(openmm.unit.nanometer)
+
+        constraints.key_map[BondKey(atom_indices=(atom1, atom2))] = _keys[distance]
+
+    return constraints
 
 
 def _convert_nonbonded_force(

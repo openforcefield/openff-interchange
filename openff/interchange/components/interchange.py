@@ -336,11 +336,19 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
-    def to_openmm(self, combine_nonbonded_forces: bool = True):
+    def to_openmm(
+        self,
+        combine_nonbonded_forces: bool = True,
+        add_constrained_forces: bool = False,
+    ):
         """Export this Interchange to an OpenMM System."""
         from openff.interchange.interop.openmm import to_openmm as to_openmm_
 
-        return to_openmm_(self, combine_nonbonded_forces=combine_nonbonded_forces)
+        return to_openmm_(
+            self,
+            combine_nonbonded_forces=combine_nonbonded_forces,
+            add_constrained_forces=add_constrained_forces,
+        )
 
     def to_openmm_topology(
         self,
