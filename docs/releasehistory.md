@@ -9,17 +9,28 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.3.2 - 2023-05-02
+
+### Behavior changes
+
+* #677 Replaces `.constraints` with `.potentials` in constraint collections.
+* #677 Unifies parameters in Ryckaert-Bellemans torsions around lowercase values (`c0`, `c1`, etc.).
 
 ### New features
 
-* #671 Adds `Interchange.to_gromacs` which writes both GROMACS topology and coordinate files.
+* #671 Adds `Interchange.to_gromacs` which writes both GROMACS topology and coordinate files at once.
+* #677 Improves support for Ryckaert-Bellemans torsions in parsers, writers, and drivers.
 * #681 Ports a PACKMOL wrapper from OpenFF Evaluator.
+* #692 Tags some features as experimental, requiring opt-in to access.
+* #697 Wires `add_constrained_forces` argument through `Interchange.to_openmm`.
+* #697 Wires `combine_nonbonded_forces` argument through `get_summary_data` and `get_all_energies`.
 
 ### Bugfixes
 
 * #680 Fixes #678 in which, in some cases, text wrapping in Amber files was mangled.
 * #680 Fixes #679 in which atom exclusion lists in Amber files were written incorrectly.
+* #685 Fixes #682 in which some 1-4 interactions in Amber files were counted incorrectly.
+* #695 Fixes #694 in which systems with no electrostatics did not check for plugins.
 
 ## 0.3.1 - 2023-04-19
 
