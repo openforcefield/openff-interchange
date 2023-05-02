@@ -112,7 +112,7 @@ def _convert_constraints(
 
         distance = _distance.value_in_unit(openmm.unit.nanometer)
 
-        constraints.slot_map[BondKey(atom_indices=(atom1, atom2))] = _keys[distance]
+        constraints.key_map[BondKey(atom_indices=(atom1, atom2))] = _keys[distance]
 
     return constraints
 
