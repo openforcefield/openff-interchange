@@ -2,16 +2,12 @@
 A wrapper around PACKMOL. Taken from OpenFF Evaluator v0.4.3.
 """
 import os
-import random
 import shutil
-import string
 import subprocess
 import tempfile
-from collections import defaultdict
 from distutils.spawn import find_executable
 from typing import Optional
 
-import mdtraj
 import numpy as np
 from openff.toolkit import Molecule, RDKitToolkitWrapper, Topology
 from openff.units import Quantity, unit
@@ -154,251 +150,6 @@ def _approximate_box_size_by_density(
     box_size /= aspect_ratio_normalizer
 
     return box_size
-
-
-def _standardize_smiles(smiles: str) -> str:
-    """
-    Standardize a SMILES pattern using the OpenFF Toolkit and RDKit.
-
-    Taken from OpenFF Evaluator v0.4.3.
-
-    See openff.evaluator.substances.components::Component._standardize_smiles
-
-    """
-    from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
-    from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
-
-    # This parsing was previously done with `cmiles.utils.load_molecule`, which
-    # * did NOT enforce stereochemistry while parsing SMILES and
-    # * implicitly used the same toolkit to write the SMILES back from an object
-    # This is hard-coded to keep test results consistent across OpenEye status
-    # and compared to older versions; if desired this could be relaxed
-    rdkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper()])
-
-    molecule = Molecule.from_smiles(
-        smiles,
-        toolkit_registry=rdkit_registry,
-        allow_undefined_stereo=True,
-    )
-
-    try:
-        # Try to make the smiles isomeric.
-        return molecule.to_smiles(
-            isomeric=True,
-            explicit_hydrogens=False,
-            mapped=False,
-            toolkit_registry=rdkit_registry,
-        )
-    except ValueError:
-        # Fall-back to non-isomeric.
-        return molecule.to_smiles(
-            isomeric=False,
-            explicit_hydrogens=False,
-            mapped=False,
-            toolkit_registry=rdkit_registry,
-        )
-
-
-def _generate_residue_name(residue, smiles):
-    """
-    Generate residue names corresponding to a particular smiles pattern.
-
-    Where possible (i.e for amino acids and ions) a standard residue
-    name will be returned, otherwise a random name will be used.
-
-    Parameters
-    ----------
-    residue: mdtraj.core.topology.Residue
-        The residue to assign the name to.
-    smiles: str
-        The SMILES pattern to generate a resiude name for.
-
-    """
-    from mdtraj.core import residue_names
-    from openff.toolkit.topology import Molecule
-
-    # Define the set of residue names which should be discarded
-    # if randomly generated as they have a reserved meaning.
-    forbidden_residue_names = [
-        *residue_names._AMINO_ACID_CODES,
-        *residue_names._SOLVENT_TYPES,
-        *residue_names._WATER_RESIDUES,
-        "ADE",
-        "CYT",
-        "CYX",
-        "DAD",
-        "DGU",
-        "FOR",
-        "GUA",
-        "HID",
-        "HIE",
-        "HIH",
-        "HSD",
-        "HSH",
-        "HSP",
-        "NMA",
-        "THY",
-        "URA",
-    ]
-
-    amino_residue_mappings = {
-        "C[C@H](N)C(=O)O": "ALA",
-        "N=C(N)NCCC[C@H](N)C(=O)O": "ARG",
-        "NC(=O)C[C@H](N)C(=O)O": "ASN",
-        "N[C@@H](CC(=O)O)C(=O)O": "ASP",
-        "N[C@@H](CS)C(=O)O": "CYS",
-        "N[C@@H](CCC(=O)O)C(=O)O": "GLU",
-        "NC(=O)CC[C@H](N)C(=O)O": "GLN",
-        "NCC(=O)O": "GLY",
-        "N[C@@H](Cc1c[nH]cn1)C(=O)O": "HIS",
-        "CC[C@H](C)[C@H](N)C(=O)O": "ILE",
-        "CC(C)C[C@H](N)C(=O)O": "LEU",
-        "NCCCC[C@H](N)C(=O)O": "LYS",
-        "CSCC[C@H](N)C(=O)O": "MET",
-        "N[C@@H](Cc1ccccc1)C(=O)O": "PHE",
-        "O=C(O)[C@@H]1CCCN1": "PRO",
-        "N[C@@H](CO)C(=O)O": "SER",
-        "C[C@@H](O)[C@H](N)C(=O)O": "THR",
-        "N[C@@H](Cc1c[nH]c2ccccc12)C(=O)O": "TRP",
-        "N[C@@H](Cc1ccc(O)cc1)C(=O)O": "TYR",
-        "CC(C)[C@H](N)C(=O)O": "VAL",
-    }
-
-    standardized_smiles = _standardize_smiles(smiles)
-
-    # Check for amino acids.
-    if standardized_smiles in amino_residue_mappings:
-        residue.name = amino_residue_mappings[standardized_smiles]
-        return
-
-    # Check for water
-    if standardized_smiles == "O":
-        residue.name = "HOH"
-
-        # Re-assign the water atom names. These need to be set to get
-        # correct CONECT statements.
-        h_counter = 1
-
-        for atom in residue.atoms:
-            if atom.element.symbol == "O":
-                atom.name = "O"
-            else:
-                atom.name = f"H{h_counter}"
-                h_counter += 1
-
-        return
-
-    # Check for ions
-    openff_molecule = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
-
-    if openff_molecule.n_atoms == 1:
-        residue.name = _ion_residue_name(openff_molecule)
-        residue.atom(0).name = residue.name
-
-        return
-
-    # Randomly generate a name
-    random_residue_name = "".join(
-        [random.choice(string.ascii_uppercase) for _ in range(3)],
-    )
-
-    while random_residue_name in forbidden_residue_names:
-        # Re-choose the residue name until we find a safe one.
-        random_residue_name = "".join(
-            [random.choice(string.ascii_uppercase) for _ in range(3)],
-        )
-
-    residue.name = random_residue_name
-
-    # Assign unique atom names.
-    element_counter = defaultdict(int)
-
-    for atom in residue.atoms:
-        atom.name = f"{atom.element.symbol}{element_counter[atom.element.symbol] + 1}"
-        element_counter[atom.element.symbol] += 1
-
-
-def _ion_residue_name(molecule: Molecule) -> str:
-    """
-    Generate a residue name for a monatomic ion.
-
-    Parameters
-    ----------
-    molecule: openff.toolkit.topology.Molecule
-        The monoatomic ion to generate a resiude name for.
-
-    Returns
-    -------
-    residue_name: str
-        The residue name of the ion
-
-    """
-    element_symbol = molecule.atoms[0].symbol
-    charge_symbol = ""
-
-    formal_charge = molecule.atoms[0].formal_charge
-
-    if isinstance(formal_charge, unit.Quantity):
-        formal_charge = formal_charge.m_as(unit.elementary_charge)
-
-    formal_charge = int(formal_charge)
-
-    if formal_charge != 0:
-        charge_symbol = "-" if formal_charge < 0 else "+"
-        formal_charge = abs(formal_charge)
-
-        if formal_charge > 1:
-            charge_symbol = f"{formal_charge}{charge_symbol}"
-
-    residue_name = f"{element_symbol}{charge_symbol}"
-    residue_name = residue_name[:3]
-
-    return residue_name
-
-
-def _create_trajectory(molecule: Molecule) -> mdtraj.Trajectory:
-    """
-    Create an `mdtraj` topology from a molecule object.
-
-    Parameters
-    ----------
-    molecule: openff.toolkit.topology.Molecule
-        The SMILES pattern.
-
-    Returns
-    -------
-    mdtraj.Trajectory
-        The created trajectory.
-
-    """
-    import mdtraj
-
-    # Check whether the molecule has a configuration defined, and if not,
-    # define one.
-    if molecule.n_conformers <= 0:
-        molecule.generate_conformers(n_conformers=1)
-
-    # We need to save out the molecule and then reload it as the toolkit
-    # will not always save the atoms in the same order that they are
-    # present in the molecule object.
-    with tempfile.NamedTemporaryFile(suffix=".pdb") as file:
-        # Toolkit's PDB writer is untrustworthy (for non-biopolymers) with OpenEyeToolktiWrapper
-        # See https://github.com/openforcefield/openff-toolkit/issues/1307 and linked issues
-        molecule.to_file(
-            file.name,
-            file_format="PDB",
-            toolkit_registry=RDKitToolkitWrapper(),
-        )
-        # Load the pdb into an mdtraj object.
-        mdtraj_trajectory = mdtraj.load_pdb(file.name)
-
-    # Change the assigned residue name (sometimes molecules are assigned
-    # an amino acid residue name even if that molecule is not an amino acid,
-    # e.g. C(CO)N is not Gly) and save the altered object as a pdb.
-    for residue in mdtraj_trajectory.topology.residues:
-        _generate_residue_name(residue, molecule.to_smiles())
-
-    return mdtraj_trajectory
 
 
 def _build_input_file(
@@ -611,16 +362,28 @@ def pack_box(
 
         # Create PDB files for all of the molecules.
         pdb_file_names = []
-        mdtraj_topologies = []
 
         for index, molecule in enumerate(molecules):
-            mdtraj_trajectory = _create_trajectory(molecule)
+            # Make a copy of the molecule so we don't change input
+            molecule = Molecule(molecule)
 
+            # Generate conformers if they're missing
+            if molecule.n_conformers <= 0:
+                molecule.generate_conformers(n_conformers=1)
+
+            # RDKitToolkitWrapper is less buggy than OpenEye for writing PDBs
+            # See https://github.com/openforcefield/openff-toolkit/issues/1307
+            # and linked issues. As long as the PDB files have the atoms in the
+            # right order, we'll be able to read packmol's output, since we
+            # just load the PDB coordinates into a topology created from its
+            # component molecules.
             pdb_file_name = f"{index}.pdb"
             pdb_file_names.append(pdb_file_name)
-
-            mdtraj_trajectory.save_pdb(pdb_file_name)
-            mdtraj_topologies.append(mdtraj_trajectory.topology)
+            molecule.to_file(
+                pdb_file_name,
+                file_format="PDB",
+                toolkit_registry=RDKitToolkitWrapper(),
+            )
 
         # Generate the input file.
         output_file_name = "packmol_output.pdb"
