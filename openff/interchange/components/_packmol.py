@@ -308,14 +308,67 @@ def _box_from_density(
     return box_vectors
 
 
+def _create_solute_pdb(
+    topology: Optional[Topology],
+    box_vectors: Quantity,
+) -> Optional[str]:
+    """Write out the solute topology to PDB so that packmol can read it."""
+    if topology is None:
+        return None
+
+    # Copy the topology so we can change it
+    topology = Topology(topology)
+    # Wrap the positions into the brick representation so that packmol
+    # sees all of them
+    topology.set_positions(
+        _wrap_into_brick(
+            topology.get_positions(),
+            box_vectors,
+        ),
+    )
+    # Write to pdb
+    solute_pdb_filename = "solvate.pdb"
+    topology.to_file(
+        solute_pdb_filename,
+        file_format="PDB",
+    )
+    return solute_pdb_filename
+
+
+def _create_molecule_pdbs(molecules: list[Molecule]) -> list[str]:
+    """Write out PDBs of the molecules so that packmol can read them."""
+    pdb_file_names = []
+    for index, molecule in enumerate(molecules):
+        # Make a copy of the molecule so we don't change the input
+        molecule = Molecule(molecule)
+
+        # Generate conformers if they're missing
+        if molecule.n_conformers <= 0:
+            molecule.generate_conformers(n_conformers=1)
+
+        # RDKitToolkitWrapper is less buggy than OpenEye for writing PDBs
+        # See https://github.com/openforcefield/openff-toolkit/issues/1307
+        # and linked issues. As long as the PDB files have the atoms in the
+        # right order, we'll be able to read packmol's output, since we
+        # just load the PDB coordinates into a topology created from its
+        # component molecules.
+        pdb_file_name = f"{index}.pdb"
+        pdb_file_names.append(pdb_file_name)
+        molecule.to_file(
+            pdb_file_name,
+            file_format="PDB",
+            toolkit_registry=RDKitToolkitWrapper(),
+        )
+    return pdb_file_names
+
+
 def _build_input_file(
     molecule_file_names: list[str],
     molecule_counts: list[int],
     structure_to_solvate: Optional[str],
     box_size: Quantity,
     tolerance: Quantity,
-    output_file_name: str,
-) -> str:
+) -> tuple[str, str]:
     """
     Construct the packmol input file.
 
@@ -333,23 +386,24 @@ def _build_input_file(
         packmol box will be shrunk by the tolerance.
     tolerance: openff.units.Quantity
         The packmol convergence tolerance.
-    output_file_name: str
-        The path to save the packed pdb to.
 
     Returns
     -------
     str
         The path to the input file.
+    str
+        The path to the output file.
 
     """
     box_size = (box_size - tolerance).m_as(unit.angstrom)
     tolerance = tolerance.m_as(unit.angstrom)
 
     # Add the global header options.
+    output_file_path = "packmol_output.pdb"
     input_lines = [
         f"tolerance {tolerance:f}",
         "filetype pdb",
-        f"output {output_file_name}",
+        f"output {output_file_path}",
         "",
     ]
 
@@ -385,7 +439,7 @@ def _build_input_file(
     with open(packmol_file_name, "w") as file_handle:
         file_handle.write(packmol_input)
 
-    return packmol_file_name
+    return packmol_file_name, output_file_path
 
 
 @requires_package("rdkit")
@@ -448,6 +502,8 @@ def pack_box(
         When packmol fails to execute / converge.
 
     """
+    import rdkit
+
     # Make sure packmol can be found.
     packmol_path = _find_packmol()
 
@@ -479,7 +535,6 @@ def pack_box(
 
     # Set up the directory to create the working files in.
     temporary_directory = False
-
     if working_directory is None:
         working_directory = tempfile.mkdtemp()
         temporary_directory = True
@@ -488,64 +543,21 @@ def pack_box(
         os.makedirs(working_directory, exist_ok=True)
 
     with temporary_cd(working_directory):
-        # Write out the topology to solvate so that packmol can read it
-        if topology_to_solvate is not None:
-            # Copy the topology so we can change it
-            topology_to_solvate = Topology(topology_to_solvate)
-            topology_to_solvate.box_vectors = box_vectors
-            # Wrap the positions into the brick representation so that packmol
-            # sees all of them
-            original_solute_positions = topology_to_solvate.get_positions()
-            topology_to_solvate.set_positions(
-                _wrap_into_brick(
-                    original_solute_positions,
-                    box_vectors,
-                ),
-            )
-            # Write to pdb
-            structure_to_solvate = "solvate.pdb"
-            topology_to_solvate.to_file(
-                structure_to_solvate,
-                file_format="PDB",
-            )
-        else:
-            structure_to_solvate = None
+        solute_pdb_filename = _create_solute_pdb(
+            topology_to_solvate,
+            box_vectors,
+        )
 
         # Create PDB files for all of the molecules.
-        pdb_file_names = []
-
-        for index, molecule in enumerate(molecules):
-            # Make a copy of the molecule so we don't change input
-            molecule = Molecule(molecule)
-
-            # Generate conformers if they're missing
-            if molecule.n_conformers <= 0:
-                molecule.generate_conformers(n_conformers=1)
-
-            # RDKitToolkitWrapper is less buggy than OpenEye for writing PDBs
-            # See https://github.com/openforcefield/openff-toolkit/issues/1307
-            # and linked issues. As long as the PDB files have the atoms in the
-            # right order, we'll be able to read packmol's output, since we
-            # just load the PDB coordinates into a topology created from its
-            # component molecules.
-            pdb_file_name = f"{index}.pdb"
-            pdb_file_names.append(pdb_file_name)
-            molecule.to_file(
-                pdb_file_name,
-                file_format="PDB",
-                toolkit_registry=RDKitToolkitWrapper(),
-            )
+        pdb_file_names = _create_molecule_pdbs(molecules)
 
         # Generate the input file.
-        output_file_name = "packmol_output.pdb"
-
-        input_file_path = _build_input_file(
+        input_file_path, output_file_path = _build_input_file(
             pdb_file_names,
             number_of_copies,
-            structure_to_solvate,
+            solute_pdb_filename,
             brick_size,
             tolerance,
-            output_file_name,
         )
 
         with open(input_file_path) as file_handle:
@@ -557,53 +569,39 @@ def pack_box(
 
             packmol_succeeded = result.find("Success!") > 0
 
-        if not retain_working_files:
-            os.unlink(input_file_path)
-
-            for file_path in pdb_file_names:
-                os.unlink(file_path)
-
         if not packmol_succeeded:
-            if os.path.isfile(output_file_name):
-                os.unlink(output_file_name)
-
             if temporary_directory and not retain_working_files:
-                shutil.rmtree(working_directory)
-
+                shutil.rmtree(".")
             raise PACKMOLRuntimeError(result)
-
-        # Construct the output topology
-        added_molecules = []
-        for mol, n in zip(molecules, number_of_copies):
-            added_molecules.extend([mol] * n)
-
-        import rdkit
 
         # Load the coordinates from the PDB file with RDKit (because its already
         # a dependency)
         rdmol = rdkit.Chem.rdmolfiles.MolFromPDBFile(
-            output_file_name,
+            output_file_path,
             sanitize=False,
             removeHs=False,
             proximityBonding=False,
         )
         positions = rdmol.GetConformers()[0].GetPositions()
-        # Create a topology with the appropriate molecules
-        if topology_to_solvate is None:
-            topology = Topology.from_molecules(added_molecules)
-        else:
-            topology = topology_to_solvate + Topology.from_molecules(added_molecules)
-            # Replace the topology_to_solvate's wrapped coordinates with the originals
-            n_solute_atoms = topology_to_solvate.n_atoms
-            positions[:n_solute_atoms] = original_solute_positions.m_as(unit.angstrom)
-        # Set the topology's positions and box vectors
-        topology.set_positions(positions * unit.angstrom)
-        topology.box_vectors = box_vectors
 
-        if not retain_working_files:
-            os.unlink(output_file_name)
-
+    # TODO: This currently does not run if we encountered an error in the
+    # context manager (except the one we raise if packmol failed)
     if temporary_directory and not retain_working_files:
         shutil.rmtree(working_directory)
+
+    # Construct the output topology
+    added_molecules = []
+    for mol, n in zip(molecules, number_of_copies):
+        added_molecules.extend([mol] * n)
+    topology = Topology.from_molecules(added_molecules)
+
+    # Set the positions, skipping the positions from topology_to_solvate
+    n_solute_atoms = len(positions) - topology.n_atoms
+    topology.set_positions(positions[n_solute_atoms:] * unit.angstrom)
+    topology.box_vectors = box_vectors
+
+    # Add topology_to_solvate back in with the original, unwrapped positions
+    if topology_to_solvate is not None:
+        topology = topology_to_solvate + topology
 
     return topology
