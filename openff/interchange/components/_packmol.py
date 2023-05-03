@@ -187,6 +187,7 @@ def _compute_brick_from_box_vectors(box_vectors: Quantity) -> Quantity:
 
 
 def _range_neg_pos(stop):
+    """Yield 0, 1, -1, 2, -2... ``stop - 1``, ``-(stop - 1)``."""
     yield 0
     for i in range(1, stop):
         yield i
@@ -194,6 +195,7 @@ def _range_neg_pos(stop):
 
 
 def _iter_lattice_vecs(box, max_order):
+    """Yield linear combinations of box vectors until max_order is reached."""
     a, b, c = box
     for i in _range_neg_pos(max_order + 1):
         for j in _range_neg_pos(max_order + 1):
