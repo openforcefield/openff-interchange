@@ -259,10 +259,12 @@ class MDConfig(DefaultModel):
     def write_sander_input_file(self, input_file: str = "run.in") -> None:
         """Write a Sander input file for running single-point energies."""
         with open(input_file, "w") as sander:
-            sander.write("single-point energy\n&cntrl\nimin=1,\nmaxcyc=0,\nntb=1,\n")
+            sander.write("single-point energy\n&cntrl\nimin=1,\nmaxcyc=1,\nntb=1,\n")
 
             if self.switching_function is not None:
                 distance = round(self.switching_distance.m_as(unit.angstrom), 4)
+                if distance == 0.0:
+                    distance = -1
                 sander.write(f"fswitch={distance},\n")
 
             if self.constraints in ["none", None]:
@@ -284,9 +286,9 @@ class MDConfig(DefaultModel):
                 )
 
             if self.coul_method == _PME:
-                sander.write("/\n&ewald\norder=4\nskinnb=1.0\n/")
+                sander.write("/\n &ewald\n  order=4\n  skinnb=1.0\n/")
 
-            sander.write("/\n")
+            sander.write("\n")
 
 
 def _infer_constraints(interchange: "Interchange") -> str:

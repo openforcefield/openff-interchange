@@ -52,6 +52,8 @@ def _process_gbsa(
             kappa=0,
         )
 
+        force.setName("GBSA")
+
     system.addForce(force)
 
     if amber_cutoff is not None:

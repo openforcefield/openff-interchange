@@ -149,6 +149,13 @@ def _process(
     for index, raw_energy in raw_energies.items():
         force = system.getForce(index)
 
+        try:
+            if force.getName() != force.__class__().getName():
+                staged[force.getName()] = raw_energy
+                continue
+        except TypeError:
+            pass
+
         if type(force) in valence_map:
             staged[valence_map[type(force)]] = raw_energy
 

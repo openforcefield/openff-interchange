@@ -107,7 +107,6 @@ def _run_sander(
             "Unable to find the 'sander' executable. Please ensure that "
             "the Amber executables are installed and in your PATH.",
         )
-
     sander_cmd = (
         f"sander -i {input_file} -c {inpcrd_file} -p {prmtop_file} -o out.mdout -O"
     )

@@ -61,6 +61,7 @@ def _process_bond_forces(
 
     if bond_handler.expression == "k/2*(r-length)**2":
         harmonic_bond_force = openmm.HarmonicBondForce()
+        harmonic_bond_force.setName("Bond")
     else:
         raise UnsupportedExportError(
             "Found an unsupported functional form in the bond handler:\n\t"
@@ -115,11 +116,13 @@ def _process_angle_forces(
     if angle_handler.expression == "k/2*(theta-angle)**2":
         custom = False
         harmonic_angle_force = openmm.HarmonicAngleForce()
+        harmonic_angle_force.setName("Angle")
     elif angle_handler.expression == "k/2*(cos(theta)-cos(angle))**2":
         custom = True
         harmonic_angle_force = openmm.CustomAngleForce(
             angle_handler.expression.replace("**", "^"),
         )
+        harmonic_angle_force.setName("Angle")
         for parameter_name in angle_handler.potential_parameters():
             harmonic_angle_force.addPerAngleParameter(parameter_name)
     else:
@@ -193,6 +196,8 @@ def _process_proper_torsion_forces(interchange, openmm_sys, particle_map):
     Process the Propers section of an Interchange object.
     """
     torsion_force = openmm.PeriodicTorsionForce()
+    torsion_force.setName("Torsion")
+
     openmm_sys.addForce(torsion_force)
 
     proper_torsion_handler = interchange["ProperTorsions"]
@@ -240,6 +245,8 @@ def _process_rb_torsion_forces(interchange, openmm_sys, particle_map):
     Process Ryckaert-Bellemans torsions.
     """
     rb_force = openmm.RBTorsionForce()
+    rb_force.setName("RBTorsion")
+
     openmm_sys.addForce(rb_force)
 
     rb_torsion_handler = interchange["RBTorsions"]
@@ -284,6 +291,7 @@ def _process_improper_torsion_forces(interchange, openmm_sys, particle_map):
             break
     else:
         torsion_force = openmm.PeriodicTorsionForce()
+        torsion_force.setName("ImproperTorsion")
 
     improper_torsion_handler = interchange["ImproperTorsions"]
 
