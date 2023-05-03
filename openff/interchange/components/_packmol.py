@@ -7,19 +7,25 @@ import shutil
 import string
 import subprocess
 import tempfile
-import warnings
 from collections import defaultdict
 from distutils.spawn import find_executable
 from typing import Optional
 
 import mdtraj
-import numpy
-from openff.toolkit.topology import Molecule
-from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
+import numpy as np
+from openff.toolkit import Molecule, RDKitToolkitWrapper, Topology
 from openff.units import Quantity, unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
+
+UNIT_CUBE = np.asarray(
+    [
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+    ],
+)
 
 
 def _find_packmol() -> Optional[str]:
@@ -279,7 +285,7 @@ def _generate_residue_name(residue, smiles):
 
         for atom in residue.atoms:
             if atom.element.symbol == "O":
-                atom.name = "O1"
+                atom.name = "O"
             else:
                 atom.name = f"H{h_counter}"
                 h_counter += 1
@@ -491,115 +497,6 @@ def _build_input_file(
     return packmol_file_name
 
 
-def _correct_packmol_output(
-    file_path: str,
-    molecule_topologies: list[mdtraj.Topology],
-    number_of_copies: list[int],
-    structure_to_solvate: Optional[str] = None,
-) -> mdtraj.Trajectory:
-    """
-    Corrects the PDB file output by packmol, namely by adding full connectivity information.
-
-    Parameters
-    ----------
-    file_path: str
-        The file path to the packmol output file.
-    molecule_topologies: list of mdtraj.Topology
-        A list of topologies for the molecules which packmol has
-        added.
-    number_of_copies: list of int
-        The total number of each molecule which packmol should have
-        created.
-    structure_to_solvate: str, optional
-        The file path to a preexisting structure which packmol
-        has solvated.
-
-    Returns
-    -------
-    mdtraj.Trajectory
-        A trajectory containing the packed system with full connectivity.
-
-    """
-    import mdtraj
-
-    with warnings.catch_warnings():
-        if structure_to_solvate is not None:
-            # Catch the known warning which is fixed in the next section.
-            warnings.filterwarnings(
-                "ignore",
-                message="WARNING: two consecutive residues with same number",
-            )
-
-        trajectory = mdtraj.load(file_path)
-
-    all_topologies = []
-    all_n_copies = []
-
-    if structure_to_solvate is not None:
-        solvated_trajectory = mdtraj.load(structure_to_solvate)
-
-        all_topologies.append(solvated_trajectory.topology)
-        all_n_copies.append(1)
-
-        # We have to split the topology to ensure the structure to solvate
-        # ends up in its own chain.
-        n_solvent_atoms = trajectory.n_atoms - solvated_trajectory.n_atoms
-        solvent_indices = numpy.arange(n_solvent_atoms) + solvated_trajectory.n_atoms
-
-        solvent_topology = trajectory.topology.subset(solvent_indices)
-
-        full_topology = solvated_trajectory.topology.join(solvent_topology)
-        trajectory.topology = full_topology
-
-    all_topologies.extend(molecule_topologies)
-    all_n_copies.extend(number_of_copies)
-
-    all_bonds = []
-    offset = 0
-
-    for molecule_topology, count in zip(all_topologies, all_n_copies):
-        _, molecule_bonds = molecule_topology.to_dataframe()
-
-        for _ in range(count):
-            for bond in molecule_bonds:
-                all_bonds.append(
-                    [int(bond[0].item()) + offset, int(bond[1].item()) + offset],
-                )
-
-            offset += molecule_topology.n_atoms
-
-    if len(all_bonds) > 0:
-        all_bonds = numpy.unique(all_bonds, axis=0).tolist()
-
-    # We have to check whether there are any existing bonds, because mdtraj
-    # will sometimes automatically detect some based on residue names (e.g HOH),
-    # and this behaviour cannot be disabled.
-    existing_bonds = []
-
-    for bond in trajectory.topology.bonds:
-        existing_bonds.append(bond)
-
-    for bond in all_bonds:
-        atom_a = trajectory.topology.atom(bond[0])
-        atom_b = trajectory.topology.atom(bond[1])
-
-        bond_exists = False
-
-        for existing_bond in existing_bonds:
-            if (existing_bond.atom1 == atom_a and existing_bond.atom2 == atom_b) or (
-                existing_bond.atom2 == atom_a and existing_bond.atom1 == atom_b
-            ):
-                bond_exists = True
-                break
-
-        if bond_exists:
-            continue
-
-        trajectory.topology.add_bond(atom_a, atom_b)
-
-    return trajectory
-
-
 @requires_package("mdtraj")
 def pack_box(
     molecules: list[Molecule],
@@ -612,8 +509,7 @@ def pack_box(
     box_aspect_ratio: Optional[list[float]] = None,
     working_directory: Optional[str] = None,
     retain_working_files: bool = False,
-    add_box_buffers: bool = True,
-) -> tuple[mdtraj.Trajectory, list[str]]:
+) -> Topology:
     """
     Run packmol to generate a box containing a mixture of molecules.
 
@@ -657,11 +553,8 @@ def pack_box(
 
     Returns
     -------
-    mdtraj.Trajectory
-        The packed box encoded in an mdtraj trajectory.
-    list of str
-        The residue names which were assigned to each of the
-        molecules in the `molecules` list.
+    Topology
+        An OpenFF ``Topology`` with the solvated system.
 
     Raises
     ------
@@ -710,16 +603,15 @@ def pack_box(
 
     # Copy the structure to solvate if one is provided.
     if structure_to_solvate is not None:
-        import mdtraj
-
-        trajectory = mdtraj.load_pdb(structure_to_solvate)
-
-        # Fix mdtraj #1611
-        for atom in trajectory.topology.atoms:
-            atom.serial = None
+        topology_to_solvate = Topology.from_pdb(structure_to_solvate)
 
         structure_to_solvate = "solvate.pdb"
-        trajectory.save_pdb(os.path.join(working_directory, structure_to_solvate))
+        topology_to_solvate.to_file(
+            os.path.join(working_directory, structure_to_solvate),
+            "PDB",
+        )
+    else:
+        topology_to_solvate = Topology()
 
     assigned_residue_names = []
 
@@ -779,20 +671,20 @@ def pack_box(
 
         # Add a 2 angstrom buffer to help alleviate PBC issues.
         if add_box_buffers:
-            box_size = [
-                (x + 2.0 * unit.angstrom).to(unit.nanometer).magnitude for x in box_size
-            ]
+            box_size += np.ones(3) * 2.0 * unit.nanometer
 
-        # Append missing connect statements to the end of the
-        # output file.
-        trajectory = _correct_packmol_output(
-            output_file_name,
-            mdtraj_topologies,
-            number_of_copies,
-            structure_to_solvate,
+        # Construct the output topology
+        added_molecules = []
+        for mol, n in zip(molecules, number_of_copies):
+            added_molecules.extend([mol] * n)
+
+        import mdtraj
+
+        topology = topology_to_solvate + Topology.from_molecules(added_molecules)
+        topology.set_positions(
+            mdtraj.load(output_file_name).xyz.reshape(-1, 3) * unit.nanometer,
         )
-        trajectory.unitcell_lengths = box_size
-        trajectory.unitcell_angles = numpy.array([90.0] * 3)
+        topology.box_vectors = box_size * UNIT_CUBE
 
         if not retain_working_files:
             os.unlink(output_file_name)
@@ -800,4 +692,4 @@ def pack_box(
     if temporary_directory and not retain_working_files:
         shutil.rmtree(working_directory)
 
-    return trajectory, assigned_residue_names
+    return topology
