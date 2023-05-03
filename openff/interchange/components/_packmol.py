@@ -105,7 +105,6 @@ def _approximate_box_size_by_density(
     n_copies: list[int],
     mass_density: Quantity,
     box_aspect_ratio: list[float],
-    box_scaleup_factor: float = 1.1,
 ) -> Quantity:
     """
     Approximate box size.
@@ -126,9 +125,6 @@ def _approximate_box_size_by_density(
     box_aspect_ratio: List of float
         The aspect ratio of the simulation box, used in conjunction with
         the `mass_density` parameter.
-    box_scaleup_factor : float
-        The factor by which the estimated box size should be
-        increased.
 
     Returns
     -------
@@ -142,7 +138,7 @@ def _approximate_box_size_by_density(
             total_mass += number * atom.mass
     volume = total_mass / mass_density
 
-    box_length = volume ** (1.0 / 3.0) * box_scaleup_factor
+    box_length = volume ** (1.0 / 3.0)
     box_length_angstrom = box_length.to(unit.angstrom).magnitude
 
     aspect_ratio_normalizer = (
@@ -429,7 +425,8 @@ def _build_input_file(
         If `True`, the structure to solvate will be centered in the
         simulation box.
     box_size: openff.units.Quantity
-        The lengths of each box vector.
+        The lengths of each box vector. This is the box size of the simulation
+        box; the packmol box will be shrunk by the tolerance.
     tolerance: openff.units.Quantity
         The packmol convergence tolerance.
     output_file_name: str
@@ -441,7 +438,7 @@ def _build_input_file(
         The path to the input file.
 
     """
-    box_size = box_size.m_as(unit.angstrom)
+    box_size = (box_size - tolerance).m_as(unit.angstrom)
     tolerance = tolerance.m_as(unit.angstrom)
 
     # Add the global header options.
@@ -528,7 +525,10 @@ def pack_box(
         ``structure_to_solvate`` is set.
     tolerance : openff.units.Quantity
         The minimum spacing between molecules during packing in units of
-        distance.
+        distance. The default is large so that added waters do not disrupt the
+        structure of proteins; when constructing a mixture of small molecules,
+        values as small as 0.05 nm will converge faster and can still produce
+        stable simulations after energy minimisation.
     box_size : openff.units.Quantity, optional
         The size of the box to generate in units compatible with angstroms.
         If ``None``, ``mass_density`` must be provided.
@@ -547,9 +547,6 @@ def pack_box(
     retain_working_files: bool
         If ``True`` all of the working files, such as individual molecule
         coordinate files, will be retained.
-    add_box_buffers: bool
-        If ``True`` (the default), buffers will be added to the box size to
-        help reduce clashes.
 
     Returns
     -------
@@ -588,7 +585,6 @@ def pack_box(
             number_of_copies,
             mass_density,
             box_aspect_ratio,  # type: ignore[arg-type]
-            box_scaleup_factor=1.1 if add_box_buffers else 1.0,
         )
 
     # Set up the directory to create the working files in.
@@ -668,10 +664,6 @@ def pack_box(
                 shutil.rmtree(working_directory)
 
             raise PACKMOLRuntimeError(result)
-
-        # Add a 2 angstrom buffer to help alleviate PBC issues.
-        if add_box_buffers:
-            box_size += np.ones(3) * 2.0 * unit.nanometer
 
         # Construct the output topology
         added_molecules = []
