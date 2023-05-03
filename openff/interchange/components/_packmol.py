@@ -6,9 +6,10 @@ import shutil
 import subprocess
 import tempfile
 from distutils.spawn import find_executable
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 from openff.toolkit import Molecule, RDKitToolkitWrapper, Topology
 from openff.units import Quantity, unit
 from openff.utilities.utilities import requires_package, temporary_cd
@@ -22,6 +23,46 @@ UNIT_CUBE = np.asarray(
         [0, 0, 1],
     ],
 )
+"""A regular square prism with image distance 1.0 and volume 1.0.
+
+A cubic box is very simple and easy to visualize, but wastes substantial space
+and computational time. A rhombic dodecahedron that provides the same separation
+between solutes has only about 71% the volume, and therefore requires simulation
+of much less solvent.
+"""
+
+RHOMBIC_DODECAHEDRON = np.array(
+    [
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.5, 0.5, np.sqrt(2.0) / 2.0],
+    ],
+)
+"""
+Rhombic dodecahedron with square XY plane cross section, image distance 1.0, and volume ~0.71.
+
+The rhombic dodecahedron is the most space-efficient triclinic box for a
+spherical solute, or equivalently for a solute whose rotations sweep out a
+sphere. Its volume is $\\frac{1}{2}\\sqrt{2}$. A square intersection with the
+XY plane allows the first two box vectors to be parallel to the x- and y-axes
+respectively, which is simple to picture and appropriate for soluble systems.
+"""
+
+RHOMBIC_DODECAHEDRON_XYHEX = np.array(
+    [
+        [1.0, 0.0, 0.0],
+        [0.5, np.sqrt(3.0) / 2.0, 0.0],
+        [0.5, np.sqrt(3.0) / 6.0, np.sqrt(6.0) / 3.0],
+    ],
+)
+"""
+A rhombic dodecahedron with hexagonal XY cross section, image distance 1.0, and volume ~0.71.
+
+The rhombic dodecahedron is the most space-efficient triclinic box for a
+spherical solute, or equivalently for a solute whose rotations sweep out a
+sphere. A hexagonal intersection with the XY plane is convenient for membrane
+simulations,
+"""
 
 
 def _find_packmol() -> Optional[str]:
@@ -46,8 +87,8 @@ def _validate_inputs(
     molecules: list[Molecule],
     number_of_copies: list[int],
     topology_to_solvate: Optional[Topology],
-    box_aspect_ratio: Optional[Quantity],
-    box_size: Optional[Quantity],
+    box_shape: NDArray,
+    box_vectors: Optional[Quantity],
     mass_density: Optional[Quantity],
 ):
     """
@@ -62,30 +103,30 @@ def _validate_inputs(
         equal to the length of `molecules`.
     topology_to_solvate: Topology, optional
         The OpenFF Topology to be solvated.
-    box_size : openff.units.Quantity, optional
-        The size of the box to generate in units compatible with angstroms.
-        If `None`, `mass_density` must be provided.
+    box_vectors : openff.units.Quantity,
+        The box vectors to fill in units compatible with angstroms. If `None`,
+        `mass_density` must be provided.
     mass_density : openff.units.Quantity, optional
         Target mass density for final system with units compatible with g / mL.
          If `None`, `box_size` must be provided.
-    box_aspect_ratio: list of float, optional
-        The aspect ratio of the simulation box, used in conjunction with
-        the `mass_density` parameter.
+    box_shape: NDArray
+        The shape of the simulation box, used in conjunction with the
+        `mass_density` parameter. Should have shape (3, 3) with all positive
+        elements.
 
     """
-    if box_size is None and mass_density is None:
+    if box_vectors is None and mass_density is None:
         raise PACKMOLValueError(
-            "Either a `box_size` or `mass_density` must be specified.",
+            "Either a `box_vectors` or `mass_density` must be specified.",
         )
 
-    if box_size is not None and len(box_size) != 3:
+    if box_vectors is not None and box_vectors.shape != (3, 3):
         raise PACKMOLValueError(
-            "`box_size` must be a openff.units.unit.Quantity wrapped list of length 3",
+            "`box_vectors` must be a openff.units.unit.Quantity Array with shape (3, 3)",
         )
 
-    if box_aspect_ratio is not None:
-        assert len(box_aspect_ratio) == 3
-        assert all(x > 0.0 for x in box_aspect_ratio)
+    assert box_shape.shape == (3, 3)
+    assert np.all(np.linalg.norm(box_shape, axis=-1) > 0.0)
 
     if len(molecules) != len(number_of_copies):
         raise PACKMOLValueError(
@@ -96,11 +137,136 @@ def _validate_inputs(
         assert topology_to_solvate.get_positions() is not None
 
 
-def _approximate_box_size_by_density(
+def _unit_vec(vec: Quantity) -> Quantity:
+    """Get a unit vector in the direction of ``vec``."""
+    return vec / np.linalg.norm(vec)
+
+
+def _compute_brick_from_box_vectors(box_vectors: Quantity) -> Quantity:
+    """
+    Compute the rectangular brick for the given triclinic box vectors.
+
+    This function implements Eqn 6 in:
+
+    https://doi.org/10.1002/(SICI)1096-987X(19971130)18:15%3C1930::AID-JCC8%3E3.0.CO;2-P
+
+    Parameters
+    ----------
+    box_vectors: NDArray
+        Array with shape (3, 3) representing the box vectors of a triclinic cell
+
+    """
+    working_unit = box_vectors.u
+    k, l, m = box_vectors.m
+
+    # Compute some re-used intermediates
+    k_hat = _unit_vec(k)
+    k_cross_hat_l = _unit_vec(np.cross(k, l))
+
+    # Compute the UVW representation
+    u = k
+    v = l - np.dot(l, k_hat) * k_hat
+    w = np.dot(m, k_cross_hat_l) * k_cross_hat_l
+
+    # Make sure the UVW representation is rectangular
+    assert np.all(u + v + w == (u[0], v[1], w[2]))
+
+    return np.asarray([u[0], v[1], w[2]]) * working_unit
+
+
+def _range_neg_pos(stop):
+    yield 0
+    for i in range(1, stop):
+        yield i
+        yield -i
+
+
+def _iter_lattice_vecs(box, max_order):
+    a, b, c = box
+    for i in _range_neg_pos(max_order + 1):
+        for j in _range_neg_pos(max_order + 1):
+            for k in _range_neg_pos(max_order + 1):
+                yield i * a + j * b + k * c
+
+
+def _wrap_into(
+    points: Quantity,
+    box: Quantity,
+    condition: Callable,
+    max_order: int = 3,
+):
+    """
+    Convert a triclinic box to a representation where all atoms satisfy a condition.
+
+    Parameters
+    ----------
+    points
+        The points to transform
+    box
+        The triclinic box vectors
+    condition
+        The condition that must be satisfied. This should be a function taking
+        an array of positions with shape (n, 3) and returning an array of
+        booleans with shape (n,) whose elements are ``True`` at positions that
+        satisfy the condition.
+    max_order
+        The maximum number of box vectors that points may be from the rectangular
+        box.
+
+    """
+    assert points.shape[-1] == 3
+    assert box.shape == (3, 3)
+    points = points.copy()
+
+    # Iterate over linear combinations of lattice vectors
+    for lattice_vec in _iter_lattice_vecs(box, max_order):
+        # If all the points satisfy the condition, we're done
+        if np.all(condition(points)):
+            break
+
+        # Otherwise, choose the points that would satisfy the condition if we
+        # translated them by the current linear combination of lattice vectors,
+        # and do so
+        translated_points = points - lattice_vec
+        correct_translated_points = condition(translated_points)
+        points -= correct_translated_points[:, None] * lattice_vec[None, :]
+    else:
+        raise ValueError(
+            f"Couldn't move all particles to satisfy condition in {max_order} steps",
+        )
+
+    return points
+
+
+def _wrap_into_brick(points: Quantity, box: Quantity, max_order: int = 3):
+    """
+    Convert a triclinic box to its rectangular brick representation.
+
+    Parameters
+    ----------
+    points
+        The points to transform
+    box
+        The triclinic box vectors
+    max_order
+        The maximum number of box vectors that points may be from the rectangular
+        box.
+
+    """
+    brick = _compute_brick_from_box_vectors(box)
+    return _wrap_into(
+        points,
+        box,
+        lambda points: np.all((np.zeros(3) <= points) & (points < brick), axis=-1),
+        max_order,
+    )
+
+
+def _box_from_density(
     molecules: list[Molecule],
     n_copies: list[int],
     mass_density: Quantity,
-    box_aspect_ratio: list[float],
+    box_shape: NDArray,
 ) -> Quantity:
     """
     Approximate box size.
@@ -118,45 +284,34 @@ def _approximate_box_size_by_density(
     mass_density : openff.units.Quantity
         The target mass density for final system. It should have units
         compatible with g / mL.
-    box_aspect_ratio: List of float
-        The aspect ratio of the simulation box, used in conjunction with
-        the `mass_density` parameter.
+    box_shape: NDArray
+        The shape of the simulation box, used in conjunction with the
+        `mass_density` parameter. Should have shape (3, 3) with all positive
+        elements.
 
     Returns
     -------
-    openff.units.Quantity
-        A list of the three box lengths in units compatible with angstroms.
+    box_vectors: openff.units.Quantity
+        The unit cell box vectors. Array with shape (3, 3)
 
     """
-    total_mass = 0.0 * unit.dalton
-    for molecule, number in zip(molecules, n_copies):
-        for atom in molecule.atoms:
-            total_mass += number * atom.mass
+    total_mass = sum(
+        sum([atom.mass for atom in molecule.atoms]) * n
+        for molecule, n in zip(molecules, n_copies)
+    )
     volume = total_mass / mass_density
 
-    box_length = volume ** (1.0 / 3.0)
-    box_length_angstrom = box_length.to(unit.angstrom).magnitude
+    # Scale the box shape so that it has unit volume
+    box_shape_volume = box_shape[0].dot(box_shape[1].cross(box_shape[2]))
+    box_vectors = volume * box_shape / box_shape_volume
 
-    aspect_ratio_normalizer = (
-        box_aspect_ratio[0] * box_aspect_ratio[1] * box_aspect_ratio[2]
-    ) ** (1.0 / 3.0)
-
-    box_size = [
-        box_length_angstrom * box_aspect_ratio[0],
-        box_length_angstrom * box_aspect_ratio[1],
-        box_length_angstrom * box_aspect_ratio[2],
-    ] * unit.angstrom
-
-    box_size /= aspect_ratio_normalizer
-
-    return box_size
+    return box_vectors
 
 
 def _build_input_file(
     molecule_file_names: list[str],
     molecule_counts: list[int],
     structure_to_solvate: Optional[str],
-    center_solute: bool,
     box_size: Quantity,
     tolerance: Quantity,
     output_file_name: str,
@@ -172,12 +327,10 @@ def _build_input_file(
         The number of each molecule to add.
     structure_to_solvate: str, optional
         The path to the structure to solvate.
-    center_solute: bool
-        If `True`, the structure to solvate will be centered in the
-        simulation box.
     box_size: openff.units.Quantity
-        The lengths of each box vector. This is the box size of the simulation
-        box; the packmol box will be shrunk by the tolerance.
+        The lengths of each side of the box we want to fill. This is the box
+        size of the rectangular brick representation of the simulation box; the
+        packmol box will be shrunk by the tolerance.
     tolerance: openff.units.Quantity
         The packmol convergence tolerance.
     output_file_name: str
@@ -202,21 +355,11 @@ def _build_input_file(
 
     # Add the section of the molecule to solvate if provided.
     if structure_to_solvate is not None:
-        solute_position = [0.0] * 3
-
-        if center_solute:
-            solute_position = [box_size[i] / 2.0 for i in range(3)]
-
         input_lines.extend(
             [
                 f"structure {structure_to_solvate}",
                 "  number 1",
-                "  fixed "
-                f"{solute_position[0]} "
-                f"{solute_position[1]} "
-                f"{solute_position[2]} "
-                "0. 0. 0.",
-                "centerofmass" if center_solute else "",
+                "  fixed 0. 0. 0. 0. 0. 0.",
                 "end structure",
                 "",
             ],
@@ -250,11 +393,10 @@ def pack_box(
     molecules: list[Molecule],
     number_of_copies: list[int],
     topology_to_solvate: Optional[Topology] = None,
-    center_solute: bool = True,
     tolerance: Quantity = 2.0 * unit.angstrom,
-    box_size: Optional[Quantity] = None,
+    box_vectors: Optional[Quantity] = None,
     mass_density: Optional[Quantity] = None,
-    box_aspect_ratio: Optional[list[float]] = None,
+    box_shape: ArrayLike = UNIT_CUBE,
     working_directory: Optional[str] = None,
     retain_working_files: bool = False,
 ) -> Topology:
@@ -270,26 +412,22 @@ def pack_box(
         equal to the length of ``molecules``.
     topology_to_solvate: Topology, optional
         The OpenFF Topology to be solvated.
-    center_solute: bool
-        If ``True``, the structure to solvate will be placed in the center of
-        the simulation box. This option is only applied when
-        ``structure_to_solvate`` is set.
     tolerance : openff.units.Quantity
         The minimum spacing between molecules during packing in units of
         distance. The default is large so that added waters do not disrupt the
         structure of proteins; when constructing a mixture of small molecules,
-        values as small as 0.05 nm will converge faster and can still produce
+        values as small as 0.5 Å will converge faster and can still produce
         stable simulations after energy minimisation.
-    box_size : openff.units.Quantity, optional
-        The size of the box to generate in units compatible with angstroms.
-        If ``None``, ``mass_density`` must be provided.
+    box_vectors : openff.units.Quantity, optional
+        The box vectors to fill in units of distance. If ``None``,
+        ``mass_density`` must be provided. Array with shape (3,3).
     mass_density : openff.units.Quantity, optional
         Target mass density for final system with units compatible with g / mL.
         If ``None``, ``box_size`` must be provided.
-    box_aspect_ratio: list of float, optional
-        The aspect ratio of the simulation box, used in conjunction with
-        the ``mass_density`` parameter. If none, an isotropic ratio (i.e.
-        ``[1.0, 1.0, 1.0]``) is used.
+    box_shape: Arraylike, optional
+        The shape of the simulation box, used in conjunction with
+        the ``mass_density`` parameter. Should be a dimensionless array with
+        shape (3,3).
     verbose : bool
         If ``True``, verbose output is written.
     working_directory: str, optional
@@ -310,33 +448,34 @@ def pack_box(
         When packmol fails to execute / converge.
 
     """
-    if mass_density is not None and box_aspect_ratio is None:
-        box_aspect_ratio = [1.0, 1.0, 1.0]
-
     # Make sure packmol can be found.
     packmol_path = _find_packmol()
 
     if packmol_path is None:
         raise OSError("Packmol not found, cannot run pack_box()")
 
+    box_shape = np.asarray(box_shape)
     # Validate the inputs.
     _validate_inputs(
         molecules,
         number_of_copies,
         topology_to_solvate,
-        box_aspect_ratio,
-        box_size,
+        box_shape,
+        box_vectors,
         mass_density,
     )
 
     # Estimate the box_size from mass density if one is not provided.
-    if box_size is None:
-        box_size = _approximate_box_size_by_density(
+    if box_vectors is None:
+        box_vectors = _box_from_density(
             molecules,
             number_of_copies,
             mass_density,
-            box_aspect_ratio,  # type: ignore[arg-type]
+            box_shape,
         )
+    # Compute the dimensions of the equivalent brick - this is what packmol will
+    # fill
+    brick_size = _compute_brick_from_box_vectors(box_vectors)
 
     # Set up the directory to create the working files in.
     temporary_directory = False
@@ -351,6 +490,19 @@ def pack_box(
     with temporary_cd(working_directory):
         # Write out the topology to solvate so that packmol can read it
         if topology_to_solvate is not None:
+            # Copy the topology so we can change it
+            topology_to_solvate = Topology(topology_to_solvate)
+            topology_to_solvate.box_vectors = box_vectors
+            # Wrap the positions into the brick representation so that packmol
+            # sees all of them
+            original_solute_positions = topology_to_solvate.get_positions()
+            topology_to_solvate.set_positions(
+                _wrap_into_brick(
+                    original_solute_positions,
+                    box_vectors,
+                ),
+            )
+            # Write to pdb
             structure_to_solvate = "solvate.pdb"
             topology_to_solvate.to_file(
                 structure_to_solvate,
@@ -358,7 +510,6 @@ def pack_box(
             )
         else:
             structure_to_solvate = None
-            topology_to_solvate = Topology()
 
         # Create PDB files for all of the molecules.
         pdb_file_names = []
@@ -392,8 +543,7 @@ def pack_box(
             pdb_file_names,
             number_of_copies,
             structure_to_solvate,
-            center_solute,
-            box_size,
+            brick_size,
             tolerance,
             output_file_name,
         )
@@ -429,8 +579,6 @@ def pack_box(
 
         import rdkit
 
-        # Create a topology with the appropriate molecules
-        topology = topology_to_solvate + Topology.from_molecules(added_molecules)
         # Load the coordinates from the PDB file with RDKit (because its already
         # a dependency)
         rdmol = rdkit.Chem.rdmolfiles.MolFromPDBFile(
@@ -440,9 +588,17 @@ def pack_box(
             proximityBonding=False,
         )
         positions = rdmol.GetConformers()[0].GetPositions()
+        # Create a topology with the appropriate molecules
+        if topology_to_solvate is None:
+            topology = Topology.from_molecules(added_molecules)
+        else:
+            topology = topology_to_solvate + Topology.from_molecules(added_molecules)
+            # Replace the topology_to_solvate's wrapped coordinates with the originals
+            n_solute_atoms = topology_to_solvate.n_atoms
+            positions[:n_solute_atoms] = original_solute_positions.m_as(unit.angstrom)
         # Set the topology's positions and box vectors
         topology.set_positions(positions * unit.angstrom)
-        topology.box_vectors = box_size * UNIT_CUBE
+        topology.box_vectors = box_vectors
 
         if not retain_working_files:
             os.unlink(output_file_name)
