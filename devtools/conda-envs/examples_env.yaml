@@ -28,6 +28,7 @@ dependencies:
   - pytest
   - nbval
   - openmmforcefields >=0.11.2
+  - rich
   # Drivers
   - gromacs >=2021=nompi*
   - lammps
