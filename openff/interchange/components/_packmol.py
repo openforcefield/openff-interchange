@@ -622,3 +622,123 @@ def pack_box(
         topology = topology_to_solvate + topology
 
     return topology
+
+
+def _max_dist_between_points(points: Quantity) -> Quantity:
+    """
+    Compute the greatest distance between two points in the array.
+    """
+    from scipy.spatial import ConvexHull
+    from scipy.spatial.distance import pdist
+
+    points, units = points.m, points.u
+
+    points_array = np.asarray(points)
+    if points_array.shape[1] != 3 or points_array.ndim != 2:
+        raise ValueError("Points should be an n*3 array")
+
+    if points_array.shape[0] >= 4:
+        # Maximum distance is guaranteed to be on the convex hull, which can be
+        # computed in O(n log n)
+        # See also https://stackoverflow.com/a/60955825
+        hull = ConvexHull(points_array)
+        hullpoints = points_array[hull.vertices, :]
+    else:
+        hullpoints = points_array
+
+    # Now compute all the distances and get the greatest distance in O(h^2)
+    max_dist = pdist(hullpoints, metric="euclidean").max()
+    return max_dist * units
+
+
+def solvate_topology(
+    topology: Topology,
+    nacl_conc: Quantity = 0.1 * unit.mole / unit.liter,
+    padding: Quantity = 1.2 * unit.nanometer,
+    box_shape: NDArray = RHOMBIC_DODECAHEDRON,
+    target_density: Quantity = 1.0 * unit.gram / unit.milliliter,
+    tolerance: Quantity = 2.0 * unit.angstrom,
+) -> Topology:
+    """
+    Add water and ions to neutralise and solvate a topology.
+
+    Parameters
+    ----------
+    topology
+        The OpenFF Topology to solvate.
+    nacl_conc
+        The concentration of NaCl to add in units compatible with molarity.
+    padding : Scalar with dimensions of length
+        The desired distance between the solute and the edge of the box. Ignored
+        if the topology already has box vectors. The usual recommendation is
+        that this equals or exceeds the VdW cut-off distance, so that the
+        solute is isolated by its periodic images by twice the cut-off.
+    box_shape : Array with shape (3, 3)
+        An array defining the box vectors of a box with the desired shape and
+        unit periodic image distance. This shape will be scaled to satisfy the
+        padding given above. Some typical shapes are provided in this module.
+    target_density : Scalar with dimensions of mass density
+        The target mass density for the packed box.
+    tolerance: Scalar with dimensions of distance
+        The minimum spacing between molecules during packing in units of
+        distance. The default is large so that added waters do not disrupt the
+        structure of proteins; when constructing a mixture of small molecules,
+        values as small as 0.5 Å will converge faster and can still produce
+        stable simulations after energy minimisation.
+
+    """
+    if box_shape.shape != (3, 3):
+        raise ValueError(
+            "box_shape should be a 3×3 array defining a box with unit periodic"
+            + " image distance",  # noqa: W503
+        )
+
+    # Compute box vectors from the solute length and requested padding
+    solute_length = _max_dist_between_points(topology.get_positions())
+    image_distance = solute_length + padding * 2
+    box_vectors = box_shape * image_distance
+
+    # Compute target masses of solvent
+    box_volume = np.linalg.det(box_vectors.m) * box_vectors.u**3
+    target_mass = box_volume * target_density
+    solute_mass = sum(
+        sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
+    )
+    solvent_mass = target_mass - solute_mass
+    if solvent_mass < 0:
+        raise ValueError(
+            "Solute mass is greater than target mass; increase density or make the box bigger",
+        )
+
+    # Get reference data and prepare solvent molecules
+    water = Molecule.from_smiles("O")
+    na = Molecule.from_smiles("[Na+]")
+    cl = Molecule.from_smiles("[Cl-]")
+    nacl_mass = sum([atom.mass for atom in na.atoms]) + sum(
+        [atom.mass for atom in cl.atoms],
+    )
+    water_mass = sum([atom.mass for atom in water.atoms])
+    molarity_pure_water = 55.5 * unit.mole / unit.liter
+
+    # Compute the number of salt "molecules" to add from the mass and concentration
+    nacl_mass_fraction = (nacl_conc * nacl_mass) / (molarity_pure_water * water_mass)
+    nacl_mass_to_add = solvent_mass * nacl_mass_fraction
+    nacl_to_add = (nacl_mass_to_add / nacl_mass).m_as(unit.dimensionless).round()
+
+    # Compute the number of water molecules to add to make up the remaining mass
+    water_mass_to_add = solvent_mass - nacl_mass
+    water_to_add = (water_mass_to_add / water_mass).m_as(unit.dimensionless).round()
+
+    # Neutralise the system by adding and removing salt
+    solute_charge = sum([molecule.total_charge for molecule in topology.molecules])
+    na_to_add = np.ceil(nacl_to_add - solute_charge.m / 2.0)
+    cl_to_add = np.floor(nacl_to_add + solute_charge.m / 2.0)
+
+    # Pack the box
+    return pack_box(
+        [water, na, cl],
+        [int(water_to_add), int(na_to_add), int(cl_to_add)],
+        topology_to_solvate=topology,
+        tolerance=2.0 * unit.angstrom,
+        box_vectors=box_vectors,
+    )
