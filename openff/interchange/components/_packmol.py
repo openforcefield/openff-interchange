@@ -316,7 +316,7 @@ def _box_from_density(
     volume = total_mass / mass_density
 
     # Scale the box shape so that it has unit volume
-    box_shape_volume = box_shape[0].dot(box_shape[1].cross(box_shape[2]))
+    box_shape_volume = np.linalg.det(box_shape)
     box_vectors = volume * box_shape / box_shape_volume
 
     return box_vectors
@@ -589,8 +589,6 @@ def pack_box(
             packmol_succeeded = result.find("Success!") > 0
 
         if not packmol_succeeded:
-            if temporary_directory and not retain_working_files:
-                shutil.rmtree(".")
             raise PACKMOLRuntimeError(result)
 
         # Load the coordinates from the PDB file with RDKit (because its already
@@ -604,7 +602,7 @@ def pack_box(
         positions = rdmol.GetConformers()[0].GetPositions()
 
     # TODO: This currently does not run if we encountered an error in the
-    # context manager (except the one we raise if packmol failed)
+    # context manager
     if temporary_directory and not retain_working_files:
         shutil.rmtree(working_directory)
 
