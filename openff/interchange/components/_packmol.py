@@ -115,9 +115,21 @@ def _validate_inputs(
         elements.
 
     """
-    if box_vectors is None and mass_density is None:
+    if (
+        box_vectors is None
+        and mass_density is None  # noqa: W503
+        and (  # noqa: W503
+            topology_to_solvate is None or topology_to_solvate.box_vectors is None
+        )
+    ):
         raise PACKMOLValueError(
-            "Either a `box_vectors` or `mass_density` must be specified.",
+            "One of `box_vectors`, `mass_density`, or"
+            + " `topology_to_solvate.box_vectors` must be specified.",  # noqa: W503
+        )
+    if box_vectors is not None and mass_density is not None:
+        raise PACKMOLValueError(
+            "`box_vectors` and `mass_density` cannot be specified together;"
+            + " choose one or the other.",  # noqa: W503
         )
 
     if box_vectors is not None and box_vectors.shape != (3, 3):
@@ -522,13 +534,18 @@ def pack_box(
     )
 
     # Estimate the box_size from mass density if one is not provided.
-    if box_vectors is None:
+    if mass_density is not None:
         box_vectors = _box_from_density(
             molecules,
             number_of_copies,
             mass_density,
             box_shape,
         )
+    # If neither box size nor density are given, take box vectors from solute
+    # topology
+    if box_vectors is None:
+        box_vectors = topology_to_solvate.box_vectors
+
     # Compute the dimensions of the equivalent brick - this is what packmol will
     # fill
     brick_size = _compute_brick_from_box_vectors(box_vectors)
