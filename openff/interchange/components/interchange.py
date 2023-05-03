@@ -3,7 +3,7 @@ import copy
 import json
 import warnings
 from pathlib import Path
-from typing import Literal, Optional, Union, overload
+from typing import TYPE_CHECKING, Literal, Optional, Union, overload
 
 import numpy as np
 from openff.models.models import DefaultModel
@@ -13,6 +13,7 @@ from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, validator
 
+from openff.interchange._experimental import experimental
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._valence import (
     AngleCollection,
@@ -39,6 +40,10 @@ if has_package("foyer"):
     from foyer.forcefield import Forcefield as FoyerForcefield
 if has_package("nglview"):
     import nglview
+
+if TYPE_CHECKING:
+    import openmm
+    import openmm.app
 
 
 def _sanitize(o):
@@ -467,18 +472,42 @@ class Interchange(DefaultModel):
         )
 
     @classmethod
-    @requires_package("intermol")
+    @experimental
     def from_gromacs(
         cls,
         topology_file: Union[Path, str],
         gro_file: Union[Path, str],
-        reader="intermol",
     ) -> "Interchange":
         """
         Create an Interchange object from GROMACS files.
 
         """
-        raise NotImplementedError()
+        from openff.interchange.interop.gromacs._import._import import from_files
+        from openff.interchange.interop.gromacs._interchange import to_interchange
+
+        return to_interchange(
+            from_files(
+                top_file=topology_file,
+                gro_file=gro_file,
+            ),
+        )
+
+    @experimental
+    def from_openmm(
+        topology: Optional["openmm.app.Topology"] = None,
+        system: Optional["openmm.System"] = None,
+        positions: Optional[unit.Quantity] = None,
+        box_vectors: Optional[unit.Quantity] = None,
+    ) -> "Interchange":
+        """Create an Interchange object from OpenMM data."""
+        from openff.interchange.interop.openmm._import._import import from_openmm
+
+        return from_openmm(
+            topology=topology,
+            system=system,
+            positions=positions,
+            box_vectors=box_vectors,
+        )
 
     def _get_parameters(self, handler_name: str, atom_indices: tuple[int]) -> dict:
         """
@@ -580,6 +609,7 @@ class Interchange(DefaultModel):
                 f"collections registered:\n\t{[*self.collections.keys()]}",
             )
 
+    @experimental
     def __add__(self, other):
         """Combine two Interchange objects. This method is unstable and likely unsafe."""
         from openff.interchange.components.toolkit import _combine_topologies

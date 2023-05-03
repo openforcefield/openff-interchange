@@ -97,8 +97,10 @@ class TestInterchange(_BaseTest):
         with pytest.raises(ValidationError):
             tmp.box = [2, 2, 3, 90, 90, 90]
 
-    def test_basic_combination(self, sage_unconstrained):
+    def test_basic_combination(self, monkeypatch, sage_unconstrained):
         """Test basic use of Interchange.__add__() based on the README example"""
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         mol = Molecule.from_smiles("C")
         mol.generate_conformers(n_conformers=1)
         top = Topology.from_molecules([mol])
@@ -118,7 +120,9 @@ class TestInterchange(_BaseTest):
         # Just see if it can be converted into OpenMM and run
         get_openmm_energies(combined)
 
-    def test_parameters_do_not_clash(self, sage_unconstrained):
+    def test_parameters_do_not_clash(self, monkeypatch, sage_unconstrained):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         thf = Molecule.from_smiles("C1CCOC1")
         ace = Molecule.from_smiles("CC(=O)O")
 
@@ -147,9 +151,11 @@ class TestInterchange(_BaseTest):
 
         # TODO: Ensure the de-duplication is maintained after exports
 
-    def test_positions_setting(self, sage):
+    def test_positions_setting(self, monkeypatch, sage):
         """Test that positions exist on the result if and only if
         both input objects have positions."""
+
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
         ethane = Molecule.from_smiles("CC")
         methane = Molecule.from_smiles("C")
