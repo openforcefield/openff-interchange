@@ -49,7 +49,7 @@ def _find_packmol() -> Optional[str]:
 def _validate_inputs(
     molecules: list[Molecule],
     number_of_copies: list[int],
-    structure_to_solvate: Optional[str],
+    topology_to_solvate: Optional[Topology],
     box_aspect_ratio: Optional[Quantity],
     box_size: Optional[Quantity],
     mass_density: Optional[Quantity],
@@ -64,8 +64,8 @@ def _validate_inputs(
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
         equal to the length of `molecules`.
-    structure_to_solvate: str, optional
-        A file path to the PDB coordinates of the structure to be solvated.
+    topology_to_solvate: Topology, optional
+        The OpenFF Topology to be solvated.
     box_size : openff.units.Quantity, optional
         The size of the box to generate in units compatible with angstroms.
         If `None`, `mass_density` must be provided.
@@ -96,8 +96,8 @@ def _validate_inputs(
             "The length of `molecules` and `number_of_copies` must be identical.",
         )
 
-    if structure_to_solvate is not None:
-        assert os.path.isfile(structure_to_solvate)
+    if topology_to_solvate is not None:
+        assert topology_to_solvate.get_positions() is not None
 
 
 def _approximate_box_size_by_density(
@@ -498,7 +498,7 @@ def _build_input_file(
 def pack_box(
     molecules: list[Molecule],
     number_of_copies: list[int],
-    structure_to_solvate: Optional[str] = None,
+    topology_to_solvate: Optional[Topology] = None,
     center_solute: bool = True,
     tolerance: Quantity = 2.0 * unit.angstrom,
     box_size: Optional[Quantity] = None,
@@ -517,8 +517,8 @@ def pack_box(
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
         equal to the length of ``molecules``.
-    structure_to_solvate: str, optional
-        A file path to the PDB coordinates of the structure to be solvated.
+    topology_to_solvate: Topology, optional
+        The OpenFF Topology to be solvated.
     center_solute: bool
         If ``True``, the structure to solvate will be placed in the center of
         the simulation box. This option is only applied when
@@ -572,7 +572,7 @@ def pack_box(
     _validate_inputs(
         molecules,
         number_of_copies,
-        structure_to_solvate,
+        topology_to_solvate,
         box_aspect_ratio,
         box_size,
         mass_density,
@@ -597,21 +597,18 @@ def pack_box(
     if len(working_directory) > 0:
         os.makedirs(working_directory, exist_ok=True)
 
-    # Copy the structure to solvate if one is provided.
-    if structure_to_solvate is not None:
-        topology_to_solvate = Topology.from_pdb(structure_to_solvate)
-
-        structure_to_solvate = "solvate.pdb"
-        topology_to_solvate.to_file(
-            os.path.join(working_directory, structure_to_solvate),
-            "PDB",
-        )
-    else:
-        topology_to_solvate = Topology()
-
-    assigned_residue_names = []
-
     with temporary_cd(working_directory):
+        # Write out the topology to solvate so that packmol can read it
+        if topology_to_solvate is not None:
+            structure_to_solvate = "solvate.pdb"
+            topology_to_solvate.to_file(
+                structure_to_solvate,
+                file_format="PDB",
+            )
+        else:
+            structure_to_solvate = None
+            topology_to_solvate = Topology()
+
         # Create PDB files for all of the molecules.
         pdb_file_names = []
         mdtraj_topologies = []
@@ -624,9 +621,6 @@ def pack_box(
 
             mdtraj_trajectory.save_pdb(pdb_file_name)
             mdtraj_topologies.append(mdtraj_trajectory.topology)
-
-            residue_name = mdtraj_trajectory.topology.residue(0).name
-            assigned_residue_names.append(residue_name)
 
         # Generate the input file.
         output_file_name = "packmol_output.pdb"
