@@ -245,7 +245,7 @@ def _build_input_file(
     return packmol_file_name
 
 
-@requires_package("mdtraj")
+@requires_package("rdkit")
 def pack_box(
     molecules: list[Molecule],
     number_of_copies: list[int],
@@ -427,12 +427,21 @@ def pack_box(
         for mol, n in zip(molecules, number_of_copies):
             added_molecules.extend([mol] * n)
 
-        import mdtraj
+        import rdkit
 
+        # Create a topology with the appropriate molecules
         topology = topology_to_solvate + Topology.from_molecules(added_molecules)
-        topology.set_positions(
-            mdtraj.load(output_file_name).xyz.reshape(-1, 3) * unit.nanometer,
+        # Load the coordinates from the PDB file with RDKit (because its already
+        # a dependency)
+        rdmol = rdkit.Chem.rdmolfiles.MolFromPDBFile(
+            output_file_name,
+            sanitize=False,
+            removeHs=False,
+            proximityBonding=False,
         )
+        positions = rdmol.GetConformers()[0].GetPositions()
+        # Set the topology's positions and box vectors
+        topology.set_positions(positions * unit.angstrom)
         topology.box_vectors = box_size * UNIT_CUBE
 
         if not retain_working_files:
