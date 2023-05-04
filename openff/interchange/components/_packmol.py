@@ -14,7 +14,7 @@ from typing import Optional
 
 import mdtraj
 import numpy
-from openff.toolkit.topology import Molecule
+from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.units import Quantity, unit
 from openff.utilities.utilities import requires_package, temporary_cd
@@ -613,7 +613,7 @@ def pack_box(
     working_directory: Optional[str] = None,
     retain_working_files: bool = False,
     add_box_buffers: bool = True,
-) -> tuple[mdtraj.Trajectory, list[str]]:
+) -> Topology:
     """
     Run packmol to generate a box containing a mixture of molecules.
 
@@ -800,4 +800,13 @@ def pack_box(
     if temporary_directory and not retain_working_files:
         shutil.rmtree(working_directory)
 
-    return trajectory, assigned_residue_names
+    topology = Topology.from_openmm(
+        openmm_topology=trajectory.topology.to_openmm(),
+        unique_molecules=molecules,
+        positions=unit.Quantity(trajectory.xyz[0], unit.nanometer),
+    )
+
+    # MDTraj's Topology.to_openmm() doesn't set the box vectors
+    topology.box_vectors = unit.Quantity(trajectory.unitcell_vectors[0], unit.nanometer)
+
+    return topology
