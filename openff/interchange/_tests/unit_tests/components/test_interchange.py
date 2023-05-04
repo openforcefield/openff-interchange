@@ -21,6 +21,7 @@ from openff.interchange._tests import (
 )
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
+    ExperimentalFeatureException,
     InvalidTopologyError,
     MissingParameterHandlerError,
     MissingParametersError,
@@ -335,4 +336,50 @@ class TestBadExports(_BaseTest):
                 force_field=sage,
                 topology=[Molecule.from_smiles("O")],
             ).json(),
+        )
+
+
+class TestWrappedCalls(_BaseTest):
+    """Test that methods which delegate out to other submodules call them."""
+
+    @pytest.fixture()
+    def simple_interchange(self, sage):
+        mol = Molecule.from_smiles("CCO")
+        mol.generate_conformers(n_conformers=1)
+        top = mol.to_topology()
+        top.box_vectors = unit.Quantity(np.eye(3) * 4, unit.nanometer)
+
+        return Interchange.from_smirnoff(force_field=sage, topology=top)
+
+    def test_from_openmm_error(self):
+        with pytest.raises(ExperimentalFeatureException):
+            Interchange.from_openmm()
+
+    def test_from_gromacs_error(self):
+        with pytest.raises(ExperimentalFeatureException):
+            Interchange.from_gromacs()
+
+    def test_from_openmm_called(self, monkeypatch, simple_interchange):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        topology = simple_interchange.to_openmm_topology()
+        system = simple_interchange.to_openmm()
+        positions = simple_interchange.positions
+        box = simple_interchange.box
+
+        Interchange.from_openmm(
+            topology=topology,
+            system=system,
+            positions=positions,
+            box_vectors=box,
+        )
+
+    def test_from_gromacs_called(self, monkeypatch, simple_interchange):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        simple_interchange.to_gromacs(prefix="tmp_")
+
+        Interchange.from_gromacs(
+            topology_file="tmp_.top",
+            gro_file="tmp_.gro",
         )
