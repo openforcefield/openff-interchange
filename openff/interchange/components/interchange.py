@@ -481,6 +481,20 @@ class Interchange(DefaultModel):
         """
         Create an Interchange object from GROMACS files.
 
+        WARNING! This method is experimental and not suitable for production.
+
+        Parameters
+        ----------
+        topology_file : Union[Path, str]
+            The path to a GROMACS topology file.
+        gro_file : Union[Path, str]
+            The path to a GROMACS coordinate file.
+
+        Returns
+        -------
+        interchange : Interchange
+            An Interchange object representing the contents of the GROMACS files.
+
         """
         from openff.interchange.interop.gromacs._import._import import from_files
         from openff.interchange.interop.gromacs._interchange import to_interchange
@@ -499,7 +513,28 @@ class Interchange(DefaultModel):
         positions: Optional[unit.Quantity] = None,
         box_vectors: Optional[unit.Quantity] = None,
     ) -> "Interchange":
-        """Create an Interchange object from OpenMM data."""
+        """
+        Create an Interchange object from OpenMM objects.
+
+        WARNING! This method is experimental and not suitable for production.
+
+        Parameters
+        ----------
+        topology : openmm.app.Topology, optional
+            The OpenMM topology.
+        system : openmm.System, optional
+            The OpenMM system.
+        positions : openmm.unit.Quantity or openff.units.Quantity, optional
+            The positions of particles in this system and/or topology.
+        box_vectors : openmm.unit.Quantity or openff.units.Quantity, optional
+            The vectors of the simulation box associated with this system and/or topology.
+
+        Returns
+        -------
+        interchange : Interchange
+            An Interchange object representing the contents of the OpenMM objects.
+
+        """
         from openff.interchange.interop.openmm._import._import import from_openmm
 
         return from_openmm(
