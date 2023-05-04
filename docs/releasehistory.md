@@ -9,6 +9,12 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+### Bugfixes
+
+* #702 Fixes #701 in which `Interchange` was needlessly re-exported in the high-level module.
+
 ## 0.3.2 - 2023-05-02
 
 ### Behavior changes
