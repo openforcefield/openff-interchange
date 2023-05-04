@@ -956,7 +956,7 @@ def _get_14_scaling_factors(data: _DATA_DICT) -> tuple[float, float]:
     else:
         coul_14 = 1.0
 
-    if data.get("vdw_handler", None) is not None:
+    if data.get("vdw_collection", None) is not None:
         vdw_14 = data["vdw_collection"].scale_14  # type: ignore[union-attr]
     else:
         vdw_14 = 1.0
