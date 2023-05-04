@@ -496,8 +496,6 @@ def pack_box(
         The shape of the simulation box, used in conjunction with
         the ``mass_density`` parameter. Should be a dimensionless array with
         shape (3,3).
-    verbose : bool
-        If ``True``, verbose output is written.
     working_directory: str, optional
         The directory in which to generate the temporary working files. If
         ``None``, a temporary one will be created.
