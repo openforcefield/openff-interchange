@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import tempfile
 from distutils.spawn import find_executable
-from typing import Callable, Optional
+from typing import Callable, Literal, Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -456,6 +456,36 @@ def _build_input_file(
     return packmol_file_name, output_file_path
 
 
+def _center_topology_at(
+    center_solute: Union[bool, Literal["BOX_VECS", "ORIGIN", "BRICK"]],
+    topology: Topology,
+    box_vectors: Quantity,
+    brick_size: Quantity,
+) -> Topology:
+    """Return a copy of the topology centered as requested."""
+    if isinstance(center_solute, str):
+        center_solute = center_solute.upper()
+    topology = Topology(topology)
+
+    if center_solute is False:
+        return topology
+    elif center_solute in [True, "BOX_VECS"]:
+        new_center = box_vectors.sum(axis=0) / 2.0
+    elif center_solute == "ORIGIN":
+        new_center = np.zeros(3)
+    elif center_solute == "BRICK":
+        new_center = brick_size / 2.0
+    else:
+        PACKMOLValueError(
+            f"center_solute must be a bool, 'BOX_VECS', 'ORIGIN', or 'BRICK', not {center_solute!r}",
+        )
+
+    positions = topology.get_positions()
+    center_of_geometry = positions.sum(axis=0) / len(positions)
+    topology.set_positions(new_center - center_of_geometry + positions)
+    return topology
+
+
 @requires_package("rdkit")
 def pack_box(
     molecules: list[Molecule],
@@ -465,6 +495,7 @@ def pack_box(
     box_vectors: Optional[Quantity] = None,
     mass_density: Optional[Quantity] = None,
     box_shape: ArrayLike = UNIT_CUBE,
+    center_solute: Union[bool, Literal["BOX_VECS", "ORIGIN", "BRICK"]] = False,
     working_directory: Optional[str] = None,
     retain_working_files: bool = False,
 ) -> Topology:
@@ -496,6 +527,13 @@ def pack_box(
         The shape of the simulation box, used in conjunction with
         the ``mass_density`` parameter. Should be a dimensionless array with
         shape (3,3).
+    center_solute
+        How to center ``topology_to_solvate`` in the simulation box. If ``True``
+        or ``"box_vecs"``, the solute's center of geometry will be placed at
+        the center of the box's parallelopiped representation. If ``"origin"``,
+        the solute will centered at the origin. If ``"brick"``, the solute will
+        be centered in the box's rectangular brick representation. If
+        ``False``, the solute will not be moved.
     working_directory: str, optional
         The directory in which to generate the temporary working files. If
         ``None``, a temporary one will be created.
@@ -549,6 +587,15 @@ def pack_box(
     # Compute the dimensions of the equivalent brick - this is what packmol will
     # fill
     brick_size = _compute_brick_from_box_vectors(box_vectors)
+
+    # Center the solute
+    if center_solute and topology_to_solvate is not None:
+        topology_to_solvate = _center_topology_at(
+            center_solute,
+            topology_to_solvate,
+            box_vectors,
+            brick_size,
+        )
 
     # Set up the directory to create the working files in.
     temporary_directory = False
