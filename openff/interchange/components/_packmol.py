@@ -669,7 +669,10 @@ def solvate_topology(
     topology
         The OpenFF Topology to solvate.
     nacl_conc
-        The concentration of NaCl to add in units compatible with molarity.
+        The bulk concentration of NaCl in the solvent, in units compatible with
+        molarity. This is used to calculate a mass fraction for the bulk
+        solvent and does not represent the actual concentration in the final
+        box.
     padding : Scalar with dimensions of length
         The desired distance between the solute and the edge of the box. Ignored
         if the topology already has box vectors. The usual recommendation is
