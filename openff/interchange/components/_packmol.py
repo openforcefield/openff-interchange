@@ -245,7 +245,7 @@ def _wrap_into(
         correct_translated_points = condition(translated_points)
         points -= correct_translated_points[:, None] * lattice_vec[None, :]
     else:
-        raise ValueError(
+        raise PACKMOLValueError(
             f"Couldn't move all particles to satisfy condition in {max_order} steps",
         )
 
@@ -682,7 +682,7 @@ def _max_dist_between_points(points: Quantity) -> Quantity:
 
     points_array = np.asarray(points)
     if points_array.shape[1] != 3 or points_array.ndim != 2:
-        raise ValueError("Points should be an n*3 array")
+        raise PACKMOLValueError("Points should be an n*3 array")
 
     if points_array.shape[0] >= 4:
         # Maximum distance is guaranteed to be on the convex hull, which can be
@@ -738,7 +738,7 @@ def solvate_topology(
 
     """
     if box_shape.shape != (3, 3):
-        raise ValueError(
+        raise PACKMOLValueError(
             "box_shape should be a 3×3 array defining a box with unit periodic"
             + " image distance",  # noqa: W503
         )
@@ -756,7 +756,7 @@ def solvate_topology(
     )
     solvent_mass = target_mass - solute_mass
     if solvent_mass < 0:
-        raise ValueError(
+        raise PACKMOLValueError(
             "Solute mass is greater than target mass; increase density or make the box bigger",
         )
 
