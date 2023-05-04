@@ -615,11 +615,13 @@ def pack_box(
     # Set the positions, skipping the positions from topology_to_solvate
     n_solute_atoms = len(positions) - topology.n_atoms
     topology.set_positions(positions[n_solute_atoms:] * unit.angstrom)
-    topology.box_vectors = box_vectors
 
     # Add topology_to_solvate back in with the original, unwrapped positions
     if topology_to_solvate is not None:
         topology = topology_to_solvate + topology
+
+    # Set the box vectors
+    topology.box_vectors = box_vectors
 
     return topology
 
