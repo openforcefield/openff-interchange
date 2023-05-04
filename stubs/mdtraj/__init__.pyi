@@ -69,8 +69,10 @@ class Topology(object):
 class Trajectory(object):
     topology: Topology
     n_atoms: int
+    xyz: numpy.ndarray
     unitcell_lengths: numpy.ndarray
     unitcell_angles: numpy.ndarray
+    unitcell_vectors: numpy.ndarray
 
     def save_pdb(self, file: str): ...
 
