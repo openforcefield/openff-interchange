@@ -248,12 +248,38 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         orientation_atom_key = TopologyKey(
                             atom_indices=(topology_key.orientation_atom_indices[i],),
                         )
-                        charges[orientation_atom_key] += increment
+                        charges[orientation_atom_key] = _add_charges(
+                            charges.get(orientation_atom_key, _ZERO_CHARGE),
+                            increment,
+                        )
 
                 elif parameter_key == "charge":
                     assert len(topology_key.atom_indices) == 1
 
-                    charges[topology_key.atom_indices[0]] = parameter_value
+                    atom_index = topology_key.atom_indices[0]
+
+                    if potential_key.associated_handler in (
+                        "LibraryCharges",
+                        "ToolkitAM1BCCHandler",
+                        "charge_from_molecules",
+                    ):
+                        charges[atom_index] = parameter_value
+
+                    elif potential_key.associated_handler in (
+                        "ChargeIncrementModelHandler"
+                    ):
+                        # the "charge" and "charge_increment" keys may not appear in that order, so
+                        # we "add" the charge whether or not the increment was already applied.
+                        # There should be a better way to do this.
+                        charges[atom_index] = _add_charges(
+                            charges.get(atom_index, _ZERO_CHARGE),
+                            parameter_value,
+                        )
+
+                    else:
+                        raise RuntimeError(
+                            f"Unexepected associated handler {potential_key.associated_handler} found.",
+                        )
 
                 elif parameter_key == "charge_increment":
                     assert len(topology_key.atom_indices) == 1
@@ -261,7 +287,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     atom_index = topology_key.atom_indices[0]
 
                     charges[atom_index] = _add_charges(
-                        charges[atom_index],
+                        charges.get(atom_index, _ZERO_CHARGE),
                         parameter_value,
                     )
 
