@@ -1,8 +1,7 @@
 import copy
 import functools
-from collections import defaultdict
 from collections.abc import Iterable
-from typing import Any, DefaultDict, Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import numpy
 from openff.toolkit import Molecule, Topology
@@ -46,6 +45,22 @@ ElectrostaticsHandlerType = Union[
     ChargeIncrementModelHandler,
     LibraryChargeHandler,
 ]
+
+
+_ZERO_CHARGE = Quantity(0.0, unit.elementary_charge)
+
+
+@unit.wraps(
+    ret=unit.elementary_charge,
+    args=(unit.elementary_charge, unit.elementary_charge),
+    strict=True,
+)
+def _add_charges(
+    charge1: Quantity,
+    charge2: Quantity,
+) -> Quantity:
+    """Add two charges together."""
+    return charge1 + charge2
 
 
 def library_charge_from_molecule(
@@ -213,9 +228,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         include_virtual_sites=False,
     ) -> dict[TopologyKey, Quantity]:
         """Get the total partial charge on each atom or particle."""
-        charges: DefaultDict[Union[TopologyKey, int], Quantity] = defaultdict(
-            lambda: Quantity(0.0, unit.elementary_charges),
-        )
+        charges: dict[Union[TopologyKey, int], Quantity] = dict()
 
         for topology_key, potential_key in self.key_map.items():
             potential = self.potentials[potential_key]
@@ -237,10 +250,21 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         )
                         charges[orientation_atom_key] += increment
 
-                elif parameter_key in ["charge", "charge_increment"]:
-                    charge = parameter_value
+                elif parameter_key == "charge":
                     assert len(topology_key.atom_indices) == 1
-                    charges[topology_key.atom_indices[0]] += charge
+
+                    charges[topology_key.atom_indices[0]] = parameter_value
+
+                elif parameter_key == "charge_increment":
+                    assert len(topology_key.atom_indices) == 1
+
+                    atom_index = topology_key.atom_indices[0]
+
+                    charges[atom_index] = _add_charges(
+                        charges[atom_index],
+                        parameter_value,
+                    )
+
                 else:
                     raise NotImplementedError()
 
