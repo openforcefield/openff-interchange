@@ -3,6 +3,7 @@ Units tests for openff.interchange.components._packmol
 """
 import numpy as np
 import pytest
+from openff.toolkit.topology import Molecule
 from openff.units import unit
 
 from openff.interchange.components._packmol import pack_box
@@ -10,8 +11,6 @@ from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
 
 def test_packmol_box_size():
-    from openff.toolkit.topology import Molecule
-
     molecules = [Molecule.from_smiles("O")]
 
     topology = pack_box(
@@ -40,18 +39,33 @@ def test_packmol_box_size():
     )
 
 
-def test_packmol_bad_input():
-    from openff.toolkit.topology import Molecule
-
+def test_packmol_bad_copies():
     molecules = [Molecule.from_smiles("O")]
 
     with pytest.raises(PACKMOLValueError):
         pack_box(molecules, [10, 20], box_size=([20] * 3) * unit.angstrom)
 
 
-def test_packmol_failed():
-    from openff.toolkit.topology import Molecule
+def test_packmol_bad_box_size():
+    molecules = [Molecule.from_smiles("O")]
 
+    with pytest.raises(PACKMOLValueError):
+        pack_box(molecules, [2], box_size=([20] * 4) * unit.angstrom)
+
+
+def test_packmol_bad_structure_to_solvate():
+    molecules = [Molecule.from_smiles("O")]
+
+    with pytest.raises(PACKMOLValueError):
+        pack_box(
+            molecules,
+            [2],
+            box_size=([20] * 4) * unit.angstrom,
+            structure_to_solvate=Molecule.from_smiles("C").to_topology(),
+        )
+
+
+def test_packmol_failed():
     molecules = [Molecule.from_smiles("O")]
 
     with pytest.raises(PACKMOLRuntimeError):
@@ -59,8 +73,6 @@ def test_packmol_failed():
 
 
 def test_packmol_water():
-    from openff.toolkit.topology import Molecule
-
     molecules = [Molecule.from_smiles("O")]
 
     topology = pack_box(
@@ -85,8 +97,6 @@ def test_packmol_water():
 
 
 def test_packmol_ions():
-    from openff.toolkit.topology import Molecule
-
     molecules = [
         Molecule.from_smiles("[Na+]"),
         Molecule.from_smiles("[Cl-]"),
@@ -118,8 +128,6 @@ def test_packmol_ions():
 
 
 def test_packmol_paracetamol():
-    from openff.toolkit.topology import Molecule
-
     # Test something a bit more tricky than water
     molecules = [Molecule.from_smiles("CC(=O)NC1=CC=C(C=C1)O")]
 
@@ -166,8 +174,6 @@ def test_amino_acids():
 
     smiles = [*amino_residues]
 
-    from openff.toolkit.topology import Molecule
-
     molecules = [Molecule.from_smiles(x) for x in smiles]
     counts = [1] * len(smiles)
 
@@ -191,3 +197,45 @@ def test_amino_acids():
 
     for _smiles, residue in zip(smiles, topology.hierarchy_iterator("residues")):
         assert residue.residue_name == amino_residues[_smiles]
+
+
+def test_pack_diatomic_ion():
+    molecules = [Molecule.from_smiles("[Mg+2]"), Molecule.from_smiles("[Cl-]")]
+
+    topology = pack_box(
+        molecules,
+        [1, 2],
+        box_size=([20] * 3) * unit.angstrom,
+    )
+
+    assert topology is not None
+
+    # See comment in _ion_residue_name
+    assert topology.atom(0).metadata["residue_name"] == "Mg2"
+
+
+def test_solvate_structure():
+    benzene = Molecule.from_smiles("c1ccccc1")
+
+    with pytest.raises(
+        PACKMOLValueError,
+        match="missing some atomic positions",
+    ):
+        pack_box(
+            [Molecule.from_smiles("O")],
+            [10],
+            box_size=([50] * 3) * unit.angstrom,
+            structure_to_solvate=benzene.to_topology(),
+        )
+
+    benzene.generate_conformers(n_conformers=1)
+
+    topology = pack_box(
+        [Molecule.from_smiles("O")],
+        [10],
+        box_size=([50] * 3) * unit.angstrom,
+        structure_to_solvate=benzene.to_topology(),
+    )
+
+    assert topology.n_molecules == 11
+    assert len([*topology.unique_molecules]) == 2

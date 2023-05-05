@@ -91,7 +91,20 @@ def _validate_inputs(
         )
 
     if structure_to_solvate is not None:
-        assert isinstance(structure_to_solvate, Topology)
+        if not isinstance(structure_to_solvate, Topology):
+            raise PACKMOLValueError(
+                "`structure_to_solvate` must be a openff.toolkit.topology.Topology",
+            )
+
+        positions = structure_to_solvate.get_positions()
+
+        try:
+            assert positions is not None
+            assert positions.shape[0] == structure_to_solvate.n_atoms
+        except AssertionError:
+            raise PACKMOLValueError(
+                "`structure_to_solvate` missing some atomic positions.",
+            )
 
 
 def _approximate_box_size_by_density(
@@ -349,6 +362,8 @@ def _ion_residue_name(molecule: Molecule) -> str:
             charge_symbol = f"{formal_charge}{charge_symbol}"
 
     residue_name = f"{element_symbol}{charge_symbol}"
+
+    # This truncates i.e. Mg2+ to Mg. What's supposed to happen here?
     residue_name = residue_name[:3]
 
     return residue_name
