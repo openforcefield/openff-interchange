@@ -1,11 +1,11 @@
 import abc
 from collections import defaultdict
 from collections.abc import Iterable
-from typing import DefaultDict, Literal
+from typing import DefaultDict, Literal, Optional
 
 from openff.models.types import FloatQuantity
 from openff.units import Quantity, unit
-from pydantic import Field
+from pydantic import Field, PrivateAttr
 
 from openff.interchange.components.potentials import Collection
 from openff.interchange.constants import _PME
@@ -81,12 +81,27 @@ class ElectrostaticsCollection(_NonbondedCollection):
     nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
+    _charges: dict[TopologyKey, Quantity] = PrivateAttr(dict())
+    _charges_cached_with_virtual_sites: Optional[bool] = PrivateAttr(None)
+
     @property
     def charges(self) -> dict[TopologyKey, Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
-        return self.get_charges(include_virtual_sites=False)
+        if self._charges is None or self._charges_cached_with_virtual_sites in (
+            True,
+            None,
+        ):
+            self._charges = self._get_charges(include_virtual_sites=False)
+            self._charges_cached_with_virtual_sites = False
 
-    def get_charges(
+        return self._charges
+
+    @property
+    def charges_with_virtual_sites(self) -> dict[TopologyKey, Quantity]:
+        """Get the total partial charge on each atom, including virtual sites."""
+        raise NotImplementedError()
+
+    def _get_charges(
         self,
         include_virtual_sites: bool = False,
     ) -> dict[TopologyKey, Quantity]:

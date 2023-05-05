@@ -218,7 +218,7 @@ class TestSMIRNOFFChargeIncrements(_BaseTest):
 
         # TODO: Fix get_charges to return the atoms in order
         found_charges = [0.0] * topology.n_atoms
-        for key, val in out["Electrostatics"].get_charges().items():
+        for key, val in out["Electrostatics"].charges.items():
             found_charges[key.atom_indices[0]] = val.m
 
         assert numpy.allclose(expected_charges, found_charges)

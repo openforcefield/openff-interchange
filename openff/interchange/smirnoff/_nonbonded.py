@@ -214,16 +214,30 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @property
     def charges(self) -> dict[TopologyKey, Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
-        return self.get_charges(include_virtual_sites=False)
+        if self._charges is None or self._charges_cached_with_virtual_sites in (
+            True,
+            None,
+        ):
+            self._charges = self._get_charges(include_virtual_sites=False)
+            self._charges_cached_with_virtual_sites = False
+
+        return self._charges
 
     @property
     def charges_with_virtual_sites(
         self,
     ) -> dict[TopologyKey, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
-        return self.get_charges(include_virtual_sites=True)
+        if self._charges is None or self._charges_cached_with_virtual_sites in (
+            False,
+            None,
+        ):
+            self._charges = self._get_charges(include_virtual_sites=True)
+            self._charges_cached_with_virtual_sites = True
 
-    def get_charges(
+        return self._charges
+
+    def _get_charges(
         self,
         include_virtual_sites=False,
     ) -> dict[TopologyKey, Quantity]:
@@ -788,7 +802,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                             self.key_map[new_key] = matches[key]
 
         topology_charges = [0.0] * topology.n_atoms
-        for key, val in self.get_charges().items():
+        for key, val in self.charges.items():
             topology_charges[key.atom_indices[0]] = val.m
 
         # TODO: Better data structures in Topology.identical_molecule_groups will make this
