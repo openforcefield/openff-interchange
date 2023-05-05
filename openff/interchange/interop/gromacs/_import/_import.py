@@ -23,7 +23,7 @@ from openff.interchange.interop.gromacs.models.models import (
 
 
 @experimental
-def from_files(top_file, gro_file, cls=GROMACSSystem):
+def from_files(top_file, gro_file, cls=GROMACSSystem) -> GROMACSSystem:
     """
     Parse a GROMACS topology file. Adapted from Intermol.
 
