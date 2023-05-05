@@ -14,7 +14,7 @@ from typing import Optional
 
 import mdtraj
 import numpy
-from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit import Molecule, Topology
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.units import Quantity, unit
 from openff.utilities.utilities import requires_package, temporary_cd
@@ -43,7 +43,7 @@ def _find_packmol() -> Optional[str]:
 def _validate_inputs(
     molecules: list[Molecule],
     number_of_copies: list[int],
-    structure_to_solvate: Optional[str],
+    structure_to_solvate: Optional[Topology],
     box_aspect_ratio: Optional[Quantity],
     box_size: Optional[Quantity],
     mass_density: Optional[Quantity],
@@ -58,8 +58,8 @@ def _validate_inputs(
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
         equal to the length of `molecules`.
-    structure_to_solvate: str, optional
-        A file path to the PDB coordinates of the structure to be solvated.
+    structure_to_solvate: Topology, optional
+        A topology to be solvated.
     box_size : openff.units.Quantity, optional
         The size of the box to generate in units compatible with angstroms.
         If `None`, `mass_density` must be provided.
@@ -91,7 +91,7 @@ def _validate_inputs(
         )
 
     if structure_to_solvate is not None:
-        assert os.path.isfile(structure_to_solvate)
+        assert isinstance(structure_to_solvate, Topology)
 
 
 def _approximate_box_size_by_density(
@@ -402,7 +402,7 @@ def _create_trajectory(molecule: Molecule) -> mdtraj.Trajectory:
 def _build_input_file(
     molecule_file_names: list[str],
     molecule_counts: list[int],
-    structure_to_solvate: Optional[str],
+    structure_to_solvate: Optional[Topology],
     center_solute: bool,
     box_size: Quantity,
     tolerance: Quantity,
@@ -417,8 +417,8 @@ def _build_input_file(
         The paths to the molecule pdb files.
     molecule_counts: list of int
         The number of each molecule to add.
-    structure_to_solvate: str, optional
-        The path to the structure to solvate.
+    structure_to_solvate: Topology, optional
+        The topology to solvate.
     center_solute: bool
         If `True`, the structure to solvate will be centered in the
         simulation box.
@@ -448,6 +448,7 @@ def _build_input_file(
 
     # Add the section of the molecule to solvate if provided.
     if structure_to_solvate is not None:
+        structure_to_solvate.to_file("_structure.pdb")
         solute_position = [0.0] * 3
 
         if center_solute:
@@ -455,7 +456,7 @@ def _build_input_file(
 
         input_lines.extend(
             [
-                f"structure {structure_to_solvate}",
+                "structure _structure.pdb",
                 "  number 1",
                 "  fixed "
                 f"{solute_position[0]} "
@@ -495,7 +496,7 @@ def _correct_packmol_output(
     file_path: str,
     molecule_topologies: list[mdtraj.Topology],
     number_of_copies: list[int],
-    structure_to_solvate: Optional[str] = None,
+    structure_to_solvate: Optional[Topology] = None,
 ) -> mdtraj.Trajectory:
     """
     Corrects the PDB file output by packmol, namely by adding full connectivity information.
@@ -510,9 +511,8 @@ def _correct_packmol_output(
     number_of_copies: list of int
         The total number of each molecule which packmol should have
         created.
-    structure_to_solvate: str, optional
-        The file path to a preexisting structure which packmol
-        has solvated.
+    structure_to_solvate: Topology, optional
+        The topology that was solvated.
 
     Returns
     -------
@@ -536,7 +536,8 @@ def _correct_packmol_output(
     all_n_copies = []
 
     if structure_to_solvate is not None:
-        solvated_trajectory = mdtraj.load(structure_to_solvate)
+        structure_to_solvate.to_file("structure.pdb")
+        solvated_trajectory = mdtraj.load("structure.pdb")
 
         all_topologies.append(solvated_trajectory.topology)
         all_n_copies.append(1)
@@ -604,7 +605,7 @@ def _correct_packmol_output(
 def pack_box(
     molecules: list[Molecule],
     number_of_copies: list[int],
-    structure_to_solvate: Optional[str] = None,
+    structure_to_solvate: Optional[Topology] = None,
     center_solute: bool = True,
     tolerance: Quantity = 2.0 * unit.angstrom,
     box_size: Optional[Quantity] = None,
@@ -624,8 +625,8 @@ def pack_box(
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
         equal to the length of ``molecules``.
-    structure_to_solvate: str, optional
-        A file path to the PDB coordinates of the structure to be solvated.
+    structure_to_solvate: Topology, optional
+        A topology to be solvated.
     center_solute: bool
         If ``True``, the structure to solvate will be placed in the center of
         the simulation box. This option is only applied when
@@ -688,6 +689,12 @@ def pack_box(
         mass_density,
     )
 
+    unique_molecules = set(molecules)
+
+    if structure_to_solvate is not None:
+        for unique_molecule in structure_to_solvate.unique_molecules:
+            unique_molecules.add(unique_molecule)
+
     # Estimate the box_size from mass density if one is not provided.
     if box_size is None:
         box_size = _approximate_box_size_by_density(
@@ -707,19 +714,6 @@ def pack_box(
 
     if len(working_directory) > 0:
         os.makedirs(working_directory, exist_ok=True)
-
-    # Copy the structure to solvate if one is provided.
-    if structure_to_solvate is not None:
-        import mdtraj
-
-        trajectory = mdtraj.load_pdb(structure_to_solvate)
-
-        # Fix mdtraj #1611
-        for atom in trajectory.topology.atoms:
-            atom.serial = None
-
-        structure_to_solvate = "solvate.pdb"
-        trajectory.save_pdb(os.path.join(working_directory, structure_to_solvate))
 
     assigned_residue_names = []
 
@@ -802,7 +796,7 @@ def pack_box(
 
     topology = Topology.from_openmm(
         openmm_topology=trajectory.topology.to_openmm(),
-        unique_molecules=molecules,
+        unique_molecules=unique_molecules,
         positions=unit.Quantity(trajectory.xyz[0], unit.nanometer),
     )
 
