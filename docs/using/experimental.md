@@ -21,14 +21,20 @@ $ INTERCHANGE_EXPERIMENTAL=1 python my_script.py
 ...
 ```
 
-or Jupyter notebook or equivalent
+or Jupyter notebook or equivalent:
 
 ```shell
 $ INTERCHANGE_EXPERIMENTAL=1 jupyter-notbook my_notebook.ipynb
 ...
 ```
 
-Feedback of any sort is useful - even (and especially) if something crashes early or produces surprising results. Please raise an [issue on GitHub](https://github.com/openforcefield/openff-interchange/issues/new) or email <info@openforcefield.org> sharing what you are trying to do and what happened instead.
+or, with cloud services like Google Colab and Binder, use the [`%env`](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-env) magic command:
+
+```jupyter
+%env INTERCHANGE_EXPERIMENTAL=1
+```
+
+Feedback of any sort is useful - even (and especially) if something crashes early or produces surprising results. Please raise an [issue on GitHub](https://github.com/openforcefield/openff-interchange/issues/new).
 
 ## Implementation
 
