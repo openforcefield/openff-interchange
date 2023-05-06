@@ -267,10 +267,13 @@ class MDConfig(DefaultModel):
 
             if self.constraints in ["none", None]:
                 sander.write("ntc=1,\nntf=1,\n")
-            elif self.constraints == "h-bonds":
+            # TODO: This is an approximation, but most of the time these will be set to 2
+            #       Amber cannot ignore H-O-H angle energy without ignoring all H-X-X angles,
+            #       See 21.7.1. in Amber22 manual
+            elif self.constraints in ("h-bonds", "all-bonds", "all-angles"):
                 sander.write("ntc=2,\nntf=2,\n")
             # TODO: Is there a clear analog to GROMACS's all-bonds?
-            elif self.constraints == "angles":
+            elif self.constraints == "all-angles":
                 raise UnsupportedExportError(
                     "Unclear how to constrain angles with sander",
                 )
