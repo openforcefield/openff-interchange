@@ -258,7 +258,7 @@ def _process(
     return EnergyReport(
         energies={
             "Bond": energies.get("Bond", 0.0 * kj_mol),
-            "Angle": energies["Angle"],
+            "Angle": energies.get("Angle", 0.0 * kj_mol),
             "Torsion": _get_gmx_energy_torsion(energies),
             "RBTorsion": energies.get("Ryckaert-Bell.", 0.0 * kj_mol),
             "vdW": _get_gmx_energy_vdw(energies),

@@ -312,11 +312,11 @@ def _create_single_nonbonded_force(
             )
 
     if data["electrostatics_collection"] is not None:
-        try:
+        if has_virtual_sites:
             partial_charges = data[
                 "electrostatics_collection"
             ].charges_with_virtual_sites
-        except AttributeError:
+        else:
             partial_charges = data["electrostatics_collection"].charges
 
     # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
