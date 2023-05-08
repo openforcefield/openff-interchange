@@ -63,7 +63,7 @@ def parse_mdp(file: str) -> dict[str, str]:
 
 def parse_sander(file: str) -> dict[str, Union[dict, str]]:
     """Naively parse (sections of) a sander input file into a dict structure."""
-    options = dict()
+    options: dict[str, Union[dict, str]] = dict()
     current_level = options
 
     with open(file) as f:
@@ -79,7 +79,7 @@ def parse_sander(file: str) -> dict[str, Union[dict, str]]:
             if line.startswith("&"):
                 current_section = line[1:]
                 current_level[current_section] = dict()
-                current_level = current_level[current_section]
+                current_level = current_level[current_section]  # type: ignore[assignment]
                 continue
 
             if "=" in line:

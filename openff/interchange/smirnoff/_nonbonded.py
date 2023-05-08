@@ -279,7 +279,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     ):
                         charges[atom_index] = parameter_value
 
-                    elif potential_key.associated_handler in (
+                    elif potential_key.associated_handler in (  # type: ignore[operator]
                         "ChargeIncrementModelHandler"
                     ):
                         # the "charge" and "charge_increment" keys may not appear in that order, so
