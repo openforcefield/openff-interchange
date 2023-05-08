@@ -21,7 +21,6 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
-from openff.interchange.interop._parmed import _lj_params_from_potential
 from openff.interchange.models import TopologyKey, VirtualSiteKey
 
 _DATA_DICT: TypeAlias = dict[str, Union[None, str, bool, "Collection"]]
@@ -341,9 +340,10 @@ def _create_single_nonbonded_force(
 
             if vdw is not None:
                 pot_key = vdw.key_map[top_key]
-                sigma, epsilon = _lj_params_from_potential(
-                    vdw.potentials[pot_key],
-                )
+
+                sigma = vdw.potentials[pot_key].parameters["sigma"]
+                epsilon = vdw.potentials[pot_key].parameters["epsilon"]
+
                 sigma = sigma.m_as(off_unit.nanometer)
                 epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
             else:
@@ -906,9 +906,9 @@ def _set_particle_parameters(
                         parameters = {key: val.m for key, val in parameters.items()}
 
                 else:
-                    sigma, epsilon = _lj_params_from_potential(
-                        vdw.potentials[pot_key],
-                    )
+                    sigma = vdw.potentials[pot_key].parameters["sigma"]
+                    epsilon = vdw.potentials[pot_key].parameters["epsilon"]
+
                     sigma = sigma.m_as(off_unit.nanometer)
                     epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
             else:

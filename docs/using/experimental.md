@@ -30,7 +30,7 @@ $ INTERCHANGE_EXPERIMENTAL=1 jupyter-notbook my_notebook.ipynb
 
 or, with cloud services like Google Colab and Binder, use the [`%env`](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-env) magic command:
 
-```jupyter
+```
 %env INTERCHANGE_EXPERIMENTAL=1
 ```
 

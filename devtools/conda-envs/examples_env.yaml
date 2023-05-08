@@ -13,18 +13,15 @@ dependencies:
   # OpenFF stack
   - openff-toolkit >=0.13
   - openff-forcefields >=2023.05
-  - openff-models >=0.0.4
   # Optional features
-  - jax
   - unyt
   - mbuild
   - foyer >=0.11.3
   # Examples
+  - jax
   - mdtraj
   - pdbfixer
-  - intermol
   - nglview
-  - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
   - openeye-toolkits
   - pytest
   - nbval
@@ -33,5 +30,3 @@ dependencies:
   # Drivers
   - gromacs >=2021=nompi*
   - lammps
-  # https://github.com/conda-forge/quippy-feedstock/issues/15
-  - panedr

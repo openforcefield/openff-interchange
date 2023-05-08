@@ -9,11 +9,27 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.3.3 - 2023-05-08
+
+* #703 Clarifies the experimental state of some features, which require opt-in to use.
+
+### Behavior changes
+
+* #706 Updates `pack_box` to return a `Topology`.
+* #716 Removes InterMol and ParmEd conversions, which were untested and not part of the public API.
 
 ### Bugfixes
 
+* #705 Fixes #693 in which 1-4 vdW interactions were not scaled when using `Interchange.to_openmm(combine_nonbonded_forces=False)`
 * #702 Fixes #701 in which `Interchange` was needlessly re-exported in the high-level module.
+
+### Documentation improvements
+
+* #673 Adds a vectorized representation example.
+* #703 Adds a section to the user guide on accessing experimental functionality.
+* #706 Updates the mixed solvent example.
+* #708 Updates the protein-ligand example.
+* #708 Updates the ligand-in-water example.
 
 ## 0.3.2 - 2023-05-02
 
@@ -96,7 +112,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #614 Adds support for GBSA parameters in SMIRNOFF force fields.
 * #586 #591 #605 #609 #613 Support custom SMIRNOFF sections with OpenMM.
 
-### Documentation
+### Documentation improvements
 
 * #634 Improves documentation for SMIRNOFF plugins.
 * #610 Adds duplicate documentation on how to covert to OpenMM-styled unit/quantity objects.
