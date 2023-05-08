@@ -16,6 +16,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### Behavior changes
 
 * #706 Updates `pack_box` to return a `Topology`.
+* #716 Removes InterMol and ParmEd conversions, which were untested and not part of the public API.
 
 ### Bugfixes
 
