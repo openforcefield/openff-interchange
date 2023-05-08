@@ -12,6 +12,7 @@ dependencies:
   - openmm >=7.6
   # OpenFF stack
   - openff-toolkit >=0.13
+  - openff-forcefields >=2023.05
   - openff-models >=0.0.4
   # Optional features
   - jax
