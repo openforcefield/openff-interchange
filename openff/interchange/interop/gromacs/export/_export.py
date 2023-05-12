@@ -243,8 +243,8 @@ class GROMACSWriter(DefaultModel):
             top.write(
                 f"{settle.first_atom :6d}\t"
                 f"{function :6d}\t"
-                f"{settle.oxygen_hydrogen_distance.m :20.12f}\t"
-                f"{settle.hydrogen_hydrogen_distance.m :20.12f}\n",
+                f"{settle.oxygen_hydrogen_distance.m_as(unit.nanometer) :20.12f}\t"
+                f"{settle.hydrogen_hydrogen_distance.m_as(unit.nanometer):20.12f}\n",
             )
 
         top.write("\n")
