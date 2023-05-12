@@ -10,6 +10,7 @@ from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest, get_test_file_path
 from openff.interchange.constants import kcal_mol, kcal_mol_a2
 from openff.interchange.exceptions import (
+    MissingPartialChargesError,
     UnassignedAngleError,
     UnassignedBondError,
     UnassignedTorsionError,
@@ -108,12 +109,10 @@ class TestUnassignedParameters(_BaseTest):
             Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
 
 
-# TODO: Remove xfail after openff-toolkit 0.10.0
-@pytest.mark.xfail()
 def test_library_charges_from_molecule():
     mol = Molecule.from_mapped_smiles("[Cl:1][C:2]#[C:3][F:4]")
 
-    with pytest.raises(ValueError, match="missing partial"):
+    with pytest.raises(MissingPartialChargesError):
         library_charge_from_molecule(mol)
 
     mol.partial_charges = numpy.linspace(-0.3, 0.3, 4) * unit.elementary_charge

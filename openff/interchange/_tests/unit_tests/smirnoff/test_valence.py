@@ -29,6 +29,7 @@ from openff.interchange.smirnoff._valence import (
     SMIRNOFFConstraintCollection,
     SMIRNOFFImproperTorsionCollection,
     _check_molecule_uniqueness,
+    _upconvert_bondhandler,
 )
 
 
@@ -151,11 +152,27 @@ class TestBondCollection(_BaseTest):
         from packaging.version import Version
 
         assert parsley["Bonds"].version == Version("0.3")
+
+        stashed = parsley["Bonds"].to_dict()
+
         with pytest.warns(
             UserWarning,
             match="Automatically up-converting BondHandler from version 0.3 to 0.4.",
         ):
             _create_interchange(parsley, [ethanol])
+
+        assert stashed != parsley["Bonds"].to_dict()
+
+    def test_upconvert_short_circuit(self, sage):
+        from packaging.version import Version
+
+        assert sage["Bonds"].version == Version("0.4")
+
+        stashed = sage["Bonds"].to_dict()
+
+        _upconvert_bondhandler(sage["Bonds"])
+
+        assert stashed == sage["Bonds"].to_dict()
 
 
 class TestConstraintCollection(_BaseTest):

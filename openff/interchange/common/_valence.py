@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from typing import Literal
 
+from openff.toolkit import Topology
 from openff.toolkit.topology.molecule import Atom
 from pydantic import Field
 
@@ -31,7 +32,7 @@ class BondCollection(Collection):
         return "k", "length"
 
     @classmethod
-    def valence_terms(cls, topology) -> list[tuple["Atom", ...]]:
+    def valence_terms(cls, topology: Topology) -> list[tuple[Atom, Atom]]:
         """Return all bonds in this topology."""
         return [tuple(b.atoms) for b in topology.bonds]
 
@@ -48,7 +49,7 @@ class AngleCollection(Collection):
         return "k", "angle"
 
     @classmethod
-    def valence_terms(cls, topology):
+    def valence_terms(cls, topology: Topology) -> list[tuple[Atom]]:
         """Return all angles in this topology."""
         return [angle for angle in topology.angles]
 

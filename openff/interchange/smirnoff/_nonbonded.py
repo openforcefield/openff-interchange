@@ -37,7 +37,7 @@ from openff.interchange.models import (
     TopologyKey,
     VirtualSiteKey,
 )
-from openff.interchange.smirnoff._base import SMIRNOFFCollection, T
+from openff.interchange.smirnoff._base import TP, SMIRNOFFCollection, T
 
 ElectrostaticsHandlerType = Union[
     ElectrostaticsHandler,
@@ -89,9 +89,9 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
     """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> tuple[TP]:
         """Return a list of allowed types of ParameterHandler classes."""
-        return [vdWHandler]
+        return (vdWHandler,)
 
     @classmethod
     def supported_parameters(cls) -> Iterable[str]:
@@ -166,11 +166,11 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
         return handler
 
     @classmethod
-    def parameter_handler_precedence(cls) -> list[str]:
+    def parameter_handler_precedence(cls) -> Iterable[str]:
         """
         Return the order in which parameter handlers take precedence when computing charges.
         """
-        return ["vdw", "VirtualSites"]
+        return ("vdw", "VirtualSites")
 
 
 class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollection):
@@ -198,18 +198,19 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> Iterable[TP]:
         """Return a list of allowed types of ParameterHandler classes."""
-        return [
+        return (
             LibraryChargeHandler,
             ChargeIncrementModelHandler,
             ToolkitAM1BCCHandler,
             ElectrostaticsHandler,
-        ]
+        )
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> Iterable[TP]:
         """Return a list of supported parameter attribute names."""
+        return tuple()
 
     @property
     def charges(self) -> dict[TopologyKey, Quantity]:
@@ -320,11 +321,11 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         return returned_charges
 
     @classmethod
-    def parameter_handler_precedence(cls) -> list[str]:
+    def parameter_handler_precedence(cls) -> Iterable[str]:
         """
         Return the order in which parameter handlers take precedence when computing charges.
         """
-        return ["LibraryCharges", "ChargeIncrementModel", "ToolkitAM1BCC"]
+        return ("LibraryCharges", "ChargeIncrementModel", "ToolkitAM1BCC")
 
     @classmethod
     def create(

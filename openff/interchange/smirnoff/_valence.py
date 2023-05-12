@@ -1,7 +1,9 @@
 import warnings
+from collections.abc import Iterable
 from typing import Literal, Optional, Union
 
 from openff.toolkit import Molecule, Topology
+from openff.toolkit.topology.molecule import Atom
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -10,7 +12,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
 )
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.interchange.common._valence import (
     AngleCollection,
@@ -32,11 +34,10 @@ from openff.interchange.models import (
 )
 from openff.interchange.smirnoff._base import (
     SMIRNOFFCollection,
-    T,
     _check_all_valence_terms_assigned,
+    _CollectionAlias,
+    _HandlerAlias,
 )
-
-_CollectionAlias = type[T]
 
 
 def _upconvert_bondhandler(bond_handler: BondHandler):
@@ -91,7 +92,10 @@ def _molecule_is_in_list(
     return False
 
 
-def _get_interpolation_coeffs(fractional_bond_order, data):
+def _get_interpolation_coeffs(
+    fractional_bond_order: float,
+    data: dict[float, Quantity],
+) -> tuple[float, float]:
     x1, x2 = data.keys()
     coeff1 = (x2 - fractional_bond_order) / (x2 - x1)
     coeff2 = (fractional_bond_order - x1) / (x2 - x1)
@@ -108,22 +112,22 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
     fractional_bond_order_interpolation: Literal["linear"] = "linear"
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> Iterable[_HandlerAlias]:
         """Return a list of allowed types of ParameterHandler classes."""
-        return [BondHandler]
+        return (BondHandler,)
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attribute names."""
-        return ["smirks", "id", "k", "length", "k_bondorder", "length_bondorder"]
+        return ("smirks", "id", "k", "length", "k_bondorder", "length_bondorder")
 
     @classmethod
-    def potential_parameters(cls):
+    def potential_parameters(cls) -> Iterable[str]:
         """Return a list of names of parameters included in each potential in this colletion."""
-        return ["k", "length"]
+        return ("k", "length")
 
     @classmethod
-    def valence_terms(cls, topology):
+    def valence_terms(cls, topology: Topology) -> list[tuple[Atom, Atom]]:
         """Return all bonds in this topology."""
         return [tuple(b.atoms) for b in topology.bonds]
 
@@ -287,19 +291,19 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
     expression: Literal[""] = ""
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> Iterable[_HandlerAlias]:
         """Return a list of allowed types of ParameterHandler classes."""
-        return [BondHandler, ConstraintHandler]
+        return (BondHandler, ConstraintHandler)
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attribute names."""
-        return ["smirks", "id", "length", "distance"]
+        return ("smirks", "id", "length", "distance")
 
     @classmethod
-    def potential_parameters(cls):
+    def potential_parameters(cls) -> Iterable[str]:
         """Return a list of names of parameters included in each potential in this colletion."""
-        return ["length", "distance"]
+        return ("length", "distance")
 
     @classmethod
     def create(
@@ -396,22 +400,22 @@ class SMIRNOFFAngleCollection(SMIRNOFFCollection, AngleCollection):
     expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> Iterable[_HandlerAlias]:
         """Return a list of allowed types of ParameterHandler classes."""
-        return [AngleHandler]
+        return (AngleHandler,)
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attributes."""
-        return ["smirks", "id", "k", "angle"]
+        return ("smirks", "id", "k", "angle")
 
     @classmethod
-    def potential_parameters(cls):
+    def potential_parameters(cls) -> Iterable[str]:
         """Return a list of names of parameters included in each potential in this colletion."""
-        return ["k", "angle"]
+        return ("k", "angle")
 
     @classmethod
-    def valence_terms(cls, topology):
+    def valence_terms(cls, topology: Topology) -> list[tuple[Atom]]:
         """Return all angles in this topology."""
         return list(topology.angles)
 
@@ -443,19 +447,19 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
     fractional_bond_order_interpolation: Literal["linear"] = "linear"
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> Iterable[_HandlerAlias]:
         """Return a list of allowed types of ParameterHandler classes."""
-        return [ProperTorsionHandler]
+        return (ProperTorsionHandler,)
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attribute names."""
-        return ["smirks", "id", "k", "periodicity", "phase", "idivf", "k_bondorder"]
+        return ("smirks", "id", "k", "periodicity", "phase", "idivf", "k_bondorder")
 
     @classmethod
-    def potential_parameters(cls):
+    def potential_parameters(cls) -> Iterable[str]:
         """Return a list of names of parameters included in each potential in this colletion."""
-        return ["k", "periodicity", "phase", "idivf"]
+        return ("k", "periodicity", "phase", "idivf")
 
     def store_matches(
         self,
@@ -599,19 +603,19 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection, ImproperTorsionColle
     # TODO: Consider whether or not default_idivf should be stored here
 
     @classmethod
-    def allowed_parameter_handlers(cls):
+    def allowed_parameter_handlers(cls) -> Iterable[_HandlerAlias]:
         """Return a list of allowed types of ParameterHandler classes."""
-        return [ImproperTorsionHandler]
+        return (ImproperTorsionHandler,)
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attribute names."""
-        return ["smirks", "id", "k", "periodicity", "phase", "idivf"]
+        return ("smirks", "id", "k", "periodicity", "phase", "idivf")
 
     @classmethod
-    def potential_parameters(cls):
+    def potential_parameters(cls) -> Iterable[str]:
         """Return a list of names of parameters included in each potential in this colletion."""
-        return ["k", "periodicity", "phase", "idivf"]
+        return ("k", "periodicity", "phase", "idivf")
 
     def store_matches(
         self,

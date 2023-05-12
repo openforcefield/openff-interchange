@@ -26,8 +26,11 @@ from openff.interchange.models import PotentialKey, TopologyKey
 T = TypeVar("T", bound="SMIRNOFFCollection")
 TP = TypeVar("TP", bound="ParameterHandler")
 
+_CollectionAlias = type[T]
+_HandlerAlias = type[TP]
 
-def _sanitize(o):
+
+def _sanitize(o) -> dict:
     # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
     # for the mapping dicts `key_map` and `potentials`.
     if isinstance(o, dict):
