@@ -9,6 +9,12 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+### Bugfixes
+
+* #721 Fixes #720 in which units were not checked when writing `[ settles ]` in GROMACS files.
+
 ## 0.3.3 - 2023-05-08
 
 * #703 Clarifies the experimental state of some features, which require opt-in to use.
