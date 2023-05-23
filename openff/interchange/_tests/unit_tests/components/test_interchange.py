@@ -258,6 +258,46 @@ class TestInterchange(_BaseTest):
         assert type(out.topology) == Topology
         assert isinstance(out.topology, Topology)
 
+    def test_to_openmm_simulation(self, sage):
+        import numpy
+        import openmm
+        import openmm.app
+        import openmm.unit
+
+        molecule = Molecule.from_smiles("CCO")
+
+        simulation = Interchange.from_smirnoff(
+            force_field=sage,
+            topology=molecule.to_topology(),
+        ).to_openmm_simulation(
+            integrator=openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond),
+        )
+
+        numpy.testing.assert_allclose(
+            numpy.linalg.norm(
+                simulation.context.getState(getPositions=True).getPositions(
+                    asNumpy=True,
+                ),
+            ),
+            numpy.zeros((molecule.n_atoms, 3)),
+        )
+
+        del simulation
+
+        molecule.generate_conformers(n_conformers=1)
+
+        simulation = Interchange.from_smirnoff(
+            force_field=sage,
+            topology=molecule.to_topology(),
+        ).to_openmm_simulation(
+            integrator=openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond),
+        )
+
+        numpy.testing.assert_allclose(
+            simulation.context.getState(getPositions=True).getPositions(asNumpy=True),
+            molecule.conformers[0].m_as(unit.nanometer),
+        )
+
     @skip_if_missing("nglview")
     def test_visualize(self, sage):
         import nglview
