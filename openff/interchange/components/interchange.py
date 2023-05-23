@@ -346,7 +346,25 @@ class Interchange(DefaultModel):
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
     ):
-        """Export this Interchange to an OpenMM System."""
+        """
+        Export this Interchange to an OpenMM System.
+
+        Parameters
+        ----------
+        combine_nonbonded_forces : bool, default=False
+            If True, an attempt will be made to combine all non-bonded interactions into a single
+            openmm.NonbondedForce.
+            If False, non-bonded interactions will be split across multiple forces.
+        add_constrained_forces : bool, default=False,
+            If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
+            on a bond or angle that is fully constrained.
+
+        Returns
+        -------
+        system : openmm.System
+            The OpenMM System object.
+
+        """
         from openff.interchange.interop.openmm import to_openmm as to_openmm_
 
         return to_openmm_(
@@ -366,6 +384,53 @@ class Interchange(DefaultModel):
             self,
             ensure_unique_atom_names=ensure_unique_atom_names,
         )
+
+    def to_openmm_simulation(
+        self,
+        integrator: "openmm.Integrator",
+        combine_nonbonded_forces: bool = True,
+        add_constrained_forces: bool = False,
+        **kwargs,
+    ) -> "openmm.app.Simulation":
+        """
+        Export this Interchange to an OpenMM `Simulation` object.
+
+        Positions are set on the `Simulation` if present on the `Interchange`.
+
+        Parameters
+        ----------
+        integrator : subclass of openmm.Integrator
+            The integrator to use for the simulation.
+        combine_nonbonded_forces : bool, default=False
+            If True, an attempt will be made to combine all non-bonded interactions into a single
+            openmm.NonbondedForce.
+            If False, non-bonded interactions will be split across multiple forces.
+        add_constrained_forces : bool, default=False,
+            If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
+            on a bond or angle that is fully constrained.
+
+        Returns
+        -------
+        simulation : openmm.app.Simulation
+            The OpenMM simulation object, possibly with positions set.
+
+        """
+        import openmm.app
+
+        simulation = openmm.app.Simulation(
+            topology=self.to_openmm_topology(),
+            system=self.to_openmm(
+                combine_nonbonded_forces=combine_nonbonded_forces,
+                add_constrained_forces=add_constrained_forces,
+            ),
+            integrator=integrator,
+            **kwargs,
+        )
+
+        if self.positions is not None:
+            simulation.context.setPositions(self.positions.to_openmm())
+
+        return simulation
 
     def to_prmtop(self, file_path: Union[Path, str], writer="internal"):
         """Export this Interchange to an Amber .prmtop file."""
