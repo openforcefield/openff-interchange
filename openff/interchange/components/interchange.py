@@ -417,6 +417,8 @@ class Interchange(DefaultModel):
         """
         import openmm.app
 
+        from openff.interchange.interop.openmm._positions import to_openmm_positions
+
         simulation = openmm.app.Simulation(
             topology=self.to_openmm_topology(),
             system=self.to_openmm(
@@ -427,8 +429,12 @@ class Interchange(DefaultModel):
             **kwargs,
         )
 
+        # If the system contains virtual sites, the positions must, so no obvious case in which
+        # include_virtual_sites could possibly be False
         if self.positions is not None:
-            simulation.context.setPositions(self.positions.to_openmm())
+            simulation.context.setPositions(
+                to_openmm_positions(self, include_virtual_sites=True),
+            )
 
         return simulation
 
