@@ -40,6 +40,6 @@ dependencies:
   - nbval
   # Typing
   - mypy =1.2
-  - typing-extensions
+  - typing-extensions !=4.6.0
   - types-setuptools
   - pandas-stubs >=1.2.0.56
