@@ -9,12 +9,13 @@ dependencies:
   - python
   - pip
   - numpy >=1.21
-  - pydantic <2.0.0a0
+  - pydantic >=1.10.8,<2.0.0a0
   - openmm >=7.6
   # OpenFF stack
   - openff-toolkit >=0.13
   - openff-models >=0.0.4
   - openff-nagl
+  - openff-nagl-models
   # Optional features
   - jax
   - unyt
@@ -35,11 +36,10 @@ dependencies:
   - panedr
   # Examples
   - nglview
-  - ipywidgets =7
   - pytest
   - nbval
   # Typing
-  - mypy =1.2
+  - mypy =1.3
   - typing-extensions
   - types-setuptools
   - pandas-stubs >=1.2.0.56

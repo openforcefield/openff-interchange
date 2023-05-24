@@ -126,6 +126,7 @@ def test_library_charges_from_molecule():
 
 
 class TestChargeFromMolecules(_BaseTest):
+    @pytest.mark.slow()
     def test_charge_from_molecules_basic(self, sage):
         molecule = Molecule.from_smiles("CCO")
         molecule.assign_partial_charges(partial_charge_method="am1bcc")
@@ -274,6 +275,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
 
         assert found_torsion_k.m_as(kcal_mol) == pytest.approx(1.44)
 
+    @pytest.mark.slow()
     def test_partial_bond_order_from_molecules_empty(self, ethanol):
         from openff.toolkit.tests.test_forcefield import xml_ff_bo
 
@@ -293,6 +295,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
             _get_interpolated_bond_k(empty["Bonds"]),
         )
 
+    @pytest.mark.slow()
     def test_partial_bond_order_from_molecules_no_matches(self, ethanol):
         from openff.toolkit.tests.test_forcefield import xml_ff_bo
 

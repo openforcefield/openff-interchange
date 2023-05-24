@@ -1,7 +1,7 @@
 """
 Units tests for openff.interchange.components._packmol
 """
-import numpy as np
+import numpy
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import unit
@@ -33,7 +33,7 @@ def test_packmol_box_size():
         for residue in topology.hierarchy_iterator("residues")
     )
 
-    assert np.allclose(
+    numpy.testing.assert_allclose(
         topology.box_vectors.m_as(unit.nanometer).diagonal(),
         [2.2, 2.2, 2.2],
     )
@@ -147,6 +147,7 @@ def test_packmol_paracetamol():
     assert topology.n_bonds == 20
 
 
+@pytest.mark.slow()
 def test_amino_acids():
     amino_residues = {
         "C[C@H](N)C(=O)O": "ALA",

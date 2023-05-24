@@ -359,6 +359,7 @@ class TestWrappedCalls(_BaseTest):
         with pytest.raises(ExperimentalFeatureException):
             Interchange.from_gromacs()
 
+    @pytest.mark.slow()
     def test_from_openmm_called(self, monkeypatch, simple_interchange):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
