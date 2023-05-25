@@ -308,7 +308,7 @@ class GROMACSWriter(DefaultModel):
                             atom.residue_index,  # This needs to be looked up from a different data structure
                             atom.residue_name,
                             atom.name,
-                            count + 1,
+                            (count + 1) % 100000,
                             positions[count, 0],
                             positions[count, 1],
                             positions[count, 2],
