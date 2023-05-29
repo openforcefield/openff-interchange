@@ -21,6 +21,7 @@ from openff.interchange._tests import (
 )
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
+    ExperimentalFeatureException,
     InvalidTopologyError,
     MissingParameterHandlerError,
     MissingParametersError,
@@ -97,8 +98,10 @@ class TestInterchange(_BaseTest):
         with pytest.raises(ValidationError):
             tmp.box = [2, 2, 3, 90, 90, 90]
 
-    def test_basic_combination(self, sage_unconstrained):
+    def test_basic_combination(self, monkeypatch, sage_unconstrained):
         """Test basic use of Interchange.__add__() based on the README example"""
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         mol = Molecule.from_smiles("C")
         mol.generate_conformers(n_conformers=1)
         top = Topology.from_molecules([mol])
@@ -118,7 +121,9 @@ class TestInterchange(_BaseTest):
         # Just see if it can be converted into OpenMM and run
         get_openmm_energies(combined)
 
-    def test_parameters_do_not_clash(self, sage_unconstrained):
+    def test_parameters_do_not_clash(self, monkeypatch, sage_unconstrained):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         thf = Molecule.from_smiles("C1CCOC1")
         ace = Molecule.from_smiles("CC(=O)O")
 
@@ -147,9 +152,11 @@ class TestInterchange(_BaseTest):
 
         # TODO: Ensure the de-duplication is maintained after exports
 
-    def test_positions_setting(self, sage):
+    def test_positions_setting(self, monkeypatch, sage):
         """Test that positions exist on the result if and only if
         both input objects have positions."""
+
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
         ethane = Molecule.from_smiles("CC")
         methane = Molecule.from_smiles("C")
@@ -329,4 +336,51 @@ class TestBadExports(_BaseTest):
                 force_field=sage,
                 topology=[Molecule.from_smiles("O")],
             ).json(),
+        )
+
+
+class TestWrappedCalls(_BaseTest):
+    """Test that methods which delegate out to other submodules call them."""
+
+    @pytest.fixture()
+    def simple_interchange(self, sage):
+        mol = Molecule.from_smiles("CCO")
+        mol.generate_conformers(n_conformers=1)
+        top = mol.to_topology()
+        top.box_vectors = unit.Quantity(np.eye(3) * 4, unit.nanometer)
+
+        return Interchange.from_smirnoff(force_field=sage, topology=top)
+
+    def test_from_openmm_error(self):
+        with pytest.raises(ExperimentalFeatureException):
+            Interchange.from_openmm()
+
+    def test_from_gromacs_error(self):
+        with pytest.raises(ExperimentalFeatureException):
+            Interchange.from_gromacs()
+
+    @pytest.mark.slow()
+    def test_from_openmm_called(self, monkeypatch, simple_interchange):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        topology = simple_interchange.to_openmm_topology()
+        system = simple_interchange.to_openmm()
+        positions = simple_interchange.positions
+        box = simple_interchange.box
+
+        Interchange.from_openmm(
+            topology=topology,
+            system=system,
+            positions=positions,
+            box_vectors=box,
+        )
+
+    def test_from_gromacs_called(self, monkeypatch, simple_interchange):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        simple_interchange.to_gromacs(prefix="tmp_")
+
+        Interchange.from_gromacs(
+            topology_file="tmp_.top",
+            gro_file="tmp_.gro",
         )

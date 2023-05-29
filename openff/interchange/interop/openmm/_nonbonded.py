@@ -21,7 +21,6 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
-from openff.interchange.interop._parmed import _lj_params_from_potential
 from openff.interchange.models import TopologyKey, VirtualSiteKey
 
 _DATA_DICT: TypeAlias = dict[str, Union[None, str, bool, "Collection"]]
@@ -312,11 +311,11 @@ def _create_single_nonbonded_force(
             )
 
     if data["electrostatics_collection"] is not None:
-        try:
+        if has_virtual_sites:
             partial_charges = data[
                 "electrostatics_collection"
             ].charges_with_virtual_sites
-        except AttributeError:
+        else:
             partial_charges = data["electrostatics_collection"].charges
 
     # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
@@ -341,9 +340,10 @@ def _create_single_nonbonded_force(
 
             if vdw is not None:
                 pot_key = vdw.key_map[top_key]
-                sigma, epsilon = _lj_params_from_potential(
-                    vdw.potentials[pot_key],
-                )
+
+                sigma = vdw.potentials[pot_key].parameters["sigma"]
+                epsilon = vdw.potentials[pot_key].parameters["epsilon"]
+
                 sigma = sigma.m_as(off_unit.nanometer)
                 epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
             else:
@@ -906,9 +906,9 @@ def _set_particle_parameters(
                         parameters = {key: val.m for key, val in parameters.items()}
 
                 else:
-                    sigma, epsilon = _lj_params_from_potential(
-                        vdw.potentials[pot_key],
-                    )
+                    sigma = vdw.potentials[pot_key].parameters["sigma"]
+                    epsilon = vdw.potentials[pot_key].parameters["epsilon"]
+
                     sigma = sigma.m_as(off_unit.nanometer)
                     epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
             else:
@@ -956,7 +956,7 @@ def _get_14_scaling_factors(data: _DATA_DICT) -> tuple[float, float]:
     else:
         coul_14 = 1.0
 
-    if data.get("vdw_handler", None) is not None:
+    if data.get("vdw_collection", None) is not None:
         vdw_14 = data["vdw_collection"].scale_14  # type: ignore[union-attr]
     else:
         vdw_14 = 1.0

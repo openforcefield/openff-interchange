@@ -71,7 +71,7 @@ class GROMACSWriter(DefaultModel):
                 )
 
             top.write(
-                f"{atom_type.name :<11s} \t"
+                f"{atom_type.name :<11s}\t"
                 f"{atom_type.atomic_number :6d}\t"
                 f"{atom_type.mass.m :.16g}\t"
                 f"{atom_type.charge.m :.16f}\t"
@@ -127,7 +127,7 @@ class GROMACSWriter(DefaultModel):
 
         for pair in molecule_type.pairs:
             top.write(
-                f"{pair.atom1 :6d}\t" f"{pair.atom2 :6d}\t" f"{function :6d}\n",
+                f"{pair.atom1 :6d}\t{pair.atom2 :6d}\t{function :6d}\n",
             )
 
         top.write("\n")
@@ -140,11 +140,11 @@ class GROMACSWriter(DefaultModel):
 
         for bond in molecule_type.bonds:
             top.write(
-                f"{bond.atom1 :6d}"
-                f"{bond.atom2 :6d}"
+                f"{bond.atom1 :6d} "
+                f"{bond.atom2 :6d} "
                 f"{function :6d}"
-                f"{bond.length.m :20.12f}"
-                f"{bond.k.m :20.12f}",
+                f"{bond.length.m :20.12f} "
+                f"{bond.k.m :20.12f} ",
             )
 
             top.write("\n")
@@ -159,12 +159,12 @@ class GROMACSWriter(DefaultModel):
 
         for angle in molecule_type.angles:
             top.write(
-                f"{angle.atom1 :6d}"
-                f"{angle.atom2 :6d}"
-                f"{angle.atom3 :6d}"
-                f"{function :6d}"
-                f"{angle.angle.m :20.12f}"
-                f"{angle.k.m :20.12f}",
+                f"{angle.atom1 :6d} "
+                f"{angle.atom2 :6d} "
+                f"{angle.atom3 :6d} "
+                f"{function :6d} "
+                f"{angle.angle.m :20.12f} "
+                f"{angle.k.m :20.12f} ",
             )
 
             top.write("\n")
@@ -243,8 +243,8 @@ class GROMACSWriter(DefaultModel):
             top.write(
                 f"{settle.first_atom :6d}\t"
                 f"{function :6d}\t"
-                f"{settle.oxygen_hydrogen_distance.m :20.12f}\t"
-                f"{settle.hydrogen_hydrogen_distance.m :20.12f}\n",
+                f"{settle.oxygen_hydrogen_distance.m_as(unit.nanometer) :20.12f}\t"
+                f"{settle.hydrogen_hydrogen_distance.m_as(unit.nanometer):20.12f}\n",
             )
 
         top.write("\n")
@@ -308,7 +308,7 @@ class GROMACSWriter(DefaultModel):
                             atom.residue_index,  # This needs to be looked up from a different data structure
                             atom.residue_name,
                             atom.name,
-                            count + 1,
+                            (count + 1) % 100000,
                             positions[count, 0],
                             positions[count, 1],
                             positions[count, 2],

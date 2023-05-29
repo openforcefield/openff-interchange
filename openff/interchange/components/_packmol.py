@@ -146,7 +146,20 @@ def _validate_inputs(
         )
 
     if topology_to_solvate is not None:
-        assert topology_to_solvate.get_positions() is not None
+        if not isinstance(structure_to_solvate, Topology):
+            raise PACKMOLValueError(
+                "`structure_to_solvate` must be a openff.toolkit.topology.Topology",
+            )
+
+        positions = structure_to_solvate.get_positions()
+
+        try:
+            assert positions is not None
+            assert positions.shape[0] == structure_to_solvate.n_atoms
+        except AssertionError:
+            raise PACKMOLValueError(
+                "`structure_to_solvate` missing some atomic positions.",
+            )
 
 
 def _unit_vec(vec: Quantity) -> Quantity:
@@ -368,6 +381,7 @@ def _create_molecule_pdbs(molecules: list[Molecule]) -> list[str]:
         # component molecules.
         pdb_file_name = f"{index}.pdb"
         pdb_file_names.append(pdb_file_name)
+
         molecule.to_file(
             pdb_file_name,
             file_format="PDB",

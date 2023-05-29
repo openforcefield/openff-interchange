@@ -1,4 +1,5 @@
 """Functions for running energy evluations with all available engines."""
+from collections.abc import Iterable
 
 from openff.utilities.utilities import requires_package
 from pandas import DataFrame
@@ -20,6 +21,7 @@ from openff.interchange.exceptions import (
 def get_all_energies(
     interchange: "Interchange",
     combine_nonbonded_forces: bool = False,
+    _engines: Iterable[str] = ("OpenMM", "Amber", "GROMACS", "LAMMPS"),
 ) -> dict[str, EnergyReport]:
     """
     Given an Interchange object, return single-point energies as computed by all available engines.
@@ -45,6 +47,8 @@ def get_all_energies(
         ("GROMACS", get_gromacs_energies, GMXError),
         ("LAMMPS", get_lammps_energies, LAMMPSError),
     ]:
+        if engine_name not in _engines:
+            continue
         try:
             all_energies[engine_name] = engine_driver(interchange)  # type: ignore[operator]
         except engine_exception:
@@ -57,6 +61,7 @@ def get_all_energies(
 def get_summary_data(
     interchange: "Interchange",
     combine_nonbonded_forces: bool = False,
+    _engines: Iterable[str] = ("OpenMM", "Amber", "GROMACS", "LAMMPS"),
 ) -> "DataFrame":
     """Return a pandas DataFrame with summaries of energies from all available engines."""
     from openff.units import unit
@@ -67,6 +72,7 @@ def get_summary_data(
     energies = get_all_energies(
         interchange,
         combine_nonbonded_forces=combine_nonbonded_forces,
+        _engines=_engines,
     )
 
     for k, v in energies.items():
