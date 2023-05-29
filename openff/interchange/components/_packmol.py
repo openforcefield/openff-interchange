@@ -137,8 +137,12 @@ def _validate_inputs(
             "`box_vectors` must be a openff.units.unit.Quantity Array with shape (3, 3)",
         )
 
-    assert box_shape.shape == (3, 3)
-    assert np.all(np.linalg.norm(box_shape, axis=-1) > 0.0)
+    if box_shape.shape != (3, 3):
+        raise PACKMOLValueError(
+            "`box_shape` must be an array with shape (3, 3) or (3,)",
+        )
+    if not np.all(np.linalg.norm(box_shape, axis=-1) > 0.0):
+        raise PACKMOLValueError("All vectors in `box_shape` must have a positive norm.")
 
     if len(molecules) != len(number_of_copies):
         raise PACKMOLValueError(
@@ -193,7 +197,7 @@ def _compute_brick_from_box_vectors(box_vectors: Quantity) -> Quantity:
     v = l - np.dot(l, k_hat) * k_hat
     w = np.dot(m, k_cross_hat_l) * k_cross_hat_l
 
-    # Make sure the UVW representation is rectangular
+    # Make sure the UVW representation is rectangular - if it isn't, that's a bug
     assert np.all(u + v + w == (u[0], v[1], w[2]))
 
     return np.asarray([u[0], v[1], w[2]]) * working_unit
@@ -540,7 +544,7 @@ def pack_box(
     box_shape: Arraylike, optional
         The shape of the simulation box, used in conjunction with
         the ``mass_density`` parameter. Should be a dimensionless array with
-        shape (3,3).
+        shape (3,3) for a triclinic box or (3,) for a rectangular box.
     center_solute
         How to center ``topology_to_solvate`` in the simulation box. If ``True``
         or ``"box_vecs"``, the solute's center of geometry will be placed at
@@ -575,6 +579,9 @@ def pack_box(
         raise OSError("Packmol not found, cannot run pack_box()")
 
     box_shape = np.asarray(box_shape)
+    if box_shape.shape == (3,):
+        box_shape = box_shape * np.identity(3)
+
     # Validate the inputs.
     _validate_inputs(
         molecules,
