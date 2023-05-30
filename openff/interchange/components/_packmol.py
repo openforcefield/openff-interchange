@@ -514,7 +514,7 @@ def pack_box(
     tolerance: Quantity = 2.0 * unit.angstrom,
     box_vectors: Optional[Quantity] = None,
     mass_density: Optional[Quantity] = None,
-    box_shape: ArrayLike = UNIT_CUBE,
+    box_shape: ArrayLike = RHOMBIC_DODECAHEDRON,
     center_solute: Union[bool, Literal["BOX_VECS", "ORIGIN", "BRICK"]] = False,
     working_directory: Optional[str] = None,
     retain_working_files: bool = False,
