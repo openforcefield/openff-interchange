@@ -86,7 +86,7 @@ def _find_packmol() -> Optional[str]:
 def _validate_inputs(
     molecules: list[Molecule],
     number_of_copies: list[int],
-    topology_to_solvate: Optional[Topology],
+    solute: Optional[Topology],
     box_shape: NDArray,
     box_vectors: Optional[Quantity],
     mass_density: Optional[Quantity],
@@ -101,7 +101,7 @@ def _validate_inputs(
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
         equal to the length of `molecules`.
-    topology_to_solvate: Topology, optional
+    solute: Topology, optional
         The OpenFF Topology to be solvated.
     box_vectors : openff.units.Quantity,
         The box vectors to fill in units compatible with angstroms. If `None`,
@@ -118,13 +118,11 @@ def _validate_inputs(
     if (
         box_vectors is None
         and mass_density is None  # noqa: W503
-        and (  # noqa: W503
-            topology_to_solvate is None or topology_to_solvate.box_vectors is None
-        )
+        and (solute is None or solute.box_vectors is None)  # noqa: W503
     ):
         raise PACKMOLValueError(
             "One of `box_vectors`, `mass_density`, or"
-            + " `topology_to_solvate.box_vectors` must be specified.",  # noqa: W503
+            + " `solute.box_vectors` must be specified.",  # noqa: W503
         )
     if box_vectors is not None and mass_density is not None:
         raise PACKMOLValueError(
@@ -149,20 +147,20 @@ def _validate_inputs(
             "The length of `molecules` and `number_of_copies` must be identical.",
         )
 
-    if topology_to_solvate is not None:
-        if not isinstance(structure_to_solvate, Topology):
+    if solute is not None:
+        if not isinstance(solute, Topology):
             raise PACKMOLValueError(
-                "`structure_to_solvate` must be a openff.toolkit.topology.Topology",
+                "`solute` must be a openff.toolkit.topology.Topology",
             )
 
-        positions = structure_to_solvate.get_positions()
+        positions = solute.get_positions()
 
         try:
             assert positions is not None
-            assert positions.shape[0] == structure_to_solvate.n_atoms
+            assert positions.shape[0] == solute.n_atoms
         except AssertionError:
             raise PACKMOLValueError(
-                "`structure_to_solvate` missing some atomic positions.",
+                "`solute` missing some atomic positions.",
             )
 
 
@@ -508,7 +506,7 @@ def _center_topology_at(
 def pack_box(
     molecules: list[Molecule],
     number_of_copies: list[int],
-    topology_to_solvate: Optional[Topology] = None,
+    solute: Optional[Topology] = None,
     tolerance: Quantity = 2.0 * unit.angstrom,
     box_vectors: Optional[Quantity] = None,
     mass_density: Optional[Quantity] = None,
@@ -527,8 +525,10 @@ def pack_box(
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
         equal to the length of ``molecules``.
-    topology_to_solvate: Topology, optional
-        The OpenFF Topology to be solvated.
+    solute: Topology, optional
+        An OpenFF :py:class:`Topology <openff.toolkit.topology.Topology>` to
+        include in the box. If ``box_vectors`` and ``mass_density`` are not
+        specified, box vectors can be taken from ``solute.box_vectors``.
     tolerance : openff.units.Quantity
         The minimum spacing between molecules during packing in units of
         distance. The default is large so that added waters do not disrupt the
@@ -546,12 +546,12 @@ def pack_box(
         the ``mass_density`` parameter. Should be a dimensionless array with
         shape (3,3) for a triclinic box or (3,) for a rectangular box.
     center_solute
-        How to center ``topology_to_solvate`` in the simulation box. If ``True``
+        How to center ``solute`` in the simulation box. If ``True``
         or ``"box_vecs"``, the solute's center of geometry will be placed at
         the center of the box's parallelopiped representation. If ``"origin"``,
         the solute will centered at the origin. If ``"brick"``, the solute will
         be centered in the box's rectangular brick representation. If
-        ``False``, the solute will not be moved.
+        ``False`` (the default), the solute will not be moved.
     working_directory: str, optional
         The directory in which to generate the temporary working files. If
         ``None``, a temporary one will be created.
@@ -586,7 +586,7 @@ def pack_box(
     _validate_inputs(
         molecules,
         number_of_copies,
-        topology_to_solvate,
+        solute,
         box_shape,
         box_vectors,
         mass_density,
@@ -603,17 +603,17 @@ def pack_box(
     # If neither box size nor density are given, take box vectors from solute
     # topology
     if box_vectors is None:
-        box_vectors = topology_to_solvate.box_vectors
+        box_vectors = solute.box_vectors
 
     # Compute the dimensions of the equivalent brick - this is what packmol will
     # fill
     brick_size = _compute_brick_from_box_vectors(box_vectors)
 
     # Center the solute
-    if center_solute and topology_to_solvate is not None:
-        topology_to_solvate = _center_topology_at(
+    if center_solute and solute is not None:
+        solute = _center_topology_at(
             center_solute,
-            topology_to_solvate,
+            solute,
             box_vectors,
             brick_size,
         )
@@ -629,7 +629,7 @@ def pack_box(
 
     with temporary_cd(working_directory):
         solute_pdb_filename = _create_solute_pdb(
-            topology_to_solvate,
+            solute,
             box_vectors,
         )
 
@@ -678,13 +678,13 @@ def pack_box(
         added_molecules.extend([mol] * n)
     topology = Topology.from_molecules(added_molecules)
 
-    # Set the positions, skipping the positions from topology_to_solvate
+    # Set the positions, skipping the positions from solute
     n_solute_atoms = len(positions) - topology.n_atoms
     topology.set_positions(positions[n_solute_atoms:] * unit.angstrom)
 
-    # Add topology_to_solvate back in with the original, unwrapped positions
-    if topology_to_solvate is not None:
-        topology = topology_to_solvate + topology
+    # Add solute back in with the original, unwrapped positions
+    if solute is not None:
+        topology = solute + topology
 
     # Set the box vectors
     topology.box_vectors = box_vectors
@@ -809,7 +809,7 @@ def solvate_topology(
     return pack_box(
         [water, na, cl],
         [int(water_to_add), int(na_to_add), int(cl_to_add)],
-        topology_to_solvate=topology,
+        solute=topology,
         tolerance=2.0 * unit.angstrom,
         box_vectors=box_vectors,
     )
