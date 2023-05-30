@@ -418,9 +418,9 @@ class Interchange(DefaultModel):
 
         Examples
         --------
-        
+
         Create an OpenMM simulation with a Langevin integrator:
-        
+
         >>> import openmm
         >>>
         >>> simulation = interchange.to_openmm_system(
@@ -430,17 +430,17 @@ class Interchange(DefaultModel):
         ...         2.0 * openmm.unit.femtosecond,
         ...     )
         ... )
-        
+
         Add a barostat:
-        
+
         >>> simulation.system.addForce(
         ...     openmm.MonteCarloBarostat(
-        ...         1.00 * openmm.unit.bar, 
-        ...         293.15 * openmm.unit.kelvin, 
+        ...         1.00 * openmm.unit.bar,
+        ...         293.15 * openmm.unit.kelvin,
         ...         25,
         ...     )
         ... )
-        
+
         """
         import openmm.app
 
