@@ -391,7 +391,7 @@ class Interchange(DefaultModel):
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
         **kwargs,
-    ) -> "openmm.app.Simulation":
+    ) -> "openmm.app.simulation.Simulation":
         """
         Export this Interchange to an OpenMM `Simulation` object.
 
@@ -408,12 +408,39 @@ class Interchange(DefaultModel):
         add_constrained_forces : bool, default=False,
             If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
             on a bond or angle that is fully constrained.
+        **kwargs
+            Further keyword parameters are passed on to :py:meth:`Simulation.__init__() <openmm.app.simulation.Simulation.__init__>`
 
         Returns
         -------
         simulation : openmm.app.Simulation
             The OpenMM simulation object, possibly with positions set.
 
+        Examples
+        --------
+        
+        Create an OpenMM simulation with a Langevin integrator:
+        
+        >>> import openmm
+        >>>
+        >>> simulation = interchange.to_openmm_system(
+        ...     openmm.LangevinMiddleIntegrator(
+        ...         293.15 * openmm.unit.kelvin,
+        ...         1.0 / openmm.unit.picosecond,
+        ...         2.0 * openmm.unit.femtosecond,
+        ...     )
+        ... )
+        
+        Add a barostat:
+        
+        >>> simulation.system.addForce(
+        ...     openmm.MonteCarloBarostat(
+        ...         1.00 * openmm.unit.bar, 
+        ...         293.15 * openmm.unit.kelvin, 
+        ...         25,
+        ...     )
+        ... )
+        
         """
         import openmm.app
 
