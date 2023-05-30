@@ -324,17 +324,21 @@ def _box_from_density(
         The unit cell box vectors. Array with shape (3, 3)
 
     """
+    working_unit = unit.angstrom
+    # Get the desired volume in cubic working units
     total_mass = sum(
         sum([atom.mass for atom in molecule.atoms]) * n
         for molecule, n in zip(molecules, n_copies)
     )
-    volume = total_mass / mass_density
+    volume = (total_mass / mass_density).m_as(working_unit**3)
 
     # Scale the box shape so that it has unit volume
     box_shape_volume = np.linalg.det(box_shape)
+
+    # Scale the box up to the desired volume
     box_vectors = volume * box_shape / box_shape_volume
 
-    return box_vectors
+    return box_vectors * working_unit
 
 
 def _create_solute_pdb(
