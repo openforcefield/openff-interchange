@@ -76,6 +76,7 @@ class TestAddRemoveMoleculeType(_BaseTest):
             _run_gmx_energy(f"{molecule_name}.top", f"{molecule_name}.gro", "tmp.mdp"),
         )
 
+    @pytest.mark.slow()
     @pytest.mark.parametrize("molecule_name", ["MOL1", "MOL2"])
     def test_add_existing_molecule_type(self, combined_system, molecule_name):
         with pytest.raises(
@@ -144,6 +145,7 @@ class TestAddRemoveMoleculeType(_BaseTest):
             _process(_run_gmx_energy("order2.top", "order2.gro", "tmp.mdp")),
         )
 
+    @pytest.mark.slow()
     def test_clashing_atom_types(self, combined_system, system1, system2):
         with pytest.raises(
             ValueError,

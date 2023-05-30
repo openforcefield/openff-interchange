@@ -26,15 +26,13 @@ dependencies:
   - pytest-randomly
   - nbval
   - nglview
-  - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
   - mdanalysis
   # Drivers
   - gromacs >=2021=nompi*
   - lammps
-  # https://github.com/conda-forge/quippy-feedstock/issues/15
   - panedr
   # Typing
-  - mypy =1.2
+  - mypy =1.3
   - typing-extensions
   - types-setuptools
   - pandas-stubs >=1.2.0.56

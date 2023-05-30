@@ -38,6 +38,7 @@ class TestToInterchange(_BaseTest):
 
         return sage_unconstrained.create_interchange(topology)
 
+    @pytest.mark.slow()
     def test_convert_basic_system(self, monkeypatch, simple_interchange):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 

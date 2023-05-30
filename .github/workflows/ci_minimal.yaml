@@ -25,9 +25,6 @@ jobs:
         python-version:
           - "3.10"
 
-    env:
-      COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
-
     steps:
     - uses: actions/checkout@v3
 
@@ -57,4 +54,4 @@ jobs:
     - name: Run unit tests
       if: always()
       run: |
-        python -m pytest -v -nauto --durations=10 $COV openff/interchange/_tests/unit_tests/
+        python -m pytest -v -nauto --durations=10 openff/interchange/_tests/unit_tests/
