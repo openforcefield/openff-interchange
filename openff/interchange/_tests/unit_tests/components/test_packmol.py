@@ -10,32 +10,23 @@ from openff.interchange.components._packmol import pack_box
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
 
-def test_packmol_box_size():
+def test_packmol_box_vectors():
     molecules = [Molecule.from_smiles("O")]
 
     topology = pack_box(
         molecules,
         [10],
-        box_size=([20] * 3) * unit.angstrom,
+        box_vectors=20 * numpy.identity(3) * unit.angstrom,
     )
 
     assert topology is not None
 
-    assert (
-        len({chain.identifier for chain in topology.hierarchy_iterator("chains")}) == 1
-    )
-    assert len({*topology.hierarchy_iterator("residues")}) == 10
     assert topology.n_atoms == 30
     assert topology.n_bonds == 20
 
-    assert all(
-        residue.residue_name == "HOH"
-        for residue in topology.hierarchy_iterator("residues")
-    )
-
     numpy.testing.assert_allclose(
         topology.box_vectors.m_as(unit.nanometer).diagonal(),
-        [2.2, 2.2, 2.2],
+        [2.0, 2.0, 2.0],
     )
 
 
@@ -43,25 +34,33 @@ def test_packmol_bad_copies():
     molecules = [Molecule.from_smiles("O")]
 
     with pytest.raises(PACKMOLValueError):
-        pack_box(molecules, [10, 20], box_size=([20] * 3) * unit.angstrom)
+        pack_box(
+            molecules,
+            [10, 20],
+            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+        )
 
 
-def test_packmol_bad_box_size():
-    molecules = [Molecule.from_smiles("O")]
-
-    with pytest.raises(PACKMOLValueError):
-        pack_box(molecules, [2], box_size=([20] * 4) * unit.angstrom)
-
-
-def test_packmol_bad_structure_to_solvate():
+def test_packmol_bad_box_vectors():
     molecules = [Molecule.from_smiles("O")]
 
     with pytest.raises(PACKMOLValueError):
         pack_box(
             molecules,
             [2],
-            box_size=([20] * 4) * unit.angstrom,
-            structure_to_solvate=Molecule.from_smiles("C").to_topology(),
+            box_vectors=20 * numpy.identity(4) * unit.angstrom,
+        )
+
+
+def test_packmol_bad_solute():
+    molecules = [Molecule.from_smiles("O")]
+
+    with pytest.raises(PACKMOLValueError):
+        pack_box(
+            molecules,
+            [2],
+            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+            solute="my_solute.pdb",
         )
 
 
@@ -69,7 +68,11 @@ def test_packmol_failed():
     molecules = [Molecule.from_smiles("O")]
 
     with pytest.raises(PACKMOLRuntimeError):
-        pack_box(molecules, [10], box_size=([0.1] * 3) * unit.angstrom)
+        pack_box(
+            molecules,
+            [10],
+            box_vectors=0.1 * numpy.identity(3) * unit.angstrom,
+        )
 
 
 def test_packmol_water():
@@ -78,22 +81,14 @@ def test_packmol_water():
     topology = pack_box(
         molecules,
         [10],
-        mass_density=1.0 * unit.grams / unit.milliliters,
+        mass_density=1.0 * unit.grams / unit.milliliter,
     )
 
     assert topology is not None
 
-    assert (
-        len({chain.identifier for chain in topology.hierarchy_iterator("chains")}) == 1
-    )
-    assert len({*topology.hierarchy_iterator("residues")}) == 10
     assert topology.n_atoms == 30
     assert topology.n_bonds == 20
-
-    assert all(
-        residue.residue_name == "HOH"
-        for residue in topology.hierarchy_iterator("residues")
-    )
+    assert topology.n_molecules == 10
 
 
 def test_packmol_ions():
@@ -106,25 +101,24 @@ def test_packmol_ions():
     topology = pack_box(
         molecules,
         [1, 1, 1],
-        box_size=([20] * 3) * unit.angstrom,
+        box_vectors=20 * numpy.identity(3) * unit.angstrom,
     )
 
     assert topology is not None
 
-    assert (
-        len({chain.identifier for chain in topology.hierarchy_iterator("chains")}) == 3
-    )
-    assert len({*topology.hierarchy_iterator("residues")}) == 3
     assert topology.n_atoms == 3
     assert topology.n_bonds == 0
 
-    assert topology.atom(0).metadata["residue_name"] == "Na+"
-    assert topology.atom(1).metadata["residue_name"] == "Cl-"
-    assert topology.atom(2).metadata["residue_name"] == "K+"
+    # Na+
+    assert topology.atom(0).formal_charge == +1 * unit.elementary_charge
+    assert topology.atom(0).atomic_number == 11
 
-    assert topology.atom(0).name == "Na+"
-    assert topology.atom(1).name == "Cl-"
-    assert topology.atom(2).name == "K+"
+    # Cl-
+    assert topology.atom(1).formal_charge == -1 * unit.elementary_charge
+    assert topology.atom(1).atomic_number == 17
+    # K+
+    assert topology.atom(2).formal_charge == +1 * unit.elementary_charge
+    assert topology.atom(2).atomic_number == 19
 
 
 def test_packmol_paracetamol():
@@ -134,15 +128,11 @@ def test_packmol_paracetamol():
     topology = pack_box(
         molecules,
         [1],
-        box_size=([20] * 3) * unit.angstrom,
+        box_vectors=20 * numpy.identity(3) * unit.angstrom,
     )
 
     assert topology is not None
 
-    assert (
-        len({chain.identifier for chain in topology.hierarchy_iterator("chains")}) == 1
-    )
-    assert len({*topology.hierarchy_iterator("residues")}) == 1
     assert topology.n_atoms == 20
     assert topology.n_bonds == 20
 
@@ -181,23 +171,10 @@ def test_amino_acids():
     topology = pack_box(
         molecules,
         counts,
-        box_size=([1000] * 3) * unit.angstrom,
+        box_vectors=1000 * numpy.identity(3) * unit.angstrom,
     )
 
     assert topology is not None
-
-    assert len(
-        {chain.identifier for chain in topology.hierarchy_iterator("chains")},
-    ) == len(smiles)
-    assert len({*topology.hierarchy_iterator("residues")}) == len(smiles)
-
-    # Cannot easily index into residues with Topology API, this is what
-    # the test did when it used an MDTraj trajectory.
-    # for index, _smiles in enumerate(smiles):
-    #   assert trajectory.top.residue(index).name == amino_residues[_smiles]
-
-    for _smiles, residue in zip(smiles, topology.hierarchy_iterator("residues")):
-        assert residue.residue_name == amino_residues[_smiles]
 
 
 def test_pack_diatomic_ion():
@@ -206,13 +183,18 @@ def test_pack_diatomic_ion():
     topology = pack_box(
         molecules,
         [1, 2],
-        box_size=([20] * 3) * unit.angstrom,
+        box_vectors=20 * numpy.identity(3) * unit.angstrom,
     )
 
     assert topology is not None
 
-    # See comment in _ion_residue_name
-    assert topology.atom(0).metadata["residue_name"] == "Mg2"
+    assert topology.atom(0).atomic_number == 12
+    assert topology.n_atoms == 3
+
+    numpy.testing.assert_allclose(
+        topology.box_vectors.m_as(unit.nanometer).diagonal(),
+        [2.0, 2.0, 2.0],
+    )
 
 
 def test_solvate_structure():
@@ -225,8 +207,8 @@ def test_solvate_structure():
         pack_box(
             [Molecule.from_smiles("O")],
             [10],
-            box_size=([50] * 3) * unit.angstrom,
-            structure_to_solvate=benzene.to_topology(),
+            box_vectors=50 * numpy.identity(3) * unit.angstrom,
+            solute=benzene.to_topology(),
         )
 
     benzene.generate_conformers(n_conformers=1)
@@ -234,8 +216,8 @@ def test_solvate_structure():
     topology = pack_box(
         [Molecule.from_smiles("O")],
         [10],
-        box_size=([50] * 3) * unit.angstrom,
-        structure_to_solvate=benzene.to_topology(),
+        box_vectors=50 * numpy.identity(3) * unit.angstrom,
+        solute=benzene.to_topology(),
     )
 
     assert topology.n_molecules == 11
