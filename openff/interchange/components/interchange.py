@@ -31,7 +31,11 @@ from openff.interchange.exceptions import (
     UnsupportedCombinationError,
     UnsupportedExportError,
 )
-from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.models import (
+    LibraryChargeTopologyKey,
+    PotentialKey,
+    TopologyKey,
+)
 from openff.interchange.smirnoff._valence import SMIRNOFFConstraintCollection
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 from openff.interchange.warnings import InterchangeDeprecationWarning
@@ -51,7 +55,7 @@ def _sanitize(o):
     # for the mapping dicts `key_map` and `potentials`.
     if isinstance(o, dict):
         return {_sanitize(k): _sanitize(v) for k, v in o.items()}
-    elif isinstance(o, (PotentialKey, TopologyKey)):
+    elif isinstance(o, (PotentialKey, TopologyKey, LibraryChargeTopologyKey)):
         return o.json()
     elif isinstance(o, unit.Quantity):
         return custom_quantity_encoder(o)
@@ -77,10 +81,11 @@ def interchange_dumps(v, *, default):
             "box": QuantityEncoder().default(v["box"]),
             "topology": TopologyEncoder().default(v["topology"]),
             "collections": {
-                "Bonds": json.dumps(
-                    _sanitize(v["collections"]["Bonds"]),
+                key: json.dumps(
+                    _sanitize(v["collections"][key]),
                     default=default,
-                ),
+                )
+                for key in v["collections"]
             },
         },
         default=default,
@@ -107,6 +112,34 @@ def interchange_loader(data: str) -> dict:
             tmp["box"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
         elif key == "topology":
             tmp["topology"] = Topology.from_json(val)
+        elif key == "collections":
+            from openff.interchange.smirnoff._nonbonded import (
+                SMIRNOFFElectrostaticsCollection,
+                SMIRNOFFvdWCollection,
+            )
+            from openff.interchange.smirnoff._valence import (
+                SMIRNOFFAngleCollection,
+                SMIRNOFFBondCollection,
+                SMIRNOFFConstraintCollection,
+                SMIRNOFFImproperTorsionCollection,
+                SMIRNOFFProperTorsionCollection,
+            )
+            from openff.interchange.smirnoff._virtual_sites import (
+                SMIRNOFFVirtualSiteCollection,
+            )
+
+            _class_mapping = {  # noqa
+                "Bonds": SMIRNOFFBondCollection,
+                "Angles": SMIRNOFFAngleCollection,
+                "Constraints": SMIRNOFFConstraintCollection,
+                "ProperTorsions": SMIRNOFFProperTorsionCollection,
+                "ImproperTorsions": SMIRNOFFImproperTorsionCollection,
+                "vdW": SMIRNOFFvdWCollection,
+                "Electrostatics": SMIRNOFFElectrostaticsCollection,
+                "VirtualSites": SMIRNOFFVirtualSiteCollection,
+            }
+
+            tmp["collections"] = {}
 
     return tmp
 
