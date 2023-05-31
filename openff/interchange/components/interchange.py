@@ -409,7 +409,8 @@ class Interchange(DefaultModel):
             If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
             on a bond or angle that is fully constrained.
         **kwargs
-            Further keyword parameters are passed on to :py:meth:`Simulation.__init__() <openmm.app.simulation.Simulation.__init__>`
+            Further keyword parameters are passed on to
+            :py:meth:`Simulation.__init__() <openmm.app.simulation.Simulation.__init__>`
 
         Returns
         -------
@@ -418,10 +419,10 @@ class Interchange(DefaultModel):
 
         Examples
         --------
-
         Create an OpenMM simulation with a Langevin integrator:
 
         >>> import openmm
+        >>> import openmm.unit
         >>>
         >>> simulation = interchange.to_openmm_system(
         ...     openmm.LangevinMiddleIntegrator(
@@ -440,6 +441,11 @@ class Interchange(DefaultModel):
         ...         25,
         ...     )
         ... )
+        >>> simulation.context.reinitialize(preserveState=True)
+
+        Re-initializing the `Context` after adding a `Force` is necessary due to implementation details in OpenMM.
+        For more, see
+        https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#why-does-it-ignore-changes-i-make-to-a-system-or-force
 
         """
         import openmm.app
