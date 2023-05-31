@@ -11,6 +11,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### New features
+
+* #725 Adds `Interchange.to_openmm_simulation`.
+
 ### Bugfixes
 
 * #724 Fixes #723 in which some parameters in GROMACS files were incorrectly written.
