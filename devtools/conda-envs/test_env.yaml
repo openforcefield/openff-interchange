@@ -10,7 +10,7 @@ dependencies:
   - pydantic <2.0.0a0
   - openmm >=7.6
   # OpenFF stack
-  - openff-toolkit >=0.13
+  - openff-toolkit >=0.13.1
   - openff-models >=0.0.4
   # Optional features
   - unyt
