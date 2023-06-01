@@ -65,10 +65,19 @@ struct.save('packed-argon.pdb')
 
 - [Source](https://github.com/samplchallenges/SAMPL6/blob/c661d3985af7fa0ba8c64a1774cfb2363cd31bda/host_guest/CB8AndGuests/CB8.mol2)
 
-`complex.top`
+`gromacs/complex.top`
 
 - [Source](https://raw.githubusercontent.com/samplchallenges/SAMPL6/master/host_guest/SAMPLing/CB8-G3-0/GROMACS/complex.top)
 
-`complex.gro`
+`gromacs/complex.gro`
 
 - [Source](https://raw.githubusercontent.com/samplchallenges/SAMPL6/master/host_guest/SAMPLing/CB8-G3-0/GROMACS/complex.gro)
+
+`gromacs/water-dimer.top`
+`gromacs/water-dimer.gro`
+
+```python
+ForceField("openff-2.0.0.offxml").create_interchange(
+    Topology.from_pdb("water-dimer.pdb")
+).to_gromacs(prefix="water-dimer")
+```

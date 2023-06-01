@@ -396,51 +396,34 @@ def _convert_dihedrals(
 
     # TODO: Ensure number of torsions written matches what is expected
     if improper_torsion_handler:
-        # Molecule/Topology.impropers lists the central atom **second** ...
-        for improper in unique_molecule.smirnoff_impropers:
-            topology_indices = tuple(
-                interchange.topology.atom_index(a) for a in improper
-            )
-            # ... so the tuple must be modified to list the central atom **first**,
-            # which is how the improper handler's slot map is built up
-            indices_to_match = (
-                topology_indices[1],
-                topology_indices[0],
-                topology_indices[2],
-                topology_indices[3],
+        for top_key in improper_torsion_handler.key_map:
+            atoms = tuple(
+                interchange.topology.atom(topology_atom_index)
+                for topology_atom_index in top_key.atom_indices
             )
 
-            molecule_indices = tuple(unique_molecule.atom_index(a) for a in improper)
+            if not all(atom in unique_molecule.atoms for atom in atoms):
+                continue
 
-            # Now, indices_to_match has the central atom listed **first**,
-            # but it's still listed second in molecule_indices
+            key = improper_torsion_handler.key_map[top_key]
+            params = improper_torsion_handler.potentials[key].parameters
 
-            for top_key in improper_torsion_handler.key_map:
-                if top_key.atom_indices[0] != indices_to_match[0]:
-                    continue
-                if top_key.atom_indices[1] != indices_to_match[1]:
-                    continue
-                if top_key.atom_indices[2] != indices_to_match[2]:
-                    continue
-                if top_key.atom_indices[3] != indices_to_match[3]:
-                    continue
-                if indices_to_match == top_key.atom_indices:
-                    key = improper_torsion_handler.key_map[top_key]
-                    params = improper_torsion_handler.potentials[key].parameters
+            idivf = int(params["idivf"])
 
-                    idivf = int(params["idivf"])
+            molecule_indices = tuple(atom.molecule_atom_index for atom in atoms)
 
-                    molecule.dihedrals.append(
-                        PeriodicImproperDihedral(
-                            atom1=molecule_indices[1] + 1,
-                            atom2=molecule_indices[0] + 1,
-                            atom3=molecule_indices[2] + 1,
-                            atom4=molecule_indices[3] + 1,
-                            phi=params["phase"].to(unit.degree),
-                            k=params["k"].to(unit.kilojoule_per_mole) / idivf,
-                            multiplicity=int(params["periodicity"]),
-                        ),
-                    )
+            dihedral = PeriodicImproperDihedral(
+                atom1=molecule_indices[0] + 1,
+                atom2=molecule_indices[1] + 1,
+                atom3=molecule_indices[2] + 1,
+                atom4=molecule_indices[3] + 1,
+                phi=params["phase"].to(unit.degree),
+                k=params["k"].to(unit.kilojoule_per_mole) / idivf,
+                multiplicity=int(params["periodicity"]),
+            )
+
+            if dihedral not in molecule.dihedrals:
+                molecule.dihedrals.append(dihedral)
 
 
 def _convert_settles(
