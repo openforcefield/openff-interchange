@@ -195,7 +195,7 @@ class TestWriteSanderInput(_BaseTest):
 
         # Unclear what's "supposed" to be the value here
         assert options["cntrl"]["ntf"] in ("2", "4")
-        assert options["cntrl"]["ntc"] == "2"
+        assert options["cntrl"]["ntc"] == "1"
 
     def test_constrained_ligand_rigid_water_box(
         self,
@@ -210,7 +210,7 @@ class TestWriteSanderInput(_BaseTest):
         # Amber does not support this case (constrain all h-bonds and water angles, but no other angles),
         # this option seems to be the best one
         assert options["cntrl"]["ntf"] == "2"
-        assert options["cntrl"]["ntc"] == "2"
+        assert options["cntrl"]["ntc"] == "1"
 
     def test_unconstrained_ligand_rigid_water_box(
         self,
@@ -225,4 +225,4 @@ class TestWriteSanderInput(_BaseTest):
         # Amber does not support this case (constrain wtaer bonds and water angles, but no other bonds or angles),
         # this option seems to be the best one
         assert options["cntrl"]["ntf"] == "2"
-        assert options["cntrl"]["ntc"] == "2"
+        assert options["cntrl"]["ntc"] == "1"
