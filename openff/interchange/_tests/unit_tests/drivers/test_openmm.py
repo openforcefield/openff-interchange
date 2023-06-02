@@ -63,10 +63,11 @@ class TestProcess:
                 0: 1.1 * kj_mol,
                 1: 2.2 * kj_mol,
                 2: 3.3 * kj_mol,
-                3: 0.5 * kj_mol,
-                4: -1 * kj_mol,
-                5: -2 * kj_mol,  # vdW
-                6: -3 * kj_mol,  # Electrostatics
+                3: 4.4 * kj_mol,
+                4: 0.5 * kj_mol,
+                5: -1 * kj_mol,
+                6: -2 * kj_mol,  # vdW
+                7: -3 * kj_mol,  # Electrostatics
             },
             dummy_system_split,
             False,

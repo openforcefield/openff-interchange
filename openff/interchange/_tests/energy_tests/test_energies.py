@@ -73,11 +73,9 @@ class TestEnergies(_BaseTest):
         gmx_energies = get_gromacs_energies(interchange, mdp=mdp)
 
         tolerances = {
-            "Bond": 2e-5 * openmm_unit.kilojoule_per_mole,
             "Electrostatics": 2 * openmm_unit.kilojoule_per_mole,
             "vdW": 2 * openmm_unit.kilojoule_per_mole,
             "Nonbonded": 2 * openmm_unit.kilojoule_per_mole,
-            "Angle": 1e-4 * openmm_unit.kilojoule_per_mole,
         }
 
         gmx_energies.compare(
