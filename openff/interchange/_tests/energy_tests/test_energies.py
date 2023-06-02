@@ -248,3 +248,16 @@ class TestEnergies(_BaseTest):
                 pytest.fail(
                     f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports",
                 )
+
+    def test_rb_torsion_energies(self, monkeypatch):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        interchange = Interchange.from_gromacs(
+            get_test_file_path("gromacs/rb_torsions.top"),
+            get_test_file_path("gromacs/rb_torsions.gro"),
+        )
+
+        openmm_energy = get_openmm_energies(interchange)["RBTorsion"]
+        gromacs_energy = get_gromacs_energies(interchange)["RBTorsion"]
+
+        assert abs(openmm_energy - gromacs_energy).m_as(unit.kilojoule_per_mole) < 1e-4
