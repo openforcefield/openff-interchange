@@ -185,7 +185,9 @@ def _process(
 
     else:
         processed = {
-            key: staged[key] for key in ["Bond", "Angle", "Torsion"] if key in staged
+            key: staged[key]
+            for key in ["Bond", "Angle", "Torsion", "RBTorsion"]
+            if key in staged
         }
 
         nonbonded_energies = [
