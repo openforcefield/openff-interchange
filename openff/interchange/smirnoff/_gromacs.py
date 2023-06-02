@@ -339,15 +339,27 @@ def _convert_dihedrals(
 
         if proper_torsion_handler:
             for top_key in proper_torsion_handler.key_map:
-                if top_key.atom_indices[0] != topology_indices[0]:
+                if top_key.atom_indices[0] not in [
+                    topology_indices[0],
+                    topology_indices[3],
+                ]:
                     continue
-                if top_key.atom_indices[1] != topology_indices[1]:
+                if top_key.atom_indices[1] not in [
+                    topology_indices[1],
+                    topology_indices[2],
+                ]:
                     continue
-                if top_key.atom_indices[2] != topology_indices[2]:
+                if top_key.atom_indices[2] not in [
+                    topology_indices[2],
+                    topology_indices[1],
+                ]:
                     continue
-                if top_key.atom_indices[3] != topology_indices[3]:
+                if top_key.atom_indices[3] not in [
+                    topology_indices[3],
+                    topology_indices[0],
+                ]:
                     continue
-                if top_key.atom_indices == topology_indices:
+                if top_key.atom_indices in (topology_indices, topology_indices[::-1]):
                     pot_key = proper_torsion_handler.key_map[top_key]
                     params = proper_torsion_handler.potentials[pot_key].parameters
 
@@ -367,15 +379,27 @@ def _convert_dihedrals(
 
         if rb_torsion_handler:
             for top_key in rb_torsion_handler.key_map:
-                if top_key.atom_indices[0] != topology_indices[0]:
+                if top_key.atom_indices[0] not in [
+                    topology_indices[0],
+                    topology_indices[3],
+                ]:
                     continue
-                if top_key.atom_indices[1] != topology_indices[1]:
+                if top_key.atom_indices[1] not in [
+                    topology_indices[1],
+                    topology_indices[2],
+                ]:
                     continue
-                if top_key.atom_indices[2] != topology_indices[2]:
+                if top_key.atom_indices[2] not in [
+                    topology_indices[2],
+                    topology_indices[1],
+                ]:
                     continue
-                if top_key.atom_indices[3] != topology_indices[3]:
+                if top_key.atom_indices[3] not in [
+                    topology_indices[3],
+                    topology_indices[0],
+                ]:
                     continue
-                if top_key.atom_indices == topology_indices:
+                if top_key.atom_indices in [topology_indices, topology_indices[::-1]]:
                     pot_key = rb_torsion_handler.key_map[top_key]
                     params = rb_torsion_handler.potentials[pot_key].parameters
 
