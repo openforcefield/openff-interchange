@@ -367,7 +367,7 @@ def _process_dihedral(
 
     elif dihedral_function == 4:
         return PeriodicImproperDihedral(
-            atom1=atom1,
+            atom1=atom1,  # central atom?
             atom2=atom2,
             atom3=atom3,
             atom4=atom4,

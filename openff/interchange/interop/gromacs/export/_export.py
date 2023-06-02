@@ -184,13 +184,24 @@ class GROMACSWriter(DefaultModel):
         for dihedral in molecule_type.dihedrals:
             function = functions[type(dihedral)]
 
-            top.write(
-                f"{dihedral.atom1 :6d}"
-                f"{dihedral.atom2 :6d}"
-                f"{dihedral.atom3 :6d}"
-                f"{dihedral.atom4 :6d}"
-                f"{functions[type(dihedral)] :6d}",
-            )
+            if function in [4]:
+                # GROMACS seems to prefer the central atom first
+                top.write(
+                    f"{dihedral.atom2 :6d}"
+                    f"{dihedral.atom1 :6d}"
+                    f"{dihedral.atom3 :6d}"
+                    f"{dihedral.atom4 :6d}"
+                    f"{functions[type(dihedral)] :6d}",
+                )
+
+            else:
+                top.write(
+                    f"{dihedral.atom1 :6d}"
+                    f"{dihedral.atom2 :6d}"
+                    f"{dihedral.atom3 :6d}"
+                    f"{dihedral.atom4 :6d}"
+                    f"{functions[type(dihedral)] :6d}",
+                )
 
             if function in [1, 4]:
                 top.write(
