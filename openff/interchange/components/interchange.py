@@ -94,13 +94,8 @@ def interchange_dumps(v, *, default):
 
 def interchange_loader(data: str) -> dict:
     """Load a JSON representation of an Interchange object."""
-    tmp: dict = {
-        "positions": None,
-        "velocities": None,
-        "box": None,
-        "topology": None,
-        "collections": {},
-    }
+    tmp: dict[str, Optional[Union[int, bool, str]]] = {}
+
     for key, val in json.loads(data).items():
         if val is None:
             continue
@@ -128,6 +123,8 @@ def interchange_loader(data: str) -> dict:
                 SMIRNOFFVirtualSiteCollection,
             )
 
+            tmp["collections"] = {}
+
             _class_mapping = {  # noqa
                 "Bonds": SMIRNOFFBondCollection,
                 "Angles": SMIRNOFFAngleCollection,
@@ -139,7 +136,10 @@ def interchange_loader(data: str) -> dict:
                 "VirtualSites": SMIRNOFFVirtualSiteCollection,
             }
 
-            tmp["collections"] = {}
+            for collection_name, collection_data in val.items():
+                tmp["collections"][collection_name] = _class_mapping[
+                    collection_name
+                ].parse_raw(collection_data)
 
     return tmp
 

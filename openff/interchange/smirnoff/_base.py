@@ -1,8 +1,8 @@
 import abc
 import json
-from typing import TypeVar
+from typing import Optional, TypeVar, Union
 
-from openff.models.types import custom_quantity_encoder, json_loader
+from openff.models.types import custom_quantity_encoder
 from openff.toolkit.topology import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
@@ -13,7 +13,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 
-from openff.interchange.components.potentials import Collection
+from openff.interchange.components.potentials import Collection, Potential
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     SMIRNOFFParameterAttributeNotImplementedError,
@@ -42,6 +42,40 @@ def _sanitize(o):
 def dump_collection(v, *, default):
     """Dump a SMIRNOFFCollection to JSON after converting to compatible types."""
     return json.dumps(_sanitize(v), default=default)
+
+
+def collection_loader(data: str) -> dict:
+    """Load a JSON blob dumped from a `Collection`."""
+    tmp: dict[str, Optional[Union[int, bool, str]]] = {}
+
+    for key, val in json.loads(data).items():
+        if isinstance(val, str, bool):
+            tmp[key] = val
+        elif isinstance(val, dict):
+            if key == "key_map":
+                key_map = {}
+
+                for key_, val_ in val.items():
+                    topology_key = TopologyKey.parse_raw(key_)
+                    potential_key = PotentialKey(**val_)
+
+                    key_map[topology_key] = potential_key
+
+                tmp[key] = key_map
+
+            elif key == "potentials":
+                continue
+
+                potentials = {}
+
+                for key_, val_ in val.items():
+                    potential_key = PotentialKey(**key_)
+                    potential = Potential.parse_raw(val_)
+
+                    potentials[potential_key] = potential
+
+            else:
+                raise NotImplementedError(f"Cannot parse {key} in this JSON.")
 
 
 # Coped from the toolkit, see
@@ -140,7 +174,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
         """Default configuration options for SMIRNOFF potential handlers."""
 
         json_dumps = dump_collection
-        json_loads = json_loader
+        json_loads = collection_loader
         validate_assignment = True
         arbitrary_types_allowed = True
 
