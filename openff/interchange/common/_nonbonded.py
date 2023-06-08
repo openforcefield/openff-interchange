@@ -1,7 +1,7 @@
 import abc
 from collections import defaultdict
 from collections.abc import Iterable
-from typing import DefaultDict, Literal, Optional
+from typing import DefaultDict, Literal, Optional, Union
 
 from openff.models.types import FloatQuantity
 from openff.units import Quantity, unit
@@ -9,7 +9,7 @@ from pydantic import Field, PrivateAttr
 
 from openff.interchange.components.potentials import Collection
 from openff.interchange.constants import _PME
-from openff.interchange.models import TopologyKey
+from openff.interchange.models import LibraryChargeTopologyKey, TopologyKey
 
 
 class _NonbondedCollection(Collection, abc.ABC):  # noqa
@@ -81,11 +81,14 @@ class ElectrostaticsCollection(_NonbondedCollection):
     nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
-    _charges: dict[TopologyKey, Quantity] = PrivateAttr(dict())
+    _charges: dict[
+        Union[TopologyKey, LibraryChargeTopologyKey],
+        Quantity,
+    ] = PrivateAttr(dict())
     _charges_cached_with_virtual_sites: Optional[bool] = PrivateAttr(None)
 
     @property
-    def charges(self) -> dict[TopologyKey, Quantity]:
+    def charges(self) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
         if self._charges is None or self._charges_cached_with_virtual_sites in (
             True,
@@ -97,19 +100,24 @@ class ElectrostaticsCollection(_NonbondedCollection):
         return self._charges
 
     @property
-    def charges_with_virtual_sites(self) -> dict[TopologyKey, Quantity]:
+    def charges_with_virtual_sites(
+        self,
+    ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         raise NotImplementedError()
 
     def _get_charges(
         self,
         include_virtual_sites: bool = False,
-    ) -> dict[TopologyKey, Quantity]:
+    ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
         """Get the total partial charge on each atom or particle."""
         if include_virtual_sites:
             raise NotImplementedError()
 
-        charges: DefaultDict[TopologyKey, Quantity] = defaultdict(
+        charges: DefaultDict[
+            Union[TopologyKey, LibraryChargeTopologyKey],
+            Quantity,
+        ] = defaultdict(
             lambda: Quantity(0.0, unit.elementary_charge),
         )
 

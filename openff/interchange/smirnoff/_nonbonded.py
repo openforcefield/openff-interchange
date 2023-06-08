@@ -212,7 +212,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         """Return a list of supported parameter attribute names."""
 
     @property
-    def charges(self) -> dict[TopologyKey, Quantity]:
+    def charges(self) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
         if self._charges is None or self._charges_cached_with_virtual_sites in (
             True,
@@ -226,7 +226,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @property
     def charges_with_virtual_sites(
         self,
-    ) -> dict[TopologyKey, Quantity]:
+    ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if self._charges is None or self._charges_cached_with_virtual_sites in (
             False,
@@ -240,7 +240,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     def _get_charges(
         self,
         include_virtual_sites=False,
-    ) -> dict[TopologyKey, Quantity]:
+    ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
         """Get the total partial charge on each atom or particle."""
         charges: dict[Union[TopologyKey, int], Quantity] = dict()
 
@@ -308,7 +308,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                 else:
                     raise NotImplementedError()
 
-        returned_charges: dict[TopologyKey, Quantity] = dict()
+        returned_charges: dict[
+            Union[TopologyKey, LibraryChargeTopologyKey],
+            Quantity,
+        ] = dict()
 
         for index, charge in charges.items():
             if isinstance(index, int):

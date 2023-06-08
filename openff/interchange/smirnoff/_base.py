@@ -32,7 +32,7 @@ T = TypeVar("T", bound="SMIRNOFFCollection")
 TP = TypeVar("TP", bound="ParameterHandler")
 
 
-def _sanitize(o) -> str:
+def _sanitize(o) -> Union[str, dict]:
     # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
     # for the mapping dicts `key_map` and `potentials`.
     if isinstance(o, dict):
@@ -57,7 +57,7 @@ def collection_loader(data: str) -> dict:
         if isinstance(val, (str, bool, type(None))):
             # These are stored as string but must be parsed into `Quantity`
             if key in ("cutoff", "switch_width"):
-                tmp[key] = unit.Quantity(*json.loads(val).values())
+                tmp[key] = unit.Quantity(*json.loads(val).values())  # type: ignore[arg-type]
             else:
                 tmp[key] = val
         elif isinstance(val, dict):
@@ -66,7 +66,11 @@ def collection_loader(data: str) -> dict:
 
                 for key_, val_ in val.items():
                     if "atom_indices" in key_:
-                        topology_key = TopologyKey.parse_raw(key_)
+                        topology_key: Union[
+                            TopologyKey,
+                            LibraryChargeTopologyKey,
+                        ] = TopologyKey.parse_raw(key_)
+
                     else:
                         topology_key = LibraryChargeTopologyKey.parse_raw(key_)
 
@@ -235,7 +239,10 @@ class SMIRNOFFCollection(Collection, abc.ABC):
         if self.key_map:
             # TODO: Should the key_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
-            self.key_map: dict[TopologyKey, PotentialKey] = dict()
+            self.key_map: dict[
+                Union[TopologyKey, LibraryChargeTopologyKey],
+                PotentialKey,
+            ] = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             topology_key = TopologyKey(atom_indices=key)

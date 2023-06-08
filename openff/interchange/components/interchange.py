@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal, Optional, Union, overload
 
 import numpy as np
 from openff.models.models import DefaultModel
-from openff.models.types import ArrayQuantity, QuantityEncoder, custom_quantity_encoder
+from openff.models.types import ArrayQuantity, QuantityEncoder
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
@@ -31,11 +31,6 @@ from openff.interchange.exceptions import (
     UnsupportedCombinationError,
     UnsupportedExportError,
 )
-from openff.interchange.models import (
-    LibraryChargeTopologyKey,
-    PotentialKey,
-    TopologyKey,
-)
 from openff.interchange.smirnoff._valence import SMIRNOFFConstraintCollection
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 from openff.interchange.warnings import InterchangeDeprecationWarning
@@ -48,18 +43,6 @@ if has_package("nglview"):
 if TYPE_CHECKING:
     import openmm
     import openmm.app
-
-
-def _sanitize(o):
-    # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
-    # for the mapping dicts `key_map` and `potentials`.
-    if isinstance(o, dict):
-        return {_sanitize(k): _sanitize(v) for k, v in o.items()}
-    elif isinstance(o, (PotentialKey, TopologyKey, LibraryChargeTopologyKey)):
-        return o.json()
-    elif isinstance(o, unit.Quantity):
-        return custom_quantity_encoder(o)
-    return o
 
 
 class TopologyEncoder(json.JSONEncoder):

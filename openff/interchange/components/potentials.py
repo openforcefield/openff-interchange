@@ -46,7 +46,7 @@ def potential_loader(data: str) -> dict:
 
     for key, val in json.loads(data).items():
         if isinstance(val, (str, type(None))):
-            tmp[key] = val  # type: ignore[index]
+            tmp[key] = val  # type: ignore
         elif isinstance(val, dict):
             if key == "parameters":
                 tmp["parameters"] = dict()
