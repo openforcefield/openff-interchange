@@ -1,11 +1,13 @@
 """Models for storing applied force field parameters."""
 import ast
+import json
 import warnings
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import numpy
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
+from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, PrivateAttr, validator
 
@@ -34,11 +36,38 @@ def __getattr__(name: str):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
+def potential_loader(data: str) -> dict:
+    """Load a JSON blob dumped from a `Collection`."""
+    tmp: dict[str, Union[int, bool, str, dict]] = {}
+
+    for key, val in json.loads(data).items():
+        if isinstance(key, (str, type(None))):
+            tmp[key] = val  # type: ignore[index]
+        elif isinstance(key, dict):
+            if key == "parameters":
+                for key_, val_ in val.items():
+                    loaded = json.loads(val_)
+                    tmp[key_]["parameters"] = unit.Quantity(  # type: ignore[index]
+                        loaded["val"],
+                        loaded["unit"],
+                    )
+
+    return tmp
+
+
 class Potential(DefaultModel):
     """Base class for storing applied parameters."""
 
     parameters: dict[str, FloatQuantity] = dict()
     map_key: Optional[int] = None
+
+    class Config:
+        """Pydantic configuration."""
+
+        json_encoders: dict[type, Callable] = DefaultModel.Config.json_encoders
+        json_loads: Callable = potential_loader
+        validate_assignment: bool = True
+        arbitrary_types_allowed: bool = True
 
     @validator("parameters")
     def validate_parameters(

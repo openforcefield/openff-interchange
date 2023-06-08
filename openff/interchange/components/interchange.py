@@ -94,7 +94,7 @@ def interchange_dumps(v, *, default):
 
 def interchange_loader(data: str) -> dict:
     """Load a JSON representation of an Interchange object."""
-    tmp: dict[str, Optional[Union[int, bool, str]]] = {}
+    tmp: dict[str, Optional[Union[int, bool, str, dict]]] = {}
 
     for key, val in json.loads(data).items():
         if val is None:
@@ -137,7 +137,7 @@ def interchange_loader(data: str) -> dict:
             }
 
             for collection_name, collection_data in val.items():
-                tmp["collections"][collection_name] = _class_mapping[
+                tmp["collections"][collection_name] = _class_mapping[  # type: ignore
                     collection_name
                 ].parse_raw(collection_data)
 

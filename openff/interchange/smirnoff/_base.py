@@ -49,7 +49,7 @@ def collection_loader(data: str) -> dict:
     tmp: dict[str, Optional[Union[int, bool, str]]] = {}
 
     for key, val in json.loads(data).items():
-        if isinstance(val, str, bool):
+        if isinstance(val, (str, bool, type(None))):
             tmp[key] = val
         elif isinstance(val, dict):
             if key == "key_map":
@@ -61,11 +61,9 @@ def collection_loader(data: str) -> dict:
 
                     key_map[topology_key] = potential_key
 
-                tmp[key] = key_map
+                tmp[key] = key_map  # type: ignore[assignment]
 
             elif key == "potentials":
-                continue
-
                 potentials = {}
 
                 for key_, val_ in val.items():
@@ -76,6 +74,8 @@ def collection_loader(data: str) -> dict:
 
             else:
                 raise NotImplementedError(f"Cannot parse {key} in this JSON.")
+
+    return tmp
 
 
 # Coped from the toolkit, see
