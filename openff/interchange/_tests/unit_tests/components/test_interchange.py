@@ -329,13 +329,30 @@ class TestBadExports(_BaseTest):
         with pytest.warns(UserWarning, match="seem to all be zero"):
             zero_positions.to_gro("foo.gro")
 
-    def test_json_roundtrip(self, sage):
-        # TODO: Inspect contents
-        Interchange.parse_raw(
-            Interchange.from_smirnoff(
-                force_field=sage,
-                topology=[Molecule.from_smiles("O")],
-            ).json(),
+
+class TestInterchangeSerialization(_BaseTest):
+    def test_json_roundtrip(self, sage, water, ethanol):
+        topology = Topology.from_molecules(
+            [
+                water,
+                water,
+            ],
+        )
+
+        for molecule in topology.molecules:
+            molecule.generate_conformers(n_conformers=1)
+
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        original = Interchange.from_smirnoff(
+            force_field=sage,
+            topology=topology,
+        )
+
+        roundtripped = Interchange.parse_raw(original.json())
+
+        get_openmm_energies(original, combine_nonbonded_forces=False).compare(
+            get_openmm_energies(roundtripped, combine_nonbonded_forces=False),
         )
 
 
