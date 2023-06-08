@@ -14,8 +14,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### Bugfixes
 
 * #724 Fixes #723 in which some parameters in GROMACS files were incorrectly written.
-* #728 Fixes #719 in which GROMACS coordinate files were written incorrectly when containing more
-  than 100,000 atoms.
+* #728 Fixes #719 in which GROMACS coordinate files were written incorrectly when containing more than 100,000 atoms.
+* #741 Improves JSON (de)serialization, particularly while parsing `Collection`s.
 
 ## 0.3.4 - 2023-05-14
 
