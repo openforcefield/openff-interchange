@@ -1,3 +1,4 @@
+import pytest
 from openff.toolkit.typing.engines.smirnoff.parameters import BondHandler
 from openff.units import unit
 
@@ -48,3 +49,19 @@ class TestCollectionSubclassing(_BaseTest):
         )
         assert handler.type == "foo"
         assert handler.expression == "m*x+b"
+
+
+class TestPotentialSerialization(_BaseTest):
+    @pytest.fixture()
+    def dummy_potential(self):
+        return Potential(
+            parameters={
+                "a": unit.Quantity(1.0, unit.kilocalorie / unit.mole),
+                "b": unit.Quantity(2.0, unit.angstrom),
+            },
+        )
+
+    def test_json_roundtrip(self, dummy_potential):
+        potential = Potential.parse_raw(dummy_potential.json())
+
+        assert potential.parameters == dummy_potential.parameters

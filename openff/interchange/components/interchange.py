@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal, Optional, Union, overload
 
 import numpy as np
 from openff.models.models import DefaultModel
-from openff.models.types import ArrayQuantity, QuantityEncoder, custom_quantity_encoder
+from openff.models.types import ArrayQuantity, QuantityEncoder
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
@@ -31,7 +31,6 @@ from openff.interchange.exceptions import (
     UnsupportedCombinationError,
     UnsupportedExportError,
 )
-from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.smirnoff._valence import SMIRNOFFConstraintCollection
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 from openff.interchange.warnings import InterchangeDeprecationWarning
@@ -44,18 +43,6 @@ if has_package("nglview"):
 if TYPE_CHECKING:
     import openmm
     import openmm.app
-
-
-def _sanitize(o):
-    # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
-    # for the mapping dicts `key_map` and `potentials`.
-    if isinstance(o, dict):
-        return {_sanitize(k): _sanitize(v) for k, v in o.items()}
-    elif isinstance(o, (PotentialKey, TopologyKey)):
-        return o.json()
-    elif isinstance(o, unit.Quantity):
-        return custom_quantity_encoder(o)
-    return o
 
 
 class TopologyEncoder(json.JSONEncoder):
@@ -71,16 +58,16 @@ class TopologyEncoder(json.JSONEncoder):
 
 def interchange_dumps(v, *, default):
     """Dump an Interchange to JSON after converting to compatible types."""
+    from openff.interchange.smirnoff._base import dump_collection
+
     return json.dumps(
         {
             "positions": QuantityEncoder().default(v["positions"]),
             "box": QuantityEncoder().default(v["box"]),
             "topology": TopologyEncoder().default(v["topology"]),
             "collections": {
-                "Bonds": json.dumps(
-                    _sanitize(v["collections"]["Bonds"]),
-                    default=default,
-                ),
+                key: dump_collection(v["collections"][key], default=default)
+                for key in v["collections"]
             },
         },
         default=default,
@@ -89,13 +76,8 @@ def interchange_dumps(v, *, default):
 
 def interchange_loader(data: str) -> dict:
     """Load a JSON representation of an Interchange object."""
-    tmp: dict = {
-        "positions": None,
-        "velocities": None,
-        "box": None,
-        "topology": None,
-        "collections": {},
-    }
+    tmp: dict[str, Optional[Union[int, bool, str, dict]]] = {}
+
     for key, val in json.loads(data).items():
         if val is None:
             continue
@@ -107,6 +89,39 @@ def interchange_loader(data: str) -> dict:
             tmp["box"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
         elif key == "topology":
             tmp["topology"] = Topology.from_json(val)
+        elif key == "collections":
+            from openff.interchange.smirnoff._nonbonded import (
+                SMIRNOFFElectrostaticsCollection,
+                SMIRNOFFvdWCollection,
+            )
+            from openff.interchange.smirnoff._valence import (
+                SMIRNOFFAngleCollection,
+                SMIRNOFFBondCollection,
+                SMIRNOFFConstraintCollection,
+                SMIRNOFFImproperTorsionCollection,
+                SMIRNOFFProperTorsionCollection,
+            )
+            from openff.interchange.smirnoff._virtual_sites import (
+                SMIRNOFFVirtualSiteCollection,
+            )
+
+            tmp["collections"] = {}
+
+            _class_mapping = {  # noqa
+                "Bonds": SMIRNOFFBondCollection,
+                "Angles": SMIRNOFFAngleCollection,
+                "Constraints": SMIRNOFFConstraintCollection,
+                "ProperTorsions": SMIRNOFFProperTorsionCollection,
+                "ImproperTorsions": SMIRNOFFImproperTorsionCollection,
+                "vdW": SMIRNOFFvdWCollection,
+                "Electrostatics": SMIRNOFFElectrostaticsCollection,
+                "VirtualSites": SMIRNOFFVirtualSiteCollection,
+            }
+
+            for collection_name, collection_data in val.items():
+                tmp["collections"][collection_name] = _class_mapping[  # type: ignore
+                    collection_name
+                ].parse_raw(collection_data)
 
     return tmp
 
