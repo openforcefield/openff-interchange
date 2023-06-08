@@ -2,6 +2,7 @@ import abc
 import json
 from typing import Optional, TypeVar, Union
 
+from openff.models.models import DefaultModel
 from openff.models.types import custom_quantity_encoder
 from openff.toolkit.topology import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -21,18 +22,22 @@ from openff.interchange.exceptions import (
     UnassignedBondError,
     UnassignedTorsionError,
 )
-from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.models import (
+    LibraryChargeTopologyKey,
+    PotentialKey,
+    TopologyKey,
+)
 
 T = TypeVar("T", bound="SMIRNOFFCollection")
 TP = TypeVar("TP", bound="ParameterHandler")
 
 
-def _sanitize(o):
+def _sanitize(o) -> str:
     # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
     # for the mapping dicts `key_map` and `potentials`.
     if isinstance(o, dict):
         return {_sanitize(k): _sanitize(v) for k, v in o.items()}
-    elif isinstance(o, (PotentialKey, TopologyKey)):
+    elif isinstance(o, DefaultModel):
         return o.json()
     elif isinstance(o, unit.Quantity):
         return custom_quantity_encoder(o)
@@ -50,13 +55,21 @@ def collection_loader(data: str) -> dict:
 
     for key, val in json.loads(data).items():
         if isinstance(val, (str, bool, type(None))):
-            tmp[key] = val
+            # These are stored as string but must be parsed into `Quantity`
+            if key in ("cutoff", "switch_width"):
+                tmp[key] = unit.Quantity(*json.loads(val).values())
+            else:
+                tmp[key] = val
         elif isinstance(val, dict):
             if key == "key_map":
                 key_map = {}
 
                 for key_, val_ in val.items():
-                    topology_key = TopologyKey.parse_raw(key_)
+                    if "atom_indices" in key_:
+                        topology_key = TopologyKey.parse_raw(key_)
+                    else:
+                        topology_key = LibraryChargeTopologyKey.parse_raw(key_)
+
                     potential_key = PotentialKey(**val_)
 
                     key_map[topology_key] = potential_key
@@ -67,10 +80,12 @@ def collection_loader(data: str) -> dict:
                 potentials = {}
 
                 for key_, val_ in val.items():
-                    potential_key = PotentialKey(**key_)
-                    potential = Potential.parse_raw(val_)
+                    potential_key = PotentialKey.parse_raw(key_)
+                    potential = Potential.parse_raw(json.dumps(val_))
 
                     potentials[potential_key] = potential
+
+                tmp[key] = potentials  # type: ignore[assignment]
 
             else:
                 raise NotImplementedError(f"Cannot parse {key} in this JSON.")

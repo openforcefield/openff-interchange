@@ -12,7 +12,11 @@ from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, PrivateAttr, validator
 
 from openff.interchange.exceptions import MissingParametersError
-from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.models import (
+    LibraryChargeTopologyKey,
+    PotentialKey,
+    TopologyKey,
+)
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if has_package("jax"):
@@ -41,13 +45,15 @@ def potential_loader(data: str) -> dict:
     tmp: dict[str, Union[int, bool, str, dict]] = {}
 
     for key, val in json.loads(data).items():
-        if isinstance(key, (str, type(None))):
+        if isinstance(val, (str, type(None))):
             tmp[key] = val  # type: ignore[index]
-        elif isinstance(key, dict):
+        elif isinstance(val, dict):
             if key == "parameters":
+                tmp["parameters"] = dict()
+
                 for key_, val_ in val.items():
                     loaded = json.loads(val_)
-                    tmp[key_]["parameters"] = unit.Quantity(  # type: ignore[index]
+                    tmp["parameters"][key_] = unit.Quantity(  # type: ignore[index]
                         loaded["val"],
                         loaded["unit"],
                     )
@@ -137,7 +143,7 @@ class Collection(DefaultModel):
         ...,
         description="The analytical expression governing the potentials in this handler.",
     )
-    key_map: dict[TopologyKey, PotentialKey] = Field(
+    key_map: dict[Union[TopologyKey, LibraryChargeTopologyKey], PotentialKey] = Field(
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )

@@ -75,16 +75,15 @@ class TopologyEncoder(json.JSONEncoder):
 
 def interchange_dumps(v, *, default):
     """Dump an Interchange to JSON after converting to compatible types."""
+    from openff.interchange.smirnoff._base import dump_collection
+
     return json.dumps(
         {
             "positions": QuantityEncoder().default(v["positions"]),
             "box": QuantityEncoder().default(v["box"]),
             "topology": TopologyEncoder().default(v["topology"]),
             "collections": {
-                key: json.dumps(
-                    _sanitize(v["collections"][key]),
-                    default=default,
-                )
+                key: dump_collection(v["collections"][key], default=default)
                 for key in v["collections"]
             },
         },
