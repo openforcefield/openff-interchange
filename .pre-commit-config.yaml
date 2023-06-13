@@ -8,7 +8,7 @@ repos:
     exclude: '\.(pdb|gro|top|sdf)$'
   - id: debug-statements
 - repo: https://github.com/asottile/add-trailing-comma
-  rev: v2.4.0
+  rev: v2.5.1
   hooks:
   - id: add-trailing-comma
     args: ["--py36-plus"]
@@ -36,7 +36,7 @@ repos:
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.4.0
+  rev: v3.6.0
   hooks:
   - id: pyupgrade
     files: ^openff|plugins|stubs
