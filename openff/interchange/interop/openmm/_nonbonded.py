@@ -845,14 +845,16 @@ def _create_electrostatics_force(
             electrostatics_force.setNonbondedMethod(
                 openmm.NonbondedForce.CutoffNonPeriodic,
             )
-            electrostatics_force.setCutoffDistance(2.0)
+
         else:
             electrostatics_force.setNonbondedMethod(
                 openmm.NonbondedForce.CutoffPeriodic,
             )
-            electrostatics_force.setCutoffDistance(0.9)
 
-        # TODO: Wire through electrostatics cutoff?
+        electrostatics_force.setCutoffDistance(
+            data["electrostatics_collection"].cutoff.m_as(off_unit.nanometer),
+        )
+
     else:
         raise UnsupportedCutoffMethodError(
             f"Electrostatics method {data['electrostatics_method']} not supported",
