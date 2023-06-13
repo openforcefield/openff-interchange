@@ -21,7 +21,6 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
-from openff.interchange.interop._parmed import _lj_params_from_potential
 from openff.interchange.models import TopologyKey, VirtualSiteKey
 
 _DATA_DICT: TypeAlias = dict[str, Union[None, str, bool, "Collection"]]
@@ -92,73 +91,28 @@ def _process_nonbonded_forces(
     )
 
     # TODO: Process ElectrostaticsHandler.exception_potential
-    # TODO: Improve logic to be less reliant on these names
-    if "vdW" in interchange.collections or "Electrostatics" in interchange.collections:
-        _data = _prepare_input_data(interchange)
+    has_vdw = False
 
-        if combine_nonbonded_forces:
-            _func = _create_single_nonbonded_force
-        else:
-            _func = _create_multiple_nonbonded_forces
+    for name, collection in interchange.collections.items():
+        if name == "vdW":
+            has_vdw = True
+            break
+        if collection.is_plugin:
+            # TODO: Here is where to detect an electrostatics plugin, if one ever exists
+            if collection.acts_as == "vdW":
+                has_vdw = True
+                break
 
-        _func(
-            _data,
-            interchange,
-            system,
-            molecule_virtual_site_map,
-            openff_openmm_particle_map,
-        )
-
-    elif "Buckingham-6" in interchange.collections:
+    if not has_vdw:
         if has_virtual_sites:
             raise UnsupportedExportError(
-                "Virtual sites with Buckingham-6 potential not supported. If this use case is important to you, "
-                "please raise an issue describing the functionality you wish to see.",
-            )
-
-        buck = interchange["Buckingham-6"]
-
-        non_bonded_force = openmm.CustomNonbondedForce(
-            "A * exp(-B * r) - C * r ^ -6; A = sqrt(A1 * A2); B = 2 / (1 / B1 + 1 / B2); C = sqrt(C1 * C2)",
-        )
-        non_bonded_force.addPerParticleParameter("A")
-        non_bonded_force.addPerParticleParameter("B")
-        non_bonded_force.addPerParticleParameter("C")
-        system.addForce(non_bonded_force)
-
-        for molecule in interchange.topology.molecules:
-            for _ in molecule.atoms:
-                non_bonded_force.addParticle([0.0, 0.0, 0.0])
-
-        if interchange.box is None:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-        else:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
-            non_bonded_force.setCutoffDistance(buck.cutoff * unit.angstrom)
-
-        for top_key, pot_key in buck.key_map.items():
-            atom_idx = top_key.atom_indices[0]
-
-            # TODO: Add electrostatics
-            params = buck.potentials[pot_key].parameters
-            a = to_openmm_quantity(params["A"])
-            b = to_openmm_quantity(params["B"])
-            c = to_openmm_quantity(params["C"])
-            non_bonded_force.setParticleParameters(atom_idx, [a, b, c])
-
-        openff_openmm_particle_map
-
-    else:
-        # Here we assume there are no vdW interactions in any collections
-
-        if has_virtual_sites:
-            raise UnsupportedExportError(
-                "Virtual sites with no vdW handler not currently supported. If this use case is important to you, "
-                "please raise an issue describing the functionality you wish to see.",
+                "Virtual sites with no vdW handler not currently supported. If this use case is "
+                "important to you, please raise an issue describing the functionality you wish to "
+                "see.",
             )
 
         try:
-            electrostatics = interchange["Electrostatics"]
+            interchange["Electrostatics"]
         except LookupError:
             raise InternalInconsistencyError(
                 "In a confused state, could not find any vdW interactions but also failed to find "
@@ -166,30 +120,20 @@ def _process_nonbonded_forces(
                 "earlier in this function. Please file an issue with a minimal reproducing example.",
             )
 
-        electrostatics_method = (
-            electrostatics.periodic_potential if electrostatics else None
-        )
+    _data = _prepare_input_data(interchange)
 
-        non_bonded_force = openmm.NonbondedForce()
-        system.addForce(non_bonded_force)
+    if combine_nonbonded_forces:
+        _func = _create_single_nonbonded_force
+    else:
+        _func = _create_multiple_nonbonded_forces
 
-        for molecule in interchange.topology.molecules:
-            for _ in molecule.atoms:
-                non_bonded_force.addParticle(0.0, 1.0, 0.0)
-
-        if electrostatics_method in ["Coulomb", None]:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-            # TODO: Would setting the dispersion correction here have any impact?
-        elif electrostatics_method == _PME:
-            non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-            non_bonded_force.setEwaldErrorTolerance(1.0e-4)
-        else:
-            raise UnsupportedCutoffMethodError(
-                f"Found no vdW interactions but an electrostatics method of {electrostatics_method}. "
-                "This is either unsupported or ambiguous. If you believe this exception has been raised "
-                "in error, please file an issue with a minimally reproducing example and your motivation "
-                "for this use case.",
-            )
+    _func(
+        _data,
+        interchange,
+        system,
+        molecule_virtual_site_map,
+        openff_openmm_particle_map,
+    )
 
     return openff_openmm_particle_map
 
@@ -311,7 +255,12 @@ def _create_single_nonbonded_force(
             "Try setting `combine_nonbonded_forces=False`.",
         )
 
-    has_virtual_sites = molecule_virtual_site_map not in (None, dict())
+    if molecule_virtual_site_map in (None, dict()):
+        has_virtual_sites = False
+    elif all([len(v) == 0 for v in molecule_virtual_site_map.values()]):
+        has_virtual_sites = False
+    else:
+        has_virtual_sites = True
 
     non_bonded_force = openmm.NonbondedForce()
     system.addForce(non_bonded_force)
@@ -370,11 +319,11 @@ def _create_single_nonbonded_force(
             )
 
     if data["electrostatics_collection"] is not None:
-        try:
+        if has_virtual_sites:
             partial_charges = data[
                 "electrostatics_collection"
             ].charges_with_virtual_sites
-        except AttributeError:
+        else:
             partial_charges = data["electrostatics_collection"].charges
 
     # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
@@ -399,9 +348,10 @@ def _create_single_nonbonded_force(
 
             if vdw is not None:
                 pot_key = vdw.key_map[top_key]
-                sigma, epsilon = _lj_params_from_potential(
-                    vdw.potentials[pot_key],
-                )
+
+                sigma = vdw.potentials[pot_key].parameters["sigma"]
+                epsilon = vdw.potentials[pot_key].parameters["epsilon"]
+
                 sigma = sigma.m_as(off_unit.nanometer)
                 epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
             else:
@@ -610,7 +560,12 @@ def _create_multiple_nonbonded_forces(
 ):
     from openff.interchange.components.toolkit import _get_14_pairs
 
-    has_virtual_sites = molecule_virtual_site_map not in (None, dict())
+    if molecule_virtual_site_map in (None, dict()):
+        has_virtual_sites = False
+    elif all([len(v) == 0 for v in molecule_virtual_site_map.values()]):
+        has_virtual_sites = False
+    else:
+        has_virtual_sites = True
 
     vdw_force = _create_vdw_force(
         data,
@@ -698,46 +653,47 @@ def _create_multiple_nonbonded_forces(
 
         openmm_pairs.append(openmm_indices)
 
-    for i in range(electrostatics_force.getNumExceptions()):
-        (p1, p2, _, _, _) = electrostatics_force.getExceptionParameters(i)
+    if electrostatics_force is not None:
+        for i in range(electrostatics_force.getNumExceptions()):
+            (p1, p2, _, _, _) = electrostatics_force.getExceptionParameters(i)
 
-        if (p1, p2) in openmm_pairs or (p2, p1) in openmm_pairs:
+            if (p1, p2) in openmm_pairs or (p2, p1) in openmm_pairs:
+                if vdw_force is not None:
+                    if data["vdw_collection"].is_plugin:
+                        # Since we fed in in r_min1, epsilon1, ..., r_min2, epsilon2, ...
+                        # each as individual parameters, we need to prepare a list of
+                        # length 2 * len(potential_parameters) to this constructor
+                        parameters1 = vdw_force.getParticleParameters(p1)
+                        parameters2 = vdw_force.getParticleParameters(p2)
+                        vdw_14_force.addBond(p1, p2, [*parameters1, *parameters2])
+
+                    else:
+                        # Look up the vdW parameters for each particle
+                        sig1, eps1 = vdw_force.getParticleParameters(p1)
+                        sig2, eps2 = vdw_force.getParticleParameters(p2)
+
+                        # manually compute ...
+                        sig_14 = (sig1 + sig2) * 0.5
+                        eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
+
+                        # ... and set the 1-4 interactions
+                        vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
+
+                # Look up the partial charges for each particle
+                q1 = electrostatics_force.getParticleParameters(p1)[0]
+                q2 = electrostatics_force.getParticleParameters(p2)[0]
+
+                # manually compute ...
+                qq = q1 * q2 * coul_14
+
+                # ... and set the 1-4 interactions
+                coul_14_force.addBond(p1, p2, [qq])
+
             if vdw_force is not None:
-                if data["vdw_collection"].is_plugin:
-                    # Since we fed in in r_min1, epsilon1, ..., r_min2, epsilon2, ...
-                    # each as individual parameters, we need to prepare a list of
-                    # length 2 * len(potential_parameters) to this constructor
-                    parameters1 = vdw_force.getParticleParameters(p1)
-                    parameters2 = vdw_force.getParticleParameters(p2)
-                    vdw_14_force.addBond(p1, p2, [*parameters1, *parameters2])
+                vdw_force.addExclusion(p1, p2)
 
-                else:
-                    # Look up the vdW parameters for each particle
-                    sig1, eps1 = vdw_force.getParticleParameters(p1)
-                    sig2, eps2 = vdw_force.getParticleParameters(p2)
-
-                    # manually compute ...
-                    sig_14 = (sig1 + sig2) * 0.5
-                    eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
-
-                    # ... and set the 1-4 interactions
-                    vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
-
-            # Look up the partial charges for each particle
-            q1 = electrostatics_force.getParticleParameters(p1)[0]
-            q2 = electrostatics_force.getParticleParameters(p2)[0]
-
-            # manually compute ...
-            qq = q1 * q2 * coul_14
-
-            # ... and set the 1-4 interactions
-            coul_14_force.addBond(p1, p2, [qq])
-
-        if vdw_force is not None:
-            vdw_force.addExclusion(p1, p2)
-
-        if electrostatics_force is not None:
-            electrostatics_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
+            if electrostatics_force is not None:
+                electrostatics_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
 
     for force in [vdw_force, electrostatics_force, vdw_14_force, coul_14_force]:
         if force is not None:
@@ -958,9 +914,9 @@ def _set_particle_parameters(
                         parameters = {key: val.m for key, val in parameters.items()}
 
                 else:
-                    sigma, epsilon = _lj_params_from_potential(
-                        vdw.potentials[pot_key],
-                    )
+                    sigma = vdw.potentials[pot_key].parameters["sigma"]
+                    epsilon = vdw.potentials[pot_key].parameters["epsilon"]
+
                     sigma = sigma.m_as(off_unit.nanometer)
                     epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
             else:
@@ -1008,7 +964,7 @@ def _get_14_scaling_factors(data: _DATA_DICT) -> tuple[float, float]:
     else:
         coul_14 = 1.0
 
-    if data.get("vdw_handler", None) is not None:
+    if data.get("vdw_collection", None) is not None:
         vdw_14 = data["vdw_collection"].scale_14  # type: ignore[union-attr]
     else:
         vdw_14 = 1.0

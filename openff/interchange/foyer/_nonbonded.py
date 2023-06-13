@@ -61,10 +61,10 @@ class FoyerElectrostaticsHandler(ElectrostaticsCollection):
     force_field_key: str = "atoms"
     cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom
 
-    _charges: dict[TopologyKey, Quantity] = PrivateAttr(dict())
+    _charges: dict[TopologyKey, Quantity] = PrivateAttr(dict())  # type: ignore
 
     @property
-    def charges(self) -> dict[TopologyKey, Quantity]:
+    def charges(self) -> dict[TopologyKey, Quantity]:  # type: ignore[override]
         """Get the total partial charge on each atom, including virtual sites."""
         return self._charges
 

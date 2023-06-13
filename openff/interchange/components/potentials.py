@@ -1,16 +1,22 @@
 """Models for storing applied force field parameters."""
 import ast
+import json
 import warnings
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import numpy
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
+from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, PrivateAttr, validator
 
 from openff.interchange.exceptions import MissingParametersError
-from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.models import (
+    LibraryChargeTopologyKey,
+    PotentialKey,
+    TopologyKey,
+)
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if has_package("jax"):
@@ -34,11 +40,40 @@ def __getattr__(name: str):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
+def potential_loader(data: str) -> dict:
+    """Load a JSON blob dumped from a `Collection`."""
+    tmp: dict[str, Union[int, bool, str, dict]] = {}
+
+    for key, val in json.loads(data).items():
+        if isinstance(val, (str, type(None))):
+            tmp[key] = val  # type: ignore
+        elif isinstance(val, dict):
+            if key == "parameters":
+                tmp["parameters"] = dict()
+
+                for key_, val_ in val.items():
+                    loaded = json.loads(val_)
+                    tmp["parameters"][key_] = unit.Quantity(  # type: ignore[index]
+                        loaded["val"],
+                        loaded["unit"],
+                    )
+
+    return tmp
+
+
 class Potential(DefaultModel):
     """Base class for storing applied parameters."""
 
     parameters: dict[str, FloatQuantity] = dict()
     map_key: Optional[int] = None
+
+    class Config:
+        """Pydantic configuration."""
+
+        json_encoders: dict[type, Callable] = DefaultModel.Config.json_encoders
+        json_loads: Callable = potential_loader
+        validate_assignment: bool = True
+        arbitrary_types_allowed: bool = True
 
     @validator("parameters")
     def validate_parameters(
@@ -108,7 +143,7 @@ class Collection(DefaultModel):
         ...,
         description="The analytical expression governing the potentials in this handler.",
     )
-    key_map: dict[TopologyKey, PotentialKey] = Field(
+    key_map: dict[Union[TopologyKey, LibraryChargeTopologyKey], PotentialKey] = Field(
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )

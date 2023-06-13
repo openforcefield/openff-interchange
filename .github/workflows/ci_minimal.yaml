@@ -25,17 +25,14 @@ jobs:
         python-version:
           - "3.10"
 
-    env:
-      COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
-
     steps:
     - uses: actions/checkout@v3
 
     - name: Install conda environment
-      uses: mamba-org/provision-with-micromamba@main
+      uses: mamba-org/setup-micromamba@v1
       with:
         environment-file: devtools/conda-envs/minimal_env.yaml
-        extra-specs: |
+        create-args: >-
           python=${{ matrix.python-version }}
 
     - name: Additional info about the build
@@ -46,7 +43,7 @@ jobs:
 
     - name: Install package
       run: |
-        python -m pip install .
+        micromamba remove --force openff-interchange openff-interchange-base
         python -m pip install -e ./plugins/
 
     - name: Environment Information
@@ -57,4 +54,4 @@ jobs:
     - name: Run unit tests
       if: always()
       run: |
-        python -m pytest -v -nauto --durations=10 $COV openff/interchange/_tests/unit_tests/
+        python -m pytest -v -nauto --durations=10 openff/interchange/_tests/unit_tests/

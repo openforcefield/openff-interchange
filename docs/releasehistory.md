@@ -11,6 +11,69 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### New features
+
+* #725 Adds `Interchange.to_openmm_simulation`.
+
+### Bugfixes
+
+* #724 Fixes #723 in which some parameters in GROMACS files were incorrectly written.
+* #728 Fixes #719 in which GROMACS coordinate files were written incorrectly when containing more than 100,000 atoms.
+* #741 Improves JSON (de)serialization, particularly while parsing `Collection`s.
+
+## 0.3.4 - 2023-05-14
+
+### Bugfixes
+
+* #721 Fixes #720 in which units were not checked when writing `[ settles ]` in GROMACS files.
+
+## 0.3.3 - 2023-05-08
+
+* #703 Clarifies the experimental state of some features, which require opt-in to use.
+
+### Behavior changes
+
+* #706 Updates `pack_box` to return a `Topology`.
+* #716 Removes InterMol and ParmEd conversions, which were untested and not part of the public API.
+
+### Bugfixes
+
+* #705 Fixes #693 in which 1-4 vdW interactions were not scaled when using `Interchange.to_openmm(combine_nonbonded_forces=False)`
+* #702 Fixes #701 in which `Interchange` was needlessly re-exported in the high-level module.
+
+### Documentation improvements
+
+* #673 Adds a vectorized representation example.
+* #703 Adds a section to the user guide on accessing experimental functionality.
+* #706 Updates the mixed solvent example.
+* #708 Updates the protein-ligand example.
+* #708 Updates the ligand-in-water example.
+
+## 0.3.2 - 2023-05-02
+
+### Behavior changes
+
+* #677 Replaces `.constraints` with `.potentials` in constraint collections.
+* #677 Unifies parameters in Ryckaert-Bellemans torsions around lowercase values (`c0`, `c1`, etc.).
+
+### New features
+
+* #671 Adds `Interchange.to_gromacs` which writes both GROMACS topology and coordinate files at once.
+* #677 Improves support for Ryckaert-Bellemans torsions in parsers, writers, and drivers.
+* #681 Ports a PACKMOL wrapper from OpenFF Evaluator.
+* #692 Tags some features as experimental, requiring opt-in to access.
+* #697 Wires `add_constrained_forces` argument through `Interchange.to_openmm`.
+* #697 Wires `combine_nonbonded_forces` argument through `get_summary_data` and `get_all_energies`.
+
+### Bugfixes
+
+* #680 Fixes #678 in which, in some cases, text wrapping in Amber files was mangled.
+* #680 Fixes #679 in which atom exclusion lists in Amber files were written incorrectly.
+* #685 Fixes #682 in which some 1-4 interactions in Amber files were counted incorrectly.
+* #695 Fixes #694 in which systems with no electrostatics did not check for plugins.
+
+## 0.3.1 - 2023-04-19
+
 ### Behavior changes
 
 * #639 Drops support for Python 3.8, following [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html#support-table).
@@ -31,7 +94,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #649 Removes the use of `pkg_resources`, which is deprecated.
 * #660 Moves the contents of `openff.interchange.components.foyer` to `openff.interchange.foyer` while maintaining existing import paths.
 * #663 Improves the performance of `Interchange.to_prmtop`.
-* #665 Properly write `[ settes ]` directive in GROMACS files.
+* #665 Properly write `[ settles ]` directive in GROMACS files.
 
 ## 0.3.0 - 2023-04-10
 
@@ -67,7 +130,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #614 Adds support for GBSA parameters in SMIRNOFF force fields.
 * #586 #591 #605 #609 #613 Support custom SMIRNOFF sections with OpenMM.
 
-### Documentation
+### Documentation improvements
 
 * #634 Improves documentation for SMIRNOFF plugins.
 * #610 Adds duplicate documentation on how to covert to OpenMM-styled unit/quantity objects.

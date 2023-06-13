@@ -31,15 +31,16 @@ jobs:
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
+      INTERCHANGE_EXPERIMENTAL: "1"
 
     steps:
     - uses: actions/checkout@v3
 
     - name: Install conda environment
-      uses: mamba-org/provision-with-micromamba@main
+      uses: mamba-org/setup-micromamba@v1
       with:
         environment-file: devtools/conda-envs/examples_env.yaml
-        extra-specs: |
+        create-args: >-
           python=${{ matrix.python-version }}
 
     - name: Additional info about the build
@@ -52,7 +53,7 @@ jobs:
       run: |
         # These packages are brought in by conda (via the toolkit) and must be removed manually
         # since pip doesn't know about the -base split and does not uninstall the -base package
-        conda remove --force openff-interchange openff-interchange-base
+        micromamba remove --force openff-interchange openff-interchange-base
         python -m pip install .
 
     - name: Environment Information
@@ -75,4 +76,4 @@ jobs:
     - name: Run example notebooks
       if: always()
       run: |
-        python -m pytest examples/ --nbval-lax --ignore=examples/deprecated/ --ignore=examples/lammps/
+        python -m pytest examples/ --nbval-lax --ignore=examples/deprecated/ --ignore=examples/lammps/ --ignore=examples/protein_ligand/

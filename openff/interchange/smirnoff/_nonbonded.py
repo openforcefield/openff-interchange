@@ -1,8 +1,7 @@
 import copy
 import functools
-from collections import defaultdict
 from collections.abc import Iterable
-from typing import Any, DefaultDict, Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import numpy
 from openff.toolkit import Molecule, Topology
@@ -48,6 +47,22 @@ ElectrostaticsHandlerType = Union[
 ]
 
 
+_ZERO_CHARGE = Quantity(0.0, unit.elementary_charge)
+
+
+@unit.wraps(
+    ret=unit.elementary_charge,
+    args=(unit.elementary_charge, unit.elementary_charge),
+    strict=True,
+)
+def _add_charges(
+    charge1: Quantity,
+    charge2: Quantity,
+) -> Quantity:
+    """Add two charges together."""
+    return charge1 + charge2
+
+
 def library_charge_from_molecule(
     molecule: "Molecule",
 ) -> LibraryChargeHandler.LibraryChargeType:
@@ -79,7 +94,7 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
         return [vdWHandler]
 
     @classmethod
-    def supported_parameters(cls):
+    def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attributes."""
         return ["smirks", "id", "sigma", "epsilon", "rmin_half"]
 
@@ -89,7 +104,7 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
         return [1.0, 0.0]
 
     @classmethod
-    def potential_parameters(cls):
+    def potential_parameters(cls) -> Iterable[str]:
         """Return a list of names of parameters included in each potential in this colletion."""
         return ["sigma", "epsilon"]
 
@@ -197,25 +212,37 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         """Return a list of supported parameter attribute names."""
 
     @property
-    def charges(self) -> dict[TopologyKey, Quantity]:
+    def charges(self) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
-        return self.get_charges(include_virtual_sites=False)
+        if self._charges is None or self._charges_cached_with_virtual_sites in (
+            True,
+            None,
+        ):
+            self._charges = self._get_charges(include_virtual_sites=False)
+            self._charges_cached_with_virtual_sites = False
+
+        return self._charges
 
     @property
     def charges_with_virtual_sites(
         self,
-    ) -> dict[TopologyKey, Quantity]:
+    ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
-        return self.get_charges(include_virtual_sites=True)
+        if self._charges is None or self._charges_cached_with_virtual_sites in (
+            False,
+            None,
+        ):
+            self._charges = self._get_charges(include_virtual_sites=True)
+            self._charges_cached_with_virtual_sites = True
 
-    def get_charges(
+        return self._charges
+
+    def _get_charges(
         self,
         include_virtual_sites=False,
-    ) -> dict[TopologyKey, Quantity]:
+    ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
         """Get the total partial charge on each atom or particle."""
-        charges: DefaultDict[Union[TopologyKey, int], Quantity] = defaultdict(
-            lambda: Quantity(0.0, unit.elementary_charges),
-        )
+        charges: dict[Union[TopologyKey, int], Quantity] = dict()
 
         for topology_key, potential_key in self.key_map.items():
             potential = self.potentials[potential_key]
@@ -235,16 +262,56 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         orientation_atom_key = TopologyKey(
                             atom_indices=(topology_key.orientation_atom_indices[i],),
                         )
-                        charges[orientation_atom_key] += increment
+                        charges[orientation_atom_key] = _add_charges(
+                            charges.get(orientation_atom_key, _ZERO_CHARGE),
+                            increment,
+                        )
 
-                elif parameter_key in ["charge", "charge_increment"]:
-                    charge = parameter_value
+                elif parameter_key == "charge":
                     assert len(topology_key.atom_indices) == 1
-                    charges[topology_key.atom_indices[0]] += charge
+
+                    atom_index = topology_key.atom_indices[0]
+
+                    if potential_key.associated_handler in (
+                        "LibraryCharges",
+                        "ToolkitAM1BCCHandler",
+                        "charge_from_molecules",
+                    ):
+                        charges[atom_index] = parameter_value
+
+                    elif potential_key.associated_handler in (  # type: ignore[operator]
+                        "ChargeIncrementModelHandler"
+                    ):
+                        # the "charge" and "charge_increment" keys may not appear in that order, so
+                        # we "add" the charge whether or not the increment was already applied.
+                        # There should be a better way to do this.
+                        charges[atom_index] = _add_charges(
+                            charges.get(atom_index, _ZERO_CHARGE),
+                            parameter_value,
+                        )
+
+                    else:
+                        raise RuntimeError(
+                            f"Unexepected associated handler {potential_key.associated_handler} found.",
+                        )
+
+                elif parameter_key == "charge_increment":
+                    assert len(topology_key.atom_indices) == 1
+
+                    atom_index = topology_key.atom_indices[0]
+
+                    charges[atom_index] = _add_charges(
+                        charges.get(atom_index, _ZERO_CHARGE),
+                        parameter_value,
+                    )
+
                 else:
                     raise NotImplementedError()
 
-        returned_charges: dict[TopologyKey, Quantity] = dict()
+        returned_charges: dict[
+            Union[TopologyKey, LibraryChargeTopologyKey],
+            Quantity,
+        ] = dict()
 
         for index, charge in charges.items():
             if isinstance(index, int):
@@ -738,7 +805,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                             self.key_map[new_key] = matches[key]
 
         topology_charges = [0.0] * topology.n_atoms
-        for key, val in self.get_charges().items():
+        for key, val in self.charges.items():
             topology_charges[key.atom_indices[0]] = val.m
 
         # TODO: Better data structures in Topology.identical_molecule_groups will make this

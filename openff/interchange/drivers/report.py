@@ -18,6 +18,7 @@ _KNOWN_ENERGY_TERMS: set[str] = {
     "Bond",
     "Angle",
     "Torsion",
+    "RBTorsion",
     "Nonbonded",
     "vdW",
     "Electrostatics",
@@ -187,6 +188,7 @@ class EnergyReport(DefaultModel):
             f"Bond:          \t\t{self['Bond']}\n"
             f"Angle:         \t\t{self['Angle']}\n"
             f"Torsion:       \t\t{self['Torsion']}\n"
+            f"RBTorsion:     \t\t{self['RBTorsion']}\n"
             f"Nonbonded:     \t\t{self['Nonbonded']}\n"
             f"vdW:           \t\t{self['vdW']}\n"
             f"Electrostatics:\t\t{self['Electrostatics']}\n"

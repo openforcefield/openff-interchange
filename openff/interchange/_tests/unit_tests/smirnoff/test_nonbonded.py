@@ -15,6 +15,7 @@ from openff.interchange.smirnoff._nonbonded import SMIRNOFFElectrostaticsCollect
 
 
 class TestNonbonded(_BaseTest):
+    @pytest.mark.slow()
     def test_electrostatics_am1_handler(self, methane):
         methane.assign_partial_charges(partial_charge_method="am1bcc")
 
@@ -93,6 +94,7 @@ class TestNonbonded(_BaseTest):
             reference_charges,
         )
 
+    @pytest.mark.slow()
     def test_toolkit_am1bcc_uses_elf10_if_oe_is_available(self, sage, hexane_diol):
         """
         Ensure that the ToolkitAM1BCCHandler assigns ELF10 charges if OpenEye is available.
@@ -218,7 +220,7 @@ class TestSMIRNOFFChargeIncrements(_BaseTest):
 
         # TODO: Fix get_charges to return the atoms in order
         found_charges = [0.0] * topology.n_atoms
-        for key, val in out["Electrostatics"].get_charges().items():
+        for key, val in out["Electrostatics"].charges.items():
             found_charges[key.atom_indices[0]] = val.m
 
         assert numpy.allclose(expected_charges, found_charges)

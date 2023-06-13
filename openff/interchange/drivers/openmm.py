@@ -6,6 +6,7 @@ import numpy
 import openmm
 import openmm.unit
 from openff.units import unit
+from openff.units.openmm import ensure_quantity
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
@@ -141,27 +142,8 @@ def _process(
         openmm.HarmonicBondForce: "Bond",
         openmm.HarmonicAngleForce: "Angle",
         openmm.PeriodicTorsionForce: "Torsion",
+        openmm.RBTorsionForce: "RBTorsion",
     }
-
-    n_rb = len(
-        [
-            force
-            for force in system.getForces()
-            if isinstance(force, openmm.RBTorsionForce)
-        ],
-    )
-    n_periodic = len(
-        [
-            force
-            for force in system.getForces()
-            if isinstance(force, openmm.PeriodicTorsionForce)
-        ],
-    )
-
-    if n_rb * n_periodic > 0:
-        raise NotImplementedError(
-            "Cannot process systems with both PeriodicTorsionForce and RBTorsionForce",
-        )
 
     # This assumes that only custom forces will have duplicate instances
     for index, raw_energy in raw_energies.items():
@@ -203,7 +185,9 @@ def _process(
 
     else:
         processed = {
-            key: staged[key] for key in ["Bond", "Angle", "Torsion"] if key in staged
+            key: staged[key]
+            for key in ["Bond", "Angle", "Torsion", "RBTorsion"]
+            if key in staged
         }
 
         nonbonded_energies = [
@@ -219,10 +203,27 @@ def _process(
         ]
 
         # Array inference acts up if given a 1-list of Quantity
-        processed["Nonbonded"] = (
-            nonbonded_energies[0]
-            if len(nonbonded_energies) == 1
-            else numpy.sum(nonbonded_energies)
-        )
+        if combine_nonbonded_forces:
+            assert len(nonbonded_energies) == 1
+
+            processed["Nonbonded"] = nonbonded_energies[0]
+
+        else:
+            zero = 0.0 * openmm.unit.kilojoule_per_mole
+
+            processed["Electrostatics"] = ensure_quantity(
+                numpy.sum(
+                    [
+                        staged.get(key, zero)
+                        for key in ["Electrostatics", "Electrostatics 1-4"]
+                    ],
+                ),
+                "openff",
+            )
+
+            processed["vdW"] = ensure_quantity(
+                numpy.sum([staged.get(key, zero) for key in ["vdW", "vdW 1-4"]]),
+                "openff",
+            )
 
     return EnergyReport(energies=processed)

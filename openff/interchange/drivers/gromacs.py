@@ -99,8 +99,8 @@ def _get_gromacs_energies(
 ) -> dict[str, unit.Quantity]:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
-            interchange.to_gro("out.gro", decimal=round_positions)
-            interchange.to_top("out.top")
+            prefix = "_tmp"
+            interchange.to_gromacs(prefix=prefix, decimal=round_positions)
 
             if mdp == "auto":
                 mdconfig = MDConfig.from_interchange(interchange)
@@ -110,8 +110,8 @@ def _get_gromacs_energies(
                 mdp_file = _get_mdp_file(mdp)
 
             return _run_gmx_energy(
-                top_file="out.top",
-                gro_file="out.gro",
+                top_file="_tmp.top",
+                gro_file="_tmp.gro",
                 mdp_file=mdp_file,
                 maxwarn=2,
             )
@@ -203,7 +203,7 @@ def _get_gmx_energy_torsion(gmx_energies: dict) -> Quantity:
     """Canonicalize torsion energies from a set of GROMACS energies."""
     gmx_torsion = 0.0 * kj_mol
 
-    for key in ["Torsion", "Ryckaert-Bell.", "Proper Dih.", "Per. Imp. Dih."]:
+    for key in ["Torsion", "Proper Dih.", "Per. Imp. Dih."]:
         if key in gmx_energies:
             gmx_torsion += gmx_energies[key]
 
@@ -257,9 +257,10 @@ def _process(
 
     return EnergyReport(
         energies={
-            "Bond": energies["Bond"] if "Bond" in energies else 0.0 * kj_mol,
-            "Angle": energies["Angle"],
+            "Bond": energies.get("Bond", 0.0 * kj_mol),
+            "Angle": energies.get("Angle", 0.0 * kj_mol),
             "Torsion": _get_gmx_energy_torsion(energies),
+            "RBTorsion": energies.get("Ryckaert-Bell.", 0.0 * kj_mol),
             "vdW": _get_gmx_energy_vdw(energies),
             "Electrostatics": _get_gmx_energy_coul(energies),
         },

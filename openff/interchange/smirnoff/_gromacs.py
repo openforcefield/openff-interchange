@@ -1,9 +1,11 @@
 import itertools
-from typing import Optional
+from typing import Optional, Union
 
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.topology.molecule import Atom, Molecule
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
+from typing_extensions import TypeAlias
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.potentials import Collection
@@ -28,6 +30,11 @@ from openff.interchange.interop.gromacs.models.models import (
     RyckaertBellemansDihedral,
 )
 from openff.interchange.models import BondKey, TopologyKey
+
+MoleculeLike: TypeAlias = Union[Molecule, _SimpleMolecule]
+
+_WATER = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+_SIMPLE_WATER = _SimpleMolecule.from_molecule(_WATER)
 
 
 def _convert(interchange: Interchange) -> GROMACSSystem:
@@ -83,11 +90,13 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
     for unique_molecule_index in unique_molecule_map:
         unique_molecule = interchange.topology.molecule(unique_molecule_index)
 
-        if unique_molecule.name == "":
+        if getattr(unique_molecule, "name", "") == "":
             unique_molecule.name = "MOL" + str(unique_molecule_index)
 
         for atom in unique_molecule.atoms:
-            atom_type_name = f"{unique_molecule.name}{unique_molecule.atom_index(atom)}"
+            atom_type_name = (
+                f"{unique_molecule.name}_{unique_molecule.atom_index(atom)}"
+            )
             _atom_atom_type_map[atom] = atom_type_name
 
             topology_index = interchange.topology.atom_index(atom)
@@ -111,6 +120,11 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
 
             _atom_atom_type_map[atom] = atom_type_name
 
+    # Indexed by OpenFF topology indices
+    _partial_charges = {
+        k.atom_indices[0]: v for k, v in interchange["Electrostatics"].charges.items()
+    }
+
     for unique_molecule_index in unique_molecule_map:
         unique_molecule = interchange.topology.molecule(unique_molecule_index)
 
@@ -131,15 +145,17 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
                         "If some atoms have residue names, all atoms must have residue names.",
                     )
                 else:
-                    for atom in unique_molecule.atoms:
-                        atom.metadata["residue_name"] = unique_molecule.name
+                    # Use dummy since we're already iterating over this molecule's atoms
+                    for _atom in unique_molecule.atoms:
+                        _atom.metadata["residue_name"] = unique_molecule.name
 
-            name = SYMBOLS[atom.atomic_number] if atom.name == "" else atom.name
-            charge = (
-                unit.Quantity(0.0, unit.elementary_charge)
-                if atom.partial_charge is None
-                else atom.partial_charge
+            name = (
+                SYMBOLS[atom.atomic_number]
+                if getattr(atom, "name", "") == ""
+                else atom.name
             )
+
+            charge = _partial_charges[interchange.topology.atom_index(atom)]
 
             molecule.atoms.append(
                 GROMACSAtom(
@@ -156,6 +172,15 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
                     mass=MASSES[atom.atomic_number],
                 ),
             )
+
+            this_molecule_atom_type_names = tuple(
+                atom.atom_type for atom in molecule.atoms
+            )
+
+            molecule._contained_atom_types = {
+                atom_type_name: system.atom_types[atom_type_name]
+                for atom_type_name in this_molecule_atom_type_names
+            }
 
         # Use a set to de-duplicate
         pairs: set[tuple] = {*_get_14_pairs(unique_molecule)}
@@ -199,7 +224,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
 
 def _convert_bonds(
     molecule: GROMACSMolecule,
-    unique_molecule: "Molecule",
+    unique_molecule: MoleculeLike,
     interchange: Interchange,
 ):
     if len(molecule.settles) > 0:
@@ -249,7 +274,7 @@ def _convert_bonds(
 
 def _convert_angles(
     molecule: GROMACSMolecule,
-    unique_molecule: "Molecule",
+    unique_molecule: MoleculeLike,
     interchange: Interchange,
 ):
     if len(molecule.settles) > 0:
@@ -291,7 +316,7 @@ def _convert_angles(
 
 def _convert_dihedrals(
     molecule: GROMACSMolecule,
-    unique_molecule: "Molecule",
+    unique_molecule: MoleculeLike,
     interchange: Interchange,
 ):
     rb_torsion_handler: Optional["Collection"] = interchange.collections.get(
@@ -314,15 +339,27 @@ def _convert_dihedrals(
 
         if proper_torsion_handler:
             for top_key in proper_torsion_handler.key_map:
-                if top_key.atom_indices[0] != topology_indices[0]:
+                if top_key.atom_indices[0] not in [
+                    topology_indices[0],
+                    topology_indices[3],
+                ]:
                     continue
-                if top_key.atom_indices[1] != topology_indices[1]:
+                if top_key.atom_indices[1] not in [
+                    topology_indices[1],
+                    topology_indices[2],
+                ]:
                     continue
-                if top_key.atom_indices[2] != topology_indices[2]:
+                if top_key.atom_indices[2] not in [
+                    topology_indices[2],
+                    topology_indices[1],
+                ]:
                     continue
-                if top_key.atom_indices[3] != topology_indices[3]:
+                if top_key.atom_indices[3] not in [
+                    topology_indices[3],
+                    topology_indices[0],
+                ]:
                     continue
-                if top_key.atom_indices == topology_indices:
+                if top_key.atom_indices in (topology_indices, topology_indices[::-1]):
                     pot_key = proper_torsion_handler.key_map[top_key]
                     params = proper_torsion_handler.potentials[pot_key].parameters
 
@@ -342,15 +379,27 @@ def _convert_dihedrals(
 
         if rb_torsion_handler:
             for top_key in rb_torsion_handler.key_map:
-                if top_key.atom_indices[0] != topology_indices[0]:
+                if top_key.atom_indices[0] not in [
+                    topology_indices[0],
+                    topology_indices[3],
+                ]:
                     continue
-                if top_key.atom_indices[1] != topology_indices[1]:
+                if top_key.atom_indices[1] not in [
+                    topology_indices[1],
+                    topology_indices[2],
+                ]:
                     continue
-                if top_key.atom_indices[2] != topology_indices[2]:
+                if top_key.atom_indices[2] not in [
+                    topology_indices[2],
+                    topology_indices[1],
+                ]:
                     continue
-                if top_key.atom_indices[3] != topology_indices[3]:
+                if top_key.atom_indices[3] not in [
+                    topology_indices[3],
+                    topology_indices[0],
+                ]:
                     continue
-                if top_key.atom_indices == topology_indices:
+                if top_key.atom_indices in [topology_indices, topology_indices[::-1]]:
                     pot_key = rb_torsion_handler.key_map[top_key]
                     params = rb_torsion_handler.potentials[pot_key].parameters
 
@@ -360,12 +409,12 @@ def _convert_dihedrals(
                             atom2=molecule_indices[1] + 1,
                             atom3=molecule_indices[2] + 1,
                             atom4=molecule_indices[3] + 1,
-                            c0=params["C0"],
-                            c1=params["C1"],
-                            c2=params["C2"],
-                            c3=params["C3"],
-                            c4=params["C4"],
-                            c5=params["C5"],
+                            c0=params["c0"],
+                            c1=params["c1"],
+                            c2=params["c2"],
+                            c3=params["c3"],
+                            c4=params["c4"],
+                            c5=params["c5"],
                         ),
                     )
 
@@ -420,14 +469,18 @@ def _convert_dihedrals(
 
 def _convert_settles(
     molecule: GROMACSMolecule,
-    unique_molecule: "Molecule",
+    unique_molecule: MoleculeLike,
     interchange: Interchange,
 ):
     if "Constraints" not in interchange.collections:
         return
 
-    if not unique_molecule.is_isomorphic_with(Molecule.from_smiles("O")):
-        return
+    if isinstance(unique_molecule, Molecule):
+        if not unique_molecule.is_isomorphic_with(_WATER):
+            return
+    elif isinstance(unique_molecule, _SimpleMolecule):
+        if not unique_molecule.is_isomorphic_with(_SIMPLE_WATER):
+            return
 
     if unique_molecule.atom(0).atomic_number != 8:
         raise Exception(
@@ -459,13 +512,13 @@ def _convert_settles(
         except LookupError:
             constraint_lengths.add(
                 interchange["Constraints"]
-                .constraints[interchange["Constraints"].key_map[key]]
+                .potentials[interchange["Constraints"].key_map[key]]
                 .parameters["distance"],
             )
 
     if len(constraint_lengths) != 2:
         raise RuntimeError(
-            "Found three unique constraint lengths in constrained water.",
+            "Found unexpected number of unique constraint lengths in constrained water.",
         )
 
     molecule.settles.append(

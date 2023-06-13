@@ -2,8 +2,21 @@ from collections.abc import Iterable
 from typing import Literal
 
 from openff.toolkit.topology.molecule import Atom
+from pydantic import Field
 
 from openff.interchange.components.potentials import Collection
+
+
+class ConstraintCollection(Collection):
+    """Collection storing constraint potentials as produced by a SMIRNOFF force field."""
+
+    type: Literal["Constraints"] = "Constraints"
+    expression: Literal[""] = ""
+
+    @classmethod
+    def potential_parameters(cls) -> Iterable[str]:
+        """Return a list of names of parameters included in each potential in this colletion."""
+        return ("length",)
 
 
 class BondCollection(Collection):
@@ -58,16 +71,19 @@ class RyckaertBellemansTorsionCollection(Collection):
     """Handler storing Ryckaert-Bellemans torsion potentials."""
 
     type: Literal["RBTorsions"] = "RBTorsions"
-    expression: str = (
-        "C0 + C1 * (cos(phi - 180)) "
-        "C2 * (cos(phi - 180)) ** 2 + C3 * (cos(phi - 180)) ** 3 "
-        "C4 * (cos(phi - 180)) ** 4 + C5 * (cos(phi - 180)) ** 5 "
+    expression: str = Field(
+        "c0 + "
+        "c1 * (cos(phi - 180)) "
+        "c2 * (cos(phi - 180)) ** 2 + "
+        "c3 * (cos(phi - 180)) ** 3 + "
+        "c4 * (cos(phi - 180)) ** 4 + "
+        "c5 * (cos(phi - 180)) ** 5",
     )
 
     @classmethod
     def supported_parameters(cls) -> Iterable[str]:
         """Return a list of supported parameter attribute names."""
-        return "C0", "C1", "C2", "C3", "C4", "C5"
+        return "c0", "c1", "c2", "c3", "c4", "c5"
 
 
 class ImproperTorsionCollection(Collection):

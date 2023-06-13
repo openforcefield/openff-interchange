@@ -1,4 +1,8 @@
+from typing import Union
+
 import pytest
+from openff.toolkit import Topology
+from openff.units import unit
 
 from openff.interchange._tests import _BaseTest
 from openff.interchange.components.mdconfig import (
@@ -7,6 +11,32 @@ from openff.interchange.components.mdconfig import (
     get_smirnoff_defaults,
 )
 from openff.interchange.constants import _PME
+
+
+@pytest.fixture()
+def system_no_constraints(sage_unconstrained, basic_top):
+    return sage_unconstrained.create_interchange(basic_top)
+
+
+@pytest.fixture()
+def rigid_water_box(sage, water):
+    topology = water.to_topology()
+    topology.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
+    return sage.create_interchange(topology)
+
+
+@pytest.fixture()
+def constrained_ligand_rigid_water_box(sage, basic_top, water):
+    topology = Topology(basic_top)
+    topology.add_molecule(water)
+    return sage.create_interchange(topology)
+
+
+@pytest.fixture()
+def unconstrained_ligand_rigid_water_box(sage_unconstrained, basic_top, water):
+    topology = Topology(basic_top)
+    topology.add_molecule(water)
+    return sage_unconstrained.create_interchange(topology)
 
 
 def parse_mdp(file: str) -> dict[str, str]:
@@ -27,6 +57,37 @@ def parse_mdp(file: str) -> dict[str, str]:
 
             else:
                 raise Exception
+
+    return options
+
+
+def parse_sander(file: str) -> dict[str, Union[dict, str]]:
+    """Naively parse (sections of) a sander input file into a dict structure."""
+    options: dict[str, Union[dict, str]] = dict()
+    current_level = options
+
+    with open(file) as f:
+        for number, line in enumerate(f.readlines()):
+            if number == 0:
+                continue
+
+            line = line.strip().replace(" ", "").replace(",", "").lower()
+
+            if line.startswith("/"):
+                continue
+
+            if line.startswith("&"):
+                current_section = line[1:]
+                current_level[current_section] = dict()
+                current_level = current_level[current_section]  # type: ignore[assignment]
+                continue
+
+            if "=" in line:
+                key, value = line.split("=")
+                current_level[key.lower()] = value
+                continue
+
+            raise ValueError(f"Unexpected content {line} on line {number} of {file}.")
 
     return options
 
@@ -116,3 +177,52 @@ class TestIntermolDefaults(_BaseTest):
 
         for key in ["vdW", "Electrostatics"]:
             assert interchange[key].cutoff.m_as(unit.nanometer) == pytest.approx(0.9)
+
+
+class TestWriteSanderInput(_BaseTest):
+    def test_system_no_constraints(self, system_no_constraints):
+        MDConfig.from_interchange(system_no_constraints).write_sander_input_file("1.in")
+
+        options = parse_sander("1.in")
+
+        assert options["cntrl"]["ntf"] == "1"
+        assert options["cntrl"]["ntc"] == "1"
+
+    def test_rigid_water_box(self, rigid_water_box):
+        MDConfig.from_interchange(rigid_water_box).write_sander_input_file("2.in")
+
+        options = parse_sander("2.in")
+
+        # Unclear what's "supposed" to be the value here
+        assert options["cntrl"]["ntf"] in ("2", "4")
+        assert options["cntrl"]["ntc"] == "1"
+
+    def test_constrained_ligand_rigid_water_box(
+        self,
+        constrained_ligand_rigid_water_box,
+    ):
+        MDConfig.from_interchange(
+            constrained_ligand_rigid_water_box,
+        ).write_sander_input_file("3.in")
+
+        options = parse_sander("3.in")
+
+        # Amber does not support this case (constrain all h-bonds and water angles, but no other angles),
+        # this option seems to be the best one
+        assert options["cntrl"]["ntf"] == "2"
+        assert options["cntrl"]["ntc"] == "1"
+
+    def test_unconstrained_ligand_rigid_water_box(
+        self,
+        unconstrained_ligand_rigid_water_box,
+    ):
+        MDConfig.from_interchange(
+            unconstrained_ligand_rigid_water_box,
+        ).write_sander_input_file("3.in")
+
+        options = parse_sander("3.in")
+
+        # Amber does not support this case (constrain wtaer bonds and water angles, but no other bonds or angles),
+        # this option seems to be the best one
+        assert options["cntrl"]["ntf"] == "2"
+        assert options["cntrl"]["ntc"] == "1"

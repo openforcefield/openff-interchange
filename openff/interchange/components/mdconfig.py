@@ -14,6 +14,7 @@ from openff.interchange.exceptions import (
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
+
 MDP_HEADER = """
 nsteps                   = 0
 nstenergy                = 1000
@@ -268,12 +269,18 @@ class MDConfig(DefaultModel):
 
             if self.constraints in ["none", None]:
                 sander.write("ntc=1,\nntf=1,\n")
-            elif self.constraints == "h-bonds":
-                sander.write("ntc=2,\nntf=2,\n")
-            # TODO: Is there a clear analog to GROMACS's all-bonds?
-            elif self.constraints == "angles":
+            # TODO: This is an approximation, but most of the time these will be set to 2
+            #       Amber cannot ignore H-O-H angle energy without ignoring all H-X-X angles,
+            #       See 21.7.1. in Amber22 manual
+            elif self.constraints in ("h-bonds", "all-bonds", "all-angles"):
+                sander.write(
+                    "ntc=1,\n"  # do NOT perform shake, since it will modify positions, but ...
+                    "ntf=2,\n",  # ... ignore interactions of bonds including hydrogen atoms
+                )
+            # TODO: Cover other cases, though hard to reach with mainline OpenFF force fields
+            else:
                 raise UnsupportedExportError(
-                    "Unclear how to constrain angles with sander",
+                    f"Unclear how to apply {self.constraints} with sander",
                 )
 
             if self.vdw_method == "cutoff":
