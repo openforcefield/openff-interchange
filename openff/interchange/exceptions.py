@@ -1,7 +1,11 @@
 """Custom exceptions used in Interchange."""
 
 
-class SMIRNOFFParameterAttributeNotImplementedError(Exception):
+class OpenFFInterchangeException(Exception):
+    """Base class for all Interchange exceptions."""
+
+
+class SMIRNOFFParameterAttributeNotImplementedError(OpenFFInterchangeException):
     """
     Exception for when a parameter attribute is supported by the SMIRNOFF specification but not yet implemented.
 
@@ -10,105 +14,105 @@ class SMIRNOFFParameterAttributeNotImplementedError(Exception):
     """
 
 
-class SMIRNOFFHandlersNotImplementedError(Exception):
+class SMIRNOFFHandlersNotImplementedError(OpenFFInterchangeException):
     """
     Exception for when some parameter handlers in the SMIRNOFF specification are not implemented here.
     """
 
 
-class SMIRNOFFVersionNotSupportedError(Exception):
+class SMIRNOFFVersionNotSupportedError(OpenFFInterchangeException):
     """
     Exception for when a parameter handler's version is not supported.
     """
 
 
-class InvalidParameterHandlerError(ValueError):
+class InvalidParameterHandlerError(OpenFFInterchangeException, ValueError):
     """
     Generic exception for mismatch between expected and found ParameterHandler types.
     """
 
 
-class InvalidBoxError(ValueError):
+class InvalidBoxError(OpenFFInterchangeException, ValueError):
     """
     Generic exception for errors reading box data.
     """
 
 
-class InvalidTopologyError(ValueError):
+class InvalidTopologyError(OpenFFInterchangeException, ValueError):
     """
     Generic exception for errors reading chemical topology data.
     """
 
 
-class NonbondedEnergyError(AssertionError):
+class NonbondedEnergyError(OpenFFInterchangeException, AssertionError):
     """
     Exception for when non-bonded energies computed from different objects differ.
     """
 
 
-class InvalidExpressionError(ValueError):
+class InvalidExpressionError(OpenFFInterchangeException, ValueError):
     """
     Exception for when an expression cannot safely be interpreted.
     """
 
 
-class UnsupportedCutoffMethodError(BaseException):
+class UnsupportedCutoffMethodError(OpenFFInterchangeException):
     """
     Exception for a cutoff method that is invalid or not supported by an engine.
     """
 
 
-class UnimplementedCutoffMethodError(BaseException):
+class UnimplementedCutoffMethodError(OpenFFInterchangeException):
     """
     Exception for a cutoff method that should be supported but it not yet implemented.
     """
 
 
-class UnsupportedMixingRuleError(BaseException):
+class UnsupportedMixingRuleError(OpenFFInterchangeException):
     """
     Raised when attempting to use a mixing rule is invalid, unsupported or otherwise not implemented.
     """
 
 
-class UnsupportedParameterError(ValueError):
+class UnsupportedParameterError(OpenFFInterchangeException, ValueError):
     """
     Exception for parameters having unsupported values, i.e. non-1.0 idivf.
     """
 
 
-class UnsupportedBoxError(ValueError):
+class UnsupportedBoxError(OpenFFInterchangeException, ValueError):
     """
     Exception for processing an unsupported box, probably non-orthogonal.
     """
 
 
-class UnsupportedImportError(BaseException):
+class UnsupportedImportError(OpenFFInterchangeException):
     """
     Generic exception for attempting to import from an unsupported data format.
     """
 
 
-class UnsupportedExportError(BaseException):
+class UnsupportedExportError(OpenFFInterchangeException):
     """
     Exception for attempting to write to an unsupported file format.
     """
 
 
-class UnsupportedCombinationError(BaseException):
+class UnsupportedCombinationError(OpenFFInterchangeException):
     """General exception for something going wrong in Interchange object combination."""
 
 
-class PluginCompatibilityError(BaseException):
+class PluginCompatibilityError(OpenFFInterchangeException):
     """A plugin is incompatible with the current version of Interchange in the way it is called."""
 
 
-class CannotSetSwitchingFunctionError(BaseException):
+class CannotSetSwitchingFunctionError(OpenFFInterchangeException):
     """
     Unable to set a switching function.
     """
 
 
-class CannotInferEnergyError(BaseException):
+class CannotInferEnergyError(OpenFFInterchangeException):
     """
     Failed to infer a physical interpretation of this energy term.
     """
@@ -120,79 +124,79 @@ class CannotInferNonbondedEnergyError(CannotInferEnergyError):
     """
 
 
-class InvalidWriterError(BaseException):
+class InvalidWriterError(OpenFFInterchangeException):
     """
     An unknown or unimplemnted writer was specified.
     """
 
 
-class ConversionError(BaseException):
+class ConversionError(OpenFFInterchangeException):
     """
     Base exception for error handling during object conversion.
     """
 
 
-class MissingBoxError(BaseException):
+class MissingBoxError(OpenFFInterchangeException):
     """
     Exception for when box vectors are needed but missing.
     """
 
 
-class MissingPositionsError(BaseException):
+class MissingPositionsError(OpenFFInterchangeException):
     """
     Exception for when positions are needed but missing.
     """
 
 
-class MissingParameterHandlerError(BaseException):
+class MissingParameterHandlerError(OpenFFInterchangeException):
     """
     Exception for when a parameter handler is requested but not found.
     """
 
 
-class MissingParametersError(BaseException):
+class MissingParametersError(OpenFFInterchangeException):
     """
     Exception for when parameters are needed but missing.
     """
 
 
-class MissingBondOrdersError(BaseException):
+class MissingBondOrdersError(OpenFFInterchangeException):
     """
     Exception for when a parameter handler needs fractional bond orders but they are missing.
     """
 
 
-class DuplicateMoleculeError(ValueError):
+class DuplicateMoleculeError(OpenFFInterchangeException, ValueError):
     """
     Exception for when molecules are not unique.
     """
 
 
-class MissingUnitError(ValueError):
+class MissingUnitError(OpenFFInterchangeException, ValueError):
     """
     Exception for data missing a unit tag.
     """
 
 
-class UnitValidationError(ValueError):
+class UnitValidationError(OpenFFInterchangeException, ValueError):
     """
     Exception for bad behavior when validating unit-tagged data.
     """
 
 
-class NonbondedCompatibilityError(BaseException):
+class NonbondedCompatibilityError(OpenFFInterchangeException):
     """
     Exception for unsupported combination of nonbonded methods.
     """
 
 
-class MissingNonbondedCompatibilityError(BaseException):
+class MissingNonbondedCompatibilityError(OpenFFInterchangeException):
     """
     Exception for uncovered combination of nonbonded methods.
     """
 
 
-class InternalInconsistencyError(BaseException):
+class InternalInconsistencyError(OpenFFInterchangeException):
     """
     Fallback exception for bad behavior releating to a self-inconsistent internal state.
 
@@ -200,7 +204,7 @@ class InternalInconsistencyError(BaseException):
     """
 
 
-class AmberError(BaseException):
+class AmberError(OpenFFInterchangeException):
     """
     Base exception for handling Amber-related errors.
     """
@@ -218,7 +222,7 @@ class SanderError(AmberError):
     """
 
 
-class GMXError(BaseException):
+class GMXError(OpenFFInterchangeException):
     """
     Exception for when a GROMACS subprocess fails.
     """
@@ -242,7 +246,7 @@ class GMXMdrunError(GMXError):
     """
 
 
-class LAMMPSError(BaseException):
+class LAMMPSError(OpenFFInterchangeException):
     """
     Base exception for handling LAMMPS-related errors.
     """
@@ -260,43 +264,43 @@ class LAMMPSRunError(LAMMPSError):
     """
 
 
-class EnergyError(BaseException):
+class EnergyError(OpenFFInterchangeException):
     """
     Base class for energies in reports not matching.
     """
 
 
-class InvalidEnergyError(BaseException):
+class InvalidEnergyError(OpenFFInterchangeException):
     """
     Energy type not understood.
     """
 
 
-class IncompatibleTolerancesError(BaseException):
+class IncompatibleTolerancesError(OpenFFInterchangeException):
     """
     Exception for when one report has a value for an energy group but the other does not.
     """
 
 
-class VirtualSiteTypeNotImplementedError(BaseException):
+class VirtualSiteTypeNotImplementedError(OpenFFInterchangeException):
     """
     Raised when this type of virtual site is not yet implemented.
     """
 
 
-class NonIntegralMoleculeChargeError(BaseException):
+class NonIntegralMoleculeChargeError(OpenFFInterchangeException):
     """
     Exception raised when the partial charges on a molecule do not sum up to its formal charge.
     """
 
 
-class MissingPartialChargesError(BaseException):
+class MissingPartialChargesError(OpenFFInterchangeException):
     """
     A molecule is missing partial charges.
     """
 
 
-class UnassignedValenceError(BaseException):
+class UnassignedValenceError(OpenFFInterchangeException):
     """Exception raised when there are valence terms for which a ParameterHandler did not find matches."""
 
 
@@ -312,7 +316,7 @@ class UnassignedTorsionError(UnassignedValenceError):
     """Exception raised when there are torsion terms for which a ParameterHandler did not find matches."""
 
 
-class MissingValenceError(BaseException):
+class MissingValenceError(OpenFFInterchangeException):
     """Exception raised when there are valence interactions for which no parameters are found."""
 
 
@@ -328,13 +332,13 @@ class MissingTorsionError(UnassignedValenceError):
     """Exception raised when there exists a torsion for which no parameters are found."""
 
 
-class PACKMOLRuntimeError(Exception):
+class PACKMOLRuntimeError(OpenFFInterchangeException):
     """Exception raised when PACKMOL fails to execute / converge."""
 
 
-class PACKMOLValueError(Exception):
+class PACKMOLValueError(OpenFFInterchangeException):
     """Exception raised when a bad input is passed to a PACKMOL wrapper."""
 
 
-class ExperimentalFeatureException(Exception):
+class ExperimentalFeatureException(OpenFFInterchangeException):
     """Exception raised when an experimental feature is used without opt-in."""

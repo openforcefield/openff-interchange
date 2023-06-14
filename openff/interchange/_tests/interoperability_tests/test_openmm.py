@@ -19,6 +19,7 @@ from openff.interchange._tests.unit_tests.plugins.test_smirnoff_plugins import (
 from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import (
     MissingPositionsError,
+    OpenFFInterchangeException,
     PluginCompatibilityError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
@@ -126,7 +127,7 @@ class TestOpenMM(_BaseTest):
                     break
             else:
                 raise Exception
-        elif issubclass(result, (BaseException, Exception)):
+        elif issubclass(result, OpenFFInterchangeException):
             exception = result
             with pytest.raises(exception):
                 interchange.to_openmm(combine_nonbonded_forces=True)
