@@ -10,9 +10,12 @@ from openff.interchange.components._packmol import pack_box
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
 
-def test_packmol_box_vectors():
-    molecules = [Molecule.from_smiles("O")]
+@pytest.fixture(scope="module")
+def molecules() -> list[Molecule]:
+    return [Molecule.from_smiles("O")]
 
+
+def test_packmol_box_vectors(molecules):
     topology = pack_box(
         molecules,
         [10],
@@ -30,9 +33,7 @@ def test_packmol_box_vectors():
     )
 
 
-def test_packmol_bad_copies():
-    molecules = [Molecule.from_smiles("O")]
-
+def test_packmol_bad_copies(molecules):
     with pytest.raises(PACKMOLValueError):
         pack_box(
             molecules,
@@ -41,10 +42,8 @@ def test_packmol_bad_copies():
         )
 
 
-def test_packmol_bad_box_vectors():
-    molecules = [Molecule.from_smiles("O")]
-
-    with pytest.raises(PACKMOLValueError):
+def test_packmol_bad_box_vectors(molecules):
+    with pytest.raises(PACKMOLValueError, match=r"with shape \(3, 3\)"):
         pack_box(
             molecules,
             [2],
@@ -52,9 +51,29 @@ def test_packmol_bad_box_vectors():
         )
 
 
-def test_packmol_bad_solute():
-    molecules = [Molecule.from_smiles("O")]
+def test_packmol_underspecified(molecules):
+    """Too few arguments are provided."""
 
+    with pytest.raises(PACKMOLValueError, match="One of.*must be"):
+        pack_box(
+            molecules,
+            number_of_copies=[1],
+        )
+
+
+def test_packmol_overspecified(molecules):
+    """Too many arguments are provided."""
+
+    with pytest.raises(PACKMOLValueError, match="cannot be specified together"):
+        pack_box(
+            molecules,
+            number_of_copies=[1],
+            mass_density=1.0 * unit.grams / unit.milliliter,
+            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+        )
+
+
+def test_packmol_bad_solute(molecules):
     with pytest.raises(PACKMOLValueError):
         pack_box(
             molecules,
@@ -64,9 +83,7 @@ def test_packmol_bad_solute():
         )
 
 
-def test_packmol_failed():
-    molecules = [Molecule.from_smiles("O")]
-
+def test_packmol_failed(molecules):
     with pytest.raises(PACKMOLRuntimeError):
         pack_box(
             molecules,
@@ -75,9 +92,7 @@ def test_packmol_failed():
         )
 
 
-def test_packmol_water():
-    molecules = [Molecule.from_smiles("O")]
-
+def test_packmol_water(molecules):
     topology = pack_box(
         molecules,
         [10],
@@ -222,3 +237,34 @@ def test_solvate_structure():
 
     assert topology.n_molecules == 11
     assert len([*topology.unique_molecules]) == 2
+
+
+def solvate_topology():
+    ligand = Molecule.from_smiles("C1CN2C(=N1)SSC2=S")
+    ligand.generate_conformers(n_conformers=1)
+
+    solvated_topology = solvate_topology(
+        ligand.to_topology(),
+    )
+
+    assert solvated_topology.molecule(0).to_smiles() == ligand.to_smiles()
+
+    assert solvated_topology.molecule(0).to_smiles(explicit_hydrogens=False) == "O"
+
+    assert solvated_topology.molecule(
+        solvated_topology.n_molecules - 1,
+    ).to_smiles() in ["[Cl-]", "[Na+]"]
+
+    # Defaults should produce something like 595, but just sanity check here
+    assert solvated_topology.n_molecules > 500
+
+    for position in [
+        [0, 1],
+        [0, 2],
+        [1, 0],
+        [1, 2],
+    ]:
+        assert solvated_topology.box_vectors[position].m == 0.0
+
+    assert solvated_topology.box_vectors[0, 0] == solvated_topology.box_vectors[1, 1]
+    assert solvated_topology.box_vectors[2, 0] == solvated_topology.box_vectors[2, 1]
