@@ -29,9 +29,13 @@ jobs:
         python-version:
           - "3.9"
           - "3.10"
+          - "3.11"
         openeye:
           - true
           - false
+        exclude:
+          - openeye: false
+            python-version: "3.11"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -46,12 +50,6 @@ jobs:
         environment-file: devtools/conda-envs/test_env.yaml
         create-args: >-
           python=${{ matrix.python-version }}
-
-    - name: Additional info about the build
-      run: |
-        uname -a
-        df -h
-        ulimit -a
 
     - name: Install package
       run: |
