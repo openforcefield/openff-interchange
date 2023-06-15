@@ -43,12 +43,6 @@ jobs:
         create-args: >-
           python=${{ matrix.python-version }}
 
-    - name: Additional info about the build
-      run: |
-        uname -a
-        df -h
-        ulimit -a
-
     - name: Install package
       run: |
         # These packages are brought in by conda (via the toolkit) and must be removed manually

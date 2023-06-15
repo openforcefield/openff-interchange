@@ -12,6 +12,7 @@ from openff.toolkit.tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
+from openff.utilities.utilities import has_executable
 from openmm import unit as openmm_unit
 
 from openff.interchange import Interchange
@@ -290,6 +291,7 @@ class _BaseTest:
 
 HAS_GROMACS = _find_gromacs_executable() is not None
 HAS_LAMMPS = _find_lammps_executable() is not None
+HAS_SANDER = has_executable("sander")
 
 needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
 needs_not_gmx = pytest.mark.skipif(
@@ -300,6 +302,11 @@ needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs LAMMPS")
 needs_not_lmp = pytest.mark.skipif(
     HAS_LAMMPS,
     reason="Needs LAMMPS to NOT be installed",
+)
+needs_sander = pytest.mark.skipif(not HAS_SANDER, reason="Needs sander")
+needs_not_sander = pytest.mark.skipif(
+    HAS_SANDER,
+    reason="sander needs to NOT be installed",
 )
 
 kj_nm2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.nanometer**2
