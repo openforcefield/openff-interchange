@@ -333,9 +333,22 @@ class GROMACSWriter(DefaultModel):
             for i in range(3):
                 gro.write(f"{box[i, i]:11.7f}")
         else:
-            raise NotImplementedError(
-                "Non-rectangular boxes are not yet tested. Please open an issue on GitHub if you "
-                "need this feature.",
-            )
+            # v1x v1y v1z
+            # v2x v2y v2z
+            # v3x v3y v3z
+            # https://manual.gromacs.org/archive/5.0.3/online/gro.html
+            # v1(x) v2(y) v3(z) v1(y) v1(z) v2(x) v2(z) v3(x) v3(y)
+            for value in [
+                box[0, 0],  # v1x
+                box[1, 1],  # v2y
+                box[2, 2],  # v3z
+                box[0, 1],  # v1y
+                box[0, 2],  # v1z
+                box[1, 0],  # v2x
+                box[1, 2],  # v2z
+                box[2, 0],  # v3x
+                box[2, 1],  # v3y
+            ]:
+                gro.write(f"{value:11.7f}")
 
         gro.write("\n")
