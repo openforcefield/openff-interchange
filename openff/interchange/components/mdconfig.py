@@ -14,6 +14,7 @@ from openff.interchange.exceptions import (
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
+
 MDP_HEADER = """
 nsteps                   = 0
 nstenergy                = 1000
@@ -263,6 +264,10 @@ class MDConfig(DefaultModel):
 
             if self.switching_function is not None:
                 distance = round(self.switching_distance.m_as(unit.angstrom), 4)
+                # This value must be negative for a switching function to not be applied.
+                # The Amber22 manual misstates the behavior of this case.
+                if distance == 0.0:
+                    distance = -1.0
                 sander.write(f"fswitch={distance},\n")
 
             if self.constraints in ["none", None]:
@@ -271,7 +276,10 @@ class MDConfig(DefaultModel):
             #       Amber cannot ignore H-O-H angle energy without ignoring all H-X-X angles,
             #       See 21.7.1. in Amber22 manual
             elif self.constraints in ("h-bonds", "all-bonds", "all-angles"):
-                sander.write("ntc=2,\nntf=2,\n")
+                sander.write(
+                    "ntc=1,\n"  # do NOT perform shake, since it will modify positions, but ...
+                    "ntf=2,\n",  # ... ignore interactions of bonds including hydrogen atoms
+                )
             # TODO: Cover other cases, though hard to reach with mainline OpenFF force fields
             else:
                 raise UnsupportedExportError(

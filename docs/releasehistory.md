@@ -11,11 +11,27 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+## Behavior changes
+
+* #748 Resolves #747 in which exceptions inherited from `BaseException` against recommended practice. Exceptions now inherit from `InterchangeException` which itself inherits from `Exception`.
+
+## 0.3.5 - 2023-06-14
+
+### New features
+
+* #725 Adds `Interchange.to_openmm_simulation`.
+
 ### Bugfixes
 
 * #724 Fixes #723 in which some parameters in GROMACS files were incorrectly written.
-* #728 Fixes #719 in which GROMACS coordinate files were written incorrectly when containing more
-  than 100,000 atoms.
+* #728 Fixes #719 in which GROMACS coordinate files were written incorrectly when containing more than 100,000 atoms.
+* #741 Improves JSON (de)serialization, particularly while parsing `Collection`s.
+* #746 Fixes #745 in which `get_amber_energies` did not properly turn off the switching function.
+* #746 Fixes #736 in which `get_openmm_energies` ignored `openmm.RBTorsionForce`.
+
+### Documentation improvements
+
+* #744 Removes binder links.
 
 ## 0.3.4 - 2023-05-14
 

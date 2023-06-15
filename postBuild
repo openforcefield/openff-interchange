@@ -1,9 +1,0 @@
-#!/bin/bash
-
-mkdir src
-cd src
-
-git clone https://github.com/openforcefield/openff-interchange.git
-cd openff-interchange
-python -m pip install .
-cd ..

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal, Optional, Union, overload
 
 import numpy as np
 from openff.models.models import DefaultModel
-from openff.models.types import ArrayQuantity, QuantityEncoder, custom_quantity_encoder
+from openff.models.types import ArrayQuantity, QuantityEncoder
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
@@ -31,7 +31,6 @@ from openff.interchange.exceptions import (
     UnsupportedCombinationError,
     UnsupportedExportError,
 )
-from openff.interchange.models import PotentialKey, TopologyKey
 from openff.interchange.smirnoff._valence import SMIRNOFFConstraintCollection
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 from openff.interchange.warnings import InterchangeDeprecationWarning
@@ -44,18 +43,6 @@ if has_package("nglview"):
 if TYPE_CHECKING:
     import openmm
     import openmm.app
-
-
-def _sanitize(o):
-    # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
-    # for the mapping dicts `key_map` and `potentials`.
-    if isinstance(o, dict):
-        return {_sanitize(k): _sanitize(v) for k, v in o.items()}
-    elif isinstance(o, (PotentialKey, TopologyKey)):
-        return o.json()
-    elif isinstance(o, unit.Quantity):
-        return custom_quantity_encoder(o)
-    return o
 
 
 class TopologyEncoder(json.JSONEncoder):
@@ -71,16 +58,16 @@ class TopologyEncoder(json.JSONEncoder):
 
 def interchange_dumps(v, *, default):
     """Dump an Interchange to JSON after converting to compatible types."""
+    from openff.interchange.smirnoff._base import dump_collection
+
     return json.dumps(
         {
             "positions": QuantityEncoder().default(v["positions"]),
             "box": QuantityEncoder().default(v["box"]),
             "topology": TopologyEncoder().default(v["topology"]),
             "collections": {
-                "Bonds": json.dumps(
-                    _sanitize(v["collections"]["Bonds"]),
-                    default=default,
-                ),
+                key: dump_collection(v["collections"][key], default=default)
+                for key in v["collections"]
             },
         },
         default=default,
@@ -89,13 +76,8 @@ def interchange_dumps(v, *, default):
 
 def interchange_loader(data: str) -> dict:
     """Load a JSON representation of an Interchange object."""
-    tmp: dict = {
-        "positions": None,
-        "velocities": None,
-        "box": None,
-        "topology": None,
-        "collections": {},
-    }
+    tmp: dict[str, Optional[Union[int, bool, str, dict]]] = {}
+
     for key, val in json.loads(data).items():
         if val is None:
             continue
@@ -107,6 +89,39 @@ def interchange_loader(data: str) -> dict:
             tmp["box"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
         elif key == "topology":
             tmp["topology"] = Topology.from_json(val)
+        elif key == "collections":
+            from openff.interchange.smirnoff._nonbonded import (
+                SMIRNOFFElectrostaticsCollection,
+                SMIRNOFFvdWCollection,
+            )
+            from openff.interchange.smirnoff._valence import (
+                SMIRNOFFAngleCollection,
+                SMIRNOFFBondCollection,
+                SMIRNOFFConstraintCollection,
+                SMIRNOFFImproperTorsionCollection,
+                SMIRNOFFProperTorsionCollection,
+            )
+            from openff.interchange.smirnoff._virtual_sites import (
+                SMIRNOFFVirtualSiteCollection,
+            )
+
+            tmp["collections"] = {}
+
+            _class_mapping = {  # noqa
+                "Bonds": SMIRNOFFBondCollection,
+                "Angles": SMIRNOFFAngleCollection,
+                "Constraints": SMIRNOFFConstraintCollection,
+                "ProperTorsions": SMIRNOFFProperTorsionCollection,
+                "ImproperTorsions": SMIRNOFFImproperTorsionCollection,
+                "vdW": SMIRNOFFvdWCollection,
+                "Electrostatics": SMIRNOFFElectrostaticsCollection,
+                "VirtualSites": SMIRNOFFVirtualSiteCollection,
+            }
+
+            for collection_name, collection_data in val.items():
+                tmp["collections"][collection_name] = _class_mapping[  # type: ignore
+                    collection_name
+                ].parse_raw(collection_data)
 
     return tmp
 
@@ -346,7 +361,25 @@ class Interchange(DefaultModel):
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
     ):
-        """Export this Interchange to an OpenMM System."""
+        """
+        Export this Interchange to an OpenMM System.
+
+        Parameters
+        ----------
+        combine_nonbonded_forces : bool, default=False
+            If True, an attempt will be made to combine all non-bonded interactions into a single
+            openmm.NonbondedForce.
+            If False, non-bonded interactions will be split across multiple forces.
+        add_constrained_forces : bool, default=False,
+            If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
+            on a bond or angle that is fully constrained.
+
+        Returns
+        -------
+        system : openmm.System
+            The OpenMM System object.
+
+        """
         from openff.interchange.interop.openmm import to_openmm as to_openmm_
 
         return to_openmm_(
@@ -366,6 +399,92 @@ class Interchange(DefaultModel):
             self,
             ensure_unique_atom_names=ensure_unique_atom_names,
         )
+
+    def to_openmm_simulation(
+        self,
+        integrator: "openmm.Integrator",
+        combine_nonbonded_forces: bool = True,
+        add_constrained_forces: bool = False,
+        **kwargs,
+    ) -> "openmm.app.simulation.Simulation":
+        """
+        Export this Interchange to an OpenMM `Simulation` object.
+
+        Positions are set on the `Simulation` if present on the `Interchange`.
+
+        Parameters
+        ----------
+        integrator : subclass of openmm.Integrator
+            The integrator to use for the simulation.
+        combine_nonbonded_forces : bool, default=False
+            If True, an attempt will be made to combine all non-bonded interactions into a single
+            openmm.NonbondedForce.
+            If False, non-bonded interactions will be split across multiple forces.
+        add_constrained_forces : bool, default=False,
+            If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
+            on a bond or angle that is fully constrained.
+        **kwargs
+            Further keyword parameters are passed on to
+            :py:meth:`Simulation.__init__() <openmm.app.simulation.Simulation.__init__>`
+
+        Returns
+        -------
+        simulation : openmm.app.Simulation
+            The OpenMM simulation object, possibly with positions set.
+
+        Examples
+        --------
+        Create an OpenMM simulation with a Langevin integrator:
+
+        >>> import openmm
+        >>> import openmm.unit
+        >>>
+        >>> simulation = interchange.to_openmm_system(
+        ...     openmm.LangevinMiddleIntegrator(
+        ...         293.15 * openmm.unit.kelvin,
+        ...         1.0 / openmm.unit.picosecond,
+        ...         2.0 * openmm.unit.femtosecond,
+        ...     )
+        ... )
+
+        Add a barostat:
+
+        >>> simulation.system.addForce(
+        ...     openmm.MonteCarloBarostat(
+        ...         1.00 * openmm.unit.bar,
+        ...         293.15 * openmm.unit.kelvin,
+        ...         25,
+        ...     )
+        ... )
+        >>> simulation.context.reinitialize(preserveState=True)
+
+        Re-initializing the `Context` after adding a `Force` is necessary due to implementation details in OpenMM.
+        For more, see
+        https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#why-does-it-ignore-changes-i-make-to-a-system-or-force
+
+        """
+        import openmm.app
+
+        from openff.interchange.interop.openmm._positions import to_openmm_positions
+
+        simulation = openmm.app.Simulation(
+            topology=self.to_openmm_topology(),
+            system=self.to_openmm(
+                combine_nonbonded_forces=combine_nonbonded_forces,
+                add_constrained_forces=add_constrained_forces,
+            ),
+            integrator=integrator,
+            **kwargs,
+        )
+
+        # If the system contains virtual sites, the positions must, so no obvious case in which
+        # include_virtual_sites could possibly be False
+        if self.positions is not None:
+            simulation.context.setPositions(
+                to_openmm_positions(self, include_virtual_sites=True),
+            )
+
+        return simulation
 
     def to_prmtop(self, file_path: Union[Path, str], writer="internal"):
         """Export this Interchange to an Amber .prmtop file."""

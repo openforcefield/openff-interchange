@@ -72,3 +72,20 @@ struct.save('packed-argon.pdb')
 `complex.gro`
 
 - [Source](https://raw.githubusercontent.com/samplchallenges/SAMPL6/master/host_guest/SAMPLing/CB8-G3-0/GROMACS/complex.gro)
+
+- `cube.pdb`
+- `dodecahedron.pdb`
+- `octahedron.pdb`
+
+```python
+import openmm.app, openmm.unit, pdbfixer
+
+for arg in ["cube", "dodecahedron", "octahedron"]:
+   pdb_file = pdbfixer.PDBFixer(
+       "../openff-toolkit/openff/toolkit/data/proteins/ace-ala-nh2.pdb"
+   )
+   pdb_file.addSolvent(padding=1.5 * openmm.unit.nanometer, boxShape=arg)
+   openmm.app.PDBFile.writeFile(
+       pdb_file.topology, pdb_file.positions, open(f"{arg}.pdb", "w")
+   )
+```
