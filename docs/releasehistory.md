@@ -9,6 +9,12 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+## Behavior changes
+
+* #748 Resolves #747 in which exceptions inherited from `BaseException` against recommended practice. Exceptions now inherit from `InterchangeException` which itself inherits from `Exception`.
+
 ## 0.3.5 - 2023-06-14
 
 ### New features
