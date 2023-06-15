@@ -75,7 +75,7 @@ struct.save('packed-argon.pdb')
 
 - `cube.pdb`
 - `dodecahedron.pdb`
-- `octahedron,pdb`
+- `octahedron.pdb`
 
 ```python
 import openmm.app, openmm.unit, pdbfixer
