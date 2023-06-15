@@ -336,7 +336,7 @@ def _box_from_density(
     box_shape_volume = np.linalg.det(box_shape)
 
     # Scale the box up to the desired volume
-    box_vectors = volume * box_shape / box_shape_volume
+    box_vectors = (volume * box_shape / box_shape_volume) ** (1 / 3)
 
     return box_vectors * working_unit
 
