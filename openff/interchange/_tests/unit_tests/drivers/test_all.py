@@ -15,6 +15,8 @@ from openff.interchange._tests import (
     needs_lmp,
     needs_not_gmx,
     needs_not_lmp,
+    needs_not_sander,
+    needs_sander,
 )
 from openff.interchange.drivers.all import get_all_energies, get_summary_data
 from openff.interchange.drivers.gromacs import _find_gromacs_executable
@@ -38,6 +40,7 @@ class TestDriversAll(_BaseTest):
 
     @needs_gmx
     @needs_lmp
+    @needs_sander
     def test_all_with_all(self, basic_interchange):
         summary = get_all_energies(basic_interchange)
 
@@ -45,10 +48,11 @@ class TestDriversAll(_BaseTest):
 
     @needs_not_gmx
     @needs_not_lmp
+    @needs_not_sander
     def test_all_with_minimum(self, basic_interchange):
         summary = get_all_energies(basic_interchange)
 
-        assert len(summary) == 2
+        assert len(summary) == 1
 
     def test_skipping(self, basic_interchange):
         summary = get_all_energies(basic_interchange)
