@@ -72,6 +72,11 @@ jobs:
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
+    - name: Install AmberTools
+      if: ${{ matrix.openeye == false }}
+      run: |
+        micromamba install ambertools -c conda-forge -yq
+
     - name: Run tests
       if: always()
       run: |
