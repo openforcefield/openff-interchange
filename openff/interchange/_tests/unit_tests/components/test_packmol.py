@@ -6,13 +6,48 @@ import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import unit
 
-from openff.interchange.components._packmol import pack_box
+from openff.interchange.components._packmol import (
+    RHOMBIC_DODECAHEDRON,
+    RHOMBIC_DODECAHEDRON_XYHEX,
+    UNIT_CUBE,
+    _scale_box,
+    pack_box,
+)
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
 
 @pytest.fixture(scope="module")
 def molecules() -> list[Molecule]:
     return [Molecule.from_smiles("O")]
+
+
+@pytest.mark.parametrize(
+    "box",
+    [
+        UNIT_CUBE,
+        RHOMBIC_DODECAHEDRON,
+        RHOMBIC_DODECAHEDRON_XYHEX,
+        50 * UNIT_CUBE,
+        -UNIT_CUBE,
+    ],
+)
+@pytest.mark.parametrize(
+    "volume",
+    [
+        1.0 * unit.angstrom**3,
+        1.0 * unit.nanometer**3,
+        0.0 * unit.angstrom**3,
+        234 * unit.angstrom**3,
+    ],
+)
+def test_scale_box(box, volume):
+    """Test that _scale_box() produces a box with the desired volume."""
+    scaled_box = _scale_box(box, volume)
+    a, b, c = scaled_box
+    # | (a x b) . c | is the volume of the box
+    # _scale_box uses numpy.linalg.det instead
+    assert numpy.isclose(numpy.abs(numpy.dot(numpy.cross(a, b), c)), volume)
+    assert scaled_box.u == unit.angstrom
 
 
 def test_packmol_box_vectors(molecules):

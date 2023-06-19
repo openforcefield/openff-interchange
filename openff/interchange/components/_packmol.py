@@ -324,21 +324,45 @@ def _box_from_density(
         The unit cell box vectors. Array with shape (3, 3)
 
     """
-    working_unit = unit.angstrom
     # Get the desired volume in cubic working units
     total_mass = sum(
         sum([atom.mass for atom in molecule.atoms]) * n
         for molecule, n in zip(molecules, n_copies)
     )
-    volume = (total_mass / mass_density).m_as(working_unit**3)
+    volume = total_mass / mass_density
 
-    # Scale the box shape so that it has unit volume
-    box_shape_volume = np.linalg.det(box_shape)
+    return _scale_box(box_shape, volume)
 
-    # Scale the box up to the desired volume
-    box_vectors = (volume * box_shape / box_shape_volume) ** (1 / 3)
 
-    return box_vectors * working_unit
+def _scale_box(box: NDArray, volume: Quantity) -> Quantity:
+    """
+    Scale the parallelepiped spanned by ``box`` to the given volume.
+
+    The volume of the parallelepiped spanned by the rows of a matrix is the
+    determinant of that matrix, and scaling a row of a matrix by a constant c
+    scales the determinant by that same constant; therefore scaling all three
+    rows by c scales the volume by c**3.
+
+    Parameters
+    ----------
+    box
+        3x3 matrix whose rows are the box vectors.
+    volume
+        Desired scalar volume of the box in units of volume.
+
+    Returns
+    -------
+    scaled_box
+        3x3 matrix in angstroms.
+
+    """
+    working_unit = unit.angstrom
+    final_volume = volume.m_as(working_unit**3)
+
+    initial_volume = np.abs(np.linalg.det(box))
+    volume_scale_factor = final_volume / initial_volume
+    linear_scale_factor = volume_scale_factor ** (1 / 3)
+    return linear_scale_factor * box * working_unit
 
 
 def _create_solute_pdb(
