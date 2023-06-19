@@ -749,6 +749,11 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         _write_text_blob(prmtop, text_blob)
 
         if IFBOX == 1:
+            if (interchange.box.m != np.diag(np.diagonal(interchange.box.m))).any():
+                raise NotImplementedError(
+                    "Interchange does not yet support exporting non-rectangular boxes to Amber",
+                )
+
             prmtop.write("%FLAG SOLVENT_POINTERS\n" "%FORMAT(3I8)\n")
             prmtop.write("       1       1       2\n")
 
@@ -813,6 +818,8 @@ def to_inpcrd(interchange: "Interchange", file_path: Union[Path, str]):
                     inpcrd.write("  90.0000000")
             else:
                 # TODO: Handle non-rectangular
-                raise NotImplementedError
+                raise NotImplementedError(
+                    "Interchange does not yet support exporting non-rectangular boxes to Amber",
+                )
 
         inpcrd.write("\n")

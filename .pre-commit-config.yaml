@@ -35,7 +35,7 @@ repos:
         'flake8-pytest-style',
         'flake8-no-pep420',
     ]
-    args: ["--ignore=W503"]
+    args: ["--ignore=W503,E203"]
 - repo: https://github.com/asottile/pyupgrade
   rev: v3.6.0
   hooks:
