@@ -275,6 +275,7 @@ class GROMACSWriter(DefaultModel):
             warnings.warn(
                 "Positions seem to all be zero. Result coordinate file may be non-physical.",
                 UserWarning,
+                stacklevel=2,
             )
 
         n_particles = sum(
@@ -306,8 +307,8 @@ class GROMACSWriter(DefaultModel):
                         f"%{decimal+5}.{decimal}f\n"
                         % (
                             atom.residue_index,  # This needs to be looked up from a different data structure
-                            atom.residue_name,
-                            atom.name,
+                            atom.residue_name[:5],
+                            atom.name[:5],
                             (count + 1) % 100000,
                             positions[count, 0],
                             positions[count, 1],
@@ -323,6 +324,7 @@ class GROMACSWriter(DefaultModel):
                 "support in versions 2020 or newer (see "
                 "https://gitlab.com/gromacs/gromacs/-/issues/3526). Setting box vectors to a 5 "
                 " nm cube.",
+                stacklevel=2,
             )
             box = 5 * numpy.eye(3)
         else:

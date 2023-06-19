@@ -176,7 +176,7 @@ class EnergyReport(DefaultModel):
         diff = dict()
         for key in self.energies:
             if key not in other.energies:
-                warnings.warn(f"Did not find key {key} in second report")
+                warnings.warn(f"Did not find key {key} in second report", stacklevel=2)
                 continue
             diff[key]: FloatQuantity = self.energies[key] - other.energies[key]  # type: ignore
 

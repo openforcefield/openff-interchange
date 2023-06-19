@@ -68,8 +68,12 @@ def to_lammps(interchange: Interchange, file_path: Union[Path, str]):
         ).magnitude
         if interchange.box is None:
             L_x, L_y, L_z = 100, 100, 100
-        else:
+        elif (interchange.box.m == np.diag(np.diagonal(interchange.box.m))).all():
             L_x, L_y, L_z = np.diag(interchange.box.to(unit.angstrom).magnitude)
+        else:
+            raise NotImplementedError(
+                "Interchange does not yet support exporting non-rectangular boxes to LAMMPS",
+            )
 
         lmp_file.write(
             "{:.10g} {:.10g} xlo xhi\n"
