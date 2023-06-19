@@ -774,6 +774,7 @@ class TestToOpenMMTopology(_BaseTest):
         # and 12 atoms named "", for a total of 3 unique atom names
         assert len(atom_names) == 3
 
+    @pytest.mark.slow()
     @pytest.mark.parametrize("explicit_arg", [True, False])
     def test_preserve_per_residue_unique_atom_names(self, explicit_arg):
         """
@@ -815,6 +816,7 @@ class TestToOpenMMTopology(_BaseTest):
         final_atomnames = [str(atom.name) for atom in omm_topology.atoms()]
         assert final_atomnames == init_atomnames
 
+    @pytest.mark.slow()
     @pytest.mark.parametrize("explicit_arg", [True, False])
     def test_generate_per_residue_unique_atom_names(self, explicit_arg):
         """

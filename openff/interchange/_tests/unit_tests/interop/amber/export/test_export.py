@@ -9,6 +9,7 @@ from openff.interchange import Interchange
 from openff.interchange._tests import get_test_file_path
 
 
+@pytest.mark.slow()
 @requires_openeye
 @pytest.mark.parametrize(
     "molecule",

@@ -34,6 +34,7 @@ def __getattr__(name: str):
             "`PotentialHandler` has been renamed to `Collection`. "
             "Importing `Collection` instead.",
             InterchangeDeprecationWarning,
+            stacklevel=2,
         )
         return Collection
 
@@ -308,6 +309,7 @@ class Collection(DefaultModel):
             warnings.warn(
                 "The `slot_map` attribute is deprecated. Use `key_map` instead.",
                 InterchangeDeprecationWarning,
+                stacklevel=2,
             )
             return self.key_map
         else:

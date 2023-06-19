@@ -13,6 +13,7 @@ from openff.interchange.components._packmol import (
     _compute_brick_from_box_vectors,
     _scale_box,
     pack_box,
+    solvate_topology,
 )
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
@@ -86,15 +87,15 @@ def test_compute_brick_from_box_vectors_not_reduced():
     Test that _compute_brick() raises an exception with an irreduced box.
     """
     # This is a rhombic dodecahedron with the first and last rows swapped
-    box = (
+    box = unit.Quantity(
         numpy.asarray(
             [
                 [0.5, 0.5, numpy.sqrt(2.0) / 2.0],
                 [0.0, 1.0, 0.0],
                 [1.0, 0.0, 0.0],
             ],
-        )
-        * unit.nanometer
+        ),
+        unit.nanometer,
     )
     with pytest.raises(AssertionError):
         _compute_brick_from_box_vectors(box)
@@ -324,7 +325,7 @@ def test_solvate_structure():
     assert len([*topology.unique_molecules]) == 2
 
 
-def solvate_topology():
+def test_solvate_topology():
     ligand = Molecule.from_smiles("C1CN2C(=N1)SSC2=S")
     ligand.generate_conformers(n_conformers=1)
 
@@ -334,7 +335,7 @@ def solvate_topology():
 
     assert solvated_topology.molecule(0).to_smiles() == ligand.to_smiles()
 
-    assert solvated_topology.molecule(0).to_smiles(explicit_hydrogens=False) == "O"
+    assert solvated_topology.molecule(1).to_smiles(explicit_hydrogens=False) == "O"
 
     assert solvated_topology.molecule(
         solvated_topology.n_molecules - 1,
@@ -349,7 +350,7 @@ def solvate_topology():
         [1, 0],
         [1, 2],
     ]:
-        assert solvated_topology.box_vectors[position].m == 0.0
+        assert solvated_topology.box_vectors[position[0], position[1]].m == [0.0]
 
     assert solvated_topology.box_vectors[0, 0] == solvated_topology.box_vectors[1, 1]
     assert solvated_topology.box_vectors[2, 0] == solvated_topology.box_vectors[2, 1]

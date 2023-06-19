@@ -80,6 +80,7 @@ class TestAmber(_BaseTest):
 
 
 class TestPRMTOP(_BaseTest):
+    @pytest.mark.slow()
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
             get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
