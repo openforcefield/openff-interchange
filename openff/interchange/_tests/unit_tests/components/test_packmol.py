@@ -10,6 +10,7 @@ from openff.interchange.components._packmol import (
     RHOMBIC_DODECAHEDRON,
     RHOMBIC_DODECAHEDRON_XYHEX,
     UNIT_CUBE,
+    _compute_brick_from_box_vectors,
     _scale_box,
     pack_box,
 )
@@ -48,6 +49,51 @@ def test_scale_box(box, volume):
     # _scale_box uses numpy.linalg.det instead
     assert numpy.isclose(numpy.abs(numpy.dot(numpy.cross(a, b), c)), volume)
     assert scaled_box.u == unit.angstrom
+
+
+@pytest.mark.parametrize(
+    "box",
+    [
+        UNIT_CUBE * unit.angstrom,
+        RHOMBIC_DODECAHEDRON * unit.angstrom,
+        RHOMBIC_DODECAHEDRON_XYHEX * unit.angstrom,
+        UNIT_CUBE * unit.nanometer,
+        50 * UNIT_CUBE * unit.angstrom,
+        165.0 * RHOMBIC_DODECAHEDRON * unit.angstrom,
+        -UNIT_CUBE * unit.angstrom,
+    ],
+)
+def test_compute_brick_from_box_vectors(box):
+    """
+    Test that _compute_brick() returns a rectangular box with the same volume
+    and units.
+    """
+    brick = _compute_brick_from_box_vectors(box)
+    # Same units
+    assert brick.u == box.u
+    # Same volume
+    l, w, h = brick.m
+    assert numpy.isclose(
+        numpy.abs(numpy.linalg.det(box.m)),
+        numpy.abs(l * w * h),
+    )
+    # Is rectangular
+    assert brick.shape == (3,)
+    x, y, z = brick.m
+
+
+def test_compute_brick_from_box_vectors_not_reduced():
+    """
+    Test that _compute_brick() raises an exception with an irreduced box.
+    """
+    # This is a rhombic dodecahedron with the first and last rows swapped
+    box = [
+        [0.5, 0.5, numpy.sqrt(2.0) / 2.0],
+        [0.0, 1.0, 0.0],
+        [1.0, 0.0, 0.0],
+    ]
+    with pytest.raises(AssertionError):
+        _compute_brick_from_box_vectors(box)
 
 
 def test_packmol_box_vectors(molecules):

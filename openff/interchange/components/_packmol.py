@@ -1,5 +1,5 @@
 """
-A wrapper around PACKMOL. Taken from OpenFF Evaluator v0.4.3.
+A wrapper around PACKMOL. Adapted from OpenFF Evaluator v0.4.3.
 """
 import os
 import shutil
@@ -164,6 +164,32 @@ def _validate_inputs(
             )
 
 
+def _box_vectors_are_in_reduced_form(box_vectors: Quantity) -> bool:
+    """
+    Return ``True`` if the box is in OpenMM reduced form; ``False`` otherwise.
+
+    These conditions are shared by OpenMM and GROMACS and greatly simplify
+    working with triclinic boxes. Any periodic system can be represented in this
+    form by rotating the system and lattice reduction.
+    See http://docs.openmm.org/latest/userguide/theory/05_other_features.html#periodic-boundary-conditions
+    """
+    assert box_vectors.shape == (3, 3)
+    a, b, c = box_vectors.m
+    ax, ay, az = a
+    bx, by, bz = b
+    cx, cy, cz = c
+    return (
+        [ay, az] == [0, 0]
+        and bz == 0
+        and ax > 0
+        and by > 0
+        and cz > 0
+        and ax >= 2 * np.abs(bx)
+        and ax >= 2 * np.abs(cx)
+        and by >= 2 * np.abs(cy)
+    )
+
+
 def _unit_vec(vec: Quantity) -> Quantity:
     """Get a unit vector in the direction of ``vec``."""
     return vec / np.linalg.norm(vec)
@@ -173,32 +199,16 @@ def _compute_brick_from_box_vectors(box_vectors: Quantity) -> Quantity:
     """
     Compute the rectangular brick for the given triclinic box vectors.
 
-    This function implements Eqn 6 in:
-
-    https://doi.org/10.1002/(SICI)1096-987X(19971130)18:15%3C1930::AID-JCC8%3E3.0.CO;2-P
-
     Parameters
     ----------
     box_vectors: NDArray
         Array with shape (3, 3) representing the box vectors of a triclinic cell
 
     """
-    working_unit = box_vectors.u
-    k, l, m = box_vectors.m
-
-    # Compute some re-used intermediates
-    k_hat = _unit_vec(k)
-    k_cross_hat_l = _unit_vec(np.cross(k, l))
-
-    # Compute the UVW representation
-    u = k
-    v = l - np.dot(l, k_hat) * k_hat
-    w = np.dot(m, k_cross_hat_l) * k_cross_hat_l
-
-    # Make sure the UVW representation is rectangular - if it isn't, that's a bug
-    assert np.all(u + v + w == (u[0], v[1], w[2]))
-
-    return np.asarray([u[0], v[1], w[2]]) * working_unit
+    # This should have already been checked with a nice error message, but it is
+    # an important invariant so we'll check it again here
+    assert _box_vectors_are_in_reduced_form(box_vectors)
+    return np.diagonal(box_vectors)
 
 
 def _range_neg_pos(stop):
@@ -565,14 +575,19 @@ def pack_box(
         stable simulations after energy minimisation.
     box_vectors : openff.units.Quantity, optional
         The box vectors to fill in units of distance. If ``None``,
-        ``mass_density`` must be provided. Array with shape (3,3).
+        ``mass_density`` must be provided. Array with shape (3,3). Box vectors
+        must be provided in `OpenMM reduced form <http://docs.openmm.org/latest/
+        userguide/theory/05_other_features.html#periodic-boundary-conditions>`_.
     mass_density : openff.units.Quantity, optional
         Target mass density for final system with units compatible with g / mL.
         If ``None``, ``box_size`` must be provided.
     box_shape: Arraylike, optional
         The shape of the simulation box, used in conjunction with
         the ``mass_density`` parameter. Should be a dimensionless array with
-        shape (3,3) for a triclinic box or (3,) for a rectangular box.
+        shape (3,3) for a triclinic box or (3,) for a rectangular box. Shape
+        vectors must be provided in `OpenMM reduced form
+        <http://docs.openmm.org/latest/userguide/theory/
+        05_other_features.html#periodic-boundary-conditions>`_.
     center_solute
         How to center ``solute`` in the simulation box. If ``True``
         or ``"box_vecs"``, the solute's center of geometry will be placed at
@@ -632,6 +647,13 @@ def pack_box(
     # topology
     if box_vectors is None:
         box_vectors = solute.box_vectors
+
+    if not _box_vectors_are_in_reduced_form(box_vectors):
+        raise PACKMOLValueError(
+            "pack_box requires box vectors to be in OpenMM reduced form.\n"
+            + "See http://docs.openmm.org/latest/userguide/theory/"
+            + "05_other_features.html#periodic-boundary-conditions",
+        )
 
     # Compute the dimensions of the equivalent brick - this is what packmol will
     # fill
