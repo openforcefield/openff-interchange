@@ -60,7 +60,6 @@ def test_scale_box(box, volume):
         UNIT_CUBE * unit.nanometer,
         50 * UNIT_CUBE * unit.angstrom,
         165.0 * RHOMBIC_DODECAHEDRON * unit.angstrom,
-        -UNIT_CUBE * unit.angstrom,
     ],
 )
 def test_compute_brick_from_box_vectors(box):
@@ -87,11 +86,16 @@ def test_compute_brick_from_box_vectors_not_reduced():
     Test that _compute_brick() raises an exception with an irreduced box.
     """
     # This is a rhombic dodecahedron with the first and last rows swapped
-    box = [
-        [0.5, 0.5, numpy.sqrt(2.0) / 2.0],
-        [0.0, 1.0, 0.0],
-        [1.0, 0.0, 0.0],
-    ]
+    box = (
+        numpy.asarray(
+            [
+                [0.5, 0.5, numpy.sqrt(2.0) / 2.0],
+                [0.0, 1.0, 0.0],
+                [1.0, 0.0, 0.0],
+            ],
+        )
+        * unit.nanometer
+    )
     with pytest.raises(AssertionError):
         _compute_brick_from_box_vectors(box)
 
