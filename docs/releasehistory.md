@@ -11,9 +11,17 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+## 0.3.6 - 2023-06-20
+
 ## Behavior changes
 
 * #748 Resolves #747 in which exceptions inherited from `BaseException` against recommended practice. Exceptions now inherit from `InterchangeException` which itself inherits from `Exception`.
+* #707 Overhauls the `openff.interchange.components._packmol` module.
+
+### New features
+
+* #731 Adds support for non-rectangular boxes in GROMACS export.
+* #707 Improves error handling when attempting to export non-rectangular boxes to Amber and LAMMPS.
 
 ## 0.3.5 - 2023-06-14
 
