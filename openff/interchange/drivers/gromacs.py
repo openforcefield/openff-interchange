@@ -1,14 +1,13 @@
 """Functions for running energy evluations with GROMACS."""
-import pathlib
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from shutil import which
-from typing import TYPE_CHECKING, Dict, Union
+from typing import Optional, Union
 
 from openff.units import unit
 from openff.utilities.utilities import requires_package, temporary_cd
-from pkg_resources import resource_filename
 
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.constants import kj_mol
@@ -19,13 +18,17 @@ from openff.interchange.exceptions import (
     GMXNotFoundError,
 )
 
-if TYPE_CHECKING:
-    from openff.units.unit import Quantity
+if sys.version_info >= (3, 10):
+    from importlib import resources
+else:
+    import importlib_resources as resources
 
-    from openff.interchange import Interchange
+from openff.units import Quantity
+
+from openff.interchange import Interchange
 
 
-def _find_gromacs_executable() -> str:
+def _find_gromacs_executable(raise_exception: bool = False) -> Optional[str]:
     """Attempt to locate a GROMACS executable based on commonly-used names."""
     gromacs_executable_names = ["gmx", "gmx_mpi", "gmx_d", "gmx_mpi_d"]
 
@@ -33,7 +36,10 @@ def _find_gromacs_executable() -> str:
         if which(name):
             return name
 
-    raise GMXNotFoundError
+    if raise_exception:
+        raise GMXNotFoundError
+    else:
+        return None
 
 
 def _get_mdp_file(key: str = "auto") -> str:
@@ -44,12 +50,12 @@ def _get_mdp_file(key: str = "auto") -> str:
         "cutoff_buck": "cutoff_buck.mdp",
     }
 
-    dir_path = resource_filename("openff.interchange", "tests/data/mdp")
-    return pathlib.Path(dir_path).joinpath(mapping[key]).as_posix()
+    dir_path = resources.files("openff.interchange._tests.data.mdp")
+    return str(dir_path / mapping[key])
 
 
 def get_gromacs_energies(
-    interchange: "Interchange",
+    interchange: Interchange,
     mdp: str = "auto",
     round_positions: int = 8,
     detailed: bool = False,
@@ -87,14 +93,14 @@ def get_gromacs_energies(
 
 
 def _get_gromacs_energies(
-    interchange: "Interchange",
+    interchange: Interchange,
     mdp: str = "auto",
     round_positions: int = 8,
-) -> Dict[str, unit.Quantity]:
+) -> dict[str, unit.Quantity]:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
-            interchange.to_gro("out.gro", decimal=round_positions)
-            interchange.to_top("out.top")
+            prefix = "_tmp"
+            interchange.to_gromacs(prefix=prefix, decimal=round_positions)
 
             if mdp == "auto":
                 mdconfig = MDConfig.from_interchange(interchange)
@@ -104,8 +110,8 @@ def _get_gromacs_energies(
                 mdp_file = _get_mdp_file(mdp)
 
             return _run_gmx_energy(
-                top_file="out.top",
-                gro_file="out.gro",
+                top_file="_tmp.top",
+                gro_file="_tmp.gro",
                 mdp_file=mdp_file,
                 maxwarn=2,
             )
@@ -116,7 +122,7 @@ def _run_gmx_energy(
     gro_file: Union[Path, str],
     mdp_file: Union[Path, str],
     maxwarn: int = 1,
-) -> Dict[str, unit.Quantity]:
+) -> dict[str, unit.Quantity]:
     """
     Given GROMACS files, return single-point energies as computed by GROMACS.
 
@@ -137,7 +143,7 @@ def _run_gmx_energy(
         A dictionary of energies, keyed by the GROMACS energy term name.
 
     """
-    gmx = _find_gromacs_executable()
+    gmx = _find_gromacs_executable(raise_exception=True)
 
     grompp_cmd = f"{gmx} grompp --maxwarn {maxwarn} -o out.tpr"
     grompp_cmd += f" -f {mdp_file} -c {gro_file} -p {top_file}"
@@ -174,7 +180,7 @@ def _run_gmx_energy(
     return _parse_gmx_energy("out.edr")
 
 
-def _get_gmx_energy_vdw(gmx_energies: Dict) -> "Quantity":
+def _get_gmx_energy_vdw(gmx_energies: dict) -> Quantity:
     """Get the total nonbonded energy from a set of GROMACS energies."""
     gmx_vdw = 0.0 * kj_mol
     for key in ["LJ (SR)", "LJ-14", "Disper. corr.", "Buck.ham (SR)"]:
@@ -184,7 +190,7 @@ def _get_gmx_energy_vdw(gmx_energies: Dict) -> "Quantity":
     return gmx_vdw
 
 
-def _get_gmx_energy_coul(gmx_energies: Dict) -> "Quantity":
+def _get_gmx_energy_coul(gmx_energies: dict) -> Quantity:
     gmx_coul = 0.0 * kj_mol
     for key in ["Coulomb (SR)", "Coul. recip.", "Coulomb-14"]:
         if key in gmx_energies:
@@ -193,11 +199,11 @@ def _get_gmx_energy_coul(gmx_energies: Dict) -> "Quantity":
     return gmx_coul
 
 
-def _get_gmx_energy_torsion(gmx_energies: Dict) -> "Quantity":
+def _get_gmx_energy_torsion(gmx_energies: dict) -> Quantity:
     """Canonicalize torsion energies from a set of GROMACS energies."""
     gmx_torsion = 0.0 * kj_mol
 
-    for key in ["Torsion", "Ryckaert-Bell.", "Proper Dih.", "Per. Imp. Dih."]:
+    for key in ["Torsion", "Proper Dih.", "Per. Imp. Dih."]:
         if key in gmx_energies:
             gmx_torsion += gmx_energies[key]
 
@@ -205,7 +211,7 @@ def _get_gmx_energy_torsion(gmx_energies: Dict) -> "Quantity":
 
 
 @requires_package("panedr")
-def _parse_gmx_energy(edr_path: str) -> Dict[str, unit.Quantity]:
+def _parse_gmx_energy(edr_path: str) -> dict[str, unit.Quantity]:
     """Parse an `.edr` file written by `gmx energy`."""
     import panedr
 
@@ -242,7 +248,7 @@ def _parse_gmx_energy(edr_path: str) -> Dict[str, unit.Quantity]:
 
 
 def _process(
-    energies: Dict[str, unit.Quantity],
+    energies: dict[str, unit.Quantity],
     detailed: bool = False,
 ) -> EnergyReport:
     """Process energies from GROMACS into a standardized format."""
@@ -251,9 +257,10 @@ def _process(
 
     return EnergyReport(
         energies={
-            "Bond": energies["Bond"] if "Bond" in energies else 0.0 * kj_mol,
-            "Angle": energies["Angle"],
+            "Bond": energies.get("Bond", 0.0 * kj_mol),
+            "Angle": energies.get("Angle", 0.0 * kj_mol),
             "Torsion": _get_gmx_energy_torsion(energies),
+            "RBTorsion": energies.get("Ryckaert-Bell.", 0.0 * kj_mol),
             "vdW": _get_gmx_energy_vdw(energies),
             "Electrostatics": _get_gmx_energy_coul(energies),
         },

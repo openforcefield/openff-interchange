@@ -1,6 +1,6 @@
 """Interfaces with LAMMPS."""
 from pathlib import Path
-from typing import IO, Dict, Union
+from typing import IO, Union
 
 import numpy as np
 from openff.units import unit
@@ -68,8 +68,12 @@ def to_lammps(interchange: Interchange, file_path: Union[Path, str]):
         ).magnitude
         if interchange.box is None:
             L_x, L_y, L_z = 100, 100, 100
-        else:
+        elif (interchange.box.m == np.diag(np.diagonal(interchange.box.m))).all():
             L_x, L_y, L_z = np.diag(interchange.box.to(unit.angstrom).magnitude)
+        else:
+            raise NotImplementedError(
+                "Interchange does not yet support exporting non-rectangular boxes to LAMMPS",
+            )
 
         lmp_file.write(
             "{:.10g} {:.10g} xlo xhi\n"
@@ -132,7 +136,7 @@ def to_lammps(interchange: Interchange, file_path: Union[Path, str]):
             _write_impropers(lmp_file=lmp_file, interchange=interchange)
 
 
-def _write_pair_coeffs(lmp_file: IO, interchange: Interchange, atom_type_map: Dict):
+def _write_pair_coeffs(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
     """Write the Pair Coeffs section of a LAMMPS data file."""
     lmp_file.write("Pair Coeffs\n\n")
 
@@ -260,7 +264,7 @@ def _write_improper_coeffs(lmp_file: IO, interchange: Interchange):
     lmp_file.write("\n")
 
 
-def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: Dict):
+def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
     """Write the Atoms section of a LAMMPS data file."""
     lmp_file.write("\nAtoms\n\n")
 
@@ -284,7 +288,7 @@ def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: Dict):
         pot_key = vdw_hander.key_map[top_key]
         atom_type = atom_type_map_inv[pot_key]
 
-        charge = charges[top_key].m_as(unit.e)  # type: ignore[union-attr]
+        charge = charges[top_key].m_as(unit.e)
         pos = interchange.positions[atom_index].to(unit.angstrom).magnitude
         lmp_file.write(
             "{:d}\t{:d}\t{:d}\t{:.8g}\t{:.8g}\t{:.8g}\t{:.8g}\n".format(

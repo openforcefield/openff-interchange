@@ -1,6 +1,6 @@
 """Storing and processing results of energy evaluations."""
 import warnings
-from typing import Dict, Optional, Set
+from typing import Optional
 
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
@@ -14,10 +14,11 @@ from openff.interchange.exceptions import (
     InvalidEnergyError,
 )
 
-_KNOWN_ENERGY_TERMS: Set[str] = {
+_KNOWN_ENERGY_TERMS: set[str] = {
     "Bond",
     "Angle",
     "Torsion",
+    "RBTorsion",
     "Nonbonded",
     "vdW",
     "Electrostatics",
@@ -30,7 +31,7 @@ class EnergyReport(DefaultModel):
     """A lightweight class containing single-point energies as computed by energy tests."""
 
     # TODO: Should the default be None or 0.0 kj_mol?
-    energies: Dict[str, Optional[FloatQuantity]] = {
+    energies: dict[str, Optional[FloatQuantity]] = {
         "Bond": None,
         "Angle": None,
         "Torsion": None,
@@ -39,7 +40,7 @@ class EnergyReport(DefaultModel):
     }
 
     @validator("energies")
-    def validate_energies(cls, v: Dict) -> Dict:
+    def validate_energies(cls, v: dict) -> dict:
         """Validate the structure of a dict mapping keys to energies."""
         for key, val in v.items():
             if key not in _KNOWN_ENERGY_TERMS:
@@ -66,14 +67,14 @@ class EnergyReport(DefaultModel):
         else:
             return None
 
-    def update(self, new_energies: Dict) -> None:
+    def update(self, new_energies: dict) -> None:
         """Update the energies in this report with new value(s)."""
         self.energies.update(self.validate_energies(new_energies))
 
     def compare(
         self,
         other: "EnergyReport",
-        tolerances: Optional[Dict[str, FloatQuantity]] = None,
+        tolerances: Optional[dict[str, FloatQuantity]] = None,
     ):
         """
         Compare two energy reports.
@@ -95,7 +96,6 @@ class EnergyReport(DefaultModel):
             "Electrostatics": 1e-3 * kj_mol,
         }
 
-        # Replace with `default_tolerances | tolerances` when Python 3.9+ (PEP 584)
         if tolerances:
             default_tolerances.update(tolerances)
 
@@ -121,7 +121,7 @@ class EnergyReport(DefaultModel):
     def diff(
         self,
         other: "EnergyReport",
-    ) -> Dict[str, FloatQuantity]:
+    ) -> dict[str, FloatQuantity]:
         """
         Return the per-key energy differences between these reports.
 
@@ -136,7 +136,7 @@ class EnergyReport(DefaultModel):
             Per-key energy differences
 
         """
-        energy_differences: Dict[str, FloatQuantity] = dict()
+        energy_differences: dict[str, FloatQuantity] = dict()
 
         nonbondeds_processed = False
 
@@ -172,11 +172,11 @@ class EnergyReport(DefaultModel):
 
         return energy_differences
 
-    def __sub__(self, other: "EnergyReport") -> Dict[str, FloatQuantity]:
+    def __sub__(self, other: "EnergyReport") -> dict[str, FloatQuantity]:
         diff = dict()
         for key in self.energies:
             if key not in other.energies:
-                warnings.warn(f"Did not find key {key} in second report")
+                warnings.warn(f"Did not find key {key} in second report", stacklevel=2)
                 continue
             diff[key]: FloatQuantity = self.energies[key] - other.energies[key]  # type: ignore
 
@@ -188,6 +188,7 @@ class EnergyReport(DefaultModel):
             f"Bond:          \t\t{self['Bond']}\n"
             f"Angle:         \t\t{self['Angle']}\n"
             f"Torsion:       \t\t{self['Torsion']}\n"
+            f"RBTorsion:     \t\t{self['RBTorsion']}\n"
             f"Nonbonded:     \t\t{self['Nonbonded']}\n"
             f"vdW:           \t\t{self['vdW']}\n"
             f"Electrostatics:\t\t{self['Electrostatics']}\n"

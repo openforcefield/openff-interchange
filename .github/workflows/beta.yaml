@@ -19,33 +19,30 @@ jobs:
           - macOS-latest
           - ubuntu-latest
         python-version:
-          - "3.8"
           - "3.9"
           - "3.10"
+        openeye:
+          - true
+          - false
+
     env:
-      CI_OS: ${{ matrix.os }}
-      PYVER: ${{ matrix.python-version }}
+      OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
     - uses: actions/checkout@v3
 
     - name: Install conda environment
-      uses: mamba-org/provision-with-micromamba@main
+      uses: mamba-org/setup-micromamba@v1
       with:
         environment-file: devtools/conda-envs/beta_env.yaml
         channel-priority: "flexible"
-        extra-specs: |
+        create-args: >-
           python=${{ matrix.python-version }}
-
-    - name: Additional info about the build
-      run: |
-        uname -a
-        df -h
-        ulimit -a
 
     - name: Install package
       run: |
+        micromamba remove --force openff-interchange openff-interchange-base
         python -m pip install . plugins/
 
     - name: Environment Information

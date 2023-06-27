@@ -11,6 +11,113 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+## 0.3.6 - 2023-06-20
+
+## Behavior changes
+
+* #748 Resolves #747 in which exceptions inherited from `BaseException` against recommended practice. Exceptions now inherit from `InterchangeException` which itself inherits from `Exception`.
+* #707 Overhauls the `openff.interchange.components._packmol` module.
+
+### New features
+
+* #731 Adds support for non-rectangular boxes in GROMACS export.
+* #707 Improves error handling when attempting to export non-rectangular boxes to Amber and LAMMPS.
+
+## 0.3.5 - 2023-06-14
+
+### New features
+
+* #725 Adds `Interchange.to_openmm_simulation`.
+
+### Bugfixes
+
+* #724 Fixes #723 in which some parameters in GROMACS files were incorrectly written.
+* #728 Fixes #719 in which GROMACS coordinate files were written incorrectly when containing more than 100,000 atoms.
+* #741 Improves JSON (de)serialization, particularly while parsing `Collection`s.
+* #746 Fixes #745 in which `get_amber_energies` did not properly turn off the switching function.
+* #746 Fixes #736 in which `get_openmm_energies` ignored `openmm.RBTorsionForce`.
+
+### Documentation improvements
+
+* #744 Removes binder links.
+
+## 0.3.4 - 2023-05-14
+
+### Bugfixes
+
+* #721 Fixes #720 in which units were not checked when writing `[ settles ]` in GROMACS files.
+
+## 0.3.3 - 2023-05-08
+
+* #703 Clarifies the experimental state of some features, which require opt-in to use.
+
+### Behavior changes
+
+* #706 Updates `pack_box` to return a `Topology`.
+* #716 Removes InterMol and ParmEd conversions, which were untested and not part of the public API.
+
+### Bugfixes
+
+* #705 Fixes #693 in which 1-4 vdW interactions were not scaled when using `Interchange.to_openmm(combine_nonbonded_forces=False)`
+* #702 Fixes #701 in which `Interchange` was needlessly re-exported in the high-level module.
+
+### Documentation improvements
+
+* #673 Adds a vectorized representation example.
+* #703 Adds a section to the user guide on accessing experimental functionality.
+* #706 Updates the mixed solvent example.
+* #708 Updates the protein-ligand example.
+* #708 Updates the ligand-in-water example.
+
+## 0.3.2 - 2023-05-02
+
+### Behavior changes
+
+* #677 Replaces `.constraints` with `.potentials` in constraint collections.
+* #677 Unifies parameters in Ryckaert-Bellemans torsions around lowercase values (`c0`, `c1`, etc.).
+
+### New features
+
+* #671 Adds `Interchange.to_gromacs` which writes both GROMACS topology and coordinate files at once.
+* #677 Improves support for Ryckaert-Bellemans torsions in parsers, writers, and drivers.
+* #681 Ports a PACKMOL wrapper from OpenFF Evaluator.
+* #692 Tags some features as experimental, requiring opt-in to access.
+* #697 Wires `add_constrained_forces` argument through `Interchange.to_openmm`.
+* #697 Wires `combine_nonbonded_forces` argument through `get_summary_data` and `get_all_energies`.
+
+### Bugfixes
+
+* #680 Fixes #678 in which, in some cases, text wrapping in Amber files was mangled.
+* #680 Fixes #679 in which atom exclusion lists in Amber files were written incorrectly.
+* #685 Fixes #682 in which some 1-4 interactions in Amber files were counted incorrectly.
+* #695 Fixes #694 in which systems with no electrostatics did not check for plugins.
+
+## 0.3.1 - 2023-04-19
+
+### Behavior changes
+
+* #639 Drops support for Python 3.8, following [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html#support-table).
+* #635 Moves and re-organizes the contents of `openff.interchange.interop.internal.gromacs` to a new submodule `openff.interchange.interop.gromacs`.
+* #662 Moves tests and un-tested modules from the public API to pseudo-private.
+
+### Bugfixes
+
+* #655 Fixes #652 by avoiding writing a blank `RESIDUE_LABEL` section in Amber files.
+
+### New features
+
+* #635 Adds a dedicated class `GROMACSSystem` to represent GROMACS state.
+* #635 Adds parsing and exporting between GROMACS files and `GROMACSSystem` objects.
+* #651 Adds support for `SMIRNOFFCollection` plugins that depend on multiple `ParameterHandler`s.
+* #654 Adds a module `openff.interchange.common` containing base classes for different types of `Collection`s.
+* #659 Improves testing for `from_openmm`.
+* #649 Removes the use of `pkg_resources`, which is deprecated.
+* #660 Moves the contents of `openff.interchange.components.foyer` to `openff.interchange.foyer` while maintaining existing import paths.
+* #663 Improves the performance of `Interchange.to_prmtop`.
+* #665 Properly write `[ settles ]` directive in GROMACS files.
+
+## 0.3.0 - 2023-04-10
+
 ### Behavior changes
 
 * #566 Refactors `EnergyReport` to more explicitly handle comparisons.
@@ -18,24 +125,46 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
   * `PotentialHandler` is deprecated for `Collection`.
   * `Interchange.handlers` is deprecated for `Interchange.collections`.
   * `PotentialHandler.slot_map` is deprecated for `Collection.key_map`.
-  * Classes found in `openff.interchange.components.smirnoff` are now in `openff.interchange.smirnoff`
-  * Classes found in `openff.interchange.components.foyer` are now in `openff.interchange.foyer`
-  * Some arguments with `handler` in their names are replaced with `collection`
-* #601 Groups GROMACS improper torsion energies in the `"Torsions"` key
+  * Classes found in `openff.interchange.components.smirnoff` are now in `openff.interchange.smirnoff`.
+  * Some arguments with `handler` in their names are replaced with `collection`.
+* #583 Refactors the internals of `Interchange.from_smirnoff` away from the chain-of-responsibility pattern.
+* #601 Groups GROMACS improper torsion energies in the `"Torsions"` key.
 
 ### Bugfixes
 
-* #593 Fix a #592 in which OpenMM exports fail to create multiple non-bonded forces without a vdW handler
-* #601 Fixes #600 in which some parameters were rounded to 6 digits in `Interchange.to_top`
+* #593 Fixes #592 in which OpenMM exports fail to create multiple non-bonded forces without a vdW handler.
+* #601 Fixes #600 in which some parameters were rounded to 6 digits in `Interchange.to_top`.
 * #598 Fixes #597 in which residue names were incorrectly written to Amber files for single-residue systems.
 * #618 Fixes #616 in which positions of multiple molecules were mangled with `to_openmm_positions`.
 * #618 Fixes #617 in which the return type of `to_openmm_positions` was inconsistent.
+* #582 Allows OpenMM version to change in regression tests.
+* #622 Fixes passing some settings to OpenMM's GBSA forces.
 
 ### New features
 
+* #569 Allows for quick importing `from openff.interchange import Interchange`.
+* #558 Removes a safeguard against a long-since fixed toolkit bug when looking up `rmin_half`.
+* #574 Adds more specific subclasses of `TopologyKey`.
 * #589 For convenience, per-parameter variables are now stored on `SMIRNOFFCollection.potential_parameters` and its subclasses.
-* #591 Adds support for custom `SMIRNOFFCollections` via a plugin interface.
-* #615 Adds support for GBSA parameters in SMIRNOFF force fields.
+* #591 Adds custom `SMIRNOFFCollection`s via a plugin interface.
+* #614 Adds support for GBSA parameters in SMIRNOFF force fields.
+* #586 #591 #605 #609 #613 Support custom SMIRNOFF sections with OpenMM.
+
+### Documentation improvements
+
+* #634 Improves documentation for SMIRNOFF plugins.
+* #610 Adds duplicate documentation on how to covert to OpenMM-styled unit/quantity objects.
+* #699 Updates the project's README.
+
+### Maintenance
+
+* #400 Adds Python 3.10 to testing.
+* #561 #564 #572 #577 #580 #581 #590 #625 Update `pre-commit` configuration.
+* #562 Removes the use of `python setup.py`.
+* #565 Removes duplicate code in favor of `openff-models`.
+* #575 #576 Avoid installing old, incompatible versions of `jax` and/or `jaxlib`.
+* #578 Updates some type annotations.
+* #619 Removes duplicate OpenMM virtual site construction code.
 
 ## 0.2.3 - 2022-11-21
 

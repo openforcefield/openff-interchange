@@ -1,23 +1,21 @@
 """
 Helper functions for producing `openmm.Force` objects for valence terms.
 """
-from typing import TYPE_CHECKING, Dict, Set, Tuple, Union
+from typing import Union
 
 import openmm
 from openff.units import unit as off_unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 
 from openff.interchange.exceptions import UnsupportedExportError
-
-if TYPE_CHECKING:
-    from openff.interchange.models import VirtualSiteKey
+from openff.interchange.models import VirtualSiteKey
 
 
 def _process_constraints(
     interchange,
     openmm_sys,
-    particle_map: Dict[Union[int, "VirtualSiteKey"], int],
-) -> Set[Tuple[int, ...]]:
+    particle_map: dict[Union[int, "VirtualSiteKey"], int],
+) -> set[tuple[int, ...]]:
     """
     Process the Constraints section of an Interchange object.
     """
@@ -26,13 +24,13 @@ def _process_constraints(
     except LookupError:
         return set()
 
-    constrained_pairs: Set[Tuple[int, ...]] = set()
+    constrained_pairs: set[tuple[int, ...]] = set()
 
     for top_key, pot_key in constraint_handler.key_map.items():
         openff_indices = top_key.atom_indices
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
-        params = constraint_handler.constraints[pot_key].parameters
+        params = constraint_handler.potentials[pot_key].parameters
         distance = params["distance"]
         distance_omm = distance.m_as(off_unit.nanometer)
 
@@ -50,8 +48,8 @@ def _process_bond_forces(
     interchange,
     openmm_sys,
     add_constrained_forces: bool,
-    constrained_pairs: Set[Tuple[int, ...]],
-    particle_map: Dict[Union[int, "VirtualSiteKey"], int],
+    constrained_pairs: set[tuple[int, ...]],
+    particle_map: dict[Union[int, "VirtualSiteKey"], int],
 ):
     """
     Process the Bonds section of an Interchange object.
@@ -103,7 +101,7 @@ def _process_angle_forces(
     interchange,
     openmm_sys,
     add_constrained_forces: bool,
-    constrained_pairs: Set[Tuple[int, ...]],
+    constrained_pairs: set[tuple[int, ...]],
     particle_map,
 ):
     """
@@ -252,12 +250,12 @@ def _process_rb_torsion_forces(interchange, openmm_sys, particle_map):
 
         params = rb_torsion_handler.potentials[pot_key].parameters
 
-        c0 = params["C0"].m_as(off_unit.kilojoule / off_unit.mol)
-        c1 = params["C1"].m_as(off_unit.kilojoule / off_unit.mol)
-        c2 = params["C2"].m_as(off_unit.kilojoule / off_unit.mol)
-        c3 = params["C3"].m_as(off_unit.kilojoule / off_unit.mol)
-        c4 = params["C4"].m_as(off_unit.kilojoule / off_unit.mol)
-        c5 = params["C5"].m_as(off_unit.kilojoule / off_unit.mol)
+        c0 = params["c0"].m_as(off_unit.kilojoule / off_unit.mol)
+        c1 = params["c1"].m_as(off_unit.kilojoule / off_unit.mol)
+        c2 = params["c2"].m_as(off_unit.kilojoule / off_unit.mol)
+        c3 = params["c3"].m_as(off_unit.kilojoule / off_unit.mol)
+        c4 = params["c4"].m_as(off_unit.kilojoule / off_unit.mol)
+        c5 = params["c5"].m_as(off_unit.kilojoule / off_unit.mol)
 
         rb_force.addTorsion(
             openmm_indices[0],
@@ -312,8 +310,8 @@ def _process_improper_torsion_forces(interchange, openmm_sys, particle_map):
 
 
 def _is_constrained(
-    constrained_pairs: Set[Tuple[int, ...]],
-    pair: Tuple[int, int],
+    constrained_pairs: set[tuple[int, ...]],
+    pair: tuple[int, int],
 ) -> bool:
     if (pair[0], pair[1]) in constrained_pairs:
         return True

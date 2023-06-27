@@ -1,28 +1,31 @@
 """Models for storing applied force field parameters."""
 import ast
+import json
 import warnings
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union
+from typing import Callable, Optional, Union
 
 import numpy
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
-from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
+from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field, PrivateAttr, validator
 
 from openff.interchange.exceptions import MissingParametersError
-from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.models import (
+    LibraryChargeTopologyKey,
+    PotentialKey,
+    TopologyKey,
+)
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if has_package("jax"):
     from jax import numpy as jax_numpy
 
-if TYPE_CHECKING:
-    from numpy.typing import ArrayLike
-    from openff.toolkit.topology import Topology
+from numpy.typing import ArrayLike
 
-    if has_package("jax"):
-        from jax import Array
+if has_package("jax"):
+    from jax import Array
 
 
 def __getattr__(name: str):
@@ -31,23 +34,53 @@ def __getattr__(name: str):
             "`PotentialHandler` has been renamed to `Collection`. "
             "Importing `Collection` instead.",
             InterchangeDeprecationWarning,
+            stacklevel=2,
         )
         return Collection
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
+def potential_loader(data: str) -> dict:
+    """Load a JSON blob dumped from a `Collection`."""
+    tmp: dict[str, Union[int, bool, str, dict]] = {}
+
+    for key, val in json.loads(data).items():
+        if isinstance(val, (str, type(None))):
+            tmp[key] = val  # type: ignore
+        elif isinstance(val, dict):
+            if key == "parameters":
+                tmp["parameters"] = dict()
+
+                for key_, val_ in val.items():
+                    loaded = json.loads(val_)
+                    tmp["parameters"][key_] = unit.Quantity(  # type: ignore[index]
+                        loaded["val"],
+                        loaded["unit"],
+                    )
+
+    return tmp
+
+
 class Potential(DefaultModel):
     """Base class for storing applied parameters."""
 
-    parameters: Dict[str, FloatQuantity] = dict()
+    parameters: dict[str, FloatQuantity] = dict()
     map_key: Optional[int] = None
+
+    class Config:
+        """Pydantic configuration."""
+
+        json_encoders: dict[type, Callable] = DefaultModel.Config.json_encoders
+        json_loads: Callable = potential_loader
+        validate_assignment: bool = True
+        arbitrary_types_allowed: bool = True
 
     @validator("parameters")
     def validate_parameters(
         cls,
-        v: Dict[str, Union[ArrayQuantity, FloatQuantity]],
-    ) -> Dict[str, FloatQuantity]:
+        v: dict[str, Union[ArrayQuantity, FloatQuantity]],
+    ) -> dict[str, FloatQuantity]:
         for key, val in v.items():
             if isinstance(val, list):
                 v[key] = ArrayQuantity.validate_type(val)
@@ -65,7 +98,7 @@ class WrappedPotential(DefaultModel):
     class InnerData(DefaultModel):
         """The potentials being wrapped."""
 
-        data: Dict[Potential, float]
+        data: dict[Potential, float]
 
     _inner_data: InnerData = PrivateAttr()
 
@@ -76,9 +109,9 @@ class WrappedPotential(DefaultModel):
             self._inner_data = self.InnerData(data=data)
 
     @property
-    def parameters(self) -> Dict[str, FloatQuantity]:
+    def parameters(self) -> dict[str, FloatQuantity]:
         """Get the parameters as represented by the stored potentials and coefficients."""
-        keys: Set[str] = {
+        keys: set[str] = {
             param_key
             for pot in self._inner_data.data.keys()
             for param_key in pot.parameters.keys()
@@ -111,17 +144,17 @@ class Collection(DefaultModel):
         ...,
         description="The analytical expression governing the potentials in this handler.",
     )
-    key_map: Dict[TopologyKey, PotentialKey] = Field(
+    key_map: dict[Union[TopologyKey, LibraryChargeTopologyKey], PotentialKey] = Field(
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )
-    potentials: Dict[PotentialKey, Union[Potential, WrappedPotential]] = Field(
+    potentials: dict[PotentialKey, Union[Potential, WrappedPotential]] = Field(
         dict(),
         description="A mapping between PotentialKey objects and Potential objects.",
     )
 
     @property
-    def independent_variables(self) -> Set[str]:
+    def independent_variables(self) -> set[str]:
         """
         Return a set of variables found in the expression but not in any potentials.
         """
@@ -133,19 +166,7 @@ class Collection(DefaultModel):
         }
         return vars_in_expression - vars_in_potentials
 
-    def store_matches(
-        self,
-        parameter_handler: ParameterHandler,
-        topology: "Topology",
-    ) -> None:
-        """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
-        raise NotImplementedError
-
-    def store_potentials(self, parameter_handler: ParameterHandler) -> None:
-        """Populate self.potentials with key-val pairs of [PotentialKey, Potential]."""
-        raise NotImplementedError
-
-    def _get_parameters(self, atom_indices: Tuple[int]) -> Dict:
+    def _get_parameters(self, atom_indices: tuple[int]) -> dict:
         for topology_key in self.key_map:
             if topology_key.atom_indices == atom_indices:
                 potential_key = self.key_map[topology_key]
@@ -224,7 +245,7 @@ class Collection(DefaultModel):
             p = self.get_force_field_parameters(use_jax=use_jax)
         mapping = self.get_mapping()
 
-        q: List = list()
+        q: list = list()
         for potential_key in self.key_map.values():
             index = mapping[potential_key]
             q.append(p[index])
@@ -234,9 +255,9 @@ class Collection(DefaultModel):
         else:
             return numpy.array(q)
 
-    def get_mapping(self) -> Dict[PotentialKey, int]:
+    def get_mapping(self) -> dict[PotentialKey, int]:
         """Get a mapping between potentials and array indices."""
-        mapping: Dict = dict()
+        mapping: dict = dict()
         index = 0
         for potential_key in self.key_map.values():
             if potential_key not in mapping:
@@ -288,6 +309,7 @@ class Collection(DefaultModel):
             warnings.warn(
                 "The `slot_map` attribute is deprecated. Use `key_map` instead.",
                 InterchangeDeprecationWarning,
+                stacklevel=2,
             )
             return self.key_map
         else:

@@ -59,15 +59,19 @@ out.to_top("out.top")
 json_blob = out.json()
 ```
 
-Other examples are available via [binder](https://mybinder.org/v2/gh/openforcefield/openff-interchange/main?filepath=%2Fexamples%2F), executable in a web browser without installing anyting on your computer.
-
 For more information, please consult the [full documentation](https://openff-interchange.readthedocs.io/).
+
+For more examples specific to Interchange, navigate to the `examples/` directory.
 
 **Please note that this software in an early and experimental state without a stable API or guarantees of long-term stability.**
 
 ## Copyright
 
 Copyright (c) 2020, Open Force Field Initiative
+
+## License
+
+The source code of Interchange is hosted [on GitHub](https://github.com/openforcefield/openff-interchange) and is available under the MIT license (see the file LICENSE). Some parts inherit from code distributed under other licenses, as detailed in LICENSE-3RD-PARTY.
 
 ## Acknowledgements
 

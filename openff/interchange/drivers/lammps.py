@@ -1,7 +1,7 @@
 """Functions for running energy evluations with LAMMPS."""
 import subprocess
 from shutil import which
-from typing import Dict, List, Optional
+from typing import Optional
 
 import numpy
 from openff.units import unit
@@ -9,10 +9,10 @@ from openff.units import unit
 from openff.interchange import Interchange
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.exceptions import LAMMPSRunError
+from openff.interchange.exceptions import LAMMPSNotFoundError, LAMMPSRunError
 
 
-def _find_lammps_executable() -> Optional[str]:
+def _find_lammps_executable(raise_exception: bool = False) -> Optional[str]:
     """Attempt to locate a LAMMPS executable based on commonly-used names."""
     lammps_executable_names = ["lammps", "lmp_serial", "lmp_mpi"]
 
@@ -20,7 +20,10 @@ def _find_lammps_executable() -> Optional[str]:
         if which(name):
             return name
 
-    return None
+    if raise_exception:
+        raise LAMMPSNotFoundError
+    else:
+        return None
 
 
 def get_lammps_energies(
@@ -60,8 +63,8 @@ def get_lammps_energies(
 def _get_lammps_energies(
     interchange: Interchange,
     round_positions: Optional[int] = None,
-) -> Dict[str, unit.Quantity]:
-    lmp = _find_lammps_executable()
+) -> dict[str, unit.Quantity]:
+    lmp = _find_lammps_executable(raise_exception=True)
 
     if round_positions is not None:
         interchange.positions = numpy.round(interchange.positions, round_positions)
@@ -103,7 +106,7 @@ def _get_lammps_energies(
 
 
 def _process(
-    energies: Dict[str, unit.Quantity],
+    energies: dict[str, unit.Quantity],
     detailed: bool = False,
 ) -> EnergyReport:
     if detailed:
@@ -122,7 +125,7 @@ def _process(
     )
 
 
-def _parse_lammps_log(file_in: str) -> List[float]:
+def _parse_lammps_log(file_in: str) -> list[float]:
     """Parse a LAMMPS log file for energy components."""
     tag = False
     with open(file_in) as fi:

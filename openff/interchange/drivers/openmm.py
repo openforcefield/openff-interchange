@@ -1,11 +1,12 @@
 """Functions for running energy evluations with OpenMM."""
 import warnings
-from typing import Dict, Optional
+from typing import Optional
 
 import numpy
 import openmm
 import openmm.unit
 from openff.units import unit
+from openff.units.openmm import ensure_quantity
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
@@ -95,7 +96,7 @@ def _get_openmm_energies(
     positions: openmm.unit.Quantity,
     round_positions: Optional[int],
     platform: str,
-) -> EnergyReport:
+) -> dict[int, openmm.unit.Quantity]:
     """Given prepared `openmm` objects, run a single-point energy calculation."""
     for index, force in enumerate(system.getForces()):
         force.setForceGroup(index)
@@ -116,7 +117,7 @@ def _get_openmm_energies(
         else positions,
     )
 
-    raw_energies: Dict[int, openmm.Force] = dict()
+    raw_energies: dict[int, openmm.unit.Quantity] = dict()
 
     for index in range(system.getNumForces()):
         state = context.getState(getEnergy=True, groups={index})
@@ -130,38 +131,19 @@ def _get_openmm_energies(
 
 
 def _process(
-    raw_energies: Dict[int, openmm.Force],
+    raw_energies: dict[int, openmm.unit.Quantity],
     system: openmm.System,
     combine_nonbonded_forces: bool,
     detailed: bool,
 ) -> EnergyReport:
-    staged: Dict[str, unit.Quantity] = dict()
+    staged: dict[str, unit.Quantity] = dict()
 
     valence_map = {
         openmm.HarmonicBondForce: "Bond",
         openmm.HarmonicAngleForce: "Angle",
         openmm.PeriodicTorsionForce: "Torsion",
+        openmm.RBTorsionForce: "RBTorsion",
     }
-
-    n_rb = len(
-        [
-            force
-            for force in system.getForces()
-            if isinstance(force, openmm.RBTorsionForce)
-        ],
-    )
-    n_periodic = len(
-        [
-            force
-            for force in system.getForces()
-            if isinstance(force, openmm.PeriodicTorsionForce)
-        ],
-    )
-
-    if n_rb * n_periodic > 0:
-        raise NotImplementedError(
-            "Cannot process systems with both PeriodicTorsionForce and RBTorsionForce",
-        )
 
     # This assumes that only custom forces will have duplicate instances
     for index, raw_energy in raw_energies.items():
@@ -190,7 +172,6 @@ def _process(
                     staged["vdW"] = raw_energy
 
                 elif isinstance(force, openmm.CustomBondForce):
-                    print(force.getEnergyFunction())
                     if "qq" in force.getEnergyFunction():
                         staged["Electrostatics 1-4"] = raw_energy
                     else:
@@ -204,7 +185,9 @@ def _process(
 
     else:
         processed = {
-            key: staged[key] for key in ["Bond", "Angle", "Torsion"] if key in staged
+            key: staged[key]
+            for key in ["Bond", "Angle", "Torsion", "RBTorsion"]
+            if key in staged
         }
 
         nonbonded_energies = [
@@ -220,10 +203,27 @@ def _process(
         ]
 
         # Array inference acts up if given a 1-list of Quantity
-        processed["Nonbonded"] = (
-            nonbonded_energies[0]
-            if len(nonbonded_energies) == 1
-            else numpy.sum(nonbonded_energies)
-        )
+        if combine_nonbonded_forces:
+            assert len(nonbonded_energies) == 1
+
+            processed["Nonbonded"] = nonbonded_energies[0]
+
+        else:
+            zero = 0.0 * openmm.unit.kilojoule_per_mole
+
+            processed["Electrostatics"] = ensure_quantity(
+                numpy.sum(
+                    [
+                        staged.get(key, zero)
+                        for key in ["Electrostatics", "Electrostatics 1-4"]
+                    ],
+                ),
+                "openff",
+            )
+
+            processed["vdW"] = ensure_quantity(
+                numpy.sum([staged.get(key, zero) for key in ["vdW", "vdW 1-4"]]),
+                "openff",
+            )
 
     return EnergyReport(energies=processed)

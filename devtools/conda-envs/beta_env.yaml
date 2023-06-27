@@ -1,5 +1,6 @@
 name: beta-env
 channels:
+  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge/label/openmm_rc
   - conda-forge
   - openeye
@@ -8,22 +9,25 @@ dependencies:
   - python
   - pip
   - numpy >=1.21
-  - pydantic <2.0.0a0
+  - pydantic >=1.10.8,<2.0.0a0
   - openmm >=7.6
   # OpenFF stack
-  - openff-toolkit >=0.11.3
+  - openff-toolkit >=0.13.1
   - openff-models >=0.0.4
+  - openff-nagl
+  - openff-nagl-models
   # Optional features
   - jax
   - unyt
   - mbuild
   - foyer >=0.11.3
   # Testing
+  - mdtraj
   - intermol
-  - openff-evaluator
   - openeye-toolkits
   - pytest-cov
   - pytest-xdist
+  - pytest-randomly
   - mdanalysis
   # Drivers
   - gromacs >=2021=nompi*
@@ -32,12 +36,10 @@ dependencies:
   - panedr
   # Examples
   - nglview
-  - ipywidgets =7
   - pytest
   - nbval
   # Typing
-  - mypy >=0.971
+  - mypy =1.3
   - typing-extensions
   - types-setuptools
-  - types-pkg_resources
   - pandas-stubs >=1.2.0.56

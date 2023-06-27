@@ -7,19 +7,24 @@ dependencies:
   - python
   - pip
   - numpy >=1.21
-  - pydantic
-  - openmm
+  - pydantic <2.0.0a0
+  - openmm >=7.6
   # OpenFF stack
-  - openff-toolkit >=0.11.3
-  - openff-models >=0.0.4
-  - openff-nagl
+  - openff-units
+  - openff-forcefields
+  - openff-amber-ff-ports
+  - openff-models
+  - cachetools
+  - cached_property
+  - python-constraint
+  - xmltodict
   # Optional features
   - unyt
   - mbuild
   - foyer >=0.11.3
   # Testing
+  - mdtraj
   - intermol
-  - openff-evaluator
   - jax
   - pytest
   - pytest-cov
@@ -27,18 +32,15 @@ dependencies:
   - pytest-randomly
   - nbval
   - nglview
-  - ipywidgets >7,<8  # https://github.com/nglviewer/nglview/issues/1032
   - mdanalysis
   # Drivers
   - gromacs >=2021=nompi*
   - lammps
-  # https://github.com/conda-forge/quippy-feedstock/issues/15
   - panedr
   # Typing
-  - mypy >=0.971
+  - mypy =1.3
   - typing-extensions
   - types-setuptools
-  - types-pkg_resources
   - pandas-stubs >=1.2.0.56
   - pip:
-    - git+https://github.com/jthorton/de-forcefields
+    - git+https://github.com/openforcefield/openff-toolkit

@@ -1,8 +1,10 @@
 import abc
 import json
-from typing import TYPE_CHECKING, Dict, Type, TypeVar
+from typing import Optional, TypeVar, Union
 
-from openff.models.types import custom_quantity_encoder, json_loader
+from openff.models.models import DefaultModel
+from openff.models.types import custom_quantity_encoder
+from openff.toolkit.topology import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -12,7 +14,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 
-from openff.interchange.components.potentials import Collection
+from openff.interchange.components.potentials import Collection, Potential
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     SMIRNOFFParameterAttributeNotImplementedError,
@@ -20,22 +22,22 @@ from openff.interchange.exceptions import (
     UnassignedBondError,
     UnassignedTorsionError,
 )
-from openff.interchange.models import PotentialKey, TopologyKey
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology import Topology
-
+from openff.interchange.models import (
+    LibraryChargeTopologyKey,
+    PotentialKey,
+    TopologyKey,
+)
 
 T = TypeVar("T", bound="SMIRNOFFCollection")
 TP = TypeVar("TP", bound="ParameterHandler")
 
 
-def _sanitize(o):
+def _sanitize(o) -> Union[str, dict]:
     # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
     # for the mapping dicts `key_map` and `potentials`.
     if isinstance(o, dict):
         return {_sanitize(k): _sanitize(v) for k, v in o.items()}
-    elif isinstance(o, (PotentialKey, TopologyKey)):
+    elif isinstance(o, DefaultModel):
         return o.json()
     elif isinstance(o, unit.Quantity):
         return custom_quantity_encoder(o)
@@ -45,6 +47,54 @@ def _sanitize(o):
 def dump_collection(v, *, default):
     """Dump a SMIRNOFFCollection to JSON after converting to compatible types."""
     return json.dumps(_sanitize(v), default=default)
+
+
+def collection_loader(data: str) -> dict:
+    """Load a JSON blob dumped from a `Collection`."""
+    tmp: dict[str, Optional[Union[int, bool, str]]] = {}
+
+    for key, val in json.loads(data).items():
+        if isinstance(val, (str, bool, type(None))):
+            # These are stored as string but must be parsed into `Quantity`
+            if key in ("cutoff", "switch_width"):
+                tmp[key] = unit.Quantity(*json.loads(val).values())  # type: ignore[arg-type]
+            else:
+                tmp[key] = val
+        elif isinstance(val, dict):
+            if key == "key_map":
+                key_map = {}
+
+                for key_, val_ in val.items():
+                    if "atom_indices" in key_:
+                        topology_key: Union[
+                            TopologyKey,
+                            LibraryChargeTopologyKey,
+                        ] = TopologyKey.parse_raw(key_)
+
+                    else:
+                        topology_key = LibraryChargeTopologyKey.parse_raw(key_)
+
+                    potential_key = PotentialKey(**val_)
+
+                    key_map[topology_key] = potential_key
+
+                tmp[key] = key_map  # type: ignore[assignment]
+
+            elif key == "potentials":
+                potentials = {}
+
+                for key_, val_ in val.items():
+                    potential_key = PotentialKey.parse_raw(key_)
+                    potential = Potential.parse_raw(json.dumps(val_))
+
+                    potentials[potential_key] = potential
+
+                tmp[key] = potentials  # type: ignore[assignment]
+
+            else:
+                raise NotImplementedError(f"Cannot parse {key} in this JSON.")
+
+    return tmp
 
 
 # Coped from the toolkit, see
@@ -143,7 +193,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
         """Default configuration options for SMIRNOFF potential handlers."""
 
         json_dumps = dump_collection
-        json_loads = json_loader
+        json_loads = collection_loader
         validate_assignment = True
         arbitrary_types_allowed = True
 
@@ -179,7 +229,6 @@ class SMIRNOFFCollection(Collection, abc.ABC):
     @classmethod
     def check_openmm_requirements(cls, combine_nonbonded_forces: bool) -> None:
         """Run through a list of assertions about what is compatible when exporting this to OpenMM."""
-        pass
 
     def store_matches(
         self,
@@ -190,7 +239,10 @@ class SMIRNOFFCollection(Collection, abc.ABC):
         if self.key_map:
             # TODO: Should the key_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
-            self.key_map: Dict[TopologyKey, PotentialKey] = dict()
+            self.key_map: dict[
+                Union[TopologyKey, LibraryChargeTopologyKey],
+                PotentialKey,
+            ] = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             topology_key = TopologyKey(atom_indices=key)
@@ -213,9 +265,15 @@ class SMIRNOFFCollection(Collection, abc.ABC):
                 valence_terms=valence_terms,
             )
 
+    def store_potentials(self, parameter_handler: TP):
+        """
+        Populate self.potentials with key-val pairs of [PotentialKey, Potential].
+        """
+        raise NotImplementedError()
+
     @classmethod
     def create(
-        cls: Type[T],
+        cls: type[T],
         parameter_handler: TP,
         topology: "Topology",
     ) -> T:
