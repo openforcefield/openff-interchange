@@ -1,7 +1,7 @@
 import numpy
 import pytest
 from openff.toolkit import ForceField, Molecule
-from openff.toolkit.tests.utils import get_14_scaling_factors
+from openff.toolkit._tests.utils import get_14_scaling_factors
 from openff.units import unit
 from openff.units.openmm import ensure_quantity
 from openmm import (

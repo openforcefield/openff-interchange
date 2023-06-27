@@ -4,7 +4,7 @@ import numpy as np
 import parmed
 import pytest
 from openff.toolkit import ForceField, Molecule
-from openff.toolkit.tests.utils import get_data_file_path
+from openff.toolkit._tests.utils import get_data_file_path
 from openff.units import unit
 from openff.utilities.utilities import has_executable
 from openmm import app
