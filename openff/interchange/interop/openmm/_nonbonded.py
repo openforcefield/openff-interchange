@@ -30,7 +30,7 @@ _DATA_DICT: TypeAlias = dict[str, Union[None, str, bool, "Collection"]]
 #       instead they are handleded by an openmm.CustomBondForce in which the scaled parameters are manually computed.
 _MIXING_RULE_EXPRESSIONS: dict[str, str] = {
     "lorentz-berthelot": "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); ",
-    "geometric": "sigma=sqrt(sigma1*sigma2); epsilon=sqrt(epsilon1*epsilon2) ",
+    "geometric": "sigma=sqrt(sigma1*sigma2); epsilon=sqrt(epsilon1*epsilon2); ",
 }
 
 
@@ -265,6 +265,7 @@ def _create_single_nonbonded_force(
         has_virtual_sites = True
 
     non_bonded_force = openmm.NonbondedForce()
+    non_bonded_force.setName("Nonbonded force")
     system.addForce(non_bonded_force)
 
     if interchange.box is None:
@@ -599,6 +600,7 @@ def _create_multiple_nonbonded_forces(
             vdw_14_force = openmm.CustomBondForce(
                 _get_scaled_potential_function(data["vdw_expression"]),
             )
+            vdw_14_force.setName("vdW 1-4 force")
 
             # feed in r_min1, epsilon1, ..., r_min2, epsilon2, ... each as individual parameters
             for index in [1, 2]:
@@ -619,21 +621,11 @@ def _create_multiple_nonbonded_forces(
         else:
             vdw_expression: str = data["vdw_expression"]
 
-            # TODO: Is it necessary to set the mixing rule here? All 1-4 interactions
-            #       should be split out into a CustomBondForce
-            mixing_rule_expression: str = _MIXING_RULE_EXPRESSIONS.get(
-                data["mixing_rule"],
-                "",
-            )
+            vdw_14_force = openmm.CustomBondForce(vdw_expression)
+            vdw_14_force.setName("vdW 1-4 force")
 
-            vdw_14_force = openmm.CustomBondForce(
-                f"{vdw_expression}"
-                if mixing_rule_expression in (None, "")
-                else f"{vdw_expression}; {mixing_rule_expression}",
-            )
-
-            for parameter in data["vdw_collection"].potential_parameters():
-                vdw_14_force.addPerBondParameter(parameter)
+            for parameter in vdw.potential_parameters():
+                vdw_14_force.addPerBondParameter(f"{parameter}")
 
         vdw_14_force.setUsesPeriodicBoundaryConditions(interchange.box is not None)
 
@@ -641,6 +633,7 @@ def _create_multiple_nonbonded_forces(
         vdw_14_force = None
 
     coul_14_force = openmm.CustomBondForce(f"{coul_const}*qq/r")
+    coul_14_force.setName("Electrostatics 1-4 force")
     coul_14_force.addPerBondParameter("qq")
     coul_14_force.setUsesPeriodicBoundaryConditions(interchange.box is not None)
 
@@ -687,42 +680,21 @@ def _create_multiple_nonbonded_forces(
                         # ... and set the 1-4 interactions
                         vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
 
-                else:
-                    # Look up the vdW parameters for each particle
-                    sig1, eps1 = vdw_force.getParticleParameters(p1)
-                    sig2, eps2 = vdw_force.getParticleParameters(p2)
+                # Look up the partial charges for each particle
+                q1 = electrostatics_force.getParticleParameters(p1)[0]
+                q2 = electrostatics_force.getParticleParameters(p2)[0]
 
-                    # manually compute ...
-                    if data["mixing_rule"] == "lorentz-berthelot":
-                        sig_14 = (sig1 + sig2) * 0.5
-                        eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
+                # manually compute ...
+                qq = q1 * q2 * coul_14
 
-                    elif data["mixing_rule"] == "geometric":
-                        sig_14 = (sig1 * sig2) ** 0.5
-                        eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
+                # ... and set the 1-4 interactions
+                coul_14_force.addBond(p1, p2, [qq])
 
-                    else:
-                        # TODO: Actually compute these automatically from expression
-                        raise NotImplementedError()
+            if vdw_force is not None:
+                vdw_force.addExclusion(p1, p2)
 
-                    # ... and set the 1-4 interactions
-                    vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
-
-            # Look up the partial charges for each particle
-            q1 = electrostatics_force.getParticleParameters(p1)[0]
-            q2 = electrostatics_force.getParticleParameters(p2)[0]
-
-            # manually compute ...
-            qq = q1 * q2 * coul_14
-
-            # ... and set the 1-4 interactions
-            coul_14_force.addBond(p1, p2, [qq])
-
-        if vdw_force is not None:
-            vdw_force.addExclusion(p1, p2)
-
-        if electrostatics_force is not None:
-            electrostatics_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
+            if electrostatics_force is not None:
+                electrostatics_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
 
     for force in [vdw_force, electrostatics_force, vdw_14_force, coul_14_force]:
         if force is not None:
@@ -762,6 +734,7 @@ def _create_vdw_force(
         if mixing_rule_expression in (None, "")
         else f"{vdw_expression}; {mixing_rule_expression}",
     )
+    vdw_force.setName("vdW force")
 
     for potential_parameter in vdw_collection.potential_parameters():
         vdw_force.addPerParticleParameter(potential_parameter)
@@ -824,6 +797,7 @@ def _create_electrostatics_force(
         return None
 
     electrostatics_force = openmm.NonbondedForce()
+    electrostatics_force.setName("Electrostatics force")
 
     # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
     #   of that parent atom (if any)
