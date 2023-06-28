@@ -7,8 +7,8 @@ from typing import DefaultDict, Optional
 import numpy as np
 import openmm
 import pytest
-from openff.toolkit.tests.create_molecules import create_ammonia, create_ethanol
-from openff.toolkit.tests.utils import get_data_file_path
+from openff.toolkit._tests.create_molecules import create_ammonia, create_ethanol
+from openff.toolkit._tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit

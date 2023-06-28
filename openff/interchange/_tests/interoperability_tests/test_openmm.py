@@ -5,8 +5,8 @@ import openmm
 import openmm.app
 import openmm.unit
 import pytest
-from openff.toolkit.tests.test_forcefield import create_ethanol
-from openff.toolkit.tests.utils import get_data_file_path
+from openff.toolkit._tests.test_forcefield import create_ethanol
+from openff.toolkit._tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.units import unit
@@ -83,7 +83,7 @@ def _compare_openmm_topologies(top1: openmm.app.Topology, top2: openmm.app.Topol
 class TestOpenMM(_BaseTest):
     @pytest.mark.parametrize("inputs", nonbonded_methods)
     def test_openmm_nonbonded_methods(self, inputs, sage):
-        """See test_nonbonded_method_resolution in openff/toolkit/tests/test_forcefield.py"""
+        """See test_nonbonded_method_resolution in openff.toolkit._tests/test_forcefield.py"""
         vdw_method = inputs["vdw_method"]
         electrostatics_method = inputs["electrostatics_periodic"]
         periodic = inputs["periodic"]
@@ -646,7 +646,7 @@ class TestOpenMMVirtualSiteExclusions(_BaseTest):
 
     def test_dichloroethane_exceptions(self, sage):
         """Test a case in which a parent's 1-4 exceptions must be 'imported'."""
-        from openff.toolkit.tests.mocking import VirtualSiteMocking
+        from openff.toolkit._tests.mocking import VirtualSiteMocking
 
         # This molecule has heavy atoms with indices (1-indexed) CL1, C2, C3, Cl4,
         # resulting in 1-4 interactions between the Cl-Cl pair and some Cl-H pairs

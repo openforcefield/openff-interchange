@@ -13,3 +13,5 @@ dependencies:
   # Testing
   - pytest
   - pytest-xdist
+  - pip:
+    - git+https://github.com/openforcefield/openff-toolkit
