@@ -29,7 +29,7 @@ def _get_interpolated_bond_k(bond_handler) -> float:
 
 
 class TestSMIRNOFFVirtualSites(_BaseTest):
-    from openff.toolkit.tests.mocking import VirtualSiteMocking
+    from openff.toolkit._tests.mocking import VirtualSiteMocking
     from openmm import unit as openmm_unit
 
     @classmethod

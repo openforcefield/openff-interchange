@@ -11,6 +11,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### New features
+
+* #579 Adds support for using the geometric mixing rule in OpenMM export.
+
 ## 0.3.6 - 2023-06-20
 
 ## Behavior changes

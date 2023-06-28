@@ -25,8 +25,12 @@ from openff.interchange.models import TopologyKey, VirtualSiteKey
 
 _DATA_DICT: TypeAlias = dict[str, Union[None, str, bool, "Collection"]]
 
+
+# TODO: Currently, these are not used since the openmm.CustomNonbondedForce does not handle 1-4 interactions and
+#       instead they are handleded by an openmm.CustomBondForce in which the scaled parameters are manually computed.
 _MIXING_RULE_EXPRESSIONS: dict[str, str] = {
     "lorentz-berthelot": "sigma=(sigma1+sigma2)/2; epsilon=sqrt(epsilon1*epsilon2); ",
+    "geometric": "sigma=sqrt(sigma1*sigma2); epsilon=sqrt(epsilon1*epsilon2); ",
 }
 
 
@@ -232,9 +236,6 @@ def _prepare_input_data(interchange: "Interchange") -> _DATA_DICT:
         "vdw_method": vdw_method,
         "vdw_expression": vdw_expression,
         "mixing_rule": mixing_rule,
-        "mixing_rule_expression": _MIXING_RULE_EXPRESSIONS.get(mixing_rule, "")
-        if isinstance(mixing_rule, str)
-        else None,
         "electrostatics_collection": electrostatics,
         "electrostatics_method": electrostatics_method,
         "periodic": interchange.box is None,
@@ -251,7 +252,8 @@ def _create_single_nonbonded_force(
     """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site collections."""
     if data["mixing_rule"] not in ("lorentz-berthelot", None):
         raise UnsupportedExportError(
-            "OpenMM's default NonbondedForce only supports Lorentz-Berthelot mixing rules."
+            "OpenMM's default NonbondedForce only supports Lorentz-Berthelot mixing rules. "
+            f"Found {data['mixing_rule']}. "
             "Try setting `combine_nonbonded_forces=False`.",
         )
 
@@ -263,6 +265,7 @@ def _create_single_nonbonded_force(
         has_virtual_sites = True
 
     non_bonded_force = openmm.NonbondedForce()
+    non_bonded_force.setName("Nonbonded force")
     system.addForce(non_bonded_force)
 
     if interchange.box is None:
@@ -593,9 +596,11 @@ def _create_multiple_nonbonded_forces(
         vdw = data["vdw_collection"]
 
         if vdw.is_plugin:
+            # TODO: Custom mixing rules in plugins is untested
             vdw_14_force = openmm.CustomBondForce(
                 _get_scaled_potential_function(data["vdw_expression"]),
             )
+            vdw_14_force.setName("vdW 1-4 force")
 
             # feed in r_min1, epsilon1, ..., r_min2, epsilon2, ... each as individual parameters
             for index in [1, 2]:
@@ -614,10 +619,13 @@ def _create_multiple_nonbonded_forces(
                 vdw_14_force.addGlobalParameter(term, value)
 
         else:
-            vdw_14_force = openmm.CustomBondForce(data["vdw_expression"])
+            vdw_expression: str = data["vdw_expression"]
 
-            for parameter in data["vdw_collection"].potential_parameters():
-                vdw_14_force.addPerBondParameter(parameter)
+            vdw_14_force = openmm.CustomBondForce(vdw_expression)
+            vdw_14_force.setName("vdW 1-4 force")
+
+            for parameter in vdw.potential_parameters():
+                vdw_14_force.addPerBondParameter(f"{parameter}")
 
         vdw_14_force.setUsesPeriodicBoundaryConditions(interchange.box is not None)
 
@@ -625,6 +633,7 @@ def _create_multiple_nonbonded_forces(
         vdw_14_force = None
 
     coul_14_force = openmm.CustomBondForce(f"{coul_const}*qq/r")
+    coul_14_force.setName("Electrostatics 1-4 force")
     coul_14_force.addPerBondParameter("qq")
     coul_14_force.setUsesPeriodicBoundaryConditions(interchange.box is not None)
 
@@ -715,13 +724,17 @@ def _create_vdw_force(
         return None
 
     vdw_expression: str = data["vdw_expression"]  # type: ignore[assignment]
-    mixing_rule_expression: str = data["mixing_rule_expression"]  # type: ignore[assignment]
+    mixing_rule_expression: str = _MIXING_RULE_EXPRESSIONS.get(
+        data["mixing_rule"],
+        "",
+    )
 
     vdw_force = openmm.CustomNonbondedForce(
         f"{vdw_expression}"
         if mixing_rule_expression in (None, "")
         else f"{vdw_expression}; {mixing_rule_expression}",
     )
+    vdw_force.setName("vdW force")
 
     for potential_parameter in vdw_collection.potential_parameters():
         vdw_force.addPerParticleParameter(potential_parameter)
@@ -784,6 +797,7 @@ def _create_electrostatics_force(
         return None
 
     electrostatics_force = openmm.NonbondedForce()
+    electrostatics_force.setName("Electrostatics force")
 
     # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
     #   of that parent atom (if any)

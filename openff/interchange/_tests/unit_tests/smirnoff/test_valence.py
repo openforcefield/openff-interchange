@@ -2,13 +2,13 @@ import numpy
 import openmm
 import pytest
 from openff.toolkit import ForceField, Molecule, Topology
-from openff.toolkit.tests.test_forcefield import (
+from openff.toolkit._tests.test_forcefield import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
     create_water,
 )
-from openff.toolkit.tests.utils import requires_openeye
+from openff.toolkit._tests.utils import requires_openeye
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -233,7 +233,7 @@ class TestBondOrderInterpolation(_BaseTest):
     def test_input_conformers_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
-        from openff.toolkit.tests.test_forcefield import create_ethanol
+        from openff.toolkit._tests.test_forcefield import create_ethanol
 
         mol = create_ethanol()
         mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
