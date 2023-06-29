@@ -9,11 +9,16 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.3.6 - 2023-06-29
 
 ### New features
 
 * #579 Adds support for using the geometric mixing rule in OpenMM export.
+
+### Documentation improvements
+
+* #756 Updates example notebooks using a more consistent structure.
+* #754 Fixes a call to `pack_box` in the protein-ligand example.
 
 ## 0.3.6 - 2023-06-20
 
