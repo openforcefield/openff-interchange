@@ -311,7 +311,7 @@ class Interchange(DefaultModel):
             raise MissingPositionsError(
                 "Cannot visualize system without positions.",
             ) from error
-        return nglview.show_file("_tmp_pdb_file.pdb")
+        return nglview.show_structure_file("_tmp_pdb_file.pdb")
 
     def to_gromacs(self, prefix: str, decimal: int = 3):
         """Export this Interchange object to GROMACS files."""
