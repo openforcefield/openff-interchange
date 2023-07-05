@@ -157,11 +157,11 @@ class TestOpenMM(_BaseTest):
             ),
         )
 
-        molecules = [create_ethanol()]
-        pdbfile = openmm.app.PDBFile(
-            get_data_file_path("systems/test_systems/1_ethanol.pdb"),
+        molecule = Molecule.from_mapped_smiles(
+            "[H:5][C:2]([H:6])([C:3]([H:7])([H:8])[Br:4])[Cl:1]",
         )
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        topology = Topology.from_molecules(molecule)
+        topology.box_vectors = [30, 30, 30] * unit.angstrom
 
         interchange = Interchange.from_smirnoff(
             force_field=forcefield,
