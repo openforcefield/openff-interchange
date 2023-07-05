@@ -32,7 +32,7 @@ dependencies:
   - openff-qcsubmit
   - mdanalysis
   # Drivers
-  - gromacs >=2021=nompi*
+  # gromacs >=2021=nompi*  # No osx-arm64 builds
   - lammps
   - panedr
   # Typing
@@ -54,4 +54,4 @@ dependencies:
   - snakeviz
   - tuna
   - pip:
-    - git+https://github.com/jthorton/de-forcefields
+    - git+https://github.com/mattwthompson/de-forcefields@maint

@@ -37,3 +37,5 @@ dependencies:
   - typing-extensions
   - types-setuptools
   - pandas-stubs >=1.2.0.56
+  - pip:
+    - git+https://github.com/mattwthompson/de-forcefields@maint
