@@ -678,10 +678,10 @@ def _create_multiple_nonbonded_forces(
                         sig2, eps2 = vdw_force.getParticleParameters(p2)
 
                         # manually compute ...
-                        if data["mixing_rule"] == "lorentz-berthelot":
+                        if data.mixing_rule == "lorentz-berthelot":
                             sig_14 = (sig1 + sig2) * 0.5
                             eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
-                        elif data["mixing_rule"] == "geometric":
+                        elif data.mixing_rule == "geometric":
                             sig_14 = (sig1 * sig2) ** 0.5
                             eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
                         else:
