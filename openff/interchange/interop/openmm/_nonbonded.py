@@ -730,7 +730,7 @@ def _create_vdw_force(
     molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
     has_virtual_sites: bool,
 ) -> Optional[openmm.CustomNonbondedForce]:
-    vdw_collection: Optional["vdWCollection"] = data.vdw_collection  # type: ignore[assignment]
+    vdw_collection: Optional["vdWCollection"] = data.vdw_collection
 
     if vdw_collection is None:
         return None
@@ -831,7 +831,7 @@ def _create_electrostatics_force(
                 ].append(force_index)
 
     if data.electrostatics_method == "reaction-field":
-        raise UnsupportedExportError(
+        raise UnsupportedCutoffMethodError(
             "Reaction field electrostatics not supported. If this use case is important to you, "
             "please raise an issue describing the scope of functionality you would like to use.",
         )
@@ -892,7 +892,7 @@ def _set_particle_parameters(
     else:
         partial_charges = None
 
-    vdw: "vdWCollection" = data.vdw_collection  # type: ignore[assignment]
+    vdw: "vdWCollection" = data.vdw_collection
 
     for molecule in interchange.topology.molecules:
         for atom in molecule.atoms:
