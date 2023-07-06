@@ -247,6 +247,7 @@ class TestEnergies(_BaseTest):
                     f"Found {key} energy difference of {energy_diff} kJ/mol between GROMACS and OpenMM exports",
                 )
 
+    @needs_gmx
     def test_rb_torsion_energies(self, monkeypatch):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
