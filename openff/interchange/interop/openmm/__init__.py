@@ -17,7 +17,6 @@ __all__ = [
 ]
 
 import openmm.app
-from openff.toolkit.topology import Topology
 
 
 def to_openmm(
@@ -118,12 +117,12 @@ def to_openmm(
     return system
 
 
-def _to_pdb(file_path: Union[Path, str], topology: "Topology", positions):
-    from openff.units.openmm import to_openmm
-
-    openmm_topology = topology.to_openmm(ensure_unique_atom_names=False)
-
-    positions = to_openmm(positions)
+def _to_pdb(file_path: Union[Path, str], topology: "openmm.app.Topology", positions):
+    from openff.units.openmm import ensure_quantity
 
     with open(file_path, "w") as outfile:
-        openmm.app.PDBFile.writeFile(openmm_topology, positions, outfile)
+        openmm.app.PDBFile.writeFile(
+            topology=topology,
+            positions=ensure_quantity(positions, "openmm"),
+            file=outfile,
+        )

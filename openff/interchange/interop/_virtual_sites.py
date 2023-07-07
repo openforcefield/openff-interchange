@@ -80,7 +80,7 @@ def get_positions_with_virtual_sites(
             )
 
         else:
-            this_molecule_atom_positions = unit.Quantity(
+            this_molecule_virtual_site_positions = unit.Quantity(
                 numpy.asarray(
                     [
                         _get_virtual_site_positions(virtual_site_key, interchange)
