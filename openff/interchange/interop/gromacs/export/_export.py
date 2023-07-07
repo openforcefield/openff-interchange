@@ -275,6 +275,7 @@ class GROMACSWriter(DefaultModel):
             warnings.warn(
                 "Positions seem to all be zero. Result coordinate file may be non-physical.",
                 UserWarning,
+                stacklevel=2,
             )
 
         n_particles = sum(
@@ -306,8 +307,8 @@ class GROMACSWriter(DefaultModel):
                         f"%{decimal+5}.{decimal}f\n"
                         % (
                             atom.residue_index,  # This needs to be looked up from a different data structure
-                            atom.residue_name,
-                            atom.name,
+                            atom.residue_name[:5],
+                            atom.name[:5],
                             (count + 1) % 100000,
                             positions[count, 0],
                             positions[count, 1],
@@ -323,6 +324,7 @@ class GROMACSWriter(DefaultModel):
                 "support in versions 2020 or newer (see "
                 "https://gitlab.com/gromacs/gromacs/-/issues/3526). Setting box vectors to a 5 "
                 " nm cube.",
+                stacklevel=2,
             )
             box = 5 * numpy.eye(3)
         else:
@@ -333,9 +335,22 @@ class GROMACSWriter(DefaultModel):
             for i in range(3):
                 gro.write(f"{box[i, i]:11.7f}")
         else:
-            raise NotImplementedError(
-                "Non-rectangular boxes are not yet tested. Please open an issue on GitHub if you "
-                "need this feature.",
-            )
+            # v1x v1y v1z
+            # v2x v2y v2z
+            # v3x v3y v3z
+            # https://manual.gromacs.org/archive/5.0.3/online/gro.html
+            # v1(x) v2(y) v3(z) v1(y) v1(z) v2(x) v2(z) v3(x) v3(y)
+            for value in [
+                box[0, 0],  # v1x
+                box[1, 1],  # v2y
+                box[2, 2],  # v3z
+                box[0, 1],  # v1y
+                box[0, 2],  # v1z
+                box[1, 0],  # v2x
+                box[1, 2],  # v2z
+                box[2, 0],  # v3x
+                box[2, 1],  # v3y
+            ]:
+                gro.write(f"{value:11.7f}")
 
         gro.write("\n")

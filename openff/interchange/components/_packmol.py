@@ -1,25 +1,68 @@
 """
-A wrapper around PACKMOL. Taken from OpenFF Evaluator v0.4.3.
+A wrapper around PACKMOL. Adapted from OpenFF Evaluator v0.4.3.
 """
 import os
-import random
 import shutil
-import string
 import subprocess
 import tempfile
-import warnings
-from collections import defaultdict
 from distutils.spawn import find_executable
-from typing import Optional
+from typing import Callable, Literal, Optional, Union
 
-import mdtraj
-import numpy
-from openff.toolkit import Molecule, Topology
-from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
+import numpy as np
+from numpy.typing import ArrayLike, NDArray
+from openff.toolkit import Molecule, RDKitToolkitWrapper, Topology
 from openff.units import Quantity, unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
+
+UNIT_CUBE = np.asarray(
+    [
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+    ],
+)
+"""A regular square prism with image distance 1.0 and volume 1.0.
+
+A cubic box is very simple and easy to visualize, but wastes substantial space
+and computational time. A rhombic dodecahedron that provides the same separation
+between solutes has only about 71% the volume, and therefore requires simulation
+of much less solvent.
+"""
+
+RHOMBIC_DODECAHEDRON = np.array(
+    [
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.5, 0.5, np.sqrt(2.0) / 2.0],
+    ],
+)
+"""
+Rhombic dodecahedron with square XY plane cross section, image distance 1.0, and volume ~0.71.
+
+The rhombic dodecahedron is the most space-efficient triclinic box for a
+spherical solute, or equivalently for a solute whose rotations sweep out a
+sphere. Its volume is $\\frac{1}{2}\\sqrt{2}$. A square intersection with the
+XY plane allows the first two box vectors to be parallel to the x- and y-axes
+respectively, which is simple to picture and appropriate for soluble systems.
+"""
+
+RHOMBIC_DODECAHEDRON_XYHEX = np.array(
+    [
+        [1.0, 0.0, 0.0],
+        [0.5, np.sqrt(3.0) / 2.0, 0.0],
+        [0.5, np.sqrt(3.0) / 6.0, np.sqrt(6.0) / 3.0],
+    ],
+)
+"""
+A rhombic dodecahedron with hexagonal XY cross section, image distance 1.0, and volume ~0.71.
+
+The rhombic dodecahedron is the most space-efficient triclinic box for a
+spherical solute, or equivalently for a solute whose rotations sweep out a
+sphere. A hexagonal intersection with the XY plane is convenient for membrane
+simulations,
+"""
 
 
 def _find_packmol() -> Optional[str]:
@@ -43,9 +86,9 @@ def _find_packmol() -> Optional[str]:
 def _validate_inputs(
     molecules: list[Molecule],
     number_of_copies: list[int],
-    structure_to_solvate: Optional[Topology],
-    box_aspect_ratio: Optional[Quantity],
-    box_size: Optional[Quantity],
+    solute: Optional[Topology],
+    box_shape: NDArray,
+    box_vectors: Optional[Quantity],
     mass_density: Optional[Quantity],
 ):
     """
@@ -58,61 +101,211 @@ def _validate_inputs(
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
         equal to the length of `molecules`.
-    structure_to_solvate: Topology, optional
-        A topology to be solvated.
-    box_size : openff.units.Quantity, optional
-        The size of the box to generate in units compatible with angstroms.
-        If `None`, `mass_density` must be provided.
+    solute: Topology, optional
+        The OpenFF Topology to be solvated.
+    box_vectors : openff.units.Quantity,
+        The box vectors to fill in units compatible with angstroms. If `None`,
+        `mass_density` must be provided.
     mass_density : openff.units.Quantity, optional
         Target mass density for final system with units compatible with g / mL.
          If `None`, `box_size` must be provided.
-    box_aspect_ratio: list of float, optional
-        The aspect ratio of the simulation box, used in conjunction with
-        the `mass_density` parameter.
+    box_shape: NDArray
+        The shape of the simulation box, used in conjunction with the
+        `mass_density` parameter. Should have shape (3, 3) with all positive
+        elements.
 
     """
-    if box_size is None and mass_density is None:
+    if (
+        box_vectors is None
+        and mass_density is None  # noqa: W503
+        and (solute is None or solute.box_vectors is None)  # noqa: W503
+    ):
         raise PACKMOLValueError(
-            "Either a `box_size` or `mass_density` must be specified.",
+            "One of `box_vectors`, `mass_density`, or"
+            + " `solute.box_vectors` must be specified.",  # noqa: W503
+        )
+    if box_vectors is not None and mass_density is not None:
+        raise PACKMOLValueError(
+            "`box_vectors` and `mass_density` cannot be specified together;"
+            + " choose one or the other.",  # noqa: W503
         )
 
-    if box_size is not None and len(box_size) != 3:
+    if box_vectors is not None and box_vectors.shape != (3, 3):
         raise PACKMOLValueError(
-            "`box_size` must be a openff.units.unit.Quantity wrapped list of length 3",
+            "`box_vectors` must be a openff.units.unit.Quantity Array with shape (3, 3)",
         )
 
-    if box_aspect_ratio is not None:
-        assert len(box_aspect_ratio) == 3
-        assert all(x > 0.0 for x in box_aspect_ratio)
+    if box_shape.shape != (3, 3):
+        raise PACKMOLValueError(
+            "`box_shape` must be an array with shape (3, 3) or (3,)",
+        )
+    if not np.all(np.linalg.norm(box_shape, axis=-1) > 0.0):
+        raise PACKMOLValueError("All vectors in `box_shape` must have a positive norm.")
 
     if len(molecules) != len(number_of_copies):
         raise PACKMOLValueError(
             "The length of `molecules` and `number_of_copies` must be identical.",
         )
 
-    if structure_to_solvate is not None:
-        if not isinstance(structure_to_solvate, Topology):
+    if solute is not None:
+        if not isinstance(solute, Topology):
             raise PACKMOLValueError(
-                "`structure_to_solvate` must be a openff.toolkit.topology.Topology",
+                "`solute` must be a openff.toolkit.topology.Topology",
             )
 
-        positions = structure_to_solvate.get_positions()
+        positions = solute.get_positions()
 
         try:
             assert positions is not None
-            assert positions.shape[0] == structure_to_solvate.n_atoms
+            assert positions.shape[0] == solute.n_atoms
         except AssertionError:
             raise PACKMOLValueError(
-                "`structure_to_solvate` missing some atomic positions.",
+                "`solute` missing some atomic positions.",
             )
 
 
-def _approximate_box_size_by_density(
+def _box_vectors_are_in_reduced_form(box_vectors: Quantity) -> bool:
+    """
+    Return ``True`` if the box is in OpenMM reduced form; ``False`` otherwise.
+
+    These conditions are shared by OpenMM and GROMACS and greatly simplify
+    working with triclinic boxes. Any periodic system can be represented in this
+    form by rotating the system and lattice reduction.
+    See http://docs.openmm.org/latest/userguide/theory/05_other_features.html#periodic-boundary-conditions
+    """
+    assert box_vectors.shape == (3, 3)
+    a, b, c = box_vectors.m
+    ax, ay, az = a
+    bx, by, bz = b
+    cx, cy, cz = c
+    return (
+        [ay, az] == [0, 0]
+        and bz == 0
+        and ax > 0
+        and by > 0
+        and cz > 0
+        and ax >= 2 * np.abs(bx)
+        and ax >= 2 * np.abs(cx)
+        and by >= 2 * np.abs(cy)
+    )
+
+
+def _unit_vec(vec: Quantity) -> Quantity:
+    """Get a unit vector in the direction of ``vec``."""
+    return vec / np.linalg.norm(vec)
+
+
+def _compute_brick_from_box_vectors(box_vectors: Quantity) -> Quantity:
+    """
+    Compute the rectangular brick for the given triclinic box vectors.
+
+    Parameters
+    ----------
+    box_vectors: NDArray
+        Array with shape (3, 3) representing the box vectors of a triclinic cell
+
+    """
+    # This should have already been checked with a nice error message, but it is
+    # an important invariant so we'll check it again here
+    assert _box_vectors_are_in_reduced_form(box_vectors)
+    return np.diagonal(box_vectors)
+
+
+def _range_neg_pos(stop):
+    """Yield 0, 1, -1, 2, -2... ``stop - 1``, ``-(stop - 1)``."""
+    yield 0
+    for i in range(1, stop):
+        yield i
+        yield -i
+
+
+def _iter_lattice_vecs(box, max_order):
+    """Yield linear combinations of box vectors until max_order is reached."""
+    a, b, c = box
+    for i in _range_neg_pos(max_order + 1):
+        for j in _range_neg_pos(max_order + 1):
+            for k in _range_neg_pos(max_order + 1):
+                yield i * a + j * b + k * c
+
+
+def _wrap_into(
+    points: Quantity,
+    box: Quantity,
+    condition: Callable,
+    max_order: int = 3,
+):
+    """
+    Convert a triclinic box to a representation where all atoms satisfy a condition.
+
+    Parameters
+    ----------
+    points
+        The points to transform
+    box
+        The triclinic box vectors
+    condition
+        The condition that must be satisfied. This should be a function taking
+        an array of positions with shape (n, 3) and returning an array of
+        booleans with shape (n,) whose elements are ``True`` at positions that
+        satisfy the condition.
+    max_order
+        The maximum number of box vectors that points may be from the rectangular
+        box.
+
+    """
+    assert points.shape[-1] == 3
+    assert box.shape == (3, 3)
+    points = points.copy()
+
+    # Iterate over linear combinations of lattice vectors
+    for lattice_vec in _iter_lattice_vecs(box, max_order):
+        # If all the points satisfy the condition, we're done
+        if np.all(condition(points)):
+            break
+
+        # Otherwise, choose the points that would satisfy the condition if we
+        # translated them by the current linear combination of lattice vectors,
+        # and do so
+        translated_points = points - lattice_vec
+        correct_translated_points = condition(translated_points)
+        points -= correct_translated_points[:, None] * lattice_vec[None, :]
+    else:
+        raise PACKMOLValueError(
+            f"Couldn't move all particles to satisfy condition in {max_order} steps",
+        )
+
+    return points
+
+
+def _wrap_into_brick(points: Quantity, box: Quantity, max_order: int = 3):
+    """
+    Convert a triclinic box to its rectangular brick representation.
+
+    Parameters
+    ----------
+    points
+        The points to transform
+    box
+        The triclinic box vectors
+    max_order
+        The maximum number of box vectors that points may be from the rectangular
+        box.
+
+    """
+    brick = _compute_brick_from_box_vectors(box)
+    return _wrap_into(
+        points,
+        box,
+        lambda points: np.all((np.zeros(3) <= points) & (points < brick), axis=-1),
+        max_order,
+    )
+
+
+def _box_from_density(
     molecules: list[Molecule],
     n_copies: list[int],
     mass_density: Quantity,
-    box_aspect_ratio: list[float],
-    box_scaleup_factor: float = 1.1,
+    box_shape: NDArray,
 ) -> Quantity:
     """
     Approximate box size.
@@ -130,299 +323,120 @@ def _approximate_box_size_by_density(
     mass_density : openff.units.Quantity
         The target mass density for final system. It should have units
         compatible with g / mL.
-    box_aspect_ratio: List of float
-        The aspect ratio of the simulation box, used in conjunction with
-        the `mass_density` parameter.
-    box_scaleup_factor : float
-        The factor by which the estimated box size should be
-        increased.
+    box_shape: NDArray
+        The shape of the simulation box, used in conjunction with the
+        `mass_density` parameter. Should have shape (3, 3) with all positive
+        elements.
 
     Returns
     -------
-    openff.units.Quantity
-        A list of the three box lengths in units compatible with angstroms.
+    box_vectors: openff.units.Quantity
+        The unit cell box vectors. Array with shape (3, 3)
 
     """
-    total_mass = 0.0 * unit.dalton
-    for molecule, number in zip(molecules, n_copies):
-        for atom in molecule.atoms:
-            total_mass += number * atom.mass
+    # Get the desired volume in cubic working units
+    total_mass = sum(
+        sum([atom.mass for atom in molecule.atoms]) * n
+        for molecule, n in zip(molecules, n_copies)
+    )
     volume = total_mass / mass_density
 
-    box_length = volume ** (1.0 / 3.0) * box_scaleup_factor
-    box_length_angstrom = box_length.to(unit.angstrom).magnitude
-
-    aspect_ratio_normalizer = (
-        box_aspect_ratio[0] * box_aspect_ratio[1] * box_aspect_ratio[2]
-    ) ** (1.0 / 3.0)
-
-    box_size = [
-        box_length_angstrom * box_aspect_ratio[0],
-        box_length_angstrom * box_aspect_ratio[1],
-        box_length_angstrom * box_aspect_ratio[2],
-    ] * unit.angstrom
-
-    box_size /= aspect_ratio_normalizer
-
-    return box_size
+    return _scale_box(box_shape, volume)
 
 
-def _standardize_smiles(smiles: str) -> str:
+def _scale_box(box: NDArray, volume: Quantity) -> Quantity:
     """
-    Standardize a SMILES pattern using the OpenFF Toolkit and RDKit.
+    Scale the parallelepiped spanned by ``box`` to the given volume.
 
-    Taken from OpenFF Evaluator v0.4.3.
-
-    See openff.evaluator.substances.components::Component._standardize_smiles
-
-    """
-    from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
-    from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
-
-    # This parsing was previously done with `cmiles.utils.load_molecule`, which
-    # * did NOT enforce stereochemistry while parsing SMILES and
-    # * implicitly used the same toolkit to write the SMILES back from an object
-    # This is hard-coded to keep test results consistent across OpenEye status
-    # and compared to older versions; if desired this could be relaxed
-    rdkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper()])
-
-    molecule = Molecule.from_smiles(
-        smiles,
-        toolkit_registry=rdkit_registry,
-        allow_undefined_stereo=True,
-    )
-
-    try:
-        # Try to make the smiles isomeric.
-        return molecule.to_smiles(
-            isomeric=True,
-            explicit_hydrogens=False,
-            mapped=False,
-            toolkit_registry=rdkit_registry,
-        )
-    except ValueError:
-        # Fall-back to non-isomeric.
-        return molecule.to_smiles(
-            isomeric=False,
-            explicit_hydrogens=False,
-            mapped=False,
-            toolkit_registry=rdkit_registry,
-        )
-
-
-def _generate_residue_name(residue, smiles):
-    """
-    Generate residue names corresponding to a particular smiles pattern.
-
-    Where possible (i.e for amino acids and ions) a standard residue
-    name will be returned, otherwise a random name will be used.
+    The volume of the parallelepiped spanned by the rows of a matrix is the
+    determinant of that matrix, and scaling a row of a matrix by a constant c
+    scales the determinant by that same constant; therefore scaling all three
+    rows by c scales the volume by c**3.
 
     Parameters
     ----------
-    residue: mdtraj.core.topology.Residue
-        The residue to assign the name to.
-    smiles: str
-        The SMILES pattern to generate a resiude name for.
-
-    """
-    from mdtraj.core import residue_names
-    from openff.toolkit.topology import Molecule
-
-    # Define the set of residue names which should be discarded
-    # if randomly generated as they have a reserved meaning.
-    forbidden_residue_names = [
-        *residue_names._AMINO_ACID_CODES,
-        *residue_names._SOLVENT_TYPES,
-        *residue_names._WATER_RESIDUES,
-        "ADE",
-        "CYT",
-        "CYX",
-        "DAD",
-        "DGU",
-        "FOR",
-        "GUA",
-        "HID",
-        "HIE",
-        "HIH",
-        "HSD",
-        "HSH",
-        "HSP",
-        "NMA",
-        "THY",
-        "URA",
-    ]
-
-    amino_residue_mappings = {
-        "C[C@H](N)C(=O)O": "ALA",
-        "N=C(N)NCCC[C@H](N)C(=O)O": "ARG",
-        "NC(=O)C[C@H](N)C(=O)O": "ASN",
-        "N[C@@H](CC(=O)O)C(=O)O": "ASP",
-        "N[C@@H](CS)C(=O)O": "CYS",
-        "N[C@@H](CCC(=O)O)C(=O)O": "GLU",
-        "NC(=O)CC[C@H](N)C(=O)O": "GLN",
-        "NCC(=O)O": "GLY",
-        "N[C@@H](Cc1c[nH]cn1)C(=O)O": "HIS",
-        "CC[C@H](C)[C@H](N)C(=O)O": "ILE",
-        "CC(C)C[C@H](N)C(=O)O": "LEU",
-        "NCCCC[C@H](N)C(=O)O": "LYS",
-        "CSCC[C@H](N)C(=O)O": "MET",
-        "N[C@@H](Cc1ccccc1)C(=O)O": "PHE",
-        "O=C(O)[C@@H]1CCCN1": "PRO",
-        "N[C@@H](CO)C(=O)O": "SER",
-        "C[C@@H](O)[C@H](N)C(=O)O": "THR",
-        "N[C@@H](Cc1c[nH]c2ccccc12)C(=O)O": "TRP",
-        "N[C@@H](Cc1ccc(O)cc1)C(=O)O": "TYR",
-        "CC(C)[C@H](N)C(=O)O": "VAL",
-    }
-
-    standardized_smiles = _standardize_smiles(smiles)
-
-    # Check for amino acids.
-    if standardized_smiles in amino_residue_mappings:
-        residue.name = amino_residue_mappings[standardized_smiles]
-        return
-
-    # Check for water
-    if standardized_smiles == "O":
-        residue.name = "HOH"
-
-        # Re-assign the water atom names. These need to be set to get
-        # correct CONECT statements.
-        h_counter = 1
-
-        for atom in residue.atoms:
-            if atom.element.symbol == "O":
-                atom.name = "O1"
-            else:
-                atom.name = f"H{h_counter}"
-                h_counter += 1
-
-        return
-
-    # Check for ions
-    openff_molecule = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
-
-    if openff_molecule.n_atoms == 1:
-        residue.name = _ion_residue_name(openff_molecule)
-        residue.atom(0).name = residue.name
-
-        return
-
-    # Randomly generate a name
-    random_residue_name = "".join(
-        [random.choice(string.ascii_uppercase) for _ in range(3)],
-    )
-
-    while random_residue_name in forbidden_residue_names:
-        # Re-choose the residue name until we find a safe one.
-        random_residue_name = "".join(
-            [random.choice(string.ascii_uppercase) for _ in range(3)],
-        )
-
-    residue.name = random_residue_name
-
-    # Assign unique atom names.
-    element_counter = defaultdict(int)
-
-    for atom in residue.atoms:
-        atom.name = f"{atom.element.symbol}{element_counter[atom.element.symbol] + 1}"
-        element_counter[atom.element.symbol] += 1
-
-
-def _ion_residue_name(molecule: Molecule) -> str:
-    """
-    Generate a residue name for a monatomic ion.
-
-    Parameters
-    ----------
-    molecule: openff.toolkit.topology.Molecule
-        The monoatomic ion to generate a resiude name for.
+    box
+        3x3 matrix whose rows are the box vectors.
+    volume
+        Desired scalar volume of the box in units of volume.
 
     Returns
     -------
-    residue_name: str
-        The residue name of the ion
+    scaled_box
+        3x3 matrix in angstroms.
 
     """
-    element_symbol = molecule.atoms[0].symbol
-    charge_symbol = ""
+    working_unit = unit.angstrom
+    final_volume = volume.m_as(working_unit**3)
 
-    formal_charge = molecule.atoms[0].formal_charge
-
-    if isinstance(formal_charge, unit.Quantity):
-        formal_charge = formal_charge.m_as(unit.elementary_charge)
-
-    formal_charge = int(formal_charge)
-
-    if formal_charge != 0:
-        charge_symbol = "-" if formal_charge < 0 else "+"
-        formal_charge = abs(formal_charge)
-
-        if formal_charge > 1:
-            charge_symbol = f"{formal_charge}{charge_symbol}"
-
-    residue_name = f"{element_symbol}{charge_symbol}"
-
-    # This truncates i.e. Mg2+ to Mg. What's supposed to happen here?
-    residue_name = residue_name[:3]
-
-    return residue_name
+    initial_volume = np.abs(np.linalg.det(box))
+    volume_scale_factor = final_volume / initial_volume
+    linear_scale_factor = volume_scale_factor ** (1 / 3)
+    return linear_scale_factor * box * working_unit
 
 
-def _create_trajectory(molecule: Molecule) -> mdtraj.Trajectory:
-    """
-    Create an `mdtraj` topology from a molecule object.
+def _create_solute_pdb(
+    topology: Optional[Topology],
+    box_vectors: Quantity,
+) -> Optional[str]:
+    """Write out the solute topology to PDB so that packmol can read it."""
+    if topology is None:
+        return None
 
-    Parameters
-    ----------
-    molecule: openff.toolkit.topology.Molecule
-        The SMILES pattern.
+    # Copy the topology so we can change it
+    topology = Topology(topology)
+    # Wrap the positions into the brick representation so that packmol
+    # sees all of them
+    topology.set_positions(
+        _wrap_into_brick(
+            topology.get_positions(),
+            box_vectors,
+        ),
+    )
+    # Write to pdb
+    solute_pdb_filename = "solvate.pdb"
+    topology.to_file(
+        solute_pdb_filename,
+        file_format="PDB",
+    )
+    return solute_pdb_filename
 
-    Returns
-    -------
-    mdtraj.Trajectory
-        The created trajectory.
 
-    """
-    import mdtraj
+def _create_molecule_pdbs(molecules: list[Molecule]) -> list[str]:
+    """Write out PDBs of the molecules so that packmol can read them."""
+    pdb_file_names = []
+    for index, molecule in enumerate(molecules):
+        # Make a copy of the molecule so we don't change the input
+        molecule = Molecule(molecule)
 
-    # Check whether the molecule has a configuration defined, and if not,
-    # define one.
-    if molecule.n_conformers <= 0:
-        molecule.generate_conformers(n_conformers=1)
+        # Generate conformers if they're missing
+        if molecule.n_conformers <= 0:
+            molecule.generate_conformers(n_conformers=1)
 
-    # We need to save out the molecule and then reload it as the toolkit
-    # will not always save the atoms in the same order that they are
-    # present in the molecule object.
-    with tempfile.NamedTemporaryFile(suffix=".pdb") as file:
-        # Toolkit's PDB writer is untrustworthy (for non-biopolymers) with OpenEyeToolktiWrapper
-        # See https://github.com/openforcefield/openff-toolkit/issues/1307 and linked issues
+        # RDKitToolkitWrapper is less buggy than OpenEye for writing PDBs
+        # See https://github.com/openforcefield/openff-toolkit/issues/1307
+        # and linked issues. As long as the PDB files have the atoms in the
+        # right order, we'll be able to read packmol's output, since we
+        # just load the PDB coordinates into a topology created from its
+        # component molecules.
+        pdb_file_name = f"{index}.pdb"
+        pdb_file_names.append(pdb_file_name)
+
         molecule.to_file(
-            file.name,
+            pdb_file_name,
             file_format="PDB",
             toolkit_registry=RDKitToolkitWrapper(),
         )
-        # Load the pdb into an mdtraj object.
-        mdtraj_trajectory = mdtraj.load_pdb(file.name)
-
-    # Change the assigned residue name (sometimes molecules are assigned
-    # an amino acid residue name even if that molecule is not an amino acid,
-    # e.g. C(CO)N is not Gly) and save the altered object as a pdb.
-    for residue in mdtraj_trajectory.topology.residues:
-        _generate_residue_name(residue, molecule.to_smiles())
-
-    return mdtraj_trajectory
+    return pdb_file_names
 
 
 def _build_input_file(
     molecule_file_names: list[str],
     molecule_counts: list[int],
-    structure_to_solvate: Optional[Topology],
-    center_solute: bool,
+    structure_to_solvate: Optional[str],
     box_size: Quantity,
     tolerance: Quantity,
-    output_file_name: str,
-) -> str:
+) -> tuple[str, str]:
     """
     Construct the packmol input file.
 
@@ -432,53 +446,42 @@ def _build_input_file(
         The paths to the molecule pdb files.
     molecule_counts: list of int
         The number of each molecule to add.
-    structure_to_solvate: Topology, optional
-        The topology to solvate.
-    center_solute: bool
-        If `True`, the structure to solvate will be centered in the
-        simulation box.
+    structure_to_solvate: str, optional
+        The path to the structure to solvate.
     box_size: openff.units.Quantity
-        The lengths of each box vector.
+        The lengths of each side of the box we want to fill. This is the box
+        size of the rectangular brick representation of the simulation box; the
+        packmol box will be shrunk by the tolerance.
     tolerance: openff.units.Quantity
         The packmol convergence tolerance.
-    output_file_name: str
-        The path to save the packed pdb to.
 
     Returns
     -------
     str
         The path to the input file.
+    str
+        The path to the output file.
 
     """
-    box_size = box_size.m_as(unit.angstrom)
+    box_size = (box_size - tolerance).m_as(unit.angstrom)
     tolerance = tolerance.m_as(unit.angstrom)
 
     # Add the global header options.
+    output_file_path = "packmol_output.pdb"
     input_lines = [
         f"tolerance {tolerance:f}",
         "filetype pdb",
-        f"output {output_file_name}",
+        f"output {output_file_path}",
         "",
     ]
 
     # Add the section of the molecule to solvate if provided.
     if structure_to_solvate is not None:
-        structure_to_solvate.to_file("_structure.pdb")
-        solute_position = [0.0] * 3
-
-        if center_solute:
-            solute_position = [box_size[i] / 2.0 for i in range(3)]
-
         input_lines.extend(
             [
-                "structure _structure.pdb",
+                f"structure {structure_to_solvate}",
                 "  number 1",
-                "  fixed "
-                f"{solute_position[0]} "
-                f"{solute_position[1]} "
-                f"{solute_position[2]} "
-                "0. 0. 0.",
-                "centerofmass" if center_solute else "",
+                "  fixed 0. 0. 0. 0. 0. 0.",
                 "end structure",
                 "",
             ],
@@ -504,131 +507,51 @@ def _build_input_file(
     with open(packmol_file_name, "w") as file_handle:
         file_handle.write(packmol_input)
 
-    return packmol_file_name
+    return packmol_file_name, output_file_path
 
 
-def _correct_packmol_output(
-    file_path: str,
-    molecule_topologies: list[mdtraj.Topology],
-    number_of_copies: list[int],
-    structure_to_solvate: Optional[Topology] = None,
-) -> mdtraj.Trajectory:
-    """
-    Corrects the PDB file output by packmol, namely by adding full connectivity information.
+def _center_topology_at(
+    center_solute: Union[bool, Literal["BOX_VECS", "ORIGIN", "BRICK"]],
+    topology: Topology,
+    box_vectors: Quantity,
+    brick_size: Quantity,
+) -> Topology:
+    """Return a copy of the topology centered as requested."""
+    if isinstance(center_solute, str):
+        center_solute = center_solute.upper()
+    topology = Topology(topology)
 
-    Parameters
-    ----------
-    file_path: str
-        The file path to the packmol output file.
-    molecule_topologies: list of mdtraj.Topology
-        A list of topologies for the molecules which packmol has
-        added.
-    number_of_copies: list of int
-        The total number of each molecule which packmol should have
-        created.
-    structure_to_solvate: Topology, optional
-        The topology that was solvated.
+    if center_solute is False:
+        return topology
+    elif center_solute in [True, "BOX_VECS"]:
+        new_center = box_vectors.sum(axis=0) / 2.0
+    elif center_solute == "ORIGIN":
+        new_center = np.zeros(3)
+    elif center_solute == "BRICK":
+        new_center = brick_size / 2.0
+    else:
+        PACKMOLValueError(
+            f"center_solute must be a bool, 'BOX_VECS', 'ORIGIN', or 'BRICK', not {center_solute!r}",
+        )
 
-    Returns
-    -------
-    mdtraj.Trajectory
-        A trajectory containing the packed system with full connectivity.
-
-    """
-    import mdtraj
-
-    with warnings.catch_warnings():
-        if structure_to_solvate is not None:
-            # Catch the known warning which is fixed in the next section.
-            warnings.filterwarnings(
-                "ignore",
-                message="WARNING: two consecutive residues with same number",
-            )
-
-        trajectory = mdtraj.load(file_path)
-
-    all_topologies = []
-    all_n_copies = []
-
-    if structure_to_solvate is not None:
-        structure_to_solvate.to_file("structure.pdb")
-        solvated_trajectory = mdtraj.load("structure.pdb")
-
-        all_topologies.append(solvated_trajectory.topology)
-        all_n_copies.append(1)
-
-        # We have to split the topology to ensure the structure to solvate
-        # ends up in its own chain.
-        n_solvent_atoms = trajectory.n_atoms - solvated_trajectory.n_atoms
-        solvent_indices = numpy.arange(n_solvent_atoms) + solvated_trajectory.n_atoms
-
-        solvent_topology = trajectory.topology.subset(solvent_indices)
-
-        full_topology = solvated_trajectory.topology.join(solvent_topology)
-        trajectory.topology = full_topology
-
-    all_topologies.extend(molecule_topologies)
-    all_n_copies.extend(number_of_copies)
-
-    all_bonds = []
-    offset = 0
-
-    for molecule_topology, count in zip(all_topologies, all_n_copies):
-        _, molecule_bonds = molecule_topology.to_dataframe()
-
-        for _ in range(count):
-            for bond in molecule_bonds:
-                all_bonds.append(
-                    [int(bond[0].item()) + offset, int(bond[1].item()) + offset],
-                )
-
-            offset += molecule_topology.n_atoms
-
-    if len(all_bonds) > 0:
-        all_bonds = numpy.unique(all_bonds, axis=0).tolist()
-
-    # We have to check whether there are any existing bonds, because mdtraj
-    # will sometimes automatically detect some based on residue names (e.g HOH),
-    # and this behaviour cannot be disabled.
-    existing_bonds = []
-
-    for bond in trajectory.topology.bonds:
-        existing_bonds.append(bond)
-
-    for bond in all_bonds:
-        atom_a = trajectory.topology.atom(bond[0])
-        atom_b = trajectory.topology.atom(bond[1])
-
-        bond_exists = False
-
-        for existing_bond in existing_bonds:
-            if (existing_bond.atom1 == atom_a and existing_bond.atom2 == atom_b) or (
-                existing_bond.atom2 == atom_a and existing_bond.atom1 == atom_b
-            ):
-                bond_exists = True
-                break
-
-        if bond_exists:
-            continue
-
-        trajectory.topology.add_bond(atom_a, atom_b)
-
-    return trajectory
+    positions = topology.get_positions()
+    center_of_geometry = positions.sum(axis=0) / len(positions)
+    topology.set_positions(new_center - center_of_geometry + positions)
+    return topology
 
 
-@requires_package("mdtraj")
+@requires_package("rdkit")
 def pack_box(
     molecules: list[Molecule],
     number_of_copies: list[int],
-    structure_to_solvate: Optional[Topology] = None,
-    center_solute: bool = True,
+    solute: Optional[Topology] = None,
     tolerance: Quantity = 2.0 * unit.angstrom,
-    box_size: Optional[Quantity] = None,
+    box_vectors: Optional[Quantity] = None,
     mass_density: Optional[Quantity] = None,
-    box_aspect_ratio: Optional[list[float]] = None,
+    box_shape: ArrayLike = RHOMBIC_DODECAHEDRON,
+    center_solute: Union[bool, Literal["BOX_VECS", "ORIGIN", "BRICK"]] = False,
     working_directory: Optional[str] = None,
     retain_working_files: bool = False,
-    add_box_buffers: bool = True,
 ) -> Topology:
     """
     Run packmol to generate a box containing a mixture of molecules.
@@ -640,44 +563,49 @@ def pack_box(
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
         equal to the length of ``molecules``.
-    structure_to_solvate: Topology, optional
-        A topology to be solvated.
-    center_solute: bool
-        If ``True``, the structure to solvate will be placed in the center of
-        the simulation box. This option is only applied when
-        ``structure_to_solvate`` is set.
+    solute: Topology, optional
+        An OpenFF :py:class:`Topology <openff.toolkit.topology.Topology>` to
+        include in the box. If ``box_vectors`` and ``mass_density`` are not
+        specified, box vectors can be taken from ``solute.box_vectors``.
     tolerance : openff.units.Quantity
         The minimum spacing between molecules during packing in units of
-        distance.
-    box_size : openff.units.Quantity, optional
-        The size of the box to generate in units compatible with angstroms.
-        If ``None``, ``mass_density`` must be provided.
+        distance. The default is large so that added waters do not disrupt the
+        structure of proteins; when constructing a mixture of small molecules,
+        values as small as 0.5 Å will converge faster and can still produce
+        stable simulations after energy minimisation.
+    box_vectors : openff.units.Quantity, optional
+        The box vectors to fill in units of distance. If ``None``,
+        ``mass_density`` must be provided. Array with shape (3,3). Box vectors
+        must be provided in `OpenMM reduced form <http://docs.openmm.org/latest/
+        userguide/theory/05_other_features.html#periodic-boundary-conditions>`_.
     mass_density : openff.units.Quantity, optional
         Target mass density for final system with units compatible with g / mL.
         If ``None``, ``box_size`` must be provided.
-    box_aspect_ratio: list of float, optional
-        The aspect ratio of the simulation box, used in conjunction with
-        the ``mass_density`` parameter. If none, an isotropic ratio (i.e.
-        ``[1.0, 1.0, 1.0]``) is used.
-    verbose : bool
-        If ``True``, verbose output is written.
+    box_shape: Arraylike, optional
+        The shape of the simulation box, used in conjunction with
+        the ``mass_density`` parameter. Should be a dimensionless array with
+        shape (3,3) for a triclinic box or (3,) for a rectangular box. Shape
+        vectors must be provided in `OpenMM reduced form
+        <http://docs.openmm.org/latest/userguide/theory/
+        05_other_features.html#periodic-boundary-conditions>`_.
+    center_solute
+        How to center ``solute`` in the simulation box. If ``True``
+        or ``"box_vecs"``, the solute's center of geometry will be placed at
+        the center of the box's parallelopiped representation. If ``"origin"``,
+        the solute will centered at the origin. If ``"brick"``, the solute will
+        be centered in the box's rectangular brick representation. If
+        ``False`` (the default), the solute will not be moved.
     working_directory: str, optional
         The directory in which to generate the temporary working files. If
         ``None``, a temporary one will be created.
     retain_working_files: bool
         If ``True`` all of the working files, such as individual molecule
         coordinate files, will be retained.
-    add_box_buffers: bool
-        If ``True`` (the default), buffers will be added to the box size to
-        help reduce clashes.
 
     Returns
     -------
-    mdtraj.Trajectory
-        The packed box encoded in an mdtraj trajectory.
-    list of str
-        The residue names which were assigned to each of the
-        molecules in the `molecules` list.
+    Topology
+        An OpenFF ``Topology`` with the solvated system.
 
     Raises
     ------
@@ -685,8 +613,7 @@ def pack_box(
         When packmol fails to execute / converge.
 
     """
-    if mass_density is not None and box_aspect_ratio is None:
-        box_aspect_ratio = [1.0, 1.0, 1.0]
+    import rdkit
 
     # Make sure packmol can be found.
     packmol_path = _find_packmol()
@@ -694,35 +621,55 @@ def pack_box(
     if packmol_path is None:
         raise OSError("Packmol not found, cannot run pack_box()")
 
+    box_shape = np.asarray(box_shape)
+    if box_shape.shape == (3,):
+        box_shape = box_shape * np.identity(3)
+
     # Validate the inputs.
     _validate_inputs(
         molecules,
         number_of_copies,
-        structure_to_solvate,
-        box_aspect_ratio,
-        box_size,
+        solute,
+        box_shape,
+        box_vectors,
         mass_density,
     )
 
-    unique_molecules = set(molecules)
-
-    if structure_to_solvate is not None:
-        for unique_molecule in structure_to_solvate.unique_molecules:
-            unique_molecules.add(unique_molecule)
-
     # Estimate the box_size from mass density if one is not provided.
-    if box_size is None:
-        box_size = _approximate_box_size_by_density(
+    if mass_density is not None:
+        box_vectors = _box_from_density(
             molecules,
             number_of_copies,
             mass_density,
-            box_aspect_ratio,  # type: ignore[arg-type]
-            box_scaleup_factor=1.1 if add_box_buffers else 1.0,
+            box_shape,
+        )
+    # If neither box size nor density are given, take box vectors from solute
+    # topology
+    if box_vectors is None:
+        box_vectors = solute.box_vectors
+
+    if not _box_vectors_are_in_reduced_form(box_vectors):
+        raise PACKMOLValueError(
+            "pack_box requires box vectors to be in OpenMM reduced form.\n"
+            + "See http://docs.openmm.org/latest/userguide/theory/"
+            + "05_other_features.html#periodic-boundary-conditions",
+        )
+
+    # Compute the dimensions of the equivalent brick - this is what packmol will
+    # fill
+    brick_size = _compute_brick_from_box_vectors(box_vectors)
+
+    # Center the solute
+    if center_solute and solute is not None:
+        solute = _center_topology_at(
+            center_solute,
+            solute,
+            box_vectors,
+            brick_size,
         )
 
     # Set up the directory to create the working files in.
     temporary_directory = False
-
     if working_directory is None:
         working_directory = tempfile.mkdtemp()
         temporary_directory = True
@@ -730,36 +677,22 @@ def pack_box(
     if len(working_directory) > 0:
         os.makedirs(working_directory, exist_ok=True)
 
-    assigned_residue_names = []
-
     with temporary_cd(working_directory):
+        solute_pdb_filename = _create_solute_pdb(
+            solute,
+            box_vectors,
+        )
+
         # Create PDB files for all of the molecules.
-        pdb_file_names = []
-        mdtraj_topologies = []
-
-        for index, molecule in enumerate(molecules):
-            mdtraj_trajectory = _create_trajectory(molecule)
-
-            pdb_file_name = f"{index}.pdb"
-            pdb_file_names.append(pdb_file_name)
-
-            mdtraj_trajectory.save_pdb(pdb_file_name)
-            mdtraj_topologies.append(mdtraj_trajectory.topology)
-
-            residue_name = mdtraj_trajectory.topology.residue(0).name
-            assigned_residue_names.append(residue_name)
+        pdb_file_names = _create_molecule_pdbs(molecules)
 
         # Generate the input file.
-        output_file_name = "packmol_output.pdb"
-
-        input_file_path = _build_input_file(
+        input_file_path, output_file_path = _build_input_file(
             pdb_file_names,
             number_of_copies,
-            structure_to_solvate,
-            center_solute,
-            box_size,
+            solute_pdb_filename,
+            brick_size,
             tolerance,
-            output_file_name,
         )
 
         with open(input_file_path) as file_handle:
@@ -771,51 +704,162 @@ def pack_box(
 
             packmol_succeeded = result.find("Success!") > 0
 
-        if not retain_working_files:
-            os.unlink(input_file_path)
-
-            for file_path in pdb_file_names:
-                os.unlink(file_path)
-
         if not packmol_succeeded:
-            if os.path.isfile(output_file_name):
-                os.unlink(output_file_name)
-
-            if temporary_directory and not retain_working_files:
-                shutil.rmtree(working_directory)
-
             raise PACKMOLRuntimeError(result)
 
-        # Add a 2 angstrom buffer to help alleviate PBC issues.
-        if add_box_buffers:
-            box_size = [
-                (x + 2.0 * unit.angstrom).to(unit.nanometer).magnitude for x in box_size
-            ]
-
-        # Append missing connect statements to the end of the
-        # output file.
-        trajectory = _correct_packmol_output(
-            output_file_name,
-            mdtraj_topologies,
-            number_of_copies,
-            structure_to_solvate,
+        # Load the coordinates from the PDB file with RDKit (because its already
+        # a dependency)
+        rdmol = rdkit.Chem.rdmolfiles.MolFromPDBFile(
+            output_file_path,
+            sanitize=False,
+            removeHs=False,
+            proximityBonding=False,
         )
-        trajectory.unitcell_lengths = box_size
-        trajectory.unitcell_angles = numpy.array([90.0] * 3)
+        positions = rdmol.GetConformers()[0].GetPositions()
 
-        if not retain_working_files:
-            os.unlink(output_file_name)
-
+    # TODO: This currently does not run if we encountered an error in the
+    # context manager
     if temporary_directory and not retain_working_files:
         shutil.rmtree(working_directory)
 
-    topology = Topology.from_openmm(
-        openmm_topology=trajectory.topology.to_openmm(),
-        unique_molecules=unique_molecules,
-        positions=unit.Quantity(trajectory.xyz[0], unit.nanometer),
-    )
+    # Construct the output topology
+    added_molecules = []
+    for mol, n in zip(molecules, number_of_copies):
+        added_molecules.extend([mol] * n)
+    topology = Topology.from_molecules(added_molecules)
 
-    # MDTraj's Topology.to_openmm() doesn't set the box vectors
-    topology.box_vectors = unit.Quantity(trajectory.unitcell_vectors[0], unit.nanometer)
+    # Set the positions, skipping the positions from solute
+    n_solute_atoms = len(positions) - topology.n_atoms
+    topology.set_positions(positions[n_solute_atoms:] * unit.angstrom)
+
+    # Add solute back in with the original, unwrapped positions
+    if solute is not None:
+        topology = solute + topology
+
+    # Set the box vectors
+    topology.box_vectors = box_vectors
 
     return topology
+
+
+def _max_dist_between_points(points: Quantity) -> Quantity:
+    """
+    Compute the greatest distance between two points in the array.
+    """
+    from scipy.spatial import ConvexHull
+    from scipy.spatial.distance import pdist
+
+    points, units = points.m, points.u
+
+    points_array = np.asarray(points)
+    if points_array.shape[1] != 3 or points_array.ndim != 2:
+        raise PACKMOLValueError("Points should be an n*3 array")
+
+    if points_array.shape[0] >= 4:
+        # Maximum distance is guaranteed to be on the convex hull, which can be
+        # computed in O(n log n)
+        # See also https://stackoverflow.com/a/60955825
+        hull = ConvexHull(points_array)
+        hullpoints = points_array[hull.vertices, :]
+    else:
+        hullpoints = points_array
+
+    # Now compute all the distances and get the greatest distance in O(h^2)
+    max_dist = pdist(hullpoints, metric="euclidean").max()
+    return max_dist * units
+
+
+def solvate_topology(
+    topology: Topology,
+    nacl_conc: Quantity = 0.1 * unit.mole / unit.liter,
+    padding: Quantity = 1.2 * unit.nanometer,
+    box_shape: NDArray = RHOMBIC_DODECAHEDRON,
+    target_density: Quantity = 1.0 * unit.gram / unit.milliliter,
+    tolerance: Quantity = 2.0 * unit.angstrom,
+) -> Topology:
+    """
+    Add water and ions to neutralise and solvate a topology.
+
+    Parameters
+    ----------
+    topology
+        The OpenFF Topology to solvate.
+    nacl_conc
+        The bulk concentration of NaCl in the solvent, in units compatible with
+        molarity. This is used to calculate a mass fraction for the bulk
+        solvent and does not represent the actual concentration in the final
+        box.
+    padding : Scalar with dimensions of length
+        The desired distance between the solute and the edge of the box. Ignored
+        if the topology already has box vectors. The usual recommendation is
+        that this equals or exceeds the VdW cut-off distance, so that the
+        solute is isolated by its periodic images by twice the cut-off.
+    box_shape : Array with shape (3, 3)
+        An array defining the box vectors of a box with the desired shape and
+        unit periodic image distance. This shape will be scaled to satisfy the
+        padding given above. Some typical shapes are provided in this module.
+    target_density : Scalar with dimensions of mass density
+        The target mass density for the packed box.
+    tolerance: Scalar with dimensions of distance
+        The minimum spacing between molecules during packing in units of
+        distance. The default is large so that added waters do not disrupt the
+        structure of proteins; when constructing a mixture of small molecules,
+        values as small as 0.5 Å will converge faster and can still produce
+        stable simulations after energy minimisation.
+
+    """
+    if box_shape.shape != (3, 3):
+        raise PACKMOLValueError(
+            "box_shape should be a 3×3 array defining a box with unit periodic"
+            + " image distance",  # noqa: W503
+        )
+
+    # Compute box vectors from the solute length and requested padding
+    solute_length = _max_dist_between_points(topology.get_positions())
+    image_distance = solute_length + padding * 2
+    box_vectors = box_shape * image_distance
+
+    # Compute target masses of solvent
+    box_volume = np.linalg.det(box_vectors.m) * box_vectors.u**3
+    target_mass = box_volume * target_density
+    solute_mass = sum(
+        sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
+    )
+    solvent_mass = target_mass - solute_mass
+    if solvent_mass < 0:
+        raise PACKMOLValueError(
+            "Solute mass is greater than target mass; increase density or make the box bigger",
+        )
+
+    # Get reference data and prepare solvent molecules
+    water = Molecule.from_smiles("O")
+    na = Molecule.from_smiles("[Na+]")
+    cl = Molecule.from_smiles("[Cl-]")
+    nacl_mass = sum([atom.mass for atom in na.atoms]) + sum(
+        [atom.mass for atom in cl.atoms],
+    )
+    water_mass = sum([atom.mass for atom in water.atoms])
+    molarity_pure_water = 55.5 * unit.mole / unit.liter
+
+    # Compute the number of salt "molecules" to add from the mass and concentration
+    nacl_mass_fraction = (nacl_conc * nacl_mass) / (molarity_pure_water * water_mass)
+    nacl_mass_to_add = solvent_mass * nacl_mass_fraction
+    nacl_to_add = (nacl_mass_to_add / nacl_mass).m_as(unit.dimensionless).round()
+
+    # Compute the number of water molecules to add to make up the remaining mass
+    water_mass_to_add = solvent_mass - nacl_mass
+    water_to_add = (water_mass_to_add / water_mass).m_as(unit.dimensionless).round()
+
+    # Neutralise the system by adding and removing salt
+    solute_charge = sum([molecule.total_charge for molecule in topology.molecules])
+    na_to_add = np.ceil(nacl_to_add - solute_charge.m / 2.0)
+    cl_to_add = np.floor(nacl_to_add + solute_charge.m / 2.0)
+
+    # Pack the box
+    return pack_box(
+        [water, na, cl],
+        [int(water_to_add), int(na_to_add), int(cl_to_add)],
+        solute=topology,
+        tolerance=2.0 * unit.angstrom,
+        box_vectors=box_vectors,
+    )

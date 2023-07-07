@@ -226,3 +226,23 @@ class TestWriteSanderInput(_BaseTest):
         # this option seems to be the best one
         assert options["cntrl"]["ntf"] == "2"
         assert options["cntrl"]["ntc"] == "1"
+
+    def test_fswitch_negative_when_no_switching_function(
+        self,
+        unconstrained_ligand_rigid_water_box,
+    ):
+        """Reproduce issue 745."""
+        MDConfig.from_interchange(
+            unconstrained_ligand_rigid_water_box,
+        ).write_sander_input_file("yes.in")
+
+        # With OpenFF defaults, the switch starts at 8 A and the cutoff is at 9 A
+        assert parse_sander("yes.in")["cntrl"]["fswitch"] == "8.0"
+
+        unconstrained_ligand_rigid_water_box["vdW"].switch_width = 0.0 * unit.nanometer
+
+        MDConfig.from_interchange(
+            unconstrained_ligand_rigid_water_box,
+        ).write_sander_input_file("no.in")
+
+        assert parse_sander("no.in")["cntrl"]["fswitch"] == "-1.0"

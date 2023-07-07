@@ -6,94 +6,190 @@ import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import unit
 
-from openff.interchange.components._packmol import pack_box
+from openff.interchange.components._packmol import (
+    RHOMBIC_DODECAHEDRON,
+    RHOMBIC_DODECAHEDRON_XYHEX,
+    UNIT_CUBE,
+    _compute_brick_from_box_vectors,
+    _scale_box,
+    pack_box,
+    solvate_topology,
+)
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
 
-def test_packmol_box_size():
-    molecules = [Molecule.from_smiles("O")]
+@pytest.fixture(scope="module")
+def molecules() -> list[Molecule]:
+    return [Molecule.from_smiles("O")]
 
+
+@pytest.mark.parametrize(
+    "box",
+    [
+        UNIT_CUBE,
+        RHOMBIC_DODECAHEDRON,
+        RHOMBIC_DODECAHEDRON_XYHEX,
+        50 * UNIT_CUBE,
+        -UNIT_CUBE,
+    ],
+)
+@pytest.mark.parametrize(
+    "volume",
+    [
+        1.0 * unit.angstrom**3,
+        1.0 * unit.nanometer**3,
+        0.0 * unit.angstrom**3,
+        234 * unit.angstrom**3,
+    ],
+)
+def test_scale_box(box, volume):
+    """Test that _scale_box() produces a box with the desired volume."""
+    scaled_box = _scale_box(box, volume)
+    a, b, c = scaled_box
+    # | (a x b) . c | is the volume of the box
+    # _scale_box uses numpy.linalg.det instead
+    assert numpy.isclose(numpy.abs(numpy.dot(numpy.cross(a, b), c)), volume)
+    assert scaled_box.u == unit.angstrom
+
+
+@pytest.mark.parametrize(
+    "box",
+    [
+        UNIT_CUBE * unit.angstrom,
+        RHOMBIC_DODECAHEDRON * unit.angstrom,
+        RHOMBIC_DODECAHEDRON_XYHEX * unit.angstrom,
+        UNIT_CUBE * unit.nanometer,
+        50 * UNIT_CUBE * unit.angstrom,
+        165.0 * RHOMBIC_DODECAHEDRON * unit.angstrom,
+    ],
+)
+def test_compute_brick_from_box_vectors(box):
+    """
+    Test that _compute_brick() returns a rectangular box with the same volume
+    and units.
+    """
+    brick = _compute_brick_from_box_vectors(box)
+    # Same units
+    assert brick.u == box.u
+    # Same volume
+    l, w, h = brick.m
+    assert numpy.isclose(
+        numpy.abs(numpy.linalg.det(box.m)),
+        numpy.abs(l * w * h),
+    )
+    # Is rectangular
+    assert brick.shape == (3,)
+    x, y, z = brick.m
+
+
+def test_compute_brick_from_box_vectors_not_reduced():
+    """
+    Test that _compute_brick() raises an exception with an irreduced box.
+    """
+    # This is a rhombic dodecahedron with the first and last rows swapped
+    box = unit.Quantity(
+        numpy.asarray(
+            [
+                [0.5, 0.5, numpy.sqrt(2.0) / 2.0],
+                [0.0, 1.0, 0.0],
+                [1.0, 0.0, 0.0],
+            ],
+        ),
+        unit.nanometer,
+    )
+    with pytest.raises(AssertionError):
+        _compute_brick_from_box_vectors(box)
+
+
+def test_packmol_box_vectors(molecules):
     topology = pack_box(
         molecules,
         [10],
-        box_size=([20] * 3) * unit.angstrom,
+        box_vectors=20 * numpy.identity(3) * unit.angstrom,
     )
 
     assert topology is not None
 
-    assert (
-        len({chain.identifier for chain in topology.hierarchy_iterator("chains")}) == 1
-    )
-    assert len({*topology.hierarchy_iterator("residues")}) == 10
     assert topology.n_atoms == 30
     assert topology.n_bonds == 20
 
-    assert all(
-        residue.residue_name == "HOH"
-        for residue in topology.hierarchy_iterator("residues")
-    )
-
     numpy.testing.assert_allclose(
         topology.box_vectors.m_as(unit.nanometer).diagonal(),
-        [2.2, 2.2, 2.2],
+        [2.0, 2.0, 2.0],
     )
 
 
-def test_packmol_bad_copies():
-    molecules = [Molecule.from_smiles("O")]
-
+def test_packmol_bad_copies(molecules):
     with pytest.raises(PACKMOLValueError):
-        pack_box(molecules, [10, 20], box_size=([20] * 3) * unit.angstrom)
+        pack_box(
+            molecules,
+            [10, 20],
+            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+        )
 
 
-def test_packmol_bad_box_size():
-    molecules = [Molecule.from_smiles("O")]
+def test_packmol_bad_box_vectors(molecules):
+    with pytest.raises(PACKMOLValueError, match=r"with shape \(3, 3\)"):
+        pack_box(
+            molecules,
+            [2],
+            box_vectors=20 * numpy.identity(4) * unit.angstrom,
+        )
 
-    with pytest.raises(PACKMOLValueError):
-        pack_box(molecules, [2], box_size=([20] * 4) * unit.angstrom)
+
+def test_packmol_underspecified(molecules):
+    """Too few arguments are provided."""
+
+    with pytest.raises(PACKMOLValueError, match="One of.*must be"):
+        pack_box(
+            molecules,
+            number_of_copies=[1],
+        )
 
 
-def test_packmol_bad_structure_to_solvate():
-    molecules = [Molecule.from_smiles("O")]
+def test_packmol_overspecified(molecules):
+    """Too many arguments are provided."""
 
+    with pytest.raises(PACKMOLValueError, match="cannot be specified together"):
+        pack_box(
+            molecules,
+            number_of_copies=[1],
+            mass_density=1.0 * unit.grams / unit.milliliter,
+            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+        )
+
+
+def test_packmol_bad_solute(molecules):
     with pytest.raises(PACKMOLValueError):
         pack_box(
             molecules,
             [2],
-            box_size=([20] * 4) * unit.angstrom,
-            structure_to_solvate=Molecule.from_smiles("C").to_topology(),
+            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+            solute="my_solute.pdb",
         )
 
 
-def test_packmol_failed():
-    molecules = [Molecule.from_smiles("O")]
-
+def test_packmol_failed(molecules):
     with pytest.raises(PACKMOLRuntimeError):
-        pack_box(molecules, [10], box_size=([0.1] * 3) * unit.angstrom)
+        pack_box(
+            molecules,
+            [10],
+            box_vectors=0.1 * numpy.identity(3) * unit.angstrom,
+        )
 
 
-def test_packmol_water():
-    molecules = [Molecule.from_smiles("O")]
-
+def test_packmol_water(molecules):
     topology = pack_box(
         molecules,
         [10],
-        mass_density=1.0 * unit.grams / unit.milliliters,
+        mass_density=1.0 * unit.grams / unit.milliliter,
     )
 
     assert topology is not None
 
-    assert (
-        len({chain.identifier for chain in topology.hierarchy_iterator("chains")}) == 1
-    )
-    assert len({*topology.hierarchy_iterator("residues")}) == 10
     assert topology.n_atoms == 30
     assert topology.n_bonds == 20
-
-    assert all(
-        residue.residue_name == "HOH"
-        for residue in topology.hierarchy_iterator("residues")
-    )
+    assert topology.n_molecules == 10
 
 
 def test_packmol_ions():
@@ -106,25 +202,24 @@ def test_packmol_ions():
     topology = pack_box(
         molecules,
         [1, 1, 1],
-        box_size=([20] * 3) * unit.angstrom,
+        box_vectors=20 * numpy.identity(3) * unit.angstrom,
     )
 
     assert topology is not None
 
-    assert (
-        len({chain.identifier for chain in topology.hierarchy_iterator("chains")}) == 3
-    )
-    assert len({*topology.hierarchy_iterator("residues")}) == 3
     assert topology.n_atoms == 3
     assert topology.n_bonds == 0
 
-    assert topology.atom(0).metadata["residue_name"] == "Na+"
-    assert topology.atom(1).metadata["residue_name"] == "Cl-"
-    assert topology.atom(2).metadata["residue_name"] == "K+"
+    # Na+
+    assert topology.atom(0).formal_charge == +1 * unit.elementary_charge
+    assert topology.atom(0).atomic_number == 11
 
-    assert topology.atom(0).name == "Na+"
-    assert topology.atom(1).name == "Cl-"
-    assert topology.atom(2).name == "K+"
+    # Cl-
+    assert topology.atom(1).formal_charge == -1 * unit.elementary_charge
+    assert topology.atom(1).atomic_number == 17
+    # K+
+    assert topology.atom(2).formal_charge == +1 * unit.elementary_charge
+    assert topology.atom(2).atomic_number == 19
 
 
 def test_packmol_paracetamol():
@@ -134,15 +229,11 @@ def test_packmol_paracetamol():
     topology = pack_box(
         molecules,
         [1],
-        box_size=([20] * 3) * unit.angstrom,
+        box_vectors=20 * numpy.identity(3) * unit.angstrom,
     )
 
     assert topology is not None
 
-    assert (
-        len({chain.identifier for chain in topology.hierarchy_iterator("chains")}) == 1
-    )
-    assert len({*topology.hierarchy_iterator("residues")}) == 1
     assert topology.n_atoms == 20
     assert topology.n_bonds == 20
 
@@ -181,23 +272,10 @@ def test_amino_acids():
     topology = pack_box(
         molecules,
         counts,
-        box_size=([1000] * 3) * unit.angstrom,
+        box_vectors=1000 * numpy.identity(3) * unit.angstrom,
     )
 
     assert topology is not None
-
-    assert len(
-        {chain.identifier for chain in topology.hierarchy_iterator("chains")},
-    ) == len(smiles)
-    assert len({*topology.hierarchy_iterator("residues")}) == len(smiles)
-
-    # Cannot easily index into residues with Topology API, this is what
-    # the test did when it used an MDTraj trajectory.
-    # for index, _smiles in enumerate(smiles):
-    #   assert trajectory.top.residue(index).name == amino_residues[_smiles]
-
-    for _smiles, residue in zip(smiles, topology.hierarchy_iterator("residues")):
-        assert residue.residue_name == amino_residues[_smiles]
 
 
 def test_pack_diatomic_ion():
@@ -206,13 +284,18 @@ def test_pack_diatomic_ion():
     topology = pack_box(
         molecules,
         [1, 2],
-        box_size=([20] * 3) * unit.angstrom,
+        box_vectors=20 * numpy.identity(3) * unit.angstrom,
     )
 
     assert topology is not None
 
-    # See comment in _ion_residue_name
-    assert topology.atom(0).metadata["residue_name"] == "Mg2"
+    assert topology.atom(0).atomic_number == 12
+    assert topology.n_atoms == 3
+
+    numpy.testing.assert_allclose(
+        topology.box_vectors.m_as(unit.nanometer).diagonal(),
+        [2.0, 2.0, 2.0],
+    )
 
 
 def test_solvate_structure():
@@ -225,8 +308,8 @@ def test_solvate_structure():
         pack_box(
             [Molecule.from_smiles("O")],
             [10],
-            box_size=([50] * 3) * unit.angstrom,
-            structure_to_solvate=benzene.to_topology(),
+            box_vectors=50 * numpy.identity(3) * unit.angstrom,
+            solute=benzene.to_topology(),
         )
 
     benzene.generate_conformers(n_conformers=1)
@@ -234,9 +317,40 @@ def test_solvate_structure():
     topology = pack_box(
         [Molecule.from_smiles("O")],
         [10],
-        box_size=([50] * 3) * unit.angstrom,
-        structure_to_solvate=benzene.to_topology(),
+        box_vectors=50 * numpy.identity(3) * unit.angstrom,
+        solute=benzene.to_topology(),
     )
 
     assert topology.n_molecules == 11
     assert len([*topology.unique_molecules]) == 2
+
+
+def test_solvate_topology():
+    ligand = Molecule.from_smiles("C1CN2C(=N1)SSC2=S")
+    ligand.generate_conformers(n_conformers=1)
+
+    solvated_topology = solvate_topology(
+        ligand.to_topology(),
+    )
+
+    assert solvated_topology.molecule(0).to_smiles() == ligand.to_smiles()
+
+    assert solvated_topology.molecule(1).to_smiles(explicit_hydrogens=False) == "O"
+
+    assert solvated_topology.molecule(
+        solvated_topology.n_molecules - 1,
+    ).to_smiles() in ["[Cl-]", "[Na+]"]
+
+    # Defaults should produce something like 595, but just sanity check here
+    assert solvated_topology.n_molecules > 500
+
+    for position in [
+        [0, 1],
+        [0, 2],
+        [1, 0],
+        [1, 2],
+    ]:
+        assert solvated_topology.box_vectors[position[0], position[1]].m == [0.0]
+
+    assert solvated_topology.box_vectors[0, 0] == solvated_topology.box_vectors[1, 1]
+    assert solvated_topology.box_vectors[2, 0] == solvated_topology.box_vectors[2, 1]

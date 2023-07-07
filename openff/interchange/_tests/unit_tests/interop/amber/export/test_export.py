@@ -3,12 +3,13 @@ import openmm.app
 import parmed
 import pytest
 from openff.toolkit import ForceField, Molecule
-from openff.toolkit.tests.utils import requires_openeye
+from openff.toolkit._tests.utils import requires_openeye
 
 from openff.interchange import Interchange
 from openff.interchange._tests import get_test_file_path
 
 
+@pytest.mark.slow()
 @requires_openeye
 @pytest.mark.parametrize(
     "molecule",

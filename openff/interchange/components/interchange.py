@@ -311,7 +311,7 @@ class Interchange(DefaultModel):
             raise MissingPositionsError(
                 "Cannot visualize system without positions.",
             ) from error
-        return nglview.show_file("_tmp_pdb_file.pdb")
+        return nglview.show_structure_file("_tmp_pdb_file.pdb")
 
     def to_gromacs(self, prefix: str, decimal: int = 3):
         """Export this Interchange object to GROMACS files."""
@@ -663,6 +663,7 @@ class Interchange(DefaultModel):
             warnings.warn(
                 "The `handlers` attribute is deprecated. Use `collections` instead.",
                 InterchangeDeprecationWarning,
+                stacklevel=2,
             )
             return self.collections
         else:
@@ -751,6 +752,7 @@ class Interchange(DefaultModel):
             "strange results. Any workflow using this method is not guaranteed to "
             "be suitable for production. Use with extreme caution and thoroughly "
             "validate results!",
+            stacklevel=2,
         )
 
         self_copy = copy.deepcopy(self)
@@ -775,6 +777,7 @@ class Interchange(DefaultModel):
                 warnings.warn(
                     f"'other' Interchange object has handler with name {handler_name} not "
                     f"found in 'self,' but it has now been added.",
+                    stacklevel=2,
                 )
                 continue
 

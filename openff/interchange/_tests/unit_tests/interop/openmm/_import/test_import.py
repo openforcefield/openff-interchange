@@ -2,7 +2,7 @@ import random
 
 import openmm.unit
 import pytest
-from openff.toolkit.tests.create_molecules import create_ethanol
+from openff.toolkit._tests.create_molecules import create_ethanol
 from openff.units import unit
 
 from openff.interchange import Interchange

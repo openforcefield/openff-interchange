@@ -265,6 +265,10 @@ class MDConfig(DefaultModel):
 
             if self.switching_function is not None:
                 distance = round(self.switching_distance.m_as(unit.angstrom), 4)
+                # This value must be negative for a switching function to not be applied.
+                # The Amber22 manual misstates the behavior of this case.
+                if distance == 0.0:
+                    distance = -1.0
                 sander.write(f"fswitch={distance},\n")
 
             if self.constraints in ["none", None]:

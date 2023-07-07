@@ -61,6 +61,7 @@ def combined_system(molecule1, molecule2, sage):
     )
 
 
+@pytest.mark.slow()
 class TestAddRemoveMoleculeType(_BaseTest):
     @needs_gmx
     @pytest.mark.parametrize("molecule_name", ["MOL1", "MOL2"])

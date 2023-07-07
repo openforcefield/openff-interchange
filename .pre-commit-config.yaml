@@ -8,7 +8,7 @@ repos:
     exclude: '\.(pdb|gro|top|sdf)$'
   - id: debug-statements
 - repo: https://github.com/asottile/add-trailing-comma
-  rev: v2.5.1
+  rev: v3.0.0
   hooks:
   - id: add-trailing-comma
     args: ["--py36-plus"]
@@ -30,13 +30,13 @@ repos:
   - id: flake8
     files: ^openff|plugins|stubs
     additional_dependencies: [
-        'flake8-bugbear>=23.1.20',
+        'flake8-bugbear',
         'flake8-absolute-import',
         'flake8-pytest-style',
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.6.0
+  rev: v3.8.0
   hooks:
   - id: pyupgrade
     files: ^openff|plugins|stubs
@@ -55,12 +55,12 @@ repos:
       args: ["openff/interchange/", "-e", "openff/interchange/_tests/"]
       pass_filenames: false
 - repo: https://github.com/asottile/blacken-docs
-  rev: 1.13.0
+  rev: 1.14.0
   hooks:
   - id: blacken-docs
     files: ^docs/
 - repo: https://github.com/igorshubovych/markdownlint-cli
-  rev: v0.34.0
+  rev: v0.35.0
   hooks:
   - id: markdownlint
     exclude: .github

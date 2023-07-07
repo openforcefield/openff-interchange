@@ -59,9 +59,9 @@ out.to_top("out.top")
 json_blob = out.json()
 ```
 
-Other examples are available via [binder](https://mybinder.org/v2/gh/openforcefield/openff-interchange/main?filepath=%2Fexamples%2F), executable in a web browser without installing anyting on your computer.
-
 For more information, please consult the [full documentation](https://openff-interchange.readthedocs.io/).
+
+For more examples specific to Interchange, navigate to the `examples/` directory.
 
 **Please note that this software in an early and experimental state without a stable API or guarantees of long-term stability.**
 

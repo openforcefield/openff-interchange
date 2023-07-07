@@ -193,8 +193,14 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         "Ewald3D-ConductingBoundary",
         "cutoff",
         "no-cutoff",
+        "reaction-field",
     ] = Field(_PME)
-    nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
+    nonperiodic_potential: Literal[
+        "Coulomb",
+        "cutoff",
+        "no-cutoff",
+        "reaction-field",
+    ] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     @classmethod

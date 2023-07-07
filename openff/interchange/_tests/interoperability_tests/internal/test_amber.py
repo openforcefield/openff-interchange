@@ -4,8 +4,9 @@ import numpy as np
 import parmed
 import pytest
 from openff.toolkit import ForceField, Molecule
-from openff.toolkit.tests.utils import get_data_file_path
+from openff.toolkit._tests.utils import get_data_file_path
 from openff.units import unit
+from openff.utilities.utilities import has_executable
 from openmm import app
 
 from openff.interchange import Interchange
@@ -34,6 +35,7 @@ class TestAmber(_BaseTest):
 
         np.testing.assert_equal(coords1, coords2)
 
+    @pytest.mark.skipif(not has_executable("sander"), reason="sander not installed")
     @pytest.mark.slow()
     @pytest.mark.parametrize(
         "smiles",
@@ -78,6 +80,7 @@ class TestAmber(_BaseTest):
 
 
 class TestPRMTOP(_BaseTest):
+    @pytest.mark.slow()
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
             get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),

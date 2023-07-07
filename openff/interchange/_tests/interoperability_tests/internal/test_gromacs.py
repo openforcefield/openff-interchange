@@ -130,6 +130,7 @@ class TestGROMACSGROFile(_BaseTest):
             assert found_residue.name == original_residue.residue_name
             assert str(found_residue.resSeq) == original_residue.residue_number
 
+    @pytest.mark.slow()
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
             get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
@@ -353,6 +354,7 @@ class TestGROMACS(_BaseTest):
 
 
 class TestGROMACSMetadata(_BaseTest):
+    @pytest.mark.slow()
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
             get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),

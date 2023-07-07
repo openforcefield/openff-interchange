@@ -8,6 +8,13 @@
   },
   {
     "type": "value-changed",
+    "openmm_path": "Forces/NonbondedForce/name",
+    "deepdiff_path": null,
+    "old_value": "NonbondedForce",
+    "new_value": "Nonbonded force"
+  },
+  {
+    "type": "value-changed",
     "openmm_path": "Forces/NonbondedForce/switchingDistance",
     "deepdiff_path": null,
     "old_value": -1.0,

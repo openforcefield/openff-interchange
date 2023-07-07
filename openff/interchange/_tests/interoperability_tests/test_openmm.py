@@ -5,8 +5,8 @@ import openmm
 import openmm.app
 import openmm.unit
 import pytest
-from openff.toolkit.tests.test_forcefield import create_ethanol
-from openff.toolkit.tests.utils import get_data_file_path
+from openff.toolkit._tests.test_forcefield import create_ethanol
+from openff.toolkit._tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.units import unit
@@ -18,6 +18,7 @@ from openff.interchange._tests.unit_tests.plugins.test_smirnoff_plugins import (
 )
 from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import (
+    InterchangeException,
     MissingPositionsError,
     PluginCompatibilityError,
     UnsupportedCutoffMethodError,
@@ -82,7 +83,7 @@ def _compare_openmm_topologies(top1: openmm.app.Topology, top2: openmm.app.Topol
 class TestOpenMM(_BaseTest):
     @pytest.mark.parametrize("inputs", nonbonded_methods)
     def test_openmm_nonbonded_methods(self, inputs, sage):
-        """See test_nonbonded_method_resolution in openff/toolkit/tests/test_forcefield.py"""
+        """See test_nonbonded_method_resolution in openff.toolkit._tests/test_forcefield.py"""
         vdw_method = inputs["vdw_method"]
         electrostatics_method = inputs["electrostatics_periodic"]
         periodic = inputs["periodic"]
@@ -126,30 +127,103 @@ class TestOpenMM(_BaseTest):
                     break
             else:
                 raise Exception
-        elif issubclass(result, (BaseException, Exception)):
+        elif issubclass(result, InterchangeException):
             exception = result
             with pytest.raises(exception):
                 interchange.to_openmm(combine_nonbonded_forces=True)
         else:
             raise Exception
 
-    @pytest.mark.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
-    def test_unsupported_mixing_rule(self, sage):
-        molecules = [create_ethanol()]
-        pdbfile = openmm.app.PDBFile(
-            get_data_file_path("systems/test_systems/1_ethanol.pdb"),
+    def test_combine_nonbonded_forces_nondefault_mixing_rule(self):
+        forcefield = ForceField(
+            get_data_file_path(
+                "test_forcefields/test_forcefield.offxml",
+            ),
         )
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        openff_sys = Interchange.from_smirnoff(
+            force_field=forcefield,
+            topology=[create_ethanol()],
+        )
+
+        openff_sys["vdW"].mixing_rule = "foo"
+
+        with pytest.raises(UnsupportedExportError, match="only supports L.*foo"):
+            openff_sys.to_openmm(combine_nonbonded_forces=True)
+
+    def test_geometric_mixing_rule(self):
+        forcefield = ForceField(
+            get_data_file_path(
+                "test_forcefields/test_forcefield.offxml",
+            ),
+        )
+
+        molecule = Molecule.from_mapped_smiles(
+            "[H:5][C:2]([H:6])([C:3]([H:7])([H:8])[Br:4])[Cl:1]",
+        )
+        topology = Topology.from_molecules(molecule)
+        topology.box_vectors = [30, 30, 30] * unit.angstrom
 
         interchange = Interchange.from_smirnoff(
-            force_field=sage,
+            force_field=forcefield,
             topology=topology,
         )
 
+        # The toolkit doesn't allow
+        # >>> forcefield["vdW"].combining_rules = "Geometric"
+        # so we have to do this instead set it after parameterization.
+        # https://github.com/openforcefield/openff-toolkit/blob/0.11.4/openff/toolkit/typing/engines/smirnoff/parameters.py#L2844-L2846
+
         interchange["vdW"].mixing_rule = "geometric"
 
-        with pytest.raises(UnsupportedExportError, match="default NonbondedForce"):
-            interchange.to_openmm(combine_nonbonded_forces=True)
+        system = interchange.to_openmm(combine_nonbonded_forces=False)
+
+        for force in system.getForces():
+            if isinstance(force, openmm.CustomNonbondedForce):
+                vdw_force = force
+                break
+        else:
+            raise RuntimeError("Could not find custom non-bonded force.")
+
+        for force in system.getForces():
+            if isinstance(force, openmm.CustomBondForce):
+                if "epsilon" in force.getEnergyFunction():
+                    vdw_14_force = force
+                    break
+        else:
+            raise RuntimeError("Could not find 1-4 vdW force.")
+
+        cl_parameters = vdw_force.getParticleParameters(0)
+        br_parameters = vdw_force.getParticleParameters(3)
+
+        assert cl_parameters[0] == forcefield["vdW"].get_parameter(
+            {"smirks": "[#17:1]"},
+        )[0].sigma.m_as(unit.nanometer)
+        assert cl_parameters[1] == forcefield["vdW"].get_parameter(
+            {"smirks": "[#17:1]"},
+        )[0].epsilon.m_as(unit.kilojoule_per_mole)
+
+        assert br_parameters[0] == forcefield["vdW"].get_parameter(
+            {"smirks": "[#35:1]"},
+        )[0].sigma.m_as(unit.nanometer)
+        assert br_parameters[1] == forcefield["vdW"].get_parameter(
+            {"smirks": "[#35:1]"},
+        )[0].epsilon.m_as(unit.kilojoule_per_mole)
+
+        for index in range(vdw_14_force.getNumBonds()):
+            particle1, particle2, parameters = vdw_14_force.getBondParameters(index)
+
+            if particle1 == 0 and particle2 == 3:
+                expected_sigma = numpy.sqrt(cl_parameters[0] * br_parameters[0])
+                expected_epsilon = forcefield["vdW"].scale14 * numpy.sqrt(
+                    cl_parameters[1] * br_parameters[1],
+                )
+
+                assert parameters[0] == expected_sigma
+                assert parameters[1] == expected_epsilon
+                break
+
+            else:
+                raise Exception("Did not find 1-4 Cl-Br interaction.")
 
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
     @pytest.mark.slow()
@@ -572,7 +646,7 @@ class TestOpenMMVirtualSiteExclusions(_BaseTest):
 
     def test_dichloroethane_exceptions(self, sage):
         """Test a case in which a parent's 1-4 exceptions must be 'imported'."""
-        from openff.toolkit.tests.mocking import VirtualSiteMocking
+        from openff.toolkit._tests.mocking import VirtualSiteMocking
 
         # This molecule has heavy atoms with indices (1-indexed) CL1, C2, C3, Cl4,
         # resulting in 1-4 interactions between the Cl-Cl pair and some Cl-H pairs
@@ -773,6 +847,7 @@ class TestToOpenMMTopology(_BaseTest):
         # and 12 atoms named "", for a total of 3 unique atom names
         assert len(atom_names) == 3
 
+    @pytest.mark.slow()
     @pytest.mark.parametrize("explicit_arg", [True, False])
     def test_preserve_per_residue_unique_atom_names(self, explicit_arg):
         """
@@ -814,6 +889,7 @@ class TestToOpenMMTopology(_BaseTest):
         final_atomnames = [str(atom.name) for atom in omm_topology.atoms()]
         assert final_atomnames == init_atomnames
 
+    @pytest.mark.slow()
     @pytest.mark.parametrize("explicit_arg", [True, False])
     def test_generate_per_residue_unique_atom_names(self, explicit_arg):
         """

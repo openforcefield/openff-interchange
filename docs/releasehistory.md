@@ -9,7 +9,30 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.3.6 - 2023-06-29
+
+### New features
+
+* #579 Adds support for using the geometric mixing rule in OpenMM export.
+
+### Documentation improvements
+
+* #756 Updates example notebooks using a more consistent structure.
+* #754 Fixes a call to `pack_box` in the protein-ligand example.
+
+## 0.3.6 - 2023-06-20
+
+## Behavior changes
+
+* #748 Resolves #747 in which exceptions inherited from `BaseException` against recommended practice. Exceptions now inherit from `InterchangeException` which itself inherits from `Exception`.
+* #707 Overhauls the `openff.interchange.components._packmol` module.
+
+### New features
+
+* #731 Adds support for non-rectangular boxes in GROMACS export.
+* #707 Improves error handling when attempting to export non-rectangular boxes to Amber and LAMMPS.
+
+## 0.3.5 - 2023-06-14
 
 ### New features
 
@@ -20,6 +43,12 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #724 Fixes #723 in which some parameters in GROMACS files were incorrectly written.
 * #728 Fixes #719 in which GROMACS coordinate files were written incorrectly when containing more than 100,000 atoms.
 * #741 Improves JSON (de)serialization, particularly while parsing `Collection`s.
+* #746 Fixes #745 in which `get_amber_energies` did not properly turn off the switching function.
+* #746 Fixes #736 in which `get_openmm_energies` ignored `openmm.RBTorsionForce`.
+
+### Documentation improvements
+
+* #744 Removes binder links.
 
 ## 0.3.4 - 2023-05-14
 

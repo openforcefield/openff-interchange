@@ -36,7 +36,7 @@ def _get_interpolated_bond_k(bond_handler) -> float:
 
 class TestCreate(_BaseTest):
     def test_modified_nonbonded_cutoffs(self, sage):
-        from openff.toolkit.tests.create_molecules import create_ethanol
+        from openff.toolkit._tests.create_molecules import create_ethanol
 
         topology = Topology.from_molecules(create_ethanol())
         modified_sage = ForceField(sage.to_string())
@@ -58,7 +58,7 @@ class TestCreate(_BaseTest):
         assert numpy.allclose(found_charges, [-0.834, 0.417, 0.417])
 
     def test_infer_positions(self, sage):
-        from openff.toolkit.tests.create_molecules import create_ethanol
+        from openff.toolkit._tests.create_molecules import create_ethanol
 
         molecule = create_ethanol()
 
@@ -201,7 +201,7 @@ class TestChargeFromMolecules(_BaseTest):
 
 
 class TestPartialBondOrdersFromMolecules(_BaseTest):
-    from openff.toolkit.tests.create_molecules import (
+    from openff.toolkit._tests.create_molecules import (
         create_ethanol,
         create_reversed_ethanol,
     )
@@ -238,7 +238,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
 
         sorted_indices = tuple(sorted(central_atoms))
 
-        from openff.toolkit.tests.test_forcefield import xml_ff_bo
+        from openff.toolkit._tests.test_forcefield import xml_ff_bo
 
         forcefield = ForceField(
             "openff-2.0.0.offxml",
@@ -277,7 +277,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
 
     @pytest.mark.slow()
     def test_partial_bond_order_from_molecules_empty(self, ethanol):
-        from openff.toolkit.tests.test_forcefield import xml_ff_bo
+        from openff.toolkit._tests.test_forcefield import xml_ff_bo
 
         forcefield = ForceField(
             "openff-2.0.0.offxml",
@@ -297,7 +297,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
 
     @pytest.mark.slow()
     def test_partial_bond_order_from_molecules_no_matches(self, ethanol):
-        from openff.toolkit.tests.test_forcefield import xml_ff_bo
+        from openff.toolkit._tests.test_forcefield import xml_ff_bo
 
         forcefield = ForceField(
             "openff-2.0.0.offxml",
