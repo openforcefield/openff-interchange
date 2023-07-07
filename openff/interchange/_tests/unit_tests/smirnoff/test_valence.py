@@ -33,7 +33,7 @@ from openff.interchange.smirnoff._valence import (
 
 
 class TestSMIRNOFFValenceCollections(_BaseTest):
-    def test_bond_collection(self):
+    def test_bond_collection(self, water):
         bond_handler = BondHandler(version=0.3)
         bond_handler.fractional_bondorder_method = "AM1-Wiberg"
         bond_parameter = BondHandler.BondType(
@@ -48,7 +48,7 @@ class TestSMIRNOFFValenceCollections(_BaseTest):
         forcefield.register_parameter_handler(bond_handler)
         bond_potentials = SMIRNOFFBondCollection.create(
             parameter_handler=forcefield["Bonds"],
-            topology=Molecule.from_smiles("O").to_topology(),
+            topology=water.to_topology(),
         )
 
         top_key = BondKey(atom_indices=(0, 1))

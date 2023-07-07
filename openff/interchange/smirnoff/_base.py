@@ -300,6 +300,6 @@ class SMIRNOFFCollection(Collection, abc.ABC):
 
     def __repr__(self) -> str:
         return (
-            f"Handler '{self.type}' with expression '{self.expression}', {len(self.key_map)} slots, "
+            f"Handler '{self.type}' with expression '{self.expression}', {len(self.key_map)} mapping keys, "
             f"and {len(self.potentials)} potentials"
         )

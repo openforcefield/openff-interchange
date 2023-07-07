@@ -15,7 +15,7 @@ from openmm import app
 from openmm import unit as openmm_unit
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest, needs_gmx
+from openff.interchange._tests import MoleculeWithConformer, _BaseTest, needs_gmx
 from openff.interchange.components.nonbonded import BuckinghamvdWCollection
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
@@ -93,8 +93,7 @@ class TestGROMACSGROFile(_BaseTest):
         assert n_decimals == 12
 
     def test_vaccum_warning(self, sage):
-        molecule = Molecule.from_smiles("CCO")
-        molecule.generate_conformers(n_conformers=1)
+        molecule = MoleculeWithConformer.from_smiles("CCO")
 
         out = Interchange.from_smirnoff(force_field=sage, topology=[molecule])
 
@@ -167,9 +166,8 @@ class TestGROMACS(_BaseTest):
         ],
     )
     def test_simple_roundtrip(self, sage, smiles, reader):
-        molecule = Molecule.from_smiles(smiles)
+        molecule = MoleculeWithConformer.from_smiles(smiles)
         molecule.name = molecule.to_hill_formula()
-        molecule.generate_conformers(n_conformers=1)
         topology = molecule.to_topology()
 
         out = Interchange.from_smirnoff(force_field=sage, topology=topology)
@@ -194,8 +192,11 @@ class TestGROMACS(_BaseTest):
 
     @skip_if_missing("parmed")
     def test_num_impropers(self, sage):
-        top = Molecule.from_smiles("CC1=CC=CC=C1").to_topology()
-        out = Interchange.from_smirnoff(sage, top)
+        out = Interchange.from_smirnoff(
+            sage,
+            MoleculeWithConformer.from_smiles("CC1=CC=CC=C1").to_topology(),
+        )
+
         out.box = unit.Quantity(4 * numpy.eye(3), units=unit.nanometer)
         out.to_top("tmp.top")
 
@@ -279,8 +280,8 @@ class TestGROMACS(_BaseTest):
             SMIRNOFFElectrostaticsCollection,
         )
 
-        mol = Molecule.from_smiles("[#18]")
-        mol.name = "Argon"
+        mol = MoleculeWithConformer.from_smiles("[#18]", name="Argon")
+
         top = Topology.from_molecules([mol, mol])
 
         # http://www.sklogwiki.org/SklogWiki/index.php/Argon#Buckingham_potential
@@ -421,16 +422,14 @@ class TestGROMACSVirtualSites(_BaseTest):
     @skip_if_missing("parmed")
     def test_sigma_hole_example(self, sage_with_sigma_hole):
         """Test that a single-molecule sigma hole example runs"""
-        mol = Molecule.from_smiles("CCl")
-        mol.name = "Chloromethane"
-        mol.generate_conformers(n_conformers=1)
+        molecule = MoleculeWithConformer.from_smiles("CCl", name="Chloromethane")
 
         out = Interchange.from_smirnoff(
             force_field=sage_with_sigma_hole,
-            topology=mol.to_topology(),
+            topology=molecule.to_topology(),
         )
         out.box = [4, 4, 4]
-        out.positions = mol.conformers[0]
+        out.positions = molecule.conformers[0]
 
         # TODO: Sanity-check reported energies
         get_gromacs_energies(out)
@@ -442,9 +441,7 @@ class TestGROMACSVirtualSites(_BaseTest):
 
     def test_carbonyl_example(self, sage_with_monovalent_lone_pair):
         """Test that a single-molecule DivalentLonePair example runs"""
-        mol = Molecule.from_smiles("C=O")
-        mol.name = "Carbon_monoxide"
-        mol.generate_conformers(n_conformers=1)
+        mol = MoleculeWithConformer.from_smiles("C=O", name="Carbon_monoxide")
 
         out = Interchange.from_smirnoff(
             force_field=sage_with_monovalent_lone_pair,

@@ -19,8 +19,8 @@ from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
 
 @pytest.fixture(scope="module")
-def molecules() -> list[Molecule]:
-    return [Molecule.from_smiles("O")]
+def molecules(water) -> list[Molecule]:
+    return [water]
 
 
 @pytest.mark.parametrize(
@@ -298,7 +298,7 @@ def test_pack_diatomic_ion():
     )
 
 
-def test_solvate_structure():
+def test_solvate_structure(molecules):
     benzene = Molecule.from_smiles("c1ccccc1")
 
     with pytest.raises(
@@ -306,7 +306,7 @@ def test_solvate_structure():
         match="missing some atomic positions",
     ):
         pack_box(
-            [Molecule.from_smiles("O")],
+            molecules,
             [10],
             box_vectors=50 * numpy.identity(3) * unit.angstrom,
             solute=benzene.to_topology(),
@@ -315,7 +315,7 @@ def test_solvate_structure():
     benzene.generate_conformers(n_conformers=1)
 
     topology = pack_box(
-        [Molecule.from_smiles("O")],
+        molecules,
         [10],
         box_vectors=50 * numpy.identity(3) * unit.angstrom,
         solute=benzene.to_topology(),

@@ -1,8 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
-from openff.toolkit.typing.engines.smirnoff.parameters import LibraryChargeHandler
+from openff.toolkit import ForceField, Molecule, Topology
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
@@ -111,6 +109,8 @@ class TestUnassignedParameters(_BaseTest):
 # TODO: Remove xfail after openff-toolkit 0.10.0
 @pytest.mark.xfail()
 def test_library_charges_from_molecule():
+    from openff.toolkit.typing.engines.smirnoff.parameters import LibraryChargeHandler
+
     mol = Molecule.from_mapped_smiles("[Cl:1][C:2]#[C:3][F:4]")
 
     with pytest.raises(ValueError, match="missing partial"):
@@ -148,9 +148,9 @@ class TestChargeFromMolecules(_BaseTest):
 
         assert numpy.allclose(found_charges_uses, molecule.partial_charges.m)
 
-    def test_charges_on_molecules_in_topology(self, sage):
+    def test_charges_on_molecules_in_topology(self, sage, water):
         ethanol = Molecule.from_smiles("CCO")
-        water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+
         ethanol_charges = numpy.linspace(-1, 1, 9) * 0.4
         water_charges = numpy.linspace(-1, 1, 3)
 
@@ -330,7 +330,7 @@ class TestCreateWithPlugins(_BaseTest):
 
         assert _PLUGIN_CLASS_MAPPING[BuckinghamHandler] == SMIRNOFFBuckinghamCollection
 
-    def test_create_buckingham(self):
+    def test_create_buckingham(self, water):
         force_field = ForceField(
             get_test_file_path("buckingham.offxml"),
             load_plugins=True,
@@ -338,7 +338,7 @@ class TestCreateWithPlugins(_BaseTest):
 
         out = Interchange.from_smirnoff(
             force_field,
-            Molecule.from_smiles("O").to_topology(),
+            water.to_topology(),
         )
 
         assert "Buckingham" in out.collections

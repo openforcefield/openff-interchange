@@ -134,7 +134,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
         topology: Topology,
     ) -> None:
         """
-        Populate self.key_map with key-val pairs of slots and unique potential identifiers.
+        Populate self.key_map with key-val pairs of keys and unique potential identifiers.
         """
         if self.key_map:
             # TODO: Should the key_map always be reset, or should we be able to partially
@@ -464,7 +464,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
         topology: Topology,
     ) -> None:
         """
-        Populate self.key_map with key-val pairs of slots and unique potential identifiers.
+        Populate self.key_map with key-val pairs of keys and unique potential identifiers.
 
         """
         if self.key_map:
@@ -620,7 +620,7 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection, ImproperTorsionColle
         topology: Topology,
     ) -> None:
         """
-        Populate self.key_map with key-val pairs of slots and unique potential identifiers.
+        Populate self.key_map with key-val pairs of keys and unique potential identifiers.
 
         """
         if self.key_map:

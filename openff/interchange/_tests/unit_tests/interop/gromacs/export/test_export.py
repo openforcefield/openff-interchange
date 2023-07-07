@@ -30,16 +30,14 @@ class TestToGro(_BaseTest):
 
 
 class TestSettles(_BaseTest):
-    def test_settles_units(self, monkeypatch):
+    def test_settles_units(self, monkeypatch, water):
         """Reproduce issue #720."""
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
-        molecule = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
-        molecule.generate_conformers(n_conformers=1)
-        molecule.name = "WAT"
+        water.name = "WAT"
 
         ForceField("openff-2.1.0.offxml").create_interchange(
-            molecule.to_topology(),
+            water.to_topology(),
         ).to_gromacs(
             prefix="settles",
         )

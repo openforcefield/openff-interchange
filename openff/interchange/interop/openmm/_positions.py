@@ -30,14 +30,14 @@ def to_openmm_positions(
 
     topology = interchange.topology
 
+    molecule_virtual_site_map = defaultdict(list)
+
     if include_virtual_sites:
         from openff.interchange.interop._virtual_sites import (
             _virtual_site_parent_molecule_mapping,
         )
 
         virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(interchange)
-
-        molecule_virtual_site_map = defaultdict(list)
 
         for virtual_site, molecule_index in virtual_site_molecule_map.items():
             molecule_virtual_site_map[molecule_index].append(virtual_site)

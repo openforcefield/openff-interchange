@@ -3,8 +3,7 @@ import itertools
 import numpy
 import openmm
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
+from openff.toolkit import ForceField, Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     LibraryChargeHandler,

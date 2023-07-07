@@ -11,6 +11,7 @@ from openff.interchange import Interchange
 from openff.interchange._tests import (
     HAS_GROMACS,
     HAS_LAMMPS,
+    MoleculeWithConformer,
     _BaseTest,
     get_test_file_path,
     needs_gmx,
@@ -45,17 +46,15 @@ class TestEnergies(_BaseTest):
     def test_energies_single_mol(self, constrained, sage, sage_unconstrained, mol_smi):
         import mbuild as mb
 
-        mol = Molecule.from_smiles(mol_smi)
-        mol.generate_conformers(n_conformers=1)
-        mol.name = "FOO"
+        molecule = MoleculeWithConformer.from_smiles(mol_smi, name="FOO")
 
         force_field = sage if constrained else sage_unconstrained
 
-        interchange = Interchange.from_smirnoff(force_field, [mol])
+        interchange = Interchange.from_smirnoff(force_field, [molecule])
 
         interchange.collections["Electrostatics"].periodic_potential = "cutoff"
 
-        mol.to_file("out.xyz", file_format="xyz")
+        molecule.to_file("out.xyz", file_format="xyz")
         compound = mb.load("out.xyz")
         packed_box = mb.fill_box(
             compound=compound,
@@ -107,8 +106,7 @@ class TestEnergies(_BaseTest):
 
         from openff.interchange.components.mbuild import offmol_to_compound
 
-        ethanol = Molecule.from_smiles("CCO")
-        ethanol.generate_conformers(n_conformers=1)
+        ethanol = MoleculeWithConformer.from_smiles("CCO")
         ethanol.generate_unique_atom_names()
 
         my_compound = offmol_to_compound(ethanol)
@@ -136,9 +134,7 @@ class TestEnergies(_BaseTest):
 
         # Use a molecule with only one 1-4 interaction, and
         # make it between heavy atoms because H-H 1-4 are weak
-        mol = Molecule.from_smiles("ClC#CCl")
-        mol.name = "HPER"
-        mol.generate_conformers(n_conformers=1)
+        mol = MoleculeWithConformer.from_smiles("ClC#CCl", name="HPER")
 
         out = Interchange.from_smirnoff(sage, [mol])
         out.positions = mol.conformers[0]
@@ -215,17 +211,16 @@ class TestEnergies(_BaseTest):
         </SMIRNOFF>
         """
 
-        mol = Molecule.from_smiles(smi)
-        mol.generate_conformers(n_conformers=1)
+        molecule = MoleculeWithConformer.from_smiles(smi)
 
         forcefield = ForceField(
             "openff-2.0.0.offxml",
             xml_ff_bo_all_heavy_bonds,
         )
 
-        out = Interchange.from_smirnoff(forcefield, [mol])
+        out = Interchange.from_smirnoff(forcefield, [molecule])
         out.box = [4, 4, 4] * unit.nanometer
-        out.positions = mol.conformers[0]
+        out.positions = molecule.conformers[0]
 
         for key in ["Bond", "Torsion"]:
             interchange_energy = get_openmm_energies(
