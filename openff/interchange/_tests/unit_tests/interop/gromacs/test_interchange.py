@@ -70,10 +70,8 @@ class TestConvertTopology(_BaseTest):
         return _convert(sage_unconstrained.create_interchange(topology))
 
     @pytest.fixture()
-    def water_dimer(self, sage_unconstrained):
-        water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+    def water_dimer(self, sage_unconstrained, water):
         water.name = "WAT"
-        water.generate_conformers(n_conformers=1)
         topology = Topology.from_molecules([water, water])
         topology.box_vectors = [4, 4, 4] * unit.nanometer
 

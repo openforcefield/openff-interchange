@@ -256,8 +256,7 @@ class Interchange(DefaultModel):
         .. code-block:: pycon
 
             >>> from openff.interchange import Interchange
-            >>> from openff.toolkit.topology import Molecule
-            >>> from openff.toolkit.typing.engines.smirnoff import ForceField
+            >>> from openff.toolkit import ForceField, Molecule
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
             >>> sage = ForceField("openff-2.0.0.offxml")

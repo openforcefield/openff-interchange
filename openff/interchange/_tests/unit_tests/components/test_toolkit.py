@@ -1,5 +1,5 @@
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import Molecule, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
 from openff.interchange._tests import _BaseTest
@@ -18,8 +18,8 @@ def simple_methane():
 
 
 @pytest.fixture()
-def simple_water():
-    return _SimpleMolecule.from_molecule(Molecule.from_smiles("O"))
+def simple_water(water):
+    return _SimpleMolecule.from_molecule(water)
 
 
 def test_simple_topology_uniqueness(simple_methane, simple_water):
@@ -53,15 +53,14 @@ class TestToolkitUtils(_BaseTest):
         assert len([*_get_14_pairs(mol)]) == num_pairs
         assert len([*_get_14_pairs(mol.to_topology())]) == num_pairs
 
-    def test_check_electrostatics_handlers(self, tip3p_missing_electrostatics_xml):
-        # https://github.com/openforcefield/openff-toolkit/blob/0.10.2/openff/toolkit/data/test_forcefields/tip3p.offxml
-        tip3p_missing_electrostatics = ForceField(tip3p_missing_electrostatics_xml)
+    def test_check_electrostatics_handlers(self, tip3p):
+        tip3p.deregister_parameter_handler("Electrostatics")
 
-        assert _check_electrostatics_handlers(tip3p_missing_electrostatics)
+        assert _check_electrostatics_handlers(tip3p)
 
-        tip3p_missing_electrostatics.deregister_parameter_handler("LibraryCharges")
+        tip3p.deregister_parameter_handler("LibraryCharges")
 
-        assert not _check_electrostatics_handlers(tip3p_missing_electrostatics)
+        assert not _check_electrostatics_handlers(tip3p)
 
     @pytest.mark.parametrize(
         ("smiles", "num_h_bonds"),
@@ -71,12 +70,11 @@ class TestToolkitUtils(_BaseTest):
         topology = Molecule.from_smiles(smiles).to_topology()
         assert _get_num_h_bonds(topology) == num_h_bonds, smiles
 
-    def test_combine_topologies(self):
+    def test_combine_topologies(self, water):
         ethanol = Molecule.from_smiles("CCO")
         ethanol.name = "ETH"
         ethanol_topology = ethanol.to_topology()
 
-        water = Molecule.from_smiles("O")
         water.name = "WAT"
         water_topology = water.to_topology()
 

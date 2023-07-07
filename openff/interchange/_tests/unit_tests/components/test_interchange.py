@@ -3,7 +3,6 @@ from copy import deepcopy
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     ParameterHandler,
@@ -68,21 +67,19 @@ class TestInterchange(_BaseTest):
         with pytest.raises(MissingParametersError, match=r"atoms \(0, 100\)"):
             out._get_parameters("Bonds", (0, 100))
 
-    def test_missing_electrostatics_handler(self, tip3p_missing_electrostatics_xml):
+    def test_missing_electrostatics_handler(self, tip3p, water):
         """Test that an error is raised when an electrostatics handler is missing"""
-        molecule = Molecule.from_smiles("O")
-        topology = Topology.from_molecules(molecule)
+        tip3p.deregister_parameter_handler("Electrostatics")
+
+        topology = water.to_topology()
         topology.box_vectors = unit.Quantity([4, 4, 4], units=unit.nanometer)
 
-        tip3p_missing_electrostatics = ForceField(tip3p_missing_electrostatics_xml)
-
         with pytest.raises(MissingParameterHandlerError, match="modify partial"):
-            Interchange.from_smirnoff(tip3p_missing_electrostatics, topology)
+            Interchange.from_smirnoff(tip3p, topology)
 
-        tip3p = deepcopy(tip3p_missing_electrostatics)
-
-        dummy_electrostatics_handler = ElectrostaticsHandler(skip_version_check=True)
-        tip3p.register_parameter_handler(dummy_electrostatics_handler)
+        tip3p.register_parameter_handler(
+            ElectrostaticsHandler(skip_version_check=True),
+        )
 
         Interchange.from_smirnoff(tip3p, topology)
 

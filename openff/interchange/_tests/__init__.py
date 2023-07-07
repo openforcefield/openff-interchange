@@ -7,10 +7,9 @@ from typing import DefaultDict, Optional
 import numpy as np
 import openmm
 import pytest
-from openff.toolkit._tests.create_molecules import create_ammonia, create_ethanol
+from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit._tests.create_molecules import create_ethanol
 from openff.toolkit._tests.utils import get_data_file_path
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
 from openff.utilities.utilities import has_executable
 from openmm import unit as openmm_unit
@@ -55,36 +54,23 @@ def get_test_files_dir_path(dirname: Optional[str] = None) -> pathlib.Path:
         )
 
 
+class MoleculeWithConformer(Molecule):
+    """Thin wrapper around `Molecule` to produce an instance with a conformer in one call."""
+
+    @classmethod
+    def from_smiles(self, smiles, name=""):
+        """Create from smiles and generate a single conformer."""
+        molecule = super().from_smiles(smiles)
+        molecule.generate_conformers(n_conformers=1)
+        molecule.name = name
+
+        return molecule
+
+
 class _BaseTest:
     @pytest.fixture(autouse=True)
     def _initdir(self, tmpdir):
         tmpdir.chdir()
-
-    # TODO: group fixtures up as dicts, i.e. argon['forcefield'], argon['topology'], ...
-    @pytest.fixture()
-    def argon_ff(self):
-        """Fixture that loads an SMIRNOFF XML for argon."""
-        return ForceField(get_test_file_path("argon.offxml"))
-
-    @pytest.fixture()
-    def argon(self):
-        """Fixture that builds a simple arogon topology."""
-        argon = Molecule()
-        argon.add_atom(
-            atomic_number=18,
-            formal_charge=0,
-            is_aromatic=False,
-        )
-        return argon
-
-    @pytest.fixture()
-    def ammonia_ff(self):
-        """Fixture that loads an SMIRNOFF XML for ammonia."""
-        return ForceField(get_test_file_path("ammonia.offxml"))
-
-    @pytest.fixture()
-    def ammonia(self):
-        return create_ammonia()
 
     @pytest.fixture()
     def ethanol(self):
@@ -95,11 +81,6 @@ class _BaseTest:
         top = Molecule.from_smiles("C").to_topology()
         top.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
         return top
-
-    @pytest.fixture()
-    def ammonia_top(self, ammonia):
-        """Fixture that builds a simple ammonia topology."""
-        return Topology.from_molecules(4 * [ammonia])
 
     @pytest.fixture()
     def ethanol_top(self, ethanol):
@@ -135,105 +116,6 @@ class _BaseTest:
     @pytest.fixture()
     def two_peptides(self, mainchain_ala, mainchain_arg):
         return Topology.from_molecules([mainchain_ala, mainchain_arg])
-
-    @pytest.fixture()
-    def tip3p_xml(self):
-        # Modified (added Electrostatics tag) from below link
-        # https://github.com/openforcefield/openff-toolkit/blob/0.10.2/openff/toolkit/data/test_forcefields/tip3p.offxml
-        return """<?xml version="1.0" encoding='ASCII'?>
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-  <Constraints version="0.3">
-    <Constraint smirks="[#1:1]-[*:2]" id="c1"></Constraint>
-    <Constraint smirks="[#1:1]-[#8X2H2+0:2]-[#1]"
-        id="c-tip3p-H-O" distance="0.9572 * angstrom"></Constraint>
-    <Constraint smirks="[#1:1]-[#8X2H2+0]-[#1:2]"
-        id="c-tip3p-H-O-H" distance="1.5139006545247014*angstrom"></Constraint>
-  </Constraints>
-  <vdW
-    version="0.3"
-    potential="Lennard-Jones-12-6"
-    combining_rules="Lorentz-Berthelot"
-    scale12="0.0"
-    scale13="0.0"
-    scale14="0.5"
-    scale15="1"
-    switch_width="1.0*angstroms"
-    cutoff="9.0*angstroms" method="cutoff"
-  >
-    <Atom
-      smirks="[#1]-[#8X2H2+0:1]-[#1]"
-      id="n1"
-      sigma="0.31507524065751241*nanometers"
-      epsilon="0.635968*kilojoules_per_mole"
-    />
-    <Atom
-      smirks="[#1:1]-[#8X2H2+0]-[#1]"
-      id="n2"
-      sigma="1*nanometers"
-      epsilon="0*kilojoules_per_mole" />
-  </vdW>
-  <Electrostatics
-    version="0.3"
-    method="PME"
-    scale12="0.0"
-    scale13="0.0"
-    scale14="0.833333"
-    scale15="1.0"
-    switch_width="0.0*angstrom"
-    cutoff="9.0*angstrom"
-  ></Electrostatics>
-  <LibraryCharges version="0.3">
-    <LibraryCharge
-        name="TIP3P"
-        smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
-        charge1="0.417*elementary_charge"
-        charge2="-0.834*elementary_charge"
-        charge3="0.417*elementary_charge"/>
-  </LibraryCharges>
-</SMIRNOFF>"""
-
-    @pytest.fixture()
-    def tip3p(self, tip3p_xml):
-        return ForceField(tip3p_xml)
-
-    @pytest.fixture()
-    def tip3p_missing_electrostatics_xml(self):
-        # Stripped from below, follow link for details
-        # https://github.com/openforcefield/openff-toolkit/blob/0.10.2/openff/toolkit/data/test_forcefields/tip3p.offxml
-        return """<?xml version="1.0" encoding='ASCII'?>
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-  <vdW
-    version="0.3"
-    potential="Lennard-Jones-12-6"
-    combining_rules="Lorentz-Berthelot"
-    scale12="0.0"
-    scale13="0.0"
-    scale14="0.5"
-    scale15="1"
-    switch_width="1.0*angstroms"
-    cutoff="9.0*angstroms" method="cutoff"
-  >
-    <Atom
-      smirks="[#1]-[#8X2H2+0:1]-[#1]"
-      id="n1"
-      sigma="0.31507524065751241*nanometers"
-      epsilon="0.635968*kilojoules_per_mole"
-    />
-    <Atom
-      smirks="[#1:1]-[#8X2H2+0]-[#1]"
-      id="n2"
-      sigma="1*nanometers"
-      epsilon="0*kilojoules_per_mole" />
-  </vdW>
-  <LibraryCharges version="0.3">
-    <LibraryCharge
-        name="TIP3P"
-        smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
-        charge1="0.417*elementary_charge"
-        charge2="-0.834*elementary_charge"
-        charge3="0.417*elementary_charge"/>
-  </LibraryCharges>
-</SMIRNOFF>"""
 
     xml_ff_bo_bonds = """<?xml version='1.0' encoding='ASCII'?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
@@ -283,10 +165,6 @@ class _BaseTest:
         return Molecule.from_mapped_smiles(
             "[C:1]([C:2](=[O:3])[H:7])([H:4])([H:5])[H:6]",
         )
-
-    @pytest.fixture()
-    def water(self):
-        return Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
 
 
 HAS_GROMACS = _find_gromacs_executable() is not None
