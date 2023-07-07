@@ -1,4 +1,5 @@
 """Functions for running energy evluations with all available engines."""
+import warnings
 from collections.abc import Iterable
 
 from openff.utilities.utilities import requires_package
@@ -29,18 +30,19 @@ def get_all_energies(
     # TODO: Return something nan-like if one driver fails, but still return others that succeed
     # TODO: Have each driver return the version of the engine that was used
 
+    all_energies: dict[str, EnergyReport] = dict()
+
     try:
         # TODO: Worth wiring this argument up to this function? kwargs complexity is not fun
-        all_energies = {
-            "OpenMM": get_openmm_energies(
-                interchange,
-                combine_nonbonded_forces=combine_nonbonded_forces,
-            ),
-        }
-    except UnsupportedCutoffMethodError:
-        all_energies = {
-            "OpenMM": get_openmm_energies(interchange, combine_nonbonded_forces=False),
-        }
+        all_energies["OpenMM"] = get_openmm_energies(
+            interchange,
+            combine_nonbonded_forces=combine_nonbonded_forces,
+        )
+    except UnsupportedCutoffMethodError as error:
+        warnings.warn(
+            f"Skipping OpenMM, driver failed with error:\n\t{error}",
+            stacklevel=2,
+        )
 
     for engine_name, engine_driver, engine_exception in [
         ("Amber", get_amber_energies, AmberError),

@@ -155,6 +155,7 @@ class MDConfig(DefaultModel):
                 mdp.write("coulombtype = PME\n")
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
                 mdp.write("coulomb-modifier = None\n")
+                mdp.write("fourier-spacing = 0.12\n")
             elif self.coul_method == "reactionfield":
                 mdp.write("coulombtype = Reaction-field\n")
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
