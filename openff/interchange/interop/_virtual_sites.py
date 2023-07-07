@@ -1,17 +1,22 @@
 """
 Common helpers for exporting virtual sites.
 """
+from collections import defaultdict
 
 import numpy
 from openff.units import unit
 
 from openff.interchange import Interchange
-from openff.interchange.exceptions import VirtualSiteTypeNotImplementedError
+from openff.interchange.exceptions import (
+    MissingPositionsError,
+    MissingVirtualSitesError,
+    VirtualSiteTypeNotImplementedError,
+)
 from openff.interchange.models import VirtualSiteKey
 
 
 def _virtual_site_parent_molecule_mapping(
-    interchange: "Interchange",
+    interchange: Interchange,
 ) -> dict[VirtualSiteKey, int]:
     mapping: dict[VirtualSiteKey, int] = dict()
 
@@ -28,9 +33,79 @@ def _virtual_site_parent_molecule_mapping(
     return mapping
 
 
+def get_positions_with_virtual_sites(
+    interchange: Interchange,
+    use_zeros: bool = False,
+) -> unit.Quantity:
+    """Return the positions of all particles (atoms and virtual sites)."""
+    if interchange.positions is None:
+        raise MissingPositionsError(
+            f"Positions are required, found {interchange.positions=}.",
+        )
+
+    if "VirtualSites" not in interchange.collections:
+        raise MissingVirtualSitesError()
+
+    if len(interchange["VirtualSites"].key_map) == 0:
+        raise MissingVirtualSitesError()
+
+    molecule_virtual_site_map = defaultdict(list)
+
+    virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(interchange)
+
+    for virtual_site, molecule_index in virtual_site_molecule_map.items():
+        molecule_virtual_site_map[molecule_index].append(virtual_site)
+
+    particle_positions = unit.Quantity(
+        numpy.empty(shape=(0, 3)),
+        unit.nanometer,
+    )
+
+    for molecule in interchange.topology.molecules:
+        molecule_index = interchange.topology.molecule_index(molecule)
+
+        atom_indices = [
+            interchange.topology.atom_index(atom) for atom in molecule.atoms
+        ]
+        this_molecule_atom_positions = interchange.positions[atom_indices, :]
+
+        n_virtual_sites_in_this_molecule: int = len(
+            molecule_virtual_site_map[molecule_index],
+        )
+
+        if use_zeros:
+            this_molecule_virtual_site_positions = unit.Quantity(
+                numpy.zeros((n_virtual_sites_in_this_molecule, 3)),
+                unit.nanometer,
+            )
+
+        else:
+            this_molecule_atom_positions = unit.Quantity(
+                numpy.asarray(
+                    [
+                        _get_virtual_site_positions(virtual_site_key, interchange)
+                        for virtual_site_key in molecule_virtual_site_map[
+                            molecule_index
+                        ]
+                    ],
+                ),
+                unit.nanometer,
+            )
+
+        particle_positions = numpy.concatenate(
+            [
+                particle_positions,
+                this_molecule_atom_positions,
+                this_molecule_virtual_site_positions,
+            ],
+        )
+
+    return particle_positions
+
+
 def _get_virtual_site_positions(
     virtual_site_key: VirtualSiteKey,
-    interchange: "Interchange",
+    interchange: Interchange,
 ) -> unit.Quantity:
     # TODO: Move this behavior elsewhere, possibly to a non-GROMACS location
     if virtual_site_key.type == "BondCharge":
