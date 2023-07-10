@@ -1,6 +1,7 @@
 from copy import deepcopy
 
-import numpy as np
+import mdtraj
+import numpy
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -25,6 +26,7 @@ from openff.interchange.exceptions import (
     MissingParameterHandlerError,
     MissingParametersError,
     MissingPositionsError,
+    MissingVirtualSitesError,
     SMIRNOFFHandlersNotImplementedError,
 )
 
@@ -39,8 +41,8 @@ class TestInterchange(_BaseTest):
         out.box = [4, 4, 4]
 
         assert not out.positions
-        np.testing.assert_equal(out["box"].m, (4 * np.eye(3) * unit.nanometer).m)
-        np.testing.assert_equal(out["box"].m, out["box_vectors"].m)
+        numpy.testing.assert_equal(out["box"].m, (4 * numpy.eye(3) * unit.nanometer).m)
+        numpy.testing.assert_equal(out["box"].m, out["box_vectors"].m)
 
         assert out["Bonds"] == out.collections["Bonds"]
 
@@ -105,7 +107,7 @@ class TestInterchange(_BaseTest):
 
         interchange = Interchange.from_smirnoff(sage_unconstrained, top)
 
-        interchange.box = [4, 4, 4] * np.eye(3)
+        interchange.box = [4, 4, 4] * numpy.eye(3)
         interchange.positions = mol.conformers[0]
 
         # Copy and translate atoms by [1, 1, 1]
@@ -145,7 +147,7 @@ class TestInterchange(_BaseTest):
         ace_vdw = ace_interchange["vdW"].get_system_parameters()
         add_vdw = complex_interchange["vdW"].get_system_parameters()
 
-        np.testing.assert_equal(np.vstack([thf_vdw, ace_vdw]), add_vdw)
+        numpy.testing.assert_equal(numpy.vstack([thf_vdw, ace_vdw]), add_vdw)
 
         # TODO: Ensure the de-duplication is maintained after exports
 
@@ -183,7 +185,7 @@ class TestInterchange(_BaseTest):
         Interchange.from_smirnoff(force_field=sage, topology=topology)
         new = list(topology.molecules)[0].conformers[0]
 
-        assert np.sum((original - new).m_as(unit.angstrom)) == pytest.approx(0)
+        assert numpy.sum((original - new).m_as(unit.angstrom)) == pytest.approx(0)
 
     @pytest.mark.skip("LAMMPS export experimental")
     @needs_gmx
@@ -318,6 +320,50 @@ class TestInterchange(_BaseTest):
         assert isinstance(out.visualize(), nglview.NGLWidget)
 
 
+class TestToPDB(_BaseTest):
+    def test_to_pdb_with_virtual_sites(self, water, tip4p):
+        tip4p.create_interchange(water.to_topology()).to_pdb(
+            "_test.pdb",
+            include_virtual_sites=True,
+        )
+
+        assert mdtraj.load("_test.pdb").topology.n_atoms == 4
+
+    def test_tip4p_pdb_dummy_particle_position(self, water, tip4p):
+        tip4p.create_interchange(water.to_topology()).to_pdb(
+            "_test.pdb",
+            include_virtual_sites=True,
+        )
+
+        # openmm.app.PDBFile does not load all 4 particles,
+        # despite it being used to write this (?!)
+        xyz = mdtraj.load("_test.pdb").xyz[0]
+
+        # https://github.com/pandegroup/tip3p-tip4p-fb/blob/e590f212a4e67d711cbe0aa6b6955ee51ef8b800/AMBER/dat/leap/parm/frcmod.tip4pfb#L7
+        numpy.testing.assert_allclose(
+            numpy.linalg.norm(xyz[0] - xyz[-1]),
+            0.010527,
+            atol=0.0005,
+        )
+
+    def test_to_pdb_ignoring_virtual_sites(self, water, tip4p):
+        tip4p.create_interchange(water.to_topology()).to_pdb(
+            "_test.pdb",
+            include_virtual_sites=False,
+        )
+
+        assert mdtraj.load("_test.pdb").topology.n_atoms == 3
+
+    def test_to_pdb_missing_virtual_sites(self, tip3p, water):
+        with pytest.raises(
+            MissingVirtualSitesError,
+        ):
+            tip3p.create_interchange(water.to_topology()).to_pdb(
+                "_test.pdb",
+                include_virtual_sites=True,
+            ),
+
+
 class TestUnimplementedSMIRNOFFCases(_BaseTest):
     def test_bogus_smirnoff_handler(self, sage):
         top = Molecule.from_smiles("CC").to_topology()
@@ -360,7 +406,7 @@ class TestBadExports(_BaseTest):
             topology=[Molecule.from_smiles("CC")],
         )
         zero_positions.positions = unit.Quantity(
-            np.zeros((zero_positions.topology.n_atoms, 3)),
+            numpy.zeros((zero_positions.topology.n_atoms, 3)),
             unit.nanometer,
         )
         with pytest.warns(UserWarning, match="seem to all be zero"):
@@ -401,7 +447,7 @@ class TestWrappedCalls(_BaseTest):
         mol = Molecule.from_smiles("CCO")
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
-        top.box_vectors = unit.Quantity(np.eye(3) * 4, unit.nanometer)
+        top.box_vectors = unit.Quantity(numpy.eye(3) * 4, unit.nanometer)
 
         return Interchange.from_smirnoff(force_field=sage, topology=top)
 
