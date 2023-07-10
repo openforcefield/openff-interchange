@@ -7,23 +7,27 @@ repos:
   - id: trailing-whitespace
     exclude: '\.(pdb|gro|top|sdf)$'
   - id: debug-statements
+- repo: https://github.com/asottile/add-trailing-comma
+  rev: v3.0.0
+  hooks:
+  - id: add-trailing-comma
 - repo: https://github.com/psf/black
-  rev: 22.10.0
+  rev: 23.3.0
   hooks:
   - id: black
-    files: ^openff|devtools
+    files: ^openff|plugins|stubs
   - id: black-jupyter
     files: ^examples
 - repo: https://github.com/PyCQA/isort
-  rev: 5.10.1
+  rev: 5.12.0
   hooks:
   - id: isort
-    files: ^openff|devtools
+    files: ^openff|plugins|stubs
 - repo: https://github.com/PyCQA/flake8
   rev: 6.0.0
   hooks:
   - id: flake8
-    files: ^openff
+    files: ^openff|plugins|stubs
     additional_dependencies: [
         'flake8-bugbear',
         'flake8-absolute-import',
@@ -31,36 +35,42 @@ repos:
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.3.0
+  rev: v3.8.0
   hooks:
   - id: pyupgrade
-    files: ^openff/interchange
+    files: ^openff|plugins|stubs
     exclude: openff/interchange/_version.py|setup.py
-    args: [--py37-plus]
+    args: ["--py39-plus"]
 - repo: https://github.com/pycqa/pydocstyle
-  rev: 6.1.1
+  rev: 6.3.0
   hooks:
   - id: pydocstyle
-    files: ^openff/interchange
+    files: ^openff|plugins
     args: ["--config=setup.cfg"]
 - repo: https://github.com/econchick/interrogate
   rev: 1.5.0
   hooks:
     - id: interrogate
-      args: [--fail-under=60, openff/interchange/]
+      args: ["openff/interchange/", "-e", "openff/interchange/_tests/"]
+      pass_filenames: false
 - repo: https://github.com/asottile/blacken-docs
-  rev: v1.12.1
+  rev: 1.14.0
   hooks:
   - id: blacken-docs
     files: ^docs/
-    additional_dependencies: [black==21.6b0]
+- repo: https://github.com/igorshubovych/markdownlint-cli
+  rev: v0.35.0
+  hooks:
+  - id: markdownlint
+    exclude: .github
+    args: ["--disable", "MD013", "MD033", "MD024", "MD046", "--ignore", "docs/using/experimental.md", "--"]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.5.3
+  rev: 1.7.0
   hooks:
     - id: nbqa-pyupgrade
       files: ^examples
       args:
-        - --py37-plus
+        - --py38-plus
     - id: nbqa-isort
       files: ^examples
 - repo: https://github.com/kynan/nbstripout

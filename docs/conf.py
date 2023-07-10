@@ -65,6 +65,12 @@ intersphinx_mapping = {
         None,
     ),
     "mdtraj": ("https://www.mdtraj.org/1.9.5/", None),
+    "openff.docs": (
+        "https://docs.openforcefield.org/en/latest/",
+        None,
+    ),
+    "setuptools": ("https://setuptools.pypa.io/en/latest/", None),
+    "openmm": ("http://docs.openmm.org/latest/api-python/", None),
 }
 
 mermaid_init_js = """mermaid.initialize({
@@ -84,7 +90,7 @@ autosummary_context = {
     # Modules to exclude from API docs
     "exclude_modules": [
         "openff.interchange.conftest",
-        "openff.interchange.tests",
+        "openff.interchange._tests",  # Maybe this is excluded by default?
     ],
 }
 autosummary_ignore_module_all = False
@@ -92,7 +98,7 @@ napoleon_google_docstring = False
 napoleon_use_param = False
 napoleon_use_ivar = True
 
-autodoc_mock_imports = []
+autodoc_mock_imports = ["jax"]
 autodoc_default_options = {
     "member-order": "bysource",
     "undoc-members": True,
@@ -265,7 +271,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, "interchange", "openff-interchange Documentation", [author], 1)
+    (master_doc, "interchange", "openff-interchange Documentation", [author], 1),
 ]
 
 

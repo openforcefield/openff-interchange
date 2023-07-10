@@ -1,12 +1,12 @@
 """Custom Pydantic models."""
-from typing import Optional, Tuple
+import abc
+from typing import Literal, Optional
 
 from openff.models.models import DefaultModel
 from pydantic import Field
-from typing_extensions import Literal
 
 
-class TopologyKey(DefaultModel):
+class TopologyKey(DefaultModel, abc.ABC):
     """
     A unique identifier of a segment of a chemical topology.
 
@@ -36,47 +36,123 @@ class TopologyKey(DefaultModel):
         >>> this_atom
         TopologyKey with atom indices (4,)
 
-    Layer multiple TopologyKey objects that point to the same torsion
-
-    .. code-block:: pycon
-
-        >>> key1 = TopologyKey(atom_indices=(1, 2, 5, 6), mult=0)
-        >>> key2 = TopologyKey(atom_indices=(1, 2, 5, 6), mult=1)
-        >>> assert key1 != key2
-
     """
 
-    atom_indices: Tuple[int, ...] = Field(
-        tuple(), description="The indices of the atoms occupied by this interaction"
-    )
-    mult: Optional[int] = Field(
-        None, description="The index of this duplicate interaction"
-    )
-    bond_order: Optional[float] = Field(
-        None,
-        description="If this key represents as topology component subject to interpolation "
-        "between multiple parameters(s), the bond order determining the coefficients of the wrapped potentials.",
+    # TODO: Swith to `pydantic.contuple` once 1.10.3 or 2.0.0 is released
+    atom_indices: tuple[int, ...] = Field(
+        description="The indices of the atoms occupied by this interaction",
     )
 
     def __hash__(self) -> int:
-        return hash((self.atom_indices, self.mult, self.bond_order))
+        return hash(tuple(self.atom_indices))
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__} with atom indices {self.atom_indices}"
+
+
+class BondKey(TopologyKey):
+    """
+    A unique identifier of the atoms associated in a bond potential.
+    """
+
+    atom_indices: tuple[int, ...] = Field(
+        description="The indices of the atoms occupied by this interaction",
+    )
+
+    bond_order: Optional[float] = Field(
+        None,
+        description=(
+            "If this key represents as topology component subject to interpolation between "
+            "multiple parameters(s), the bond order determining the coefficients of the wrapped "
+            "potentials."
+        ),
+    )
+
+    def __hash__(self) -> int:
+        return hash((tuple(self.atom_indices), self.bond_order))
 
     def __repr__(self) -> str:
         return (
-            f"TopologyKey with atom indices {self.atom_indices}"
-            f"{'' if self.mult is None else ', mult' + str(self.mult)}"
+            f"{self.__class__.__name__} with atom indices {self.atom_indices}"
             f"{'' if self.bond_order is None else ', bond order ' + str(self.bond_order)}"
         )
 
 
-class LibraryChargeTopologyKey(DefaultModel):
-    """Subclass of `TopologyKey` for use with library charges only."""
+class AngleKey(TopologyKey):
+    """
+    A unique identifier of the atoms associated in an angle potential.
+    """
 
+    atom_indices: tuple[int, ...] = Field(
+        description="The indices of the atoms occupied by this interaction",
+    )
+
+
+class ProperTorsionKey(TopologyKey):
+    """
+    A unique identifier of the atoms associated in a proper torsion potential.
+    """
+
+    atom_indices: tuple[int, ...] = Field(
+        description="The indices of the atoms occupied by this interaction",
+    )
+
+    mult: Optional[int] = Field(
+        None,
+        description="The index of this duplicate interaction",
+    )
+
+    phase: Optional[float] = Field(
+        None,
+        description="If this key represents as topology component subject to interpolation between "
+        "multiple parameters(s), the phase determining the coefficients of the wrapped "
+        "potentials.",
+    )
+
+    bond_order: Optional[float] = Field(
+        None,
+        description=(
+            "If this key represents as topology component subject to interpolation between "
+            "multiple parameters(s), the bond order determining the coefficients of the wrapped "
+            "potentials."
+        ),
+    )
+
+    def __hash__(self) -> int:
+        return hash((tuple(self.atom_indices), self.mult, self.bond_order, self.phase))
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__} with atom indices {self.atom_indices}"
+            f"{'' if self.mult is None else ', mult ' + str(self.mult)}"
+            f"{'' if self.bond_order is None else ', bond order ' + str(self.bond_order)}"
+        )
+
+
+class ImproperTorsionKey(ProperTorsionKey):
+    """
+    A unique identifier of the atoms associated in an improper torsion potential.
+
+    The central atom is the second atom in the `atom_indices` tuple, or accessible via `get_central_atom_index`.
+    """
+
+    def get_central_atom_index(self) -> int:
+        """Get the index of the central atom of this improper torsion."""
+        return self.atom_indices[1]
+
+
+class LibraryChargeTopologyKey(DefaultModel):
+    """
+    A unique identifier of the atoms associated with a library charge.
+    """
+
+    # TODO: Store all atoms associated with this charge?
+    # TODO: Is there an upper bound on the number of atoms that can be associated with a LibraryChargeType?
     # TODO: Eventually rename this for coherence with `TopologyKey`
     this_atom_index: int
 
     @property
-    def atom_indices(self) -> Tuple[int, ...]:
+    def atom_indices(self) -> tuple[int, ...]:
         """Alias for `this_atom_index`."""
         return (self.this_atom_index,)
 
@@ -85,9 +161,9 @@ class LibraryChargeTopologyKey(DefaultModel):
 
 
 class SingleAtomChargeTopologyKey(LibraryChargeTopologyKey):
-    """Shim class for storing the result of charge_from_molecules."""
-
-    pass
+    """
+    Shim class for storing the result of charge_from_molecules.
+    """
 
 
 class ChargeModelTopologyKey(DefaultModel):
@@ -97,7 +173,7 @@ class ChargeModelTopologyKey(DefaultModel):
     partial_charge_method: str
 
     @property
-    def atom_indices(self) -> Tuple[int, ...]:
+    def atom_indices(self) -> tuple[int, ...]:
         """Alias for `this_atom_index`."""
         return (self.this_atom_index,)
 
@@ -110,10 +186,10 @@ class ChargeIncrementTopologyKey(DefaultModel):
 
     # TODO: Eventually rename this for coherence with `TopologyKey`
     this_atom_index: int
-    other_atom_indices: Tuple[int, ...]
+    other_atom_indices: tuple[int, ...]
 
     @property
-    def atom_indices(self) -> Tuple[int, ...]:
+    def atom_indices(self) -> tuple[int, ...]:
         """Alias for `this_atom_index`."""
         return (self.this_atom_index,)
 
@@ -121,17 +197,23 @@ class ChargeIncrementTopologyKey(DefaultModel):
         return hash((self.this_atom_index, self.other_atom_indices))
 
 
-class VirtualSiteKey(DefaultModel):
+class VirtualSiteKey(TopologyKey):
     """A unique identifier of a virtual site in the scope of a chemical topology."""
 
-    orientation_atom_indices: Tuple[int, ...] = Field(
-        description="The indices of the 'orientation atoms' which are used to define the position of this "
-        "virtual site. The first atom is the 'parent atom' which defines which atom the virtual site is 'attached' to."
+    # TODO: Overriding the attribute of a parent class is clumsy, but less grief than
+    #       having this not inherit from `TopologyKey`. It might be useful to just have
+    #       orientation_atom_indices point to the same thing.
+    atom_indices: Optional[tuple[int]] = None  # type: ignore[assignment]
+
+    orientation_atom_indices: tuple[int, ...] = Field(
+        description="The indices of the 'orientation atoms' which are used to define the position "
+        "of this virtual site. The first atom is the 'parent atom' which defines which atom the "
+        "virtual site is 'attached' to.",
     )
     type: str = Field(description="The type of this virtual site parameter.")
     name: str = Field(description="The name of this virtual site parameter.")
     match: Literal["once", "all_permutations"] = Field(
-        description="The `match` attribute of the associated virtual site type"
+        description="The `match` attribute of the associated virtual site type",
     )
 
     def __hash__(self) -> int:
@@ -141,7 +223,7 @@ class VirtualSiteKey(DefaultModel):
                 self.name,
                 self.type,
                 self.match,
-            )
+            ),
         )
 
 
@@ -185,7 +267,8 @@ class PotentialKey(DefaultModel):
         description="A unique identifier of this potential, i.e. a SMARTS pattern or an atom type",
     )
     mult: Optional[int] = Field(
-        None, description="The index of this duplicate interaction"
+        None,
+        description="The index of this duplicate interaction",
     )
     associated_handler: Optional[str] = Field(
         None,
@@ -204,6 +287,6 @@ class PotentialKey(DefaultModel):
     def __repr__(self) -> str:
         return (
             f"PotentialKey associated with handler '{self.associated_handler}' with id '{self.id}'"
-            f"{'' if self.mult is None else ', mult' + str(self.mult)}"
+            f"{'' if self.mult is None else ', mult ' + str(self.mult)}"
             f"{'' if self.bond_order is None else ', bond order ' + str(self.bond_order)}"
         )

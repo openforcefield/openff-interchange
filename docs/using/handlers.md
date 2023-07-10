@@ -4,14 +4,14 @@ Interchange stores force field parameters in potential handlers, which link the
 entry in the force field to the parameter as applied to a topology. This makes
 it easy to inspect and even modify how a parameter is applied to a system.
 
-## Handlers
+## Collections
 
-Potential handlers describe how force field parameters are applied to a chemical
+Collections describe how force field parameters are applied to a chemical
 system. This attribute is a dictionary whose keys are string identifiers and
-whose values are [`PotentialHandler`] objects. Instead of linking parameters to
+whose values are [`Collection`] objects. Instead of linking parameters to
 abstract chemical environments like SMIRNOFF force fields, or copying
 parameters into place like a traditional force field format, a
-`PotentialHandler` links an input parameter in the force field to every place
+`Collection` links an input parameter in the force field to every place
 in the topology where it is used.
 
 Like SMIRNOFF force fields, each parameter in an `Interchange`  knows where it
@@ -45,7 +45,7 @@ potential key. For classically atom-typed force fields, a key can be
 constructed using atom types or combinations thereof.
 
 These objects are strung together with two mappings, each stored as dictionary
-attributes of a `PotentialHandler`. The `.slot_map` attribute maps segments of
+attributes of a `Collection`. The `.key_map` attribute maps segments of
 a topology to the potential keys (`TopologyKey` to `PotentialKey` mapping). The
 `.potentials` attribute maps the potential keys to the potentials
 (`PotentialKey` to `Potential`). This allows many topology keys to map to the
@@ -55,10 +55,10 @@ Despite this, getting the `Potential` for a place in the topology is a constant
 time operation. For example, parametrizing a thousand water molecules each with
 two identical bonds will produce only one `Potential`, rather than two thousand.
 
-Each potential handler inherits from the base [`PotentialHandler`] class and
+Each potential handler inherits from the base [`Collection`] class and
 describes a single type of parameter from a single source. Potential handlers
-for SMIRNOFF force fields are found in the [`openff.interchange.components.smirnoff`]
-module, while those for Foyer are found in the [`openff.interchange.components.foyer`]
+for SMIRNOFF force fields are found in the [`openff.interchange.smirnoff`]
+module, while those for Foyer are found in the [`openff.interchange.foyer`]
 module.
 
 ## Inspecting an assigned parameter
@@ -84,9 +84,9 @@ dict_keys(['Bonds', 'Constraints', 'Angles', 'ProperTorsions',
     'ImproperTorsions', 'vdW', 'Electrostatics'])
 >>> # Ethane has no improper torsions, so both maps will be empty
 >>> interchange.handlers['ImproperTorsions']  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
-SMIRNOFFImproperTorsionHandler(type='ImproperTorsions',
+SMIRNOFFImproperTorsionCollection(type='ImproperTorsions',
     expression='k*(1+cos(periodicity*theta-phase))',
-    slot_map={},
+    key_map={},
     potentials={})
 
 ```
@@ -97,7 +97,7 @@ carbon-hydrogen bonds. It's clear from the SMIRKS codes that atoms 0 and 1 are
 the carbon atoms, and atoms 2 through 7 are the hydrogens:
 
 ```pycon
->>> interchange.handlers['Bonds'].slot_map  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
+>>> interchange.handlers['Bonds'].key_map  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
 {TopologyKey(atom_indices=(0, 1), ...): PotentialKey(id='[#6X4:1]-[#6X4:2]', ...),
  TopologyKey(atom_indices=(0, 2), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
  TopologyKey(atom_indices=(0, 3), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
@@ -135,7 +135,7 @@ the bonds have been updated:
 >>> from openff.units import unit
 >>> # Get the potential from the first C-H bond
 >>> top_key = TopologyKey(atom_indices=(0, 2))
->>> pot_key = interchange.handlers['Bonds'].slot_map[top_key]
+>>> pot_key = interchange.handlers['Bonds'].key_map[top_key]
 >>> potential = interchange.handlers['Bonds'].potentials[pot_key]
 >>> # Modify the potential
 >>> potential.parameters['length'] = 3.1415926 * unit.nanometer
@@ -158,11 +158,10 @@ the bonds have been updated:
 
 ```
 
-
-[`PotentialHandler`]: openff.interchange.components.potentials.PotentialHandler
+[`Collection`]: openff.interchange.components.potentials.Collection
 [`TopologyKey`]: openff.interchange.models.TopologyKey
 [`PotentialKey`]: openff.interchange.models.PotentialKey
 [`Potential`]: openff.interchange.components.potentials.Potential
 [`Interchange.handlers`]: openff.interchange.Interchange.topology
-[`openff.interchange.components.smirnoff`]: openff.interchange.components.smirnoff
-[`openff.interchange.components.foyer`]: openff.interchange.components.foyer
+[`openff.interchange.smirnoff`]: openff.interchange.smirnoff
+[`openff.interchange.foyer`]: openff.interchange.foyer

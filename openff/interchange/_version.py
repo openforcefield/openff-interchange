@@ -1,5 +1,3 @@
-# type: ignore # noqa
-
 # This file helps to compute a version number in source trees obtained from
 # git-archive tarball (such as those provided by githubs download-from-tag
 # feature). Distribution tarballs (built by setup.py sdist) and build
@@ -16,6 +14,7 @@ import os
 import re
 import subprocess
 import sys
+from typing import Any
 
 
 def get_keywords():
@@ -53,8 +52,8 @@ class NotThisMethod(Exception):
     """Exception raised if a method is not valid for the current scenario."""
 
 
-LONG_VERSION_PY = {}
-HANDLERS = {}
+LONG_VERSION_PY: dict = dict()
+HANDLERS: dict = {}
 
 
 def register_vcs_handler(vcs, method):  # decorator
@@ -135,7 +134,7 @@ def versions_from_parentdir(parentdir_prefix, root, verbose):
     if verbose:
         print(
             "Tried directories %s but none started with prefix %s"
-            % (str(rootdirs), parentdir_prefix)
+            % (str(rootdirs), parentdir_prefix),
         )
     raise NotThisMethod("rootdir doesn't start with parentdir_prefix")
 
@@ -506,7 +505,7 @@ def render(pieces, style):
     }
 
 
-def get_versions():
+def get_versions() -> dict[str, Any]:
     """Get version information or return default if unable to do so."""
     # I am in _version.py, which lives at ROOT/VERSIONFILE_SOURCE. If we have
     # __file__, we can work backwards from there to the root. Some

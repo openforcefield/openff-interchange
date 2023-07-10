@@ -1,13 +1,17 @@
-from typing import Any, Optional, NoReturn, Generator, List
+from typing import Any, Generator, Optional, Union
+
+import numpy
+import pandas
 
 class Element(object):
     atomic_number: int
 
 class Atom(object):
     name: str
-    _bond_partners: List[Atom]
+    _bond_partners: list[Atom]
     index: int
     element: Element
+    serial: Optional[int]
 
 class Bond(object):
     atom1: Atom
@@ -42,14 +46,14 @@ class Topology(object):
         element: Any,
         residue: Any,
         serial: Optional[int] = None,
-    ) -> NoReturn: ...
+    ): ...
     def add_bond(
         self,
         atom1: Any,
         atom2: Any,
         type: Optional[Any] = None,
         order: Optional[int] = None,
-    ) -> NoReturn: ...
+    ): ...
     def atom(self, index: int) -> Atom: ...
     @property
     def atoms(self) -> Generator[Atom, None, None]: ...
@@ -57,3 +61,20 @@ class Topology(object):
     def bonds(self) -> Generator[Bond, None, None]: ...
     @property
     def residues(self) -> Generator[Residue, None, None]: ...
+    def subset(self, atom_indices: Union[numpy.ndarray, list[int]]) -> Topology: ...
+    def join(self, other: Topology, keep_resSeq: bool = True) -> Topology: ...
+    def to_dataframe(self) -> tuple[pandas.DataFrame, numpy.ndarray]: ...
+    def residue(self, index: int) -> Residue: ...
+
+class Trajectory(object):
+    topology: Topology
+    n_atoms: int
+    xyz: numpy.ndarray
+    unitcell_lengths: numpy.ndarray
+    unitcell_angles: numpy.ndarray
+    unitcell_vectors: numpy.ndarray
+
+    def save_pdb(self, file: str): ...
+
+def load_pdb(file: str) -> Trajectory: ...
+def load(file: str) -> Trajectory: ...

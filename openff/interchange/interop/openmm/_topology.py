@@ -1,17 +1,18 @@
-from typing import TYPE_CHECKING, List, Union
+"""
+Helper functions for exporting the topology to OpenMM.
+"""
+from typing import Union
 
+import openmm.app
+
+from openff.interchange import Interchange
 from openff.interchange.models import VirtualSiteKey
-
-if TYPE_CHECKING:
-    from openmm import app
-
-    from openff.interchange import Interchange
 
 
 def to_openmm_topology(
     interchange: "Interchange",
     ensure_unique_atom_names: Union[str, bool] = "residues",
-) -> "app.Topology":
+) -> openmm.app.Topology:
     """Create an OpenMM Topology containing some virtual site information (if appropriate)."""
     # Heavily cribbed from the toolkit
     # https://github.com/openforcefield/openff-toolkit/blob/0.11.0rc2/openff/toolkit/topology/topology.py
@@ -20,7 +21,6 @@ def to_openmm_topology(
 
     from openff.toolkit.topology import Topology
     from openff.toolkit.topology.molecule import Bond
-    from openmm import app
 
     from openff.interchange.interop._virtual_sites import (
         _virtual_site_parent_molecule_mapping,
@@ -38,15 +38,16 @@ def to_openmm_topology(
 
     has_virtual_sites = len(virtual_site_molecule_map) > 0
 
-    virtual_site_element = app.element.Element.getByMass(0)
+    virtual_site_element = openmm.app.element.Element.getByMass(0)
 
-    openmm_topology = app.Topology()
+    openmm_topology = openmm.app.Topology()
 
     # Create unique atom names (as requested)
     if ensure_unique_atom_names:
         for molecule in topology._molecules:
             if isinstance(ensure_unique_atom_names, str) and hasattr(
-                molecule, ensure_unique_atom_names
+                molecule,
+                ensure_unique_atom_names,
             ):
                 for hier_elem in getattr(molecule, ensure_unique_atom_names):
                     if not hier_elem.has_unique_atom_names:
@@ -102,7 +103,7 @@ def to_openmm_topology(
                     (last_residue.name == atom_residue_name),
                     (int(last_residue.id) == int(atom_residue_number)),
                     (chain.id == last_chain.id),
-                )
+                ),
             ):
                 residue = last_residue
             else:
@@ -110,7 +111,7 @@ def to_openmm_topology(
                 residue.id = atom_residue_number
 
             # Add atom.
-            element = app.Element.getByAtomicNumber(atom.atomic_number)
+            element = openmm.app.Element.getByAtomicNumber(atom.atomic_number)
             omm_atom = openmm_topology.addAtom(atom.name, element, residue)
 
             # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
@@ -121,7 +122,7 @@ def to_openmm_topology(
             last_residue = residue
 
         if has_virtual_sites:
-            virtual_sites_in_this_molecule: List[
+            virtual_sites_in_this_molecule: list[
                 VirtualSiteKey
             ] = molecule_virtual_site_map[molecule_index]
             for this_virtual_site in virtual_sites_in_this_molecule:
@@ -138,22 +139,22 @@ def to_openmm_topology(
                 )
 
         # Add all bonds.
-        bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
+        bond_types = {1: openmm.app.Single, 2: openmm.app.Double, 3: openmm.app.Triple}
         for bond in molecule.bonds:
             atom1, atom2 = bond.atoms
             atom1_idx, atom2_idx = topology.atom_index(atom1), topology.atom_index(
-                atom2
+                atom2,
             )
             if isinstance(bond, Bond):
                 if bond.is_aromatic:
-                    bond_type = app.Aromatic
+                    bond_type = openmm.app.Aromatic
                 else:
                     bond_type = bond_types[bond.bond_order]
                 bond_order = bond.bond_order
             else:
                 raise RuntimeError(
                     "Unexpected bond type found while iterating over Topology.bonds."
-                    f"Found {type(bond)}, allowed is Bond."
+                    f"Found {type(bond)}, allowed is Bond.",
                 )
 
             openmm_topology.addBond(

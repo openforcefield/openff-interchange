@@ -1,26 +1,34 @@
 """Functions for running energy evluations with GROMACS."""
-import pathlib
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from shutil import which
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import Optional, Union
 
+from openff.units import unit
 from openff.utilities.utilities import requires_package, temporary_cd
-from pkg_resources import resource_filename
 
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
-from openff.interchange.exceptions import GMXGromppError, GMXMdrunError
+from openff.interchange.exceptions import (
+    GMXGromppError,
+    GMXMdrunError,
+    GMXNotFoundError,
+)
 
-if TYPE_CHECKING:
-    from openff.units.unit import Quantity
+if sys.version_info >= (3, 10):
+    from importlib import resources
+else:
+    import importlib_resources as resources
 
-    from openff.interchange import Interchange
+from openff.units import Quantity
+
+from openff.interchange import Interchange
 
 
-def _find_gromacs_executable() -> Optional[str]:
+def _find_gromacs_executable(raise_exception: bool = False) -> Optional[str]:
     """Attempt to locate a GROMACS executable based on commonly-used names."""
     gromacs_executable_names = ["gmx", "gmx_mpi", "gmx_d", "gmx_mpi_d"]
 
@@ -28,13 +36,13 @@ def _find_gromacs_executable() -> Optional[str]:
         if which(name):
             return name
 
-    return None
+    if raise_exception:
+        raise GMXNotFoundError
+    else:
+        return None
 
 
 def _get_mdp_file(key: str = "auto") -> str:
-    #       if key == "auto":
-    #           return "auto_generated.mdp"
-    #
     mapping = {
         "default": "default.mdp",
         "cutoff": "cutoff.mdp",
@@ -42,15 +50,15 @@ def _get_mdp_file(key: str = "auto") -> str:
         "cutoff_buck": "cutoff_buck.mdp",
     }
 
-    dir_path = resource_filename("openff.interchange", "tests/data/mdp")
-    return pathlib.Path(dir_path).joinpath(mapping[key]).as_posix()
+    dir_path = resources.files("openff.interchange._tests.data.mdp")
+    return str(dir_path / mapping[key])
 
 
 def get_gromacs_energies(
-    off_sys: "Interchange",
+    interchange: Interchange,
     mdp: str = "auto",
-    writer: str = "internal",
-    decimal: int = 8,
+    round_positions: int = 8,
+    detailed: bool = False,
 ) -> EnergyReport:
     """
     Given an OpenFF Interchange object, return single-point energies as computed by GROMACS.
@@ -59,15 +67,14 @@ def get_gromacs_energies(
 
     Parameters
     ----------
-    off_sys : openff.interchange.Interchange
+    interchange : openff.interchange.Interchange
         An OpenFF Interchange object to compute the single-point energy of
     mdp : str, default="cutoff"
         A string key identifying the GROMACS `.mdp` file to be used. See `_get_mdp_file`.
-    writer : str, default="internal"
-        A string key identifying the backend to be used to write GROMACS files. The
-        default value of `"internal"` results in this package's exporters being used.
-    decimal : int, default=8
+    round_positions: int, default=8
         A decimal precision for the positions in the `.gro` file.
+    detailed : bool, default=False
+        If True, return a detailed report containing the energies of each term.
 
     Returns
     -------
@@ -75,23 +82,39 @@ def get_gromacs_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
+    return _process(
+        _get_gromacs_energies(
+            interchange=interchange,
+            mdp=mdp,
+            round_positions=round_positions,
+        ),
+        detailed=detailed,
+    )
+
+
+def _get_gromacs_energies(
+    interchange: Interchange,
+    mdp: str = "auto",
+    round_positions: int = 8,
+) -> dict[str, unit.Quantity]:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
-            off_sys.to_gro("out.gro", writer=writer, decimal=decimal)
-            off_sys.to_top("out.top", writer=writer)
+            prefix = "_tmp"
+            interchange.to_gromacs(prefix=prefix, decimal=round_positions)
+
             if mdp == "auto":
-                mdconfig = MDConfig.from_interchange(off_sys)
-                mdconfig.write_mdp_file("tmp.mdp")
+                mdconfig = MDConfig.from_interchange(interchange)
                 mdp_file = "tmp.mdp"
+                mdconfig.write_mdp_file(mdp_file)
             else:
                 mdp_file = _get_mdp_file(mdp)
-            report = _run_gmx_energy(
-                top_file="out.top",
-                gro_file="out.gro",
+
+            return _run_gmx_energy(
+                top_file="_tmp.top",
+                gro_file="_tmp.gro",
                 mdp_file=mdp_file,
                 maxwarn=2,
             )
-            return report
 
 
 def _run_gmx_energy(
@@ -99,7 +122,7 @@ def _run_gmx_energy(
     gro_file: Union[Path, str],
     mdp_file: Union[Path, str],
     maxwarn: int = 1,
-) -> EnergyReport:
+) -> dict[str, unit.Quantity]:
     """
     Given GROMACS files, return single-point energies as computed by GROMACS.
 
@@ -116,11 +139,11 @@ def _run_gmx_energy(
 
     Returns
     -------
-    report : EnergyReport
-        An `EnergyReport` object containing the single-point energies.
+    energies: Dict[str, unit.Quantity]
+        A dictionary of energies, keyed by the GROMACS energy term name.
 
     """
-    gmx = _find_gromacs_executable()
+    gmx = _find_gromacs_executable(raise_exception=True)
 
     grompp_cmd = f"{gmx} grompp --maxwarn {maxwarn} -o out.tpr"
     grompp_cmd += f" -f {mdp_file} -c {gro_file} -p {top_file}"
@@ -154,67 +177,55 @@ def _run_gmx_energy(
     if mdrun.returncode:
         raise GMXMdrunError(err)
 
-    report = _parse_gmx_energy("out.edr")
-
-    return report
+    return _parse_gmx_energy("out.edr")
 
 
-def _get_gmx_energy_vdw(gmx_energies: Dict) -> "Quantity":
+def _get_gmx_energy_vdw(gmx_energies: dict) -> Quantity:
     """Get the total nonbonded energy from a set of GROMACS energies."""
     gmx_vdw = 0.0 * kj_mol
     for key in ["LJ (SR)", "LJ-14", "Disper. corr.", "Buck.ham (SR)"]:
-        try:
+        if key in gmx_energies:
             gmx_vdw += gmx_energies[key]
-        except KeyError:
-            pass
 
     return gmx_vdw
 
 
-def _get_gmx_energy_coul(gmx_energies: Dict) -> "Quantity":
+def _get_gmx_energy_coul(gmx_energies: dict) -> Quantity:
     gmx_coul = 0.0 * kj_mol
     for key in ["Coulomb (SR)", "Coul. recip.", "Coulomb-14"]:
-        try:
+        if key in gmx_energies:
             gmx_coul += gmx_energies[key]
-        except KeyError:
-            pass
 
     return gmx_coul
 
 
-def _get_gmx_energy_torsion(gmx_energies: Dict) -> "Quantity":
+def _get_gmx_energy_torsion(gmx_energies: dict) -> Quantity:
     """Canonicalize torsion energies from a set of GROMACS energies."""
     gmx_torsion = 0.0 * kj_mol
-    for key in ["Torsion", "Ryckaert-Bell.", "Proper Dih."]:
-        try:
+
+    for key in ["Torsion", "Proper Dih.", "Per. Imp. Dih."]:
+        if key in gmx_energies:
             gmx_torsion += gmx_energies[key]
-        except KeyError:
-            pass
 
     return gmx_torsion
 
 
 @requires_package("panedr")
-def _parse_gmx_energy(edr_path: str) -> EnergyReport:
+def _parse_gmx_energy(edr_path: str) -> dict[str, unit.Quantity]:
     """Parse an `.edr` file written by `gmx energy`."""
     import panedr
 
-    if TYPE_CHECKING:
-        from pandas import DataFrame
+    parsed_energies = panedr.edr_to_df("out.edr").to_dict("index")[0.0]
+    parsed_energies.pop("Time")
 
-    df: DataFrame = panedr.edr_to_df("out.edr")
-    energies_dict: Dict = df.to_dict("index")
-    energies = energies_dict[0.0]
-    energies.pop("Time")
+    #   for key in energies:
+    #       energies[key] *= kj_mol
 
-    for key in energies:
-        energies[key] *= kj_mol
-
-    # TODO: Better way of filling in missing fields
-    # GROMACS may not populate all keys
-    for required_key in ["Bond", "Angle", "Proper Dih."]:
-        if required_key not in energies:
-            energies[required_key] = 0.0 * kj_mol
+    #   # TODO: Better way of filling in missing fields
+    #   # GROMACS may not populate all keys
+    #   for required_key in ["Bond", "Angle", "Proper Dih."]:
+    #       if required_key not in energies:
+    #           energies[required_key] = 0.0 * kj_mol
 
     keys_to_drop = [
         "Kinetic En.",
@@ -230,19 +241,27 @@ def _parse_gmx_energy(edr_path: str) -> EnergyReport:
         "Vir-XZ",
     ]
     for key in keys_to_drop:
-        if key in energies.keys():
-            energies.pop(key)
+        if key in parsed_energies:
+            parsed_energies.pop(key)
 
-    report = EnergyReport()
+    return {key: val * kj_mol for key, val in parsed_energies.items()}
 
-    report.update(
-        {
-            "Bond": energies["Bond"],
-            "Angle": energies["Angle"],
+
+def _process(
+    energies: dict[str, unit.Quantity],
+    detailed: bool = False,
+) -> EnergyReport:
+    """Process energies from GROMACS into a standardized format."""
+    if detailed:
+        return EnergyReport(energies=energies)
+
+    return EnergyReport(
+        energies={
+            "Bond": energies.get("Bond", 0.0 * kj_mol),
+            "Angle": energies.get("Angle", 0.0 * kj_mol),
             "Torsion": _get_gmx_energy_torsion(energies),
+            "RBTorsion": energies.get("Ryckaert-Bell.", 0.0 * kj_mol),
             "vdW": _get_gmx_energy_vdw(energies),
             "Electrostatics": _get_gmx_energy_coul(energies),
-        }
+        },
     )
-
-    return report
