@@ -282,6 +282,12 @@ class IncompatibleTolerancesError(InterchangeException):
     """
 
 
+class MissingVirtualSitesError(InterchangeException):
+    """
+    Raise when virtual sites are expected to exist but are not found.
+    """
+
+
 class VirtualSiteTypeNotImplementedError(InterchangeException):
     """
     Raised when this type of virtual site is not yet implemented.

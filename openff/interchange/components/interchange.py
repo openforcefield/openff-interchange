@@ -300,12 +300,18 @@ class Interchange(DefaultModel):
             raise UnsupportedExportError
 
     @requires_package("nglview")
-    def _visualize_nglview(self) -> "nglview.NGLWidget":
+    def _visualize_nglview(
+        self,
+        include_virtual_sites: bool = False,
+    ) -> "nglview.NGLWidget":
         """Visualize the system using NGLView via a PDB file."""
         import nglview
 
         try:
-            self.to_pdb("_tmp_pdb_file.pdb", writer="openmm")
+            self.to_pdb(
+                "_tmp_pdb_file.pdb",
+                include_virtual_sites=include_virtual_sites,
+            )
         except MissingPositionsError as error:
             raise MissingPositionsError(
                 "Cannot visualize system without positions.",
@@ -495,22 +501,33 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
-    def to_pdb(self, file_path: Union[Path, str], writer="openmm"):
+    def to_pdb(self, file_path: Union[Path, str], include_virtual_sites: bool = False):
         """Export this Interchange to a .pdb file."""
+        from openff.interchange.interop.openmm import _to_pdb
+
         if self.positions is None:
             raise MissingPositionsError(
                 "Positions are required to write a `.pdb` file but found None.",
             )
 
-        if writer == "openmm":
-            from openff.interchange.interop.openmm import _to_pdb
+        # TODO: Simply wire `include_virtual_sites` to `to_openmm_{topology|positions}`?
+        if include_virtual_sites:
+            from openff.interchange.interop._virtual_sites import (
+                get_positions_with_virtual_sites,
+            )
 
-            _topology = Topology(other=self.topology)
-            _topology.box_vectors = self.box
+            topology: openmm.app.Topology = self.to_openmm_topology(
+                ensure_unique_atom_names=False,
+            )
+            positions = get_positions_with_virtual_sites(self)
 
-            _to_pdb(file_path, _topology, self.positions)
         else:
-            raise UnsupportedExportError
+            topology: openmm.app.Topology = self.topology.to_openmm(
+                ensure_unique_atom_names=False,
+            )
+            positions = self.positions
+
+        _to_pdb(file_path, topology, positions)
 
     def to_psf(self, file_path: Union[Path, str]):
         """Export this Interchange to a CHARMM-style .psf file."""
