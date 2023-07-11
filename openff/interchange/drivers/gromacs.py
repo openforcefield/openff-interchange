@@ -215,7 +215,7 @@ def _parse_gmx_energy(edr_path: str) -> dict[str, unit.Quantity]:
     """Parse an `.edr` file written by `gmx energy`."""
     import panedr
 
-    parsed_energies = panedr.edr_to_df("out.edr").to_dict("index")[0.0]
+    parsed_energies = panedr.edr_to_df(edr_path).to_dict("index")[0.0]
     parsed_energies.pop("Time")
 
     #   for key in energies:
