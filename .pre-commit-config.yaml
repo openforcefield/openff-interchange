@@ -35,7 +35,7 @@ repos:
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.8.0
+  rev: v3.9.0
   hooks:
   - id: pyupgrade
     files: ^openff|plugins|stubs
@@ -54,7 +54,7 @@ repos:
       args: ["openff/interchange/", "-e", "openff/interchange/_tests/"]
       pass_filenames: false
 - repo: https://github.com/asottile/blacken-docs
-  rev: 1.14.0
+  rev: 1.15.0
   hooks:
   - id: blacken-docs
     files: ^docs/
