@@ -8,11 +8,19 @@
 
 A project (and object) for storing, manipulating, and converting molecular mechanics data.
 
+## Documentation
+
+Documentation for Interchange, including examples, a brief user guide, release history, and API docs, is available [on the OpenFF website](https://docs.openforcefield.org/projects/interchange/en/stable). Example notebooks are rendered online among examples from other projects in the [OpenFF ecosysytem docs](https://docs.openforcefield.org/en/latest/examples.html)
+
+## How to cite
+
+Please cite Interchange using the [Zenodo record](https://zenodo.org/record/8147765) of the [latest release](https://zenodo.org/record/8147765) or the version that was used. The BibTeX reference of the latest release can be found [here](https://zenodo.org/record/8147765/export/hx).
+
 ## Installation
 
-Recent versions of the OpenFF Toolkit (0.11.0+) install Interchange by default through its `conda` package.
+Recent versions of the OpenFF Toolkit (0.11.0+, released August 2022) install Interchange by default through its `conda` package.
 
-Interchange can also be installed manually via `conda`:
+Interchange can also be installed manually via `conda` (or `mamba`):
 
 ```shell
 conda install openff-interchange -c conda-forge
