@@ -9,7 +9,25 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## 0.3.6 - 2023-06-29
+## 0.3.8 - 2023-07-14
+
+### Behavior changes
+
+* #667 Clarifies lack of support for (hard) cut-off electrostatics in OpenMM.
+
+### New features
+
+* #763 Optionally adds virtual sites to `Interchange.to_pdb` and `Interchange.visualize` and refactors virtual site position fetching into a common module.
+
+### Bugfixes
+
+* #766 Fixes #765 in which the path to the GROMACS energy file argument was hard-coded in `_parse_gmx_energy`.
+
+### Maintenance
+
+* #759 Improves internal handling of non-bonded settings in OpenMM export.
+
+## 0.3.7 - 2023-06-29
 
 ### New features
 
