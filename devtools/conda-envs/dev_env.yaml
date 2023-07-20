@@ -55,4 +55,4 @@ dependencies:
   - snakeviz
   - tuna
   - pip:
-    - git+https://github.com/mattwthompson/de-forcefields@maint
+    - git+https://github.com/jthorton/de-forcefields
