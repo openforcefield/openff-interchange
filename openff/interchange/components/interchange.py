@@ -619,8 +619,10 @@ class Interchange(DefaultModel):
             ),
         )
 
+    @classmethod
     @experimental
     def from_openmm(
+        cls,
         topology: Optional["openmm.app.Topology"] = None,
         system: Optional["openmm.System"] = None,
         positions: Optional[unit.Quantity] = None,
