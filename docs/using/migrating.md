@@ -78,24 +78,17 @@ Below is a minimal but complete example parameterizing an ethanol molecule with 
 ```python
 from foyer import Forcefield
 import mdtraj as md
-from openff.toolkit.topology import Molecule
+from openff.toolkit import Molecule
 
-# from openff.interchange.components.mdtraj import _OFFBioTop
 from openff.interchange import Interchange
 
-ethanol: Molecule = Molecule.from_smiles("CCO")
+ethanol = Molecule.from_smiles("CCO")
 ethanol.generate_conformers(n_conformers=1)
-topology: Topology = _OFFBioTop(other=ethanol.to_topology())
-topology.mdtop = md.Topology.from_openmm(ethanol.to_topology().to_openmm())
+topology = ethanol.to_topology()
 
 oplsaa: Forcefield = Forcefield(name="oplsaa")
 
 interchange = Interchange.from_foyer(topology=topology, force_field=oplsaa)
-interchange["vdW"].mixing_rule = "lorentz-berthelot"
-interchange.positions = ethanol.conformers[0]
-
-openmm_system = interchange.to_openmm()
-
-interchange.to_gro("out.gro")
-interchange.to_top("out.top")
+assert interchange["vdW"].mixing_rule == "geometric"
+assert interchange.positions.shape == ethanol.conformers[0].shape
 ```
