@@ -1,8 +1,11 @@
+from typing import Optional
+
 from openff.toolkit import Topology
-from openff.units import unit
+from openff.units import Quantity, unit
 from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
+from openff.interchange.common._positions import _infer_positions
 from openff.interchange.components.potentials import Collection
 from openff.interchange.foyer._nonbonded import (
     FoyerElectrostaticsHandler,
@@ -41,9 +44,15 @@ def get_handlers_callable() -> dict[str, _CollectionAlias]:
 def _create_interchange(
     force_field: "Forcefield",
     topology: Topology,
+    box: Optional[Quantity] = None,
+    positions: Optional[Quantity] = None,
 ) -> Interchange:
     interchange = Interchange()
-    interchange.topology = topology
+    _topology = Interchange.validate_topology(topology)
+
+    interchange.positions = _infer_positions(_topology, positions)
+
+    interchange.box = _topology.box_vectors if box is None else box
 
     # This block is from a mega merge, unclear if it's still needed
     for name, handler_class in get_handlers_callable().items():
@@ -51,7 +60,7 @@ def _create_interchange(
 
     vdw_handler = interchange["vdW"]
     vdw_handler.scale_14 = force_field.lj14scale
-    vdw_handler.store_matches(force_field, topology=interchange.topology)
+    vdw_handler.store_matches(force_field, topology=_topology)
     vdw_handler.store_potentials(force_field=force_field)
 
     atom_slots = vdw_handler.key_map
@@ -65,18 +74,16 @@ def _create_interchange(
 
     for name, handler in interchange.collections.items():
         if name not in ["vdW", "Electrostatics"]:
-            handler.store_matches(atom_slots, topology=interchange.topology)
+            handler.store_matches(atom_slots, topology=_topology)
             handler.store_potentials(force_field)
 
     # TODO: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
 
     charges = electrostatics.charges
 
-    for molecule in interchange.topology.molecules:
+    for molecule in _topology.molecules:
         molecule_charges = [
-            charges[
-                TopologyKey(atom_indices=(interchange.topology.atom_index(atom),))
-            ].m
+            charges[TopologyKey(atom_indices=(_topology.atom_index(atom),))].m
             for atom in molecule.atoms
         ]
         molecule.partial_charges = unit.Quantity(
@@ -86,5 +93,7 @@ def _create_interchange(
 
     interchange.collections["vdW"] = vdw_handler
     interchange.collections["Electrostatics"] = electrostatics
+
+    interchange.topology = _topology
 
     return interchange

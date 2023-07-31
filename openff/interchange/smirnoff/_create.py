@@ -7,6 +7,7 @@ from openff.units import Quantity
 from packaging.version import Version
 
 from openff.interchange import Interchange
+from openff.interchange.common._positions import _infer_positions
 from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
     MissingParameterHandlerError,
@@ -19,7 +20,6 @@ from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     SMIRNOFFvdWCollection,
 )
-from openff.interchange.smirnoff._positions import _infer_positions
 from openff.interchange.smirnoff._valence import (
     SMIRNOFFAngleCollection,
     SMIRNOFFBondCollection,
