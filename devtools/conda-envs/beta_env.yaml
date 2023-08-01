@@ -2,6 +2,7 @@ name: beta-env
 channels:
   - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge/label/openmm_rc
+  - conda-forge/label/openff-models_rc
   - conda-forge
   - openeye
 dependencies:
@@ -9,11 +10,11 @@ dependencies:
   - python
   - pip
   - numpy >=1.21
-  - pydantic >=1.10.8,<2.0.0a0
+  - pydantic
   - openmm >=7.6
   # OpenFF stack
   - openff-toolkit >=0.14
-  - openff-models >=0.0.4
+  - openff-models
   - openff-nagl
   - openff-nagl-models
   # Optional features

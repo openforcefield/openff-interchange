@@ -4,12 +4,16 @@ from openff.models.types import FloatQuantity
 from openff.toolkit.topology import Topology
 from openff.units import Quantity, unit
 from openff.utilities.utilities import has_package
-from pydantic import Field, PrivateAttr
 
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.components.potentials import Potential
 from openff.interchange.foyer._base import _copy_params
 from openff.interchange.models import PotentialKey, TopologyKey
+
+try:
+    from pydantic.v1 import Field, PrivateAttr
+except ImportError:
+    from pydantic import Field, PrivateAttr
 
 if has_package("foyer"):
     from foyer.forcefield import Forcefield

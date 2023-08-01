@@ -5,9 +5,13 @@ from typing import Literal
 
 from openff.models.types import FloatQuantity
 from openff.units import unit
-from pydantic import Field
 
 from openff.interchange.components.potentials import Collection
+
+try:
+    from pydantic.v1 import Field
+except ImportError:
+    from pydantic import Field
 
 
 class BaseBondHandler(Collection):

@@ -4,7 +4,11 @@ from typing import Optional
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
 from openff.units import unit
-from pydantic import Field, PositiveInt, PrivateAttr
+
+try:
+    from pydantic.v1 import Field, PositiveInt, PrivateAttr
+except ImportError:
+    from pydantic import Field, PositiveInt, PrivateAttr
 
 
 class GROMACSAtomType(DefaultModel):

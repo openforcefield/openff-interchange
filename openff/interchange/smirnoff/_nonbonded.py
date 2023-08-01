@@ -13,7 +13,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 from openff.units import Quantity, unit
-from pydantic import Field
 
 from openff.interchange.common._nonbonded import (
     ElectrostaticsCollection,
@@ -38,6 +37,11 @@ from openff.interchange.models import (
     VirtualSiteKey,
 )
 from openff.interchange.smirnoff._base import SMIRNOFFCollection, T
+
+try:
+    from pydantic.v1 import Field
+except ImportError:
+    from pydantic import Field
 
 ElectrostaticsHandlerType = Union[
     ElectrostaticsHandler,

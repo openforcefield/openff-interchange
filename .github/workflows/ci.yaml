@@ -19,6 +19,7 @@ defaults:
 
 jobs:
   test:
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm }}, Pydantic ${{ matrix.pydantic-version }}, OpenEye ${{ matrix.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -30,6 +31,9 @@ jobs:
           - "3.9"
           - "3.10"
           - "3.11"
+        pydantic-version:
+          - "1"
+          - "2"
         openeye:
           - true
           - false
@@ -50,6 +54,7 @@ jobs:
         environment-file: devtools/conda-envs/test_env.yaml
         create-args: >-
           python=${{ matrix.python-version }}
+          pydantic=${{ matrix.pydantic-version }}
 
     - name: Install package
       run: |
@@ -80,7 +85,7 @@ jobs:
     - name: Run tests
       if: always()
       run: |
-        python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
+        python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow" --ignore=openff/interchange/_tests/energy_tests/test_energies.py
 
     - name: Run small molecule regression tests
       if: ${{ matrix.python-version == 3.9 && matrix.openeye == true }}

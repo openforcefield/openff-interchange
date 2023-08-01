@@ -1,13 +1,15 @@
 name: openff-interchange-env
 channels:
   - jaimergp/label/unsupported-cudatoolkit-shim
+  - conda-forge/label/openff-models_rc
+  - conda-forge/label/openff-interchange_rc
   - conda-forge
 dependencies:
   # Core
   - python
   - pip
   - numpy >=1.21
-  - pydantic <2.0.0a0
+  - pydantic
   - openmm >=7.6
   # OpenFF stack
   - openff-toolkit >=0.14
@@ -16,7 +18,8 @@ dependencies:
   # Optional features
   - unyt
   - mbuild
-  - foyer >=0.11.3
+  # GMSO does not support Pydantic 2
+  # foyer >=0.11.3
   # Testing
   - mdtraj
   - intermol

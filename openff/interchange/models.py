@@ -3,7 +3,11 @@ import abc
 from typing import Literal, Optional
 
 from openff.models.models import DefaultModel
-from pydantic import Field
+
+try:
+    from pydantic.v1 import Field
+except ImportError:
+    from pydantic import Field
 
 
 class TopologyKey(DefaultModel, abc.ABC):

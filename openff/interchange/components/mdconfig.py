@@ -4,13 +4,17 @@ from typing import TYPE_CHECKING, Literal
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
 from openff.units import unit
-from pydantic import Field
 
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
+
+try:
+    from pydantic.v1 import Field
+except ImportError:
+    from pydantic import Field
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange

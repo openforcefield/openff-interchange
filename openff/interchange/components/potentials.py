@@ -9,7 +9,6 @@ from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
-from pydantic import Field, PrivateAttr, validator
 
 from openff.interchange.exceptions import MissingParametersError
 from openff.interchange.models import (
@@ -18,6 +17,11 @@ from openff.interchange.models import (
     TopologyKey,
 )
 from openff.interchange.warnings import InterchangeDeprecationWarning
+
+try:
+    from pydantic.v1 import Field, PrivateAttr, validator
+except ImportError:
+    from pydantic import Field, PrivateAttr, validator
 
 if has_package("jax"):
     from jax import numpy as jax_numpy

@@ -5,7 +5,6 @@ from typing import Optional
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
 from openff.units import unit
-from pydantic import validator
 
 from openff.interchange.constants import kj_mol
 from openff.interchange.exceptions import (
@@ -13,6 +12,11 @@ from openff.interchange.exceptions import (
     IncompatibleTolerancesError,
     InvalidEnergyError,
 )
+
+try:
+    from pydantic.v1 import validator
+except ImportError:
+    from pydantic import validator
 
 _KNOWN_ENERGY_TERMS: set[str] = {
     "Bond",
