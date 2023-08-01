@@ -5,11 +5,15 @@ from typing import DefaultDict, Literal, Optional, Union
 
 from openff.models.types import FloatQuantity
 from openff.units import Quantity, unit
-from pydantic import Field, PrivateAttr
 
 from openff.interchange.components.potentials import Collection
 from openff.interchange.constants import _PME
 from openff.interchange.models import LibraryChargeTopologyKey, TopologyKey
+
+try:
+    from pydantic.v1 import Field, PrivateAttr
+except ImportError:
+    from pydantic import Field, PrivateAttr
 
 
 class _NonbondedCollection(Collection, abc.ABC):  # noqa

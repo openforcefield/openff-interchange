@@ -11,7 +11,6 @@ from openff.models.types import ArrayQuantity, QuantityEncoder
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.units import unit
 from openff.utilities.utilities import has_package, requires_package
-from pydantic import Field, validator
 
 from openff.interchange._experimental import experimental
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
@@ -34,6 +33,11 @@ from openff.interchange.exceptions import (
 from openff.interchange.smirnoff._valence import SMIRNOFFConstraintCollection
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 from openff.interchange.warnings import InterchangeDeprecationWarning
+
+try:
+    from pydantic.v1 import Field, validator
+except ImportError:
+    from pydantic import Field, validator
 
 if has_package("foyer"):
     from foyer.forcefield import Forcefield as FoyerForcefield

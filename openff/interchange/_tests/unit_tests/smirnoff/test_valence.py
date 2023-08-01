@@ -15,7 +15,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ImproperTorsionHandler,
 )
 from openff.units import unit
-from pydantic import ValidationError
 
 from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest
@@ -30,6 +29,11 @@ from openff.interchange.smirnoff._valence import (
     SMIRNOFFImproperTorsionCollection,
     _check_molecule_uniqueness,
 )
+
+try:
+    from pydantic.v1 import ValidationError
+except ImportError:
+    from pydantic import ValidationError
 
 
 class TestSMIRNOFFValenceCollections(_BaseTest):

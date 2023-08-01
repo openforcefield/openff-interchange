@@ -1,6 +1,5 @@
 from openff.toolkit.topology import Topology
 from openff.units import unit
-from pydantic import Field
 
 from openff.interchange.common._valence import (
     AngleCollection,
@@ -15,6 +14,11 @@ from openff.interchange.foyer._base import (
     _get_potential_key_id,
 )
 from openff.interchange.models import PotentialKey, TopologyKey
+
+try:
+    from pydantic.v1 import Field
+except ImportError:
+    from pydantic import Field
 
 
 class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler, BondCollection):

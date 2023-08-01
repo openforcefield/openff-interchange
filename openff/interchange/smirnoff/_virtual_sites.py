@@ -7,7 +7,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     VirtualSiteHandler,
 )
 from openff.units import unit
-from pydantic import Field
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import _validated_list_to_array
@@ -17,6 +16,11 @@ from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     SMIRNOFFvdWCollection,
 )
+
+try:
+    from pydantic.v1 import Field
+except ImportError:
+    from pydantic import Field
 
 # The use of `type` as a field name conflicts with the built-in `type()` when used with PEP 585
 _ListOfHandlerTypes = list[type[ParameterHandler]]
