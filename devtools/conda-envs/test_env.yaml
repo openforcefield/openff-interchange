@@ -7,7 +7,7 @@ dependencies:
   - python
   - pip
   - numpy >=1.21
-  - pydantic <2.0.0a0
+  - pydantic
   - openmm >=7.6
   # OpenFF stack
   - openff-toolkit >=0.14

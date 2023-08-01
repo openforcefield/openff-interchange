@@ -6,7 +6,7 @@ dependencies:
   # Core
   - python
   - pip
-  - pydantic >=1.10.8,<2.0.0a0
+  - pydantic
   # OpenFF stack
   - openff-toolkit >=0.14
   - openff-models >=0.0.4
