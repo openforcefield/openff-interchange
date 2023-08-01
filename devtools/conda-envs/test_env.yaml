@@ -18,7 +18,8 @@ dependencies:
   # Optional features
   - unyt
   - mbuild
-  - foyer >=0.11.3
+  # GMSO does not support Pydantic 2
+  # foyer >=0.11.3
   # Testing
   - mdtraj
   - intermol
