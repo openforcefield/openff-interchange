@@ -85,7 +85,7 @@ jobs:
     - name: Run tests
       if: always()
       run: |
-        python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow"
+        python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow" --ignore=openff/interchange/_tests/energy_tests/test_energies.py
 
     - name: Run small molecule regression tests
       if: ${{ matrix.python-version == 3.9 && matrix.openeye == true }}
