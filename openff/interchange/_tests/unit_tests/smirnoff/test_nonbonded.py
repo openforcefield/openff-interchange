@@ -8,6 +8,7 @@ from openff.toolkit.typing.engines.smirnoff import (
     ToolkitAM1BCCHandler,
     vdWHandler,
 )
+from openff.toolkit.utils.exceptions import SMIRNOFFVersionError
 from openff.units import unit
 from packaging.version import Version
 
@@ -147,14 +148,20 @@ class TestvdWUpDownConversion(_BaseTest):
         if handler.version == Version("0.4"):
             pytest.skip("Don't test upconversion if the toolkit already did it")
 
-        _upconvert_vdw_handler(handler)
+        try:
+            _upconvert_vdw_handler(handler)
+        except SMIRNOFFVersionError:
+            pytest.skip("The installed version of the toolkit does not support 0.4")
 
         assert handler.version == Version("0.4")
         assert handler.periodic_method == "cutoff"
         assert handler.nonperiodic_method == "no-cutoff"
 
     def test_downconversion(self):
-        handler = vdWHandler(version=0.4)
+        try:
+            handler = vdWHandler(version=0.4)
+        except SMIRNOFFVersionError:
+            pytest.skip("The installed version of the toolkit does not support 0.4")
 
         _downconvert_vdw_handler(handler)
 
