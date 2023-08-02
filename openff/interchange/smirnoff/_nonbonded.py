@@ -1,5 +1,6 @@
 import copy
 import functools
+import warnings
 from collections.abc import Iterable
 from typing import Any, Literal, Optional, Union
 
@@ -65,6 +66,59 @@ def _add_charges(
 ) -> Quantity:
     """Add two charges together."""
     return charge1 + charge2
+
+
+def _upconvert_vdwhandler(vdw_handler: vdWHandler):
+    """Given a vdW with version 0.3, up-convert to 0.4."""
+    from packaging.version import Version
+
+    if vdw_handler.version >= Version("0.4"):
+        return
+
+    elif vdw_handler.version == Version("0.3"):
+        warnings.warn(
+            "Automatically up-converting vdWHandler from version 0.3 to 0.4. Consider manually upgrading "
+            "this vdW (or <vdW> section in an OFFXML file) to 0.4 or newer. For more details, "
+            "see https://openforcefield.github.io/standards/standards/smirnoff/#vdw.",
+            stacklevel=2,
+        )
+
+        if vdw_handler.method != "cutoff":
+            raise NotImplementedError(
+                "Up-converting vdWHandler with method != 'cutoff' not yet supported.",
+            )
+
+        vdw_handler.version = Version("0.4")
+        vdw_handler.periodic_method = "cutoff"
+        vdw_handler.nonbonded_method = "no-cutoff"
+
+        delattr(vdw_handler, "method")
+
+
+def _downconvert_vdw_handler(vdw_handler: vdWHandler):
+    """Given a vdWHandler with version 0.4, down-convert to 0.3."""
+    from packaging.version import Version
+
+    if vdw_handler.version >= Version("0.3"):
+        return
+
+    elif vdw_handler.version == Version("0.4"):
+        warnings.warn(
+            "Automatically down-converting BondHandler from version 0.4 to 0.3. In the future, this "
+            "down-conversion will not happen and verison 0.3 will not be supported.",
+            stacklevel=2,
+        )
+
+        if (vdw_handler.peirodic_method != "cutoff") or (
+            vdw_handler.nonbonded_method != "no-cutoff"
+        ):
+            raise NotImplementedError("Down-converting vdWHandler failed.")
+
+        vdw_handler.version = Version("0.4")
+        vdw_handler.method = "cutoff"
+
+        delattr(vdw_handler, "periodic_method")
+        delattr(vdw_handler, "nonperiodic_method")
 
 
 def library_charge_from_molecule(
