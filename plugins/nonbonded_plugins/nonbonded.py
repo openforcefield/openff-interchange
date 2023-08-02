@@ -468,7 +468,7 @@ class SMIRNOFFC4IonCollection(_SMIRNOFFNonbondedCollection):
                 "This handler is only compatible with a single NonbondedForce/CustomNonbondedForce.",
             )
 
-        if type(non_bonded_forces[0]) == openmm.CustomNonbondedForce:
+        if type(non_bonded_forces[0]) is openmm.CustomNonbondedForce:
             raise NotImplementedError(
                 "This handler is only compatible with a single NonbondedForce/CustomNonbondedForce.",
             )

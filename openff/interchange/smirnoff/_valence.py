@@ -342,15 +342,15 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
 
         try:
             constraint_handler = [
-                p for p in parameter_handlers if type(p) == ConstraintHandler
+                p for p in parameter_handlers if type(p) is ConstraintHandler
             ][0]
         except IndexError:
             return
 
         constraint_matches = constraint_handler.find_matches(topology)
 
-        if any([type(p) == BondHandler for p in parameter_handlers]):
-            bond_handler = [p for p in parameter_handlers if type(p) == BondHandler][0]
+        if any([type(p) is BondHandler for p in parameter_handlers]):
+            bond_handler = [p for p in parameter_handlers if type(p) is BondHandler][0]
             # This should be passed in as a parameter
             assert bonds is not None
         else:

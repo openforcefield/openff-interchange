@@ -279,7 +279,7 @@ def _process_improper_torsion_forces(interchange, openmm_sys, particle_map):
         return
 
     for force in openmm_sys.getForces():
-        if type(force) == openmm.PeriodicTorsionForce:
+        if type(force) is openmm.PeriodicTorsionForce:
             torsion_force = force
             break
     else:

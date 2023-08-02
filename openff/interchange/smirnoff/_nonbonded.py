@@ -318,7 +318,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
             for parameter_key, parameter_value in potential.parameters.items():
                 if parameter_key == "charge_increments":
-                    if type(topology_key) != VirtualSiteKey:
+                    if type(topology_key) is not VirtualSiteKey:
                         raise RuntimeError
 
                     total_charge = numpy.sum(parameter_value)
@@ -426,7 +426,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     )
 
         toolkit_handler_with_metadata = [
-            p for p in parameter_handlers if type(p) == ElectrostaticsHandler
+            p for p in parameter_handlers if type(p) is ElectrostaticsHandler
         ][0]
 
         handler = cls(
@@ -546,7 +546,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         }
 
         parameter_matches = {key: val for key, val in unique_parameter_matches.values()}
-        if type(parameter_handler) == ChargeIncrementModelHandler:
+        if type(parameter_handler) is ChargeIncrementModelHandler:
             for atom_indices, val in parameter_matches.items():
                 charge_increments = val.parameter_type.charge_increment
 

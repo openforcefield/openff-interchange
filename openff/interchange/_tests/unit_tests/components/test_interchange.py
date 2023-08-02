@@ -235,7 +235,7 @@ class TestInterchange(_BaseTest):
         assert "ProperTorsions" in out.collections.keys()
         assert "vdW" in out.collections.keys()
 
-        assert type(out.topology) == Topology
+        assert type(out.topology) is Topology
         assert isinstance(out.topology, Topology)
 
     def test_validate_simple_topology(self, sage):
@@ -258,7 +258,7 @@ class TestInterchange(_BaseTest):
         assert "ProperTorsions" in out.collections.keys()
         assert "vdW" in out.collections.keys()
 
-        assert type(out.topology) == Topology
+        assert type(out.topology) is Topology
         assert isinstance(out.topology, Topology)
 
     def test_to_openmm_simulation(self, sage):
