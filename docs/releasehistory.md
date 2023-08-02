@@ -9,7 +9,12 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.3.10 - 2023-08-02
+
+### New features
+
+* #781 Adds support for version 0.4 of the SMIRNOFF vdW section.
+* #780 Adds compatibility with Pydantic v2, using the existing v1 API.
 
 ### Behavior changes
 
