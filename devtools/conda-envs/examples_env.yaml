@@ -30,3 +30,5 @@ dependencies:
   # Drivers
   - gromacs >=2021=nompi*
   - lammps
+  - pip:
+    - git+https://github.com/openforcefield/openff-toolkit.git@vdw-0.4

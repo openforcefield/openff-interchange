@@ -232,9 +232,9 @@ def _vdw(interchange: Interchange, force_field: ForceField, topology: Topology):
         return
 
     if force_field["vdW"].version == Version("0.4"):
-        from openff.interchange.smirnoff._nonbonded import _downconvert_vdwhandler
+        from openff.interchange.smirnoff._nonbonded import _downconvert_vdw_handler
 
-        _downconvert_vdwhandler(force_field["vdW"])
+        _downconvert_vdw_handler(force_field["vdW"])
 
     interchange.collections.update(
         {
