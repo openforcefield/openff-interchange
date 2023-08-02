@@ -15,6 +15,7 @@ from openff.interchange.exceptions import (
 from openff.interchange.models import BondKey
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFvdWCollection,
+    _downconvert_vdw_handler,
     library_charge_from_molecule,
 )
 from openff.interchange.smirnoff._valence import (
@@ -372,6 +373,9 @@ class TestMatrixRepresentations(_BaseTest):
                 topology=ethanol_top,
             )
         elif handler_name == "vdW":
+            # Ensure this is 0.3 until everything assumes 0.4
+            _downconvert_vdw_handler(sage[handler_name])
+
             handler = SMIRNOFFvdWCollection.create(
                 parameter_handler=sage[handler_name],
                 topology=ethanol_top,

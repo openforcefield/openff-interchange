@@ -25,7 +25,6 @@ from openff.interchange.exceptions import (
     InterchangeException,
     MissingPositionsError,
     PluginCompatibilityError,
-    UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
 from openff.interchange.interop.openmm import (
@@ -48,18 +47,6 @@ nonbonded_methods = [
         "electrostatics_periodic": "PME",
         "periodic": False,
         "result": openmm.NonbondedForce.NoCutoff,
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic": "PME",
-        "periodic": True,
-        "result": openmm.NonbondedForce.LJPME,
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic": "PME",
-        "periodic": False,
-        "result": UnsupportedCutoffMethodError,
     },
 ]
 
