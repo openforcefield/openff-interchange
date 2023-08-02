@@ -82,6 +82,11 @@ jobs:
       run: |
         micromamba install ambertools -c conda-forge -yq
 
+    - name: Install Foyer
+      if: ${{ matrix.pydantic-version == "1" }}
+      run: |
+        micromamba install foyer -c conda-forge -yq
+
     - name: Run tests
       if: always()
       run: |
