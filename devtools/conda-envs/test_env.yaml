@@ -1,8 +1,6 @@
 name: openff-interchange-env
 channels:
   - jaimergp/label/unsupported-cudatoolkit-shim
-  - conda-forge/label/openff-models_rc
-  - conda-forge/label/openff-interchange_rc
   - conda-forge
 dependencies:
   # Core
@@ -14,7 +12,7 @@ dependencies:
   # OpenFF stack
   - openff-toolkit >=0.14
   - openff-units
-  - openff-models
+  - openff-models =0.1
   # Optional features
   - unyt
   - mbuild

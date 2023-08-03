@@ -12,7 +12,7 @@ dependencies:
   - openmm
   # OpenFF stack
   - openff-toolkit >=0.14
-  - openff-models
+  - openff-models =0.1
   - openff-nagl
   - openff-nagl-models
   # Optional features
