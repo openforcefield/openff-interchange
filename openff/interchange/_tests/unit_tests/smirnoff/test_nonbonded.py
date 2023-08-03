@@ -6,12 +6,19 @@ from openff.toolkit.typing.engines.smirnoff import (
     ElectrostaticsHandler,
     LibraryChargeHandler,
     ToolkitAM1BCCHandler,
+    vdWHandler,
 )
+from openff.toolkit.utils.exceptions import SMIRNOFFVersionError
 from openff.units import unit
+from packaging.version import Version
 
 from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest
-from openff.interchange.smirnoff._nonbonded import SMIRNOFFElectrostaticsCollection
+from openff.interchange.smirnoff._nonbonded import (
+    SMIRNOFFElectrostaticsCollection,
+    _downconvert_vdw_handler,
+    _upconvert_vdw_handler,
+)
 
 
 class TestNonbonded(_BaseTest):
@@ -132,6 +139,42 @@ class TestNonbonded(_BaseTest):
         else:
             assert not uses_elf10
             numpy.testing.assert_allclose(partial_charges, assigned_charges)
+
+
+class TestvdWUpDownConversion(_BaseTest):
+    def test_upconversion(self):
+        handler = vdWHandler(version=0.3, method="cutoff")
+
+        if handler.version == Version("0.4"):
+            pytest.skip("Don't test upconversion if the toolkit already did it")
+
+        try:
+            _upconvert_vdw_handler(handler)
+        except SMIRNOFFVersionError:
+            pytest.skip("The installed version of the toolkit does not support 0.4")
+
+        assert handler.version == Version("0.4")
+        assert handler.periodic_method == "cutoff"
+        assert handler.nonperiodic_method == "no-cutoff"
+
+    def test_downconversion(self):
+        try:
+            handler = vdWHandler(version=0.4)
+        except SMIRNOFFVersionError:
+            pytest.skip("The installed version of the toolkit does not support 0.4")
+
+        _downconvert_vdw_handler(handler)
+
+        assert handler.version == Version("0.3")
+        assert handler.method == "cutoff"
+
+        # Update when https://github.com/openforcefield/openff-toolkit/issues/1680 is resolved
+        try:
+            assert not hasattr(handler, "nonperiodic_method")
+            assert not hasattr(handler, "periodic_method")
+        except AssertionError:
+            assert not hasattr(handler, "__delete__")
+            pytest.skip("ParameterAttribute.__delete__ not implemented")
 
 
 class TestSMIRNOFFChargeIncrements(_BaseTest):

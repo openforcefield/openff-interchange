@@ -25,7 +25,6 @@ from openff.interchange.exceptions import (
     InterchangeException,
     MissingPositionsError,
     PluginCompatibilityError,
-    UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
 from openff.interchange.interop.openmm import (
@@ -48,18 +47,6 @@ nonbonded_methods = [
         "electrostatics_periodic": "PME",
         "periodic": False,
         "result": openmm.NonbondedForce.NoCutoff,
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic": "PME",
-        "periodic": True,
-        "result": openmm.NonbondedForce.LJPME,
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic": "PME",
-        "periodic": False,
-        "result": UnsupportedCutoffMethodError,
     },
 ]
 
@@ -112,7 +99,7 @@ class TestOpenMM(_BaseTest):
             force_field=sage,
             topology=topology,
         )
-        if type(result) == int:
+        if type(result) is int:
             nonbonded_method = result
             # The method is validated and may raise an exception if it's not supported.
             sage.get_parameter_handler("vdW", {}).method = vdw_method
@@ -290,7 +277,7 @@ class TestOpenMM(_BaseTest):
         # The only angle in the system (H-O-H) includes bonds with constrained lengths
         # and a constrained angle, so by convention a force should NOT be added
         for force in openmm_system.getForces():
-            if type(force) == openmm.HarmonicAngleForce:
+            if type(force) is openmm.HarmonicAngleForce:
                 assert force.getNumAngles() == 0
                 break
         else:

@@ -47,7 +47,7 @@ class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
         new_k = []
         new_length = []
         for force in new.getForces():
-            if type(force) == openmm.HarmonicBondForce:
+            if type(force) is openmm.HarmonicBondForce:
                 for i in range(force.getNumBonds()):
                     new_k.append(force.getBondParameters(i)[3]._value)
                     new_length.append(force.getBondParameters(i)[2]._value)
@@ -55,7 +55,7 @@ class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
         ref_k = []
         ref_length = []
         for force in ref.getForces():
-            if type(force) == openmm.HarmonicBondForce:
+            if type(force) is openmm.HarmonicBondForce:
                 for i in range(force.getNumBonds()):
                     ref_k.append(force.getBondParameters(i)[3]._value)
                     ref_length.append(force.getBondParameters(i)[2]._value)

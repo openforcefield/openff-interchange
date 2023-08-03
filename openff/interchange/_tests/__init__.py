@@ -193,7 +193,7 @@ kj_rad2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.radian**2
 
 def _get_charges_from_openmm_system(omm_sys: openmm.System):
     for force in omm_sys.getForces():
-        if type(force) == openmm.NonbondedForce:
+        if type(force) is openmm.NonbondedForce:
             break
     for idx in range(omm_sys.getNumParticles()):
         param = force.getParticleParameters(idx)
@@ -220,7 +220,7 @@ def _get_epsilon_from_nonbonded_force(
 
 def _get_lj_params_from_openmm_system(omm_sys: openmm.System):
     for force in omm_sys.getForces():
-        if type(force) == openmm.NonbondedForce:
+        if type(force) is openmm.NonbondedForce:
             break
     n_particles = omm_sys.getNumParticles()
     sigmas = np.asarray([*_get_sigma_from_nonbonded_force(n_particles, force)])
@@ -374,7 +374,7 @@ def _compare_exceptions(force1, force2):
 
 
 def _get_force(openmm_sys: openmm.System, force_type):
-    forces = [f for f in openmm_sys.getForces() if type(f) == force_type]
+    forces = [f for f in openmm_sys.getForces() if type(f) is force_type]
 
     if len(forces) > 1:
         raise NotImplementedError("Not yet able to process duplicate forces types")

@@ -746,7 +746,7 @@ class Interchange(DefaultModel):
 
     def __getitem__(self, item: str):  # noqa
         """Syntax sugar for looking up collections or other components."""
-        if type(item) != str:
+        if type(item) is not str:
             raise LookupError(
                 "Only str arguments can be currently be used for lookups.\n"
                 f"Found item {item} of type {type(item)}",
