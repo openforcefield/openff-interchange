@@ -10,9 +10,7 @@ from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandle
 from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.units.openmm import ensure_quantity
-from openff.utilities.testing import skip_if_missing
-from openmm import app
-from openmm import unit as openmm_unit
+from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, _BaseTest, needs_gmx
@@ -34,6 +32,10 @@ if sys.version_info >= (3, 10):
     from importlib import resources
 else:
     import importlib_resources as resources
+
+if has_package("openmm"):
+    import openmm.app
+    import openmm.unit
 
 
 @needs_gmx
@@ -79,7 +81,7 @@ class TestGROMACSGROFile(_BaseTest):
         # floats; converting through Pint-like quantities might produce a
         # funky double-wrapped thing
         def converter(x):
-            return x.value_in_unit(openmm_unit.nanometer)
+            return x.value_in_unit(openmm.unit.nanometer)
 
         other_coords = numpy.frompyfunc(converter, 1, 1)(intermol_gro.positions).astype(
             float,
@@ -140,10 +142,12 @@ class TestGROMACSGROFile(_BaseTest):
             "atom_names.gro",
         )
 
-        pdb_object = app.PDBFile(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
+        pdb_object = openmm.app.PDBFile(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
+        )
         pdb_atom_names = [atom.name for atom in pdb_object.topology.atoms()]
 
-        openmm_atom_names = app.GromacsGroFile("atom_names.gro").atomNames
+        openmm_atom_names = openmm.app.GromacsGroFile("atom_names.gro").atomNames
 
         assert openmm_atom_names == pdb_atom_names
 
@@ -369,8 +373,10 @@ class TestGROMACSMetadata(_BaseTest):
             "atom_names.top",
         )
 
-        pdb_object = app.PDBFile(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
-        openmm_object = app.GromacsTopFile("atom_names.top")
+        pdb_object = openmm.app.PDBFile(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
+        )
+        openmm_object = openmm.app.GromacsTopFile("atom_names.top")
 
         pdb_atom_names = [atom.name for atom in pdb_object.topology.atoms()]
 

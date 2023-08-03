@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Optional
 
-import openmm
-import openmm.app
+from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange._experimental import experimental
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
@@ -13,10 +12,15 @@ from openff.interchange.common._valence import (
 )
 from openff.interchange.exceptions import UnsupportedImportError
 
+if has_package("openmm"):
+    import openmm
+    import openmm.unit
+
 if TYPE_CHECKING:
     from openff.interchange import Interchange
 
 
+@requires_package("openmm")
 @experimental
 def from_openmm(
     topology: Optional["openmm.app.Topology"] = None,

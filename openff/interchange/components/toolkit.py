@@ -1,5 +1,5 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import networkx as nx
 import numpy as np
@@ -8,7 +8,10 @@ from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.utils.collections import ValidatedList
 from openff.units import Quantity
-from openmm.app import Topology as OpenMMTopology
+from openff.utilities.utilities import has_package
+
+if has_package("openmm") or TYPE_CHECKING:
+    import openmm.app
 
 
 def _get_num_h_bonds(topology: "Topology") -> int:
@@ -104,7 +107,7 @@ def _check_electrostatics_handlers(force_field: "ForceField") -> bool:
     return False
 
 
-def _simple_topology_from_openmm(openmm_topology: "OpenMMTopology") -> Topology:
+def _simple_topology_from_openmm(openmm_topology: "openmm.app.Topology") -> Topology:
     """Convert an OpenMM Topology into an OpenFF Topology consisting **only** of so-called `_SimpleMolecule`s."""
     # TODO: Residue metadata
     # TODO: Splice in fully-defined OpenFF `Molecule`s?

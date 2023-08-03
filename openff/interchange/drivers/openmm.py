@@ -3,17 +3,21 @@ import warnings
 from typing import Optional
 
 import numpy
-import openmm
-import openmm.unit
 from openff.units import unit
 from openff.units.openmm import ensure_quantity
+from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import CannotInferNonbondedEnergyError
 from openff.interchange.interop.openmm._positions import to_openmm_positions
 
+if has_package("openmm"):
+    import openmm
+    import openmm.unit
 
+
+@requires_package("openmm")
 def get_openmm_energies(
     interchange: Interchange,
     round_positions: Optional[int] = None,

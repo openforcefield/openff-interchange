@@ -5,14 +5,12 @@ from collections import defaultdict
 from typing import DefaultDict, Optional
 
 import numpy as np
-import openmm
 import pytest
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.toolkit._tests.create_molecules import create_ethanol
 from openff.toolkit._tests.utils import get_data_file_path
 from openff.units import unit
-from openff.utilities.utilities import has_executable
-from openmm import unit as openmm_unit
+from openff.utilities.utilities import has_executable, has_package, requires_package
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.gromacs import _find_gromacs_executable
@@ -22,6 +20,14 @@ if sys.version_info >= (3, 10):
     from importlib import resources
 else:
     import importlib_resources as resources
+
+
+if has_package("openmm"):
+    import openmm
+    import openmm.unit
+
+    kj_nm2_mol = openmm.unit.kilojoule_per_mole / openmm.unit.nanometer**2
+    kj_rad2_mol = openmm.unit.kilojoule_per_mole / openmm.unit.radian**2
 
 
 def get_test_file_path(test_file: str) -> pathlib.Path:
@@ -187,47 +193,6 @@ needs_not_sander = pytest.mark.skipif(
     reason="sander needs to NOT be installed",
 )
 
-kj_nm2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.nanometer**2
-kj_rad2_mol = openmm_unit.kilojoule_per_mole / openmm_unit.radian**2
-
-
-def _get_charges_from_openmm_system(omm_sys: openmm.System):
-    for force in omm_sys.getForces():
-        if type(force) is openmm.NonbondedForce:
-            break
-    for idx in range(omm_sys.getNumParticles()):
-        param = force.getParticleParameters(idx)
-        yield param[0].value_in_unit(openmm_unit.elementary_charge)
-
-
-def _get_sigma_from_nonbonded_force(
-    n_particles: int,
-    nonbond_force: openmm.NonbondedForce,
-):
-    for idx in range(n_particles):
-        param = nonbond_force.getParticleParameters(idx)
-        yield param[1].value_in_unit(openmm_unit.nanometer)
-
-
-def _get_epsilon_from_nonbonded_force(
-    n_particles: int,
-    nonbond_force: openmm.NonbondedForce,
-):
-    for idx in range(n_particles):
-        param = nonbond_force.getParticleParameters(idx)
-        yield param[2].value_in_unit(openmm_unit.kilojoule_per_mole)
-
-
-def _get_lj_params_from_openmm_system(omm_sys: openmm.System):
-    for force in omm_sys.getForces():
-        if type(force) is openmm.NonbondedForce:
-            break
-    n_particles = omm_sys.getNumParticles()
-    sigmas = np.asarray([*_get_sigma_from_nonbonded_force(n_particles, force)])
-    epsilons = np.asarray([*_get_epsilon_from_nonbonded_force(n_particles, force)])
-
-    return sigmas, epsilons
-
 
 def _get_charges_from_openff_interchange(interchange: Interchange):
     charges_ = [*interchange["Electrostatics"].charges.values()]
@@ -269,10 +234,11 @@ def _create_angle_dict(angle_force):
     return angles
 
 
+@requires_package("openmm")
 def _compare_individual_torsions(x, y):
     assert x[0] == y[0]
     assert x[1] == y[1]
-    assert (x[2] - y[2]) < 1e-15 * openmm_unit.kilojoule_per_mole
+    assert (x[2] - y[2]) < 1e-15 * openmm.unit.kilojoule_per_mole
 
 
 def _compare_torsion_forces(force1, force2):
@@ -288,6 +254,7 @@ def _compare_torsion_forces(force1, force2):
             _compare_individual_torsions(sorted1[key][i], sorted2[key][i])
 
 
+@requires_package("openmm")
 def _compare_bond_forces(force1, force2):
     assert force1.getNumBonds() == force2.getNumBonds()
 
@@ -297,12 +264,13 @@ def _compare_bond_forces(force1, force2):
     for key in bonds1:
         length_diff = bonds2[key][0] - bonds1[key][0]
         assert (
-            abs(length_diff) < 1e-15 * openmm_unit.nanometer
+            abs(length_diff) < 1e-15 * openmm.unit.nanometer
         ), f"Bond lengths differ by {length_diff}"
         k_diff = bonds2[key][1] - bonds1[key][1]
         assert abs(k_diff) < 1e-9 * kj_nm2_mol, f"bond k differ by {k_diff}"
 
 
+@requires_package("openmm")
 def _compare_angle_forces(force1, force2):
     assert force1.getNumAngles() == force2.getNumAngles()
 
@@ -312,7 +280,7 @@ def _compare_angle_forces(force1, force2):
     for key in angles1:
         angle_diff = angles2[key][0] - angles1[key][0]
         assert (
-            abs(angle_diff) < 1e-15 * openmm_unit.radian
+            abs(angle_diff) < 1e-15 * openmm.unit.radian
         ), f"angles differ by {angle_diff}"
         k_diff = angles2[key][1] - angles1[key][1]
         assert abs(k_diff) < 1e-10 * kj_rad2_mol, f"angle k differ by {k_diff}"
@@ -335,6 +303,7 @@ def _compare_nonbonded_settings(force1, force2):
         assert getattr(force1, attr)() == getattr(force2, attr)(), attr
 
 
+@requires_package("openmm")
 def _compare_nonbonded_parameters(force1, force2):
     assert (
         force1.getNumParticles() == force2.getNumParticles()
@@ -344,16 +313,17 @@ def _compare_nonbonded_parameters(force1, force2):
         q1, sig1, eps1 = force1.getParticleParameters(i)
         q2, sig2, eps2 = force2.getParticleParameters(i)
         assert (
-            abs(q2 - q1) < 1e-8 * openmm_unit.elementary_charge
+            abs(q2 - q1) < 1e-8 * openmm.unit.elementary_charge
         ), f"charge mismatch in particle {i}: {q1} vs {q2}"
         assert (
-            abs(sig2 - sig1) < 1e-12 * openmm_unit.nanometer
+            abs(sig2 - sig1) < 1e-12 * openmm.unit.nanometer
         ), f"sigma mismatch in particle {i}: {sig1} vs {sig2}"
         assert (
-            abs(eps2 - eps1) < 1e-12 * openmm_unit.kilojoule_per_mole
+            abs(eps2 - eps1) < 1e-12 * openmm.unit.kilojoule_per_mole
         ), f"epsilon mismatch in particle {i}: {eps1} vs {eps2}"
 
 
+@requires_package("openmm")
 def _compare_exceptions(force1, force2):
     assert (
         force1.getNumExceptions() == force2.getNumExceptions()
@@ -363,16 +333,17 @@ def _compare_exceptions(force1, force2):
         _, _, q1, sig1, eps1 = force1.getExceptionParameters(i)
         _, _, q2, sig2, eps2 = force2.getExceptionParameters(i)
         assert (
-            abs(q2 - q1) < 1e-12 * openmm_unit.elementary_charge**2
+            abs(q2 - q1) < 1e-12 * openmm.unit.elementary_charge**2
         ), f"charge mismatch in exception {i}"
         assert (
-            abs(sig2 - sig1) < 1e-12 * openmm_unit.nanometer
+            abs(sig2 - sig1) < 1e-12 * openmm.unit.nanometer
         ), f"sigma mismatch in exception {i}"
         assert (
-            abs(eps2 - eps1) < 1e-12 * openmm_unit.kilojoule_per_mole
+            abs(eps2 - eps1) < 1e-12 * openmm.unit.kilojoule_per_mole
         ), f"epsilon mismatch in exception {i}"
 
 
+@requires_package("openmm")
 def _get_force(openmm_sys: openmm.System, force_type):
     forces = [f for f in openmm_sys.getForces() if type(f) is force_type]
 

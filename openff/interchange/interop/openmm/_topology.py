@@ -3,10 +3,13 @@ Helper functions for exporting the topology to OpenMM.
 """
 from typing import Union
 
-import openmm.app
+from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
 from openff.interchange.models import VirtualSiteKey
+
+if has_package("openmm"):
+    import openmm.app
 
 
 def to_openmm_topology(

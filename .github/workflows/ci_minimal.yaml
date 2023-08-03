@@ -35,6 +35,10 @@ jobs:
         create-args: >-
           python=${{ matrix.python-version }}
 
+    - name: Uninstall OpenMM
+      run: |
+        micromamba remove --force openmm
+
     - name: Install package
       run: |
         micromamba remove --force openff-interchange openff-interchange-base
