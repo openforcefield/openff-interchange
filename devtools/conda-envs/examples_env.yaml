@@ -6,7 +6,6 @@ channels:
 dependencies:
   # Core
   - python
-  - pip
   - numpy >=1.21
   - pydantic
   - openmm >=7.6
