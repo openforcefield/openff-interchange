@@ -69,7 +69,7 @@ def _add_charges(
 
 
 def _upconvert_vdw_handler(vdw_handler: vdWHandler):
-    """Given a vdW with version 0.3, up-convert to 0.4."""
+    """Given a vdW with version 0.3 or 0.4, up-convert to 0.4 or short-circuit if already 0.4."""
     from packaging.version import Version
 
     if vdw_handler.version >= Version("0.4"):
@@ -176,7 +176,8 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
         Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
 
         """
-        self.method = parameter_handler.method.lower()
+        self.periodic_method = parameter_handler.periodic_method.lower()
+        self.nonperiodic_method = parameter_handler.nonperiodic_method.lower()
         self.cutoff = parameter_handler.cutoff
 
         for potential_key in self.key_map.values():
@@ -220,7 +221,8 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
             scale_15=parameter_handler.scale15,
             cutoff=parameter_handler.cutoff,
             mixing_rule=parameter_handler.combining_rules.lower(),
-            method=parameter_handler.method.lower(),
+            periodic_method=parameter_handler.periodic_method.lower(),
+            nonperiodic_method=parameter_handler.nonperiodic_method.lower(),
             switch_width=parameter_handler.switch_width,
         )
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)

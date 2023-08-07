@@ -82,8 +82,13 @@ class MDConfig(DefaultModel):
         )
         if "vdW" in interchange.collections:
             vdw_collection = interchange["vdW"]
-            mdconfig.vdw_cutoff = vdw_collection.cutoff
-            mdconfig.vdw_method = vdw_collection.method
+
+            if interchange.box is None:
+                mdconfig.vdw_method = vdw_collection.nonperiodic_method
+            else:
+                mdconfig.vdw_method = vdw_collection.periodic_method
+                mdconfig.vdw_cutoff = vdw_collection.cutoff
+
             mdconfig.mixing_rule = vdw_collection.mixing_rule
 
             if vdw_collection.switch_width is not None:
@@ -116,8 +121,13 @@ class MDConfig(DefaultModel):
 
         if "vdW" in interchange.collections:
             vdw_collection = interchange["vdW"]
+
+            if interchange.box is None:
+                vdw_collection.nonperiodic_method = self.vdw_method
+            else:
+                vdw_collection.periodic_method = self.vdw_method
+
             vdw_collection.cutoff = self.vdw_cutoff
-            vdw_collection.method = self.vdw_method
             vdw_collection.mixing_rule = self.mixing_rule
 
             if self.switching_function:

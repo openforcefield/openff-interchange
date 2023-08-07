@@ -128,7 +128,8 @@ class TestSMIRNOFFDefaults(_BaseTest):
                 unit.nanometer,
             ) == pytest.approx(value)
 
-        assert interchange["vdW"].method == "cutoff"
+        assert interchange["vdW"].periodic_method == "cutoff"
+        assert interchange["vdW"].nonperiodic_method == "no-cutoff"
 
         if periodic:
             assert interchange["Electrostatics"].periodic_potential == _PME

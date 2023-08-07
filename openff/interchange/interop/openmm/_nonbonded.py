@@ -803,7 +803,7 @@ def _create_vdw_force(
                 "LJ-PME with split non-bonded forces is not supported due to openmm.CustomNonbondedForce "
                 "not supporting PME. If also using PME electrostatics, try `combine_nonbonded_forces=True`,  "
                 "which should produce a single force with NonbondedForce.LJPME, which uses PME for both "
-                "electrostatics and LJ forces tersm. If your use case would benenfit from split non-bonded "
+                "electrostatics and LJ forces terms. If your use case would benefit from split non-bonded "
                 "forces with LJPME, please file an feature request.",
             )
 
