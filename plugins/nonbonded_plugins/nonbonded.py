@@ -48,9 +48,14 @@ class BuckinghamHandler(ParameterHandler):
 
     cutoff = ParameterAttribute(default=9.0 * unit.angstroms, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=1.0 * unit.angstroms, unit=unit.angstrom)
-    method = ParameterAttribute(
+
+    periodic_method = ParameterAttribute(
         default="cutoff",
-        converter=_allow_only(["cutoff", "PME"]),
+        converter=_allow_only(["cutoff"]),
+    )
+    nonperiodic_method = ParameterAttribute(
+        default="no-cutoff",
+        converter=_allow_only(["no-cutoff"]),
     )
 
     combining_rules = ParameterAttribute(
@@ -86,9 +91,14 @@ class DoubleExponentialHandler(ParameterHandler):
 
     cutoff = ParameterAttribute(default=9.0 * unit.angstroms, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=1.0 * unit.angstroms, unit=unit.angstrom)
-    method = ParameterAttribute(
+
+    periodic_method = ParameterAttribute(
         default="cutoff",
-        converter=_allow_only(["cutoff", "PME"]),
+        converter=_allow_only(["cutoff"]),
+    )
+    nonperiodic_method = ParameterAttribute(
+        default="no-cutoff",
+        converter=_allow_only(["no-cutoff"]),
     )
 
     combining_rules = ParameterAttribute(
@@ -128,7 +138,8 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
         "a*exp(-b*r)-c*r^-6;" "a=sqrt(a1*a2);" "b=2/(1/b1+1/b2);" "c=sqrt(c1*c2);"
     )
 
-    method: str = "cutoff"
+    periodic_method: str = "cutoff"
+    nonperiodic_method: str = "no-cutoff"
 
     mixing_rule: str = "Buckingham"
 
@@ -175,7 +186,8 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
         Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
 
         """
-        self.method = parameter_handler.method.lower()
+        self.periodic_method = parameter_handler.periodic_method.lower()
+        self.nonperiodic_method = parameter_handler.nonperiodic_method.lower()
         self.cutoff = parameter_handler.cutoff
 
         for potential_key in self.slot_map.values():
@@ -213,7 +225,8 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
             scale_15=parameter_handler.scale15,
             cutoff=parameter_handler.cutoff,
             mixing_rule=parameter_handler.combining_rules.lower(),
-            method=parameter_handler.method.lower(),
+            periodic_method=parameter_handler.periodic_method.lower(),
+            nonperiodic_method=parameter_handler.nonperiodic_method.lower(),
             switch_width=parameter_handler.switch_width,
         )
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
@@ -255,7 +268,8 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
         "CombinedR=r_min1+r_min2;"
     )
 
-    method: str = "cutoff"
+    periodic_method: str = "cutoff"
+    nonperiodic_method: str = "no-cutoff"
 
     mixing_rule: str = ""
 
@@ -326,7 +340,8 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
         Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
 
         """
-        self.method = parameter_handler.method.lower()
+        self.periodic_method = parameter_handler.periodic_method.lower()
+        self.nonperiodic_method = parameter_handler.nonperiodic_method.lower()
         self.cutoff = parameter_handler.cutoff
 
         for potential_key in self.slot_map.values():
@@ -366,7 +381,8 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
             scale_15=parameter_handler.scale15,
             cutoff=parameter_handler.cutoff,
             mixing_rule=parameter_handler.combining_rules.lower(),
-            method=parameter_handler.method.lower(),
+            periodic_method=parameter_handler.periodic_method.lower(),
+            nonperiodic_method=parameter_handler.nonperiodic_method.lower(),
             switch_width=parameter_handler.switch_width,
         )
         handler.store_matches(parameter_handler=parameter_handler, topology=topology)
@@ -398,6 +414,9 @@ class SMIRNOFFC4IonCollection(_SMIRNOFFNonbondedCollection):
     is_plugin: bool = True
 
     expression: str = "c*r^-4;c=sqrt(c1*c2);"
+
+    periodic_method: str = "cutoff"
+    nonperiodic_method: str = "no-cutoff"
 
     @classmethod
     def allowed_parameter_handlers(cls) -> _HandlerIterable:

@@ -446,6 +446,19 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
 
         assert isinstance(exception.value.__cause__, AssertionError)
 
+    def test_nocutoff_when_nonperiodic(self, de_force_field):
+        system = Interchange.from_smirnoff(
+            de_force_field,
+            MoleculeWithConformer.from_smiles("CCO").to_topology(),
+        ).to_openmm(combine_nonbonded_forces=False)
+
+        for force in system.getForces():
+            if type(force) in (
+                openmm.NonbondedForce,
+                openmm.CustomNonbondedForce,
+            ):
+                assert force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff
+
     def test_double_exponential_create_simulation(self, de_force_field):
         from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 

@@ -210,7 +210,12 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
 
     if vdw:
         vdw_cutoff: Optional[unit.Quanaity] = vdw.cutoff
-        vdw_method: Optional[str] = getattr(vdw, "method", "cutoff").lower()
+
+        if interchange.box is None:
+            vdw_method: Optional[str] = vdw.nonperiodic_method.lower()
+        else:
+            vdw_method: Optional[str] = vdw.periodic_method.lower()
+
         mixing_rule: Optional[str] = getattr(vdw, "mixing_rule", None)
         vdw_expression: Optional[str] = vdw.expression.replace("**", "^")
     else:
@@ -730,7 +735,7 @@ def _create_multiple_nonbonded_forces(
         ):
             raise UnsupportedCutoffMethodError(
                 "When using `openmm.CustomNonbondedForce`, vdW and electrostatics cutoff methods "
-                "must agree on whether or not periodic boundary conditions should be used."
+                "must agree on whether or not periodic boundary conditions should be used. "
                 f"OpenMM will throw an error. Found vdw method {vdw_force.getNonbondedMethod()}, "
                 f"and electrostatics method {electrostatics_force.getNonbondedMethod()}, ",
             )
@@ -793,6 +798,14 @@ def _create_vdw_force(
 
         _apply_switching_function(vdw_collection, vdw_force)
 
+    elif data.vdw_method == "no-cutoff":
+        if interchange.box is None:
+            vdw_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+        else:
+            raise UnsupportedCutoffMethodError(
+                "vdW method 'no-cutoff' is not valid for periodic systems.",
+            )
+
     elif data.vdw_method == "pme":
         if interchange.box is None:
             raise UnsupportedCutoffMethodError(
@@ -804,8 +817,13 @@ def _create_vdw_force(
                 "not supporting PME. If also using PME electrostatics, try `combine_nonbonded_forces=True`,  "
                 "which should produce a single force with NonbondedForce.LJPME, which uses PME for both "
                 "electrostatics and LJ forces terms. If your use case would benefit from split non-bonded "
-                "forces with LJPME, please file an feature request.",
+                "forces with LJPME, please open a feature request.",
             )
+
+    else:
+        raise UnsupportedCutoffMethodError(
+            f"Unsupported vdW method: {data.vdw_method}",
+        )
 
     return vdw_force
 
