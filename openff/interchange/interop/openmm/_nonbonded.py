@@ -280,7 +280,7 @@ def _create_single_nonbonded_force(
     system.addForce(non_bonded_force)
 
     if interchange.box is None:
-        if (data.vdw_method in ("cutoff", None)) and (
+        if (data.vdw_method in ("no-cutoff", None)) and (
             data.electrostatics_method in ("Coulomb", None)
         ):
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)

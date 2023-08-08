@@ -76,7 +76,9 @@ class DoubleExponentialHandler(ParameterHandler):
         r_min = ParameterAttribute(default=None, unit=unit.nanometers)
         epsilon = ParameterAttribute(default=None, unit=unit.kilojoule_per_mole)
 
-    _TAGNAME = "DoubleExponential"
+    # Give this a different name than the class provided in smirnoff-plugins
+    # since the toolkit forbids two handlers from sharing a _TAGNAME
+    _TAGNAME = "OtherDoubleExponential"
     _INFOTYPE = DoubleExponentialType
 
     scale12 = ParameterAttribute(default=0.0, converter=float)
