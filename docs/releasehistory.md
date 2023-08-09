@@ -9,18 +9,23 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## 0.3.10 - 2023-08-09
+## 0.3.11 - 2023-08-09
+
+### Behavior changes
+
+* #789 Internally use vdWHandler 0.4 when storing SMIRNOFF data and creating OpenMM forces.
+* #789 Using plugins that create `openmm.NonbondedForce` now results in `openmm.NonbondedForce.NoCutoff` when the topology is non-periodic and `vdWHandler.nonperiodic_method == "no-cutoff"`
+
+## 0.3.10 - 2023-08-02
 
 ### New features
 
 * #781 Adds support for version 0.4 of the SMIRNOFF vdW section.
-* #789 Internally use vdWHandler 0.4 when storing SMIRNOFF data and creating OpenMM forces.
 * #780 Adds compatibility with Pydantic v2, using the existing v1 API.
 
 ### Behavior changes
 
 * #778 `Interchange.from_foyer` now infers positions from the input topology, matching the behavior of `Interchange.from_smirnoff`.
-* #789 Using plugins that create `openmm.NonbondedForce` now results in `openmm.NonbondedForce.NoCutoff` when the topology is non-periodic and `vdWHandler.nonperiodic_method == "no-cutoff"`
 
 ### Documentation improvements
 
