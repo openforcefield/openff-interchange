@@ -1,8 +1,6 @@
 name: openff-interchange-env
 channels:
   - jaimergp/label/unsupported-cudatoolkit-shim
-  - conda-forge/label/openff-models_rc
-  - conda-forge/label/openff-interchange_rc
   - conda-forge
 dependencies:
   # Core
@@ -12,7 +10,7 @@ dependencies:
   - pydantic
   - openmm >=7.6
   # OpenFF stack
-  - openff-toolkit >=0.14
+  - openff-toolkit >=0.14.2
   - openff-units
   - openff-models
   # Optional features
@@ -41,4 +39,5 @@ dependencies:
   - types-setuptools
   - pandas-stubs >=1.2.0.56
   - pip:
-    - git+https://github.com/jthorton/de-forcefields
+    - git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods
+    - git+https://github.com/openforcefield/smirnoff-plugins.git@vdw-0.4

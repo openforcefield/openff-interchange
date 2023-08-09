@@ -93,14 +93,23 @@ def parse_sander(file: str) -> dict[str, Union[dict, str]]:
 
 
 class TestMDConfigFromInterchange(_BaseTest):
+    @pytest.mark.parametrize("periodic", [True, False])
     @pytest.mark.parametrize("switch", [True, False])
-    def test_from_interchange(self, sage, basic_top, switch):
+    def test_from_interchange(self, sage, basic_top, switch, periodic):
         from openff.units import unit
+        from packaging.version import Version
 
         from openff.interchange import Interchange
 
+        # After openff-toolkit 0.14.2, this should mean
+        # periodic_method="cutoff", nonperiodic-method="no-cutoff"
+        assert sage["vdW"].version >= Version("0.3.0")
+
         if not switch:
             sage["vdW"].switch_width = 0.0 * unit.nanometer
+
+        if not periodic:
+            basic_top.box_vectors = None
 
         interchange = Interchange.from_smirnoff(sage, basic_top)
         config = MDConfig.from_interchange(interchange)
@@ -111,6 +120,11 @@ class TestMDConfigFromInterchange(_BaseTest):
         else:
             assert not config.switching_function
             # No need to check the value of `switching_distance` ... right?
+
+        if periodic:
+            assert config.vdw_method == "cutoff"
+        else:
+            assert config.vdw_method == "no-cutoff"
 
 
 class TestSMIRNOFFDefaults(_BaseTest):
@@ -128,7 +142,8 @@ class TestSMIRNOFFDefaults(_BaseTest):
                 unit.nanometer,
             ) == pytest.approx(value)
 
-        assert interchange["vdW"].method == "cutoff"
+        assert interchange["vdW"].periodic_method == "cutoff"
+        assert interchange["vdW"].nonperiodic_method == "no-cutoff"
 
         if periodic:
             assert interchange["Electrostatics"].periodic_potential == _PME

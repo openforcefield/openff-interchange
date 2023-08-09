@@ -37,13 +37,15 @@ from openff.interchange.interop.openmm import (
 
 nonbonded_methods = [
     {
-        "vdw_method": "cutoff",
+        "vdw_periodic": "cutoff",
+        "vdw_nonperiodic": "no-cutoff",
         "electrostatics_periodic": "PME",
         "periodic": True,
         "result": openmm.NonbondedForce.PME,
     },
     {
-        "vdw_method": "cutoff",
+        "vdw_periodic": "cutoff",
+        "vdw_nonperiodic": "no-cutoff",
         "electrostatics_periodic": "PME",
         "periodic": False,
         "result": openmm.NonbondedForce.NoCutoff,
@@ -75,7 +77,6 @@ class TestOpenMM(_BaseTest):
     @pytest.mark.parametrize("inputs", nonbonded_methods)
     def test_openmm_nonbonded_methods(self, inputs, sage):
         """See test_nonbonded_method_resolution in openff.toolkit._tests/test_forcefield.py"""
-        vdw_method = inputs["vdw_method"]
         electrostatics_method = inputs["electrostatics_periodic"]
         periodic = inputs["periodic"]
         result = inputs["result"]
@@ -90,7 +91,15 @@ class TestOpenMM(_BaseTest):
         if not periodic:
             topology.box_vectors = None
 
-        sage.get_parameter_handler("vdW", {}).method = vdw_method
+        if inputs["periodic"]:
+            sage.get_parameter_handler("vdW", {}).periodic_method = inputs[
+                "vdw_periodic"
+            ]
+        else:
+            sage.get_parameter_handler("vdW", {}).nonperiodic_method = inputs[
+                "vdw_nonperiodic"
+            ]
+
         sage.get_parameter_handler(
             "Electrostatics",
             {},
@@ -102,7 +111,15 @@ class TestOpenMM(_BaseTest):
         if type(result) is int:
             nonbonded_method = result
             # The method is validated and may raise an exception if it's not supported.
-            sage.get_parameter_handler("vdW", {}).method = vdw_method
+            if inputs["periodic"]:
+                sage.get_parameter_handler("vdW", {}).periodic_method = inputs[
+                    "vdw_periodic"
+                ]
+            else:
+                sage.get_parameter_handler("vdW", {}).nonperiodic_method = inputs[
+                    "vdw_nonperiodic"
+                ]
+
             sage.get_parameter_handler(
                 "Electrostatics",
                 {},
@@ -428,6 +445,19 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
             out.to_openmm(combine_nonbonded_forces=True)
 
         assert isinstance(exception.value.__cause__, AssertionError)
+
+    def test_nocutoff_when_nonperiodic(self, de_force_field):
+        system = Interchange.from_smirnoff(
+            de_force_field,
+            MoleculeWithConformer.from_smiles("CCO").to_topology(),
+        ).to_openmm(combine_nonbonded_forces=False)
+
+        for force in system.getForces():
+            if type(force) in (
+                openmm.NonbondedForce,
+                openmm.CustomNonbondedForce,
+            ):
+                assert force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff
 
     def test_double_exponential_create_simulation(self, de_force_field):
         from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper

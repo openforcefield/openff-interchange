@@ -3,13 +3,5 @@ channels:
   - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
 dependencies:
-  # Core
-  - python
-  - pip
-  - pydantic
-  # OpenFF stack
-  - openff-toolkit >=0.14
-  - openff-models
-  # Testing
-  - pytest
+  - openff-toolkit >=0.14.2
   - pytest-xdist

@@ -228,13 +228,15 @@ def _impropers(interchange, force_field, _topology):
 
 
 def _vdw(interchange: Interchange, force_field: ForceField, topology: Topology):
+    from openff.interchange.smirnoff._nonbonded import _upconvert_vdw_handler
+
     if "vdW" not in force_field.registered_parameter_handlers:
         return
 
-    if force_field["vdW"].version == Version("0.4"):
-        from openff.interchange.smirnoff._nonbonded import _downconvert_vdw_handler
+    # TODO: This modifies a user-supplied argument in-place, might consider
+    # deepcopying it somewhere around `Interchange.from_x`
 
-        _downconvert_vdw_handler(force_field["vdW"])
+    _upconvert_vdw_handler(force_field["vdW"])
 
     interchange.collections.update(
         {

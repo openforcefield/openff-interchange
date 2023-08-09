@@ -57,7 +57,8 @@ class vdWCollection(_NonbondedCollection):
         description="The width over which the switching function is applied",
     )
 
-    method: Literal["cutoff", "no-cutoff", "pme"] = Field("cutoff")
+    periodic_method: Literal["cutoff", "no-cutoff", "pme"] = Field("cutoff")
+    nonperiodic_method: Literal["cutoff", "no-cutoff", "pme"] = Field("no-cutoff")
 
     @classmethod
     def default_parameter_values(cls) -> Iterable[float]:
