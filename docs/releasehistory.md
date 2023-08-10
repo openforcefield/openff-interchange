@@ -9,6 +9,18 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+### API-breaking changes
+
+### Behavior changes
+
+### Bugfixes
+
+### New features
+
+### Improved documentation and warnings
+
 ## 0.3.11 - 2023-08-09
 
 ### Behavior changes
