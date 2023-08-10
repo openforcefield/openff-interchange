@@ -32,7 +32,7 @@ class TestDoubleExponential:
 
     @pytest.fixture()
     def de_force_field(self) -> ForceField:
-        force_field = ForceField("de-force-1.0.0.offxml", load_plugins=True)
+        force_field = ForceField("de-force-1.0.1.offxml", load_plugins=True)
 
         # An early version of this force field includes a blank vdW handler
         # https://github.com/jthorton/de-forcefields/blob/aaaa4c721967310ec8e9e3176b97de858273b2d5/deforcefields/offxml/de-force-1.0.0.offxml#L325-L327
@@ -49,7 +49,7 @@ class TestDoubleExponential:
         return force_field
 
     def test_loadable(self):
-        ForceField("de-force-1.0.0.offxml", load_plugins=True)
+        ForceField("de-force-1.0.1.offxml", load_plugins=True)
 
     def test_create_interchange(self, de_force_field):
         Interchange.from_smirnoff(
