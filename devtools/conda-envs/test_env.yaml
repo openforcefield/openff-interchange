@@ -28,6 +28,7 @@ dependencies:
   - nbval
   - nglview
   - mdanalysis
+  - smirnoff-plugins =2023
   # Drivers
   - gromacs >=2021=nompi*
   - lammps
@@ -38,4 +39,4 @@ dependencies:
   - types-setuptools
   - pandas-stubs >=1.2.0.56
   - pip:
-    - git+https://github.com/jthorton/de-forcefields
+    - git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods

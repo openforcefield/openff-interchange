@@ -6,13 +6,11 @@ channels:
 dependencies:
   # Core
   - python
-  - pip
   - numpy >=1.21
-  - pydantic
+  - pydantic =1
   - openmm >=7.6
   # OpenFF stack
-  - openff-toolkit >=0.14
-  - openff-forcefields >=2023.05
+  - openff-toolkit >=0.14.2
   # Optional features
   - unyt
   - mbuild

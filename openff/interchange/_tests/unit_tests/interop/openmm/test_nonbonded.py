@@ -12,7 +12,7 @@ class TestUnsupportedCases(_BaseTest):
     def test_ljpme_nonperiodic(self, sage):
         interchange = sage.create_interchange(Molecule.from_smiles("CC").to_topology())
 
-        interchange["vdW"].method = "pme"
+        interchange["vdW"].nonperiodic_method = "pme"
 
         with pytest.raises(
             UnsupportedCutoffMethodError,
