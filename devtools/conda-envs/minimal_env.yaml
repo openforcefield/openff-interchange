@@ -1,7 +1,0 @@
-name: openff-interchange-minimal-env
-channels:
-  - jaimergp/label/unsupported-cudatoolkit-shim
-  - conda-forge
-dependencies:
-  - openff-toolkit >=0.14.2
-  - pytest-xdist

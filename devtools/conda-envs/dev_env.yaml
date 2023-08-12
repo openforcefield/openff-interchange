@@ -57,5 +57,5 @@ dependencies:
   - flake8
   - snakeviz
   - tuna
-  - pip:
-    - git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods
+  # pip:
+    # git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods

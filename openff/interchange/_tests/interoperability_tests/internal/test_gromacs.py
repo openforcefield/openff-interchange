@@ -147,7 +147,7 @@ class TestGROMACSGROFile(_BaseTest):
         )
 
         pdb_object = openmm.app.PDBFile(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
         )
         pdb_atom_names = [atom.name for atom in pdb_object.topology.atoms()]
 
