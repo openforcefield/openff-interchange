@@ -1,9 +1,8 @@
 import random
 
-import openmm.unit
 import pytest
-from openff.toolkit._tests.create_molecules import create_ethanol
 from openff.units import unit
+from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest
@@ -13,17 +12,21 @@ from openff.interchange.exceptions import UnsupportedImportError
 from openff.interchange.interop.openmm._import import from_openmm
 from openff.interchange.interop.openmm._import._import import _convert_nonbonded_force
 
+if has_package("openmm"):
+    import openmm.app
+    import openmm.unit
 
+
+@skip_if_missing("openmm")
 class TestFromOpenMM(_BaseTest):
-    def test_simple_roundtrip(self, monkeypatch, sage_unconstrained):
+    def test_simple_roundtrip(self, monkeypatch, sage_unconstrained, ethanol):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
-        molecule = create_ethanol()
-        molecule.generate_conformers(n_conformers=1)
+        ethanol.generate_conformers(n_conformers=1)
 
         interchange = Interchange.from_smirnoff(
             sage_unconstrained,
-            [molecule],
+            [ethanol],
             box=[4, 4, 4] * unit.nanometer,
         )
 
@@ -47,21 +50,20 @@ class TestFromOpenMM(_BaseTest):
         )
 
 
+@skip_if_missing("openmm")
 class TestConvertNonbondedForce:
-    @pytest.mark.parametrize(
-        "method",
-        [
+    def test_unsupported_method(self):
+        # Cannot parametrize with a class in an optional module
+        for method in (
             openmm.NonbondedForce.NoCutoff,
             openmm.NonbondedForce.CutoffNonPeriodic,
             openmm.NonbondedForce.CutoffPeriodic,
-        ],
-    )
-    def test_unsupported_method(self, method):
-        force = openmm.NonbondedForce()
-        force.setNonbondedMethod(method)
+        ):
+            force = openmm.NonbondedForce()
+            force.setNonbondedMethod(method)
 
-        with pytest.raises(UnsupportedImportError):
-            _convert_nonbonded_force(force)
+            with pytest.raises(UnsupportedImportError):
+                _convert_nonbonded_force(force)
 
     def test_parse_switching_distance(self):
         force = openmm.NonbondedForce()
@@ -93,6 +95,7 @@ class TestConvertNonbondedForce:
         assert vdw.switch_width.m_as(unit.nanometer) == 0.0
 
 
+@skip_if_missing("openmm")
 class TestConvertConstraints(_BaseTest):
     def test_num_constraints(self, monkeypatch, sage, basic_top):
         """Test that the number of constraints is preserved when converting to and from OpenMM"""

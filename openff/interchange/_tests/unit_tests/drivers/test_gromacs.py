@@ -1,5 +1,6 @@
 import pytest
 from openff.units import unit
+from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import needs_gmx
@@ -7,6 +8,7 @@ from openff.interchange.drivers.gromacs import get_gromacs_energies
 from openff.interchange.drivers.openmm import get_openmm_energies
 
 
+@skip_if_missing("openmm")
 @pytest.mark.slow()
 @needs_gmx
 def test_group_impropers(cb8_host, no_charges):

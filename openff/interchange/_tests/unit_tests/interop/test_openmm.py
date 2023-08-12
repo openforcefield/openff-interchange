@@ -2,20 +2,24 @@ from copy import deepcopy
 
 import numpy
 import pytest
-from openff.toolkit._tests.utils import get_14_scaling_factors
 from openff.units import unit
 from openff.units.openmm import ensure_quantity
-from openmm import (
-    HarmonicAngleForce,
-    HarmonicBondForce,
-    NonbondedForce,
-    PeriodicTorsionForce,
-)
+from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, _BaseTest
+from openff.interchange._tests._openmm import get_14_scaling_factors
+
+if has_package("openmm"):
+    from openmm import (
+        HarmonicAngleForce,
+        HarmonicBondForce,
+        NonbondedForce,
+        PeriodicTorsionForce,
+    )
 
 
+@skip_if_missing("openmm")
 class TestOpenMM(_BaseTest):
     def test_no_nonbonded_force(self, sage):
         """
@@ -105,6 +109,7 @@ class TestOpenMM(_BaseTest):
         )
 
 
+@skip_if_missing("openmm")
 class TestOpenMMMissingHandlers(_BaseTest):
     def test_missing_vdw_combine_energies(self, sage):
         from openff.interchange.drivers import get_openmm_energies

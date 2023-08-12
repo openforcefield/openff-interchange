@@ -1,19 +1,14 @@
-"""\
-def _process(
-    raw_energies: Dict[int, openmm.Force],
-    system,
-    combine_nonbonded_forces: bool,
-    detailed: bool,
-) -> EnergyReport:
-"""
-
-import openmm
 import pytest
+from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.openmm import _process
 
+if has_package("openmm"):
+    import openmm
 
+
+@requires_package("openmm")
 class TestProcess:
     @pytest.fixture()
     def dummy_system(self):

@@ -26,7 +26,7 @@ def to_openmm(
     interchange,
     combine_nonbonded_forces: bool = False,
     add_constrained_forces: bool = False,
-) -> openmm.System:
+) -> "openmm.System":
     """
     Convert an Interchange to an OpenmM System.
 

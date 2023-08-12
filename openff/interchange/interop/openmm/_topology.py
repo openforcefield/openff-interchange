@@ -1,21 +1,21 @@
 """
 Helper functions for exporting the topology to OpenMM.
 """
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
 from openff.interchange.models import VirtualSiteKey
 
-if has_package("openmm"):
+if has_package("openmm") or TYPE_CHECKING:
     import openmm.app
 
 
 def to_openmm_topology(
     interchange: "Interchange",
     ensure_unique_atom_names: Union[str, bool] = "residues",
-) -> openmm.app.Topology:
+) -> "openmm.app.Topology":
     """Create an OpenMM Topology containing some virtual site information (if appropriate)."""
     # Heavily cribbed from the toolkit
     # https://github.com/openforcefield/openff-toolkit/blob/0.11.0rc2/openff/toolkit/topology/topology.py

@@ -1,12 +1,14 @@
-import openmm
-import openmm.app
 import parmed
 import pytest
 from openff.toolkit import ForceField, Molecule
-from openff.toolkit._tests.utils import requires_openeye
+from openff.utilities import has_package
 
 from openff.interchange import Interchange
-from openff.interchange._tests import get_test_file_path
+from openff.interchange._tests import get_test_file_path, requires_openeye
+
+if has_package("openmm"):
+    import openmm
+    import openmm.app
 
 
 @pytest.mark.slow()

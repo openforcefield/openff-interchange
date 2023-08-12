@@ -2,15 +2,13 @@ import sys
 from math import exp
 
 import numpy
-import openmm
 import parmed
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
-from openff.toolkit.utils import get_data_file_path
 from openff.units import unit
 from openff.units.openmm import ensure_quantity
-from openff.utilities import has_package, skip_if_missing
+from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, _BaseTest, needs_gmx
@@ -38,6 +36,7 @@ if has_package("openmm"):
     import openmm.unit
 
 
+@skip_if_missing("openmm")
 @needs_gmx
 class TestGROMACSGROFile(_BaseTest):
     _INTERMOL_PATH = resources.files(
@@ -104,13 +103,17 @@ class TestGROMACSGROFile(_BaseTest):
         with pytest.warns(UserWarning, match="gitlab"):
             out.to_gro("tmp.gro")
 
+    @skip_if_missing("openmm")
     @pytest.mark.slow()
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .gro files."""
         import mdtraj
 
         protein = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_HIE.pdb"),
+            get_data_file_path(
+                "proteins/MainChain_HIE.pdb",
+                "openff.toolkit",
+            ),
         )
 
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
@@ -131,10 +134,11 @@ class TestGROMACSGROFile(_BaseTest):
             assert found_residue.name == original_residue.residue_name
             assert str(found_residue.resSeq) == original_residue.residue_number
 
+    @skip_if_missing("openmm")
     @pytest.mark.slow()
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
         )
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
@@ -241,13 +245,17 @@ class TestGROMACS(_BaseTest):
         with pytest.raises(UnsupportedExportError, match="rule `geometric` not compat"):
             interchange.to_top("out.top")
 
+    @skip_if_missing("openmm")
     @pytest.mark.slow()
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .top files."""
         import parmed
         from openff.units.openmm import from_openmm
 
-        pdb_path = get_data_file_path("proteins/MainChain_HIE.pdb")
+        pdb_path = get_data_file_path(
+            "proteins/MainChain_HIE.pdb",
+            "openff.toolkit",
+        )
 
         protein = Molecule.from_polymer_pdb(pdb_path)
 
@@ -359,10 +367,14 @@ class TestGROMACS(_BaseTest):
 
 
 class TestGROMACSMetadata(_BaseTest):
+    @skip_if_missing("openmm")
     @pytest.mark.slow()
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
+            get_data_file_path(
+                "proteins/MainChain_ALA_ALA.pdb",
+                "openff.toolkit",
+            ),
         )
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
@@ -374,7 +386,10 @@ class TestGROMACSMetadata(_BaseTest):
         )
 
         pdb_object = openmm.app.PDBFile(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
+            get_data_file_path(
+                "proteins/MainChain_ALA_ALA.pdb",
+                "openff.toolkit",
+            ),
         )
         openmm_object = openmm.app.GromacsTopFile("atom_names.top")
 

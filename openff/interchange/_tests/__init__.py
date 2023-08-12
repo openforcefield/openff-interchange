@@ -7,12 +7,15 @@ from typing import DefaultDict, Optional
 import numpy as np
 import pytest
 from openff.toolkit import ForceField, Molecule, Topology
-from openff.toolkit._tests.create_molecules import create_ethanol
-from openff.toolkit._tests.utils import get_data_file_path
+from openff.toolkit.utils import (
+    AmberToolsToolkitWrapper,
+    OpenEyeToolkitWrapper,
+    RDKitToolkitWrapper,
+)
 from openff.units import unit
+from openff.utilities import get_data_file_path
 from openff.utilities.utilities import has_executable, has_package, requires_package
 
-from openff.interchange import Interchange
 from openff.interchange.drivers.gromacs import _find_gromacs_executable
 from openff.interchange.drivers.lammps import _find_lammps_executable
 
@@ -28,6 +31,19 @@ if has_package("openmm"):
 
     kj_nm2_mol = openmm.unit.kilojoule_per_mole / openmm.unit.nanometer**2
     kj_rad2_mol = openmm.unit.kilojoule_per_mole / openmm.unit.radian**2
+
+requires_ambertools = pytest.mark.skipif(
+    not AmberToolsToolkitWrapper.is_available(),
+    reason="Test requires AmberTools",
+)
+requires_rdkit = pytest.mark.skipif(
+    not RDKitToolkitWrapper.is_available(),
+    reason="Test requires RDKit",
+)
+requires_openeye = pytest.mark.skipif(
+    not OpenEyeToolkitWrapper.is_available(),
+    reason="Test requires OE toolkit",
+)
 
 
 def get_test_file_path(test_file: str) -> pathlib.Path:
@@ -79,10 +95,6 @@ class _BaseTest:
         tmpdir.chdir()
 
     @pytest.fixture()
-    def ethanol(self):
-        return create_ethanol()
-
-    @pytest.fixture()
     def basic_top(self):
         top = Molecule.from_smiles("C").to_topology()
         top.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
@@ -103,7 +115,9 @@ class _BaseTest:
 
     @pytest.fixture()
     def mainchain_ala(self):
-        molecule = Molecule.from_file(get_data_file_path("proteins/MainChain_ALA.sdf"))
+        molecule = Molecule.from_file(
+            get_data_file_path("proteins/MainChain_ALA.sdf", "openff.toolkit"),
+        )
         molecule._add_default_hierarchy_schemes()
         molecule.perceive_residues()
         molecule.perceive_hierarchy()
@@ -112,7 +126,9 @@ class _BaseTest:
 
     @pytest.fixture()
     def mainchain_arg(self):
-        molecule = Molecule.from_file(get_data_file_path("proteins/MainChain_ARG.sdf"))
+        molecule = Molecule.from_file(
+            get_data_file_path("proteins/MainChain_ARG.sdf", "openff.toolkit"),
+        )
         molecule._add_default_hierarchy_schemes()
         molecule.perceive_residues()
         molecule.perceive_hierarchy()
@@ -194,7 +210,7 @@ needs_not_sander = pytest.mark.skipif(
 )
 
 
-def _get_charges_from_openff_interchange(interchange: Interchange):
+def _get_charges_from_openff_interchange(interchange):
     charges_ = [*interchange["Electrostatics"].charges.values()]
     charges = np.asarray([charge.magnitude for charge in charges_])
     return charges
@@ -344,7 +360,7 @@ def _compare_exceptions(force1, force2):
 
 
 @requires_package("openmm")
-def _get_force(openmm_sys: openmm.System, force_type):
+def _get_force(openmm_sys: "openmm.System", force_type):
     forces = [f for f in openmm_sys.getForces() if type(f) is force_type]
 
     if len(forces) > 1:

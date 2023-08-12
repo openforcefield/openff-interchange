@@ -5,6 +5,7 @@ import numpy
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import unit
+from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.components._packmol import (
     RHOMBIC_DODECAHEDRON,
@@ -298,6 +299,7 @@ def test_pack_diatomic_ion():
     )
 
 
+@skip_if_missing("openmm")
 def test_solvate_structure(molecules):
     benzene = Molecule.from_smiles("c1ccccc1")
 
@@ -325,6 +327,7 @@ def test_solvate_structure(molecules):
     assert len([*topology.unique_molecules]) == 2
 
 
+@skip_if_missing("openmm")
 def test_solvate_topology():
     ligand = Molecule.from_smiles("C1CN2C(=N1)SSC2=S")
     ligand.generate_conformers(n_conformers=1)

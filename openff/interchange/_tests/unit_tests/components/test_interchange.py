@@ -101,6 +101,7 @@ class TestInterchange(_BaseTest):
         with pytest.raises(ValidationError):
             tmp.box = [2, 2, 3, 90, 90, 90]
 
+    @skip_if_missing("openmm")
     def test_basic_combination(self, monkeypatch, sage_unconstrained):
         """Test basic use of Interchange.__add__() based on the README example"""
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
@@ -238,6 +239,7 @@ class TestInterchange(_BaseTest):
         assert type(out.topology) is Topology
         assert isinstance(out.topology, Topology)
 
+    @skip_if_missing("openmm")
     def test_validate_simple_topology(self, sage):
         from openff.interchange.components.toolkit import _simple_topology_from_openmm
 
@@ -261,6 +263,7 @@ class TestInterchange(_BaseTest):
         assert type(out.topology) is Topology
         assert isinstance(out.topology, Topology)
 
+    @skip_if_missing("openmm")
     def test_to_openmm_simulation(self, sage):
         import numpy
         import openmm
@@ -302,6 +305,7 @@ class TestInterchange(_BaseTest):
         )
 
     @skip_if_missing("nglview")
+    @skip_if_missing("openmm")
     def test_visualize(self, sage):
         import nglview
 
@@ -324,6 +328,7 @@ class TestInterchange(_BaseTest):
         assert isinstance(out.visualize(), nglview.NGLWidget)
 
 
+@skip_if_missing("openmm")
 class TestToPDB(_BaseTest):
     def test_to_pdb_with_virtual_sites(self, water, tip4p):
         tip4p.create_interchange(water.to_topology()).to_pdb(
@@ -383,6 +388,7 @@ class TestUnimplementedSMIRNOFFCases(_BaseTest):
 
 
 class TestBadExports(_BaseTest):
+    @skip_if_missing("openmm")
     def test_invalid_topology(self, sage):
         """Test that InvalidTopologyError is caught when passing an unsupported
         topology type to Interchange.from_smirnoff"""
@@ -417,6 +423,7 @@ class TestBadExports(_BaseTest):
             zero_positions.to_gro("foo.gro")
 
 
+@skip_if_missing("openmm")
 class TestInterchangeSerialization(_BaseTest):
     def test_json_roundtrip(self, sage, water, ethanol):
         topology = Topology.from_molecules(
@@ -455,6 +462,7 @@ class TestWrappedCalls(_BaseTest):
 
         return Interchange.from_smirnoff(force_field=sage, topology=top)
 
+    @skip_if_missing("openmm")
     def test_from_openmm_error(self):
         with pytest.raises(ExperimentalFeatureException):
             Interchange.from_openmm()
@@ -463,6 +471,7 @@ class TestWrappedCalls(_BaseTest):
         with pytest.raises(ExperimentalFeatureException):
             Interchange.from_gromacs()
 
+    @skip_if_missing("openmm")
     @pytest.mark.slow()
     def test_from_openmm_called(self, monkeypatch, simple_interchange):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")

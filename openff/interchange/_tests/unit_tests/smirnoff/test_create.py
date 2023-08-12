@@ -34,10 +34,8 @@ def _get_interpolated_bond_k(bond_handler) -> float:
 
 
 class TestCreate(_BaseTest):
-    def test_modified_nonbonded_cutoffs(self, sage):
-        from openff.toolkit._tests.create_molecules import create_ethanol
-
-        topology = Topology.from_molecules(create_ethanol())
+    def test_modified_nonbonded_cutoffs(self, sage, ethanol):
+        topology = Topology.from_molecules(ethanol)
         modified_sage = ForceField(sage.to_string())
 
         modified_sage["vdW"].cutoff = 0.777 * unit.angstrom
@@ -56,17 +54,13 @@ class TestCreate(_BaseTest):
 
         assert numpy.allclose(found_charges, [-0.834, 0.417, 0.417])
 
-    def test_infer_positions(self, sage):
-        from openff.toolkit._tests.create_molecules import create_ethanol
+    def test_infer_positions(self, sage, ethanol):
+        assert Interchange.from_smirnoff(sage, [ethanol]).positions is None
 
-        molecule = create_ethanol()
+        ethanol.generate_conformers(n_conformers=1)
 
-        assert Interchange.from_smirnoff(sage, [molecule]).positions is None
-
-        molecule.generate_conformers(n_conformers=1)
-
-        assert Interchange.from_smirnoff(sage, [molecule]).positions.shape == (
-            molecule.n_atoms,
+        assert Interchange.from_smirnoff(sage, [ethanol]).positions.shape == (
+            ethanol.n_atoms,
             3,
         )
 
@@ -201,26 +195,24 @@ class TestChargeFromMolecules(_BaseTest):
         assert numpy.allclose(expected_charges, found_charges)
 
 
+@skip_if_missing("openmm")
 class TestPartialBondOrdersFromMolecules(_BaseTest):
-    from openff.toolkit._tests.create_molecules import (
-        create_ethanol,
-        create_reversed_ethanol,
-    )
-
     @pytest.mark.parametrize(
         (
-            "get_molecule",
+            "reversed",
             "central_atoms",
         ),
         [
-            (create_ethanol, (1, 2)),
-            (create_reversed_ethanol, (7, 6)),
+            (False, (1, 2)),
+            (True, (7, 6)),
         ],
     )
     def test_interpolated_partial_bond_orders_from_molecules(
         self,
-        get_molecule,
+        reversed,
         central_atoms,
+        ethanol,
+        reversed_ethanol,
     ):
         """Test the fractional bond orders are used to interpolate k and length values as we expect,
         including that the fractional bond order is defined by the value on the input molecule via
@@ -234,23 +226,21 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
         bond length   1.4, 1.3 A                          1.55                1.345 A
         torsion k     1, 1.8 kcal/mol                     1.55                1.44 kcal/mol
         """
-        mol = get_molecule()
-        mol.get_bond_between(*central_atoms).fractional_bond_order = 1.55
+        from openff.toolkit._tests.test_forcefield import xml_ff_bo
+
+        molecule = reversed_ethanol if reversed else ethanol
+
+        molecule.get_bond_between(*central_atoms).fractional_bond_order = 1.55
 
         sorted_indices = tuple(sorted(central_atoms))
 
-        from openff.toolkit._tests.test_forcefield import xml_ff_bo
-
-        forcefield = ForceField(
-            "openff-2.0.0.offxml",
-            xml_ff_bo,
-        )
-        topology = Topology.from_molecules(mol)
-
         out = Interchange.from_smirnoff(
-            force_field=forcefield,
-            topology=topology,
-            partial_bond_orders_from_molecules=[mol],
+            force_field=ForceField(
+                "openff-2.0.0.offxml",
+                xml_ff_bo,
+            ),
+            topology=molecule.to_topology(),
+            partial_bond_orders_from_molecules=[molecule],
         )
 
         bond_key = BondKey(atom_indices=sorted_indices, bond_order=1.55)

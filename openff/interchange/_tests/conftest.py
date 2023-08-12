@@ -1,6 +1,7 @@
 """Pytest configuration."""
 import pytest
 from openff.toolkit import ForceField, Molecule
+from openff.units import Quantity, unit
 
 from openff.interchange._tests import get_test_file_path
 
@@ -34,3 +35,107 @@ def water() -> Molecule:
     molecule = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
     molecule.generate_conformers(n_conformers=1)
     return molecule
+
+
+@pytest.fixture()
+def ethanol() -> Molecule:
+    ethanol = Molecule()
+
+    ethanol.add_atom(6, 0, False)
+    ethanol.add_atom(6, 0, False)
+    ethanol.add_atom(8, 0, False)
+    ethanol.add_atom(1, 0, False)
+    ethanol.add_atom(1, 0, False)
+    ethanol.add_atom(1, 0, False)
+    ethanol.add_atom(1, 0, False)
+    ethanol.add_atom(1, 0, False)
+    ethanol.add_atom(1, 0, False)
+    ethanol.add_bond(0, 1, 1, False, fractional_bond_order=1.33)
+    ethanol.add_bond(1, 2, 1, False, fractional_bond_order=1.23)
+    ethanol.add_bond(0, 3, 1, False, fractional_bond_order=1)
+    ethanol.add_bond(0, 4, 1, False, fractional_bond_order=1)
+    ethanol.add_bond(0, 5, 1, False, fractional_bond_order=1)
+    ethanol.add_bond(1, 6, 1, False, fractional_bond_order=1)
+    ethanol.add_bond(1, 7, 1, False, fractional_bond_order=1)
+    ethanol.add_bond(2, 8, 1, False, fractional_bond_order=1)
+
+    ethanol.partial_charges = Quantity(
+        [-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4],
+        unit.elementary_charge,
+    )
+
+    return ethanol
+
+
+@pytest.fixture()
+def reversed_ethanol() -> Molecule:
+    ethanol = Molecule()
+
+    ethanol.add_atom(1, 0, False)
+    ethanol.add_atom(1, 0, False)
+    ethanol.add_atom(1, 0, False)
+    ethanol.add_atom(1, 0, False)
+    ethanol.add_atom(1, 0, False)
+    ethanol.add_atom(1, 0, False)
+    ethanol.add_atom(8, 0, False)
+    ethanol.add_atom(6, 0, False)
+    ethanol.add_atom(6, 0, False)
+    ethanol.add_bond(8, 7, 1, False, fractional_bond_order=1.33)
+    ethanol.add_bond(7, 6, 1, False, fractional_bond_order=1.23)
+    ethanol.add_bond(8, 5, 1, False, fractional_bond_order=1)
+    ethanol.add_bond(8, 4, 1, False, fractional_bond_order=1)
+    ethanol.add_bond(8, 3, 1, False, fractional_bond_order=1)
+    ethanol.add_bond(7, 2, 1, False, fractional_bond_order=1)
+    ethanol.add_bond(7, 1, 1, False, fractional_bond_order=1)
+    ethanol.add_bond(6, 0, 1, False, fractional_bond_order=1)
+
+    ethanol.partial_charges = Quantity(
+        [0.4, 0.3, 0.2, 0.1, 0.00001, -0.1, -0.2, -0.3, -0.4],
+        unit.elementary_charge,
+    )
+
+    return ethanol
+
+
+@pytest.fixture()
+def cyclohexane() -> Molecule:
+    cyclohexane = Molecule()
+
+    cyclohexane.add_atom(6, 0, False)
+    cyclohexane.add_atom(6, 0, False)
+    cyclohexane.add_atom(6, 0, False)
+    cyclohexane.add_atom(6, 0, False)
+    cyclohexane.add_atom(6, 0, False)
+    cyclohexane.add_atom(6, 0, False)
+    cyclohexane.add_atom(1, 0, False)
+    cyclohexane.add_atom(1, 0, False)
+    cyclohexane.add_atom(1, 0, False)
+    cyclohexane.add_atom(1, 0, False)
+    cyclohexane.add_atom(1, 0, False)
+    cyclohexane.add_atom(1, 0, False)
+    cyclohexane.add_atom(1, 0, False)
+    cyclohexane.add_atom(1, 0, False)
+    cyclohexane.add_atom(1, 0, False)
+    cyclohexane.add_atom(1, 0, False)
+    cyclohexane.add_atom(1, 0, False)
+    cyclohexane.add_atom(1, 0, False)
+    cyclohexane.add_bond(0, 1, 1, False)
+    cyclohexane.add_bond(1, 2, 1, False)
+    cyclohexane.add_bond(2, 3, 1, False)
+    cyclohexane.add_bond(3, 4, 1, False)
+    cyclohexane.add_bond(4, 5, 1, False)
+    cyclohexane.add_bond(5, 0, 1, False)
+    cyclohexane.add_bond(0, 6, 1, False)
+    cyclohexane.add_bond(0, 7, 1, False)
+    cyclohexane.add_bond(1, 8, 1, False)
+    cyclohexane.add_bond(1, 9, 1, False)
+    cyclohexane.add_bond(2, 10, 1, False)
+    cyclohexane.add_bond(2, 11, 1, False)
+    cyclohexane.add_bond(3, 12, 1, False)
+    cyclohexane.add_bond(3, 13, 1, False)
+    cyclohexane.add_bond(4, 14, 1, False)
+    cyclohexane.add_bond(4, 15, 1, False)
+    cyclohexane.add_bond(5, 16, 1, False)
+    cyclohexane.add_bond(5, 17, 1, False)
+
+    return cyclohexane
