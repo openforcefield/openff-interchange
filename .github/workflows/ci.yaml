@@ -41,9 +41,9 @@ jobs:
         exclude:
           - openeye: false
             python-version: "3.11"
-          - pydantic: "1"
+          - pydantic-version: "1"
             python-version: "3.9"
-          - pydantic: "1"
+          - pydantic-version: "1"
             python-version: "3.10"
 
     env:
