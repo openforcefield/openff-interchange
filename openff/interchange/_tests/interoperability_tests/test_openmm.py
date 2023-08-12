@@ -5,7 +5,8 @@ import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.units import unit
-from openff.utilities import get_data_file_path, has_package, skip_if_missing
+from openff.utilities import get_data_file_path, has_package
+from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import (
@@ -1150,6 +1151,7 @@ class TestOpenMMToPDB(_BaseTest):
             out.to_pdb("file_should_not_exist.pdb")
 
 
+@skip_if_missing("openmm")
 class TestBuckingham:
     def test_water_with_virtual_sites(self, water):
         force_field = ForceField(

@@ -231,6 +231,7 @@ class TestBondOrderInterpolation(_BaseTest):
             k2 = bonds_mod.potentials[pot_key2].parameters["k"].m_as(kcal_mol_a2)
             assert k1 == pytest.approx(k2, rel=1e-5), (k1, k2)
 
+    @skip_if_missing("openmm")
     def test_input_conformers_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
