@@ -1,11 +1,9 @@
-import foyer
 import numpy as np
 import pytest
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.units import unit
-from openff.utilities.testing import skip_if_missing
-from openmm import unit as openmm_unit
+from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import (
@@ -20,6 +18,11 @@ from openff.interchange._tests import (
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
 
+if has_package("openmm"):
+    import openmm
+    import openmm.app
+    import openmm.unit
+
 if HAS_GROMACS:
     from openff.interchange.drivers.gromacs import (
         _get_mdp_file,
@@ -31,9 +34,12 @@ if HAS_LAMMPS:
     from openff.interchange.drivers.lammps import get_lammps_energies
 
 
+@skip_if_missing("foyer")
 class TestEnergies(_BaseTest):
     @pytest.fixture(scope="session")
     def oplsaa(self):
+        import foyer
+
         return foyer.forcefields.load_OPLSAA()
 
     @skip_if_missing("mbuild")
@@ -72,9 +78,9 @@ class TestEnergies(_BaseTest):
         gmx_energies = get_gromacs_energies(interchange, mdp=mdp)
 
         tolerances = {
-            "Electrostatics": 2 * openmm_unit.kilojoule_per_mole,
-            "vdW": 2 * openmm_unit.kilojoule_per_mole,
-            "Nonbonded": 2 * openmm_unit.kilojoule_per_mole,
+            "Electrostatics": 2 * openmm.unit.kilojoule_per_mole,
+            "vdW": 2 * openmm.unit.kilojoule_per_mole,
+            "Nonbonded": 2 * openmm.unit.kilojoule_per_mole,
         }
 
         gmx_energies.compare(
@@ -91,8 +97,8 @@ class TestEnergies(_BaseTest):
             )
             lmp_energies = get_lammps_energies(interchange)
             tolerances = {
-                "vdW": 5.0 * openmm_unit.kilojoule_per_mole,
-                "Electrostatics": 5.0 * openmm_unit.kilojoule_per_mole,
+                "vdW": 5.0 * openmm.unit.kilojoule_per_mole,
+                "Electrostatics": 5.0 * openmm.unit.kilojoule_per_mole,
             }
             lmp_energies.compare(other_energies, tolerances)
 

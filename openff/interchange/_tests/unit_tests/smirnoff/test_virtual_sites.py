@@ -1,7 +1,7 @@
 import itertools
+from typing import TYPE_CHECKING
 
 import numpy
-import openmm
 import pytest
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -12,10 +12,14 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 from openff.units.openmm import to_openmm
-from openmm import unit as openmm_unit
+from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest
+
+if has_package("openmm") or TYPE_CHECKING:
+    import openmm
+    import openmm.unit
 
 
 def _get_interpolated_bond_k(bond_handler) -> float:
@@ -27,9 +31,9 @@ def _get_interpolated_bond_k(bond_handler) -> float:
     return bond_handler.potentials[potential_key].parameters["k"].m
 
 
+@skip_if_missing("openmm")
 class TestSMIRNOFFVirtualSites(_BaseTest):
     from openff.toolkit._tests.mocking import VirtualSiteMocking
-    from openmm import unit as openmm_unit
 
     @classmethod
     def build_force_field(cls, v_site_handler: VirtualSiteHandler) -> ForceField:
@@ -109,7 +113,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
 
         context = openmm.Context(
             system,
-            openmm.VerletIntegrator(1.0 * openmm_unit.femtosecond),
+            openmm.VerletIntegrator(1.0 * openmm.unit.femtosecond),
             openmm.Platform.getPlatformByName("Reference"),
         )
 
@@ -246,7 +250,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 return x[numpy.lexsort((x[:, 2], x[:, 1], x[:, 0])), :]
 
             found = sort_coordinates(
-                output_coordinates.value_in_unit(openmm_unit.angstrom),
+                output_coordinates.value_in_unit(openmm.unit.angstrom),
             )
             expected = sort_coordinates(expected_coordinates.m_as(unit.angstrom))
 
@@ -405,7 +409,11 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
         topology: Topology,
         parameters: list[VirtualSiteHandler.VirtualSiteType],
         expected_parameters: list[
-            tuple[openmm_unit.Quantity, openmm_unit.Quantity, openmm_unit.Quantity]
+            tuple[
+                "openmm.unit.Quantity",
+                "openmm.unit.Quantity",
+                "openmm.unit.Quantity",
+            ]
         ],
         expected_n_v_sites: int,
     ):
@@ -453,7 +461,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
         assert system.getNumForces() == 1
         force: openmm.NonbondedForce = next(iter(system.getForces()))
 
-        total_charge = 0.0 * openmm_unit.elementary_charge
+        total_charge = 0.0 * openmm.unit.elementary_charge
 
         for i, (expected_charge, expected_sigma, expected_epsilon) in enumerate(
             expected_parameters,
@@ -467,15 +475,15 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
 
             assert numpy.isclose(
                 expected_charge.m_as(unit.elementary_charge),
-                charge.value_in_unit(openmm_unit.elementary_charge),
+                charge.value_in_unit(openmm.unit.elementary_charge),
             )
             assert numpy.isclose(
                 expected_sigma.m_as(unit.angstrom),
-                sigma.value_in_unit(openmm_unit.angstrom),
+                sigma.value_in_unit(openmm.unit.angstrom),
             )
             assert numpy.isclose(
                 expected_epsilon.m_as(unit.kilojoule_per_mole),
-                epsilon.value_in_unit(openmm_unit.kilojoule_per_mole),
+                epsilon.value_in_unit(openmm.unit.kilojoule_per_mole),
             )
 
             total_charge += charge
@@ -487,5 +495,5 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
 
         assert numpy.isclose(
             expected_total_charge,
-            total_charge.value_in_unit(openmm_unit.elementary_charge),
+            total_charge.value_in_unit(openmm.unit.elementary_charge),
         )

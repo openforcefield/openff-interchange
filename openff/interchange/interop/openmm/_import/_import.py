@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Optional
 
-import openmm
-import openmm.app
+from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange._experimental import experimental
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
@@ -13,14 +12,22 @@ from openff.interchange.common._valence import (
 )
 from openff.interchange.exceptions import UnsupportedImportError
 
+if has_package("openmm"):
+    import openmm
+    import openmm.unit
+
 if TYPE_CHECKING:
+    import openmm
+    import openmm.unit
+
     from openff.interchange import Interchange
 
 
+@requires_package("openmm")
 @experimental
 def from_openmm(
     topology: Optional["openmm.app.Topology"] = None,
-    system: Optional[openmm.System] = None,
+    system: Optional["openmm.System"] = None,
     positions=None,
     box_vectors=None,
 ) -> "Interchange":
@@ -73,7 +80,7 @@ def from_openmm(
 
 
 def _convert_constraints(
-    system: openmm.System,
+    system: "openmm.System",
 ) -> Optional[ConstraintCollection]:
     from openff.units import unit
 
@@ -118,7 +125,7 @@ def _convert_constraints(
 
 
 def _convert_nonbonded_force(
-    force: openmm.NonbondedForce,
+    force: "openmm.NonbondedForce",
 ) -> tuple["vdWCollection", "ElectrostaticsCollection"]:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
@@ -175,7 +182,7 @@ def _convert_nonbonded_force(
 
 
 def _convert_harmonic_bond_force(
-    force: openmm.HarmonicBondForce,
+    force: "openmm.HarmonicBondForce",
 ) -> "BondCollection":
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
@@ -205,7 +212,7 @@ def _convert_harmonic_bond_force(
 
 
 def _convert_harmonic_angle_force(
-    force: openmm.HarmonicAngleForce,
+    force: "openmm.HarmonicAngleForce",
 ) -> "AngleCollection":
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
@@ -235,7 +242,7 @@ def _convert_harmonic_angle_force(
 
 
 def _convert_periodic_torsion_force(
-    force: openmm.PeriodicTorsionForce,
+    force: "openmm.PeriodicTorsionForce",
 ) -> "ProperTorsionCollection":
     # TODO: Can impropers be separated out from a PeriodicTorsionForce?
     # Maybe by seeing if a quartet is in mol/top.propers or .impropers

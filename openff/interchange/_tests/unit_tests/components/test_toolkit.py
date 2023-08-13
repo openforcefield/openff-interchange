@@ -1,6 +1,7 @@
 import pytest
 from openff.toolkit import Molecule, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
+from openff.utilities.testing import skip_if_missing
 
 from openff.interchange._tests import _BaseTest
 from openff.interchange.components.toolkit import (
@@ -90,6 +91,7 @@ class TestToolkitUtils(_BaseTest):
                 attr,
             )
 
+    @skip_if_missing("openmm")
     def test_simple_topology_from_openmm(self):
         simple_topology = _simple_topology_from_openmm(
             Topology.from_molecules(

@@ -6,11 +6,10 @@ dependencies:
   # Core
   - python
   - pip
-  - numpy >=1.21
+  - numpy
   - pydantic
-  - openmm >=7.6
   # OpenFF stack
-  - openff-toolkit >=0.14.2
+  - openff-toolkit-base >=0.14.3
   - openff-units
   - openff-models
   # Optional features
@@ -29,7 +28,6 @@ dependencies:
   - nbval
   - nglview
   - mdanalysis
-  - smirnoff-plugins =2023
   # Drivers
   - gromacs >=2021=nompi*
   - lammps
@@ -39,5 +37,3 @@ dependencies:
   - typing-extensions
   - types-setuptools
   - pandas-stubs >=1.2.0.56
-  - pip:
-    - git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods

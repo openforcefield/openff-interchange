@@ -1,13 +1,16 @@
 import numpy
-import openmm.app
-import openmm.unit
 import pytest
 from openff.toolkit import ForceField, Molecule
 from openff.units import unit
+from openff.utilities import has_package, requires_package
 
 from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest, get_test_file_path
 from openff.interchange.interop.gromacs._import._import import from_files
+
+if has_package("openmm"):
+    import openmm.app
+    import openmm.unit
 
 
 class TestToGro(_BaseTest):
@@ -55,6 +58,7 @@ class TestSettles(_BaseTest):
 
 
 @pytest.mark.slow()
+@requires_package("openmm")
 class TestCommonBoxes(_BaseTest):
     @pytest.mark.parametrize(
         "pdb_file",

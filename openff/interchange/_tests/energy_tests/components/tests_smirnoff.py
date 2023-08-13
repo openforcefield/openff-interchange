@@ -1,16 +1,19 @@
 import numpy as np
-import openmm
 import pytest
 from openff.toolkit import ForceField, Molecule
-from openff.toolkit._tests.utils import get_data_file_path
 from openff.units import unit
-from openmm import unit as openmm_unit
+from openff.utilities import get_data_file_path, has_package
 
 from openff.interchange import Interchange
 from openff.interchange._tests.unit_tests.smirnoff.test_valence import (
     TestBondOrderInterpolation,
 )
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
+
+if has_package("openmm"):
+    import openmm
+    import openmm.app
+    import openmm.unit
 
 
 class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
@@ -21,7 +24,9 @@ class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
             self.xml_ff_bo_bonds,
         )
 
-        mol = Molecule.from_file(get_data_file_path("molecules/CID20742535_anion.sdf"))
+        mol = Molecule.from_file(
+            get_data_file_path("molecules/CID20742535_anion.sdf", "openff.toolkit"),
+        )
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
 
@@ -35,7 +40,7 @@ class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
         ).energies["Bond"]
         toolkit_bond_energy = _get_openmm_energies(
             forcefield.create_openmm_system(top),
-            box_vectors=[[4, 0, 0], [0, 4, 0], [0, 0, 4]] * openmm_unit.nanometer,
+            box_vectors=[[4, 0, 0], [0, 4, 0], [0, 0, 4]] * openmm.unit.nanometer,
             positions=mol.conformers[0],
         ).energies["Bond"]
 

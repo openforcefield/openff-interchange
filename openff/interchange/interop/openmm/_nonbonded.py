@@ -4,11 +4,10 @@ Helper functions for producing `openmm.Force` objects for non-bonded terms.
 from collections import defaultdict
 from typing import DefaultDict, NamedTuple, Optional, Union
 
-import openmm
 from openff.toolkit import Molecule
-from openff.units import unit as off_unit
+from openff.units import unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
-from openmm import unit
+from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
@@ -21,6 +20,10 @@ from openff.interchange.exceptions import (
 )
 from openff.interchange.models import TopologyKey, VirtualSiteKey
 
+if has_package("openmm"):
+    import openmm
+    import openmm.unit
+
 # TODO: Currently, these are not used since the openmm.CustomNonbondedForce does not handle 1-4 interactions and
 #       instead they are handleded by an openmm.CustomBondForce in which the scaled parameters are manually computed.
 _MIXING_RULE_EXPRESSIONS: dict[str, str] = {
@@ -31,7 +34,7 @@ _MIXING_RULE_EXPRESSIONS: dict[str, str] = {
 
 class _NonbondedData(NamedTuple):
     vdw_collection: vdWCollection
-    vdw_cutoff: off_unit.Quantity
+    vdw_cutoff: unit.Quantity
     vdw_method: Optional[str]
     vdw_expression: Optional[str]
     mixing_rule: Optional[str]
@@ -159,7 +162,7 @@ def _add_particles_to_system(
         for atom in molecule.atoms:
             atom_index = interchange.topology.atom_index(atom)
 
-            # Skip unit check for speed, trust that the toolkit reports mass in Dalton
+            # Skipopenmm.unit check for speed, trust that the toolkit reports mass in Dalton
             system_index = system.addParticle(mass=atom.mass.m)
 
             openff_openmm_particle_map[atom_index] = system_index
@@ -358,7 +361,7 @@ def _create_single_nonbonded_force(
             top_key = TopologyKey(atom_indices=(atom_index,))
 
             if data.electrostatics_collection is not None:
-                partial_charge = partial_charges[top_key].m_as(off_unit.e)
+                partial_charge = partial_charges[top_key].m_as(unit.e)
             else:
                 partial_charge = 0.0
 
@@ -368,11 +371,11 @@ def _create_single_nonbonded_force(
                 sigma = vdw.potentials[pot_key].parameters["sigma"]
                 epsilon = vdw.potentials[pot_key].parameters["epsilon"]
 
-                sigma = sigma.m_as(off_unit.nanometer)
-                epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
+                sigma = sigma.m_as(unit.nanometer)
+                epsilon = epsilon.m_as(unit.kilojoule / unit.mol)
             else:
-                sigma = unit.Quantity(0.0, unit.nanometer)
-                epsilon = unit.Quantity(0.0, unit.kilojoules_per_mole)
+                sigma = openmm.unit.Quantity(0.0, openmm.unit.nanometer)
+                epsilon = openmm.unit.Quantity(0.0, openmm.unit.kilojoules_per_mole)
 
             openmm_atom_index = openff_openmm_particle_map[atom_index]
 
@@ -933,7 +936,7 @@ def _set_particle_parameters(
             top_key = TopologyKey(atom_indices=(atom_index,))
 
             if partial_charges is not None:
-                partial_charge = partial_charges[top_key].m_as(off_unit.e)
+                partial_charge = partial_charges[top_key].m_as(unit.e)
             else:
                 partial_charge = 0.0
 
@@ -944,7 +947,7 @@ def _set_particle_parameters(
                     parameters = vdw.potentials[pot_key].parameters
 
                     if hasattr(vdw, "modify_parameters"):
-                        # This method strips units ..
+                        # This method stripsopenmm.units ..
                         parameters = vdw.modify_parameters(parameters)
                     else:
                         # so manually strip them if the method is not present
@@ -954,11 +957,11 @@ def _set_particle_parameters(
                     sigma = vdw.potentials[pot_key].parameters["sigma"]
                     epsilon = vdw.potentials[pot_key].parameters["epsilon"]
 
-                    sigma = sigma.m_as(off_unit.nanometer)
-                    epsilon = epsilon.m_as(off_unit.kilojoule / off_unit.mol)
+                    sigma = sigma.m_as(unit.nanometer)
+                    epsilon = epsilon.m_as(unit.kilojoule / unit.mol)
             else:
-                sigma = unit.Quantity(0.0, unit.nanometer)
-                epsilon = unit.Quantity(0.0, unit.kilojoules_per_mole)
+                sigma = openmm.unit.Quantity(0.0, openmm.unit.nanometer)
+                epsilon = openmm.unit.Quantity(0.0, openmm.unit.kilojoules_per_mole)
 
             if vdw_force is not None:
                 if vdw.is_plugin:
@@ -984,12 +987,12 @@ def _set_particle_parameters(
             #       custom non-bonded functional forms
             particle_index = openff_openmm_particle_map[virtual_site_key]
 
-            partial_charge = partial_charges[virtual_site_key].m_as(off_unit.e)
+            partial_charge = partial_charges[virtual_site_key].m_as(unit.e)
 
             if electrostatics_force is not None:
                 electrostatics_force.setParticleParameters(
                     particle_index,
-                    partial_charges[virtual_site_key].m_as(off_unit.e),
+                    partial_charges[virtual_site_key].m_as(unit.e),
                     0.0,
                     0.0,
                 )

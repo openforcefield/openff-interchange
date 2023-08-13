@@ -1,15 +1,12 @@
 import math
 
 import numpy
-import openmm
-import openmm.app
-import openmm.unit
 import pytest
-from openff.toolkit._tests.test_forcefield import create_ethanol
-from openff.toolkit._tests.utils import get_data_file_path
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
 from openff.units import unit
+from openff.utilities import get_data_file_path, has_package
+from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import (
@@ -33,31 +30,40 @@ from openff.interchange.interop.openmm import (
     to_openmm_topology,
 )
 
-# WISHLIST: Add tests for reaction-field if implemented
+if has_package("openmm"):
+    import openmm
+    import openmm.app
+    import openmm.unit
 
-nonbonded_methods = [
-    {
-        "vdw_periodic": "cutoff",
-        "vdw_nonperiodic": "no-cutoff",
-        "electrostatics_periodic": "PME",
-        "periodic": True,
-        "result": openmm.NonbondedForce.PME,
-    },
-    {
-        "vdw_periodic": "cutoff",
-        "vdw_nonperiodic": "no-cutoff",
-        "electrostatics_periodic": "PME",
-        "periodic": False,
-        "result": openmm.NonbondedForce.NoCutoff,
-    },
-]
+    nonbonded_methods = [
+        {
+            "vdw_periodic": "cutoff",
+            "vdw_nonperiodic": "no-cutoff",
+            "electrostatics_periodic": "PME",
+            "periodic": True,
+            "result": openmm.NonbondedForce.PME,
+        },
+        {
+            "vdw_periodic": "cutoff",
+            "vdw_nonperiodic": "no-cutoff",
+            "electrostatics_periodic": "PME",
+            "periodic": False,
+            "result": openmm.NonbondedForce.NoCutoff,
+        },
+    ]
+
+else:
+    nonbonded_methods = list()
 
 
-def _get_num_virtual_sites(openmm_topology: openmm.app.Topology) -> int:
+def _get_num_virtual_sites(openmm_topology: "openmm.app.Topology") -> int:
     return sum(atom.element is None for atom in openmm_topology.atoms())
 
 
-def _compare_openmm_topologies(top1: openmm.app.Topology, top2: openmm.app.Topology):
+def _compare_openmm_topologies(
+    top1: "openmm.app.Topology",
+    top2: "openmm.app.Topology",
+):
     """
     In lieu of first-class serializaiton in OpenMM (https://github.com/openmm/openmm/issues/1543),
     do some quick heuristics to roughly compare two OpenMM Topology objects.
@@ -73,18 +79,19 @@ def _compare_openmm_topologies(top1: openmm.app.Topology, top2: openmm.app.Topol
     assert (top1.getPeriodicBoxVectors() == top2.getPeriodicBoxVectors()).all()
 
 
+@skip_if_missing("openmm")
 class TestOpenMM(_BaseTest):
     @pytest.mark.parametrize("inputs", nonbonded_methods)
-    def test_openmm_nonbonded_methods(self, inputs, sage):
+    def test_openmm_nonbonded_methods(self, inputs, sage, ethanol):
         """See test_nonbonded_method_resolution in openff.toolkit._tests/test_forcefield.py"""
         electrostatics_method = inputs["electrostatics_periodic"]
         periodic = inputs["periodic"]
         result = inputs["result"]
 
-        molecules = [create_ethanol()]
+        molecules = [ethanol]
 
         pdbfile = openmm.app.PDBFile(
-            get_data_file_path("systems/test_systems/1_ethanol.pdb"),
+            get_data_file_path("systems/test_systems/1_ethanol.pdb", "openff.toolkit"),
         )
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
@@ -142,15 +149,16 @@ class TestOpenMM(_BaseTest):
         else:
             raise Exception
 
-    def test_combine_nonbonded_forces_nondefault_mixing_rule(self):
+    def test_combine_nonbonded_forces_nondefault_mixing_rule(self, ethanol):
         forcefield = ForceField(
             get_data_file_path(
                 "test_forcefields/test_forcefield.offxml",
+                "openff.toolkit",
             ),
         )
         openff_sys = Interchange.from_smirnoff(
             force_field=forcefield,
-            topology=[create_ethanol()],
+            topology=ethanol.to_topology(),
         )
 
         openff_sys["vdW"].mixing_rule = "foo"
@@ -162,6 +170,7 @@ class TestOpenMM(_BaseTest):
         forcefield = ForceField(
             get_data_file_path(
                 "test_forcefields/test_forcefield.offxml",
+                "openff.toolkit",
             ),
         )
 
@@ -316,9 +325,7 @@ class TestOpenMM(_BaseTest):
             if _is_custom_angle(force):
                 assert force.getEnergyFunction() == "k/2*(cos(theta)-cos(angle))^2"
 
-    def test_openmm_no_valence_forces_with_no_handler(self, sage):
-        ethanol = create_ethanol()
-
+    def test_openmm_no_valence_forces_with_no_handler(self, sage, ethanol):
         original_system = Interchange.from_smirnoff(sage, [ethanol]).to_openmm(
             combine_nonbonded_forces=True,
         )
@@ -377,6 +384,7 @@ class TestOpenMM(_BaseTest):
                 ) == pytest.approx(cutoff.m_as(unit.nanometer))
 
 
+@skip_if_missing("openmm")
 class TestOpenMMSwitchingFunction(_BaseTest):
     def test_switching_function_applied(self, sage, basic_top):
         out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
@@ -429,6 +437,7 @@ class TestOpenMMSwitchingFunction(_BaseTest):
         assert found_force, "NonbondedForce not found in system"
 
 
+@skip_if_missing("openmm")
 class TestOpenMMWithPlugins(TestDoubleExponential):
     pytest.importorskip("deforcefields")
 
@@ -498,6 +507,7 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
 
 
 @pytest.mark.slow()
+@skip_if_missing("openmm")
 class TestOpenMMVirtualSites(_BaseTest):
     @pytest.fixture()
     def sage_with_sigma_hole(self, sage):
@@ -633,6 +643,7 @@ class TestOpenMMVirtualSites(_BaseTest):
                 assert p3 == 7
 
 
+@skip_if_missing("openmm")
 class TestOpenMMVirtualSiteExclusions(_BaseTest):
     def test_tip5p_num_exceptions(self, water):
         tip5p = ForceField(get_test_file_path("tip5p.offxml"))
@@ -704,6 +715,7 @@ class TestOpenMMVirtualSiteExclusions(_BaseTest):
                         assert value._value != 0, (q, sigma, epsilon)
 
 
+@skip_if_missing("openmm")
 class TestToOpenMMTopology(_BaseTest):
     def test_num_virtual_sites(self, water, tip4p):
         out = Interchange.from_smirnoff(tip4p, [water])
@@ -863,7 +875,10 @@ class TestToOpenMMTopology(_BaseTest):
         """
         # Create a topology from a capped dialanine
         peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
+            get_data_file_path(
+                "proteins/MainChain_ALA_ALA.pdb",
+                "openff.toolkit",
+            ),
         )
         off_topology = Topology.from_molecules([peptide])
 
@@ -904,7 +919,7 @@ class TestToOpenMMTopology(_BaseTest):
         """
         # Create a topology from a capped dialanine
         peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
         )
         off_topology = Topology.from_molecules([peptide])
 
@@ -965,7 +980,7 @@ class TestToOpenMMTopology(_BaseTest):
         """
         # Create a topology from a capped dialanine
         peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
         )
         off_topology = Topology.from_molecules([peptide])
 
@@ -1057,6 +1072,7 @@ class TestToOpenMMTopology(_BaseTest):
             ), "New atom names should've been generated but weren't"
 
 
+@skip_if_missing("openmm")
 class TestToOpenMMPositions(_BaseTest):
     def test_missing_positions(self):
         with pytest.raises(
@@ -1119,6 +1135,7 @@ class TestToOpenMMPositions(_BaseTest):
         )
 
 
+@skip_if_missing("openmm")
 class TestOpenMMToPDB(_BaseTest):
     def test_to_pdb(self, sage, water):
         import mdtraj
@@ -1134,6 +1151,7 @@ class TestOpenMMToPDB(_BaseTest):
             out.to_pdb("file_should_not_exist.pdb")
 
 
+@skip_if_missing("openmm")
 class TestBuckingham:
     def test_water_with_virtual_sites(self, water):
         force_field = ForceField(
@@ -1210,6 +1228,7 @@ class TestBuckingham:
             )
 
 
+@skip_if_missing("openmm")
 class TestGBSA(_BaseTest):
     def test_create_gbsa(self, gbsa_force_field):
         interchange = Interchange.from_smirnoff(

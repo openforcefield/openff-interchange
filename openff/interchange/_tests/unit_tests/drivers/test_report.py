@@ -1,6 +1,7 @@
 import pytest
 from openff.units import unit
 from openff.units.openmm import ensure_quantity
+from openff.utilities.testing import skip_if_missing
 
 from openff.interchange._tests import _BaseTest
 from openff.interchange.constants import kj_mol
@@ -25,6 +26,7 @@ class TestEnergyReport(_BaseTest):
             },
         )
 
+    @skip_if_missing("openmm")
     def test_coerce_to_quantity(self):
         assert isinstance(
             EnergyReport(
@@ -60,6 +62,7 @@ class TestEnergyReport(_BaseTest):
 
         assert report["Bond"].m == -200.0
 
+    @skip_if_missing("openmm")
     @pytest.mark.parametrize(
         "unit_system",
         ["openff", "openmm"],

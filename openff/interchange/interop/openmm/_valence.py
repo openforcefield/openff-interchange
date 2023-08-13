@@ -3,12 +3,15 @@ Helper functions for producing `openmm.Force` objects for valence terms.
 """
 from typing import Union
 
-import openmm
 from openff.units import unit as off_unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
+from openff.utilities.utilities import has_package
 
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.models import VirtualSiteKey
+
+if has_package("openmm"):
+    import openmm
 
 
 def _process_constraints(

@@ -4,11 +4,9 @@ on:
   push:
     branches:
       - main
-      - v0.3.0-staging
   pull_request:
     branches:
       - main
-      - v0.3.0-staging
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
@@ -37,9 +35,16 @@ jobs:
         openeye:
           - true
           - false
+        openmm:
+          - true
+          - false
         exclude:
           - openeye: false
             python-version: "3.11"
+          - pydantic-version: "1"
+            python-version: "3.9"
+          - pydantic-version: "1"
+            python-version: "3.10"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -77,6 +82,18 @@ jobs:
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
+    - name: Install OpenMM
+      if: ${{ matrix.openmm == true }}
+      run: |
+        micromamba install openmm "smirnoff-plugins =2023" -yq
+        pip install git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods
+
+      # Might not need this after re-packaging
+    - name: Uninstall OpenMM
+      if: ${{ matrix.openmm == false }}
+      run: |
+        micromamba remove openmm -yq
+
     - name: Install AmberTools
       if: ${{ matrix.openeye == false }}
       run: |
@@ -93,7 +110,7 @@ jobs:
         python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow" --ignore=openff/interchange/_tests/energy_tests/test_energies.py
 
     - name: Run small molecule regression tests
-      if: ${{ matrix.python-version == 3.9 && matrix.openeye == true }}
+      if: ${{ matrix.python-version == 3.9 && matrix.openeye == true && matrix.openmm == true }}
       run: |
         micromamba install deepdiff rich click -c conda-forge -yq
         python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git

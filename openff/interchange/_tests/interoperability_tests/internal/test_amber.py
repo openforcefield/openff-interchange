@@ -4,14 +4,22 @@ import numpy as np
 import parmed
 import pytest
 from openff.toolkit import ForceField, Molecule
-from openff.toolkit._tests.utils import get_data_file_path
 from openff.units import unit
-from openff.utilities.utilities import has_executable
-from openmm import app
+from openff.utilities import (
+    get_data_file_path,
+    has_executable,
+    has_package,
+    skip_if_missing,
+)
 
 from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest
 from openff.interchange.drivers import get_amber_energies, get_openmm_energies
+
+if has_package("openmm"):
+    import openmm
+    import openmm.app
+    import openmm.unit
 
 
 class TestAmber(_BaseTest):
@@ -35,6 +43,7 @@ class TestAmber(_BaseTest):
 
         np.testing.assert_equal(coords1, coords2)
 
+    @skip_if_missing("openmm")
     @pytest.mark.skipif(not has_executable("sander"), reason="sander not installed")
     @pytest.mark.slow()
     @pytest.mark.parametrize(
@@ -80,10 +89,11 @@ class TestAmber(_BaseTest):
 
 
 class TestPRMTOP(_BaseTest):
+    @skip_if_missing("openmm")
     @pytest.mark.slow()
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
         )
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
@@ -91,8 +101,10 @@ class TestPRMTOP(_BaseTest):
             "atom_names.prmtop",
         )
 
-        pdb_object = app.PDBFile(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
-        openmm_object = app.AmberPrmtopFile("atom_names.prmtop")
+        pdb_object = openmm.app.PDBFile(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
+        )
+        openmm_object = openmm.app.AmberPrmtopFile("atom_names.prmtop")
         mdanalysis_object = MDAnalysis.Universe("atom_names.prmtop")
         # This may not be useful, see
         # https://github.com/mdtraj/mdtraj/blob/6bb35a8d78a5758ff1f72b3af1fc21d2e38f1029/mdtraj/formats/prmtop.py#L47-L49

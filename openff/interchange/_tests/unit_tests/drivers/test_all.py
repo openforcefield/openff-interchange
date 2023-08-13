@@ -7,6 +7,7 @@ from shutil import which
 import pandas
 import pytest
 from openff.toolkit.topology import Molecule
+from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import (
@@ -23,6 +24,7 @@ from openff.interchange.drivers.gromacs import _find_gromacs_executable
 from openff.interchange.drivers.lammps import _find_lammps_executable
 
 
+@skip_if_missing("openmm")
 @pytest.mark.slow()
 class TestDriversAll(_BaseTest):
     @pytest.fixture()

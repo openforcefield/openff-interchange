@@ -1,23 +1,16 @@
 import numpy
-import openmm
 import pytest
 from openff.toolkit import ForceField, Molecule, Topology
-from openff.toolkit._tests.test_forcefield import (
-    create_cyclohexane,
-    create_ethanol,
-    create_reversed_ethanol,
-    create_water,
-)
-from openff.toolkit._tests.utils import requires_openeye
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
     ImproperTorsionHandler,
 )
 from openff.units import unit
+from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest
+from openff.interchange._tests import _BaseTest, requires_openeye
 from openff.interchange.constants import kcal_mol_a2, kcal_mol_rad2
 from openff.interchange.exceptions import DuplicateMoleculeError
 from openff.interchange.models import AngleKey, BondKey, ImproperTorsionKey
@@ -29,6 +22,10 @@ from openff.interchange.smirnoff._valence import (
     SMIRNOFFImproperTorsionCollection,
     _check_molecule_uniqueness,
 )
+
+if has_package("openmm"):
+    import openmm.app
+    import openmm.unit
 
 try:
     from pydantic.v1 import ValidationError
@@ -199,11 +196,11 @@ class TestConstraintCollection(_BaseTest):
 
 class TestBondOrderInterpolation(_BaseTest):
     @pytest.mark.slow()
-    def test_input_bond_orders_ignored(self):
+    def test_input_bond_orders_ignored(self, ethanol):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
 
-        mol = create_ethanol()
+        mol = ethanol
         mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
         mod_mol = Molecule(mol)
         for bond in mod_mol.bonds:
@@ -234,6 +231,7 @@ class TestBondOrderInterpolation(_BaseTest):
             k2 = bonds_mod.potentials[pot_key2].parameters["k"].m_as(kcal_mol_a2)
             assert k1 == pytest.approx(k2, rel=1e-5), (k1, k2)
 
+    @skip_if_missing("openmm")
     def test_input_conformers_ignored(self):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
@@ -374,27 +372,30 @@ class TestParameterInterpolation(_BaseTest):
             180.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
         )
 
+    @skip_if_missing("openmm")
     @requires_openeye
     @pytest.mark.parametrize(
         (
-            "get_molecule",
+            "reversed",
             "k_torsion_interpolated",
             "k_bond_interpolated",
             "length_bond_interpolated",
             "central_atoms",
         ),
         [
-            (create_ethanol, 4.16586914, 42208.5402, 0.140054167256, (1, 2)),
-            (create_reversed_ethanol, 4.16564555, 42207.9252, 0.14005483525, (7, 6)),
+            (False, 4.16586914, 42208.5402, 0.140054167256, (1, 2)),
+            (True, 4.16564555, 42207.9252, 0.14005483525, (7, 6)),
         ],
     )
     def test_fractional_bondorder_from_molecule(
         self,
-        get_molecule,
+        reversed,
         k_torsion_interpolated,
         k_bond_interpolated,
         length_bond_interpolated,
         central_atoms,
+        ethanol,
+        reversed_ethanol,
     ):
         """Copied from the toolkit with modified reference constants.
         Force constant computed by interpolating (k1, k2) = (101, 123) kcal/A**2/mol
@@ -418,7 +419,8 @@ class TestParameterInterpolation(_BaseTest):
             torsion k = 4.16564555 kJ/mol
 
         """
-        mol = get_molecule()
+        mol = reversed_ethanol if reversed else ethanol
+
         forcefield = ForceField(
             "openff-2.0.0.offxml",
             self.xml_ff_bo,
@@ -536,15 +538,20 @@ def test_get_uses_interpolation():
     )
 
 
-def test_check_molecule_uniqueness():
+def test_check_molecule_uniqueness(
+    ethanol,
+    reversed_ethanol,
+    cyclohexane,
+    water,
+):
     _check_molecule_uniqueness(None)
     _check_molecule_uniqueness(list())
-    _check_molecule_uniqueness([create_ethanol()])
-    _check_molecule_uniqueness([create_cyclohexane()])
-    _check_molecule_uniqueness([create_ethanol(), create_cyclohexane(), create_water()])
+    _check_molecule_uniqueness([ethanol])
+    _check_molecule_uniqueness([cyclohexane])
+    _check_molecule_uniqueness([ethanol, cyclohexane, water])
 
     with pytest.raises(DuplicateMoleculeError, match="Duplicate molecules"):
-        _check_molecule_uniqueness(2 * [create_ethanol()])
+        _check_molecule_uniqueness(2 * [ethanol])
 
     with pytest.raises(DuplicateMoleculeError, match="Duplicate molecules"):
-        _check_molecule_uniqueness([create_ethanol(), create_reversed_ethanol()])
+        _check_molecule_uniqueness([ethanol, reversed_ethanol])

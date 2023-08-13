@@ -2,12 +2,16 @@
 from pathlib import Path
 from typing import Union
 
-import openmm
+from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange.exceptions import PluginCompatibilityError
 from openff.interchange.interop.openmm._import._import import from_openmm
 from openff.interchange.interop.openmm._positions import to_openmm_positions
 from openff.interchange.interop.openmm._topology import to_openmm_topology
+
+if has_package("openmm"):
+    import openmm
+    import openmm.app
 
 __all__ = [
     "to_openmm",
@@ -16,14 +20,13 @@ __all__ = [
     "from_openmm",
 ]
 
-import openmm.app
 
-
+@requires_package("openmm")
 def to_openmm(
     interchange,
     combine_nonbonded_forces: bool = False,
     add_constrained_forces: bool = False,
-) -> openmm.System:
+) -> "openmm.System":
     """
     Convert an Interchange to an OpenmM System.
 

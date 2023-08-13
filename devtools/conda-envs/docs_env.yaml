@@ -27,5 +27,5 @@ dependencies:
   - sphinxcontrib-mermaid
   - sphinx-notfound-page
   - pip:
-    - git+https://github.com/jthorton/de-forcefields
+    # git+https://github.com/jthorton/de-forcefields
     - git+https://github.com/openforcefield/openff-sphinx-theme.git@main
