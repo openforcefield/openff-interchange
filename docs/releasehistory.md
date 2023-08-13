@@ -9,17 +9,12 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
-
-### API-breaking changes
-
-### Behavior changes
-
-### Bugfixes
+## 0.3.12 - 2023-08-14
 
 ### New features
 
-### Improved documentation and warnings
+* #782 OpenMM is now an optional dependency at runtime or if using the `openff-interchange-base` conda
+  package.
 
 ## 0.3.11 - 2023-08-09
 
