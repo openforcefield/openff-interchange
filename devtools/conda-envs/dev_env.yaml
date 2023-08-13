@@ -34,7 +34,6 @@ dependencies:
   - qcportal
   - openff-qcsubmit
   - mdanalysis
-  - smirnoff-plugins =2023
   # Drivers
   # gromacs >=2021=nompi*  # No osx-arm64 builds
   - lammps
@@ -57,5 +56,3 @@ dependencies:
   - flake8
   - snakeviz
   - tuna
-  # pip:
-    # git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods

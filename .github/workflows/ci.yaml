@@ -82,6 +82,13 @@ jobs:
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
+    - name: Install OpenMM
+      if: ${{ matrix.openmm == true }}
+      run: |
+        micromamba install openmm "smirnoff-plugins =2023" -yq
+        pip install git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods
+
+      # Might not need this after re-packaging
     - name: Uninstall OpenMM
       if: ${{ matrix.openmm == false }}
       run: |
