@@ -276,7 +276,11 @@ class Interchange(DefaultModel):
             allow_nonintegral_charges=allow_nonintegral_charges,
         )
 
-    def visualize(self, backend: str = "nglview"):
+    def visualize(
+        self,
+        include_virtual_sites: bool = False,
+        backend: str = "nglview",
+    ):
         """
         Visualize this Interchange.
 
@@ -284,6 +288,8 @@ class Interchange(DefaultModel):
 
         Parameters
         ----------
+        include_virtual_sites : bool, default=False
+            Whether or not to include virtual sites in the visualization.
         backend : str, default="nglview"
             The backend to use for visualization. Currently only "nglview" is supported.
 
@@ -294,7 +300,7 @@ class Interchange(DefaultModel):
 
         """
         if backend == "nglview":
-            return self._visualize_nglview()
+            return self._visualize_nglview(include_virtual_sites=include_virtual_sites)
         else:
             raise UnsupportedExportError
 
@@ -303,7 +309,12 @@ class Interchange(DefaultModel):
         self,
         include_virtual_sites: bool = False,
     ) -> "nglview.NGLWidget":
-        """Visualize the system using NGLView via a PDB file."""
+        """
+        Visualize the system using NGLView via a PDB file.
+
+        include_virtual_sites : bool, default=False
+            Whether or not to include virtual sites in the visualization.
+        """
         import nglview
 
         try:
