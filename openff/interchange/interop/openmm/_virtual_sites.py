@@ -1,12 +1,18 @@
 """
 Helper functions for exporting virutal sites to OpenMM.
 """
+from collections.abc import Iterable
 from typing import Union
 
+from openff.units import Quantity, unit
 from openff.units.openmm import to_openmm
 from openff.utilities.utilities import has_package
 
-from openff.interchange.components._particles import _VirtualSite
+from openff.interchange import Interchange
+from openff.interchange.components._particles import (
+    _BondChargeVirtualSite,
+    _VirtualSite,
+)
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.models import VirtualSiteKey
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
@@ -26,13 +32,10 @@ def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteCollection
 
 
 def _create_openmm_virtual_site(
+    interchange: Interchange,
     virtual_site: "_VirtualSite",
     openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int],
-) -> openmm.LocalCoordinatesSite:
-    # It is assumed that the first "orientation" atom is the "parent" atom.
-    originwt, xdir, ydir = virtual_site.local_frame_weights
-    pos = virtual_site.local_frame_positions
-
+) -> openmm.VirtualSite:
     # virtual_site.orientations is a list of the _openff_ indices, which is more or less
     # the topology index in a topology containing only atoms (no virtual site). This dict,
     # _if only looking up atoms_, can be used to map between openff "indices" and
@@ -44,6 +47,26 @@ def _create_openmm_virtual_site(
         openff_openmm_particle_map[openff_index]
         for openff_index in virtual_site.orientations
     ]
+
+    if isinstance(virtual_site, _BondChargeVirtualSite):
+        separation = _get_separation_by_atom_indices(
+            interchange=interchange,
+            atom_indices=virtual_site.orientations,
+        )
+        distance = virtual_site.distance
+
+        ratio = (distance / separation).m_as(unit.dimensionless)
+
+        return openmm.TwoParticleAverageSite(
+            virtual_site.orientations[0],
+            virtual_site.orientations[1],
+            1.0 + ratio,
+            0.0 - ratio,
+        )
+
+    # It is assumed that the first "orientation" atom is the "parent" atom.
+    originwt, xdir, ydir = virtual_site.local_frame_weights
+    pos = virtual_site.local_frame_positions
 
     return openmm.LocalCoordinatesSite(
         openmm_indices,
@@ -99,3 +122,40 @@ def _create_virtual_site_object(
 
     else:
         raise NotImplementedError(virtual_site_key.type)
+
+
+def _get_separation_by_atom_indices(
+    interchange: Interchange,
+    atom_indices: Iterable[int],
+) -> Quantity:
+    """
+    Given indices of (two?) atoms, return the distance between them.
+
+    A constraint distance is first searched for, then an equilibrium bond length.
+
+    This is slow, but often necessary for converting virtual site "distances" to weighted
+    averages (unitless) of orientation atom positions.
+    """
+    if "Constraints" in interchange.collections:
+        collection = interchange["Constraints"]
+
+        for key in collection.key_map:
+            if (key.atom_indices == atom_indices) or (
+                key.atom_indices[::-1] == atom_indices
+            ):
+                return collection.potentials[collection.key_map[key]].parameters[
+                    "distance"
+                ]
+
+    if "Bonds" in interchange.collections:
+        collection = interchange["Bonds"]
+
+        for key in collection.key_map:
+            if (key.atom_indices == atom_indices) or (
+                key.atom_indices[::-1] == atom_indices
+            ):
+                return collection.potentials[collection.key_map[key]].parameters[
+                    "length"
+                ]
+
+    raise ValueError(f"Could not find distance between atoms {atom_indices}")

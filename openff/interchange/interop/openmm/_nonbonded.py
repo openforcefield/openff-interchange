@@ -189,6 +189,7 @@ def _add_particles_to_system(
             )
 
             openmm_particle: openmm.VirtualSite = _create_openmm_virtual_site(
+                interchange,
                 virtual_site_object,
                 openff_openmm_particle_map,
             )
@@ -408,6 +409,7 @@ def _create_single_nonbonded_force(
             )
 
             openmm_particle: openmm.VirtualSite = _create_openmm_virtual_site(
+                interchange,
                 virtual_site_object,
                 openff_openmm_particle_map,
             )

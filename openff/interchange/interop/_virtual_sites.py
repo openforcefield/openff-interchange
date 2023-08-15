@@ -83,7 +83,10 @@ def get_positions_with_virtual_sites(
             this_molecule_virtual_site_positions = Quantity(
                 numpy.asarray(
                     [
-                        _get_virtual_site_positions(virtual_site_key, interchange)
+                        _get_virtual_site_positions(
+                            virtual_site_key,
+                            interchange,
+                        ).m_as(unit.nanometer)
                         for virtual_site_key in molecule_virtual_site_map[
                             molecule_index
                         ]
