@@ -4,6 +4,7 @@ Helper functions for exporting virutal sites to OpenMM.
 from collections.abc import Iterable
 from typing import Union
 
+import numpy
 from openff.units import Quantity, unit
 from openff.units.openmm import to_openmm
 from openff.utilities.utilities import has_package
@@ -11,6 +12,7 @@ from openff.utilities.utilities import has_package
 from openff.interchange import Interchange
 from openff.interchange.components._particles import (
     _BondChargeVirtualSite,
+    _DivalentLonePairVirtualSite,
     _VirtualSite,
 )
 from openff.interchange.exceptions import UnsupportedExportError
@@ -63,6 +65,45 @@ def _create_openmm_virtual_site(
             1.0 + ratio,
             0.0 - ratio,
         )
+
+    if isinstance(virtual_site, _DivalentLonePairVirtualSite):
+        r12 = _get_separation_by_atom_indices(
+            interchange=interchange,
+            atom_indices=virtual_site.orientations[:2],
+        )
+        r13 = _get_separation_by_atom_indices(
+            interchange=interchange,
+            atom_indices=(virtual_site.orientations[0], virtual_site.orientations[2]),
+        )
+
+        distance = virtual_site.distance
+
+        if r12 == r13 and distance.m < 0.0:
+            d = -1 * distance
+
+            theta = _get_angle_by_atom_indices(
+                interchange,
+                atom_indices=(
+                    virtual_site.orientations[0],
+                    virtual_site.orientations[1],
+                    virtual_site.orientations[2],
+                ),
+            )
+
+            r2v = numpy.sqrt(
+                r13**2 + d**2 - 2 * r13 * d * numpy.cos(theta / 2),
+            )
+
+            d_prime = r2v * numpy.cos(theta / 2)
+
+            return openmm.ThreeParticleAverageSite(
+                virtual_site.orientations[0],
+                virtual_site.orientations[1],
+                virtual_site.orientations[2],
+                1 - d / d_prime,
+                d / (2 * d_prime),
+                d / (2 * d_prime),
+            )
 
     # It is assumed that the first "orientation" atom is the "parent" atom.
     originwt, xdir, ydir = virtual_site.local_frame_weights
@@ -159,3 +200,30 @@ def _get_separation_by_atom_indices(
                 ]
 
     raise ValueError(f"Could not find distance between atoms {atom_indices}")
+
+
+def _get_angle_by_atom_indices(
+    interchange: Interchange,
+    atom_indices: Iterable[int],
+) -> Quantity:
+    """
+    Given indices of three atoms, return the angle between them.
+
+    It is assumed that the middle atom is the central atom of the angle.
+    """
+    ba = _get_separation_by_atom_indices(
+        interchange,
+        (atom_indices[0], atom_indices[1]),
+    ).m_as(unit.angstrom)
+
+    bc = _get_separation_by_atom_indices(
+        interchange,
+        (atom_indices[0], atom_indices[1]),
+    ).m_as(unit.angstrom)
+
+    return Quantity(
+        numpy.arccos(
+            numpy.dot(ba, bc) / (numpy.linalg.norm(ba) * numpy.linalg.norm(bc)),
+        ),
+        unit.radian,
+    )
