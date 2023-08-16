@@ -2,7 +2,7 @@
 # Visit https://bit.ly/cffinit to generate yours today!
 
 cff-version: 1.2.0
-title: OpenFF Interchannge
+title: OpenFF Interchange
 message: 'If you use Interchange, please cite it as below.'
 type: software
 authors:
