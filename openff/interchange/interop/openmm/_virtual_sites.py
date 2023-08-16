@@ -82,18 +82,22 @@ def _create_openmm_virtual_site(
 
         distance = virtual_site.distance
 
-        if r12 == r13 and distance.m < 0.0:
-            d = -1 * distance
-
-            theta = numpy.arccos(
-                (r23**2 - r12**2 - r13**2) / (-2 * r12 * r13),
+        # TODO: Test r12 != r13, prima facia the math also applies, probably need
+        #       a more direct way to get r1mid
+        if r12 == r13 and float(virtual_site.out_of_plane_angle.m) == 0.0:
+            theta = Quantity(
+                numpy.arccos(
+                    (r23**2 - r12**2 - r13**2) / (-2 * r12 * r13),
+                ),
+                unit.radian,
             )
 
-            r2v = numpy.sqrt(
-                r12**2 + d**2 - 2 * r12 * d * numpy.cos(theta / 2),
+            r1mid = Quantity(
+                numpy.cos(theta.m_as(unit.radian) / 2) * r12.m_as(unit.nanometer),
+                unit.nanometer,
             )
 
-            w1 = r2v / r12
+            w1 = 1 + distance / r1mid
 
             return openmm.ThreeParticleAverageSite(
                 virtual_site.orientations[0],
