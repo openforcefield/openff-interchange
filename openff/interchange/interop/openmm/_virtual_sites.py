@@ -75,34 +75,33 @@ def _create_openmm_virtual_site(
             interchange=interchange,
             atom_indices=(virtual_site.orientations[0], virtual_site.orientations[2]),
         )
+        r23 = _get_separation_by_atom_indices(
+            interchange=interchange,
+            atom_indices=virtual_site.orientations[1:],
+        )
 
         distance = virtual_site.distance
 
         if r12 == r13 and distance.m < 0.0:
             d = -1 * distance
 
-            theta = _get_angle_by_atom_indices(
-                interchange,
-                atom_indices=(
-                    virtual_site.orientations[0],
-                    virtual_site.orientations[1],
-                    virtual_site.orientations[2],
-                ),
+            theta = numpy.arccos(
+                (r23**2 - r12**2 - r13**2) / (-2 * r12 * r13),
             )
 
             r2v = numpy.sqrt(
-                r13**2 + d**2 - 2 * r13 * d * numpy.cos(theta / 2),
+                r12**2 + d**2 - 2 * r12 * d * numpy.cos(theta / 2),
             )
 
-            d_prime = r2v * numpy.cos(theta / 2)
+            w1 = r2v / r12
 
             return openmm.ThreeParticleAverageSite(
                 virtual_site.orientations[0],
                 virtual_site.orientations[1],
                 virtual_site.orientations[2],
-                1 - d / d_prime,
-                d / (2 * d_prime),
-                d / (2 * d_prime),
+                w1,
+                (1 - w1) / 2,
+                (1 - w1) / 2,
             )
 
     # It is assumed that the first "orientation" atom is the "parent" atom.
@@ -214,12 +213,12 @@ def _get_angle_by_atom_indices(
     ba = _get_separation_by_atom_indices(
         interchange,
         (atom_indices[0], atom_indices[1]),
-    ).m_as(unit.angstrom)
+    ).m_as(unit.nanometer)
 
     bc = _get_separation_by_atom_indices(
         interchange,
-        (atom_indices[0], atom_indices[1]),
-    ).m_as(unit.angstrom)
+        (atom_indices[0], atom_indices[2]),
+    ).m_as(unit.nanometer)
 
     return Quantity(
         numpy.arccos(
