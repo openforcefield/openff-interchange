@@ -113,8 +113,13 @@ def _get_virtual_site_positions(
     # TODO: Move this behavior elsewhere, possibly to a non-GROMACS location
     if virtual_site_key.type == "BondCharge":
         return _get_bond_charge_virtual_site_positions(virtual_site_key, interchange)
-    if virtual_site_key.type == "DivalentLonePair":
+    elif virtual_site_key.type == "DivalentLonePair":
         return _get_divalent_lone_pair_virtual_site_positions(
+            virtual_site_key,
+            interchange,
+        )
+    elif virtual_site_key.type == "TrivalentLonePair":
+        return _get_trivalent_lone_pair_virtual_site_positions(
             virtual_site_key,
             interchange,
         )
@@ -211,3 +216,37 @@ def _get_divalent_lone_pair_virtual_site_positions(
         )
 
     return r0 + (r0 - rmid) * (distance) / (rmid_distance)
+
+
+def _get_trivalent_lone_pair_virtual_site_positions(
+    virtual_site_key,
+    interchange,
+):
+    potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
+    distance = (
+        interchange["VirtualSites"]
+        .potentials[potential_key]
+        .parameters["distance"]
+        .m_as(unit.nanometer)
+    )
+
+    center, a, b, c = (
+        interchange.positions[index].m_as(unit.nanometer)
+        for index in virtual_site_key.orientation_atom_indices
+    )
+
+    # clockwise vs. counter-clockwise matters here - manually correcting it later
+    dir = numpy.cross(b - a, c - a)
+    dir /= numpy.linalg.norm(dir)
+
+    # if adding the (normalized) normal vector to the midpoint of (a, b, c) ends up closer to the enter
+    if numpy.linalg.norm(
+        center - (numpy.cross(b - a, c - a) + dir),
+    ) < numpy.linalg.norm(center - (numpy.cross(b - a, c - a) - dir)):
+        # then this vector is pointing _toward_ the central atom
+        pass
+    else:
+        # otherwise, this vector is pointing _away_ from the central atom, so we need to point it the other way
+        dir *= -1
+
+    return Quantity(center + dir * distance, unit.nanometer)
