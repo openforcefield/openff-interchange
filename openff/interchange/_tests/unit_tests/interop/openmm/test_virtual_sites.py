@@ -153,3 +153,37 @@ class TestFourSiteWater:
         assert virtual_site.getWeight(0) == pytest.approx(expected_w1)
         assert virtual_site.getWeight(1) == pytest.approx(expected_w2)
         assert virtual_site.getWeight(2) == pytest.approx(expected_w3)
+
+
+class TestTIP4PVsOpenMM:
+    def test_compare_tip4pfb_openmm(self, water):
+        import openmm.app
+        from openff.toolkit import ForceField
+
+        openmm_tip4pfb = openmm.app.ForceField("tip4pfb.xml")
+        openmm_topology = water.to_topology().to_openmm()
+        openmm_positions = water.conformers[0].to_openmm()
+
+        modeller = openmm.app.Modeller(
+            openmm_topology,
+            openmm_positions,
+        )
+
+        modeller.addExtraParticles(openmm_tip4pfb)
+
+        openmm_virtual_site = openmm_tip4pfb.createSystem(
+            modeller.topology,
+        ).getVirtualSite(3)
+        openmm_weights = [openmm_virtual_site.getWeight(index) for index in range(3)]
+
+        openff_tip4p = ForceField("tip4p_fb.offxml")
+
+        openff_virtual_site = openff_tip4p.create_openmm_system(
+            water.to_topology(),
+        ).getVirtualSite(3)
+        openff_weights = [openff_virtual_site.getWeight(index) for index in range(3)]
+
+        assert type(openmm_virtual_site) is type(openff_virtual_site)
+
+        for w_openmm, w_openff in zip(openmm_weights, openff_weights):
+            assert w_openmm == pytest.approx(w_openff)
