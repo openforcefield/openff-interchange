@@ -7,6 +7,16 @@ from openff.interchange._tests import get_test_file_path
 
 
 @pytest.fixture()
+def sage():
+    return ForceField("openff-2.0.0.offxml")
+
+
+@pytest.fixture()
+def sage_unconstrained():
+    return ForceField("openff_unconstrained-2.0.0.offxml")
+
+
+@pytest.fixture()
 def _simple_force_field():
     # TODO: Create a minimal force field for faster tests
     pass

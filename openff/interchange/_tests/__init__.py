@@ -106,14 +106,6 @@ class _BaseTest:
         return Topology.from_molecules(4 * [ethanol])
 
     @pytest.fixture()
-    def sage(self):
-        return ForceField("openff-2.0.0.offxml")
-
-    @pytest.fixture()
-    def sage_unconstrained(self):
-        return ForceField("openff_unconstrained-2.0.0.offxml")
-
-    @pytest.fixture()
     def mainchain_ala(self):
         molecule = Molecule.from_file(
             get_data_file_path("proteins/MainChain_ALA.sdf", "openff.toolkit"),
