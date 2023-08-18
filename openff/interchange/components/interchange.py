@@ -511,6 +511,7 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
+    @requires_package("openmm")
     def to_pdb(self, file_path: Union[Path, str], include_virtual_sites: bool = False):
         """Export this Interchange to a .pdb file."""
         from openff.interchange.interop.openmm import _to_pdb
