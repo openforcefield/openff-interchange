@@ -278,8 +278,8 @@ class Interchange(DefaultModel):
 
     def visualize(
         self,
-        include_virtual_sites: bool = False,
         backend: str = "nglview",
+        include_virtual_sites: bool = False,
     ):
         """
         Visualize this Interchange.
@@ -288,10 +288,10 @@ class Interchange(DefaultModel):
 
         Parameters
         ----------
-        include_virtual_sites : bool, default=False
-            Whether or not to include virtual sites in the visualization.
         backend : str, default="nglview"
             The backend to use for visualization. Currently only "nglview" is supported.
+        include_virtual_sites : bool, default=False
+            Whether or not to include virtual sites in the visualization.
 
         Returns
         -------

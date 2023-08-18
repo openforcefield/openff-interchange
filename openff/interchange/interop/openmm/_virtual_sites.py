@@ -75,16 +75,17 @@ def _create_openmm_virtual_site(
             interchange=interchange,
             atom_indices=(virtual_site.orientations[0], virtual_site.orientations[2]),
         )
-        r23 = _get_separation_by_atom_indices(
-            interchange=interchange,
-            atom_indices=virtual_site.orientations[1:],
-        )
 
         distance = virtual_site.distance
 
         # TODO: Test r12 != r13, prima facia the math also applies, probably need
         #       a more direct way to get r1mid
         if r12 == r13 and float(virtual_site.out_of_plane_angle.m) == 0.0:
+            r23 = _get_separation_by_atom_indices(
+                interchange=interchange,
+                atom_indices=virtual_site.orientations[1:],
+            )
+
             theta = Quantity(
                 numpy.arccos(
                     (r23**2 - r12**2 - r13**2) / (-2 * r12 * r13),
