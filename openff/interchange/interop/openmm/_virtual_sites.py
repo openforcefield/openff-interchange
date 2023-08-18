@@ -60,8 +60,7 @@ def _create_openmm_virtual_site(
         ratio = (distance / separation).m_as(unit.dimensionless)
 
         return openmm.TwoParticleAverageSite(
-            virtual_site.orientations[0],
-            virtual_site.orientations[1],
+            *openmm_indices,
             1.0 + ratio,
             0.0 - ratio,
         )
@@ -101,9 +100,7 @@ def _create_openmm_virtual_site(
             w1 = 1 + distance / r1mid
 
             return openmm.ThreeParticleAverageSite(
-                virtual_site.orientations[0],
-                virtual_site.orientations[1],
-                virtual_site.orientations[2],
+                *openmm_indices,
                 w1,
                 (1 - w1) / 2,
                 (1 - w1) / 2,

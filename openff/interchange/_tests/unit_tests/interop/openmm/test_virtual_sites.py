@@ -1,9 +1,10 @@
-import openmm
 import pytest
 from openff.toolkit import ForceField, Molecule
 from openff.units import Quantity, unit
+from openff.utilities.testing import skip_if_missing
 
 
+@skip_if_missing("openmm")
 class TestBondChargeVirtualSite:
     @pytest.mark.parametrize(
         (
@@ -27,6 +28,8 @@ class TestBondChargeVirtualSite:
         expected_w1,
         expected_w2,
     ):
+        import openmm
+
         sage_with_bond_charge["VirtualSites"].parameters[0].distance = Quantity(
             distance_,
             unit.angstrom,
@@ -63,6 +66,7 @@ class TestBondChargeVirtualSite:
         assert virtual_site.getWeight(1) == pytest.approx(expected_w2)
 
 
+@skip_if_missing("openmm")
 class TestFourSiteWater:
     @pytest.mark.parametrize(
         (
@@ -100,6 +104,8 @@ class TestFourSiteWater:
         expected_w2,
         expected_w3,
     ):
+        import openmm
+
         tip4p = ForceField("tip4p_fb.offxml")
 
         tip4p["VirtualSites"].parameters[0].distance = Quantity(
@@ -136,6 +142,7 @@ class TestFourSiteWater:
         assert virtual_site.getWeight(2) == pytest.approx(expected_w3)
 
 
+@skip_if_missing("openmm")
 class TestTIP4PVsOpenMM:
     def test_compare_tip4pfb_openmm(self, water):
         import openmm.app
