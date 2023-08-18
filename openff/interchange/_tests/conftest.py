@@ -1,6 +1,7 @@
 """Pytest configuration."""
 import pytest
 from openff.toolkit import ForceField, Molecule
+from openff.toolkit.typing.engines.smirnoff.parameters import BondType, VirtualSiteType
 from openff.units import Quantity, unit
 
 from openff.interchange._tests import get_test_file_path
@@ -14,6 +15,32 @@ def sage():
 @pytest.fixture()
 def sage_unconstrained():
     return ForceField("openff_unconstrained-2.0.0.offxml")
+
+
+@pytest.fixture()
+def sage_with_bond_charge(sage):
+    sage["Bonds"].add_parameter(
+        parameter=BondType(
+            smirks="[#6:2]-[#17X1:1]",
+            id="b0",
+            length="1.6 * angstrom",
+            k="500 * angstrom**-2 * mole**-1 * kilocalorie",
+        ),
+    )
+
+    sage.get_parameter_handler("VirtualSites")
+    sage["VirtualSites"].add_parameter(
+        parameter=VirtualSiteType(
+            smirks="[#6:2]-[#17X1:1]",
+            type="BondCharge",
+            match="all_permutations",
+            distance="0.8 * angstrom ** 1",
+            charge_increment1="0.0 * elementary_charge ** 1",
+            charge_increment2="0.0 * elementary_charge ** 1",
+        ),
+    )
+
+    return sage
 
 
 @pytest.fixture()
@@ -44,6 +71,23 @@ def gbsa_force_field() -> ForceField:
 def water() -> Molecule:
     molecule = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
     molecule.generate_conformers(n_conformers=1)
+    return molecule
+
+
+@pytest.fixture(scope="session")
+def water_tip4p() -> Molecule:
+    """Water minimized to TIP4P-FB geometry."""
+    molecule = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+    molecule._conformers = [
+        Quantity(
+            [
+                [0.0, 0.0, 0.0],
+                [-0.7569503, -0.5858823, 0.0],
+                [0.7569503, -0.5858823, 0.0],
+            ],
+            unit.angstrom,
+        ),
+    ]
     return molecule
 
 

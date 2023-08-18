@@ -2,6 +2,7 @@
 Common helpers for exporting virtual sites.
 """
 from collections import defaultdict
+from collections.abc import Iterable
 
 import numpy
 from openff.units import Quantity, unit
@@ -143,10 +144,18 @@ def _get_bond_charge_virtual_site_positions(
     r1 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
     r2 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
 
-    r2_r1_norm = numpy.linalg.norm((r2 - r1).m_as(unit.angstrom)) * unit.angstrom
+    separation = _get_separation_by_atom_indices(
+        interchange,
+        atom_indices=tuple(
+            (
+                virtual_site_key.orientation_atom_indices[0],
+                virtual_site_key.orientation_atom_indices[1],
+            ),
+        ),
+    )
 
     # The virtual site is placed at a distance opposite the r1 -> r2 vector
-    return r1 - (r2 - r1) * (distance / r2_r1_norm)
+    return r1 - (r2 - r1) * distance / separation
 
 
 def _get_monovalent_lone_pair_virtual_site_positions(
@@ -195,10 +204,24 @@ def _get_divalent_lone_pair_virtual_site_positions(
     r1 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
     r2 = interchange.positions[virtual_site_key.orientation_atom_indices[2]]
 
-    r0_r1_bond_length = numpy.sqrt(numpy.sum((r0 - r1) ** 2))
-    r0_r2_bond_length = numpy.sqrt(numpy.sum((r0 - r2) ** 2))
-    rmid = (r1 + r2) / 2
-    rmid_distance = numpy.sqrt(numpy.sum((r0 - rmid) ** 2))
+    r0_r1_bond_length = _get_separation_by_atom_indices(
+        interchange,
+        atom_indices=tuple(
+            (
+                virtual_site_key.orientation_atom_indices[0],
+                virtual_site_key.orientation_atom_indices[1],
+            ),
+        ),
+    )
+    r0_r2_bond_length = _get_separation_by_atom_indices(
+        interchange,
+        atom_indices=tuple(
+            (
+                virtual_site_key.orientation_atom_indices[0],
+                virtual_site_key.orientation_atom_indices[2],
+            ),
+        ),
+    )
 
     if abs(r0_r1_bond_length - r0_r2_bond_length) > Quantity(1e-3, unit.nanometer):
         raise VirtualSiteTypeNotImplementedError(
@@ -214,6 +237,20 @@ def _get_divalent_lone_pair_virtual_site_positions(
         raise VirtualSiteTypeNotImplementedError(
             "Only planar `DivalentLonePairType` is currently supported.",
         )
+
+    theta = _get_angle_by_atom_indices(
+        interchange,
+        atom_indices=tuple(
+            (
+                virtual_site_key.orientation_atom_indices[1],
+                virtual_site_key.orientation_atom_indices[0],
+                virtual_site_key.orientation_atom_indices[2],
+            ),
+        ),
+    )
+
+    rmid_distance = r0_r1_bond_length * numpy.cos(theta.m_as(unit.radian) * 0.5)
+    rmid = (r1 + r2) / 2
 
     return r0 + (r0 - rmid) * (distance) / (rmid_distance)
 
@@ -250,3 +287,81 @@ def _get_trivalent_lone_pair_virtual_site_positions(
         dir *= -1
 
     return Quantity(center + dir * distance, unit.nanometer)
+
+
+def _get_separation_by_atom_indices(
+    interchange: Interchange,
+    atom_indices: Iterable[int],
+) -> Quantity:
+    """
+    Given indices of (two?) atoms, return the distance between them.
+
+    A constraint distance is first searched for, then an equilibrium bond length.
+
+    This is slow, but often necessary for converting virtual site "distances" to weighted
+    averages (unitless) of orientation atom positions.
+    """
+    if "Constraints" in interchange.collections:
+        collection = interchange["Constraints"]
+
+        for key in collection.key_map:
+            if (key.atom_indices == atom_indices) or (
+                key.atom_indices[::-1] == atom_indices
+            ):
+                return collection.potentials[collection.key_map[key]].parameters[
+                    "distance"
+                ]
+
+    if "Bonds" in interchange.collections:
+        collection = interchange["Bonds"]
+
+        for key in collection.key_map:
+            if (key.atom_indices == atom_indices) or (
+                key.atom_indices[::-1] == atom_indices
+            ):
+                return collection.potentials[collection.key_map[key]].parameters[
+                    "length"
+                ]
+
+    raise ValueError(f"Could not find distance between atoms {atom_indices}")
+
+
+def _get_angle_by_atom_indices(
+    interchange: Interchange,
+    atom_indices: Iterable[int],
+) -> Quantity:
+    """
+    Given indices of three atoms, return the angle between them using the law of cosines.
+
+    Distances are defined by the force field, not the positions.
+
+    It is assumed that the second atom is the central atom of the angle.
+
+            b
+          /   \
+         /     \
+        a ----- c
+
+    angle abc = arccos((ac^2 - ab^2 - bc^2) / (-2 * ab * bc)
+    """
+    ab = _get_separation_by_atom_indices(
+        interchange,
+        (atom_indices[0], atom_indices[1]),
+    ).m_as(unit.nanometer)
+
+    ac = _get_separation_by_atom_indices(
+        interchange,
+        (atom_indices[0], atom_indices[2]),
+    ).m_as(unit.nanometer)
+
+    bc = _get_separation_by_atom_indices(
+        interchange,
+        (atom_indices[1], atom_indices[2]),
+    ).m_as(unit.nanometer)
+
+    return Quantity(
+        numpy.arccos(
+            (ac**2 - ab**2 - bc**2) / (-2 * ab * bc),
+        ),
+        unit.radian,
+    )

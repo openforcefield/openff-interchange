@@ -1,7 +1,6 @@
 """
 Helper functions for exporting virutal sites to OpenMM.
 """
-from collections.abc import Iterable
 from typing import Union
 
 import numpy
@@ -16,6 +15,7 @@ from openff.interchange.components._particles import (
     _VirtualSite,
 )
 from openff.interchange.exceptions import UnsupportedExportError
+from openff.interchange.interop._virtual_sites import _get_separation_by_atom_indices
 from openff.interchange.models import VirtualSiteKey
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 
@@ -167,67 +167,3 @@ def _create_virtual_site_object(
 
     else:
         raise NotImplementedError(virtual_site_key.type)
-
-
-def _get_separation_by_atom_indices(
-    interchange: Interchange,
-    atom_indices: Iterable[int],
-) -> Quantity:
-    """
-    Given indices of (two?) atoms, return the distance between them.
-
-    A constraint distance is first searched for, then an equilibrium bond length.
-
-    This is slow, but often necessary for converting virtual site "distances" to weighted
-    averages (unitless) of orientation atom positions.
-    """
-    if "Constraints" in interchange.collections:
-        collection = interchange["Constraints"]
-
-        for key in collection.key_map:
-            if (key.atom_indices == atom_indices) or (
-                key.atom_indices[::-1] == atom_indices
-            ):
-                return collection.potentials[collection.key_map[key]].parameters[
-                    "distance"
-                ]
-
-    if "Bonds" in interchange.collections:
-        collection = interchange["Bonds"]
-
-        for key in collection.key_map:
-            if (key.atom_indices == atom_indices) or (
-                key.atom_indices[::-1] == atom_indices
-            ):
-                return collection.potentials[collection.key_map[key]].parameters[
-                    "length"
-                ]
-
-    raise ValueError(f"Could not find distance between atoms {atom_indices}")
-
-
-def _get_angle_by_atom_indices(
-    interchange: Interchange,
-    atom_indices: Iterable[int],
-) -> Quantity:
-    """
-    Given indices of three atoms, return the angle between them.
-
-    It is assumed that the middle atom is the central atom of the angle.
-    """
-    ba = _get_separation_by_atom_indices(
-        interchange,
-        (atom_indices[0], atom_indices[1]),
-    ).m_as(unit.nanometer)
-
-    bc = _get_separation_by_atom_indices(
-        interchange,
-        (atom_indices[0], atom_indices[2]),
-    ).m_as(unit.nanometer)
-
-    return Quantity(
-        numpy.arccos(
-            numpy.dot(ba, bc) / (numpy.linalg.norm(ba) * numpy.linalg.norm(bc)),
-        ),
-        unit.radian,
-    )

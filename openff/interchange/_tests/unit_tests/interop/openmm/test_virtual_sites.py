@@ -1,7 +1,6 @@
 import openmm
 import pytest
 from openff.toolkit import ForceField, Molecule
-from openff.toolkit.typing.engines.smirnoff.parameters import BondType, VirtualSiteType
 from openff.units import Quantity, unit
 
 
@@ -20,35 +19,20 @@ class TestBondChargeVirtualSite:
             (-2.4, -0.5, 1.5),
         ],
     )
-    def test_bond_charge_geometry(
+    def test_bond_charge_weights(
         self,
-        sage,
+        sage_with_bond_charge,
+        water,
         distance_,
         expected_w1,
         expected_w2,
     ):
-        sage["Bonds"].add_parameter(
-            parameter=BondType(
-                smirks="[#6:2]-[#17X1:1]",
-                id="b0",
-                length="1.6 * angstrom",
-                k="500 * angstrom**-2 * mole**-1 * kilocalorie",
-            ),
+        sage_with_bond_charge["VirtualSites"].parameters[0].distance = Quantity(
+            distance_,
+            unit.angstrom,
         )
 
-        sage.get_parameter_handler("VirtualSites")
-        sage["VirtualSites"].add_parameter(
-            parameter=VirtualSiteType(
-                smirks="[#6:2]-[#17X1:1]",
-                type="BondCharge",
-                match="all_permutations",
-                distance=Quantity(distance_, unit.angstrom),
-                charge_increment1="0.0 * elementary_charge ** 1",
-                charge_increment2="0.0 * elementary_charge ** 1",
-            ),
-        )
-
-        system = sage.create_openmm_system(
+        system = sage_with_bond_charge.create_openmm_system(
             Molecule.from_mapped_smiles(
                 "[H:3][C:2]([H:4])([H:5])[Cl:1]",
             ).to_topology(),
@@ -108,8 +92,9 @@ class TestFourSiteWater:
             (-0.585882276619988, 0.0, 0.5, 0.5),
         ],
     )
-    def test_bond_charge_geometry(
+    def test_weights(
         self,
+        water,
         distance_,
         expected_w1,
         expected_w2,
@@ -122,11 +107,7 @@ class TestFourSiteWater:
             unit.angstrom,
         )
 
-        system = tip4p.create_openmm_system(
-            Molecule.from_mapped_smiles(
-                "[H:2][O:1][H:3]",
-            ).to_topology(),
-        )
+        system = tip4p.create_openmm_system(water.to_topology())
 
         assert system.getNumParticles() == 4
 
