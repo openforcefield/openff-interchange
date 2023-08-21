@@ -133,3 +133,53 @@ class TestVirtualSitePositions:
             positions[-1].m_as(unit.angstrom),
             (w1 * p1 + w2 * p2 + w3 * p3).m_as(unit.angstrom),
         )
+
+    @pytest.mark.parametrize(
+        "distance_",
+        [
+            0.8,
+            0.0,
+            -0.8,
+            -1.6,
+            -2.4,
+        ],
+    )
+    def test_trivalent_nitrogen_positions(
+        self,
+        sage_with_trivalent_nitrogen,
+        ammonia_tetrahedral,
+        distance_,
+    ):
+        sage_with_trivalent_nitrogen["VirtualSites"].parameters[0].distance = Quantity(
+            distance_,
+            unit.angstrom,
+        )
+
+        out = sage_with_trivalent_nitrogen.create_interchange(
+            ammonia_tetrahedral.to_topology(),
+        )
+
+        original = ammonia_tetrahedral.conformers[0]
+        positions = get_positions_with_virtual_sites(out).to(unit.angstrom)
+
+        # The nitrogen is placed at [0, 0, 0.8855572013] and the hydrogens are on
+        # the xy plane, so the virtual site is at [0, 0, 0.88 ... + distance_]
+        assert positions[-1].m_as(unit.angstrom)[0] == 0.0
+        assert positions[-1].m_as(unit.angstrom)[1] == 0.0
+        assert positions[-1].m_as(unit.angstrom)[2] == 0.8855572013 + distance_
+
+        d_n_vs = positions[-1] - original[0]
+        d_n_h = [
+            positions[1] - original[0],
+            positions[2] - original[0],
+            positions[3] - original[0],
+        ]
+
+        assert numpy.linalg.norm(
+            d_n_vs.m_as(unit.angstrom),
+        ) == pytest.approx(numpy.abs(distance_))
+
+        for d in d_n_h[1:]:
+            assert numpy.linalg.norm(
+                d.m_as(unit.angstrom),
+            ) == pytest.approx(numpy.linalg.norm(d_n_h[0].m_as(unit.angstrom)))

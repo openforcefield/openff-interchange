@@ -44,6 +44,40 @@ def sage_with_bond_charge(sage):
 
 
 @pytest.fixture()
+def sage_with_trivalent_nitrogen():
+    sage_210 = ForceField("openff-2.1.0.offxml")
+    sage_210["Bonds"].add_parameter(
+        parameter=BondType(
+            smirks="[#7:3]-[#1X1:1]",
+            id="b0",
+            length="1.2 * angstrom",
+            k="500 * angstrom**-2 * mole**-1 * kilocalorie",
+        ),
+    )
+
+    sage_210.get_parameter_handler("VirtualSites")
+    sage_210["VirtualSites"].add_parameter(
+        parameter=VirtualSiteType(
+            smirks="[#1:2][#7:1]([#1:3])[#1:4]",
+            epsilon="0.0 * kilojoules_per_mole ** 1",
+            type="TrivalentLonePair",
+            match="once",
+            distance="0.5 * nanometer ** 1",
+            outOfPlaneAngle="None",
+            inPlaneAngle="None",
+            charge_increment1="0.0 * elementary_charge ** 1",
+            charge_increment2="0.0 * elementary_charge ** 1",
+            charge_increment3="0.0 * elementary_charge ** 1",
+            charge_increment4="0.0 * elementary_charge ** 1",
+            sigma="0.0 * angstrom ** 1",
+            name="EP",
+        ),
+    )
+
+    return sage_210
+
+
+@pytest.fixture()
 def _simple_force_field():
     # TODO: Create a minimal force field for faster tests
     pass
@@ -88,6 +122,27 @@ def water_tip4p() -> Molecule:
             unit.angstrom,
         ),
     ]
+
+    return molecule
+
+
+@pytest.fixture()
+def ammonia_tetrahedral() -> Molecule:
+    """An ammonia molecule with a tetrahedral geometry."""
+    # Sage 2.1.0; id: b87, length: 1.022553377106 angstrom
+    molecule = Molecule.from_mapped_smiles("[H:2][N:1]([H:3])[H:4]")
+    molecule._conformers = [
+        Quantity(
+            [
+                [0, 0, 0.8855572013],
+                [0, 0.5112766886, 0],
+                [0.4427786006, -0.2556383443, 0],
+                [-0.4427786006, 0.2556383443, 0],
+            ],
+            unit.angstrom,
+        ),
+    ]
+
     return molecule
 
 

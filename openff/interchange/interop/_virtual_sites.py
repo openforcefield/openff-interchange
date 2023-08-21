@@ -276,11 +276,12 @@ def _get_trivalent_lone_pair_virtual_site_positions(
     dir = numpy.cross(b - a, c - a)
     dir /= numpy.linalg.norm(dir)
 
-    # if adding the (normalized) normal vector to the midpoint of (a, b, c) ends up closer to the enter
+    # if adding a differential of the (normalized) normal vector to the midpoint
+    # of (a, b, c) ends up closer to the center
     if numpy.linalg.norm(
-        center - (numpy.cross(b - a, c - a) + dir),
-    ) < numpy.linalg.norm(center - (numpy.cross(b - a, c - a) - dir)):
-        # then this vector is pointing _toward_ the central atom
+        center - (numpy.cross(b - a, c - a) + dir * 0.001),
+    ) < numpy.linalg.norm(center - (numpy.cross(b - a, c - a) - dir * 0.001)):
+        # then this vector is pointing _toward_ the central atom, or "above" in the spec
         pass
     else:
         # otherwise, this vector is pointing _away_ from the central atom, so we need to point it the other way
