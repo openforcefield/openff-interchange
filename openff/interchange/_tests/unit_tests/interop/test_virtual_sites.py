@@ -1,4 +1,6 @@
 """Unit tests for common virtual site functions."""
+from random import random
+
 import numpy
 import pytest
 from openff.toolkit import ForceField
@@ -77,6 +79,49 @@ class TestVirtualSitePositions:
             positions[-1].m_as(unit.angstrom),
             (w1 * p1 + w2 * p2).m_as(unit.angstrom),
         )
+
+    @pytest.mark.parametrize(
+        (
+            "distance_",
+            "theta",
+        ),
+        [
+            (0.8, 120),
+            (1.5, 120),
+            (1.5, 100),
+            (0.6, 180),
+            (0.5 + random(), 90 + 90 * random()),
+        ],
+    )
+    def test_planar_monovalent_positions(
+        self,
+        sage_with_planar_monovalent_carbonyl,
+        carbonyl_planar,
+        distance_,
+        theta,
+    ):
+        sage_with_planar_monovalent_carbonyl["VirtualSites"].parameters[
+            0
+        ].distance = Quantity(
+            distance_,
+            unit.angstrom,
+        )
+
+        sage_with_planar_monovalent_carbonyl["VirtualSites"].parameters[
+            0
+        ].inPlaneAngle = Quantity(
+            theta,
+            unit.degree,
+        )
+
+        out = sage_with_planar_monovalent_carbonyl.create_interchange(
+            carbonyl_planar.to_topology(),
+        )
+
+        positions = get_positions_with_virtual_sites(out).to(unit.angstrom)
+
+        distance = numpy.linalg.norm((positions[-1] - positions[0]).m_as(unit.angstrom))
+        assert distance == pytest.approx(distance_)
 
     @pytest.mark.parametrize(
         (

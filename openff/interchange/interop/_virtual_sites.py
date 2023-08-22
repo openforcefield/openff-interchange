@@ -112,20 +112,14 @@ def _get_virtual_site_positions(
     virtual_site_key: VirtualSiteKey,
     interchange: Interchange,
 ) -> Quantity:
-    # TODO: Move this behavior elsewhere, possibly to a non-GROMACS location
-    if virtual_site_key.type == "BondCharge":
-        return _get_bond_charge_virtual_site_positions(virtual_site_key, interchange)
-    elif virtual_site_key.type == "DivalentLonePair":
-        return _get_divalent_lone_pair_virtual_site_positions(
-            virtual_site_key,
-            interchange,
-        )
-    elif virtual_site_key.type == "TrivalentLonePair":
-        return _get_trivalent_lone_pair_virtual_site_positions(
-            virtual_site_key,
-            interchange,
-        )
-    else:
+    try:
+        return {
+            "BondCharge": _get_bond_charge_virtual_site_positions,
+            "MonovalentLonePair": _get_monovalent_lone_pair_virtual_site_positions,
+            "DivalentLonePair": _get_divalent_lone_pair_virtual_site_positions,
+            "TrivalentLonePair": _get_trivalent_lone_pair_virtual_site_positions,
+        }[virtual_site_key.type](virtual_site_key, interchange)
+    except KeyError:
         raise VirtualSiteTypeNotImplementedError(
             f"Virtual site type {virtual_site_key.type} not implemented.",
         )
@@ -147,11 +141,9 @@ def _get_bond_charge_virtual_site_positions(
 
     separation = _get_separation_by_atom_indices(
         interchange,
-        atom_indices=tuple(
-            (
-                virtual_site_key.orientation_atom_indices[0],
-                virtual_site_key.orientation_atom_indices[1],
-            ),
+        atom_indices=(
+            virtual_site_key.orientation_atom_indices[0],
+            virtual_site_key.orientation_atom_indices[1],
         ),
     )
 
@@ -183,24 +175,18 @@ def _get_monovalent_lone_pair_virtual_site_positions(
 
     else:
         r12 = _get_separation_by_atom_indices(
-            interchange(
-                atom_indices=tuple(
-                    (
-                        virtual_site_key.orientation_atom_indices[0],
-                        virtual_site_key.orientation_atom_indices[1],
-                    ),
-                ),
+            interchange,
+            atom_indices=(
+                virtual_site_key.orientation_atom_indices[0],
+                virtual_site_key.orientation_atom_indices[1],
             ),
         )
 
         r23 = _get_separation_by_atom_indices(
-            interchange(
-                atom_indices=tuple(
-                    (
-                        virtual_site_key.orientation_atom_indices[1],
-                        virtual_site_key.orientation_atom_indices[2],
-                    ),
-                ),
+            interchange,
+            atom_indices=(
+                virtual_site_key.orientation_atom_indices[1],
+                virtual_site_key.orientation_atom_indices[2],
             ),
         )
 
@@ -231,20 +217,16 @@ def _get_divalent_lone_pair_virtual_site_positions(
 
     r0_r1_bond_length = _get_separation_by_atom_indices(
         interchange,
-        atom_indices=tuple(
-            (
-                virtual_site_key.orientation_atom_indices[0],
-                virtual_site_key.orientation_atom_indices[1],
-            ),
+        atom_indices=(
+            virtual_site_key.orientation_atom_indices[0],
+            virtual_site_key.orientation_atom_indices[1],
         ),
     )
     r0_r2_bond_length = _get_separation_by_atom_indices(
         interchange,
-        atom_indices=tuple(
-            (
-                virtual_site_key.orientation_atom_indices[0],
-                virtual_site_key.orientation_atom_indices[2],
-            ),
+        atom_indices=(
+            virtual_site_key.orientation_atom_indices[0],
+            virtual_site_key.orientation_atom_indices[2],
         ),
     )
 
@@ -265,12 +247,10 @@ def _get_divalent_lone_pair_virtual_site_positions(
 
     theta = _get_angle_by_atom_indices(
         interchange,
-        atom_indices=tuple(
-            (
-                virtual_site_key.orientation_atom_indices[1],
-                virtual_site_key.orientation_atom_indices[0],
-                virtual_site_key.orientation_atom_indices[2],
-            ),
+        atom_indices=(
+            virtual_site_key.orientation_atom_indices[1],
+            virtual_site_key.orientation_atom_indices[0],
+            virtual_site_key.orientation_atom_indices[2],
         ),
     )
 
@@ -370,24 +350,35 @@ def _get_angle_by_atom_indices(
 
     angle abc = arccos((ac^2 - ab^2 - bc^2) / (-2 * ab * bc)
     """
-    ab = _get_separation_by_atom_indices(
-        interchange,
-        (atom_indices[0], atom_indices[1]),
-    ).m_as(unit.nanometer)
+    if "Angles" in interchange.collections:
+        collection = interchange["Angles"]
 
-    ac = _get_separation_by_atom_indices(
-        interchange,
-        (atom_indices[0], atom_indices[2]),
-    ).m_as(unit.nanometer)
+        for key in collection.key_map:
+            if (key.atom_indices == atom_indices) or (
+                key.atom_indices[::-1] == atom_indices
+            ):
+                return collection.potentials[collection.key_map[key]].parameters[
+                    "angle"
+                ]
+    else:
+        ab = _get_separation_by_atom_indices(
+            interchange,
+            (atom_indices[0], atom_indices[1]),
+        ).m_as(unit.nanometer)
 
-    bc = _get_separation_by_atom_indices(
-        interchange,
-        (atom_indices[1], atom_indices[2]),
-    ).m_as(unit.nanometer)
+        ac = _get_separation_by_atom_indices(
+            interchange,
+            (atom_indices[0], atom_indices[2]),
+        ).m_as(unit.nanometer)
 
-    return Quantity(
-        numpy.arccos(
-            (ac**2 - ab**2 - bc**2) / (-2 * ab * bc),
-        ),
-        unit.radian,
-    )
+        bc = _get_separation_by_atom_indices(
+            interchange,
+            (atom_indices[1], atom_indices[2]),
+        ).m_as(unit.nanometer)
+
+        return Quantity(
+            numpy.arccos(
+                (ac**2 - ab**2 - bc**2) / (-2 * ab * bc),
+            ),
+            unit.radian,
+        )
