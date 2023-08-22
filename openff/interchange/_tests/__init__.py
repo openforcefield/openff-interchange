@@ -80,9 +80,18 @@ class MoleculeWithConformer(Molecule):
     """Thin wrapper around `Molecule` to produce an instance with a conformer in one call."""
 
     @classmethod
-    def from_smiles(self, smiles, name=""):
+    def from_smiles(self, smiles, name="", **kwargs):
         """Create from smiles and generate a single conformer."""
-        molecule = super().from_smiles(smiles)
+        molecule = super().from_smiles(smiles, **kwargs)
+        molecule.generate_conformers(n_conformers=1)
+        molecule.name = name
+
+        return molecule
+
+    @classmethod
+    def from_mapped_smiles(self, smiles, name="", **kwargs):
+        """Create from smiles and generate a single conformer."""
+        molecule = super().from_mapped_smiles(smiles, **kwargs)
         molecule.generate_conformers(n_conformers=1)
         molecule.name = name
 
@@ -104,14 +113,6 @@ class _BaseTest:
     def ethanol_top(self, ethanol):
         """Fixture that builds a simple four ethanol topology."""
         return Topology.from_molecules(4 * [ethanol])
-
-    @pytest.fixture()
-    def sage(self):
-        return ForceField("openff-2.0.0.offxml")
-
-    @pytest.fixture()
-    def sage_unconstrained(self):
-        return ForceField("openff_unconstrained-2.0.0.offxml")
 
     @pytest.fixture()
     def mainchain_ala(self):

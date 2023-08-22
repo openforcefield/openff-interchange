@@ -338,8 +338,8 @@ class TestToPDB(_BaseTest):
 
         assert mdtraj.load("_test.pdb").topology.n_atoms == 4
 
-    def test_tip4p_pdb_dummy_particle_position(self, water, tip4p):
-        tip4p.create_interchange(water.to_topology()).to_pdb(
+    def test_tip4p_pdb_dummy_particle_position(self, water_tip4p, tip4p):
+        tip4p.create_interchange(water_tip4p.to_topology()).to_pdb(
             "_test.pdb",
             include_virtual_sites=True,
         )

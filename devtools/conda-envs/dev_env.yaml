@@ -10,10 +10,10 @@ dependencies:
   - pip
   - numpy
   - pydantic
-  # openmm
+  - openmm
   # OpenFF stack
   - openff-toolkit-base >=0.14
-  - openff-interchange-base ==0.3.11  # ==pyhc3945a9_1
+  - openff-interchange-base
   - openff-models
   # openff-nagl
   # openff-nagl-models
@@ -56,3 +56,5 @@ dependencies:
   - flake8
   - snakeviz
   - tuna
+  - pip:
+    - git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods

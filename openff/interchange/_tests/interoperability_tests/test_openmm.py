@@ -506,9 +506,9 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
         assert abs(energy._value - expected_energy) < 3e-3
 
 
-@pytest.mark.slow()
 @skip_if_missing("openmm")
-class TestOpenMMVirtualSites(_BaseTest):
+@pytest.mark.slow()
+class TestOpenMMVirtualSites:
     @pytest.fixture()
     def sage_with_sigma_hole(self, sage):
         """Fixture that loads an SMIRNOFF XML with a C-Cl sigma hole."""

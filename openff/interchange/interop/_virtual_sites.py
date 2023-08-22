@@ -2,9 +2,11 @@
 Common helpers for exporting virtual sites.
 """
 from collections import defaultdict
+from collections.abc import Iterable
+from math import cos, pi, sin
 
 import numpy
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import (
@@ -36,7 +38,7 @@ def _virtual_site_parent_molecule_mapping(
 def get_positions_with_virtual_sites(
     interchange: Interchange,
     use_zeros: bool = False,
-) -> unit.Quantity:
+) -> Quantity:
     """Return the positions of all particles (atoms and virtual sites)."""
     if interchange.positions is None:
         raise MissingPositionsError(
@@ -56,7 +58,7 @@ def get_positions_with_virtual_sites(
     for virtual_site, molecule_index in virtual_site_molecule_map.items():
         molecule_virtual_site_map[molecule_index].append(virtual_site)
 
-    particle_positions = unit.Quantity(
+    particle_positions = Quantity(
         numpy.empty(shape=(0, 3)),
         unit.nanometer,
     )
@@ -74,16 +76,19 @@ def get_positions_with_virtual_sites(
         )
 
         if use_zeros:
-            this_molecule_virtual_site_positions = unit.Quantity(
+            this_molecule_virtual_site_positions = Quantity(
                 numpy.zeros((n_virtual_sites_in_this_molecule, 3)),
                 unit.nanometer,
             )
 
         else:
-            this_molecule_virtual_site_positions = unit.Quantity(
+            this_molecule_virtual_site_positions = Quantity(
                 numpy.asarray(
                     [
-                        _get_virtual_site_positions(virtual_site_key, interchange)
+                        _get_virtual_site_positions(
+                            virtual_site_key,
+                            interchange,
+                        ).m_as(unit.nanometer)
                         for virtual_site_key in molecule_virtual_site_map[
                             molecule_index
                         ]
@@ -106,16 +111,15 @@ def get_positions_with_virtual_sites(
 def _get_virtual_site_positions(
     virtual_site_key: VirtualSiteKey,
     interchange: Interchange,
-) -> unit.Quantity:
-    # TODO: Move this behavior elsewhere, possibly to a non-GROMACS location
-    if virtual_site_key.type == "BondCharge":
-        return _get_bond_charge_virtual_site_positions(virtual_site_key, interchange)
-    if virtual_site_key.type == "DivalentLonePair":
-        return _get_divalent_lone_pair_virtual_site_positions(
-            virtual_site_key,
-            interchange,
-        )
-    else:
+) -> Quantity:
+    try:
+        return {
+            "BondCharge": _get_bond_charge_virtual_site_positions,
+            "MonovalentLonePair": _get_monovalent_lone_pair_virtual_site_positions,
+            "DivalentLonePair": _get_divalent_lone_pair_virtual_site_positions,
+            "TrivalentLonePair": _get_trivalent_lone_pair_virtual_site_positions,
+        }[virtual_site_key.type](virtual_site_key, interchange)
+    except KeyError:
         raise VirtualSiteTypeNotImplementedError(
             f"Virtual site type {virtual_site_key.type} not implemented.",
         )
@@ -124,34 +128,109 @@ def _get_virtual_site_positions(
 def _get_bond_charge_virtual_site_positions(
     virtual_site_key,
     interchange,
-) -> unit.Quantity:
-    r0 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
-    r1 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
-
-    # numpy.linalg.norm(r0 - r1) requires something unimplemented with __array_function__
-    r1_r0_bond_length = numpy.sqrt(numpy.sum((r0 - r1) ** 2))
-
+) -> Quantity:
     potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
     potential = interchange["VirtualSites"].potentials[potential_key]
     distance = potential.parameters["distance"]
 
-    return r1 + (r1 - r0) * (distance / r1_r0_bond_length)
+    # r1 and r2 are positions of atom1 and atom2 in the convention of
+    # these diagrams:
+    # https://docs.openforcefield.org/projects/toolkit/en/stable/users/virtualsites.html#applying-virtual-site-parameters
+    r1 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
+    r2 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
+
+    separation = _get_separation_by_atom_indices(
+        interchange,
+        atom_indices=(
+            virtual_site_key.orientation_atom_indices[0],
+            virtual_site_key.orientation_atom_indices[1],
+        ),
+    )
+
+    # The virtual site is placed at a distance opposite the r1 -> r2 vector
+    return r1 - (r2 - r1) * distance / separation
+
+
+def _get_monovalent_lone_pair_virtual_site_positions(
+    virtual_site_key,
+    interchange,
+) -> Quantity:
+    # r1 and r2 are positions of atom1 and atom2 in the convention of
+    # these diagrams:
+    # https://docs.openforcefield.org/projects/toolkit/en/stable/users/virtualsites.html#applying-virtual-site-parameters
+    r1 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
+    r2 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
+    r3 = interchange.positions[virtual_site_key.orientation_atom_indices[2]]
+
+    potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
+    potential = interchange["VirtualSites"].potentials[potential_key]
+    distance = potential.parameters["distance"]
+    in_plane_angle = potential.parameters["inPlaneAngle"]
+    out_of_plane_angle = potential.parameters["outOfPlaneAngle"]
+
+    if out_of_plane_angle.m != 0.0:
+        raise NotImplementedError(
+            "Only planar `MonovalentLonePairType` is currently supported.",
+        )
+
+    else:
+        r12 = _get_separation_by_atom_indices(
+            interchange,
+            atom_indices=(
+                virtual_site_key.orientation_atom_indices[0],
+                virtual_site_key.orientation_atom_indices[1],
+            ),
+        )
+
+        r23 = _get_separation_by_atom_indices(
+            interchange,
+            atom_indices=(
+                virtual_site_key.orientation_atom_indices[1],
+                virtual_site_key.orientation_atom_indices[2],
+            ),
+        )
+
+        theta = in_plane_angle.m_as(unit.radian)
+
+        theta_123 = _get_angle_by_atom_indices(
+            interchange,
+            atom_indices=virtual_site_key.orientation_atom_indices,
+        ).m_as(unit.radian)
+
+        w3 = distance / r23 * sin(pi - theta) / sin(pi - theta_123)
+
+        w1 = 1 + w3 * r23 / r12 * cos(pi - theta_123) + distance / r12 * cos(pi - theta)
+
+        w2 = 1 - w1 - w3
+
+        # This is based on the given atom positions, not the geometry specified by the force field
+        return w1 * r1 + w2 * r2 + w3 * r3
 
 
 def _get_divalent_lone_pair_virtual_site_positions(
     virtual_site_key,
     interchange,
-) -> unit.Quantity:
+) -> Quantity:
     r0 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
     r1 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
     r2 = interchange.positions[virtual_site_key.orientation_atom_indices[2]]
 
-    r0_r1_bond_length = numpy.sqrt(numpy.sum((r0 - r1) ** 2))
-    r0_r2_bond_length = numpy.sqrt(numpy.sum((r0 - r2) ** 2))
-    rmid = (r1 + r2) / 2
-    rmid_distance = numpy.sqrt(numpy.sum((r0 - rmid) ** 2))
+    r0_r1_bond_length = _get_separation_by_atom_indices(
+        interchange,
+        atom_indices=(
+            virtual_site_key.orientation_atom_indices[0],
+            virtual_site_key.orientation_atom_indices[1],
+        ),
+    )
+    r0_r2_bond_length = _get_separation_by_atom_indices(
+        interchange,
+        atom_indices=(
+            virtual_site_key.orientation_atom_indices[0],
+            virtual_site_key.orientation_atom_indices[2],
+        ),
+    )
 
-    if abs(r0_r1_bond_length - r0_r2_bond_length) > unit.Quantity(1e-3, unit.nanometer):
+    if abs(r0_r1_bond_length - r0_r2_bond_length) > Quantity(1e-3, unit.nanometer):
         raise VirtualSiteTypeNotImplementedError(
             "Only symmetric geometries (i.e. r2 - r0 = r1 - r0) are currently supported",
         )
@@ -166,4 +245,140 @@ def _get_divalent_lone_pair_virtual_site_positions(
             "Only planar `DivalentLonePairType` is currently supported.",
         )
 
+    theta = _get_angle_by_atom_indices(
+        interchange,
+        atom_indices=(
+            virtual_site_key.orientation_atom_indices[1],
+            virtual_site_key.orientation_atom_indices[0],
+            virtual_site_key.orientation_atom_indices[2],
+        ),
+    )
+
+    rmid_distance = r0_r1_bond_length * cos(theta.m_as(unit.radian) * 0.5)
+    rmid = (r1 + r2) / 2
+
     return r0 + (r0 - rmid) * (distance) / (rmid_distance)
+
+
+def _get_trivalent_lone_pair_virtual_site_positions(
+    virtual_site_key,
+    interchange,
+):
+    potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
+    distance = (
+        interchange["VirtualSites"]
+        .potentials[potential_key]
+        .parameters["distance"]
+        .m_as(unit.nanometer)
+    )
+
+    center, a, b, c = (
+        interchange.positions[index].m_as(unit.nanometer)
+        for index in virtual_site_key.orientation_atom_indices
+    )
+
+    # clockwise vs. counter-clockwise matters here - manually correcting it later
+    dir = numpy.cross(b - a, c - a)
+    dir /= numpy.linalg.norm(dir)
+
+    # if adding a differential of the (normalized) normal vector to the midpoint
+    # of (a, b, c) ends up closer to the center
+    if numpy.linalg.norm(
+        center - (numpy.cross(b - a, c - a) + dir * 0.001),
+    ) < numpy.linalg.norm(center - (numpy.cross(b - a, c - a) - dir * 0.001)):
+        # then this vector is pointing _toward_ the central atom, or "above" in the spec
+        pass
+    else:
+        # otherwise, this vector is pointing _away_ from the central atom, so we need to point it the other way
+        dir *= -1
+
+    return Quantity(center + dir * distance, unit.nanometer)
+
+
+def _get_separation_by_atom_indices(
+    interchange: Interchange,
+    atom_indices: Iterable[int],
+) -> Quantity:
+    """
+    Given indices of (two?) atoms, return the distance between them.
+
+    A constraint distance is first searched for, then an equilibrium bond length.
+
+    This is slow, but often necessary for converting virtual site "distances" to weighted
+    averages (unitless) of orientation atom positions.
+    """
+    if "Constraints" in interchange.collections:
+        collection = interchange["Constraints"]
+
+        for key in collection.key_map:
+            if (key.atom_indices == atom_indices) or (
+                key.atom_indices[::-1] == atom_indices
+            ):
+                return collection.potentials[collection.key_map[key]].parameters[
+                    "distance"
+                ]
+
+    if "Bonds" in interchange.collections:
+        collection = interchange["Bonds"]
+
+        for key in collection.key_map:
+            if (key.atom_indices == atom_indices) or (
+                key.atom_indices[::-1] == atom_indices
+            ):
+                return collection.potentials[collection.key_map[key]].parameters[
+                    "length"
+                ]
+
+    raise ValueError(f"Could not find distance between atoms {atom_indices}")
+
+
+def _get_angle_by_atom_indices(
+    interchange: Interchange,
+    atom_indices: Iterable[int],
+) -> Quantity:
+    """
+    Given indices of three atoms, return the angle between them using the law of cosines.
+
+    Distances are defined by the force field, not the positions.
+
+    It is assumed that the second atom is the central atom of the angle.
+
+            b
+          /   \
+         /     \
+        a ----- c
+
+    angle abc = arccos((ac^2 - ab^2 - bc^2) / (-2 * ab * bc)
+    """
+    if "Angles" in interchange.collections:
+        collection = interchange["Angles"]
+
+        for key in collection.key_map:
+            if (key.atom_indices == atom_indices) or (
+                key.atom_indices[::-1] == atom_indices
+            ):
+                return collection.potentials[collection.key_map[key]].parameters[
+                    "angle"
+                ]
+    else:
+        ab = _get_separation_by_atom_indices(
+            interchange,
+            (atom_indices[0], atom_indices[1]),
+        ).m_as(unit.nanometer)
+
+        ac = _get_separation_by_atom_indices(
+            interchange,
+            (atom_indices[0], atom_indices[2]),
+        ).m_as(unit.nanometer)
+
+        bc = _get_separation_by_atom_indices(
+            interchange,
+            (atom_indices[1], atom_indices[2]),
+        ).m_as(unit.nanometer)
+
+        return Quantity(
+            numpy.arccos(
+                (ac**2 - ab**2 - bc**2) / (-2 * ab * bc),
+            ),
+            unit.radian,
+        )

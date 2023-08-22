@@ -9,6 +9,18 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## 0.3.13 - 2023-08-22
+
+### New Features
+
+* #791 `Interchange.visualize` can now visualize virtual sites via the `include_virtual_sites` argument.
+* #791 `get_positions_with_virtual_sites` now supports more virtual site types.
+
+### Behavior changes
+
+* #791 `BondCharge` virtual sites are now implemented in OpenMM with `openmm.TwoParticleAverageSite`.
+* #791 Conventional four-site water models using `DivalentLonePair` virtual sites, like TIP4P and its variants, are now implemented in OpenMM with `openmm.ThreeParticleAverageSite`.
+
 ## 0.3.12 - 2023-08-14
 
 ### New features
