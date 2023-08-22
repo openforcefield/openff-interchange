@@ -3,6 +3,7 @@ Common helpers for exporting virtual sites.
 """
 from collections import defaultdict
 from collections.abc import Iterable
+from math import cos, pi, sin
 
 import numpy
 from openff.units import Quantity, unit
@@ -167,6 +168,7 @@ def _get_monovalent_lone_pair_virtual_site_positions(
     # https://docs.openforcefield.org/projects/toolkit/en/stable/users/virtualsites.html#applying-virtual-site-parameters
     r1 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
     r2 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
+    r3 = interchange.positions[virtual_site_key.orientation_atom_indices[2]]
 
     potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
     potential = interchange["VirtualSites"].potentials[potential_key]
@@ -179,21 +181,44 @@ def _get_monovalent_lone_pair_virtual_site_positions(
             "Only planar `MonovalentLonePairType` is currently supported.",
         )
 
-    if in_plane_angle.m != 0.0:
-        raise NotImplementedError(
-            "Only linear `MonovalentLonePairType` is currently supported.",
+    else:
+        r12 = _get_separation_by_atom_indices(
+            interchange(
+                atom_indices=tuple(
+                    (
+                        virtual_site_key.orientation_atom_indices[0],
+                        virtual_site_key.orientation_atom_indices[1],
+                    ),
+                ),
+            ),
         )
 
-    # r1 and r2 are positions of atom1 and atom2 in the convention of
-    # these diagrams:
-    # https://docs.openforcefield.org/projects/toolkit/en/stable/users/virtualsites.html#applying-virtual-site-parameters
-    r1 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
-    r2 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
+        r23 = _get_separation_by_atom_indices(
+            interchange(
+                atom_indices=tuple(
+                    (
+                        virtual_site_key.orientation_atom_indices[1],
+                        virtual_site_key.orientation_atom_indices[2],
+                    ),
+                ),
+            ),
+        )
 
-    r2_r1_norm = numpy.linalg.norm((r2 - r1).m_as(unit.angstrom)) * unit.angstrom
+        theta = in_plane_angle.m_as(unit.radian)
 
-    # The virtual site is placed at a distance opposite the r1 -> r2 vector
-    return r1 - (r2 - r1) * (distance / r2_r1_norm)
+        theta_123 = _get_angle_by_atom_indices(
+            interchange,
+            atom_indices=virtual_site_key.orientation_atom_indices,
+        ).m_as(unit.radian)
+
+        w3 = distance / r23 * sin(pi - theta) / sin(pi - theta_123)
+
+        w1 = 1 + w3 * r23 / r12 * cos(pi - theta_123) + distance / r12 * cos(pi - theta)
+
+        w2 = 1 - w1 - w3
+
+        # This is based on the given atom positions, not the geometry specified by the force field
+        return w1 * r1 + w2 * r2 + w3 * r3
 
 
 def _get_divalent_lone_pair_virtual_site_positions(
@@ -249,7 +274,7 @@ def _get_divalent_lone_pair_virtual_site_positions(
         ),
     )
 
-    rmid_distance = r0_r1_bond_length * numpy.cos(theta.m_as(unit.radian) * 0.5)
+    rmid_distance = r0_r1_bond_length * cos(theta.m_as(unit.radian) * 0.5)
     rmid = (r1 + r2) / 2
 
     return r0 + (r0 - rmid) * (distance) / (rmid_distance)
