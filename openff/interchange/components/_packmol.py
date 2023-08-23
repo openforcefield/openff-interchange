@@ -707,15 +707,30 @@ def pack_box(
         if not packmol_succeeded:
             raise PACKMOLRuntimeError(result)
 
-        # Load the coordinates from the PDB file with RDKit (because its already
-        # a dependency)
-        rdmol = rdkit.Chem.rdmolfiles.MolFromPDBFile(
-            output_file_path,
-            sanitize=False,
-            removeHs=False,
-            proximityBonding=False,
-        )
-        positions = rdmol.GetConformers()[0].GetPositions()
+        try:
+            # Load the coordinates from the PDB file with RDKit (because its already
+            # a dependency)
+            rdmol = rdkit.Chem.rdmolfiles.MolFromPDBFile(
+                output_file_path,
+                sanitize=False,
+                removeHs=False,
+                proximityBonding=False,
+            )
+
+            positions = rdmol.GetConformers()[0].GetPositions()
+        except AttributeError:
+            # Handle a case in which RDKit doesn't parse PACKMOL's PDB files
+            # with more than 99,999 atoms
+            try:
+                import mdtraj
+
+                positions = mdtraj.load(output_file_path).xyz[0] * 0.1
+            except ModuleNotFoundError as error:
+                raise PACKMOLRuntimeError(
+                    "PACKMOL output could not be parsed by RDKit, possibly because "
+                    "this file has 100,000 or more atoms. Parsing this file in this "
+                    "particular case requires the optional dependency MDTraj.",
+                ) from error
 
     # TODO: This currently does not run if we encountered an error in the
     # context manager
