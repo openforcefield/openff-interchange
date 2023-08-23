@@ -32,7 +32,6 @@ dependencies:
   - pytest-randomly
   - nbval
   - qcportal
-  - openff-qcsubmit
   - mdanalysis
   # Drivers
   # gromacs >=2021=nompi*  # No osx-arm64 builds

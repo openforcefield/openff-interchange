@@ -1,7 +1,7 @@
 import abc
 from collections import defaultdict
 from collections.abc import Iterable
-from typing import DefaultDict, Literal, Optional, Union
+from typing import DefaultDict, Literal, Union
 
 from openff.models.types import FloatQuantity
 from openff.units import Quantity, unit
@@ -90,17 +90,18 @@ class ElectrostaticsCollection(_NonbondedCollection):
         Union[TopologyKey, LibraryChargeTopologyKey],
         Quantity,
     ] = PrivateAttr(dict())
-    _charges_cached_with_virtual_sites: Optional[bool] = PrivateAttr(None)
+    _charges_cached: bool = PrivateAttr(False)
 
     @property
     def charges(self) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
-        if self._charges is None or self._charges_cached_with_virtual_sites in (
+        raise NotImplementedError()
+        if self._charges is None or self._charges_cached in (
             True,
             None,
         ):
-            self._charges = self._get_charges(include_virtual_sites=False)
-            self._charges_cached_with_virtual_sites = False
+            self._charges = self._get_charges(include_virtual_sites=True)
+            self._charges_cached = False
 
         return self._charges
 
@@ -116,6 +117,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
         include_virtual_sites: bool = False,
     ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
         """Get the total partial charge on each atom or particle."""
+        raise NotImplementedError()
         if include_virtual_sites:
             raise NotImplementedError()
 
