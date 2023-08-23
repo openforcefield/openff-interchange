@@ -80,15 +80,13 @@ jobs:
     - name: Install OpenMM
       if: ${{ matrix.openmm == true }}
       run: |
-        micromamba install openmm "smirnoff-plugins =2023"
+        micromamba install openmm "smirnoff-plugins =2023" -yq
         pip install git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods
 
     - name: Uninstall OpenMM
       if: ${{ matrix.openmm == false && matrix.openeye == true }}
       run: |
-        micromamba remove openmm mdtraj
-        # Removing mBuild also removes some leaves, need to re-install them
-        micromamba install rdkit packmol
+        micromamba remove openmm mdtraj -yq
 
     - name: Install AmberTools
       if: ${{ matrix.openeye == false }}
