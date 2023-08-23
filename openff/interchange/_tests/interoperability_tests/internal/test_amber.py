@@ -1,5 +1,4 @@
 import MDAnalysis
-import mdtraj
 import numpy as np
 import parmed
 import pytest
@@ -89,9 +88,12 @@ class TestAmber(_BaseTest):
 
 
 class TestPRMTOP(_BaseTest):
+    @skip_if_missing("mdtraj")
     @skip_if_missing("openmm")
     @pytest.mark.slow()
     def test_atom_names_pdb(self):
+        import mdtraj
+
         peptide = Molecule.from_polymer_pdb(
             get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
         )

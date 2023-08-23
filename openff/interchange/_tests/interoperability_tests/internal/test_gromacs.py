@@ -36,6 +36,7 @@ if has_package("openmm"):
     import openmm.unit
 
 
+@skip_if_missing("mdtraj")
 @skip_if_missing("openmm")
 @needs_gmx
 class TestGROMACSGROFile(_BaseTest):
@@ -103,8 +104,8 @@ class TestGROMACSGROFile(_BaseTest):
         with pytest.warns(UserWarning, match="gitlab"):
             out.to_gro("tmp.gro")
 
-    @skip_if_missing("openmm")
     @pytest.mark.slow()
+    @skip_if_missing("openmm")
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .gro files."""
         import mdtraj
@@ -134,7 +135,6 @@ class TestGROMACSGROFile(_BaseTest):
             assert found_residue.name == original_residue.residue_name
             assert str(found_residue.resSeq) == original_residue.residue_number
 
-    @skip_if_missing("openmm")
     @pytest.mark.slow()
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
@@ -245,8 +245,8 @@ class TestGROMACS(_BaseTest):
         with pytest.raises(UnsupportedExportError, match="rule `geometric` not compat"):
             interchange.to_top("out.top")
 
-    @skip_if_missing("openmm")
     @pytest.mark.slow()
+    @skip_if_missing("openmm")
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .top files."""
         import parmed
@@ -368,6 +368,7 @@ class TestGROMACS(_BaseTest):
 
 class TestGROMACSMetadata(_BaseTest):
     @skip_if_missing("openmm")
+    @skip_if_missing("mdtraj")
     @pytest.mark.slow()
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(

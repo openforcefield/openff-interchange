@@ -1,6 +1,5 @@
 from copy import deepcopy
 
-import mdtraj
 import numpy
 import pytest
 from openff.toolkit.topology import Molecule, Topology
@@ -329,8 +328,11 @@ class TestInterchange(_BaseTest):
 
 
 @skip_if_missing("openmm")
+@skip_if_missing("mdtraj")
 class TestToPDB(_BaseTest):
     def test_to_pdb_with_virtual_sites(self, water, tip4p):
+        import mdtraj
+
         tip4p.create_interchange(water.to_topology()).to_pdb(
             "_test.pdb",
             include_virtual_sites=True,
@@ -339,6 +341,8 @@ class TestToPDB(_BaseTest):
         assert mdtraj.load("_test.pdb").topology.n_atoms == 4
 
     def test_tip4p_pdb_dummy_particle_position(self, water_tip4p, tip4p):
+        import mdtraj
+
         tip4p.create_interchange(water_tip4p.to_topology()).to_pdb(
             "_test.pdb",
             include_virtual_sites=True,
@@ -356,6 +360,8 @@ class TestToPDB(_BaseTest):
         )
 
     def test_to_pdb_ignoring_virtual_sites(self, water, tip4p):
+        import mdtraj
+
         tip4p.create_interchange(water.to_topology()).to_pdb(
             "_test.pdb",
             include_virtual_sites=False,
