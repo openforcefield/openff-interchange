@@ -85,7 +85,7 @@ jobs:
     - name: Install OpenMM
       if: ${{ matrix.openmm == true }}
       run: |
-        micromamba install openmm "smirnoff-plugins =2023" -yq
+        micromamba install openmm mdtraj "smirnoff-plugins =2023" -yq
         pip install git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods
 
       # Might not need this after re-packaging

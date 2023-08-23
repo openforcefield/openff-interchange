@@ -5,7 +5,7 @@ import numpy
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import unit
-from openff.utilities.testing import skip_if_missing
+from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange.components._packmol import (
     RHOMBIC_DODECAHEDRON,
@@ -357,3 +357,34 @@ def test_solvate_topology():
 
     assert solvated_topology.box_vectors[0, 0] == solvated_topology.box_vectors[1, 1]
     assert solvated_topology.box_vectors[2, 0] == solvated_topology.box_vectors[2, 1]
+
+
+@pytest.mark.skipif(
+    has_package("mdtraj"),
+    reason="Test requires that MDTraj is not installed",
+)
+def test_noninteger_serial_error():
+    """See issue #794."""
+    with pytest.raises(
+        PACKMOLRuntimeError,
+        match="could not be parsed by RDKit",
+    ):
+        pack_box(
+            molecules=[Molecule.from_smiles("CCO")],
+            number_of_copies=[11112],
+            box_shape=UNIT_CUBE,
+            tolerance=1.0 * unit.angstrom,
+            mass_density=0.1 * unit.grams / unit.milliliters,
+        )
+
+
+@skip_if_missing("mdtraj")
+def test_noninteger_serial_fallback():
+    """See issue #794."""
+    pack_box(
+        molecules=[Molecule.from_smiles("CCO")],
+        number_of_copies=[11112],
+        box_shape=UNIT_CUBE,
+        tolerance=1.0 * unit.angstrom,
+        mass_density=0.1 * unit.grams / unit.milliliters,
+    )
