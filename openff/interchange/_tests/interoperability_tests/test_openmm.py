@@ -1135,6 +1135,7 @@ class TestToOpenMMPositions(_BaseTest):
         )
 
 
+@skip_if_missing("mdtraj")
 @skip_if_missing("openmm")
 class TestOpenMMToPDB(_BaseTest):
     def test_to_pdb(self, sage, water):
