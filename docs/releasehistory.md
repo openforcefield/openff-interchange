@@ -9,6 +9,17 @@ Releases follow versioning as described in
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+### Bugfixes
+
+* #797 Fixes a bug in which virtual site charge increments were not properly applied.
+
+### Breaking changes
+
+* #797 `SMIRNOFFElectrostaticsCollection` now applies virtual site charge increments.
+* #797 Removes `ElectrostaticsCollection.charges_without_virtual_sites`, `FoyerElectrostaticsHandler.charges_without_virtual_sites`, and makes `SMIRNOFFElectrostaticsCollection.charges_without_virtual_sites` private.
+
 ## 0.3.13 - 2023-08-22
 
 ### New Features
