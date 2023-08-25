@@ -72,11 +72,6 @@ class FoyerElectrostaticsHandler(ElectrostaticsCollection):
         """Get the total partial charge on each atom, including virtual sites."""
         return self._charges
 
-    @property
-    def charges_with_virtual_sites(self):
-        """Get the total partial charge on each atom, including virtual sites."""
-        raise NotImplementedError("Foyer force fields do not support virtual sites.")
-
     def store_charges(
         self,
         atom_slots: dict[TopologyKey, PotentialKey],

@@ -283,37 +283,30 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         """Return a list of supported parameter attribute names."""
 
     @property
-    def charges(self) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
+    def _charges_without_virtual_sites(
+        self,
+    ) -> dict[TopologyKey, Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
-        if self._charges is None or self._charges_cached_with_virtual_sites in (
-            True,
-            None,
-        ):
-            self._charges = self._get_charges(include_virtual_sites=False)
-            self._charges_cached_with_virtual_sites = False
-
-        return self._charges
+        return self._get_charges(include_virtual_sites=False)
 
     @property
-    def charges_with_virtual_sites(
+    def charges(
         self,
-    ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
+    ) -> dict[Union[TopologyKey, VirtualSiteKey], Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
-        if self._charges is None or self._charges_cached_with_virtual_sites in (
-            False,
-            None,
-        ):
+        if len(self._charges) == 0 or self._charges_cached is False:
             self._charges = self._get_charges(include_virtual_sites=True)
-            self._charges_cached_with_virtual_sites = True
+            self._charges_cached = True
 
         return self._charges
 
     def _get_charges(
         self,
-        include_virtual_sites=False,
-    ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
+        include_virtual_sites=True,
+    ) -> dict[Union[TopologyKey, VirtualSiteKey], Quantity]:
         """Get the total partial charge on each atom or particle."""
-        charges: dict[Union[TopologyKey, int], Quantity] = dict()
+        # Keyed by index for atoms and by VirtualSiteKey for virtual sites.
+        charges: dict[Union[VirtualSiteKey, int], Quantity] = dict()
 
         for topology_key, potential_key in self.key_map.items():
             potential = self.potentials[potential_key]
@@ -321,20 +314,23 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             for parameter_key, parameter_value in potential.parameters.items():
                 if parameter_key == "charge_increments":
                     if type(topology_key) is not VirtualSiteKey:
-                        raise RuntimeError
+                        raise RuntimeError(
+                            '"charge_increments" (plural) understood to only be applied by'
+                            "virtual sites, not by a `ChargeIncrementModelHandler`.",
+                        )
 
                     total_charge = numpy.sum(parameter_value)
                     # assumes virtual sites can only have charges determined in one step
-                    # here, topology_key is actually a VirtualSiteKey
                     charges[topology_key] = -1.0 * total_charge
 
                     # Apply increments to "orientation" atoms
                     for i, increment in enumerate(parameter_value):
-                        orientation_atom_key = TopologyKey(
-                            atom_indices=(topology_key.orientation_atom_indices[i],),
-                        )
-                        charges[orientation_atom_key] = _add_charges(
-                            charges.get(orientation_atom_key, _ZERO_CHARGE),
+                        orientation_atom_index = topology_key.orientation_atom_indices[
+                            i
+                        ]
+
+                        charges[orientation_atom_index] = _add_charges(
+                            charges.get(orientation_atom_index, _ZERO_CHARGE),
                             increment,
                         )
 
@@ -348,7 +344,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         "ToolkitAM1BCCHandler",
                         "charge_from_molecules",
                     ):
-                        charges[atom_index] = parameter_value
+                        charges[atom_index] = _add_charges(
+                            charges.get(atom_index, _ZERO_CHARGE),
+                            parameter_value,
+                        )
 
                     elif potential_key.associated_handler in (  # type: ignore[operator]
                         "ChargeIncrementModelHandler"
@@ -356,6 +355,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         # the "charge" and "charge_increment" keys may not appear in that order, so
                         # we "add" the charge whether or not the increment was already applied.
                         # There should be a better way to do this.
+
                         charges[atom_index] = _add_charges(
                             charges.get(atom_index, _ZERO_CHARGE),
                             parameter_value,
@@ -385,9 +385,9 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         ] = dict()
 
         for index, charge in charges.items():
-            if isinstance(index, int):
+            if type(index) is int:
                 returned_charges[TopologyKey(atom_indices=(index,))] = charge
-            else:
+            elif type(index) is VirtualSiteKey:
                 if include_virtual_sites:
                     returned_charges[index] = charge
 
@@ -448,6 +448,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             charge_from_molecules=charge_from_molecules,
             allow_nonintegral_charges=allow_nonintegral_charges,
         )
+        handler._charges = dict()
 
         return handler
 

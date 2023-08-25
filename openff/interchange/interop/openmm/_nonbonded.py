@@ -341,10 +341,7 @@ def _create_single_nonbonded_force(
             )
 
     if data.electrostatics_collection is not None:
-        if has_virtual_sites:
-            partial_charges = data.electrostatics_collection.charges_with_virtual_sites
-        else:
-            partial_charges = data.electrostatics_collection.charges
+        partial_charges = data.electrostatics_collection.charges
 
     # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
     #   of that parent atom (if any)
@@ -919,10 +916,7 @@ def _set_particle_parameters(
     if electrostatics_force is not None:
         electrostatics: ElectrostaticsCollection = data.electrostatics_collection
 
-        partial_charges = getattr(
-            electrostatics,
-            "charges_with_virtual_sites" if has_virtual_sites else "charges",
-        )
+        partial_charges = electrostatics.charges
 
     else:
         partial_charges = None

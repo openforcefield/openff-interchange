@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Optional
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange._experimental import experimental
-from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
+from openff.interchange.common._nonbonded import vdWCollection
 from openff.interchange.common._valence import (
     AngleCollection,
     BondCollection,
@@ -11,6 +11,9 @@ from openff.interchange.common._valence import (
     ProperTorsionCollection,
 )
 from openff.interchange.exceptions import UnsupportedImportError
+from openff.interchange.interop.openmm._import._nonbonded import (
+    BasicElectrostaticsCollection,
+)
 
 if has_package("openmm"):
     import openmm
@@ -126,13 +129,9 @@ def _convert_constraints(
 
 def _convert_nonbonded_force(
     force: "openmm.NonbondedForce",
-) -> tuple["vdWCollection", "ElectrostaticsCollection"]:
+) -> tuple[vdWCollection, BasicElectrostaticsCollection]:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
-    from openff.interchange.common._nonbonded import (
-        ElectrostaticsCollection,
-        vdWCollection,
-    )
     from openff.interchange.components.potentials import Potential
     from openff.interchange.models import PotentialKey, TopologyKey
 
@@ -142,7 +141,7 @@ def _convert_nonbonded_force(
         )
 
     vdw = vdWCollection()
-    electrostatics = ElectrostaticsCollection(version=0.4, scale_14=0.833333)
+    electrostatics = BasicElectrostaticsCollection(version=0.4, scale_14=0.833333)
 
     n_parametrized_particles = force.getNumParticles()
 

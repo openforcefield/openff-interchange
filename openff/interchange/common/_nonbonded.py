@@ -1,7 +1,6 @@
 import abc
-from collections import defaultdict
 from collections.abc import Iterable
-from typing import DefaultDict, Literal, Optional, Union
+from typing import Literal, Union
 
 from openff.models.types import FloatQuantity
 from openff.units import Quantity, unit
@@ -90,45 +89,13 @@ class ElectrostaticsCollection(_NonbondedCollection):
         Union[TopologyKey, LibraryChargeTopologyKey],
         Quantity,
     ] = PrivateAttr(dict())
-    _charges_cached_with_virtual_sites: Optional[bool] = PrivateAttr(None)
+    _charges_cached: bool = PrivateAttr(False)
 
     @property
-    def charges(self) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
-        """Get the total partial charge on each atom, excluding virtual sites."""
-        if self._charges is None or self._charges_cached_with_virtual_sites in (
-            True,
-            None,
-        ):
-            self._charges = self._get_charges(include_virtual_sites=False)
-            self._charges_cached_with_virtual_sites = False
-
-        return self._charges
-
-    @property
-    def charges_with_virtual_sites(
-        self,
-    ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
+    def charges(self):
         """Get the total partial charge on each atom, including virtual sites."""
         raise NotImplementedError()
 
-    def _get_charges(
-        self,
-        include_virtual_sites: bool = False,
-    ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
+    def _get_charges(self):
         """Get the total partial charge on each atom or particle."""
-        if include_virtual_sites:
-            raise NotImplementedError()
-
-        charges: DefaultDict[
-            Union[TopologyKey, LibraryChargeTopologyKey],
-            Quantity,
-        ] = defaultdict(
-            lambda: Quantity(0.0, unit.elementary_charge),
-        )
-
-        for topology_key, potential_key in self.key_map.items():
-            potential = self.potentials[potential_key]
-
-            charges[topology_key] = potential.parameters["charge"]
-
-        return charges
+        raise NotImplementedError()

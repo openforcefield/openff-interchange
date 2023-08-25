@@ -794,12 +794,12 @@ class Interchange(DefaultModel):
         atom_offset = self.topology.n_atoms
 
         if "Electrostatics" in self_copy.collections:
-            self_copy["Electrostatics"]._charges = None
-            self_copy["Electrostatics"]._charges_cached_with_virtual_sites = False
+            self_copy["Electrostatics"]._charges = dict()
+            self_copy["Electrostatics"]._charges_cached = False
 
         if "Electrostatics" in other.collections:
-            other["Electrostatics"]._charges = None
-            other["Electrostatics"]._charges_cached_with_virtual_sites = False
+            other["Electrostatics"]._charges = dict()
+            other["Electrostatics"]._charges_cached = False
 
         for handler_name, handler in other.collections.items():
             # TODO: Actually specify behavior in this case

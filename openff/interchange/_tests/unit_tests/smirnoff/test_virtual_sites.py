@@ -10,7 +10,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     VirtualSiteHandler,
     vdWHandler,
 )
-from openff.units import unit
+from openff.units import Quantity, unit
 from openff.units.openmm import to_openmm
 from openff.utilities import has_package, skip_if_missing
 
@@ -29,6 +29,50 @@ def _get_interpolated_bond_k(bond_handler) -> float:
             break
     potential_key = bond_handler.key_map[topology_key]
     return bond_handler.potentials[potential_key].parameters["k"].m
+
+
+class TestSMIRNOFFVirtualSiteCharges:
+    @pytest.mark.parametrize("chlorine_charge", [-0.1, 0.22, 1.3])
+    def test_neutral_total_charge(self, sage_with_bond_charge, chlorine_charge):
+        sage_with_bond_charge.deregister_parameter_handler("ToolkitAM1BCC")
+        sage_with_bond_charge.get_parameter_handler("ChargeIncrementModel")
+        sage_with_bond_charge["ChargeIncrementModel"].partial_charge_method = "zeros"
+
+        sage_with_bond_charge["VirtualSites"].parameters[
+            0
+        ].charge_increment1 = Quantity(
+            chlorine_charge,
+            unit.elementary_charge,
+        )
+
+        out = sage_with_bond_charge.create_interchange(
+            Molecule.from_mapped_smiles(
+                "[H:3][C:1]([H:4])([H:5])[Cl:2]",
+            ).to_topology(),
+        )
+
+        charges = [charge.m for charge in out["Electrostatics"].charges.values()]
+
+        assert sum(charges) == 0.0
+
+        # The carbon's charge was not modified
+        assert charges[0] == 0.0
+
+        # The chlorine received variable charge from the virtual site, which should have the negative of it
+        # SMIRNOFF spec (Aug 2023):
+        #   Each virtual site receives charge which is transferred from the desired atoms specified
+        #   in the SMIRKS pattern via a charge_increment# parameter,
+        #   e.g., if charge_increment1=0.1*elementary_charge then the virtual site will receive a
+        #   charge of -0.1 and the atom labeled 1 will have its charge adjusted upwards by 0.1.
+        assert charges[1] == chlorine_charge
+        assert charges[-1] == -1 * chlorine_charge
+
+        charges_without_virtual_sites = [
+            charge.m
+            for charge in out["Electrostatics"]._charges_without_virtual_sites.values()
+        ]
+
+        assert sum(charges_without_virtual_sites) == chlorine_charge != 0.0
 
 
 @skip_if_missing("openmm")
