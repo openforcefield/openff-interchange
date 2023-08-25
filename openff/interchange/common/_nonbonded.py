@@ -1,7 +1,6 @@
 import abc
-from collections import defaultdict
 from collections.abc import Iterable
-from typing import DefaultDict, Literal, Union
+from typing import Literal, Union
 
 from openff.models.types import FloatQuantity
 from openff.units import Quantity, unit
@@ -93,44 +92,10 @@ class ElectrostaticsCollection(_NonbondedCollection):
     _charges_cached: bool = PrivateAttr(False)
 
     @property
-    def charges(self) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
-        """Get the total partial charge on each atom, excluding virtual sites."""
-        raise NotImplementedError()
-        if self._charges is None or self._charges_cached in (
-            True,
-            None,
-        ):
-            self._charges = self._get_charges(include_virtual_sites=True)
-            self._charges_cached = False
-
-        return self._charges
-
-    @property
-    def charges_with_virtual_sites(
-        self,
-    ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
+    def charges(self):
         """Get the total partial charge on each atom, including virtual sites."""
         raise NotImplementedError()
 
-    def _get_charges(
-        self,
-        include_virtual_sites: bool = False,
-    ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
+    def _get_charges(self):
         """Get the total partial charge on each atom or particle."""
         raise NotImplementedError()
-        if include_virtual_sites:
-            raise NotImplementedError()
-
-        charges: DefaultDict[
-            Union[TopologyKey, LibraryChargeTopologyKey],
-            Quantity,
-        ] = defaultdict(
-            lambda: Quantity(0.0, unit.elementary_charge),
-        )
-
-        for topology_key, potential_key in self.key_map.items():
-            potential = self.potentials[potential_key]
-
-            charges[topology_key] = potential.parameters["charge"]
-
-        return charges
