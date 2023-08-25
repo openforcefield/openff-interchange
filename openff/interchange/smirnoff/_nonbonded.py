@@ -285,7 +285,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @property
     def _charges_without_virtual_sites(
         self,
-    ) -> dict[Union[TopologyKey, LibraryChargeTopologyKey], Quantity]:
+    ) -> dict[TopologyKey, Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
         return self._get_charges(include_virtual_sites=False)
 
