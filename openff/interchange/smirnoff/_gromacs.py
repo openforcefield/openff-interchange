@@ -120,9 +120,11 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
 
             _atom_atom_type_map[atom] = atom_type_name
 
-    # Indexed by OpenFF topology indices
+    # Indexed by OpenFF topology indices, only containing atoms here
     _partial_charges = {
-        k.atom_indices[0]: v for k, v in interchange["Electrostatics"].charges.items()
+        k.atom_indices[0]: v
+        for k, v in interchange["Electrostatics"].charges.items()
+        if type(k) is TopologyKey
     }
 
     for unique_molecule_index in unique_molecule_map:
