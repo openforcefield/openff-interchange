@@ -18,6 +18,7 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
+from openff.interchange.interop.common import _build_particle_map
 from openff.interchange.models import TopologyKey, VirtualSiteKey
 
 if has_package("openmm"):
@@ -156,16 +157,19 @@ def _add_particles_to_system(
     system: openmm.System,
     molecule_virtual_site_map,
 ) -> dict[Union[int, VirtualSiteKey], int]:
-    openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int] = dict()
+    particle_map: dict[Union[int, VirtualSiteKey], int] = _build_particle_map(
+        interchange,
+        molecule_virtual_site_map,
+    )
 
     for molecule in interchange.topology.molecules:
         for atom in molecule.atoms:
             atom_index = interchange.topology.atom_index(atom)
 
-            # Skipopenmm.unit check for speed, trust that the toolkit reports mass in Dalton
+            # Skip unit check for speed, trust the toolkit reports mass in Dalton
             system_index = system.addParticle(mass=atom.mass.m)
 
-            openff_openmm_particle_map[atom_index] = system_index
+            assert system_index == particle_map[atom_index]
 
         for virtual_site_key in molecule_virtual_site_map[
             interchange.topology.molecule_index(molecule)
@@ -177,7 +181,7 @@ def _add_particles_to_system(
 
             system_index = system.addParticle(mass=0.0)
 
-            openff_openmm_particle_map[virtual_site_key] = system_index
+            assert system_index == particle_map[virtual_site_key]
 
             virtual_site_potential = interchange["VirtualSites"].potentials[
                 interchange["VirtualSites"].key_map[virtual_site_key]
@@ -191,12 +195,12 @@ def _add_particles_to_system(
             openmm_particle: openmm.VirtualSite = _create_openmm_virtual_site(
                 interchange,
                 virtual_site_object,
-                openff_openmm_particle_map,
+                particle_map,
             )
 
             system.setVirtualSite(system_index, openmm_particle)
 
-    return openff_openmm_particle_map
+    return particle_map
 
 
 def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:

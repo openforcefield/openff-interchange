@@ -1,10 +1,11 @@
 """Utilities for interoperability with multiple packages."""
+from typing import Union
 
 from openff.interchange import Interchange
 from openff.interchange.models import VirtualSiteKey
 
 
-def _build_typemap(interchange: "Interchange") -> dict[int, str]:
+def _build_typemap(interchange: Interchange) -> dict[int, str]:
     typemap = dict()
     elements: dict[str, int] = dict()
 
@@ -26,7 +27,7 @@ def _build_typemap(interchange: "Interchange") -> dict[int, str]:
     return typemap
 
 
-def _build_virtual_site_map(interchange: "Interchange") -> dict[VirtualSiteKey, int]:
+def _build_virtual_site_map(interchange: Interchange) -> dict[VirtualSiteKey, int]:
     """
     Construct a mapping between the VirtualSiteKey objects found in a SMIRNOFFVirtualSiteHandler and particle indices.
     """
@@ -44,3 +45,29 @@ def _build_virtual_site_map(interchange: "Interchange") -> dict[VirtualSiteKey, 
         virtual_site_topology_index_map[virtual_site_key] = n_atoms + 1 + index
 
     return virtual_site_topology_index_map
+
+
+def _build_particle_map(
+    interchange: Interchange,
+    molecule_virtual_site_map,
+) -> dict[Union[int, VirtualSiteKey], int]:
+    particle_map: dict[Union[int, VirtualSiteKey], int] = dict()
+
+    particle_index = 0
+
+    for molecule in interchange.topology.molecules:
+        for atom in molecule.atoms:
+            atom_index = interchange.topology.atom_index(atom)
+
+            particle_map[atom_index] = particle_index
+
+            particle_index += 1
+
+        for virtual_site_key in molecule_virtual_site_map[
+            interchange.topology.molecule_index(molecule)
+        ]:
+            particle_map[virtual_site_key] = particle_index
+
+            particle_index += 1
+
+    return particle_map

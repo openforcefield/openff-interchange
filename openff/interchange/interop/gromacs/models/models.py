@@ -56,8 +56,8 @@ class GROMACSVirtualSite2(GROMACSVirtualSite):
     """GROMACS virtual site type 2."""
 
     type: str = "2"
-    header_tag = 2
-    func = 1
+    header_tag: int = 2
+    func: int = 1
     a: float
 
 
@@ -65,8 +65,8 @@ class GROMACSVirtualSite3(GROMACSVirtualSite):
     """GROMACS virtual site type 3."""
 
     type: str = "3"
-    header_tag = 3
-    func = 1
+    header_tag: int = 3
+    func: int = 1
     a: float
     b: float
 
@@ -75,8 +75,8 @@ class GROMACSVirtualSite3fd(GROMACSVirtualSite):
     """GROMACS virtual site type 3fd."""
 
     type: str = "3fd"
-    header_tag = 3
-    func = 2
+    header_tag: int = 3
+    func: int = 2
     a: float
     d: float
 
@@ -85,8 +85,8 @@ class GROMACSVirtualSite3fad(GROMACSVirtualSite):
     """GROMACS virtual site type 3fad."""
 
     type: str = "3fad"
-    header_tag = 3
-    func = 3
+    header_tag: int = 3
+    func: int = 3
     theta: float
     d: float
 
@@ -95,8 +95,8 @@ class GROMACSVirtualSite3out(GROMACSVirtualSite):
     """GROMACS virtual site type 3out."""
 
     type: str = "3out"
-    header_tag = 3
-    func = 4
+    header_tag: int = 3
+    func: int = 4
     a: float
     b: float
     c: float
@@ -106,8 +106,8 @@ class GROMACSVirtualSite4fdn(GROMACSVirtualSite):
     """GROMACS virtual site type 4fdn."""
 
     type: str = "4fdn"
-    header_tag = 4
-    func = 2
+    header_tag: int = 4
+    func: int = 2
     a: float
     b: float
     c: float
