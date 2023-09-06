@@ -96,7 +96,7 @@ def _process_nonbonded_forces(
         molecule_virtual_site_map = defaultdict(list)
 
     # Mapping between OpenFF "particles" and OpenMM particles (via index). OpenFF objects
-    # (keys) are either atom indices (if atoms) or `VirtualSitesKey`s if virtual sites
+    # (keys) are either atom indices (if atoms) or `VirtualSiteKey`s if virtual sites
     # openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int] = dict()
     openff_openmm_particle_map = _add_particles_to_system(
         interchange,
@@ -157,7 +157,7 @@ def _add_particles_to_system(
     system: openmm.System,
     molecule_virtual_site_map,
 ) -> dict[Union[int, VirtualSiteKey], int]:
-    particle_map: dict[Union[int, VirtualSiteKey], int] = _build_particle_map(
+    particle_map = _build_particle_map(
         interchange,
         molecule_virtual_site_map,
     )

@@ -1,9 +1,10 @@
 import itertools
+from collections import defaultdict
 from typing import Optional, Union
 
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.topology.molecule import Atom, Molecule
-from openff.units import unit
+from openff.units import Quantity, unit
 from openff.units.elements import MASSES, SYMBOLS
 from typing_extensions import TypeAlias
 
@@ -15,6 +16,10 @@ from openff.interchange.exceptions import (
     MissingBondError,
     UnsupportedExportError,
 )
+from openff.interchange.interop._virtual_sites import (
+    _virtual_site_parent_molecule_mapping,
+)
+from openff.interchange.interop.common import _build_particle_map
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSAngle,
     GROMACSAtom,
@@ -29,7 +34,7 @@ from openff.interchange.interop.gromacs.models.models import (
     PeriodicProperDihedral,
     RyckaertBellemansDihedral,
 )
-from openff.interchange.models import BondKey, TopologyKey
+from openff.interchange.models import BondKey, TopologyKey, VirtualSiteKey
 
 MoleculeLike: TypeAlias = Union[Molecule, _SimpleMolecule]
 
@@ -76,6 +81,23 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
         list,
     ] = interchange.topology.identical_molecule_groups
 
+    molecule_virtual_site_map: dict[int, list[VirtualSiteKey]] = defaultdict(list)
+
+    virtual_site_molecule_map: dict[
+        VirtualSiteKey,
+        int,
+    ] = _virtual_site_parent_molecule_mapping(interchange)
+
+    molecule_virtual_site_map: dict[int, list[VirtualSiteKey]] = defaultdict(list)
+
+    for virtual_site_key, molecule_index in virtual_site_molecule_map.items():
+        molecule_virtual_site_map[molecule_index].append(virtual_site_key)
+
+    particle_map = _build_particle_map(
+        interchange,
+        molecule_virtual_site_map,
+    )
+
     # Give each atom in each unique molecule a unique name so that can act like an atom type
 
     # TODO: Virtual sites
@@ -94,12 +116,10 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             unique_molecule.name = "MOL" + str(unique_molecule_index)
 
         for atom in unique_molecule.atoms:
-            atom_type_name = (
-                f"{unique_molecule.name}_{unique_molecule.atom_index(atom)}"
-            )
+            atom_type_name = f"{unique_molecule.name}_{particle_map[unique_molecule.atom_index(atom)]}"
             _atom_atom_type_map[atom] = atom_type_name
 
-            topology_index = interchange.topology.atom_index(atom)
+            topology_index = particle_map[interchange.topology.atom_index(atom)]
             key = TopologyKey(atom_indices=(topology_index,))
             vdw_parameters = vdw_collection.potentials[
                 vdw_collection.key_map[key]
@@ -112,20 +132,47 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
                 bonding_type="",
                 atomic_number=atom.atomic_number,
                 mass=MASSES[atom.atomic_number],
-                charge=unit.Quantity(0.0, unit.elementary_charge),
+                charge=Quantity(0.0, unit.elementary_charge),
                 particle_type="A",
                 sigma=vdw_parameters["sigma"].to(unit.nanometer),
                 epsilon=vdw_parameters["epsilon"].to(unit.kilojoule_per_mole),
             )
 
+        for virtual_site_key in molecule_virtual_site_map[
+            interchange.topology.molecule_index(unique_molecule)
+        ]:
+            atom_type_name = f"{unique_molecule.name}_{particle_map[virtual_site_key]}"
             _atom_atom_type_map[atom] = atom_type_name
 
-    # Indexed by OpenFF topology indices, only containing atoms here
-    _partial_charges = {
-        k.atom_indices[0]: v
-        for k, v in interchange["Electrostatics"].charges.items()
-        if type(k) is TopologyKey
-    }
+            topology_index = particle_map[virtual_site_key]
+
+            vdw_parameters = vdw_collection.potentials[
+                vdw_collection.key_map[virtual_site_key]
+            ].parameters
+            charge = electrostatics_collection.charges[key]
+
+            # TODO: Separate class for "atom types" representing virtual sites?
+            system.atom_types[atom_type_name] = LennardJonesAtomType(
+                name=_atom_atom_type_map[atom],
+                bonding_type="",
+                atomic_number=0,
+                mass=Quantity(0.0, unit.dalton),
+                charge=Quantity(0.0, unit.elementary_charge),
+                particle_type="D",
+                sigma=vdw_parameters["sigma"].to(unit.nanometer),
+                epsilon=vdw_parameters["epsilon"].to(unit.kilojoule_per_mole),
+            )
+
+    _partial_charges: dict[Union[int, VirtualSiteKey], float] = dict()
+
+    # Indexed by particle (atom or virtual site) indices
+    for key, charge in interchange["Electrostatics"].charges.items():
+        if type(key) is TopologyKey:
+            _partial_charges[key.atom_indices[0]] = charge
+        elif type(key) is VirtualSiteKey:
+            _partial_charges[key] = charge
+        else:
+            raise RuntimeError()
 
     for unique_molecule_index in unique_molecule_map:
         unique_molecule = interchange.topology.molecule(unique_molecule_index)

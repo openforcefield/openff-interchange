@@ -179,7 +179,7 @@ def _process_atomtype(
             split.insert(1, None)  # type: ignore[arg-type]
 
     atom_type = split[0]
-    bonding_type = split[1]
+    bonding_type = split[1] if split[1] else ""
 
     atomic_number = int(split[2]) if split[2] is not None else None
     mass = unit.Quantity(float(split[3]), unit.dalton)
