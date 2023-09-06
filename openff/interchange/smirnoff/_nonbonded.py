@@ -104,8 +104,8 @@ def _downconvert_vdw_handler(vdw_handler: vdWHandler):
 
     elif vdw_handler.version == Version("0.4"):
         warnings.warn(
-            "Automatically down-converting BondHandler from version 0.4 to 0.3. In the future, this "
-            "down-conversion will not happen and verison 0.3 will not be supported.",
+            "Automatically down-converting vdWHandler from version 0.4 to 0.3. In the future, this "
+            "down-conversion will not happen and version 0.3 will not be supported.",
             stacklevel=2,
         )
 
