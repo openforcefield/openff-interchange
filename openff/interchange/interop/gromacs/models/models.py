@@ -274,6 +274,10 @@ class GROMACSMolecule(DefaultModel):
         list(),
         description="The dihedrals in this molecule.",
     )
+    virtual_sites: list[GROMACSVirtualSite] = Field(
+        list(),
+        description="The virtual sites in this molecule.",
+    )
     exclusions: list[GROMACSExclusion] = Field(
         list(),
         description="The exclusions in this molecule.",

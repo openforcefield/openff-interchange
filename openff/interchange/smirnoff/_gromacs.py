@@ -20,6 +20,9 @@ from openff.interchange.interop._virtual_sites import (
     _virtual_site_parent_molecule_mapping,
 )
 from openff.interchange.interop.common import _build_particle_map
+from openff.interchange.interop.gromacs.export._virtual_sites import (
+    _create_gromacs_virtual_site,
+)
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSAngle,
     GROMACSAtom,
@@ -29,6 +32,7 @@ from openff.interchange.interop.gromacs.models.models import (
     GROMACSPair,
     GROMACSSettles,
     GROMACSSystem,
+    GROMACSVirtualSite,
     LennardJonesAtomType,
     PeriodicImproperDihedral,
     PeriodicProperDihedral,
@@ -254,6 +258,13 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
         # pairs
         _convert_dihedrals(molecule, unique_molecule, interchange)
         # other constraints?
+
+        _convert_virtual_sites(
+            molecule,
+            unique_molecule,
+            interchange,
+            molecule_virtual_site_map,
+        )
 
         system.molecule_types[unique_molecule.name] = molecule
 
@@ -514,6 +525,45 @@ def _convert_dihedrals(
                             multiplicity=int(params["periodicity"]),
                         ),
                     )
+
+
+def _convert_virtual_sites(
+    molecule: GROMACSMolecule,
+    unique_molecule: MoleculeLike,
+    interchange: Interchange,
+    molecule_virtual_site_map,
+):
+    if "VirtualSites" not in interchange.collections:
+        return
+
+    for virtual_site_key in molecule_virtual_site_map[
+        interchange.topology.molecule_index(unique_molecule)
+    ]:
+        from openff.interchange.interop.common import _create_virtual_site_object
+
+        virtual_site_potential = interchange["VirtualSites"].potentials[
+            interchange["VirtualSites"].key_map[virtual_site_key]
+        ]
+
+        virtual_site_object = _create_virtual_site_object(
+            virtual_site_key,
+            virtual_site_potential,
+        )
+
+        # TODO: Store this somewhere so it doesn't need to be computed twice
+        particle_map = _build_particle_map(
+            interchange,
+            molecule_virtual_site_map,
+        )
+
+        gromacs_virtual_site: GROMACSVirtualSite = _create_gromacs_virtual_site(
+            interchange,
+            virtual_site_object,
+            virtual_site_key,
+            particle_map,
+        )
+
+        molecule.virtual_sites.append(gromacs_virtual_site)
 
 
 def _convert_settles(
