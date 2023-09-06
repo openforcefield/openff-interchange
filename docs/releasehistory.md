@@ -20,6 +20,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #797 `SMIRNOFFElectrostaticsCollection` now applies virtual site charge increments.
 * #797 Removes `ElectrostaticsCollection.charges_without_virtual_sites`, `FoyerElectrostaticsHandler.charges_without_virtual_sites`, and makes `SMIRNOFFElectrostaticsCollection.charges_without_virtual_sites` private.
 
+### Documentation improvements
+
+* #802 Fixes some typos in the `vdWHandler` down-conversion warning.
+
 ## 0.3.13 - 2023-08-22
 
 ### New Features
