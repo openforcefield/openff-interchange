@@ -59,6 +59,7 @@ class GROMACSVirtualSite(DefaultModel):
     """Base class for storing GROMACS virtual sites."""
 
     type: str
+    name: str
     header_tag: conint(ge=2)
     site: PositiveInt
     func: PositiveInt

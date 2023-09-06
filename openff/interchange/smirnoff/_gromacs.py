@@ -104,7 +104,6 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
 
     # Give each atom in each unique molecule a unique name so that can act like an atom type
 
-    # TODO: Virtual sites
     _atom_atom_type_map: dict["Atom", str] = dict()
 
     try:
@@ -146,7 +145,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             interchange.topology.molecule_index(unique_molecule)
         ]:
             atom_type_name = f"{unique_molecule.name}_{particle_map[virtual_site_key]}"
-            _atom_atom_type_map[atom] = atom_type_name
+            _atom_atom_type_map[virtual_site_key] = atom_type_name
 
             topology_index = particle_map[virtual_site_key]
 
@@ -157,7 +156,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
 
             # TODO: Separate class for "atom types" representing virtual sites?
             system.atom_types[atom_type_name] = LennardJonesAtomType(
-                name=_atom_atom_type_map[atom],
+                name=_atom_atom_type_map[virtual_site_key],
                 bonding_type="",
                 atomic_number=0,
                 mass=Quantity(0.0, unit.dalton),
@@ -264,6 +263,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             unique_molecule,
             interchange,
             molecule_virtual_site_map,
+            _atom_atom_type_map,
         )
 
         system.molecule_types[unique_molecule.name] = molecule
@@ -276,7 +276,15 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             ],
         )
 
-    system.positions = interchange.positions
+    if "VirtualSites" in interchange.collections:
+        from openff.interchange.interop._virtual_sites import (
+            get_positions_with_virtual_sites,
+        )
+
+        system.positions = get_positions_with_virtual_sites(interchange)
+    else:
+        system.positions = interchange.positions
+
     system.box = interchange.box
 
     return system
@@ -532,6 +540,7 @@ def _convert_virtual_sites(
     unique_molecule: MoleculeLike,
     interchange: Interchange,
     molecule_virtual_site_map,
+    _atom_atom_type_map,
 ):
     if "VirtualSites" not in interchange.collections:
         return
@@ -564,6 +573,27 @@ def _convert_virtual_sites(
         )
 
         molecule.virtual_sites.append(gromacs_virtual_site)
+
+        # TODO: Consider making a separate type for this non-atom "atom"
+        molecule.atoms.append(
+            GROMACSAtom(
+                index=gromacs_virtual_site.site,
+                name=gromacs_virtual_site.name,
+                atom_type=_atom_atom_type_map[virtual_site_key],
+                residue_index=molecule.atoms[0].residue_index,
+                residue_name=molecule.atoms[0].residue_index,
+                charge_group_number=1,
+                charge=interchange["Electrostatics"].charges[virtual_site_key],
+                mass=Quantity(0.0, unit.dalton),
+            ),
+        )
+
+        molecule.exclusions.append(
+            GROMACSExclusion(
+                first_atom=gromacs_virtual_site.site,
+                other_atoms=gromacs_virtual_site.orientation_atoms,
+            ),
+        )
 
 
 def _convert_settles(

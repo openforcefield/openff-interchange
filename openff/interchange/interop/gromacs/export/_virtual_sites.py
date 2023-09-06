@@ -40,7 +40,9 @@ def _create_gromacs_virtual_site(
 
         ratio = (distance / separation).m_as(unit.dimensionless)
 
+        # TODO: This will create name collisions in many molecules
         return GROMACSVirtualSite2(
+            name=virtual_site_key.name,
             site=particle_map[virtual_site_key] + 1,
             orientation_atoms=gromacs_indices,
             a=1.0 + ratio,
@@ -81,6 +83,7 @@ def _create_gromacs_virtual_site(
             w1 = 1 + distance / r1mid
 
             return GROMACSVirtualSite3(
+                name=virtual_site_key.name,
                 site=particle_map[virtual_site_key] + 1,
                 orientation_atoms=gromacs_indices,
                 a=(1 - w1) / 2,
