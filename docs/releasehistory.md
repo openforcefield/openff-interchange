@@ -11,6 +11,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### New Features
+
+* #798 `Interchange.to_gromacs` and related methods now support `BondCharge` virtual sites and four-site water models.
+
 ### Bugfixes
 
 * #797 Fixes a bug in which virtual site charge increments were not properly applied.
