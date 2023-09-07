@@ -75,35 +75,44 @@ def get_positions_with_virtual_sites(
             molecule_virtual_site_map[molecule_index],
         )
 
-        if use_zeros:
-            this_molecule_virtual_site_positions = Quantity(
-                numpy.zeros((n_virtual_sites_in_this_molecule, 3)),
-                unit.nanometer,
+        if n_virtual_sites_in_this_molecule > 0:
+            if use_zeros:
+                this_molecule_virtual_site_positions = Quantity(
+                    numpy.zeros((n_virtual_sites_in_this_molecule, 3)),
+                    unit.nanometer,
+                )
+
+            else:
+                this_molecule_virtual_site_positions = Quantity(
+                    numpy.asarray(
+                        [
+                            _get_virtual_site_positions(
+                                virtual_site_key,
+                                interchange,
+                            ).m_as(unit.nanometer)
+                            for virtual_site_key in molecule_virtual_site_map[
+                                molecule_index
+                            ]
+                        ],
+                    ),
+                    unit.nanometer,
+                )
+
+            particle_positions = numpy.concatenate(
+                [
+                    particle_positions,
+                    this_molecule_atom_positions,
+                    this_molecule_virtual_site_positions,
+                ],
             )
 
         else:
-            this_molecule_virtual_site_positions = Quantity(
-                numpy.asarray(
-                    [
-                        _get_virtual_site_positions(
-                            virtual_site_key,
-                            interchange,
-                        ).m_as(unit.nanometer)
-                        for virtual_site_key in molecule_virtual_site_map[
-                            molecule_index
-                        ]
-                    ],
-                ),
-                unit.nanometer,
+            particle_positions = numpy.concatenate(
+                [
+                    particle_positions,
+                    this_molecule_atom_positions,
+                ],
             )
-
-        particle_positions = numpy.concatenate(
-            [
-                particle_positions,
-                this_molecule_atom_positions,
-                this_molecule_virtual_site_positions,
-            ],
-        )
 
     return particle_positions
 
