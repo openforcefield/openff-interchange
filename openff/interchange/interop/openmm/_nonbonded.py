@@ -18,6 +18,7 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
+from openff.interchange.interop.common import _build_particle_map
 from openff.interchange.models import TopologyKey, VirtualSiteKey
 
 if has_package("openmm"):
@@ -73,7 +74,7 @@ def _process_nonbonded_forces(
         from openff.interchange.interop._virtual_sites import (
             _virtual_site_parent_molecule_mapping,
         )
-        from openff.interchange.interop.openmm._virtual_sites import (
+        from openff.interchange.interop.common import (
             _check_virtual_site_exclusion_policy,
         )
 
@@ -95,7 +96,7 @@ def _process_nonbonded_forces(
         molecule_virtual_site_map = defaultdict(list)
 
     # Mapping between OpenFF "particles" and OpenMM particles (via index). OpenFF objects
-    # (keys) are either atom indices (if atoms) or `VirtualSitesKey`s if virtual sites
+    # (keys) are either atom indices (if atoms) or `VirtualSiteKey`s if virtual sites
     # openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int] = dict()
     openff_openmm_particle_map = _add_particles_to_system(
         interchange,
@@ -156,28 +157,31 @@ def _add_particles_to_system(
     system: openmm.System,
     molecule_virtual_site_map,
 ) -> dict[Union[int, VirtualSiteKey], int]:
-    openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int] = dict()
+    particle_map = _build_particle_map(
+        interchange,
+        molecule_virtual_site_map,
+    )
 
     for molecule in interchange.topology.molecules:
         for atom in molecule.atoms:
             atom_index = interchange.topology.atom_index(atom)
 
-            # Skipopenmm.unit check for speed, trust that the toolkit reports mass in Dalton
+            # Skip unit check for speed, trust the toolkit reports mass in Dalton
             system_index = system.addParticle(mass=atom.mass.m)
 
-            openff_openmm_particle_map[atom_index] = system_index
+            assert system_index == particle_map[atom_index]
 
         for virtual_site_key in molecule_virtual_site_map[
             interchange.topology.molecule_index(molecule)
         ]:
+            from openff.interchange.interop.common import _create_virtual_site_object
             from openff.interchange.interop.openmm._virtual_sites import (
                 _create_openmm_virtual_site,
-                _create_virtual_site_object,
             )
 
             system_index = system.addParticle(mass=0.0)
 
-            openff_openmm_particle_map[virtual_site_key] = system_index
+            assert system_index == particle_map[virtual_site_key]
 
             virtual_site_potential = interchange["VirtualSites"].potentials[
                 interchange["VirtualSites"].key_map[virtual_site_key]
@@ -191,12 +195,12 @@ def _add_particles_to_system(
             openmm_particle: openmm.VirtualSite = _create_openmm_virtual_site(
                 interchange,
                 virtual_site_object,
-                openff_openmm_particle_map,
+                particle_map,
             )
 
             system.setVirtualSite(system_index, openmm_particle)
 
-    return openff_openmm_particle_map
+    return particle_map
 
 
 def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
@@ -391,9 +395,9 @@ def _create_single_nonbonded_force(
 
         for virtual_site_key in molecule_virtual_site_map[molecule_index]:
             # TODO: Move this function to openff/interchange/interop/_particles.py ?
+            from openff.interchange.interop.common import _create_virtual_site_object
             from openff.interchange.interop.openmm._virtual_sites import (
                 _create_openmm_virtual_site,
-                _create_virtual_site_object,
             )
 
             _potential_key = interchange["VirtualSites"].key_map[virtual_site_key]

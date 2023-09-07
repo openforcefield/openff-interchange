@@ -3,30 +3,43 @@ from typing import Optional
 
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
-from openff.units import unit
+from openff.units import Quantity
 
 try:
-    from pydantic.v1 import Field, PositiveInt, PrivateAttr
+    from pydantic.v1 import Field, PositiveInt, PrivateAttr, conint, validator
 except ImportError:
-    from pydantic import Field, PositiveInt, PrivateAttr
+    from pydantic import Field, PositiveInt, PrivateAttr, conint, validator
 
 
 class GROMACSAtomType(DefaultModel):
     """Base class for GROMACS atom types."""
 
     name: str
-    bonding_type: Optional[str] = None
-    atomic_number: Optional[PositiveInt]
-    mass: unit.Quantity
-    charge: unit.Quantity
+    bonding_type: str = ""
+    atomic_number: int
+    mass: Quantity
+    charge: Quantity
     particle_type: str
+
+    @validator("particle_type")
+    def validate_particle_type(
+        cls,
+        v: str,
+        values,
+    ) -> str:
+        if values["mass"].m == 0.0:
+            assert v in ("D", "V"), 'Particle type must be "D" or "V" if massless'
+        elif values["mass"].m > 0.0:
+            assert v == "A", 'Particle type must be "A" if it has mass'
+
+        return v
 
 
 class LennardJonesAtomType(GROMACSAtomType):
     """A Lennard-Jones atom type."""
 
-    sigma: unit.Quantity
-    epsilon: unit.Quantity
+    sigma: Quantity
+    epsilon: Quantity
 
 
 class GROMACSAtom(DefaultModel):
@@ -38,8 +51,80 @@ class GROMACSAtom(DefaultModel):
     residue_index: PositiveInt
     residue_name: str
     charge_group_number: PositiveInt
-    charge: unit.Quantity
-    mass: unit.Quantity
+    charge: Quantity
+    mass: Quantity
+
+
+class GROMACSVirtualSite(DefaultModel):
+    """Base class for storing GROMACS virtual sites."""
+
+    type: str
+    name: str
+    header_tag: conint(ge=2)
+    site: PositiveInt
+    func: PositiveInt
+    orientation_atoms: list[int]
+
+
+class GROMACSVirtualSite2(GROMACSVirtualSite):
+    """GROMACS virtual site type 2."""
+
+    type: str = "2"
+    header_tag: int = 2
+    func: int = 1
+    a: float
+
+
+class GROMACSVirtualSite3(GROMACSVirtualSite):
+    """GROMACS virtual site type 3."""
+
+    type: str = "3"
+    header_tag: int = 3
+    func: int = 1
+    a: float
+    b: float
+
+
+class GROMACSVirtualSite3fd(GROMACSVirtualSite):
+    """GROMACS virtual site type 3fd."""
+
+    type: str = "3fd"
+    header_tag: int = 3
+    func: int = 2
+    a: float
+    d: float
+
+
+class GROMACSVirtualSite3fad(GROMACSVirtualSite):
+    """GROMACS virtual site type 3fad."""
+
+    type: str = "3fad"
+    header_tag: int = 3
+    func: int = 3
+    theta: float
+    d: float
+
+
+class GROMACSVirtualSite3out(GROMACSVirtualSite):
+    """GROMACS virtual site type 3out."""
+
+    type: str = "3out"
+    header_tag: int = 3
+    func: int = 4
+    a: float
+    b: float
+    c: float
+
+
+class GROMACSVirtualSite4fdn(GROMACSVirtualSite):
+    """GROMACS virtual site type 4fdn."""
+
+    type: str = "4fdn"
+    header_tag: int = 4
+    func: int = 2
+    a: float
+    b: float
+    c: float
 
 
 class GROMACSBond(DefaultModel):
@@ -52,8 +137,8 @@ class GROMACSBond(DefaultModel):
         description="The GROMACS index of the second atom in the bond.",
     )
     function: int = Field(1, const=True, description="The GROMACS bond function type.")
-    length: unit.Quantity
-    k: unit.Quantity
+    length: Quantity
+    k: Quantity
 
 
 class GROMACSPair(DefaultModel):
@@ -107,8 +192,8 @@ class GROMACSAngle(DefaultModel):
     atom3: PositiveInt = Field(
         description="The GROMACS index of the third atom in the angle.",
     )
-    angle: unit.Quantity
-    k: unit.Quantity
+    angle: Quantity
+    k: Quantity
 
 
 class GROMACSDihedral(DefaultModel):
@@ -132,27 +217,27 @@ class GROMACSDihedral(DefaultModel):
 class PeriodicProperDihedral(GROMACSDihedral):
     """A type 1 dihedral in GROMACS."""
 
-    phi: unit.Quantity
-    k: unit.Quantity
+    phi: Quantity
+    k: Quantity
     multiplicity: PositiveInt
 
 
 class RyckaertBellemansDihedral(GROMACSDihedral):
     """A type 3 dihedral in GROMACS."""
 
-    c0: unit.Quantity
-    c1: unit.Quantity
-    c2: unit.Quantity
-    c3: unit.Quantity
-    c4: unit.Quantity
-    c5: unit.Quantity
+    c0: Quantity
+    c1: Quantity
+    c2: Quantity
+    c3: Quantity
+    c4: Quantity
+    c5: Quantity
 
 
 class PeriodicImproperDihedral(GROMACSDihedral):
     """A type 4 dihedral in GROMACS."""
 
-    phi: unit.Quantity
-    k: unit.Quantity
+    phi: Quantity
+    k: Quantity
     multiplicity: PositiveInt
 
 
@@ -189,6 +274,10 @@ class GROMACSMolecule(DefaultModel):
     dihedrals: list[GROMACSDihedral] = Field(
         list(),
         description="The dihedrals in this molecule.",
+    )
+    virtual_sites: list[GROMACSVirtualSite] = Field(
+        list(),
+        description="The virtual sites in this molecule.",
     )
     exclusions: list[GROMACSExclusion] = Field(
         list(),
@@ -316,7 +405,7 @@ class GROMACSSystem(DefaultModel):
             ]
 
             # Pint lacks __array_function__ needed here, so strip and then tag units
-            self.positions = unit.Quantity(
+            self.positions = Quantity(
                 numpy.delete(self.positions.m, row_indices_to_delete, axis=0),
                 self.positions.units,
             )

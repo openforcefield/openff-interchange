@@ -1,10 +1,24 @@
 """Utilities for interoperability with multiple packages."""
+from typing import Union
 
 from openff.interchange import Interchange
+from openff.interchange.components._particles import _VirtualSite
+from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.models import VirtualSiteKey
+from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 
 
-def _build_typemap(interchange: "Interchange") -> dict[int, str]:
+def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteCollection"):
+    _SUPPORTED_EXCLUSION_POLICIES = ("parents",)
+
+    if handler.exclusion_policy not in _SUPPORTED_EXCLUSION_POLICIES:
+        raise UnsupportedExportError(
+            f"Found unsupported exclusion policy {handler.exclusion_policy}. "
+            f"Supported exclusion policies are {_SUPPORTED_EXCLUSION_POLICIES}",
+        )
+
+
+def _build_typemap(interchange: Interchange) -> dict[int, str]:
     typemap = dict()
     elements: dict[str, int] = dict()
 
@@ -26,21 +40,74 @@ def _build_typemap(interchange: "Interchange") -> dict[int, str]:
     return typemap
 
 
-def _build_virtual_site_map(interchange: "Interchange") -> dict[VirtualSiteKey, int]:
-    """
-    Construct a mapping between the VirtualSiteKey objects found in a SMIRNOFFVirtualSiteHandler and particle indices.
-    """
-    virtual_site_topology_index_map: dict[VirtualSiteKey, int] = dict()
+def _build_particle_map(
+    interchange: Interchange,
+    molecule_virtual_site_map,
+) -> dict[Union[int, VirtualSiteKey], int]:
+    particle_map: dict[Union[int, VirtualSiteKey], int] = dict()
 
-    if "VirtualSites" not in interchange.collections:
-        return virtual_site_topology_index_map
+    particle_index = 0
 
-    n_atoms = interchange.topology.n_atoms
+    for molecule in interchange.topology.molecules:
+        for atom in molecule.atoms:
+            atom_index = interchange.topology.atom_index(atom)
 
-    for index, virtual_site_key in enumerate(
-        interchange["VirtualSites"].key_map.keys(),
-    ):
-        assert isinstance(virtual_site_key, VirtualSiteKey)
-        virtual_site_topology_index_map[virtual_site_key] = n_atoms + 1 + index
+            particle_map[atom_index] = particle_index
 
-    return virtual_site_topology_index_map
+            particle_index += 1
+
+        for virtual_site_key in molecule_virtual_site_map[
+            interchange.topology.molecule_index(molecule)
+        ]:
+            particle_map[virtual_site_key] = particle_index
+
+            particle_index += 1
+
+    return particle_map
+
+
+def _create_virtual_site_object(
+    virtual_site_key: VirtualSiteKey,
+    virtual_site_potential,
+    # interchange: "Interchange",
+    # non_bonded_force: openmm.NonbondedForce,
+) -> "_VirtualSite":
+    from openff.interchange.components._particles import (
+        _BondChargeVirtualSite,
+        _DivalentLonePairVirtualSite,
+        _MonovalentLonePairVirtualSite,
+        _TrivalentLonePairVirtualSite,
+    )
+
+    orientations = virtual_site_key.orientation_atom_indices
+
+    if virtual_site_key.type == "BondCharge":
+        return _BondChargeVirtualSite(
+            type="BondCharge",
+            distance=virtual_site_potential.parameters["distance"],
+            orientations=orientations,
+        )
+    elif virtual_site_key.type == "MonovalentLonePair":
+        return _MonovalentLonePairVirtualSite(
+            type="MonovalentLonePair",
+            distance=virtual_site_potential.parameters["distance"],
+            out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
+            in_plane_angle=virtual_site_potential.parameters["inPlaneAngle"],
+            orientations=orientations,
+        )
+    elif virtual_site_key.type == "DivalentLonePair":
+        return _DivalentLonePairVirtualSite(
+            type="DivalentLonePair",
+            distance=virtual_site_potential.parameters["distance"],
+            out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
+            orientations=orientations,
+        )
+    elif virtual_site_key.type == "TrivalentLonePair":
+        return _TrivalentLonePairVirtualSite(
+            type="TrivalentLonePair",
+            distance=virtual_site_potential.parameters["distance"],
+            orientations=orientations,
+        )
+
+    else:
+        raise NotImplementedError(virtual_site_key.type)

@@ -9,6 +9,8 @@ from openff.units import unit
 from openff.interchange.exceptions import MissingPositionsError
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSSystem,
+    GROMACSVirtualSite2,
+    GROMACSVirtualSite3,
     LennardJonesAtomType,
     PeriodicImproperDihedral,
     PeriodicProperDihedral,
@@ -97,6 +99,7 @@ class GROMACSWriter(DefaultModel):
             self._write_angles(top, molecule_type)
             self._write_dihedrals(top, molecule_type)
             self._write_settles(top, molecule_type)
+            self._write_virtual_sites(top, molecule_type)
             self._write_exclusions(top, molecule_type)
 
         top.write("\n")
@@ -213,6 +216,40 @@ class GROMACSWriter(DefaultModel):
                 raise ValueError(f"Invalid dihedral function {function}.")
 
             top.write("\n")
+
+        top.write("\n")
+
+    def _write_virtual_sites(self, top, molecule_type):
+        # TODO: Collect by type so only one header is used for each per molecule
+        for gromacs_virtual_site in molecule_type.virtual_sites:
+            if isinstance(gromacs_virtual_site, GROMACSVirtualSite2):
+                top.write("[ virtual_sites2 ]\n")
+                top.write("; parent, orientation atoms, func, a\n")
+                top.write(
+                    f"{gromacs_virtual_site.site}\t"
+                    f"{gromacs_virtual_site.orientation_atoms[0]}\t"
+                    f"{gromacs_virtual_site.orientation_atoms[1]}\t"
+                    f"{gromacs_virtual_site.func}\t"
+                    f"{gromacs_virtual_site.a}\t"
+                    "\n",
+                )
+
+            elif isinstance(gromacs_virtual_site, GROMACSVirtualSite3):
+                top.write("[ virtual_sites3 ]\n")
+                top.write("; parent, orientation atoms, func, a, b\n")
+                top.write(
+                    f"{gromacs_virtual_site.site}\t"
+                    f"{gromacs_virtual_site.orientation_atoms[0]}\t"
+                    f"{gromacs_virtual_site.orientation_atoms[1]}\t"
+                    f"{gromacs_virtual_site.orientation_atoms[2]}\t"
+                    f"{gromacs_virtual_site.func}\t"
+                    f"{gromacs_virtual_site.a}\t"
+                    f"{gromacs_virtual_site.b}\t"
+                    "\n",
+                )
+
+            else:
+                raise NotImplementedError()
 
         top.write("\n")
 
