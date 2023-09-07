@@ -75,7 +75,9 @@ class TestSettles(_BaseTest):
         assert molecule.exclusions[0].first_atom == 1
         assert molecule.exclusions[0].other_atoms == [2, 3]
         assert molecule.exclusions[1].first_atom == 2
-        assert molecule.exclusions[1].other_atoms == [3]
+        assert molecule.exclusions[1].other_atoms == [1, 3]
+        assert molecule.exclusions[2].first_atom == 3
+        assert molecule.exclusions[2].other_atoms == [1, 2]
 
     def test_convert_no_settles_unconstrained_water(self, tip3p_interchange):
         tip3p_interchange.collections["Constraints"].key_map = dict()
