@@ -40,26 +40,6 @@ def _build_typemap(interchange: Interchange) -> dict[int, str]:
     return typemap
 
 
-def _build_virtual_site_map(interchange: Interchange) -> dict[VirtualSiteKey, int]:
-    """
-    Construct a mapping between the VirtualSiteKey objects found in a SMIRNOFFVirtualSiteHandler and particle indices.
-    """
-    virtual_site_topology_index_map: dict[VirtualSiteKey, int] = dict()
-
-    if "VirtualSites" not in interchange.collections:
-        return virtual_site_topology_index_map
-
-    n_atoms = interchange.topology.n_atoms
-
-    for index, virtual_site_key in enumerate(
-        interchange["VirtualSites"].key_map.keys(),
-    ):
-        assert isinstance(virtual_site_key, VirtualSiteKey)
-        virtual_site_topology_index_map[virtual_site_key] = n_atoms + 1 + index
-
-    return virtual_site_topology_index_map
-
-
 def _build_particle_map(
     interchange: Interchange,
     molecule_virtual_site_map,

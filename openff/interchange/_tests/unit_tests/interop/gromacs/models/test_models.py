@@ -3,13 +3,19 @@ from copy import deepcopy
 import numpy
 import pytest
 from openff.toolkit import Molecule, Topology
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest, needs_gmx
 from openff.interchange.components.mdconfig import get_intermol_defaults
 from openff.interchange.drivers.gromacs import _process, _run_gmx_energy
+from openff.interchange.interop.gromacs.models.models import GROMACSAtomType
 from openff.interchange.smirnoff._gromacs import _convert
+
+try:
+    from pydantic.v1 import ValidationError
+except ModuleNotFoundError:
+    from pydantic import ValidationError
 
 
 @pytest.fixture()
@@ -61,6 +67,37 @@ def combined_system(molecule1, molecule2, sage):
     )
 
 
+class TestModels:
+    def test_massless_atom_error(self):
+        with pytest.raises(
+            ValidationError,
+            match="Particle type.*D.*V.*if massless",
+        ):
+            GROMACSAtomType(
+                name="foo",
+                bonding_type="",
+                atomic_number=100,
+                mass=Quantity(0.0, unit.dalton),
+                charge=Quantity(0.0, unit.elementary_charge),
+                particle_type="A",
+            )
+
+    def test_massive_virtual_site_error(self):
+        with pytest.raises(
+            ValidationError,
+            match="Particle type.*A.*if it has mass",
+        ):
+            GROMACSAtomType(
+                name="foo",
+                bonding_type="",
+                atomic_number=100,
+                mass=Quantity(20.0, unit.dalton),
+                charge=Quantity(0.0, unit.elementary_charge),
+                particle_type="V",
+            )
+
+
+#    GROMACSAtomType
 @pytest.mark.slow()
 class TestAddRemoveMoleculeType(_BaseTest):
     @needs_gmx

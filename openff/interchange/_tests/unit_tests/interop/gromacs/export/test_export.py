@@ -2,7 +2,7 @@ import numpy
 import pytest
 from openff.toolkit import ForceField, Molecule
 from openff.units import unit
-from openff.utilities import has_package, requires_package
+from openff.utilities import has_package, requires_package, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest, get_test_file_path
@@ -30,6 +30,18 @@ class TestToGro(_BaseTest):
 
         for line in open("should_have_residue_names.gro").readlines()[2:-2]:
             assert line[5:10] == "LIG  "
+
+    @skip_if_missing("openmm")
+    def test_tip4p_dimer(self, tip4p, water_dimer):
+        tip4p.create_interchange(water_dimer).to_gro("_dimer.gro")
+
+        positions = openmm.app.GromacsGroFile(
+            "_dimer.gro",
+        ).getPositions(asNumpy=True)
+
+        assert positions.shape == (8, 3)
+
+        assert not numpy.allclose(positions[3], positions[7])
 
 
 class TestSettles(_BaseTest):
@@ -93,3 +105,19 @@ class TestCommonBoxes(_BaseTest):
             numpy.array(original_box_vectors.value_in_unit(openmm.unit.nanometer)),
             numpy.array(parsed_box_vectors.value_in_unit(openmm.unit.nanometer)),
         )
+
+
+class TestVirtualSites:
+    @skip_if_missing("openmm")
+    def test_tip4p_charge_neutrality(self, tip4p, water_dimer):
+        tip4p.create_interchange(water_dimer).to_top("_dimer.top")
+
+        system = openmm.app.GromacsTopFile("_dimer.top").createSystem()
+
+        assert system.getForce(0).getNumParticles() == 8
+
+        charges = [
+            system.getForce(0).getParticleParameters(i)[0]._value for i in range(4)
+        ]
+
+        assert sum(charges) == pytest.approx(0.0)

@@ -3,7 +3,7 @@ from math import cos, pi, sin
 from random import random
 
 import pytest
-from openff.toolkit import ForceField, Molecule
+from openff.toolkit import ForceField, Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleType,
     BondType,
@@ -155,6 +155,13 @@ def water() -> Molecule:
     molecule = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
     molecule.generate_conformers(n_conformers=1)
     return molecule
+
+
+@pytest.fixture(scope="session")
+def water_dimer() -> Topology:
+    return Topology.from_pdb(
+        get_test_file_path("water-dimer.pdb"),
+    )
 
 
 @pytest.fixture(scope="session")

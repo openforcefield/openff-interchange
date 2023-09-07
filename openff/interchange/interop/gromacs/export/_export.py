@@ -235,10 +235,6 @@ class GROMACSWriter(DefaultModel):
                 )
 
             elif isinstance(gromacs_virtual_site, GROMACSVirtualSite3):
-                # https://github.com/gromacs/gromacs/blob/main/share/top/oplsaa.ff/tip4p.itp
-                # [ virtual_sites3 ]
-                # ; Vsite from			funct	a		b
-                # 4	1	2	3	1	0.128012065	0.128012065
                 top.write("[ virtual_sites3 ]\n")
                 top.write("; parent, orientation atoms, func, a, b\n")
                 top.write(
