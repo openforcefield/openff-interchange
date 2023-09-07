@@ -27,8 +27,14 @@ def _create_gromacs_virtual_site(
     virtual_site_key: VirtualSiteKey,
     particle_map: dict[Union[int, VirtualSiteKey], int],
 ) -> GROMACSVirtualSite:
+    offset = interchange.topology.atom_index(
+        interchange.topology.atom(min(virtual_site_key.orientation_atom_indices)),
+    )
+
+    # These are GROMACS "molecule" indices, already mapped back from the topology on to the molecule
     gromacs_indices: list[int] = [
-        particle_map[openff_index] + 1 for openff_index in virtual_site.orientations
+        particle_map[openff_index] - offset + 1
+        for openff_index in virtual_site.orientations
     ]
 
     if isinstance(virtual_site, _BondChargeVirtualSite):
@@ -43,7 +49,7 @@ def _create_gromacs_virtual_site(
         # TODO: This will create name collisions in many molecules
         return GROMACSVirtualSite2(
             name=virtual_site_key.name,
-            site=particle_map[virtual_site_key] + 1,
+            site=particle_map[virtual_site_key] - offset + 1,
             orientation_atoms=gromacs_indices,
             a=-1.0 * ratio,  # this is basically w2 in OpenMM jargon
         )
@@ -84,7 +90,7 @@ def _create_gromacs_virtual_site(
 
             return GROMACSVirtualSite3(
                 name=virtual_site_key.name,
-                site=particle_map[virtual_site_key] + 1,
+                site=particle_map[virtual_site_key] - offset + 1,
                 orientation_atoms=gromacs_indices,
                 a=(1 - w1) / 2,
                 b=(1 - w1) / 2,

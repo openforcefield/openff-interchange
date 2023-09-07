@@ -582,7 +582,7 @@ def _convert_virtual_sites(
                 name=gromacs_virtual_site.name,
                 atom_type=_atom_atom_type_map[virtual_site_key],
                 residue_index=molecule.atoms[0].residue_index,
-                residue_name=molecule.atoms[0].residue_index,
+                residue_name=molecule.atoms[0].residue_name,
                 charge_group_number=1,
                 charge=interchange["Electrostatics"].charges[virtual_site_key],
                 mass=Quantity(0.0, unit.dalton),
@@ -595,6 +595,18 @@ def _convert_virtual_sites(
                 other_atoms=gromacs_virtual_site.orientation_atoms,
             ),
         )
+
+        # Exclusions need to be listed twice, i.e. i-j and then j-i
+        # not obvious how orientation atom-orientation atom exclusions are to be treated here;
+        # for now just add the symmetries between virtual site and orientation atoms
+
+        for orientation_atom in gromacs_virtual_site.orientation_atoms:
+            molecule.exclusions.append(
+                GROMACSExclusion(
+                    first_atom=orientation_atom,
+                    other_atoms=[gromacs_virtual_site.site],
+                ),
+            )
 
 
 def _convert_settles(
@@ -659,6 +671,7 @@ def _convert_settles(
         ),
     )
 
+    # Exclusions need to be listed twice, i.e. i-j and then j-i
     molecule.exclusions.append(
         GROMACSExclusion(
             first_atom=1,
@@ -668,6 +681,12 @@ def _convert_settles(
     molecule.exclusions.append(
         GROMACSExclusion(
             first_atom=2,
-            other_atoms=[3],
+            other_atoms=[1, 3],
+        ),
+    )
+    molecule.exclusions.append(
+        GROMACSExclusion(
+            first_atom=3,
+            other_atoms=[1, 2],
         ),
     )
