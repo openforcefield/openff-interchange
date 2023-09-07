@@ -277,6 +277,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
         )
 
     if "VirtualSites" in interchange.collections:
+        # TODO: Some say to skip this if the user only wants a topology file?
         from openff.interchange.interop._virtual_sites import (
             get_positions_with_virtual_sites,
         )

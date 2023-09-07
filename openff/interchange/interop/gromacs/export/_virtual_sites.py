@@ -45,7 +45,7 @@ def _create_gromacs_virtual_site(
             name=virtual_site_key.name,
             site=particle_map[virtual_site_key] + 1,
             orientation_atoms=gromacs_indices,
-            a=1.0 + ratio,
+            a=-1.0 * ratio,  # this is basically w2 in OpenMM jargon
         )
 
     if isinstance(virtual_site, _DivalentLonePairVirtualSite):
