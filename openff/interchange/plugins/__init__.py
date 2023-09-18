@@ -2,7 +2,7 @@
 Collections for custom SMIRNOFF handlers.
 """
 
-from openff.interchange.smirnoff._base import SMIRNOFFCollection
+from openff.interchange.smirnoff import SMIRNOFFCollection
 
 __all__ = [
     "SMIRNOFFCollection",

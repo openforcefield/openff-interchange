@@ -5,7 +5,7 @@ from openff.interchange import Interchange
 from openff.interchange.components._particles import _VirtualSite
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.models import VirtualSiteKey
-from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
+from openff.interchange.smirnoff import SMIRNOFFVirtualSiteCollection
 
 
 def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteCollection"):
