@@ -56,6 +56,7 @@ def _build_particle_map(
 
             particle_index += 1
 
+    for molecule in interchange.topology.molecules:
         for virtual_site_key in molecule_virtual_site_map[
             interchange.topology.molecule_index(molecule)
         ]:

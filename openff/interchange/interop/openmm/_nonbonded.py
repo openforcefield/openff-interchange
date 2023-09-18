@@ -169,8 +169,13 @@ def _add_particles_to_system(
             # Skip unit check for speed, trust the toolkit reports mass in Dalton
             system_index = system.addParticle(mass=atom.mass.m)
 
-            assert system_index == particle_map[atom_index]
+            assert system_index == particle_map[atom_index], (
+                system_index,
+                atom_index,
+                particle_map[atom_index],
+            )
 
+    for molecule in interchange.topology.molecules:
         for virtual_site_key in molecule_virtual_site_map[
             interchange.topology.molecule_index(molecule)
         ]:
@@ -388,6 +393,7 @@ def _create_single_nonbonded_force(
                 epsilon,
             )
 
+    for molecule in interchange.topology.molecules:
         if has_virtual_sites:
             molecule_index = interchange.topology.molecule_index(molecule)
         else:
@@ -440,7 +446,7 @@ def _create_single_nonbonded_force(
 
             if system_index != force_index:
                 raise InternalInconsistencyError(
-                    "Mismatch in system and force indexing",
+                    f"Mismatch in system ({system_index=}) and force ({force_index=}) indexing",
                 )
 
             parent_atom_index = openff_openmm_particle_map[

@@ -634,13 +634,20 @@ class TestOpenMMVirtualSites:
 
         assert out.getNumForces() == 3
 
+        # Particle indexing is 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+        #                      O, H, H, O, H, H, VS, VS, VS, VS
         for force in out.getForces():
             if isinstance(force, openmm.HarmonicAngleForce):
                 p1, p2, p3, _, _ = force.getAngleParameters(1)
 
-                assert p1 == 6
-                assert p2 == 5
-                assert p3 == 7
+                assert p1 == 4
+                assert p2 == 3
+                assert p3 == 5
+
+        for index in range(10):
+            assert (
+                index >= 6 == isinstance(out.getVirtualSite(index), openmm.VirtualSite)
+            )
 
 
 @skip_if_missing("openmm")
