@@ -7,8 +7,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 
 from openff.interchange._tests import _BaseTest
 from openff.interchange.exceptions import InvalidParameterHandlerError
-from openff.interchange.smirnoff._base import SMIRNOFFCollection
-from openff.interchange.smirnoff._valence import SMIRNOFFAngleCollection
+from openff.interchange.smirnoff import SMIRNOFFAngleCollection, SMIRNOFFCollection
 
 
 class TestSMIRNOFFCollection(_BaseTest):

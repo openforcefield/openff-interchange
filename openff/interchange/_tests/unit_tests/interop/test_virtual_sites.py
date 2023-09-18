@@ -17,7 +17,7 @@ def tip4p_interchange(water, tip4p):
 
 
 def test_short_circuit_emtpy_virtual_site_collection(tip3p, water):
-    from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
+    from openff.interchange.smirnoff import SMIRNOFFVirtualSiteCollection
 
     out = tip3p.create_interchange(water.to_topology())
 

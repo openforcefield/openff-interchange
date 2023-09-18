@@ -288,9 +288,7 @@ class TestGROMACS(_BaseTest):
     )
     def test_argon_buck(self):
         """Test that Buckingham potentials are supported and can be exported"""
-        from openff.interchange.smirnoff._nonbonded import (
-            SMIRNOFFElectrostaticsCollection,
-        )
+        from openff.interchange.smirnoff import SMIRNOFFElectrostaticsCollection
 
         mol = MoleculeWithConformer.from_smiles("[#18]", name="Argon")
 

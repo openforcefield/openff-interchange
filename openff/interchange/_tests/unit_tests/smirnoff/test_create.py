@@ -13,14 +13,14 @@ from openff.interchange.exceptions import (
     UnassignedTorsionError,
 )
 from openff.interchange.models import BondKey
-from openff.interchange.smirnoff._nonbonded import (
-    SMIRNOFFvdWCollection,
-    _upconvert_vdw_handler,
-    library_charge_from_molecule,
-)
-from openff.interchange.smirnoff._valence import (
+from openff.interchange.smirnoff import (
     SMIRNOFFAngleCollection,
     SMIRNOFFBondCollection,
+    SMIRNOFFvdWCollection,
+)
+from openff.interchange.smirnoff._nonbonded import (
+    _upconvert_vdw_handler,
+    library_charge_from_molecule,
 )
 
 

@@ -30,8 +30,10 @@ from openff.interchange.exceptions import (
     UnsupportedCombinationError,
     UnsupportedExportError,
 )
-from openff.interchange.smirnoff._valence import SMIRNOFFConstraintCollection
-from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
+from openff.interchange.smirnoff import (
+    SMIRNOFFConstraintCollection,
+    SMIRNOFFVirtualSiteCollection,
+)
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
 try:
@@ -94,18 +96,14 @@ def interchange_loader(data: str) -> dict:
         elif key == "topology":
             tmp["topology"] = Topology.from_json(val)
         elif key == "collections":
-            from openff.interchange.smirnoff._nonbonded import (
-                SMIRNOFFElectrostaticsCollection,
-                SMIRNOFFvdWCollection,
-            )
-            from openff.interchange.smirnoff._valence import (
+            from openff.interchange.smirnoff import (
                 SMIRNOFFAngleCollection,
                 SMIRNOFFBondCollection,
                 SMIRNOFFConstraintCollection,
+                SMIRNOFFElectrostaticsCollection,
                 SMIRNOFFImproperTorsionCollection,
                 SMIRNOFFProperTorsionCollection,
-            )
-            from openff.interchange.smirnoff._virtual_sites import (
+                SMIRNOFFvdWCollection,
                 SMIRNOFFVirtualSiteCollection,
             )
 

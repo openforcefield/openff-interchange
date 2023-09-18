@@ -11,9 +11,13 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### New Features
+
+* #815 Most SMIRNOFF collections are now available via a public interface (`from openff.interchange.smirnoff import ...`).
+
 ### Bugfixes
 
-* #813 Tracks `scale_12` in non-bonded handlers.
+* #814 Tracks `scale_12` in non-bonded handlers.
 
 ## 0.3.14 - 2023-09-07
 
