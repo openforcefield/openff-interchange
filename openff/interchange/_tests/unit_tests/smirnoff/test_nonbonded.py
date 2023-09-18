@@ -140,6 +140,31 @@ class TestNonbonded(_BaseTest):
             assert not uses_elf10
             numpy.testing.assert_allclose(partial_charges, assigned_charges)
 
+    @pytest.mark.skip(
+        reason="Turn on if toolkit ever allows non-standard scale12/13/15",
+    )
+    def test_nonstandard_scale_factors(
+        sage,
+        methane,
+    ):
+        import random
+
+        # SMIRNOFFSpecError: Current OFF toolkit is unable to handle scale12 values other than 0.0.
+        # SMIRNOFFSpecError: Current OFF toolkit is unable to handle scale13 values other than 0.0.
+        # SMIRNOFFSpecError: Current OFF toolkit is unable to handle scale15 values other than 1.0.
+
+        factors = {index: random.random() for index in range(2, 6)}
+
+        for handler in ("vdW", "Electrostatics"):
+            for index, factor in factors.items():
+                setattr(sage[handler], f"scale1{index}", factor)
+
+        interchange = sage.create_interchange(methane.to_topology())
+
+        for collection in ("vdW", "Electrostatics"):
+            for index, factor in factors.items():
+                assert getattr(interchange[collection], f"scale1{index}") == factor
+
 
 class TestvdWUpDownConversion(_BaseTest):
     def test_upconversion(self):

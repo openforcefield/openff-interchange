@@ -216,6 +216,7 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
                 )
 
         handler = cls(
+            scale_12=parameter_handler.scale12,
             scale_13=parameter_handler.scale13,
             scale_14=parameter_handler.scale14,
             scale_15=parameter_handler.scale15,
@@ -433,6 +434,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
         handler = cls(
             type=toolkit_handler_with_metadata.TAGNAME,
+            scale_12=toolkit_handler_with_metadata.scale12,
             scale_13=toolkit_handler_with_metadata.scale13,
             scale_14=toolkit_handler_with_metadata.scale14,
             scale_15=toolkit_handler_with_metadata.scale15,

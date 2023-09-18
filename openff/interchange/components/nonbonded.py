@@ -12,6 +12,7 @@ class BuckinghamvdWCollection(Collection):
     mixing_rule: Literal["buckingham"] = "buckingham"
     method: str = "cutoff"
     cutoff: float = 9.0
+    scale_12: float = 0.0
     scale_13: float = 0.0
     scale_14: float = 0.5
     scale_15: float = 1.0

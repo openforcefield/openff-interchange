@@ -47,6 +47,10 @@ class _BaseNonbondedHandler(Collection):
 
     type: str = "Nonbonded"
 
+    scale_12: float = Field(
+        0.0,
+        description="The scaling factor applied to 1-2 interactions",
+    )
     scale_13: float = Field(
         0.0,
         description="The scaling factor applied to 1-3 interactions",
