@@ -23,6 +23,10 @@ class _NonbondedCollection(Collection, abc.ABC):  # noqa
         description="The distance at which pairwise interactions are truncated",
     )
 
+    scale_12: float = Field(
+        0.0,
+        description="The scaling factor applied to 1-2 interactions",
+    )
     scale_13: float = Field(
         0.0,
         description="The scaling factor applied to 1-3 interactions",

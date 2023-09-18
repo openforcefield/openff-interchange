@@ -11,6 +11,12 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### Bugfixes
+
+* #813 Tracks `scale_12` in non-bonded handlers.
+
+## 0.3.14 - 2023-09-07
+
 ### New Features
 
 * #798 `Interchange.to_gromacs` and related methods now support `BondCharge` virtual sites and four-site water models.
