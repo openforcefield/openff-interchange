@@ -100,6 +100,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
     particle_map = _build_particle_map(
         interchange,
         molecule_virtual_site_map,
+        collate=True,
     )
 
     # Give each atom in each unique molecule a unique name so that can act like an atom type
@@ -564,6 +565,7 @@ def _convert_virtual_sites(
         particle_map = _build_particle_map(
             interchange,
             molecule_virtual_site_map,
+            collate=True,
         )
 
         gromacs_virtual_site: GROMACSVirtualSite = _create_gromacs_virtual_site(

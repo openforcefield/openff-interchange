@@ -43,7 +43,14 @@ def _build_typemap(interchange: Interchange) -> dict[int, str]:
 def _build_particle_map(
     interchange: Interchange,
     molecule_virtual_site_map,
+    collate: bool = False,
 ) -> dict[Union[int, VirtualSiteKey], int]:
+    """
+    Build a dict mapping particle indices between a topology and another object.
+
+    If `collate=True`, virtual sites are collated with each molecule's atoms.
+    If `collate=False`, virtual sites go at the very end, after all atoms were added.
+    """
     particle_map: dict[Union[int, VirtualSiteKey], int] = dict()
 
     particle_index = 0
@@ -56,12 +63,22 @@ def _build_particle_map(
 
             particle_index += 1
 
-        for virtual_site_key in molecule_virtual_site_map[
-            interchange.topology.molecule_index(molecule)
-        ]:
-            particle_map[virtual_site_key] = particle_index
+        if collate:
+            for virtual_site_key in molecule_virtual_site_map[
+                interchange.topology.molecule_index(molecule)
+            ]:
+                particle_map[virtual_site_key] = particle_index
 
-            particle_index += 1
+                particle_index += 1
+
+    if not collate:
+        for molecule in interchange.topology.molecules:
+            for virtual_site_key in molecule_virtual_site_map[
+                interchange.topology.molecule_index(molecule)
+            ]:
+                particle_map[virtual_site_key] = particle_index
+
+                particle_index += 1
 
     return particle_map
 
