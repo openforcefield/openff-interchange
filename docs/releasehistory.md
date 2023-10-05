@@ -18,6 +18,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### Bugfixes
 
 * #814 Tracks `scale_12` in non-bonded handlers.
+* #821 Fixes visualization issues described in #819.
 
 ## 0.3.14 - 2023-09-07
 

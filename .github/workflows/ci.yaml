@@ -90,16 +90,22 @@ jobs:
         # Removing mBuild also removes some leaves, need to re-install them
         micromamba install rdkit packmol
 
-    - name: Install AmberTools
+    - name: Install AmberTools and RDKit
       if: ${{ matrix.openeye == false }}
-      run: |
-        # Unclear why, but around October 2023 this downgrades JAX to broken 0.1.x builds
-        micromamba install ambertools "jax >=3" "jaxlib >3" -c conda-forge
+      # Unclear why, but around October 2023 this downgrades JAX to broken 0.1.x builds
+      # and also uninstalls RDKit
+      run: micromamba install rdkit ambertools "jax >=0.3" "jaxlib >=0.3" -c conda-forge
+
+    - name: Uninstall GROMACS on macOS
+      if: ${{ matrix.os == 'macOS-latest' }}
+      # It appears some macOS runners use old hardware without RDTSCP. GROMACS builds are compiled
+      # with it on for performance reasons, and it's easier to just skip these cases than make
+      # even more builds.
+      run: micromamba remove gromacs
 
     - name: Install Foyer
       if: ${{ matrix.pydantic-version == 1 }}
-      run: |
-        micromamba install foyer -c conda-forge
+      run: micromamba install foyer -c conda-forge
 
     - name: Run tests
       if: always()

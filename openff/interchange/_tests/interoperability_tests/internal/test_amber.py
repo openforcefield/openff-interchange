@@ -1,4 +1,3 @@
-import MDAnalysis
 import numpy as np
 import parmed
 import pytest
@@ -89,9 +88,11 @@ class TestAmber(_BaseTest):
 
 class TestPRMTOP(_BaseTest):
     @skip_if_missing("mdtraj")
+    @skip_if_missing("MDAnalysis")
     @skip_if_missing("openmm")
     @pytest.mark.slow()
     def test_atom_names_pdb(self):
+        import MDAnalysis
         import mdtraj
 
         peptide = Molecule.from_polymer_pdb(
