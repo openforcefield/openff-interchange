@@ -1,4 +1,4 @@
-name: openff-interchange-env
+name: openff-interchange-dev
 channels:
   - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge

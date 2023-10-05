@@ -644,10 +644,12 @@ class TestOpenMMVirtualSites:
                 assert p2 == 3
                 assert p3 == 5
 
-        for index in range(10):
-            assert (
-                index >= 6 == isinstance(out.getVirtualSite(index), openmm.VirtualSite)
-            )
+        for index in range(6):
+            assert out.getParticleMass(index)._value > 0.0
+
+        for index in range(6, 10):
+            assert out.getParticleMass(index)._value == 0.0
+            assert isinstance(out.getVirtualSite(index), openmm.VirtualSite)
 
 
 @skip_if_missing("openmm")

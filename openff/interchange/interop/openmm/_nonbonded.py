@@ -160,6 +160,7 @@ def _add_particles_to_system(
     particle_map = _build_particle_map(
         interchange,
         molecule_virtual_site_map,
+        collate=False,
     )
 
     for molecule in interchange.topology.molecules:
