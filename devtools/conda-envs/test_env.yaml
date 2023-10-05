@@ -12,6 +12,8 @@ dependencies:
   - openff-toolkit-base >=0.14.3
   - openff-units
   - openff-models
+  # Needs to be explicitly listed to not be dropped with AmberTools is removed
+  - rdkit
   # Optional features
   - unyt
   - mbuild

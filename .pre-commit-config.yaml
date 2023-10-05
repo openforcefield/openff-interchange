@@ -35,7 +35,7 @@ repos:
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.13.0
+  rev: v3.14.0
   hooks:
   - id: pyupgrade
     files: ^openff|plugins|stubs
