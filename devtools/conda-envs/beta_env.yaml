@@ -20,8 +20,8 @@ dependencies:
   # Optional features
   - jax
   - unyt
-  - mbuild
-  - foyer >=0.11.3
+  # mbuild
+  # foyer >=0.11.3
   # Testing
   - mdtraj
   - intermol

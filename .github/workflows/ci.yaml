@@ -103,9 +103,9 @@ jobs:
       # even more builds.
       run: micromamba remove gromacs
 
-    - name: Install Foyer
-      if: ${{ matrix.pydantic-version == 1 }}
-      run: micromamba install foyer -c conda-forge
+    # name: Install Foyer
+    # if: ${{ matrix.pydantic-version == 1 }}
+    # run: micromamba install foyer -c conda-forge
 
     - name: Run tests
       if: always()

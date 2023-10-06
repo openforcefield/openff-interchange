@@ -13,8 +13,8 @@ dependencies:
   - openff-toolkit >=0.14.2
   # Optional features
   - unyt
-  - mbuild
-  - foyer >=0.11.3
+  # mbuild
+  # foyer >=0.11.3
   # Examples
   - jax
   - mdtraj
