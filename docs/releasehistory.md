@@ -7,9 +7,11 @@ Releases follow versioning as described in
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+Dates are given in YYYY-MM-DD format.
+
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.3.15 - 2023-10-06
 
 ### New Features
 
@@ -19,6 +21,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 * #814 Tracks `scale_12` in non-bonded handlers.
 * #821 Fixes visualization issues described in #819.
+* #816 Ensures virtual sites are added at the _end_ of an `openmm.System`, after _all_ atoms (i.e. not interlaced with molecules).
 
 ## 0.3.14 - 2023-09-07
 
