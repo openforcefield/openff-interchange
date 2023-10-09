@@ -452,7 +452,7 @@ class Interchange(DefaultModel):
         >>> import openmm
         >>> import openmm.unit
         >>>
-        >>> simulation = interchange.to_openmm_system(
+        >>> simulation = interchange.to_openmm_simulation(
         ...     openmm.LangevinMiddleIntegrator(
         ...         293.15 * openmm.unit.kelvin,
         ...         1.0 / openmm.unit.picosecond,
