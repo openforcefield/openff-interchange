@@ -53,7 +53,35 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.autosummary",
     "sphinx.ext.todo",
-    # "sphinxcontrib.autodoc_pydantic",
+    "openff_sphinx_theme",
+    "sphinxcontrib.autodoc_pydantic",
+    "sphinxcontrib.mermaid",
+]
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "openff.toolkit": (
+        "https://open-forcefield-toolkit.readthedocs.io/en/stable/",
+        None,
+    ),
+    "mdtraj": ("https://www.mdtraj.org/1.9.5/", None),
+    "openff.docs": (
+        "https://docs.openforcefield.org/en/latest/",
+        None,
+    ),
+    "setuptools": ("https://setuptools.pypa.io/en/latest/", None),
+    "openmm": ("http://docs.openmm.org/latest/api-python/", None),
+}
+
+mermaid_init_js = """mermaid.initialize({
+    startOnLoad:true,
+    fontFamily:"montserrat,sans",
+    theme: "default",
+});"""
+
+## Suppress warnings about ambiguous Python references
+suppress_warnings = [
+    "ref.python",
 ]
 
 autosummary_generate = True
@@ -62,30 +90,68 @@ autosummary_context = {
     # Modules to exclude from API docs
     "exclude_modules": [
         "openff.interchange.conftest",
-        "openff.interchange.energy_tests",
-        "openff.interchange.interoperability_tests",
-        "openff.interchange.unit_tests",
+        "openff.interchange._tests",  # Maybe this is excluded by default?
     ],
 }
+autosummary_ignore_module_all = False
 napoleon_google_docstring = False
 napoleon_use_param = False
 napoleon_use_ivar = True
 
-autodoc_mock_imports = ["pmdtest", "openmm"]
+autodoc_mock_imports = ["jax"]
 autodoc_default_options = {
     "member-order": "bysource",
+    "undoc-members": True,
+    "inherited-members": False,
+    "show-inheritance": True,
 }
 autodoc_preserve_defaults = True
 autodoc_inherit_docstrings = False
-suppress_warnings = ["autodoc"]
+autodoc_typehints_format = "short"
+# Workaround for autodoc_typehints_format not working for attributes
+# see https://github.com/sphinx-doc/sphinx/issues/10290#issuecomment-1079740009
+python_use_unqualified_type_names = True
 
 # autodoc_pydantic settings
-# autodoc_pydantic_show_config = False
-# autodoc_pydantic_model_show_config = False
-# autodoc_pydantic_show_validators = False
-# autodoc_pydantic_model_show_validators = False
-# autodoc_pydantic_field_show_alias = False
-# autodoc_pydantic_model_show_json = False
+autodoc_pydantic_show_config = False
+autodoc_pydantic_model_show_config = False
+autodoc_pydantic_model_show_config_summary = False
+autodoc_pydantic_show_validators = False
+autodoc_pydantic_model_show_validators = False
+autodoc_pydantic_field_show_alias = False
+autodoc_pydantic_model_show_json = False
+
+myst_enable_extensions = [
+    "deflist",
+    "smartquotes",
+    "replacements",
+    "dollarmath",
+    "colon_fence",
+]
+
+# sphinx-notfound-page
+# https://github.com/readthedocs/sphinx-notfound-page
+# Renders a 404 page with absolute links
+import importlib
+
+if importlib.util.find_spec("notfound"):
+    extensions.append("notfound.extension")
+
+    notfound_context = {
+        "title": "404: File Not Found",
+        "body": """
+    <h1>404: File Not Found</h1>
+    <p>
+        Sorry, we couldn't find that page. This often happens as a result of
+        following an outdated link. Please check the
+        <a href="https://openff-interchange.readthedocs.io/en/stable/">latest stable version</a>
+        of the docs, unless you're sure you want an earlier version, and
+        try using the search box or the navigation menu on the left.
+    </p>
+    <p>
+    </p>
+    """,
+    }
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -109,7 +175,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "README.md"]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "default"
@@ -119,14 +185,33 @@ pygments_style = "default"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
-html_theme = "sphinx_rtd_theme"
+
+html_theme = "openff_sphinx_theme"
+html_sidebars = {"**": ["globaltoc.html", "localtoc.html", "searchbox.html"]}
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    # Repository integration
+    # Set the repo url for the link to appear
+    "repo_url": "https://github.com/openforcefield/openff-interchange",
+    # The name of the repo. If must be set if repo_url is set
+    "repo_name": "openff-interchange",
+    # Must be one of github, gitlab or bitbucket
+    "repo_type": "github",
+    # Colour for sidebar captions and other accents. One of
+    # openff-blue, openff-toolkit-blue, openff-dataset-yellow,
+    # openff-evaluator-orange, aquamarine, lilac, amaranth, grape,
+    # violet, pink, pale-green, green, crimson, eggplant, turquoise,
+    # or a tuple of three ints in the range [0, 255] corresponding to
+    # a position in RGB space.
+    "color_accent": "pink",
+    # Content Minification for deployment, prettification for debugging
+    "html_minify": False,  # q for mermaid to work
+    "css_minify": True,
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -186,7 +271,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, "interchange", "openff-interchange Documentation", [author], 1)
+    (master_doc, "interchange", "openff-interchange Documentation", [author], 1),
 ]
 
 

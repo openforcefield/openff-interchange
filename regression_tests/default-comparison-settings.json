@@ -1,0 +1,1 @@
+{"default_numeric_tolerance": 1e-06, "numeric_tolerance_overrides": {"Forces/NonbondedForce/Particles/*/q": 0.005, "Forces/NonbondedForce/Exceptions/*/q": 0.005}}

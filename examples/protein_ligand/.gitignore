@@ -1,0 +1,5 @@
+*.pdb
+*.sdf
+out.*
+log.lammps
+tmp.in

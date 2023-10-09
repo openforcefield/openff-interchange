@@ -7,22 +7,27 @@ A project (and object) for storing, manipulating, and converting molecular mecha
 ```{toctree}
 ---
 caption: Installation
+maxdepth: 2
 ---
 installation.md
 developing.md
-releasehistory.rst
+releasehistory.md
 ```
 
 ```{toctree}
 ---
-caption: User Guides
+caption: User's guide
+maxdepth: 2
 ---
-using/gromacs.md
-using/openmm.md
-using/lammps.md
-using/amber.md
-using/charmm.md
-energy_tests.md
+
+using/intro.md
+using/construction.rst
+using/output.md
+using/handlers.md
+using/migrating.md
+using/plugins.md
+using/experimental.md
+
 ```
 
 <div class="toctree-wrapper"><p class="caption" role="heading"><span class="caption-text">

@@ -1,10 +1,10 @@
 """Models for non-standard non-bonded treatments."""
-from typing_extensions import Literal
+from typing import Literal
 
-from openff.interchange.components.potentials import PotentialHandler
+from openff.interchange.components.potentials import Collection
 
 
-class BuckinghamvdWHandler(PotentialHandler):
+class BuckinghamvdWCollection(Collection):
     """Handler storing Buckingham-style vdW potentials."""
 
     type: Literal["Buckingham-6"] = "Buckingham-6"
@@ -12,6 +12,7 @@ class BuckinghamvdWHandler(PotentialHandler):
     mixing_rule: Literal["buckingham"] = "buckingham"
     method: str = "cutoff"
     cutoff: float = 9.0
+    scale_12: float = 0.0
     scale_13: float = 0.0
     scale_14: float = 0.5
     scale_15: float = 1.0

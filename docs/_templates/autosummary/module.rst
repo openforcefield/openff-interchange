@@ -1,55 +1,60 @@
-{{ fullname | escape | underline(line="=")}}
+{% if fullname == "openff." ~ objname -%}
+{%- set title = fullname | escape -%}
+{%- else -%}
+{%- set title = objname | escape -%}
+{%- endif %}
+{{ ("``" ~ title ~ "``") | underline('=')}}
 
 .. automodule:: {{ fullname }}
+   :no-members:
 
-{% block modules %}
-{% if modules %}
-.. rubric:: Modules
+.. currentmodule:: {{ fullname }}
 
-.. autosummary::
-   :toctree:
-   :recursive:
-{% for item in modules if item not in exclude_modules %}
-   {{ item }}
+{% block classes -%}
+
+{%- set types = [] -%}
+{%- for item in members -%}
+   {%- if not item.startswith('_') and not (
+      item in functions
+      or item in attributes
+      or item in exceptions
+      or item in modules
+      or item == "TYPE_CHECKING"
+) -%}
+      {%- set _ = types.append(item) -%}
+   {%- endif -%}
 {%- endfor %}
-{% endif %}
-{% endblock %}
 
-{% block classes %}
-{% if classes %}
+{% if types %}
 {{ _('Classes') | escape | underline(line="-") }}
 
    .. autosummary::
+      :toctree:
       :nosignatures:
-   {% for item in classes %}
-      {{ item }}
-   {%- endfor %}
-
-   {% for item in classes %}
-   .. autoclass:: {{ item }}
-      :members:
-      :special-members: __init__
-      :undoc-members:
-      :show-inheritance:
-      :inherited-members:
+   {% for item in types %}
+      {% if item.startswith(fullname ~ ".") -%}
+      {{- item[((fullname ~ ".") | length):] -}}
+      {%- else -%}
+      {{- item -}}
+      {%- endif %}
    {%- endfor %}
 
 {% endif %}
 {% endblock %}
-
 
 {% block functions %}
 {% if functions %}
 {{ _('Functions') | escape | underline(line="-") }}
 
    .. autosummary::
+      :toctree:
       :nosignatures:
    {% for item in functions %}
-      {{ item }}
-   {%- endfor %}
-
-   {% for item in functions %}
-   .. autofunction:: {{ item }}
+      {% if item.startswith(fullname ~ ".") -%}
+      {{- item[((fullname ~ ".") | length):] -}}
+      {%- else -%}
+      {{- item -}}
+      {%- endif %}
    {%- endfor %}
 
 {% endif %}
@@ -60,13 +65,14 @@
 {{ _('Exceptions') | escape | underline(line="-") }}
 
    .. autosummary::
+      :toctree:
       :nosignatures:
    {% for item in exceptions %}
-      {{ item }}
-   {%- endfor %}
-
-   {% for item in exceptions %}
-   .. autoexception:: {{ item }}
+      {% if item.startswith(fullname ~ ".") -%}
+      {{- item[((fullname ~ ".") | length):] -}}
+      {%- else -%}
+      {{- item -}}
+      {%- endif %}
    {%- endfor %}
 
 {% endif %}
@@ -76,11 +82,30 @@
 {% if attributes %}
 {{ _('Module Attributes') | escape | underline(line="-") }}
 
-   .. autosummary::
-      :nosignatures:
    {% for item in attributes %}
-      {{ item }}
+   .. autoattribute:: {% if item.startswith(fullname ~ ".") -%}
+                      {{- item[((fullname ~ ".") | length):] -}}
+                      {%- else -%}
+                      {{- item -}}
+                      {%- endif %}
    {%- endfor %}
 
+{% endif %}
+{% endblock %}
+
+{% block modules %}
+{% if modules %}
+{{ _('Modules') | escape | underline(line="-") }}
+
+.. autosummary::
+   :toctree:
+   :recursive:
+{% for item in modules if item not in exclude_modules %}
+   {% if item.startswith(fullname ~ ".") -%}
+   {{- item[((fullname ~ ".") | length):] -}}
+   {%- else -%}
+   {{- item -}}
+   {%- endif %}
+{%- endfor %}
 {% endif %}
 {% endblock %}

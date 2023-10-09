@@ -1,0 +1,30 @@
+name: interchange-examples-env
+channels:
+  - jaimergp/label/unsupported-cudatoolkit-shim
+  - conda-forge
+  - openeye
+dependencies:
+  # Core
+  - python
+  - numpy >=1.21
+  - pydantic =1
+  - openmm >=7.6
+  # OpenFF stack
+  - openff-toolkit >=0.14.2
+  # Optional features
+  - unyt
+  - mbuild
+  # foyer >=0.11.3
+  # Examples
+  - jax
+  - mdtraj
+  - pdbfixer
+  - nglview
+  - openeye-toolkits
+  - pytest
+  - nbval
+  - openmmforcefields >=0.11.2
+  - rich
+  # Drivers
+  - gromacs >=2021=nompi*
+  - lammps

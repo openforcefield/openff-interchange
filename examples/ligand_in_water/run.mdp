@@ -1,0 +1,35 @@
+integrator             = md
+dt                     = 0.001
+nsteps                 = 5000
+
+nstxout-compressed     = 100
+
+cutoff-scheme          = Verlet
+
+coulombtype            = PME
+rcoulomb               = 0.9
+
+vdwtype                = Cut-off
+vdw-modifier           = force-switch
+rvdw                   = 0.9
+rvdw-switch            = 0.8
+DispCorr               = EnerPres
+
+tcoupl                 = V-rescale
+tc-grps                = system
+tau-t                  = 1.0
+ref-t                  = 300.0
+
+pcoupl                 = C-rescale
+pcoupltype             = isotropic
+tau-p                  = 1.0
+compressibility        = 4.5e-5
+ref-p                  = 1.0
+
+gen-vel                = yes
+gen-temp               = 300.0
+gen-seed               = -1
+
+constraints            = h-bonds
+constraint-algorithm   = LINCS
+continuation           = no

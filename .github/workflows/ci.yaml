@@ -1,101 +1,155 @@
-name: full_tests
+name: ci
 
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash -l {0}
 
 jobs:
   test:
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm }}, Pydantic ${{ matrix.pydantic-version }}, OpenEye ${{ matrix.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        python-version: [3.7, 3.8, 3.9]
+        os:
+          - macOS-latest
+          - ubuntu-latest
+        python-version:
+          - "3.9"
+          - "3.10"
+          - "3.11"
+        pydantic-version:
+          - "1"
+          - "2"
+        openeye:
+          - true
+          - false
+        openmm:
+          - true
+          - false
+        exclude:
+          - openeye: false
+            python-version: "3.11"
+          - pydantic-version: "1"
+            python-version: "3.9"
+          - pydantic-version: "1"
+            python-version: "3.10"
+
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
-    - uses: actions/checkout@v2.3.4
+    - uses: actions/checkout@v4
 
-    - uses: conda-incubator/setup-miniconda@v2.1.1
+    - name: Install conda environment
+      uses: mamba-org/setup-micromamba@v1
       with:
-        python-version: ${{ matrix.python-version }}
         environment-file: devtools/conda-envs/test_env.yaml
-        activate-environment: test
-        auto-activate-base: false
-        mamba-version: "*"
-        miniforge-version: latest
-        miniforge-variant: Mambaforge
-        use-mamba: true
-
-    - name: Additional info about the build
-      shell: bash
-      run: |
-        uname -a
-        df -h
-        ulimit -a
+        create-args: >-
+          python=${{ matrix.python-version }}
+          pydantic=${{ matrix.pydantic-version }}
 
     - name: Install package
-      shell: bash -l {0}
       run: |
-        python setup.py develop --no-deps
+        # These packages are brought in by conda (via the toolkit) and must be removed manually
+        # since pip doesn't know about the -base split and does not uninstall the -base package
+        micromamba remove --force openff-interchange openff-interchange-base
+        python -m pip install . plugins/
 
-    - name: Environment Information
-      shell: bash -l {0}
+    - name: Install and license OpenEye Toolkits
+      if: ${{ matrix.openeye == true }}
       run: |
-        conda info
-        conda list
-
-    - name: Clone ParmEd tests
-      shell: bash -l {0}
-      run: |
-        git clone https://github.com/mattwthompson/tests
-        cp -r tests/pmdtest .
-        echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
-
-    - name: License OpenEye
-      shell: bash -l {0}
-      run: |
+        micromamba install openeye-toolkits -c openeye
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
-    - name: Run mypy
-      shell: bash -l {0}
+    - name: Install OpenMM
+      if: ${{ matrix.openmm == true }}
       run: |
-        mypy --show-error-codes --warn-unused-configs --warn-unused-ignores --namespace-packages -p "openff.interchange"
+        micromamba install openmm "smirnoff-plugins =2023"
+        pip install git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods
 
-    - name: Run docexamples
-      shell: bash -l {0}
+    - name: Uninstall OpenMM
+      if: ${{ matrix.openmm == false && matrix.openeye == true }}
       run: |
-        pytest -v --doctest-modules openff/interchange/ --ignore=openff/interchange/energy_tests --ignore=openff/interchange/unit_tests --ignore=openff/interchange/data --ignore=openff/interchange/interoperability_tests
+        micromamba remove openmm mdtraj
+        # Removing mBuild also removes some leaves, need to re-install them
+        micromamba install rdkit packmol
 
-    - name: Run all tests
+    - name: Install AmberTools and RDKit
+      if: ${{ matrix.openeye == false }}
+      # Unclear why, but around October 2023 this downgrades JAX to broken 0.1.x builds
+      # and also uninstalls RDKit
+      run: micromamba install rdkit "ambertools =23" "jax >=0.3" "jaxlib >=0.3" -c conda-forge
+
+    - name: Uninstall GROMACS on macOS
+      if: ${{ matrix.os == 'macOS-latest' }}
+      # It appears some macOS runners use old hardware without RDTSCP. GROMACS builds are compiled
+      # with it on for performance reasons, and it's easier to just skip these cases than make
+      # even more builds.
+      run: micromamba remove gromacs
+
+    # name: Install Foyer
+    # if: ${{ matrix.pydantic-version == 1 }}
+    # run: micromamba install foyer -c conda-forge
+
+    - name: Run tests
       if: always()
-      shell: bash -l {0}
       run: |
-        python -m pytest -v -nauto $COV openff/interchange/
+        python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow" --ignore=openff/interchange/_tests/energy_tests/test_energies.py
 
-#    - name: Run ParmEd tests
-#      continue-on-error: true
-#      shell: bash -l {0}
-#      run: |
-#        python -m pytest -v $COV openff/interchange/tests/parmed
-
-    - name: Run example notebooks
-      shell: bash -l {0}
+    - name: Run small molecule regression tests
+      if: ${{ matrix.python-version == 3.9 && matrix.openeye == true && matrix.openmm == true }}
       run: |
-        python -m pytest -v $COV examples/ --nbval-lax
+        micromamba install deepdiff rich click -c conda-forge
+        python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git
+
+        create_openmm_systems \
+          --input             "regression_tests/small-molecule/input-topologies.json" \
+          --output            "regression_tests/small-molecule/" \
+          --using-interchange \
+          --force-field       "openff-2.0.0.offxml" \
+          --n-procs           2
+
+        # Don't trust the interchange version here, for some reason, just put it in a new directory
+        mkdir regression_tests/small-molecule/omm-systems-interchange-latest/
+        mv regression_tests/small-molecule/omm-systems-interchange-*/*xml regression_tests/small-molecule/omm-systems-interchange-latest/
+
+        compare_openmm_systems \
+          --input-dir-a       "regression_tests/small-molecule/omm-systems-toolkit-0.10.6" \
+          --input-dir-b       "regression_tests/small-molecule/omm-systems-interchange-latest" \
+          --output            "regression_tests/differences.json" \
+          --settings          "regression_tests/default-comparison-settings.json" \
+          --expected-changes  "regression_tests/toolkit-to-interchange.json" \
+          --n-procs           2
+
+        python devtools/scripts/molecule-regressions.py
+
+    - name: Run mypy
+      continue-on-error: true
+      run: |
+        # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
+        # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
+        micromamba remove jax
+        mypy --show-error-codes --namespace-packages -p "openff.interchange" --exclude "openff/interchange/_tests/data/"
+        mypy --show-error-codes plugins/nonbonded_plugins/
 
     - name: Codecov
-      uses: codecov/codecov-action@v2.1.0
+      uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
         fail_ci_if_error: false

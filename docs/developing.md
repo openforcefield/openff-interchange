@@ -6,7 +6,9 @@ For topics or details not specified, refer to the [development guidelines]( http
 
 ## Supported Python versions
 
-Generally, follow [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html). This means that currently Python 3.7-3.9 are supported as of the inception of this document (February 2021). No effort needs to be made to support older versions (Python 2 or 3.6 or earlier) or newer versions that are not well-supported by the PyData stack.
+Generally, follow [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html). This means that currently Python 3.8-3.9 are supported as of the last update of this document (January 2022). No effort needs to be made to support older versions (Python 2 or 3.7 or earlier) or newer versions that are not well-supported by the [PyData](https://pydata.org) stack.
+
+The last release with support for Python 3.7 wass v0.1.3.
 
 ## Style
 
@@ -36,20 +38,41 @@ The configuration file (`.pre-commit-config.yaml`) is commited to the repo. This
 
 First, install `pre-commit`
 
+```console
+$ conda install pre-commit -c conda-forge
+...
 ```
-conda install pre-commit -c conda-forge  # also available via pip
+
+or
+
+```console
+$ pip install pre-commit
+...
 ```
 
 Then, install the pre-commit hooks (note that it installs the linters into an isolated virtual environment, not the current conda environment):
 
-```
-pre-commit install
+```console
+$ pre-commit install
+pre-commit installed at .git/hooks/pre-commit
 ```
 
 Optionally update the hooks:
 
-```
-pre-commit autoupdate.
+```console
+$ pre-commit autoupdate.
+Updating https://github.com/pre-commit/pre-commit-hooks ... already up to date.
+Updating https://github.com/asottile/add-trailing-comma ... already up to date.
+Updating https://github.com/psf/black ... already up to date.
+Updating https://github.com/PyCQA/isort ... already up to date.
+Updating https://github.com/PyCQA/flake8 ... already up to date.
+Updating https://github.com/asottile/pyupgrade ... already up to date.
+Updating https://github.com/pycqa/pydocstyle ... already up to date.
+Updating https://github.com/econchick/interrogate ... already up to date.
+Updating https://github.com/asottile/blacken-docs ... already up to date.
+Updating https://github.com/jumanjihouse/pre-commit-hooks ... updating 2.1.6 -> 3.0.0.
+Updating https://github.com/nbQA-dev/nbQA ... already up to date.
+Updating https://github.com/kynan/nbstripout ... already up to date.
 ```
 
 Hooks will now run automatically before commits. Once installed, it should run in a few seconds.
@@ -72,9 +95,9 @@ Dependencies for building the documentation can be found in `docs/environment.ym
 
 ```shell
 # Create the environment
-conda env create -n interchange-docs -f docs/environment.yml
+conda env create --file devtools/conda-envs/docs_env.yaml
 # Prepare the current shell session
-conda activate -n interchange-docs
+conda activate interchange-docs
 cd docs
 # Build the docs
 make html
