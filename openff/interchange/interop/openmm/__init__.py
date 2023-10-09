@@ -22,10 +22,11 @@ __all__ = [
 
 
 @requires_package("openmm")
-def to_openmm(
+def to_openmm_system(
     interchange,
     combine_nonbonded_forces: bool = False,
     add_constrained_forces: bool = False,
+    ewald_tolerance: float = 1e-4,
 ) -> "openmm.System":
     """
     Convert an Interchange to an OpenmM System.
@@ -40,6 +41,8 @@ def to_openmm(
     add_constrained_forces : bool, default=False,
         If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
         on a bond or angle that is fully constrained.
+    ewald_tolerance : float, default=1e-4
+        The value passed to `NonbondedForce.setEwaldErrorTolerance`
 
     Returns
     -------
@@ -78,6 +81,7 @@ def to_openmm(
         interchange,
         system,
         combine_nonbonded_forces=combine_nonbonded_forces,
+        ewald_tolerance=ewald_tolerance,
     )
 
     constrained_pairs = _process_constraints(interchange, system, particle_map)
@@ -118,6 +122,9 @@ def to_openmm(
                 continue
 
     return system
+
+
+to_openmm = to_openmm_system
 
 
 def _to_pdb(file_path: Union[Path, str], topology: "openmm.app.Topology", positions):

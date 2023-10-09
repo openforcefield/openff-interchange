@@ -369,10 +369,11 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
-    def to_openmm(
+    def to_openmm_system(
         self,
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
+        ewald_tolerance: float = 1e-4,
     ):
         """
         Export this Interchange to an OpenMM System.
@@ -386,6 +387,8 @@ class Interchange(DefaultModel):
         add_constrained_forces : bool, default=False,
             If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
             on a bond or angle that is fully constrained.
+        ewald_tolerance : float, default=1e-4
+            The value passed to `NonbondedForce.setEwaldErrorTolerance`
 
         Returns
         -------
@@ -393,13 +396,18 @@ class Interchange(DefaultModel):
             The OpenMM System object.
 
         """
-        from openff.interchange.interop.openmm import to_openmm as to_openmm_
+        from openff.interchange.interop.openmm import (
+            to_openmm_system as _to_openmm_system,
+        )
 
-        return to_openmm_(
+        return _to_openmm_system(
             self,
             combine_nonbonded_forces=combine_nonbonded_forces,
             add_constrained_forces=add_constrained_forces,
+            ewald_tolerance=ewald_tolerance,
         )
+
+    to_openmm = to_openmm_system
 
     def to_openmm_topology(
         self,
