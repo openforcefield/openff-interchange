@@ -11,6 +11,12 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+### Examples added
+
+* #825 Adds a host-guest example derived from the [SAMPL6 challenge](https://github.com/samplchallenges/SAMPL6).
+
 ## 0.3.15 - 2023-10-06
 
 ### New Features
