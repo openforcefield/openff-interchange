@@ -150,6 +150,13 @@ def gbsa_force_field() -> ForceField:
     )
 
 
+@pytest.fixture()
+def basic_top() -> Topology:
+    topology = Molecule.from_smiles("C").to_topology()
+    topology.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
+    return topology
+
+
 @pytest.fixture(scope="session")
 def water() -> Molecule:
     molecule = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")

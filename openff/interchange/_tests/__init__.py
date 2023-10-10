@@ -12,7 +12,6 @@ from openff.toolkit.utils import (
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
 )
-from openff.units import unit
 from openff.utilities import get_data_file_path
 from openff.utilities.utilities import has_executable, has_package, requires_package
 
@@ -102,12 +101,6 @@ class _BaseTest:
     @pytest.fixture(autouse=True)
     def _initdir(self, tmpdir):
         tmpdir.chdir()
-
-    @pytest.fixture()
-    def basic_top(self):
-        top = Molecule.from_smiles("C").to_topology()
-        top.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
-        return top
 
     @pytest.fixture()
     def ethanol_top(self, ethanol):
