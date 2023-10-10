@@ -48,6 +48,7 @@ def _process_nonbonded_forces(
     interchange: "Interchange",
     system: openmm.System,
     combine_nonbonded_forces: bool = False,
+    ewald_tolerance: float = 1e-4,
 ) -> dict[Union[int, VirtualSiteKey], int]:
     """
     Process the non-bonded collections in an Interchange into corresponding openmm objects.
@@ -145,6 +146,7 @@ def _process_nonbonded_forces(
         _data,
         interchange,
         system,
+        ewald_tolerance,
         molecule_virtual_site_map,
         openff_openmm_particle_map,
     )
@@ -271,6 +273,7 @@ def _create_single_nonbonded_force(
     data: _NonbondedData,
     interchange: "Interchange",
     system: openmm.System,
+    ewald_tolerance: float,
     molecule_virtual_site_map: dict["Molecule", list[VirtualSiteKey]],
     openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int],
 ):
@@ -316,7 +319,7 @@ def _create_single_nonbonded_force(
             None,
         ):
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
-            non_bonded_force.setEwaldErrorTolerance(1.0e-4)
+            non_bonded_force.setEwaldErrorTolerance(ewald_tolerance)
             non_bonded_force.setUseDispersionCorrection(True)
             if not data.vdw_cutoff:
                 # With no vdW handler and/or ambiguous cutoff, cannot set it,
@@ -330,7 +333,7 @@ def _create_single_nonbonded_force(
                 )
         elif data.vdw_method == "pme" and data.electrostatics_method == _PME:
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-            non_bonded_force.setEwaldErrorTolerance(1.0e-4)
+            non_bonded_force.setEwaldErrorTolerance(ewald_tolerance)
 
         elif data["vdw_method"] == data["electrostatics_method"] == "cutoff":
             if data["vdw_cutoff"] != data["electrostatics_collection"].cutoff:
@@ -584,6 +587,7 @@ def _create_multiple_nonbonded_forces(
     data: _NonbondedData,
     interchange: "Interchange",
     system: openmm.System,
+    ewald_tolerance: float,
     molecule_virtual_site_map: dict,
     openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int],
 ):
@@ -606,6 +610,7 @@ def _create_multiple_nonbonded_forces(
     electrostatics_force: openmm.NonbondedForce = _create_electrostatics_force(
         data,
         interchange,
+        ewald_tolerance,
         molecule_virtual_site_map,
         has_virtual_sites,
         openff_openmm_particle_map,
@@ -844,6 +849,7 @@ def _create_vdw_force(
 def _create_electrostatics_force(
     data: _NonbondedData,
     interchange: "Interchange",
+    ewald_tolerance: float,
     molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
     has_virtual_sites: bool,
     openff_openmm_particle_map,
@@ -881,7 +887,7 @@ def _create_electrostatics_force(
 
     elif data.electrostatics_method == _PME:
         electrostatics_force.setNonbondedMethod(openmm.NonbondedForce.PME)
-        electrostatics_force.setEwaldErrorTolerance(1.0e-4)
+        electrostatics_force.setEwaldErrorTolerance(ewald_tolerance)
         electrostatics_force.setUseDispersionCorrection(True)
         if data.vdw_cutoff is not None:
             # All nonbonded forces must use the same cutoff, even though PME doesn't have a cutoff

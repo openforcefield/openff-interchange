@@ -13,6 +13,11 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### New Features
+
+* #827 Adds the `ewald_tolerance` option to `to_openmm`, overriding a default value inherited from old versions of the OpenFF Toolkit.
+* #827 Adds `to_openmm_system` methods, which alias existing `to_openmm` methods that create `openmm.System`s. Existing methods are not removed or currently deprecated.
+
 ### Examples added
 
 * #825 Adds a host-guest example derived from the [SAMPL6 challenge](https://github.com/samplchallenges/SAMPL6).
