@@ -179,7 +179,8 @@ def _get_monovalent_lone_pair_virtual_site_positions(
 
     if out_of_plane_angle.m != 0.0:
         raise NotImplementedError(
-            "Only planar `MonovalentLonePairType` is currently supported.",
+            "Only planar `MonovalentLonePairType` is currently supported."
+            f"Given {out_of_plane_angle=}",
         )
 
     else:
