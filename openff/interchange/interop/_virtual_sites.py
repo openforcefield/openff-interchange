@@ -339,6 +339,43 @@ def _get_separation_by_atom_indices(
                     "length"
                 ]
 
+    # Two heavy atoms may be on opposite ends of an angle, in which case it's still
+    # possible to determine their separation as defined by the geometry of the force field
+    if "Angles" in interchange.collections:
+        collection = interchange["Angles"]
+
+        index0 = atom_indices[0]
+        index1 = atom_indices[1]
+        for key in collection.key_map:
+            if (key.atom_indices[0] == index0 and key.atom_indices[2] == index1) or (
+                key.atom_indices[2] == index0 and key.atom_indices[0] == index1
+            ):
+                gamma = collection.potentials[collection.key_map[key]].parameters[
+                    "angle"
+                ]
+
+                a = _get_separation_by_atom_indices(
+                    interchange,
+                    (key.atom_indices[0], key.atom_indices[1]),
+                )
+
+                b = _get_separation_by_atom_indices(
+                    interchange,
+                    (key.atom_indices[1], key.atom_indices[2]),
+                ).m_as(unit.nanometer)
+
+                a = a.m_as(unit.nanometer)
+                b = b.m_as(unit.nanometer)
+                gamma = gamma.m_as(unit.radian)
+
+                # law of cosines
+                c2 = a**2 + b**2 - 2 * a * b * numpy.cos(gamma)
+
+                return unit.Quantity(
+                    c2**0.5,
+                    unit.nanometer,
+                )
+
     raise ValueError(f"Could not find distance between atoms {atom_indices}")
 
 
