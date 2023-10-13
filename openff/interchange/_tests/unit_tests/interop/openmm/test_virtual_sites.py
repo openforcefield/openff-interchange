@@ -175,3 +175,53 @@ class TestTIP4PVsOpenMM:
 
         for w_openmm, w_openff in zip(openmm_weights, openff_weights):
             assert w_openmm == pytest.approx(w_openff)
+
+
+@skip_if_missing("openmm")
+class TestTIP5PVsOpenMM:
+    def test_compare_tip5p_openmm(self, water, tip5p):
+        import openmm.app
+
+        openmm_tip5p = openmm.app.ForceField("tip5p.xml")
+        openmm_topology = water.to_topology().to_openmm()
+        openmm_positions = water.conformers[0].to_openmm()
+
+        modeller = openmm.app.Modeller(
+            openmm_topology,
+            openmm_positions,
+        )
+
+        modeller.addExtraParticles(openmm_tip5p)
+
+        openmm_system = openmm_tip5p.createSystem(
+            modeller.topology,
+            removeCMMotion=False,
+        )
+
+        openmm_virtual_sites = [
+            openmm_system.getVirtualSite(3),
+            openmm_system.getVirtualSite(4),
+        ]
+
+        openff_system = tip5p.create_openmm_system(
+            water.to_topology(),
+        )
+
+        openff_virtual_sites = [
+            openff_system.getVirtualSite(3),
+            openmm_system.getVirtualSite(4),
+        ]
+
+        for openmm_virtual_site, openff_virtual_site in zip(
+            openmm_virtual_sites,
+            openff_virtual_sites,
+        ):
+            assert type(openmm_virtual_site) is type(openff_virtual_site)
+
+            for attr in ("getWeight12", "getWeight13", "getWeightCross"):
+                assert getattr(openmm_virtual_site, attr)() == pytest.approx(
+                    getattr(openff_virtual_site, attr)(),
+                )
+
+
+# TODO: Port xml_ff_virtual_sites_monovalent from toolkit
