@@ -553,7 +553,6 @@ class TestOpenMMVirtualSites:
         return sage
 
     def test_valence_term_paticle_index_offsets(self, water):
-        # Use a questionable version of TIP5P that includes angle parameters, since that's what's being tested
         tip5p_offxml = """<?xml version="1.0" encoding="utf-8"?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
     <LibraryCharges version="0.3">
@@ -583,6 +582,18 @@ class TestOpenMMVirtualSites:
                 epsilon="0.66944*mole**-1*kilojoule"
                 sigma="0.312*nanometer"/>
     </vdW>
+    <Constraints version="0.3">
+        <Constraint
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1]"
+            id="c-tip5p-H-O"
+            distance="0.09572 * nanometer ** 1">
+        </Constraint>
+        <Constraint
+            smirks="[#1:1]-[#8X2H2+0]-[#1:2]"
+            id="c-tip5p-H-O-H"
+            distance="0.15139006545 * nanometer ** 1">
+        </Constraint>
+    </Constraints>
     <Bonds
         version="0.4"
         potential="harmonic"
@@ -593,13 +604,6 @@ class TestOpenMMVirtualSites:
             length="0.9572*angstrom"
             k="462750.4*nanometer**-2*mole**-1*kilojoule"/>
     </Bonds>
-    <Angles version="0.3" potential="harmonic">
-        <Angle
-            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
-            angle="1.82421813418*radian"
-            k="836.8*mole**-1*radian**-2*kilojoule"
-            id="a1"/>
-    </Angles>
     <VirtualSites version="0.3">
         <VirtualSite
             type="DivalentLonePair"
@@ -632,18 +636,13 @@ class TestOpenMMVirtualSites:
             combine_nonbonded_forces=True,
         )
 
-        assert out.getNumForces() == 3
+        # NonbondedForce and HarmonicBondForce; no HarmonicAngleForce (even if there were force
+        # field parameters added, the current implementation would not add an angle force because
+        # H-O-H is fully constrained)
+        assert out.getNumForces() == 2
 
         # Particle indexing is 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
         #                      O, H, H, O, H, H, VS, VS, VS, VS
-        for force in out.getForces():
-            if isinstance(force, openmm.HarmonicAngleForce):
-                p1, p2, p3, _, _ = force.getAngleParameters(1)
-
-                assert p1 == 4
-                assert p2 == 3
-                assert p3 == 5
-
         for index in range(6):
             assert out.getParticleMass(index)._value > 0.0
 
