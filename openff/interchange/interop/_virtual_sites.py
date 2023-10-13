@@ -362,7 +362,7 @@ def _get_separation_by_atom_indices(
                 b = _get_separation_by_atom_indices(
                     interchange,
                     (key.atom_indices[1], key.atom_indices[2]),
-                ).m_as(unit.nanometer)
+                )
 
                 a = a.m_as(unit.nanometer)
                 b = b.m_as(unit.nanometer)
