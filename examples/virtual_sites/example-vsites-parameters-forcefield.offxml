@@ -67,7 +67,7 @@
             epsilon="0.5 * kilojoules_per_mole ** 1"
             type="TrivalentLonePair"
             match="once"
-            distance="0.5 * nanometer ** 1"
+            distance="0.3 * angstrom ** 1"
             outOfPlaneAngle="None"
             inPlaneAngle="None"
             charge_increment1="0.2 * elementary_charge ** 1"
