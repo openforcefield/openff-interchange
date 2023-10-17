@@ -85,8 +85,6 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
         list,
     ] = interchange.topology.identical_molecule_groups
 
-    molecule_virtual_site_map: dict[int, list[VirtualSiteKey]] = defaultdict(list)
-
     virtual_site_molecule_map: dict[
         VirtualSiteKey,
         int,

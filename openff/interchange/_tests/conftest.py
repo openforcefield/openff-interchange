@@ -143,6 +143,89 @@ def tip4p() -> ForceField:
 
 
 @pytest.fixture()
+def tip5p() -> ForceField:
+    return ForceField(
+        """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+        <LibraryCharge
+            name="tip5p"
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+            charge1="0.*elementary_charge"
+            charge2="0.*elementary_charge"
+            charge3="0.*elementary_charge"/>
+    </LibraryCharges>
+    <vdW
+        version="0.3"
+        potential="Lennard-Jones-12-6"
+        combining_rules="Lorentz-Berthelot"
+        scale12="0.0"
+        scale13="0.0"
+        scale14="0.5"
+        scale15="1.0"
+        switch_width="0.0 * angstrom"
+        cutoff="9.0 * angstrom" method="cutoff">
+            <Atom
+                smirks="[#1:1]-[#8X2H2+0]-[#1]"
+                epsilon="0.*mole**-1*kilojoule"
+                sigma="1.0 * nanometer"/>
+            <Atom
+                smirks="[#1]-[#8X2H2+0:1]-[#1]"
+                epsilon="0.66944*mole**-1*kilojoule"
+                sigma="0.312*nanometer"/>
+    </vdW>
+    <Constraints version="0.3">
+        <Constraint
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1]"
+            id="c-tip5p-H-O"
+            distance="0.09572 * nanometer ** 1">
+        </Constraint>
+        <Constraint
+            smirks="[#1:1]-[#8X2H2+0]-[#1:2]"
+            id="c-tip5p-H-O-H"
+            distance="0.15139006545 * nanometer ** 1">
+        </Constraint>
+    </Constraints>
+    <Bonds
+        version="0.4"
+        potential="harmonic"
+        fractional_bondorder_method="AM1-Wiberg"
+        fractional_bondorder_interpolation="linear">
+        <Bond
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1]"
+            length="0.9572*angstrom"
+            k="462750.4*nanometer**-2*mole**-1*kilojoule"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="DivalentLonePair"
+            name="EP"
+            smirks="[#1:2]-[#8X2H2+0:1]-[#1:3]"
+            distance="0.70 * angstrom"
+            charge_increment1="0.0*elementary_charge"
+            charge_increment2="0.1205*elementary_charge"
+            charge_increment3="0.1205*elementary_charge"
+            sigma="10.0*angstrom"
+            epsilon="0.0*kilocalories_per_mole"
+            outOfPlaneAngle="54.735*degree"
+            match="all_permutations" >
+        </VirtualSite>
+    </VirtualSites>
+    <Electrostatics
+        version="0.3"
+        method="PME"
+        scale12="0.0"
+        scale13="0.0"
+        scale14="0.833333"
+        scale15="1.0"
+        switch_width="0.0 * angstrom"
+        cutoff="9.0 * angstrom"/>
+</SMIRNOFF>
+""",
+    )
+
+
+@pytest.fixture()
 def gbsa_force_field() -> ForceField:
     return ForceField(
         "openff-2.0.0.offxml",
