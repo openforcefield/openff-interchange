@@ -3,6 +3,7 @@ Helper functions for exporting virutal sites to OpenMM.
 """
 from typing import Union
 
+from openff.units import unit
 from openff.units.openmm import to_openmm
 from openff.utilities.utilities import has_package
 
@@ -75,7 +76,7 @@ def _create_openmm_virtual_site(
                 *openmm_indices,
                 w12,
                 w13,
-                wcross,
+                wcross.m_as(1 / unit.nanometer),
             )
 
     # It is assumed that the first "orientation" atom is the "parent" atom.

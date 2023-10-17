@@ -4,6 +4,7 @@ Common helpers for exporting virtual sites.
 from collections import defaultdict
 from collections.abc import Iterable
 from math import cos, pi, sin
+from typing import Union
 
 import numpy
 from openff.units import Quantity, unit
@@ -253,7 +254,7 @@ def _get_monovalent_lone_pair_virtual_site_positions(
 def _get_divalent_weights(
     virtual_site: _DivalentLonePairVirtualSite,
     interchange: Interchange,
-) -> tuple[float]:
+) -> Union[tuple[float], tuple[float, float, Quantity]]:
     """
     Get OpenMM-style weights when using SMIRNOFF `DivalentLonePair`.
 
@@ -321,12 +322,50 @@ def _get_divalent_weights(
 
         w12 = w13 = -1 * distance_in_plane / r1mid / 2
 
+        # cross product needs positions to determine direction, but the interatomic distances
+        # need to be defined by the force field. So use the direction from the positions but
+        # distance from force field by scaling the difference in atomic positions by the
+        # distance defined by the force field.
+        p2 = interchange.positions[virtual_site.orientations[1]]
+        p1 = interchange.positions[virtual_site.orientations[0]]
+        p3 = interchange.positions[virtual_site.orientations[2]]
+
+        vector_r12 = p2 - p1
+        vector_r13 = p3 - p1
+
+        vector_r12 *= r12.m_as(unit.nanometer) / numpy.linalg.norm(
+            vector_r12.m_as(unit.nanometer),
+        )
+        vector_r13 *= r13.m_as(unit.nanometer) / numpy.linalg.norm(
+            vector_r13.m_as(unit.nanometer),
+        )
+
         # units of inverse distance
         wcross = virtual_site.distance * numpy.sin(
             virtual_site.out_of_plane_angle.m_as(unit.radian),
         )
-        wcross /= r12 * r13 * numpy.sin(theta.m_as(unit.radian))
+        wcross /= Quantity(
+            numpy.linalg.norm(numpy.cross(vector_r12, vector_r13).m),
+            unit.nanometer**2,
+        )
 
+        angle_from_geometry = _get_angle_by_atom_indices(
+            interchange,
+            atom_indices=(
+                virtual_site.orientations[1],
+                virtual_site.orientations[0],
+                virtual_site.orientations[2],
+            ),
+            prioritize_geometry=True,
+        )
+
+        wcross *= numpy.sin(angle_from_geometry.m_as(unit.radian)) / numpy.sin(
+            theta.m_as(unit.radian),
+        )
+
+        # wcross /= r12 * r13 * numpy.sin(theta.m_as(unit.radian))
+        # import ipdb; ipdb.set_trace()
+        # print(virtual_site.orientations)
         # arbitrary, should be replaced by a proper cross product
         if virtual_site.orientations[2] > virtual_site.orientations[1]:
             wcross *= -1
@@ -334,7 +373,7 @@ def _get_divalent_weights(
         return (
             w12,
             w13,
-            wcross.m_as(1 / unit.nanometer),
+            wcross,
         )
 
 
@@ -355,19 +394,20 @@ def _get_divalent_lone_pair_virtual_site_positions(
         return w1 * r1 + w2 * r2 + w3 * r3
 
     else:
-
-        def _cross_product(r12, r13):
-            raise NotImplementedError()
-
         w12, w13, wcross = _get_divalent_weights(
             virtual_site,
             interchange,
         )
 
+        # These are based off of the actual positions, not the geometry defined in the force field,
+        # though they should be close, so this will not necessarily produce virtual site distances
+        # that match what are defined by the force field; this could be changed, however it shouldn't
+        # be an issue as long as initial geometries are sane and the actual parameters are written well
         r12 = r2 - r1
         r13 = r3 - r1
 
-        return r1 + r12 * w12 + r13 * w13 + wcross * _cross_product(r12, r13)
+        # the sign of the cross product is handled by the geometry
+        return r1 + r12 * w12 + r13 * w13 + numpy.abs(wcross) * numpy.cross(r12, r13)
 
 
 def _get_trivalent_lone_pair_virtual_site_positions(
@@ -402,6 +442,7 @@ def _get_trivalent_lone_pair_virtual_site_positions(
 def _get_separation_by_atom_indices(
     interchange: Interchange,
     atom_indices: Iterable[int],
+    prioritize_geometry: bool = False,
 ) -> Quantity:
     """
     Given indices of (two?) atoms, return the distance between them.
@@ -411,6 +452,12 @@ def _get_separation_by_atom_indices(
     This is slow, but often necessary for converting virtual site "distances" to weighted
     averages (unitless) of orientation atom positions.
     """
+    if prioritize_geometry:
+        p1 = interchange.positions[atom_indices[1]]
+        p0 = interchange.positions[atom_indices[0]]
+
+        return p1 - p0
+
     if "Constraints" in interchange.collections:
         collection = interchange["Constraints"]
 
@@ -476,6 +523,7 @@ def _get_separation_by_atom_indices(
 def _get_angle_by_atom_indices(
     interchange: Interchange,
     atom_indices: Iterable[int],
+    prioritize_geometry: bool = False,
 ) -> Quantity:
     """
     Given indices of three atoms, return the angle between them using the law of cosines.
@@ -505,21 +553,33 @@ def _get_angle_by_atom_indices(
         ab = _get_separation_by_atom_indices(
             interchange,
             (atom_indices[0], atom_indices[1]),
+            prioritize_geometry=prioritize_geometry,
         ).m_as(unit.nanometer)
 
         ac = _get_separation_by_atom_indices(
             interchange,
             (atom_indices[0], atom_indices[2]),
+            prioritize_geometry=prioritize_geometry,
         ).m_as(unit.nanometer)
 
         bc = _get_separation_by_atom_indices(
             interchange,
             (atom_indices[1], atom_indices[2]),
+            prioritize_geometry=prioritize_geometry,
         ).m_as(unit.nanometer)
 
-        return Quantity(
-            numpy.arccos(
-                (ac**2 - ab**2 - bc**2) / (-2 * ab * bc),
-            ),
-            unit.radian,
-        )
+        if prioritize_geometry:
+            return Quantity(
+                numpy.arccos(
+                    numpy.dot(ab, bc) / (numpy.linalg.norm(ab) * numpy.linalg.norm(bc)),
+                ),
+                unit.radian,
+            )
+
+        else:
+            return Quantity(
+                numpy.arccos(
+                    (ac**2 - ab**2 - bc**2) / (-2 * ab * bc),
+                ),
+                unit.radian,
+            )
