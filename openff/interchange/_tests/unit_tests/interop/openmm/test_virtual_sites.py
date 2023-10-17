@@ -67,6 +67,22 @@ class TestBondChargeVirtualSite:
 
 
 @skip_if_missing("openmm")
+class TestTrivalentLonePairVirtualSite:
+    def test_basic(
+        self,
+        sage_with_trivalent_nitrogen,
+        ammonia_tetrahedral,
+    ):
+        import openmm
+
+        system: openmm.System = sage_with_trivalent_nitrogen.create_openmm_system(
+            ammonia_tetrahedral.to_topology(),
+        )
+
+        assert isinstance(system.getVirtualSite(4), openmm.LocalCoordinatesSite)
+
+
+@skip_if_missing("openmm")
 class TestFourSiteWater:
     @pytest.mark.parametrize(
         (

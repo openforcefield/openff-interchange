@@ -9,11 +9,19 @@ import numpy
 from openff.units import Quantity, unit
 
 from openff.interchange import Interchange
+from openff.interchange.components._particles import (
+    _BondChargeVirtualSite,
+    _DivalentLonePairVirtualSite,
+    _MonovalentLonePairVirtualSite,
+    _TrivalentLonePairVirtualSite,
+    _VirtualSite,
+)
 from openff.interchange.exceptions import (
     MissingPositionsError,
     MissingVirtualSitesError,
     VirtualSiteTypeNotImplementedError,
 )
+from openff.interchange.interop.common import _create_virtual_site_object
 from openff.interchange.models import VirtualSiteKey
 
 
@@ -121,170 +129,256 @@ def _get_virtual_site_positions(
     virtual_site_key: VirtualSiteKey,
     interchange: Interchange,
 ) -> Quantity:
+    virtual_site_potential = interchange["VirtualSites"].potentials[
+        interchange["VirtualSites"].key_map[virtual_site_key]
+    ]
+
+    virtual_site: "_VirtualSite" = _create_virtual_site_object(
+        virtual_site_key,
+        virtual_site_potential,
+    )
+
     try:
         return {
             "BondCharge": _get_bond_charge_virtual_site_positions,
             "MonovalentLonePair": _get_monovalent_lone_pair_virtual_site_positions,
             "DivalentLonePair": _get_divalent_lone_pair_virtual_site_positions,
             "TrivalentLonePair": _get_trivalent_lone_pair_virtual_site_positions,
-        }[virtual_site_key.type](virtual_site_key, interchange)
+        }[virtual_site_key.type](virtual_site, interchange)
     except KeyError:
         raise VirtualSiteTypeNotImplementedError(
             f"Virtual site type {virtual_site_key.type} not implemented.",
         )
 
 
-def _get_bond_charge_virtual_site_positions(
-    virtual_site_key,
-    interchange,
-) -> Quantity:
-    potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
-    potential = interchange["VirtualSites"].potentials[potential_key]
-    distance = potential.parameters["distance"]
-
-    # r1 and r2 are positions of atom1 and atom2 in the convention of
-    # these diagrams:
-    # https://docs.openforcefield.org/projects/toolkit/en/stable/users/virtualsites.html#applying-virtual-site-parameters
-    r1 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
-    r2 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
-
+def _get_bond_charge_weights(
+    virtual_site: _BondChargeVirtualSite,
+    interchange: Interchange,
+) -> tuple[float]:
+    """
+    Get OpenMM-style weights when using SMIRNOFF `BondCharge`.
+    """
     separation = _get_separation_by_atom_indices(
+        interchange=interchange,
+        atom_indices=virtual_site.orientations,
+    )
+    distance = virtual_site.distance
+
+    ratio = (distance / separation).m_as(unit.dimensionless)
+
+    w1 = 1.0 + ratio
+    w2 = 0.0 - ratio
+
+    return (w1, w2)
+
+
+def _get_bond_charge_virtual_site_positions(
+    virtual_site: _BondChargeVirtualSite,
+    interchange: Interchange,
+) -> Quantity:
+    w1, w2 = _get_bond_charge_weights(
+        virtual_site,
         interchange,
-        atom_indices=(
-            virtual_site_key.orientation_atom_indices[0],
-            virtual_site_key.orientation_atom_indices[1],
-        ),
     )
 
-    # The virtual site is placed at a distance opposite the r1 -> r2 vector
-    return r1 - (r2 - r1) * distance / separation
+    r1 = interchange.positions[virtual_site.orientations[0]]
+    r2 = interchange.positions[virtual_site.orientations[1]]
+
+    return r1 * w1 + r2 * w2
 
 
-def _get_monovalent_lone_pair_virtual_site_positions(
-    virtual_site_key,
-    interchange,
-) -> Quantity:
-    # r1 and r2 are positions of atom1 and atom2 in the convention of
-    # these diagrams:
-    # https://docs.openforcefield.org/projects/toolkit/en/stable/users/virtualsites.html#applying-virtual-site-parameters
-    r1 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
-    r2 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
-    r3 = interchange.positions[virtual_site_key.orientation_atom_indices[2]]
-
-    potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
-    potential = interchange["VirtualSites"].potentials[potential_key]
-    distance = potential.parameters["distance"]
-    in_plane_angle = potential.parameters["inPlaneAngle"]
-    out_of_plane_angle = potential.parameters["outOfPlaneAngle"]
-
-    if out_of_plane_angle.m != 0.0:
+def _get_monovalent_weights(
+    virtual_site: _MonovalentLonePairVirtualSite,
+    interchange: Interchange,
+) -> tuple[float]:
+    """
+    Get OpenMM-style weights when using SMIRNOFF `MonovalentLonePair`.
+    """
+    if virtual_site.out_of_plane_angle.m != 0.0:
         raise NotImplementedError(
             "Only planar `MonovalentLonePairType` is currently supported."
-            f"Given {out_of_plane_angle=}",
+            f"Given {virtual_site.out_of_plane_angle=}",
         )
 
     else:
         r12 = _get_separation_by_atom_indices(
             interchange,
             atom_indices=(
-                virtual_site_key.orientation_atom_indices[0],
-                virtual_site_key.orientation_atom_indices[1],
+                virtual_site.orientations[0],
+                virtual_site.orientations[1],
             ),
         )
 
         r23 = _get_separation_by_atom_indices(
             interchange,
             atom_indices=(
-                virtual_site_key.orientation_atom_indices[1],
-                virtual_site_key.orientation_atom_indices[2],
+                virtual_site.orientations[1],
+                virtual_site.orientations[2],
             ),
         )
 
-        theta = in_plane_angle.m_as(unit.radian)
+        theta = virtual_site.in_plane_angle.m_as(unit.radian)
 
         theta_123 = _get_angle_by_atom_indices(
             interchange,
-            atom_indices=virtual_site_key.orientation_atom_indices,
+            atom_indices=virtual_site.orientations,
         ).m_as(unit.radian)
 
-        w3 = distance / r23 * sin(pi - theta) / sin(pi - theta_123)
+        w3 = virtual_site.distance / r23 * sin(pi - theta) / sin(pi - theta_123)
 
-        w1 = 1 + w3 * r23 / r12 * cos(pi - theta_123) + distance / r12 * cos(pi - theta)
+        w1 = 1 + w3 * r23 / r12 * cos(pi - theta_123)
+        w1 += virtual_site.distance / r12 * cos(pi - theta)
 
         w2 = 1 - w1 - w3
 
-        # This is based on the given atom positions, not the geometry specified by the force field
-        return w1 * r1 + w2 * r2 + w3 * r3
+        return w1, w2, w3
 
 
-def _get_divalent_lone_pair_virtual_site_positions(
-    virtual_site_key,
-    interchange,
+def _get_monovalent_lone_pair_virtual_site_positions(
+    virtual_site: _MonovalentLonePairVirtualSite,
+    interchange: Interchange,
 ) -> Quantity:
-    r0 = interchange.positions[virtual_site_key.orientation_atom_indices[0]]
-    r1 = interchange.positions[virtual_site_key.orientation_atom_indices[1]]
-    r2 = interchange.positions[virtual_site_key.orientation_atom_indices[2]]
-
-    r0_r1_bond_length = _get_separation_by_atom_indices(
+    w1, w2, w3 = _get_monovalent_weights(
+        virtual_site,
         interchange,
-        atom_indices=(
-            virtual_site_key.orientation_atom_indices[0],
-            virtual_site_key.orientation_atom_indices[1],
-        ),
-    )
-    r0_r2_bond_length = _get_separation_by_atom_indices(
-        interchange,
-        atom_indices=(
-            virtual_site_key.orientation_atom_indices[0],
-            virtual_site_key.orientation_atom_indices[2],
-        ),
     )
 
-    if abs(r0_r1_bond_length - r0_r2_bond_length) > Quantity(1e-3, unit.nanometer):
+    r1 = interchange.positions[virtual_site.orientations[0]]
+    r2 = interchange.positions[virtual_site.orientations[1]]
+    r3 = interchange.positions[virtual_site.orientations[2]]
+
+    return w1 * r1 + w2 * r2 + w3 * r3
+
+
+def _get_divalent_weights(
+    virtual_site: _DivalentLonePairVirtualSite,
+    interchange: Interchange,
+) -> tuple[float]:
+    """
+    Get OpenMM-style weights when using SMIRNOFF `DivalentLonePair`.
+
+    If planar, return (w1, w2, w3) for `ThreeParticleAverageSite`.
+    If non-planar, return (w12, w13, wcross) for `OutOfPlaneSite`.
+
+    Note that w1, w2, w3, w12, and w13 are unitless but wcross has units
+    of inverse distance (1/nm here).
+    """
+    r12 = _get_separation_by_atom_indices(
+        interchange,
+        atom_indices=(
+            virtual_site.orientations[0],
+            virtual_site.orientations[1],
+        ),
+    )
+    r13 = _get_separation_by_atom_indices(
+        interchange,
+        atom_indices=(
+            virtual_site.orientations[0],
+            virtual_site.orientations[2],
+        ),
+    )
+
+    if abs(r12 - r13) > Quantity(1e-3, unit.nanometer):
         raise VirtualSiteTypeNotImplementedError(
             "Only symmetric geometries (i.e. r2 - r0 = r1 - r0) are currently supported",
-        )
-
-    potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
-    potential = interchange["VirtualSites"].potentials[potential_key]
-    distance = potential.parameters["distance"]
-    out_of_plane_angle = potential.parameters["outOfPlaneAngle"]
-
-    if out_of_plane_angle.m_as(unit.degree) != 0.0:
-        raise VirtualSiteTypeNotImplementedError(
-            "Only planar `DivalentLonePairType` is currently supported.",
         )
 
     theta = _get_angle_by_atom_indices(
         interchange,
         atom_indices=(
-            virtual_site_key.orientation_atom_indices[1],
-            virtual_site_key.orientation_atom_indices[0],
-            virtual_site_key.orientation_atom_indices[2],
+            virtual_site.orientations[1],
+            virtual_site.orientations[0],
+            virtual_site.orientations[2],
         ),
     )
 
-    rmid_distance = r0_r1_bond_length * cos(theta.m_as(unit.radian) * 0.5)
-    rmid = (r1 + r2) / 2
+    if virtual_site.out_of_plane_angle.m == 0.0:
+        # rmid is a point bisecting hydrogens, also lying on the same line as O-VS
+        rmid_distance = r12 * cos(theta.m_as(unit.radian) * 0.5)
 
-    return r0 + (r0 - rmid) * (distance) / (rmid_distance)
+        w1 = 1 + float(virtual_site.distance / rmid_distance)
+        w2 = w3 = (1 - w1) / 2
+
+        return w1, w2, w3
+
+    else:
+        # Special case out 5-site water, assumes symmetric geometry. Other cases
+        # fall back to LocalCoordinatesSite implementation
+        if sorted(
+            [
+                interchange.topology.atom(index).atomic_number
+                for index in virtual_site.orientations
+            ],
+        ) != [1, 1, 8]:
+            raise VirtualSiteTypeNotImplementedError(
+                "Only planar `DivalentLonePairType` is currently supported for non-water.",
+            )
+
+        distance_in_plane = virtual_site.distance * numpy.cos(
+            virtual_site.out_of_plane_angle.to(unit.radian),
+        )
+        r1mid = r12 * numpy.cos(theta.m_as(unit.radian) / 2)
+
+        w12 = w13 = -1 * distance_in_plane / r1mid / 2
+
+        # units of inverse distance
+        wcross = virtual_site.distance * numpy.sin(
+            virtual_site.out_of_plane_angle.m_as(unit.radian),
+        )
+        wcross /= r12 * r13 * numpy.sin(theta.m_as(unit.radian))
+
+        # arbitrary, should be replaced by a proper cross product
+        if virtual_site.orientations[2] > virtual_site.orientations[1]:
+            wcross *= -1
+
+        return (
+            w12,
+            w13,
+            wcross.m_as(1 / unit.nanometer),
+        )
+
+
+def _get_divalent_lone_pair_virtual_site_positions(
+    virtual_site: _DivalentLonePairVirtualSite,
+    interchange: Interchange,
+) -> Quantity:
+    r1 = interchange.positions[virtual_site.orientations[0]]
+    r2 = interchange.positions[virtual_site.orientations[1]]
+    r3 = interchange.positions[virtual_site.orientations[2]]
+
+    if virtual_site.out_of_plane_angle.m == 0.0:
+        w1, w2, w3 = _get_divalent_weights(
+            virtual_site,
+            interchange,
+        )
+
+        return w1 * r1 + w2 * r2 + w3 * r3
+
+    else:
+
+        def _cross_product(r12, r13):
+            raise NotImplementedError()
+
+        w12, w13, wcross = _get_divalent_weights(
+            virtual_site,
+            interchange,
+        )
+
+        r12 = r2 - r1
+        r13 = r3 - r1
+
+        return r1 + r12 * w12 + r13 * w13 + wcross * _cross_product(r12, r13)
 
 
 def _get_trivalent_lone_pair_virtual_site_positions(
-    virtual_site_key,
-    interchange,
-):
-    potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
-    distance = (
-        interchange["VirtualSites"]
-        .potentials[potential_key]
-        .parameters["distance"]
-        .m_as(unit.nanometer)
-    )
+    virtual_site: _TrivalentLonePairVirtualSite,
+    interchange: Interchange,
+) -> Quantity:
+    distance = virtual_site.distance.m_as(unit.nanometer)
 
     center, a, b, c = (
         interchange.positions[index].m_as(unit.nanometer)
-        for index in virtual_site_key.orientation_atom_indices
+        for index in virtual_site.orientations
     )
 
     # clockwise vs. counter-clockwise matters here - manually correcting it later
