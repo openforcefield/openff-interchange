@@ -11,12 +11,20 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.3.16 - 2023-10-18
 
 ### New Features
 
 * #827 Adds the `ewald_tolerance` option to `to_openmm`, overriding a default value inherited from old versions of the OpenFF Toolkit.
 * #827 Adds `to_openmm_system` methods, which alias existing `to_openmm` methods that create `openmm.System`s. Existing methods are not removed or currently deprecated.
+
+### Behavior changes
+
+* #828 Most virtual site types are implemented in OpenMM as types other than ``openmm.LocalCoordinatesSite`` for better human readability.
+
+### Documentation improvements
+
+* #828 Adds a notebook demonstrating, including visualization and running short simulations, several use cases of SMIRNOFF virtual sites.
 
 ### Examples added
 
