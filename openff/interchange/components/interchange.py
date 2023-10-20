@@ -30,6 +30,9 @@ from openff.interchange.exceptions import (
     UnsupportedCombinationError,
     UnsupportedExportError,
 )
+from openff.interchange.operations.minimize import (
+    _DEFAULT_ENERGY_MINIMIZATION_TOLERANCE,
+)
 from openff.interchange.smirnoff import (
     SMIRNOFFConstraintCollection,
     SMIRNOFFVirtualSiteCollection,
@@ -49,10 +52,6 @@ if has_package("nglview"):
 if TYPE_CHECKING:
     import openmm
     import openmm.app
-
-_DEFAULT_ENERGY_MINIMIZATION_TOLERANCE = (
-    Quantity(10.0, unit.kilojoule_per_mol / unit.nanometer),
-)
 
 
 class TopologyEncoder(json.JSONEncoder):
@@ -354,7 +353,11 @@ class Interchange(DefaultModel):
         if engine == "openmm":
             from openff.interchange.operations.minimize.openmm import minimize_openmm
 
-            minimized_positions = minimize_openmm(self)
+            minimized_positions = minimize_openmm(
+                self,
+                tolerance=force_tolerance,
+                max_iterations=max_iterations,
+            )
             self.positions = minimized_positions
         else:
             raise NotImplementedError(f"Engine {engine} is not implemented.")

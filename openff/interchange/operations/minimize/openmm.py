@@ -16,8 +16,9 @@ def minimize_openmm(
 ) -> Quantity:
     """Minimize the energy of a system using OpenMM."""
     import openmm.unit
+    from openff.units.openmm import from_openmm
 
-    simulation = interchange.to_openmm_system(
+    simulation = interchange.to_openmm_simulation(
         openmm.LangevinMiddleIntegrator(
             293.15 * openmm.unit.kelvin,
             1.0 / openmm.unit.picosecond,
@@ -26,10 +27,8 @@ def minimize_openmm(
     )
 
     simulation.minimizeEnergy(
-        tolerance=tolerance.to_openmm,
+        tolerance=tolerance.to_openmm(),
         maxIterations=max_iterations,
     )
 
-    return Quantity.from_openmm(
-        simulation.context.getState(getPositions=True).getPositions(),
-    )
+    return from_openmm(simulation.context.getState(getPositions=True).getPositions())
