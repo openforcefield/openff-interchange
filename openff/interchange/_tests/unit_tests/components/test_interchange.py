@@ -503,3 +503,13 @@ class TestWrappedCalls(_BaseTest):
             topology_file="tmp_.top",
             gro_file="tmp_.gro",
         )
+
+    @skip_if_missing("openmm")
+    def test_minimize(self, simple_interchange):
+        original_energy = get_openmm_energies(simple_interchange).total_energy
+
+        simple_interchange.minimize()
+
+        minimied_energy = get_openmm_energies(simple_interchange).total_energy
+
+        assert minimied_energy < original_energy

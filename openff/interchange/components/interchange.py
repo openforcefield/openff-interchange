@@ -9,7 +9,7 @@ import numpy as np
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, QuantityEncoder
 from openff.toolkit import ForceField, Molecule, Topology
-from openff.units import unit
+from openff.units import Quantity, unit
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange._experimental import experimental
@@ -29,6 +29,9 @@ from openff.interchange.exceptions import (
     MissingPositionsError,
     UnsupportedCombinationError,
     UnsupportedExportError,
+)
+from openff.interchange.operations.minimize import (
+    _DEFAULT_ENERGY_MINIMIZATION_TOLERANCE,
 )
 from openff.interchange.smirnoff import (
     SMIRNOFFConstraintCollection,
@@ -325,6 +328,39 @@ class Interchange(DefaultModel):
                 "Cannot visualize system without positions.",
             ) from error
         return nglview.show_structure_file("_tmp_pdb_file.pdb")
+
+    def minimize(
+        self,
+        engine: str = "openmm",
+        force_tolerance: Quantity = _DEFAULT_ENERGY_MINIMIZATION_TOLERANCE,
+        max_iterations: int = 10_000,
+    ):
+        """
+        Minimize the energy of the system using an available engine.
+
+        Updates positions in-place.
+
+        Parameters
+        ----------
+        engine : str, default="openmm"
+            The engine to use for minimization. Currently only "openmm" is supported.
+        force_tolerance : openff.units.Quantity, default=10.0 kJ / mol / nm
+            The force tolerance to run until during energy minimization.
+        max_iterations : int, default=10_000
+            The maximum number of iterations to run during energy minimization.
+
+        """
+        if engine == "openmm":
+            from openff.interchange.operations.minimize.openmm import minimize_openmm
+
+            minimized_positions = minimize_openmm(
+                self,
+                tolerance=force_tolerance,
+                max_iterations=max_iterations,
+            )
+            self.positions = minimized_positions
+        else:
+            raise NotImplementedError(f"Engine {engine} is not implemented.")
 
     def to_gromacs(self, prefix: str, decimal: int = 3):
         """Export this Interchange object to GROMACS files."""
