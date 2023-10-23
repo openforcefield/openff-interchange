@@ -3,16 +3,11 @@ Helper functions for exporting virutal sites to OpenMM.
 """
 from typing import Union
 
-from openff.units import unit
 from openff.units.openmm import to_openmm
 from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
-from openff.interchange.components._particles import (
-    _BondChargeVirtualSite,
-    _DivalentLonePairVirtualSite,
-    _VirtualSite,
-)
+from openff.interchange.components._particles import _VirtualSite
 from openff.interchange.models import VirtualSiteKey
 
 if has_package("openmm"):
@@ -35,49 +30,6 @@ def _create_openmm_virtual_site(
         openff_openmm_particle_map[openff_index]
         for openff_index in virtual_site.orientations
     ]
-
-    if isinstance(virtual_site, _BondChargeVirtualSite):
-        from openff.interchange.interop._virtual_sites import _get_bond_charge_weights
-
-        w1, w2 = _get_bond_charge_weights(
-            virtual_site,
-            interchange,
-        )
-
-        return openmm.TwoParticleAverageSite(
-            *openmm_indices,
-            w1,
-            w2,
-        )
-
-    if isinstance(virtual_site, _DivalentLonePairVirtualSite):
-        from openff.interchange.interop._virtual_sites import _get_divalent_weights
-
-        if virtual_site.out_of_plane_angle.m == 0.0:
-            w1, w2, w3 = _get_divalent_weights(
-                virtual_site,
-                interchange,
-            )
-
-            return openmm.ThreeParticleAverageSite(
-                *openmm_indices,
-                w1,
-                w2,
-                w3,
-            )
-
-        else:
-            w12, w13, wcross = _get_divalent_weights(
-                virtual_site,
-                interchange,
-            )
-
-            return openmm.OutOfPlaneSite(
-                *openmm_indices,
-                w12,
-                w13,
-                wcross.m_as(1 / unit.nanometer),
-            )
 
     # It is assumed that the first "orientation" atom is the "parent" atom.
     originwt, xdir, ydir = virtual_site.local_frame_weights
