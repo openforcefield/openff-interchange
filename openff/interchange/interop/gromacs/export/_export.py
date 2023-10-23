@@ -339,9 +339,9 @@ class GROMACSWriter(DefaultModel):
                 for atom in molecule.atoms:
                     gro.write(
                         f"%5d%-5s%5s%5d"
-                        f"%{decimal+5}.{decimal}f"
-                        f"%{decimal+5}.{decimal}f"
-                        f"%{decimal+5}.{decimal}f\n"
+                        f"%{decimal + 5}.{decimal}f"
+                        f"%{decimal + 5}.{decimal}f"
+                        f"%{decimal + 5}.{decimal}f\n"
                         % (
                             atom.residue_index,  # This needs to be looked up from a different data structure
                             atom.residue_name[:5],

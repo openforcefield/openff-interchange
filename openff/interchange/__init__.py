@@ -9,11 +9,7 @@ if TYPE_CHECKING:
     # Type checkers can't see lazy-imported objects
     from openff.interchange.components.interchange import Interchange
 
-# Handle versioneer
-versions = get_versions()
-__version__ = versions["version"]
-__git_revision__ = versions["full-revisionid"]
-del get_versions, versions
+__version__ = get_versions()["version"]
 
 __all__: list[str] = [
     "Interchange",
