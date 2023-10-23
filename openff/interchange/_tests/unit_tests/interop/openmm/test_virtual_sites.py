@@ -1,3 +1,4 @@
+import numpy
 import pytest
 from openff.toolkit import ForceField, Molecule
 from openff.units import Quantity, unit
@@ -7,26 +8,19 @@ from openff.utilities.testing import skip_if_missing
 @skip_if_missing("openmm")
 class TestBondChargeVirtualSite:
     @pytest.mark.parametrize(
-        (
-            "distance_",
-            "expected_w1",
-            "expected_w2",
-        ),
+        "distance_",
         [
-            (0.8, 1.5, -0.5),
-            (0.0, 1.0, 0.0),
-            (-0.8, 0.5, 0.5),
-            (-1.6, 0.0, 1.0),
-            (-2.4, -0.5, 1.5),
+            0.8,
+            0.0,
+            -0.8,
+            -1.6,
+            -2.4,
         ],
     )
     def test_bond_charge_weights(
         self,
         sage_with_bond_charge,
-        water,
         distance_,
-        expected_w1,
-        expected_w2,
     ):
         import openmm
 
@@ -57,13 +51,22 @@ class TestBondChargeVirtualSite:
 
         virtual_site = system.getVirtualSite(5)
 
-        assert isinstance(virtual_site, openmm.TwoParticleAverageSite)
-
         assert virtual_site.getParticle(0) == 0
         assert virtual_site.getParticle(1) == 1
 
-        assert virtual_site.getWeight(0) == pytest.approx(expected_w1)
-        assert virtual_site.getWeight(1) == pytest.approx(expected_w2)
+        numpy.testing.assert_allclose(
+            Quantity(
+                [
+                    -1 * distance_,
+                    0,
+                    0,
+                ],
+                unit.angstrom,
+            ).m_as(unit.angstrom),
+            numpy.asarray(
+                virtual_site.getLocalPosition().value_in_unit(openmm.unit.angstrom),
+            ),
+        )
 
 
 @skip_if_missing("openmm")
