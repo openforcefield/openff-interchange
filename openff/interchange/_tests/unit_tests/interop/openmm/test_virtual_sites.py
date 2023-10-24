@@ -150,15 +150,20 @@ class TestFourSiteWater:
 
         virtual_site = system.getVirtualSite(3)
 
-        assert isinstance(virtual_site, openmm.ThreeParticleAverageSite)
+        assert isinstance(virtual_site, openmm.LocalCoordinatesSite)
 
         assert virtual_site.getParticle(0) == 0
         assert virtual_site.getParticle(1) == 1
         assert virtual_site.getParticle(2) == 2
 
-        assert virtual_site.getWeight(0) == pytest.approx(expected_w1)
-        assert virtual_site.getWeight(1) == pytest.approx(expected_w2)
-        assert virtual_site.getWeight(2) == pytest.approx(expected_w3)
+        # Negative because SMIRNOFF points the virtual site "away" from hydrogens but the
+        # coordinate system is pointed "towards" them; 0.1 because Angstrom -> nanometer
+        assert distance_ * -0.1 == pytest.approx(
+            virtual_site.getLocalPosition()[0].value_in_unit(openmm.unit.nanometer),
+        )
+
+        assert pytest.approx(virtual_site.getLocalPosition()[1]._value) == 0.0
+        assert pytest.approx(virtual_site.getLocalPosition()[2]._value) == 0.0
 
 
 @skip_if_missing("openmm")
@@ -167,33 +172,56 @@ class TestTIP4PVsOpenMM:
         import openmm.app
         from openff.toolkit import ForceField
 
-        openmm_tip4pfb = openmm.app.ForceField("tip4pfb.xml")
-        openmm_topology = water.to_topology().to_openmm()
-        openmm_positions = water.conformers[0].to_openmm()
+        if False:
+            openmm_tip4pfb = openmm.app.ForceField("tip4pfb.xml")
+            openmm_topology = water.to_topology().to_openmm()
+            openmm_positions = water.conformers[0].to_openmm()
 
-        modeller = openmm.app.Modeller(
-            openmm_topology,
-            openmm_positions,
-        )
+            modeller = openmm.app.Modeller(
+                openmm_topology,
+                openmm_positions,
+            )
 
-        modeller.addExtraParticles(openmm_tip4pfb)
+            modeller.addExtraParticles(openmm_tip4pfb)
 
-        openmm_virtual_site = openmm_tip4pfb.createSystem(
-            modeller.topology,
-        ).getVirtualSite(3)
-        openmm_weights = [openmm_virtual_site.getWeight(index) for index in range(3)]
+            openmm_virtual_site = openmm_tip4pfb.createSystem(
+                modeller.topology,
+            ).getVirtualSite(3)
+            openmm_weights = [  # noqa
+                openmm_virtual_site.getWeight(index) for index in range(3)
+            ]
 
         openff_tip4p = ForceField("tip4p_fb.offxml")
 
-        openff_virtual_site = openff_tip4p.create_openmm_system(
+        openff_system = openff_tip4p.create_openmm_system(
             water.to_topology(),
-        ).getVirtualSite(3)
-        openff_weights = [openff_virtual_site.getWeight(index) for index in range(3)]
+        )
+        openff_virtual_site = openff_system.getVirtualSite(3)
 
-        assert type(openmm_virtual_site) is type(openff_virtual_site)
+        # Cannot directly compare weights because OpenMM (OutOfPlaneSite) and OpenFF (LocalCoordinatesSite)
+        # use different implementations out of necessity, nor can we directly compare types
+        assert isinstance(openff_virtual_site, openmm.LocalCoordinatesSite)
 
-        for w_openmm, w_openff in zip(openmm_weights, openff_weights):
-            assert w_openmm == pytest.approx(w_openff)
+        # See table
+        # https://docs.openforcefield.org/projects/recharge/en/latest/users/theory.html#generating-coordinates
+        assert openff_virtual_site.getOriginWeights() == (0, 1, 0)
+        assert openff_virtual_site.getXWeights() == (0.5, -1.0, 0.5)
+        assert openff_virtual_site.getYWeights() == (1, -1, 0)
+
+        assert openff_virtual_site.getParticle(0) == 0
+        assert openff_virtual_site.getParticle(1) in (1, 2)
+        assert openff_virtual_site.getParticle(2) in (2, 1)
+
+        # This local position should directly match the distance (O-VS) one would draw by hand (0.10527... Angstrom)
+        # https://github.com/pandegroup/tip3p-tip4p-fb/blob/master/AMBER/dat/leap/parm/frcmod.tip4pfb#L7
+        # https://github.com/openforcefield/openff-forcefields/blob/2023.08.0/openforcefields/offxml/tip4p_fb-1.0.0.offxml#L137
+        assert openff_virtual_site.getLocalPosition()[0].value_in_unit(
+            openmm.unit.nanometer,
+        ) == pytest.approx(0.010527445756662016)
+        assert openff_virtual_site.getLocalPosition()[1]._value == 0.0
+        assert openff_virtual_site.getLocalPosition()[2]._value == 0.0
+
+        # TODO: Also doubly compare geometry to OpenMM result
 
 
 @skip_if_missing("openmm")
@@ -201,26 +229,27 @@ class TestTIP5PVsOpenMM:
     def test_compare_tip5p_openmm(self, water, tip5p):
         import openmm.app
 
-        openmm_tip5p = openmm.app.ForceField("tip5p.xml")
-        openmm_topology = water.to_topology().to_openmm()
-        openmm_positions = water.conformers[0].to_openmm()
+        if False:
+            openmm_tip5p = openmm.app.ForceField("tip5p.xml")
+            openmm_topology = water.to_topology().to_openmm()
+            openmm_positions = water.conformers[0].to_openmm()
 
-        modeller = openmm.app.Modeller(
-            openmm_topology,
-            openmm_positions,
-        )
+            modeller = openmm.app.Modeller(
+                openmm_topology,
+                openmm_positions,
+            )
 
-        modeller.addExtraParticles(openmm_tip5p)
+            modeller.addExtraParticles(openmm_tip5p)
 
-        openmm_system = openmm_tip5p.createSystem(
-            modeller.topology,
-            removeCMMotion=False,
-        )
+            openmm_system = openmm_tip5p.createSystem(
+                modeller.topology,
+                removeCMMotion=False,
+            )
 
-        openmm_virtual_sites = [
-            openmm_system.getVirtualSite(3),
-            openmm_system.getVirtualSite(4),
-        ]
+            openmm_virtual_sites = [  # noqa
+                openmm_system.getVirtualSite(3),
+                openmm_system.getVirtualSite(4),
+            ]
 
         openff_system = tip5p.create_openmm_system(
             water.to_topology(),
@@ -228,19 +257,42 @@ class TestTIP5PVsOpenMM:
 
         openff_virtual_sites = [
             openff_system.getVirtualSite(3),
-            openmm_system.getVirtualSite(4),
+            openff_system.getVirtualSite(4),
         ]
 
-        for openmm_virtual_site, openff_virtual_site in zip(
-            openmm_virtual_sites,
-            openff_virtual_sites,
-        ):
-            assert type(openmm_virtual_site) is type(openff_virtual_site)
+        # Cannot directly compare weights because OpenMM (OutOfPlaneSite) and OpenFF (LocalCoordinatesSite)
+        # use different implementations out of necessity
 
-            for attr in ("getWeight12", "getWeight13", "getWeightCross"):
-                assert getattr(openmm_virtual_site, attr)() == pytest.approx(
-                    getattr(openff_virtual_site, attr)(),
-                )
+        # See table
+        # https://docs.openforcefield.org/projects/recharge/en/latest/users/theory.html#generating-coordinates
+        for openff_virtual_site in openff_virtual_sites:
+            assert isinstance(openff_virtual_site, openmm.LocalCoordinatesSite)
+
+            assert openff_virtual_site.getOriginWeights() == (0, 1, 0)
+            assert openff_virtual_site.getXWeights() == (0.5, -1.0, 0.5)
+            assert openff_virtual_site.getYWeights() == (1, -1, 0)
+
+            assert openff_virtual_site.getLocalPosition()[0].value_in_unit(
+                openmm.unit.nanometer,
+            ) == pytest.approx(-0.040415127656087124)
+            assert openff_virtual_site.getLocalPosition()[1]._value == 0.0
+            assert openff_virtual_site.getLocalPosition()[2].value_in_unit(
+                openmm.unit.nanometer,
+            ) == pytest.approx(0.0571543301644082)
+
+        # Both particles should be indexed as O-H-H, but the order of the hydrogens should be flipped
+        # (this is how the local positions are the same but "real" space positions are flipped)
+        assert openff_virtual_sites[0].getParticle(0) == openff_virtual_sites[
+            1
+        ].getParticle(0)
+        assert openff_virtual_sites[0].getParticle(1) == openff_virtual_sites[
+            1
+        ].getParticle(2)
+        assert openff_virtual_sites[0].getParticle(2) == openff_virtual_sites[
+            1
+        ].getParticle(1)
+
+        # TODO: Also doubly compare geometry to OpenMM result
 
 
 # TODO: Port xml_ff_virtual_sites_monovalent from toolkit

@@ -6,7 +6,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     VirtualSiteHandler,
 )
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import _validated_list_to_array
@@ -175,13 +175,16 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                 electrostatics_key
             ] = electrostatics_potential
 
-    def _get_local_frame_weights(self, virtual_site_key: "VirtualSiteKey"):
+    def _get_local_frame_weights(
+        self,
+        virtual_site_key: "VirtualSiteKey",
+    ) -> tuple[list[float]]:
         if virtual_site_key.type == "BondCharge":
             origin_weight = [1.0, 0.0]
             x_direction = [-1.0, 1.0]
             y_direction = [-1.0, 1.0]
         elif virtual_site_key.type == "MonovalentLonePair":
-            origin_weight = [1, 0.0, 0.0]
+            origin_weight = [1.0, 0.0, 0.0]
             x_direction = [-1.0, 1.0, 0.0]
             y_direction = [-1.0, 0.0, 1.0]
         elif virtual_site_key.type == "DivalentLonePair":
@@ -195,14 +198,14 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
 
         return origin_weight, x_direction, y_direction
 
-    def _get_local_frame_position(self, virtual_site_key: "VirtualSiteKey"):
+    def _get_local_frame_position(self, virtual_site_key: "VirtualSiteKey") -> Quantity:
         potential_key = self.key_map[virtual_site_key]
         potential = self.potentials[potential_key]
         if virtual_site_key.type == "BondCharge":
-            distance = potential.parameters["distance"]
+            distance = potential.parameters["distance"].m_as(unit.nanometer)
             local_frame_position = numpy.asarray([-1.0, 0.0, 0.0]) * distance
         elif virtual_site_key.type == "MonovalentLonePair":
-            distance = potential.parameters["distance"]
+            distance = potential.parameters["distance"].m_as(unit.nanometer)
             theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
             psi = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
             factor = numpy.array(
@@ -214,12 +217,15 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
             )
             local_frame_position = factor * distance
         elif virtual_site_key.type == "DivalentLonePair":
-            distance = potential.parameters["distance"]
+            distance = potential.parameters["distance"].m_as(unit.nanometer)
             theta = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
             factor = numpy.asarray([-1.0 * numpy.cos(theta), 0.0, numpy.sin(theta)])
             local_frame_position = factor * distance
         elif virtual_site_key.type == "TrivalentLonePair":
-            distance = potential.parameters["distance"]
+            distance = potential.parameters["distance"].m_as(unit.nanometer)
             local_frame_position = numpy.asarray([-1.0, 0.0, 0.0]) * distance
 
-        return local_frame_position
+        return unit.Quantity(
+            local_frame_position,
+            unit.nanometer,
+        )

@@ -406,9 +406,6 @@ def _create_single_nonbonded_force(
         for virtual_site_key in molecule_virtual_site_map[molecule_index]:
             # TODO: Move this function to openff/interchange/interop/_particles.py ?
             from openff.interchange.interop.common import _create_virtual_site_object
-            from openff.interchange.interop.openmm._virtual_sites import (
-                _create_openmm_virtual_site,
-            )
 
             _potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
             virtual_site_potential = interchange["VirtualSites"].potentials[
@@ -417,12 +414,6 @@ def _create_single_nonbonded_force(
             virtual_site_object = _create_virtual_site_object(
                 virtual_site_key,
                 virtual_site_potential,
-            )
-
-            openmm_particle: openmm.VirtualSite = _create_openmm_virtual_site(
-                interchange,
-                virtual_site_object,
-                openff_openmm_particle_map,
             )
 
             vdw = interchange["vdW"]
@@ -458,8 +449,6 @@ def _create_single_nonbonded_force(
             ]
 
             parent_virtual_particle_mapping[parent_atom_index].append(force_index)
-
-            system.setVirtualSite(system_index, openmm_particle)
 
     _create_exceptions(
         data,

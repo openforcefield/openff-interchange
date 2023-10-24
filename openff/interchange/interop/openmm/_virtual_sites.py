@@ -3,7 +3,6 @@ Helper functions for exporting virutal sites to OpenMM.
 """
 from typing import Union
 
-from openff.units.openmm import to_openmm
 from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
@@ -40,5 +39,5 @@ def _create_openmm_virtual_site(
         originwt,
         xdir,
         ydir,
-        to_openmm(pos),
+        pos.to_openmm(),
     )

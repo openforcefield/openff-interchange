@@ -85,9 +85,9 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
 
     @property
     def local_frame_weights(self) -> tuple[list[float], ...]:
-        originwt = [1.0, 0.0, 0.0]
-        xdir = [-1.0, 0.5, 0.5]
-        ydir = [-1.0, 1.0, 0.0]
+        originwt = [0.0, 1.0, 0.0]
+        xdir = [0.5, -1.0, 0.5]
+        ydir = [1.0, -1.0, 0.0]
 
         return originwt, xdir, ydir
 
@@ -115,8 +115,8 @@ class _TrivalentLonePairVirtualSite(_VirtualSite):
     @property
     def local_frame_weights(self) -> tuple[list[float], ...]:
         originwt = [1.0, 0.0, 0.0, 0.0]
-        xdir = [-1.0, 1 / 3, 1 / 3, 1 / 3]
-        ydir = [-1.0, 1.0, 0.0, 0.0]  # Not used
+        xdir = [1 / 3, -1.0, 1 / 3, 1 / 3]
+        ydir = [1.0, -1.0, 0.0, 0.0]  # Not used (?)
 
         return originwt, xdir, ydir
 
