@@ -265,9 +265,9 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
 
     @property
     def local_frame_weights(self) -> tuple[list[float], ...]:
-        origin_weight = [0.0, 1.0, 0.0]  # second atom is origin
-        x_direction = [0.5, -1.0, 0.5]
-        y_direction = [1.0, -1.0, 0.0]
+        origin_weight = [1.0, 0.0, 0.0]  # first atom is origin
+        x_direction = [-1.0, 0.5, 0.5]
+        y_direction = [-1.0, 1.0, 0.0]
 
         return origin_weight, x_direction, y_direction
 
