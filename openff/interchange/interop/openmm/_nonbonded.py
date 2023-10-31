@@ -182,9 +182,11 @@ def _add_particles_to_system(
         for virtual_site_key in molecule_virtual_site_map[
             interchange.topology.molecule_index(molecule)
         ]:
-            from openff.interchange.interop.common import _create_virtual_site_object
             from openff.interchange.interop.openmm._virtual_sites import (
                 _create_openmm_virtual_site,
+            )
+            from openff.interchange.smirnoff._virtual_sites import (
+                _create_virtual_site_object,
             )
 
             system_index = system.addParticle(mass=0.0)
@@ -405,7 +407,9 @@ def _create_single_nonbonded_force(
 
         for virtual_site_key in molecule_virtual_site_map[molecule_index]:
             # TODO: Move this function to openff/interchange/interop/_particles.py ?
-            from openff.interchange.interop.common import _create_virtual_site_object
+            from openff.interchange.smirnoff._virtual_sites import (
+                _create_virtual_site_object,
+            )
 
             _potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
             virtual_site_potential = interchange["VirtualSites"].potentials[

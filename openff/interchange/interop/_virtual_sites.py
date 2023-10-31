@@ -4,41 +4,62 @@ Common helpers for exporting virtual sites.
 from collections import defaultdict
 from collections.abc import Iterable
 from math import cos, pi, sin
-from typing import Union
+from typing import DefaultDict, Union
 
 import numpy
 from openff.units import Quantity, unit
 
 from openff.interchange import Interchange
-from openff.interchange.components._particles import (
-    _BondChargeVirtualSite,
-    _DivalentLonePairVirtualSite,
-    _MonovalentLonePairVirtualSite,
-    _TrivalentLonePairVirtualSite,
-    _VirtualSite,
-)
 from openff.interchange.exceptions import (
     MissingPositionsError,
     MissingVirtualSitesError,
     VirtualSiteTypeNotImplementedError,
 )
-from openff.interchange.interop.common import _create_virtual_site_object
 from openff.interchange.models import VirtualSiteKey
+from openff.interchange.smirnoff._virtual_sites import (
+    _BondChargeVirtualSite,
+    _create_virtual_site_object,
+    _DivalentLonePairVirtualSite,
+    _MonovalentLonePairVirtualSite,
+    _TrivalentLonePairVirtualSite,
+    _VirtualSite,
+)
 
 
 def _virtual_site_parent_molecule_mapping(
     interchange: Interchange,
 ) -> dict[VirtualSiteKey, int]:
-    mapping: dict[VirtualSiteKey, int] = dict()
+    """
+    Map `VirtualSiteKey`s the index of the molecule they belong to.
+
+    Parameters
+    ----------
+    interchange
+        The interchange object to get the mapping from.
+
+    Returns
+    -------
+    mapping: dict[VirtualSiteKey, int]
+        A dictionary mapping virtual site keys to the index of the molecule they belong to.
+
+    """
+    mapping = dict()
 
     if "VirtualSites" not in interchange.collections:
         return mapping
 
+    # TODO: This implicitly assumes the ordering of virtual sites is defined by
+    # how they are presented in the iterator; this may cause problems when a
+    # molecule (a large ligand? polymer?) has many virtual sites
     for virtual_site_key in interchange["VirtualSites"].key_map:
         assert isinstance(virtual_site_key, VirtualSiteKey)
+
         parent_atom_index = virtual_site_key.orientation_atom_indices[0]
+
         parent_atom = interchange.topology.atom(parent_atom_index)
+
         parent_molecule = parent_atom.molecule
+
         mapping[virtual_site_key] = interchange.topology.molecule_index(parent_molecule)
 
     return mapping
@@ -60,7 +81,10 @@ def get_positions_with_virtual_sites(
     if len(interchange["VirtualSites"].key_map) == 0:
         raise MissingVirtualSitesError()
 
-    molecule_virtual_site_map = defaultdict(list)
+    # map of molecule index to *list* of virtual site keys contained therein
+    molecule_virtual_site_map: DefaultDict[int, list[VirtualSiteKey]] = defaultdict(
+        list,
+    )
 
     virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(interchange)
 
