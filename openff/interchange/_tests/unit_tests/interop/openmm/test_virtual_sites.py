@@ -204,9 +204,9 @@ class TestTIP4PVsOpenMM:
 
         # See table
         # https://docs.openforcefield.org/projects/recharge/en/latest/users/theory.html#generating-coordinates
-        assert openff_virtual_site.getOriginWeights() == (0, 1, 0)
-        assert openff_virtual_site.getXWeights() == (0.5, -1.0, 0.5)
-        assert openff_virtual_site.getYWeights() == (1, -1, 0)
+        assert openff_virtual_site.getOriginWeights() == (1, 0, 0)
+        assert openff_virtual_site.getXWeights() == (-1.0, 0.5, 0.5)
+        assert openff_virtual_site.getYWeights() == (-1, 1, 0)
 
         assert openff_virtual_site.getParticle(0) == 0
         assert openff_virtual_site.getParticle(1) in (1, 2)
@@ -268,9 +268,9 @@ class TestTIP5PVsOpenMM:
         for openff_virtual_site in openff_virtual_sites:
             assert isinstance(openff_virtual_site, openmm.LocalCoordinatesSite)
 
-            assert openff_virtual_site.getOriginWeights() == (0, 1, 0)
-            assert openff_virtual_site.getXWeights() == (0.5, -1.0, 0.5)
-            assert openff_virtual_site.getYWeights() == (1, -1, 0)
+            assert openff_virtual_site.getOriginWeights() == (1.0, 0, 0)
+            assert openff_virtual_site.getXWeights() == (-1.0, 0.5, 0.5)
+            assert openff_virtual_site.getYWeights() == (-1.0, 1.0, 0)
 
             assert openff_virtual_site.getLocalPosition()[0].value_in_unit(
                 openmm.unit.nanometer,

@@ -580,7 +580,7 @@ class Interchange(DefaultModel):
             )
             positions = self.positions
 
-        _to_pdb(file_path, topology, positions)
+        _to_pdb(file_path, topology, positions.to(unit.angstrom))
 
     def to_psf(self, file_path: Union[Path, str]):
         """Export this Interchange to a CHARMM-style .psf file."""

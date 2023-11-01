@@ -3,7 +3,6 @@ from typing import Literal, Optional
 
 import numpy
 from openff.models.types import FloatQuantity
-from openff.toolkit import Molecule
 from openff.toolkit.topology import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
@@ -307,8 +306,8 @@ class _TrivalentLonePairVirtualSite(_VirtualSite):
     @property
     def local_frame_weights(self) -> tuple[list[float], ...]:
         origin_weight = [1.0, 0.0, 0.0, 0.0]  # first atom is origin
-        x_direction = [1 / 3, -1.0, 1 / 3, 1 / 3]
-        y_direction = [1.0, -1.0, 0.0, 0.0]  # Not used (?)
+        x_direction = [-1.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]
+        y_direction = [-1.0, 1.0, 0.0, 0.0]  # Not used (?)
 
         return origin_weight, x_direction, y_direction
 
@@ -370,7 +369,7 @@ def _create_virtual_site_object(
 
 
 def _build_local_coordinate_frames(
-    molecule: Molecule,
+    interchange,
     virtual_site_collection: SMIRNOFFVirtualSiteCollection,
 ) -> numpy.ndarray:
     """
@@ -392,10 +391,10 @@ def _build_local_coordinate_frames(
         )
 
         # positions of all "orientation" atoms, not just the single "parent"
-        orientation_coordinates = molecule.conformers[0][
+        orientation_coordinates = interchange.positions[
             virtual_site_key.orientation_atom_indices,
             :,
-        ]
+        ].m_as(unit.nanometer)
 
         local_frame_weights = virtual_site.local_frame_weights
 
@@ -407,11 +406,11 @@ def _build_local_coordinate_frames(
 
         xy_plane_norm = xy_plane / numpy.sqrt(
             (xy_plane * xy_plane).sum(-1),
-        ).m.reshape(-1, 1)
+        ).reshape(-1, 1)
 
         x_hat = xy_plane_norm[0, :]
-        z_hat = numpy.cross(x_hat, xy_plane[1, :].m)
-        y_hat = numpy.cross(z_hat, x_hat.m)
+        z_hat = numpy.cross(x_hat, xy_plane[1, :])
+        y_hat = numpy.cross(z_hat, x_hat)
 
         stacked_frames[0].append(origin.reshape(1, -1))
         stacked_frames[1].append(x_hat.reshape(1, -1))
@@ -420,7 +419,7 @@ def _build_local_coordinate_frames(
 
     local_frames = numpy.stack([numpy.vstack(frames) for frames in stacked_frames])
 
-    return local_frames
+    return Quantity(local_frames, unit.nanometer)
 
 
 def _convert_local_coordinates(
@@ -452,7 +451,7 @@ def _convert_local_coordinates(
 
 
 def _generate_positions(
-    molecule: Molecule,
+    interchange,
     virtual_site_collection: SMIRNOFFVirtualSiteCollection,
     conformer: Optional[Quantity] = None,
 ) -> Quantity:
@@ -469,7 +468,7 @@ def _generate_positions(
     )
 
     local_coordinate_frames = _build_local_coordinate_frames(
-        molecule,
+        interchange,
         virtual_site_collection,
     )
 
@@ -480,5 +479,5 @@ def _generate_positions(
 
     return Quantity(
         virtual_site_positions,
-        unit.angstrom,
+        unit.nanometer,
     )

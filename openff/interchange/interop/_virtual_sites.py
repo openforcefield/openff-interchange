@@ -91,63 +91,32 @@ def get_positions_with_virtual_sites(
     for virtual_site, molecule_index in virtual_site_molecule_map.items():
         molecule_virtual_site_map[molecule_index].append(virtual_site)
 
-    particle_positions = Quantity(
-        numpy.empty(shape=(0, 3)),
-        unit.nanometer,
-    )
+    if "VirtualSites" in interchange.collections:
+        if use_zeros:
+            # TODO: Consider removing this behavior
+            virtual_site_positions = numpy.zeros(
+                (
+                    len(interchange["VirtualSites"].key_map),
+                    3,
+                ),
+            )
+        else:
+            from openff.interchange.smirnoff._virtual_sites import _generate_positions
 
-    for molecule in interchange.topology.molecules:
-        molecule_index = interchange.topology.molecule_index(molecule)
+            virtual_site_positions = _generate_positions(
+                interchange,
+                interchange["VirtualSites"],
+            )
 
-        atom_indices = [
-            interchange.topology.atom_index(atom) for atom in molecule.atoms
-        ]
-        this_molecule_atom_positions = interchange.positions[atom_indices, :]
-
-        n_virtual_sites_in_this_molecule: int = len(
-            molecule_virtual_site_map[molecule_index],
+        return numpy.concatenate(
+            [
+                interchange.positions,
+                virtual_site_positions,
+            ],
         )
 
-        if n_virtual_sites_in_this_molecule > 0:
-            if use_zeros:
-                this_molecule_virtual_site_positions = Quantity(
-                    numpy.zeros((n_virtual_sites_in_this_molecule, 3)),
-                    unit.nanometer,
-                )
-
-            else:
-                this_molecule_virtual_site_positions = Quantity(
-                    numpy.asarray(
-                        [
-                            _get_virtual_site_positions(
-                                virtual_site_key,
-                                interchange,
-                            ).m_as(unit.nanometer)
-                            for virtual_site_key in molecule_virtual_site_map[
-                                molecule_index
-                            ]
-                        ],
-                    ),
-                    unit.nanometer,
-                )
-
-            particle_positions = numpy.concatenate(
-                [
-                    particle_positions,
-                    this_molecule_atom_positions,
-                    this_molecule_virtual_site_positions,
-                ],
-            )
-
-        else:
-            particle_positions = numpy.concatenate(
-                [
-                    particle_positions,
-                    this_molecule_atom_positions,
-                ],
-            )
-
-    return particle_positions
+    else:
+        return interchange.positions
 
 
 def _get_virtual_site_positions(
@@ -388,7 +357,7 @@ def _get_divalent_weights(
         )
 
         # wcross /= r12 * r13 * numpy.sin(theta.m_as(unit.radian))
-        # import ipdb; ipdb.set_trace()
+
         # print(virtual_site.orientations)
         # arbitrary, should be replaced by a proper cross product
         if virtual_site.orientations[2] > virtual_site.orientations[1]:
