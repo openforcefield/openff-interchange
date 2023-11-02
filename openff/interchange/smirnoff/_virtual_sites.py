@@ -440,11 +440,10 @@ def _convert_local_coordinates(
     # Here we use cos(phi) in place of sin(phi) and sin(phi) in place of cos(phi)
     # this is because we want phi=0 to represent a 0 degree angle from the x-y plane
     # rather than 0 degrees from the z-axis.
-    vsite_positions = (
-        local_coordinate_frames[0]
-        + d * cos_theta * cos_phi * local_coordinate_frames[1]  # noqa
-        + d * sin_theta * cos_phi * local_coordinate_frames[2]  # noqa
-        + d * sin_phi * local_coordinate_frames[3]  # noqa
+    vsite_positions = local_coordinate_frames[0] + d * (
+        cos_theta * cos_phi * local_coordinate_frames[1]
+        + sin_theta * cos_phi * local_coordinate_frames[2]  # noqa
+        + sin_phi * local_coordinate_frames[3]  # noqa
     )
 
     return vsite_positions
