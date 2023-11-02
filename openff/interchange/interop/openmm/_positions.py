@@ -25,7 +25,7 @@ def to_openmm_positions(
         try:
             return get_positions_with_virtual_sites(
                 interchange,
-                use_zeros=True,
+                use_zeros=False,
             ).to_openmm()
         except MissingVirtualSitesError:
             return interchange.positions.to_openmm()

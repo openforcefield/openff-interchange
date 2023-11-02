@@ -1,13 +1,16 @@
-from typing import Literal
+import math
+from typing import Literal, Optional
 
 import numpy
+from openff.models.types import FloatQuantity
 from openff.toolkit.topology import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     VirtualSiteHandler,
 )
-from openff.units import unit
+from openff.units import Quantity, unit
 
+from openff.interchange.components._particles import _VirtualSite
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import _validated_list_to_array
 from openff.interchange.models import PotentialKey, VirtualSiteKey
@@ -21,6 +24,9 @@ try:
     from pydantic.v1 import Field
 except ImportError:
     from pydantic import Field
+
+_DEGREES_TO_RADIANS = numpy.pi / 180.0
+
 
 # The use of `type` as a field name conflicts with the built-in `type()` when used with PEP 585
 _ListOfHandlerTypes = list[type[ParameterHandler]]
@@ -175,51 +181,302 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                 electrostatics_key
             ] = electrostatics_potential
 
-    def _get_local_frame_weights(self, virtual_site_key: "VirtualSiteKey"):
-        if virtual_site_key.type == "BondCharge":
-            origin_weight = [1.0, 0.0]
-            x_direction = [-1.0, 1.0]
-            y_direction = [-1.0, 1.0]
-        elif virtual_site_key.type == "MonovalentLonePair":
-            origin_weight = [1, 0.0, 0.0]
-            x_direction = [-1.0, 1.0, 0.0]
-            y_direction = [-1.0, 0.0, 1.0]
-        elif virtual_site_key.type == "DivalentLonePair":
-            origin_weight = [0.0, 1.0, 0.0]
-            x_direction = [0.5, -1.0, 0.5]
-            y_direction = [1.0, -1.0, 0.0]
-        elif virtual_site_key.type == "TrivalentLonePair":
-            origin_weight = [0.0, 1.0, 0.0, 0.0]
-            x_direction = [1 / 3, -1.0, 1 / 3, 1 / 3]
-            y_direction = [1.0, -1.0, 0.0, 0.0]
+
+class _BondChargeVirtualSite(_VirtualSite):
+    type: Literal["BondCharge"]
+    distance: FloatQuantity["nanometer"]
+    orientations: tuple[int, ...]
+
+    @property
+    def local_frame_weights(self) -> tuple[list[float], ...]:
+        origin_weight = [1.0, 0.0]  # first atom is origin
+        x_direction = [-1.0, 1.0]
+        y_direction = [-1.0, 1.0]
 
         return origin_weight, x_direction, y_direction
 
-    def _get_local_frame_position(self, virtual_site_key: "VirtualSiteKey"):
-        potential_key = self.key_map[virtual_site_key]
-        potential = self.potentials[potential_key]
-        if virtual_site_key.type == "BondCharge":
-            distance = potential.parameters["distance"]
-            local_frame_position = numpy.asarray([-1.0, 0.0, 0.0]) * distance
-        elif virtual_site_key.type == "MonovalentLonePair":
-            distance = potential.parameters["distance"]
-            theta = potential.parameters["inPlaneAngle"].m_as(unit.radian)
-            psi = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
-            factor = numpy.array(
-                [
-                    numpy.cos(theta) * numpy.cos(psi),
-                    numpy.sin(theta) * numpy.cos(psi),
-                    numpy.sin(psi),
-                ],
-            )
-            local_frame_position = factor * distance
-        elif virtual_site_key.type == "DivalentLonePair":
-            distance = potential.parameters["distance"]
-            theta = potential.parameters["outOfPlaneAngle"].m_as(unit.radian)
-            factor = numpy.asarray([-1.0 * numpy.cos(theta), 0.0, numpy.sin(theta)])
-            local_frame_position = factor * distance
-        elif virtual_site_key.type == "TrivalentLonePair":
-            distance = potential.parameters["distance"]
-            local_frame_position = numpy.asarray([-1.0, 0.0, 0.0]) * distance
+    @property
+    def local_frame_positions(self) -> unit.Quantity:
+        distance_unit = self.distance.units
+        return unit.Quantity(
+            [-self.distance.m, 0.0, 0.0],
+            distance_unit,
+        )
 
-        return local_frame_position
+    @property
+    def local_frame_coordinates(self) -> Quantity:
+        return Quantity(
+            numpy.array(
+                [self.distance.m_as(unit.nanometer), 180.0, 0.0],
+            ),
+        )
+
+
+class _MonovalentLonePairVirtualSite(_VirtualSite):
+    type: Literal["MonovalentLonePair"]
+    distance: FloatQuantity["nanometer"]
+    out_of_plane_angle: FloatQuantity["degree"]
+    in_plane_angle: FloatQuantity["degree"]
+    orientations: tuple[int, ...]
+
+    @property
+    def local_frame_weights(self) -> tuple[list[float], ...]:
+        origin_weight = [1.0, 0.0, 0.0]  # first/zeroth atom is origin
+        x_direction = [-1.0, 1.0, 0.0]
+        y_direction = [-1.0, 0.0, 1.0]
+
+        return origin_weight, x_direction, y_direction
+
+    @property
+    def local_frame_positions(self) -> unit.Quantity:
+        theta = self.in_plane_angle.m_as(unit.radian)
+        phi = self.out_of_plane_angle.m_as(unit.radian)
+
+        distance_unit = self.distance.units
+
+        return unit.Quantity(
+            [
+                self.distance.m * math.cos(theta) * math.cos(phi),
+                self.distance.m * math.sin(theta) * math.cos(phi),
+                self.distance.m * math.sin(phi),
+            ],
+            distance_unit,
+        )
+
+    @property
+    def local_frame_coordinates(self) -> Quantity:
+        return Quantity(
+            numpy.array(
+                [
+                    self.distance.m_as(unit.nanometer),
+                    self.in_plane_angle.m_as(unit.degree),
+                    self.out_of_plane_angle.m_as(unit.degree),
+                ],
+            ),
+        )
+
+
+class _DivalentLonePairVirtualSite(_VirtualSite):
+    type: Literal["DivalentLonePair"]
+    distance: FloatQuantity["nanometer"]
+    out_of_plane_angle: FloatQuantity["degree"]
+    orientations: tuple[int, ...]
+
+    @property
+    def local_frame_weights(self) -> tuple[list[float], ...]:
+        origin_weight = [1.0, 0.0, 0.0]  # first atom is origin
+        x_direction = [-1.0, 0.5, 0.5]
+        y_direction = [-1.0, 1.0, 0.0]
+
+        return origin_weight, x_direction, y_direction
+
+    @property
+    def local_frame_positions(self) -> unit.Quantity:
+        theta = self.out_of_plane_angle.m_as(unit.radian)
+
+        distance_unit = self.distance.units
+
+        return unit.Quantity(
+            [
+                -self.distance.m * math.cos(theta),
+                0.0,
+                self.distance.m * math.sin(theta),
+            ],
+            distance_unit,
+        )
+
+    @property
+    def local_frame_coordinates(self) -> Quantity:
+        return Quantity(
+            numpy.array(
+                [
+                    self.distance.m_as(unit.nanometer),
+                    180.0,
+                    self.out_of_plane_angle.m_as(unit.degree),
+                ],
+            ),
+        )
+
+
+class _TrivalentLonePairVirtualSite(_VirtualSite):
+    type: Literal["TrivalentLonePair"]
+    distance: FloatQuantity["nanometer"]
+    orientations: tuple[int, ...]
+
+    @property
+    def local_frame_weights(self) -> tuple[list[float], ...]:
+        origin_weight = [1.0, 0.0, 0.0, 0.0]  # first atom is origin
+        x_direction = [-1.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]
+        y_direction = [-1.0, 1.0, 0.0, 0.0]  # Not used (?)
+
+        return origin_weight, x_direction, y_direction
+
+    @property
+    def local_frame_positions(self) -> unit.Quantity:
+        distance_unit = self.distance.units
+        return unit.Quantity(
+            [-self.distance.m, 0.0, 0.0],
+            distance_unit,
+        )
+
+    @property
+    def local_frame_coordinates(self) -> Quantity:
+        return Quantity(
+            numpy.array(
+                [self.distance.m_as(unit.nanometer), 180.0, 0.0],
+            ),
+        )
+
+
+def _create_virtual_site_object(
+    virtual_site_key: VirtualSiteKey,
+    virtual_site_potential,
+    # interchange: "Interchange",
+    # non_bonded_force: openmm.NonbondedForce,
+) -> _VirtualSite:
+    orientations = virtual_site_key.orientation_atom_indices
+
+    if virtual_site_key.type == "BondCharge":
+        return _BondChargeVirtualSite(
+            type="BondCharge",
+            distance=virtual_site_potential.parameters["distance"],
+            orientations=orientations,
+        )
+    elif virtual_site_key.type == "MonovalentLonePair":
+        return _MonovalentLonePairVirtualSite(
+            type="MonovalentLonePair",
+            distance=virtual_site_potential.parameters["distance"],
+            out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
+            in_plane_angle=virtual_site_potential.parameters["inPlaneAngle"],
+            orientations=orientations,
+        )
+    elif virtual_site_key.type == "DivalentLonePair":
+        return _DivalentLonePairVirtualSite(
+            type="DivalentLonePair",
+            distance=virtual_site_potential.parameters["distance"],
+            out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
+            orientations=orientations,
+        )
+    elif virtual_site_key.type == "TrivalentLonePair":
+        return _TrivalentLonePairVirtualSite(
+            type="TrivalentLonePair",
+            distance=virtual_site_potential.parameters["distance"],
+            orientations=orientations,
+        )
+
+    else:
+        raise NotImplementedError(virtual_site_key.type)
+
+
+def _build_local_coordinate_frames(
+    interchange,
+    virtual_site_collection: SMIRNOFFVirtualSiteCollection,
+) -> numpy.ndarray:
+    """
+    Build local coordinate frames.
+
+    Adapted from an implementation in OpenFF Recharge (see `LICENSE-3RD-PARTY`).
+
+    See Also
+    --------
+    https://github.com/openforcefield/openff-recharge/blob/0.5.0/openff/recharge/charges/vsite.py#L584
+
+    """
+    stacked_frames: list[list] = [[], [], [], []]
+
+    for virtual_site_key, potential_key in virtual_site_collection.key_map.items():
+        virtual_site = _create_virtual_site_object(
+            virtual_site_key=virtual_site_key,
+            virtual_site_potential=virtual_site_collection.potentials[potential_key],
+        )
+
+        # positions of all "orientation" atoms, not just the single "parent"
+        orientation_coordinates = interchange.positions[
+            virtual_site_key.orientation_atom_indices,
+            :,
+        ].m_as(unit.nanometer)
+
+        local_frame_weights = virtual_site.local_frame_weights
+
+        weighted_coordinates = local_frame_weights @ orientation_coordinates
+
+        origin = weighted_coordinates[0, :]
+
+        xy_plane = weighted_coordinates[1:, :]
+
+        xy_plane_norm = xy_plane / numpy.sqrt(
+            (xy_plane * xy_plane).sum(-1),
+        ).reshape(-1, 1)
+
+        x_hat = xy_plane_norm[0, :]
+        z_hat = numpy.cross(x_hat, xy_plane[1, :])
+        y_hat = numpy.cross(z_hat, x_hat)
+
+        stacked_frames[0].append(origin.reshape(1, -1))
+        stacked_frames[1].append(x_hat.reshape(1, -1))
+        stacked_frames[2].append(y_hat.reshape(1, -1))
+        stacked_frames[3].append(z_hat.reshape(1, -1))
+
+    local_frames = numpy.stack([numpy.vstack(frames) for frames in stacked_frames])
+
+    return Quantity(local_frames, unit.nanometer)
+
+
+def _convert_local_coordinates(
+    local_frame_coordinates: numpy.ndarray,
+    local_coordinate_frames: numpy.ndarray,
+) -> numpy.ndarray:
+    d = local_frame_coordinates[:, 0].reshape(-1, 1)
+
+    theta = (local_frame_coordinates[:, 1] * _DEGREES_TO_RADIANS).reshape(-1, 1)
+    phi = (local_frame_coordinates[:, 2] * _DEGREES_TO_RADIANS).reshape(-1, 1)
+
+    cos_theta = numpy.cos(theta)
+    sin_theta = numpy.sin(theta)
+
+    cos_phi = numpy.cos(phi)
+    sin_phi = numpy.sin(phi)
+
+    # Here we use cos(phi) in place of sin(phi) and sin(phi) in place of cos(phi)
+    # this is because we want phi=0 to represent a 0 degree angle from the x-y plane
+    # rather than 0 degrees from the z-axis.
+    vsite_positions = local_coordinate_frames[0] + d * (
+        cos_theta * cos_phi * local_coordinate_frames[1]
+        + sin_theta * cos_phi * local_coordinate_frames[2]  # noqa
+        + sin_phi * local_coordinate_frames[3]  # noqa
+    )
+
+    return vsite_positions
+
+
+def _generate_positions(
+    interchange,
+    virtual_site_collection: SMIRNOFFVirtualSiteCollection,
+    conformer: Optional[Quantity] = None,
+) -> Quantity:
+    # TODO: Capture these objects instead of generating them on-the-fly so many times
+
+    local_frame_coordinates = numpy.vstack(
+        [
+            _create_virtual_site_object(
+                virtual_site_key,
+                virtual_site_collection.potentials[potential_key],
+            ).local_frame_coordinates
+            for virtual_site_key, potential_key in virtual_site_collection.key_map.items()
+        ],
+    )
+
+    local_coordinate_frames = _build_local_coordinate_frames(
+        interchange,
+        virtual_site_collection,
+    )
+
+    virtual_site_positions = _convert_local_coordinates(
+        local_frame_coordinates,
+        local_coordinate_frames,
+    )
+
+    return Quantity(
+        virtual_site_positions,
+        unit.nanometer,
+    )

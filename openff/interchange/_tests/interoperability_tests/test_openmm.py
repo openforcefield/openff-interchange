@@ -1030,6 +1030,8 @@ class TestToOpenMMPositions(_BaseTest):
     @pytest.mark.parametrize("include_virtual_sites", [True, False])
     def test_given_positions(self, include_virtual_sites, water, tip4p):
         """Test issue #616"""
+        import openmm.unit
+
         topology = Topology.from_molecules([water, water])
         out = Interchange.from_smirnoff(tip4p, topology)
 
@@ -1054,14 +1056,20 @@ class TestToOpenMMPositions(_BaseTest):
         )
 
         assert isinstance(positions, openmm.unit.Quantity)
-
-        # Number of particles per molecule
-        n = 3 + int(include_virtual_sites)
+        assert str(positions.unit) == "nanometer"
 
         assert numpy.allclose(
-            (positions[n:][:3] - positions[:n][:3]).value_in_unit(openmm.unit.angstrom),
-            numpy.array([[5, 0, 0], [5, 0, 0], [5, 0, 0]]),
+            (positions[3:6, :] - positions[:3, :]).value_in_unit(openmm.unit.angstrom),
+            [5, 0, 0],
         )
+
+        if include_virtual_sites:
+            assert numpy.allclose(
+                (positions[-1, :] - positions[-2, :]).value_in_unit(
+                    openmm.unit.angstrom,
+                ),
+                [5, 0, 0],
+            )
 
 
 @skip_if_missing("mdtraj")

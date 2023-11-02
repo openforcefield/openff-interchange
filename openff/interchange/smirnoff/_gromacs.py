@@ -548,7 +548,9 @@ def _convert_virtual_sites(
     for virtual_site_key in molecule_virtual_site_map[
         interchange.topology.molecule_index(unique_molecule)
     ]:
-        from openff.interchange.interop.common import _create_virtual_site_object
+        from openff.interchange.smirnoff._virtual_sites import (
+            _create_virtual_site_object,
+        )
 
         virtual_site_potential = interchange["VirtualSites"].potentials[
             interchange["VirtualSites"].key_map[virtual_site_key]

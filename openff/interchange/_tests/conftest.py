@@ -1,17 +1,10 @@
 """Pytest configuration."""
-from math import cos, pi, sin
-from random import random
-
 import pytest
 from openff.toolkit import ForceField, Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff.parameters import (
-    AngleType,
-    BondType,
-    VirtualSiteType,
-)
+from openff.toolkit.typing.engines.smirnoff.parameters import BondType, VirtualSiteType
 from openff.units import Quantity, unit
 
-from openff.interchange._tests import get_test_file_path
+from openff.interchange._tests import MoleculeWithConformer, get_test_file_path
 
 
 @pytest.fixture()
@@ -52,31 +45,6 @@ def sage_with_bond_charge(sage):
 
 @pytest.fixture()
 def sage_with_planar_monovalent_carbonyl(sage):
-    sage["Bonds"].add_parameter(
-        parameter=BondType(
-            smirks="[#6:2]=[#8:1]",
-            id="b0",
-            length="1.5 * angstrom",
-            k="500 * angstrom**-2 * mole**-1 * kilocalorie",
-        ),
-    )
-    sage["Bonds"].add_parameter(
-        parameter=BondType(
-            smirks="[#6:2]-[#6:1]",
-            id="b00",
-            length="1.5 * angstrom",
-            k="500 * angstrom**-2 * mole**-1 * kilocalorie",
-        ),
-    )
-    sage["Angles"].add_parameter(
-        parameter=AngleType(
-            smirks="[#6:3]-[#6:2]=[#8:1]",
-            id="a0",
-            angle="120 * degree",
-            k="50 * kilocalorie / mole / radian ** 2",
-        ),
-    )
-
     sage.get_parameter_handler("VirtualSites")
     sage["VirtualSites"].add_parameter(
         parameter=VirtualSiteType(
@@ -242,9 +210,7 @@ def basic_top() -> Topology:
 
 @pytest.fixture(scope="session")
 def water() -> Molecule:
-    molecule = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
-    molecule.generate_conformers(n_conformers=1)
-    return molecule
+    return MoleculeWithConformer.from_mapped_smiles("[H:2][O:1][H:3]")
 
 
 @pytest.fixture(scope="session")
@@ -276,28 +242,9 @@ def water_tip4p() -> Molecule:
 def carbonyl_planar() -> Molecule:
     """A carbonyl group with a planar geometry."""
     # Geometry matching `planar_monovalent_carbonyl`
-    molecule = Molecule.from_mapped_smiles(
+    return MoleculeWithConformer.from_mapped_smiles(
         "[C:3]([C:2](=[O:1])[H:7])([H:4])([H:5])[H:6]",
     )
-
-    theta_123 = 120 / 180 * pi
-    molecule._conformers = [
-        Quantity(
-            [
-                [0.0, 1.5, 0.0],
-                [0.0, 0.0, 0.0],
-                [-1.5 * sin(theta_123), 1.5 * cos(theta_123), 0.0],
-                # hydrogen positions are not relevant for this test
-                3 * [random()],
-                3 * [random()],
-                3 * [random()],
-                3 * [random()],
-            ],
-            unit.angstrom,
-        ),
-    ]
-
-    return molecule
 
 
 @pytest.fixture()

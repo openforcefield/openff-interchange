@@ -7,11 +7,6 @@ import numpy
 from openff.units import Quantity, unit
 
 from openff.interchange import Interchange
-from openff.interchange.components._particles import (
-    _BondChargeVirtualSite,
-    _DivalentLonePairVirtualSite,
-    _VirtualSite,
-)
 from openff.interchange.interop._virtual_sites import _get_separation_by_atom_indices
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSVirtualSite,
@@ -19,6 +14,11 @@ from openff.interchange.interop.gromacs.models.models import (
     GROMACSVirtualSite3,
 )
 from openff.interchange.models import VirtualSiteKey
+from openff.interchange.smirnoff._virtual_sites import (
+    _BondChargeVirtualSite,
+    _DivalentLonePairVirtualSite,
+    _VirtualSite,
+)
 
 
 def _create_gromacs_virtual_site(

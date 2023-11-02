@@ -26,6 +26,8 @@ def minimize_openmm(
         ),
     )
 
+    simulation.context.computeVirtualSites()
+
     simulation.minimizeEnergy(
         tolerance=tolerance.to_openmm(),
         maxIterations=max_iterations,
