@@ -320,7 +320,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                             "virtual sites, not by a `ChargeIncrementModelHandler`.",
                         )
 
-                    total_charge = numpy.sum(parameter_value)
+                    total_charge: Quantity = numpy.sum(parameter_value)
                     # assumes virtual sites can only have charges determined in one step
                     charges[topology_key] = -1.0 * total_charge
 
