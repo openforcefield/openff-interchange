@@ -11,6 +11,20 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## 0.3.17 - 2023-11-02
+
+### New Features
+
+* #831 Adds `Interchange.minimize` and an underlying implementation with OpenMM.
+
+### Bugfixes
+
+* #830 #834 Updates versioneer configuration for Python 3.12 compatibility.
+
+### Behavior changes
+
+* #835 Most SMIRNOFF virtual site types are once again implemented in OpenMM with ``openmm.LocalCoordinatesSite`` as it is strictly the only proper option.
+
 ## 0.3.16 - 2023-10-18
 
 ### New Features
