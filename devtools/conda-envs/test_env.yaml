@@ -31,6 +31,7 @@ dependencies:
   - nglview
   - mdanalysis
   # Drivers
+  - gromacs=2023.3=nompi_*_101
   - gromacs >=2021=nompi*
   - lammps
   - panedr
