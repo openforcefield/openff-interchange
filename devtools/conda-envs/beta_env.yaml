@@ -8,10 +8,10 @@ channels:
 dependencies:
   # Core
   - python
-  - pip
   - numpy >=1.21
   - pydantic =1
   - openmm >=7.6
+  - jaimergp::cudatoolkit
   # OpenFF stack
   - openff-toolkit >=0.14.2
   - openff-models
@@ -31,7 +31,7 @@ dependencies:
   - pytest-randomly
   - mdanalysis
   # Drivers
-  - gromacs >=2021=nompi*
+  - gromacs =2023.3=nompi_*_101
   - lammps
   # https://github.com/conda-forge/quippy-feedstock/issues/15
   - panedr
