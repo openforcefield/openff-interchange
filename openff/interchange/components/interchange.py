@@ -416,7 +416,7 @@ class Interchange(DefaultModel):
 
         Parameters
         ----------
-        combine_nonbonded_forces : bool, default=False
+        combine_nonbonded_forces : bool, default=True
             If True, an attempt will be made to combine all non-bonded interactions into a single
             openmm.NonbondedForce.
             If False, non-bonded interactions will be split across multiple forces.
