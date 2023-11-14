@@ -33,7 +33,7 @@ dependencies:
   - nbval
   - mdanalysis
   # Drivers
-  # gromacs >=2021=nompi*  # No osx-arm64 builds
+  # gromacs =2023.3=nompi_*_101  # No osx-arm64 builds
   - lammps
   - panedr
   # Typing

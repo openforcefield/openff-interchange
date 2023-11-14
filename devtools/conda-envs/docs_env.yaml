@@ -9,7 +9,7 @@ dependencies:
   - python =3.10
   - pip
   - numpy >=1.21
-  - pydantic >=1.10.8,<2.0.0a0
+  - pydantic =1
   - openff-toolkit-base >=0.14.2
   - openff-models
   - openmm >=7.6
@@ -18,7 +18,7 @@ dependencies:
   - nglview
   - panedr
   - typing-extensions
-  - pandas-stubs >=1.2.0.56
+  - pandas-stubs
   # readthedocs dependencies
   - myst-parser
   - numpydoc

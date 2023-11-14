@@ -5,20 +5,18 @@ channels:
 dependencies:
   # Core
   - python
-  - pip
   - numpy
   - pydantic
   # OpenFF stack
   - openff-toolkit-base >=0.14.3
   - openff-units
   - openff-models
-  # Needs to be explicitly listed to not be dropped with AmberTools is removed
+  # Needs to be explicitly listed to not be dropped when AmberTools is removed
   - rdkit
   # Optional features
-  - unyt
+  # GMSO does not support Pydantic 2; should come in release after 0.12.0
+  # foyer
   # mbuild
-  # GMSO does not support Pydantic 2
-  # foyer >=0.11.3
   # Testing
   - mdtraj
   - intermol
@@ -31,11 +29,11 @@ dependencies:
   - nglview
   - mdanalysis
   # Drivers
-  - gromacs >=2021=nompi*
+  - gromacs =2023.3=nompi_*_101
   - lammps
   - panedr
   # Typing
   - mypy =1.3
   - typing-extensions
   - types-setuptools
-  - pandas-stubs >=1.2.0.56
+  - pandas-stubs
