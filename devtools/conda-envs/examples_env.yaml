@@ -9,7 +9,6 @@ dependencies:
   - numpy >=1.21
   - pydantic =1
   - openmm >=7.6
-  - jaimergp::cudatoolkit
   # OpenFF stack
   - openff-toolkit >=0.14.2
   - openff-nagl ==0.3.1

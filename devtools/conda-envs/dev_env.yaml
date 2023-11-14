@@ -10,7 +10,6 @@ dependencies:
   - numpy
   - pydantic
   - openmm
-  - jaimergp::cudatoolkit
   # OpenFF stack
   - openff-toolkit ==0.14.3
   - openff-interchange-base

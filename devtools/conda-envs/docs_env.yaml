@@ -13,7 +13,6 @@ dependencies:
   - openff-toolkit-base >=0.14.2
   - openff-models
   - openmm >=7.6
-  - jaimergp::cudatoolkit
   - mbuild
   - foyer >=0.11.3
   - nglview
