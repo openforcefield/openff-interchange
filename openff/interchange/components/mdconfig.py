@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Literal
 
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
@@ -45,7 +45,7 @@ class MDConfig(DefaultModel):
         description="The method used to calculate the vdW interactions.",
     )
     vdw_cutoff: FloatQuantity["angstrom"] = Field(
-        unit.Quantity(9.0, unit.angstrom),
+        Quantity(9.0, unit.angstrom),
         description="The distance at which pairwise interactions are truncated",
     )
     mixing_rule: str = Field(
@@ -58,7 +58,7 @@ class MDConfig(DefaultModel):
         description="Whether or not to use a switching function for the vdw interactions",
     )
     switching_distance: FloatQuantity["angstrom"] = Field(
-        unit.Quantity(0.0, unit.angstrom),
+        Quantity(0.0, unit.angstrom),
         description="The distance at which the switching function is applied",
     )
     coul_method: str = Field(
@@ -66,7 +66,7 @@ class MDConfig(DefaultModel):
         description="The method used to compute pairwise electrostatic interactions",
     )
     coul_cutoff: FloatQuantity["angstrom"] = Field(
-        unit.Quantity(9.0, unit.angstrom),
+        Quantity(9.0, unit.angstrom),
         description=(
             "The distance at which electrostatic interactions are truncated or transition from "
             "short- to long-range."

@@ -4,7 +4,7 @@ from shutil import which
 from typing import Optional
 
 import numpy
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.interchange import Interchange
 from openff.interchange.components.mdconfig import MDConfig
@@ -63,7 +63,7 @@ def get_lammps_energies(
 def _get_lammps_energies(
     interchange: Interchange,
     round_positions: Optional[int] = None,
-) -> dict[str, unit.Quantity]:
+) -> dict[str, Quantity]:
     lmp = _find_lammps_executable(raise_exception=True)
 
     if round_positions is not None:
@@ -106,7 +106,7 @@ def _get_lammps_energies(
 
 
 def _process(
-    energies: dict[str, unit.Quantity],
+    energies: dict[str, Quantity],
     detailed: bool = False,
 ) -> EnergyReport:
     if detailed:

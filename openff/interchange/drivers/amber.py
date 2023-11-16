@@ -1,11 +1,12 @@
 """Functions for running energy evluations with Amber."""
 import subprocess
 import tempfile
+from collections.abc import MutableMapping
 from pathlib import Path
 from shutil import which
-from typing import Union
+from typing import Optional, Union
 
-from openff.units import unit
+from openff.units import Quantity, unit
 from openff.utilities.utilities import temporary_cd
 
 from openff.interchange import Interchange
@@ -56,7 +57,7 @@ def get_amber_energies(
 def _get_amber_energies(
     interchange: Interchange,
     writer: str = "internal",
-) -> dict[str, unit.Quantity]:
+) -> MutableMapping[str, Quantity | None]:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             if writer == "internal":
@@ -83,7 +84,7 @@ def _run_sander(
     inpcrd_file: Union[Path, str],
     prmtop_file: Union[Path, str],
     input_file: Union[Path, str],
-) -> dict[str, unit.Quantity]:
+) -> MutableMapping[str, Optional[Quantity]]:
     """
     Given Amber files, return single-point energies as computed by Amber.
 
@@ -98,7 +99,7 @@ def _run_sander(
 
     Returns
     -------
-    energies: Dict[str, unit.Quantity]
+    energies: dict[str, Quantity]
         A dictionary of energies, keyed by the GROMACS energy term name.
 
     """
@@ -128,7 +129,7 @@ def _run_sander(
     return _parse_amber_energy("mdinfo")
 
 
-def _parse_amber_energy(mdinfo: str) -> dict[str, unit.Quantity]:
+def _parse_amber_energy(mdinfo: str) -> MutableMapping[str, Optional[Quantity]]:
     """
     Parse AMBER output file and group the energy terms in a dict.
 
@@ -157,7 +158,7 @@ def _parse_amber_energy(mdinfo: str) -> dict[str, unit.Quantity]:
     # Strange ranges for amber file data.
     ranges = [[1, 24], [26, 49], [51, 77]]
 
-    e_out = dict()
+    e_out: MutableMapping[str, Quantity | None] = dict()
     potential = 0 * unit.kilocalories_per_mole
     for line in all_lines[startline + 1 :]:
         if "=" in line:
@@ -166,7 +167,10 @@ def _parse_amber_energy(mdinfo: str) -> dict[str, unit.Quantity]:
                 term = line[r[0] : r[1]]
                 if "=" in term:
                     energy_type, energy_value = term.strip().split("=")
-                    energy_value = float(energy_value) * unit.kilocalories_per_mole
+                    energy_value = Quantity(
+                        float(energy_value),
+                        unit.kilocalories_per_mole,
+                    )
                     potential += energy_value
                     energy_type = energy_type.rstrip()
                     e_out[energy_type] = energy_value
@@ -177,7 +181,7 @@ def _parse_amber_energy(mdinfo: str) -> dict[str, unit.Quantity]:
     return e_out
 
 
-def _get_amber_energy_vdw(amber_energies: dict) -> unit.Quantity:
+def _get_amber_energy_vdw(amber_energies: MutableMapping) -> Quantity:
     """Get the total nonbonded energy from a set of Amber energies."""
     amber_vdw = 0.0 * unit.kilojoule_per_mole
     for key in ["VDWAALS", "1-4 VDW", "1-4 NB"]:
@@ -187,7 +191,7 @@ def _get_amber_energy_vdw(amber_energies: dict) -> unit.Quantity:
     return amber_vdw
 
 
-def _get_amber_energy_coul(amber_energies: dict) -> unit.Quantity:
+def _get_amber_energy_coul(amber_energies: MutableMapping) -> Quantity:
     """Get the total nonbonded energy from a set of Amber energies."""
     amber_coul = 0.0 * unit.kilojoule_per_mole
     for key in ["EEL", "1-4 EEL"]:
@@ -198,7 +202,7 @@ def _get_amber_energy_coul(amber_energies: dict) -> unit.Quantity:
 
 
 def _process(
-    energies: dict[str, unit.Quantity],
+    energies: MutableMapping[str, Optional[Quantity]],
     detailed: bool = False,
 ) -> EnergyReport:
     if detailed:

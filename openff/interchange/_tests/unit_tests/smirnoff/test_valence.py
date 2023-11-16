@@ -6,7 +6,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondHandler,
     ImproperTorsionHandler,
 )
-from openff.units import unit
+from openff.units import Quantity, unit
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -428,7 +428,7 @@ class TestParameterInterpolation(_BaseTest):
         topology = Topology.from_molecules(mol)
 
         out = Interchange.from_smirnoff(forcefield, topology)
-        out.box = unit.Quantity(4 * numpy.eye(3), unit.nanometer)
+        out.box = Quantity(4 * numpy.eye(3), unit.nanometer)
         omm_system = out.to_openmm(combine_nonbonded_forces=True)
 
         # Verify that the assigned bond parameters were correctly interpolated

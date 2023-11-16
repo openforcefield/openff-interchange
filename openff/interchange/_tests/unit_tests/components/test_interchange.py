@@ -7,7 +7,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     ParameterHandler,
 )
-from openff.units import unit
+from openff.units import Quantity, unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
@@ -77,7 +77,7 @@ class TestInterchange(_BaseTest):
         tip3p.deregister_parameter_handler("Electrostatics")
 
         topology = water.to_topology()
-        topology.box_vectors = unit.Quantity([4, 4, 4], units=unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], units=unit.nanometer)
 
         with pytest.raises(MissingParameterHandlerError, match="modify partial"):
             Interchange.from_smirnoff(tip3p, topology)
@@ -424,7 +424,7 @@ class TestBadExports(_BaseTest):
             force_field=sage,
             topology=[Molecule.from_smiles("CC")],
         )
-        zero_positions.positions = unit.Quantity(
+        zero_positions.positions = Quantity(
             numpy.zeros((zero_positions.topology.n_atoms, 3)),
             unit.nanometer,
         )
@@ -445,7 +445,7 @@ class TestInterchangeSerialization(_BaseTest):
         for molecule in topology.molecules:
             molecule.generate_conformers(n_conformers=1)
 
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
 
         original = Interchange.from_smirnoff(
             force_field=sage,
@@ -467,7 +467,7 @@ class TestWrappedCalls(_BaseTest):
         mol = Molecule.from_smiles("CCO")
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
-        top.box_vectors = unit.Quantity(numpy.eye(3) * 4, unit.nanometer)
+        top.box_vectors = Quantity(numpy.eye(3) * 4, unit.nanometer)
 
         return Interchange.from_smirnoff(force_field=sage, topology=top)
 

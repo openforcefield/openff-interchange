@@ -2,7 +2,7 @@ from typing import Union
 
 import pytest
 from openff.toolkit import Topology
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.interchange._tests import _BaseTest
 from openff.interchange.components.mdconfig import (
@@ -21,7 +21,7 @@ def system_no_constraints(sage_unconstrained, basic_top):
 @pytest.fixture()
 def rigid_water_box(sage, water):
     topology = water.to_topology()
-    topology.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
+    topology.box_vectors = Quantity([5, 5, 5], unit.nanometer)
     return sage.create_interchange(topology)
 
 

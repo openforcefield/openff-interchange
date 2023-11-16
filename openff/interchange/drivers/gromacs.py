@@ -6,12 +6,13 @@ from pathlib import Path
 from shutil import which
 from typing import Optional, Union
 
-from openff.units import unit
+from openff.units import Quantity
 from openff.utilities.utilities import requires_package, temporary_cd
 
+from openff.interchange import Interchange
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.constants import kj_mol
-from openff.interchange.drivers.report import EnergyReport
+from openff.interchange.drivers.report import _ENERGIES, EnergyReport
 from openff.interchange.exceptions import (
     GMXGromppError,
     GMXMdrunError,
@@ -22,10 +23,6 @@ if sys.version_info >= (3, 10):
     from importlib import resources
 else:
     import importlib_resources as resources
-
-from openff.units import Quantity
-
-from openff.interchange import Interchange
 
 
 def _find_gromacs_executable(raise_exception: bool = False) -> Optional[str]:
@@ -96,7 +93,7 @@ def _get_gromacs_energies(
     interchange: Interchange,
     mdp: str = "auto",
     round_positions: int = 8,
-) -> dict[str, unit.Quantity]:
+) -> _ENERGIES:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             prefix = "_tmp"
@@ -122,7 +119,7 @@ def _run_gmx_energy(
     gro_file: Union[Path, str],
     mdp_file: Union[Path, str],
     maxwarn: int = 1,
-) -> dict[str, unit.Quantity]:
+) -> _ENERGIES:
     """
     Given GROMACS files, return single-point energies as computed by GROMACS.
 
@@ -139,7 +136,7 @@ def _run_gmx_energy(
 
     Returns
     -------
-    energies: Dict[str, unit.Quantity]
+    energies: dict[str, Quantity]
         A dictionary of energies, keyed by the GROMACS energy term name.
 
     """
@@ -180,38 +177,21 @@ def _run_gmx_energy(
     return _parse_gmx_energy("out.edr")
 
 
-def _get_gmx_energy_vdw(gmx_energies: dict) -> Quantity:
-    """Get the total nonbonded energy from a set of GROMACS energies."""
-    gmx_vdw = 0.0 * kj_mol
-    for key in ["LJ (SR)", "LJ-14", "Disper. corr.", "Buck.ham (SR)"]:
+def _get_gmx_energy_by_keys(
+    gmx_energies,
+    keys: list[str],
+) -> Quantity:
+    summed_energy = Quantity(0.0, kj_mol)
+
+    for key in keys:
         if key in gmx_energies:
-            gmx_vdw += gmx_energies[key]
+            summed_energy += gmx_energies[key]
 
-    return gmx_vdw
-
-
-def _get_gmx_energy_coul(gmx_energies: dict) -> Quantity:
-    gmx_coul = 0.0 * kj_mol
-    for key in ["Coulomb (SR)", "Coul. recip.", "Coulomb-14"]:
-        if key in gmx_energies:
-            gmx_coul += gmx_energies[key]
-
-    return gmx_coul
-
-
-def _get_gmx_energy_torsion(gmx_energies: dict) -> Quantity:
-    """Canonicalize torsion energies from a set of GROMACS energies."""
-    gmx_torsion = 0.0 * kj_mol
-
-    for key in ["Torsion", "Proper Dih.", "Per. Imp. Dih."]:
-        if key in gmx_energies:
-            gmx_torsion += gmx_energies[key]
-
-    return gmx_torsion
+    return summed_energy
 
 
 @requires_package("panedr")
-def _parse_gmx_energy(edr_path: str) -> dict[str, unit.Quantity]:
+def _parse_gmx_energy(edr_path: str) -> _ENERGIES:
     """Parse an `.edr` file written by `gmx energy`."""
     import panedr
 
@@ -248,7 +228,7 @@ def _parse_gmx_energy(edr_path: str) -> dict[str, unit.Quantity]:
 
 
 def _process(
-    energies: dict[str, unit.Quantity],
+    energies: _ENERGIES,
     detailed: bool = False,
 ) -> EnergyReport:
     """Process energies from GROMACS into a standardized format."""
@@ -257,11 +237,20 @@ def _process(
 
     return EnergyReport(
         energies={
-            "Bond": energies.get("Bond", 0.0 * kj_mol),
-            "Angle": energies.get("Angle", 0.0 * kj_mol),
-            "Torsion": _get_gmx_energy_torsion(energies),
-            "RBTorsion": energies.get("Ryckaert-Bell.", 0.0 * kj_mol),
-            "vdW": _get_gmx_energy_vdw(energies),
-            "Electrostatics": _get_gmx_energy_coul(energies),
+            "Bond": energies.get("Bond"),
+            "Angle": energies.get("Angle"),
+            "Torsion": _get_gmx_energy_by_keys(
+                energies,
+                ["Torsion", "Proper Dih.", "Per. Imp. Dih."],
+            ),
+            "RBTorsion": energies.get("Ryckaert-Bell."),
+            "vdW": _get_gmx_energy_by_keys(
+                energies,
+                ["LJ (SR)", "LJ-14", "Disper. corr.", "Buck.ham (SR)"],
+            ),
+            "Electrostatics (SR)": _get_gmx_energy_by_keys(
+                energies,
+                ["Coulomb (SR)", "Coulomb-14", "Coul. recip."],
+            ),
         },
     )

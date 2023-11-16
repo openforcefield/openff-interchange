@@ -12,7 +12,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
 )
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.interchange.components.potentials import Collection, Potential
 from openff.interchange.exceptions import (
@@ -57,7 +57,7 @@ def collection_loader(data: str) -> dict:
         if isinstance(val, (str, bool, type(None))):
             # These are stored as string but must be parsed into `Quantity`
             if key in ("cutoff", "switch_width"):
-                tmp[key] = unit.Quantity(*json.loads(val).values())  # type: ignore[arg-type]
+                tmp[key] = Quantity(*json.loads(val).values())  # type: ignore[arg-type]
             else:
                 tmp[key] = val
         elif isinstance(val, dict):

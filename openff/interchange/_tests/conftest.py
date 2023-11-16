@@ -204,7 +204,7 @@ def gbsa_force_field() -> ForceField:
 @pytest.fixture()
 def basic_top() -> Topology:
     topology = Molecule.from_smiles("C").to_topology()
-    topology.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
+    topology.box_vectors = Quantity([5, 5, 5], unit.nanometer)
     return topology
 
 

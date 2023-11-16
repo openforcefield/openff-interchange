@@ -560,7 +560,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                 elif len(atom_indices) - len(charge_increments) == 1:
                     # If we've been provided with one less charge increment value than tagged atoms, assume the last
                     # tagged atom offsets the charge of the others to make the chargeincrement net-neutral
-                    charge_increment_sum = unit.Quantity(0.0, unit.elementary_charge)
+                    charge_increment_sum = Quantity(0.0, unit.elementary_charge)
 
                     for ci in charge_increments:
                         charge_increment_sum += ci
@@ -906,7 +906,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         f"a net charge of {charge_sum}",
                     )
 
-            molecule.partial_charges = unit.Quantity(
+            molecule.partial_charges = Quantity(
                 molecule_charges,
                 unit.elementary_charge,
             )

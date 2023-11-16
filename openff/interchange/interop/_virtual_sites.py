@@ -182,7 +182,7 @@ def _get_separation_by_atom_indices(
                 # law of cosines
                 c2 = a**2 + b**2 - 2 * a * b * numpy.cos(gamma)
 
-                return unit.Quantity(
+                return Quantity(
                     c2**0.5,
                     unit.nanometer,
                 )

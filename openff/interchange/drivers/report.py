@@ -1,10 +1,11 @@
 """Storing and processing results of energy evaluations."""
 import warnings
-from typing import Optional
+from collections.abc import MutableMapping
+from typing import Optional, TypeAlias
 
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.interchange.constants import kj_mol
 from openff.interchange.exceptions import (
@@ -30,12 +31,14 @@ _KNOWN_ENERGY_TERMS: set[str] = {
     "Electrostatics 1-4",
 }
 
+_ENERGIES: TypeAlias = MutableMapping[str, Quantity | None]
+
 
 class EnergyReport(DefaultModel):
     """A lightweight class containing single-point energies as computed by energy tests."""
 
     # TODO: Should the default be None or 0.0 kj_mol?
-    energies: dict[str, Optional[FloatQuantity]] = {
+    energies: MutableMapping[str, FloatQuantity] = {
         "Bond": None,
         "Angle": None,
         "Torsion": None,

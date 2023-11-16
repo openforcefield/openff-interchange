@@ -91,11 +91,11 @@ def interchange_loader(data: str) -> dict:
         if val is None:
             continue
         if key == "positions":
-            tmp["positions"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+            tmp["positions"] = Quantity(val["val"], unit.Unit(val["unit"]))
         elif key == "velocities":
-            tmp["velocities"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+            tmp["velocities"] = Quantity(val["val"], unit.Unit(val["unit"]))
         elif key == "box":
-            tmp["box"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+            tmp["box"] = Quantity(val["val"], unit.Unit(val["unit"]))
         elif key == "topology":
             tmp["topology"] = Topology.from_json(val)
         elif key == "collections":

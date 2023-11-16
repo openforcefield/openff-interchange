@@ -4,7 +4,7 @@ from typing import Literal, Optional
 from openff.models.types import FloatQuantity
 from openff.toolkit import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kcal_mol_a2
@@ -60,7 +60,7 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
             potential = Potential(
                 parameters={
                     "radius": force_field_parameters.radius,
-                    "scale": unit.Quantity(
+                    "scale": Quantity(
                         force_field_parameters.scale,
                         unit.dimensionless,
                     ),

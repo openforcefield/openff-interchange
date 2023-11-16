@@ -3,7 +3,7 @@ import warnings
 from typing import TYPE_CHECKING, Optional
 
 import numpy
-from openff.units import unit
+from openff.units import Quantity
 from openff.units.openmm import ensure_quantity
 from openff.utilities.utilities import has_package, requires_package
 
@@ -71,9 +71,10 @@ def get_openmm_energies(
         combine_nonbonded_forces=combine_nonbonded_forces,
     )
 
-    box_vectors: openmm.unit.Quantity = (
-        None if interchange.box is None else interchange.box.to_openmm()
-    )
+    if interchange.box_vectors:
+        box_vectors: openmm.unit.Quantity = interchange.box_vectors.to_openmm()
+    else:
+        box_vectors = None
 
     positions: openmm.unit.Quantity = to_openmm_positions(
         interchange,
@@ -140,7 +141,7 @@ def _process(
     combine_nonbonded_forces: bool,
     detailed: bool,
 ) -> EnergyReport:
-    staged: dict[str, unit.Quantity] = dict()
+    staged: dict[str, Quantity] = dict()
 
     valence_map = {
         openmm.HarmonicBondForce: "Bond",

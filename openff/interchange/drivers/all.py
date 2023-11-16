@@ -79,6 +79,6 @@ def get_summary_data(
 
     for k, v in energies.items():
         for kk in v.energies:
-            energies[k].energies[kk] = energies[k].energies[kk].m_as(kj_mol)  # type: ignore[union-attr]
+            energies[k].energies[kk] = energies[k].energies[kk].m_as(kj_mol)  # type: ignore[attr-defined]
 
     return DataFrame({k: v.energies for k, v in energies.items()}).T

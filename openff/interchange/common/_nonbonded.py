@@ -19,7 +19,7 @@ class _NonbondedCollection(Collection, abc.ABC):  # noqa
     type: str = "nonbonded"
 
     cutoff: FloatQuantity["angstrom"] = Field(  # noqa
-        unit.Quantity(9.0, unit.angstrom),
+        Quantity(9.0, unit.angstrom),
         description="The distance at which pairwise interactions are truncated",
     )
 
@@ -56,7 +56,7 @@ class vdWCollection(_NonbondedCollection):
     )
 
     switch_width: FloatQuantity["angstrom"] = Field(  # noqa
-        unit.Quantity(1.0, unit.angstrom),
+        Quantity(1.0, unit.angstrom),
         description="The width over which the switching function is applied",
     )
 
