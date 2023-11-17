@@ -317,6 +317,13 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
     if interchange["vdW"].mixing_rule != "lorentz-berthelot":
         raise UnsupportedMixingRuleError(interchange["vdW"].mixing_rule)
 
+    if "VirtualSites" in interchange.collections:
+        if len(interchange["VirtualSites"].key_map) > 0:
+            raise UnsupportedExportError(
+                "Virtual sites are not yet supported in Amber writers. See issues labeled "
+                "'amber' or 'virtual sites' for status and updates of this feature.",
+            )
+
     if interchange.box is None:
         if interchange["Electrostatics"].periodic_potential != _PME:
             raise UnsupportedExportError(

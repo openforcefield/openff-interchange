@@ -17,6 +17,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 * #844 Fixes a bug in which charge assignment caching incorrect charges between similar molecules with different atom orderings.
 
+### Behavior changes
+
+* #845 Adds an exception when unimplemented virtual sites are present while writing to Amber files. Previously this was a silent error producing invalid files.
+
 ## 0.3.17 - 2023-11-02
 
 ### New Features

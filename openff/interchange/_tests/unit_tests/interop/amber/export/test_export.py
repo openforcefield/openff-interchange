@@ -5,6 +5,7 @@ from openff.utilities import has_package
 
 from openff.interchange import Interchange
 from openff.interchange._tests import get_test_file_path, requires_openeye
+from openff.interchange.exceptions import UnsupportedExportError
 
 if has_package("openmm"):
     import openmm
@@ -60,3 +61,11 @@ def exclusions_in_rings(molecule):
     for force in loaded_system.getForces():
         if isinstance(force, openmm.NonbondedForce):
             assert force.getNumExceptions() == reference
+
+
+def test_virtual_site_error(tip4p, water):
+    with pytest.raises(
+        UnsupportedExportError,
+        match="not yet supported in Amber writers",
+    ):
+        tip4p.create_interchange(water.to_topology()).to_prmtop("foo")
