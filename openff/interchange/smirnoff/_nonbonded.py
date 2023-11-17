@@ -456,7 +456,12 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
     @classmethod
     @functools.lru_cache(None)
-    def _compute_partial_charges(cls, molecule: Molecule, method: str) -> "Quantity":
+    def _compute_partial_charges(
+        cls,
+        molecule: Molecule,
+        mapped_smiles: str,
+        method: str,
+    ) -> "Quantity":
         """Call out to the toolkit's toolkit wrappers to generate partial charges."""
         molecule = copy.deepcopy(molecule)
         molecule.assign_partial_charges(method)
@@ -646,6 +651,11 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
         partial_charges = cls._compute_partial_charges(
             unique_molecule,
+            unique_molecule.to_smiles(
+                isomeric=True,
+                explicit_hydrogens=True,
+                mapped=True,
+            ),
             method=partial_charge_method,
         )
 

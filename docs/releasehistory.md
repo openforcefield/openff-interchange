@@ -11,7 +11,11 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.3.18 - 2023-11-16
+
+### Bugfixes
+
+* #844 Fixes a bug in which charge assignment caching incorrect charges between similar molecules with different atom orderings.
 
 ### Behavior changes
 

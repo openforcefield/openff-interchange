@@ -1,6 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit import Topology
+from openff.toolkit import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
@@ -9,7 +9,7 @@ from openff.toolkit.typing.engines.smirnoff import (
     vdWHandler,
 )
 from openff.toolkit.utils.exceptions import SMIRNOFFVersionError
-from openff.units import unit
+from openff.units import Quantity, unit
 from packaging.version import Version
 
 from openff.interchange import Interchange
@@ -200,6 +200,35 @@ class TestvdWUpDownConversion(_BaseTest):
         except AssertionError:
             assert not hasattr(handler, "__delete__")
             pytest.skip("ParameterAttribute.__delete__ not implemented")
+
+
+class TestElectrostatics:
+    def test_caching_detects_atom_ordering(self, sage):
+        def get_charges_from_interchange(
+            molecule: Molecule,
+        ) -> dict[int, Quantity]:
+            return {
+                key.atom_indices[0]: val
+                for key, val in sage.create_interchange(molecule.to_topology())[
+                    "Electrostatics"
+                ].charges.items()
+            }
+
+        def compare_charges(
+            molecule: Molecule,
+            interchange_charges: dict[int, Quantity],
+        ):
+            for index, molecule_charge in enumerate(molecule.partial_charges):
+                assert interchange_charges[index] == molecule_charge
+
+        original = Molecule.from_mapped_smiles("[H:1]-[C:2]#[N:3]")
+        reordered = Molecule.from_mapped_smiles("[H:3]-[C:2]#[N:1]")
+
+        for molecule in [original, reordered]:
+            molecule.assign_partial_charges("am1bcc")
+
+        compare_charges(original, get_charges_from_interchange(original))
+        compare_charges(reordered, get_charges_from_interchange(reordered))
 
 
 class TestSMIRNOFFChargeIncrements(_BaseTest):
