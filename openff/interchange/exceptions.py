@@ -346,5 +346,9 @@ class PACKMOLValueError(InterchangeException):
     """Exception raised when a bad input is passed to a PACKMOL wrapper."""
 
 
+class MinimizationError(InterchangeException):
+    """Exception raised when an energy minimization fails to converge."""
+
+
 class ExperimentalFeatureException(InterchangeException):
     """Exception raised when an experimental feature is used without opt-in."""
