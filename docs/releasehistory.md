@@ -11,6 +11,16 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+### New Features
+
+* #848 Raises a more useful error when `Interchange.minimize` is called while positions are not present.
+
+### Bugfixes
+
+* #848 Fixes a bug in which `Interchange.minimize` erroneously appended virtual site positions to the `positions` attribute.
+
 ## 0.3.18 - 2023-11-16
 
 ### Bugfixes
