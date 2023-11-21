@@ -257,14 +257,19 @@ class MDConfig(DefaultModel):
             vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)
             coul_cutoff = round(self.coul_cutoff.m_as(unit.angstrom), 4)
 
-            if self.coul_method == _PME:
-                lmp.write(f"pair_style lj/cut/coul/long {vdw_cutoff} {coul_cutoff}\n")
-            elif self.coul_method == "cutoff":
-                lmp.write(f"pair_style lj/cut/coul/cut {vdw_cutoff} {coul_cutoff}\n")
+            if self.vdw_method == "pme" and self.coul_method == "pme":
+                lmp.write("pair_style lj/long/coul/long")
+            elif self.vdw_method == "cutoff":
+                if self.coul_method == _PME:
+                    lmp.write("pair_style lj/cut/coul/long")
+                elif self.coul_method == "cutoff":
+                    lmp.write("pair_style lj/cut/coul/cut")
             else:
                 raise UnsupportedExportError(
-                    f"Unsupported electrostatics method {self.coul_method}",
+                    "Unsupported nonbonded methods found: "
+                    f"{self.coul_method=}, {self.vdw_method=}",
                 )
+            lmp.write(f" {vdw_cutoff} {coul_cutoff}\n")
 
             if self.mixing_rule == "lorentz-berthelot":
                 lmp.write("pair_modify mix arithmetic tail yes\n\n")
