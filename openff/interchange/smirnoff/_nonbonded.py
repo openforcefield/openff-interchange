@@ -176,7 +176,10 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
         Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
 
         """
-        self.periodic_method = parameter_handler.periodic_method.lower()
+        self.periodic_method = parameter_handler.periodic_method.lower().replace(
+            "ewald3d",
+            "pme",
+        )
         self.nonperiodic_method = parameter_handler.nonperiodic_method.lower()
         self.cutoff = parameter_handler.cutoff
 
@@ -222,7 +225,10 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
             scale_15=parameter_handler.scale15,
             cutoff=parameter_handler.cutoff,
             mixing_rule=parameter_handler.combining_rules.lower(),
-            periodic_method=parameter_handler.periodic_method.lower(),
+            periodic_method=parameter_handler.periodic_method.lower().replace(
+                "ewald3d",
+                "pme",
+            ),
             nonperiodic_method=parameter_handler.nonperiodic_method.lower(),
             switch_width=parameter_handler.switch_width,
         )
