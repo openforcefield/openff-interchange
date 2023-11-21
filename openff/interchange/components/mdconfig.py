@@ -198,8 +198,22 @@ class MDConfig(DefaultModel):
                 mdp.write("vdw-modifier = None\n")
                 mdp.write("rvdwswitch = 0\n")
 
-    def write_lammps_input(self, input_file: str = "run.in") -> None:
-        """Write a LAMMPS input file for running single-point energies."""
+    def write_lammps_input(
+        self,
+        input_file: str = "run.in",
+        data_file: str = "out.lmp",
+    ) -> None:
+        """
+        Write a LAMMPS input file for running single-point energies.
+
+        Parameters
+        ----------
+        input_file
+            The name of the input file to write.
+        data_file
+            The name of the data file to write.
+
+        """
         with open(input_file, "w") as lmp:
             lmp.write(
                 "units real\n"
@@ -260,7 +274,7 @@ class MDConfig(DefaultModel):
                 raise UnsupportedExportError(
                     f"Mixing rule {self.mixing_rule} not supported",
                 )
-            lmp.write("read_data out.lmp\n\n")
+            lmp.write(f"read_data {data_file}\n\n")
             lmp.write(
                 "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n",
             )
