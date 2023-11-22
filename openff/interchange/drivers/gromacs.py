@@ -175,7 +175,7 @@ def _run_gmx_energy(
 def _get_gmx_energy_vdw(gmx_energies: dict) -> Quantity:
     """Get the total nonbonded energy from a set of GROMACS energies."""
     gmx_vdw = 0.0 * kj_mol
-    for key in ["LJ (SR)", "LJ-14", "Disper. corr.", "Buck.ham (SR)"]:
+    for key in ["LJ (SR)", "LJ recip.", "LJ-14", "Disper. corr.", "Buck.ham (SR)"]:
         if key in gmx_energies:
             gmx_vdw += gmx_energies[key]
 
