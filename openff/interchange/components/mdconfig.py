@@ -170,6 +170,8 @@ class MDConfig(DefaultModel):
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
                 mdp.write("coulomb-modifier = None\n")
                 mdp.write("fourier-spacing = 0.12\n")
+                # TODO: Wire this through like `ewald_tolerance` in `to_openmm`
+                mdp.write("ewald-rtol = 1e-4\n")
             elif self.coul_method == "reactionfield":
                 mdp.write("coulombtype = Reaction-field\n")
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
@@ -180,8 +182,12 @@ class MDConfig(DefaultModel):
 
             if self.vdw_method == "cutoff":
                 mdp.write("vdwtype = cutoff\n")
-            elif self.vdw_method == _PME:
+            elif self.vdw_method in ("Ewald3D", "pme", "PME", _PME):
                 mdp.write("vdwtype = PME\n")
+                # TODO: Wire this through like `ewald_tolerance` in `to_openmm`
+                # TODO: Should this match electrostatics PME tolerance?
+                mdp.write("ewald-rtol-lj = 1e-4\n")
+                mdp.write(f"lj-pme-comb-rule = {self.mixing_rule}\n")
             else:
                 raise UnsupportedExportError(
                     f"vdW method {self.vdw_method} not supported",
@@ -190,7 +196,7 @@ class MDConfig(DefaultModel):
             vdw_cutoff = round(self.vdw_cutoff.m_as(unit.nanometer), 4)
             mdp.write(f"rvdw = {vdw_cutoff}\n")
 
-            if self.switching_function:
+            if self.switching_function and self.vdw_method == "cutoff":
                 mdp.write("vdw-modifier = Potential-switch\n")
                 distance = round(self.switching_distance.m_as(unit.nanometer), 4)
                 mdp.write(f"rvdw-switch = {distance}\n")
