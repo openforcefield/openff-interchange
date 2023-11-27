@@ -65,7 +65,7 @@ repos:
     exclude: .github
     args: ["--disable", "MD013", "MD033", "MD024", "MD046", "--ignore", "docs/using/experimental.md", "--"]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.7.0
+  rev: 1.7.1
   hooks:
     - id: nbqa-pyupgrade
       files: ^examples
