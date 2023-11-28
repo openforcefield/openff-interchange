@@ -307,7 +307,10 @@ def _convert_bonds(
     if len(molecule.settles) > 0:
         return
 
-    collection = interchange["Bonds"]
+    try:
+        collection = interchange["Bonds"]
+    except LookupError:
+        return
 
     for bond in unique_molecule.bonds:
         molecule_indices = tuple(
@@ -357,7 +360,10 @@ def _convert_angles(
     if len(molecule.settles) > 0:
         return
 
-    collection = interchange["Angles"]
+    try:
+        collection = interchange["Angles"]
+    except LookupError:
+        return
 
     for angle in unique_molecule.angles:
         topology_indices = tuple(interchange.topology.atom_index(a) for a in angle)
