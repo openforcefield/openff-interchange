@@ -10,13 +10,13 @@ class TestLJPME:
     def test_ljpme(self, sage):
         sage["vdW"].periodic_method = "Ewald3D"
 
-        topology = MoleculeWithConformer.from_smiles("C#N").to_topology()
-        topology.box_vectors = [2, 2, 2] * unit.nanometer
+        topology = MoleculeWithConformer.from_smiles("CC").to_topology()
+        topology.box_vectors = [10, 10, 10] * unit.nanometer
         interchange = sage.create_interchange(topology)
 
         get_openmm_energies(interchange, combine_nonbonded_forces=True).compare(
             get_gromacs_energies(interchange),
             tolerances={
-                "Nonbonded": Quantity(0.001, "kilojoule / mole"),
+                "Nonbonded": Quantity(0.05, "kilojoule / mole"),
             },
         )

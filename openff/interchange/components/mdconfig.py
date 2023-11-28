@@ -187,7 +187,7 @@ class MDConfig(DefaultModel):
                 # TODO: Wire this through like `ewald_tolerance` in `to_openmm`
                 # TODO: Should this match electrostatics PME tolerance?
                 mdp.write("ewald-rtol-lj = 1e-4\n")
-                mdp.write(f"lj-pme-comb-rule = {self.mixing_rule}\n")
+                mdp.write("lj-pme-comb-rule = geometric\n")
             else:
                 raise UnsupportedExportError(
                     f"vdW method {self.vdw_method} not supported",
