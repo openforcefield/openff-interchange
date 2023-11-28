@@ -39,14 +39,24 @@ class TestUnsupportedCases(_BaseTest):
 
 @skip_if_missing("openmm")
 class TestEwaldSettings:
-    def test_set_ewald_tolerance(self, sage, basic_top):
+    @pytest.mark.parametrize("lj_method", ["cutoff", "pme"])
+    def test_set_ewald_tolerance(self, sage, basic_top, lj_method):
         import openmm
+
+        if lj_method == "pme":
+            sage["vdW"].periodic_method = "Ewald3D"
 
         system = sage.create_interchange(basic_top).to_openmm(ewald_tolerance=1.234e-5)
 
         for force in system.getForces():
             if isinstance(force, openmm.NonbondedForce):
+                if lj_method == "pme":
+                    assert force.getNonbondedMethod() == openmm.NonbondedForce.LJPME
+                elif lj_method == "cutoff":
+                    assert force.getNonbondedMethod() == openmm.NonbondedForce.PME
+
                 assert force.getEwaldErrorTolerance() == 1.234e-5
+
                 break
         else:
             pytest.fail("Found no `NonbondedForce`")
