@@ -78,6 +78,8 @@ def from_openmm(
 
     if box_vectors is not None:
         interchange.box = box_vectors
+    elif system is not None:
+        interchange.box = system.getDefaultPeriodicBoxVectors()
 
     return interchange
 
