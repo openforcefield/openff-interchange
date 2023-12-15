@@ -379,7 +379,7 @@ class TestToPDB(_BaseTest):
             tip3p.create_interchange(water.to_topology()).to_pdb(
                 "_test.pdb",
                 include_virtual_sites=True,
-            ),
+            )
 
 
 class TestUnimplementedSMIRNOFFCases(_BaseTest):
