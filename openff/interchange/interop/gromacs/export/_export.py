@@ -58,7 +58,7 @@ class GROMACSWriter(DefaultModel):
             f"{gen_pairs:6s}\t"
             f"{self.system.vdw_14:8.6f}\t"
             f"{self.system.coul_14:8.6f}\n\n",
-        ),
+        )
 
     def _write_atomtypes(self, top):
         top.write("[ atomtypes ]\n")
