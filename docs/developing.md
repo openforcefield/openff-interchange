@@ -39,7 +39,7 @@ The configuration file (`.pre-commit-config.yaml`) is commited to the repo. This
 First, install `pre-commit`
 
 ```console
-$ conda install pre-commit -c conda-forge
+$ mamba install pre-commit -c conda-forge
 ...
 ```
 
@@ -95,9 +95,9 @@ Dependencies for building the documentation can be found in `docs/environment.ym
 
 ```shell
 # Create the environment
-conda env create --file devtools/conda-envs/docs_env.yaml
+mamba env create --file devtools/conda-envs/docs_env.yaml
 # Prepare the current shell session
-conda activate interchange-docs
+mamba activate interchange-docs
 cd docs
 # Build the docs
 make html
