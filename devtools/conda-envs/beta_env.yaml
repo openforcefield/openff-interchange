@@ -30,7 +30,7 @@ dependencies:
   - pytest-randomly
   - mdanalysis
   # Drivers
-  - gromacs =2023.3=nompi_*_101
+  - gromacs =2023.3=nompi_*_103
   - lammps
   # https://github.com/conda-forge/quippy-feedstock/issues/15
   - panedr

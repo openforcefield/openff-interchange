@@ -29,5 +29,5 @@ dependencies:
   - openmmforcefields >=0.11.2
   - rich
   # Drivers
-  - gromacs =2023.3=nompi_*_101
+  - gromacs =2023.3=nompi_*_103
   - lammps
