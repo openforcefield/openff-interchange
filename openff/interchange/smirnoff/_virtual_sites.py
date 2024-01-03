@@ -120,6 +120,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                             [parameter.smirks, parameter.name, parameter.match],
                         ),
                         associated_handler="VirtualSites",
+                        virtual_site_type=parameter.type,
                     )
                     self.key_map[virtual_site_key] = potential_key
                     self.virtual_site_key_topology_index_map[

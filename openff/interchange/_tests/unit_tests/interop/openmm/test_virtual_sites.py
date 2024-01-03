@@ -78,7 +78,7 @@ class TestTrivalentLonePairVirtualSite:
     ):
         import openmm
 
-        system: openmm.System = sage_with_trivalent_nitrogen.create_openmm_system(
+        system = sage_with_trivalent_nitrogen.create_openmm_system(
             ammonia_tetrahedral.to_topology(),
         )
 

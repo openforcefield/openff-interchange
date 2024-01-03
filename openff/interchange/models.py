@@ -284,6 +284,10 @@ class PotentialKey(DefaultModel):
         description="If this is a key to a WrappedPotential interpolating multiple parameter(s), "
         "the bond order determining the coefficients of the wrapped potentials.",
     )
+    virtual_site_type: Optional[str] = Field(
+        None,
+        description="The 'type' of virtual site (i.e. `BondCharge`) this parameter is associated with.",
+    )
 
     def __hash__(self) -> int:
         return hash((self.id, self.mult, self.associated_handler, self.bond_order))
