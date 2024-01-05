@@ -138,6 +138,11 @@ def _simple_topology_from_graph(graph: nx.Graph) -> Topology:
     return topology
 
 
+_SimpleMolecule.__deepcopy__ = lambda self, memo: self.__class__.from_dict(
+    self.to_dict(),
+)
+
+
 # This is to re-implement:
 #   https://github.com/openforcefield/openff-toolkit/blob/60014820e6a333bed04e8bf5181d177da066da4d/
 #   openff/toolkit/typing/engines/smirnoff/parameters.py#L2509-L2515
