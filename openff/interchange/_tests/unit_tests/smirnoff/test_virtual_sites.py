@@ -14,7 +14,6 @@ from openff.units import Quantity, unit
 from openff.units.openmm import to_openmm
 from openff.utilities import has_package, skip_if_missing
 
-from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest
 
 if has_package("openmm") or TYPE_CHECKING:
@@ -50,6 +49,10 @@ class TestSMIRNOFFVirtualSiteCharges:
                 "[H:3][C:1]([H:4])([H:5])[Cl:2]",
             ).to_topology(),
         )
+
+        assert {key.virtual_site_type for key in out["VirtualSites"].potentials} == {
+            "BondCharge",
+        }
 
         charges = [charge.m for charge in out["Electrostatics"].charges.values()]
 
@@ -136,10 +139,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
 
         force_field = cls.build_force_field(handler)
 
-        system = Interchange.from_smirnoff(
-            force_field=force_field,
-            topology=molecule.to_topology(),
-        ).to_openmm(combine_nonbonded_forces=True)
+        system = force_field.create_openmm_system(molecule.to_topology())
 
         n_v_sites = sum(
             1 if system.isVirtualSite(i) else 0 for i in range(system.getNumParticles())
@@ -490,12 +490,14 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
         )
         force_field.register_parameter_handler(handler)
 
-        system: openmm.System = Interchange.from_smirnoff(
-            force_field,
-            topology,
-        ).to_openmm(
-            combine_nonbonded_forces=True,
-        )
+        assert {
+            key.virtual_site_type
+            for key in force_field.create_interchange(topology)[
+                "VirtualSites"
+            ].potentials
+        } == {parameter.type for parameter in parameters}
+
+        system = force_field.create_openmm_system(topology)
 
         assert system.getNumParticles() == expected_n_total
 
@@ -541,3 +543,39 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             expected_total_charge,
             total_charge.value_in_unit(openmm.unit.elementary_charge),
         )
+
+    def test_virtual_site_type_stored_in_potential_key(
+        self,
+        ethanol,
+        sage_with_bond_charge,
+        sage_with_trivalent_nitrogen,
+    ):
+        # Can't use a fixture here because of the modified versions
+        sage = ForceField("openff-2.1.0.offxml")
+
+        assert {
+            key.virtual_site_type
+            for key in sage.create_interchange(ethanol.to_topology())["vdW"].potentials
+        } == {None}
+
+        with pytest.raises(LookupError):
+            assert {
+                key.virtual_site_type
+                for key in sage.create_interchange(ethanol.to_topology())[
+                    "VirtualSites"
+                ].potentials
+            } == {None}
+
+        assert {
+            key.virtual_site_type
+            for key in sage_with_bond_charge.create_interchange(
+                Molecule.from_smiles("CCl").to_topology(),
+            )["VirtualSites"].potentials
+        } == {"BondCharge"}
+
+        assert {
+            key.virtual_site_type
+            for key in sage_with_trivalent_nitrogen.create_interchange(
+                Molecule.from_smiles("N").to_topology(),
+            )["VirtualSites"].potentials
+        } == {"TrivalentLonePair"}
