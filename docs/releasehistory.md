@@ -15,6 +15,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### New Features
 
+* #867 Tags `PotentialKey.virtual_site_type` with the associated type provided by SMIRNOFF parameters.
 * #848 Raises a more useful error when `Interchange.minimize` is called while positions are not present.
 * #852 Support LJPME in OpenMM export.
 
