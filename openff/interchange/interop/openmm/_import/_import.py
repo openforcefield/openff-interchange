@@ -78,6 +78,8 @@ def from_openmm(
 
     if box_vectors is not None:
         interchange.box = box_vectors
+    elif system is not None:
+        interchange.box = system.getDefaultPeriodicBoxVectors()
 
     return interchange
 
@@ -147,17 +149,21 @@ def _convert_nonbonded_force(
 
     for idx in range(n_parametrized_particles):
         charge, sigma, epsilon = force.getParticleParameters(idx)
+
         top_key = TopologyKey(atom_indices=(idx,))
-        pot_key = PotentialKey(id=f"{idx}")
+
         pot = Potential(
             parameters={
                 "sigma": from_openmm_quantity(sigma),
                 "epsilon": from_openmm_quantity(epsilon),
             },
         )
+
+        pot_key = PotentialKey(id=f"{idx}", associated_handler="vdW")
         vdw.key_map.update({top_key: pot_key})
         vdw.potentials.update({pot_key: pot})
 
+        pot_key = PotentialKey(id=f"{idx}", associated_handler="Electrostatics")
         electrostatics.key_map.update({top_key: pot_key})
         electrostatics.potentials.update(
             {pot_key: Potential(parameters={"charge": from_openmm_quantity(charge)})},
@@ -196,7 +202,7 @@ def _convert_harmonic_bond_force(
     for idx in range(n_parametrized_bonds):
         atom1, atom2, length, k = force.getBondParameters(idx)
         top_key = BondKey(atom_indices=(atom1, atom2))
-        pot_key = PotentialKey(id=f"{atom1}-{atom2}")
+        pot_key = PotentialKey(id=f"{atom1}-{atom2}", associated_handler="Bonds")
         pot = Potential(
             parameters={
                 "length": from_openmm_quantity(length),
@@ -226,7 +232,10 @@ def _convert_harmonic_angle_force(
     for idx in range(n_parametrized_angles):
         atom1, atom2, atom3, angle, k = force.getAngleParameters(idx)
         top_key = AngleKey(atom_indices=(atom1, atom2, atom3))
-        pot_key = PotentialKey(id=f"{atom1}-{atom2}-{atom3}")
+        pot_key = PotentialKey(
+            id=f"{atom1}-{atom2}-{atom3}",
+            associated_handler="Angles",
+        )
         pot = Potential(
             parameters={
                 "angle": from_openmm_quantity(angle),
@@ -264,7 +273,11 @@ def _convert_periodic_torsion_force(
         while top_key in proper_torsions.key_map:
             top_key.mult = top_key.mult + 1  # type: ignore[operator]
 
-        pot_key = PotentialKey(id=f"{atom1}-{atom2}-{atom3}-{atom4}", mult=top_key.mult)
+        pot_key = PotentialKey(
+            id=f"{atom1}-{atom2}-{atom3}-{atom4}",
+            mult=top_key.mult,
+            associated_handler="ProperTorsions",
+        )
         pot = Potential(
             parameters={
                 "periodicity": int(per) * unit.dimensionless,
