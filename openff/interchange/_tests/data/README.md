@@ -89,3 +89,7 @@ for arg in ["cube", "dodecahedron", "octahedron"]:
        pdb_file.topology, pdb_file.positions, open(f"{arg}.pdb", "w")
    )
 ```
+
+`de-force-1.0.1.offxml`
+
+- [Source](https://github.com/jthorton/de-forcefields/blob/a6f666fc8a3f48d597bfb4db5c46826b9d5d7ed4/deforcefields/offxml/de-force-1.0.1.offxml) with vdW section removed

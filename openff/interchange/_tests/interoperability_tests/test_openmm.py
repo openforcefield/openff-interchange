@@ -439,8 +439,6 @@ class TestOpenMMSwitchingFunction(_BaseTest):
 
 @skip_if_missing("openmm")
 class TestOpenMMWithPlugins(TestDoubleExponential):
-    pytest.importorskip("deforcefields")
-
     def test_combine_compatibility(self, de_force_field):
         out = Interchange.from_smirnoff(
             force_field=de_force_field,
