@@ -7,7 +7,6 @@ from nonbonded_plugins.nonbonded import (
 )
 from openff.toolkit import ForceField, Molecule
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
-from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import get_test_file_path
@@ -29,8 +28,10 @@ def test_load_smirnoff_plugins():
     assert SMIRNOFFDoubleExponentialCollection in available_plugins
 
 
-@skip_if_missing("openmm")
 class TestDoubleExponential:
+    pytest.importorskip("openmm")
+    pytest.importorskip("smirnoff_plugins")
+
     @pytest.fixture()
     def de_force_field(self) -> ForceField:
         force_field = ForceField(
