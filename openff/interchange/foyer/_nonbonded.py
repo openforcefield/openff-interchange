@@ -67,11 +67,6 @@ class FoyerElectrostaticsHandler(ElectrostaticsCollection):
 
     _charges: dict[TopologyKey, Quantity] = PrivateAttr(dict())  # type: ignore
 
-    @property
-    def charges(self) -> dict[TopologyKey, Quantity]:
-        """Get the total partial charge on each atom, including virtual sites."""
-        return self._charges
-
     def store_charges(
         self,
         atom_slots: dict[TopologyKey, PotentialKey],

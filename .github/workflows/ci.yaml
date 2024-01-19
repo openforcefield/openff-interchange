@@ -80,8 +80,7 @@ jobs:
     - name: Install OpenMM
       if: ${{ matrix.openmm == true }}
       run: |
-        micromamba install openmm "smirnoff-plugins =2023"
-        pip install git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods
+        micromamba install openmm "smirnoff-plugins =2023" de-forcefields -c conda-forge
 
     - name: Uninstall OpenMM
       if: ${{ matrix.openmm == false && matrix.openeye == true }}
@@ -96,21 +95,16 @@ jobs:
       # and also uninstalls RDKit
       run: micromamba install rdkit "ambertools =23" "jax >=0.3" "jaxlib >=0.3" -c conda-forge
 
-    - name: Uninstall GROMACS on macOS
-      if: ${{ matrix.os == 'macOS-latest' }}
-      # It appears some macOS runners use old hardware without RDTSCP. GROMACS builds are compiled
-      # with it on for performance reasons, and it's easier to just skip these cases than make
-      # even more builds.
-      run: micromamba remove gromacs
-
-    # name: Install Foyer
-    # if: ${{ matrix.pydantic-version == 1 }}
-    # run: micromamba install foyer -c conda-forge
+    - name: Install Foyer
+      run: micromamba install "foyer >=0.12.1" -c conda-forge -yq
 
     - name: Run tests
       if: always()
       run: |
-        python -m pytest -r fE -nauto --durations=10 $COV openff/interchange/ -m "slow or not slow" --ignore=openff/interchange/_tests/energy_tests/test_energies.py
+        python -m pytest $COV openff/interchange/ \
+          -r fE -nauto --durations=10 \
+          -m "slow or not slow" \
+          --ignore=openff/interchange/_tests/energy_tests/test_energies.py
 
     - name: Run small molecule regression tests
       if: ${{ matrix.python-version == 3.9 && matrix.openeye == true && matrix.openmm == true }}

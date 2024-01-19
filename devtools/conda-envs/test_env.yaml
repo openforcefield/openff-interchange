@@ -8,15 +8,15 @@ dependencies:
   - numpy
   - pydantic
   # OpenFF stack
-  - openff-toolkit-base >=0.14.5
+  - openff-toolkit-base =0.14.5
   - openff-units
   - openff-models
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
   - rdkit
   # Optional features
   # GMSO does not support Pydantic 2; should come in release after 0.12.0
-  # foyer
-  # mbuild
+  - foyer >=0.12.1
+  - mbuild
   # Testing
   - mdtraj
   - intermol

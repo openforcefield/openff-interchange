@@ -96,10 +96,22 @@ class ElectrostaticsCollection(_NonbondedCollection):
     _charges_cached: bool = PrivateAttr(False)
 
     @property
-    def charges(self):
+    def charges(self) -> dict[TopologyKey, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
-        raise NotImplementedError()
+        if len(self._charges) == 0 or self._charges_cached is False:
+            self._charges = self._get_charges(include_virtual_sites=False)
+            self._charges_cached = True
 
-    def _get_charges(self):
-        """Get the total partial charge on each atom or particle."""
-        raise NotImplementedError()
+        return self._charges
+
+    def _get_charges(
+        self,
+        include_virtual_sites: bool = False,
+    ) -> dict[TopologyKey, Quantity]:
+        if include_virtual_sites:
+            raise NotImplementedError()
+
+        return {
+            topology_key: self.potentials[potential_key].parameters["charge"]
+            for topology_key, potential_key in self.key_map.items()
+        }
