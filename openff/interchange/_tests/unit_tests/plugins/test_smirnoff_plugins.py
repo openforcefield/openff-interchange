@@ -7,9 +7,9 @@ from nonbonded_plugins.nonbonded import (
 )
 from openff.toolkit import ForceField, Molecule
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
-from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
+from openff.interchange._tests import get_test_file_path
 from openff.interchange.plugins import load_smirnoff_plugins
 
 
@@ -28,17 +28,16 @@ def test_load_smirnoff_plugins():
     assert SMIRNOFFDoubleExponentialCollection in available_plugins
 
 
-@skip_if_missing("openmm")
 class TestDoubleExponential:
-    pytest.importorskip("deforcefields")
+    pytest.importorskip("openmm")
+    pytest.importorskip("smirnoff_plugins")
 
     @pytest.fixture()
     def de_force_field(self) -> ForceField:
-        force_field = ForceField("de-force-1.0.1.offxml", load_plugins=True)
-
-        # An early version of this force field includes a blank vdW handler
-        # https://github.com/jthorton/de-forcefields/blob/aaaa4c721967310ec8e9e3176b97de858273b2d5/deforcefields/offxml/de-force-1.0.0.offxml#L325-L327
-        force_field.deregister_parameter_handler("vdW")
+        force_field = ForceField(
+            get_test_file_path("de-force-1.0.1.offxml"),
+            load_plugins=True,
+        )
 
         # This force field also includes a 4-site water model, remove that for now
         force_field.deregister_parameter_handler("VirtualSites")
@@ -51,7 +50,10 @@ class TestDoubleExponential:
         return force_field
 
     def test_loadable(self):
-        ForceField("de-force-1.0.1.offxml", load_plugins=True)
+        ForceField(
+            get_test_file_path("de-force-1.0.1.offxml"),
+            load_plugins=True,
+        )
 
     def test_create_interchange(self, de_force_field):
         Interchange.from_smirnoff(

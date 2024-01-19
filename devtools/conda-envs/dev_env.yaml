@@ -18,10 +18,8 @@ dependencies:
   # openff-nagl
   # openff-nagl-models
   # Optional features
-  # jax
-  # unyt
-  # mbuild
-  # foyer >=0.11.3
+  - mbuild
+  - foyer >=0.12.1
   # Testing
   - mdtraj
   - intermol
@@ -40,13 +38,13 @@ dependencies:
   - mypy =1.3
   - typing-extensions
   - types-setuptools
-  - pandas-stubs >=1.2.0.56
+  - pandas-stubs
   # Development tools
   # https://github.com/mamba-org/mamba/issues/1523#issuecomment-1246591319
   - micromamba
   - jupyterlab
   - nglview
-  # pdbfixer
+  - pdbfixer
   - ipdb
   - pre-commit
   - black
@@ -54,5 +52,3 @@ dependencies:
   - flake8
   - snakeviz
   - tuna
-  - pip:
-    - git+https://github.com/mattwthompson/de-forcefields.git@periodic-nonperiodic-methods
