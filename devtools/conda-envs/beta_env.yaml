@@ -24,7 +24,7 @@ dependencies:
   # Testing
   - mdtraj
   - intermol
-  - openeye-toolkits
+  - openeye-toolkits =2023.1
   - pytest-cov
   - pytest-xdist
   - pytest-randomly
