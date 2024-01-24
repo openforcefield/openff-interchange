@@ -383,8 +383,20 @@ class TestParameterInterpolation(_BaseTest):
             "central_atoms",
         ),
         [
-            (False, 4.16586914, 42208.5402, 0.140054167256, (1, 2)),
-            (True, 4.16564555, 42207.9252, 0.14005483525, (7, 6)),
+            (
+                False,
+                4.165575439001892,
+                42207.73245725521,
+                0.14005504469705454,
+                (1, 2),
+            ),
+            (
+                True,
+                4.165322743473034,
+                42207.037544550854,
+                0.14005579964306572,
+                (7, 6),
+            ),
         ],
     )
     def test_fractional_bondorder_from_molecule(
@@ -406,17 +418,17 @@ class TestParameterInterpolation(_BaseTest):
         Same process with bond length (1.4, 1.3) A gives 0.1399906965 nm
         Same process with torsion k (1.0, 1.8) kcal/mol gives 4.18711406752 kJ/mol
 
-        Using OpenEye (openeye-toolkits 2021.1.1, Python 3.8, macOS):
-            bond order 0.9945832743790813
-            bond k = 42208.5402 kJ/nm**2/mol
-            bond length = 0.14005416725620918 nm
-            torsion k = 4.16586914 kilojoules kJ/mol
+        Using OpenEye (openeye-toolkits 2023.2, Python 3.11, macOS, January 2024):
+            bond order 0.9944955302945424
+            bond k = 42207.73245725521 kJ/nm**2/mol
+            bond length = 0.14005504469705454 nm
+            torison k = 4.165575439001892 kj/mol
 
         ... except OpenEye has a different fractional bond order for reversed ethanol
-            bond order 0.9945164749654242
-            bond k = 42207.9252 kJ/nm**2/mol
-            bond length = 0.14005483525034576 nm
-            torsion k = 4.16564555 kJ/mol
+            bond order 0.9944200356934255
+            bond k = 42207.037544550854 kJ/nm**2/mol
+            bond length = 0.14005579964306572 nm
+            torsion k = 4.165322743473034 kJ/mol
 
         """
         mol = reversed_ethanol if reversed else ethanol
