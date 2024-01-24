@@ -494,10 +494,13 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
         state = simulation.context.getState(getEnergy=True)
         energy = state.getPotentialEnergy().in_units_of(openmm.unit.kilojoule_per_mole)
 
+        # Values manually computed 01/24/2024 with Python 3.11, macOS ...
         if OpenEyeToolkitWrapper.is_available():
-            expected_energy = 13.591709748611304
+            # ... openeye-toolkits 2023.2.3
+            expected_energy = 13.607998372016262
         else:
-            expected_energy = 37.9516622967221
+            # ... ambertools 23.3, rdkit 2023.09.4
+            expected_energy = 37.951662726270584
 
         # Different operating systems report different energies around 0.001 kJ/mol,
         # locally testing this should enable something like 1e-6 kJ/mol

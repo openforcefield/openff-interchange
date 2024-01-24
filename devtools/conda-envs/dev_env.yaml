@@ -23,7 +23,7 @@ dependencies:
   # Testing
   - mdtraj
   - intermol
-  - openeye-toolkits =2023.1
+  - openeye-toolkits >=2023.2
   - pytest
   - pytest-cov
   - pytest-xdist
