@@ -1,4 +1,5 @@
 """Pytest configuration."""
+
 import pytest
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import BondType, VirtualSiteType

@@ -1,4 +1,5 @@
 """Utilities for interoperability with multiple packages."""
+
 from typing import Union
 
 from openff.interchange import Interchange

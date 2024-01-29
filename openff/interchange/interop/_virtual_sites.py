@@ -1,6 +1,7 @@
 """
 Common helpers for exporting virtual sites.
 """
+
 from collections import defaultdict
 from collections.abc import Iterable
 from typing import DefaultDict

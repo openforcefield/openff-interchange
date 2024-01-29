@@ -1,6 +1,7 @@
 """
 Helper functions for exporting virutal sites to GROMACS.
 """
+
 from typing import Union
 
 import numpy

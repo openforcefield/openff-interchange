@@ -1,6 +1,7 @@
 """
 Helper functions for producing `openmm.Force` objects for non-bonded terms.
 """
+
 from collections import defaultdict
 from typing import DefaultDict, NamedTuple, Optional, Union
 
@@ -770,9 +771,11 @@ def _create_vdw_force(
     )
 
     vdw_force = openmm.CustomNonbondedForce(
-        f"{vdw_expression}"
-        if mixing_rule_expression in (None, "")
-        else f"{vdw_expression}; {mixing_rule_expression}",
+        (
+            f"{vdw_expression}"
+            if mixing_rule_expression in (None, "")
+            else f"{vdw_expression}; {mixing_rule_expression}"
+        ),
     )
     vdw_force.setName("vdW force")
 

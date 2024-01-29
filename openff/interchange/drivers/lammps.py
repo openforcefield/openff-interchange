@@ -1,4 +1,5 @@
 """Functions for running energy evluations with LAMMPS."""
+
 import subprocess
 from shutil import which
 from typing import Optional

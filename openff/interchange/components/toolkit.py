@@ -1,4 +1,5 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
+
 from typing import TYPE_CHECKING, Union
 
 import networkx as nx

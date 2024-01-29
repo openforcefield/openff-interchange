@@ -1,4 +1,5 @@
 """Functions for running energy evluations with GROMACS."""
+
 import subprocess
 import sys
 import tempfile

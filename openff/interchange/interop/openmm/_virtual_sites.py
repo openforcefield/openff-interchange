@@ -1,6 +1,7 @@
 """
 Helper functions for exporting virutal sites to OpenMM.
 """
+
 from typing import Union
 
 from openff.utilities.utilities import has_package

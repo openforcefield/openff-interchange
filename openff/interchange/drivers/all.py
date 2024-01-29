@@ -1,4 +1,5 @@
 """Functions for running energy evluations with all available engines."""
+
 import warnings
 from collections.abc import Iterable
 

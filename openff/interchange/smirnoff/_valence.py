@@ -436,9 +436,9 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
     """Handler storing proper torsions potentials as produced by a SMIRNOFF force field."""
 
     type: Literal["ProperTorsions"] = "ProperTorsions"
-    expression: Literal[
+    expression: Literal["k*(1+cos(periodicity*theta-phase))"] = (
         "k*(1+cos(periodicity*theta-phase))"
-    ] = "k*(1+cos(periodicity*theta-phase))"
+    )
     fractional_bond_order_method: Literal["AM1-Wiberg"] = "AM1-Wiberg"
     fractional_bond_order_interpolation: Literal["linear"] = "linear"
 
@@ -593,9 +593,9 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection, ImproperTorsionColle
     """Handler storing improper torsions potentials as produced by a SMIRNOFF force field."""
 
     type: Literal["ImproperTorsions"] = "ImproperTorsions"
-    expression: Literal[
+    expression: Literal["k*(1+cos(periodicity*theta-phase))"] = (
         "k*(1+cos(periodicity*theta-phase))"
-    ] = "k*(1+cos(periodicity*theta-phase))"
+    )
     # TODO: Consider whether or not default_idivf should be stored here
 
     @classmethod

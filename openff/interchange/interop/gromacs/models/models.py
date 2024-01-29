@@ -1,4 +1,5 @@
 """Classes used to represent GROMACS state."""
+
 from typing import Optional
 
 from openff.models.models import DefaultModel
