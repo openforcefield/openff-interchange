@@ -28,6 +28,7 @@ dependencies:
   - nbval
   - nglview
   - mdanalysis
+  - smirnoff-plugins =2023
   # Drivers
   - gromacs =2023.3=nompi_*_103
   - lammps
