@@ -1,6 +1,7 @@
 """
 Plugins for custom SMIRNOFF types.
 """
+
 from setuptools import setup
 
 setup(

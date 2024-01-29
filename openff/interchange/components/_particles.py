@@ -1,6 +1,7 @@
 """
 Temporary module for second-class virtual site objects.
 """
+
 import abc
 
 from openff.models.models import DefaultModel

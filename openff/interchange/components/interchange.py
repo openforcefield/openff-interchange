@@ -1,4 +1,5 @@
 """An object for storing, manipulating, and converting molecular mechanics data."""
+
 import copy
 import json
 import warnings
@@ -745,58 +746,49 @@ class Interchange(DefaultModel):
             return super().__getattribute__(attr)
 
     @overload
-    def __getitem__(self, item: Literal["Bonds"]) -> "BondCollection":
-        ...
+    def __getitem__(self, item: Literal["Bonds"]) -> "BondCollection": ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["Constraints"],
-    ) -> "SMIRNOFFConstraintCollection":
-        ...
+    ) -> "SMIRNOFFConstraintCollection": ...
 
     @overload
-    def __getitem__(self, item: Literal["Angles"]) -> "AngleCollection":
-        ...
+    def __getitem__(self, item: Literal["Angles"]) -> "AngleCollection": ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["vdW"],
-    ) -> "vdWCollection":
-        ...
+    ) -> "vdWCollection": ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["ProperTorsions"],
-    ) -> "ProperTorsionCollection":
-        ...
+    ) -> "ProperTorsionCollection": ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["ImproperTorsions"],
-    ) -> "ImproperTorsionCollection":
-        ...
+    ) -> "ImproperTorsionCollection": ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["VirtualSites"],
-    ) -> "SMIRNOFFVirtualSiteCollection":
-        ...
+    ) -> "SMIRNOFFVirtualSiteCollection": ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["Electrostatics"],
-    ) -> "ElectrostaticsCollection":
-        ...
+    ) -> "ElectrostaticsCollection": ...
 
     @overload
-    def __getitem__(self, item: str) -> "Collection":
-        ...
+    def __getitem__(self, item: str) -> "Collection": ...
 
     def __getitem__(self, item: str):  # noqa
         """Syntax sugar for looking up collections or other components."""

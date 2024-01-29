@@ -1,4 +1,5 @@
 """Custom Pydantic models."""
+
 import abc
 from typing import Literal, Optional
 

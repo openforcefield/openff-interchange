@@ -1,4 +1,5 @@
 """Interfaces with OpenMM."""
+
 from pathlib import Path
 from typing import Union
 

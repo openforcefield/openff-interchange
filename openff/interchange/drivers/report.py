@@ -1,4 +1,5 @@
 """Storing and processing results of energy evaluations."""
+
 import warnings
 from typing import Optional
 

@@ -1,4 +1,5 @@
 """Unit tests for common virtual site functions."""
+
 from random import random
 
 import numpy
@@ -93,11 +94,11 @@ class TestVirtualSitePositions:
         distance_,
         theta,
     ):
-        sage_with_planar_monovalent_carbonyl["VirtualSites"].parameters[
-            0
-        ].distance = Quantity(
-            distance_,
-            unit.nanometer,
+        sage_with_planar_monovalent_carbonyl["VirtualSites"].parameters[0].distance = (
+            Quantity(
+                distance_,
+                unit.nanometer,
+            )
         )
 
         sage_with_planar_monovalent_carbonyl["VirtualSites"].parameters[

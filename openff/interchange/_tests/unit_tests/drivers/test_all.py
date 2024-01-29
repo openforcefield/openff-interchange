@@ -1,6 +1,7 @@
 """
 Test the behavior of the drivers.all module
 """
+
 import math
 from shutil import which
 

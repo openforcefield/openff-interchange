@@ -49,9 +49,9 @@ _PLUGIN_CLASS_MAPPING: dict[
 ] = dict()
 
 for collection_plugin in load_smirnoff_plugins():
-    parameter_handlers: list[
-        type["ParameterHandler"]
-    ] = collection_plugin.allowed_parameter_handlers()
+    parameter_handlers: list[type["ParameterHandler"]] = (
+        collection_plugin.allowed_parameter_handlers()
+    )
 
     for parameter_handler in parameter_handlers:
         if parameter_handler in load_handler_plugins():

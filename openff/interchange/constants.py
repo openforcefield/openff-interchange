@@ -1,6 +1,7 @@
 """
 Commonly-used constants.
 """
+
 from openff.units import unit
 
 _PME = "Ewald3D-ConductingBoundary"

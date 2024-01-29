@@ -1,6 +1,7 @@
 """
 Base models for engine- and force field-agnostic components.
 """
+
 from typing import Literal
 
 from openff.models.types import FloatQuantity

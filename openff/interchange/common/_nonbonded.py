@@ -46,9 +46,9 @@ class vdWCollection(_NonbondedCollection):
 
     type: Literal["vdW"] = "vdW"
 
-    expression: Literal[
+    expression: Literal["4*epsilon*((sigma/r)**12-(sigma/r)**6)"] = (
         "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
-    ] = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
+    )
 
     mixing_rule: str = Field(
         "lorentz-berthelot",

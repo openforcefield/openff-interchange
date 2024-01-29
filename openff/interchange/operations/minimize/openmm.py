@@ -1,4 +1,5 @@
 """Minimize energy using OpenMM."""
+
 from typing import TYPE_CHECKING
 
 from openff.units import Quantity
