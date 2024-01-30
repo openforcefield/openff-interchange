@@ -1,4 +1,5 @@
 """Runtime settings for MD simulations."""
+
 from typing import TYPE_CHECKING, Literal
 
 from openff.models.models import DefaultModel

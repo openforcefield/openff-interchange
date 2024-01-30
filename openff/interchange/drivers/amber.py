@@ -1,4 +1,5 @@
 """Functions for running energy evluations with Amber."""
+
 import subprocess
 import tempfile
 from pathlib import Path

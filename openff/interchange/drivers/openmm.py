@@ -1,4 +1,5 @@
 """Functions for running energy evluations with OpenMM."""
+
 import warnings
 from typing import TYPE_CHECKING, Optional
 
@@ -116,9 +117,11 @@ def _get_openmm_energies(
         context.setPeriodicBoxVectors(*box_vectors)
 
     context.setPositions(
-        numpy.round(positions, round_positions)
-        if round_positions is not None
-        else positions,
+        (
+            numpy.round(positions, round_positions)
+            if round_positions is not None
+            else positions
+        ),
     )
 
     raw_energies: dict[int, openmm.unit.Quantity] = dict()

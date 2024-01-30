@@ -1,6 +1,7 @@
 """
 Units tests for openff.interchange.components._packmol
 """
+
 import numpy
 import pytest
 from openff.toolkit.topology import Molecule

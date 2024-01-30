@@ -1,4 +1,5 @@
 """Plugins handling virtual sites."""
+
 from typing import get_args
 
 import numpy
@@ -92,9 +93,11 @@ class BuckinghamVirtualSiteHandler(VirtualSiteHandler):
 
         if not cls._supports_match(type_, match, is_in_plane):
             raise SMIRNOFFSpecError(
-                f"match='{match}' not supported with type='{type_}'" + ""
-                if is_in_plane is None
-                else f" and is_in_plane={is_in_plane}",
+                (
+                    f"match='{match}' not supported with type='{type_}'" + ""
+                    if is_in_plane is None
+                    else f" and is_in_plane={is_in_plane}"
+                ),
             )
 
     _TAGNAME = "BuckinghamVirtualSites"
@@ -175,6 +178,6 @@ class BuckinghamVirtualSiteCollection(SMIRNOFFVirtualSiteCollection):
                 },
             )
             electrostatics_handler.key_map[virtual_site_key] = electrostatics_key
-            electrostatics_handler.potentials[
-                electrostatics_key
-            ] = electrostatics_potential
+            electrostatics_handler.potentials[electrostatics_key] = (
+                electrostatics_potential
+            )

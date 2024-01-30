@@ -678,9 +678,9 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             )
             potentials[potential_key] = Potential(parameters={"charge": partial_charge})
 
-            matches[
-                SingleAtomChargeTopologyKey(this_atom_index=atom_index)
-            ] = potential_key
+            matches[SingleAtomChargeTopologyKey(this_atom_index=atom_index)] = (
+                potential_key
+            )
 
         return partial_charge_method, matches, potentials
 

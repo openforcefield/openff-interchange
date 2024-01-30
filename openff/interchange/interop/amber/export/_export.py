@@ -1,4 +1,5 @@
 """Interfaces with Amber."""
+
 import textwrap
 from collections import defaultdict
 from collections.abc import Iterable
