@@ -13,7 +13,7 @@ Currently, systems using custom interactions can only be exported to OpenMM. The
 
 ## Creating a custom `ParameterHandler`
 
-There is no formal specification for a `ParameterHandler` as processed by the OpenFF Toolkit, but there are some guidelines that are expected to be followed. A parameter handler requires both a [`ParameterHandler`] class, which performs parametrization, and a [`ParameterType`] class, which stores the corresponding data. For more information, see the [Toolkit documentation](openff.toolkit:users/developing.md#modular-design-features).
+There is no formal specification for a `ParameterHandler` as processed by the OpenFF Toolkit, but there are some guidelines that are expected to be followed. A parameter handler requires both a [`ParameterHandler`] class, which performs parametrization, and a [`ParameterType`] class, which stores the corresponding data. For more information, see the Toolkit documentation.
 
 The high-level objectives of a parameter handler are to:
 
