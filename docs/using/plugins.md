@@ -315,7 +315,8 @@ class MySMIRNOFFCollection(SMIRNOFFCollection):
         add_constrained_forces: bool,
         constrained_pairs: Set[Tuple[int, ...]],
         particle_map: Dict[Union[int, "VirtualSiteKey"], int],
-    ): ...
+    ):
+        ...
 ```
 
 [`modify_openmm_forces`]: openff.interchange.plugins.SMIRNOFFCollection.modify_openmm_forces
