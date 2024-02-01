@@ -1,6 +1,6 @@
-import numpy
 import random
 
+import numpy
 import pytest
 from openff.units import unit
 from openff.utilities import has_package, skip_if_missing
@@ -52,6 +52,7 @@ class TestFromOpenMM(_BaseTest):
 
         assert isinstance(converted.box.m, numpy.ndarray)
         assert converted.box.m.dtype is float
+
 
 @skip_if_missing("openmm")
 class TestConvertNonbondedForce:
