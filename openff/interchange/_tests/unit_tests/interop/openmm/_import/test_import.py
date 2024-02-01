@@ -1,3 +1,4 @@
+import numpy
 import random
 
 import pytest
@@ -49,6 +50,8 @@ class TestFromOpenMM(_BaseTest):
             },
         )
 
+        assert isinstance(converted.box.m, numpy.ndarray)
+        assert converted.box.m.dtype is float
 
 @skip_if_missing("openmm")
 class TestConvertNonbondedForce:
