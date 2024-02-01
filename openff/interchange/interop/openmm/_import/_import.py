@@ -163,7 +163,9 @@ def _convert_nonbonded_force(
         vdw.key_map.update({top_key: pot_key})
         vdw.potentials.update({pot_key: pot})
 
-        pot_key = PotentialKey(id=f"{idx}", associated_handler="Electrostatics")
+        # This quacks like it's from a library charge, but tracks that it's
+        # not actually coming from a source
+        pot_key = PotentialKey(id=f"{idx}", associated_handler="ExternalSource")
         electrostatics.key_map.update({top_key: pot_key})
         electrostatics.potentials.update(
             {pot_key: Potential(parameters={"charge": from_openmm_quantity(charge)})},
