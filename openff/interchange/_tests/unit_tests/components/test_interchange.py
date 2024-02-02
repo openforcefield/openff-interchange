@@ -305,13 +305,14 @@ class TestInterchange(_BaseTest):
 
     @skip_if_missing("nglview")
     @skip_if_missing("openmm")
-    def test_visualize(self, sage):
+    @pytest.mark.parametrize("include_virtual_sites", [True, False])
+    def test_visualize(self, include_virtual_sites, tip4p, sage):
         import nglview
 
-        molecule = Molecule.from_smiles("CCO")
+        molecule = Molecule.from_smiles("O")
 
         out = Interchange.from_smirnoff(
-            force_field=sage,
+            force_field=tip4p if include_virtual_sites else sage,
             topology=molecule.to_topology(),
         )
 
@@ -324,7 +325,10 @@ class TestInterchange(_BaseTest):
         molecule.generate_conformers(n_conformers=1)
         out.positions = molecule.conformers[0]
 
-        assert isinstance(out.visualize(), nglview.NGLWidget)
+        assert isinstance(
+            out.visualize(include_virtual_sites=include_virtual_sites),
+            nglview.NGLWidget,
+        )
 
 
 @skip_if_missing("openmm")
