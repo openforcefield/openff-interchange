@@ -96,11 +96,11 @@ class TestFromOpenMM(_BaseTest):
         """
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
         pdb = openmm.app.PDBFile(
-            get_data_file_path("ALA_GLY/ALA_GLY.pdb", "openff.interchange._tests.data")
+            get_data_file_path("ALA_GLY/ALA_GLY.pdb", "openff.interchange._tests.data"),
         )
         interchange = Interchange.from_openmm(topology=pdb.topology)
         off_top = Topology.from_pdb(
-            get_data_file_path("ALA_GLY/ALA_GLY.pdb", "openff.interchange._tests.data")
+            get_data_file_path("ALA_GLY/ALA_GLY.pdb", "openff.interchange._tests.data"),
         )
         for roundtrip_atom, off_atom in zip(interchange.topology.atoms, off_top.atoms):
             # off_atom's metadata also includes a little info about how the chemistry was
