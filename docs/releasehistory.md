@@ -13,15 +13,26 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
-### New Features
+### 0.3.19 - 2023-02-05
 
 * #867 Tags `PotentialKey.virtual_site_type` with the associated type provided by SMIRNOFF parameters.
+* #857 Tags `PotentialKey.associated_handler` when importing data from OpenMM.
 * #848 Raises a more useful error when `Interchange.minimize` is called while positions are not present.
 * #852 Support LJPME in OpenMM export.
+* #871 Re-introduces Foyer compatibility with version 0.12.1.
+* #883 Improve topology interoperability after importing data from OpenMM, using OpenFF Toolkit 0.15.2.
+* #883 Falls back to `Topology.visualize` in most cases.
 
 ### Bugfixes
 
 * #848 Fixes a bug in which `Interchange.minimize` erroneously appended virtual site positions to the `positions` attribute.
+* #883 Using `openff-models` 0.1.2, fixes parsing box information from OpenMM data.
+* #883 Skips writing unnecessary PDB file during visualization.
+* #883 Preserves atom metadata when roundtripping topologies with OpenMM.
+
+### Documentation improvements
+
+* #864 Updates installation instructions.
 
 ## 0.3.18 - 2023-11-16
 
