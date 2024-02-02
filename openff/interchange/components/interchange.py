@@ -282,7 +282,7 @@ class Interchange(DefaultModel):
         self,
         backend: str = "nglview",
         include_virtual_sites: bool = False,
-    ):
+    ) -> "nglview.NGLWidget":
         """
         Visualize this Interchange.
 
@@ -301,9 +301,42 @@ class Interchange(DefaultModel):
             The NGLWidget containing the visualization.
 
         """
+        from openff.toolkit.utils.exceptions import (
+            IncompatibleUnitError,
+            MissingConformersError,
+        )
+
         if backend == "nglview":
-            return self._visualize_nglview(include_virtual_sites=include_virtual_sites)
+            if include_virtual_sites:
+
+                return self._visualize_nglview(include_virtual_sites=True)
+
+            else:
+
+                # Interchange.topology might have its own positions;
+                # just use Interchange.positions
+                original_positions = self.topology.get_positions()
+
+                try:
+                    self.topology.set_positions(self.positions)
+                    widget = self.topology.visualize()
+                except (MissingConformersError, IncompatibleUnitError) as error:
+                    raise MissingPositionsError(
+                        "Cannot visualize system without positions.",
+                    ) from error
+
+                # but don't modify them long-term
+                # work around https://github.com/openforcefield/openff-toolkit/issues/1820
+                if original_positions:
+                    self.topology.set_positions(original_positions)
+                else:
+                    for molecule in self.topology.molecules:
+                        molecule._conformers = None
+
+                return widget
+
         else:
+
             raise UnsupportedExportError
 
     @requires_package("nglview")
@@ -319,16 +352,35 @@ class Interchange(DefaultModel):
         """
         import nglview
 
+        from openff.interchange.components._viz import InterchangeNGLViewStructure
+
         try:
-            self.to_pdb(
-                "_tmp_pdb_file.pdb",
-                include_virtual_sites=include_virtual_sites,
+            widget = nglview.NGLWidget(
+                InterchangeNGLViewStructure(
+                    interchange=self,
+                    ext="pdb",
+                ),
+                representations=[
+                    dict(type="unitcell", params=dict()),
+                ],
             )
+
         except MissingPositionsError as error:
             raise MissingPositionsError(
                 "Cannot visualize system without positions.",
             ) from error
-        return nglview.show_structure_file("_tmp_pdb_file.pdb")
+
+        widget.add_representation("line", sele="water")
+        widget.add_representation("spacefill", sele="ion")
+        widget.add_representation("cartoon", sele="protein")
+        widget.add_representation(
+            "licorice",
+            sele="not water and not ion and not protein",
+            radius=0.25,
+            multipleBond=False,
+        )
+
+        return widget
 
     def minimize(
         self,
