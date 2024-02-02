@@ -264,38 +264,6 @@ class TestOpenMM(_BaseTest):
             get_openmm_energies(converted, combine_nonbonded_forces=True),
         )
 
-    def test_openmm_roundtrip_metadata(self):
-        # Make an example OpenMM Topology with metadata.
-        # Here we use OFFTK to make the OpenMM Topology, but this could just as easily come from another source
-        ethanol = Molecule.from_smiles("CCO")
-        benzene = Molecule.from_smiles("c1ccccc1")
-        for atom in ethanol.atoms:
-            atom.metadata["chain_id"] = "1"
-            atom.metadata["residue_number"] = "1"
-            atom.metadata["insertion_code"] = ""
-            atom.metadata["residue_name"] = "ETH"
-        for atom in benzene.atoms:
-            atom.metadata["chain_id"] = "1"
-            atom.metadata["residue_number"] = "2"
-            atom.metadata["insertion_code"] = "A"
-            atom.metadata["residue_name"] = "BNZ"
-        top = Topology.from_molecules([ethanol, benzene])
-
-        # Roundtrip the topology with metadata through openmm
-        interchange = Interchange.from_openmm(topology=top.to_openmm())
-
-        # Ensure that the metadata is the same
-        for atom in interchange.topology.molecule(0).atoms:
-            assert atom.metadata["chain_id"] == "1"
-            assert atom.metadata["residue_number"] == "1"
-            assert atom.metadata["insertion_code"] == ""
-            assert atom.metadata["residue_name"] == "ETH"
-        for atom in interchange.topology.molecule(1).atoms:
-            assert atom.metadata["chain_id"] == "1"
-            assert atom.metadata["residue_number"] == "2"
-            assert atom.metadata["insertion_code"] == "A"
-            assert atom.metadata["residue_name"] == "BNZ"
-
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
     @pytest.mark.slow()
     def test_combine_nonbonded_forces(self, sage):

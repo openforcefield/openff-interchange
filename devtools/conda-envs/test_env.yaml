@@ -8,9 +8,9 @@ dependencies:
   - numpy
   - pydantic
   # OpenFF stack
-  - openff-toolkit-base =0.14.5
+  - openff-toolkit-base =0.15
   - openff-units
-  - openff-models
+  - openff-models =0.1.2
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
   - rdkit
   # Optional features

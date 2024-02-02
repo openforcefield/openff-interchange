@@ -2,7 +2,7 @@ import random
 
 import numpy
 import pytest
-from openff.units import unit
+from openff.toolkit import Molecule, Topology, unit
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -51,7 +51,43 @@ class TestFromOpenMM(_BaseTest):
         )
 
         assert isinstance(converted.box.m, numpy.ndarray)
-        assert converted.box.m.dtype is float
+
+        # OpenMM seems to avoid using the built-in type
+        assert converted.box.m.dtype in (float, numpy.float32, numpy.float64)
+
+    def test_openmm_roundtrip_metadata(self, monkeypatch):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        # Make an example OpenMM Topology with metadata.
+        # Here we use OFFTK to make the OpenMM Topology, but this could just as easily come from another source
+        ethanol = Molecule.from_smiles("CCO")
+        benzene = Molecule.from_smiles("c1ccccc1")
+        for atom in ethanol.atoms:
+            atom.metadata["chain_id"] = "1"
+            atom.metadata["residue_number"] = "1"
+            atom.metadata["insertion_code"] = ""
+            atom.metadata["residue_name"] = "ETH"
+        for atom in benzene.atoms:
+            atom.metadata["chain_id"] = "1"
+            atom.metadata["residue_number"] = "2"
+            atom.metadata["insertion_code"] = "A"
+            atom.metadata["residue_name"] = "BNZ"
+        top = Topology.from_molecules([ethanol, benzene])
+
+        # Roundtrip the topology with metadata through openmm
+        interchange = Interchange.from_openmm(topology=top.to_openmm())
+
+        # Ensure that the metadata is the same
+        for atom in interchange.topology.molecule(0).atoms:
+            assert atom.metadata["chain_id"] == "1"
+            assert atom.metadata["residue_number"] == "1"
+            assert atom.metadata["insertion_code"] == ""
+            assert atom.metadata["residue_name"] == "ETH"
+        for atom in interchange.topology.molecule(1).atoms:
+            assert atom.metadata["chain_id"] == "1"
+            assert atom.metadata["residue_number"] == "2"
+            assert atom.metadata["insertion_code"] == "A"
+            assert atom.metadata["residue_name"] == "BNZ"
 
 
 @skip_if_missing("openmm")
