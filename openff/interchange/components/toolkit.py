@@ -113,11 +113,20 @@ def _simple_topology_from_openmm(openmm_topology: "openmm.app.Topology") -> Topo
     # TODO: Residue metadata
     # TODO: Splice in fully-defined OpenFF `Molecule`s?
     graph = nx.Graph()
-
+    # TODO: This is nearly identical to Topology._openmm_topology_to_networkx.
+    #  Should this method be replaced with a direct call to that?
     for atom in openmm_topology.atoms():
         graph.add_node(
             atom.index,
             atomic_number=atom.element.atomic_number,
+            name=atom.name,
+            residue_name=atom.residue.name,
+            # Note that residue number is mapped to residue.id here. The use of id vs. number varies in other packages
+            # and the convention for the OpenFF-OpenMM interconversion is recorded at
+            # https://docs.openforcefield.org/projects/toolkit/en/0.15.1/users/molecule_conversion.html
+            residue_number=atom.residue.id,
+            insertion_code=atom.residue.insertionCode,
+            chain_id=atom.residue.chain.id,
         )
 
     for bond in openmm_topology.bonds():
