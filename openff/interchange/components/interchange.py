@@ -327,7 +327,7 @@ class Interchange(DefaultModel):
 
                 # but don't modify them long-term
                 # work around https://github.com/openforcefield/openff-toolkit/issues/1820
-                if original_positions:
+                if original_positions is not None:
                     self.topology.set_positions(original_positions)
                 else:
                     for molecule in self.topology.molecules:
