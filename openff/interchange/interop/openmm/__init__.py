@@ -1,7 +1,8 @@
 """Interfaces with OpenMM."""
 
+from contextlib import nullcontext
 from pathlib import Path
-from typing import Union
+from typing import TextIO, Union
 
 from openff.utilities.utilities import has_package, requires_package
 
@@ -128,10 +129,21 @@ def to_openmm_system(
 to_openmm = to_openmm_system
 
 
-def _to_pdb(file_path: Union[Path, str], topology: "openmm.app.Topology", positions):
+def _to_pdb(
+    file_path: Union[Path, str, TextIO],
+    topology: "openmm.app.Topology",
+    positions,
+):
     from openff.units.openmm import ensure_quantity
 
-    with open(file_path, "w") as outfile:
+    # Deal with the possibility of `StringIO`
+    manager: Union[nullcontext[TextIO], TextIO]  # MyPy needs some help here
+    if isinstance(file_path, (str, Path)):
+        manager = open(file_path, "w")
+    else:
+        manager = nullcontext(file_path)
+
+    with manager as outfile:
         openmm.app.PDBFile.writeFile(
             topology=topology,
             positions=ensure_quantity(positions, "openmm"),
