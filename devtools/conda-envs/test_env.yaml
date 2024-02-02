@@ -8,9 +8,9 @@ dependencies:
   - numpy
   - pydantic
   # OpenFF stack
-  - openff-toolkit-base =0.15
+  - openff-toolkit-base =0.15.2
   - openff-units
-  - openff-models =0.1.2
+  - openff-models
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
   - rdkit
   # Optional features
@@ -37,5 +37,3 @@ dependencies:
   - typing-extensions
   - types-setuptools
   - pandas-stubs
-  - pip:
-    - git+https://github.com/openforcefield/openff-toolkit.git@interop
