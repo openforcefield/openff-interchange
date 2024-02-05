@@ -24,6 +24,7 @@ def to_openmm_topology(
     from collections import defaultdict
 
     from openff.toolkit.topology import Topology
+    from openff.toolkit.topology._mm_molecule import _SimpleBond
     from openff.toolkit.topology.molecule import Bond
 
     from openff.interchange.interop._virtual_sites import (
@@ -155,6 +156,9 @@ def to_openmm_topology(
                 else:
                     bond_type = bond_types[bond.bond_order]
                 bond_order = bond.bond_order
+            elif isinstance(bond, _SimpleBond):
+                bond_type = None
+                bond_order = None
             else:
                 raise RuntimeError(
                     "Unexpected bond type found while iterating over Topology.bonds."

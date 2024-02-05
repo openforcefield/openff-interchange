@@ -9,7 +9,7 @@ dependencies:
   - pip
   - numpy =1
   - pydantic =1
-  - openff-toolkit-base =0.14.5
+  - openff-toolkit-base =0.15.2
   - openff-models
   - openmm >=7.6
   - mbuild

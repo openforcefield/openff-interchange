@@ -2,13 +2,11 @@
 
 from typing import TYPE_CHECKING, Union
 
-import networkx as nx
-import numpy as np
-from openff.toolkit import Molecule, Topology
+import networkx
+import numpy
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
-from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.utils.collections import ValidatedList
-from openff.units import Quantity
 from openff.utilities.utilities import has_package
 
 if has_package("openmm") or TYPE_CHECKING:
@@ -66,7 +64,7 @@ def _validated_list_to_array(validated_list: "ValidatedList") -> "Quantity":
     from openff.units import unit
 
     unit_ = validated_list[0].units
-    return unit.Quantity(np.asarray([val.m for val in validated_list]), unit_)
+    return unit.Quantity(numpy.asarray([val.m for val in validated_list]), unit_)
 
 
 def _combine_topologies(topology1: Topology, topology2: Topology) -> Topology:
@@ -110,14 +108,24 @@ def _check_electrostatics_handlers(force_field: "ForceField") -> bool:
 
 def _simple_topology_from_openmm(openmm_topology: "openmm.app.Topology") -> Topology:
     """Convert an OpenMM Topology into an OpenFF Topology consisting **only** of so-called `_SimpleMolecule`s."""
-    # TODO: Residue metadata
     # TODO: Splice in fully-defined OpenFF `Molecule`s?
-    graph = nx.Graph()
 
+    graph = networkx.Graph()
+
+    # TODO: This is nearly identical to Topology._openmm_topology_to_networkx.
+    #  Should this method be replaced with a direct call to that?
     for atom in openmm_topology.atoms():
         graph.add_node(
             atom.index,
             atomic_number=atom.element.atomic_number,
+            name=atom.name,
+            residue_name=atom.residue.name,
+            # Note that residue number is mapped to residue.id here. The use of id vs. number varies in other packages
+            # and the convention for the OpenFF-OpenMM interconversion is recorded at
+            # https://docs.openforcefield.org/projects/toolkit/en/0.15.1/users/molecule_conversion.html
+            residue_number=atom.residue.id,
+            insertion_code=atom.residue.insertionCode,
+            chain_id=atom.residue.chain.id,
         )
 
     for bond in openmm_topology.bonds():
@@ -129,10 +137,11 @@ def _simple_topology_from_openmm(openmm_topology: "openmm.app.Topology") -> Topo
     return _simple_topology_from_graph(graph)
 
 
-def _simple_topology_from_graph(graph: nx.Graph) -> Topology:
+def _simple_topology_from_graph(graph: networkx.Graph) -> Topology:
+    """Convert a networkx Graph into an OpenFF Topology consisting only of `_SimpleMolecule`s."""
     topology = Topology()
 
-    for component in nx.connected_components(graph):
+    for component in networkx.connected_components(graph):
         subgraph = graph.subgraph(component)
         topology.add_molecule(_SimpleMolecule._from_subgraph(subgraph))
 

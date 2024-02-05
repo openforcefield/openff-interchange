@@ -1,8 +1,10 @@
+import copy
 import random
 
+import numpy
 import pytest
-from openff.units import unit
-from openff.utilities import has_package, skip_if_missing
+from openff.toolkit import Molecule, Topology, unit
+from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest
@@ -48,6 +50,64 @@ class TestFromOpenMM(_BaseTest):
                 "Nonbonded": 1e-3 * kj_mol,
             },
         )
+
+        assert isinstance(converted.box.m, numpy.ndarray)
+
+        # OpenMM seems to avoid using the built-in type
+        assert converted.box.m.dtype in (float, numpy.float32, numpy.float64)
+
+    def test_openmm_roundtrip_metadata(self, monkeypatch):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        # Make an example OpenMM Topology with metadata.
+        # Here we use OFFTK to make the OpenMM Topology, but this could just as easily come from another source
+        ethanol = Molecule.from_smiles("CCO")
+        benzene = Molecule.from_smiles("c1ccccc1")
+        for atom in ethanol.atoms:
+            atom.metadata["chain_id"] = "1"
+            atom.metadata["residue_number"] = "1"
+            atom.metadata["insertion_code"] = ""
+            atom.metadata["residue_name"] = "ETH"
+        for atom in benzene.atoms:
+            atom.metadata["chain_id"] = "1"
+            atom.metadata["residue_number"] = "2"
+            atom.metadata["insertion_code"] = "A"
+            atom.metadata["residue_name"] = "BNZ"
+        top = Topology.from_molecules([ethanol, benzene])
+
+        # Roundtrip the topology with metadata through openmm
+        interchange = Interchange.from_openmm(topology=top.to_openmm())
+
+        # Ensure that the metadata is the same
+        for atom in interchange.topology.molecule(0).atoms:
+            assert atom.metadata["chain_id"] == "1"
+            assert atom.metadata["residue_number"] == "1"
+            assert atom.metadata["insertion_code"] == ""
+            assert atom.metadata["residue_name"] == "ETH"
+        for atom in interchange.topology.molecule(1).atoms:
+            assert atom.metadata["chain_id"] == "1"
+            assert atom.metadata["residue_number"] == "2"
+            assert atom.metadata["insertion_code"] == "A"
+            assert atom.metadata["residue_name"] == "BNZ"
+
+    def test_openmm_native_roundtrip_metadata(self, monkeypatch):
+        """
+        Test that metadata is the same whether we load a PDB through OpenMM+Interchange vs. Topology.from_pdb.
+        """
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+        pdb = openmm.app.PDBFile(
+            get_data_file_path("ALA_GLY/ALA_GLY.pdb", "openff.interchange._tests.data"),
+        )
+        interchange = Interchange.from_openmm(topology=pdb.topology)
+        off_top = Topology.from_pdb(
+            get_data_file_path("ALA_GLY/ALA_GLY.pdb", "openff.interchange._tests.data"),
+        )
+        for roundtrip_atom, off_atom in zip(interchange.topology.atoms, off_top.atoms):
+            # off_atom's metadata also includes a little info about how the chemistry was
+            # assigned, so we remove this from the comparison
+            off_atom_metadata = copy.deepcopy(off_atom.metadata)
+            del off_atom_metadata["match_info"]
+            assert roundtrip_atom.metadata == off_atom_metadata
 
 
 @skip_if_missing("openmm")
