@@ -463,6 +463,7 @@ class Interchange(DefaultModel):
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
         ewald_tolerance: float = 1e-4,
+        hydrogen_mass: float = 1.007947,
     ):
         """
         Export this Interchange to an OpenMM System.
@@ -478,6 +479,10 @@ class Interchange(DefaultModel):
             on a bond or angle that is fully constrained.
         ewald_tolerance : float, default=1e-4
             The value passed to `NonbondedForce.setEwaldErrorTolerance`
+        hydrogen_mass : float, default=1.007947
+            The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
+            than the default value, mass will be transferred from neighboring heavy atoms.
+
 
         Returns
         -------
@@ -494,6 +499,7 @@ class Interchange(DefaultModel):
             combine_nonbonded_forces=combine_nonbonded_forces,
             add_constrained_forces=add_constrained_forces,
             ewald_tolerance=ewald_tolerance,
+            hydrogen_mass=hydrogen_mass,
         )
 
     to_openmm = to_openmm_system
