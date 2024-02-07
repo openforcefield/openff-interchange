@@ -3,18 +3,20 @@ import random
 import pytest
 from openff.toolkit import unit
 
-from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange.exceptions import UnsupportedExportError
 
 
-def test_hmr_basic(sage):
+@pytest.mark.parametrize("reversed", [False, True])
+def test_hmr_basic(sage, reversed, ethanol, reversed_ethanol):
     pytest.importorskip("openmm.unit")
     import openmm.unit
 
     hydrogen_mass = random.uniform(1.0, 4.0)
-    topology = MoleculeWithConformer.from_mapped_smiles(
-        "[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]",
-    ).to_topology()
+
+    molecule = reversed_ethanol if reversed else ethanol
+    molecule.generate_conformers(n_conformers=1)
+
+    topology = molecule.to_topology()
 
     interchange = sage.create_interchange(topology)
 
