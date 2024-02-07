@@ -421,7 +421,22 @@ class Interchange(DefaultModel):
         decimal: int = 3,
         hydrogen_mass: float = 1.007947,
     ):
-        """Export this Interchange object to GROMACS files."""
+        """
+        Export this Interchange object to GROMACS files.
+
+        Parameters
+        ----------
+        prefix: str
+            The prefix to use for the GROMACS topology and coordinate files, i.e. "foo" will produce
+            "foo.top" and "foo.gro".
+        decimal: int, default=3
+            The number of decimal places to use when writing the GROMACS coordinate file.
+        hydrogen_mass : float, default=1.007947
+            The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
+            than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
+            not applied to any waters and is unsupported when virtual sites are present.
+
+        """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
 
@@ -439,17 +454,39 @@ class Interchange(DefaultModel):
         file_path: Union[Path, str],
         hydrogen_mass: float = 1.007947,
     ):
-        """Export this Interchange to a GROMACS topology file."""
+        """
+        Export this Interchange to a GROMACS topology file.
+
+        Parameters
+        ----------
+        file_path
+            The path to the GROMACS topology file to write.
+        hydrogen_mass : float, default=1.007947
+            The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
+            than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
+            not applied to any waters and is unsupported when virtual sites are present.
+
+        """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
 
         GROMACSWriter(
-            system=_convert(self),
+            system=_convert(self, hydrogen_mass=hydrogen_mass),
             top_file=file_path,
         ).to_top()
 
     def to_gro(self, file_path: Union[Path, str], decimal: int = 3):
-        """Export this Interchange object to a GROMACS coordinate file."""
+        """
+        Export this Interchange object to a GROMACS coordinate file.
+
+        Parameters
+        ----------
+        file_path: Union[Path, str]
+            The path to the GROMACS coordinate file to write.
+        decimal: int, default=3
+            The number of decimal places to use when writing the GROMACS coordinate file.
+
+        """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
 
@@ -490,8 +527,8 @@ class Interchange(DefaultModel):
             The value passed to `NonbondedForce.setEwaldErrorTolerance`
         hydrogen_mass : float, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
-            than the default value, mass will be transferred from neighboring heavy atoms.
-
+            than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
+            not applied to any waters and is unsupported when virtual sites are present.
 
         Returns
         -------
