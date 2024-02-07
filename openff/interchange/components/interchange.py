@@ -415,13 +415,18 @@ class Interchange(DefaultModel):
         else:
             raise NotImplementedError(f"Engine {engine} is not implemented.")
 
-    def to_gromacs(self, prefix: str, decimal: int = 3):
+    def to_gromacs(
+        self,
+        prefix: str,
+        decimal: int = 3,
+        hydrogen_mass: float = 1.007947,
+    ):
         """Export this Interchange object to GROMACS files."""
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
 
         writer = GROMACSWriter(
-            system=_convert(self),
+            system=_convert(self, hydrogen_mass=hydrogen_mass),
             top_file=prefix + ".top",
             gro_file=prefix + ".gro",
         )
@@ -429,7 +434,11 @@ class Interchange(DefaultModel):
         writer.to_top()
         writer.to_gro(decimal=decimal)
 
-    def to_top(self, file_path: Union[Path, str]):
+    def to_top(
+        self,
+        file_path: Union[Path, str],
+        hydrogen_mass: float = 1.007947,
+    ):
         """Export this Interchange to a GROMACS topology file."""
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert

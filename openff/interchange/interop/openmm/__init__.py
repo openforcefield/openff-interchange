@@ -182,8 +182,8 @@ def _apply_hmr(
 
     if system.getNumParticles() != interchange.topology.n_atoms:
         raise UnsupportedExportError(
-            "Hydrogen mass repartition with virtual sites present, even on rigid water, "
-            "is not yet supported.",
+            "Hydrogen mass repartitioning with virtual sites present, even on "
+            " rigid water, is not yet supported.",
         )
 
     water = Molecule.from_smiles("O")
