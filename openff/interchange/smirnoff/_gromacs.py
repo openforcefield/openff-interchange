@@ -46,7 +46,10 @@ _WATER = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
 _SIMPLE_WATER = _SimpleMolecule.from_molecule(_WATER)
 
 
-def _convert(interchange: Interchange) -> GROMACSSystem:
+def _convert(
+    interchange: Interchange,
+    hydrogen_mass: float = 1.007947,
+) -> GROMACSSystem:
     """Convert an `Interchange` object to `GROMACSSystem`."""
     if "vdW" in interchange.collections:
         nonbonded_function = 1
@@ -264,6 +267,9 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             molecule_virtual_site_map,
             _atom_atom_type_map,
         )
+
+        # Apply HMR to this molecule only
+        _apply_hmr(molecule, unique_molecule, hydrogen_mass)
 
         system.molecule_types[unique_molecule.name] = molecule
 
@@ -692,3 +698,54 @@ def _convert_settles(
             other_atoms=[1, 2],
         ),
     )
+
+
+# TODO: Refactor this with the OpenMM version into a common mass mask?
+def _apply_hmr(
+    gromacs_molecule: GROMACSMolecule,
+    toolkit_molecule: Molecule,
+    hydrogen_mass: float,
+):
+    if abs(hydrogen_mass - 1.008) < 1e-3:
+        return
+
+    if len(gromacs_molecule.virtual_sites) > 0:
+        raise UnsupportedExportError(
+            "Hydrogen mass repartitioning with virtual sites present, even on "
+            " rigid water, is not yet supported.",
+        )
+
+    water = Molecule.from_smiles("O")
+
+    def _is_water(molecule: Molecule) -> bool:
+        return molecule.is_isomorphic_with(water)
+
+    _hydrogen_mass = hydrogen_mass * unit.dalton
+
+    for bond in toolkit_molecule.bonds:
+
+        heavy_atom, hydrogen_atom = bond.atoms
+
+        if heavy_atom.atomic_number == 1:
+
+            heavy_atom, hydrogen_atom = hydrogen_atom, heavy_atom
+
+        # TODO: This should only skip rigid waters, even though HMR or flexible water is questionable
+        if (
+            (hydrogen_atom.atomic_number == 1)
+            and (heavy_atom.atomic_number != 1)  # noqa: W503
+            and not (_is_water(hydrogen_atom.molecule))  # noqa: W503
+        ):
+
+            # these are molecule indices, whereas in the OpenMM function they are topology indices
+            # these are indexed to the toolkit molecule (0-index), not the GROMACS molecule (1-index),
+            # although indexing into GROMACSMolecule.atoms is 0-indexed, GROAMCSAtom.index is 1-indexed
+            hydrogen_index = hydrogen_atom.molecule_atom_index
+            heavy_index = heavy_atom.molecule_atom_index
+
+            mass_to_transfer = (
+                _hydrogen_mass - gromacs_molecule.atoms[hydrogen_index].mass
+            )
+
+            gromacs_molecule.atoms[hydrogen_index].mass += mass_to_transfer
+            gromacs_molecule.atoms[heavy_index].mass -= mass_to_transfer

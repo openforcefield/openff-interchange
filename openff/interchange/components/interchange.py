@@ -415,13 +415,33 @@ class Interchange(DefaultModel):
         else:
             raise NotImplementedError(f"Engine {engine} is not implemented.")
 
-    def to_gromacs(self, prefix: str, decimal: int = 3):
-        """Export this Interchange object to GROMACS files."""
+    def to_gromacs(
+        self,
+        prefix: str,
+        decimal: int = 3,
+        hydrogen_mass: float = 1.007947,
+    ):
+        """
+        Export this Interchange object to GROMACS files.
+
+        Parameters
+        ----------
+        prefix: str
+            The prefix to use for the GROMACS topology and coordinate files, i.e. "foo" will produce
+            "foo.top" and "foo.gro".
+        decimal: int, default=3
+            The number of decimal places to use when writing the GROMACS coordinate file.
+        hydrogen_mass : float, default=1.007947
+            The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
+            than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
+            not applied to any waters and is unsupported when virtual sites are present.
+
+        """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
 
         writer = GROMACSWriter(
-            system=_convert(self),
+            system=_convert(self, hydrogen_mass=hydrogen_mass),
             top_file=prefix + ".top",
             gro_file=prefix + ".gro",
         )
@@ -429,18 +449,44 @@ class Interchange(DefaultModel):
         writer.to_top()
         writer.to_gro(decimal=decimal)
 
-    def to_top(self, file_path: Union[Path, str]):
-        """Export this Interchange to a GROMACS topology file."""
+    def to_top(
+        self,
+        file_path: Union[Path, str],
+        hydrogen_mass: float = 1.007947,
+    ):
+        """
+        Export this Interchange to a GROMACS topology file.
+
+        Parameters
+        ----------
+        file_path
+            The path to the GROMACS topology file to write.
+        hydrogen_mass : float, default=1.007947
+            The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
+            than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
+            not applied to any waters and is unsupported when virtual sites are present.
+
+        """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
 
         GROMACSWriter(
-            system=_convert(self),
+            system=_convert(self, hydrogen_mass=hydrogen_mass),
             top_file=file_path,
         ).to_top()
 
     def to_gro(self, file_path: Union[Path, str], decimal: int = 3):
-        """Export this Interchange object to a GROMACS coordinate file."""
+        """
+        Export this Interchange object to a GROMACS coordinate file.
+
+        Parameters
+        ----------
+        file_path: Union[Path, str]
+            The path to the GROMACS coordinate file to write.
+        decimal: int, default=3
+            The number of decimal places to use when writing the GROMACS coordinate file.
+
+        """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
 
@@ -463,6 +509,7 @@ class Interchange(DefaultModel):
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
         ewald_tolerance: float = 1e-4,
+        hydrogen_mass: float = 1.007947,
     ):
         """
         Export this Interchange to an OpenMM System.
@@ -478,6 +525,10 @@ class Interchange(DefaultModel):
             on a bond or angle that is fully constrained.
         ewald_tolerance : float, default=1e-4
             The value passed to `NonbondedForce.setEwaldErrorTolerance`
+        hydrogen_mass : float, default=1.007947
+            The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
+            than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
+            not applied to any waters and is unsupported when virtual sites are present.
 
         Returns
         -------
@@ -494,6 +545,7 @@ class Interchange(DefaultModel):
             combine_nonbonded_forces=combine_nonbonded_forces,
             add_constrained_forces=add_constrained_forces,
             ewald_tolerance=ewald_tolerance,
+            hydrogen_mass=hydrogen_mass,
         )
 
     to_openmm = to_openmm_system
