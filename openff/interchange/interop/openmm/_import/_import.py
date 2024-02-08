@@ -77,9 +77,15 @@ def from_openmm(
         interchange.positions = positions
 
     if box_vectors is not None:
-        interchange.box = box_vectors
+        interchange.box = Interchange.validate_box(box_vectors)
+    elif topology is not None:
+        interchange.box = Interchange.validate_box(
+            topology.getPeriodicBoxVectors(),
+        )
     elif system is not None:
-        interchange.box = system.getDefaultPeriodicBoxVectors()
+        interchange.box = Interchange.validate_box(
+            system.getDefaultPeriodicBoxVectors(),
+        )
 
     return interchange
 

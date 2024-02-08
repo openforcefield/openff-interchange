@@ -156,22 +156,23 @@ class Interchange(DefaultModel):
         arbitrary_types_allowed = True
 
     @validator("box", allow_reuse=True)
-    def validate_box(cls, value):
+    def validate_box(cls, value) -> Optional[Quantity]:
         if value is None:
             return value
-        first_pass = ArrayQuantity.validate_type(value)
-        as_2d = np.atleast_2d(first_pass)
-        if as_2d.shape == (3, 3):
-            box = as_2d
-        elif as_2d.shape == (1, 3):
-            box = as_2d * np.eye(3)
+
+        validated = ArrayQuantity.validate_type(value)
+
+        dimensions = np.atleast_2d(validated).shape
+
+        if dimensions == (3, 3):
+            return validated
+        elif dimensions == (1, 3):
+            return validated * np.eye(3)
         else:
             raise InvalidBoxError(
                 f"Failed to convert value {value} to 3x3 box vectors. Please file an issue if you think this "
                 "input should be supported and the failure is an error.",
             )
-
-        return box
 
     @validator("topology", pre=True)
     def validate_topology(cls, value):
