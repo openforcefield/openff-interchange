@@ -3,7 +3,7 @@ import random
 
 import numpy
 import pytest
-from openff.toolkit import Molecule, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -29,7 +29,7 @@ class TestFromOpenMM(_BaseTest):
         interchange = Interchange.from_smirnoff(
             sage_unconstrained,
             [ethanol],
-            box=[4, 4, 4] * unit.nanometer,
+            box=Quantity([4, 4, 4], unit.nanometer),
         )
 
         system = interchange.to_openmm(combine_nonbonded_forces=True)
@@ -55,6 +55,56 @@ class TestFromOpenMM(_BaseTest):
 
         # OpenMM seems to avoid using the built-in type
         assert converted.box.m.dtype in (float, numpy.float32, numpy.float64)
+
+    @pytest.fixture()
+    def simple_system(self):
+        return openmm.XmlSerializer.deserialize(
+            open(
+                get_data_file_path(
+                    "system.xml",
+                    "openff.interchange._tests.data",
+                ),
+            ).read(),
+        )
+
+    @pytest.mark.parametrize("as_argument", [False, True])
+    def test_different_ways_to_process_box_vectors(
+        self,
+        monkeypatch,
+        as_argument,
+        simple_system,
+    ):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        if as_argument:
+            box = Interchange.from_openmm(
+                system=simple_system,
+                box_vectors=simple_system.getDefaultPeriodicBoxVectors(),
+            ).box
+        else:
+            box = Interchange.from_openmm(system=simple_system).box
+
+        assert box.shape == (3, 3)
+        assert type(box.m[2][2]) in (float, numpy.float64, numpy.float32)
+        assert type(box.m[1][1]) is not Quantity
+
+    def test_topology_and_system_box_vectors_differ(
+        self,
+        monkeypatch,
+        simple_system,
+    ):
+        """Ensure that, if box vectors specified in the topology and system differ, those in the topology are used."""
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        topology = Molecule.from_smiles("C").to_topology()
+        topology.box_vectors = Quantity([4, 5, 6], unit.nanometer)
+
+        box = Interchange.from_openmm(
+            system=simple_system,
+            topology=topology.to_openmm(),
+        ).box
+
+        assert numpy.diag(box.m_as(unit.nanometer)) == pytest.approx([4, 5, 6])
 
     def test_openmm_roundtrip_metadata(self, monkeypatch):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
