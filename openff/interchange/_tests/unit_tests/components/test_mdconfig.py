@@ -261,3 +261,33 @@ class TestWriteSanderInput(_BaseTest):
         ).write_sander_input_file("no.in")
 
         assert parse_sander("no.in")["cntrl"]["fswitch"] == "-1.0"
+
+
+class TestWriteLammpsInput(_BaseTest):
+    def test_no_error_if_no_constraints(
+        self,
+        system_no_constraints,
+        tmp_path,
+    ):
+        MDConfig.from_interchange(system_no_constraints).write_lammps_input(
+            tmp_path / ".inp",
+        )
+
+    def test_error_if_any_constraints(
+        self,
+        rigid_water_box,
+        constrained_ligand_rigid_water_box,
+        unconstrained_ligand_rigid_water_box,
+        tmp_path,
+    ):
+        for system in [
+            rigid_water_box,
+            constrained_ligand_rigid_water_box,
+            unconstrained_ligand_rigid_water_box,
+        ]:
+
+            with pytest.raises(
+                NotImplementedError,
+                match="constraints in LAMMPS input file not yet implemented",
+            ):
+                MDConfig.from_interchange(system).write_lammps_input(tmp_path / ".inp")

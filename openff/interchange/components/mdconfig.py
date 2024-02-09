@@ -201,6 +201,12 @@ class MDConfig(DefaultModel):
 
     def write_lammps_input(self, input_file: str = "run.in") -> None:
         """Write a LAMMPS input file for running single-point energies."""
+        if self.constraints != "none":
+            raise NotImplementedError(
+                "Properly handling constraints in LAMMPS input file not yet implemented. "
+                f"Found constriants={self.constraints}",
+            )
+
         with open(input_file, "w") as lmp:
             lmp.write(
                 "units real\n"
