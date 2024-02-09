@@ -1,5 +1,5 @@
 import pytest
-from openff.toolkit.topology import Topology
+from openff.toolkit import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     ParameterHandler,

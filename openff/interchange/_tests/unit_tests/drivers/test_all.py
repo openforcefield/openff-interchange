@@ -7,7 +7,7 @@ from shutil import which
 
 import pandas
 import pytest
-from openff.toolkit.topology import Molecule
+from openff.toolkit import Molecule
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange

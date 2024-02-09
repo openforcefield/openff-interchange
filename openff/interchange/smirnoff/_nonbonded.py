@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from typing import Any, Literal, Optional, Union
 
 import numpy
-from openff.toolkit import Molecule, Topology
+from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
@@ -13,8 +13,8 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ToolkitAM1BCCHandler,
     vdWHandler,
 )
-from openff.units import Quantity, unit
 
+from openff.interchange._pydantic import Field
 from openff.interchange.common._nonbonded import (
     ElectrostaticsCollection,
     _NonbondedCollection,
@@ -39,11 +39,6 @@ from openff.interchange.models import (
 )
 from openff.interchange.smirnoff._base import SMIRNOFFCollection, T
 
-try:
-    from pydantic.v1 import Field
-except ImportError:
-    from pydantic import Field
-
 ElectrostaticsHandlerType = Union[
     ElectrostaticsHandler,
     ToolkitAM1BCCHandler,
@@ -61,9 +56,9 @@ _ZERO_CHARGE = Quantity(0.0, unit.elementary_charge)
     strict=True,
 )
 def _add_charges(
-    charge1: Quantity,
-    charge2: Quantity,
-) -> Quantity:
+    charge1: "Quantity",
+    charge2: "Quantity",
+) -> "Quantity":
     """Add two charges together."""
     return charge1 + charge2
 
@@ -468,7 +463,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         molecule: Molecule,
         mapped_smiles: str,
         method: str,
-    ) -> "Quantity":
+    ) -> Quantity:
         """Call out to the toolkit's toolkit wrappers to generate partial charges."""
         molecule = copy.deepcopy(molecule)
         molecule.assign_partial_charges(method)
@@ -572,7 +567,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                 elif len(atom_indices) - len(charge_increments) == 1:
                     # If we've been provided with one less charge increment value than tagged atoms, assume the last
                     # tagged atom offsets the charge of the others to make the chargeincrement net-neutral
-                    charge_increment_sum = unit.Quantity(0.0, unit.elementary_charge)
+                    charge_increment_sum = Quantity(0.0, unit.elementary_charge)
 
                     for ci in charge_increments:
                         charge_increment_sum += ci
@@ -923,7 +918,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         f"a net charge of {charge_sum}",
                     )
 
-            molecule.partial_charges = unit.Quantity(
+            molecule.partial_charges = Quantity(
                 molecule_charges,
                 unit.elementary_charge,
             )

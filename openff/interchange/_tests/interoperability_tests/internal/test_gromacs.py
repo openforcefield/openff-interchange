@@ -4,9 +4,8 @@ from math import exp
 import numpy
 import parmed
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 from openff.units.openmm import ensure_quantity
 from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
@@ -205,7 +204,7 @@ class TestGROMACS(_BaseTest):
             MoleculeWithConformer.from_smiles("CC1=CC=CC=C1").to_topology(),
         )
 
-        out.box = unit.Quantity(4 * numpy.eye(3), units=unit.nanometer)
+        out.box = Quantity(4 * numpy.eye(3), units=unit.nanometer)
         out.to_top("tmp.top")
 
         # Sanity check; toluene should have some improper(s)
@@ -318,7 +317,7 @@ class TestGROMACS(_BaseTest):
             )
 
         for molecule in top.molecules:
-            molecule.partial_charges = unit.Quantity(
+            molecule.partial_charges = Quantity(
                 molecule.n_atoms * [0],
                 unit.elementary_charge,
             )
@@ -351,10 +350,10 @@ class TestGROMACS(_BaseTest):
 
         for index, molecule in enumerate(molecules):
             molecule.generate_conformers(n_conformers=1)
-            molecule.conformers[0] += unit.Quantity(3 * [5 * index], unit.angstrom)
+            molecule.conformers[0] += Quantity(3 * [5 * index], unit.angstrom)
 
         topology = Topology.from_molecules(molecules)
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
 
         out = Interchange.from_smirnoff(sage_unconstrained, topology)
 

@@ -1,7 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit import Molecule, Topology
-from openff.units import unit
+from openff.toolkit import Molecule, Topology, unit
 
 from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest

@@ -5,8 +5,7 @@ Helper functions for producing `openmm.Force` objects for non-bonded terms.
 from collections import defaultdict
 from typing import DefaultDict, NamedTuple, Optional, Union
 
-from openff.toolkit import Molecule
-from openff.units import unit
+from openff.toolkit import Molecule, unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 

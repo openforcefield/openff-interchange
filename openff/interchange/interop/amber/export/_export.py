@@ -8,8 +8,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 import numpy as np
-from openff.toolkit import Topology
-from openff.units import unit
+from openff.toolkit import Topology, unit
 
 from openff.interchange import Interchange
 from openff.interchange.components.toolkit import _get_num_h_bonds

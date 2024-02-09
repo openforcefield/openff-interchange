@@ -4,8 +4,7 @@ Units tests for openff.interchange.components._packmol
 
 import numpy
 import pytest
-from openff.toolkit.topology import Molecule
-from openff.units import unit
+from openff.toolkit import Molecule, Quantity, unit
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange.components._packmol import (
@@ -90,7 +89,7 @@ class TestPackmolWrapper:
         Test that _compute_brick() raises an exception with an irreduced box.
         """
         # This is a rhombic dodecahedron with the first and last rows swapped
-        box = unit.Quantity(
+        box = Quantity(
             numpy.asarray(
                 [
                     [0.5, 0.5, numpy.sqrt(2.0) / 2.0],

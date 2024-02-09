@@ -1,7 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, unit
 from openff.utilities import has_package, requires_package, skip_if_missing
 
 from openff.interchange import Interchange

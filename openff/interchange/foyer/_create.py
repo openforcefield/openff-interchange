@@ -1,7 +1,6 @@
 from typing import Optional
 
-from openff.toolkit import Topology
-from openff.units import Quantity, unit
+from openff.toolkit import Quantity, Topology, unit
 from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
@@ -86,7 +85,7 @@ def _create_interchange(
             charges[TopologyKey(atom_indices=(_topology.atom_index(atom),))].m
             for atom in molecule.atoms
         ]
-        molecule.partial_charges = unit.Quantity(
+        molecule.partial_charges = Quantity(
             molecule_charges,
             unit.elementary_charge,
         )

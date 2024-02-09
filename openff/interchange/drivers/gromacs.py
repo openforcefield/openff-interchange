@@ -7,7 +7,7 @@ from pathlib import Path
 from shutil import which
 from typing import Optional, Union
 
-from openff.units import unit
+from openff.toolkit import unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.interchange.components.mdconfig import MDConfig
@@ -24,7 +24,7 @@ if sys.version_info >= (3, 10):
 else:
     import importlib_resources as resources
 
-from openff.units import Quantity
+from openff.toolkit import Quantity
 
 from openff.interchange import Interchange
 

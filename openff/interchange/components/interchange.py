@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, Literal, Optional, Union, overload
 import numpy as np
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, QuantityEncoder
-from openff.toolkit import ForceField, Molecule, Topology
-from openff.units import Quantity, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange._experimental import experimental
+from openff.interchange._pydantic import Field, validator
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._valence import (
     AngleCollection,
@@ -39,11 +39,6 @@ from openff.interchange.smirnoff import (
     SMIRNOFFVirtualSiteCollection,
 )
 from openff.interchange.warnings import InterchangeDeprecationWarning
-
-try:
-    from pydantic.v1 import Field, validator
-except ImportError:
-    from pydantic import Field, validator
 
 if has_package("foyer"):
     from foyer.forcefield import Forcefield as FoyerForcefield
@@ -92,11 +87,11 @@ def interchange_loader(data: str) -> dict:
         if val is None:
             continue
         if key == "positions":
-            tmp["positions"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+            tmp["positions"] = Quantity(val["val"], unit.Unit(val["unit"]))
         elif key == "velocities":
-            tmp["velocities"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+            tmp["velocities"] = Quantity(val["val"], unit.Unit(val["unit"]))
         elif key == "box":
-            tmp["box"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+            tmp["box"] = Quantity(val["val"], unit.Unit(val["unit"]))
         elif key == "topology":
             tmp["topology"] = Topology.from_json(val)
         elif key == "collections":
@@ -193,7 +188,7 @@ class Interchange(DefaultModel):
             raise InvalidTopologyError("_OFFBioTop is no longer supported")
         else:
             raise InvalidTopologyError(
-                "Could not process topology argument, expected openff.toolkit.topology.Topology. "
+                "Could not process topology argument, expected openff.toolkit.Topology. "
                 f"Found object of type {type(value)}.",
             )
 
@@ -227,7 +222,7 @@ class Interchange(DefaultModel):
         ----------
         force_field : `openff.toolkit.ForceField`
             The force field to parameterize the topology with.
-        topology : `openff.toolkit.topology.Topology` or `List[openff.toolkit.topology.Molecule]`
+        topology : `openff.toolkit.Topology` or `List[openff.toolkit.Molecule]`
             The topology to parameterize, or a list of molecules to construct a
             topology from and parameterize.
         box : `openff.unit.Quantity`, optional
@@ -675,18 +670,18 @@ class Interchange(DefaultModel):
                 get_positions_with_virtual_sites,
             )
 
-            topology: openmm.app.Topology = self.to_openmm_topology(
+            openmm_topology = self.to_openmm_topology(
                 ensure_unique_atom_names=False,
             )
             positions = get_positions_with_virtual_sites(self)
 
         else:
-            topology: openmm.app.Topology = self.topology.to_openmm(
+            openmm_topology = self.topology.to_openmm(
                 ensure_unique_atom_names=False,
             )
             positions = self.positions
 
-        _to_pdb(file_path, topology, positions.to(unit.angstrom))
+        _to_pdb(file_path, openmm_topology, positions.to(unit.angstrom))
 
     def to_psf(self, file_path: Union[Path, str]):
         """Export this Interchange to a CHARMM-style .psf file."""
@@ -727,7 +722,7 @@ class Interchange(DefaultModel):
         .. code-block:: pycon
 
             >>> from openff.interchange import Interchange
-            >>> from openff.toolkit.topology import Molecule, Topology
+            >>> from openff.toolkit import Molecule, Topology
             >>> from foyer import Forcefield
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)

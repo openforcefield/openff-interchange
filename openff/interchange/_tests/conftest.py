@@ -1,9 +1,8 @@
 """Pytest configuration."""
 
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import BondType, VirtualSiteType
-from openff.units import Quantity, unit
 
 from openff.interchange._tests import MoleculeWithConformer, get_test_file_path
 
@@ -205,7 +204,7 @@ def gbsa_force_field() -> ForceField:
 @pytest.fixture()
 def basic_top() -> Topology:
     topology = Molecule.from_smiles("C").to_topology()
-    topology.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
+    topology.box_vectors = Quantity([5, 5, 5], unit.nanometer)
     return topology
 
 

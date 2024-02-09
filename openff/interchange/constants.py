@@ -2,7 +2,7 @@
 Commonly-used constants.
 """
 
-from openff.units import unit
+from openff.toolkit import unit
 
 _PME = "Ewald3D-ConductingBoundary"
 kj_mol = unit.Unit("kilojoule / mol")

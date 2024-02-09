@@ -4,7 +4,7 @@ Helper functions for producing `openmm.Force` objects for valence terms.
 
 from typing import Union
 
-from openff.units import unit as off_unit
+from openff.toolkit import unit as off_unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 

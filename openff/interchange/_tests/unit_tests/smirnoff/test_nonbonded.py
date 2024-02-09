@@ -1,6 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit import Molecule, Topology
+from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
@@ -9,7 +9,6 @@ from openff.toolkit.typing.engines.smirnoff import (
     vdWHandler,
 )
 from openff.toolkit.utils.exceptions import SMIRNOFFVersionError
-from openff.units import Quantity, unit
 from packaging.version import Version
 
 from openff.interchange import Interchange

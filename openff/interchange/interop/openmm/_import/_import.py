@@ -93,7 +93,7 @@ def from_openmm(
 def _convert_constraints(
     system: "openmm.System",
 ) -> Optional[ConstraintCollection]:
-    from openff.units import unit
+    from openff.toolkit import unit
 
     from openff.interchange.components.potentials import Potential
     from openff.interchange.models import BondKey, PotentialKey
@@ -262,7 +262,7 @@ def _convert_periodic_torsion_force(
 ) -> "ProperTorsionCollection":
     # TODO: Can impropers be separated out from a PeriodicTorsionForce?
     # Maybe by seeing if a quartet is in mol/top.propers or .impropers
-    from openff.units import unit
+    from openff.toolkit import unit
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.common._valence import ProperTorsionCollection

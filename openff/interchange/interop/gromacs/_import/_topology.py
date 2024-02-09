@@ -1,5 +1,5 @@
+from openff.toolkit.topology import Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
-from openff.toolkit.topology.topology import Topology
 
 from openff.interchange.interop.gromacs._import._import import GROMACSSystem
 

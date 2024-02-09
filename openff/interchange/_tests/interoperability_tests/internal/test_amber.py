@@ -1,8 +1,7 @@
 import numpy as np
 import parmed
 import pytest
-from openff.toolkit import ForceField, Molecule
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, unit
 from openff.utilities import (
     get_data_file_path,
     has_executable,

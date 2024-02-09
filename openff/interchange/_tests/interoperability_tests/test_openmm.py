@@ -2,9 +2,8 @@ import math
 
 import numpy
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 from openff.utilities import get_data_file_path, has_package
 from openff.utilities.testing import skip_if_missing
 
@@ -363,9 +362,9 @@ class TestOpenMM(_BaseTest):
     def test_nonstandard_cutoffs_match(self, sage):
         """Test that multiple nonbonded forces use the same cutoff."""
         topology = Molecule.from_smiles("C").to_topology()
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
 
-        cutoff = unit.Quantity(1.555, unit.nanometer)
+        cutoff = Quantity(1.555, unit.nanometer)
 
         sage["vdW"].cutoff = cutoff
 
@@ -470,7 +469,7 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
         from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 
         topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
 
         out = Interchange.from_smirnoff(
             de_force_field,
@@ -662,7 +661,7 @@ class TestToOpenMMTopology(_BaseTest):
         and as the wrapped method of the same name on the `Interchange` class.
         """
         topology = water.to_topology()
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
 
         out = Interchange.from_smirnoff(tip4p, topology)
 
@@ -1037,7 +1036,7 @@ class TestToOpenMMPositions(_BaseTest):
         out = Interchange.from_smirnoff(tip4p, topology)
 
         # Approximate conformer position with a duplicate 5 A away in x
-        out.positions = unit.Quantity(
+        out.positions = Quantity(
             numpy.array(
                 [
                     [0.85, 1.17, 0.84],

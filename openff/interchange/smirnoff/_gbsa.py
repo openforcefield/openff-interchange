@@ -2,10 +2,10 @@ from collections.abc import Iterable
 from typing import Literal, Optional
 
 from openff.models.types import FloatQuantity
-from openff.toolkit import Topology
+from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler
-from openff.units import unit
 
+from openff.interchange._pydantic import Field
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kcal_mol_a2
 from openff.interchange.exceptions import InvalidParameterHandlerError
@@ -18,15 +18,38 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
     type: Literal["GBSA"] = "GBSA"
     expression: str = "GBSA-OBC1"
 
-    gb_model: str = "OBC1"
-
-    solvent_dielectric: FloatQuantity["dimensionless"] = 78.5
-    solute_dielectric: FloatQuantity["dimensionless"] = 1.0
-    sa_model: Optional[str] = "ACE"
-    surface_area_penalty: FloatQuantity["kilocalorie_per_mole / angstrom ** 2"] = (
-        5.4 * kcal_mol_a2
+    gb_model: str = Field(
+        "OBC1",
+        description=(
+            "The generalized Born (GB) model to be used. For details, see "
+            "https://openforcefield.github.io/standards/standards/smirnoff/#supported-generalized-born-gb-models",
+        ),
     )
-    solvent_radius: FloatQuantity["angstrom"] = 1.4 * unit.angstrom
+
+    solvent_dielectric: FloatQuantity["dimensionless"] = Field(
+        Quantity(78.5, "dimensionless"),
+        description="The dielectric constant of the solvent.",
+    )
+
+    solute_dielectric: FloatQuantity["dimensionless"] = Field(
+        Quantity(1.0, "dimensionless"),
+        description="The dielectric constant of the solute.",
+    )
+
+    sa_model: Optional[str] = Field(
+        "ACE",
+        description="The solvent-accessible surface area model to be used. See SMIRNOFF spec for details",
+    )
+
+    surface_area_penalty: FloatQuantity["kilocalorie_per_mole / angstrom ** 2"] = Field(
+        Quantity(5.4, kcal_mol_a2),
+        description="The surface area penalty if using the ACE model.",
+    )
+
+    solvent_radius: FloatQuantity["angstrom"] = Field(
+        Quantity(1.4, unit.angstrom),
+        description="The radius of the solvent molecule.",
+    )
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -60,7 +83,7 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
             potential = Potential(
                 parameters={
                     "radius": force_field_parameters.radius,
-                    "scale": unit.Quantity(
+                    "scale": Quantity(
                         force_field_parameters.scale,
                         unit.dimensionless,
                     ),
