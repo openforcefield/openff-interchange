@@ -2,11 +2,14 @@
 
 from contextlib import nullcontext
 from pathlib import Path
-from typing import TextIO, Union
+from typing import TYPE_CHECKING, TextIO, Union
 
 from openff.utilities.utilities import has_package, requires_package
 
-from openff.interchange.exceptions import PluginCompatibilityError
+from openff.interchange.exceptions import (
+    PluginCompatibilityError,
+    UnsupportedExportError,
+)
 from openff.interchange.interop.openmm._import._import import from_openmm
 from openff.interchange.interop.openmm._positions import to_openmm_positions
 from openff.interchange.interop.openmm._topology import to_openmm_topology
@@ -14,6 +17,9 @@ from openff.interchange.interop.openmm._topology import to_openmm_topology
 if has_package("openmm"):
     import openmm
     import openmm.app
+
+if TYPE_CHECKING:
+    from openff.interchange import Interchange
 
 __all__ = [
     "to_openmm",
@@ -25,10 +31,11 @@ __all__ = [
 
 @requires_package("openmm")
 def to_openmm_system(
-    interchange,
+    interchange: "Interchange",
     combine_nonbonded_forces: bool = False,
     add_constrained_forces: bool = False,
     ewald_tolerance: float = 1e-4,
+    hydrogen_mass: float = 1.007947,
 ) -> "openmm.System":
     """
     Convert an Interchange to an OpenmM System.
@@ -45,6 +52,9 @@ def to_openmm_system(
         on a bond or angle that is fully constrained.
     ewald_tolerance : float, default=1e-4
         The value passed to `NonbondedForce.setEwaldErrorTolerance`
+    hydrogen_mass : float, default=1.007947
+        The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
+        than the default value, mass will be transferred from neighboring heavy atoms.
 
     Returns
     -------
@@ -110,6 +120,13 @@ def to_openmm_system(
         system,
     )
 
+    # TODO: Apply HMR before or after final plugin touch point?
+    _apply_hmr(
+        system,
+        interchange,
+        hydrogen_mass=hydrogen_mass,
+    )
+
     for collection in interchange.collections.values():
         if collection.is_plugin:
             try:
@@ -129,6 +146,7 @@ def to_openmm_system(
 to_openmm = to_openmm_system
 
 
+@requires_package("openmm")
 def _to_pdb(
     file_path: Union[Path, str, TextIO],
     topology: "openmm.app.Topology",
@@ -149,3 +167,60 @@ def _to_pdb(
             positions=ensure_quantity(positions, "openmm"),
             file=outfile,
         )
+
+
+@requires_package("openmm")
+def _apply_hmr(
+    system: "openmm.System",
+    interchange: "Interchange",
+    hydrogen_mass: float,
+):
+    from openff.toolkit import Molecule
+
+    if abs(hydrogen_mass - 1.008) < 1e-3:
+        return
+
+    if system.getNumParticles() != interchange.topology.n_atoms:
+        raise UnsupportedExportError(
+            "Hydrogen mass repartitioning with virtual sites present, even on "
+            " rigid water, is not yet supported.",
+        )
+
+    water = Molecule.from_smiles("O")
+
+    def _is_water(molecule: Molecule) -> bool:
+        return molecule.is_isomorphic_with(water)
+
+    _hydrogen_mass = hydrogen_mass * openmm.unit.dalton
+
+    for bond in interchange.topology.bonds:
+
+        heavy_atom, hydrogen_atom = bond.atoms
+
+        if heavy_atom.atomic_number == 1:
+
+            heavy_atom, hydrogen_atom = hydrogen_atom, heavy_atom
+
+        # TODO: This should only skip rigid waters, even though HMR or flexible water is questionable
+        if (
+            (hydrogen_atom.atomic_number == 1)
+            and (heavy_atom.atomic_number != 1)  # noqa: W503
+            and not (_is_water(hydrogen_atom.molecule))  # noqa: W503
+        ):
+
+            hydrogen_index = interchange.topology.atom_index(hydrogen_atom)
+            heavy_index = interchange.topology.atom_index(heavy_atom)
+
+            # This will need to be wired up through the OpenFF-OpenMM particle index map
+            # when virtual sites + HMR are supported
+            mass_to_transfer = _hydrogen_mass - system.getParticleMass(hydrogen_index)
+
+            system.setParticleMass(
+                hydrogen_index,
+                hydrogen_mass * openmm.unit.dalton,
+            )
+
+            system.setParticleMass(
+                heavy_index,
+                system.getParticleMass(heavy_index) - mass_to_transfer,
+            )

@@ -13,6 +13,9 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+* #891 Adds support for hydrogen mass repartitioning (HMR) in GROMACS export. Note that this implementaiton never modifies masses in waters and requires the system contains no virtual sites.
+* #887 Adds support for hydrogen mass repartitioning (HMR) in OpenMM export. Note that this implementaiton never modifies masses in waters and requires the system contains no virtual sites.
+
 ### 0.3.19 - 2023-02-05
 
 * #867 Tags `PotentialKey.virtual_site_type` with the associated type provided by SMIRNOFF parameters.
