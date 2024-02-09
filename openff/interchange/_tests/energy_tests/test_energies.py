@@ -1,8 +1,6 @@
 import numpy as np
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, Topology, unit
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange

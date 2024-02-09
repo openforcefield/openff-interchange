@@ -5,7 +5,7 @@ from shutil import which
 from typing import Optional
 
 import numpy
-from openff.units import unit
+from openff.toolkit import unit
 
 from openff.interchange import Interchange
 from openff.interchange.components.mdconfig import MDConfig

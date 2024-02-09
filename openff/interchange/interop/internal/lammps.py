@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import IO, Union
 
 import numpy as np
-from openff.units import unit
+from openff.toolkit import unit
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError

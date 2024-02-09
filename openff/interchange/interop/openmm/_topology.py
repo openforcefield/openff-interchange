@@ -23,7 +23,7 @@ def to_openmm_topology(
 
     from collections import defaultdict
 
-    from openff.toolkit.topology import Topology
+    from openff.toolkit import Topology
     from openff.toolkit.topology._mm_molecule import _SimpleBond
     from openff.toolkit.topology.molecule import Bond
 

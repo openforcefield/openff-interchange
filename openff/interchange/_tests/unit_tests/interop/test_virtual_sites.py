@@ -4,8 +4,7 @@ from random import random
 
 import numpy
 import pytest
-from openff.toolkit import ForceField
-from openff.units import Quantity, unit
+from openff.toolkit import ForceField, Quantity, unit
 
 from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange.exceptions import MissingVirtualSitesError

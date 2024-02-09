@@ -2,9 +2,9 @@ import itertools
 from collections import defaultdict
 from typing import Optional, Union
 
+from openff.toolkit import Molecule, Quantity, unit
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
-from openff.toolkit.topology.molecule import Atom, Molecule
-from openff.units import Quantity, unit
+from openff.toolkit.topology.molecule import Atom
 from openff.units.elements import MASSES, SYMBOLS
 from typing_extensions import TypeAlias
 

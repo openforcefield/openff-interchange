@@ -1,6 +1,5 @@
 import numpy as np
-from openff.toolkit.topology import Molecule, Topology
-from openff.units import unit
+from openff.toolkit import Molecule, Topology, unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.components.mbuild import offmol_to_compound, offtop_to_compound

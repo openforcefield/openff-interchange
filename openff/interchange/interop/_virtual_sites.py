@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from typing import DefaultDict
 
 import numpy
-from openff.units import Quantity, unit
+from openff.toolkit import Quantity, unit
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import (
@@ -183,7 +183,7 @@ def _get_separation_by_atom_indices(
                 # law of cosines
                 c2 = a**2 + b**2 - 2 * a * b * numpy.cos(gamma)
 
-                return unit.Quantity(
+                return Quantity(
                     c2**0.5,
                     unit.nanometer,
                 )

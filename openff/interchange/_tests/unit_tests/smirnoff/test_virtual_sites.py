@@ -3,14 +3,13 @@ from typing import TYPE_CHECKING
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     LibraryChargeHandler,
     VirtualSiteHandler,
     vdWHandler,
 )
-from openff.units import Quantity, unit
 from openff.units.openmm import to_openmm
 from openff.utilities import has_package, skip_if_missing
 
@@ -145,7 +144,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             1 if system.isVirtualSite(i) else 0 for i in range(system.getNumParticles())
         )
 
-        input_conformer = unit.Quantity(
+        input_conformer = Quantity(
             numpy.vstack(
                 [
                     input_conformer.m_as(unit.angstrom),
@@ -187,14 +186,14 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 "[Cl:1][C:2]([H:3])([H:4])[H:5]",
                 VirtualSiteMocking.sp3_conformer(),
                 (0, 1),
-                unit.Quantity(numpy.array([[0.0, 3.0, 0.0]]), unit.angstrom),
+                Quantity(numpy.array([[0.0, 3.0, 0.0]]), unit.angstrom),
             ),
             (
                 VirtualSiteMocking.bond_charge_parameter("[C:1]#[C:2]"),
                 "[H:1][C:2]#[C:3][H:4]",
                 VirtualSiteMocking.sp1_conformer(),
                 (2, 3),
-                unit.Quantity(
+                Quantity(
                     numpy.array([[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]]),
                     unit.angstrom,
                 ),
@@ -206,7 +205,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 (0, 1, 2, 3),
                 (
                     VirtualSiteMocking.sp2_conformer()[0]
-                    + unit.Quantity(  # noqa
+                    + Quantity(  # noqa
                         numpy.array(
                             [[1.0, numpy.sqrt(2), 1.0], [1.0, -numpy.sqrt(2), -1.0]],
                         ),
@@ -234,7 +233,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 "[H:2][O:1][H:3]",
                 VirtualSiteMocking.sp2_conformer()[1:, :],
                 (0, 1, 2),
-                unit.Quantity(
+                Quantity(
                     numpy.array(
                         [
                             [numpy.sqrt(2), numpy.sqrt(2), 0.0],

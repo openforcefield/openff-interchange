@@ -1,8 +1,7 @@
 """Test SMIRNOFF-GROMACS conversion."""
 
 import pytest
-from openff.toolkit import Molecule
-from openff.units import unit
+from openff.toolkit import Molecule, unit
 
 from openff.interchange import Interchange
 from openff.interchange._tests import _BaseTest

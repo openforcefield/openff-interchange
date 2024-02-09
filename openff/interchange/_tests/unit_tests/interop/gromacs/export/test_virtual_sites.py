@@ -1,5 +1,5 @@
 import pytest
-from openff.units import Quantity, unit
+from openff.toolkit import Quantity, unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange._tests import MoleculeWithConformer

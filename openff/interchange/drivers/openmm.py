@@ -4,7 +4,7 @@ import warnings
 from typing import TYPE_CHECKING, Optional
 
 import numpy
-from openff.units import unit
+from openff.toolkit import unit
 from openff.units.openmm import ensure_quantity
 from openff.utilities.utilities import has_package, requires_package
 

@@ -1,5 +1,5 @@
 import pytest
-from openff.units import unit
+from openff.toolkit import unit
 from openff.units.openmm import ensure_quantity
 from openff.utilities.testing import skip_if_missing
 

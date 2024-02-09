@@ -1,12 +1,11 @@
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
     ImproperTorsionHandler,
 )
-from openff.units import unit
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -27,10 +26,7 @@ if has_package("openmm"):
     import openmm.app
     import openmm.unit
 
-try:
-    from pydantic.v1 import ValidationError
-except ImportError:
-    from pydantic import ValidationError
+from openff.interchange._pydantic import ValidationError
 
 
 class TestSMIRNOFFValenceCollections(_BaseTest):
@@ -440,7 +436,7 @@ class TestParameterInterpolation(_BaseTest):
         topology = Topology.from_molecules(mol)
 
         out = Interchange.from_smirnoff(forcefield, topology)
-        out.box = unit.Quantity(4 * numpy.eye(3), unit.nanometer)
+        out.box = Quantity(4 * numpy.eye(3), unit.nanometer)
         omm_system = out.to_openmm(combine_nonbonded_forces=True)
 
         # Verify that the assigned bond parameters were correctly interpolated

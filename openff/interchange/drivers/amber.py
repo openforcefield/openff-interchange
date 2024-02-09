@@ -6,7 +6,7 @@ from pathlib import Path
 from shutil import which
 from typing import Union
 
-from openff.units import unit
+from openff.toolkit import unit
 from openff.utilities.utilities import temporary_cd
 
 from openff.interchange import Interchange

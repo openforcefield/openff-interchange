@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import numpy
 from openff.models.models import DefaultModel
-from openff.units import unit
+from openff.toolkit import unit
 
 from openff.interchange.exceptions import MissingPositionsError
 from openff.interchange.interop.gromacs.models.models import (

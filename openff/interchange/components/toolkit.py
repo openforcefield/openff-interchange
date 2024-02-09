@@ -60,11 +60,9 @@ def _get_14_pairs(topology_or_molecule: Union["Topology", "Molecule"]):
                         yield (atom_i_partner, atom_j_partner)
 
 
-def _validated_list_to_array(validated_list: "ValidatedList") -> "Quantity":
-    from openff.units import unit
-
+def _validated_list_to_array(validated_list: "ValidatedList") -> Quantity:
     unit_ = validated_list[0].units
-    return unit.Quantity(numpy.asarray([val.m for val in validated_list]), unit_)
+    return Quantity(numpy.asarray([val.m for val in validated_list]), unit_)
 
 
 def _combine_topologies(topology1: Topology, topology2: Topology) -> Topology:

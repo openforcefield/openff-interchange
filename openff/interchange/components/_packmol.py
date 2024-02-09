@@ -11,8 +11,7 @@ from typing import Callable, Literal, Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
-from openff.toolkit import Molecule, RDKitToolkitWrapper, Topology
-from openff.units import Quantity, unit
+from openff.toolkit import Molecule, Quantity, RDKitToolkitWrapper, Topology, unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
@@ -97,7 +96,7 @@ def _validate_inputs(
 
     Parameters
     ----------
-    molecules : list of openff.toolkit.topology.Molecule
+    molecules : list of openff.toolkit.Molecule
         The molecules in the system.
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
@@ -151,7 +150,7 @@ def _validate_inputs(
     if solute is not None:
         if not isinstance(solute, Topology):
             raise PACKMOLValueError(
-                "`solute` must be a openff.toolkit.topology.Topology",
+                "`solute` must be a openff.toolkit.Topology",
             )
 
         positions = solute.get_positions()
@@ -317,7 +316,7 @@ def _box_from_density(
 
     Parameters
     ----------
-    molecules : list of openff.toolkit.topology.Molecule
+    molecules : list of openff.toolkit.Molecule
         The molecules in the system.
     n_copies : list of int
         The number of copies of each molecule.
@@ -559,13 +558,13 @@ def pack_box(
 
     Parameters
     ----------
-    molecules : list of openff.toolkit.topology.Molecule
+    molecules : list of openff.toolkit.Molecule
         The molecules in the system.
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
         equal to the length of ``molecules``.
     solute: Topology, optional
-        An OpenFF :py:class:`Topology <openff.toolkit.topology.Topology>` to
+        An OpenFF :py:class:`Topology <openff.toolkit.Topology>` to
         include in the box. If ``box_vectors`` and ``mass_density`` are not
         specified, box vectors can be taken from ``solute.box_vectors``.
     tolerance : openff.units.Quantity
@@ -647,7 +646,7 @@ def pack_box(
     # If neither box size nor density are given, take box vectors from solute
     # topology
     if box_vectors is None:
-        box_vectors = solute.box_vectors
+        box_vectors = solute.box_vectors  # type: ignore[union-attr]
 
     if not _box_vectors_are_in_reduced_form(box_vectors):
         raise PACKMOLValueError(
@@ -762,8 +761,7 @@ def _max_dist_between_points(points: Quantity) -> Quantity:
     """
     Compute the greatest distance between two points in the array.
     """
-    from scipy.spatial import ConvexHull
-    from scipy.spatial.distance import pdist
+    from scipy.spatial import ConvexHull, distance
 
     points, units = points.m, points.u
 
@@ -781,7 +779,7 @@ def _max_dist_between_points(points: Quantity) -> Quantity:
         hullpoints = points_array
 
     # Now compute all the distances and get the greatest distance in O(h^2)
-    max_dist = pdist(hullpoints, metric="euclidean").max()
+    max_dist = distance.pdist(hullpoints, metric="euclidean").max()
     return max_dist * units
 
 

@@ -5,10 +5,7 @@ from typing import Literal, Optional
 
 from openff.models.models import DefaultModel
 
-try:
-    from pydantic.v1 import Field
-except ImportError:
-    from pydantic import Field
+from openff.interchange._pydantic import Field
 
 
 class TopologyKey(DefaultModel, abc.ABC):
@@ -249,7 +246,7 @@ class PotentialKey(DefaultModel):
     .. code-block:: pycon
 
         >>> from openff.interchange.models import PotentialKey
-        >>> from openff.toolkit.typing.engines.smirnoff import ForceField
+        >>> from openff.toolkit import ForceField
         >>> parsley = ForceField("openff-1.0.0.offxml")
         >>> param = parsley["Bonds"].get_parameter({"id": "b55"})[0]
         >>> bond_55 = PotentialKey(id=param.smirks)
