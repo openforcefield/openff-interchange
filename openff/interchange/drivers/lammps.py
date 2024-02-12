@@ -73,6 +73,7 @@ def _get_lammps_energies(
     interchange.to_lammps("out.lmp")
     mdconfig = MDConfig.from_interchange(interchange)
     mdconfig.write_lammps_input(
+        interchange=interchange,
         input_file="tmp.in",
     )
 

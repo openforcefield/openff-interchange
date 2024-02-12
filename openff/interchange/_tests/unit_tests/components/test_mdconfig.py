@@ -270,10 +270,11 @@ class TestWriteLammpsInput(_BaseTest):
         tmp_path,
     ):
         MDConfig.from_interchange(system_no_constraints).write_lammps_input(
+            system_no_constraints,
             tmp_path / ".inp",
         )
 
-    def test_error_if_any_constraints(
+    def test_error_if_unsupported_constrained(
         self,
         rigid_water_box,
         constrained_ligand_rigid_water_box,
@@ -288,6 +289,9 @@ class TestWriteLammpsInput(_BaseTest):
 
             with pytest.raises(
                 NotImplementedError,
-                match="constraints in LAMMPS input file not yet implemented",
+                match="unsupported constraints case",
             ):
-                MDConfig.from_interchange(system).write_lammps_input(tmp_path / ".inp")
+                MDConfig.from_interchange(system).write_lammps_input(
+                    system,
+                    tmp_path / ".inp",
+                )

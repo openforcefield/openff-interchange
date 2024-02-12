@@ -199,13 +199,49 @@ class MDConfig(DefaultModel):
                 mdp.write("vdw-modifier = None\n")
                 mdp.write("rvdwswitch = 0\n")
 
-    def write_lammps_input(self, input_file: str = "run.in") -> None:
+    def write_lammps_input(
+        self,
+        interchange: "Interchange",
+        input_file: str = "run.in",
+    ) -> None:
         """Write a LAMMPS input file for running single-point energies."""
-        if self.constraints != "none":
-            raise NotImplementedError(
-                "Properly handling constraints in LAMMPS input file not yet implemented. "
-                f"Found constriants={self.constraints}",
-            )
+        # TODO: Get constrained angles
+        # TODO: Process rigid water
+
+        def _get_coeffs_of_constrained_bonds(interchange: "Interchange") -> set[int]:
+            """
+            Get coefficients of bonds that appear to be constrained.
+
+            Refactor this when LAMMPS export uses a dedicated class. Angles are not processed here.
+
+            * Coefficients are matched by stored SMIRKS
+            * Coefficients are ints associated with Bond Coeffs section
+            * Coefficients are zero-indexed
+            """
+            if {
+                key.associated_handler for key in interchange["Constraints"].potentials
+            } not in (
+                set(),
+                {"Bonds"},
+            ):
+                raise NotImplementedError(
+                    "Found unsupported constraints case in LAMMPS input writer.",
+                )
+
+            constrained_bond_smirks = {
+                key.id
+                for key in interchange["Constraints"].potentials
+                if key.associated_handler == "Bonds"
+            }
+
+            return {
+                key
+                for key, val in dict(enumerate(interchange["Bonds"].potentials)).items()
+                if val.id in constrained_bond_smirks
+            }
+
+        # zero-indexed here
+        constrained_bond_coeffs = _get_coeffs_of_constrained_bonds(interchange)
 
         with open(input_file, "w") as lmp:
             lmp.write(
@@ -235,6 +271,7 @@ class MDConfig(DefaultModel):
                     "1-5": 1,
                 },
             }
+
             lmp.write(
                 "special_bonds lj "
                 f"{scale_factors['vdW']['1-2']} "
@@ -267,9 +304,19 @@ class MDConfig(DefaultModel):
                 raise UnsupportedExportError(
                     f"Mixing rule {self.mixing_rule} not supported",
                 )
+
             lmp.write("read_data out.lmp\n\n")
             lmp.write(
                 "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n",
+            )
+
+            # https://docs.lammps.org/fix_shake.html
+            # TODO: Constrained angles, etc.?
+            # TODO: Apply fix to just a group (sub-group)?
+            lmp.write(
+                "fix 100 all shake 0.0001 20 10 b "
+                f"{' '.join([str(val + 1) for val in constrained_bond_coeffs])}"
+                "\n",
             )
 
             if self.coul_method == _PME:
