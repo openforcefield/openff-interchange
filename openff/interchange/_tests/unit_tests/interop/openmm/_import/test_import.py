@@ -7,7 +7,6 @@ from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import UnsupportedImportError
@@ -20,7 +19,7 @@ if has_package("openmm"):
 
 
 @skip_if_missing("openmm")
-class TestFromOpenMM(_BaseTest):
+class TestFromOpenMM:
     def test_simple_roundtrip(self, monkeypatch, sage_unconstrained, ethanol):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
@@ -206,7 +205,7 @@ class TestConvertNonbondedForce:
 
 
 @skip_if_missing("openmm")
-class TestConvertConstraints(_BaseTest):
+class TestConvertConstraints:
     def test_num_constraints(self, monkeypatch, sage, basic_top):
         """Test that the number of constraints is preserved when converting to and from OpenMM"""
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")

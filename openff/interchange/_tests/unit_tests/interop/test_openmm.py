@@ -7,7 +7,7 @@ from openff.units.openmm import ensure_quantity
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import MoleculeWithConformer, _BaseTest
+from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange._tests._openmm import get_14_scaling_factors
 
 if has_package("openmm"):
@@ -20,7 +20,7 @@ if has_package("openmm"):
 
 
 @skip_if_missing("openmm")
-class TestOpenMM(_BaseTest):
+class TestOpenMM:
     def test_no_nonbonded_force(self, sage):
         """
         Ensure a SMIRNOFF-style force field can be exported to OpenMM even if no nonbonded handlers are present. For
@@ -110,7 +110,7 @@ class TestOpenMM(_BaseTest):
 
 
 @skip_if_missing("openmm")
-class TestOpenMMMissingHandlers(_BaseTest):
+class TestOpenMMMissingHandlers:
     def test_missing_vdw_combine_energies(self, sage):
         from openff.interchange.drivers import get_openmm_energies
 

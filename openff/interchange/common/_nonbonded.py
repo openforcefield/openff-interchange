@@ -15,7 +15,7 @@ except ImportError:
     from pydantic import Field, PrivateAttr
 
 
-class _NonbondedCollection(Collection, abc.ABC):  # noqa
+class _NonbondedCollection(Collection, abc.ABC):
     type: str = "nonbonded"
 
     cutoff: FloatQuantity["angstrom"] = Field(  # noqa

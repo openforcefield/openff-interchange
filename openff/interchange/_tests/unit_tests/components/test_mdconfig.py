@@ -4,7 +4,6 @@ import pytest
 from openff.toolkit import Topology
 from openff.units import unit
 
-from openff.interchange._tests import _BaseTest
 from openff.interchange.components.mdconfig import (
     MDConfig,
     get_intermol_defaults,
@@ -92,7 +91,7 @@ def parse_sander(file: str) -> dict[str, Union[dict, str]]:
     return options
 
 
-class TestMDConfigFromInterchange(_BaseTest):
+class TestMDConfigFromInterchange:
     @pytest.mark.parametrize("periodic", [True, False])
     @pytest.mark.parametrize("switch", [True, False])
     def test_from_interchange(self, sage, basic_top, switch, periodic):
@@ -127,7 +126,7 @@ class TestMDConfigFromInterchange(_BaseTest):
             assert config.vdw_method == "no-cutoff"
 
 
-class TestSMIRNOFFDefaults(_BaseTest):
+class TestSMIRNOFFDefaults:
     @pytest.mark.parametrize("periodic", [True, False])
     def test_apply_smirnoff_defaults(self, sage, basic_top, periodic):
         from openff.units import unit
@@ -151,7 +150,7 @@ class TestSMIRNOFFDefaults(_BaseTest):
             assert interchange["Electrostatics"].nonperiodic_potential == "Coulomb"
 
 
-class TestIntermolDefaults(_BaseTest):
+class TestIntermolDefaults:
     @pytest.mark.parametrize("periodic", [True, False])
     def test_write_mdp(self, periodic):
         """
@@ -194,7 +193,7 @@ class TestIntermolDefaults(_BaseTest):
             assert interchange[key].cutoff.m_as(unit.nanometer) == pytest.approx(0.9)
 
 
-class TestWriteSanderInput(_BaseTest):
+class TestWriteSanderInput:
     def test_system_no_constraints(self, system_no_constraints):
         MDConfig.from_interchange(system_no_constraints).write_sander_input_file("1.in")
 

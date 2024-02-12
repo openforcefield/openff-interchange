@@ -14,8 +14,6 @@ from openff.units import Quantity, unit
 from openff.units.openmm import to_openmm
 from openff.utilities import has_package, skip_if_missing
 
-from openff.interchange._tests import _BaseTest
-
 if has_package("openmm") or TYPE_CHECKING:
     import openmm
     import openmm.unit
@@ -79,7 +77,7 @@ class TestSMIRNOFFVirtualSiteCharges:
 
 
 @skip_if_missing("openmm")
-class TestSMIRNOFFVirtualSites(_BaseTest):
+class TestSMIRNOFFVirtualSites:
     from openff.toolkit._tests.mocking import VirtualSiteMocking
 
     @classmethod

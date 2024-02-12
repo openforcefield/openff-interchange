@@ -346,7 +346,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
 
         from openff.interchange.interop.common import _build_typemap
 
-        typemap = _build_typemap(interchange)  # noqa
+        typemap = _build_typemap(interchange)
 
         potential_key_to_atom_type_mapping: dict[PotentialKey, int] = {
             key: i for i, key in enumerate(interchange["vdW"].potentials)

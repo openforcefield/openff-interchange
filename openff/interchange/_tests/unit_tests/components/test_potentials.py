@@ -2,7 +2,6 @@ import pytest
 from openff.toolkit.typing.engines.smirnoff.parameters import BondHandler
 from openff.units import unit
 
-from openff.interchange._tests import _BaseTest
 from openff.interchange.components.potentials import (
     Collection,
     Potential,
@@ -10,7 +9,7 @@ from openff.interchange.components.potentials import (
 )
 
 
-class TestWrappedPotential(_BaseTest):
+class TestWrappedPotential:
     def test_interpolated_potentials(self):
         """Test the construction of and .parameters getter of WrappedPotential"""
 
@@ -41,7 +40,7 @@ class TestWrappedPotential(_BaseTest):
         assert simple.parameters == pot2.parameters
 
 
-class TestCollectionSubclassing(_BaseTest):
+class TestCollectionSubclassing:
     def test_dummy_collection(self):
         handler = Collection(
             type="foo",
@@ -51,7 +50,7 @@ class TestCollectionSubclassing(_BaseTest):
         assert handler.expression == "m*x+b"
 
 
-class TestPotentialSerialization(_BaseTest):
+class TestPotentialSerialization:
     @pytest.fixture()
     def dummy_potential(self):
         return Potential(

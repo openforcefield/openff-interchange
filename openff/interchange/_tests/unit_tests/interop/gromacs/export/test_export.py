@@ -5,7 +5,7 @@ from openff.units import unit
 from openff.utilities import has_package, requires_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest, get_test_file_path
+from openff.interchange._tests import get_test_file_path
 from openff.interchange.interop.gromacs._import._import import from_files
 
 if has_package("openmm"):
@@ -13,7 +13,7 @@ if has_package("openmm"):
     import openmm.unit
 
 
-class TestToGro(_BaseTest):
+class TestToGro:
     def test_residue_names(self, sage):
         """Reproduce issue #642."""
         # This could maybe just test the behavior of _convert?
@@ -44,7 +44,7 @@ class TestToGro(_BaseTest):
         assert not numpy.allclose(positions[3], positions[7])
 
 
-class TestSettles(_BaseTest):
+class TestSettles:
     def test_settles_units(self, monkeypatch, water):
         """Reproduce issue #720."""
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
@@ -71,7 +71,7 @@ class TestSettles(_BaseTest):
 
 @pytest.mark.slow()
 @requires_package("openmm")
-class TestCommonBoxes(_BaseTest):
+class TestCommonBoxes:
     @pytest.mark.parametrize(
         "pdb_file",
         [

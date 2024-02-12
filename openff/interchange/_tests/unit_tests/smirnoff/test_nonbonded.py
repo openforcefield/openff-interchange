@@ -13,7 +13,6 @@ from openff.units import Quantity, unit
 from packaging.version import Version
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     _downconvert_vdw_handler,
@@ -21,7 +20,7 @@ from openff.interchange.smirnoff._nonbonded import (
 )
 
 
-class TestNonbonded(_BaseTest):
+class TestNonbonded:
     @pytest.mark.slow()
     def test_electrostatics_am1_handler(self, methane):
         methane.assign_partial_charges(partial_charge_method="am1bcc")
@@ -166,7 +165,7 @@ class TestNonbonded(_BaseTest):
                 assert getattr(interchange[collection], f"scale1{index}") == factor
 
 
-class TestvdWUpDownConversion(_BaseTest):
+class TestvdWUpDownConversion:
     def test_upconversion(self):
         handler = vdWHandler(version=0.3, method="cutoff")
 
@@ -231,7 +230,7 @@ class TestElectrostatics:
         compare_charges(reordered, get_charges_from_interchange(reordered))
 
 
-class TestSMIRNOFFChargeIncrements(_BaseTest):
+class TestSMIRNOFFChargeIncrements:
     @pytest.fixture()
     def hydrogen_cyanide_charge_increments(self):
         handler = ChargeIncrementModelHandler(

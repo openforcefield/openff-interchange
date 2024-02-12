@@ -12,7 +12,6 @@ from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import (
-    _BaseTest,
     needs_gmx,
     needs_lmp,
     needs_not_gmx,
@@ -27,7 +26,7 @@ from openff.interchange.drivers.lammps import _find_lammps_executable
 
 @skip_if_missing("openmm")
 @pytest.mark.slow()
-class TestDriversAll(_BaseTest):
+class TestDriversAll:
     @pytest.fixture()
     def basic_interchange(self, sage_unconstrained):
         molecule = Molecule.from_smiles("CCO")

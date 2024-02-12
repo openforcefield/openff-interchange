@@ -10,7 +10,6 @@ from openff.interchange._tests import (
     HAS_GROMACS,
     HAS_LAMMPS,
     MoleculeWithConformer,
-    _BaseTest,
     get_test_file_path,
     needs_gmx,
     needs_lmp,
@@ -35,7 +34,7 @@ if HAS_LAMMPS:
 
 
 @skip_if_missing("foyer")
-class TestEnergies(_BaseTest):
+class TestEnergies:
     @pytest.fixture(scope="session")
     def oplsaa(self):
         import foyer

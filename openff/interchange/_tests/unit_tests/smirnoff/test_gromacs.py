@@ -5,7 +5,6 @@ from openff.toolkit import Molecule
 from openff.units import unit
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest
 from openff.interchange.interop.gromacs.models.models import GROMACSMolecule
 from openff.interchange.smirnoff._gromacs import (
     _convert,
@@ -15,7 +14,7 @@ from openff.interchange.smirnoff._gromacs import (
 )
 
 
-class TestConvert(_BaseTest):
+class TestConvert:
     def test_residue_names(self, sage):
         """Reproduce issue #642."""
         ligand = Molecule.from_smiles("CCO")
@@ -36,7 +35,7 @@ class TestConvert(_BaseTest):
                 assert atom.residue_name == "LIG"
 
 
-class TestSettles(_BaseTest):
+class TestSettles:
     @pytest.fixture()
     def tip3p_interchange(self, tip3p, water):
         return tip3p.create_interchange(water.to_topology())

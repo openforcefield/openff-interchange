@@ -11,7 +11,7 @@ from openff.units.openmm import ensure_quantity
 from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import MoleculeWithConformer, _BaseTest, needs_gmx
+from openff.interchange._tests import MoleculeWithConformer, needs_gmx
 from openff.interchange.components.nonbonded import BuckinghamvdWCollection
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
@@ -39,7 +39,7 @@ if has_package("openmm"):
 @skip_if_missing("mdtraj")
 @skip_if_missing("openmm")
 @needs_gmx
-class TestGROMACSGROFile(_BaseTest):
+class TestGROMACSGROFile:
     _INTERMOL_PATH = resources.files(
         "intermol.tests.gromacs.unit_tests",
     )
@@ -157,7 +157,7 @@ class TestGROMACSGROFile(_BaseTest):
 
 
 @needs_gmx
-class TestGROMACS(_BaseTest):
+class TestGROMACS:
     @pytest.mark.slow()
     @pytest.mark.skip("from_top is not yet refactored for new Topology API")
     @pytest.mark.parametrize("reader", ["intermol", "internal"])
@@ -364,7 +364,7 @@ class TestGROMACS(_BaseTest):
         )
 
 
-class TestGROMACSMetadata(_BaseTest):
+class TestGROMACSMetadata:
     @skip_if_missing("openmm")
     @skip_if_missing("mdtraj")
     @pytest.mark.slow()
@@ -401,7 +401,7 @@ class TestGROMACSMetadata(_BaseTest):
 
 @needs_gmx
 @pytest.mark.skip("Needs rewrite")
-class TestGROMACSVirtualSites(_BaseTest):
+class TestGROMACSVirtualSites:
     @pytest.fixture()
     def sigma_hole_type(self, sage):
         """A handler with a bond charge virtual site on a C-Cl bond."""
