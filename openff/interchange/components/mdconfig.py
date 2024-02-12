@@ -251,10 +251,17 @@ class MDConfig(DefaultModel):
                 "dimension 3\nboundary p p p\n\n",
             )
 
-            lmp.write("bond_style hybrid harmonic\n")
-            lmp.write("angle_style hybrid harmonic\n")
-            lmp.write("dihedral_style hybrid fourier\n")
-            lmp.write("improper_style cvff\n")
+            if interchange.topology.n_bonds > 0:
+                lmp.write("bond_style hybrid harmonic\n")
+
+            if interchange.topology.n_angles > 0:
+                lmp.write("angle_style hybrid harmonic\n")
+
+            if interchange.topology.n_propers > 0:
+                lmp.write("dihedral_style hybrid fourier\n")
+
+            if interchange.topology.n_impropers > 0:
+                lmp.write("improper_style cvff\n")
 
             # TODO: LAMMPS puts this information in the "run" file. Should it live in MDConfig or not?
             scale_factors = {
@@ -310,14 +317,15 @@ class MDConfig(DefaultModel):
                 "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n",
             )
 
-            # https://docs.lammps.org/fix_shake.html
-            # TODO: Constrained angles, etc.?
-            # TODO: Apply fix to just a group (sub-group)?
-            lmp.write(
-                "fix 100 all shake 0.0001 20 10 b "
-                f"{' '.join([str(val + 1) for val in constrained_bond_coeffs])}"
-                "\n",
-            )
+            if len(constrained_bond_coeffs) > 0:
+                # https://docs.lammps.org/fix_shake.html
+                # TODO: Constrained angles, etc.?
+                # TODO: Apply fix to just a group (sub-group)?
+                lmp.write(
+                    "fix 100 all shake 0.0001 20 10 b "
+                    f"{' '.join([str(val + 1) for val in constrained_bond_coeffs])}"
+                    "\n",
+                )
 
             if self.coul_method == _PME:
                 # Note: LAMMPS will error out if using kspace on something with all zero charges,

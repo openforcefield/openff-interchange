@@ -1,6 +1,7 @@
 """Functions for running energy evluations with LAMMPS."""
 
 import subprocess
+import tempfile
 from shutil import which
 from typing import Optional
 
@@ -15,7 +16,7 @@ from openff.interchange.exceptions import LAMMPSNotFoundError, LAMMPSRunError
 
 def _find_lammps_executable(raise_exception: bool = False) -> Optional[str]:
     """Attempt to locate a LAMMPS executable based on commonly-used names."""
-    lammps_executable_names = ["lammps", "lmp_serial", "lmp_mpi"]
+    lammps_executable_names = ["lammps", "lmp", "lmp_serial", "lmp_mpi"]
 
     for name in lammps_executable_names:
         if which(name):
@@ -56,7 +57,7 @@ def get_lammps_energies(
 
     """
     return _process(
-        _get_lammps_energies(interchange, round_positions),
+        _get_lammps_energies(interchange=interchange, round_positions=round_positions),
         detailed,
     )
 
@@ -70,41 +71,42 @@ def _get_lammps_energies(
     if round_positions is not None:
         interchange.positions = numpy.round(interchange.positions, round_positions)
 
-    interchange.to_lammps("out.lmp")
-    mdconfig = MDConfig.from_interchange(interchange)
-    mdconfig.write_lammps_input(
-        interchange=interchange,
-        input_file="tmp.in",
-    )
+    with tempfile.TemporaryDirectory():
+        interchange.to_lammps("out.lmp")
+        mdconfig = MDConfig.from_interchange(interchange)
+        mdconfig.write_lammps_input(
+            interchange=interchange,
+            input_file="tmp.in",
+        )
 
-    run_cmd = f"{lmp} -i tmp.in"
+        run_cmd = f"{lmp} -i tmp.in"
 
-    proc = subprocess.Popen(
-        run_cmd,
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
+        proc = subprocess.Popen(
+            run_cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
 
-    _, err = proc.communicate()
+        _, err = proc.communicate()
 
-    if proc.returncode:
-        raise LAMMPSRunError(err)
+        if proc.returncode:
+            raise LAMMPSRunError(err)
 
-    # thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe
-    parsed_energies = unit.kilocalorie_per_mole * _parse_lammps_log("log.lammps")
+        # thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe
+        parsed_energies = unit.kilocalorie_per_mole * _parse_lammps_log("log.lammps")
 
-    return {
-        "Bond": parsed_energies[0],
-        "Angle": parsed_energies[1],
-        "ProperTorsion": parsed_energies[2],
-        "ImproperTorsion": parsed_energies[3],
-        "vdW": parsed_energies[5],
-        "DispersionCorrection": parsed_energies[8],
-        "ElectrostaticsShort": parsed_energies[6],
-        "ElectrostaticsLong": parsed_energies[7],
-    }
+        return {
+            "Bond": parsed_energies[0],
+            "Angle": parsed_energies[1],
+            "ProperTorsion": parsed_energies[2],
+            "ImproperTorsion": parsed_energies[3],
+            "vdW": parsed_energies[5],
+            "DispersionCorrection": parsed_energies[8],
+            "ElectrostaticsShort": parsed_energies[6],
+            "ElectrostaticsLong": parsed_energies[7],
+        }
 
 
 def _process(
