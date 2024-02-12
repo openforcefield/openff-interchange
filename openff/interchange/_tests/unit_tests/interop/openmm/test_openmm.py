@@ -3,7 +3,6 @@ from openff.toolkit import ForceField, Molecule
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
-from openff.interchange._tests import _BaseTest
 from openff.interchange.components.mdconfig import get_intermol_defaults
 from openff.interchange.drivers import get_summary_data
 
@@ -29,7 +28,7 @@ def compare(smiles: str) -> float:
 
 
 @skip_if_missing("openmm")
-class TestToOpenMM(_BaseTest):
+class TestToOpenMM:
     def test_combine_nonbonded_forces_vdw_14(self, sage_unconstrained):
         molecule = Molecule.from_mapped_smiles("[C:2](#[C:3][Br:4])[Br:1]")
         molecule.generate_conformers(n_conformers=1)

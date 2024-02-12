@@ -58,7 +58,8 @@ if TYPE_CHECKING:
 class TopologyEncoder(json.JSONEncoder):
     """Custom encoder for `Topology` objects."""
 
-    def default(self, obj: Topology):  # noqa
+    def default(self, obj: Topology):
+        """Encode a `Topology` object to JSON."""
         _topology = copy.deepcopy(obj)
         for molecule in _topology.molecules:
             molecule._conformers = None
@@ -113,7 +114,7 @@ def interchange_loader(data: str) -> dict:
 
             tmp["collections"] = {}
 
-            _class_mapping = {  # noqa
+            _class_mapping = {
                 "Bonds": SMIRNOFFBondCollection,
                 "Angles": SMIRNOFFAngleCollection,
                 "Constraints": SMIRNOFFConstraintCollection,
@@ -895,7 +896,7 @@ class Interchange(DefaultModel):
     @overload
     def __getitem__(self, item: str) -> "Collection": ...
 
-    def __getitem__(self, item: str):  # noqa
+    def __getitem__(self, item: str):
         """Syntax sugar for looking up collections or other components."""
         if type(item) is not str:
             raise LookupError(

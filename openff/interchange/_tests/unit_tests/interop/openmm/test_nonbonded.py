@@ -3,12 +3,11 @@ from openff.toolkit import Molecule
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
-from openff.interchange._tests import _BaseTest
 from openff.interchange.exceptions import UnsupportedCutoffMethodError
 
 
 @skip_if_missing("openmm")
-class TestUnsupportedCases(_BaseTest):
+class TestUnsupportedCases:
     def test_ljpme_nonperiodic(self, sage):
         interchange = sage.create_interchange(Molecule.from_smiles("CC").to_topology())
 

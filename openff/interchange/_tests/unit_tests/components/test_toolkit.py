@@ -3,7 +3,6 @@ from openff.toolkit import Molecule, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.utilities.testing import skip_if_missing
 
-from openff.interchange._tests import _BaseTest
 from openff.interchange.components.toolkit import (
     _check_electrostatics_handlers,
     _combine_topologies,
@@ -36,7 +35,7 @@ def test_simple_topology_uniqueness(simple_methane, simple_water):
     assert len(topology.identical_molecule_groups) == 2
 
 
-class TestToolkitUtils(_BaseTest):
+class TestToolkitUtils:
     @pytest.mark.parametrize(
         ("smiles", "num_pairs"),
         [

@@ -5,12 +5,11 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
 )
 
-from openff.interchange._tests import _BaseTest
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.smirnoff import SMIRNOFFAngleCollection, SMIRNOFFCollection
 
 
-class TestSMIRNOFFCollection(_BaseTest):
+class TestSMIRNOFFCollection:
     def test_allowed_parameter_handler_types(self):
         class DummyParameterHandler(ParameterHandler):
             pass

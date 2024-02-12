@@ -9,11 +9,7 @@ from openff.utilities import get_data_file_path, has_package
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import (
-    MoleculeWithConformer,
-    _BaseTest,
-    get_test_file_path,
-)
+from openff.interchange._tests import MoleculeWithConformer, get_test_file_path
 from openff.interchange._tests.unit_tests.plugins.test_smirnoff_plugins import (
     TestDoubleExponential,
 )
@@ -80,7 +76,7 @@ def _compare_openmm_topologies(
 
 
 @skip_if_missing("openmm")
-class TestOpenMM(_BaseTest):
+class TestOpenMM:
     @pytest.mark.parametrize("inputs", nonbonded_methods)
     def test_openmm_nonbonded_methods(self, inputs, sage, ethanol):
         """See test_nonbonded_method_resolution in openff.toolkit._tests/test_forcefield.py"""
@@ -385,7 +381,7 @@ class TestOpenMM(_BaseTest):
 
 
 @skip_if_missing("openmm")
-class TestOpenMMSwitchingFunction(_BaseTest):
+class TestOpenMMSwitchingFunction:
     def test_switching_function_applied(self, sage, basic_top):
         out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
             combine_nonbonded_forces=True,
@@ -574,7 +570,7 @@ class TestOpenMMVirtualSites:
 
 
 @skip_if_missing("openmm")
-class TestOpenMMVirtualSiteExclusions(_BaseTest):
+class TestOpenMMVirtualSiteExclusions:
     def test_tip5p_num_exceptions(self, water):
         tip5p = ForceField(get_test_file_path("tip5p.offxml"))
 
@@ -646,7 +642,7 @@ class TestOpenMMVirtualSiteExclusions(_BaseTest):
 
 
 @skip_if_missing("openmm")
-class TestToOpenMMTopology(_BaseTest):
+class TestToOpenMMTopology:
     def test_num_virtual_sites(self, water, tip4p):
         out = Interchange.from_smirnoff(tip4p, [water])
 
@@ -1003,7 +999,7 @@ class TestToOpenMMTopology(_BaseTest):
 
 
 @skip_if_missing("openmm")
-class TestToOpenMMPositions(_BaseTest):
+class TestToOpenMMPositions:
     def test_missing_positions(self):
         with pytest.raises(
             MissingPositionsError,
@@ -1075,7 +1071,7 @@ class TestToOpenMMPositions(_BaseTest):
 
 @skip_if_missing("mdtraj")
 @skip_if_missing("openmm")
-class TestOpenMMToPDB(_BaseTest):
+class TestOpenMMToPDB:
     def test_to_pdb(self, sage, water):
         import mdtraj
 
@@ -1168,7 +1164,7 @@ class TestBuckingham:
 
 
 @skip_if_missing("openmm")
-class TestGBSA(_BaseTest):
+class TestGBSA:
     def test_create_gbsa(self, gbsa_force_field):
         interchange = Interchange.from_smirnoff(
             force_field=gbsa_force_field,
