@@ -34,8 +34,8 @@ class TestFromOpenMM:
         system = interchange.to_openmm(combine_nonbonded_forces=True)
 
         converted = from_openmm(
-            topology=interchange.topology.to_openmm(),
             system=system,
+            topology=interchange.topology.to_openmm(),
             positions=interchange.positions,
             box_vectors=interchange.box,
         )
@@ -105,13 +105,14 @@ class TestFromOpenMM:
 
         assert numpy.diag(box.m_as(unit.nanometer)) == pytest.approx([4, 5, 6])
 
-    def test_openmm_roundtrip_metadata(self, monkeypatch):
+    def test_openmm_roundtrip_metadata(self, monkeypatch, sage):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
         # Make an example OpenMM Topology with metadata.
         # Here we use OFFTK to make the OpenMM Topology, but this could just as easily come from another source
         ethanol = Molecule.from_smiles("CCO")
         benzene = Molecule.from_smiles("c1ccccc1")
+
         for atom in ethanol.atoms:
             atom.metadata["chain_id"] = "1"
             atom.metadata["residue_number"] = "1"
@@ -122,10 +123,17 @@ class TestFromOpenMM:
             atom.metadata["residue_number"] = "2"
             atom.metadata["insertion_code"] = "A"
             atom.metadata["residue_name"] = "BNZ"
-        top = Topology.from_molecules([ethanol, benzene])
 
-        # Roundtrip the topology with metadata through openmm
-        interchange = Interchange.from_openmm(topology=top.to_openmm())
+        topology = Topology.from_molecules([ethanol, benzene])
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+
+        # Roundtrip the topology with metadata through openmm,
+        # which requires a system even though it won't be used here
+        # and requires PME for now
+        interchange = Interchange.from_openmm(
+            system=sage.create_openmm_system(topology),
+            topology=topology.to_openmm(),
+        )
 
         # Ensure that the metadata is the same
         for atom in interchange.topology.molecule(0).atoms:
@@ -139,19 +147,29 @@ class TestFromOpenMM:
             assert atom.metadata["insertion_code"] == "A"
             assert atom.metadata["residue_name"] == "BNZ"
 
-    def test_openmm_native_roundtrip_metadata(self, monkeypatch):
+    def test_openmm_native_roundtrip_metadata(self, monkeypatch, sage):
         """
         Test that metadata is the same whether we load a PDB through OpenMM+Interchange vs. Topology.from_pdb.
         """
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         pdb = openmm.app.PDBFile(
+            get_data_file_path(
+                "ALA_GLY/ALA_GLY.pdb",
+                "openff.interchange._tests.data",
+            ),
+        )
+
+        topology = Topology.from_pdb(
             get_data_file_path("ALA_GLY/ALA_GLY.pdb", "openff.interchange._tests.data"),
         )
-        interchange = Interchange.from_openmm(topology=pdb.topology)
-        off_top = Topology.from_pdb(
-            get_data_file_path("ALA_GLY/ALA_GLY.pdb", "openff.interchange._tests.data"),
+
+        interchange = Interchange.from_openmm(
+            system=sage.create_openmm_system(topology),
+            topology=pdb.topology,
         )
-        for roundtrip_atom, off_atom in zip(interchange.topology.atoms, off_top.atoms):
+
+        for roundtrip_atom, off_atom in zip(interchange.topology.atoms, topology.atoms):
             # off_atom's metadata also includes a little info about how the chemistry was
             # assigned, so we remove this from the comparison
             off_atom_metadata = copy.deepcopy(off_atom.metadata)

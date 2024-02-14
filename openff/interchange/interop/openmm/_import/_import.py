@@ -15,22 +15,20 @@ from openff.interchange.interop.openmm._import._nonbonded import (
     BasicElectrostaticsCollection,
 )
 
-if has_package("openmm"):
+if has_package("openmm") or TYPE_CHECKING:
     import openmm
+    import openmm.app
     import openmm.unit
 
 if TYPE_CHECKING:
-    import openmm
-    import openmm.unit
-
     from openff.interchange import Interchange
 
 
 @requires_package("openmm")
 @experimental
 def from_openmm(
+    system: "openmm.System" = None,
     topology: Optional["openmm.app.Topology"] = None,
-    system: Optional["openmm.System"] = None,
     positions=None,
     box_vectors=None,
 ) -> "Interchange":
@@ -39,32 +37,31 @@ def from_openmm(
 
     interchange = Interchange()
 
-    if system:
-        constraints = _convert_constraints(system)
+    constraints = _convert_constraints(system)
 
-        if constraints is not None:
-            interchange.collections["Constraints"] = constraints
+    if constraints is not None:
+        interchange.collections["Constraints"] = constraints
 
-        for force in system.getForces():
-            if isinstance(force, openmm.NonbondedForce):
-                vdw, coul = _convert_nonbonded_force(force)
-                interchange.collections["vdW"] = vdw
-                interchange.collections["Electrostatics"] = coul
-            elif isinstance(force, openmm.HarmonicBondForce):
-                bonds = _convert_harmonic_bond_force(force)
-                interchange.collections["Bonds"] = bonds
-            elif isinstance(force, openmm.HarmonicAngleForce):
-                angles = _convert_harmonic_angle_force(force)
-                interchange.collections["Angles"] = angles
-            elif isinstance(force, openmm.PeriodicTorsionForce):
-                proper_torsions = _convert_periodic_torsion_force(force)
-                interchange.collections["ProperTorsions"] = proper_torsions
-            elif isinstance(force, openmm.CMMotionRemover):
-                pass
-            else:
-                raise UnsupportedImportError(
-                    f"Unsupported OpenMM Force type ({type(force)}) found.",
-                )
+    for force in system.getForces():
+        if isinstance(force, openmm.NonbondedForce):
+            vdw, coul = _convert_nonbonded_force(force)
+            interchange.collections["vdW"] = vdw
+            interchange.collections["Electrostatics"] = coul
+        elif isinstance(force, openmm.HarmonicBondForce):
+            bonds = _convert_harmonic_bond_force(force)
+            interchange.collections["Bonds"] = bonds
+        elif isinstance(force, openmm.HarmonicAngleForce):
+            angles = _convert_harmonic_angle_force(force)
+            interchange.collections["Angles"] = angles
+        elif isinstance(force, openmm.PeriodicTorsionForce):
+            proper_torsions = _convert_periodic_torsion_force(force)
+            interchange.collections["ProperTorsions"] = proper_torsions
+        elif isinstance(force, openmm.CMMotionRemover):
+            pass
+        else:
+            raise UnsupportedImportError(
+                f"Unsupported OpenMM Force type ({type(force)}) found.",
+            )
 
     if topology is not None:
         from openff.interchange.components.toolkit import _simple_topology_from_openmm
@@ -82,7 +79,7 @@ def from_openmm(
         interchange.box = Interchange.validate_box(
             topology.getPeriodicBoxVectors(),
         )
-    elif system is not None:
+    else:
         interchange.box = Interchange.validate_box(
             system.getDefaultPeriodicBoxVectors(),
         )
