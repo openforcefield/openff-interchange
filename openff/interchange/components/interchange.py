@@ -93,11 +93,11 @@ def interchange_loader(data: str) -> dict:
         if val is None:
             continue
         if key == "positions":
-            tmp["positions"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+            tmp["positions"] = Quantity(val["val"], unit.Unit(val["unit"]))
         elif key == "velocities":
-            tmp["velocities"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+            tmp["velocities"] = Quantity(val["val"], unit.Unit(val["unit"]))
         elif key == "box":
-            tmp["box"] = unit.Quantity(val["val"], unit.Unit(val["unit"]))
+            tmp["box"] = Quantity(val["val"], unit.Unit(val["unit"]))
         elif key == "topology":
             tmp["topology"] = Topology.from_json(val)
         elif key == "collections":
@@ -198,7 +198,7 @@ class Interchange(DefaultModel):
                 f"Found object of type {type(value)}.",
             )
 
-    def _infer_positions(self) -> Optional[ArrayQuantity]:
+    def _infer_positions(self) -> Optional[Quantity]:
         """
         Attempt to set Interchange.positions based on conformers in molecules in the topology.
 
@@ -217,8 +217,8 @@ class Interchange(DefaultModel):
         topology: Union[Topology, list[Molecule]],
         box=None,
         positions=None,
-        charge_from_molecules: Optional[list[Molecule]] = None,
-        partial_bond_orders_from_molecules: Optional[list[Molecule]] = None,
+        charge_from_molecules: Union[list[Molecule], None] = None,
+        partial_bond_orders_from_molecules: Union[list[Molecule], None] = None,
         allow_nonintegral_charges: bool = False,
     ) -> "Interchange":
         """
@@ -231,10 +231,10 @@ class Interchange(DefaultModel):
         topology : `openff.toolkit.topology.Topology` or `List[openff.toolkit.topology.Molecule]`
             The topology to parameterize, or a list of molecules to construct a
             topology from and parameterize.
-        box : `openff.unit.Quantity`, optional
+        box : `openff.units.Quantity`, optional
             The box vectors associated with the ``Interchange``. If ``None``,
             box vectors are taken from the topology, if present.
-        positions : `openff.unit.Quantity`, optional
+        positions : `openff.units.Quantity`, optional
             The positions associated with atoms in the input topology. If ``None``,
             positions are taken from the molecules in topology, if present on all molecules.
         charge_from_molecules : `List[openff.toolkit.molecule.Molecule]`, optional
@@ -787,10 +787,10 @@ class Interchange(DefaultModel):
     @experimental
     def from_openmm(
         cls,
-        topology: Optional["openmm.app.Topology"] = None,
-        system: Optional["openmm.System"] = None,
-        positions: Optional[unit.Quantity] = None,
-        box_vectors: Optional[unit.Quantity] = None,
+        system: "openmm.System" = None,
+        topology: Union["openmm.app.Topology", Topology, None] = None,
+        positions: Union[Quantity, None] = None,
+        box_vectors: Union[Quantity, None] = None,
     ) -> "Interchange":
         """
         Create an Interchange object from OpenMM objects.
@@ -799,10 +799,10 @@ class Interchange(DefaultModel):
 
         Parameters
         ----------
-        topology : openmm.app.Topology, optional
-            The OpenMM topology.
         system : openmm.System, optional
             The OpenMM system.
+        topology : openmm.app.Topology, optional
+            The OpenMM topology.
         positions : openmm.unit.Quantity or openff.units.Quantity, optional
             The positions of particles in this system and/or topology.
         box_vectors : openmm.unit.Quantity or openff.units.Quantity, optional
