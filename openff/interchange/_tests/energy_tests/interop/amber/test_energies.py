@@ -3,6 +3,7 @@ from openff.toolkit import Quantity
 from openff.utilities import skip_if_missing
 
 from openff.interchange._tests import MoleculeWithConformer, requires_ambertools
+from openff.interchange.constants import kcal_mol
 from openff.interchange.drivers import get_amber_energies, get_openmm_energies
 
 
@@ -15,7 +16,7 @@ from openff.interchange.drivers import get_amber_energies, get_openmm_energies
 def test_polycyclic_nonbonded(smiles, sage_unconstrained):
     molecule = MoleculeWithConformer.from_smiles(smiles)
     topology = molecule.to_topology()
-    topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+    topology.box_vectors = Quantity([10, 10, 10], "nanometer")
 
     interchange = sage_unconstrained.create_interchange(topology)
     openmm_vdw = get_openmm_energies(
@@ -24,4 +25,6 @@ def test_polycyclic_nonbonded(smiles, sage_unconstrained):
     ).energies["vdW"]
     amber_vdw = get_amber_energies(interchange).energies["vdW"]
 
-    assert abs(openmm_vdw - amber_vdw).m < 1e-3
+    assert openmm_vdw.m == pytest.approx(
+        amber_vdw,
+    ), f"{openmm_vdw.m_as(kcal_mol)=}, {amber_vdw.m_as(kcal_mol)=}"
