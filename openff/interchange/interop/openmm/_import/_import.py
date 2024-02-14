@@ -1,5 +1,7 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Union
 
+from openff.models.types import ArrayQuantity
+from openff.toolkit import Topology
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange._experimental import experimental
@@ -15,20 +17,24 @@ from openff.interchange.interop.openmm._import._nonbonded import (
     BasicElectrostaticsCollection,
 )
 
-if has_package("openmm") or TYPE_CHECKING:
+if has_package("openmm"):
     import openmm
     import openmm.app
     import openmm.unit
 
 if TYPE_CHECKING:
+    import openmm
+    import openmm.app
+    import openmm.unit
+
     from openff.interchange import Interchange
 
 
 @requires_package("openmm")
 @experimental
 def from_openmm(
-    system: "openmm.System" = None,
-    topology: Optional["openmm.app.Topology"] = None,
+    topology: Union["openmm.app.Topology", Topology, None] = None,
+    system: Union["openmm.System", None] = None,
     positions=None,
     box_vectors=None,
 ) -> "Interchange":
@@ -37,59 +43,73 @@ def from_openmm(
 
     interchange = Interchange()
 
-    constraints = _convert_constraints(system)
+    if system:
+        constraints = _convert_constraints(system)
 
-    if constraints is not None:
-        interchange.collections["Constraints"] = constraints
+        if constraints is not None:
+            interchange.collections["Constraints"] = constraints
 
-    for force in system.getForces():
-        if isinstance(force, openmm.NonbondedForce):
-            vdw, coul = _convert_nonbonded_force(force)
-            interchange.collections["vdW"] = vdw
-            interchange.collections["Electrostatics"] = coul
-        elif isinstance(force, openmm.HarmonicBondForce):
-            bonds = _convert_harmonic_bond_force(force)
-            interchange.collections["Bonds"] = bonds
-        elif isinstance(force, openmm.HarmonicAngleForce):
-            angles = _convert_harmonic_angle_force(force)
-            interchange.collections["Angles"] = angles
-        elif isinstance(force, openmm.PeriodicTorsionForce):
-            proper_torsions = _convert_periodic_torsion_force(force)
-            interchange.collections["ProperTorsions"] = proper_torsions
-        elif isinstance(force, openmm.CMMotionRemover):
-            pass
-        else:
-            raise UnsupportedImportError(
-                f"Unsupported OpenMM Force type ({type(force)}) found.",
-            )
+        for force in system.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                vdw, coul = _convert_nonbonded_force(force)
+                interchange.collections["vdW"] = vdw
+                interchange.collections["Electrostatics"] = coul
+            elif isinstance(force, openmm.HarmonicBondForce):
+                bonds = _convert_harmonic_bond_force(force)
+                interchange.collections["Bonds"] = bonds
+            elif isinstance(force, openmm.HarmonicAngleForce):
+                angles = _convert_harmonic_angle_force(force)
+                interchange.collections["Angles"] = angles
+            elif isinstance(force, openmm.PeriodicTorsionForce):
+                proper_torsions = _convert_periodic_torsion_force(force)
+                interchange.collections["ProperTorsions"] = proper_torsions
+            elif isinstance(force, openmm.CMMotionRemover):
+                pass
+            else:
+                raise UnsupportedImportError(
+                    f"Unsupported OpenMM Force type ({type(force)}) found.",
+                )
 
-    if topology is not None:
+    if isinstance(topology, openmm.app.Topology):
         from openff.interchange.components.toolkit import _simple_topology_from_openmm
 
         openff_topology = _simple_topology_from_openmm(topology)
 
         interchange.topology = openff_topology
 
+    elif isinstance(topology, Topology):
+
+        interchange.topology = topology
+        interchange.positions = topology.get_positions()
+
+    elif topology is None:
+
+        interchange.topology = topology
+
     if positions is not None:
+
         interchange.positions = positions
 
     if box_vectors is not None:
-        interchange.box = Interchange.validate_box(box_vectors)
+        _box_vectors = box_vectors
+
     elif topology is not None:
-        interchange.box = Interchange.validate_box(
-            topology.getPeriodicBoxVectors(),
-        )
+        if isinstance(topology, openmm.app.Topology):
+            _box_vectors = topology.getPeriodicBoxVectors()
+        elif isinstance(topology, Topology):
+            _box_vectors = topology.box_vectors
+
     else:
-        interchange.box = Interchange.validate_box(
-            system.getDefaultPeriodicBoxVectors(),
-        )
+        _box_vectors = system.getDefaultPeriodicBoxVectors()
+
+    interchange.box = ArrayQuantity.validate_type(_box_vectors)
 
     return interchange
 
 
 def _convert_constraints(
     system: "openmm.System",
-) -> Optional[ConstraintCollection]:
+) -> Union[ConstraintCollection, None]:
     from openff.units import unit
 
     from openff.interchange.components.potentials import Potential
@@ -193,7 +213,7 @@ def _convert_nonbonded_force(
 
 def _convert_harmonic_bond_force(
     force: "openmm.HarmonicBondForce",
-) -> "BondCollection":
+) -> BondCollection:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.common._valence import BondCollection
@@ -223,7 +243,7 @@ def _convert_harmonic_bond_force(
 
 def _convert_harmonic_angle_force(
     force: "openmm.HarmonicAngleForce",
-) -> "AngleCollection":
+) -> AngleCollection:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.common._valence import AngleCollection
@@ -256,7 +276,7 @@ def _convert_harmonic_angle_force(
 
 def _convert_periodic_torsion_force(
     force: "openmm.PeriodicTorsionForce",
-) -> "ProperTorsionCollection":
+) -> ProperTorsionCollection:
     # TODO: Can impropers be separated out from a PeriodicTorsionForce?
     # Maybe by seeing if a quartet is in mol/top.propers or .impropers
     from openff.units import unit

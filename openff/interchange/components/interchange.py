@@ -198,7 +198,7 @@ class Interchange(DefaultModel):
                 f"Found object of type {type(value)}.",
             )
 
-    def _infer_positions(self) -> Optional[ArrayQuantity]:
+    def _infer_positions(self) -> Optional[Quantity]:
         """
         Attempt to set Interchange.positions based on conformers in molecules in the topology.
 
@@ -217,8 +217,8 @@ class Interchange(DefaultModel):
         topology: Union[Topology, list[Molecule]],
         box=None,
         positions=None,
-        charge_from_molecules: Optional[list[Molecule]] = None,
-        partial_bond_orders_from_molecules: Optional[list[Molecule]] = None,
+        charge_from_molecules: Union[list[Molecule], None] = None,
+        partial_bond_orders_from_molecules: Union[list[Molecule], None] = None,
         allow_nonintegral_charges: bool = False,
     ) -> "Interchange":
         """
@@ -788,9 +788,9 @@ class Interchange(DefaultModel):
     def from_openmm(
         cls,
         system: "openmm.System" = None,
-        topology: Optional["openmm.app.Topology"] = None,
-        positions: Optional[Quantity] = None,
-        box_vectors: Optional[Quantity] = None,
+        topology: Union["openmm.app.Topology", Topology, None] = None,
+        positions: Union[Quantity, None] = None,
+        box_vectors: Union[Quantity, None] = None,
     ) -> "Interchange":
         """
         Create an Interchange object from OpenMM objects.

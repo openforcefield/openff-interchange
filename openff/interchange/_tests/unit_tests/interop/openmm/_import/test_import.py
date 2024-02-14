@@ -178,6 +178,41 @@ class TestFromOpenMM:
 
 
 @skip_if_missing("openmm")
+class TestProcessTopology:
+    def test_with_openff_topology(self, monkeypatch, sage, basic_top):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        system = sage.create_openmm_system(basic_top)
+
+        with_openff = Interchange.from_openmm(
+            system=system,
+            topology=basic_top,
+        )
+
+        # positions are lost when making an openmm.app.Topology,
+        # just feed them back in to make comparison easier
+        with_openmm = Interchange.from_openmm(
+            system=system,
+            topology=basic_top.to_openmm(),
+            positions=basic_top.get_positions().to_openmm(),
+        )
+
+        assert with_openff.topology.n_atoms == with_openmm.topology.n_atoms
+        assert with_openff.topology.n_bonds == with_openmm.topology.n_bonds
+
+        get_openmm_energies(
+            with_openff,
+            combine_nonbonded_forces=True,
+        ).compare(
+            get_openmm_energies(with_openmm),
+            tolerances={
+                "Angle": Quantity(0.001, "kilojoule / mole"),
+                "Nonbonded": Quantity(0.001, "kilojoule / mole"),
+            },
+        )
+
+
+@skip_if_missing("openmm")
 class TestConvertNonbondedForce:
     def test_unsupported_method(self):
         # Cannot parametrize with a class in an optional module
