@@ -25,6 +25,12 @@ def sage_unconstrained():
 
 
 @pytest.fixture()
+def sage_no_switch(sage):
+    sage["vdW"].switch_width = Quantity(0.0, "angstrom")
+    return sage
+
+
+@pytest.fixture()
 def sage_with_bond_charge(sage):
     sage["Bonds"].add_parameter(
         parameter=BondType(
