@@ -14,7 +14,6 @@ from openff.toolkit.utils import (
 from openff.utilities.utilities import has_executable, has_package
 
 from openff.interchange.drivers.gromacs import _find_gromacs_executable
-from openff.interchange.drivers.lammps import _find_lammps_executable
 
 if sys.version_info >= (3, 10):
     from importlib import resources
@@ -96,7 +95,7 @@ class MoleculeWithConformer(Molecule):
 
 
 HAS_GROMACS = _find_gromacs_executable() is not None
-HAS_LAMMPS = _find_lammps_executable() is not None
+HAS_LAMMPS = has_package("lammps")
 HAS_SANDER = has_executable("sander")
 
 needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
