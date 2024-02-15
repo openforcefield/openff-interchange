@@ -6,7 +6,7 @@ from openff.toolkit import Molecule, Topology
 from openff.units import Quantity, unit
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest, needs_gmx
+from openff.interchange._tests import needs_gmx
 from openff.interchange.components.mdconfig import get_intermol_defaults
 from openff.interchange.drivers.gromacs import _process, _run_gmx_energy
 from openff.interchange.interop.gromacs.models.models import GROMACSAtomType
@@ -99,7 +99,7 @@ class TestModels:
 
 #    GROMACSAtomType
 @pytest.mark.slow()
-class TestAddRemoveMoleculeType(_BaseTest):
+class TestAddRemoveMoleculeType:
     @needs_gmx
     @pytest.mark.parametrize("molecule_name", ["MOL1", "MOL2"])
     def test_remove_basic(self, combined_system, molecule_name):
@@ -210,7 +210,7 @@ class TestAddRemoveMoleculeType(_BaseTest):
             system2.add_molecule_type(system2.molecule_types["MOL2"], 1)
 
 
-class TestToFiles(_BaseTest):
+class TestToFiles:
     @needs_gmx
     def test_identical_outputs(self, system1):
         system1.to_files(prefix="1", decimal=8)

@@ -4,7 +4,6 @@ from openff.toolkit import Molecule, Topology
 from openff.units import unit
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest
 from openff.interchange.interop.gromacs._interchange import (
     _convert_topology,
     to_interchange,
@@ -13,7 +12,7 @@ from openff.interchange.interop.gromacs.models.models import GROMACSSystem
 from openff.interchange.smirnoff._gromacs import _convert
 
 
-class TestToInterchange(_BaseTest):
+class TestToInterchange:
     @pytest.fixture()
     def simple_interchange(self, sage_unconstrained) -> Interchange:
         topology = Topology()
@@ -59,7 +58,7 @@ class TestToInterchange(_BaseTest):
             assert name in converted.collections
 
 
-class TestConvertTopology(_BaseTest):
+class TestConvertTopology:
     @pytest.fixture()
     def simple_system(self, sage_unconstrained) -> GROMACSSystem:
         molecule = Molecule.from_smiles("CCO")

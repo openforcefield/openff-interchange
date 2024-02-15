@@ -11,7 +11,7 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.3.20 - 2023-02-12
 
 * #891 Adds support for hydrogen mass repartitioning (HMR) in GROMACS export. Note that this implementaiton never modifies masses in waters and requires the system contains no virtual sites.
 * #887 Adds support for hydrogen mass repartitioning (HMR) in OpenMM export. Note that this implementaiton never modifies masses in waters and requires the system contains no virtual sites.

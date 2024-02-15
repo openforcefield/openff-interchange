@@ -4,12 +4,12 @@ from openff.toolkit.topology import Molecule, Topology
 from openff.units import unit
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest, needs_lmp
+from openff.interchange._tests import needs_lmp
 from openff.interchange.drivers import get_lammps_energies, get_openmm_energies
 
 
 @needs_lmp
-class TestLammps(_BaseTest):
+class TestLammps:
     @pytest.mark.skip("LAMMPS export experimental")
     @pytest.mark.slow()
     @pytest.mark.parametrize("n_mols", [1, 2])

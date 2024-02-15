@@ -1,11 +1,10 @@
 import pytest
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
 
-class TestDeprecation(_BaseTest):
+class TestDeprecation:
     def test_potential_handler_deprecation(self):
         from openff.interchange.components.potentials import Collection
 

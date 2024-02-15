@@ -11,12 +11,7 @@ from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import (
-    _BaseTest,
-    get_test_file_path,
-    needs_gmx,
-    needs_lmp,
-)
+from openff.interchange._tests import get_test_file_path, needs_gmx, needs_lmp
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
     ExperimentalFeatureException,
@@ -35,7 +30,7 @@ except ImportError:
 
 
 @pytest.mark.slow()
-class TestInterchange(_BaseTest):
+class TestInterchange:
     def test_getitem(self, sage):
         """Test behavior of Interchange.__getitem__"""
         mol = Molecule.from_smiles("CCO")
@@ -333,7 +328,7 @@ class TestInterchange(_BaseTest):
 
 @skip_if_missing("openmm")
 @skip_if_missing("mdtraj")
-class TestToPDB(_BaseTest):
+class TestToPDB:
     def test_to_pdb_with_virtual_sites(self, water, tip4p):
         import mdtraj
 
@@ -386,7 +381,7 @@ class TestToPDB(_BaseTest):
             )
 
 
-class TestUnimplementedSMIRNOFFCases(_BaseTest):
+class TestUnimplementedSMIRNOFFCases:
     def test_bogus_smirnoff_handler(self, sage):
         top = Molecule.from_smiles("CC").to_topology()
 
@@ -400,7 +395,7 @@ class TestUnimplementedSMIRNOFFCases(_BaseTest):
             Interchange.from_smirnoff(force_field=sage, topology=top)
 
 
-class TestBadExports(_BaseTest):
+class TestBadExports:
     @skip_if_missing("openmm")
     def test_invalid_topology(self, sage):
         """Test that InvalidTopologyError is caught when passing an unsupported
@@ -437,7 +432,7 @@ class TestBadExports(_BaseTest):
 
 
 @skip_if_missing("openmm")
-class TestInterchangeSerialization(_BaseTest):
+class TestInterchangeSerialization:
     def test_json_roundtrip(self, sage, water, ethanol):
         topology = Topology.from_molecules(
             [
@@ -463,7 +458,7 @@ class TestInterchangeSerialization(_BaseTest):
         )
 
 
-class TestWrappedCalls(_BaseTest):
+class TestWrappedCalls:
     """Test that methods which delegate out to other submodules call them."""
 
     @pytest.fixture()
