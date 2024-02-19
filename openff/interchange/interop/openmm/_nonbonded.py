@@ -506,12 +506,7 @@ def _create_exceptions(
                 epsilon,
             ) = non_bonded_force.getExceptionParameters(exception_index)
 
-            print(
-                "Adding parent-(child of neighbor) exceptions of "
-                f"parent {p1=} or {p2=}",
-            )
-            # If this iterable is not empty, add an exception between p1's virtual
-            # particle and the "other" atom in p1's exception
+            # Adding parent-(child of neighbor) exceptions from either p1 or p2
             for virtual_particle_of_p1 in parent_virtual_particle_mapping[p1]:
                 if virtual_particle_of_p1 != p2:
                     print(f"\texcluding {virtual_particle_of_p1=} {p2=}")
@@ -525,7 +520,8 @@ def _create_exceptions(
                             replace=True,
                         )
                     else:
-                        # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
+                        # TODO: Pass mixing rule into these parameters
+                        #       Decide on best logic for inheriting scaled 1-4 interactions
                         v1_parameters = non_bonded_force.getParticleParameters(
                             virtual_particle_of_p1,
                         )
@@ -553,7 +549,8 @@ def _create_exceptions(
                             replace=True,
                         )
                     else:
-                        # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
+                        # TODO: Pass mixing rule into these parameters
+                        #       Decide on best logic for inheriting scaled 1-4 interactions
                         v2_parameters = non_bonded_force.getParticleParameters(
                             virtual_particle_of_p2,
                         )
@@ -585,17 +582,25 @@ def _create_exceptions(
                         replace=True,
                     )
                 else:
-                    raise NotImplementedError("This is not yet implemented")
+                    # TODO: Pass mixing rule into
+                    #       Decide on best logic for inheriting scaled 1-4 interactions
+                    v1_parameters = non_bonded_force.getParticleParameters(v1)
+                    v2_parameters = non_bonded_force.getParticleParameters(v2)
 
-        print("Adding parent-child exceptions for each parent with virtual sites")
-        # Add exceptions between each virtual particle and parent atom
+                    non_bonded_force.addException(
+                        particle1=v1,
+                        particle2=v2,
+                        chargeProd=v1_parameters[0] * v2_parameters[0],
+                        sigma=(v1_parameters[1] + v2_parameters[1]) * 0.5,
+                        epsilon=(v1_parameters[2] * v2_parameters[2]) ** 0.5,
+                    )
+
         for (
             parent,
             virtual_particles_of_this_parent,
         ) in parent_virtual_particle_mapping.items():
             for virtual_particle in virtual_particles_of_this_parent:
-                # These indices are of the OpenMM particles, so no need to use map
-                print(f"\texcluding {parent=}, {virtual_particle=}")
+                # Add exceptions between each virtual particle and parent atom
                 non_bonded_force.addException(
                     parent,
                     virtual_particle,
@@ -604,6 +609,24 @@ def _create_exceptions(
                     0.0,
                     True,
                 )
+
+            # Add exceptions (all zeros) between each virtual site - virtual site pair
+            # of a common parent such as the two dummy atoms on TIP5P
+            for v1, v2 in itertools.product(
+                virtual_particles_of_this_parent,
+                virtual_particles_of_this_parent,
+            ):
+                # No need to add symmetric/duplicate exceptions, nor self-self exceptions
+                if v1 < v2:
+                    print(f"\texcluding {v1=}, {v2=}")
+                    non_bonded_force.addException(
+                        v1,
+                        v2,
+                        0.0,
+                        1.0,
+                        0.0,
+                        True,
+                    )
 
 
 def _create_multiple_nonbonded_forces(
