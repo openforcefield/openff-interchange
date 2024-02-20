@@ -503,7 +503,7 @@ class TestOpenMMVirtualSiteExclusions:
         # zeroed if their vdW interactions are turned off
         assert {
             tuple(sorted((p1, p2)))
-            for p1, p2, charge, _, epsilon in exceptions
+            for p1, p2, _, _, epsilon in exceptions
             if epsilon._value == 0.0
         } == set(
             expected_zeroed_pairs,
@@ -511,7 +511,7 @@ class TestOpenMMVirtualSiteExclusions:
 
         assert {
             tuple(sorted((p1, p2)))
-            for p1, p2, charge, _, epsilon in exceptions
+            for p1, p2, _, _, epsilon in exceptions
             if epsilon._value != 0.0
         } == set(
             expected_14_pairs,

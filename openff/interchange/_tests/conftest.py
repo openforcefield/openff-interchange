@@ -105,6 +105,10 @@ def sage_with_trivalent_nitrogen():
 def sage_with_off_center_hydrogen(sage):
     virtual_sites = sage.get_parameter_handler("VirtualSites")
 
+    # Add a virtual site for an off-center hydrogen, see issue #905
+    # this differs by JH's example by adding an arbitrary charge increment in
+    # order to test the electrostatics of virtual site pairs that interact
+    # by 1-4 interactions (as determined by their parent relationship)
     virtual_sites.add_parameter(
         parameter_kwargs={
             "smirks": "[#1:1]~[*:2]",
@@ -114,7 +118,7 @@ def sage_with_off_center_hydrogen(sage):
             "distance": Quantity(-0.1, "angstrom"),
             "outOfPlaneAngle": None,
             "inPlaneAngle": None,
-            "charge_increment1": Quantity(0, "elementary_charge"),
+            "charge_increment1": Quantity(0.12345, "elementary_charge"),
             "charge_increment2": Quantity(0, "elementary_charge"),
             "sigma": Quantity(1.069078461768407, "angstrom"),
             "name": "OFF_SITE_HYDROGEN",
