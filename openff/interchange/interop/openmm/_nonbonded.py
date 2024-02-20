@@ -509,7 +509,6 @@ def _create_exceptions(
             # Adding parent-(child of neighbor) exceptions from either p1 or p2
             for virtual_particle_of_p1 in parent_virtual_particle_mapping[p1]:
                 if virtual_particle_of_p1 != p2:
-                    print(f"\texcluding {virtual_particle_of_p1=} {p2=}")
                     if charge_prod._value == epsilon._value == 0.0:
                         non_bonded_force.addException(
                             particle1=virtual_particle_of_p1,
@@ -531,14 +530,13 @@ def _create_exceptions(
                             particle2=p2,
                             chargeProd=v1_parameters[0] * p2_parameters[0],
                             sigma=(v1_parameters[1] + p2_parameters[1]) * 0.5,
-                            epsilon=(v1_parameters[2] * p2_parameters[2]) ** 0.5,
+                            epsilon=(v1_parameters[2] * p2_parameters[2]) ** 0.5 * 0.5,
                         )
 
             # If this iterable is not empty, add an exception between p2's virtual
             # particle and the "other" atom in p2's exception
             for virtual_particle_of_p2 in parent_virtual_particle_mapping[p2]:
                 if virtual_particle_of_p2 != p1 or True:
-                    print(f"\texcluding {p1=}, {virtual_particle_of_p2=}")
                     if charge_prod._value == epsilon._value == 0.0:
                         non_bonded_force.addException(
                             particle1=virtual_particle_of_p2,
@@ -560,18 +558,14 @@ def _create_exceptions(
                             particle2=p1,
                             chargeProd=v2_parameters[0] * p1_parameters[0],
                             sigma=(v2_parameters[1] + p1_parameters[1]) * 0.5,
-                            epsilon=(v2_parameters[2] * p1_parameters[2]) ** 0.5,
+                            epsilon=(v2_parameters[2] * p1_parameters[2]) ** 0.5 * 0.5,
                         )
 
-            print(
-                "Adding (child of this parent)-(child of neighbor) exceptions of "
-                f"parent {p1=} or {p2=}",
-            )
+            # Adding (child of this parent)-(child of neighbor) exceptions
             for v1, v2 in itertools.product(
                 parent_virtual_particle_mapping[p1],
                 parent_virtual_particle_mapping[p2],
             ):
-                print(f"\texcluding {v1=}, {v2=}")
                 if charge_prod._value == epsilon._value == 0.0:
                     non_bonded_force.addException(
                         particle1=v1,
@@ -592,7 +586,7 @@ def _create_exceptions(
                         particle2=v2,
                         chargeProd=v1_parameters[0] * v2_parameters[0],
                         sigma=(v1_parameters[1] + v2_parameters[1]) * 0.5,
-                        epsilon=(v1_parameters[2] * v2_parameters[2]) ** 0.5,
+                        epsilon=(v1_parameters[2] * v2_parameters[2]) ** 0.5 * 0.5,
                     )
 
         for (
@@ -618,7 +612,6 @@ def _create_exceptions(
             ):
                 # No need to add symmetric/duplicate exceptions, nor self-self exceptions
                 if v1 < v2:
-                    print(f"\texcluding {v1=}, {v2=}")
                     non_bonded_force.addException(
                         v1,
                         v2,

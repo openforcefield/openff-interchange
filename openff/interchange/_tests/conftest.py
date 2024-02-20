@@ -102,6 +102,29 @@ def sage_with_trivalent_nitrogen():
 
 
 @pytest.fixture()
+def sage_with_off_center_hydrogen(sage):
+    virtual_sites = sage.get_parameter_handler("VirtualSites")
+
+    virtual_sites.add_parameter(
+        parameter_kwargs={
+            "smirks": "[#1:1]~[*:2]",
+            "epsilon": Quantity(0.0157, "kilocalorie / mole"),
+            "type": "BondCharge",
+            "match": "all_permutations",
+            "distance": Quantity(-0.1, "angstrom"),
+            "outOfPlaneAngle": None,
+            "inPlaneAngle": None,
+            "charge_increment1": Quantity(0, "elementary_charge"),
+            "charge_increment2": Quantity(0, "elementary_charge"),
+            "sigma": Quantity(1.069078461768407, "angstrom"),
+            "name": "OFF_SITE_HYDROGEN",
+        },
+    )
+
+    return sage
+
+
+@pytest.fixture()
 def _simple_force_field():
     # TODO: Create a minimal force field for faster tests
     pass
