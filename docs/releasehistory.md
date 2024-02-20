@@ -11,6 +11,12 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## 0.3.21 - 2023-02-20
+
+* #906 Fixes a bug in which intramolecular interactions between virtual sites were not properly excluded with OpenMM.
+* #901 `Interchange.from_openmm` now requires the `system` argument.
+* #903 The Python API of LAMMPS is now internally used for LAMMPS energy calculations.
+
 ## 0.3.20 - 2023-02-12
 
 * #891 Adds support for hydrogen mass repartitioning (HMR) in GROMACS export. Note that this implementaiton never modifies masses in waters and requires the system contains no virtual sites.
