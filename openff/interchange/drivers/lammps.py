@@ -65,7 +65,10 @@ def _get_lammps_energies(
         input_file="tmp.in",
     )
 
-    runner = lammps.lammps()
+    # By default, LAMMPS spits out logs to the screen, turn it off
+    # https://matsci.org/t/how-to-remove-or-redirect-python-lammps-stdout/38075/5
+    # not that this is not sent to STDOUT, so `contextlib.redirect_stdout` won't work
+    runner = lammps.lammps(cmdargs=["-screen", "none", "-nocite"])
 
     try:
         runner.file("tmp.in")
