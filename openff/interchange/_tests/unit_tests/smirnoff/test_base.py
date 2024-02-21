@@ -1,3 +1,5 @@
+import random
+
 import pytest
 from openff.toolkit.topology import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -6,7 +8,11 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 
 from openff.interchange.exceptions import InvalidParameterHandlerError
-from openff.interchange.smirnoff import SMIRNOFFAngleCollection, SMIRNOFFCollection
+from openff.interchange.smirnoff import (
+    SMIRNOFFAngleCollection,
+    SMIRNOFFCollection,
+    SMIRNOFFElectrostaticsCollection,
+)
 
 
 class TestSMIRNOFFCollection:
@@ -49,3 +55,16 @@ class TestSMIRNOFFCollection:
                 parameter_handler=angle_Handler,
                 topology=Topology(),
             )
+
+
+def test_json_roundtrip_preserves_float_values():
+    """Reproduce issue #908."""
+    scale_factor = 0.5 + random.random() * 0.5
+
+    collection = SMIRNOFFElectrostaticsCollection(scale_14=scale_factor)
+
+    assert collection.scale_14 == scale_factor
+
+    roundtripped = SMIRNOFFElectrostaticsCollection.parse_raw(collection.json())
+
+    assert roundtripped.scale_14 == scale_factor

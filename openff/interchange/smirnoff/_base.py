@@ -54,7 +54,11 @@ def collection_loader(data: str) -> dict:
     tmp: dict[str, Optional[Union[int, bool, str]]] = {}
 
     for key, val in json.loads(data).items():
-        if isinstance(val, (str, bool, type(None))):
+        if val is None:
+            tmp[key] = val
+        elif isinstance(val, (int, float, bool)):
+            tmp[key] = val
+        elif isinstance(val, (str)):
             # These are stored as string but must be parsed into `Quantity`
             if key in ("cutoff", "switch_width"):
                 tmp[key] = unit.Quantity(*json.loads(val).values())  # type: ignore[arg-type]
