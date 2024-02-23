@@ -51,7 +51,7 @@ def dump_collection(v, *, default):
 
 def collection_loader(data: str) -> dict:
     """Load a JSON blob dumped from a `Collection`."""
-    tmp: dict[str, Optional[Union[int, bool, str]]] = {}
+    tmp: dict[str, Optional[Union[int, float, bool, str, dict]]] = {}
 
     for key, val in json.loads(data).items():
         if val is None:
