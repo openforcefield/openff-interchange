@@ -40,6 +40,10 @@ class TestSettles:
     def tip3p_interchange(self, tip3p, water):
         return tip3p.create_interchange(water.to_topology())
 
+    @pytest.fixture()
+    def sage_tip3p_interchange(self, sage, water):
+        return sage.create_interchange(water.to_topology())
+
     def test_catch_other_water_ordering(self, tip3p):
         molecule = Molecule.from_mapped_smiles("[H:1][O:2][H:3]")
         interchange = tip3p.create_interchange(molecule.to_topology())
@@ -51,14 +55,27 @@ class TestSettles:
                 interchange,
             )
 
-    def test_convert_settles(self, tip3p_interchange):
+    @pytest.mark.parametrize("use_bundled_tip3p", [True, False])
+    def test_convert_settles(
+        self,
+        use_bundled_tip3p,
+        tip3p_interchange,
+        sage_tip3p_interchange,
+    ):
         molecule = GROMACSMolecule(name="foo")
 
-        _convert_settles(
-            molecule,
-            tip3p_interchange.topology.molecule(0),
-            tip3p_interchange,
-        )
+        if use_bundled_tip3p:
+            _convert_settles(
+                molecule,
+                tip3p_interchange.topology.molecule(0),
+                tip3p_interchange,
+            )
+        else:
+            _convert_settles(
+                molecule,
+                sage_tip3p_interchange.topology.molecule(0),
+                sage_tip3p_interchange,
+            )
 
         assert len(molecule.settles) == 1
 
