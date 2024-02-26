@@ -62,7 +62,7 @@ class TestSettles:
         settles = system.molecule_types["WAT"].settles[0]
 
         assert settles.oxygen_hydrogen_distance.m_as(unit.angstrom) == pytest.approx(
-            0.981124525388,
+            0.9572,
         )
         assert settles.hydrogen_hydrogen_distance.m_as(unit.angstrom) == pytest.approx(
             1.513900654525,

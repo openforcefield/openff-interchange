@@ -647,23 +647,19 @@ def _convert_settles(
     for atom_pair in itertools.combinations(topology_atom_indices, 2):
         key = BondKey(atom_indices=atom_pair)
 
+        # Assume that SETTLES distances are defined by constraints, not bond lengths
         if key not in interchange["Constraints"].key_map:
             return
 
+        constraints = interchange["Constraints"]
+
         try:
             constraint_lengths.add(
-                interchange["Bonds"]
-                .potentials[interchange["Bonds"].key_map[key]]
-                .parameters["length"],
+                constraints.potentials[constraints.key_map[key]].parameters["distance"],
             )
-        # KeyError (subclass of LookupErrorR) when this BondKey is not found in the bond collection
-        # LookupError for the Interchange not having a bond collection
-        # in either case, look to the constraint collection for this distance
         except LookupError:
-            constraint_lengths.add(
-                interchange["Constraints"]
-                .potentials[interchange["Constraints"].key_map[key]]
-                .parameters["distance"],
+            raise RuntimeError(
+                f"Could not find a constraint distance for atoms {atom_pair=}.",
             )
 
     if len(constraint_lengths) != 2:
