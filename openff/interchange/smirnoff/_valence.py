@@ -1,7 +1,7 @@
 import warnings
 from typing import Literal, Optional, Union
 
-from openff.toolkit import Molecule, Topology
+from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -10,7 +10,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
 )
-from openff.units import unit
 from packaging.version import Version
 
 from openff.interchange.common._valence import (
@@ -97,6 +96,15 @@ def _get_interpolation_coeffs(fractional_bond_order, data):
     coeff2 = (fractional_bond_order - x1) / (x2 - x1)
 
     return coeff1, coeff2
+
+
+def _interpret_idivf(idivf) -> Union[Quantity, str]:
+    if isinstance(idivf, (int, float)):
+        return Quantity(idivf, unit.dimensionless)
+    elif isinstance(idivf, str):
+        return idivf
+    else:
+        raise NotImplementedError(f"Do not know how to parse {idivf=}")
 
 
 class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
@@ -528,7 +536,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
                         "k": parameter.k_bondorder[n][map_key],
                         "periodicity": parameter.periodicity[n] * unit.dimensionless,
                         "phase": parameter.phase[n],
-                        "idivf": parameter.idivf[n] * unit.dimensionless,
+                        "idivf": _interpret_idivf(parameter.idivf[n]),
                     }
                     pots.append(
                         Potential(
@@ -544,7 +552,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
                     "k": parameter.k[n],
                     "periodicity": parameter.periodicity[n] * unit.dimensionless,
                     "phase": parameter.phase[n],
-                    "idivf": parameter.idivf[n] * unit.dimensionless,
+                    "idivf": _interpret_idivf(parameter.idivf[n]),
                 }
                 potential = Potential(parameters=parameters)  # type: ignore[assignment]
             self.potentials[potential_key] = potential

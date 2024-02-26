@@ -6,6 +6,7 @@ import warnings
 from typing import Callable, Optional, Union
 
 import numpy
+from openff.models.exceptions import UnitValidationError
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
 from openff.units import unit
@@ -70,7 +71,7 @@ def potential_loader(data: str) -> dict:
 class Potential(DefaultModel):
     """Base class for storing applied parameters."""
 
-    parameters: dict[str, FloatQuantity] = dict()
+    parameters: dict[str, Union[FloatQuantity, str]] = dict()
     map_key: Optional[int] = None
 
     class Config:
@@ -84,13 +85,24 @@ class Potential(DefaultModel):
     @validator("parameters")
     def validate_parameters(
         cls,
-        v: dict[str, Union[ArrayQuantity, FloatQuantity]],
-    ) -> dict[str, FloatQuantity]:
-        for key, val in v.items():
-            if isinstance(val, list):
-                v[key] = ArrayQuantity.validate_type(val)
+        v: dict[str, Union[ArrayQuantity, FloatQuantity, str]],
+    ) -> dict[str, Union[FloatQuantity, str]]:
+
+        try:
+
+            for key, val in v.items():
+
+                if isinstance(val, list):
+                    v[key] = ArrayQuantity.validate_type(val)
+                else:
+                    v[key] = FloatQuantity.validate_type(val)
+
+        except UnitValidationError as error:
+            if key == "idivf" and val == "experimental-auto":
+                return v
             else:
-                v[key] = FloatQuantity.validate_type(val)
+                raise error
+
         return v
 
     def __hash__(self) -> int:

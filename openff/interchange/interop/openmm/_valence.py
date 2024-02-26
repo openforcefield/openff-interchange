@@ -2,7 +2,7 @@
 Helper functions for producing `openmm.Force` objects for valence terms.
 """
 
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 from openff.units import unit as off_unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
@@ -13,6 +13,9 @@ from openff.interchange.models import VirtualSiteKey
 
 if has_package("openmm"):
     import openmm
+
+if TYPE_CHECKING:
+    from openff.toolkit import Topology
 
 
 def _process_constraints(
@@ -225,7 +228,8 @@ def _process_proper_torsion_forces(interchange, openmm_sys, particle_map):
         # 1.0
         # >>> round(val, 0).m
         # 1.0
-        idivf = params["idivf"].m_as(off_unit.dimensionless)
+        idivf = _interpret_idivf(params["idivf"], interchange.topology, openff_indices)
+
         if idivf == 0:
             raise RuntimeError("Found an idivf of 0.")
         torsion_force.addTorsion(
@@ -300,6 +304,8 @@ def _process_improper_torsion_forces(interchange, openmm_sys, particle_map):
         k = params["k"].m_as(off_unit.kilojoule / off_unit.mol)
         periodicity = int(params["periodicity"])
         phase = params["phase"].m_as(off_unit.radian)
+
+        # Impropers don't have "auto" magic
         idivf = int(params["idivf"])
 
         torsion_force.addTorsion(
@@ -311,6 +317,24 @@ def _process_improper_torsion_forces(interchange, openmm_sys, particle_map):
             phase,
             k / idivf,
         )
+
+
+def _interpret_idivf(
+    idivf: Union[off_unit.Quantity, str],
+    topology: "Topology",
+    openff_indices: tuple[int, ...],
+) -> float:
+    if isinstance(idivf, off_unit.Quantity):
+        return idivf.m_as(off_unit.dimensionless)
+
+    elif idivf == "experimental-auto":
+        # implementation described in https://github.com/openforcefield/standards/pull/61/files
+        _, j, k, _ = (topology.atom(index) for index in openff_indices)
+
+        return float(len(j.bonds) - 1) * (len(k.bonds) - 1)
+
+    else:
+        raise NotImplementedError(f"Unsupported idivf value: {idivf}")
 
 
 def _is_constrained(
