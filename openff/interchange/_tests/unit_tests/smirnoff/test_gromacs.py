@@ -67,14 +67,14 @@ class TestSettles:
         if use_bundled_tip3p:
             _convert_settles(
                 molecule,
-                tip3p_interchange.topology.molecule(0),
-                tip3p_interchange,
+                sage_tip3p_interchange.topology.molecule(0),
+                sage_tip3p_interchange,
             )
         else:
             _convert_settles(
                 molecule,
-                sage_tip3p_interchange.topology.molecule(0),
-                sage_tip3p_interchange,
+                tip3p_interchange.topology.molecule(0),
+                tip3p_interchange,
             )
 
         assert len(molecule.settles) == 1
@@ -121,6 +121,53 @@ class TestSettles:
         )
 
         assert len(molecule.settles) == 0
+
+    @pytest.mark.parametrize("use_bundled_tip3p", [True, False])
+    def test_error_if_water_partially_constrained(
+        self,
+        use_bundled_tip3p,
+        tip3p_interchange,
+        sage_tip3p_interchange,
+    ):
+        from openff.interchange.models import BondKey
+
+        # Manually remove the H-H constraint parameter from each,
+        tip3p_interchange["Constraints"].potentials.pop(
+            tip3p_interchange["Constraints"].key_map[BondKey(atom_indices=(0, 1))],
+        )
+
+        sage_tip3p_interchange["Constraints"].potentials.pop(
+            sage_tip3p_interchange["Constraints"].key_map[BondKey(atom_indices=(0, 1))],
+        )
+
+        molecule = GROMACSMolecule(name="foo")
+
+        if not use_bundled_tip3p:
+            with pytest.raises(
+                RuntimeError,
+                match="Could not find a constraint distance .*0.*1",
+            ):
+                # ... and ensure this is an error when there is no bond parameter
+                # to fall back on
+                _convert_settles(
+                    GROMACSMolecule(name="foo"),
+                    tip3p_interchange.topology.molecule(0),
+                    tip3p_interchange,
+                )
+        else:
+            # ... but uses a O-H distance if there is one (here, from Sage)
+            _convert_settles(
+                molecule,
+                sage_tip3p_interchange.topology.molecule(0),
+                sage_tip3p_interchange,
+            )
+
+            # b88 in both 2.0 and 2.1
+            assert molecule.settles[0].oxygen_hydrogen_distance.m_as(
+                unit.angstrom,
+            ) == pytest.approx(
+                0.97167633126,
+            )
 
     def test_no_bonds_or_angles_if_settle(self, tip3p_interchange):
         molecule = GROMACSMolecule(name="foo")
