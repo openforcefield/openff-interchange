@@ -1,5 +1,6 @@
 """Runtime settings for MD simulations."""
 
+import warnings
 from typing import TYPE_CHECKING, Literal
 
 from openff.models.models import DefaultModel
@@ -11,6 +12,7 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
+from openff.interchange.warnings import SwitchingFunctionNotImplementedWarning
 
 try:
     from pydantic.v1 import Field
@@ -202,6 +204,17 @@ class MDConfig(DefaultModel):
     def write_lammps_input(self, input_file: str = "run.in") -> None:
         """Write a LAMMPS input file for running single-point energies."""
         with open(input_file, "w") as lmp:
+
+            if self.switching_function is not None:
+                if self.switching_distance.m > 0.0:
+                    warnings.warn(
+                        f"A switching distance {self.switching_distance} was specified by the "
+                        "force field, but LAMMPS may not implement a switching function as "
+                        "specified by SMIRNOFF. Using a hard cut-off instead. Non-bonded "
+                        "interactions will be affected.",
+                        SwitchingFunctionNotImplementedWarning,
+                    )
+
             lmp.write(
                 "units real\n"
                 "atom_style full\n"
@@ -279,12 +292,17 @@ class MDConfig(DefaultModel):
             sander.write("single-point energy\n&cntrl\nimin=1,\nmaxcyc=0,\nntb=1,\n")
 
             if self.switching_function is not None:
-                distance = round(self.switching_distance.m_as(unit.angstrom), 4)
-                # This value must be negative for a switching function to not be applied.
-                # The Amber22 manual misstates the behavior of this case.
-                if distance == 0.0:
-                    distance = -1.0
-                sander.write(f"fswitch={distance},\n")
+                if self.switching_distance.m > 0.0:
+                    warnings.warn(
+                        f"A switching distance {self.switching_distance} was specified by the "
+                        "force field, but Amber does not implement a switching function. Using a "
+                        "hard cut-off instead. Non-bonded interactions will be affected.",
+                        SwitchingFunctionNotImplementedWarning,
+                    )
+
+                # Whether this is stored as zero or positive distance, pass a
+                # negative value to ensure it's turned off.
+                sander.write(f"fswitch={-1.0},\n")
 
             if self.constraints in ["none", None]:
                 sander.write("ntc=1,\nntf=1,\n")
@@ -341,8 +359,6 @@ def _infer_constraints(interchange: "Interchange") -> str:
                 return "all-angles"
 
             else:
-                import warnings
-
                 warnings.warn(
                     "Ambiguous failure while processing constraints. Constraining h-bonds as a stopgap.",
                 )
