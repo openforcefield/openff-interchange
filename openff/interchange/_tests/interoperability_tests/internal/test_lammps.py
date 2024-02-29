@@ -1,17 +1,14 @@
-import numpy as np
+import numpy
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from openff.units import unit
+from openff.toolkit import Topology, unit
 
 from openff.interchange import Interchange
-from openff.interchange._tests import needs_lmp
+from openff.interchange._tests import MoleculeWithConformer, needs_lmp
 from openff.interchange.drivers import get_lammps_energies, get_openmm_energies
 
 
 @needs_lmp
 class TestLammps:
-    @pytest.mark.skip("LAMMPS export experimental")
-    @pytest.mark.slow()
     @pytest.mark.parametrize("n_mols", [1, 2])
     @pytest.mark.parametrize(
         "mol",
@@ -40,18 +37,17 @@ class TestLammps:
         TODO: Tighten tolerances
         TODO: Test periodic and non-periodic
         """
-        mol = Molecule.from_smiles(mol)
-        mol.generate_conformers(n_conformers=1)
+        mol = MoleculeWithConformer.from_smiles(mol)
+        mol.conformers[0] -= numpy.min(mol.conformers[0], axis=0)
         top = Topology.from_molecules(n_mols * [mol])
-        mol.conformers[0] -= np.min(mol.conformers[0], axis=0)
 
-        top.box_vectors = 10 * np.eye(3) * unit.nanometer
+        top.box_vectors = 5.0 * numpy.eye(3) * unit.nanometer
 
         if n_mols == 1:
             positions = mol.conformers[0]
         elif n_mols == 2:
-            positions = np.concatenate(
-                [mol.conformers[0], mol.conformers[0] + 3 * unit.nanometer],
+            positions = numpy.concatenate(
+                [mol.conformers[0], mol.conformers[0] + 1.5 * unit.nanometer],
             )
 
         interchange = Interchange.from_smirnoff(sage_unconstrained, top)
@@ -67,8 +63,6 @@ class TestLammps:
             interchange=interchange,
             round_positions=3,
         )
-
-        interchange.mdconfig.write_lammps_input("tmp.in")
 
         lmp_energies.compare(
             reference,

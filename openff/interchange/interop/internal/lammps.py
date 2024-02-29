@@ -8,7 +8,7 @@ from openff.units import unit
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError
-from openff.interchange.models import AngleKey, BondKey
+from openff.interchange.models import AngleKey, BondKey, PotentialKey
 
 
 def to_lammps(interchange: Interchange, file_path: Union[Path, str]):
@@ -369,27 +369,27 @@ def _write_propers(lmp_file: IO, interchange: Interchange):
     lmp_file.write("\nDihedrals\n\n")
 
     proper_handler = interchange["ProperTorsions"]
-    proper_type_map = dict(enumerate(proper_handler.potentials))
+    proper_map: dict[PotentialKey, int] = {
+        potential_key: index
+        for index, potential_key in enumerate(proper_handler.potentials)
+    }
 
-    proper_type_map_inv = dict({v: k for k, v in proper_type_map.items()})
+    for proper_index, top_key in enumerate(proper_handler.key_map):
+        pot_key = proper_handler.key_map[top_key]
+        proper_type_index = proper_map[pot_key]
 
-    for proper_idx, proper in enumerate(interchange.topology.propers):
-        indices = tuple(interchange.topology.atom_index(a) for a in proper)
+        indices = top_key.atom_indices
 
-        for top_key, pot_key in proper_handler.key_map.items():
-            if indices == top_key.atom_indices:
-                proper_type_idx = proper_type_map_inv[pot_key]
-
-                lmp_file.write(
-                    "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
-                        proper_idx + 1,
-                        proper_type_idx + 1,
-                        indices[0] + 1,
-                        indices[1] + 1,
-                        indices[2] + 1,
-                        indices[3] + 1,
-                    ),
-                )
+        lmp_file.write(
+            "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
+                proper_index + 1,
+                proper_type_index + 1,
+                indices[0] + 1,
+                indices[1] + 1,
+                indices[2] + 1,
+                indices[3] + 1,
+            ),
+        )
 
 
 def _write_impropers(lmp_file: IO, interchange: Interchange):
