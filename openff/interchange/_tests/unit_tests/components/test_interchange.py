@@ -114,7 +114,7 @@ class TestInterchange:
         other = deepcopy(interchange)
         other.positions += 1.0 * unit.nanometer
 
-        combined = interchange + other
+        combined = interchange.combine(other)
 
         # Just see if it can be converted into OpenMM and run
         get_openmm_energies(combined)
@@ -140,7 +140,7 @@ class TestInterchange:
 
         thf_interchange = make_interchange(thf)
         ace_interchange = make_interchange(ace)
-        complex_interchange = thf_interchange + ace_interchange
+        complex_interchange = thf_interchange.combine(ace_interchange)
 
         thf_vdw = thf_interchange["vdW"].get_system_parameters()
         ace_vdw = ace_interchange["vdW"].get_system_parameters()
@@ -168,11 +168,11 @@ class TestInterchange:
         ethane.generate_conformers(n_conformers=1)
         methane.generate_conformers(n_conformers=1)
 
-        assert (methane_interchange + ethane_interchange).positions is None
+        assert (methane_interchange.combine(ethane_interchange)).positions is None
         methane_interchange.positions = methane.conformers[0]
-        assert (methane_interchange + ethane_interchange).positions is None
+        assert (methane_interchange.combine(ethane_interchange)).positions is None
         ethane_interchange.positions = ethane.conformers[0]
-        assert (methane_interchange + ethane_interchange).positions is not None
+        assert (methane_interchange.combine(ethane_interchange)).positions is not None
 
     def test_input_topology_not_modified(self, sage):
         molecule = Molecule.from_smiles("CCO")

@@ -916,8 +916,19 @@ class Interchange(DefaultModel):
             )
 
     @experimental
-    def __add__(self, other):
-        """Combine two Interchange objects. This method is unstable and likely unsafe."""
+    def __add__(self, other: "Interchange") -> "Interchange":
+        """Combine two Interchange objects. This method is unstable and not yet unsafe."""
+        warnings.warn(
+            "The `+` operator is deprecated. Use `Interchange.combine` instead.",
+            InterchangeDeprecationWarning,
+            stacklevel=2,
+        )
+
+        return self.combine(other)
+
+    @experimental
+    def combine(self, other: "Interchange") -> "Interchange":
+        """Combine two Interchange objects. This method is unstable and not yet unsafe."""
         from openff.interchange.components.toolkit import _combine_topologies
 
         warnings.warn(
