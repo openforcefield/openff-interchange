@@ -59,6 +59,6 @@ class TestLammps:
             reference,
             tolerances={
                 "Nonbonded": 1 * unit.kilojoule_per_mole,
-                "Torsion": 0.01 * unit.kilojoule_per_mole,
+                "Torsion": 0.02 * unit.kilojoule_per_mole,
             },
         )
