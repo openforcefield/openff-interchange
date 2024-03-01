@@ -15,19 +15,10 @@ class TestLammps:
         [
             "C",
             "CC",  # Adds a proper torsion term(s)
-            pytest.param(
-                "C=O",
-                marks=pytest.mark.xfail,
-            ),  # Simplest molecule with any improper torsion
-            pytest.param(
-                "OC=O",
-                marks=pytest.mark.xfail,
-            ),  # Simplest molecule with a multi-term torsion
+            "C=O",  # Simplest molecule with any improper torsion
+            "OC=O",  # Simplest molecule with a multi-term torsion
             "CCOC",  # This hits t86, which has a non-1.0 idivf
-            pytest.param(
-                "C1COC(=O)O1",
-                marks=pytest.mark.xfail,
-            ),  # This adds an improper, i2
+            "C1COC(=O)O1",  # This adds an improper, i2
         ],
     )
     def test_to_lammps_single_mols(self, mol, sage_unconstrained, n_mols):
@@ -66,9 +57,8 @@ class TestLammps:
 
         lmp_energies.compare(
             reference,
-            {
-                "Nonbonded": 100 * unit.kilojoule_per_mole,
-                "Electrostatics": 100 * unit.kilojoule_per_mole,
-                "vdW": 100 * unit.kilojoule_per_mole,
+            tolerances={
+                "Nonbonded": 1 * unit.kilojoule_per_mole,
+                "Torsion": 0.01 * unit.kilojoule_per_mole,
             },
         )
