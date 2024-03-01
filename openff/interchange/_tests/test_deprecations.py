@@ -33,3 +33,12 @@ class TestDeprecation:
             match="The `handlers` attribute is deprecated. Use `collections` instead.",
         ):
             prepared_system.handlers
+
+    def test_plus_operator_warning(self, monkeypatch, prepared_system):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        with pytest.warns(
+            InterchangeDeprecationWarning,
+            match="combine.*instead",
+        ):
+            prepared_system + prepared_system
