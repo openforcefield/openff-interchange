@@ -1,8 +1,6 @@
 import numpy as np
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, Topology, unit
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -158,7 +156,6 @@ class TestEnergies:
         # TODO: It would be best to save the 1-4 interactions, split off into vdW and Electrostatics
         # in the energies. This might be tricky/intractable to do for engines that are not GROMACS
 
-    @pytest.mark.skip(reason="LAMMPS export experimental")
     @needs_gmx
     @needs_lmp
     @pytest.mark.slow()

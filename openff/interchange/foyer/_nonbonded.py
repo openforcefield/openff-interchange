@@ -1,8 +1,7 @@
 from typing import Literal
 
 from openff.models.types import FloatQuantity
-from openff.toolkit.topology import Topology
-from openff.units import Quantity, unit
+from openff.toolkit import Quantity, Topology, unit
 from openff.utilities.utilities import has_package
 
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection

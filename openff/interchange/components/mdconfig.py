@@ -201,7 +201,7 @@ class MDConfig(DefaultModel):
                 mdp.write("vdw-modifier = None\n")
                 mdp.write("rvdwswitch = 0\n")
 
-    def write_lammps_input(self, input_file: str = "run.in") -> None:
+    def write_lammps_input(self, input_file: str, interchange: "Interchange"):
         """Write a LAMMPS input file for running single-point energies."""
         with open(input_file, "w") as lmp:
 
@@ -222,10 +222,17 @@ class MDConfig(DefaultModel):
                 "dimension 3\nboundary p p p\n\n",
             )
 
-            lmp.write("bond_style hybrid harmonic\n")
-            lmp.write("angle_style hybrid harmonic\n")
-            lmp.write("dihedral_style hybrid fourier\n")
-            lmp.write("improper_style cvff\n")
+            if len(interchange["Bonds"].key_map) > 0:
+                lmp.write("bond_style hybrid harmonic\n")
+
+            if len(interchange["Angles"].key_map) > 0:
+                lmp.write("angle_style hybrid harmonic\n")
+
+            if len(interchange["ProperTorsions"].key_map) > 0:
+                lmp.write("dihedral_style hybrid fourier\n")
+
+            if len(interchange["ImproperTorsions"].key_map) > 0:
+                lmp.write("improper_style cvff\n")
 
             # TODO: LAMMPS puts this information in the "run" file. Should it live in MDConfig or not?
             scale_factors = {
