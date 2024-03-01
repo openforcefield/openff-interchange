@@ -284,4 +284,4 @@ class TestWriteLAMMPSInput:
         ):
             MDConfig.from_interchange(
                 system_no_constraints,
-            ).write_lammps_input(tmp_path / "yes.in")
+            ).write_lammps_input(tmp_path / "yes.in", system_no_constraints)
