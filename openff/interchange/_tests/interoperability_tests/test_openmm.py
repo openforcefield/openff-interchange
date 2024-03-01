@@ -2,9 +2,8 @@ import math
 
 import numpy
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, Topology, unit
+from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 from openff.utilities import get_data_file_path, has_package
 from openff.utilities.testing import skip_if_missing
 

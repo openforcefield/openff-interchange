@@ -13,6 +13,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+* #916 Some internal code paths are re-organized, including removing the `openff.interchange.interop.internal` submodule.
+* #916 Improves speed of `Interchange.to_lammps`, particularly for larger systems.
 * #915 Deprecates `Interchange.__add__` in favor of `Interchange.combine`.
 
 ## 0.3.22 - 2023-02-27

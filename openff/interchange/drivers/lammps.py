@@ -63,6 +63,7 @@ def _get_lammps_energies(
     mdconfig = MDConfig.from_interchange(interchange)
     mdconfig.write_lammps_input(
         input_file="tmp.in",
+        interchange=interchange,
     )
 
     # By default, LAMMPS spits out logs to the screen, turn it off
