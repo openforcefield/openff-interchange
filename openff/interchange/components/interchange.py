@@ -500,7 +500,7 @@ class Interchange(DefaultModel):
     def to_lammps(self, file_path: Union[Path, str], writer="internal"):
         """Export this Interchange to a LAMMPS data file."""
         if writer == "internal":
-            from openff.interchange.interop.internal.lammps import to_lammps
+            from openff.interchange.interop.lammps.export import to_lammps
 
             to_lammps(self, file_path)
         else:
@@ -653,7 +653,7 @@ class Interchange(DefaultModel):
     def to_prmtop(self, file_path: Union[Path, str], writer="internal"):
         """Export this Interchange to an Amber .prmtop file."""
         if writer == "internal":
-            from openff.interchange.interop.internal.amber import to_prmtop
+            from openff.interchange.interop.amber import to_prmtop
 
             to_prmtop(self, file_path)
 
@@ -700,7 +700,7 @@ class Interchange(DefaultModel):
     def to_inpcrd(self, file_path: Union[Path, str], writer="internal"):
         """Export this Interchange to an Amber .inpcrd file."""
         if writer == "internal":
-            from openff.interchange.interop.internal.amber import to_inpcrd
+            from openff.interchange.interop.amber import to_inpcrd
 
             to_inpcrd(self, file_path)
 

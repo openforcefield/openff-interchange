@@ -1,4 +1,4 @@
-"""Interfaces with LAMMPS."""
+"""Export to LAMMPS."""
 
 from pathlib import Path
 from typing import IO, Union

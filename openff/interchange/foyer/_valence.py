@@ -1,5 +1,4 @@
-from openff.toolkit.topology import Topology
-from openff.units import unit
+from openff.toolkit import Topology, unit
 
 from openff.interchange.common._valence import (
     AngleCollection,
