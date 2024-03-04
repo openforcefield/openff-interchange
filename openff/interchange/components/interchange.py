@@ -500,7 +500,7 @@ class Interchange(DefaultModel):
     def to_lammps(self, file_path: Union[Path, str], writer="internal"):
         """Export this Interchange to a LAMMPS data file."""
         if writer == "internal":
-            from openff.interchange.interop.lammps.export import to_lammps
+            from openff.interchange.interop.lammps import to_lammps
 
             to_lammps(self, file_path)
         else:

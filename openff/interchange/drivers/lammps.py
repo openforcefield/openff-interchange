@@ -1,5 +1,6 @@
 """Functions for running energy evluations with LAMMPS."""
 
+import tempfile
 from typing import Optional
 
 import numpy
@@ -59,12 +60,13 @@ def _get_lammps_energies(
     if round_positions is not None:
         interchange.positions = numpy.round(interchange.positions, round_positions)
 
-    interchange.to_lammps("out.lmp")
-    mdconfig = MDConfig.from_interchange(interchange)
-    mdconfig.write_lammps_input(
-        input_file="tmp.in",
-        interchange=interchange,
-    )
+    with tempfile.TemporaryDirectory():
+        interchange.to_lammps("out.lmp")
+        mdconfig = MDConfig.from_interchange(interchange)
+        mdconfig.write_lammps_input(
+            interchange=interchange,
+            input_file="tmp.in",
+        )
 
     # By default, LAMMPS spits out logs to the screen, turn it off
     # https://matsci.org/t/how-to-remove-or-redirect-python-lammps-stdout/38075/5

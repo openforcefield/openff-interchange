@@ -284,4 +284,39 @@ class TestWriteLAMMPSInput:
         ):
             MDConfig.from_interchange(
                 system_no_constraints,
-            ).write_lammps_input(tmp_path / "yes.in", system_no_constraints)
+            ).write_lammps_input(
+                interchange=system_no_constraints,
+                input_file=tmp_path / "yes.in",
+            )
+
+    def test_no_error_if_no_constraints(
+        self,
+        system_no_constraints,
+        tmp_path,
+    ):
+        MDConfig.from_interchange(system_no_constraints).write_lammps_input(
+            interchange=system_no_constraints,
+            input_file=tmp_path / ".inp",
+        )
+
+    def test_error_if_unsupported_constrained(
+        self,
+        rigid_water_box,
+        constrained_ligand_rigid_water_box,
+        unconstrained_ligand_rigid_water_box,
+        tmp_path,
+    ):
+        for system in [
+            rigid_water_box,
+            constrained_ligand_rigid_water_box,
+            unconstrained_ligand_rigid_water_box,
+        ]:
+
+            with pytest.raises(
+                NotImplementedError,
+                match="unsupported constraints case",
+            ):
+                MDConfig.from_interchange(system).write_lammps_input(
+                    system,
+                    tmp_path / ".inp",
+                )

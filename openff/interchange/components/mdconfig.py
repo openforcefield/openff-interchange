@@ -201,8 +201,71 @@ class MDConfig(DefaultModel):
                 mdp.write("vdw-modifier = None\n")
                 mdp.write("rvdwswitch = 0\n")
 
-    def write_lammps_input(self, input_file: str, interchange: "Interchange"):
+    def write_lammps_input(
+        self,
+        interchange: "Interchange",
+        input_file: str = "run.in",
+    ) -> None:
         """Write a LAMMPS input file for running single-point energies."""
+        # TODO: Get constrained angles
+        # TODO: Process rigid water
+
+        def _get_coeffs_of_constrained_bonds_and_angles(
+            interchange: "Interchange",
+        ) -> tuple[set[int], set[int]]:
+            """
+            Get coefficients of bonds and angles that appear to be constrained.
+
+            Refactor this when LAMMPS export uses a dedicated class.
+
+            * Coefficients are matched by stored SMIRKS
+            * Coefficients are ints associated with Bond Coeffs / Angle Coeffs section
+            * Coefficients are zero-indexed
+            """
+            constraint_styles = {
+                key.associated_handler for key in interchange["Constraints"].potentials
+            }
+
+            if len(constraint_styles.difference({"Bonds", "Angles"})) > 0:
+                raise NotImplementedError(
+                    "Found unsupported constraints case in LAMMPS input writer.",
+                )
+
+            constrained_bond_smirks = {
+                key.id
+                for key in interchange["Constraints"].potentials
+                if key.associated_handler == "Bonds"
+            }
+
+            constrained_angle_smirks = {
+                key.id
+                for key in interchange["Constraints"].potentials
+                if key.associated_handler == "Angles"
+            }
+
+            return (
+                {
+                    key
+                    for key, val in dict(
+                        enumerate(interchange["Bonds"].potentials),
+                    ).items()
+                    if val.id in constrained_bond_smirks
+                },
+                {
+                    key
+                    for key, val in dict(
+                        enumerate(interchange["Angles"].potentials),
+                    ).items()
+                    if val.id in constrained_angle_smirks
+                },
+            )
+
+        # zero-indexed here
+        (
+            constrained_bond_coeffs,
+            constrained_angle_coeffs,
+        ) = _get_coeffs_of_constrained_bonds_and_angles(interchange)
+
         with open(input_file, "w") as lmp:
 
             if self.switching_function is not None:
@@ -249,6 +312,7 @@ class MDConfig(DefaultModel):
                     "1-5": 1,
                 },
             }
+
             lmp.write(
                 "special_bonds lj "
                 f"{scale_factors['vdW']['1-2']} "
@@ -281,10 +345,30 @@ class MDConfig(DefaultModel):
                 raise UnsupportedExportError(
                     f"Mixing rule {self.mixing_rule} not supported",
                 )
+
             lmp.write("read_data out.lmp\n\n")
             lmp.write(
                 "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n",
             )
+
+            if len(constrained_bond_coeffs.union(constrained_angle_coeffs)) > 0:
+                # https://docs.lammps.org/fix_shake.html
+                # TODO: Apply fix to just a group (sub-group)?
+                lmp.write(
+                    "fix 100 all shake 0.0001 20 10 ",
+                )
+
+                if constrained_bond_coeffs:
+                    lmp.write(
+                        f"b {' '.join([str(val + 1) for val in constrained_bond_coeffs])}",
+                    )
+
+                if constrained_angle_coeffs:
+                    lmp.write(
+                        f"a {' '.join([str(val + 1) for val in constrained_angle_coeffs])}",
+                    )
+
+                lmp.write("\n")
 
             if self.coul_method == _PME:
                 # Note: LAMMPS will error out if using kspace on something with all zero charges,
