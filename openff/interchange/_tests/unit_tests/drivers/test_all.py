@@ -6,14 +6,14 @@ import math
 
 import pandas
 import pytest
-from openff.toolkit.topology import Molecule
+from openff.toolkit import Quantity
 from openff.utilities.testing import skip_if_missing
 
-from openff.interchange import Interchange
 from openff.interchange._tests import (
     HAS_GROMACS,
     HAS_LAMMPS,
     HAS_SANDER,
+    MoleculeWithConformer,
     needs_gmx,
     needs_lmp,
     needs_not_gmx,
@@ -29,16 +29,12 @@ from openff.interchange.drivers.all import get_all_energies, get_summary_data
 class TestDriversAll:
     @pytest.fixture()
     def basic_interchange(self, sage_unconstrained):
-        molecule = Molecule.from_smiles("CCO")
-        molecule.generate_conformers(n_conformers=1)
+        molecule = MoleculeWithConformer.from_smiles("CCO")
         molecule.name = "MOL"
         topology = molecule.to_topology()
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
-        out = Interchange.from_smirnoff(sage_unconstrained, topology)
-        out.positions = molecule.conformers[0]
-        out.box = [4, 4, 4]
-
-        return out
+        return sage_unconstrained.create_interchange(topology)
 
     @needs_gmx
     @needs_lmp

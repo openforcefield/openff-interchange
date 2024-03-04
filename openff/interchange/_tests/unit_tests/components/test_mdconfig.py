@@ -1,3 +1,4 @@
+import warnings
 from typing import Union
 
 import pytest
@@ -10,6 +11,7 @@ from openff.interchange.components.mdconfig import (
     get_smirnoff_defaults,
 )
 from openff.interchange.constants import _PME
+from openff.interchange.warnings import SwitchingFunctionNotImplementedWarning
 
 
 @pytest.fixture()
@@ -241,22 +243,80 @@ class TestWriteSanderInput:
         assert options["cntrl"]["ntf"] == "2"
         assert options["cntrl"]["ntc"] == "1"
 
-    def test_fswitch_negative_when_no_switching_function(
+    def test_switching_function_warning(
         self,
-        unconstrained_ligand_rigid_water_box,
+        system_no_constraints,
     ):
         """Reproduce issue 745."""
-        MDConfig.from_interchange(
-            unconstrained_ligand_rigid_water_box,
-        ).write_sander_input_file("yes.in")
+        with pytest.warns(
+            SwitchingFunctionNotImplementedWarning,
+        ):
+            MDConfig.from_interchange(
+                system_no_constraints,
+            ).write_sander_input_file("yes.in")
 
-        # With OpenFF defaults, the switch starts at 8 A and the cutoff is at 9 A
-        assert parse_sander("yes.in")["cntrl"]["fswitch"] == "8.0"
+        # This should always be -1 (turned off) since Amber does not implement
+        # a switching function on the potential
+        assert parse_sander("yes.in")["cntrl"]["fswitch"] == "-1.0"
 
-        unconstrained_ligand_rigid_water_box["vdW"].switch_width = 0.0 * unit.nanometer
+        system_no_constraints["vdW"].switch_width = 0.0 * unit.nanometer
 
-        MDConfig.from_interchange(
-            unconstrained_ligand_rigid_water_box,
-        ).write_sander_input_file("no.in")
+        # this pattern forces warnings to become errors
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+
+            MDConfig.from_interchange(
+                system_no_constraints,
+            ).write_sander_input_file("no.in")
 
         assert parse_sander("no.in")["cntrl"]["fswitch"] == "-1.0"
+
+
+class TestWriteLAMMPSInput:
+
+    def test_switching_function_warning(
+        self,
+        system_no_constraints,
+        tmp_path,
+    ):
+        with pytest.warns(
+            SwitchingFunctionNotImplementedWarning,
+        ):
+            MDConfig.from_interchange(
+                system_no_constraints,
+            ).write_lammps_input(
+                interchange=system_no_constraints,
+                input_file=tmp_path / "yes.in",
+            )
+
+    def test_no_error_if_no_constraints(
+        self,
+        system_no_constraints,
+        tmp_path,
+    ):
+        MDConfig.from_interchange(system_no_constraints).write_lammps_input(
+            interchange=system_no_constraints,
+            input_file=tmp_path / ".inp",
+        )
+
+    def test_error_if_unsupported_constrained(
+        self,
+        rigid_water_box,
+        constrained_ligand_rigid_water_box,
+        unconstrained_ligand_rigid_water_box,
+        tmp_path,
+    ):
+        for system in [
+            rigid_water_box,
+            constrained_ligand_rigid_water_box,
+            unconstrained_ligand_rigid_water_box,
+        ]:
+
+            with pytest.raises(
+                NotImplementedError,
+                match="unsupported constraints case",
+            ):
+                MDConfig.from_interchange(system).write_lammps_input(
+                    system,
+                    tmp_path / ".inp",
+                )

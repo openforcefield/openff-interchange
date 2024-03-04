@@ -53,7 +53,7 @@ def get_all_energies(
         if engine_name not in _engines:
             continue
         try:
-            all_energies[engine_name] = engine_driver(interchange)  # type: ignore[operator]
+            all_energies[engine_name] = engine_driver(interchange=interchange)  # type: ignore[operator]
         except engine_exception:
             pass
 
