@@ -30,6 +30,7 @@ dependencies:
   - pytest-randomly
   - nbval
   - mdanalysis
+  - de-forcefields
   # Drivers
   - gromacs =2023.3=nompi_*_103
   - lammps
@@ -52,3 +53,5 @@ dependencies:
   - flake8
   - snakeviz
   - tuna
+  - pip:
+    - git+https://github.com/jthorton/de-forcefields.git

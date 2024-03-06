@@ -28,6 +28,7 @@ dependencies:
   - pytest-xdist
   - pytest-randomly
   - mdanalysis
+  - de-forcefields
   # Drivers
   - gromacs =2023.3=nompi_*_103
   - lammps
@@ -35,10 +36,12 @@ dependencies:
   - panedr
   # Examples
   - nglview
-  - pytest =8.0
+  - pytest
   - nbval
   # Typing
   - mypy
   - typing-extensions
   - types-setuptools
   - pandas-stubs >=1.2.0.56
+  - pip:
+    - git+https://github.com/jthorton/de-forcefields.git
