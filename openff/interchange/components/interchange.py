@@ -787,7 +787,7 @@ class Interchange(DefaultModel):
     @experimental
     def from_openmm(
         cls,
-        system: "openmm.System" = None,
+        system: "openmm.System",
         topology: Union["openmm.app.Topology", Topology, None] = None,
         positions: Union[Quantity, None] = None,
         box_vectors: Union[Quantity, None] = None,
