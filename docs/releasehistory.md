@@ -13,6 +13,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+* #923 An error is raised in `Interchange.from_openmm` when the topology and system are incompatible.
 * #912 A warning is raised when writing an input/run file (not data file) to an engine that does not implement a switching function described by SMIRNOFF.
 * #916 Some internal code paths are re-organized, including removing the `openff.interchange.interop.internal` submodule.
 * #916 Improves speed of `Interchange.to_lammps`, particularly for larger systems.

@@ -16,6 +16,7 @@ from openff.interchange.exceptions import UnsupportedImportError
 from openff.interchange.interop.openmm._import._nonbonded import (
     BasicElectrostaticsCollection,
 )
+from openff.interchange.interop.openmm._import.compat import _check_compatible_inputs
 
 if has_package("openmm"):
     import openmm
@@ -33,14 +34,15 @@ if TYPE_CHECKING:
 @requires_package("openmm")
 @experimental
 def from_openmm(
+    system: "openmm.System",
     topology: Union["openmm.app.Topology", Topology, None] = None,
-    system: Union["openmm.System", None] = None,
     positions=None,
     box_vectors=None,
 ) -> "Interchange":
     """Create an Interchange object from OpenMM data."""
     from openff.interchange import Interchange
 
+    _check_compatible_inputs(system=system, topology=topology)
     interchange = Interchange()
 
     if system:
