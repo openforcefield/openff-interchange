@@ -17,10 +17,6 @@ def _check_compatible_inputs(
             raise UnsupportedImportError(
                 "A particle is a virtual site, which is not yet supported.",
             )
-        if system.getParticleMass(index)._value == 0.0:
-            raise UnsupportedImportError(
-                "A particle has a mass of 0.0. Is this intentional?",
-            )
 
     if isinstance(topology, Topology):
         _topology = topology.to_openmm()
