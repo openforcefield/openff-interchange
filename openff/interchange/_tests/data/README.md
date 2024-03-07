@@ -93,3 +93,24 @@ for arg in ["cube", "dodecahedron", "octahedron"]:
 `de-force-1.0.1.offxml`
 
 - [Source](https://github.com/jthorton/de-forcefields/blob/a6f666fc8a3f48d597bfb4db5c46826b9d5d7ed4/deforcefields/offxml/de-force-1.0.1.offxml) with vdW section removed
+
+`system.xml`
+
+Simple OpenMM System XML, written from toolkit objects.
+
+```python
+from openff.toolkit import ForceField, Molecule, unit, Quantity
+import openmm
+
+molecule = Molecule.from_smiles("C")
+
+topology = molecule.to_topology()
+topology.box_vectors = Quantity([2.5, 2.5, 2.5], unit.nanometer)
+
+
+open("system.xml", "w").write(
+    openmm.XmlSerializer.serialize(
+        ForceField("openff-2.1.0.offxml").create_openmm_system(topology)
+    )
+)
+```

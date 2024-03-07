@@ -11,12 +11,7 @@ from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import (
-    _BaseTest,
-    get_test_file_path,
-    needs_gmx,
-    needs_lmp,
-)
+from openff.interchange._tests import get_test_file_path, needs_gmx, needs_lmp
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
     ExperimentalFeatureException,
@@ -35,7 +30,7 @@ except ImportError:
 
 
 @pytest.mark.slow()
-class TestInterchange(_BaseTest):
+class TestInterchange:
     def test_getitem(self, sage):
         """Test behavior of Interchange.__getitem__"""
         mol = Molecule.from_smiles("CCO")
@@ -119,7 +114,7 @@ class TestInterchange(_BaseTest):
         other = deepcopy(interchange)
         other.positions += 1.0 * unit.nanometer
 
-        combined = interchange + other
+        combined = interchange.combine(other)
 
         # Just see if it can be converted into OpenMM and run
         get_openmm_energies(combined)
@@ -145,7 +140,7 @@ class TestInterchange(_BaseTest):
 
         thf_interchange = make_interchange(thf)
         ace_interchange = make_interchange(ace)
-        complex_interchange = thf_interchange + ace_interchange
+        complex_interchange = thf_interchange.combine(ace_interchange)
 
         thf_vdw = thf_interchange["vdW"].get_system_parameters()
         ace_vdw = ace_interchange["vdW"].get_system_parameters()
@@ -173,11 +168,11 @@ class TestInterchange(_BaseTest):
         ethane.generate_conformers(n_conformers=1)
         methane.generate_conformers(n_conformers=1)
 
-        assert (methane_interchange + ethane_interchange).positions is None
+        assert (methane_interchange.combine(ethane_interchange)).positions is None
         methane_interchange.positions = methane.conformers[0]
-        assert (methane_interchange + ethane_interchange).positions is None
+        assert (methane_interchange.combine(ethane_interchange)).positions is None
         ethane_interchange.positions = ethane.conformers[0]
-        assert (methane_interchange + ethane_interchange).positions is not None
+        assert (methane_interchange.combine(ethane_interchange)).positions is not None
 
     def test_input_topology_not_modified(self, sage):
         molecule = Molecule.from_smiles("CCO")
@@ -305,13 +300,14 @@ class TestInterchange(_BaseTest):
 
     @skip_if_missing("nglview")
     @skip_if_missing("openmm")
-    def test_visualize(self, sage):
+    @pytest.mark.parametrize("include_virtual_sites", [True, False])
+    def test_visualize(self, include_virtual_sites, tip4p, sage):
         import nglview
 
-        molecule = Molecule.from_smiles("CCO")
+        molecule = Molecule.from_smiles("O")
 
         out = Interchange.from_smirnoff(
-            force_field=sage,
+            force_field=tip4p if include_virtual_sites else sage,
             topology=molecule.to_topology(),
         )
 
@@ -324,12 +320,15 @@ class TestInterchange(_BaseTest):
         molecule.generate_conformers(n_conformers=1)
         out.positions = molecule.conformers[0]
 
-        assert isinstance(out.visualize(), nglview.NGLWidget)
+        assert isinstance(
+            out.visualize(include_virtual_sites=include_virtual_sites),
+            nglview.NGLWidget,
+        )
 
 
 @skip_if_missing("openmm")
 @skip_if_missing("mdtraj")
-class TestToPDB(_BaseTest):
+class TestToPDB:
     def test_to_pdb_with_virtual_sites(self, water, tip4p):
         import mdtraj
 
@@ -382,7 +381,7 @@ class TestToPDB(_BaseTest):
             )
 
 
-class TestUnimplementedSMIRNOFFCases(_BaseTest):
+class TestUnimplementedSMIRNOFFCases:
     def test_bogus_smirnoff_handler(self, sage):
         top = Molecule.from_smiles("CC").to_topology()
 
@@ -396,7 +395,7 @@ class TestUnimplementedSMIRNOFFCases(_BaseTest):
             Interchange.from_smirnoff(force_field=sage, topology=top)
 
 
-class TestBadExports(_BaseTest):
+class TestBadExports:
     @skip_if_missing("openmm")
     def test_invalid_topology(self, sage):
         """Test that InvalidTopologyError is caught when passing an unsupported
@@ -433,7 +432,7 @@ class TestBadExports(_BaseTest):
 
 
 @skip_if_missing("openmm")
-class TestInterchangeSerialization(_BaseTest):
+class TestInterchangeSerialization:
     def test_json_roundtrip(self, sage, water, ethanol):
         topology = Topology.from_molecules(
             [
@@ -459,7 +458,7 @@ class TestInterchangeSerialization(_BaseTest):
         )
 
 
-class TestWrappedCalls(_BaseTest):
+class TestWrappedCalls:
     """Test that methods which delegate out to other submodules call them."""
 
     @pytest.fixture()

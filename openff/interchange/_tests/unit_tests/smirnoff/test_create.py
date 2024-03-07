@@ -5,7 +5,7 @@ from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest, get_test_file_path
+from openff.interchange._tests import get_test_file_path
 from openff.interchange.constants import kcal_mol, kcal_mol_a2
 from openff.interchange.exceptions import (
     UnassignedAngleError,
@@ -33,7 +33,7 @@ def _get_interpolated_bond_k(bond_handler) -> float:
     return bond_handler.potentials[potential_key].parameters["k"].m
 
 
-class TestCreate(_BaseTest):
+class TestCreate:
     def test_modified_nonbonded_cutoffs(self, sage, ethanol):
         topology = Topology.from_molecules(ethanol)
         modified_sage = ForceField(sage.to_string())
@@ -66,7 +66,7 @@ class TestCreate(_BaseTest):
 
 
 @pytest.mark.slow()
-class TestUnassignedParameters(_BaseTest):
+class TestUnassignedParameters:
     def test_catch_unassigned_bonds(self, sage, ethanol_top):
         for param in sage["Bonds"].parameters:
             param.smirks = "[#99:1]-[#99:2]"
@@ -120,7 +120,7 @@ def test_library_charges_from_molecule():
     assert library_charges.charge == [*mol.partial_charges]
 
 
-class TestChargeFromMolecules(_BaseTest):
+class TestChargeFromMolecules:
     @pytest.mark.slow()
     def test_charge_from_molecules_basic(self, sage):
         molecule = Molecule.from_smiles("CCO")
@@ -196,7 +196,7 @@ class TestChargeFromMolecules(_BaseTest):
 
 
 @skip_if_missing("openmm")
-class TestPartialBondOrdersFromMolecules(_BaseTest):
+class TestPartialBondOrdersFromMolecules:
     @pytest.mark.parametrize(
         (
             "reversed",
@@ -310,7 +310,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
         )
 
 
-class TestCreateWithPlugins(_BaseTest):
+class TestCreateWithPlugins:
     def test_setup_plugins(self):
         from nonbonded_plugins.nonbonded import (
             BuckinghamHandler,
@@ -337,7 +337,7 @@ class TestCreateWithPlugins(_BaseTest):
 
 
 @skip_if_missing("jax")
-class TestMatrixRepresentations(_BaseTest):
+class TestMatrixRepresentations:
     @pytest.mark.parametrize(
         ("handler_name", "n_ff_terms", "n_sys_terms"),
         [("vdW", 10, 72), ("Bonds", 8, 64), ("Angles", 6, 104)],

@@ -76,6 +76,8 @@ should be modified for the desired simulation:
 mdconfig.write_lammps_input(input_file="auto_generated.in")
 ```
 
+Note that LAMMPS does not seem to implement a switching function as [commonly used](https://openforcefield.github.io/standards/standards/smirnoff/#vdw) by SMIRNOFF force fields.
+
 ## OpenMM
 
 An [`Interchange`] object can be converted to an `openmm.System` object with
@@ -120,6 +122,8 @@ should be modified for the desired simulation:
 ```python
 mdconfig.write_sander_input_file(input_file="auto_generated.in")
 ```
+
+Note that Amber does not implement a switching function as [commonly used](https://openforcefield.github.io/standards/standards/smirnoff/#vdw) by SMIRNOFF force fields.
 
 <!--
 ## CHARMM

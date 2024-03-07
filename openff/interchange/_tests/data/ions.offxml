@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-  <vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" switch_width="1.0 * angstroms" cutoff="9.0 * angstroms" method="cutoff">
-    <Atom smirks="[*:1]" id="n1" sigma="0.1 * nanometers" epsilon="0.0 * kilojoules_per_mole" />
+  <Bonds version="0.4" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+  </Bonds>
+  <Angles version="0.3" potential="harmonic">
+  </Angles>
+  <vdW version="0.4" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1.0" cutoff="9.0 * angstrom ** 1" switch_width="1.0 * angstrom ** 1" periodic_method="cutoff" nonperiodic_method="no-cutoff">
+    <Atom smirks="[*:1]" epsilon="0.0868793154488 * mole ** -1 * kilocalorie ** 1" id="n14" rmin_half="1.953447017081 * angstrom ** 1"></Atom>
   </vdW>
-  <Electrostatics version="0.3" scale12="0.0" scale13="0.0" scale14="0.833333" scale15="1.0" cutoff="9.0 * angstrom" switch_width="0.0 * angstrom" method="PME"></Electrostatics>
+  <Electrostatics version="0.4" scale12="0.0" scale13="0.0" scale14="0.8333333333" scale15="1.0" cutoff="9.0 * angstrom ** 1" switch_width="0.0 * angstrom ** 1" periodic_potential="Ewald3D-ConductingBoundary" nonperiodic_potential="Coulomb" exception_potential="Coulomb"></Electrostatics>
   <LibraryCharges version="0.3">
     <LibraryCharge name="foobar" smirks="[#3:1]" charge1="1.0*elementary_charge"/>
     <LibraryCharge name="foobar" smirks="[#17:1]" charge1="-1.0*elementary_charge"/>

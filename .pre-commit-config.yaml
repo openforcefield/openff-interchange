@@ -12,7 +12,7 @@ repos:
   hooks:
   - id: add-trailing-comma
 - repo: https://github.com/psf/black
-  rev: 24.1.1
+  rev: 24.2.0
   hooks:
   - id: black
     files: ^openff|plugins|stubs
@@ -23,6 +23,10 @@ repos:
   hooks:
   - id: isort
     files: ^openff|plugins|stubs
+- repo: https://github.com/asottile/yesqa
+  rev: v1.5.0
+  hooks:
+  - id: yesqa
 - repo: https://github.com/PyCQA/flake8
   rev: 7.0.0
   hooks:
@@ -35,7 +39,7 @@ repos:
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.15.0
+  rev: v3.15.1
   hooks:
   - id: pyupgrade
     files: ^openff|plugins|stubs
@@ -63,7 +67,7 @@ repos:
   hooks:
   - id: markdownlint
     exclude: .github
-    args: ["--disable", "MD013", "MD033", "MD024", "MD046", "--ignore", "docs/using/experimental.md", "--"]
+    args: ["--disable", "MD013", "MD033", "MD024", "MD046", "--ignore", "docs/using/experimental.md", "--ignore", "docs/using/status.md", "--"]
 - repo: https://github.com/nbQA-dev/nbQA
   rev: 1.7.1
   hooks:
@@ -74,7 +78,7 @@ repos:
     - id: nbqa-isort
       files: ^examples
 - repo: https://github.com/kynan/nbstripout
-  rev: 0.6.1
+  rev: 0.7.1
   hooks:
     - id: nbstripout
       files: ^examples

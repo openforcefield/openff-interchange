@@ -1,8 +1,13 @@
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule
-from openff.units import Quantity, unit
-from openff.utilities.testing import skip_if_missing
+from openff.toolkit import ForceField, Molecule, Quantity, unit
+from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
+from openff.utilities import has_package, skip_if_missing
+
+from openff.interchange._tests import MoleculeWithConformer, get_test_file_path
+
+if has_package("openmm"):
+    import openmm
 
 
 @skip_if_missing("openmm")
@@ -193,9 +198,7 @@ class TestTIP4PVsOpenMM:
 
         openff_tip4p = ForceField("tip4p_fb.offxml")
 
-        openff_system = openff_tip4p.create_openmm_system(
-            water.to_topology(),
-        )
+        openff_system = openff_tip4p.create_openmm_system(water.to_topology())
         openff_virtual_site = openff_system.getVirtualSite(3)
 
         # Cannot directly compare weights because OpenMM (OutOfPlaneSite) and OpenFF (LocalCoordinatesSite)
@@ -251,9 +254,7 @@ class TestTIP5PVsOpenMM:
                 openmm_system.getVirtualSite(4),
             ]
 
-        openff_system = tip5p.create_openmm_system(
-            water.to_topology(),
-        )
+        openff_system = tip5p.create_openmm_system(water.to_topology())
 
         openff_virtual_sites = [
             openff_system.getVirtualSite(3),
@@ -296,3 +297,247 @@ class TestTIP5PVsOpenMM:
 
 
 # TODO: Port xml_ff_virtual_sites_monovalent from toolkit
+
+
+@skip_if_missing("openmm")
+class TestOpenMMVirtualSiteExclusions:
+    def test_tip5p_num_exceptions(self, water):
+        tip5p = ForceField(get_test_file_path("tip5p.offxml"))
+
+        out = tip5p.create_openmm_system(water.to_topology())
+
+        # In a TIP5P water    expected exceptions include (total 10)
+        #
+        # V(3)  V(4)          Oxygen to hydrogens and particles (4)
+        #    \ /                - (0, 1), (0, 2), (0, 3), (0, 4)
+        #     O(0)            Hyrogens to virtual particles (4)
+        #    / \                - (1, 3), (1, 4), (2, 3), (2, 4)
+        # H(1)  H(2)          Hydrogens and virtual particles to each other (2)
+        #                       - (1, 2), (3, 4)
+
+        for force in out.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                assert force.getNumExceptions() == 10
+
+    def test_dichloroethane_exceptions(self, sage):
+        """Test a case in which a parent's 1-4 exceptions must be 'imported'."""
+        from openff.toolkit._tests.mocking import VirtualSiteMocking
+
+        # This molecule has heavy atoms with indices (1-indexed) CL1, C2, C3, Cl4,
+        # resulting in 1-4 interactions between the Cl-Cl pair and some Cl-H pairs
+        dichloroethane = Molecule.from_mapped_smiles(
+            "[Cl:1][C:2]([H:5])([H:6])[C:3]([H:7])([H:8])[Cl:4]",
+        )
+
+        # This parameter pulls 0.1 and 0.2e from Cl (parent) and C, respectively, and has
+        # LJ parameters of 4 A, 3 kJ/mol
+        parameter = VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]")
+
+        handler = VirtualSiteHandler(version="0.3")
+        handler.add_parameter(parameter=parameter)
+
+        sage.register_parameter_handler(handler)
+
+        system = sage.create_openmm_system(dichloroethane.to_topology())
+
+        assert system.isVirtualSite(8)
+        assert system.isVirtualSite(9)
+
+        non_bonded_force = [
+            f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)
+        ][0]
+
+        for exception_index in range(non_bonded_force.getNumExceptions()):
+            p1, p2, q, sigma, epsilon = non_bonded_force.getExceptionParameters(
+                exception_index,
+            )
+            if p2 == 8:
+                # Parent Cl, adjacent C and its bonded H, and the 1-3 C
+                if p1 in (0, 1, 2, 4, 5):
+                    assert q._value == epsilon._value == 0.0
+                # 1-4 Cl or 1-4 Hs
+                if p1 in (3, 6, 7):
+                    for value in (q, sigma, epsilon):
+                        assert value._value != 0, (q, sigma, epsilon)
+            if p2 == 9:
+                if p1 in (3, 1, 2, 6, 7):
+                    assert q._value == epsilon._value == 0.0
+                if p1 in (0, 4, 5):
+                    for value in (q, sigma, epsilon):
+                        assert value._value != 0, (q, sigma, epsilon)
+
+    def test_off_center_hydrogen_water(
+        self,
+        sage_with_off_center_hydrogen,
+        water,
+    ):
+        """Reproduce oxygen case of issue #905."""
+        import openmm
+
+        system = sage_with_off_center_hydrogen.create_openmm_system(
+            water.to_topology(),
+        )
+
+        for force in system.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                exceptions = [
+                    force.getExceptionParameters(index)
+                    for index in range(force.getNumExceptions())
+                ]
+
+        assert len(exceptions) == 10
+
+        expected_pairs = {
+            tuple(sorted(pair))
+            for pair in (
+                (0, 1),  # O-H
+                (0, 2),  # O-H
+                (0, 3),  # O-VS
+                (0, 4),  # O-VS
+                (1, 2),  # H-H
+                (1, 3),  # H-VS (self)
+                (2, 4),  # H-VS (self)
+                (1, 4),  # H-VS (other)
+                (2, 3),  # H-VS (other)
+                (3, 4),  # VS-VS
+            )
+        }
+
+        assert {tuple(sorted((p1, p2))) for p1, p2, _, _, _ in exceptions} == set(
+            expected_pairs,
+        )
+
+        for _, _, charge, _, epsilon in exceptions:
+            assert charge._value == 0.0
+            assert epsilon._value == 0.0
+
+    def test_off_center_hydrogen_methanol(
+        self,
+        sage_with_off_center_hydrogen,
+    ):
+        """Reproduce oxygen case of issue #905."""
+        import openmm
+
+        system = sage_with_off_center_hydrogen.create_openmm_system(
+            MoleculeWithConformer.from_mapped_smiles(
+                "[H:3][C:1]([H:4])([H:5])[O:2][H:6]",
+            ).to_topology(),
+        )
+
+        # zero-indexed, though the order of virtual site indices is not guaranteed
+        #
+        #             H(3)*VS(7)
+        #             |
+        #  VS(6)*H(2) - C(0) - O(1) - H(5)*VS(9)
+        #             |
+        #             H(4)*VS(8)
+        #
+        #
+        for force in system.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                exceptions = [
+                    force.getExceptionParameters(index)
+                    for index in range(force.getNumExceptions())
+                ]
+
+                break
+
+        expected_zeroed_pairs = {
+            tuple(sorted(pair))
+            for pair in (
+                (0, 1),  # C-O
+                (0, 2),  # C-H
+                (0, 3),  # C-H
+                (0, 4),  # C-H
+                (0, 5),  # C-H (through the oxygen)
+                (0, 6),  # C-VS
+                (0, 7),  # C-VS
+                (0, 8),  # C-VS
+                (0, 9),  # C-VS (through the oxygen)
+                (1, 2),  # O-H (through the carbon)
+                (1, 3),  # O-H (through the carbon)
+                (1, 4),  # O-H (through the carbon)
+                (1, 5),  # O-H
+                (1, 6),  # O-VS (through the carbon)
+                (1, 7),  # O-VS (through the carbon)
+                (1, 8),  # O-VS (through the carbon)
+                (1, 9),  # O-VS
+                (2, 3),  # H-H
+                (2, 4),  # H-H
+                (2, 6),  # H-VS
+                (2, 7),  # H-VS
+                (2, 8),  # H-VS
+                (3, 4),  # H-H
+                (3, 6),  # H-VS
+                (3, 7),  # H-VS
+                (3, 8),  # H-VS
+                (4, 6),  # H-VS
+                (4, 7),  # H-VS
+                (4, 8),  # H-VS
+                (5, 9),  # H-VS
+                (6, 7),  # VS-VS (within methyl)
+                (6, 8),  # VS-VS (within methyl)
+                (7, 8),  # VS-VS (within methyl)
+            )
+        }
+
+        expected_14_pairs = {
+            tuple(sorted(pair))
+            for pair in (
+                (2, 5),  # H-H (through the oxygen)
+                (3, 5),  # H-H (through the oxygen)
+                (4, 5),  # H-H (through the oxygen)
+                (5, 6),  # H-VS (through the oxygen and carbon)
+                (5, 7),  # H-VS (through the oxygen and carbon)
+                (5, 8),  # H-VS (through the oxygen and carbon)
+                (2, 9),  # H-VS (through the oxygen and carbon)
+                (3, 9),  # H-VS (through the oxygen and carbon)
+                (4, 9),  # H-VS (through the oxygen and carbon)
+                (6, 9),  # VS-VS (through the oxygen and carbon)
+                (7, 9),  # VS-VS (through the oxygen and carbon)
+                (8, 9),  # VS-VS (through the oxygen and carbon)
+            )
+        }
+
+        # the virtual sites on hydrogens don't carry charge, so they're only truly
+        # zeroed if their vdW interactions are turned off
+        assert {
+            tuple(sorted((p1, p2)))
+            for p1, p2, _, _, epsilon in exceptions
+            if epsilon._value == 0.0
+        } == set(
+            expected_zeroed_pairs,
+        )
+
+        assert {
+            tuple(sorted((p1, p2)))
+            for p1, p2, _, _, epsilon in exceptions
+            if epsilon._value != 0.0
+        } == set(
+            expected_14_pairs,
+        )
+
+        coul_14 = sage_with_off_center_hydrogen["Electrostatics"].scale14
+        vdw_14 = sage_with_off_center_hydrogen["vdW"].scale14
+
+        for p1, p2, charge_product, sigma, epsilon in exceptions:
+            if tuple(sorted((p1, p2))) in expected_zeroed_pairs:
+                assert charge_product._value == 0.0
+                assert epsilon._value == 0.0
+            elif tuple(sorted((p1, p2))) in expected_14_pairs:
+                p1_parameters = force.getParticleParameters(p1)
+                p2_parameters = force.getParticleParameters(p2)
+
+                expected_charge = p1_parameters[0] * p2_parameters[0] * coul_14
+                expected_sigma = (p1_parameters[1] + p2_parameters[1]) * 0.5
+
+                expected_epsilon = (p1_parameters[2] * p2_parameters[2]) ** 0.5 * vdw_14
+
+                assert charge_product._value == pytest.approx(expected_charge._value)
+
+                assert sigma._value == pytest.approx(expected_sigma._value)
+
+                assert epsilon._value == pytest.approx(expected_epsilon._value)
+
+            else:
+                raise Exception("Unexpected exception found")

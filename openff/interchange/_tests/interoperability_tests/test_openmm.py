@@ -2,18 +2,13 @@ import math
 
 import numpy
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, Topology, unit
+from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 from openff.utilities import get_data_file_path, has_package
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import (
-    MoleculeWithConformer,
-    _BaseTest,
-    get_test_file_path,
-)
+from openff.interchange._tests import MoleculeWithConformer, get_test_file_path
 from openff.interchange._tests.unit_tests.plugins.test_smirnoff_plugins import (
     TestDoubleExponential,
 )
@@ -80,7 +75,7 @@ def _compare_openmm_topologies(
 
 
 @skip_if_missing("openmm")
-class TestOpenMM(_BaseTest):
+class TestOpenMM:
     @pytest.mark.parametrize("inputs", nonbonded_methods)
     def test_openmm_nonbonded_methods(self, inputs, sage, ethanol):
         """See test_nonbonded_method_resolution in openff.toolkit._tests/test_forcefield.py"""
@@ -385,7 +380,7 @@ class TestOpenMM(_BaseTest):
 
 
 @skip_if_missing("openmm")
-class TestOpenMMSwitchingFunction(_BaseTest):
+class TestOpenMMSwitchingFunction:
     def test_switching_function_applied(self, sage, basic_top):
         out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
             combine_nonbonded_forces=True,
@@ -574,79 +569,7 @@ class TestOpenMMVirtualSites:
 
 
 @skip_if_missing("openmm")
-class TestOpenMMVirtualSiteExclusions(_BaseTest):
-    def test_tip5p_num_exceptions(self, water):
-        tip5p = ForceField(get_test_file_path("tip5p.offxml"))
-
-        out = Interchange.from_smirnoff(tip5p, [water]).to_openmm(
-            combine_nonbonded_forces=True,
-        )
-
-        # In a TIP5P water    expected exceptions include (total 10)
-        #
-        # V(3)  V(4)          Oxygen to hydrogens and particles (4)
-        #    \ /                - (0, 1), (0, 2), (0, 3), (0, 4)
-        #     O(0)            Hyrogens to virtual particles (4)
-        #    / \                - (1, 3), (1, 4), (2, 3), (2, 4)
-        # H(1)  H(2)          Hydrogens and virtual particles to each other (2)
-        #                       - (1, 2), (3, 4)
-
-        for force in out.getForces():
-            if isinstance(force, openmm.NonbondedForce):
-                assert force.getNumExceptions() == 10
-
-    def test_dichloroethane_exceptions(self, sage):
-        """Test a case in which a parent's 1-4 exceptions must be 'imported'."""
-        from openff.toolkit._tests.mocking import VirtualSiteMocking
-
-        # This molecule has heavy atoms with indices (1-indexed) CL1, C2, C3, Cl4,
-        # resulting in 1-4 interactions between the Cl-Cl pair and some Cl-H pairs
-        dichloroethane = Molecule.from_mapped_smiles(
-            "[Cl:1][C:2]([H:5])([H:6])[C:3]([H:7])([H:8])[Cl:4]",
-        )
-
-        # This parameter pulls 0.1 and 0.2e from Cl (parent) and C, respectively, and has
-        # LJ parameters of 4 A, 3 kJ/mol
-        parameter = VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]")
-
-        handler = VirtualSiteHandler(version="0.3")
-        handler.add_parameter(parameter=parameter)
-
-        sage.register_parameter_handler(handler)
-
-        system = Interchange.from_smirnoff(sage, [dichloroethane]).to_openmm(
-            combine_nonbonded_forces=True,
-        )
-
-        assert system.isVirtualSite(8)
-        assert system.isVirtualSite(9)
-
-        non_bonded_force = [
-            f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)
-        ][0]
-
-        for exception_index in range(non_bonded_force.getNumExceptions()):
-            p1, p2, q, sigma, epsilon = non_bonded_force.getExceptionParameters(
-                exception_index,
-            )
-            if p2 == 8:
-                # Parent Cl, adjacent C and its bonded H, and the 1-3 C
-                if p1 in (0, 1, 2, 4, 5):
-                    assert q._value == epsilon._value == 0.0
-                # 1-4 Cl or 1-4 Hs
-                if p1 in (3, 6, 7):
-                    for value in (q, sigma, epsilon):
-                        assert value._value != 0, (q, sigma, epsilon)
-            if p2 == 9:
-                if p1 in (3, 1, 2, 6, 7):
-                    assert q._value == epsilon._value == 0.0
-                if p1 in (0, 4, 5):
-                    for value in (q, sigma, epsilon):
-                        assert value._value != 0, (q, sigma, epsilon)
-
-
-@skip_if_missing("openmm")
-class TestToOpenMMTopology(_BaseTest):
+class TestToOpenMMTopology:
     def test_num_virtual_sites(self, water, tip4p):
         out = Interchange.from_smirnoff(tip4p, [water])
 
@@ -1003,7 +926,7 @@ class TestToOpenMMTopology(_BaseTest):
 
 
 @skip_if_missing("openmm")
-class TestToOpenMMPositions(_BaseTest):
+class TestToOpenMMPositions:
     def test_missing_positions(self):
         with pytest.raises(
             MissingPositionsError,
@@ -1075,7 +998,7 @@ class TestToOpenMMPositions(_BaseTest):
 
 @skip_if_missing("mdtraj")
 @skip_if_missing("openmm")
-class TestOpenMMToPDB(_BaseTest):
+class TestOpenMMToPDB:
     def test_to_pdb(self, sage, water):
         import mdtraj
 
@@ -1168,7 +1091,7 @@ class TestBuckingham:
 
 
 @skip_if_missing("openmm")
-class TestGBSA(_BaseTest):
+class TestGBSA:
     def test_create_gbsa(self, gbsa_force_field):
         interchange = Interchange.from_smirnoff(
             force_field=gbsa_force_field,

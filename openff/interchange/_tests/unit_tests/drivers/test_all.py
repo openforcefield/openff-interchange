@@ -3,16 +3,17 @@ Test the behavior of the drivers.all module
 """
 
 import math
-from shutil import which
 
 import pandas
 import pytest
-from openff.toolkit.topology import Molecule
+from openff.toolkit import Quantity
 from openff.utilities.testing import skip_if_missing
 
-from openff.interchange import Interchange
 from openff.interchange._tests import (
-    _BaseTest,
+    HAS_GROMACS,
+    HAS_LAMMPS,
+    HAS_SANDER,
+    MoleculeWithConformer,
     needs_gmx,
     needs_lmp,
     needs_not_gmx,
@@ -21,25 +22,19 @@ from openff.interchange._tests import (
     needs_sander,
 )
 from openff.interchange.drivers.all import get_all_energies, get_summary_data
-from openff.interchange.drivers.gromacs import _find_gromacs_executable
-from openff.interchange.drivers.lammps import _find_lammps_executable
 
 
 @skip_if_missing("openmm")
 @pytest.mark.slow()
-class TestDriversAll(_BaseTest):
+class TestDriversAll:
     @pytest.fixture()
     def basic_interchange(self, sage_unconstrained):
-        molecule = Molecule.from_smiles("CCO")
-        molecule.generate_conformers(n_conformers=1)
+        molecule = MoleculeWithConformer.from_smiles("CCO")
         molecule.name = "MOL"
         topology = molecule.to_topology()
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
-        out = Interchange.from_smirnoff(sage_unconstrained, topology)
-        out.positions = molecule.conformers[0]
-        out.box = [4, 4, 4]
-
-        return out
+        return sage_unconstrained.create_interchange(topology)
 
     @needs_gmx
     @needs_lmp
@@ -60,9 +55,9 @@ class TestDriversAll(_BaseTest):
     def test_skipping(self, basic_interchange):
         summary = get_all_energies(basic_interchange)
 
-        assert ("GROMACS" in summary) == (_find_gromacs_executable() is not None)
-        assert ("Amber" in summary) == (which("sander") is not None)
-        assert ("LAMMPS" in summary) == (_find_lammps_executable() is not None)
+        assert ("GROMACS" in summary) == HAS_GROMACS
+        assert ("Amber" in summary) == HAS_SANDER
+        assert ("LAMMPS" in summary) == HAS_LAMMPS
 
     # TODO: Also run all of this with h-bond constraints
     def test_summary_data(self, basic_interchange):
@@ -72,9 +67,9 @@ class TestDriversAll(_BaseTest):
 
         assert "OpenMM" in summary.index
 
-        assert ("GROMACS" in summary.index) == (_find_gromacs_executable() is not None)
-        assert ("Amber" in summary.index) == (which("sander") is not None)
-        assert ("LAMMPS" in summary.index) == (_find_lammps_executable() is not None)
+        assert ("GROMACS" in summary.index) == HAS_GROMACS
+        assert ("Amber" in summary.index) == HAS_SANDER
+        assert ("LAMMPS" in summary.index) == HAS_LAMMPS
 
         # Check that (some of) the data is reasonable, this tolerance should be greatly reduced
         # See https://github.com/openforcefield/openff-interchange/issues/632

@@ -350,6 +350,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         "LibraryCharges",
                         "ToolkitAM1BCCHandler",
                         "charge_from_molecules",
+                        "ExternalSource",
                     ):
                         charges[atom_index] = _add_charges(
                             charges.get(atom_index, _ZERO_CHARGE),

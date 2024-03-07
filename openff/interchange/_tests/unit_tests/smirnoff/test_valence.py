@@ -10,7 +10,7 @@ from openff.units import unit
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest, requires_openeye
+from openff.interchange._tests import requires_openeye
 from openff.interchange.constants import kcal_mol_a2, kcal_mol_rad2
 from openff.interchange.exceptions import DuplicateMoleculeError
 from openff.interchange.models import AngleKey, BondKey, ImproperTorsionKey
@@ -33,7 +33,7 @@ except ImportError:
     from pydantic import ValidationError
 
 
-class TestSMIRNOFFValenceCollections(_BaseTest):
+class TestSMIRNOFFValenceCollections:
     def test_bond_collection(self, water):
         bond_handler = BondHandler(version=0.3)
         bond_handler.fractional_bondorder_method = "AM1-Wiberg"
@@ -147,7 +147,7 @@ class TestSMIRNOFFValenceCollections(_BaseTest):
         ] == 5.555 * unit.dimensionless
 
 
-class TestBondCollection(_BaseTest):
+class TestBondCollection:
     def test_upconvert_warning(self, parsley, ethanol):
         from packaging.version import Version
 
@@ -159,7 +159,7 @@ class TestBondCollection(_BaseTest):
             _create_interchange(parsley, [ethanol])
 
 
-class TestConstraintCollection(_BaseTest):
+class TestConstraintCollection:
     @pytest.mark.parametrize(
         ("mol", "n_constraints"),
         [
@@ -194,9 +194,9 @@ class TestConstraintCollection(_BaseTest):
         assert len(constraints.potentials) == 2
 
 
-class TestBondOrderInterpolation(_BaseTest):
+class TestBondOrderInterpolation:
     @pytest.mark.slow()
-    def test_input_bond_orders_ignored(self, ethanol):
+    def test_input_bond_orders_ignored(self, ethanol, xml_ff_bo_bonds):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
 
@@ -211,7 +211,7 @@ class TestBondOrderInterpolation(_BaseTest):
 
         forcefield = ForceField(
             "openff-2.0.0.offxml",
-            self.xml_ff_bo_bonds,
+            xml_ff_bo_bonds,
         )
 
         bonds = SMIRNOFFBondCollection.create(
@@ -232,7 +232,7 @@ class TestBondOrderInterpolation(_BaseTest):
             assert k1 == pytest.approx(k2, rel=1e-5), (k1, k2)
 
     @skip_if_missing("openmm")
-    def test_input_conformers_ignored(self):
+    def test_input_conformers_ignored(self, xml_ff_bo_bonds):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
         from openff.toolkit._tests.test_forcefield import create_ethanol
@@ -250,7 +250,7 @@ class TestBondOrderInterpolation(_BaseTest):
 
         forcefield = ForceField(
             "openff-2.0.0.offxml",
-            self.xml_ff_bo_bonds,
+            xml_ff_bo_bonds,
         )
 
         bonds = SMIRNOFFBondCollection.create(
@@ -267,14 +267,18 @@ class TestBondOrderInterpolation(_BaseTest):
             k2 = bonds_mod.potentials[key2].parameters["k"].m_as(kcal_mol_a2)
             assert k1 == pytest.approx(k2, rel=1e-5), (k1, k2)
 
-    def test_fractional_bondorder_invalid_interpolation_method(self, ethanol):
+    def test_fractional_bondorder_invalid_interpolation_method(
+        self,
+        ethanol,
+        xml_ff_bo_bonds,
+    ):
         """
         Ensure that requesting an invalid interpolation method leads to a
         FractionalBondOrderInterpolationMethodUnsupportedError
         """
         forcefield = ForceField(
             "openff-2.0.0.offxml",
-            self.xml_ff_bo_bonds,
+            xml_ff_bo_bonds,
         )
         forcefield["Bonds"]._fractional_bondorder_interpolation = "invalid method name"
 
@@ -283,34 +287,12 @@ class TestBondOrderInterpolation(_BaseTest):
             Interchange.from_smirnoff(forcefield, [ethanol])
 
 
-class TestParameterInterpolation(_BaseTest):
-    xml_ff_bo = """<?xml version='1.0' encoding='ASCII'?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-      <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg"
-        fractional_bondorder_interpolation="linear">
-        <Bond
-          smirks="[#6X4:1]~[#8X2:2]"
-          id="bbo1"
-          k_bondorder1="101.0 * kilocalories_per_mole/angstrom**2"
-          k_bondorder2="123.0 * kilocalories_per_mole/angstrom**2"
-          length_bondorder1="1.4 * angstrom"
-          length_bondorder2="1.3 * angstrom"
-          />
-      </Bonds>
-      <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
-        <Proper smirks="[*:1]~[#6X3:2]~[#6X3:3]~[*:4]" id="tbo1" periodicity1="2" phase1="0.0 * degree"
-        k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
-        <Proper smirks="[*:1]~[#6X4:2]~[#8X2:3]~[*:4]" id="tbo2" periodicity1="2" phase1="0.0 * degree"
-        k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
-      </ProperTorsions>
-    </SMIRNOFF>
-    """
-
+class TestParameterInterpolation:
     @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
-    def test_bond_order_interpolation(self, ethanol):
+    def test_bond_order_interpolation(self, ethanol, xml_ff_bo):
         forcefield = ForceField(
             "openff-2.0.0.offxml",
-            self.xml_ff_bo,
+            xml_ff_bo,
         )
 
         ethanol.generate_conformers(n_conformers=1)
@@ -331,12 +313,12 @@ class TestParameterInterpolation(_BaseTest):
 
     @pytest.mark.slow()
     @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
-    def test_bond_order_interpolation_similar_bonds(self):
+    def test_bond_order_interpolation_similar_bonds(self, xml_ff_bo):
         """Test that key mappings do not get confused when two bonds having similar SMIRKS matches
         have different bond orders"""
         forcefield = ForceField(
             "openff-2.0.0.offxml",
-            self.xml_ff_bo,
+            xml_ff_bo,
         )
 
         # TODO: Construct manually to avoid relying on atom ordering
@@ -401,6 +383,7 @@ class TestParameterInterpolation(_BaseTest):
     )
     def test_fractional_bondorder_from_molecule(
         self,
+        xml_ff_bo,
         reversed,
         k_torsion_interpolated,
         k_bond_interpolated,
@@ -435,7 +418,7 @@ class TestParameterInterpolation(_BaseTest):
 
         forcefield = ForceField(
             "openff-2.0.0.offxml",
-            self.xml_ff_bo,
+            xml_ff_bo,
         )
         topology = Topology.from_molecules(mol)
 

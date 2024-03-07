@@ -106,7 +106,10 @@ class EnergyReport(DefaultModel):
 
         tolerances = default_tolerances
 
-        energy_differences = self.diff(other)
+        # Ensure everything is in kJ/mol for safety of later comparison
+        energy_differences = {
+            key: diff.to(kj_mol) for key, diff in self.diff(other).items()
+        }
 
         if ("Nonbonded" in tolerances) != ("Nonbonded" in energy_differences):
             raise IncompatibleTolerancesError(

@@ -8,12 +8,7 @@ from openff.units import unit
 from openff.utilities.testing import has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import (
-    HAS_GROMACS,
-    _BaseTest,
-    get_test_files_dir_path,
-    needs_gmx,
-)
+from openff.interchange._tests import HAS_GROMACS, get_test_files_dir_path, needs_gmx
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
@@ -34,7 +29,7 @@ if HAS_GROMACS:
 
 
 @skip_if_missing("foyer")
-class TestFoyer(_BaseTest):
+class TestFoyer:
     @pytest.fixture(scope="session")
     def oplsaa(self):
         return foyer.forcefields.load_OPLSAA()

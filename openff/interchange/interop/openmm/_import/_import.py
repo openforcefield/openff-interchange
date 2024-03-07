@@ -1,5 +1,7 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Union
 
+from openff.models.types import ArrayQuantity
+from openff.toolkit import Topology
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange._experimental import experimental
@@ -14,13 +16,16 @@ from openff.interchange.exceptions import UnsupportedImportError
 from openff.interchange.interop.openmm._import._nonbonded import (
     BasicElectrostaticsCollection,
 )
+from openff.interchange.interop.openmm._import.compat import _check_compatible_inputs
 
 if has_package("openmm"):
     import openmm
+    import openmm.app
     import openmm.unit
 
 if TYPE_CHECKING:
     import openmm
+    import openmm.app
     import openmm.unit
 
     from openff.interchange import Interchange
@@ -29,14 +34,15 @@ if TYPE_CHECKING:
 @requires_package("openmm")
 @experimental
 def from_openmm(
-    topology: Optional["openmm.app.Topology"] = None,
-    system: Optional["openmm.System"] = None,
+    system: "openmm.System",
+    topology: Union["openmm.app.Topology", Topology, None] = None,
     positions=None,
     box_vectors=None,
 ) -> "Interchange":
     """Create an Interchange object from OpenMM data."""
     from openff.interchange import Interchange
 
+    _check_compatible_inputs(system=system, topology=topology)
     interchange = Interchange()
 
     if system:
@@ -66,27 +72,46 @@ def from_openmm(
                     f"Unsupported OpenMM Force type ({type(force)}) found.",
                 )
 
-    if topology is not None:
+    if isinstance(topology, openmm.app.Topology):
         from openff.interchange.components.toolkit import _simple_topology_from_openmm
 
         openff_topology = _simple_topology_from_openmm(topology)
 
         interchange.topology = openff_topology
 
+    elif isinstance(topology, Topology):
+
+        interchange.topology = topology
+        interchange.positions = topology.get_positions()
+
+    elif topology is None:
+
+        interchange.topology = topology
+
     if positions is not None:
+
         interchange.positions = positions
 
     if box_vectors is not None:
-        interchange.box = box_vectors
-    elif system is not None:
-        interchange.box = system.getDefaultPeriodicBoxVectors()
+        _box_vectors = box_vectors
+
+    elif topology is not None:
+        if isinstance(topology, openmm.app.Topology):
+            _box_vectors = topology.getPeriodicBoxVectors()
+        elif isinstance(topology, Topology):
+            _box_vectors = topology.box_vectors
+
+    else:
+        _box_vectors = system.getDefaultPeriodicBoxVectors()
+
+    interchange.box = ArrayQuantity.validate_type(_box_vectors)
 
     return interchange
 
 
 def _convert_constraints(
     system: "openmm.System",
-) -> Optional[ConstraintCollection]:
+) -> Union[ConstraintCollection, None]:
     from openff.units import unit
 
     from openff.interchange.components.potentials import Potential
@@ -163,7 +188,9 @@ def _convert_nonbonded_force(
         vdw.key_map.update({top_key: pot_key})
         vdw.potentials.update({pot_key: pot})
 
-        pot_key = PotentialKey(id=f"{idx}", associated_handler="Electrostatics")
+        # This quacks like it's from a library charge, but tracks that it's
+        # not actually coming from a source
+        pot_key = PotentialKey(id=f"{idx}", associated_handler="ExternalSource")
         electrostatics.key_map.update({top_key: pot_key})
         electrostatics.potentials.update(
             {pot_key: Potential(parameters={"charge": from_openmm_quantity(charge)})},
@@ -188,7 +215,7 @@ def _convert_nonbonded_force(
 
 def _convert_harmonic_bond_force(
     force: "openmm.HarmonicBondForce",
-) -> "BondCollection":
+) -> BondCollection:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.common._valence import BondCollection
@@ -218,7 +245,7 @@ def _convert_harmonic_bond_force(
 
 def _convert_harmonic_angle_force(
     force: "openmm.HarmonicAngleForce",
-) -> "AngleCollection":
+) -> AngleCollection:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.common._valence import AngleCollection
@@ -251,7 +278,7 @@ def _convert_harmonic_angle_force(
 
 def _convert_periodic_torsion_force(
     force: "openmm.PeriodicTorsionForce",
-) -> "ProperTorsionCollection":
+) -> ProperTorsionCollection:
     # TODO: Can impropers be separated out from a PeriodicTorsionForce?
     # Maybe by seeing if a quartet is in mol/top.propers or .impropers
     from openff.units import unit
