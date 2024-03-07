@@ -501,10 +501,74 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
         # locally testing this should enable something like 1e-6 kJ/mol
         assert abs(energy._value - expected_energy) < 3e-3
 
+    def test_minimize_water_dimer(self, de_force_field, water_dimer):
+        interchange = de_force_field.create_interchange(water_dimer)
+
+        original_energies = get_openmm_energies(
+            interchange,
+            combine_nonbonded_forces=False,
+        )
+
+        interchange.minimize()
+
+        new_energies = get_openmm_energies(
+            interchange,
+            combine_nonbonded_forces=False,
+        )
+
+        # the vdW energy might have increased, but the electrostatics energy should
+        # dwarf it - this is just how water behaves - but only look at the total
+        assert new_energies.total_energy < original_energies.total_energy
+
+    def test_minimize_mixed_system(self, de_force_field):
+        """Check a system with a non-LJ functional form, virtual sites, and multiple molecules."""
+        interchange = de_force_field.create_interchange(
+            Topology.from_pdb(
+                get_test_file_path("hexanol-water.pdb"),
+                unique_molecules=[
+                    Molecule.from_smiles("O"),
+                    Molecule.from_smiles("CCCCCCO"),
+                ],
+            ),
+        )
+
+        original_energies = get_openmm_energies(
+            interchange,
+            combine_nonbonded_forces=False,
+        )
+
+        interchange.minimize()
+
+        new_energies = get_openmm_energies(
+            interchange,
+            combine_nonbonded_forces=False,
+        )
+
+        # March 2024: non-bonded energies decrease significantly, valence do not
+        #
+        # original_energies: {
+        #   'Bond': <Quantity(0.823814244, 'kilojoule / mole')>,
+        #   'Angle': <Quantity(263.952367, 'kilojoule / mole')>,
+        #   'Torsion': <Quantity(15.5416592, 'kilojoule / mole')>,
+        #   'Electrostatics': <Quantity(7.51418904, 'kilojoule / mole')>,
+        #   'vdW': <Quantity(5842.3125, 'kilojoule / mole')>,
+        # }
+        # new_energies: {
+        #   'Bond': <Quantity(0.830504993, 'kilojoule / mole')>,
+        #   'Angle': <Quantity(250.47977, 'kilojoule / mole')>,
+        #   'Torsion': <Quantity(20.6318574, 'kilojoule / mole')>,
+        #   'Electrostatics': <Quantity(-168.244031, 'kilojoule / mole')>,
+        #   'vdW': <Quantity(-11.3446069, 'kilojoule / mole')>,
+        # }
+        assert new_energies.total_energy < original_energies.total_energy
+        assert new_energies["vdW"] < original_energies["vdW"]
+        assert new_energies["Electrostatics"] < original_energies["Electrostatics"]
+
 
 @skip_if_missing("openmm")
 @pytest.mark.slow()
 class TestOpenMMVirtualSites:
+
     @pytest.fixture()
     def sage_with_sigma_hole(self, sage):
         """Fixture that loads an SMIRNOFF XML with a C-Cl sigma hole."""
@@ -1015,7 +1079,8 @@ class TestOpenMMToPDB:
 
 @skip_if_missing("openmm")
 class TestBuckingham:
-    def test_water_with_virtual_sites(self, water):
+    @pytest.mark.parametrize("n_molecules", [1, 2, 5])
+    def test_water_with_virtual_sites(self, n_molecules, water):
         force_field = ForceField(
             get_test_file_path("buckingham_virtual_sites.offxml"),
             load_plugins=True,
@@ -1023,7 +1088,7 @@ class TestBuckingham:
 
         interchange = Interchange.from_smirnoff(
             force_field=force_field,
-            topology=water.to_topology(),
+            topology=Topology.from_molecules(n_molecules * [water]),
             box=[4, 4, 4],
         )
 
@@ -1046,18 +1111,25 @@ class TestBuckingham:
                     electrostatics14 = force
                     continue
 
-        assert system.getNumParticles() == 4
+        assert system.getNumParticles() == 4 * n_molecules
 
-        masses = [15.99943, 1.007947, 1.007947, 0.0]
+        masses = [15.99943, 1.007947, 1.007947]
 
         for particle_index in range(system.getNumParticles()):
-            assert system.isVirtualSite(particle_index) == (particle_index == 3)
-            assert system.getParticleMass(particle_index)._value == pytest.approx(
-                masses[particle_index],
-            )
+            if particle_index < n_molecules * 3:
+                # atoms should repeat O H H O H H ...
+                assert system.getParticleMass(particle_index)._value == pytest.approx(
+                    masses[particle_index % 3],
+                )
+                assert not system.isVirtualSite(particle_index)
+
+            else:
+                # all virtual sites should be at the end
+                assert system.isVirtualSite(particle_index)
+                assert system.getParticleMass(particle_index)._value == 0.0
 
         charges = openmm.unit.Quantity(
-            [0.0, 0.53254, 0.53254, -1.06508],
+            n_molecules * [0.0, 0.53254, 0.53254] + n_molecules * [-1.06508],
             openmm.unit.elementary_charge,
         )
 
@@ -1066,10 +1138,15 @@ class TestBuckingham:
 
         for index in range(vdw.getNumParticles()):
             parameters = vdw.getParticleParameters(index)
-            for p in parameters:
-                assert (p == 0) == (index > 0)
+            if index % 3 == 0 and not system.isVirtualSite(index):
+                assert parameters[0] == 1600000.0
 
-        assert vdw.getParticleParameters(0) == (1600000.0, 42.0, 0.003)
+        for molecule_index in range(n_molecules):
+            assert vdw.getParticleParameters(molecule_index * 3) == (
+                1600000.0,
+                42.0,
+                0.003,
+            )
 
         # This test should be replaced with one that uses a more complex
         # system than a single water molecule and look at vdw14 force
@@ -1078,16 +1155,17 @@ class TestBuckingham:
         with pytest.raises(PluginCompatibilityError):
             get_openmm_energies(interchange, combine_nonbonded_forces=True)
 
-        with pytest.warns(
-            UserWarning,
-            match="energies from split forces with virtual sites",
-        ):
-            assert not math.isnan(
-                get_openmm_energies(
-                    interchange,
-                    combine_nonbonded_forces=False,
-                ).total_energy.m,
-            )
+        if n_molecules == 1:
+            with pytest.warns(
+                UserWarning,
+                match="energies from split forces with virtual sites",
+            ):
+                assert not math.isnan(
+                    get_openmm_energies(
+                        interchange,
+                        combine_nonbonded_forces=False,
+                    ).total_energy.m,
+                )
 
 
 @skip_if_missing("openmm")

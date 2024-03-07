@@ -11,32 +11,33 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.3.23 - 2024-03-07
 
 * #923 An error is raised in `Interchange.from_openmm` when the topology and system are incompatible.
 * #912 A warning is raised when writing an input/run file (not data file) to an engine that does not implement a switching function described by SMIRNOFF.
 * #916 Some internal code paths are re-organized, including removing the `openff.interchange.interop.internal` submodule.
 * #916 Improves speed of `Interchange.to_lammps`, particularly for larger systems.
+* #920 Fixes a bug in which virtual site exclusions were incorrect when using split non-bonded forces.
 * #915 Deprecates `Interchange.__add__` in favor of `Interchange.combine`.
 * #897 Improves energy evaluation with LAMMPS when some bonds are constrained.
 
-## 0.3.22 - 2023-02-27
+## 0.3.22 - 2024-02-27
 
 * #912 Fixes a bug in which rigid water geometries were incorrectly written to GROMACS files.
 * #909 Fixes a bug in which numerical values such as `scale_14` were lost when parsing JSON dumps.
 
-## 0.3.21 - 2023-02-20
+## 0.3.21 - 2024-02-20
 
 * #906 Fixes a bug in which intramolecular interactions between virtual sites were not properly excluded with OpenMM.
 * #901 `Interchange.from_openmm` now requires the `system` argument.
 * #903 The Python API of LAMMPS is now internally used for LAMMPS energy calculations.
 
-## 0.3.20 - 2023-02-12
+## 0.3.20 - 2024-02-12
 
 * #891 Adds support for hydrogen mass repartitioning (HMR) in GROMACS export. Note that this implementaiton never modifies masses in waters and requires the system contains no virtual sites.
 * #887 Adds support for hydrogen mass repartitioning (HMR) in OpenMM export. Note that this implementaiton never modifies masses in waters and requires the system contains no virtual sites.
 
-### 0.3.19 - 2023-02-05
+### 0.3.19 - 2024-02-05
 
 * #867 Tags `PotentialKey.virtual_site_type` with the associated type provided by SMIRNOFF parameters.
 * #857 Tags `PotentialKey.associated_handler` when importing data from OpenMM.

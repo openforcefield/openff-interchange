@@ -21,7 +21,7 @@ dependencies:
   - mdtraj
   - intermol
   - jax
-  - pytest =8.0
+  - pytest
   - pytest-cov
   - pytest-xdist
   - pytest-randomly

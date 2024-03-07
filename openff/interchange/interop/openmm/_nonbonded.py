@@ -501,9 +501,9 @@ def _create_exceptions(
             (
                 p1,
                 p2,
-                charge_prod,
                 _,
-                epsilon,
+                _,
+                _,
             ) = non_bonded_force.getExceptionParameters(exception_index)
 
             # Adding parent-(child of neighbor) exceptions from either p1 or p2
@@ -778,6 +778,7 @@ def _create_vdw_force(
         for _ in molecule.atoms:
             vdw_force.addParticle(vdw_collection.default_parameter_values())
 
+    for molecule in interchange.topology.molecules:
         if has_virtual_sites:
             molecule_index = interchange.topology.molecule_index(molecule)
             for _ in molecule_virtual_site_map[molecule_index]:
@@ -846,12 +847,16 @@ def _create_electrostatics_force(
         for _ in molecule.atoms:
             electrostatics_force.addParticle(0.0, 1.0, 0.0)
 
+    for molecule in interchange.topology.molecules:
         if has_virtual_sites:
             molecule_index = interchange.topology.molecule_index(molecule)
             for virtual_site_key in molecule_virtual_site_map[molecule_index]:
                 force_index = electrostatics_force.addParticle(0.0, 1.0, 0.0)
 
+                # this is an "OpenFF" index
                 parent_atom_index = virtual_site_key.orientation_atom_indices[0]
+
+                # this dict contains only "OpenMM" indices, so look through map
                 parent_virtual_particle_mapping[
                     openff_openmm_particle_map[parent_atom_index]
                 ].append(force_index)

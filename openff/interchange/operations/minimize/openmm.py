@@ -23,11 +23,12 @@ def minimize_openmm(
     from openff.units.openmm import from_openmm
 
     simulation = interchange.to_openmm_simulation(
-        openmm.LangevinMiddleIntegrator(
+        integrator=openmm.LangevinMiddleIntegrator(
             293.15 * openmm.unit.kelvin,
             1.0 / openmm.unit.picosecond,
             2.0 * openmm.unit.femtosecond,
         ),
+        combine_nonbonded_forces=False,
     )
 
     simulation.context.computeVirtualSites()
