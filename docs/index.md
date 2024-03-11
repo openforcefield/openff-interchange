@@ -12,6 +12,8 @@ maxdepth: 2
 installation.md
 developing.md
 releasehistory.md
+v0.4-changes.md
+
 ```
 
 ```{toctree}
@@ -23,7 +25,7 @@ maxdepth: 2
 using/intro.md
 using/construction.rst
 using/output.md
-using/handlers.md
+using/collections.md
 using/migrating.md
 using/plugins.md
 using/status.md

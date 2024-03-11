@@ -102,7 +102,7 @@ how that chemistry is represented by a force field, and how the system is
 organized in 3D space. An `Interchange` object has four components:
 
 1. **Topology**: Stores chemical information, such as connectivity and formal charges, independently of force field
-2. **Handlers**: Maps the chemical information to force field parameters. The Force Field itself is not stored in the `Interchange`
+2. **Collections**: Maps the chemical information to force field parameters. The Force Field itself is not stored in the `Interchange`
 3. **Positions**: Cartesian co-ordinates of atoms
 4. **Box vectors**: Periodicity information
 5. **Velocities**: Cartesian velocities of atoms
@@ -114,7 +114,7 @@ from openff.interchange import Interchange
 
 empty_interchange = Interchange()
 assert empty_interchange.topology is None
-assert empty_interchange.handlers is {}
+assert empty_interchange.collections is {}
 assert empty_interchange.positions is None
 assert empty_interchange.box is None
 assert empty_interchange.velocities is None
@@ -138,15 +138,15 @@ A topology is technically optional, and any conversions requiring topological
 information will fail if any required data is missing. However, most conversions
 do require some information from the topology.
 
-### Handlers
+### Collections
 
-Handlers store force field information in a format that associates assigned
+Collections are classes that store force field information in a format that associates assigned
 parameters with their source and allows parameters to be inspected and even
 modified with the full power of SMIRKS-based direct chemical perception. They
-are discussed further in [](handlers.md)
+are discussed further in [](collections.md)
 
-Handlers are optional, though any conversions requiring force field parameters
-will fail if the necessary handlers are missing.
+Collections are optional, though any conversions requiring force field parameters
+will fail if the necessary data are missing.
 
 ### Positions and velocities
 
