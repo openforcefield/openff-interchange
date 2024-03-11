@@ -1,6 +1,6 @@
 # Tweaking and Inspecting Parameters
 
-Interchange stores force field parameters in potential handlers, which link the
+Interchange stores force field parameters in classes called collections, which link the
 entry in the force field to the parameter as applied to a topology. This makes
 it easy to inspect and even modify how a parameter is applied to a system.
 
@@ -21,7 +21,7 @@ input parameter to be reflected instantly in the parameterized system. Unlike a
 SMIRNOFF force field, the chemistry of system itself cannot be changed; a new
 `Interchange` must be defined and parameterized.
 
-There are three central components in each handler: topology keys, potentials,
+There are three central components in each collection: topology keys, potentials,
 and potential keys.
 
 [`TopologyKey`] objects are unique identifiers of locations in a topology. These
@@ -55,7 +55,7 @@ Despite this, getting the `Potential` for a place in the topology is a constant
 time operation. For example, parametrizing a thousand water molecules each with
 two identical bonds will produce only one `Potential`, rather than two thousand.
 
-Each potential handler inherits from the base [`Collection`] class and
+Each collection inherits from the base [`Collection`] class and
 describes a single type of parameter from a single source. Potential handlers
 for SMIRNOFF force fields are found in the [`openff.interchange.smirnoff`]
 module, while those for Foyer are found in the [`openff.interchange.foyer`]
@@ -76,14 +76,14 @@ Construct a simple `Interchange`
 
 ```
 
-The [`Interchange.handlers`] attribute maps names to the corresponding handler:
+The [`Interchange.collections`] attribute maps names to the corresponding collection:
 
 ```pycon
->>> interchange.handlers.keys()  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
+>>> interchange.collections.keys()  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
 dict_keys(['Bonds', 'Constraints', 'Angles', 'ProperTorsions',
     'ImproperTorsions', 'vdW', 'Electrostatics'])
 >>> # Ethane has no improper torsions, so both maps will be empty
->>> interchange.handlers['ImproperTorsions']  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
+>>> interchange.collections['ImproperTorsions']  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
 SMIRNOFFImproperTorsionCollection(type='ImproperTorsions',
     expression='k*(1+cos(periodicity*theta-phase))',
     key_map={},
@@ -91,13 +91,13 @@ SMIRNOFFImproperTorsionCollection(type='ImproperTorsions',
 
 ```
 
-In the bond handler for example, each pair of bonded atoms maps to one of two
+In the bond collection for example, each pair of bonded atoms maps to one of two
 potential keys, one for the carbon-carbon bond, and the other for the
 carbon-hydrogen bonds. It's clear from the SMIRKS codes that atoms 0 and 1 are
 the carbon atoms, and atoms 2 through 7 are the hydrogens:
 
 ```pycon
->>> interchange.handlers['Bonds'].key_map  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
+>>> interchange.collections['Bonds'].key_map  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
 {TopologyKey(atom_indices=(0, 1), ...): PotentialKey(id='[#6X4:1]-[#6X4:2]', ...),
  TopologyKey(atom_indices=(0, 2), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
  TopologyKey(atom_indices=(0, 3), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
@@ -113,11 +113,11 @@ Which atom indices represent hydrogens bonded to carbon atom 0, and which are
 bonded to carbon atom 1?
 :::
 
-The bond handler also maps the two potential keys to the appropriate `Potential`.
+The bond collection also maps the two potential keys to the appropriate `Potential`.
 Here we can read off the force constant and length:
 
 ```pycon
->>> interchange.handlers['Bonds'].potentials  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
+>>> interchange.collections['Bonds'].potentials  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
 {PotentialKey(id='[#6X4:1]-[#6X4:2]', ...):
      Potential(parameters={'k': <Quantity(529.242972, 'kilocalorie / angstrom ** 2 / mole')>,
                            'length': <Quantity(1.52190126, 'angstrom')>}, ...),
@@ -135,8 +135,8 @@ the bonds have been updated:
 >>> from openff.units import unit
 >>> # Get the potential from the first C-H bond
 >>> top_key = TopologyKey(atom_indices=(0, 2))
->>> pot_key = interchange.handlers['Bonds'].key_map[top_key]
->>> potential = interchange.handlers['Bonds'].potentials[pot_key]
+>>> pot_key = interchange.collections['Bonds'].key_map[top_key]
+>>> potential = interchange.collections['Bonds'].potentials[pot_key]
 >>> # Modify the potential
 >>> potential.parameters['length'] = 3.1415926 * unit.nanometer
 >>> # Write out the modified interchange to a GROMACS .top file
@@ -162,6 +162,6 @@ the bonds have been updated:
 [`TopologyKey`]: openff.interchange.models.TopologyKey
 [`PotentialKey`]: openff.interchange.models.PotentialKey
 [`Potential`]: openff.interchange.components.potentials.Potential
-[`Interchange.handlers`]: openff.interchange.Interchange.topology
+[`Interchange.collections`]: openff.interchange.Interchange.collections
 [`openff.interchange.smirnoff`]: openff.interchange.smirnoff
 [`openff.interchange.foyer`]: openff.interchange.foyer
