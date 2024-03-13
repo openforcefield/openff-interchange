@@ -4,6 +4,7 @@ import pathlib
 import sys
 from typing import Optional
 
+import numpy
 import pytest
 from openff.toolkit import Molecule
 from openff.toolkit.utils import (
@@ -40,6 +41,9 @@ requires_openeye = pytest.mark.skipif(
     not OpenEyeToolkitWrapper.is_available(),
     reason="Test requires OE toolkit",
 )
+
+
+_rng = numpy.random.default_rng(12345)
 
 
 def get_test_file_path(test_file: str) -> pathlib.Path:
