@@ -2,13 +2,14 @@ import numpy
 from openff.toolkit import Topology
 from openff.units import unit
 
+from openff.interchange._tests import _rng
 from openff.interchange.common._positions import _infer_positions
 
 
 class TestInferPositions:
     def test_short_circuit(self, methane):
         positions = unit.Quantity(
-            numpy.random.random((methane.n_atoms, 3)),
+            _rng.random((methane.n_atoms, 3)),
             unit.angstrom,
         )
 
