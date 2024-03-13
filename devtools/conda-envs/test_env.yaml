@@ -27,7 +27,6 @@ dependencies:
   - pytest-randomly
   - nbval
   - nglview
-  - mdanalysis
   # Drivers
   - gromacs =2023.3=nompi_*_103
   - lammps

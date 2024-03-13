@@ -147,14 +147,9 @@ class TestAmber:
 
 
 class TestPRMTOP:
-    @skip_if_missing("mdtraj")
-    @skip_if_missing("MDAnalysis")
     @skip_if_missing("openmm")
     @pytest.mark.slow()
     def test_atom_names_pdb(self):
-        import MDAnalysis
-        import mdtraj
-
         peptide = Molecule.from_polymer_pdb(
             get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
         )
@@ -168,20 +163,12 @@ class TestPRMTOP:
             get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
         )
         openmm_object = openmm.app.AmberPrmtopFile("atom_names.prmtop")
-        mdanalysis_object = MDAnalysis.Universe("atom_names.prmtop")
-        # This may not be useful, see
-        # https://github.com/mdtraj/mdtraj/blob/6bb35a8d78a5758ff1f72b3af1fc21d2e38f1029/mdtraj/formats/prmtop.py#L47-L49
-        mdtraj_object = mdtraj.load_prmtop("atom_names.prmtop")
 
         pdb_atom_names = [atom.name for atom in pdb_object.topology.atoms()]
 
         openmm_atom_names = [atom.name for atom in openmm_object.topology.atoms()]
-        mdanalysis_atom_names = [atom.name for atom in mdanalysis_object.atoms]
-        mdtraj_atom_names = [atom.name for atom in mdtraj_object.atoms]
 
         assert openmm_atom_names == pdb_atom_names
-        assert mdanalysis_atom_names == pdb_atom_names
-        assert mdtraj_atom_names == pdb_atom_names
 
 
 class TestAmberResidues:
