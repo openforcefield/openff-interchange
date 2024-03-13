@@ -29,8 +29,7 @@ dependencies:
   - pytest-xdist
   - pytest-randomly
   - nbval
-  - mdanalysis
-  - de-forcefields
+  # de-forcefields  # needs new release
   # Drivers
   - gromacs =2023.3=nompi_*_103
   - lammps
