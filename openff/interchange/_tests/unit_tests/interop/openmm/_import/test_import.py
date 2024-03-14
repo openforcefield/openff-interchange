@@ -187,6 +187,7 @@ class TestProcessTopology:
         with_openff = Interchange.from_openmm(
             system=system,
             topology=basic_top,
+            positions=basic_top.get_positions(),
         )
 
         # positions are lost when making an openmm.app.Topology,
@@ -268,6 +269,7 @@ class TestConvertConstraints:
         converted = from_openmm(
             topology=interchange.topology.to_openmm(),
             system=interchange.to_openmm(combine_nonbonded_forces=True),
+            positions=interchange.positions,
         )
 
         assert "Constraints" in interchange.collections

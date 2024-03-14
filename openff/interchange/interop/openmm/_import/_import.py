@@ -1,7 +1,7 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from openff.models.types import ArrayQuantity
-from openff.toolkit import Topology
+from openff.toolkit import Quantity, Topology
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange._experimental import experimental
@@ -34,10 +34,11 @@ if TYPE_CHECKING:
 @requires_package("openmm")
 @experimental
 def from_openmm(
+    *,
     system: "openmm.System",
+    positions: Quantity,
     topology: Union["openmm.app.Topology", Topology, None] = None,
-    positions=None,
-    box_vectors=None,
+    box_vectors: Optional[Quantity] = None,
 ) -> "Interchange":
     """Create an Interchange object from OpenMM data."""
     from openff.interchange import Interchange
@@ -88,9 +89,7 @@ def from_openmm(
 
         interchange.topology = topology
 
-    if positions is not None:
-
-        interchange.positions = positions
+    interchange.positions = positions
 
     if box_vectors is not None:
         _box_vectors = box_vectors

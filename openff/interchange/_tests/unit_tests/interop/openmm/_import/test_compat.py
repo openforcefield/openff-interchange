@@ -22,7 +22,11 @@ class TestUnsupportedCases:
         system = sage_unconstrained.create_openmm_system(topology)
 
         # This should not error
-        from_openmm(system=system, topology=topology.to_openmm())
+        from_openmm(
+            system=system,
+            topology=topology.to_openmm(),
+            positions=topology.get_positions(),
+        )
 
         with pytest.raises(
             UnsupportedImportError,
@@ -34,6 +38,7 @@ class TestUnsupportedCases:
             from_openmm(
                 system=system,
                 topology=other_topology.to_openmm(),
+                positions=topology.get_positions(),
             )
 
     def test_found_virtual_sites(self, monkeypatch, tip4p, water):
@@ -51,4 +56,5 @@ class TestUnsupportedCases:
             from_openmm(
                 system=system,
                 topology=topology.to_openmm(),
+                positions=topology.get_positions(),
             )
