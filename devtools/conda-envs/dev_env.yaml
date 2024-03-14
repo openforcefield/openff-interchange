@@ -1,6 +1,5 @@
 name: openff-interchange-dev
 channels:
-  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
   - openeye
 dependencies:
@@ -19,7 +18,8 @@ dependencies:
   # openff-nagl-models
   # Optional features
   - mbuild
-  - foyer >=0.12.1
+  - foyer =0.12.1
+  - gmso =0.12
   # Testing
   - mdtraj
   - intermol
@@ -54,3 +54,4 @@ dependencies:
   - tuna
   - pip:
     - git+https://github.com/jthorton/de-forcefields.git
+    - git+https://github.com/openforcefield/openff-toolkit.git@base-virtual-site-type

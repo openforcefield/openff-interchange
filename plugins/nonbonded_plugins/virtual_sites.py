@@ -1,16 +1,11 @@
 """Plugins handling virtual sites."""
 
-from typing import get_args
-
-import numpy
 from nonbonded_plugins.nonbonded import SMIRNOFFBuckinghamCollection
 from openff.toolkit.typing.engines.smirnoff.parameters import (
-    IndexedParameterAttribute,
     ParameterAttribute,
     VirtualSiteHandler,
-    _VirtualSiteType,
+    _BaseVirtualSiteType,
 )
-from openff.toolkit.utils.exceptions import SMIRNOFFSpecError
 from openff.units import unit
 
 from openff.interchange.components.potentials import Potential
@@ -23,19 +18,10 @@ from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollec
 class BuckinghamVirtualSiteHandler(VirtualSiteHandler):
     """A handler for virtual sites compatible with the Buckingham (exp-6) functional form."""
 
-    class BuckinghamVirtualSiteType(VirtualSiteHandler.VirtualSiteType):
+    class BuckinghamVirtualSiteType(_BaseVirtualSiteType):
         """A type for virtual sites compatible with the Buckingham (exp-6) functional form."""
 
         _ELEMENT_NAME = "BuckinghamVirtualSite"
-
-        name = ParameterAttribute(default="EP", converter=str)
-        type = ParameterAttribute(converter=str)
-
-        match = ParameterAttribute(converter=str)
-
-        distance = ParameterAttribute(unit=unit.angstrom)
-        outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
-        inPlaneAngle = ParameterAttribute(unit=unit.degree)
 
         _DEFAULT_A = 0.0 * unit.kilojoule_per_mole
         _DEFAULT_B = 0.0 * unit.nanometer**-1
@@ -44,61 +30,6 @@ class BuckinghamVirtualSiteHandler(VirtualSiteHandler):
         a = ParameterAttribute(_DEFAULT_A, unit=_DEFAULT_A.units)
         b = ParameterAttribute(_DEFAULT_B, unit=_DEFAULT_B.units)
         c = ParameterAttribute(_DEFAULT_C, unit=_DEFAULT_C.units)
-
-        charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
-
-    @classmethod
-    def _add_default_init_kwargs(cls, kwargs):
-        """Override VirtualSiteHandler._add_default_init_kwargs without rmin_half/epsilon logic."""
-        type_ = kwargs.get("type", None)
-
-        if type_ is None:
-            raise SMIRNOFFSpecError("the `type` keyword is missing")
-        if type_ not in get_args(_VirtualSiteType):
-            raise SMIRNOFFSpecError(
-                f"'{type_}' is not a supported virtual site type",
-            )
-
-        if "charge_increment" in kwargs:
-            expected_num_charge_increments = cls._expected_num_charge_increments(
-                type_,
-            )
-            num_charge_increments = len(kwargs["charge_increment"])
-            if num_charge_increments != expected_num_charge_increments:
-                raise SMIRNOFFSpecError(
-                    f"'{type_}' virtual sites expect exactly {expected_num_charge_increments} "
-                    f"charge increments, but got {kwargs['charge_increment']} "
-                    f"(length {num_charge_increments}) instead.",
-                )
-
-        supports_in_plane_angle = cls._supports_in_plane_angle(type_)
-        supports_out_of_plane_angle = cls._supports_out_of_plane_angle(type_)
-
-        if not supports_out_of_plane_angle:
-            kwargs["outOfPlaneAngle"] = kwargs.get("outOfPlaneAngle", None)
-        if not supports_in_plane_angle:
-            kwargs["inPlaneAngle"] = kwargs.get("inPlaneAngle", None)
-
-        match = kwargs.get("match", None)
-
-        if match is None:
-            raise SMIRNOFFSpecError("the `match` keyword is missing")
-
-        out_of_plane_angle = kwargs.get("outOfPlaneAngle", 0.0 * unit.degree)
-        is_in_plane = (
-            None
-            if not supports_out_of_plane_angle
-            else numpy.isclose(out_of_plane_angle.m_as(unit.degree), 0.0)
-        )
-
-        if not cls._supports_match(type_, match, is_in_plane):
-            raise SMIRNOFFSpecError(
-                (
-                    f"match='{match}' not supported with type='{type_}'" + ""
-                    if is_in_plane is None
-                    else f" and is_in_plane={is_in_plane}"
-                ),
-            )
 
     _TAGNAME = "BuckinghamVirtualSites"
     _INFOTYPE = BuckinghamVirtualSiteType

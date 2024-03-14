@@ -1,6 +1,5 @@
 name: interchange-examples-env
 channels:
-  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
   - openeye
 dependencies:
@@ -16,9 +15,11 @@ dependencies:
   - openff-nagl-models ==0.1
   - dgl =1
   # Optional features
+  - smirnoff-plugins =2024
   - unyt
   - mbuild
-  - foyer >=0.12.1
+  - foyer =0.12.1
+  - gmso =0.12
   # Examples
   - jax
   - mdtraj
@@ -33,3 +34,6 @@ dependencies:
   # Drivers
   - gromacs =2023.3=nompi_*_103
   - lammps
+  - pip:
+    - git+https://github.com/jthorton/de-forcefields.git
+    - git+https://github.com/openforcefield/openff-toolkit.git@base-virtual-site-type
