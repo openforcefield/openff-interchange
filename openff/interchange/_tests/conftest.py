@@ -572,3 +572,19 @@ def no_charges() -> ForceField:
     )
 
     return sage
+
+
+@pytest.fixture()
+def default_barostat():
+    try:
+        import openmm
+        import openmm.unit
+
+        return openmm.MonteCarloBarostat(
+            1.00 * openmm.unit.bar,
+            300 * openmm.unit.kelvin,
+            25,
+        )
+
+    except ImportError:
+        return None

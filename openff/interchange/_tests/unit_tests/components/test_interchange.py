@@ -11,7 +11,12 @@ from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import get_test_file_path, needs_gmx, needs_lmp
+from openff.interchange._tests import (
+    MoleculeWithConformer,
+    get_test_file_path,
+    needs_gmx,
+    needs_lmp,
+)
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
     ExperimentalFeatureException,
@@ -297,6 +302,26 @@ class TestInterchange:
             simulation.context.getState(getPositions=True).getPositions(asNumpy=True),
             molecule.conformers[0].m_as(unit.nanometer),
         )
+
+    def test_add_barostat(self, default_barostat, sage):
+        import openmm
+        import openmm.unit
+
+        topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        simulation = sage.create_interchange(topology).to_openmm_simulation(
+            integrator=openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond),
+            additional_forces=[default_barostat],
+        )
+
+        for force in simulation.system.getForces():
+            if isinstance(force, openmm.MonteCarloBarostat):
+                assert force.getDefaultPressure() == 1.0 * openmm.unit.bar
+                assert force.getDefaultTemperature() == 300.0 * openmm.unit.kelvin
+                break
+        else:
+            raise Exception("No barostat found")
 
     @skip_if_missing("nglview")
     @skip_if_missing("openmm")

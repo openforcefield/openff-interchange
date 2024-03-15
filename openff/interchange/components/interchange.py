@@ -570,7 +570,7 @@ class Interchange(DefaultModel):
         integrator: "openmm.Integrator",
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
-        extra_forces: Iterable["openmm.Force"] = tuple(),
+        additional_forces: Iterable["openmm.Force"] = tuple(),
         **kwargs,
     ) -> "openmm.app.simulation.Simulation":
         """
@@ -589,8 +589,8 @@ class Interchange(DefaultModel):
         add_constrained_forces : bool, default=False,
             If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
             on a bond or angle that is fully constrained.
-        extra_forces : Iterable[openmm.Force], default=tuple()
-            Extra forces to be added to the system, i.e. barostats that are not
+        additional_forces : Iterable[openmm.Force], default=tuple()
+            Additional forces to be added to the system, i.e. barostats that are not
             added by the force field.
         **kwargs
             Further keyword parameters are passed on to
@@ -608,24 +608,23 @@ class Interchange(DefaultModel):
         >>> import openmm
         >>> import openmm.unit
         >>>
-        >>> simulation = interchange.to_openmm_system(
-        ...     openmm.LangevinMiddleIntegrator(
-        ...         293.15 * openmm.unit.kelvin,
-        ...         1.0 / openmm.unit.picosecond,
-        ...         2.0 * openmm.unit.femtosecond,
-        ...     )
+        >>> integrator = openmm.LangevinMiddleIntegrator(
+        ...     293.15 * openmm.unit.kelvin,
+        ...     1.0 / openmm.unit.picosecond,
+        ...     2.0 * openmm.unit.femtosecond,
+        ... )
+        >>> barostat = openmm.MonteCarloBarostat(
+        ...     1.00 * openmm.unit.bar,
+        ...     293.15 * openmm.unit.kelvin,
+        ...     25,
+        ... )
+        >>> simulation = interchange.to_openmm_simulation(
+        ...     integrator=integrator,
+        ...     additional_forces=[barostat],
         ... )
 
         Add a barostat:
 
-        >>> simulation.system.addForce(
-        ...     openmm.MonteCarloBarostat(
-        ...         1.00 * openmm.unit.bar,
-        ...         293.15 * openmm.unit.kelvin,
-        ...         25,
-        ...     )
-        ... )
-        >>> simulation.context.reinitialize(preserveState=True)
 
         Re-initializing the `Context` after adding a `Force` is necessary due to implementation details in OpenMM.
         For more, see
@@ -636,13 +635,17 @@ class Interchange(DefaultModel):
 
         from openff.interchange.interop.openmm._positions import to_openmm_positions
 
-        system = self.to_openmm(
+        system = self.to_openmm_system(
             combine_nonbonded_forces=combine_nonbonded_forces,
             add_constrained_forces=add_constrained_forces,
         )
 
-        for force in extra_forces:
+        for force in additional_forces:
             system.addForce(force)
+
+        # since we're adding forces before making a context, we don't need to
+        # re-initialize context. In a different order, we would need to:
+        # https://github.com/openforcefield/openff-interchange/pull/725#discussion_r1210928501
 
         simulation = openmm.app.Simulation(
             topology=self.to_openmm_topology(),
