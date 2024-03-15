@@ -3,6 +3,7 @@
 import copy
 import json
 import warnings
+from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Optional, Union, overload
 
@@ -569,6 +570,7 @@ class Interchange(DefaultModel):
         integrator: "openmm.Integrator",
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
+        extra_forces: Iterable["openmm.Force"] = tuple(),
         **kwargs,
     ) -> "openmm.app.simulation.Simulation":
         """
@@ -587,6 +589,9 @@ class Interchange(DefaultModel):
         add_constrained_forces : bool, default=False,
             If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
             on a bond or angle that is fully constrained.
+        extra_forces : Iterable[openmm.Force], default=tuple()
+            Extra forces to be added to the system, i.e. barostats that are not
+            added by the force field.
         **kwargs
             Further keyword parameters are passed on to
             :py:meth:`Simulation.__init__() <openmm.app.simulation.Simulation.__init__>`
@@ -631,12 +636,17 @@ class Interchange(DefaultModel):
 
         from openff.interchange.interop.openmm._positions import to_openmm_positions
 
+        system = self.to_openmm(
+            combine_nonbonded_forces=combine_nonbonded_forces,
+            add_constrained_forces=add_constrained_forces,
+        )
+
+        for force in extra_forces:
+            system.addForce(force)
+
         simulation = openmm.app.Simulation(
             topology=self.to_openmm_topology(),
-            system=self.to_openmm(
-                combine_nonbonded_forces=combine_nonbonded_forces,
-                add_constrained_forces=add_constrained_forces,
-            ),
+            system=system,
             integrator=integrator,
             **kwargs,
         )
