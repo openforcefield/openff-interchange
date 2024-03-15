@@ -461,7 +461,11 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
             ):
                 assert force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff
 
-    def test_double_exponential_create_simulation(self, de_force_field):
+    def test_double_exponential_create_simulation(
+        self,
+        de_force_field,
+        default_integrator,
+    ):
         from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 
         topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
@@ -472,19 +476,10 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
             topology,
         )
 
-        system = out.to_openmm(combine_nonbonded_forces=False)
-
-        simulation = openmm.app.Simulation(
-            to_openmm_topology(out),
-            system,
-            openmm.LangevinIntegrator(300, 1, 0.002),
-            openmm.Platform.getPlatformByName("CPU"),
+        simulation = out.to_openmm_simulation(
+            combine_nonbonded_forces=False,
+            integrator=default_integrator,
         )
-
-        simulation.context.setPositions(
-            to_openmm_positions(out, include_virtual_sites=False),
-        )
-        simulation.context.setPeriodicBoxVectors(*out.box.to_openmm())
 
         state = simulation.context.getState(getEnergy=True)
         energy = state.getPotentialEnergy().in_units_of(openmm.unit.kilojoule_per_mole)

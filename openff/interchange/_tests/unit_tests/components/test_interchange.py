@@ -263,20 +263,13 @@ class TestInterchange:
         assert isinstance(out.topology, Topology)
 
     @skip_if_missing("openmm")
-    def test_to_openmm_simulation(self, sage):
-        import numpy
-        import openmm
-        import openmm.app
-        import openmm.unit
-
+    def test_to_openmm_simulation(self, sage, default_integrator):
         molecule = Molecule.from_smiles("CCO")
 
         simulation = Interchange.from_smirnoff(
             force_field=sage,
             topology=molecule.to_topology(),
-        ).to_openmm_simulation(
-            integrator=openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond),
-        )
+        ).to_openmm_simulation(integrator=default_integrator)
 
         numpy.testing.assert_allclose(
             numpy.linalg.norm(
@@ -294,16 +287,14 @@ class TestInterchange:
         simulation = Interchange.from_smirnoff(
             force_field=sage,
             topology=molecule.to_topology(),
-        ).to_openmm_simulation(
-            integrator=openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond),
-        )
+        ).to_openmm_simulation(integrator=default_integrator)
 
         numpy.testing.assert_allclose(
             simulation.context.getState(getPositions=True).getPositions(asNumpy=True),
             molecule.conformers[0].m_as(unit.nanometer),
         )
 
-    def test_add_barostat(self, default_barostat, sage):
+    def test_add_barostat(self, sage, default_integrator, default_barostat):
         import openmm
         import openmm.unit
 
@@ -311,7 +302,7 @@ class TestInterchange:
         topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
 
         simulation = sage.create_interchange(topology).to_openmm_simulation(
-            integrator=openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond),
+            integrator=default_integrator,
             additional_forces=[default_barostat],
         )
 

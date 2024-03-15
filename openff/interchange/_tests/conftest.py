@@ -575,6 +575,18 @@ def no_charges() -> ForceField:
 
 
 @pytest.fixture()
+def default_integrator():
+    try:
+        import openmm
+        import openmm.unit
+
+        return openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond)
+
+    except ImportError:
+        return None
+
+
+@pytest.fixture()
 def default_barostat():
     try:
         import openmm
