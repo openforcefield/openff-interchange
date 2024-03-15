@@ -323,7 +323,11 @@ class Interchange(DefaultModel):
                 try:
                     self.topology.set_positions(self.positions)
                     widget = self.topology.visualize()
-                except (MissingConformersError, IncompatibleUnitError) as error:
+                except (
+                    MissingConformersError,
+                    IncompatibleUnitError,
+                    ValueError,
+                ) as error:
                     raise MissingPositionsError(
                         "Cannot visualize system without positions.",
                     ) from error

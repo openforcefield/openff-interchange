@@ -263,26 +263,20 @@ class TestInterchange:
         assert isinstance(out.topology, Topology)
 
     @skip_if_missing("openmm")
-    def test_to_openmm_simulation(self, sage, default_integrator):
+    @pytest.mark.parametrize("generate_conformers", [True, False])
+    def test_to_openmm_simulation(
+        self,
+        sage,
+        default_integrator,
+        generate_conformers,
+    ):
         molecule = Molecule.from_smiles("CCO")
 
-        simulation = Interchange.from_smirnoff(
-            force_field=sage,
-            topology=molecule.to_topology(),
-        ).to_openmm_simulation(integrator=default_integrator)
-
-        numpy.testing.assert_allclose(
-            numpy.linalg.norm(
-                simulation.context.getState(getPositions=True).getPositions(
-                    asNumpy=True,
-                ),
-            ),
-            numpy.zeros((molecule.n_atoms, 3)),
-        )
-
-        del simulation
-
-        molecule.generate_conformers(n_conformers=1)
+        if generate_conformers:
+            molecule.generate_conformers(n_conformers=1)
+            expected_positions = molecule.conformers[0].m_as(unit.nanometer)
+        else:
+            expected_positions = numpy.zeros((molecule.n_atoms, 3))
 
         simulation = Interchange.from_smirnoff(
             force_field=sage,
@@ -291,7 +285,7 @@ class TestInterchange:
 
         numpy.testing.assert_allclose(
             simulation.context.getState(getPositions=True).getPositions(asNumpy=True),
-            molecule.conformers[0].m_as(unit.nanometer),
+            expected_positions,
         )
 
     def test_add_barostat(self, sage, default_integrator, default_barostat):
