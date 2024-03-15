@@ -21,7 +21,11 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
 )
 from openff.interchange.interop.common import _build_particle_map
-from openff.interchange.models import TopologyKey, VirtualSiteKey
+from openff.interchange.models import (
+    SingleAtomChargeTopologyKey,
+    TopologyKey,
+    VirtualSiteKey,
+)
 
 if has_package("openmm"):
     import openmm
@@ -376,7 +380,13 @@ def _create_single_nonbonded_force(
             top_key = TopologyKey(atom_indices=(atom_index,))
 
             if data.electrostatics_collection is not None:
-                partial_charge = partial_charges[top_key].m_as(unit.e)
+                try:
+                    partial_charge = partial_charges[top_key].m_as(unit.e)
+                except KeyError:
+                    other_top_key = SingleAtomChargeTopologyKey(
+                        this_atom_index=atom_index,
+                    )
+                    partial_charge = partial_charges[other_top_key].m_as(unit.e)
             else:
                 partial_charge = 0.0
 
