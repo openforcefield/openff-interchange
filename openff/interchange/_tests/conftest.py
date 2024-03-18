@@ -571,3 +571,8 @@ def no_charges() -> ForceField:
     )
 
     return sage
+
+
+@pytest.fixture()
+def popc():
+    return Molecule(get_test_file_path("popc.sdf"))
