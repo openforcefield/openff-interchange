@@ -572,3 +572,11 @@ def no_charges() -> ForceField:
     )
 
     return sage
+
+
+@pytest.fixture()
+def popc():
+    return MoleculeWithConformer.from_smiles(
+        "CCCCCCCCCCCCCCCC(=O)OCC(COP(=O)([O-])OCC[N+](C)(C)C)OC(=O)CCCCCCCC=CCCCCCCCC",
+        allow_undefined_stereo=True,
+    )

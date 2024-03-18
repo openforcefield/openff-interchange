@@ -1,6 +1,5 @@
 name: beta-env
 channels:
-  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge/label/openmm_rc
   - conda-forge
   - openeye
