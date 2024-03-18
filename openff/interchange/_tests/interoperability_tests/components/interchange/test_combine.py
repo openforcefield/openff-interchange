@@ -11,7 +11,8 @@ def test_combine_after_from_openmm_with_mainline_openmm_force_field(
     popc,
     sage,
 ):
-    pytest.importorskip("openmm")
+    # amber/lipid17.xml is not shipped with OpenMM
+    pytest.importorskip("openmmforcefields")
 
     import openmm.app
     import openmm.unit
