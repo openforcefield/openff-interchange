@@ -11,6 +11,10 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+* #933 Fixes #934 in which atom order was sometimes mangled in `Interchange.from_openmm`.
+
 ## 0.3.23 - 2024-03-07
 
 * #923 An error is raised in `Interchange.from_openmm` when the topology and system are incompatible.
