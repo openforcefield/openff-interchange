@@ -9,6 +9,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
+from pydantic.v1 import ValidationError
 
 from openff.interchange import Interchange
 from openff.interchange._tests import get_test_file_path, needs_gmx, needs_lmp
@@ -22,11 +23,6 @@ from openff.interchange.exceptions import (
     MissingVirtualSitesError,
     SMIRNOFFHandlersNotImplementedError,
 )
-
-try:
-    from pydantic.v1 import ValidationError
-except ImportError:
-    from pydantic import ValidationError
 
 
 @pytest.mark.slow()

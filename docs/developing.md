@@ -6,7 +6,7 @@ For topics or details not specified, refer to the [development guidelines]( http
 
 ## Supported Python versions
 
-Generally, follow [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html). This means that currently Python 3.8-3.9 are supported as of the last update of this document (January 2022). No effort needs to be made to support older versions (Python 2 or 3.7 or earlier) or newer versions that are not well-supported by the [PyData](https://pydata.org) stack.
+Generally, follow [SPEC 0](https://scientific-python.org/specs/spec-0000/). This means that Python 3.10-3.12 are supported as of the last update of this document (March 2024). No effort needs to be made to support older versions (Python 2 or 3.9 or earlier) or newer versions that are not well-supported by the [PyData](https://pydata.org) stack.
 
 The last release with support for Python 3.7 wass v0.1.3.
 

@@ -9,6 +9,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     VirtualSiteHandler,
 )
 from openff.units import Quantity, unit
+from pydantic.v1 import Field
 
 from openff.interchange.components._particles import _VirtualSite
 from openff.interchange.components.potentials import Potential
@@ -19,11 +20,6 @@ from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     SMIRNOFFvdWCollection,
 )
-
-try:
-    from pydantic.v1 import Field
-except ImportError:
-    from pydantic import Field
 
 _DEGREES_TO_RADIANS = numpy.pi / 180.0
 

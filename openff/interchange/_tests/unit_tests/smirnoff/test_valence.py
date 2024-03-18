@@ -8,6 +8,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 from openff.utilities import has_package, skip_if_missing
+from pydantic.v1 import ValidationError
 
 from openff.interchange import Interchange
 from openff.interchange._tests import requires_openeye
@@ -26,11 +27,6 @@ from openff.interchange.smirnoff._valence import (
 if has_package("openmm"):
     import openmm.app
     import openmm.unit
-
-try:
-    from pydantic.v1 import ValidationError
-except ImportError:
-    from pydantic import ValidationError
 
 
 class TestSMIRNOFFValenceCollections:
