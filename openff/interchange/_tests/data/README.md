@@ -114,3 +114,17 @@ open("system.xml", "w").write(
     )
 )
 ```
+
+`popc.sdf` generated from
+
+```python
+popc = MoleculeWithConformer.from_smiles(
+    "CCCCCCCCCCCCCCCC(=O)OCC(COP(=O)([O-])OCC[N+](C)(C)C)OC(=O)CCCCCCCC=CCCCCCCCC",
+    allow_undefined_stereo=True,
+)
+
+popc.assign_partial_charges(partial_charge_method="am1bccelf10")
+popc.to_file("popc.sdf", file_format="sdf")
+```
+
+using OpenEye Toolkits 2023.2.3 and `partial_charge_method="am1bccelf10"`
