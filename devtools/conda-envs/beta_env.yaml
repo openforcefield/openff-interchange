@@ -21,6 +21,7 @@ dependencies:
   - foyer >=0.12.1
   # Testing
   - mdtraj
+  - openmmforcefields
   - intermol
   - openeye-toolkits >=2023.2
   - pytest-cov

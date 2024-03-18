@@ -18,6 +18,7 @@ dependencies:
   - mbuild
   # Testing
   - mdtraj
+  - openmmforcefields
   - intermol
   - jax
   - pytest
