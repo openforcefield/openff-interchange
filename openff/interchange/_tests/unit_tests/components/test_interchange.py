@@ -11,7 +11,12 @@ from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import get_test_file_path, needs_gmx, needs_lmp
+from openff.interchange._tests import (
+    MoleculeWithConformer,
+    get_test_file_path,
+    needs_gmx,
+    needs_lmp,
+)
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
     ExperimentalFeatureException,
@@ -258,45 +263,50 @@ class TestInterchange:
         assert isinstance(out.topology, Topology)
 
     @skip_if_missing("openmm")
-    def test_to_openmm_simulation(self, sage):
-        import numpy
-        import openmm
-        import openmm.app
-        import openmm.unit
-
+    @pytest.mark.parametrize("generate_conformers", [True, False])
+    def test_to_openmm_simulation(
+        self,
+        sage,
+        default_integrator,
+        generate_conformers,
+    ):
         molecule = Molecule.from_smiles("CCO")
 
-        simulation = Interchange.from_smirnoff(
-            force_field=sage,
-            topology=molecule.to_topology(),
-        ).to_openmm_simulation(
-            integrator=openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond),
-        )
-
-        numpy.testing.assert_allclose(
-            numpy.linalg.norm(
-                simulation.context.getState(getPositions=True).getPositions(
-                    asNumpy=True,
-                ),
-            ),
-            numpy.zeros((molecule.n_atoms, 3)),
-        )
-
-        del simulation
-
-        molecule.generate_conformers(n_conformers=1)
+        if generate_conformers:
+            molecule.generate_conformers(n_conformers=1)
+            expected_positions = molecule.conformers[0].m_as(unit.nanometer)
+        else:
+            expected_positions = numpy.zeros((molecule.n_atoms, 3))
 
         simulation = Interchange.from_smirnoff(
             force_field=sage,
             topology=molecule.to_topology(),
-        ).to_openmm_simulation(
-            integrator=openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond),
-        )
+        ).to_openmm_simulation(integrator=default_integrator)
 
         numpy.testing.assert_allclose(
             simulation.context.getState(getPositions=True).getPositions(asNumpy=True),
-            molecule.conformers[0].m_as(unit.nanometer),
+            expected_positions,
         )
+
+    def test_add_barostat(self, sage, default_integrator, default_barostat):
+        import openmm
+        import openmm.unit
+
+        topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        simulation = sage.create_interchange(topology).to_openmm_simulation(
+            integrator=default_integrator,
+            additional_forces=[default_barostat],
+        )
+
+        for force in simulation.system.getForces():
+            if isinstance(force, openmm.MonteCarloBarostat):
+                assert force.getDefaultPressure() == 1.0 * openmm.unit.bar
+                assert force.getDefaultTemperature() == 300.0 * openmm.unit.kelvin
+                break
+        else:
+            raise Exception("No barostat found")
 
     @skip_if_missing("nglview")
     @skip_if_missing("openmm")

@@ -574,5 +574,33 @@ def no_charges() -> ForceField:
 
 
 @pytest.fixture()
+def default_integrator():
+    try:
+        import openmm
+        import openmm.unit
+
+        return openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond)
+
+    except ImportError:
+        return None
+
+
+@pytest.fixture()
+def default_barostat():
+    try:
+        import openmm
+        import openmm.unit
+
+        return openmm.MonteCarloBarostat(
+            1.00 * openmm.unit.bar,
+            300 * openmm.unit.kelvin,
+            25,
+        )
+
+    except ImportError:
+        return None
+
+
+@pytest.fixture()
 def popc():
     return Molecule(get_test_file_path("popc.sdf"))
