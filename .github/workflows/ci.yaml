@@ -103,7 +103,7 @@ jobs:
       if: always()
       run: |
         python -m pytest $COV openff/interchange/ \
-          -r fExs -nauto --durations=10 \
+          -r fExs -n logical --durations=10 \
           -m "slow or not slow" \
           --ignore=openff/interchange/_tests/energy_tests/test_energies.py
 
