@@ -9,6 +9,7 @@ import numpy
 from openff.interchange.components.toolkit import _combine_topologies
 from openff.interchange.exceptions import (
     CutoffMismatchError,
+    SwitchingFunctionMismatchError,
     UnsupportedCombinationError,
 )
 
@@ -36,6 +37,12 @@ def _check_nonbonded_compatibility(
                 f"{key} cutoffs do not match. Found "
                 f"{interchange1[key].cutoff} and {interchange2[key].cutoff}.",
             )
+
+    if interchange1["vdW"].switch_width != interchange2["vdW"].switch_width:
+        raise SwitchingFunctionMismatchError(
+            f"Switching distance(s) do not match. Found "
+            f"{interchange1['vdW'].switch_width} and {interchange2['vdW'].switch_width}.",
+        )
 
 
 def _combine(
