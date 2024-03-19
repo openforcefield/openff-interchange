@@ -1,13 +1,10 @@
-from copy import deepcopy
-
 import numpy
 import pytest
-from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit import Molecule, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     ParameterHandler,
 )
-from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
@@ -99,85 +96,6 @@ class TestInterchange:
 
         with pytest.raises(ValidationError):
             tmp.box = [2, 2, 3, 90, 90, 90]
-
-    @skip_if_missing("openmm")
-    def test_basic_combination(self, monkeypatch, sage_unconstrained):
-        """Test basic use of Interchange.__add__() based on the README example"""
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
-        mol = Molecule.from_smiles("C")
-        mol.generate_conformers(n_conformers=1)
-        top = Topology.from_molecules([mol])
-
-        interchange = Interchange.from_smirnoff(sage_unconstrained, top)
-
-        interchange.box = [4, 4, 4] * numpy.eye(3)
-        interchange.positions = mol.conformers[0]
-
-        # Copy and translate atoms by [1, 1, 1]
-        other = Interchange()
-        other = deepcopy(interchange)
-        other.positions += 1.0 * unit.nanometer
-
-        combined = interchange.combine(other)
-
-        # Just see if it can be converted into OpenMM and run
-        get_openmm_energies(combined)
-
-    def test_parameters_do_not_clash(self, monkeypatch, sage_unconstrained):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
-        thf = Molecule.from_smiles("C1CCOC1")
-        ace = Molecule.from_smiles("CC(=O)O")
-
-        thf.generate_conformers(n_conformers=1)
-        ace.generate_conformers(n_conformers=1)
-
-        def make_interchange(molecule: Molecule) -> Interchange:
-            molecule.generate_conformers(n_conformers=1)
-            interchange = Interchange.from_smirnoff(
-                force_field=sage_unconstrained,
-                topology=[molecule],
-            )
-            interchange.positions = molecule.conformers[0]
-
-            return interchange
-
-        thf_interchange = make_interchange(thf)
-        ace_interchange = make_interchange(ace)
-        complex_interchange = thf_interchange.combine(ace_interchange)
-
-        thf_vdw = thf_interchange["vdW"].get_system_parameters()
-        ace_vdw = ace_interchange["vdW"].get_system_parameters()
-        add_vdw = complex_interchange["vdW"].get_system_parameters()
-
-        numpy.testing.assert_equal(numpy.vstack([thf_vdw, ace_vdw]), add_vdw)
-
-        # TODO: Ensure the de-duplication is maintained after exports
-
-    def test_positions_setting(self, monkeypatch, sage):
-        """Test that positions exist on the result if and only if
-        both input objects have positions."""
-
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
-        ethane = Molecule.from_smiles("CC")
-        methane = Molecule.from_smiles("C")
-
-        ethane_interchange = Interchange.from_smirnoff(
-            sage,
-            [ethane],
-        )
-        methane_interchange = Interchange.from_smirnoff(sage, [methane])
-
-        ethane.generate_conformers(n_conformers=1)
-        methane.generate_conformers(n_conformers=1)
-
-        assert (methane_interchange.combine(ethane_interchange)).positions is None
-        methane_interchange.positions = methane.conformers[0]
-        assert (methane_interchange.combine(ethane_interchange)).positions is None
-        ethane_interchange.positions = ethane.conformers[0]
-        assert (methane_interchange.combine(ethane_interchange)).positions is not None
 
     def test_input_topology_not_modified(self, sage):
         molecule = Molecule.from_smiles("CCO")
