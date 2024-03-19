@@ -11,9 +11,11 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.3.24 - 2024-03-19
 
+* #925 Adds documentation of upcoming v0.4 changes.
 * #933 Fixes #934 in which atom order was sometimes mangled in `Interchange.from_openmm`.
+* #932 Fixes #935 in which `KeyError` was sometimes raised after `Interchange.combine`.
 * #929 A warning is raised when positions are not passed to `Interchange.from_openmm`.
 * #930 Adds `additional_forces` argument to `create_openmm_simulation`.
 * #938 An error is raised when non-bonded settings do not match when using `Interchange.combine`.
