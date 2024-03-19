@@ -601,5 +601,6 @@ def default_barostat():
         return None
 
 
+@pytest.fixture()
 def popc():
     return Molecule(get_test_file_path("popc.sdf"))
