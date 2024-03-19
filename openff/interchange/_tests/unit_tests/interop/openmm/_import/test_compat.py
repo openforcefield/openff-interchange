@@ -7,6 +7,7 @@ from openff.toolkit import Molecule, Quantity
 
 from openff.interchange.exceptions import UnsupportedImportError
 from openff.interchange.interop.openmm._import import from_openmm
+from openff.interchange.warnings import MissingPositionsWarning
 
 
 class TestUnsupportedCases:
@@ -50,5 +51,20 @@ class TestUnsupportedCases:
         ):
             from_openmm(
                 system=system,
+                topology=topology.to_openmm(),
+            )
+
+    def test_missing_positions_warning(self, monkeypatch, sage, water):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        topology = water.to_topology()
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+
+        with pytest.warns(
+            MissingPositionsWarning,
+            match="are you sure",
+        ):
+            from_openmm(
+                system=sage.create_openmm_system(topology),
                 topology=topology.to_openmm(),
             )

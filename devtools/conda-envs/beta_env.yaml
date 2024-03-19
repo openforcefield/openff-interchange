@@ -1,6 +1,5 @@
 name: beta-env
 channels:
-  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge/label/openmm_rc
   - conda-forge
   - openeye
@@ -22,6 +21,7 @@ dependencies:
   - foyer >=0.12.1
   # Testing
   - mdtraj
+  - openmmforcefields
   - intermol
   - openeye-toolkits >=2023.2
   - pytest-cov

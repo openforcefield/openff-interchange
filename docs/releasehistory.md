@@ -13,8 +13,14 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
-* #XYZ Following [SPEC 0](https://scientific-python.org/specs/spec-0000/), drops support for Python 3.9.
-* #XYZ Drops support for Pydantic v1 as installed.
+* #936 Following [SPEC 0](https://scientific-python.org/specs/spec-0000/), drops support for Python 3.9.
+* #936 Drops support for Pydantic v1 as installed.
+
+## 0.3.24 - 2024-03-
+
+* #933 Fixes #934 in which atom order was sometimes mangled in `Interchange.from_openmm`.
+* #929 A warning is raised when positions are not passed to `Interchange.from_openmm`.
+* #930 Adds `additional_forces` argument to `create_openmm_simulation`.
 
 ## 0.3.23 - 2024-03-07
 

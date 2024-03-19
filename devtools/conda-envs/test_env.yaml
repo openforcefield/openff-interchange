@@ -1,6 +1,5 @@
 name: openff-interchange-env
 channels:
-  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
 dependencies:
   # Core
@@ -19,6 +18,7 @@ dependencies:
   - mbuild
   # Testing
   - mdtraj
+  - openmmforcefields
   - intermol
   - jax
   - pytest
