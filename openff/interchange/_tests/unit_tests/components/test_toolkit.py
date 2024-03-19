@@ -3,6 +3,7 @@ from openff.toolkit import Molecule, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.utilities.testing import skip_if_missing
 
+from openff.interchange._tests import get_test_file_path
 from openff.interchange.components.toolkit import (
     _check_electrostatics_handlers,
     _combine_topologies,
@@ -110,3 +111,39 @@ class TestToolkitUtils:
             3,
             9,
         ]
+
+    def test_simple_subgraph_atom_ordering(self):
+        """
+        Test that simple molecules created from subgraphs use nodes in ascending
+        order (like you'd always do for atom indices)
+        """
+        pytest.importorskip("openmm")
+
+        import openmm.app
+
+        crazy_water = openmm.app.PDBFile(
+            get_test_file_path("copied_reordered_water.pdb").as_posix(),
+        )
+
+        expected_atomic_numbers = [
+            8,
+            1,
+            1,
+            1,
+            8,
+            1,
+            1,
+            1,
+            8,
+            1,
+            8,
+            1,
+        ]
+
+        simple_topology = _simple_topology_from_openmm(crazy_water.topology)
+
+        for atom, expected_atomic_number in zip(
+            simple_topology.atoms,
+            expected_atomic_numbers,
+        ):
+            assert atom.atomic_number == expected_atomic_number

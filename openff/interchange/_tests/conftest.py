@@ -1,6 +1,5 @@
 """Pytest configuration."""
 
-import numpy
 import pytest
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -11,7 +10,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from openff.units import Quantity, unit
 from openff.utilities import get_data_file_path
 
-from openff.interchange._tests import MoleculeWithConformer, get_test_file_path
+from openff.interchange._tests import MoleculeWithConformer, _rng, get_test_file_path
 
 
 @pytest.fixture()
@@ -540,7 +539,7 @@ def acetaldehyde():
 def methane_with_conformer(methane):
     methane.add_conformer(
         unit.Quantity(
-            numpy.random.random((methane.n_atoms, 3)),
+            _rng.random((methane.n_atoms, 3)),
             unit.angstrom,
         ),
     )
@@ -551,7 +550,7 @@ def methane_with_conformer(methane):
 def ethanol_with_conformer(ethanol):
     ethanol.add_conformer(
         unit.Quantity(
-            numpy.random.random((ethanol.n_atoms, 3)),
+            _rng.random((ethanol.n_atoms, 3)),
             unit.angstrom,
         ),
     )
@@ -600,3 +599,7 @@ def default_barostat():
 
     except ImportError:
         return None
+
+
+def popc():
+    return Molecule(get_test_file_path("popc.sdf"))

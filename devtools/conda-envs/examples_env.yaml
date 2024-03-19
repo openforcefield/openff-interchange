@@ -1,6 +1,5 @@
 name: interchange-examples-env
 channels:
-  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
   - openeye
 dependencies:

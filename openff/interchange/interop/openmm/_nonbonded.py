@@ -383,6 +383,9 @@ def _create_single_nonbonded_force(
                 try:
                     partial_charge = partial_charges[top_key].m_as(unit.e)
                 except KeyError:
+                    # TODO: Work around this by updating the handler or .charges
+                    #       to support looking up directly based on atom index,
+                    #       not creating a new TopologyKey each time
                     other_top_key = SingleAtomChargeTopologyKey(
                         this_atom_index=atom_index,
                     )
