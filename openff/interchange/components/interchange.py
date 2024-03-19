@@ -29,7 +29,6 @@ from openff.interchange.exceptions import (
     InvalidTopologyError,
     MissingParameterHandlerError,
     MissingPositionsError,
-    UnsupportedCombinationError,
     UnsupportedExportError,
 )
 from openff.interchange.operations.minimize import (
@@ -946,88 +945,9 @@ class Interchange(DefaultModel):
     @experimental
     def combine(self, other: "Interchange") -> "Interchange":
         """Combine two Interchange objects. This method is unstable and not yet unsafe."""
-        from openff.interchange.components.toolkit import _combine_topologies
-        from openff.interchange.operations._combine import (
-            _check_nonbonded_compatibility,
-        )
+        from openff.interchange.operations._combine import _combine
 
-        warnings.warn(
-            "Interchange object combination is experimental and likely to produce "
-            "strange results. Any workflow using this method is not guaranteed to "
-            "be suitable for production. Use with extreme caution and thoroughly "
-            "validate results!",
-            stacklevel=2,
-        )
-
-        self_copy = copy.deepcopy(self)
-
-        self_copy.topology = _combine_topologies(self.topology, other.topology)
-        atom_offset = self.topology.n_atoms
-
-        _check_nonbonded_compatibility(
-            self,
-            other,
-        )
-        # TODO: Test that charge cache is invalidated in each of these cases
-        if "Electrostatics" in self_copy.collections:
-            self_copy["Electrostatics"]._charges = dict()
-            self_copy["Electrostatics"]._charges_cached = False
-
-        if "Electrostatics" in other.collections:
-            other["Electrostatics"]._charges = dict()
-            other["Electrostatics"]._charges_cached = False
-
-        for handler_name, handler in other.collections.items():
-            # TODO: Actually specify behavior in this case
-            try:
-                self_handler = self_copy.collections[handler_name]
-            except KeyError:
-                self_copy.collections[handler_name] = handler
-                warnings.warn(
-                    f"'other' Interchange object has handler with name {handler_name} not "
-                    f"found in 'self,' but it has now been added.",
-                    stacklevel=2,
-                )
-                continue
-
-            for top_key, pot_key in handler.key_map.items():
-                new_atom_indices = tuple(
-                    idx + atom_offset for idx in top_key.atom_indices
-                )
-                new_top_key = top_key.__class__(**top_key.dict())
-                try:
-                    new_top_key.atom_indices = new_atom_indices
-                except ValueError:
-                    assert len(new_atom_indices) == 1
-                    new_top_key.this_atom_index = new_atom_indices[0]
-
-                self_handler.key_map.update({new_top_key: pot_key})
-                if handler_name == "Constraints":
-                    self_handler.potentials.update(
-                        {pot_key: handler.potentials[pot_key]},
-                    )
-                else:
-                    self_handler.potentials.update(
-                        {pot_key: handler.potentials[pot_key]},
-                    )
-
-            self_copy.collections[handler_name] = self_handler
-
-        if self_copy.positions is not None and other.positions is not None:
-            new_positions = np.vstack([self_copy.positions, other.positions])
-            self_copy.positions = new_positions
-        else:
-            warnings.warn(
-                "Setting positions to None because one or both objects added together were missing positions.",
-            )
-            self_copy.positions = None
-
-        if not np.all(self_copy.box == other.box):
-            raise UnsupportedCombinationError(
-                "Combination with unequal box vectors is not curretnly supported",
-            )
-
-        return self_copy
+        return _combine(self, other)
 
     def __repr__(self) -> str:
         periodic = self.box is not None
