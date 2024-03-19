@@ -1,7 +1,8 @@
-from typing import TYPE_CHECKING, Union
+import warnings
+from typing import TYPE_CHECKING, Optional, Union
 
 from openff.models.types import ArrayQuantity
-from openff.toolkit import Topology
+from openff.toolkit import Quantity, Topology
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange._experimental import experimental
@@ -17,6 +18,7 @@ from openff.interchange.interop.openmm._import._nonbonded import (
     BasicElectrostaticsCollection,
 )
 from openff.interchange.interop.openmm._import.compat import _check_compatible_inputs
+from openff.interchange.warnings import MissingPositionsWarning
 
 if has_package("openmm"):
     import openmm
@@ -34,10 +36,11 @@ if TYPE_CHECKING:
 @requires_package("openmm")
 @experimental
 def from_openmm(
+    *,
     system: "openmm.System",
+    positions: Optional[Quantity] = None,
     topology: Union["openmm.app.Topology", Topology, None] = None,
-    positions=None,
-    box_vectors=None,
+    box_vectors: Optional[Quantity] = None,
 ) -> "Interchange":
     """Create an Interchange object from OpenMM data."""
     from openff.interchange import Interchange
@@ -88,7 +91,16 @@ def from_openmm(
 
         interchange.topology = topology
 
-    if positions is not None:
+    if positions is None:
+
+        warnings.warn(
+            "Nothing was passed to the `positions` argument, are you sure "
+            "you don't want to pass positions?",
+            MissingPositionsWarning,
+            stacklevel=2,
+        )
+
+    else:
 
         interchange.positions = positions
 
