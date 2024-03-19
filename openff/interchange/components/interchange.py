@@ -947,6 +947,9 @@ class Interchange(DefaultModel):
     def combine(self, other: "Interchange") -> "Interchange":
         """Combine two Interchange objects. This method is unstable and not yet unsafe."""
         from openff.interchange.components.toolkit import _combine_topologies
+        from openff.interchange.operations._combine import (
+            _check_nonbonded_compatibility,
+        )
 
         warnings.warn(
             "Interchange object combination is experimental and likely to produce "
@@ -961,6 +964,11 @@ class Interchange(DefaultModel):
         self_copy.topology = _combine_topologies(self.topology, other.topology)
         atom_offset = self.topology.n_atoms
 
+        _check_nonbonded_compatibility(
+            self,
+            other,
+        )
+        # TODO: Test that charge cache is invalidated in each of these cases
         if "Electrostatics" in self_copy.collections:
             self_copy["Electrostatics"]._charges = dict()
             self_copy["Electrostatics"]._charges_cached = False
