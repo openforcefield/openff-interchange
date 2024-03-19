@@ -80,7 +80,7 @@ jobs:
     - name: Install OpenMM
       if: ${{ matrix.openmm == true }}
       run: |
-        micromamba install openmm "smirnoff-plugins =2024" -c conda-forge
+        micromamba install openmm openmmforcefields "smirnoff-plugins =2024" -c conda-forge
         pip install git+https://github.com/jthorton/de-forcefields.git
 
     - name: Uninstall OpenMM

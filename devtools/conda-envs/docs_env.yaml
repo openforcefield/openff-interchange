@@ -1,6 +1,5 @@
 name: interchange-docs
 channels:
-  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
 dependencies:
   # Base depends

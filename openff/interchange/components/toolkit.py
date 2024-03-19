@@ -142,10 +142,26 @@ def _simple_topology_from_graph(graph: networkx.Graph) -> Topology:
     topology = Topology()
 
     for component in networkx.connected_components(graph):
-        subgraph = graph.subgraph(component)
+        subgraph = _reorder_subgraph(graph.subgraph(component))
+
+        # Attempt to safeguard against the possibility that
+        # the subgraphs are returned out of "atom order", like
+        # if atoms in an later molecule have lesser atom indices
+        # than this molecule
+        assert topology.n_atoms == [*subgraph.nodes][0]
+
         topology.add_molecule(_SimpleMolecule._from_subgraph(subgraph))
 
     return topology
+
+
+def _reorder_subgraph(graph: networkx.Graph) -> networkx.Graph:
+    """Ensure that the graph is ordered with ascending atoms."""
+    new_graph = networkx.Graph()
+    new_graph.add_nodes_from(sorted(graph.nodes(data=True)))
+    new_graph.add_edges_from(graph.edges(data=True))
+
+    return new_graph
 
 
 # This is to re-implement:
@@ -154,7 +170,7 @@ def _simple_topology_from_graph(graph: networkx.Graph) -> Topology:
 # It doesn't seem ideal to assume that matching SMILES === isomorphism?
 class _HashedMolecule(Molecule):
     def __hash__(self):
-        return hash(self.to_smiles())
+        return hash(self.to_smiles(mapped=True, explicit_hydrogens=True, isomeric=True))
 
 
 def _assert_all_isomorphic(molecule_list: list[Molecule]) -> bool:
