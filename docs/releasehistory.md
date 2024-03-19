@@ -16,6 +16,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #933 Fixes #934 in which atom order was sometimes mangled in `Interchange.from_openmm`.
 * #929 A warning is raised when positions are not passed to `Interchange.from_openmm`.
 * #930 Adds `additional_forces` argument to `create_openmm_simulation`.
+* #938 An error is raised when non-bonded settings do not match when using `Interchange.combine`.
 
 ## 0.3.23 - 2024-03-07
 
