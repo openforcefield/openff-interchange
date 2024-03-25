@@ -39,14 +39,14 @@ repos:
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.15.1
+  rev: v3.15.2
   hooks:
   - id: pyupgrade
     files: ^openff|plugins|stubs
     exclude: openff/interchange/_version.py|setup.py
     args: ["--py39-plus"]
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.3.3
+  rev: v0.3.4
   hooks:
     - id: ruff
       args: ["check", "--select", "NPY"]
