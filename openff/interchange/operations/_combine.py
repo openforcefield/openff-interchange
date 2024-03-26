@@ -22,10 +22,10 @@ def _check_nonbonded_compatibility(
     interchange2: "Interchange",
 ):
     if not (
-        "vdW" in interchange1.handlers
-        and "vdW" in interchange2.handlers
-        and "Electrostatics" in interchange1.handlers
-        and "Electrostatics" in interchange2.handlers
+        "vdW" in interchange1.collections
+        and "vdW" in interchange2.collections
+        and "Electrostatics" in interchange1.collections
+        and "Electrostatics" in interchange2.collections
     ):
         raise UnsupportedCombinationError(
             "One or more inputs is missing a vdW and/or Electrostatics handler(s).",
