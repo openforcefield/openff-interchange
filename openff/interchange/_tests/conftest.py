@@ -139,7 +139,7 @@ def sage_with_two_virtual_sites_same_smirks(sage):
 def sage_with_off_center_hydrogen(sage):
     virtual_sites = sage.get_parameter_handler("VirtualSites")
 
-    # Add a virtual site for an off-center hydrogen, see issue #905
+    # Add a virtual site for an off-center hydrogen, see issue #940
     # this differs by JH's example by adding an arbitrary charge increment in
     # order to test the electrostatics of virtual site pairs that interact
     # by 1-4 interactions (as determined by their parent relationship)

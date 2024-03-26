@@ -582,7 +582,7 @@ class TestSMIRNOFFVirtualSites:
         self,
         sage_with_two_virtual_sites_same_smirks,
     ):
-        """Reproduce issue #905."""
+        """Reproduce issue #940."""
         nitrogen = Molecule.from_mapped_smiles("[H:2][N:1]([H:3])[H:4]")
 
         out = sage_with_two_virtual_sites_same_smirks.create_interchange(
