@@ -577,3 +577,27 @@ class TestSMIRNOFFVirtualSites:
                 Molecule.from_smiles("N").to_topology(),
             )["VirtualSites"].potentials
         } == {"TrivalentLonePair"}
+
+    def test_identical_smirks_do_not_clash(
+        self,
+        sage_with_two_virtual_sites_same_smirks,
+    ):
+        """Reproduce issue #905."""
+        nitrogen = Molecule.from_mapped_smiles("[H:2][N:1]([H:3])[H:4]")
+
+        out = sage_with_two_virtual_sites_same_smirks.create_interchange(
+            nitrogen.to_topology(),
+        )
+
+        charges = [charge.m for charge in out["Electrostatics"].charges.values()]
+
+        assert sum(charges) == pytest.approx(0.0)
+
+        # The second parameter shifts 5 e of charge from the virtual site to the
+        # nitrogen, so the nitrogen should end up with a VERY negative charge. If
+        # the parameter collision in the issue happens, this should closer to -1.5.
+        # Use rough numbers because of AM1-BCC inconsistency.
+        assert charges[0] < -4.0
+
+        # charges on virtual sites should not match
+        assert charges[-2] != charges[-1]

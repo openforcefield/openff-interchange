@@ -76,9 +76,8 @@ def sage_with_planar_monovalent_carbonyl(sage):
 
 
 @pytest.fixture()
-def sage_with_trivalent_nitrogen():
-    sage_210 = ForceField("openff-2.1.0.offxml")
-    sage_210["Bonds"].add_parameter(
+def sage_with_trivalent_nitrogen(sage):
+    sage["Bonds"].add_parameter(
         parameter=BondType(
             smirks="[#7:3]-[#1X1:1]",
             id="b0",
@@ -87,8 +86,8 @@ def sage_with_trivalent_nitrogen():
         ),
     )
 
-    sage_210.get_parameter_handler("VirtualSites")
-    sage_210["VirtualSites"].add_parameter(
+    sage.get_parameter_handler("VirtualSites")
+    sage["VirtualSites"].add_parameter(
         parameter=VirtualSiteType(
             smirks="[#1:2][#7:1]([#1:3])[#1:4]",
             type="TrivalentLonePair",
@@ -103,7 +102,37 @@ def sage_with_trivalent_nitrogen():
         ),
     )
 
-    return sage_210
+    return sage
+
+
+@pytest.fixture()
+def sage_with_two_virtual_sites_same_smirks(sage):
+    """
+    Add two virtual site parameters with identical SMIRKS but different
+    names, distances, and charges
+    """
+    sage.get_parameter_handler("VirtualSites")
+
+    for name, distance, charge in zip(
+        ("EP1", "EP2"),
+        (-0.5, 0.5),
+        (1.0, 5.0),
+    ):
+        sage["VirtualSites"].add_parameter(
+            parameter=VirtualSiteType(
+                name=name,
+                smirks="[#7:1](-[*:2])(-[*:3])-[*:4]",
+                type="TrivalentLonePair",
+                match="once",
+                distance=f"{distance} nanometer",
+                charge_increment1=f"{charge} * elementary_charge ** 1",
+                charge_increment2="0.0 * elementary_charge ** 1",
+                charge_increment3="0.0 * elementary_charge ** 1",
+                charge_increment4="0.0 * elementary_charge ** 1",
+            ),
+        )
+
+    return sage
 
 
 @pytest.fixture()
