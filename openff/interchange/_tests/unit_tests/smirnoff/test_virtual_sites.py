@@ -593,11 +593,11 @@ class TestSMIRNOFFVirtualSites:
 
         assert sum(charges) == pytest.approx(0.0)
 
-        # The second parameter shifts 5 e of charge from the virtual site to the
-        # nitrogen, so the nitrogen should end up with a VERY negative charge. If
-        # the parameter collision in the issue happens, this should closer to -1.5.
+        # The second parameter shifts 5 e of charge from the nitrogen to the
+        # virtual site, so the nitrogen should end up with a VERY positive charge. If
+        # the parameter collision in the issue happens, this should closer to +1.0.
         # Use rough numbers because of AM1-BCC inconsistency.
-        assert charges[0] < -4.0
+        assert charges[0] > 4.0
 
         # charges on virtual sites should not match
         assert charges[-2] != charges[-1]

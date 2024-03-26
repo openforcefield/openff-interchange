@@ -115,7 +115,7 @@ def sage_with_two_virtual_sites_same_smirks(sage):
 
     for name, distance, charge in zip(
         ("EP1", "EP2"),
-        (-0.5, 0.5),
+        (-0.5, 1.5),
         (1.0, 5.0),
     ):
         sage["VirtualSites"].add_parameter(
