@@ -565,27 +565,6 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
 class TestOpenMMVirtualSites:
 
     @pytest.fixture()
-    def sage_with_sigma_hole(self, sage):
-        """Fixture that loads an SMIRNOFF XML with a C-Cl sigma hole."""
-        # TODO: Move this into BaseTest to that GROMACS and others can access it
-        virtual_site_handler = VirtualSiteHandler(version=0.3)
-
-        sigma_type = VirtualSiteHandler.VirtualSiteType(
-            name="EP",
-            smirks="[#6:1]-[#17:2]",
-            distance=1.4 * unit.angstrom,
-            type="BondCharge",
-            match="once",
-            charge_increment1=0.1 * unit.elementary_charge,
-            charge_increment2=0.2 * unit.elementary_charge,
-        )
-
-        virtual_site_handler.add_parameter(parameter=sigma_type)
-        sage.register_parameter_handler(virtual_site_handler)
-
-        return sage
-
-    @pytest.fixture()
     def sage_with_monovalent_lone_pair(self, sage):
         virtual_site_handler = VirtualSiteHandler(version=0.3)
 
