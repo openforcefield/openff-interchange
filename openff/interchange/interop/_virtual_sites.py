@@ -58,9 +58,12 @@ def _virtual_site_parent_molecule_mapping(
 
 def get_positions_with_virtual_sites(
     interchange: Interchange,
+    collate: bool = False,
     use_zeros: bool = False,
 ) -> Quantity:
     """Return the positions of all particles (atoms and virtual sites)."""
+    from openff.interchange.interop.common import _build_particle_map
+
     if interchange.positions is None:
         raise MissingPositionsError(
             f"Positions are required, found {interchange.positions=}.",
@@ -99,13 +102,62 @@ def get_positions_with_virtual_sites(
                 interchange["VirtualSites"],
             )
 
-        return numpy.concatenate(
-            [
-                interchange.positions,
-                virtual_site_positions,
-            ],
-        )
+        if collate:
+            # for i.e. a 4-site water dimer, these would be
 
+            # {
+            #   0: 0,
+            #   1: 1,
+            #   2: 2,
+            #   3: 3,
+            #   4: 4,
+            #   5: 5,
+            #   VirtualSiteKey with atom indices None: 6,
+            #   VirtualSiteKey with atom indices None: 7,
+            #   }
+            uncollated = _build_particle_map(
+                interchange=interchange,
+                molecule_virtual_site_map=molecule_virtual_site_map,
+                collate=False,
+            )
+
+            # {
+            #   0: 0,
+            #   1: 1,
+            #   2: 2,
+            #   VirtualSiteKey with atom indices None: 3,
+            #   3: 4:
+            #   4: 5,
+            #   5: 6,
+            #   VirtualSiteKey with atom indices None: 7,
+            #   }
+            collated = _build_particle_map(
+                interchange=interchange,
+                molecule_virtual_site_map=molecule_virtual_site_map,
+                collate=True,
+            )
+
+            # and so the mapping from collated to uncollated would be
+            # [0, 1, 2, 6, 3, 4, 5, 7]
+            uncollated_to_collated_mapping = [uncollated[key] for key in collated]
+
+            return numpy.concatenate(
+                [
+                    interchange.positions,
+                    virtual_site_positions,
+                ],
+            )[uncollated_to_collated_mapping]
+
+        else:
+            # could just pass it through a [0, 1, 3, 4, ...] mapping
+            # but that seems like a waste
+
+            return numpy.concatenate(
+                [
+                    interchange.positions,
+                    virtual_site_positions,
+                ],
+            )
     else:
         return interchange.positions
 
