@@ -21,7 +21,7 @@ if has_package("openmm") or TYPE_CHECKING:
 @requires_package("openmm")
 def get_openmm_energies(
     interchange: Interchange,
-    round_positions: Optional[int] = None,
+    round_positions: int | None = None,
     combine_nonbonded_forces: bool = True,
     detailed: bool = False,
     platform: str = "Reference",
@@ -99,7 +99,7 @@ def _get_openmm_energies(
     system: "openmm.System",
     box_vectors: Optional["openmm.unit.Quantity"],
     positions: "openmm.unit.Quantity",
-    round_positions: Optional[int],
+    round_positions: int | None,
     platform: str,
 ) -> dict[int, "openmm.unit.Quantity"]:
     """Given prepared `openmm` objects, run a single-point energy calculation."""

@@ -3,7 +3,8 @@
 import ast
 import json
 import warnings
-from typing import Callable, Optional, Union
+from collections.abc import Callable
+from typing import Union
 
 import numpy
 from openff.models.models import DefaultModel
@@ -48,7 +49,7 @@ def __getattr__(name: str):
 
 def potential_loader(data: str) -> dict:
     """Load a JSON blob dumped from a `Collection`."""
-    tmp: dict[str, Union[int, bool, str, dict]] = {}
+    tmp: dict[str, int | bool | str | dict] = {}
 
     for key, val in json.loads(data).items():
         if isinstance(val, (str, type(None))):
@@ -71,7 +72,7 @@ class Potential(DefaultModel):
     """Base class for storing applied parameters."""
 
     parameters: dict[str, FloatQuantity] = dict()
-    map_key: Optional[int] = None
+    map_key: int | None = None
 
     class Config:
         """Pydantic configuration."""
@@ -84,7 +85,7 @@ class Potential(DefaultModel):
     @validator("parameters")
     def validate_parameters(
         cls,
-        v: dict[str, Union[ArrayQuantity, FloatQuantity]],
+        v: dict[str, ArrayQuantity | FloatQuantity],
     ) -> dict[str, FloatQuantity]:
         for key, val in v.items():
             if isinstance(val, list):
@@ -107,7 +108,7 @@ class WrappedPotential(DefaultModel):
 
     _inner_data: InnerData = PrivateAttr()
 
-    def __init__(self, data: Union[Potential, dict]) -> None:
+    def __init__(self, data: Potential | dict) -> None:
         if isinstance(data, Potential):
             self._inner_data = self.InnerData(data={data: 1.0})
         elif isinstance(data, dict):
@@ -149,11 +150,11 @@ class Collection(DefaultModel):
         ...,
         description="The analytical expression governing the potentials in this handler.",
     )
-    key_map: dict[Union[TopologyKey, LibraryChargeTopologyKey], PotentialKey] = Field(
+    key_map: dict[TopologyKey | LibraryChargeTopologyKey, PotentialKey] = Field(
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )
-    potentials: dict[PotentialKey, Union[Potential, WrappedPotential]] = Field(
+    potentials: dict[PotentialKey, Potential | WrappedPotential] = Field(
         dict(),
         description="A mapping between PotentialKey objects and Potential objects.",
     )

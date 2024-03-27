@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ParameterHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
@@ -83,11 +81,11 @@ def _check_supported_handlers(force_field: ForceField):
 
 def _create_interchange(
     force_field: ForceField,
-    topology: Union[Topology, list[Molecule]],
-    box: Optional[Quantity] = None,
-    positions: Optional[Quantity] = None,
-    charge_from_molecules: Optional[list[Molecule]] = None,
-    partial_bond_orders_from_molecules: Optional[list[Molecule]] = None,
+    topology: Topology | list[Molecule],
+    box: Quantity | None = None,
+    positions: Quantity | None = None,
+    charge_from_molecules: list[Molecule] | None = None,
+    partial_bond_orders_from_molecules: list[Molecule] | None = None,
     allow_nonintegral_charges: bool = False,
 ) -> Interchange:
     _check_supported_handlers(force_field)
@@ -134,7 +132,7 @@ def _bonds(
     interchange: Interchange,
     force_field: ForceField,
     _topology: Topology,
-    partial_bond_orders_from_molecules: Optional[list[Molecule]] = None,
+    partial_bond_orders_from_molecules: list[Molecule] | None = None,
 ):
     if "Bonds" not in force_field.registered_parameter_handlers:
         return
@@ -159,7 +157,7 @@ def _constraints(
     interchange: Interchange,
     force_field: ForceField,
     topology: Topology,
-    bonds: Optional[SMIRNOFFBondCollection] = None,
+    bonds: SMIRNOFFBondCollection | None = None,
 ):
     interchange.collections.update(
         {
@@ -252,7 +250,7 @@ def _electrostatics(
     interchange: Interchange,
     force_field: ForceField,
     topology: Topology,
-    charge_from_molecules: Optional[list[Molecule]] = None,
+    charge_from_molecules: list[Molecule] | None = None,
     allow_nonintegral_charges: bool = False,
 ):
     if "Electrostatics" not in force_field.registered_parameter_handlers:

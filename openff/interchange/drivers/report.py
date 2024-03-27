@@ -1,7 +1,6 @@
 """Storing and processing results of energy evaluations."""
 
 import warnings
-from typing import Optional
 
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
@@ -36,7 +35,7 @@ class EnergyReport(DefaultModel):
     """A lightweight class containing single-point energies as computed by energy tests."""
 
     # TODO: Should the default be None or 0.0 kj_mol?
-    energies: dict[str, Optional[FloatQuantity]] = {
+    energies: dict[str, FloatQuantity | None] = {
         "Bond": None,
         "Angle": None,
         "Torsion": None,
@@ -59,7 +58,7 @@ class EnergyReport(DefaultModel):
         """Return the total energy."""
         return self["total"]
 
-    def __getitem__(self, item: str) -> Optional[FloatQuantity]:
+    def __getitem__(self, item: str) -> FloatQuantity | None:
         if type(item) is not str:
             raise LookupError(
                 "Only str arguments can be currently be used for lookups.\n"
@@ -79,7 +78,7 @@ class EnergyReport(DefaultModel):
     def compare(
         self,
         other: "EnergyReport",
-        tolerances: Optional[dict[str, FloatQuantity]] = None,
+        tolerances: dict[str, FloatQuantity] | None = None,
     ):
         """
         Compare two energy reports.

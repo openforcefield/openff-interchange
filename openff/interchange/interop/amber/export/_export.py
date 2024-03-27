@@ -5,7 +5,6 @@ from collections import defaultdict
 from collections.abc import Iterable
 from copy import deepcopy
 from pathlib import Path
-from typing import Optional, Union
 
 import numpy as np
 from openff.toolkit import Topology
@@ -305,7 +304,7 @@ def _get_dihedral_lists(
 
 
 # TODO: Split this mono-function into smaller functions
-def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
+def to_prmtop(interchange: "Interchange", file_path: Path | str):
     """
     Write a .prmtop file. See http://ambermd.org/prmtop.pdf for details.
 
@@ -544,7 +543,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         acoefs = [None] * int((NTYPES + 1) * NTYPES / 2)
         bcoefs = [None] * int((NTYPES + 1) * NTYPES / 2)
 
-        nonbonded_parm_indices: list[Optional[int]] = [None] * (NTYPES * NTYPES)
+        nonbonded_parm_indices: list[int | None] = [None] * (NTYPES * NTYPES)
 
         for key_i, i in potential_key_to_atom_type_mapping.items():
             for key_j, j in potential_key_to_atom_type_mapping.items():
@@ -795,7 +794,7 @@ def to_prmtop(interchange: "Interchange", file_path: Union[Path, str]):
         prmtop.write("       0\n")
 
 
-def to_inpcrd(interchange: "Interchange", file_path: Union[Path, str]):
+def to_inpcrd(interchange: "Interchange", file_path: Path | str):
     """
     Write a .prmtop file. See https://ambermd.org/FileFormats.php#restart for details.
 

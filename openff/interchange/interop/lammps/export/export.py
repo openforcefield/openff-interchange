@@ -1,7 +1,7 @@
 """Export to LAMMPS."""
 
 from pathlib import Path
-from typing import IO, Union
+from typing import IO
 
 import numpy
 from openff.toolkit.topology.molecule import Atom, unit
@@ -11,7 +11,7 @@ from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.models import PotentialKey
 
 
-def to_lammps(interchange: Interchange, file_path: Union[Path, str]):
+def to_lammps(interchange: Interchange, file_path: Path | str):
     """Write an Interchange object to a LAMMPS data file."""
     if isinstance(file_path, str):
         path = Path(file_path)

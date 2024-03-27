@@ -1,7 +1,5 @@
 """Classes used to represent GROMACS state."""
 
-from typing import Optional
-
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
 from openff.units import Quantity
@@ -294,8 +292,8 @@ class GROMACSMolecule(DefaultModel):
 class GROMACSSystem(DefaultModel):
     """A GROMACS system. Adapted from Intermol."""
 
-    positions: Optional[ArrayQuantity] = None
-    box: Optional[ArrayQuantity] = None
+    positions: ArrayQuantity | None = None
+    box: ArrayQuantity | None = None
 
     name: str = ""
     nonbonded_function: int = Field(

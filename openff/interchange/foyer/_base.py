@@ -1,6 +1,5 @@
 from abc import abstractmethod
 from copy import copy
-from typing import Optional
 
 from openff.toolkit import Topology
 from openff.utilities.utilities import has_package
@@ -20,7 +19,7 @@ POTENTIAL_KEY_SEPARATOR = "-"
 def _copy_params(
     params: dict[str, float],
     *drop_keys: str,
-    param_units: Optional[dict] = None,
+    param_units: dict | None = None,
 ) -> dict:
     """Copy parameters from a dictionary."""
     params_copy = copy(params)
