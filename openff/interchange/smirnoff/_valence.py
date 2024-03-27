@@ -141,8 +141,17 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
             self.key_map: dict[BondKey, PotentialKey] = dict()  # type: ignore[assignment]
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
-            param = val.parameter_type
-            if param.k_bondorder or param.length_bondorder:
+            parameter: BondHandler.BondType = val.parameter_type
+
+            cosmetic_attributes = {
+                cosmetic_attribute: getattr(
+                    parameter,
+                    f"_{cosmetic_attribute}",
+                )
+                for cosmetic_attribute in parameter._cosmetic_attribs
+            }
+
+            if parameter.k_bondorder or parameter.length_bondorder:
                 bond = topology.get_bond_between(*key)
                 fractional_bond_order = bond.fractional_bond_order
                 if not fractional_bond_order:
@@ -158,10 +167,12 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
             )
 
             potential_key = PotentialKey(
-                id=val.parameter_type.smirks,
+                id=parameter.smirks,
                 associated_handler=parameter_handler.TAGNAME,
                 bond_order=fractional_bond_order,
+                cosmetic_attributes=cosmetic_attributes,
             )
+
             self.key_map[topology_key] = potential_key
 
         valence_terms = self.valence_terms(topology)
@@ -359,16 +370,31 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
 
         for key, match in constraint_matches.items():
             topology_key = BondKey(atom_indices=key)
-            smirks = match.parameter_type.smirks
-            distance = match.parameter_type.distance
+
+            parameter = match.parameter_type
+
+            smirks = parameter.smirks
+            distance = parameter.distance
+            cosmetic_attributes = {
+                cosmetic_attribute: getattr(
+                    parameter,
+                    f"_{cosmetic_attribute}",
+                )
+                for cosmetic_attribute in parameter._cosmetic_attribs
+            }
+
             if distance is not None:
                 # This constraint parameter is fully specified
                 potential_key = PotentialKey(
                     id=smirks,
                     associated_handler="Constraints",
+                    cosmetic_attributes=cosmetic_attributes,
                 )
+
                 self.key_map[topology_key] = potential_key
-                distance = match.parameter_type.distance
+
+                distance = parameter.distance
+
             else:
                 # This constraint parameter depends on the BondHandler ...
                 if bond_handler is None:
@@ -377,15 +403,20 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
                         "specified, and no corresponding bond parameters were found. The distance "
                         "of this constraint is not specified.",
                     )
+
                 # ... so use the same PotentialKey instance as the BondHandler to look up the distance
                 potential_key = bonds.key_map[topology_key]  # type: ignore[union-attr]
+
                 self.key_map[topology_key] = potential_key
+
                 distance = bonds.potentials[potential_key].parameters["length"]  # type: ignore[union-attr]
+
             potential = Potential(
                 parameters={
                     "distance": distance,
                 },
             )
+
             self.potentials[potential_key] = potential
 
 
@@ -470,11 +501,22 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
             self.key_map: dict[ProperTorsionKey, PotentialKey] = dict()  # type: ignore[assignment]
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
-            param = val.parameter_type
-            n_terms = len(val.parameter_type.phase)
+            parameter: ProperTorsionHandler.ProperTorsionType = val.parameter_type
+
+            n_terms = len(parameter.phase)
+
+            cosmetic_attributes = {
+                cosmetic_attribute: getattr(
+                    parameter,
+                    f"_{cosmetic_attribute}",
+                )
+                for cosmetic_attribute in parameter._cosmetic_attribs
+            }
+
             for n in range(n_terms):
-                smirks = param.smirks
-                if param.k_bondorder:
+                smirks = parameter.smirks
+
+                if parameter.k_bondorder:
                     # The relevant bond order is that of the _central_ bond in the torsion
                     bond = topology.get_bond_between(key[1], key[2])
                     fractional_bond_order = bond.fractional_bond_order
@@ -484,17 +526,21 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
                         )
                 else:
                     fractional_bond_order = None
+
                 topology_key = ProperTorsionKey(
                     atom_indices=key,
                     mult=n,
                     bond_order=fractional_bond_order,
                 )
+
                 potential_key = PotentialKey(
                     id=smirks,
                     mult=n,
                     associated_handler="ProperTorsions",
                     bond_order=fractional_bond_order,
+                    cosmetic_attributes=cosmetic_attributes,
                 )
+
                 self.key_map[topology_key] = potential_key
 
         _check_all_valence_terms_assigned(
@@ -513,7 +559,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
             smirks = potential_key.id
             n = potential_key.mult
             parameter = parameter_handler.parameters[smirks]
-            # n_terms = len(parameter.k)
+
             if topology_key.bond_order:
                 bond_order = topology_key.bond_order
                 data = parameter.k_bondorder[n]
@@ -634,9 +680,22 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection, ImproperTorsionColle
                     (1, 3),
                 ],
             )
-            n_terms = len(val.parameter_type.k)
+
+            parameter: ImproperTorsionHandler.ImproperTorsionType = val.parameter_type
+
+            n_terms = len(parameter.phase)
+
+            cosmetic_attributes = {
+                cosmetic_attribute: getattr(
+                    parameter,
+                    f"_{cosmetic_attribute}",
+                )
+                for cosmetic_attribute in parameter._cosmetic_attribs
+            }
+
             for n in range(n_terms):
-                smirks = val.parameter_type.smirks
+                smirks = parameter.smirks
+
                 non_central_indices = [key[0], key[2], key[3]]
 
                 for permuted_key in [
@@ -655,7 +714,9 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection, ImproperTorsionColle
                         id=smirks,
                         mult=n,
                         associated_handler="ImproperTorsions",
+                        cosmetic_attributes=cosmetic_attributes,
                     )
+
                     self.key_map[topology_key] = potential_key
 
     def store_potentials(self, parameter_handler: ImproperTorsionHandler) -> None:
