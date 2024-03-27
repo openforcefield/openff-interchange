@@ -56,6 +56,7 @@ class GROMACSAtom(DefaultModel):
     mass: Quantity
 
 
+# Should the physical values (distance/angles) be float or Quantity?
 class GROMACSVirtualSite(DefaultModel):
     """Base class for storing GROMACS virtual sites."""
 

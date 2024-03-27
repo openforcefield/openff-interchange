@@ -13,11 +13,13 @@ from openff.interchange.interop.gromacs.models.models import (
     GROMACSVirtualSite,
     GROMACSVirtualSite2,
     GROMACSVirtualSite3,
+    GROMACSVirtualSite3fad,
 )
 from openff.interchange.models import VirtualSiteKey
 from openff.interchange.smirnoff._virtual_sites import (
     _BondChargeVirtualSite,
     _DivalentLonePairVirtualSite,
+    _MonovalentLonePairVirtualSite,
     _VirtualSite,
 )
 
@@ -99,5 +101,26 @@ def _create_gromacs_virtual_site(
 
         else:
             raise NotImplementedError()
+
+    if isinstance(virtual_site, _MonovalentLonePairVirtualSite):
+        if virtual_site.out_of_plane_angle != 0.0:
+            raise NotImplementedError(
+                "Non-zero out-of-plane angles not yet supported in GROMACS export.",
+            )
+
+        # In the plane of three atoms, GROMACS calls this 3fad and gives the example
+        #
+        # [ virtual_sites3 ]
+        # ; Site  from               funct   theta      d
+        # 5       1     2     3      3       120        0.5
+        # https://manual.gromacs.org/current/reference-manual/topologies/particle-type.html
+
+        return GROMACSVirtualSite3fad(
+            name=virtual_site_key.name,
+            site=particle_map[virtual_site_key] - offset + 1,
+            orientation_atoms=gromacs_indices,
+            theta=virtual_site.in_plane_angle.m_as(unit.degree),
+            d=virtual_site.distance.m_as(unit.nanometer),
+        )
 
     raise NotImplementedError()

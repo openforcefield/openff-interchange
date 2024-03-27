@@ -24,11 +24,7 @@ from openff.interchange._tests import (
 from openff.interchange.components.nonbonded import BuckinghamvdWCollection
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
-from openff.interchange.exceptions import (
-    GMXMdrunError,
-    UnsupportedExportError,
-    VirtualSiteTypeNotImplementedError,
-)
+from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
 from openff.interchange.interop.gromacs._import._import import (
     _read_box,
     _read_coordinates,
@@ -81,9 +77,12 @@ class TestToGro:
 @skip_if_missing("openmm")
 @needs_gmx
 class TestGROMACSGROFile:
-    _INTERMOL_PATH = resources.files(
-        "intermol.tests.gromacs.unit_tests",
-    )
+    try:
+        _INTERMOL_PATH = resources.files(
+            "intermol.tests.gromacs.unit_tests",
+        )
+    except ModuleNotFoundError:
+        _INTERMOL_PATH = None
 
     @skip_if_missing("intermol")
     def test_load_gro(self):
@@ -504,7 +503,6 @@ class TestCommonBoxes:
 
 
 @needs_gmx
-@pytest.mark.skip("Needs rewrite")
 class TestGROMACSVirtualSites:
     @pytest.fixture()
     def sigma_hole_type(self, sage):
@@ -518,29 +516,6 @@ class TestGROMACSVirtualSites:
             charge_increment1=0.1 * unit.elementary_charge,
             charge_increment2=0.2 * unit.elementary_charge,
         )
-
-    @pytest.fixture()
-    def sage_with_monovalent_lone_pair(self, sage):
-        """Fixture that loads an SMIRNOFF XML for argon"""
-        virtual_site_handler = VirtualSiteHandler(version=0.3)
-
-        carbonyl_type = VirtualSiteHandler.VirtualSiteType(
-            name="EP",
-            smirks="[O:1]=[C:2]-[*:3]",
-            distance=0.3 * unit.angstrom,
-            type="MonovalentLonePair",
-            match="all_permutations",
-            outOfPlaneAngle=0.0 * unit.degree,
-            inPlaneAngle=120.0 * unit.degree,
-            charge_increment1=0.05 * unit.elementary_charge,
-            charge_increment2=0.1 * unit.elementary_charge,
-            charge_increment3=0.15 * unit.elementary_charge,
-        )
-
-        virtual_site_handler.add_parameter(parameter=carbonyl_type)
-        sage.register_parameter_handler(virtual_site_handler)
-
-        return sage
 
     @pytest.mark.xfail()
     @skip_if_missing("parmed")
@@ -563,23 +538,16 @@ class TestGROMACSVirtualSites:
 
         assert abs(numpy.sum([p.charge for p in gmx_top.atoms])) < 1e-3
 
-    def test_carbonyl_example(self, sage_with_monovalent_lone_pair):
-        """Test that a single-molecule DivalentLonePair example runs"""
-        mol = MoleculeWithConformer.from_smiles("C=O", name="Carbon_monoxide")
+    def test_carbonyl_example(self, sage_with_planar_monovalent_carbonyl):
+        """Test that a single-molecule planar carbonyl example can run 0 steps."""
+        mol = MoleculeWithConformer.from_smiles("C(=O)C")
 
-        out = Interchange.from_smirnoff(
-            force_field=sage_with_monovalent_lone_pair,
-            topology=mol.to_topology(),
-        )
+        out = sage_with_planar_monovalent_carbonyl.create_interchange(mol.to_topology())
+
         out.box = [4, 4, 4]
-        out.positions = mol.conformers[0]
 
-        with pytest.raises(
-            VirtualSiteTypeNotImplementedError,
-            match="MonovalentLonePair not implemented.",
-        ):
-            # TODO: Sanity-check reported energies
-            get_gromacs_energies(out)
+        # TODO: Sanity-check reported energies
+        get_gromacs_energies(out)
 
     @skip_if_missing("openmm")
     def test_tip4p_charge_neutrality(self, tip4p, water_dimer):

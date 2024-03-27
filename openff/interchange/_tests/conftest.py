@@ -76,6 +76,25 @@ def sage_with_planar_monovalent_carbonyl(sage):
 
 
 @pytest.fixture()
+def sage_with_sigma_hole(sage):
+    """Fixture that loads an SMIRNOFF XML with a C-Cl sigma hole."""
+    sage.get_parameter_handler("VirtualSites")
+    sage["VirtualSites"].add_parameter(
+        parameter=VirtualSiteType(
+            name="EP",
+            smirks="[#6:1]-[#17:2]",
+            distance=1.4 * unit.angstrom,
+            type="BondCharge",
+            match="once",
+            charge_increment1=0.1 * unit.elementary_charge,
+            charge_increment2=0.2 * unit.elementary_charge,
+        ),
+    )
+
+    return sage
+
+
+@pytest.fixture()
 def sage_with_trivalent_nitrogen():
     sage_210 = ForceField("openff-2.1.0.offxml")
     sage_210["Bonds"].add_parameter(

@@ -11,6 +11,7 @@ from openff.interchange.interop.gromacs.models.models import (
     GROMACSSystem,
     GROMACSVirtualSite2,
     GROMACSVirtualSite3,
+    GROMACSVirtualSite3fad,
     LennardJonesAtomType,
     PeriodicImproperDihedral,
     PeriodicProperDihedral,
@@ -245,6 +246,20 @@ class GROMACSWriter(DefaultModel):
                     f"{gromacs_virtual_site.func}\t"
                     f"{gromacs_virtual_site.a}\t"
                     f"{gromacs_virtual_site.b}\t"
+                    "\n",
+                )
+
+            elif isinstance(gromacs_virtual_site, GROMACSVirtualSite3fad):
+                top.write("[ virtual_sites3 ]\n")
+                top.write("; parent, orientation atoms, func, theta, d\n")
+                top.write(
+                    f"{gromacs_virtual_site.site}\t"
+                    f"{gromacs_virtual_site.orientation_atoms[0]}\t"
+                    f"{gromacs_virtual_site.orientation_atoms[1]}\t"
+                    f"{gromacs_virtual_site.orientation_atoms[2]}\t"
+                    f"{gromacs_virtual_site.func}\t"
+                    f"{gromacs_virtual_site.theta}\t"
+                    f"{gromacs_virtual_site.d}\t"
                     "\n",
                 )
 
