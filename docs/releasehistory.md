@@ -11,6 +11,10 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+* #947 Fixes a bug in which virtual site parameters with identical SMIRKS would clash.
+
 ## 0.3.24 - 2024-03-19
 
 * #925 Adds documentation of upcoming v0.4 changes.
