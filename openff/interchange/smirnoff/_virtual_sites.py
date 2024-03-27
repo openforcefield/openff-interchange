@@ -1,5 +1,5 @@
 import math
-from typing import Literal, Optional
+from typing import Literal
 
 import numpy
 from openff.models.types import FloatQuantity
@@ -453,7 +453,7 @@ def _convert_local_coordinates(
 def _generate_positions(
     interchange,
     virtual_site_collection: SMIRNOFFVirtualSiteCollection,
-    conformer: Optional[Quantity] = None,
+    conformer: Quantity | None = None,
 ) -> Quantity:
     # TODO: Capture these objects instead of generating them on-the-fly so many times
 

@@ -1,5 +1,4 @@
 import warnings
-from typing import Union
 
 import pytest
 from openff.toolkit import Topology
@@ -62,9 +61,9 @@ def parse_mdp(file: str) -> dict[str, str]:
     return options
 
 
-def parse_sander(file: str) -> dict[str, Union[dict, str]]:
+def parse_sander(file: str) -> dict[str, dict | str]:
     """Naively parse (sections of) a sander input file into a dict structure."""
-    options: dict[str, Union[dict, str]] = dict()
+    options: dict[str, dict | str] = dict()
     current_level = options
 
     with open(file) as f:

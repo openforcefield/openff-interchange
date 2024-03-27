@@ -1,6 +1,6 @@
 import abc
 from collections.abc import Iterable
-from typing import Literal, Union
+from typing import Literal
 
 from openff.models.types import FloatQuantity
 from openff.units import Quantity, unit
@@ -90,7 +90,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     _charges: dict[
-        Union[TopologyKey, LibraryChargeTopologyKey],
+        TopologyKey | LibraryChargeTopologyKey,
         Quantity,
     ] = PrivateAttr(dict())
     _charges_cached: bool = PrivateAttr(False)

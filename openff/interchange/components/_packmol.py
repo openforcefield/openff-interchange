@@ -6,8 +6,9 @@ import os
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Callable
 from distutils.spawn import find_executable
-from typing import Callable, Literal, Optional, Union
+from typing import Literal
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -66,7 +67,7 @@ simulations,
 """
 
 
-def _find_packmol() -> Optional[str]:
+def _find_packmol() -> str | None:
     """
     Attempt to find the path to the `packmol` binary.
 
@@ -87,10 +88,10 @@ def _find_packmol() -> Optional[str]:
 def _validate_inputs(
     molecules: list[Molecule],
     number_of_copies: list[int],
-    solute: Optional[Topology],
+    solute: Topology | None,
     box_shape: NDArray,
-    box_vectors: Optional[Quantity],
-    mass_density: Optional[Quantity],
+    box_vectors: Quantity | None,
+    mass_density: Quantity | None,
 ):
     """
     Validate the inputs which were passed to the main pack method.
@@ -377,9 +378,9 @@ def _scale_box(box: NDArray, volume: Quantity) -> Quantity:
 
 
 def _create_solute_pdb(
-    topology: Optional[Topology],
+    topology: Topology | None,
     box_vectors: Quantity,
-) -> Optional[str]:
+) -> str | None:
     """Write out the solute topology to PDB so that packmol can read it."""
     if topology is None:
         return None
@@ -434,7 +435,7 @@ def _create_molecule_pdbs(molecules: list[Molecule]) -> list[str]:
 def _build_input_file(
     molecule_file_names: list[str],
     molecule_counts: list[int],
-    structure_to_solvate: Optional[str],
+    structure_to_solvate: str | None,
     box_size: Quantity,
     tolerance: Quantity,
 ) -> tuple[str, str]:
@@ -512,7 +513,7 @@ def _build_input_file(
 
 
 def _center_topology_at(
-    center_solute: Union[bool, Literal["BOX_VECS", "ORIGIN", "BRICK"]],
+    center_solute: bool | Literal["BOX_VECS", "ORIGIN", "BRICK"],
     topology: Topology,
     box_vectors: Quantity,
     brick_size: Quantity,
@@ -545,13 +546,13 @@ def _center_topology_at(
 def pack_box(
     molecules: list[Molecule],
     number_of_copies: list[int],
-    solute: Optional[Topology] = None,
+    solute: Topology | None = None,
     tolerance: Quantity = 2.0 * unit.angstrom,
-    box_vectors: Optional[Quantity] = None,
-    mass_density: Optional[Quantity] = None,
+    box_vectors: Quantity | None = None,
+    mass_density: Quantity | None = None,
     box_shape: ArrayLike = RHOMBIC_DODECAHEDRON,
-    center_solute: Union[bool, Literal["BOX_VECS", "ORIGIN", "BRICK"]] = False,
-    working_directory: Optional[str] = None,
+    center_solute: bool | Literal["BOX_VECS", "ORIGIN", "BRICK"] = False,
+    working_directory: str | None = None,
     retain_working_files: bool = False,
 ) -> Topology:
     """

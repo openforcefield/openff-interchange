@@ -1,4 +1,4 @@
-import sys
+from importlib import resources
 from math import exp
 
 import numpy
@@ -35,11 +35,6 @@ from openff.interchange.interop.gromacs._import._import import (
     from_files,
 )
 from openff.interchange.models import PotentialKey, TopologyKey
-
-if sys.version_info >= (3, 10):
-    from importlib import resources
-else:
-    import importlib_resources as resources
 
 if has_package("openmm"):
     import openmm.app

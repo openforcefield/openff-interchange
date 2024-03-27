@@ -1,5 +1,3 @@
-from typing import Union
-
 import openmm
 import openmm.app
 from openff.toolkit import Topology
@@ -9,7 +7,7 @@ from openff.interchange.exceptions import UnsupportedImportError
 
 def _check_compatible_inputs(
     system: openmm.System,
-    topology: Union[openmm.app.Topology, Topology, None],
+    topology: openmm.app.Topology | Topology | None,
 ):
     """Check that inputs are compatible and supported."""
     for index in range(system.getNumParticles()):

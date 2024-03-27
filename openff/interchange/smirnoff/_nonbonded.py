@@ -299,7 +299,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @property
     def charges(
         self,
-    ) -> dict[Union[TopologyKey, VirtualSiteKey], Quantity]:
+    ) -> dict[TopologyKey | VirtualSiteKey, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:
             self._charges = self._get_charges(include_virtual_sites=True)
@@ -310,10 +310,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     def _get_charges(
         self,
         include_virtual_sites=True,
-    ) -> dict[Union[TopologyKey, VirtualSiteKey], Quantity]:
+    ) -> dict[TopologyKey | VirtualSiteKey, Quantity]:
         """Get the total partial charge on each atom or particle."""
         # Keyed by index for atoms and by VirtualSiteKey for virtual sites.
-        charges: dict[Union[VirtualSiteKey, int], Quantity] = dict()
+        charges: dict[VirtualSiteKey | int, Quantity] = dict()
 
         for topology_key, potential_key in self.key_map.items():
             potential = self.potentials[potential_key]
@@ -388,7 +388,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     raise NotImplementedError()
 
         returned_charges: dict[
-            Union[TopologyKey, LibraryChargeTopologyKey],
+            TopologyKey | LibraryChargeTopologyKey,
             Quantity,
         ] = dict()
 
@@ -826,10 +826,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
     def store_matches(
         self,
-        parameter_handler: Union[
-            ElectrostaticsHandlerType,
-            list[ElectrostaticsHandlerType],
-        ],
+        parameter_handler: ElectrostaticsHandlerType | list[ElectrostaticsHandlerType],
         topology: Topology,
         charge_from_molecules=None,
         allow_nonintegral_charges: bool = False,
@@ -930,10 +927,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
     def store_potentials(
         self,
-        parameter_handler: Union[
-            ElectrostaticsHandlerType,
-            list[ElectrostaticsHandlerType],
-        ],
+        parameter_handler: ElectrostaticsHandlerType | list[ElectrostaticsHandlerType],
     ) -> None:
         """
         Populate self.potentials with key-val pairs of [PotentialKey, Potential].

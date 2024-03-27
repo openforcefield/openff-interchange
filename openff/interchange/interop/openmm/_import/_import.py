@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Union
 
 from openff.models.types import ArrayQuantity
 from openff.toolkit import Quantity, Topology
@@ -38,9 +38,9 @@ if TYPE_CHECKING:
 def from_openmm(
     *,
     system: "openmm.System",
-    positions: Optional[Quantity] = None,
+    positions: Quantity | None = None,
     topology: Union["openmm.app.Topology", Topology, None] = None,
-    box_vectors: Optional[Quantity] = None,
+    box_vectors: Quantity | None = None,
 ) -> "Interchange":
     """Create an Interchange object from OpenMM data."""
     from openff.interchange import Interchange
@@ -123,7 +123,7 @@ def from_openmm(
 
 def _convert_constraints(
     system: "openmm.System",
-) -> Union[ConstraintCollection, None]:
+) -> ConstraintCollection | None:
     from openff.units import unit
 
     from openff.interchange.components.potentials import Potential

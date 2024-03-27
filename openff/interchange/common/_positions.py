@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy
 from openff.toolkit import Topology
 from openff.units import Quantity
@@ -7,8 +5,8 @@ from openff.units import Quantity
 
 def _infer_positions(
     topology: Topology,
-    positions: Optional[Quantity] = None,
-) -> Optional[Quantity]:
+    positions: Quantity | None = None,
+) -> Quantity | None:
     if positions is not None:
         return positions
 
