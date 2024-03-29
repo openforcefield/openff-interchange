@@ -14,6 +14,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ## Current development
 
 * #947 Fixes a bug in which virtual site parameters with identical SMIRKS would clash.
+* #948 Updates the GAFF example.
+* #950 Fixes a bug in which atom ordering was often incorrect in GROMACS `.gro` files when virtual sites were present.
+* #942 Fixes an errant internally-thrown `DeprecationWarning`.
+* #942 Recommends `jupyter-lab` over `jupyer-notebook`.
 
 ## 0.3.24 - 2024-03-19
 
@@ -65,7 +69,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #848 Fixes a bug in which `Interchange.minimize` erroneously appended virtual site positions to the `positions` attribute.
 * #883 Using `openff-models` 0.1.2, fixes parsing box information from OpenMM data.
 * #883 Skips writing unnecessary PDB file during visualization.
-* #883 Preserves atom metadata when roundtripping topologies with OpenMM.
+* #883 Preserves atom metadata when round-tripping topologies with OpenMM.
 
 ### Documentation improvements
 
