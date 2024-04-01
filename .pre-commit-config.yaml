@@ -46,7 +46,7 @@ repos:
     exclude: openff/interchange/_version.py|setup.py
     args: ["--py39-plus"]
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.3.4
+  rev: v0.3.5
   hooks:
     - id: ruff
       args: ["check", "--select", "NPY"]
@@ -74,7 +74,7 @@ repos:
     exclude: .github
     args: ["--disable", "MD013", "MD033", "MD024", "MD046", "--ignore", "docs/using/experimental.md", "--ignore", "docs/using/status.md", "--"]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.8.4
+  rev: 1.8.5
   hooks:
     - id: nbqa-pyupgrade
       files: ^examples
