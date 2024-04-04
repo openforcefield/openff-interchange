@@ -77,6 +77,7 @@ def collection_loader(data: str) -> dict:
                     else:
                         topology_key = LibraryChargeTopologyKey.parse_raw(key_)
 
+                    # TODO: Not obvious if cosmetic attributes survive here
                     potential_key = PotentialKey(**val_)
 
                     key_map[topology_key] = potential_key
@@ -246,13 +247,28 @@ class SMIRNOFFCollection(Collection, abc.ABC):
                 TopologyKey | LibraryChargeTopologyKey,
                 PotentialKey,
             ] = dict()
+
         matches = parameter_handler.find_matches(topology)
+
         for key, val in matches.items():
+            parameter: ParameterHandler.ParameterType = val.parameter_type
+
+            cosmetic_attributes = {
+                cosmetic_attribute: getattr(
+                    parameter,
+                    f"_{cosmetic_attribute}",
+                )
+                for cosmetic_attribute in parameter._cosmetic_attribs
+            }
+
             topology_key = TopologyKey(atom_indices=key)
+
             potential_key = PotentialKey(
-                id=val.parameter_type.smirks,
+                id=parameter.smirks,
                 associated_handler=parameter_handler.TAGNAME,
+                cosmetic_attributes=cosmetic_attributes,
             )
+
             self.key_map[topology_key] = potential_key
 
         if self.__class__.__name__ in [

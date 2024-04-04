@@ -1,12 +1,13 @@
 import pytest
+from openff.toolkit import Molecule, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import BondHandler
-from openff.units import unit
 
 from openff.interchange.components.potentials import (
     Collection,
     Potential,
     WrappedPotential,
 )
+from openff.interchange.smirnoff._valence import SMIRNOFFBondCollection
 
 
 class TestWrappedPotential:
@@ -38,6 +39,28 @@ class TestWrappedPotential:
         # Ensure a single Potential object can be wrapped with similar behavior
         simple = WrappedPotential(data=pot2)
         assert simple.parameters == pot2.parameters
+
+
+class TestCosmeticAttributes:
+    def test_potential_with_cosmetic_attributes(self):
+        cosmetic = BondHandler.BondType(
+            smirks="[*:1]~[*:2]",
+            id="cos1",
+            k="430.0 * kilocalories_per_mole/angstrom**2",
+            length="1.33 * angstrom",
+            foo="bar",
+            allow_cosmetic_attributes=True,
+        )
+
+        handler = BondHandler(version=0.4)
+        handler.add_parameter(parameter=cosmetic)
+
+        collection = SMIRNOFFBondCollection()
+
+        collection.store_matches(
+            parameter_handler=handler,
+            topology=Molecule.from_smiles("O").to_topology(),
+        )
 
 
 class TestCollectionSubclassing:

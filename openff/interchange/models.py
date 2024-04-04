@@ -1,7 +1,7 @@
 """Custom Pydantic models."""
 
 import abc
-from typing import Literal
+from typing import Any, Literal
 
 from openff.models.models import DefaultModel
 
@@ -288,6 +288,10 @@ class PotentialKey(DefaultModel):
     virtual_site_type: str | None = Field(
         None,
         description="The 'type' of virtual site (i.e. `BondCharge`) this parameter is associated with.",
+    )
+    cosmetic_attributes: dict[str, Any] = Field(
+        dict(),
+        description="A dictionary of cosmetic attributes associated with this potential key.",
     )
 
     def __hash__(self) -> int:

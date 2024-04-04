@@ -5,9 +5,10 @@ Units tests for openff.interchange.components._packmol
 import numpy
 import pytest
 from openff.toolkit.topology import Molecule
-from openff.units import unit
+from openff.units import Quantity, unit
 from openff.utilities import has_package, skip_if_missing
 
+from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange.components._packmol import (
     RHOMBIC_DODECAHEDRON,
     RHOMBIC_DODECAHEDRON_XYHEX,
@@ -17,6 +18,7 @@ from openff.interchange.components._packmol import (
     _scale_box,
     pack_box,
     solvate_topology,
+    solvate_topology_nonwater,
 )
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
@@ -134,6 +136,20 @@ class TestPackmolWrapper:
                 molecules,
                 [2],
                 box_vectors=20 * numpy.identity(4) * unit.angstrom,
+            )
+
+    def test_packmol_bad_box_shape(self, molecules):
+        with pytest.raises(PACKMOLValueError, match=r"with shape \(3, 3\)"):
+            solvate_topology(
+                molecules[0].to_topology(),
+                box_shape=20 * numpy.identity(4) * unit.angstrom,
+            )
+
+        with pytest.raises(PACKMOLValueError, match=r"with shape \(3, 3\)"):
+            solvate_topology_nonwater(
+                molecules[0].to_topology(),
+                solvent=Molecule.from_smiles("CCCCCCO"),
+                box_shape=20 * numpy.identity(4) * unit.angstrom,
             )
 
     def test_packmol_underspecified(self, molecules):
@@ -349,6 +365,28 @@ class TestPackmolWrapper:
         assert (
             solvated_topology.box_vectors[2, 0] == solvated_topology.box_vectors[2, 1]
         )
+
+    def test_packmol_add_negative_solvent_mass(self):
+        ligand = MoleculeWithConformer.from_smiles("C1CN2C(=N1)SSC2=S")
+
+        with pytest.raises(
+            PACKMOLValueError,
+            match="Solute mass is greater than target mass",
+        ):
+            solvate_topology(
+                ligand.to_topology(),
+                target_density=Quantity(1e-6, "kilogram/meter**3"),
+            )
+
+        with pytest.raises(
+            PACKMOLValueError,
+            match="Solute mass is greater than target mass",
+        ):
+            solvate_topology_nonwater(
+                ligand.to_topology(),
+                solvent=Molecule.from_smiles("CCCCCCO"),
+                target_density=Quantity(1e-6, "kilogram/meter**3"),
+            )
 
     @pytest.mark.skipif(
         has_package("mdtraj"),

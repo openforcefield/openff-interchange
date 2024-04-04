@@ -35,7 +35,7 @@ repos:
     additional_dependencies: [
         'flake8-bugbear',
         'flake8-absolute-import',
-        'flake8-pytest-style',
+        'flake8-pytest-style==1',
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
@@ -46,7 +46,7 @@ repos:
     exclude: openff/interchange/_version.py|setup.py
     args: ["--py310-plus"]
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.3.4
+  rev: v0.3.5
   hooks:
     - id: ruff
       args: ["check", "--select", "NPY"]

@@ -64,6 +64,48 @@ class TestCreate:
             3,
         )
 
+    def test_cosmetic_attributes(self):
+        from openff.toolkit._tests.test_forcefield import xml_ff_w_cosmetic_elements
+
+        force_field = ForceField(
+            "openff-2.1.0.offxml",
+            xml_ff_w_cosmetic_elements.replace(
+                'Bonds version="0.3"',
+                'Bonds version="0.4"',
+            ),
+            allow_cosmetic_attributes=True,
+        )
+
+        bonds = SMIRNOFFBondCollection()
+
+        bonds.store_matches(
+            parameter_handler=force_field["Bonds"],
+            topology=Molecule.from_smiles("CC").to_topology(),
+        )
+
+        for key in bonds.potentials:
+            if key.id == "[#6X4:1]-[#6X4:2]":
+                assert key.cosmetic_attributes == {
+                    "parameters": "k, length",
+                    "parameterize_eval": "blah=blah2",
+                }
+
+    def test_all_cosmetic(self, sage, basic_top):
+        for handler in sage.registered_parameter_handlers:
+            for parameter in sage[handler].parameters:
+                parameter._cosmetic_attribs = ["fOO"]
+                parameter._fOO = "bAR"
+                parameter.fOO = "bAR"
+
+        out = sage.create_interchange(basic_top)
+
+        for collection in out.collections:
+            if collection == "Electrostatics":
+                continue
+
+            for potential_key in out[collection].potentials:
+                assert potential_key.cosmetic_attributes["fOO"] == "bAR"
+
 
 @pytest.mark.slow()
 class TestUnassignedParameters:
