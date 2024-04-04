@@ -85,6 +85,21 @@ def _find_packmol() -> Optional[str]:
     )
 
 
+def _check_add_positive_mass(mass_to_add):
+    if mass_to_add.m < 0:
+        raise PACKMOLValueError(
+            "Solute mass is greater than target mass; increase density or make the box bigger",
+        )
+
+
+def _check_box_shape_shape(box_shape: ArrayLike):
+    """Check the .shape of the box_shape argument."""
+    if box_shape.shape != (3, 3):
+        raise PACKMOLValueError(
+            "box_shape should be an array with shape (3, 3) defining a box with unit periodic image distance",
+        )
+
+
 def _validate_inputs(
     molecules: list[Molecule],
     number_of_copies: list[int],
@@ -134,7 +149,7 @@ def _validate_inputs(
 
     if box_vectors is not None and box_vectors.shape != (3, 3):
         raise PACKMOLValueError(
-            "`box_vectors` must be a openff.units.unit.Quantity Array with shape (3, 3)",
+            "`box_vectors` must be a openff.units.Quantity Array with shape (3, 3)",
         )
 
     if box_shape.shape != (3, 3):
@@ -825,11 +840,7 @@ def solvate_topology(
         stable simulations after energy minimisation.
 
     """
-    if box_shape.shape != (3, 3):
-        raise PACKMOLValueError(
-            "box_shape should be a 3×3 array defining a box with unit periodic"
-            + " image distance",  # noqa: W503
-        )
+    _check_box_shape_shape(box_shape)
 
     # Compute box vectors from the solute length and requested padding
     solute_length = _max_dist_between_points(topology.get_positions())
@@ -843,10 +854,8 @@ def solvate_topology(
         sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
     )
     solvent_mass = target_mass - solute_mass
-    if solvent_mass < 0:
-        raise PACKMOLValueError(
-            "Solute mass is greater than target mass; increase density or make the box bigger",
-        )
+
+    _check_add_positive_mass(solvent_mass)
 
     # Get reference data and prepare solvent molecules
     water = Molecule.from_smiles("O")
@@ -918,11 +927,7 @@ def solvate_topology_nonwater(
         stable simulations after energy minimisation.
 
     """
-    if box_shape.shape != (3, 3):
-        raise PACKMOLValueError(
-            "box_shape should be a 3×3 array defining a box with unit periodic"
-            + " image distance",  # noqa: W503
-        )
+    _check_box_shape_shape(box_shape)
 
     # Compute box vectors from the solute length and requested padding
     solute_length = _max_dist_between_points(topology.get_positions())
@@ -937,10 +942,8 @@ def solvate_topology_nonwater(
     )
 
     solvent_mass_to_add = target_mass - solute_mass
-    if solvent_mass_to_add < 0:
-        raise PACKMOLValueError(
-            "Solute mass is greater than target mass; increase density or make the box bigger",
-        )
+
+    _check_add_positive_mass(solvent_mass_to_add)
 
     _solvent = deepcopy(solvent)
     solvent_mass = sum([atom.mass for atom in _solvent.atoms])
