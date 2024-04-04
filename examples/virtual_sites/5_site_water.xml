@@ -37,12 +37,12 @@
 				<Exception eps="0" p1="0" p2="1" q="0" sig="1"/>
 				<Exception eps="0" p1="0" p2="2" q="0" sig="1"/>
 				<Exception eps="0" p1="1" p2="2" q="0" sig="1"/>
-				<Exception eps="0" p1="0" p2="3" q="0" sig="1"/>
-				<Exception eps="0" p1="0" p2="4" q="0" sig="1"/>
 				<Exception eps="0" p1="3" p2="1" q="0" sig="1"/>
 				<Exception eps="0" p1="4" p2="1" q="0" sig="1"/>
 				<Exception eps="0" p1="3" p2="2" q="0" sig="1"/>
 				<Exception eps="0" p1="4" p2="2" q="0" sig="1"/>
+				<Exception eps="0" p1="0" p2="3" q="0" sig="1"/>
+				<Exception eps="0" p1="0" p2="4" q="0" sig="1"/>
 				<Exception eps="0" p1="3" p2="4" q="0" sig="1"/>
 			</Exceptions>
 		</Force>
