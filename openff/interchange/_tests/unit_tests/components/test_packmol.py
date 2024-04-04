@@ -92,7 +92,7 @@ class TestPackmolWrapper:
         Test that _compute_brick() raises an exception with an irreduced box.
         """
         # This is a rhombic dodecahedron with the first and last rows swapped
-        box = unit.Quantity(
+        box = Quantity(
             numpy.asarray(
                 [
                     [0.5, 0.5, numpy.sqrt(2.0) / 2.0],

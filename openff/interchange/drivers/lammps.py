@@ -3,7 +3,7 @@
 import tempfile
 
 import numpy
-from openff.units import Quantity, unit
+from openff.toolkit import Quantity, unit
 from openff.utilities import MissingOptionalDependencyError, requires_package
 
 from openff.interchange import Interchange

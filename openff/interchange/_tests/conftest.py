@@ -1,13 +1,12 @@
 """Pytest configuration."""
 
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondType,
     ChargeIncrementModelHandler,
     VirtualSiteType,
 )
-from openff.units import Quantity, unit
 from openff.utilities import get_data_file_path
 
 from openff.interchange._tests import MoleculeWithConformer, _rng, get_test_file_path

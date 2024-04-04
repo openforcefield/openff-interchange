@@ -3,7 +3,7 @@ Helper functions for exporting virutal sites to GROMACS.
 """
 
 import numpy
-from openff.units import Quantity, unit
+from openff.toolkit import Quantity, unit
 
 from openff.interchange import Interchange
 from openff.interchange.interop._virtual_sites import _get_separation_by_atom_indices

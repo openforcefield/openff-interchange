@@ -1,4 +1,4 @@
-from openff.units import Quantity
+from openff.toolkit import Quantity
 
 from openff.interchange.common._nonbonded import ElectrostaticsCollection
 

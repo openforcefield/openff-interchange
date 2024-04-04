@@ -1,5 +1,5 @@
 import pytest
-from openff.toolkit import Molecule, unit
+from openff.toolkit import Molecule, Quantity, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import BondHandler
 
 from openff.interchange.components.potentials import (
@@ -78,8 +78,8 @@ class TestPotentialSerialization:
     def dummy_potential(self):
         return Potential(
             parameters={
-                "a": unit.Quantity(1.0, unit.kilocalorie / unit.mole),
-                "b": unit.Quantity(2.0, unit.angstrom),
+                "a": Quantity(1.0, unit.kilocalorie / unit.mole),
+                "b": Quantity(2.0, unit.angstrom),
             },
         )
 

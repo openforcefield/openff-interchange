@@ -5,10 +5,7 @@ from typing import Any, Literal
 
 from openff.models.models import DefaultModel
 
-try:
-    from pydantic.v1 import Field
-except ImportError:
-    from pydantic import Field
+from openff.interchange._pydantic import Field
 
 
 class TopologyKey(DefaultModel, abc.ABC):

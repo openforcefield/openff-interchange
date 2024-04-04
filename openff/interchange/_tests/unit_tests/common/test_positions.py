@@ -1,5 +1,5 @@
 import numpy
-from openff.toolkit import Topology
+from openff.toolkit import Quantity, Topology
 from openff.units import unit
 
 from openff.interchange._tests import _rng
@@ -8,7 +8,7 @@ from openff.interchange.common._positions import _infer_positions
 
 class TestInferPositions:
     def test_short_circuit(self, methane):
-        positions = unit.Quantity(
+        positions = Quantity(
             _rng.random((methane.n_atoms, 3)),
             unit.angstrom,
         )
@@ -30,7 +30,7 @@ class TestInferPositions:
         topology = Topology.from_molecules(
             [methane_with_conformer, ethanol_with_conformer],
         )
-        expected_positions = unit.Quantity(
+        expected_positions = Quantity(
             numpy.concatenate(
                 [
                     methane_with_conformer.conformers[0].m,

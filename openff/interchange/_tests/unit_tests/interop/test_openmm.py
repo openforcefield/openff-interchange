@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import numpy
 import pytest
-from openff.units import unit
+from openff.toolkit import Quantity, unit
 from openff.units.openmm import ensure_quantity
 from openff.utilities import has_package, skip_if_missing
 
@@ -92,7 +92,7 @@ class TestOpenMM:
         from openmm.app import PDBFile
 
         topology = MoleculeWithConformer.from_smiles("CC").to_topology()
-        topology.box_vectors = unit.Quantity(
+        topology.box_vectors = Quantity(
             10.0 * numpy.eye(3),
             unit.angstrom,
         )
@@ -124,7 +124,7 @@ class TestOpenMMMissingHandlers:
         energy1 = get_openmm_energies(out, combine_nonbonded_forces=True).total_energy
         energy2 = get_openmm_energies(out, combine_nonbonded_forces=False).total_energy
 
-        assert abs(energy2 - energy1) < unit.Quantity(
+        assert abs(energy2 - energy1) < Quantity(
             1e-6,
             unit.kilojoule_per_mole,
         )

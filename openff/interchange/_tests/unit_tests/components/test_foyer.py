@@ -3,8 +3,7 @@ from pathlib import Path
 import numpy as np
 import parmed as pmd
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from openff.units import unit
+from openff.toolkit import Molecule, Topology, unit
 from openff.utilities.testing import has_package, skip_if_missing
 
 from openff.interchange import Interchange

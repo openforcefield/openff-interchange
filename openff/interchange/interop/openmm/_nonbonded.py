@@ -6,8 +6,7 @@ import itertools
 from collections import defaultdict
 from typing import DefaultDict, NamedTuple, Optional
 
-from openff.toolkit import Molecule
-from openff.units import unit
+from openff.toolkit import Molecule, unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 

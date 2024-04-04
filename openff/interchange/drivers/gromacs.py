@@ -6,7 +6,7 @@ from importlib import resources
 from pathlib import Path
 from shutil import which
 
-from openff.units import Quantity, unit
+from openff.toolkit import Quantity, unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.interchange import Interchange

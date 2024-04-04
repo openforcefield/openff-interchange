@@ -9,9 +9,10 @@ from typing import Union
 import numpy
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
-from openff.units import unit
+from openff.toolkit import Quantity
 from openff.utilities.utilities import has_package, requires_package
 
+from openff.interchange._pydantic import Field, PrivateAttr, validator
 from openff.interchange.exceptions import MissingParametersError
 from openff.interchange.models import (
     LibraryChargeTopologyKey,
@@ -19,11 +20,6 @@ from openff.interchange.models import (
     TopologyKey,
 )
 from openff.interchange.warnings import InterchangeDeprecationWarning
-
-try:
-    from pydantic.v1 import Field, PrivateAttr, validator
-except ImportError:
-    from pydantic import Field, PrivateAttr, validator
 
 if has_package("jax"):
     from jax import numpy as jax_numpy
@@ -60,7 +56,7 @@ def potential_loader(data: str) -> dict:
 
                 for key_, val_ in val.items():
                     loaded = json.loads(val_)
-                    tmp["parameters"][key_] = unit.Quantity(  # type: ignore[index]
+                    tmp["parameters"][key_] = Quantity(  # type: ignore[index]
                         loaded["val"],
                         loaded["unit"],
                     )

@@ -1,7 +1,7 @@
 import pathlib
 
 import numpy
-from openff.units import unit
+from openff.toolkit import Quantity, unit
 
 from openff.interchange._experimental import experimental
 from openff.interchange.interop.gromacs.models.models import (
@@ -182,15 +182,15 @@ def _process_atomtype(
     bonding_type = split[1] if split[1] else ""
 
     atomic_number = int(split[2]) if split[2] is not None else None
-    mass = unit.Quantity(float(split[3]), unit.dalton)
+    mass = Quantity(float(split[3]), unit.dalton)
 
-    charge = unit.Quantity(float(split[4]), unit.elementary_charge)
+    charge = Quantity(float(split[4]), unit.elementary_charge)
 
     particle_type = split[5]
 
     if particle_type == "A":
-        sigma = unit.Quantity(float(split[6]), unit.nanometer)
-        epsilon = unit.Quantity(float(split[7]), unit.kilojoule_per_mole)
+        sigma = Quantity(float(split[6]), unit.nanometer)
+        epsilon = Quantity(float(split[7]), unit.kilojoule_per_mole)
     else:
         raise ValueError(f"Particle type must be A, parsed {particle_type}.")
 
@@ -226,8 +226,8 @@ def _process_atom(
     residue_name = split[3]
     atom_name = split[4]
     charge_group_number = int(split[5])
-    charge = unit.Quantity(float(split[6]), unit.elementary_charge)
-    mass = unit.Quantity(float(split[7]), unit.amu)
+    charge = Quantity(float(split[6]), unit.elementary_charge)
+    mass = Quantity(float(split[7]), unit.amu)
 
     return GROMACSAtom(
         index=atom_number,
@@ -265,8 +265,8 @@ def _process_settles(line: str) -> GROMACSSettles:
 
     first_atom = int(split[0])
 
-    oxygen_hydrogen_distance = unit.Quantity(float(split[2]), unit.nanometer)
-    hydrogen_hydrogen_distance = unit.Quantity(float(split[3]), unit.nanometer)
+    oxygen_hydrogen_distance = Quantity(float(split[2]), unit.nanometer)
+    hydrogen_hydrogen_distance = Quantity(float(split[3]), unit.nanometer)
 
     return GROMACSSettles(
         first_atom=first_atom,
@@ -284,8 +284,8 @@ def _process_bond(line: str) -> GROMACSBond:
     bond_function = int(split[2])
 
     if bond_function == 1:
-        bond_length = unit.Quantity(float(split[3]), unit.nanometer)
-        bond_k = unit.Quantity(
+        bond_length = Quantity(float(split[3]), unit.nanometer)
+        bond_k = Quantity(
             float(split[4]),
             unit.kilojoule_per_mole / unit.nanometer**2,
         )
@@ -314,8 +314,8 @@ def _process_angle(
     angle_function = int(split[3])
 
     if angle_function == 1:
-        angle = unit.Quantity(float(split[4]), unit.degrees)
-        k = unit.Quantity(float(split[5]), unit.kilojoule_per_mole)
+        angle = Quantity(float(split[4]), unit.degrees)
+        k = Quantity(float(split[5]), unit.kilojoule_per_mole)
     else:
         raise ValueError(f"Angle function must be 1, parsed {angle_function}.")
 
@@ -346,8 +346,8 @@ def _process_dihedral(
             atom2=atom2,
             atom3=atom3,
             atom4=atom4,
-            phi=unit.Quantity(float(split[5]), unit.degrees),
-            k=unit.Quantity(float(split[6]), unit.kilojoule_per_mole),
+            phi=Quantity(float(split[5]), unit.degrees),
+            k=Quantity(float(split[6]), unit.kilojoule_per_mole),
             multiplicity=int(float(split[7])),
         )
 
@@ -357,12 +357,12 @@ def _process_dihedral(
             atom2=atom2,
             atom3=atom3,
             atom4=atom4,
-            c0=unit.Quantity(float(split[5]), unit.kilojoule_per_mole),
-            c1=unit.Quantity(float(split[6]), unit.kilojoule_per_mole),
-            c2=unit.Quantity(float(split[7]), unit.kilojoule_per_mole),
-            c3=unit.Quantity(float(split[8]), unit.kilojoule_per_mole),
-            c4=unit.Quantity(float(split[9]), unit.kilojoule_per_mole),
-            c5=unit.Quantity(float(split[10]), unit.kilojoule_per_mole),
+            c0=Quantity(float(split[5]), unit.kilojoule_per_mole),
+            c1=Quantity(float(split[6]), unit.kilojoule_per_mole),
+            c2=Quantity(float(split[7]), unit.kilojoule_per_mole),
+            c3=Quantity(float(split[8]), unit.kilojoule_per_mole),
+            c4=Quantity(float(split[9]), unit.kilojoule_per_mole),
+            c5=Quantity(float(split[10]), unit.kilojoule_per_mole),
         )
 
     elif dihedral_function == 4:
@@ -371,8 +371,8 @@ def _process_dihedral(
             atom2=atom2,
             atom3=atom3,
             atom4=atom4,
-            phi=unit.Quantity(float(split[5]), unit.degrees),
-            k=unit.Quantity(float(split[6]), unit.kilojoule_per_mole),
+            phi=Quantity(float(split[5]), unit.degrees),
+            k=Quantity(float(split[6]), unit.kilojoule_per_mole),
             multiplicity=int(float(split[7])),
         )
 

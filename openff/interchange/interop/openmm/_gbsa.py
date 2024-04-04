@@ -13,7 +13,7 @@ def _process_gbsa(
 ):
     import openmm.app
     import openmm.unit
-    from openff.units import unit
+    from openff.toolkit import unit
 
     try:
         collection = interchange.collections["GBSA"]

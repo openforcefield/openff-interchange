@@ -1,7 +1,6 @@
 import pytest
-from openff.toolkit import Molecule
+from openff.toolkit import Molecule, Quantity, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler
-from openff.units import unit
 
 from openff.interchange.constants import kcal_mol_a2
 from openff.interchange.models import TopologyKey
@@ -61,5 +60,5 @@ class TestGBSACollection:
             collection.key_map[TopologyKey(atom_indices=(2,))]
         ].parameters
 
-        assert oxygen_parameters["radius"] == unit.Quantity(0.15, unit.nanometer)
-        assert oxygen_parameters["scale"] == unit.Quantity(0.85, unit.dimensionless)
+        assert oxygen_parameters["radius"] == Quantity(0.15, unit.nanometer)
+        assert oxygen_parameters["scale"] == Quantity(0.85, unit.dimensionless)

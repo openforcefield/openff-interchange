@@ -1,7 +1,6 @@
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff import ParameterHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
-from openff.units import Quantity
 from packaging.version import Version
 
 from openff.interchange import Interchange

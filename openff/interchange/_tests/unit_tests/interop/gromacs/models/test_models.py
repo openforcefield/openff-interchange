@@ -2,20 +2,15 @@ from copy import deepcopy
 
 import numpy
 import pytest
-from openff.toolkit import Molecule, Topology
-from openff.units import Quantity, unit
+from openff.toolkit import Molecule, Quantity, Topology, unit
 
 from openff.interchange import Interchange
+from openff.interchange._pydantic import ValidationError
 from openff.interchange._tests import needs_gmx
 from openff.interchange.components.mdconfig import get_intermol_defaults
 from openff.interchange.drivers.gromacs import _process, _run_gmx_energy
 from openff.interchange.interop.gromacs.models.models import GROMACSAtomType
 from openff.interchange.smirnoff._gromacs import _convert
-
-try:
-    from pydantic.v1 import ValidationError
-except ModuleNotFoundError:
-    from pydantic import ValidationError
 
 
 @pytest.fixture()

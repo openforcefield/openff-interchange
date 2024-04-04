@@ -62,7 +62,7 @@ def to_openmm_system(
         The corresponding OpenMM System object
 
     """
-    from openff.units import unit as off_unit
+    from openff.toolkit import unit as off_unit
 
     from openff.interchange.interop.openmm._gbsa import _process_gbsa
     from openff.interchange.interop.openmm._nonbonded import _process_nonbonded_forces

@@ -1,7 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
@@ -191,8 +190,8 @@ class TestChargeFromMolecules:
         ethanol_charges = numpy.linspace(-1, 1, 9) * 0.4
         water_charges = numpy.linspace(-1, 1, 3)
 
-        ethanol.partial_charges = unit.Quantity(ethanol_charges, unit.elementary_charge)
-        water.partial_charges = unit.Quantity(water_charges, unit.elementary_charge)
+        ethanol.partial_charges = Quantity(ethanol_charges, unit.elementary_charge)
+        water.partial_charges = Quantity(water_charges, unit.elementary_charge)
 
         out = Interchange.from_smirnoff(
             sage,
@@ -220,7 +219,7 @@ class TestChargeFromMolecules:
         #  N  # C  - H
         # -0.3, 0.0, 0.3
         molecule_with_charges = hydrogen_cyanide_reversed
-        molecule_with_charges.partial_charges = unit.Quantity(
+        molecule_with_charges.partial_charges = Quantity(
             [-0.3, 0.0, 0.3],
             unit.elementary_charge,
         )

@@ -1,6 +1,5 @@
 import numpy
-from openff.toolkit import Topology
-from openff.units import Quantity
+from openff.toolkit import Quantity, Topology
 
 
 def _infer_positions(

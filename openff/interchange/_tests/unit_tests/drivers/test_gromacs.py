@@ -1,5 +1,5 @@
 import pytest
-from openff.units import unit
+from openff.toolkit import unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange

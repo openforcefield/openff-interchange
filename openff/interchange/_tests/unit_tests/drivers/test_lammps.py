@@ -10,8 +10,7 @@ class TestProcess:
     @pytest.fixture()
     def dummy_energies(self):
         energies = [
-            unit.Quantity(val, kj_mol)
-            for val in [2.0, 1.0, 1.5, 0.5, -100.0, 0.1, -4, -400]
+            Quantity(val, kj_mol) for val in [2.0, 1.0, 1.5, 0.5, -100.0, 0.1, -4, -400]
         ]
 
         return {

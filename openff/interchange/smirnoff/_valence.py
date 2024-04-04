@@ -1,7 +1,7 @@
 import warnings
 from typing import Literal
 
-from openff.toolkit import Molecule, Topology
+from openff.toolkit import Molecule, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -10,7 +10,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
 )
-from openff.units import unit
 from packaging.version import Version
 
 from openff.interchange.common._valence import (

@@ -1,8 +1,7 @@
 import warnings
 
 import pytest
-from openff.toolkit import Topology
-from openff.units import unit
+from openff.toolkit import Quantity, Topology, unit
 
 from openff.interchange.components.mdconfig import (
     MDConfig,
@@ -21,7 +20,7 @@ def system_no_constraints(sage_unconstrained, basic_top):
 @pytest.fixture()
 def rigid_water_box(sage, water):
     topology = water.to_topology()
-    topology.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
+    topology.box_vectors = Quantity([5, 5, 5], unit.nanometer)
     return sage.create_interchange(topology)
 
 
@@ -96,7 +95,7 @@ class TestMDConfigFromInterchange:
     @pytest.mark.parametrize("periodic", [True, False])
     @pytest.mark.parametrize("switch", [True, False])
     def test_from_interchange(self, sage, basic_top, switch, periodic):
-        from openff.units import unit
+        from openff.toolkit import unit
         from packaging.version import Version
 
         from openff.interchange import Interchange
@@ -130,7 +129,7 @@ class TestMDConfigFromInterchange:
 class TestSMIRNOFFDefaults:
     @pytest.mark.parametrize("periodic", [True, False])
     def test_apply_smirnoff_defaults(self, sage, basic_top, periodic):
-        from openff.units import unit
+        from openff.toolkit import unit
 
         from openff.interchange import Interchange
 
@@ -181,7 +180,7 @@ class TestIntermolDefaults:
         assert options["constraints"] == "none"
 
     def test_apply_intermol_defaults(self, sage, basic_top):
-        from openff.units import unit
+        from openff.toolkit import unit
 
         from openff.interchange import Interchange
 
