@@ -1,8 +1,7 @@
 import numpy as np
 import parmed
 import pytest
-from openff.toolkit import ForceField, Molecule
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, unit
 from openff.utilities import (
     get_data_file_path,
     has_executable,
@@ -11,73 +10,12 @@ from openff.utilities import (
 )
 
 from openff.interchange import Interchange
-from openff.interchange._tests import get_test_file_path, requires_openeye
 from openff.interchange.drivers import get_amber_energies, get_openmm_energies
-from openff.interchange.exceptions import UnsupportedExportError
 
 if has_package("openmm"):
     import openmm
     import openmm.app
     import openmm.unit
-
-
-@pytest.mark.slow
-@requires_openeye
-@pytest.mark.parametrize(
-    "molecule",
-    [
-        "lig_CHEMBL3265016-1.pdb",
-        "c1ccc2ccccc2c1",
-    ],
-)
-def test_atom_names_with_padding(molecule):
-    # pytest processes fixtures before the decorator can be applied
-    if molecule.endswith(".pdb"):
-        molecule = Molecule(get_test_file_path(molecule).as_posix())
-    else:
-        molecule = Molecule.from_smiles(molecule)
-
-    # Unclear if the toolkit will always load PDBs with padded whitespace in name
-    Interchange.from_smirnoff(
-        ForceField("openff-2.0.0.offxml"),
-        molecule.to_topology(),
-    ).to_prmtop("tmp.prmtop")
-
-    # Loading with ParmEd striggers #679 if exclusions lists are wrong
-    parmed.load_file("tmp.prmtop")
-
-
-@pytest.mark.parametrize("molecule", ["C1=CN=CN1", "c1ccccc1", "c1ccc2ccccc2c1"])
-def exclusions_in_rings(molecule):
-    molecule.generate_conformers(n_conformers=1)
-    topology = molecule.to_topology()
-    topology.box_vectors = [4, 4, 4]
-
-    sage_no_impropers = ForceField("openff-2.0.0.offxml")
-    sage_no_impropers.deregister_parameter_handler("ImproperTorsions")
-
-    interchange = sage_no_impropers.create_interchange(topology)
-
-    interchange.to_prmtop("tmp.prmtop")
-
-    # Use the OpenMM export as source of truth
-    openmm_system = interchange.to_openmm()
-    for force in openmm_system.getForces():
-        if isinstance(force, openmm.NonbondedForce):
-            reference = force.getNumExceptions()
-
-    loaded_system = openmm.app.AmberPrmtopFile("tmp.prmtop").createSystem()
-    for force in loaded_system.getForces():
-        if isinstance(force, openmm.NonbondedForce):
-            assert force.getNumExceptions() == reference
-
-
-def test_virtual_site_error(tip4p, water):
-    with pytest.raises(
-        UnsupportedExportError,
-        match="not yet supported in Amber writers",
-    ):
-        tip4p.create_interchange(water.to_topology()).to_prmtop("foo")
 
 
 class TestAmber:
@@ -147,9 +85,14 @@ class TestAmber:
 
 
 class TestPRMTOP:
+    @skip_if_missing("mdtraj")
+    @skip_if_missing("MDAnalysis")
     @skip_if_missing("openmm")
     @pytest.mark.slow
     def test_atom_names_pdb(self):
+        import MDAnalysis
+        import mdtraj
+
         peptide = Molecule.from_polymer_pdb(
             get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
         )
@@ -163,12 +106,20 @@ class TestPRMTOP:
             get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
         )
         openmm_object = openmm.app.AmberPrmtopFile("atom_names.prmtop")
+        mdanalysis_object = MDAnalysis.Universe("atom_names.prmtop")
+        # This may not be useful, see
+        # https://github.com/mdtraj/mdtraj/blob/6bb35a8d78a5758ff1f72b3af1fc21d2e38f1029/mdtraj/formats/prmtop.py#L47-L49
+        mdtraj_object = mdtraj.load_prmtop("atom_names.prmtop")
 
         pdb_atom_names = [atom.name for atom in pdb_object.topology.atoms()]
 
         openmm_atom_names = [atom.name for atom in openmm_object.topology.atoms()]
+        mdanalysis_atom_names = [atom.name for atom in mdanalysis_object.atoms]
+        mdtraj_atom_names = [atom.name for atom in mdtraj_object.atoms]
 
         assert openmm_atom_names == pdb_atom_names
+        assert mdanalysis_atom_names == pdb_atom_names
+        assert mdtraj_atom_names == pdb_atom_names
 
 
 class TestAmberResidues:

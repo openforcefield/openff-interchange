@@ -10,7 +10,7 @@ if has_package("openmm"):
 
 @requires_package("openmm")
 class TestProcess:
-    @pytest.fixture()
+    @pytest.fixture
     def dummy_system(self):
         system = openmm.System()
         for force in [
@@ -24,7 +24,7 @@ class TestProcess:
 
         return system
 
-    @pytest.fixture()
+    @pytest.fixture
     def dummy_system_split(self, dummy_system):
         dummy_system.addForce(openmm.CustomNonbondedForce("sigma*epsilon"))
         dummy_system.addForce(openmm.CustomBondForce("sigma*epsilon"))

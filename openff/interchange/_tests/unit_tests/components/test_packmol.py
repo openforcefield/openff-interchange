@@ -92,7 +92,7 @@ class TestPackmolWrapper:
         Test that _compute_brick() raises an exception with an irreduced box.
         """
         # This is a rhombic dodecahedron with the first and last rows swapped
-        box = unit.Quantity(
+        box = Quantity(
             numpy.asarray(
                 [
                     [0.5, 0.5, numpy.sqrt(2.0) / 2.0],
@@ -246,7 +246,7 @@ class TestPackmolWrapper:
         assert topology.n_atoms == 20
         assert topology.n_bonds == 20
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_amino_acids(self):
         amino_residues = {
             "C[C@H](N)C(=O)O": "ALA",

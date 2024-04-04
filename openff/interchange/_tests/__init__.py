@@ -1,8 +1,7 @@
 """Assorted utilities used in tests."""
 
 import pathlib
-import sys
-from typing import Optional
+from importlib import resources
 
 import numpy
 import pytest
@@ -15,12 +14,6 @@ from openff.toolkit.utils import (
 from openff.utilities.utilities import has_executable, has_package
 
 from openff.interchange.drivers.gromacs import _find_gromacs_executable
-
-if sys.version_info >= (3, 10):
-    from importlib import resources
-else:
-    import importlib_resources as resources
-
 
 if has_package("openmm"):
     import openmm
@@ -59,7 +52,7 @@ def get_test_file_path(test_file: str) -> pathlib.Path:
         )
 
 
-def get_test_files_dir_path(dirname: Optional[str] = None) -> pathlib.Path:
+def get_test_files_dir_path(dirname: str | None = None) -> pathlib.Path:
     """Given a directory with a collection of test data files, return its full path."""
     dir_path = resources.files("openff.interchange._tests.data")
 

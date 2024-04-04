@@ -2,10 +2,8 @@
 Helper functions for exporting virutal sites to GROMACS.
 """
 
-from typing import Union
-
 import numpy
-from openff.units import Quantity, unit
+from openff.toolkit import Quantity, unit
 
 from openff.interchange import Interchange
 from openff.interchange.interop._virtual_sites import _get_separation_by_atom_indices
@@ -26,7 +24,7 @@ def _create_gromacs_virtual_site(
     interchange: Interchange,
     virtual_site: "_VirtualSite",
     virtual_site_key: VirtualSiteKey,
-    particle_map: dict[Union[int, VirtualSiteKey], int],
+    particle_map: dict[int | VirtualSiteKey, int],
 ) -> GROMACSVirtualSite:
     offset = interchange.topology.atom_index(
         interchange.topology.atom(min(virtual_site_key.orientation_atom_indices)),

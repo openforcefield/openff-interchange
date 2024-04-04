@@ -1,5 +1,3 @@
-from typing import Optional
-
 from openff.toolkit import Topology
 from openff.units import Quantity, unit
 from openff.utilities.utilities import has_package
@@ -44,8 +42,8 @@ def get_handlers_callable() -> dict[str, _CollectionAlias]:
 def _create_interchange(
     force_field: "Forcefield",
     topology: Topology,
-    box: Optional[Quantity] = None,
-    positions: Optional[Quantity] = None,
+    box: Quantity | None = None,
+    positions: Quantity | None = None,
 ) -> Interchange:
     interchange = Interchange()
     _topology = Interchange.validate_topology(topology)
@@ -86,7 +84,7 @@ def _create_interchange(
             charges[TopologyKey(atom_indices=(_topology.atom_index(atom),))].m
             for atom in molecule.atoms
         ]
-        molecule.partial_charges = unit.Quantity(
+        molecule.partial_charges = Quantity(
             molecule_charges,
             unit.elementary_charge,
         )

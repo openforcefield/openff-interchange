@@ -4,23 +4,13 @@ from math import exp
 import numpy
 import parmed
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
-from openff.units import unit
 from openff.units.openmm import ensure_quantity
-from openff.utilities import (
-    get_data_file_path,
-    has_package,
-    requires_package,
-    skip_if_missing,
-)
+from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import (
-    MoleculeWithConformer,
-    get_test_file_path,
-    needs_gmx,
-)
+from openff.interchange._tests import MoleculeWithConformer, needs_gmx
 from openff.interchange.components.nonbonded import BuckinghamvdWCollection
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
@@ -32,44 +22,12 @@ from openff.interchange.exceptions import (
 from openff.interchange.interop.gromacs._import._import import (
     _read_box,
     _read_coordinates,
-    from_files,
 )
 from openff.interchange.models import PotentialKey, TopologyKey
 
 if has_package("openmm"):
     import openmm.app
     import openmm.unit
-
-
-class TestToGro:
-    def test_residue_names(self, sage):
-        """Reproduce issue #642."""
-        # This could maybe just test the behavior of _convert?
-        ligand = Molecule.from_smiles("CCO")
-        ligand.generate_conformers(n_conformers=1)
-
-        for atom in ligand.atoms:
-            atom.metadata["residue_name"] = "LIG"
-
-        Interchange.from_smirnoff(
-            sage,
-            [ligand],
-        ).to_gro("should_have_residue_names.gro")
-
-        for line in open("should_have_residue_names.gro").readlines()[2:-2]:
-            assert line[5:10] == "LIG  "
-
-    @skip_if_missing("openmm")
-    def test_tip4p_dimer(self, tip4p, water_dimer):
-        tip4p.create_interchange(water_dimer).to_gro("_dimer.gro")
-
-        positions = openmm.app.GromacsGroFile(
-            "_dimer.gro",
-        ).getPositions(asNumpy=True)
-
-        assert positions.shape == (8, 3)
-
-        assert not numpy.allclose(positions[3], positions[7])
 
 
 @skip_if_missing("mdtraj")
@@ -241,7 +199,7 @@ class TestGROMACS:
             MoleculeWithConformer.from_smiles("CC1=CC=CC=C1").to_topology(),
         )
 
-        out.box = unit.Quantity(4 * numpy.eye(3), units=unit.nanometer)
+        out.box = Quantity(4 * numpy.eye(3), units=unit.nanometer)
         out.to_top("tmp.top")
 
         # Sanity check; toluene should have some improper(s)
@@ -354,7 +312,7 @@ class TestGROMACS:
             )
 
         for molecule in top.molecules:
-            molecule.partial_charges = unit.Quantity(
+            molecule.partial_charges = Quantity(
                 molecule.n_atoms * [0],
                 unit.elementary_charge,
             )
@@ -387,10 +345,10 @@ class TestGROMACS:
 
         for index, molecule in enumerate(molecules):
             molecule.generate_conformers(n_conformers=1)
-            molecule.conformers[0] += unit.Quantity(3 * [5 * index], unit.angstrom)
+            molecule.conformers[0] += Quantity(3 * [5 * index], unit.angstrom)
 
         topology = Topology.from_molecules(molecules)
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
 
         out = Interchange.from_smirnoff(sage_unconstrained, topology)
 
@@ -433,69 +391,6 @@ class TestGROMACSMetadata:
         openmm_atom_names = [atom.name for atom in openmm_object.topology.atoms()]
 
         assert openmm_atom_names == pdb_atom_names
-
-
-class TestSettles:
-    def test_settles_units(self, monkeypatch, water):
-        """Reproduce issue #720."""
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
-        water.name = "WAT"
-
-        ForceField("openff-2.1.0.offxml").create_interchange(
-            water.to_topology(),
-        ).to_gromacs(
-            prefix="settles",
-        )
-
-        system = from_files("settles.top", "settles.gro")
-
-        settles = system.molecule_types["WAT"].settles[0]
-
-        assert settles.oxygen_hydrogen_distance.m_as(unit.angstrom) == pytest.approx(
-            0.9572,
-        )
-        assert settles.hydrogen_hydrogen_distance.m_as(unit.angstrom) == pytest.approx(
-            1.513900654525,
-        )
-
-
-@pytest.mark.slow
-@requires_package("openmm")
-class TestCommonBoxes:
-    @pytest.mark.parametrize(
-        "pdb_file",
-        [
-            get_test_file_path("cube.pdb").as_posix(),
-            get_test_file_path("dodecahedron.pdb").as_posix(),
-            get_test_file_path("octahedron.pdb").as_posix(),
-        ],
-    )
-    def test_common_boxes(self, pdb_file):
-        original_box_vectors = openmm.app.PDBFile(
-            pdb_file,
-        ).topology.getPeriodicBoxVectors()
-
-        from openff.toolkit import Topology
-
-        # TODO: Regenerate test files to be simpler and smaller, no need to use a protein
-        force_field = ForceField(
-            "openff-2.1.0.offxml",
-            "ff14sb_off_impropers_0.0.3.offxml",
-        )
-
-        topology = Topology.from_pdb(pdb_file)
-
-        force_field.create_interchange(topology).to_gro(pdb_file.replace("pdb", "gro"))
-
-        parsed_box_vectors = openmm.app.GromacsGroFile(
-            pdb_file.replace("pdb", "gro"),
-        ).getPeriodicBoxVectors()
-
-        numpy.testing.assert_allclose(
-            numpy.array(original_box_vectors.value_in_unit(openmm.unit.nanometer)),
-            numpy.array(parsed_box_vectors.value_in_unit(openmm.unit.nanometer)),
-        )
 
 
 @needs_gmx
@@ -575,17 +470,3 @@ class TestGROMACSVirtualSites:
         ):
             # TODO: Sanity-check reported energies
             get_gromacs_energies(out)
-
-    @skip_if_missing("openmm")
-    def test_tip4p_charge_neutrality(self, tip4p, water_dimer):
-        tip4p.create_interchange(water_dimer).to_top("_dimer.top")
-
-        system = openmm.app.GromacsTopFile("_dimer.top").createSystem()
-
-        assert system.getForce(0).getNumParticles() == 8
-
-        charges = [
-            system.getForce(0).getParticleParameters(i)[0]._value for i in range(4)
-        ]
-
-        assert sum(charges) == pytest.approx(0.0)

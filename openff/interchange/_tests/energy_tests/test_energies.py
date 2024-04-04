@@ -42,8 +42,8 @@ class TestEnergies:
     @skip_if_missing("mbuild")
     @needs_gmx
     @needs_lmp
-    @pytest.mark.xfail()
-    @pytest.mark.slow()
+    @pytest.mark.xfail
+    @pytest.mark.slow
     @pytest.mark.parametrize("constrained", [True, False])
     @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
     def test_energies_single_mol(self, constrained, sage, sage_unconstrained, mol_smi):
@@ -102,7 +102,7 @@ class TestEnergies:
     @needs_gmx
     @skip_if_missing("foyer")
     @skip_if_missing("mbuild")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_process_rb_torsions(self, oplsaa):
         """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
         from mbuild import Box
@@ -158,7 +158,7 @@ class TestEnergies:
 
     @needs_gmx
     @needs_lmp
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_cutoff_electrostatics(self):
         ion_ff = ForceField(get_test_file_path("ions.offxml"))
         ions = Topology.from_molecules(
@@ -199,7 +199,7 @@ class TestEnergies:
         ],
     )
     @needs_gmx
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_interpolated_parameters(self, smi):
         xml_ff_bo_all_heavy_bonds = """<?xml version='1.0' encoding='ASCII'?>
         <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">

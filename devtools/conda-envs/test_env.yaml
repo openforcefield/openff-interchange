@@ -16,6 +16,7 @@ dependencies:
   # GMSO does not support Pydantic 2; should come in release after 0.12.0
   - foyer >=0.12.1
   - mbuild
+  - gmso =0.12
   # Testing
   - mdtraj
   - openmmforcefields
@@ -32,7 +33,7 @@ dependencies:
   - lammps
   - panedr
   # Typing
-  - mypy =1.3
+  - mypy
   - typing-extensions
   - types-setuptools
   - pandas-stubs

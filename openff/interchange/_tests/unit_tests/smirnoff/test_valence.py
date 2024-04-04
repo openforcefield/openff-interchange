@@ -1,12 +1,11 @@
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
     ImproperTorsionHandler,
 )
-from openff.units import unit
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -27,10 +26,7 @@ if has_package("openmm"):
     import openmm.app
     import openmm.unit
 
-try:
-    from pydantic.v1 import ValidationError
-except ImportError:
-    from pydantic import ValidationError
+from openff.interchange._pydantic import ValidationError
 
 
 class TestSMIRNOFFValenceCollections:
@@ -195,7 +191,7 @@ class TestConstraintCollection:
 
 
 class TestBondOrderInterpolation:
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_input_bond_orders_ignored(self, ethanol, xml_ff_bo_bonds):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
@@ -311,7 +307,7 @@ class TestParameterInterpolation:
         found_k = out["Bonds"].potentials[out["Bonds"].key_map[top_key]].parameters["k"]
         assert found_k == 300 * kcal_mol_a2
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
     def test_bond_order_interpolation_similar_bonds(self, xml_ff_bo):
         """Test that key mappings do not get confused when two bonds having similar SMIRKS matches
@@ -423,7 +419,7 @@ class TestParameterInterpolation:
         topology = Topology.from_molecules(mol)
 
         out = Interchange.from_smirnoff(forcefield, topology)
-        out.box = unit.Quantity(4 * numpy.eye(3), unit.nanometer)
+        out.box = Quantity(4 * numpy.eye(3), unit.nanometer)
         omm_system = out.to_openmm(combine_nonbonded_forces=True)
 
         # Verify that the assigned bond parameters were correctly interpolated

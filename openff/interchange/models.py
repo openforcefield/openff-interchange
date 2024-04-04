@@ -1,14 +1,11 @@
 """Custom Pydantic models."""
 
 import abc
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from openff.models.models import DefaultModel
 
-try:
-    from pydantic.v1 import Field
-except ImportError:
-    from pydantic import Field
+from openff.interchange._pydantic import Field
 
 
 class TopologyKey(DefaultModel, abc.ABC):
@@ -64,7 +61,7 @@ class BondKey(TopologyKey):
         description="The indices of the atoms occupied by this interaction",
     )
 
-    bond_order: Optional[float] = Field(
+    bond_order: float | None = Field(
         None,
         description=(
             "If this key represents as topology component subject to interpolation between "
@@ -102,19 +99,19 @@ class ProperTorsionKey(TopologyKey):
         description="The indices of the atoms occupied by this interaction",
     )
 
-    mult: Optional[int] = Field(
+    mult: int | None = Field(
         None,
         description="The index of this duplicate interaction",
     )
 
-    phase: Optional[float] = Field(
+    phase: float | None = Field(
         None,
         description="If this key represents as topology component subject to interpolation between "
         "multiple parameters(s), the phase determining the coefficients of the wrapped "
         "potentials.",
     )
 
-    bond_order: Optional[float] = Field(
+    bond_order: float | None = Field(
         None,
         description=(
             "If this key represents as topology component subject to interpolation between "
@@ -208,7 +205,7 @@ class VirtualSiteKey(TopologyKey):
     # TODO: Overriding the attribute of a parent class is clumsy, but less grief than
     #       having this not inherit from `TopologyKey`. It might be useful to just have
     #       orientation_atom_indices point to the same thing.
-    atom_indices: Optional[tuple[int]] = None  # type: ignore[assignment]
+    atom_indices: tuple[int] | None = None  # type: ignore[assignment]
 
     orientation_atom_indices: tuple[int, ...] = Field(
         description="The indices of the 'orientation atoms' which are used to define the position "
@@ -271,21 +268,21 @@ class PotentialKey(DefaultModel):
         ...,
         description="A unique identifier of this potential, i.e. a SMARTS pattern or an atom type",
     )
-    mult: Optional[int] = Field(
+    mult: int | None = Field(
         None,
         description="The index of this duplicate interaction",
     )
-    associated_handler: Optional[str] = Field(
+    associated_handler: str | None = Field(
         None,
         description="The type of handler this potential key is associated with, "
         "i.e. 'Bonds', 'vdW', or 'LibraryCharges",
     )
-    bond_order: Optional[float] = Field(
+    bond_order: float | None = Field(
         None,
         description="If this is a key to a WrappedPotential interpolating multiple parameter(s), "
         "the bond order determining the coefficients of the wrapped potentials.",
     )
-    virtual_site_type: Optional[str] = Field(
+    virtual_site_type: str | None = Field(
         None,
         description="The 'type' of virtual site (i.e. `BondCharge`) this parameter is associated with.",
     )

@@ -1,15 +1,15 @@
 import math
-from typing import Literal, Optional
+from typing import Literal
 
 import numpy
 from openff.models.types import FloatQuantity
-from openff.toolkit.topology import Topology
+from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     VirtualSiteHandler,
 )
-from openff.units import Quantity, unit
 
+from openff.interchange._pydantic import Field
 from openff.interchange.components._particles import _VirtualSite
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import (
@@ -22,11 +22,6 @@ from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     SMIRNOFFvdWCollection,
 )
-
-try:
-    from pydantic.v1 import Field
-except ImportError:
-    from pydantic import Field
 
 _DEGREES_TO_RADIANS = numpy.pi / 180.0
 
@@ -207,7 +202,7 @@ class _BondChargeVirtualSite(_VirtualSite):
     @property
     def local_frame_positions(self) -> unit.Quantity:
         distance_unit = self.distance.units
-        return unit.Quantity(
+        return Quantity(
             [-self.distance.m, 0.0, 0.0],
             distance_unit,
         )
@@ -243,7 +238,7 @@ class _MonovalentLonePairVirtualSite(_VirtualSite):
 
         distance_unit = self.distance.units
 
-        return unit.Quantity(
+        return Quantity(
             [
                 self.distance.m * math.cos(theta) * math.cos(phi),
                 self.distance.m * math.sin(theta) * math.cos(phi),
@@ -285,7 +280,7 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
 
         distance_unit = self.distance.units
 
-        return unit.Quantity(
+        return Quantity(
             [
                 -self.distance.m * math.cos(theta),
                 0.0,
@@ -323,7 +318,7 @@ class _TrivalentLonePairVirtualSite(_VirtualSite):
     @property
     def local_frame_positions(self) -> unit.Quantity:
         distance_unit = self.distance.units
-        return unit.Quantity(
+        return Quantity(
             [-self.distance.m, 0.0, 0.0],
             distance_unit,
         )
@@ -461,7 +456,7 @@ def _convert_local_coordinates(
 def _generate_positions(
     interchange,
     virtual_site_collection: SMIRNOFFVirtualSiteCollection,
-    conformer: Optional[Quantity] = None,
+    conformer: Quantity | None = None,
 ) -> Quantity:
     # TODO: Capture these objects instead of generating them on-the-fly so many times
 

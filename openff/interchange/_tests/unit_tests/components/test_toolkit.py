@@ -14,12 +14,12 @@ from openff.interchange.components.toolkit import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def simple_methane():
     return _SimpleMolecule.from_molecule(Molecule.from_smiles("C"))
 
 
-@pytest.fixture()
+@pytest.fixture
 def simple_water(water):
     return _SimpleMolecule.from_molecule(water)
 

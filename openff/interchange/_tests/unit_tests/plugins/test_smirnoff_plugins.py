@@ -32,7 +32,7 @@ class TestDoubleExponential:
     pytest.importorskip("openmm")
     pytest.importorskip("smirnoff_plugins")
 
-    @pytest.fixture()
+    @pytest.fixture
     def de_force_field(self) -> ForceField:
         force_field = ForceField(
             get_test_file_path("de-force-1.0.1.offxml"),

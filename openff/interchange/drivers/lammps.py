@@ -1,10 +1,9 @@
 """Functions for running energy evluations with LAMMPS."""
 
 import tempfile
-from typing import Optional
 
 import numpy
-from openff.units import Quantity, unit
+from openff.toolkit import Quantity, unit
 from openff.utilities import MissingOptionalDependencyError, requires_package
 
 from openff.interchange import Interchange
@@ -15,7 +14,7 @@ from openff.interchange.exceptions import LAMMPSNotFoundError, LAMMPSRunError
 
 def get_lammps_energies(
     interchange: Interchange,
-    round_positions: Optional[int] = None,
+    round_positions: int | None = None,
     detailed: bool = False,
 ) -> EnergyReport:
     """
@@ -53,7 +52,7 @@ def get_lammps_energies(
 @requires_package("lammps")
 def _get_lammps_energies(
     interchange: Interchange,
-    round_positions: Optional[int] = None,
+    round_positions: int | None = None,
 ) -> dict[str, unit.Quantity]:
     import lammps
 

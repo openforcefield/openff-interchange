@@ -4,15 +4,14 @@ from random import random
 
 import numpy
 import pytest
-from openff.toolkit import ForceField
-from openff.units import Quantity, unit
+from openff.toolkit import ForceField, Quantity, unit
 
 from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange.exceptions import MissingVirtualSitesError
 from openff.interchange.interop._virtual_sites import get_positions_with_virtual_sites
 
 
-@pytest.fixture()
+@pytest.fixture
 def tip4p_interchange(water, tip4p):
     return tip4p.create_interchange(water.to_topology())
 

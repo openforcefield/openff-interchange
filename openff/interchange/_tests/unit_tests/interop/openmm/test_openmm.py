@@ -1,6 +1,5 @@
 import pandas
-from openff.toolkit import ForceField, Molecule
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.components.mdconfig import get_intermol_defaults

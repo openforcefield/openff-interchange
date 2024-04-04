@@ -9,7 +9,7 @@ from openff.interchange.components._packmol import (
 from openff.interchange.drivers import get_openmm_energies
 
 
-@pytest.mark.slow()
+@pytest.mark.slow
 @pytest.mark.skipif(_find_packmol() is None, reason="PACKMOL not found")
 def test_solvate_ligand_in_nonwater(sage):
     """

@@ -1,25 +1,21 @@
 import abc
 from collections.abc import Iterable
-from typing import Literal, Union
+from typing import Literal
 
 from openff.models.types import FloatQuantity
-from openff.units import Quantity, unit
+from openff.toolkit import Quantity, unit
 
+from openff.interchange._pydantic import Field, PrivateAttr
 from openff.interchange.components.potentials import Collection
 from openff.interchange.constants import _PME
 from openff.interchange.models import LibraryChargeTopologyKey, TopologyKey
-
-try:
-    from pydantic.v1 import Field, PrivateAttr
-except ImportError:
-    from pydantic import Field, PrivateAttr
 
 
 class _NonbondedCollection(Collection, abc.ABC):
     type: str = "nonbonded"
 
     cutoff: FloatQuantity["angstrom"] = Field(  # noqa
-        unit.Quantity(9.0, unit.angstrom),
+        Quantity(9.0, unit.angstrom),
         description="The distance at which pairwise interactions are truncated",
     )
 
@@ -56,7 +52,7 @@ class vdWCollection(_NonbondedCollection):
     )
 
     switch_width: FloatQuantity["angstrom"] = Field(  # noqa
-        unit.Quantity(1.0, unit.angstrom),
+        Quantity(1.0, unit.angstrom),
         description="The width over which the switching function is applied",
     )
 
@@ -90,7 +86,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     _charges: dict[
-        Union[TopologyKey, LibraryChargeTopologyKey],
+        TopologyKey | LibraryChargeTopologyKey,
         Quantity,
     ] = PrivateAttr(dict())
     _charges_cached: bool = PrivateAttr(False)

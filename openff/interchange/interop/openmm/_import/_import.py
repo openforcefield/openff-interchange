@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Union
 
 from openff.models.types import ArrayQuantity
 from openff.toolkit import Quantity, Topology
@@ -38,9 +38,9 @@ if TYPE_CHECKING:
 def from_openmm(
     *,
     system: "openmm.System",
-    positions: Optional[Quantity] = None,
+    positions: Quantity | None = None,
     topology: Union["openmm.app.Topology", Topology, None] = None,
-    box_vectors: Optional[Quantity] = None,
+    box_vectors: Quantity | None = None,
 ) -> "Interchange":
     """Create an Interchange object from OpenMM data."""
     from openff.interchange import Interchange
@@ -123,8 +123,8 @@ def from_openmm(
 
 def _convert_constraints(
     system: "openmm.System",
-) -> Union[ConstraintCollection, None]:
-    from openff.units import unit
+) -> ConstraintCollection | None:
+    from openff.toolkit import unit
 
     from openff.interchange.components.potentials import Potential
     from openff.interchange.models import BondKey, PotentialKey
@@ -293,7 +293,7 @@ def _convert_periodic_torsion_force(
 ) -> ProperTorsionCollection:
     # TODO: Can impropers be separated out from a PeriodicTorsionForce?
     # Maybe by seeing if a quartet is in mol/top.propers or .impropers
-    from openff.units import unit
+    from openff.toolkit import unit
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.common._valence import ProperTorsionCollection

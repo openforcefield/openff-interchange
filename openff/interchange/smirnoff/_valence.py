@@ -1,7 +1,7 @@
 import warnings
-from typing import Literal, Optional, Union
+from typing import Literal
 
-from openff.toolkit import Molecule, Topology
+from openff.toolkit import Molecule, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -10,7 +10,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
 )
-from openff.units import unit
 from packaging.version import Version
 
 from openff.interchange.common._valence import (
@@ -57,7 +56,7 @@ def _upconvert_bondhandler(bond_handler: BondHandler):
         bond_handler.potential = "(k/2)*(r-length)^2"
 
 
-def _check_molecule_uniqueness(molecule_list: Optional[list[Molecule]]):
+def _check_molecule_uniqueness(molecule_list: list[Molecule] | None):
     """Check if the reference molecule is isomorphic with any molecules in a provided list."""
     # TODO: This could all be replaced by MoleculeSet
     if molecule_list is None:
@@ -79,7 +78,7 @@ def _check_molecule_uniqueness(molecule_list: Optional[list[Molecule]]):
 
 def _molecule_is_in_list(
     molecule: Molecule,
-    molecule_list: Optional[list[Molecule]],
+    molecule_list: list[Molecule] | None,
 ) -> bool:
     if molecule_list is None:
         return False
@@ -221,7 +220,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
                         ),
                     )
 
-                potential: Union[Potential, WrappedPotential] = WrappedPotential(
+                potential: Potential | WrappedPotential = WrappedPotential(
                     {pot: coeff for pot, coeff in zip(pots, coeffs)},
                 )
 
@@ -251,7 +250,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
         cls: _CollectionAlias,
         parameter_handler: BondHandler,
         topology: Topology,
-        partial_bond_orders_from_molecules: Optional[list[Molecule]] = None,
+        partial_bond_orders_from_molecules: list[Molecule] | None = None,
     ) -> "SMIRNOFFBondCollection":
         """
         Create a SMIRNOFFBondCollection from toolkit data.
@@ -317,7 +316,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
         cls: _CollectionAlias,
         parameter_handler: list,
         topology: Topology,
-        bonds: Optional[SMIRNOFFBondCollection] = None,
+        bonds: SMIRNOFFBondCollection | None = None,
     ) -> "SMIRNOFFConstraintCollection":
         """
         Create a SMIRNOFFCollection from toolkit data.
@@ -345,7 +344,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
         self,
         parameter_handlers: list,
         topology: Topology,
-        bonds: Optional[SMIRNOFFBondCollection] = None,
+        bonds: SMIRNOFFBondCollection | None = None,
     ) -> None:
         """Store constraints."""
         if self.key_map:
