@@ -1,17 +1,19 @@
-from copy import deepcopy
-
 import numpy
 import pytest
-from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit import Molecule, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     ParameterHandler,
 )
-from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import get_test_file_path, needs_gmx, needs_lmp
+from openff.interchange._tests import (
+    MoleculeWithConformer,
+    get_test_file_path,
+    needs_gmx,
+    needs_lmp,
+)
 from openff.interchange.drivers import get_openmm_energies
 from openff.interchange.exceptions import (
     ExperimentalFeatureException,
@@ -94,85 +96,6 @@ class TestInterchange:
 
         with pytest.raises(ValidationError):
             tmp.box = [2, 2, 3, 90, 90, 90]
-
-    @skip_if_missing("openmm")
-    def test_basic_combination(self, monkeypatch, sage_unconstrained):
-        """Test basic use of Interchange.__add__() based on the README example"""
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
-        mol = Molecule.from_smiles("C")
-        mol.generate_conformers(n_conformers=1)
-        top = Topology.from_molecules([mol])
-
-        interchange = Interchange.from_smirnoff(sage_unconstrained, top)
-
-        interchange.box = [4, 4, 4] * numpy.eye(3)
-        interchange.positions = mol.conformers[0]
-
-        # Copy and translate atoms by [1, 1, 1]
-        other = Interchange()
-        other = deepcopy(interchange)
-        other.positions += 1.0 * unit.nanometer
-
-        combined = interchange.combine(other)
-
-        # Just see if it can be converted into OpenMM and run
-        get_openmm_energies(combined)
-
-    def test_parameters_do_not_clash(self, monkeypatch, sage_unconstrained):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
-        thf = Molecule.from_smiles("C1CCOC1")
-        ace = Molecule.from_smiles("CC(=O)O")
-
-        thf.generate_conformers(n_conformers=1)
-        ace.generate_conformers(n_conformers=1)
-
-        def make_interchange(molecule: Molecule) -> Interchange:
-            molecule.generate_conformers(n_conformers=1)
-            interchange = Interchange.from_smirnoff(
-                force_field=sage_unconstrained,
-                topology=[molecule],
-            )
-            interchange.positions = molecule.conformers[0]
-
-            return interchange
-
-        thf_interchange = make_interchange(thf)
-        ace_interchange = make_interchange(ace)
-        complex_interchange = thf_interchange.combine(ace_interchange)
-
-        thf_vdw = thf_interchange["vdW"].get_system_parameters()
-        ace_vdw = ace_interchange["vdW"].get_system_parameters()
-        add_vdw = complex_interchange["vdW"].get_system_parameters()
-
-        numpy.testing.assert_equal(numpy.vstack([thf_vdw, ace_vdw]), add_vdw)
-
-        # TODO: Ensure the de-duplication is maintained after exports
-
-    def test_positions_setting(self, monkeypatch, sage):
-        """Test that positions exist on the result if and only if
-        both input objects have positions."""
-
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
-        ethane = Molecule.from_smiles("CC")
-        methane = Molecule.from_smiles("C")
-
-        ethane_interchange = Interchange.from_smirnoff(
-            sage,
-            [ethane],
-        )
-        methane_interchange = Interchange.from_smirnoff(sage, [methane])
-
-        ethane.generate_conformers(n_conformers=1)
-        methane.generate_conformers(n_conformers=1)
-
-        assert (methane_interchange.combine(ethane_interchange)).positions is None
-        methane_interchange.positions = methane.conformers[0]
-        assert (methane_interchange.combine(ethane_interchange)).positions is None
-        ethane_interchange.positions = ethane.conformers[0]
-        assert (methane_interchange.combine(ethane_interchange)).positions is not None
 
     def test_input_topology_not_modified(self, sage):
         molecule = Molecule.from_smiles("CCO")
@@ -258,45 +181,50 @@ class TestInterchange:
         assert isinstance(out.topology, Topology)
 
     @skip_if_missing("openmm")
-    def test_to_openmm_simulation(self, sage):
-        import numpy
-        import openmm
-        import openmm.app
-        import openmm.unit
-
+    @pytest.mark.parametrize("generate_conformers", [True, False])
+    def test_to_openmm_simulation(
+        self,
+        sage,
+        default_integrator,
+        generate_conformers,
+    ):
         molecule = Molecule.from_smiles("CCO")
 
-        simulation = Interchange.from_smirnoff(
-            force_field=sage,
-            topology=molecule.to_topology(),
-        ).to_openmm_simulation(
-            integrator=openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond),
-        )
-
-        numpy.testing.assert_allclose(
-            numpy.linalg.norm(
-                simulation.context.getState(getPositions=True).getPositions(
-                    asNumpy=True,
-                ),
-            ),
-            numpy.zeros((molecule.n_atoms, 3)),
-        )
-
-        del simulation
-
-        molecule.generate_conformers(n_conformers=1)
+        if generate_conformers:
+            molecule.generate_conformers(n_conformers=1)
+            expected_positions = molecule.conformers[0].m_as(unit.nanometer)
+        else:
+            expected_positions = numpy.zeros((molecule.n_atoms, 3))
 
         simulation = Interchange.from_smirnoff(
             force_field=sage,
             topology=molecule.to_topology(),
-        ).to_openmm_simulation(
-            integrator=openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond),
-        )
+        ).to_openmm_simulation(integrator=default_integrator)
 
         numpy.testing.assert_allclose(
             simulation.context.getState(getPositions=True).getPositions(asNumpy=True),
-            molecule.conformers[0].m_as(unit.nanometer),
+            expected_positions,
         )
+
+    def test_add_barostat(self, sage, default_integrator, default_barostat):
+        import openmm
+        import openmm.unit
+
+        topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        simulation = sage.create_interchange(topology).to_openmm_simulation(
+            integrator=default_integrator,
+            additional_forces=[default_barostat],
+        )
+
+        for force in simulation.system.getForces():
+            if isinstance(force, openmm.MonteCarloBarostat):
+                assert force.getDefaultPressure() == 1.0 * openmm.unit.bar
+                assert force.getDefaultTemperature() == 300.0 * openmm.unit.kelvin
+                break
+        else:
+            raise Exception("No barostat found")
 
     @skip_if_missing("nglview")
     @skip_if_missing("openmm")

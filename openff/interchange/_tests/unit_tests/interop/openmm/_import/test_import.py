@@ -10,7 +10,6 @@ from openff.interchange import Interchange
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import UnsupportedImportError
-from openff.interchange.interop.openmm._import import from_openmm
 from openff.interchange.interop.openmm._import._import import _convert_nonbonded_force
 
 if has_package("openmm"):
@@ -33,7 +32,7 @@ class TestFromOpenMM:
 
         system = interchange.to_openmm(combine_nonbonded_forces=True)
 
-        converted = from_openmm(
+        converted = Interchange.from_openmm(
             system=system,
             topology=interchange.topology.to_openmm(),
             positions=interchange.positions,
@@ -265,7 +264,7 @@ class TestConvertConstraints:
 
         interchange = sage.create_interchange(basic_top)
 
-        converted = from_openmm(
+        converted = Interchange.from_openmm(
             topology=interchange.topology.to_openmm(),
             system=interchange.to_openmm(combine_nonbonded_forces=True),
         )

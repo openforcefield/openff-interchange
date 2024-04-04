@@ -7,3 +7,7 @@ class InterchangeDeprecationWarning(UserWarning):
 
 class SwitchingFunctionNotImplementedWarning(UserWarning):
     """Exporting to an engine that does not implement a switching function."""
+
+
+class MissingPositionsWarning(UserWarning):
+    """Warning for when positions are likely needed but missing."""

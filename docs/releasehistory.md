@@ -13,6 +13,23 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## 0.3.23 - 2024-03-07
 
+* #947 Fixes a bug in which virtual site parameters with identical SMIRKS would clash.
+* #948 Updates the GAFF example.
+* #950 Fixes a bug in which atom ordering was often incorrect in GROMACS `.gro` files when virtual sites were present.
+* #942 Fixes an errant internally-thrown `DeprecationWarning`.
+* #942 Recommends `jupyter-lab` over `jupyer-notebook`.
+
+## 0.3.24 - 2024-03-19
+
+* #925 Adds documentation of upcoming v0.4 changes.
+* #933 Fixes #934 in which atom order was sometimes mangled in `Interchange.from_openmm`.
+* #932 Fixes #935 in which `KeyError` was sometimes raised after `Interchange.combine`.
+* #929 A warning is raised when positions are not passed to `Interchange.from_openmm`.
+* #930 Adds `additional_forces` argument to `create_openmm_simulation`.
+* #938 An error is raised when non-bonded settings do not match when using `Interchange.combine`.
+
+## 0.3.23 - 2024-03-07
+
 * #923 An error is raised in `Interchange.from_openmm` when the topology and system are incompatible.
 * #912 A warning is raised when writing an input/run file (not data file) to an engine that does not implement a switching function described by SMIRNOFF.
 * #916 Some internal code paths are re-organized, including removing the `openff.interchange.interop.internal` submodule.
@@ -52,7 +69,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #848 Fixes a bug in which `Interchange.minimize` erroneously appended virtual site positions to the `positions` attribute.
 * #883 Using `openff-models` 0.1.2, fixes parsing box information from OpenMM data.
 * #883 Skips writing unnecessary PDB file during visualization.
-* #883 Preserves atom metadata when roundtripping topologies with OpenMM.
+* #883 Preserves atom metadata when round-tripping topologies with OpenMM.
 
 ### Documentation improvements
 

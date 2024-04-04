@@ -13,7 +13,7 @@ Currently, systems using custom interactions can only be exported to OpenMM. The
 
 ## Creating a custom `ParameterHandler`
 
-There is no formal specification for a `ParameterHandler` as processed by the OpenFF Toolkit, but there are some guidelines that are expected to be followed. A parameter handler requires both a [`ParameterHandler`] class, which performs parametrization, and a [`ParameterType`] class, which stores the corresponding data. For more information, see the Toolkit documentation.
+There is no formal specification for a `ParameterHandler` as processed by the OpenFF Toolkit, but there are some guidelines that are expected to be followed. A parameter handler requires both a [`ParameterHandler`] class, which performs parametrization, and a [`ParameterType`] class, which stores the corresponding data. For more information, see the [Toolkit documentation].
 
 The high-level objectives of a parameter handler are to:
 
@@ -48,6 +48,7 @@ The high-level objectives of a parameter handler are to:
 [`ParameterType`]: openff.toolkit.typing.engines.smirnoff.parameters.ParameterType
 [entry point group]: setuptools:userguide/entry_point
 [`check_handler_compatibility`]: openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.check_handler_compatibility
+[Toolkit documentation]: openff.toolkit:developing
 
 ## Creating a custom `SMIRNOFFCollection`
 

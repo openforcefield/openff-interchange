@@ -79,7 +79,9 @@ jobs:
 
     - name: Install OpenMM
       if: ${{ matrix.openmm == true }}
-      run: micromamba install openmm "smirnoff-plugins =2023" -c conda-forge
+      run: |
+        micromamba install openmm openmmforcefields "smirnoff-plugins =2024" -c conda-forge
+        pip install git+https://github.com/jthorton/de-forcefields.git
 
     - name: Uninstall OpenMM
       if: ${{ matrix.openmm == false && matrix.openeye == true }}
@@ -101,7 +103,7 @@ jobs:
       if: always()
       run: |
         python -m pytest $COV openff/interchange/ \
-          -r fE -nauto --durations=10 \
+          -r fExs -n logical --durations=10 \
           -m "slow or not slow" \
           --ignore=openff/interchange/_tests/energy_tests/test_energies.py
 

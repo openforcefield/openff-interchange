@@ -1,6 +1,5 @@
 """Pytest configuration."""
 
-import numpy
 import pytest
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -11,7 +10,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from openff.units import Quantity, unit
 from openff.utilities import get_data_file_path
 
-from openff.interchange._tests import MoleculeWithConformer, get_test_file_path
+from openff.interchange._tests import MoleculeWithConformer, _rng, get_test_file_path
 
 
 @pytest.fixture()
@@ -77,9 +76,8 @@ def sage_with_planar_monovalent_carbonyl(sage):
 
 
 @pytest.fixture()
-def sage_with_trivalent_nitrogen():
-    sage_210 = ForceField("openff-2.1.0.offxml")
-    sage_210["Bonds"].add_parameter(
+def sage_with_trivalent_nitrogen(sage):
+    sage["Bonds"].add_parameter(
         parameter=BondType(
             smirks="[#7:3]-[#1X1:1]",
             id="b0",
@@ -88,8 +86,8 @@ def sage_with_trivalent_nitrogen():
         ),
     )
 
-    sage_210.get_parameter_handler("VirtualSites")
-    sage_210["VirtualSites"].add_parameter(
+    sage.get_parameter_handler("VirtualSites")
+    sage["VirtualSites"].add_parameter(
         parameter=VirtualSiteType(
             smirks="[#1:2][#7:1]([#1:3])[#1:4]",
             type="TrivalentLonePair",
@@ -104,14 +102,44 @@ def sage_with_trivalent_nitrogen():
         ),
     )
 
-    return sage_210
+    return sage
+
+
+@pytest.fixture()
+def sage_with_two_virtual_sites_same_smirks(sage):
+    """
+    Add two virtual site parameters with identical SMIRKS but different
+    names, distances, and charges
+    """
+    sage.get_parameter_handler("VirtualSites")
+
+    for name, distance, charge in zip(
+        ("EP1", "EP2"),
+        (-0.5, 1.5),
+        (1.0, 5.0),
+    ):
+        sage["VirtualSites"].add_parameter(
+            parameter=VirtualSiteType(
+                name=name,
+                smirks="[#7:1](-[*:2])(-[*:3])-[*:4]",
+                type="TrivalentLonePair",
+                match="once",
+                distance=f"{distance} nanometer",
+                charge_increment1=f"{charge} * elementary_charge ** 1",
+                charge_increment2="0.0 * elementary_charge ** 1",
+                charge_increment3="0.0 * elementary_charge ** 1",
+                charge_increment4="0.0 * elementary_charge ** 1",
+            ),
+        )
+
+    return sage
 
 
 @pytest.fixture()
 def sage_with_off_center_hydrogen(sage):
     virtual_sites = sage.get_parameter_handler("VirtualSites")
 
-    # Add a virtual site for an off-center hydrogen, see issue #905
+    # Add a virtual site for an off-center hydrogen, see issue #940
     # this differs by JH's example by adding an arbitrary charge increment in
     # order to test the electrostatics of virtual site pairs that interact
     # by 1-4 interactions (as determined by their parent relationship)
@@ -540,7 +568,7 @@ def acetaldehyde():
 def methane_with_conformer(methane):
     methane.add_conformer(
         unit.Quantity(
-            numpy.random.random((methane.n_atoms, 3)),
+            _rng.random((methane.n_atoms, 3)),
             unit.angstrom,
         ),
     )
@@ -551,7 +579,7 @@ def methane_with_conformer(methane):
 def ethanol_with_conformer(ethanol):
     ethanol.add_conformer(
         unit.Quantity(
-            numpy.random.random((ethanol.n_atoms, 3)),
+            _rng.random((ethanol.n_atoms, 3)),
             unit.angstrom,
         ),
     )
@@ -572,3 +600,36 @@ def no_charges() -> ForceField:
     )
 
     return sage
+
+
+@pytest.fixture()
+def default_integrator():
+    try:
+        import openmm
+        import openmm.unit
+
+        return openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond)
+
+    except ImportError:
+        return None
+
+
+@pytest.fixture()
+def default_barostat():
+    try:
+        import openmm
+        import openmm.unit
+
+        return openmm.MonteCarloBarostat(
+            1.00 * openmm.unit.bar,
+            300 * openmm.unit.kelvin,
+            25,
+        )
+
+    except ImportError:
+        return None
+
+
+@pytest.fixture()
+def popc():
+    return Molecule(get_test_file_path("popc.sdf"))

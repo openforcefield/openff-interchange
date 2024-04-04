@@ -6,6 +6,7 @@ import networkx
 import numpy
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
+from openff.toolkit.typing.engines.smirnoff.parameters import VirtualSiteHandler
 from openff.toolkit.utils.collections import ValidatedList
 from openff.utilities.utilities import has_package
 
@@ -142,10 +143,26 @@ def _simple_topology_from_graph(graph: networkx.Graph) -> Topology:
     topology = Topology()
 
     for component in networkx.connected_components(graph):
-        subgraph = graph.subgraph(component)
+        subgraph = _reorder_subgraph(graph.subgraph(component))
+
+        # Attempt to safeguard against the possibility that
+        # the subgraphs are returned out of "atom order", like
+        # if atoms in an later molecule have lesser atom indices
+        # than this molecule
+        assert topology.n_atoms == [*subgraph.nodes][0]
+
         topology.add_molecule(_SimpleMolecule._from_subgraph(subgraph))
 
     return topology
+
+
+def _reorder_subgraph(graph: networkx.Graph) -> networkx.Graph:
+    """Ensure that the graph is ordered with ascending atoms."""
+    new_graph = networkx.Graph()
+    new_graph.add_nodes_from(sorted(graph.nodes(data=True)))
+    new_graph.add_edges_from(graph.edges(data=True))
+
+    return new_graph
 
 
 # This is to re-implement:
@@ -154,10 +171,40 @@ def _simple_topology_from_graph(graph: networkx.Graph) -> Topology:
 # It doesn't seem ideal to assume that matching SMILES === isomorphism?
 class _HashedMolecule(Molecule):
     def __hash__(self):
-        return hash(self.to_smiles())
+        return hash(self.to_smiles(mapped=True, explicit_hydrogens=True, isomeric=True))
 
 
 def _assert_all_isomorphic(molecule_list: list[Molecule]) -> bool:
     hashed_molecules = {_HashedMolecule(molecule) for molecule in molecule_list}
 
     return len(hashed_molecules) == len(molecule_list)
+
+
+def _lookup_virtual_site_parameter(
+    parameter_handler: VirtualSiteHandler,
+    smirks: str,
+    name: str,
+    match: str,
+) -> VirtualSiteHandler.VirtualSiteType:
+    """
+    Given some attributes, look up a virtual site parameter.
+
+    The toolkit does not reliably look up `VirtualSiteType`s when SMIRKS are not unique,
+    which is valid for some virtual site use cases.
+    https://github.com/openforcefield/openff-toolkit/issues/1847
+
+    """
+    if not isinstance(parameter_handler, VirtualSiteHandler):
+        raise NotImplementedError("Only VirtualSiteHandler is currently supported.")
+
+    for virtual_site_type in parameter_handler.parameters:
+        if (
+            virtual_site_type.smirks == smirks
+            and virtual_site_type.name == name
+            and virtual_site_type.match == match
+        ):
+            return virtual_site_type
+    else:
+        raise ValueError(
+            f"No VirtualSiteType found with {smirks=}, name={name=}, and match={match=}.",
+        )

@@ -291,11 +291,19 @@ class MDConfig(DefaultModel):
             if len(interchange["Angles"].key_map) > 0:
                 lmp.write("angle_style hybrid harmonic\n")
 
-            if len(interchange["ProperTorsions"].key_map) > 0:
-                lmp.write("dihedral_style hybrid fourier\n")
+            try:
+                if len(interchange["ProperTorsions"].key_map) > 0:
+                    lmp.write("dihedral_style hybrid fourier\n")
+            except LookupError:
+                # no torsions here
+                pass
 
-            if len(interchange["ImproperTorsions"].key_map) > 0:
-                lmp.write("improper_style cvff\n")
+            try:
+                if len(interchange["ImproperTorsions"].key_map) > 0:
+                    lmp.write("improper_style cvff\n")
+            except LookupError:
+                # no impropers here
+                pass
 
             # TODO: LAMMPS puts this information in the "run" file. Should it live in MDConfig or not?
             scale_factors = {

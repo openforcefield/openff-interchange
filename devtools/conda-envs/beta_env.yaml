@@ -1,6 +1,5 @@
 name: beta-env
 channels:
-  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge/label/openmm_rc
   - conda-forge
   - openeye
@@ -22,12 +21,13 @@ dependencies:
   - foyer >=0.12.1
   # Testing
   - mdtraj
+  - openmmforcefields
   - intermol
   - openeye-toolkits >=2023.2
   - pytest-cov
   - pytest-xdist
   - pytest-randomly
-  - mdanalysis
+  # de-forcefields  # needs new release
   # Drivers
   - gromacs =2023.3=nompi_*_103
   - lammps
@@ -35,10 +35,12 @@ dependencies:
   - panedr
   # Examples
   - nglview
-  - pytest =8.0
+  - pytest
   - nbval
   # Typing
   - mypy
   - typing-extensions
   - types-setuptools
   - pandas-stubs >=1.2.0.56
+  - pip:
+    - git+https://github.com/jthorton/de-forcefields.git

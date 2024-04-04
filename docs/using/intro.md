@@ -13,7 +13,7 @@ and their connectivity. For most users, Interchange forms the bridge between
 the OpenFF ecosystem and their simulation software of choice; users describe
 their system with the [OpenFF Toolkit] and then parameterize it with Interchange.
 
-An `Interchange` stores parameters in handlers that link the topology to the
+An `Interchange` stores parameters in classes that link the topology to the
 force field. This allows changes in the force field to be reflected in the
 `Interchange` immediately. This is useful for iteratively tweaking parts of a
 force field without having to recompute expensive parts like the charges.

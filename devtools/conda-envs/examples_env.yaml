@@ -1,14 +1,13 @@
 name: interchange-examples-env
 channels:
-  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
   - openeye
 dependencies:
   # Core
   - python
-  - numpy =1
-  - pydantic =1
-  - openmm >=7.6
+  - numpy
+  - pydantic =2
+  - openmm
   # OpenFF stack
   - openff-toolkit =0.15.2
   - openff-models
@@ -17,8 +16,9 @@ dependencies:
   - dgl =1
   # Optional features
   - unyt
-  - mbuild
+  - mbuild =0.17
   - foyer >=0.12.1
+  - gmso =0.12
   # Examples
   - jax
   - mdtraj

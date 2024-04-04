@@ -287,7 +287,11 @@ def _convert(
             get_positions_with_virtual_sites,
         )
 
-        system.positions = get_positions_with_virtual_sites(interchange)
+        system.positions = get_positions_with_virtual_sites(
+            interchange,
+            collate=True,
+        )
+
     else:
         system.positions = interchange.positions
 

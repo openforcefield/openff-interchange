@@ -3,6 +3,7 @@
 import copy
 import json
 import warnings
+from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Optional, Union, overload
 
@@ -28,7 +29,6 @@ from openff.interchange.exceptions import (
     InvalidTopologyError,
     MissingParameterHandlerError,
     MissingPositionsError,
-    UnsupportedCombinationError,
     UnsupportedExportError,
 )
 from openff.interchange.operations.minimize import (
@@ -322,7 +322,11 @@ class Interchange(DefaultModel):
                 try:
                     self.topology.set_positions(self.positions)
                     widget = self.topology.visualize()
-                except (MissingConformersError, IncompatibleUnitError) as error:
+                except (
+                    MissingConformersError,
+                    IncompatibleUnitError,
+                    ValueError,
+                ) as error:
                     raise MissingPositionsError(
                         "Cannot visualize system without positions.",
                     ) from error
@@ -569,6 +573,7 @@ class Interchange(DefaultModel):
         integrator: "openmm.Integrator",
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
+        additional_forces: Iterable["openmm.Force"] = tuple(),
         **kwargs,
     ) -> "openmm.app.simulation.Simulation":
         """
@@ -587,6 +592,9 @@ class Interchange(DefaultModel):
         add_constrained_forces : bool, default=False,
             If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
             on a bond or angle that is fully constrained.
+        additional_forces : Iterable[openmm.Force], default=tuple()
+            Additional forces to be added to the system, i.e. barostats that are not
+            added by the force field.
         **kwargs
             Further keyword parameters are passed on to
             :py:meth:`Simulation.__init__() <openmm.app.simulation.Simulation.__init__>`
@@ -603,24 +611,23 @@ class Interchange(DefaultModel):
         >>> import openmm
         >>> import openmm.unit
         >>>
-        >>> simulation = interchange.to_openmm_system(
-        ...     openmm.LangevinMiddleIntegrator(
-        ...         293.15 * openmm.unit.kelvin,
-        ...         1.0 / openmm.unit.picosecond,
-        ...         2.0 * openmm.unit.femtosecond,
-        ...     )
+        >>> integrator = openmm.LangevinMiddleIntegrator(
+        ...     293.15 * openmm.unit.kelvin,
+        ...     1.0 / openmm.unit.picosecond,
+        ...     2.0 * openmm.unit.femtosecond,
+        ... )
+        >>> barostat = openmm.MonteCarloBarostat(
+        ...     1.00 * openmm.unit.bar,
+        ...     293.15 * openmm.unit.kelvin,
+        ...     25,
+        ... )
+        >>> simulation = interchange.to_openmm_simulation(
+        ...     integrator=integrator,
+        ...     additional_forces=[barostat],
         ... )
 
         Add a barostat:
 
-        >>> simulation.system.addForce(
-        ...     openmm.MonteCarloBarostat(
-        ...         1.00 * openmm.unit.bar,
-        ...         293.15 * openmm.unit.kelvin,
-        ...         25,
-        ...     )
-        ... )
-        >>> simulation.context.reinitialize(preserveState=True)
 
         Re-initializing the `Context` after adding a `Force` is necessary due to implementation details in OpenMM.
         For more, see
@@ -631,12 +638,21 @@ class Interchange(DefaultModel):
 
         from openff.interchange.interop.openmm._positions import to_openmm_positions
 
+        system = self.to_openmm_system(
+            combine_nonbonded_forces=combine_nonbonded_forces,
+            add_constrained_forces=add_constrained_forces,
+        )
+
+        for force in additional_forces:
+            system.addForce(force)
+
+        # since we're adding forces before making a context, we don't need to
+        # re-initialize context. In a different order, we would need to:
+        # https://github.com/openforcefield/openff-interchange/pull/725#discussion_r1210928501
+
         simulation = openmm.app.Simulation(
             topology=self.to_openmm_topology(),
-            system=self.to_openmm(
-                combine_nonbonded_forces=combine_nonbonded_forces,
-                add_constrained_forces=add_constrained_forces,
-            ),
+            system=system,
             integrator=integrator,
             **kwargs,
         )
@@ -929,80 +945,9 @@ class Interchange(DefaultModel):
     @experimental
     def combine(self, other: "Interchange") -> "Interchange":
         """Combine two Interchange objects. This method is unstable and not yet unsafe."""
-        from openff.interchange.components.toolkit import _combine_topologies
+        from openff.interchange.operations._combine import _combine
 
-        warnings.warn(
-            "Interchange object combination is experimental and likely to produce "
-            "strange results. Any workflow using this method is not guaranteed to "
-            "be suitable for production. Use with extreme caution and thoroughly "
-            "validate results!",
-            stacklevel=2,
-        )
-
-        self_copy = copy.deepcopy(self)
-
-        self_copy.topology = _combine_topologies(self.topology, other.topology)
-        atom_offset = self.topology.n_atoms
-
-        if "Electrostatics" in self_copy.collections:
-            self_copy["Electrostatics"]._charges = dict()
-            self_copy["Electrostatics"]._charges_cached = False
-
-        if "Electrostatics" in other.collections:
-            other["Electrostatics"]._charges = dict()
-            other["Electrostatics"]._charges_cached = False
-
-        for handler_name, handler in other.collections.items():
-            # TODO: Actually specify behavior in this case
-            try:
-                self_handler = self_copy.collections[handler_name]
-            except KeyError:
-                self_copy.collections[handler_name] = handler
-                warnings.warn(
-                    f"'other' Interchange object has handler with name {handler_name} not "
-                    f"found in 'self,' but it has now been added.",
-                    stacklevel=2,
-                )
-                continue
-
-            for top_key, pot_key in handler.key_map.items():
-                new_atom_indices = tuple(
-                    idx + atom_offset for idx in top_key.atom_indices
-                )
-                new_top_key = top_key.__class__(**top_key.dict())
-                try:
-                    new_top_key.atom_indices = new_atom_indices
-                except ValueError:
-                    assert len(new_atom_indices) == 1
-                    new_top_key.this_atom_index = new_atom_indices[0]
-
-                self_handler.key_map.update({new_top_key: pot_key})
-                if handler_name == "Constraints":
-                    self_handler.potentials.update(
-                        {pot_key: handler.potentials[pot_key]},
-                    )
-                else:
-                    self_handler.potentials.update(
-                        {pot_key: handler.potentials[pot_key]},
-                    )
-
-            self_copy.collections[handler_name] = self_handler
-
-        if self_copy.positions is not None and other.positions is not None:
-            new_positions = np.vstack([self_copy.positions, other.positions])
-            self_copy.positions = new_positions
-        else:
-            warnings.warn(
-                "Setting positions to None because one or both objects added together were missing positions.",
-            )
-            self_copy.positions = None
-
-        if not np.all(self_copy.box == other.box):
-            raise UnsupportedCombinationError(
-                "Combination with unequal box vectors is not curretnly supported",
-            )
-
-        return self_copy
+        return _combine(self, other)
 
     def __repr__(self) -> str:
         periodic = self.box is not None
