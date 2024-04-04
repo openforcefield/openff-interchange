@@ -19,6 +19,7 @@ dependencies:
   - unyt
   - mbuild
   - foyer >=0.12.1
+  - gmso =0.12
   # Testing
   - mdtraj
   - openmmforcefields

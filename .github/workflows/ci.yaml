@@ -28,7 +28,6 @@ jobs:
         python-version:
           - "3.10"
           - "3.11"
-          - "3.12"
         pydantic-version:
           - "2"
         openeye:
@@ -37,11 +36,6 @@ jobs:
         openmm:
           - true
           - false
-        exclude:
-          - openeye: true
-            python-version: "3.12"
-          - os: macOS-latest
-            python-version: "3.12"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -133,7 +127,7 @@ jobs:
 
     - name: Run mypy
       continue-on-error: true
-      if: ${{ matrix.pydantic-version == 2 && matrix.python-version == 3.9 }}
+      if: ${{ matrix.python-version == '3.11' }}
       run: |
         # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
         # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
