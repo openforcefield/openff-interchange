@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+from copy import deepcopy
 from distutils.spawn import find_executable
 from typing import Callable, Literal, Optional, Union
 
@@ -876,6 +877,83 @@ def solvate_topology(
         [water, na, cl],
         [int(water_to_add), int(na_to_add), int(cl_to_add)],
         solute=topology,
-        tolerance=2.0 * unit.angstrom,
+        tolerance=tolerance,
         box_vectors=box_vectors,
+    )
+
+
+def solvate_topology_nonwater(
+    topology: Topology,
+    solvent: Molecule,
+    padding: Quantity = 1.2 * unit.nanometer,
+    box_shape: NDArray = RHOMBIC_DODECAHEDRON,
+    target_density: Quantity = 1.0 * unit.gram / unit.milliliter,
+    tolerance: Quantity = 2.0 * unit.angstrom,
+) -> Topology:
+    """
+    Add water and ions to neutralise and solvate a topology.
+
+    Parameters
+    ----------
+    topology
+        The OpenFF Topology to solvate.
+    solvent
+        The OpenFF Molecule to use as the solvent.
+    padding : Scalar with dimensions of length
+        The desired distance between the solute and the edge of the box. Ignored
+        if the topology already has box vectors. The usual recommendation is
+        that this equals or exceeds the VdW cut-off distance, so that the
+        solute is isolated by its periodic images by twice the cut-off.
+    box_shape : Array with shape (3, 3)
+        An array defining the box vectors of a box with the desired shape and
+        unit periodic image distance. This shape will be scaled to satisfy the
+        padding given above. Some typical shapes are provided in this module.
+    target_density : Scalar with dimensions of mass density
+        The target mass density for the packed box.
+    tolerance: Scalar with dimensions of distance
+        The minimum spacing between molecules during packing in units of
+        distance. The default is large so that added waters do not disrupt the
+        structure of proteins; when constructing a mixture of small molecules,
+        values as small as 0.5 Å will converge faster and can still produce
+        stable simulations after energy minimisation.
+
+    """
+    if box_shape.shape != (3, 3):
+        raise PACKMOLValueError(
+            "box_shape should be a 3×3 array defining a box with unit periodic"
+            + " image distance",  # noqa: W503
+        )
+
+    # Compute box vectors from the solute length and requested padding
+    solute_length = _max_dist_between_points(topology.get_positions())
+    image_distance = solute_length + padding * 2
+    box_vectors = box_shape * image_distance
+
+    # Compute target masses of solvent
+    box_volume = np.linalg.det(box_vectors.m) * box_vectors.u**3
+    target_mass = box_volume * target_density
+    solute_mass = sum(
+        sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
+    )
+
+    solvent_mass_to_add = target_mass - solute_mass
+    if solvent_mass_to_add < 0:
+        raise PACKMOLValueError(
+            "Solute mass is greater than target mass; increase density or make the box bigger",
+        )
+
+    _solvent = deepcopy(solvent)
+    solvent_mass = sum([atom.mass for atom in _solvent.atoms])
+
+    solvent_to_add = (
+        (solvent_mass_to_add / solvent_mass).m_as(unit.dimensionless).round()
+    )
+
+    return pack_box(
+        molecules=[solvent],
+        number_of_copies=[int(solvent_to_add)],
+        solute=topology,
+        tolerance=tolerance,
+        box_vectors=box_vectors,
+        center_solute=True,
     )
