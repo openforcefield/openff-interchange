@@ -106,7 +106,7 @@ class TestCreate:
                 assert potential_key.cosmetic_attributes["fOO"] == "bAR"
 
 
-@pytest.mark.slow()
+@pytest.mark.slow
 class TestUnassignedParameters:
     def test_catch_unassigned_bonds(self, sage, ethanol_top):
         for param in sage["Bonds"].parameters:
@@ -143,7 +143,7 @@ class TestUnassignedParameters:
 
 
 # TODO: Remove xfail after openff-toolkit 0.10.0
-@pytest.mark.xfail()
+@pytest.mark.xfail
 def test_library_charges_from_molecule():
     from openff.toolkit.typing.engines.smirnoff.parameters import LibraryChargeHandler
 
@@ -162,7 +162,7 @@ def test_library_charges_from_molecule():
 
 
 class TestChargeFromMolecules:
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_charge_from_molecules_basic(self, sage):
         molecule = Molecule.from_smiles("CCO")
         molecule.assign_partial_charges(partial_charge_method="am1bcc")
@@ -307,7 +307,7 @@ class TestPartialBondOrdersFromMolecules:
 
         assert found_torsion_k.m_as(kcal_mol) == pytest.approx(1.44)
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_partial_bond_order_from_molecules_empty(self, ethanol):
         from openff.toolkit._tests.test_forcefield import xml_ff_bo
 
@@ -327,7 +327,7 @@ class TestPartialBondOrdersFromMolecules:
             _get_interpolated_bond_k(empty["Bonds"]),
         )
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_partial_bond_order_from_molecules_no_matches(self, ethanol):
         from openff.toolkit._tests.test_forcefield import xml_ff_bo
 

@@ -21,7 +21,7 @@ if has_package("openmm"):
 
 @skip_if_missing("openmm")
 class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_basic_bond_order_interpolation_energies(self, xml_ff_bo_bonds):
         forcefield = ForceField(
             get_data_file_path(

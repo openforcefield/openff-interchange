@@ -13,7 +13,7 @@ from openff.interchange.interop.gromacs.models.models import GROMACSAtomType
 from openff.interchange.smirnoff._gromacs import _convert
 
 
-@pytest.fixture()
+@pytest.fixture
 def molecule1():
     molecule = Molecule.from_smiles(
         "[H][O][c]1[c]([H])[c]([O][H])[c]([H])[c]([O][H])[c]1[H]",
@@ -24,7 +24,7 @@ def molecule1():
     return molecule
 
 
-@pytest.fixture()
+@pytest.fixture
 def molecule2():
     molecule = Molecule.from_smiles("C1=C(C=C(C=C1C(=O)O)C(=O)O)C(=O)O")
     molecule.generate_conformers(n_conformers=1)
@@ -35,21 +35,21 @@ def molecule2():
     return molecule
 
 
-@pytest.fixture()
+@pytest.fixture
 def system1(molecule1, sage):
     box = 5 * numpy.eye(3) * unit.nanometer
 
     return _convert(Interchange.from_smirnoff(sage, [molecule1], box=box))
 
 
-@pytest.fixture()
+@pytest.fixture
 def system2(molecule2, sage):
     box = 5 * numpy.eye(3) * unit.nanometer
 
     return _convert(Interchange.from_smirnoff(sage, [molecule2], box=box))
 
 
-@pytest.fixture()
+@pytest.fixture
 def combined_system(molecule1, molecule2, sage):
     box = 5 * numpy.eye(3) * unit.nanometer
 
@@ -93,7 +93,7 @@ class TestModels:
 
 
 #    GROMACSAtomType
-@pytest.mark.slow()
+@pytest.mark.slow
 class TestAddRemoveMoleculeType:
     @needs_gmx
     @pytest.mark.parametrize("molecule_name", ["MOL1", "MOL2"])
@@ -109,7 +109,7 @@ class TestAddRemoveMoleculeType:
             _run_gmx_energy(f"{molecule_name}.top", f"{molecule_name}.gro", "tmp.mdp"),
         )
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.parametrize("molecule_name", ["MOL1", "MOL2"])
     def test_add_existing_molecule_type(self, combined_system, molecule_name):
         with pytest.raises(
@@ -178,7 +178,7 @@ class TestAddRemoveMoleculeType:
             _process(_run_gmx_energy("order2.top", "order2.gro", "tmp.mdp")),
         )
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_clashing_atom_types(self, combined_system, system1, system2):
         with pytest.raises(
             ValueError,

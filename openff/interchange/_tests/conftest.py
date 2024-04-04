@@ -12,23 +12,23 @@ from openff.utilities import get_data_file_path
 from openff.interchange._tests import MoleculeWithConformer, _rng, get_test_file_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def sage():
     return ForceField("openff-2.0.0.offxml")
 
 
-@pytest.fixture()
+@pytest.fixture
 def sage_unconstrained():
     return ForceField("openff_unconstrained-2.0.0.offxml")
 
 
-@pytest.fixture()
+@pytest.fixture
 def sage_no_switch(sage):
     sage["vdW"].switch_width = Quantity(0.0, "angstrom")
     return sage
 
 
-@pytest.fixture()
+@pytest.fixture
 def sage_with_bond_charge(sage):
     sage["Bonds"].add_parameter(
         parameter=BondType(
@@ -54,7 +54,7 @@ def sage_with_bond_charge(sage):
     return sage
 
 
-@pytest.fixture()
+@pytest.fixture
 def sage_with_planar_monovalent_carbonyl(sage):
     sage.get_parameter_handler("VirtualSites")
     sage["VirtualSites"].add_parameter(
@@ -74,7 +74,7 @@ def sage_with_planar_monovalent_carbonyl(sage):
     return sage
 
 
-@pytest.fixture()
+@pytest.fixture
 def sage_with_trivalent_nitrogen(sage):
     sage["Bonds"].add_parameter(
         parameter=BondType(
@@ -104,7 +104,7 @@ def sage_with_trivalent_nitrogen(sage):
     return sage
 
 
-@pytest.fixture()
+@pytest.fixture
 def sage_with_two_virtual_sites_same_smirks(sage):
     """
     Add two virtual site parameters with identical SMIRKS but different
@@ -134,7 +134,7 @@ def sage_with_two_virtual_sites_same_smirks(sage):
     return sage
 
 
-@pytest.fixture()
+@pytest.fixture
 def sage_with_off_center_hydrogen(sage):
     virtual_sites = sage.get_parameter_handler("VirtualSites")
 
@@ -161,23 +161,23 @@ def sage_with_off_center_hydrogen(sage):
     return sage
 
 
-@pytest.fixture()
+@pytest.fixture
 def _simple_force_field():
     # TODO: Create a minimal force field for faster tests
     pass
 
 
-@pytest.fixture()
+@pytest.fixture
 def tip3p() -> ForceField:
     return ForceField("tip3p.offxml")
 
 
-@pytest.fixture()
+@pytest.fixture
 def tip4p() -> ForceField:
     return ForceField("tip4p_fb.offxml")
 
 
-@pytest.fixture()
+@pytest.fixture
 def tip5p() -> ForceField:
     return ForceField(
         """<?xml version="1.0" encoding="utf-8"?>
@@ -260,7 +260,7 @@ def tip5p() -> ForceField:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def gbsa_force_field() -> ForceField:
     return ForceField(
         "openff-2.0.0.offxml",
@@ -268,7 +268,7 @@ def gbsa_force_field() -> ForceField:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def basic_top() -> Topology:
     topology = MoleculeWithConformer.from_smiles("C").to_topology()
     topology.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
@@ -305,7 +305,7 @@ def water_tip4p() -> Molecule:
     return molecule
 
 
-@pytest.fixture()
+@pytest.fixture
 def carbonyl_planar() -> Molecule:
     """A carbonyl group with a planar geometry."""
     # Geometry matching `planar_monovalent_carbonyl`
@@ -314,7 +314,7 @@ def carbonyl_planar() -> Molecule:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def ammonia_tetrahedral() -> Molecule:
     """An ammonia molecule with a tetrahedral geometry."""
     # Sage 2.1.0; id: b87, length: 1.022553377106 angstrom
@@ -334,7 +334,7 @@ def ammonia_tetrahedral() -> Molecule:
     return molecule
 
 
-@pytest.fixture()
+@pytest.fixture
 def ethanol() -> Molecule:
     ethanol = Molecule()
 
@@ -364,7 +364,7 @@ def ethanol() -> Molecule:
     return ethanol
 
 
-@pytest.fixture()
+@pytest.fixture
 def reversed_ethanol() -> Molecule:
     ethanol = Molecule()
 
@@ -394,7 +394,7 @@ def reversed_ethanol() -> Molecule:
     return ethanol
 
 
-@pytest.fixture()
+@pytest.fixture
 def cyclohexane() -> Molecule:
     cyclohexane = Molecule()
 
@@ -443,13 +443,13 @@ def _initdir(tmpdir):
     tmpdir.chdir()
 
 
-@pytest.fixture()
+@pytest.fixture
 def ethanol_top(ethanol):
     """Fixture that builds a simple four ethanol topology."""
     return Topology.from_molecules(4 * [ethanol])
 
 
-@pytest.fixture()
+@pytest.fixture
 def mainchain_ala():
     molecule = Molecule.from_file(
         get_data_file_path("proteins/MainChain_ALA.sdf", "openff.toolkit"),
@@ -461,7 +461,7 @@ def mainchain_ala():
     return molecule
 
 
-@pytest.fixture()
+@pytest.fixture
 def mainchain_arg():
     molecule = Molecule.from_file(
         get_data_file_path("proteins/MainChain_ARG.sdf", "openff.toolkit"),
@@ -473,12 +473,12 @@ def mainchain_arg():
     return molecule
 
 
-@pytest.fixture()
+@pytest.fixture
 def two_peptides(mainchain_ala, mainchain_arg):
     return Topology.from_molecules([mainchain_ala, mainchain_arg])
 
 
-@pytest.fixture()
+@pytest.fixture
 def xml_ff_bo_bonds() -> str:
     return """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
@@ -493,7 +493,7 @@ def xml_ff_bo_bonds() -> str:
 """
 
 
-@pytest.fixture()
+@pytest.fixture
 def xml_ff_bo() -> str:
     return """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
@@ -518,27 +518,27 @@ def xml_ff_bo() -> str:
 """
 
 
-@pytest.fixture()
+@pytest.fixture
 def methane():
     return Molecule.from_smiles("C")
 
 
-@pytest.fixture()
+@pytest.fixture
 def parsley():
     return ForceField("openff-1.0.0.offxml")
 
 
-@pytest.fixture()
+@pytest.fixture
 def hydrogen_cyanide():
     return Molecule.from_mapped_smiles("[H:1][C:2]#[N:3]")
 
 
-@pytest.fixture()
+@pytest.fixture
 def hydrogen_cyanide_reversed():
     return Molecule.from_mapped_smiles("[H:3][C:2]#[N:1]")
 
 
-@pytest.fixture()
+@pytest.fixture
 def hexane_diol():
     molecule = Molecule.from_smiles("OCCCCCCO")
     molecule.assign_partial_charges(partial_charge_method="gasteiger")
@@ -546,24 +546,24 @@ def hexane_diol():
     return molecule
 
 
-@pytest.fixture()
+@pytest.fixture
 def hydrogen_chloride():
     return Molecule.from_mapped_smiles("[Cl:1][H:2]")
 
 
-@pytest.fixture()
+@pytest.fixture
 def formaldehyde():
     return Molecule.from_mapped_smiles("[H:3][C:1]([H:4])=[O:2]")
 
 
-@pytest.fixture()
+@pytest.fixture
 def acetaldehyde():
     return Molecule.from_mapped_smiles(
         "[C:1]([C:2](=[O:3])[H:7])([H:4])([H:5])[H:6]",
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def methane_with_conformer(methane):
     methane.add_conformer(
         unit.Quantity(
@@ -574,7 +574,7 @@ def methane_with_conformer(methane):
     return methane
 
 
-@pytest.fixture()
+@pytest.fixture
 def ethanol_with_conformer(ethanol):
     ethanol.add_conformer(
         unit.Quantity(
@@ -585,12 +585,12 @@ def ethanol_with_conformer(ethanol):
     return ethanol
 
 
-@pytest.fixture()
+@pytest.fixture
 def cb8_host() -> Molecule:
     return Molecule.from_file(get_test_file_path("CB8.sdf"))
 
 
-@pytest.fixture()
+@pytest.fixture
 def no_charges() -> ForceField:
     sage = ForceField("openff_unconstrained-2.0.0.offxml")
     sage.deregister_parameter_handler("ToolkitAM1BCC")
@@ -601,7 +601,7 @@ def no_charges() -> ForceField:
     return sage
 
 
-@pytest.fixture()
+@pytest.fixture
 def default_integrator():
     try:
         import openmm
@@ -613,7 +613,7 @@ def default_integrator():
         return None
 
 
-@pytest.fixture()
+@pytest.fixture
 def default_barostat():
     try:
         import openmm
@@ -629,6 +629,6 @@ def default_barostat():
         return None
 
 
-@pytest.fixture()
+@pytest.fixture
 def popc():
     return Molecule(get_test_file_path("popc.sdf"))

@@ -41,7 +41,7 @@ class TestAmber:
 
     @skip_if_missing("openmm")
     @pytest.mark.skipif(not has_executable("sander"), reason="sander not installed")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -88,7 +88,7 @@ class TestPRMTOP:
     @skip_if_missing("mdtraj")
     @skip_if_missing("MDAnalysis")
     @skip_if_missing("openmm")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_atom_names_pdb(self):
         import MDAnalysis
         import mdtraj

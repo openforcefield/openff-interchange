@@ -27,7 +27,7 @@ from openff.interchange.exceptions import (
 )
 
 
-@pytest.mark.slow()
+@pytest.mark.slow
 class TestInterchange:
     def test_getitem(self, sage):
         """Test behavior of Interchange.__getitem__"""
@@ -108,7 +108,7 @@ class TestInterchange:
     @pytest.mark.skip("LAMMPS export experimental")
     @needs_gmx
     @needs_lmp
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @skip_if_missing("foyer")
     def test_atom_ordering(self):
         """Test that atom indices in bonds are ordered consistently between the slot map and topology"""
@@ -385,7 +385,7 @@ class TestInterchangeSerialization:
 class TestWrappedCalls:
     """Test that methods which delegate out to other submodules call them."""
 
-    @pytest.fixture()
+    @pytest.fixture
     def simple_interchange(self, sage):
         mol = Molecule.from_smiles("CCO")
         mol.generate_conformers(n_conformers=1)
@@ -404,7 +404,7 @@ class TestWrappedCalls:
             Interchange.from_gromacs()
 
     @skip_if_missing("openmm")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_from_openmm_called(self, monkeypatch, simple_interchange):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 

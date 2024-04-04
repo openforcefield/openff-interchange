@@ -12,26 +12,26 @@ from openff.interchange.constants import _PME
 from openff.interchange.warnings import SwitchingFunctionNotImplementedWarning
 
 
-@pytest.fixture()
+@pytest.fixture
 def system_no_constraints(sage_unconstrained, basic_top):
     return sage_unconstrained.create_interchange(basic_top)
 
 
-@pytest.fixture()
+@pytest.fixture
 def rigid_water_box(sage, water):
     topology = water.to_topology()
     topology.box_vectors = Quantity([5, 5, 5], unit.nanometer)
     return sage.create_interchange(topology)
 
 
-@pytest.fixture()
+@pytest.fixture
 def constrained_ligand_rigid_water_box(sage, basic_top, water):
     topology = Topology(basic_top)
     topology.add_molecule(water)
     return sage.create_interchange(topology)
 
 
-@pytest.fixture()
+@pytest.fixture
 def unconstrained_ligand_rigid_water_box(sage_unconstrained, basic_top, water):
     topology = Topology(basic_top)
     topology.add_molecule(water)

@@ -246,7 +246,7 @@ class TestPackmolWrapper:
         assert topology.n_atoms == 20
         assert topology.n_bonds == 20
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_amino_acids(self):
         amino_residues = {
             "C[C@H](N)C(=O)O": "ALA",

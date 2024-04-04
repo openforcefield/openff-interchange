@@ -35,11 +35,11 @@ class TestConvert:
 
 
 class TestSettles:
-    @pytest.fixture()
+    @pytest.fixture
     def tip3p_interchange(self, tip3p, water):
         return tip3p.create_interchange(water.to_topology())
 
-    @pytest.fixture()
+    @pytest.fixture
     def sage_tip3p_interchange(self, sage, water):
         return sage.create_interchange(water.to_topology())
 

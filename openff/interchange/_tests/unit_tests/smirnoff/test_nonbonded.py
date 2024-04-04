@@ -20,7 +20,7 @@ from openff.interchange.smirnoff._nonbonded import (
 
 
 class TestNonbonded:
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_electrostatics_am1_handler(self, methane):
         methane.assign_partial_charges(partial_charge_method="am1bcc")
 
@@ -99,7 +99,7 @@ class TestNonbonded:
             reference_charges,
         )
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_toolkit_am1bcc_uses_elf10_if_oe_is_available(self, sage, hexane_diol):
         """
         Ensure that the ToolkitAM1BCCHandler assigns ELF10 charges if OpenEye is available.
@@ -230,7 +230,7 @@ class TestElectrostatics:
 
 
 class TestSMIRNOFFChargeIncrements:
-    @pytest.fixture()
+    @pytest.fixture
     def hydrogen_cyanide_charge_increments(self):
         handler = ChargeIncrementModelHandler(
             version=0.4,

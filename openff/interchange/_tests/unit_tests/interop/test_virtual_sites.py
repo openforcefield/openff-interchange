@@ -11,7 +11,7 @@ from openff.interchange.exceptions import MissingVirtualSitesError
 from openff.interchange.interop._virtual_sites import get_positions_with_virtual_sites
 
 
-@pytest.fixture()
+@pytest.fixture
 def tip4p_interchange(water, tip4p):
     return tip4p.create_interchange(water.to_topology())
 

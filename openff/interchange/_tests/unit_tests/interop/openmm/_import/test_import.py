@@ -54,7 +54,7 @@ class TestFromOpenMM:
         # OpenMM seems to avoid using the built-in type
         assert converted.box.m.dtype in (float, numpy.float32, numpy.float64)
 
-    @pytest.fixture()
+    @pytest.fixture
     def simple_system(self):
         return openmm.XmlSerializer.deserialize(
             open(

@@ -7,7 +7,7 @@ from openff.interchange.drivers.lammps import _process, get_lammps_energies
 
 
 class TestProcess:
-    @pytest.fixture()
+    @pytest.fixture
     def dummy_energies(self):
         energies = [
             Quantity(val, kj_mol) for val in [2.0, 1.0, 1.5, 0.5, -100.0, 0.1, -4, -400]

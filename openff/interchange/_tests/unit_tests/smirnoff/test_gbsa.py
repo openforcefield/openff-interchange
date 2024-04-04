@@ -8,7 +8,7 @@ from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 
 
 class TestGBSACollection:
-    @pytest.fixture()
+    @pytest.fixture
     def gbsa_handler(self) -> GBSAHandler:
         handler = GBSAHandler(
             version="0.3",

@@ -16,7 +16,7 @@ class TestDeprecation:
 
         assert PotentialHandler is Collection
 
-    @pytest.fixture()
+    @pytest.fixture
     def prepared_system(self, sage, water):
         return Interchange.from_smirnoff(sage, [water])
 

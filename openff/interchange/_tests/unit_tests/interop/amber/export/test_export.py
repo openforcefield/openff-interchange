@@ -21,7 +21,7 @@ if has_package("openmm"):
     import openmm.unit
 
 
-@pytest.mark.slow()
+@pytest.mark.slow
 @requires_openeye
 @pytest.mark.parametrize(
     "molecule",
@@ -103,7 +103,7 @@ class TestAmber:
 
     @skip_if_missing("openmm")
     @pytest.mark.skipif(not has_executable("sander"), reason="sander not installed")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -148,7 +148,7 @@ class TestAmber:
 
 class TestPRMTOP:
     @skip_if_missing("openmm")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
             get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),

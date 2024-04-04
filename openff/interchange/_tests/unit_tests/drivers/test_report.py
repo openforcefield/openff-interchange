@@ -13,7 +13,7 @@ from openff.interchange.exceptions import (
 
 
 class TestEnergyReport:
-    @pytest.fixture()
+    @pytest.fixture
     def report(self):
         return EnergyReport(
             energies={

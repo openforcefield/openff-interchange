@@ -191,7 +191,7 @@ class TestConstraintCollection:
 
 
 class TestBondOrderInterpolation:
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_input_bond_orders_ignored(self, ethanol, xml_ff_bo_bonds):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
@@ -307,7 +307,7 @@ class TestParameterInterpolation:
         found_k = out["Bonds"].potentials[out["Bonds"].key_map[top_key]].parameters["k"]
         assert found_k == 300 * kcal_mol_a2
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
     def test_bond_order_interpolation_similar_bonds(self, xml_ff_bo):
         """Test that key mappings do not get confused when two bonds having similar SMIRKS matches

@@ -9,7 +9,7 @@ from openff.interchange.drivers.openmm import get_openmm_energies
 
 
 @skip_if_missing("openmm")
-@pytest.mark.slow()
+@pytest.mark.slow
 @needs_gmx
 def test_group_impropers(cb8_host, no_charges):
     out = Interchange.from_smirnoff(no_charges, [cb8_host], box=[4, 4, 4])

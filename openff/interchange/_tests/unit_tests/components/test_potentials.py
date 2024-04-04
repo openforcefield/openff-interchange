@@ -74,7 +74,7 @@ class TestCollectionSubclassing:
 
 
 class TestPotentialSerialization:
-    @pytest.fixture()
+    @pytest.fixture
     def dummy_potential(self):
         return Potential(
             parameters={
