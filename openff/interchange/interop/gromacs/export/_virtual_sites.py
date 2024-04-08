@@ -30,9 +30,19 @@ def _create_gromacs_virtual_site(
     virtual_site_key: VirtualSiteKey,
     particle_map: dict[Union[int, VirtualSiteKey], int],
 ) -> GROMACSVirtualSite:
-    offset = interchange.topology.atom_index(
-        interchange.topology.atom(min(virtual_site_key.orientation_atom_indices)),
+
+    # Orientation atom indices are topology indices, but here they need to be indexed as molecule
+    # indices. Store the difference between an orientation atom's molecule and topology indices.
+    # (It can probably be any of the orientation atoms.)
+    parent_atom = interchange.topology.atom(
+        virtual_site_key.orientation_atom_indices[0],
     )
+
+    # This lookup scales poorly with system size, but it's not clear how to work around the
+    # tool's ~O(N) scaling of topology lookups
+    offset = interchange.topology.atom_index(
+        parent_atom,
+    ) - parent_atom.molecule.atom_index(parent_atom)
 
     # These are GROMACS "molecule" indices, already mapped back from the topology on to the molecule
     gromacs_indices: list[int] = [

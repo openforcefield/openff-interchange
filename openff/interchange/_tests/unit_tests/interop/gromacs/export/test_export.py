@@ -4,9 +4,8 @@ from math import exp
 import numpy
 import parmed
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
-from openff.units import unit
 from openff.units.openmm import ensure_quantity
 from openff.utilities import (
     get_data_file_path,
@@ -538,16 +537,19 @@ class TestGROMACSVirtualSites:
 
         assert abs(numpy.sum([p.charge for p in gmx_top.atoms])) < 1e-3
 
-    def test_carbonyl_example(self, sage_with_planar_monovalent_carbonyl):
+    def test_carbonyl_example(self, sage_with_planar_monovalent_carbonyl, ethanol):
         """Test that a single-molecule planar carbonyl example can run 0 steps."""
-        mol = MoleculeWithConformer.from_smiles("C(=O)C")
+        ethanol.generate_conformers(n_conformers=1)
 
-        out = sage_with_planar_monovalent_carbonyl.create_interchange(mol.to_topology())
+        hexanal = MoleculeWithConformer.from_smiles("CCCCCC=O")
+        hexanal._conformers[0] += Quantity("2 nanometer")
 
-        out.box = [4, 4, 4]
+        topology = Topology.from_molecules([ethanol, hexanal])
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
-        # TODO: Sanity-check reported energies
-        get_gromacs_energies(out)
+        get_gromacs_energies(
+            sage_with_planar_monovalent_carbonyl.create_interchange(topology),
+        )
 
     @skip_if_missing("openmm")
     def test_tip4p_charge_neutrality(self, tip4p, water_dimer):
