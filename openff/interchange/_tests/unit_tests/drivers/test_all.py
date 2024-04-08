@@ -25,9 +25,9 @@ from openff.interchange.drivers.all import get_all_energies, get_summary_data
 
 
 @skip_if_missing("openmm")
-@pytest.mark.slow()
+@pytest.mark.slow
 class TestDriversAll:
-    @pytest.fixture()
+    @pytest.fixture
     def basic_interchange(self, sage_unconstrained):
         molecule = MoleculeWithConformer.from_smiles("CCO")
         molecule.name = "MOL"

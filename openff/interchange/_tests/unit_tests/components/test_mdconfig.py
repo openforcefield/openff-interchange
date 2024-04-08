@@ -1,9 +1,7 @@
 import warnings
-from typing import Union
 
 import pytest
-from openff.toolkit import Topology
-from openff.units import unit
+from openff.toolkit import Quantity, Topology, unit
 
 from openff.interchange.components.mdconfig import (
     MDConfig,
@@ -14,26 +12,26 @@ from openff.interchange.constants import _PME
 from openff.interchange.warnings import SwitchingFunctionNotImplementedWarning
 
 
-@pytest.fixture()
+@pytest.fixture
 def system_no_constraints(sage_unconstrained, basic_top):
     return sage_unconstrained.create_interchange(basic_top)
 
 
-@pytest.fixture()
+@pytest.fixture
 def rigid_water_box(sage, water):
     topology = water.to_topology()
-    topology.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
+    topology.box_vectors = Quantity([5, 5, 5], unit.nanometer)
     return sage.create_interchange(topology)
 
 
-@pytest.fixture()
+@pytest.fixture
 def constrained_ligand_rigid_water_box(sage, basic_top, water):
     topology = Topology(basic_top)
     topology.add_molecule(water)
     return sage.create_interchange(topology)
 
 
-@pytest.fixture()
+@pytest.fixture
 def unconstrained_ligand_rigid_water_box(sage_unconstrained, basic_top, water):
     topology = Topology(basic_top)
     topology.add_molecule(water)
@@ -62,9 +60,9 @@ def parse_mdp(file: str) -> dict[str, str]:
     return options
 
 
-def parse_sander(file: str) -> dict[str, Union[dict, str]]:
+def parse_sander(file: str) -> dict[str, dict | str]:
     """Naively parse (sections of) a sander input file into a dict structure."""
-    options: dict[str, Union[dict, str]] = dict()
+    options: dict[str, dict | str] = dict()
     current_level = options
 
     with open(file) as f:
@@ -97,7 +95,7 @@ class TestMDConfigFromInterchange:
     @pytest.mark.parametrize("periodic", [True, False])
     @pytest.mark.parametrize("switch", [True, False])
     def test_from_interchange(self, sage, basic_top, switch, periodic):
-        from openff.units import unit
+        from openff.toolkit import unit
         from packaging.version import Version
 
         from openff.interchange import Interchange
@@ -131,7 +129,7 @@ class TestMDConfigFromInterchange:
 class TestSMIRNOFFDefaults:
     @pytest.mark.parametrize("periodic", [True, False])
     def test_apply_smirnoff_defaults(self, sage, basic_top, periodic):
-        from openff.units import unit
+        from openff.toolkit import unit
 
         from openff.interchange import Interchange
 
@@ -182,7 +180,7 @@ class TestIntermolDefaults:
         assert options["constraints"] == "none"
 
     def test_apply_intermol_defaults(self, sage, basic_top):
-        from openff.units import unit
+        from openff.toolkit import unit
 
         from openff.interchange import Interchange
 

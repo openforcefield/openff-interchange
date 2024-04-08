@@ -5,16 +5,16 @@ import json
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Optional, Union, overload
+from typing import TYPE_CHECKING, Literal, Union, overload
 
 import numpy as np
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, QuantityEncoder
-from openff.toolkit import ForceField, Molecule, Topology
-from openff.units import Quantity, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange._experimental import experimental
+from openff.interchange._pydantic import Field, validator
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._valence import (
     AngleCollection,
@@ -39,11 +39,6 @@ from openff.interchange.smirnoff import (
     SMIRNOFFVirtualSiteCollection,
 )
 from openff.interchange.warnings import InterchangeDeprecationWarning
-
-try:
-    from pydantic.v1 import Field, validator
-except ImportError:
-    from pydantic import Field, validator
 
 if has_package("foyer"):
     from foyer.forcefield import Forcefield as FoyerForcefield
@@ -87,7 +82,7 @@ def interchange_dumps(v, *, default):
 
 def interchange_loader(data: str) -> dict:
     """Load a JSON representation of an Interchange object."""
-    tmp: dict[str, Optional[Union[int, bool, str, dict]]] = {}
+    tmp: dict[str, int | bool | str | dict | None] = {}
 
     for key, val in json.loads(data).items():
         if val is None:
@@ -157,7 +152,7 @@ class Interchange(DefaultModel):
         arbitrary_types_allowed = True
 
     @validator("box", allow_reuse=True)
-    def validate_box(cls, value) -> Optional[Quantity]:
+    def validate_box(cls, value) -> Quantity | None:
         if value is None:
             return value
 
@@ -194,11 +189,11 @@ class Interchange(DefaultModel):
             raise InvalidTopologyError("_OFFBioTop is no longer supported")
         else:
             raise InvalidTopologyError(
-                "Could not process topology argument, expected openff.toolkit.topology.Topology. "
+                "Could not process topology argument, expected openff.toolkit.Topology. "
                 f"Found object of type {type(value)}.",
             )
 
-    def _infer_positions(self) -> Optional[Quantity]:
+    def _infer_positions(self) -> Quantity | None:
         """
         Attempt to set Interchange.positions based on conformers in molecules in the topology.
 
@@ -214,11 +209,11 @@ class Interchange(DefaultModel):
     def from_smirnoff(
         cls,
         force_field: ForceField,
-        topology: Union[Topology, list[Molecule]],
+        topology: Topology | list[Molecule],
         box=None,
         positions=None,
-        charge_from_molecules: Union[list[Molecule], None] = None,
-        partial_bond_orders_from_molecules: Union[list[Molecule], None] = None,
+        charge_from_molecules: list[Molecule] | None = None,
+        partial_bond_orders_from_molecules: list[Molecule] | None = None,
         allow_nonintegral_charges: bool = False,
     ) -> "Interchange":
         """
@@ -228,7 +223,7 @@ class Interchange(DefaultModel):
         ----------
         force_field : `openff.toolkit.ForceField`
             The force field to parameterize the topology with.
-        topology : `openff.toolkit.topology.Topology` or `List[openff.toolkit.topology.Molecule]`
+        topology : `openff.toolkit.Topology` or `List[openff.toolkit.Molecule]`
             The topology to parameterize, or a list of molecules to construct a
             topology from and parameterize.
         box : `openff.units.Quantity`, optional
@@ -457,7 +452,7 @@ class Interchange(DefaultModel):
 
     def to_top(
         self,
-        file_path: Union[Path, str],
+        file_path: Path | str,
         hydrogen_mass: float = 1.007947,
     ):
         """
@@ -481,7 +476,7 @@ class Interchange(DefaultModel):
             top_file=file_path,
         ).to_top()
 
-    def to_gro(self, file_path: Union[Path, str], decimal: int = 3):
+    def to_gro(self, file_path: Path | str, decimal: int = 3):
         """
         Export this Interchange object to a GROMACS coordinate file.
 
@@ -501,7 +496,7 @@ class Interchange(DefaultModel):
             gro_file=file_path,
         ).to_gro(decimal=decimal)
 
-    def to_lammps(self, file_path: Union[Path, str], writer="internal"):
+    def to_lammps(self, file_path: Path | str, writer="internal"):
         """Export this Interchange to a LAMMPS data file."""
         if writer == "internal":
             from openff.interchange.interop.lammps import to_lammps
@@ -558,7 +553,7 @@ class Interchange(DefaultModel):
 
     def to_openmm_topology(
         self,
-        ensure_unique_atom_names: Union[str, bool] = "residues",
+        ensure_unique_atom_names: str | bool = "residues",
     ):
         """Export components of this Interchange to an OpenMM Topology."""
         from openff.interchange.interop.openmm._topology import to_openmm_topology
@@ -666,7 +661,7 @@ class Interchange(DefaultModel):
 
         return simulation
 
-    def to_prmtop(self, file_path: Union[Path, str], writer="internal"):
+    def to_prmtop(self, file_path: Path | str, writer="internal"):
         """Export this Interchange to an Amber .prmtop file."""
         if writer == "internal":
             from openff.interchange.interop.amber import to_prmtop
@@ -677,7 +672,7 @@ class Interchange(DefaultModel):
             raise UnsupportedExportError
 
     @requires_package("openmm")
-    def to_pdb(self, file_path: Union[Path, str], include_virtual_sites: bool = False):
+    def to_pdb(self, file_path: Path | str, include_virtual_sites: bool = False):
         """Export this Interchange to a .pdb file."""
         from openff.interchange.interop.openmm import _to_pdb
 
@@ -692,28 +687,28 @@ class Interchange(DefaultModel):
                 get_positions_with_virtual_sites,
             )
 
-            topology: openmm.app.Topology = self.to_openmm_topology(
+            openmm_topology = self.to_openmm_topology(
                 ensure_unique_atom_names=False,
             )
             positions = get_positions_with_virtual_sites(self)
 
         else:
-            topology: openmm.app.Topology = self.topology.to_openmm(
+            openmm_topology = self.topology.to_openmm(
                 ensure_unique_atom_names=False,
             )
             positions = self.positions
 
-        _to_pdb(file_path, topology, positions.to(unit.angstrom))
+        _to_pdb(file_path, openmm_topology, positions.to(unit.angstrom))
 
-    def to_psf(self, file_path: Union[Path, str]):
+    def to_psf(self, file_path: Path | str):
         """Export this Interchange to a CHARMM-style .psf file."""
         raise UnsupportedExportError
 
-    def to_crd(self, file_path: Union[Path, str]):
+    def to_crd(self, file_path: Path | str):
         """Export this Interchange to a CHARMM-style .crd file."""
         raise UnsupportedExportError
 
-    def to_inpcrd(self, file_path: Union[Path, str], writer="internal"):
+    def to_inpcrd(self, file_path: Path | str, writer="internal"):
         """Export this Interchange to an Amber .inpcrd file."""
         if writer == "internal":
             from openff.interchange.interop.amber import to_inpcrd
@@ -744,7 +739,7 @@ class Interchange(DefaultModel):
         .. code-block:: pycon
 
             >>> from openff.interchange import Interchange
-            >>> from openff.toolkit.topology import Molecule, Topology
+            >>> from openff.toolkit import Molecule, Topology
             >>> from foyer import Forcefield
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
@@ -768,8 +763,8 @@ class Interchange(DefaultModel):
     @experimental
     def from_gromacs(
         cls,
-        topology_file: Union[Path, str],
-        gro_file: Union[Path, str],
+        topology_file: Path | str,
+        gro_file: Path | str,
     ) -> "Interchange":
         """
         Create an Interchange object from GROMACS files.
@@ -805,8 +800,8 @@ class Interchange(DefaultModel):
         cls,
         system: "openmm.System",
         topology: Union["openmm.app.Topology", Topology, None] = None,
-        positions: Union[Quantity, None] = None,
-        box_vectors: Union[Quantity, None] = None,
+        positions: Quantity | None = None,
+        box_vectors: Quantity | None = None,
     ) -> "Interchange":
         """
         Create an Interchange object from OpenMM objects.

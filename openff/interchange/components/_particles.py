@@ -6,7 +6,7 @@ import abc
 
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
-from openff.units import Quantity
+from openff.toolkit import Quantity
 
 
 class _VirtualSite(DefaultModel, abc.ABC):

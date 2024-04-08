@@ -1,10 +1,10 @@
 import abc
 import json
-from typing import Optional, TypeVar, Union
+from typing import TypeVar
 
 from openff.models.models import DefaultModel
 from openff.models.types import custom_quantity_encoder
-from openff.toolkit.topology import Topology
+from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -12,7 +12,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
 )
-from openff.units import unit
 
 from openff.interchange.components.potentials import Collection, Potential
 from openff.interchange.exceptions import (
@@ -32,7 +31,7 @@ T = TypeVar("T", bound="SMIRNOFFCollection")
 TP = TypeVar("TP", bound="ParameterHandler")
 
 
-def _sanitize(o) -> Union[str, dict]:
+def _sanitize(o) -> str | dict:
     # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
     # for the mapping dicts `key_map` and `potentials`.
     if isinstance(o, dict):
@@ -51,7 +50,7 @@ def dump_collection(v, *, default):
 
 def collection_loader(data: str) -> dict:
     """Load a JSON blob dumped from a `Collection`."""
-    tmp: dict[str, Optional[Union[int, float, bool, str, dict]]] = {}
+    tmp: dict[str, int | float | bool | str | dict | None] = {}
 
     for key, val in json.loads(data).items():
         if val is None:
@@ -61,7 +60,7 @@ def collection_loader(data: str) -> dict:
         elif isinstance(val, (str)):
             # These are stored as string but must be parsed into `Quantity`
             if key in ("cutoff", "switch_width"):
-                tmp[key] = unit.Quantity(*json.loads(val).values())  # type: ignore[arg-type]
+                tmp[key] = Quantity(*json.loads(val).values())  # type: ignore[arg-type]
             else:
                 tmp[key] = val
         elif isinstance(val, dict):
@@ -70,14 +69,14 @@ def collection_loader(data: str) -> dict:
 
                 for key_, val_ in val.items():
                     if "atom_indices" in key_:
-                        topology_key: Union[
-                            TopologyKey,
-                            LibraryChargeTopologyKey,
-                        ] = TopologyKey.parse_raw(key_)
+                        topology_key: TopologyKey | LibraryChargeTopologyKey = (
+                            TopologyKey.parse_raw(key_)
+                        )
 
                     else:
                         topology_key = LibraryChargeTopologyKey.parse_raw(key_)
 
+                    # TODO: Not obvious if cosmetic attributes survive here
                     potential_key = PotentialKey(**val_)
 
                     key_map[topology_key] = potential_key
@@ -244,16 +243,31 @@ class SMIRNOFFCollection(Collection, abc.ABC):
             # TODO: Should the key_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
             self.key_map: dict[
-                Union[TopologyKey, LibraryChargeTopologyKey],
+                TopologyKey | LibraryChargeTopologyKey,
                 PotentialKey,
             ] = dict()
+
         matches = parameter_handler.find_matches(topology)
+
         for key, val in matches.items():
+            parameter: ParameterHandler.ParameterType = val.parameter_type
+
+            cosmetic_attributes = {
+                cosmetic_attribute: getattr(
+                    parameter,
+                    f"_{cosmetic_attribute}",
+                )
+                for cosmetic_attribute in parameter._cosmetic_attribs
+            }
+
             topology_key = TopologyKey(atom_indices=key)
+
             potential_key = PotentialKey(
-                id=val.parameter_type.smirks,
+                id=parameter.smirks,
                 associated_handler=parameter_handler.TAGNAME,
+                cosmetic_attributes=cosmetic_attributes,
             )
+
             self.key_map[topology_key] = potential_key
 
         if self.__class__.__name__ in [

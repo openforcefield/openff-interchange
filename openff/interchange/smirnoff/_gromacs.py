@@ -1,12 +1,11 @@
 import itertools
 from collections import defaultdict
-from typing import Optional, Union
+from typing import Optional, TypeAlias, Union
 
+from openff.toolkit import Molecule, Quantity, unit
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
-from openff.toolkit.topology.molecule import Atom, Molecule
-from openff.units import Quantity, unit
+from openff.toolkit.topology.molecule import Atom
 from openff.units.elements import MASSES, SYMBOLS
-from typing_extensions import TypeAlias
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.potentials import Collection
@@ -168,7 +167,7 @@ def _convert(
                 epsilon=vdw_parameters["epsilon"].to(unit.kilojoule_per_mole),
             )
 
-    _partial_charges: dict[Union[int, VirtualSiteKey], float] = dict()
+    _partial_charges: dict[int | VirtualSiteKey, float] = dict()
 
     # Indexed by particle (atom or virtual site) indices
     for key, charge in interchange["Electrostatics"].charges.items():
@@ -287,7 +286,11 @@ def _convert(
             get_positions_with_virtual_sites,
         )
 
-        system.positions = get_positions_with_virtual_sites(interchange)
+        system.positions = get_positions_with_virtual_sites(
+            interchange,
+            collate=True,
+        )
+
     else:
         system.positions = interchange.positions
 

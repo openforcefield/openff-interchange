@@ -1,10 +1,9 @@
 import pathlib
 import warnings
-from typing import Optional, Union
 
 import numpy
 from openff.models.models import DefaultModel
-from openff.units import unit
+from openff.toolkit import unit
 
 from openff.interchange.exceptions import MissingPositionsError
 from openff.interchange.interop.gromacs.models.models import (
@@ -23,8 +22,8 @@ class GROMACSWriter(DefaultModel):
     """Thin wrapper for writing GROMACS systems."""
 
     system: GROMACSSystem
-    top_file: Optional[Union[pathlib.Path, str]] = None
-    gro_file: Optional[Union[pathlib.Path, str]] = None
+    top_file: pathlib.Path | str | None = None
+    gro_file: pathlib.Path | str | None = None
 
     def to_top(self):
         """Write a GROMACS topology file."""

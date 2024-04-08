@@ -2,7 +2,7 @@
 
 from contextlib import nullcontext
 from pathlib import Path
-from typing import TYPE_CHECKING, TextIO, Union
+from typing import TYPE_CHECKING, TextIO
 
 from openff.utilities.utilities import has_package, requires_package
 
@@ -62,7 +62,7 @@ def to_openmm_system(
         The corresponding OpenMM System object
 
     """
-    from openff.units import unit as off_unit
+    from openff.toolkit import unit as off_unit
 
     from openff.interchange.interop.openmm._gbsa import _process_gbsa
     from openff.interchange.interop.openmm._nonbonded import _process_nonbonded_forces
@@ -148,14 +148,14 @@ to_openmm = to_openmm_system
 
 @requires_package("openmm")
 def _to_pdb(
-    file_path: Union[Path, str, TextIO],
+    file_path: Path | str | TextIO,
     topology: "openmm.app.Topology",
     positions,
 ):
     from openff.units.openmm import ensure_quantity
 
     # Deal with the possibility of `StringIO`
-    manager: Union[nullcontext[TextIO], TextIO]  # MyPy needs some help here
+    manager: nullcontext[TextIO] | TextIO  # MyPy needs some help here
     if isinstance(file_path, (str, Path)):
         manager = open(file_path, "w")
     else:

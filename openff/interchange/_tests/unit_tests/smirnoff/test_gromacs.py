@@ -1,8 +1,7 @@
 """Test SMIRNOFF-GROMACS conversion."""
 
 import pytest
-from openff.toolkit import Molecule
-from openff.units import unit
+from openff.toolkit import Molecule, unit
 
 from openff.interchange import Interchange
 from openff.interchange.interop.gromacs.models.models import GROMACSMolecule
@@ -36,11 +35,11 @@ class TestConvert:
 
 
 class TestSettles:
-    @pytest.fixture()
+    @pytest.fixture
     def tip3p_interchange(self, tip3p, water):
         return tip3p.create_interchange(water.to_topology())
 
-    @pytest.fixture()
+    @pytest.fixture
     def sage_tip3p_interchange(self, sage, water):
         return sage.create_interchange(water.to_topology())
 

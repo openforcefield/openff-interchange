@@ -4,10 +4,9 @@ Helper functions for producing `openmm.Force` objects for non-bonded terms.
 
 import itertools
 from collections import defaultdict
-from typing import DefaultDict, NamedTuple, Optional, Union
+from typing import DefaultDict, NamedTuple, Optional
 
-from openff.toolkit import Molecule
-from openff.units import unit
+from openff.toolkit import Molecule, unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 
@@ -42,11 +41,11 @@ _MIXING_RULE_EXPRESSIONS: dict[str, str] = {
 class _NonbondedData(NamedTuple):
     vdw_collection: vdWCollection
     vdw_cutoff: unit.Quantity
-    vdw_method: Optional[str]
-    vdw_expression: Optional[str]
-    mixing_rule: Optional[str]
+    vdw_method: str | None
+    vdw_expression: str | None
+    mixing_rule: str | None
     electrostatics_collection: ElectrostaticsCollection
-    electrostatics_method: Optional[str]
+    electrostatics_method: str | None
     periodic: bool
 
 
@@ -55,7 +54,7 @@ def _process_nonbonded_forces(
     system: openmm.System,
     combine_nonbonded_forces: bool = False,
     ewald_tolerance: float = 1e-4,
-) -> dict[Union[int, VirtualSiteKey], int]:
+) -> dict[int | VirtualSiteKey, int]:
     """
     Process the non-bonded collections in an Interchange into corresponding openmm objects.
 
@@ -164,7 +163,7 @@ def _add_particles_to_system(
     interchange: "Interchange",
     system: openmm.System,
     molecule_virtual_site_map,
-) -> dict[Union[int, VirtualSiteKey], int]:
+) -> dict[int | VirtualSiteKey, int]:
     particle_map = _build_particle_map(
         interchange,
         molecule_virtual_site_map,
@@ -233,15 +232,15 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
             vdw = None  # type: ignore[assignment]
 
     if vdw:
-        vdw_cutoff: Optional[unit.Quanaity] = vdw.cutoff
+        vdw_cutoff: unit.Quanaity | None = vdw.cutoff
 
         if interchange.box is None:
-            vdw_method: Optional[str] = vdw.nonperiodic_method.lower()
+            vdw_method: str | None = vdw.nonperiodic_method.lower()
         else:
-            vdw_method: Optional[str] = vdw.periodic_method.lower()
+            vdw_method: str | None = vdw.periodic_method.lower()
 
-        mixing_rule: Optional[str] = getattr(vdw, "mixing_rule", None)
-        vdw_expression: Optional[str] = vdw.expression.replace("**", "^")
+        mixing_rule: str | None = getattr(vdw, "mixing_rule", None)
+        vdw_expression: str | None = vdw.expression.replace("**", "^")
     else:
         vdw_cutoff = None
         vdw_method = None
@@ -254,7 +253,7 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
         electrostatics = None  # type: ignore[assignment]
 
     if electrostatics is None:
-        electrostatics_method: Optional[str] = None
+        electrostatics_method: str | None = None
     else:
         if interchange.box is None:
             electrostatics_method = getattr(
@@ -283,7 +282,7 @@ def _create_single_nonbonded_force(
     system: openmm.System,
     ewald_tolerance: float,
     molecule_virtual_site_map: dict["Molecule", list[VirtualSiteKey]],
-    openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int],
+    openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
 ):
     """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site collections."""
     if data.mixing_rule not in ("lorentz-berthelot", None):
@@ -577,7 +576,7 @@ def _create_multiple_nonbonded_forces(
     system: openmm.System,
     ewald_tolerance: float,
     molecule_virtual_site_map: dict,
-    openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int],
+    openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
 ):
     from openff.interchange.components.toolkit import _get_14_pairs
 
@@ -752,7 +751,7 @@ def _create_vdw_force(
     interchange: "Interchange",
     molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
     has_virtual_sites: bool,
-) -> Optional[openmm.CustomNonbondedForce]:
+) -> openmm.CustomNonbondedForce | None:
     vdw_collection: Optional["vdWCollection"] = data.vdw_collection
 
     if vdw_collection is None:
@@ -844,7 +843,7 @@ def _create_electrostatics_force(
     molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
     has_virtual_sites: bool,
     openff_openmm_particle_map,
-) -> Optional[openmm.NonbondedForce]:
+) -> openmm.NonbondedForce | None:
     if data.electrostatics_collection is None:
         return None
 
@@ -923,7 +922,7 @@ def _set_particle_parameters(
     interchange: "Interchange",
     has_virtual_sites: bool,
     molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
-    openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int],
+    openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
 ):
     if electrostatics_force is not None:
         electrostatics: ElectrostaticsCollection = data.electrostatics_collection

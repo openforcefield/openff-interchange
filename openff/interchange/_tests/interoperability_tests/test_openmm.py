@@ -2,7 +2,7 @@ import math
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 from openff.utilities import get_data_file_path, has_package
 from openff.utilities.testing import skip_if_missing
@@ -238,7 +238,7 @@ class TestOpenMM:
                 raise Exception("Did not find 1-4 Cl-Br interaction.")
 
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.parametrize("mol_smi", ["C", "CC", "CCO"])
     def test_openmm_roundtrip(self, sage, mol_smi):
         topology = MoleculeWithConformer.from_smiles(mol_smi).to_topology()
@@ -260,7 +260,7 @@ class TestOpenMM:
         )
 
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_combine_nonbonded_forces(self, sage):
         topology = MoleculeWithConformer.from_smiles(
             "ClC#CCl",
@@ -358,9 +358,9 @@ class TestOpenMM:
     def test_nonstandard_cutoffs_match(self, sage):
         """Test that multiple nonbonded forces use the same cutoff."""
         topology = Molecule.from_smiles("C").to_topology()
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
 
-        cutoff = unit.Quantity(1.555, unit.nanometer)
+        cutoff = Quantity(1.555, unit.nanometer)
 
         sage["vdW"].cutoff = cutoff
 
@@ -469,7 +469,7 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
         from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 
         topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
 
         out = Interchange.from_smirnoff(
             de_force_field,
@@ -561,10 +561,31 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
 
 
 @skip_if_missing("openmm")
-@pytest.mark.slow()
+@pytest.mark.slow
 class TestOpenMMVirtualSites:
 
-    @pytest.fixture()
+    @pytest.fixture
+    def sage_with_sigma_hole(self, sage):
+        """Fixture that loads an SMIRNOFF XML with a C-Cl sigma hole."""
+        # TODO: Move this into BaseTest to that GROMACS and others can access it
+        virtual_site_handler = VirtualSiteHandler(version=0.3)
+
+        sigma_type = VirtualSiteHandler.VirtualSiteType(
+            name="EP",
+            smirks="[#6:1]-[#17:2]",
+            distance=1.4 * unit.angstrom,
+            type="BondCharge",
+            match="once",
+            charge_increment1=0.1 * unit.elementary_charge,
+            charge_increment2=0.2 * unit.elementary_charge,
+        )
+
+        virtual_site_handler.add_parameter(parameter=sigma_type)
+        sage.register_parameter_handler(virtual_site_handler)
+
+        return sage
+
+    @pytest.fixture
     def sage_with_monovalent_lone_pair(self, sage):
         virtual_site_handler = VirtualSiteHandler(version=0.3)
 
@@ -623,7 +644,7 @@ class TestToOpenMMTopology:
         and as the wrapped method of the same name on the `Interchange` class.
         """
         topology = water.to_topology()
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
 
         out = Interchange.from_smirnoff(tip4p, topology)
 
@@ -758,7 +779,7 @@ class TestToOpenMMTopology:
         # and 12 atoms named "", for a total of 3 unique atom names
         assert len(atom_names) == 3
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.parametrize("explicit_arg", [True, False])
     def test_preserve_per_residue_unique_atom_names(self, explicit_arg, sage):
         """
@@ -802,7 +823,7 @@ class TestToOpenMMTopology:
         final_atomnames = [str(atom.name) for atom in omm_topology.atoms()]
         assert final_atomnames == init_atomnames
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.parametrize("explicit_arg", [True, False])
     def test_generate_per_residue_unique_atom_names(self, explicit_arg, sage):
         """
@@ -998,7 +1019,7 @@ class TestToOpenMMPositions:
         out = Interchange.from_smirnoff(tip4p, topology)
 
         # Approximate conformer position with a duplicate 5 A away in x
-        out.positions = unit.Quantity(
+        out.positions = Quantity(
             numpy.array(
                 [
                     [0.85, 1.17, 0.84],

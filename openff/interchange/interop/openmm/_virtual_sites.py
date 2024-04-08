@@ -2,8 +2,6 @@
 Helper functions for exporting virutal sites to OpenMM.
 """
 
-from typing import Union
-
 from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
@@ -17,7 +15,7 @@ if has_package("openmm"):
 def _create_openmm_virtual_site(
     interchange: Interchange,
     virtual_site: "_VirtualSite",
-    openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int],
+    openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
 ) -> openmm.VirtualSite:
     # virtual_site.orientations is a list of the _openff_ indices, which is more or less
     # the topology index in a topology containing only atoms (no virtual site). This dict,

@@ -1,6 +1,5 @@
 import pytest
-from openff.toolkit import Molecule
-from openff.units import unit
+from openff.toolkit import Molecule, unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.exceptions import UnsupportedCutoffMethodError

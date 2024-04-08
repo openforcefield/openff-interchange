@@ -26,11 +26,9 @@ jobs:
           - macOS-latest
           - ubuntu-latest
         python-version:
-          - "3.9"
           - "3.10"
           - "3.11"
         pydantic-version:
-          - "1"
           - "2"
         openeye:
           - true
@@ -38,13 +36,6 @@ jobs:
         openmm:
           - true
           - false
-        exclude:
-          - openeye: false
-            python-version: "3.11"
-          - pydantic-version: "1"
-            python-version: "3.9"
-          - pydantic-version: "1"
-            python-version: "3.10"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -108,7 +99,7 @@ jobs:
           --ignore=openff/interchange/_tests/energy_tests/test_energies.py
 
     - name: Run small molecule regression tests
-      if: ${{ matrix.python-version == 3.9 && matrix.openeye == true && matrix.openmm == true }}
+      if: ${{ matrix.python-version == '3.10' && matrix.openeye == true && matrix.openmm == true }}
       run: |
         micromamba install deepdiff rich click -c conda-forge
         python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git
@@ -136,11 +127,12 @@ jobs:
 
     - name: Run mypy
       continue-on-error: true
+      if: ${{ matrix.python-version == '3.11' }}
       run: |
         # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
         # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
         micromamba remove jax
-        mypy --show-error-codes --namespace-packages -p "openff.interchange" --exclude "openff/interchange/_tests/data/"
+        mypy -p "openff.interchange" --exclude "openff/interchange/_tests/"
         mypy --show-error-codes plugins/nonbonded_plugins/
 
     - name: Codecov

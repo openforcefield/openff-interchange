@@ -12,13 +12,14 @@ dependencies:
   # OpenFF stack
   - openff-toolkit >=0.15.2
   - openff-models
-  - openff-nagl
+  - openff-nagl ~=0.3.7
   - openff-nagl-models
   # Optional features
   - jax
   - unyt
   - mbuild
   - foyer >=0.12.1
+  - gmso =0.12
   # Testing
   - mdtraj
   - openmmforcefields

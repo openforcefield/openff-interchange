@@ -6,13 +6,14 @@ import os
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Callable
+from copy import deepcopy
 from distutils.spawn import find_executable
-from typing import Callable, Literal, Optional, Union
+from typing import Literal
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
-from openff.toolkit import Molecule, RDKitToolkitWrapper, Topology
-from openff.units import Quantity, unit
+from openff.toolkit import Molecule, Quantity, RDKitToolkitWrapper, Topology, unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
@@ -66,7 +67,7 @@ simulations,
 """
 
 
-def _find_packmol() -> Optional[str]:
+def _find_packmol() -> str | None:
     """
     Attempt to find the path to the `packmol` binary.
 
@@ -84,20 +85,35 @@ def _find_packmol() -> Optional[str]:
     )
 
 
+def _check_add_positive_mass(mass_to_add):
+    if mass_to_add.m < 0:
+        raise PACKMOLValueError(
+            "Solute mass is greater than target mass; increase density or make the box bigger",
+        )
+
+
+def _check_box_shape_shape(box_shape: ArrayLike):
+    """Check the .shape of the box_shape argument."""
+    if box_shape.shape != (3, 3):
+        raise PACKMOLValueError(
+            "box_shape should be an array with shape (3, 3) defining a box with unit periodic image distance",
+        )
+
+
 def _validate_inputs(
     molecules: list[Molecule],
     number_of_copies: list[int],
-    solute: Optional[Topology],
+    solute: Topology | None,
     box_shape: NDArray,
-    box_vectors: Optional[Quantity],
-    mass_density: Optional[Quantity],
+    box_vectors: Quantity | None,
+    mass_density: Quantity | None,
 ):
     """
     Validate the inputs which were passed to the main pack method.
 
     Parameters
     ----------
-    molecules : list of openff.toolkit.topology.Molecule
+    molecules : list of openff.toolkit.Molecule
         The molecules in the system.
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
@@ -133,7 +149,7 @@ def _validate_inputs(
 
     if box_vectors is not None and box_vectors.shape != (3, 3):
         raise PACKMOLValueError(
-            "`box_vectors` must be a openff.units.unit.Quantity Array with shape (3, 3)",
+            "`box_vectors` must be a openff.units.Quantity Array with shape (3, 3)",
         )
 
     if box_shape.shape != (3, 3):
@@ -151,7 +167,7 @@ def _validate_inputs(
     if solute is not None:
         if not isinstance(solute, Topology):
             raise PACKMOLValueError(
-                "`solute` must be a openff.toolkit.topology.Topology",
+                "`solute` must be a openff.toolkit.Topology",
             )
 
         positions = solute.get_positions()
@@ -317,7 +333,7 @@ def _box_from_density(
 
     Parameters
     ----------
-    molecules : list of openff.toolkit.topology.Molecule
+    molecules : list of openff.toolkit.Molecule
         The molecules in the system.
     n_copies : list of int
         The number of copies of each molecule.
@@ -377,9 +393,9 @@ def _scale_box(box: NDArray, volume: Quantity) -> Quantity:
 
 
 def _create_solute_pdb(
-    topology: Optional[Topology],
+    topology: Topology | None,
     box_vectors: Quantity,
-) -> Optional[str]:
+) -> str | None:
     """Write out the solute topology to PDB so that packmol can read it."""
     if topology is None:
         return None
@@ -434,7 +450,7 @@ def _create_molecule_pdbs(molecules: list[Molecule]) -> list[str]:
 def _build_input_file(
     molecule_file_names: list[str],
     molecule_counts: list[int],
-    structure_to_solvate: Optional[str],
+    structure_to_solvate: str | None,
     box_size: Quantity,
     tolerance: Quantity,
 ) -> tuple[str, str]:
@@ -512,7 +528,7 @@ def _build_input_file(
 
 
 def _center_topology_at(
-    center_solute: Union[bool, Literal["BOX_VECS", "ORIGIN", "BRICK"]],
+    center_solute: bool | Literal["BOX_VECS", "ORIGIN", "BRICK"],
     topology: Topology,
     box_vectors: Quantity,
     brick_size: Quantity,
@@ -545,13 +561,13 @@ def _center_topology_at(
 def pack_box(
     molecules: list[Molecule],
     number_of_copies: list[int],
-    solute: Optional[Topology] = None,
+    solute: Topology | None = None,
     tolerance: Quantity = 2.0 * unit.angstrom,
-    box_vectors: Optional[Quantity] = None,
-    mass_density: Optional[Quantity] = None,
+    box_vectors: Quantity | None = None,
+    mass_density: Quantity | None = None,
     box_shape: ArrayLike = RHOMBIC_DODECAHEDRON,
-    center_solute: Union[bool, Literal["BOX_VECS", "ORIGIN", "BRICK"]] = False,
-    working_directory: Optional[str] = None,
+    center_solute: bool | Literal["BOX_VECS", "ORIGIN", "BRICK"] = False,
+    working_directory: str | None = None,
     retain_working_files: bool = False,
 ) -> Topology:
     """
@@ -559,13 +575,13 @@ def pack_box(
 
     Parameters
     ----------
-    molecules : list of openff.toolkit.topology.Molecule
+    molecules : list of openff.toolkit.Molecule
         The molecules in the system.
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
         equal to the length of ``molecules``.
     solute: Topology, optional
-        An OpenFF :py:class:`Topology <openff.toolkit.topology.Topology>` to
+        An OpenFF :py:class:`Topology <openff.toolkit.Topology>` to
         include in the box. If ``box_vectors`` and ``mass_density`` are not
         specified, box vectors can be taken from ``solute.box_vectors``.
     tolerance : openff.units.Quantity
@@ -647,7 +663,7 @@ def pack_box(
     # If neither box size nor density are given, take box vectors from solute
     # topology
     if box_vectors is None:
-        box_vectors = solute.box_vectors
+        box_vectors = solute.box_vectors  # type: ignore[union-attr]
 
     if not _box_vectors_are_in_reduced_form(box_vectors):
         raise PACKMOLValueError(
@@ -762,8 +778,7 @@ def _max_dist_between_points(points: Quantity) -> Quantity:
     """
     Compute the greatest distance between two points in the array.
     """
-    from scipy.spatial import ConvexHull
-    from scipy.spatial.distance import pdist
+    from scipy.spatial import ConvexHull, distance
 
     points, units = points.m, points.u
 
@@ -781,7 +796,7 @@ def _max_dist_between_points(points: Quantity) -> Quantity:
         hullpoints = points_array
 
     # Now compute all the distances and get the greatest distance in O(h^2)
-    max_dist = pdist(hullpoints, metric="euclidean").max()
+    max_dist = distance.pdist(hullpoints, metric="euclidean").max()
     return max_dist * units
 
 
@@ -824,11 +839,7 @@ def solvate_topology(
         stable simulations after energy minimisation.
 
     """
-    if box_shape.shape != (3, 3):
-        raise PACKMOLValueError(
-            "box_shape should be a 3×3 array defining a box with unit periodic"
-            + " image distance",  # noqa: W503
-        )
+    _check_box_shape_shape(box_shape)
 
     # Compute box vectors from the solute length and requested padding
     solute_length = _max_dist_between_points(topology.get_positions())
@@ -842,10 +853,8 @@ def solvate_topology(
         sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
     )
     solvent_mass = target_mass - solute_mass
-    if solvent_mass < 0:
-        raise PACKMOLValueError(
-            "Solute mass is greater than target mass; increase density or make the box bigger",
-        )
+
+    _check_add_positive_mass(solvent_mass)
 
     # Get reference data and prepare solvent molecules
     water = Molecule.from_smiles("O")
@@ -876,6 +885,77 @@ def solvate_topology(
         [water, na, cl],
         [int(water_to_add), int(na_to_add), int(cl_to_add)],
         solute=topology,
-        tolerance=2.0 * unit.angstrom,
+        tolerance=tolerance,
         box_vectors=box_vectors,
+    )
+
+
+def solvate_topology_nonwater(
+    topology: Topology,
+    solvent: Molecule,
+    padding: Quantity = 1.2 * unit.nanometer,
+    box_shape: NDArray = RHOMBIC_DODECAHEDRON,
+    target_density: Quantity = 1.0 * unit.gram / unit.milliliter,
+    tolerance: Quantity = 2.0 * unit.angstrom,
+) -> Topology:
+    """
+    Add water and ions to neutralise and solvate a topology.
+
+    Parameters
+    ----------
+    topology
+        The OpenFF Topology to solvate.
+    solvent
+        The OpenFF Molecule to use as the solvent.
+    padding : Scalar with dimensions of length
+        The desired distance between the solute and the edge of the box. Ignored
+        if the topology already has box vectors. The usual recommendation is
+        that this equals or exceeds the VdW cut-off distance, so that the
+        solute is isolated by its periodic images by twice the cut-off.
+    box_shape : Array with shape (3, 3)
+        An array defining the box vectors of a box with the desired shape and
+        unit periodic image distance. This shape will be scaled to satisfy the
+        padding given above. Some typical shapes are provided in this module.
+    target_density : Scalar with dimensions of mass density
+        The target mass density for the packed box.
+    tolerance: Scalar with dimensions of distance
+        The minimum spacing between molecules during packing in units of
+        distance. The default is large so that added waters do not disrupt the
+        structure of proteins; when constructing a mixture of small molecules,
+        values as small as 0.5 Å will converge faster and can still produce
+        stable simulations after energy minimisation.
+
+    """
+    _check_box_shape_shape(box_shape)
+
+    # Compute box vectors from the solute length and requested padding
+    solute_length = _max_dist_between_points(topology.get_positions())
+    image_distance = solute_length + padding * 2
+    box_vectors = box_shape * image_distance
+
+    # Compute target masses of solvent
+    box_volume = np.linalg.det(box_vectors.m) * box_vectors.u**3
+    target_mass = box_volume * target_density
+    solute_mass = sum(
+        sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
+    )
+
+    solvent_mass_to_add = target_mass - solute_mass
+
+    _check_add_positive_mass(solvent_mass_to_add)
+
+    _solvent = deepcopy(solvent)
+    solvent_mass = sum([atom.mass for atom in _solvent.atoms])
+
+    solvent_to_add = (
+        (solvent_mass_to_add / solvent_mass).m_as(unit.dimensionless).round()
+    )
+
+    return pack_box(
+        molecules=[solvent],
+        number_of_copies=[int(solvent_to_add)],
+        solute=topology,
+        tolerance=tolerance,
+        box_vectors=box_vectors,
+        center_solute=True,
     )

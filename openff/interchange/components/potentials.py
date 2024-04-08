@@ -3,14 +3,16 @@
 import ast
 import json
 import warnings
-from typing import Callable, Optional, Union
+from collections.abc import Callable
+from typing import Union
 
 import numpy
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
-from openff.units import unit
+from openff.toolkit import Quantity
 from openff.utilities.utilities import has_package, requires_package
 
+from openff.interchange._pydantic import Field, PrivateAttr, validator
 from openff.interchange.exceptions import MissingParametersError
 from openff.interchange.models import (
     LibraryChargeTopologyKey,
@@ -18,11 +20,6 @@ from openff.interchange.models import (
     TopologyKey,
 )
 from openff.interchange.warnings import InterchangeDeprecationWarning
-
-try:
-    from pydantic.v1 import Field, PrivateAttr, validator
-except ImportError:
-    from pydantic import Field, PrivateAttr, validator
 
 if has_package("jax"):
     from jax import numpy as jax_numpy
@@ -48,7 +45,7 @@ def __getattr__(name: str):
 
 def potential_loader(data: str) -> dict:
     """Load a JSON blob dumped from a `Collection`."""
-    tmp: dict[str, Union[int, bool, str, dict]] = {}
+    tmp: dict[str, int | bool | str | dict] = {}
 
     for key, val in json.loads(data).items():
         if isinstance(val, (str, type(None))):
@@ -59,7 +56,7 @@ def potential_loader(data: str) -> dict:
 
                 for key_, val_ in val.items():
                     loaded = json.loads(val_)
-                    tmp["parameters"][key_] = unit.Quantity(  # type: ignore[index]
+                    tmp["parameters"][key_] = Quantity(  # type: ignore[index]
                         loaded["val"],
                         loaded["unit"],
                     )
@@ -71,7 +68,7 @@ class Potential(DefaultModel):
     """Base class for storing applied parameters."""
 
     parameters: dict[str, FloatQuantity] = dict()
-    map_key: Optional[int] = None
+    map_key: int | None = None
 
     class Config:
         """Pydantic configuration."""
@@ -84,7 +81,7 @@ class Potential(DefaultModel):
     @validator("parameters")
     def validate_parameters(
         cls,
-        v: dict[str, Union[ArrayQuantity, FloatQuantity]],
+        v: dict[str, ArrayQuantity | FloatQuantity],
     ) -> dict[str, FloatQuantity]:
         for key, val in v.items():
             if isinstance(val, list):
@@ -107,7 +104,7 @@ class WrappedPotential(DefaultModel):
 
     _inner_data: InnerData = PrivateAttr()
 
-    def __init__(self, data: Union[Potential, dict]) -> None:
+    def __init__(self, data: Potential | dict) -> None:
         if isinstance(data, Potential):
             self._inner_data = self.InnerData(data={data: 1.0})
         elif isinstance(data, dict):
@@ -149,11 +146,11 @@ class Collection(DefaultModel):
         ...,
         description="The analytical expression governing the potentials in this handler.",
     )
-    key_map: dict[Union[TopologyKey, LibraryChargeTopologyKey], PotentialKey] = Field(
+    key_map: dict[TopologyKey | LibraryChargeTopologyKey, PotentialKey] = Field(
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )
-    potentials: dict[PotentialKey, Union[Potential, WrappedPotential]] = Field(
+    potentials: dict[PotentialKey, Potential | WrappedPotential] = Field(
         dict(),
         description="A mapping between PotentialKey objects and Potential objects.",
     )

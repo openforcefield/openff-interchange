@@ -1,4 +1,4 @@
-import sys
+from importlib import resources
 from math import exp
 
 import numpy
@@ -30,11 +30,6 @@ from openff.interchange.interop.gromacs._import._import import (
     from_files,
 )
 from openff.interchange.models import PotentialKey, TopologyKey
-
-if sys.version_info >= (3, 10):
-    from importlib import resources
-else:
-    import importlib_resources as resources
 
 if has_package("openmm"):
     import openmm.app
@@ -143,7 +138,7 @@ class TestGROMACSGROFile:
         with pytest.warns(UserWarning, match="gitlab"):
             out.to_gro("tmp.gro")
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @skip_if_missing("openmm")
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .gro files."""
@@ -174,7 +169,7 @@ class TestGROMACSGROFile:
             assert found_residue.name == original_residue.residue_name
             assert str(found_residue.resSeq) == original_residue.residue_number
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
             get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
@@ -197,7 +192,7 @@ class TestGROMACSGROFile:
 
 @needs_gmx
 class TestGROMACS:
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.skip("from_top is not yet refactored for new Topology API")
     @pytest.mark.parametrize("reader", ["intermol", "internal"])
     @pytest.mark.parametrize(
@@ -254,7 +249,7 @@ class TestGROMACS:
         n_impropers_parmed = len([d for d in struct.dihedrals if d.improper])
         assert n_impropers_parmed == len(out["ImproperTorsions"].key_map)
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @skip_if_missing("intermol")
     @pytest.mark.skip(reason="Re-implement when SMIRNOFF supports more mixing rules")
     def test_set_mixing_rule(self, ethanol_top, sage):
@@ -284,7 +279,7 @@ class TestGROMACS:
         with pytest.raises(UnsupportedExportError, match="rule `geometric` not compat"):
             interchange.to_top("out.top")
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @skip_if_missing("openmm")
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .top files."""
@@ -321,7 +316,7 @@ class TestGROMACS:
             assert found_residue.name == original_residue.residue_name
             assert str(found_residue.number + 1) == original_residue.residue_number
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.skip(
         reason="Update when energy reports intentionally support non-vdW handlers",
     )
@@ -406,7 +401,7 @@ class TestGROMACS:
 class TestGROMACSMetadata:
     @skip_if_missing("openmm")
     @skip_if_missing("mdtraj")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_atom_names_pdb(self):
         peptide = Molecule.from_polymer_pdb(
             get_data_file_path(
@@ -463,7 +458,7 @@ class TestSettles:
         )
 
 
-@pytest.mark.slow()
+@pytest.mark.slow
 @requires_package("openmm")
 class TestCommonBoxes:
     @pytest.mark.parametrize(
@@ -503,7 +498,7 @@ class TestCommonBoxes:
 
 @needs_gmx
 class TestGROMACSVirtualSites:
-    @pytest.fixture()
+    @pytest.fixture
     def sigma_hole_type(self, sage):
         """A handler with a bond charge virtual site on a C-Cl bond."""
         return VirtualSiteHandler.VirtualSiteBondChargeType(
@@ -516,7 +511,30 @@ class TestGROMACSVirtualSites:
             charge_increment2=0.2 * unit.elementary_charge,
         )
 
-    @pytest.mark.xfail()
+    @pytest.fixture
+    def sage_with_monovalent_lone_pair(self, sage):
+        """Fixture that loads an SMIRNOFF XML for argon"""
+        virtual_site_handler = VirtualSiteHandler(version=0.3)
+
+        carbonyl_type = VirtualSiteHandler.VirtualSiteType(
+            name="EP",
+            smirks="[O:1]=[C:2]-[*:3]",
+            distance=0.3 * unit.angstrom,
+            type="MonovalentLonePair",
+            match="all_permutations",
+            outOfPlaneAngle=0.0 * unit.degree,
+            inPlaneAngle=120.0 * unit.degree,
+            charge_increment1=0.05 * unit.elementary_charge,
+            charge_increment2=0.1 * unit.elementary_charge,
+            charge_increment3=0.15 * unit.elementary_charge,
+        )
+
+        virtual_site_handler.add_parameter(parameter=carbonyl_type)
+        sage.register_parameter_handler(virtual_site_handler)
+
+        return sage
+
+    @pytest.mark.xfail
     @skip_if_missing("parmed")
     def test_sigma_hole_example(self, sage_with_sigma_hole):
         """Test that a single-molecule sigma hole example runs"""
