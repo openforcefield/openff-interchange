@@ -4,9 +4,8 @@ from math import exp
 import numpy
 import parmed
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
-from openff.units import unit
 from openff.units.openmm import ensure_quantity
 from openff.utilities import (
     get_data_file_path,
@@ -24,11 +23,7 @@ from openff.interchange._tests import (
 from openff.interchange.components.nonbonded import BuckinghamvdWCollection
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
-from openff.interchange.exceptions import (
-    GMXMdrunError,
-    UnsupportedExportError,
-    VirtualSiteTypeNotImplementedError,
-)
+from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
 from openff.interchange.interop.gromacs._import._import import (
     _read_box,
     _read_coordinates,
@@ -76,9 +71,12 @@ class TestToGro:
 @skip_if_missing("openmm")
 @needs_gmx
 class TestGROMACSGROFile:
-    _INTERMOL_PATH = resources.files(
-        "intermol.tests.gromacs.unit_tests",
-    )
+    try:
+        _INTERMOL_PATH = resources.files(
+            "intermol.tests.gromacs.unit_tests",
+        )
+    except ModuleNotFoundError:
+        _INTERMOL_PATH = None
 
     @skip_if_missing("intermol")
     def test_load_gro(self):
@@ -499,7 +497,6 @@ class TestCommonBoxes:
 
 
 @needs_gmx
-@pytest.mark.skip("Needs rewrite")
 class TestGROMACSVirtualSites:
     @pytest.fixture
     def sigma_hole_type(self, sage):
@@ -558,23 +555,19 @@ class TestGROMACSVirtualSites:
 
         assert abs(numpy.sum([p.charge for p in gmx_top.atoms])) < 1e-3
 
-    def test_carbonyl_example(self, sage_with_monovalent_lone_pair):
-        """Test that a single-molecule DivalentLonePair example runs"""
-        mol = MoleculeWithConformer.from_smiles("C=O", name="Carbon_monoxide")
+    def test_carbonyl_example(self, sage_with_planar_monovalent_carbonyl, ethanol):
+        """Test that a single-molecule planar carbonyl example can run 0 steps."""
+        ethanol.generate_conformers(n_conformers=1)
 
-        out = Interchange.from_smirnoff(
-            force_field=sage_with_monovalent_lone_pair,
-            topology=mol.to_topology(),
+        hexanal = MoleculeWithConformer.from_smiles("CCCCCC=O")
+        hexanal._conformers[0] += Quantity("2 nanometer")
+
+        topology = Topology.from_molecules([ethanol, hexanal])
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+
+        get_gromacs_energies(
+            sage_with_planar_monovalent_carbonyl.create_interchange(topology),
         )
-        out.box = [4, 4, 4]
-        out.positions = mol.conformers[0]
-
-        with pytest.raises(
-            VirtualSiteTypeNotImplementedError,
-            match="MonovalentLonePair not implemented.",
-        ):
-            # TODO: Sanity-check reported energies
-            get_gromacs_energies(out)
 
     @skip_if_missing("openmm")
     def test_tip4p_charge_neutrality(self, tip4p, water_dimer):

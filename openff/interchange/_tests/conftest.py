@@ -66,8 +66,27 @@ def sage_with_planar_monovalent_carbonyl(sage):
             outOfPlaneAngle=Quantity("0 * degree ** 1"),
             inPlaneAngle=Quantity("120 * degree ** 1"),
             charge_increment1="0.1 * elementary_charge ** 1",
-            charge_increment2="0.1 * elementary_charge ** 1",
-            charge_increment3="0.1 * elementary_charge ** 1",
+            charge_increment2="0.0 * elementary_charge ** 1",
+            charge_increment3="0.0 * elementary_charge ** 1",
+        ),
+    )
+
+    return sage
+
+
+@pytest.fixture
+def sage_with_sigma_hole(sage):
+    """Fixture that loads an SMIRNOFF XML with a C-Cl sigma hole."""
+    sage.get_parameter_handler("VirtualSites")
+    sage["VirtualSites"].add_parameter(
+        parameter=VirtualSiteType(
+            name="EP",
+            smirks="[#6:1]-[#17:2]",
+            distance=1.4 * unit.angstrom,
+            type="BondCharge",
+            match="once",
+            charge_increment1=0.1 * unit.elementary_charge,
+            charge_increment2=0.2 * unit.elementary_charge,
         ),
     )
 
