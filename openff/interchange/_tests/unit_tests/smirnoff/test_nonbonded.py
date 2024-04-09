@@ -12,6 +12,7 @@ from openff.toolkit.utils.exceptions import SMIRNOFFVersionError
 from packaging.version import Version
 
 from openff.interchange import Interchange
+from openff.interchange.exceptions import NonIntegralMoleculeChargeError
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     _downconvert_vdw_handler,
@@ -227,6 +228,18 @@ class TestElectrostatics:
 
         compare_charges(original, get_charges_from_interchange(original))
         compare_charges(reordered, get_charges_from_interchange(reordered))
+
+
+def test_nonintegral_molecule_charge_error(sage, water):
+    funky_charges = Quantity([0, 0, -5.5], "elementary_charge")
+
+    water.partial_charges = funky_charges
+
+    with pytest.raises(
+        NonIntegralMoleculeChargeError,
+        match="net charge of -5.5 compared to a total formal charge of 0.0",
+    ):
+        sage.create_interchange(water.to_topology(), charge_from_molecules=[water])
 
 
 class TestSMIRNOFFChargeIncrements:

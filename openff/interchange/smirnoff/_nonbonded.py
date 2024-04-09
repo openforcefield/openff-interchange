@@ -912,7 +912,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                 else:
                     raise NonIntegralMoleculeChargeError(
                         f"Molecule {molecule.to_smiles(explicit_hydrogens=False)} has "
-                        f"a net charge of {charge_sum} compared to a total formal charge of ",
+                        f"a net charge of {charge_sum} compared to a total formal charge of "
                         f"{formal_sum}.",
                     )
 
