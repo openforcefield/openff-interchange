@@ -69,16 +69,18 @@ class GROMACSWriter(DefaultModel):
         reduced_atom_types = []
         to_reduced_atom_types = {}
 
-        def _is_atom_type_in_list(atom_type, atom_type_list, diff: float = 1e-5) -> bool | str:
+        def _is_atom_type_in_list(
+            atom_type, atom_type_list, diff: float = 1e-5
+        ) -> bool | str:
             """
             Checks if the atom type is already in list.
             """
             for _at_name, _atom_type in atom_type_list:
                 if (
-                    atom_type.atomic_number == _atom_type.atomic_number and
-                    numpy.abs(atom_type.mass.m - _atom_type.mass.m) < diff and
-                    numpy.abs(atom_type.sigma.m - _atom_type.sigma.m) < diff and
-                    numpy.abs(atom_type.epsilon.m - _atom_type.epsilon.m) < diff
+                    atom_type.atomic_number == _atom_type.atomic_number
+                    and numpy.abs(atom_type.mass.m - _atom_type.mass.m) < diff
+                    and numpy.abs(atom_type.sigma.m - _atom_type.sigma.m) < diff
+                    and numpy.abs(atom_type.epsilon.m - _atom_type.epsilon.m) < diff
                 ):
                     return _at_name
             return False
@@ -93,15 +95,17 @@ class GROMACSWriter(DefaultModel):
                 return f"AT_{_previous_idx+1}"
             else:
                 return "AT_0"
-        
+
         for atom_type in self.system.atom_types.values():
             if not isinstance(atom_type, LennardJonesAtomType):
                 raise NotImplementedError(
                     "Only Lennard-Jones atom types are currently supported.",
                 )
-            
+
             if _is_atom_type_in_list(atom_type, reduced_atom_types):
-                to_reduced_atom_types[atom_type.name] = _is_atom_type_in_list(atom_type, reduced_atom_types)
+                to_reduced_atom_types[atom_type.name] = _is_atom_type_in_list(
+                    atom_type, reduced_atom_types
+                )
             else:
                 _at_name = _get_new_entry_name(reduced_atom_types)
                 reduced_atom_types.append((_at_name, atom_type))
