@@ -13,7 +13,7 @@ dependencies:
   - openff-toolkit >=0.15.2
   - openff-models
   - openff-nagl ~=0.3.7
-  - openff-nagl-models
+  - openff-nagl-models =0.1
   # Optional features
   - jax
   - unyt
