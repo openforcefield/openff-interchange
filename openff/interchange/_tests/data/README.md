@@ -64,6 +64,7 @@ struct.save('packed-argon.pdb')
 `CB8.sdf`
 
 - [Source](https://github.com/samplchallenges/SAMPL6/blob/c661d3985af7fa0ba8c64a1774cfb2363cd31bda/host_guest/CB8AndGuests/CB8.mol2)
+  - Partial charges removed to avoid masking charge assignment failures, see [context](https://github.com/openforcefield/openff-interchange/pull/957#issuecomment-2046102208)
 
 `complex.top`
 
