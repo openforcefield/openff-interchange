@@ -131,7 +131,7 @@ class GROMACSWriter(DefaultModel):
         if not merge_atom_types:
             top.write("\n")
             return mapping_to_reduced_atom_types
-            
+
         for atom_type_name, atom_type in reduced_atom_types:
             top.write(
                 f"{atom_type_name :<11s}\t"
