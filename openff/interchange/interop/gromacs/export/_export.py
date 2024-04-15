@@ -70,7 +70,9 @@ class GROMACSWriter(DefaultModel):
         to_reduced_atom_types = {}
 
         def _is_atom_type_in_list(
-            atom_type, atom_type_list, diff: float = 1e-5
+            atom_type,
+            atom_type_list,
+            diff: float = 1e-5,
         ) -> bool | str:
             """
             Checks if the atom type is already in list.
@@ -104,7 +106,8 @@ class GROMACSWriter(DefaultModel):
 
             if _is_atom_type_in_list(atom_type, reduced_atom_types):
                 to_reduced_atom_types[atom_type.name] = _is_atom_type_in_list(
-                    atom_type, reduced_atom_types
+                    atom_type,
+                    reduced_atom_types,
                 )
             else:
                 _at_name = _get_new_entry_name(reduced_atom_types)
