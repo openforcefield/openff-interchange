@@ -93,7 +93,11 @@ def _get_gromacs_energies(
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             prefix = "_tmp"
-            interchange.to_gromacs(prefix=prefix, decimal=round_positions, merge_atom_types=merge_atom_types)
+            interchange.to_gromacs(
+                prefix=prefix,
+                decimal=round_positions,
+                merge_atom_types=merge_atom_types,
+            )
 
             if mdp == "auto":
                 mdconfig = MDConfig.from_interchange(interchange)
