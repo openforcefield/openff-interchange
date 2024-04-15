@@ -32,7 +32,7 @@ class GROMACSWriter(DefaultModel):
 
         with open(self.top_file, "w") as top:
             self._write_defaults(top)
-            to_reduced_atom_types = self._write_atomtypes(top)
+            reduced_atom_types = self._write_atomtypes(top)
 
             self._write_moleculetypes(top, to_reduced_atom_types)
 
