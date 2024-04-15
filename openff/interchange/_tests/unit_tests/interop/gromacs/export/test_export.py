@@ -292,7 +292,9 @@ class TestGROMACS:
 
         converted = Interchange.from_gromacs("out.top", "out.gro", reader=reader)
         converted_merged = Interchange.from_gromacs(
-            "out_merged.top", "out.gro", reader=reader
+            "out_merged.top",
+            "out.gro",
+            reader=reader,
         )
 
         assert numpy.allclose(converted.positions, converted_merged.positions)
