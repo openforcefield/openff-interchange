@@ -154,7 +154,7 @@ class GROMACSWriter(DefaultModel):
                 f"{molecule_type.nrexcl:10d}\n\n",
             )
 
-            self._write_atoms(top, molecule_type, mapping_to_reduced_atom_types, merge_atom_types: bool)
+            self._write_atoms(top, molecule_type, mapping_to_reduced_atom_types, merge_atom_types)
             self._write_pairs(top, molecule_type)
             self._write_bonds(top, molecule_type)
             self._write_angles(top, molecule_type)
