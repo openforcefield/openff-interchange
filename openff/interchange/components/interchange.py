@@ -421,6 +421,7 @@ class Interchange(DefaultModel):
         prefix: str,
         decimal: int = 3,
         hydrogen_mass: float = 1.007947,
+        merge_atom_types: bool = False,
     ):
         """
         Export this Interchange object to GROMACS files.
@@ -447,7 +448,7 @@ class Interchange(DefaultModel):
             gro_file=prefix + ".gro",
         )
 
-        writer.to_top()
+        writer.to_top(merge_atom_types=merge_atom_types)
         writer.to_gro(decimal=decimal)
 
     def to_top(
