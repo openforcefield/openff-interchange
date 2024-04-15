@@ -25,16 +25,16 @@ class GROMACSWriter(DefaultModel):
     top_file: pathlib.Path | str | None = None
     gro_file: pathlib.Path | str | None = None
 
-    def to_top(self):
+    def to_top(self, merge_atom_types: bool = False):
         """Write a GROMACS topology file."""
         if self.top_file is None:
             raise ValueError("No TOP file specified.")
 
         with open(self.top_file, "w") as top:
             self._write_defaults(top)
-            reduced_atom_types = self._write_atomtypes(top)
+            mapping_to_reduced_atom_types = self._write_atomtypes(top, merge_atom_types: bool = False)
 
-            self._write_moleculetypes(top, to_reduced_atom_types)
+            self._write_moleculetypes(top, mapping_to_reduced_atom_types, merge_atom_types)
 
             self._write_system(top)
             self._write_molecules(top)
@@ -60,23 +60,25 @@ class GROMACSWriter(DefaultModel):
             f"{self.system.coul_14:8.6f}\n\n",
         )
 
-    def _write_atomtypes(self, top) -> dict[str, str]:
+    def _write_atomtypes(self, top, merge_atom_types: bool) -> dict[str, str]:
         top.write("[ atomtypes ]\n")
         top.write(
             ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n",
         )
 
         reduced_atom_types = []
-        to_reduced_atom_types = {}
+        mapping_to_reduced_atom_types = {}
 
         def _is_atom_type_in_list(
             atom_type,
             atom_type_list,
-            diff: float = 1e-5,
         ) -> bool | str:
             """
             Checks if the atom type is already in list.
             """
+            mass_tolerance = Quantity("1e-5 amu")
+            sigma_tolerance = Quantity("1e-5 nanometer")
+            epsilon_tolerance = Quantity("1e-5 kilojoule_per_mol")
             for _at_name, _atom_type in atom_type_list:
                 if (
                     atom_type.atomic_number == _atom_type.atomic_number
@@ -105,16 +107,31 @@ class GROMACSWriter(DefaultModel):
                     "Only Lennard-Jones atom types are currently supported.",
                 )
 
-            if _is_atom_type_in_list(atom_type, reduced_atom_types):
-                to_reduced_atom_types[atom_type.name] = _is_atom_type_in_list(
-                    atom_type,
-                    reduced_atom_types,
-                )
+            if merge_atom_types:
+                if _is_atom_type_in_list(atom_type, reduced_atom_types):
+                    mapping_to_reduced_atom_types[atom_type.name] = _is_atom_type_in_list(
+                        atom_type,
+                        reduced_atom_types,
+                    )
+                else:
+                    _at_name = _get_new_entry_name(reduced_atom_types)
+                    reduced_atom_types.append((_at_name, atom_type))
+                    mapping_to_reduced_atom_types[atom_type.name] = _at_name
             else:
-                _at_name = _get_new_entry_name(reduced_atom_types)
-                reduced_atom_types.append((_at_name, atom_type))
-                to_reduced_atom_types[atom_type.name] = _at_name
+                top.write(
+                    f"{atom_type.name :<11s}\t"
+                    f"{atom_type.atomic_number :6d}\t"
+                    f"{atom_type.mass.m :.16g}\t"
+                    f"{atom_type.charge.m :.16f}\t"
+                    f"{atom_type.particle_type :5s}\t"
+                    f"{atom_type.sigma.m :.16g}\t"
+                    f"{atom_type.epsilon.m :.16g}\n",
+                )
 
+        if not merge_atom_types:
+            top.write("\n")
+            return mapping_to_reduced_atom_types
+            
         for atom_type_name, atom_type in reduced_atom_types:
             top.write(
                 f"{atom_type_name :<11s}\t"
@@ -126,9 +143,9 @@ class GROMACSWriter(DefaultModel):
                 f"{atom_type.epsilon.m :.16g}\n",
             )
         top.write("\n")
-        return to_reduced_atom_types
+        return mapping_to_reduced_atom_types
 
-    def _write_moleculetypes(self, top, to_reduced_atom_types):
+    def _write_moleculetypes(self, top, mapping_to_reduced_atom_types, merge_atom_types: bool):
         for molecule_name, molecule_type in self.system.molecule_types.items():
             top.write("[ moleculetype ]\n")
 
@@ -137,7 +154,7 @@ class GROMACSWriter(DefaultModel):
                 f"{molecule_type.nrexcl:10d}\n\n",
             )
 
-            self._write_atoms(top, molecule_type, to_reduced_atom_types)
+            self._write_atoms(top, molecule_type, mapping_to_reduced_atom_types, merge_atom_types: bool)
             self._write_pairs(top, molecule_type)
             self._write_bonds(top, molecule_type)
             self._write_angles(top, molecule_type)
@@ -148,21 +165,33 @@ class GROMACSWriter(DefaultModel):
 
         top.write("\n")
 
-    def _write_atoms(self, top, molecule_type, to_reduced_atom_types):
+    def _write_atoms(self, top, molecule_type, mapping_to_reduced_atom_types, merge_atom_types: bool):
         top.write("[ atoms ]\n")
         top.write(";index, atom type, resnum, resname, name, cgnr, charge, mass\n")
 
         for atom in molecule_type.atoms:
-            top.write(
-                f"{atom.index :6d} "
-                f"{to_reduced_atom_types[atom.atom_type] :6s}"
-                f"{atom.residue_index :8d} "
-                f"{atom.residue_name :8s} "
-                f"{atom.name :6s}"
-                f"{atom.charge_group_number :6d}"
-                f"{atom.charge.m :20.12f}"
-                f"{atom.mass.m :20.12f}\n",
-            )
+            if merge_atom_types:
+                top.write(
+                    f"{atom.index :6d} "
+                    f"{mapping_to_reduced_atom_types[atom.atom_type] :6s}"
+                    f"{atom.residue_index :8d} "
+                    f"{atom.residue_name :8s} "
+                    f"{atom.name :6s}"
+                    f"{atom.charge_group_number :6d}"
+                    f"{atom.charge.m :20.12f}"
+                    f"{atom.mass.m :20.12f}\n",
+                )
+            else:
+                top.write(
+                    f"{atom.index :6d} "
+                    f"{atom.atom_type :6s}"
+                    f"{atom.residue_index :8d} "
+                    f"{atom.residue_name :8s} "
+                    f"{atom.name :6s}"
+                    f"{atom.charge_group_number :6d}"
+                    f"{atom.charge.m :20.12f}"
+                    f"{atom.mass.m :20.12f}\n",
+                )
 
         top.write("\n")
 
