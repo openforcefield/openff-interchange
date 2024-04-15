@@ -118,6 +118,11 @@ def from_openmm(
 
     interchange.box = ArrayQuantity.validate_type(_box_vectors)
 
+    if interchange.topology.n_bonds > len(interchange.collections["Bonds"].key_map):
+        # There are probably missing (physics) bonds from rigid waters. The topological
+        # bonds are probably processed correctly.
+        _fill_in_rigid_water_bonds(interchange)
+
     return interchange
 
 
@@ -330,3 +335,35 @@ def _convert_periodic_torsion_force(
         proper_torsions.potentials.update({pot_key: pot})
 
     return proper_torsions
+
+
+def _fill_in_rigid_water_bonds(interchange: "Interchange"):
+    from openff.toolkit.topology._mm_molecule import Molecule, _SimpleMolecule
+
+    from openff.interchange.components.potentials import Potential
+    from openff.interchange.models import BondKey, PotentialKey
+
+    simple_water = _SimpleMolecule.from_molecule(Molecule.from_smiles("O"))
+
+    rigid_water_key = PotentialKey(id="rigid_water", associated_handler="Bonds")
+    rigid_water_parameters = Potential(
+        parameters={
+            "length": Quantity("1.0 angstrom"),
+            "k": Quantity("50,000.0 kcal/mol/angstrom**2"),
+        },
+    )
+
+    interchange["Bonds"].potentials.update({rigid_water_key: rigid_water_parameters})
+
+    for bond in interchange.topology.bonds:
+        if bond.molecule.is_isomorphic_with(simple_water):
+            top_key = BondKey(
+                atom_indices=(
+                    interchange.topology.atom_index(bond.atom1),
+                    interchange.topology.atom_index(bond.atom2),
+                ),
+            )
+
+            if top_key not in interchange["Bonds"]:
+                # add 1 A / 50,000 kcal/mol/A2 force constant
+                interchange["Bonds"].key_map.update({top_key: rigid_water_key})

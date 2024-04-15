@@ -806,11 +806,18 @@ class Interchange(DefaultModel):
         """
         Create an Interchange object from OpenMM objects.
 
-        WARNING! This method is experimental and not suitable for production.
+        WARNING! This method is experimental and not yet suitable for production.
+
+        Notes
+        -----
+        If (topological) bonds in water are missing physics parameters, as if open the case with
+        rigid water, these parameters will be filled in with values of 1 Angstrom equilibrium bond
+        length and a default force constant of 50,000 kcal/mol/A^2, representing an arbitrarily
+        high value.
 
         Parameters
         ----------
-        system : openmm.System, optional
+        system : openmm.System
             The OpenMM system.
         topology : openmm.app.Topology, optional
             The OpenMM topology.
