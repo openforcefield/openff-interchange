@@ -118,10 +118,11 @@ def from_openmm(
 
     interchange.box = ArrayQuantity.validate_type(_box_vectors)
 
-    if interchange.topology.n_bonds > len(interchange.collections["Bonds"].key_map):
-        # There are probably missing (physics) bonds from rigid waters. The topological
-        # bonds are probably processed correctly.
-        _fill_in_rigid_water_bonds(interchange)
+    if interchange.topology is not None:
+        if interchange.topology.n_bonds > len(interchange.collections["Bonds"].key_map):
+            # There are probably missing (physics) bonds from rigid waters. The topological
+            # bonds are probably processed correctly.
+            _fill_in_rigid_water_bonds(interchange)
 
     return interchange
 

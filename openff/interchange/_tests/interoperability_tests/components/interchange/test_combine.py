@@ -32,9 +32,7 @@ def test_combine_after_from_openmm_with_mainline_openmm_force_field(
     popc_system = lipid17.createSystem(
         topology=popc_topology.to_openmm(),
         nonbondedMethod=openmm.app.PME,
-        nonbondedCutoff=0.9 * openmm.unit.nanometer,
         constraints=openmm.app.HBonds,
-        switchDistance=0.8 * openmm.unit.nanometer,
     )
 
     imported = Interchange.from_openmm(
@@ -44,6 +42,11 @@ def test_combine_after_from_openmm_with_mainline_openmm_force_field(
     )
 
     ligand_interchange = sage.create_interchange(topology)
+
+    for item in [imported, ligand_interchange]:
+        item["vdW"].cutoff = Quantity(9, "angstrom")
+        item["vdW"].switch_width = Quantity(1, "angstrom")
+        item["Electrostatics"].cutoff = Quantity(9, "angstrom")
 
     combined = imported.combine(ligand_interchange)
 
