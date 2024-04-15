@@ -60,7 +60,7 @@ class GROMACSWriter(DefaultModel):
             f"{self.system.coul_14:8.6f}\n\n",
         )
 
-    def _write_atomtypes(self, top) -> dict:
+    def _write_atomtypes(self, top) -> dict[str, str]:
         top.write("[ atomtypes ]\n")
         top.write(
             ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n",
