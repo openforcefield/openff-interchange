@@ -34,7 +34,9 @@ class GROMACSWriter(DefaultModel):
             self._write_defaults(top)
             mapping_to_reduced_atom_types = self._write_atomtypes(top, merge_atom_types)
 
-            self._write_moleculetypes(top, mapping_to_reduced_atom_types, merge_atom_types)
+            self._write_moleculetypes(
+                top, mapping_to_reduced_atom_types, merge_atom_types
+            )
 
             self._write_system(top)
             self._write_molecules(top)
@@ -109,9 +111,11 @@ class GROMACSWriter(DefaultModel):
 
             if merge_atom_types:
                 if _is_atom_type_in_list(atom_type, reduced_atom_types):
-                    mapping_to_reduced_atom_types[atom_type.name] = _is_atom_type_in_list(
-                        atom_type,
-                        reduced_atom_types,
+                    mapping_to_reduced_atom_types[atom_type.name] = (
+                        _is_atom_type_in_list(
+                            atom_type,
+                            reduced_atom_types,
+                        )
                     )
                 else:
                     _at_name = _get_new_entry_name(reduced_atom_types)
@@ -145,7 +149,9 @@ class GROMACSWriter(DefaultModel):
         top.write("\n")
         return mapping_to_reduced_atom_types
 
-    def _write_moleculetypes(self, top, mapping_to_reduced_atom_types, merge_atom_types: bool):
+    def _write_moleculetypes(
+        self, top, mapping_to_reduced_atom_types, merge_atom_types: bool
+    ):
         for molecule_name, molecule_type in self.system.molecule_types.items():
             top.write("[ moleculetype ]\n")
 
@@ -154,7 +160,9 @@ class GROMACSWriter(DefaultModel):
                 f"{molecule_type.nrexcl:10d}\n\n",
             )
 
-            self._write_atoms(top, molecule_type, mapping_to_reduced_atom_types, merge_atom_types)
+            self._write_atoms(
+                top, molecule_type, mapping_to_reduced_atom_types, merge_atom_types
+            )
             self._write_pairs(top, molecule_type)
             self._write_bonds(top, molecule_type)
             self._write_angles(top, molecule_type)
@@ -165,7 +173,9 @@ class GROMACSWriter(DefaultModel):
 
         top.write("\n")
 
-    def _write_atoms(self, top, molecule_type, mapping_to_reduced_atom_types, merge_atom_types: bool):
+    def _write_atoms(
+        self, top, molecule_type, mapping_to_reduced_atom_types, merge_atom_types: bool
+    ):
         top.write("[ atoms ]\n")
         top.write(";index, atom type, resnum, resname, name, cgnr, charge, mass\n")
 
