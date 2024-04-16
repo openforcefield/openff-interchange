@@ -1,16 +1,16 @@
 import pathlib
 import warnings
-from typing import Optional, Union
 
 import numpy
 from openff.models.models import DefaultModel
-from openff.units import unit
+from openff.toolkit import unit
 
 from openff.interchange.exceptions import MissingPositionsError
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSSystem,
     GROMACSVirtualSite2,
     GROMACSVirtualSite3,
+    GROMACSVirtualSite3fad,
     LennardJonesAtomType,
     PeriodicImproperDihedral,
     PeriodicProperDihedral,
@@ -22,8 +22,8 @@ class GROMACSWriter(DefaultModel):
     """Thin wrapper for writing GROMACS systems."""
 
     system: GROMACSSystem
-    top_file: Optional[Union[pathlib.Path, str]] = None
-    gro_file: Optional[Union[pathlib.Path, str]] = None
+    top_file: pathlib.Path | str | None = None
+    gro_file: pathlib.Path | str | None = None
 
     def to_top(self):
         """Write a GROMACS topology file."""
@@ -58,7 +58,7 @@ class GROMACSWriter(DefaultModel):
             f"{gen_pairs:6s}\t"
             f"{self.system.vdw_14:8.6f}\t"
             f"{self.system.coul_14:8.6f}\n\n",
-        ),
+        )
 
     def _write_atomtypes(self, top):
         top.write("[ atomtypes ]\n")
@@ -245,6 +245,20 @@ class GROMACSWriter(DefaultModel):
                     f"{gromacs_virtual_site.func}\t"
                     f"{gromacs_virtual_site.a}\t"
                     f"{gromacs_virtual_site.b}\t"
+                    "\n",
+                )
+
+            elif isinstance(gromacs_virtual_site, GROMACSVirtualSite3fad):
+                top.write("[ virtual_sites3 ]\n")
+                top.write("; parent, orientation atoms, func, theta, d\n")
+                top.write(
+                    f"{gromacs_virtual_site.site}\t"
+                    f"{gromacs_virtual_site.orientation_atoms[0]}\t"
+                    f"{gromacs_virtual_site.orientation_atoms[1]}\t"
+                    f"{gromacs_virtual_site.orientation_atoms[2]}\t"
+                    f"{gromacs_virtual_site.func}\t"
+                    f"{gromacs_virtual_site.theta}\t"
+                    f"{gromacs_virtual_site.d}\t"
                     "\n",
                 )
 

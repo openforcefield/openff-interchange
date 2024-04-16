@@ -1,4 +1,5 @@
 """The interface between Interchange and SMIRNOFF objects."""
+
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
 from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.smirnoff._nonbonded import (

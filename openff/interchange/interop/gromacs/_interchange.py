@@ -1,6 +1,5 @@
 import networkx
-from openff.toolkit import Topology
-from openff.units import unit
+from openff.toolkit import Quantity, Topology, unit
 
 from openff.interchange import Interchange
 from openff.interchange._experimental import experimental
@@ -240,7 +239,7 @@ def to_interchange(
                 ):
                     potential = Potential(
                         parameters={
-                            "periodicity": unit.Quantity(
+                            "periodicity": Quantity(
                                 dihedral.multiplicity,
                                 unit.dimensionless,
                             ),

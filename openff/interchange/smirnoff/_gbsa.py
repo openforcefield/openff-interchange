@@ -1,10 +1,9 @@
 from collections.abc import Iterable
-from typing import Literal, Optional
+from typing import Literal
 
 from openff.models.types import FloatQuantity
-from openff.toolkit import Topology
+from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler
-from openff.units import unit
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kcal_mol_a2
@@ -22,7 +21,7 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
 
     solvent_dielectric: FloatQuantity["dimensionless"] = 78.5
     solute_dielectric: FloatQuantity["dimensionless"] = 1.0
-    sa_model: Optional[str] = "ACE"
+    sa_model: str | None = "ACE"
     surface_area_penalty: FloatQuantity["kilocalorie_per_mole / angstrom ** 2"] = (
         5.4 * kcal_mol_a2
     )
@@ -60,7 +59,7 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
             potential = Potential(
                 parameters={
                     "radius": force_field_parameters.radius,
-                    "scale": unit.Quantity(
+                    "scale": Quantity(
                         force_field_parameters.scale,
                         unit.dimensionless,
                     ),

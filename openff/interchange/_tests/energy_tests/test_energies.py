@@ -1,8 +1,6 @@
 import numpy as np
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, Topology, unit
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -10,7 +8,6 @@ from openff.interchange._tests import (
     HAS_GROMACS,
     HAS_LAMMPS,
     MoleculeWithConformer,
-    _BaseTest,
     get_test_file_path,
     needs_gmx,
     needs_lmp,
@@ -35,7 +32,7 @@ if HAS_LAMMPS:
 
 
 @skip_if_missing("foyer")
-class TestEnergies(_BaseTest):
+class TestEnergies:
     @pytest.fixture(scope="session")
     def oplsaa(self):
         import foyer
@@ -45,8 +42,8 @@ class TestEnergies(_BaseTest):
     @skip_if_missing("mbuild")
     @needs_gmx
     @needs_lmp
-    @pytest.mark.xfail()
-    @pytest.mark.slow()
+    @pytest.mark.xfail
+    @pytest.mark.slow
     @pytest.mark.parametrize("constrained", [True, False])
     @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
     def test_energies_single_mol(self, constrained, sage, sage_unconstrained, mol_smi):
@@ -105,7 +102,7 @@ class TestEnergies(_BaseTest):
     @needs_gmx
     @skip_if_missing("foyer")
     @skip_if_missing("mbuild")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_process_rb_torsions(self, oplsaa):
         """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
         from mbuild import Box
@@ -159,10 +156,9 @@ class TestEnergies(_BaseTest):
         # TODO: It would be best to save the 1-4 interactions, split off into vdW and Electrostatics
         # in the energies. This might be tricky/intractable to do for engines that are not GROMACS
 
-    @pytest.mark.skip(reason="LAMMPS export experimental")
     @needs_gmx
     @needs_lmp
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_cutoff_electrostatics(self):
         ion_ff = ForceField(get_test_file_path("ions.offxml"))
         ions = Topology.from_molecules(
@@ -203,7 +199,7 @@ class TestEnergies(_BaseTest):
         ],
     )
     @needs_gmx
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_interpolated_parameters(self, smi):
         xml_ff_bo_all_heavy_bonds = """<?xml version='1.0' encoding='ASCII'?>
         <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">

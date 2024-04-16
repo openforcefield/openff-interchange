@@ -1,14 +1,15 @@
 """Functions for running energy evluations with GROMACS."""
+
 import subprocess
-import sys
 import tempfile
+from importlib import resources
 from pathlib import Path
 from shutil import which
-from typing import Optional, Union
 
-from openff.units import unit
+from openff.toolkit import Quantity, unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
+from openff.interchange import Interchange
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
@@ -18,17 +19,8 @@ from openff.interchange.exceptions import (
     GMXNotFoundError,
 )
 
-if sys.version_info >= (3, 10):
-    from importlib import resources
-else:
-    import importlib_resources as resources
 
-from openff.units import Quantity
-
-from openff.interchange import Interchange
-
-
-def _find_gromacs_executable(raise_exception: bool = False) -> Optional[str]:
+def _find_gromacs_executable(raise_exception: bool = False) -> str | None:
     """Attempt to locate a GROMACS executable based on commonly-used names."""
     gromacs_executable_names = ["gmx", "gmx_mpi", "gmx_d", "gmx_mpi_d"]
 
@@ -118,9 +110,9 @@ def _get_gromacs_energies(
 
 
 def _run_gmx_energy(
-    top_file: Union[Path, str],
-    gro_file: Union[Path, str],
-    mdp_file: Union[Path, str],
+    top_file: Path | str,
+    gro_file: Path | str,
+    mdp_file: Path | str,
     maxwarn: int = 1,
 ) -> dict[str, unit.Quantity]:
     """

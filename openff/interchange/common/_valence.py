@@ -3,12 +3,8 @@ from typing import Literal
 
 from openff.toolkit.topology.molecule import Atom
 
+from openff.interchange._pydantic import Field
 from openff.interchange.components.potentials import Collection
-
-try:
-    from pydantic.v1 import Field
-except ImportError:
-    from pydantic import Field
 
 
 class ConstraintCollection(Collection):
@@ -61,9 +57,9 @@ class ProperTorsionCollection(Collection):
     """Handler storing periodic proper torsion potentials."""
 
     type: Literal["ProperTorsions"] = "ProperTorsions"
-    expression: Literal[
+    expression: Literal["k*(1+cos(periodicity*theta-phase))"] = (
         "k*(1+cos(periodicity*theta-phase))"
-    ] = "k*(1+cos(periodicity*theta-phase))"
+    )
 
     @classmethod
     def supported_parameters(cls) -> Iterable[str]:
@@ -94,9 +90,9 @@ class ImproperTorsionCollection(Collection):
     """Handler storing periodic improper torsion potentials."""
 
     type: Literal["ImproperTorsions"] = "ImproperTorsions"
-    expression: Literal[
+    expression: Literal["k*(1+cos(periodicity*theta-phase))"] = (
         "k*(1+cos(periodicity*theta-phase))"
-    ] = "k*(1+cos(periodicity*theta-phase))"
+    )
 
     @classmethod
     def supported_parameters(cls) -> Iterable[str]:

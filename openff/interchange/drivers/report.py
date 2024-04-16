@@ -1,22 +1,18 @@
 """Storing and processing results of energy evaluations."""
+
 import warnings
-from typing import Optional
 
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
-from openff.units import unit
+from openff.toolkit import unit
 
+from openff.interchange._pydantic import validator
 from openff.interchange.constants import kj_mol
 from openff.interchange.exceptions import (
     EnergyError,
     IncompatibleTolerancesError,
     InvalidEnergyError,
 )
-
-try:
-    from pydantic.v1 import validator
-except ImportError:
-    from pydantic import validator
 
 _KNOWN_ENERGY_TERMS: set[str] = {
     "Bond",
@@ -35,7 +31,7 @@ class EnergyReport(DefaultModel):
     """A lightweight class containing single-point energies as computed by energy tests."""
 
     # TODO: Should the default be None or 0.0 kj_mol?
-    energies: dict[str, Optional[FloatQuantity]] = {
+    energies: dict[str, FloatQuantity | None] = {
         "Bond": None,
         "Angle": None,
         "Torsion": None,
@@ -58,7 +54,7 @@ class EnergyReport(DefaultModel):
         """Return the total energy."""
         return self["total"]
 
-    def __getitem__(self, item: str) -> Optional[FloatQuantity]:
+    def __getitem__(self, item: str) -> FloatQuantity | None:
         if type(item) is not str:
             raise LookupError(
                 "Only str arguments can be currently be used for lookups.\n"
@@ -78,7 +74,7 @@ class EnergyReport(DefaultModel):
     def compare(
         self,
         other: "EnergyReport",
-        tolerances: Optional[dict[str, FloatQuantity]] = None,
+        tolerances: dict[str, FloatQuantity] | None = None,
     ):
         """
         Compare two energy reports.
@@ -105,7 +101,10 @@ class EnergyReport(DefaultModel):
 
         tolerances = default_tolerances
 
-        energy_differences = self.diff(other)
+        # Ensure everything is in kJ/mol for safety of later comparison
+        energy_differences = {
+            key: diff.to(kj_mol) for key, diff in self.diff(other).items()
+        }
 
         if ("Nonbonded" in tolerances) != ("Nonbonded" in energy_differences):
             raise IncompatibleTolerancesError(
@@ -158,8 +157,8 @@ class EnergyReport(DefaultModel):
                     self["Electrostatics"] and other["Electrostatics"]
                 ) is not None:
                     for key in ("vdW", "Electrostatics"):
-                        energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
-                        energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
+                        energy_differences[key] = self[key] - other[key]
+                        energy_differences[key] = self[key] - other[key]
 
                         nonbondeds_processed = True
 

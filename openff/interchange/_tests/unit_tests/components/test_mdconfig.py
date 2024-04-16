@@ -1,38 +1,37 @@
-from typing import Union
+import warnings
 
 import pytest
-from openff.toolkit import Topology
-from openff.units import unit
+from openff.toolkit import Quantity, Topology, unit
 
-from openff.interchange._tests import _BaseTest
 from openff.interchange.components.mdconfig import (
     MDConfig,
     get_intermol_defaults,
     get_smirnoff_defaults,
 )
 from openff.interchange.constants import _PME
+from openff.interchange.warnings import SwitchingFunctionNotImplementedWarning
 
 
-@pytest.fixture()
+@pytest.fixture
 def system_no_constraints(sage_unconstrained, basic_top):
     return sage_unconstrained.create_interchange(basic_top)
 
 
-@pytest.fixture()
+@pytest.fixture
 def rigid_water_box(sage, water):
     topology = water.to_topology()
-    topology.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
+    topology.box_vectors = Quantity([5, 5, 5], unit.nanometer)
     return sage.create_interchange(topology)
 
 
-@pytest.fixture()
+@pytest.fixture
 def constrained_ligand_rigid_water_box(sage, basic_top, water):
     topology = Topology(basic_top)
     topology.add_molecule(water)
     return sage.create_interchange(topology)
 
 
-@pytest.fixture()
+@pytest.fixture
 def unconstrained_ligand_rigid_water_box(sage_unconstrained, basic_top, water):
     topology = Topology(basic_top)
     topology.add_molecule(water)
@@ -61,9 +60,9 @@ def parse_mdp(file: str) -> dict[str, str]:
     return options
 
 
-def parse_sander(file: str) -> dict[str, Union[dict, str]]:
+def parse_sander(file: str) -> dict[str, dict | str]:
     """Naively parse (sections of) a sander input file into a dict structure."""
-    options: dict[str, Union[dict, str]] = dict()
+    options: dict[str, dict | str] = dict()
     current_level = options
 
     with open(file) as f:
@@ -92,11 +91,11 @@ def parse_sander(file: str) -> dict[str, Union[dict, str]]:
     return options
 
 
-class TestMDConfigFromInterchange(_BaseTest):
+class TestMDConfigFromInterchange:
     @pytest.mark.parametrize("periodic", [True, False])
     @pytest.mark.parametrize("switch", [True, False])
     def test_from_interchange(self, sage, basic_top, switch, periodic):
-        from openff.units import unit
+        from openff.toolkit import unit
         from packaging.version import Version
 
         from openff.interchange import Interchange
@@ -127,10 +126,10 @@ class TestMDConfigFromInterchange(_BaseTest):
             assert config.vdw_method == "no-cutoff"
 
 
-class TestSMIRNOFFDefaults(_BaseTest):
+class TestSMIRNOFFDefaults:
     @pytest.mark.parametrize("periodic", [True, False])
     def test_apply_smirnoff_defaults(self, sage, basic_top, periodic):
-        from openff.units import unit
+        from openff.toolkit import unit
 
         from openff.interchange import Interchange
 
@@ -151,7 +150,7 @@ class TestSMIRNOFFDefaults(_BaseTest):
             assert interchange["Electrostatics"].nonperiodic_potential == "Coulomb"
 
 
-class TestIntermolDefaults(_BaseTest):
+class TestIntermolDefaults:
     @pytest.mark.parametrize("periodic", [True, False])
     def test_write_mdp(self, periodic):
         """
@@ -181,7 +180,7 @@ class TestIntermolDefaults(_BaseTest):
         assert options["constraints"] == "none"
 
     def test_apply_intermol_defaults(self, sage, basic_top):
-        from openff.units import unit
+        from openff.toolkit import unit
 
         from openff.interchange import Interchange
 
@@ -194,7 +193,7 @@ class TestIntermolDefaults(_BaseTest):
             assert interchange[key].cutoff.m_as(unit.nanometer) == pytest.approx(0.9)
 
 
-class TestWriteSanderInput(_BaseTest):
+class TestWriteSanderInput:
     def test_system_no_constraints(self, system_no_constraints):
         MDConfig.from_interchange(system_no_constraints).write_sander_input_file("1.in")
 
@@ -242,22 +241,80 @@ class TestWriteSanderInput(_BaseTest):
         assert options["cntrl"]["ntf"] == "2"
         assert options["cntrl"]["ntc"] == "1"
 
-    def test_fswitch_negative_when_no_switching_function(
+    def test_switching_function_warning(
         self,
-        unconstrained_ligand_rigid_water_box,
+        system_no_constraints,
     ):
         """Reproduce issue 745."""
-        MDConfig.from_interchange(
-            unconstrained_ligand_rigid_water_box,
-        ).write_sander_input_file("yes.in")
+        with pytest.warns(
+            SwitchingFunctionNotImplementedWarning,
+        ):
+            MDConfig.from_interchange(
+                system_no_constraints,
+            ).write_sander_input_file("yes.in")
 
-        # With OpenFF defaults, the switch starts at 8 A and the cutoff is at 9 A
-        assert parse_sander("yes.in")["cntrl"]["fswitch"] == "8.0"
+        # This should always be -1 (turned off) since Amber does not implement
+        # a switching function on the potential
+        assert parse_sander("yes.in")["cntrl"]["fswitch"] == "-1.0"
 
-        unconstrained_ligand_rigid_water_box["vdW"].switch_width = 0.0 * unit.nanometer
+        system_no_constraints["vdW"].switch_width = 0.0 * unit.nanometer
 
-        MDConfig.from_interchange(
-            unconstrained_ligand_rigid_water_box,
-        ).write_sander_input_file("no.in")
+        # this pattern forces warnings to become errors
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+
+            MDConfig.from_interchange(
+                system_no_constraints,
+            ).write_sander_input_file("no.in")
 
         assert parse_sander("no.in")["cntrl"]["fswitch"] == "-1.0"
+
+
+class TestWriteLAMMPSInput:
+
+    def test_switching_function_warning(
+        self,
+        system_no_constraints,
+        tmp_path,
+    ):
+        with pytest.warns(
+            SwitchingFunctionNotImplementedWarning,
+        ):
+            MDConfig.from_interchange(
+                system_no_constraints,
+            ).write_lammps_input(
+                interchange=system_no_constraints,
+                input_file=tmp_path / "yes.in",
+            )
+
+    def test_no_error_if_no_constraints(
+        self,
+        system_no_constraints,
+        tmp_path,
+    ):
+        MDConfig.from_interchange(system_no_constraints).write_lammps_input(
+            interchange=system_no_constraints,
+            input_file=tmp_path / ".inp",
+        )
+
+    def test_error_if_unsupported_constrained(
+        self,
+        rigid_water_box,
+        constrained_ligand_rigid_water_box,
+        unconstrained_ligand_rigid_water_box,
+        tmp_path,
+    ):
+        for system in [
+            rigid_water_box,
+            constrained_ligand_rigid_water_box,
+            unconstrained_ligand_rigid_water_box,
+        ]:
+
+            with pytest.raises(
+                NotImplementedError,
+                match="unsupported constraints case",
+            ):
+                MDConfig.from_interchange(system).write_lammps_input(
+                    system,
+                    tmp_path / ".inp",
+                )

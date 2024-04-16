@@ -1,9 +1,10 @@
 """Functions for running energy evluations with OpenMM."""
+
 import warnings
 from typing import TYPE_CHECKING, Optional
 
 import numpy
-from openff.units import unit
+from openff.toolkit import unit
 from openff.units.openmm import ensure_quantity
 from openff.utilities.utilities import has_package, requires_package
 
@@ -20,7 +21,7 @@ if has_package("openmm") or TYPE_CHECKING:
 @requires_package("openmm")
 def get_openmm_energies(
     interchange: Interchange,
-    round_positions: Optional[int] = None,
+    round_positions: int | None = None,
     combine_nonbonded_forces: bool = True,
     detailed: bool = False,
     platform: str = "Reference",
@@ -98,7 +99,7 @@ def _get_openmm_energies(
     system: "openmm.System",
     box_vectors: Optional["openmm.unit.Quantity"],
     positions: "openmm.unit.Quantity",
-    round_positions: Optional[int],
+    round_positions: int | None,
     platform: str,
 ) -> dict[int, "openmm.unit.Quantity"]:
     """Given prepared `openmm` objects, run a single-point energy calculation."""
@@ -116,9 +117,11 @@ def _get_openmm_energies(
         context.setPeriodicBoxVectors(*box_vectors)
 
     context.setPositions(
-        numpy.round(positions, round_positions)
-        if round_positions is not None
-        else positions,
+        (
+            numpy.round(positions, round_positions)
+            if round_positions is not None
+            else positions
+        ),
     )
 
     raw_energies: dict[int, openmm.unit.Quantity] = dict()

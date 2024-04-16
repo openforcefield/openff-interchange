@@ -1,25 +1,21 @@
 import abc
 from collections.abc import Iterable
-from typing import Literal, Union
+from typing import Literal
 
 from openff.models.types import FloatQuantity
-from openff.units import Quantity, unit
+from openff.toolkit import Quantity, unit
 
+from openff.interchange._pydantic import Field, PrivateAttr
 from openff.interchange.components.potentials import Collection
 from openff.interchange.constants import _PME
 from openff.interchange.models import LibraryChargeTopologyKey, TopologyKey
 
-try:
-    from pydantic.v1 import Field, PrivateAttr
-except ImportError:
-    from pydantic import Field, PrivateAttr
 
-
-class _NonbondedCollection(Collection, abc.ABC):  # noqa
+class _NonbondedCollection(Collection, abc.ABC):
     type: str = "nonbonded"
 
     cutoff: FloatQuantity["angstrom"] = Field(  # noqa
-        unit.Quantity(9.0, unit.angstrom),
+        Quantity(10.0, unit.angstrom),
         description="The distance at which pairwise interactions are truncated",
     )
 
@@ -46,9 +42,9 @@ class vdWCollection(_NonbondedCollection):
 
     type: Literal["vdW"] = "vdW"
 
-    expression: Literal[
+    expression: Literal["4*epsilon*((sigma/r)**12-(sigma/r)**6)"] = (
         "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
-    ] = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
+    )
 
     mixing_rule: str = Field(
         "lorentz-berthelot",
@@ -56,7 +52,7 @@ class vdWCollection(_NonbondedCollection):
     )
 
     switch_width: FloatQuantity["angstrom"] = Field(  # noqa
-        unit.Quantity(1.0, unit.angstrom),
+        Quantity(1.0, unit.angstrom),
         description="The width over which the switching function is applied",
     )
 
@@ -90,16 +86,28 @@ class ElectrostaticsCollection(_NonbondedCollection):
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     _charges: dict[
-        Union[TopologyKey, LibraryChargeTopologyKey],
+        TopologyKey | LibraryChargeTopologyKey,
         Quantity,
     ] = PrivateAttr(dict())
     _charges_cached: bool = PrivateAttr(False)
 
     @property
-    def charges(self):
+    def charges(self) -> dict[TopologyKey, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
-        raise NotImplementedError()
+        if len(self._charges) == 0 or self._charges_cached is False:
+            self._charges = self._get_charges(include_virtual_sites=False)
+            self._charges_cached = True
 
-    def _get_charges(self):
-        """Get the total partial charge on each atom or particle."""
-        raise NotImplementedError()
+        return self._charges
+
+    def _get_charges(
+        self,
+        include_virtual_sites: bool = False,
+    ) -> dict[TopologyKey, Quantity]:
+        if include_virtual_sites:
+            raise NotImplementedError()
+
+        return {
+            topology_key: self.potentials[potential_key].parameters["charge"]
+            for topology_key, potential_key in self.key_map.items()
+        }

@@ -1,6 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit import Molecule, Topology
+from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
@@ -9,11 +9,10 @@ from openff.toolkit.typing.engines.smirnoff import (
     vdWHandler,
 )
 from openff.toolkit.utils.exceptions import SMIRNOFFVersionError
-from openff.units import Quantity, unit
 from packaging.version import Version
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest
+from openff.interchange.exceptions import NonIntegralMoleculeChargeError
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     _downconvert_vdw_handler,
@@ -21,8 +20,8 @@ from openff.interchange.smirnoff._nonbonded import (
 )
 
 
-class TestNonbonded(_BaseTest):
-    @pytest.mark.slow()
+class TestNonbonded:
+    @pytest.mark.slow
     def test_electrostatics_am1_handler(self, methane):
         methane.assign_partial_charges(partial_charge_method="am1bcc")
 
@@ -101,7 +100,7 @@ class TestNonbonded(_BaseTest):
             reference_charges,
         )
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_toolkit_am1bcc_uses_elf10_if_oe_is_available(self, sage, hexane_diol):
         """
         Ensure that the ToolkitAM1BCCHandler assigns ELF10 charges if OpenEye is available.
@@ -166,7 +165,7 @@ class TestNonbonded(_BaseTest):
                 assert getattr(interchange[collection], f"scale1{index}") == factor
 
 
-class TestvdWUpDownConversion(_BaseTest):
+class TestvdWUpDownConversion:
     def test_upconversion(self):
         handler = vdWHandler(version=0.3, method="cutoff")
 
@@ -231,8 +230,20 @@ class TestElectrostatics:
         compare_charges(reordered, get_charges_from_interchange(reordered))
 
 
-class TestSMIRNOFFChargeIncrements(_BaseTest):
-    @pytest.fixture()
+def test_nonintegral_molecule_charge_error(sage, water):
+    funky_charges = Quantity([0, 0, -5.5], "elementary_charge")
+
+    water.partial_charges = funky_charges
+
+    with pytest.raises(
+        NonIntegralMoleculeChargeError,
+        match="net charge of -5.5 compared to a total formal charge of 0.0",
+    ):
+        sage.create_interchange(water.to_topology(), charge_from_molecules=[water])
+
+
+class TestSMIRNOFFChargeIncrements:
+    @pytest.fixture
     def hydrogen_cyanide_charge_increments(self):
         handler = ChargeIncrementModelHandler(
             version=0.4,

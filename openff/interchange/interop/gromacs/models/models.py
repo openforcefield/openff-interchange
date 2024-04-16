@@ -1,14 +1,16 @@
 """Classes used to represent GROMACS state."""
-from typing import Optional
 
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
-from openff.units import Quantity
+from openff.toolkit import Quantity
 
-try:
-    from pydantic.v1 import Field, PositiveInt, PrivateAttr, conint, validator
-except ImportError:
-    from pydantic import Field, PositiveInt, PrivateAttr, conint, validator
+from openff.interchange._pydantic import (
+    Field,
+    PositiveInt,
+    PrivateAttr,
+    conint,
+    validator,
+)
 
 
 class GROMACSAtomType(DefaultModel):
@@ -55,6 +57,7 @@ class GROMACSAtom(DefaultModel):
     mass: Quantity
 
 
+# Should the physical values (distance/angles) be float or Quantity?
 class GROMACSVirtualSite(DefaultModel):
     """Base class for storing GROMACS virtual sites."""
 
@@ -293,8 +296,8 @@ class GROMACSMolecule(DefaultModel):
 class GROMACSSystem(DefaultModel):
     """A GROMACS system. Adapted from Intermol."""
 
-    positions: Optional[ArrayQuantity] = None
-    box: Optional[ArrayQuantity] = None
+    positions: ArrayQuantity | None = None
+    box: ArrayQuantity | None = None
 
     name: str = ""
     nonbonded_function: int = Field(

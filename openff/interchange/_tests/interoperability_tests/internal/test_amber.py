@@ -1,8 +1,7 @@
 import numpy as np
 import parmed
 import pytest
-from openff.toolkit import ForceField, Molecule
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, unit
 from openff.utilities import (
     get_data_file_path,
     has_executable,
@@ -11,7 +10,6 @@ from openff.utilities import (
 )
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest
 from openff.interchange.drivers import get_amber_energies, get_openmm_energies
 
 if has_package("openmm"):
@@ -20,7 +18,7 @@ if has_package("openmm"):
     import openmm.unit
 
 
-class TestAmber(_BaseTest):
+class TestAmber:
     @pytest.mark.skip(reason="Need replacement route to reference positions")
     def test_inpcrd(self, sage):
         mol = Molecule.from_smiles(10 * "C")
@@ -43,7 +41,7 @@ class TestAmber(_BaseTest):
 
     @skip_if_missing("openmm")
     @pytest.mark.skipif(not has_executable("sander"), reason="sander not installed")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -86,11 +84,11 @@ class TestAmber(_BaseTest):
         omm_energies.compare(amb_energies)
 
 
-class TestPRMTOP(_BaseTest):
+class TestPRMTOP:
     @skip_if_missing("mdtraj")
     @skip_if_missing("MDAnalysis")
     @skip_if_missing("openmm")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_atom_names_pdb(self):
         import MDAnalysis
         import mdtraj
@@ -124,7 +122,7 @@ class TestPRMTOP(_BaseTest):
         assert mdtraj_atom_names == pdb_atom_names
 
 
-class TestAmberResidues(_BaseTest):
+class TestAmberResidues:
     @pytest.mark.parametrize("patch_residue_name", [True, False])
     def test_single_residue_system_residue_name(
         self,

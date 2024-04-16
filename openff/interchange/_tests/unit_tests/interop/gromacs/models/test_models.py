@@ -2,23 +2,18 @@ from copy import deepcopy
 
 import numpy
 import pytest
-from openff.toolkit import Molecule, Topology
-from openff.units import Quantity, unit
+from openff.toolkit import Molecule, Quantity, Topology, unit
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest, needs_gmx
+from openff.interchange._pydantic import ValidationError
+from openff.interchange._tests import needs_gmx
 from openff.interchange.components.mdconfig import get_intermol_defaults
 from openff.interchange.drivers.gromacs import _process, _run_gmx_energy
 from openff.interchange.interop.gromacs.models.models import GROMACSAtomType
 from openff.interchange.smirnoff._gromacs import _convert
 
-try:
-    from pydantic.v1 import ValidationError
-except ModuleNotFoundError:
-    from pydantic import ValidationError
 
-
-@pytest.fixture()
+@pytest.fixture
 def molecule1():
     molecule = Molecule.from_smiles(
         "[H][O][c]1[c]([H])[c]([O][H])[c]([H])[c]([O][H])[c]1[H]",
@@ -29,7 +24,7 @@ def molecule1():
     return molecule
 
 
-@pytest.fixture()
+@pytest.fixture
 def molecule2():
     molecule = Molecule.from_smiles("C1=C(C=C(C=C1C(=O)O)C(=O)O)C(=O)O")
     molecule.generate_conformers(n_conformers=1)
@@ -40,21 +35,21 @@ def molecule2():
     return molecule
 
 
-@pytest.fixture()
+@pytest.fixture
 def system1(molecule1, sage):
     box = 5 * numpy.eye(3) * unit.nanometer
 
     return _convert(Interchange.from_smirnoff(sage, [molecule1], box=box))
 
 
-@pytest.fixture()
+@pytest.fixture
 def system2(molecule2, sage):
     box = 5 * numpy.eye(3) * unit.nanometer
 
     return _convert(Interchange.from_smirnoff(sage, [molecule2], box=box))
 
 
-@pytest.fixture()
+@pytest.fixture
 def combined_system(molecule1, molecule2, sage):
     box = 5 * numpy.eye(3) * unit.nanometer
 
@@ -98,8 +93,8 @@ class TestModels:
 
 
 #    GROMACSAtomType
-@pytest.mark.slow()
-class TestAddRemoveMoleculeType(_BaseTest):
+@pytest.mark.slow
+class TestAddRemoveMoleculeType:
     @needs_gmx
     @pytest.mark.parametrize("molecule_name", ["MOL1", "MOL2"])
     def test_remove_basic(self, combined_system, molecule_name):
@@ -114,7 +109,7 @@ class TestAddRemoveMoleculeType(_BaseTest):
             _run_gmx_energy(f"{molecule_name}.top", f"{molecule_name}.gro", "tmp.mdp"),
         )
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.parametrize("molecule_name", ["MOL1", "MOL2"])
     def test_add_existing_molecule_type(self, combined_system, molecule_name):
         with pytest.raises(
@@ -183,7 +178,7 @@ class TestAddRemoveMoleculeType(_BaseTest):
             _process(_run_gmx_energy("order2.top", "order2.gro", "tmp.mdp")),
         )
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_clashing_atom_types(self, combined_system, system1, system2):
         with pytest.raises(
             ValueError,
@@ -210,7 +205,7 @@ class TestAddRemoveMoleculeType(_BaseTest):
             system2.add_molecule_type(system2.molecule_types["MOL2"], 1)
 
 
-class TestToFiles(_BaseTest):
+class TestToFiles:
     @needs_gmx
     def test_identical_outputs(self, system1):
         system1.to_files(prefix="1", decimal=8)

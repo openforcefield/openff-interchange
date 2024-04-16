@@ -70,7 +70,7 @@ jobs:
     - name: Run example notebooks
       if: always()
       run: |
-        python -m pytest --nbval-lax --dist loadscope -nauto \
+        python -m pytest --nbval-lax --dist loadscope -n logical --durations=20 \
           examples/ \
           --ignore=examples/deprecated/ \
           --ignore=examples/lammps/ \

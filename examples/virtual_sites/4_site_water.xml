@@ -1,0 +1,51 @@
+<?xml version="1.0" ?>
+<System openmmVersion="8.1.1" type="System" version="1">
+	<PeriodicBoxVectors>
+		<A x="2" y="0" z="0"/>
+		<B x="0" y="2" z="0"/>
+		<C x="0" y="0" z="2"/>
+	</PeriodicBoxVectors>
+	<Particles>
+		<Particle mass="15.99943"/>
+		<Particle mass="1.007947"/>
+		<Particle mass="1.007947"/>
+		<Particle mass="0">
+			<LocalCoordinatesSite p1="0" p2="1" p3="2" pos1=".014999999999999998" pos2="0" pos3="-0" wo1="1" wo2="0" wo3="0" wx1="-1" wx2=".5" wx3=".5" wy1="-1" wy2="1" wy3="0"/>
+		</Particle>
+	</Particles>
+	<Constraints>
+		<Constraint d=".09572" p1="0" p2="1"/>
+		<Constraint d=".09572" p1="0" p2="2"/>
+		<Constraint d=".15139006545247014" p1="1" p2="2"/>
+	</Constraints>
+	<Forces>
+		<Force alpha="0" cutoff=".9" dispersionCorrection="1" ewaldTolerance=".0005" exceptionsUsePeriodic="0" forceGroup="0" includeDirectSpace="1" ljAlpha="0" ljnx="0" ljny="0" ljnz="0" method="0" name="Nonbonded force" nx="0" ny="0" nz="0" recipForceGroup="-1" rfDielectric="78.3" switchingDistance=".8" type="NonbondedForce" useSwitchingFunction="1" version="4">
+			<GlobalParameters/>
+			<ParticleOffsets/>
+			<ExceptionOffsets/>
+			<Particles>
+				<Particle eps="0" q="-.834" sig=".09999999999999999"/>
+				<Particle eps="0" q="1.417" sig=".09999999999999999"/>
+				<Particle eps="0" q="1.417" sig=".09999999999999999"/>
+				<Particle eps=".6" q="-2" sig=".06999999999999999"/>
+			</Particles>
+			<Exceptions>
+				<Exception eps="0" p1="0" p2="1" q="0" sig="1"/>
+				<Exception eps="0" p1="0" p2="2" q="0" sig="1"/>
+				<Exception eps="0" p1="1" p2="2" q="0" sig="1"/>
+				<Exception eps="0" p1="3" p2="1" q="0" sig="1"/>
+				<Exception eps="0" p1="3" p2="2" q="0" sig="1"/>
+				<Exception eps="0" p1="0" p2="3" q="0" sig="1"/>
+			</Exceptions>
+		</Force>
+		<Force forceGroup="0" name="PeriodicTorsionForce" type="PeriodicTorsionForce" usesPeriodic="0" version="2">
+			<Torsions/>
+		</Force>
+		<Force forceGroup="0" name="HarmonicAngleForce" type="HarmonicAngleForce" usesPeriodic="0" version="2">
+			<Angles/>
+		</Force>
+		<Force forceGroup="0" name="HarmonicBondForce" type="HarmonicBondForce" usesPeriodic="0" version="2">
+			<Bonds/>
+		</Force>
+	</Forces>
+</System>

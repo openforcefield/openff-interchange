@@ -1,11 +1,10 @@
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest, get_test_file_path
+from openff.interchange._tests import get_test_file_path
 from openff.interchange.constants import kcal_mol, kcal_mol_a2
 from openff.interchange.exceptions import (
     UnassignedAngleError,
@@ -33,7 +32,7 @@ def _get_interpolated_bond_k(bond_handler) -> float:
     return bond_handler.potentials[potential_key].parameters["k"].m
 
 
-class TestCreate(_BaseTest):
+class TestCreate:
     def test_modified_nonbonded_cutoffs(self, sage, ethanol):
         topology = Topology.from_molecules(ethanol)
         modified_sage = ForceField(sage.to_string())
@@ -64,9 +63,51 @@ class TestCreate(_BaseTest):
             3,
         )
 
+    def test_cosmetic_attributes(self):
+        from openff.toolkit._tests.test_forcefield import xml_ff_w_cosmetic_elements
 
-@pytest.mark.slow()
-class TestUnassignedParameters(_BaseTest):
+        force_field = ForceField(
+            "openff-2.1.0.offxml",
+            xml_ff_w_cosmetic_elements.replace(
+                'Bonds version="0.3"',
+                'Bonds version="0.4"',
+            ),
+            allow_cosmetic_attributes=True,
+        )
+
+        bonds = SMIRNOFFBondCollection()
+
+        bonds.store_matches(
+            parameter_handler=force_field["Bonds"],
+            topology=Molecule.from_smiles("CC").to_topology(),
+        )
+
+        for key in bonds.potentials:
+            if key.id == "[#6X4:1]-[#6X4:2]":
+                assert key.cosmetic_attributes == {
+                    "parameters": "k, length",
+                    "parameterize_eval": "blah=blah2",
+                }
+
+    def test_all_cosmetic(self, sage, basic_top):
+        for handler in sage.registered_parameter_handlers:
+            for parameter in sage[handler].parameters:
+                parameter._cosmetic_attribs = ["fOO"]
+                parameter._fOO = "bAR"
+                parameter.fOO = "bAR"
+
+        out = sage.create_interchange(basic_top)
+
+        for collection in out.collections:
+            if collection == "Electrostatics":
+                continue
+
+            for potential_key in out[collection].potentials:
+                assert potential_key.cosmetic_attributes["fOO"] == "bAR"
+
+
+@pytest.mark.slow
+class TestUnassignedParameters:
     def test_catch_unassigned_bonds(self, sage, ethanol_top):
         for param in sage["Bonds"].parameters:
             param.smirks = "[#99:1]-[#99:2]"
@@ -102,7 +143,7 @@ class TestUnassignedParameters(_BaseTest):
 
 
 # TODO: Remove xfail after openff-toolkit 0.10.0
-@pytest.mark.xfail()
+@pytest.mark.xfail
 def test_library_charges_from_molecule():
     from openff.toolkit.typing.engines.smirnoff.parameters import LibraryChargeHandler
 
@@ -120,8 +161,8 @@ def test_library_charges_from_molecule():
     assert library_charges.charge == [*mol.partial_charges]
 
 
-class TestChargeFromMolecules(_BaseTest):
-    @pytest.mark.slow()
+class TestChargeFromMolecules:
+    @pytest.mark.slow
     def test_charge_from_molecules_basic(self, sage):
         molecule = Molecule.from_smiles("CCO")
         molecule.assign_partial_charges(partial_charge_method="am1bcc")
@@ -149,8 +190,8 @@ class TestChargeFromMolecules(_BaseTest):
         ethanol_charges = numpy.linspace(-1, 1, 9) * 0.4
         water_charges = numpy.linspace(-1, 1, 3)
 
-        ethanol.partial_charges = unit.Quantity(ethanol_charges, unit.elementary_charge)
-        water.partial_charges = unit.Quantity(water_charges, unit.elementary_charge)
+        ethanol.partial_charges = Quantity(ethanol_charges, unit.elementary_charge)
+        water.partial_charges = Quantity(water_charges, unit.elementary_charge)
 
         out = Interchange.from_smirnoff(
             sage,
@@ -178,7 +219,7 @@ class TestChargeFromMolecules(_BaseTest):
         #  N  # C  - H
         # -0.3, 0.0, 0.3
         molecule_with_charges = hydrogen_cyanide_reversed
-        molecule_with_charges.partial_charges = unit.Quantity(
+        molecule_with_charges.partial_charges = Quantity(
             [-0.3, 0.0, 0.3],
             unit.elementary_charge,
         )
@@ -196,7 +237,7 @@ class TestChargeFromMolecules(_BaseTest):
 
 
 @skip_if_missing("openmm")
-class TestPartialBondOrdersFromMolecules(_BaseTest):
+class TestPartialBondOrdersFromMolecules:
     @pytest.mark.parametrize(
         (
             "reversed",
@@ -266,7 +307,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
 
         assert found_torsion_k.m_as(kcal_mol) == pytest.approx(1.44)
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_partial_bond_order_from_molecules_empty(self, ethanol):
         from openff.toolkit._tests.test_forcefield import xml_ff_bo
 
@@ -286,7 +327,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
             _get_interpolated_bond_k(empty["Bonds"]),
         )
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_partial_bond_order_from_molecules_no_matches(self, ethanol):
         from openff.toolkit._tests.test_forcefield import xml_ff_bo
 
@@ -310,7 +351,7 @@ class TestPartialBondOrdersFromMolecules(_BaseTest):
         )
 
 
-class TestCreateWithPlugins(_BaseTest):
+class TestCreateWithPlugins:
     def test_setup_plugins(self):
         from nonbonded_plugins.nonbonded import (
             BuckinghamHandler,
@@ -337,7 +378,7 @@ class TestCreateWithPlugins(_BaseTest):
 
 
 @skip_if_missing("jax")
-class TestMatrixRepresentations(_BaseTest):
+class TestMatrixRepresentations:
     @pytest.mark.parametrize(
         ("handler_name", "n_ff_terms", "n_sys_terms"),
         [("vdW", 10, 72), ("Bonds", 8, 64), ("Angles", 6, 104)],

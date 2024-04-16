@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from typing import Any, Literal, Optional, Union
 
 import numpy
-from openff.toolkit import Molecule, Topology
+from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
@@ -13,8 +13,8 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ToolkitAM1BCCHandler,
     vdWHandler,
 )
-from openff.units import Quantity, unit
 
+from openff.interchange._pydantic import Field
 from openff.interchange.common._nonbonded import (
     ElectrostaticsCollection,
     _NonbondedCollection,
@@ -39,11 +39,6 @@ from openff.interchange.models import (
 )
 from openff.interchange.smirnoff._base import SMIRNOFFCollection, T
 
-try:
-    from pydantic.v1 import Field
-except ImportError:
-    from pydantic import Field
-
 ElectrostaticsHandlerType = Union[
     ElectrostaticsHandler,
     ToolkitAM1BCCHandler,
@@ -61,9 +56,9 @@ _ZERO_CHARGE = Quantity(0.0, unit.elementary_charge)
     strict=True,
 )
 def _add_charges(
-    charge1: Quantity,
-    charge2: Quantity,
-) -> Quantity:
+    charge1: "Quantity",
+    charge2: "Quantity",
+) -> "Quantity":
     """Add two charges together."""
     return charge1 + charge2
 
@@ -299,7 +294,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @property
     def charges(
         self,
-    ) -> dict[Union[TopologyKey, VirtualSiteKey], Quantity]:
+    ) -> dict[TopologyKey | VirtualSiteKey, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:
             self._charges = self._get_charges(include_virtual_sites=True)
@@ -310,10 +305,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     def _get_charges(
         self,
         include_virtual_sites=True,
-    ) -> dict[Union[TopologyKey, VirtualSiteKey], Quantity]:
+    ) -> dict[TopologyKey | VirtualSiteKey, Quantity]:
         """Get the total partial charge on each atom or particle."""
         # Keyed by index for atoms and by VirtualSiteKey for virtual sites.
-        charges: dict[Union[VirtualSiteKey, int], Quantity] = dict()
+        charges: dict[VirtualSiteKey | int, Quantity] = dict()
 
         for topology_key, potential_key in self.key_map.items():
             potential = self.potentials[potential_key]
@@ -350,6 +345,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         "LibraryCharges",
                         "ToolkitAM1BCCHandler",
                         "charge_from_molecules",
+                        "ExternalSource",
                     ):
                         charges[atom_index] = _add_charges(
                             charges.get(atom_index, _ZERO_CHARGE),
@@ -387,7 +383,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     raise NotImplementedError()
 
         returned_charges: dict[
-            Union[TopologyKey, LibraryChargeTopologyKey],
+            TopologyKey | LibraryChargeTopologyKey,
             Quantity,
         ] = dict()
 
@@ -467,7 +463,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         molecule: Molecule,
         mapped_smiles: str,
         method: str,
-    ) -> "Quantity":
+    ) -> Quantity:
         """Call out to the toolkit's toolkit wrappers to generate partial charges."""
         molecule = copy.deepcopy(molecule)
         molecule.assign_partial_charges(method)
@@ -571,7 +567,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                 elif len(atom_indices) - len(charge_increments) == 1:
                     # If we've been provided with one less charge increment value than tagged atoms, assume the last
                     # tagged atom offsets the charge of the others to make the chargeincrement net-neutral
-                    charge_increment_sum = unit.Quantity(0.0, unit.elementary_charge)
+                    charge_increment_sum = Quantity(0.0, unit.elementary_charge)
 
                     for ci in charge_increments:
                         charge_increment_sum += ci
@@ -678,9 +674,9 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             )
             potentials[potential_key] = Potential(parameters={"charge": partial_charge})
 
-            matches[
-                SingleAtomChargeTopologyKey(this_atom_index=atom_index)
-            ] = potential_key
+            matches[SingleAtomChargeTopologyKey(this_atom_index=atom_index)] = (
+                potential_key
+            )
 
         return partial_charge_method, matches, potentials
 
@@ -825,10 +821,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
     def store_matches(
         self,
-        parameter_handler: Union[
-            ElectrostaticsHandlerType,
-            list[ElectrostaticsHandlerType],
-        ],
+        parameter_handler: ElectrostaticsHandlerType | list[ElectrostaticsHandlerType],
         topology: Topology,
         charge_from_molecules=None,
         allow_nonintegral_charges: bool = False,
@@ -919,20 +912,18 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                 else:
                     raise NonIntegralMoleculeChargeError(
                         f"Molecule {molecule.to_smiles(explicit_hydrogens=False)} has "
-                        f"a net charge of {charge_sum}",
+                        f"a net charge of {charge_sum} compared to a total formal charge of "
+                        f"{formal_sum}.",
                     )
 
-            molecule.partial_charges = unit.Quantity(
+            molecule.partial_charges = Quantity(
                 molecule_charges,
                 unit.elementary_charge,
             )
 
     def store_potentials(
         self,
-        parameter_handler: Union[
-            ElectrostaticsHandlerType,
-            list[ElectrostaticsHandlerType],
-        ],
+        parameter_handler: ElectrostaticsHandlerType | list[ElectrostaticsHandlerType],
     ) -> None:
         """
         Populate self.potentials with key-val pairs of [PotentialKey, Potential].

@@ -1,7 +1,8 @@
 """
 Helper functions for exporting the topology to OpenMM.
 """
-from typing import TYPE_CHECKING, Union
+
+from typing import TYPE_CHECKING
 
 from openff.utilities.utilities import has_package
 
@@ -14,7 +15,7 @@ if has_package("openmm") or TYPE_CHECKING:
 
 def to_openmm_topology(
     interchange: "Interchange",
-    ensure_unique_atom_names: Union[str, bool] = "residues",
+    ensure_unique_atom_names: str | bool = "residues",
 ) -> "openmm.app.Topology":
     """Create an OpenMM Topology containing some virtual site information (if appropriate)."""
     # Heavily cribbed from the toolkit
@@ -22,7 +23,8 @@ def to_openmm_topology(
 
     from collections import defaultdict
 
-    from openff.toolkit.topology import Topology
+    from openff.toolkit import Topology
+    from openff.toolkit.topology._mm_molecule import _SimpleBond
     from openff.toolkit.topology.molecule import Bond
 
     from openff.interchange.interop._virtual_sites import (
@@ -125,9 +127,9 @@ def to_openmm_topology(
             last_residue = residue
 
         if has_virtual_sites:
-            virtual_sites_in_this_molecule: list[
-                VirtualSiteKey
-            ] = molecule_virtual_site_map[molecule_index]
+            virtual_sites_in_this_molecule: list[VirtualSiteKey] = (
+                molecule_virtual_site_map[molecule_index]
+            )
             for this_virtual_site in virtual_sites_in_this_molecule:
                 virtual_site_name = this_virtual_site.name
 
@@ -154,6 +156,9 @@ def to_openmm_topology(
                 else:
                     bond_type = bond_types[bond.bond_order]
                 bond_order = bond.bond_order
+            elif isinstance(bond, _SimpleBond):
+                bond_type = None
+                bond_order = None
             else:
                 raise RuntimeError(
                     "Unexpected bond type found while iterating over Topology.bonds."
