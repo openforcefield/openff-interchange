@@ -440,6 +440,7 @@ class Interchange(DefaultModel):
         merge_atom_types: bool, default = False
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
+            
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
