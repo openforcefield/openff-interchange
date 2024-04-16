@@ -11,7 +11,18 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## 0.3.23 - 2024-03-07
+## 0.3.26 - 2024-04-16
+
+* #952 Drops support for Python 3.9.
+* #853 Better support LJPME in some GROMACS tests.
+* #954 Fixes a broken link in plugin documentation.
+* #963 Removes pre-set partial charges from host-guest example.
+* #956 Adds another helper function for solvation in non-aqueous solvent.
+* #946 Adds support for GROMACS's `3fad` virtual sites.
+* #918 Improves storage of cosmetic attributes.
+* #880 Improves virtual site example notebook.
+
+## 0.3.25 - 2024-03-29
 
 * #947 Fixes a bug in which virtual site parameters with identical SMIRKS would clash.
 * #948 Updates the GAFF example.
@@ -51,8 +62,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## 0.3.20 - 2024-02-12
 
-* #891 Adds support for hydrogen mass repartitioning (HMR) in GROMACS export. Note that this implementaiton never modifies masses in waters and requires the system contains no virtual sites.
-* #887 Adds support for hydrogen mass repartitioning (HMR) in OpenMM export. Note that this implementaiton never modifies masses in waters and requires the system contains no virtual sites.
+* #891 Adds support for hydrogen mass repartitioning (HMR) in GROMACS export. Note that this implementation never modifies masses in waters and requires the system contains no virtual sites.
+* #887 Adds support for hydrogen mass repartitioning (HMR) in OpenMM export. Note that this implementation never modifies masses in waters and requires the system contains no virtual sites.
 
 ### 0.3.19 - 2024-02-05
 
@@ -497,14 +508,14 @@ This release supports Python 3.8 and 3.9; it may be compatible with older and ne
 
 ### Breaking changes
 
-* #357 The `_OFFBioTop` constructor now requires an `mdtraj.Topology` passed through the `mdtop` argumment.
+* #357 The `_OFFBioTop` constructor now requires an `mdtraj.Topology` passed through the `mdtop` argument.
 * #363 This project is no longer tested on Python 3.7
 
 ### Bugfixes
 
 * #351 Fix setting byte order while processing bytes to NumPy arrays
 * #354 Fix positions processing in `Interchange.__add__`
-* `e176033` Fixes nonbonded energies not being parsed while reporting energies from the OpenMM drver.
+* `e176033` Fixes non-bonded energies not being parsed while reporting energies from the OpenMM driver.
 
 ## 0.1.3 - 2021-11-12
 
@@ -579,7 +590,7 @@ This pre-release of the OpenFF Interchange adds preliminary support for virtual 
 
 ### Testing and reliability improvements
 
-* #269 OpenEye toolkits are now used in automated testing by default.
+* #269 OpenEye Toolkits are now used in automated testing by default.
 * #281 Refactors the test suite into unit tests, interoperability tests, and energy comparison tests.
 * #289 Improves the Amber energy driver.
 * #292 Improves some ParmEd conversions.
