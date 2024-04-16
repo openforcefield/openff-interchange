@@ -88,9 +88,9 @@ class GROMACSWriter(DefaultModel):
             for _at_name, _atom_type in atom_type_list:
                 if (
                     atom_type.atomic_number == _atom_type.atomic_number
-                    and abs(atom_type.mass - _atom_type.mass).m < mass_tolerance
-                    and abs(atom_type.sigma - _atom_type.sigma).m < sigma_tolerance
-                    and abs(atom_type.epsilon - _atom_type.epsilon).m
+                    and abs(atom_type.mass - _atom_type.mass) < mass_tolerance
+                    and abs(atom_type.sigma - _atom_type.sigma) < sigma_tolerance
+                    and abs(atom_type.epsilon - _atom_type.epsilon)
                     < epsilon_tolerance
                 ):
                     return _at_name
