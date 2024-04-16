@@ -118,6 +118,12 @@ def from_openmm(
 
     interchange.box = ArrayQuantity.validate_type(_box_vectors)
 
+    if interchange.topology is not None:
+        if interchange.topology.n_bonds > len(interchange.collections["Bonds"].key_map):
+            # There are probably missing (physics) bonds from rigid waters. The topological
+            # bonds are probably processed correctly.
+            _fill_in_rigid_water_bonds(interchange)
+
     return interchange
 
 
@@ -330,3 +336,71 @@ def _convert_periodic_torsion_force(
         proper_torsions.potentials.update({pot_key: pot})
 
     return proper_torsions
+
+
+def _fill_in_rigid_water_bonds(interchange: "Interchange"):
+    from openff.toolkit.topology._mm_molecule import Molecule, _SimpleMolecule
+
+    from openff.interchange.components.potentials import Potential
+    from openff.interchange.models import AngleKey, BondKey, PotentialKey
+
+    simple_water = _SimpleMolecule.from_molecule(Molecule.from_smiles("O"))
+
+    rigid_water_bond_key = PotentialKey(id="rigid_water", associated_handler="Bonds")
+    rigid_water_bond = Potential(
+        parameters={
+            "length": Quantity("1.0 angstrom"),
+            "k": Quantity("50,000.0 kcal/mol/angstrom**2"),
+        },
+    )
+
+    rigid_water_angle_key = PotentialKey(id="rigid_water", associated_handler="Angles")
+    rigid_water_angle = Potential(
+        parameters={
+            "angle": Quantity("104.5 degree"),
+            "k": Quantity("1.0 kcal/mol/rad**2"),
+        },
+    )
+
+    interchange["Bonds"].potentials.update(
+        {PotentialKey(id="rigid_water", associated_handler="Bonds"): rigid_water_bond},
+    )
+
+    interchange["Angles"].potentials.update(
+        {
+            PotentialKey(
+                id="rigid_water",
+                associated_handler="Angles",
+            ): rigid_water_angle,
+        },
+    )
+
+    for molecule in interchange.topology.molecules:
+        if not molecule.is_isomorphic_with(simple_water):
+            continue
+
+        for bond in molecule.bonds:
+            bond_key = BondKey(
+                atom_indices=(
+                    interchange.topology.atom_index(bond.atom1),
+                    interchange.topology.atom_index(bond.atom2),
+                ),
+            )
+
+            if bond_key not in interchange["Bonds"]:
+                # add 1 A / 50,000 kcal/mol/A2 force constant
+                interchange["Bonds"].key_map.update({bond_key: rigid_water_bond_key})
+
+        for angle in molecule.angles:
+            angle_key = AngleKey(
+                atom_indices=(
+                    interchange.topology.atom_index(angle[0]),
+                    interchange.topology.atom_index(angle[1]),
+                    interchange.topology.atom_index(angle[2]),
+                ),
+            )
+
+            if angle_key not in interchange["Angles"]:
+                # add very flimsy force constant, since equilibrium angles differ
+                # across models
+                interchange["Angles"].key_map.update({angle_key: rigid_water_angle_key})

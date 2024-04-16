@@ -7,6 +7,7 @@ from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
+from openff.interchange._tests import needs_gmx
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import UnsupportedImportError
@@ -174,6 +175,38 @@ class TestFromOpenMM:
             off_atom_metadata = copy.deepcopy(off_atom.metadata)
             del off_atom_metadata["match_info"]
             assert roundtrip_atom.metadata == off_atom_metadata
+
+    @needs_gmx
+    def test_fill_in_rigid_water_parameters(self, water_dimer, monkeypatch):
+        import openmm.app
+
+        from openff.interchange.drivers import get_gromacs_energies
+
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        openmm_force_field = openmm.app.ForceField("tip3p.xml")
+        openmm_topology = water_dimer.to_openmm()
+
+        imported = Interchange.from_openmm(
+            system=openmm_force_field.createSystem(
+                openmm_topology,
+                constraints=openmm.app.HBonds,
+                nonbondedMethod=openmm.app.PME,
+            ),
+            topology=openmm_topology,
+            positions=water_dimer.get_positions().to_openmm(),
+        )
+
+        assert len(imported["Bonds"].key_map) == imported.topology.n_bonds == 4
+        assert len(imported["Angles"].key_map) == imported.topology.n_angles == 2
+
+        # Mostly just ensure GROMACS evaluation doesn't crash
+        get_openmm_energies(imported, combine_nonbonded_forces=False).compare(
+            get_gromacs_energies(imported),
+            tolerances={
+                "Electrostatics": Quantity(0.1, "kilojoule / mole"),
+            },
+        )
 
 
 @skip_if_missing("openmm")

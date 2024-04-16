@@ -15,7 +15,7 @@ class _NonbondedCollection(Collection, abc.ABC):
     type: str = "nonbonded"
 
     cutoff: FloatQuantity["angstrom"] = Field(  # noqa
-        Quantity(9.0, unit.angstrom),
+        Quantity(10.0, unit.angstrom),
         description="The distance at which pairwise interactions are truncated",
     )
 
