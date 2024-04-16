@@ -35,7 +35,9 @@ class GROMACSWriter(DefaultModel):
             mapping_to_reduced_atom_types = self._write_atomtypes(top, merge_atom_types)
 
             self._write_moleculetypes(
-                top, mapping_to_reduced_atom_types, merge_atom_types
+                top,
+                mapping_to_reduced_atom_types,
+                merge_atom_types,
             )
 
             self._write_system(top)
@@ -150,7 +152,10 @@ class GROMACSWriter(DefaultModel):
         return mapping_to_reduced_atom_types
 
     def _write_moleculetypes(
-        self, top, mapping_to_reduced_atom_types, merge_atom_types: bool
+        self,
+        top,
+        mapping_to_reduced_atom_types,
+        merge_atom_types: bool,
     ):
         for molecule_name, molecule_type in self.system.molecule_types.items():
             top.write("[ moleculetype ]\n")
@@ -161,7 +166,10 @@ class GROMACSWriter(DefaultModel):
             )
 
             self._write_atoms(
-                top, molecule_type, mapping_to_reduced_atom_types, merge_atom_types
+                top,
+                molecule_type,
+                mapping_to_reduced_atom_types,
+                merge_atom_types,
             )
             self._write_pairs(top, molecule_type)
             self._write_bonds(top, molecule_type)
@@ -174,7 +182,11 @@ class GROMACSWriter(DefaultModel):
         top.write("\n")
 
     def _write_atoms(
-        self, top, molecule_type, mapping_to_reduced_atom_types, merge_atom_types: bool
+        self,
+        top,
+        molecule_type,
+        mapping_to_reduced_atom_types,
+        merge_atom_types: bool,
     ):
         top.write("[ atoms ]\n")
         top.write(";index, atom type, resnum, resname, name, cgnr, charge, mass\n")
