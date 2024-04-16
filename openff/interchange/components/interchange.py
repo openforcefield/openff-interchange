@@ -810,10 +810,12 @@ class Interchange(DefaultModel):
 
         Notes
         -----
-        If (topological) bonds in water are missing physics parameters, as if open the case with
+        If (topological) bonds in water are missing (physics) parameters, as is often the case with
         rigid water, these parameters will be filled in with values of 1 Angstrom equilibrium bond
         length and a default force constant of 50,000 kcal/mol/A^2, representing an arbitrarily
-        high value.
+        stiff harmonic bond, and angle parameters of 104.5 degrees and 1.0 kcal/mol/rad^2,
+        representing an arbitrarily harmonic angle. It is expected that these values will be
+        overwritten by runtime MD options.
 
         Parameters
         ----------
