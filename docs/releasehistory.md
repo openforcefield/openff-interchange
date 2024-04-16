@@ -11,7 +11,18 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## 0.3.23 - 2024-03-07
+## 0.3.26 - 2024-04-16
+
+* #952 Drops support for Python 3.9.
+* #853 Better support LJPME in some GROMACS tests.
+* #954 Fixes a broken link in plugin documentation.
+* #963 Removes pre-set partial charges from host-guest example.
+* #956 Adds another helper function for solvation in non-acqueous solvent.
+* #946 Adds support for GROMACS's `3fad` virtual sites.
+* #918 Improves storage of cosmetic attributes.
+* #880 Improves virtual site example notebook.
+
+## 0.3.25 - 2024-03-29
 
 * #947 Fixes a bug in which virtual site parameters with identical SMIRKS would clash.
 * #948 Updates the GAFF example.
