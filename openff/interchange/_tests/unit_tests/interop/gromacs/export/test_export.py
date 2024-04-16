@@ -239,7 +239,7 @@ class TestGROMACS:
         [
             "CC",  # Two identical carbons
             "C1CCCCC1",  # Identical carbons in the ring
-            "C1C(N)CC(N)CC1",  # Identical carbons and nitrogens in the ring
+            "C1[C@@H](N)C[C@@H](N)CC1",  # Identical carbons and nitrogens in the ring
         ],
     )
     def test_energies_with_merging_atom_types(self, sage, smiles, reader):
@@ -270,7 +270,7 @@ class TestGROMACS:
         [
             "CC",  # Two identical carbons
             "C1CCCCC1",  # Identical carbons in the ring
-            "C1C(N)CC(N)CC1",  # Identical carbons and nitrogens in the ring
+            "C1[C@@H](N)C[C@@H](N)CC1",  # Identical carbons and nitrogens in the ring
         ],
     )
     def test_simple_roundtrip_with_merging_atom_types(self, sage, smiles, reader):
