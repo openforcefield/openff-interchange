@@ -81,15 +81,17 @@ class GROMACSWriter(DefaultModel):
             Checks if the atom type is already in list.
             """
             from openff.toolkit import Quantity
+
             mass_tolerance = Quantity("1e-5 amu")
             sigma_tolerance = Quantity("1e-5 nanometer")
             epsilon_tolerance = Quantity("1e-5 kilojoule_per_mol")
             for _at_name, _atom_type in atom_type_list:
                 if (
-                    atom_type.atomic_number == _atom_type.atomic_number and
-                    abs(atom_type.mass - _atom_type.mass).m < mass_tolerance and
-                    abs(atom_type.sigma - _atom_type.sigma).m < sigma_tolerance and 
-                    abs(atom_type.epsilon - _atom_type.epsilon).m < epsilon_tolerance
+                    atom_type.atomic_number == _atom_type.atomic_number
+                    and abs(atom_type.mass - _atom_type.mass).m < mass_tolerance
+                    and abs(atom_type.sigma - _atom_type.sigma).m < sigma_tolerance
+                    and abs(atom_type.epsilon - _atom_type.epsilon).m
+                    < epsilon_tolerance
                 ):
                     return _at_name
             return False
