@@ -302,19 +302,19 @@ class SMIRNOFFCollection(Collection, abc.ABC):
         if type(parameter_handler) not in cls.allowed_parameter_handlers():
             raise InvalidParameterHandlerError(type(parameter_handler))
 
-        handler = cls()
-        if hasattr(handler, "fractional_bondorder_method"):
+        collection = cls()
+        if hasattr(collection, "fractional_bondorder_method"):
             if getattr(parameter_handler, "fractional_bondorder_method", None):
-                handler.fractional_bond_order_method = (  # type: ignore[attr-defined]
+                collection.fractional_bond_order_method = (  # type: ignore[attr-defined]
                     parameter_handler.fractional_bondorder_method
                 )
-                handler.fractional_bond_order_interpolation = (  # type: ignore[attr-defined]
+                collection.fractional_bond_order_interpolation = (  # type: ignore[attr-defined]
                     parameter_handler.fractional_bondorder_interpolation
                 )
-        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
-        handler.store_potentials(parameter_handler=parameter_handler)
+        collection.store_matches(parameter_handler=parameter_handler, topology=topology)
+        collection.store_potentials(parameter_handler=parameter_handler)
 
-        return handler
+        return collection
 
     def __repr__(self) -> str:
         return (
