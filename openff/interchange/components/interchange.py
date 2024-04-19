@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING, Literal, Union, overload
 
 import numpy as np
 from openff.models.models import DefaultModel
-from openff.models.types.dimension_types import DistanceQuantity, VelocityQuantity
+from openff.models.types.dimension_types import VelocityQuantity
 from openff.models.types.serialization import QuantityEncoder
+from openff.models.types.unit_types import NanometerQuantity
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
 
@@ -138,10 +139,10 @@ class Interchange(DefaultModel):
     """
 
     collections: dict[str, Collection] = Field(dict())
-    topology: Topology = Field(None)
-    mdconfig: MDConfig = Field(None)
-    box: DistanceQuantity | None = Field(None)
-    positions: DistanceQuantity | None = Field(None)
+    topology: Topology | None = Field(None)
+    mdconfig: MDConfig | None = Field(None)
+    box: NanometerQuantity | None = Field(None)
+    positions: NanometerQuantity | None = Field(None)
     velocities: VelocityQuantity | None = Field(None)
 
     @validator("box", allow_reuse=True)
@@ -149,7 +150,7 @@ class Interchange(DefaultModel):
         if value is None:
             return value
 
-        validated = DistanceQuantity.__call__(value)
+        validated = NanometerQuantity.__call__(value)
 
         dimensions = np.atleast_2d(validated).shape
 

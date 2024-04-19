@@ -38,7 +38,10 @@ class TestNonbonded:
             methane.to_topology(),
         )
         numpy.testing.assert_allclose(
-            [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
+            [
+                charge.m_as(unit.e)
+                for charge in electrostatics_handler._get_charges().values()
+            ],
             reference_charges,
         )
 
@@ -63,7 +66,10 @@ class TestNonbonded:
         )
 
         numpy.testing.assert_allclose(
-            [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
+            [
+                charge.m_as(unit.e)
+                for charge in electrostatics_handler._get_charges().values()
+            ],
             [-0.1, 0.025, 0.025, 0.025, 0.025],
         )
 
@@ -96,7 +102,10 @@ class TestNonbonded:
         # AM1-Mulliken charges are [-0.168,  0.168], increments are [0.1, -0.1],
         # sum is [-0.068,  0.068]
         numpy.testing.assert_allclose(
-            [charge.m_as(unit.e) for charge in electrostatics_handler.charges.values()],
+            [
+                charge.m_as(unit.e)
+                for charge in electrostatics_handler._get._get_charges().values()
+            ],
             reference_charges,
         )
 
@@ -120,9 +129,9 @@ class TestNonbonded:
 
         assigned_charges = [
             v.m
-            for v in Interchange.from_smirnoff(sage, [hexane_diol])[
-                "Electrostatics"
-            ].charges.values()
+            for v in Interchange.from_smirnoff(sage, [hexane_diol])["Electrostatics"]
+            ._get_charges()
+            .values()
         ]
 
         try:
@@ -210,7 +219,9 @@ class TestElectrostatics:
                 key.atom_indices[0]: val
                 for key, val in sage.create_interchange(molecule.to_topology())[
                     "Electrostatics"
-                ].charges.items()
+                ]
+                ._get_charges()
+                .items()
             }
 
         def compare_charges(
@@ -280,7 +291,7 @@ class TestSMIRNOFFChargeIncrements:
 
         out = Interchange.from_smirnoff(sage, [hexane_diol])
         assert numpy.allclose(
-            numpy.asarray([v.m for v in out["Electrostatics"].charges.values()]),
+            numpy.asarray([v.m for v in out["Electrostatics"]._get_charges().values()]),
             gastiger_charges,
         )
 
@@ -302,9 +313,9 @@ class TestSMIRNOFFChargeIncrements:
         assert 0.0 == pytest.approx(
             sum(
                 v.m
-                for v in Interchange.from_smirnoff(sage, [methane])[
-                    "Electrostatics"
-                ].charges.values()
+                for v in Interchange.from_smirnoff(sage, [methane])["Electrostatics"]
+                ._get_charges()
+                .values()
             ),
         )
 
@@ -328,7 +339,7 @@ class TestSMIRNOFFChargeIncrements:
 
         # TODO: Fix get_charges to return the atoms in order
         found_charges = [0.0] * topology.n_atoms
-        for key, val in out["Electrostatics"].charges.items():
+        for key, val in out["Electrostatics"]._get_charges().items():
             found_charges[key.atom_indices[0]] = val.m
 
         assert numpy.allclose(expected_charges, found_charges)

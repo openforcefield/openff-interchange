@@ -273,7 +273,7 @@ def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
 
     vdw_handler = interchange["vdW"]
 
-    charges = interchange["Electrostatics"].charges
+    charges = interchange["Electrostatics"]._get_charges()
     positions = interchange.positions.m_as(unit.angstrom)
 
     """

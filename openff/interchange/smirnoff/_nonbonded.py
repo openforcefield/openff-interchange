@@ -891,7 +891,8 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                             self.key_map[new_key] = matches[key]
 
         topology_charges = [0.0] * topology.n_atoms
-        for key, val in self.charges.items():
+
+        for key, val in self._get_charges().items():
             topology_charges[key.atom_indices[0]] = val.m
 
         # TODO: Better data structures in Topology.identical_molecule_groups will make this

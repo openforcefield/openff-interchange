@@ -164,6 +164,9 @@ class LibraryChargeTopologyKey(DefaultModel):
     def __hash__(self) -> int:
         return hash((self.this_atom_index,))
 
+    def __eq__(self, other: Any) -> bool:
+        return self.__hash__() == other.__hash__()
+
 
 class SingleAtomChargeTopologyKey(LibraryChargeTopologyKey):
     """

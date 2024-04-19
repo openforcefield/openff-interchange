@@ -507,10 +507,10 @@ def get_intermol_defaults(periodic: bool = False) -> MDConfig:
         periodic=periodic,
         constraints="none",
         vdw_method="cutoff",
-        vdw_cutoff=0.9 * unit.nanometer,
+        vdw_cutoff=Quantity(0.9, "nanometer"),
         mixing_rule="lorentz-berthelot",
         switching_function=False,
-        switching_distance=0.0,
+        switching_distance=Quantity(0.0, "angstrom"),
         coul_method="PME" if periodic else "cutoff",
         coul_cutoff=(0.9 * unit.nanometer if periodic else 2.0 * unit.nanometer),
     )
