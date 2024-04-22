@@ -255,7 +255,7 @@ class TestGROMACS:
         out.positions = molecule.conformers[0]
 
         get_gromacs_energies(out).compare(
-            get_gromacs_energies(out, merge_atom_types=True),
+            get_gromacs_energies(out, _merge_atom_types=True),
             tolerances={
                 "Bond": 0.002 * molecule.n_bonds * unit.kilojoule / unit.mol,
                 "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
@@ -286,7 +286,7 @@ class TestGROMACS:
         out.positions = molecule.conformers[0]
 
         out.to_top("out.top")
-        out.to_top("out_merged.top", merge_atom_types=True)
+        out.to_top("out_merged.top", _merge_atom_types=True)
         out.to_gro("out.gro")
 
         converted = Interchange.from_gromacs("out.top", "out.gro", reader=reader)

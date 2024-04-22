@@ -25,19 +25,19 @@ class GROMACSWriter(DefaultModel):
     top_file: pathlib.Path | str | None = None
     gro_file: pathlib.Path | str | None = None
 
-    def to_top(self, merge_atom_types: bool = False):
+    def to_top(self, _merge_atom_types: bool = False):
         """Write a GROMACS topology file."""
         if self.top_file is None:
             raise ValueError("No TOP file specified.")
 
         with open(self.top_file, "w") as top:
             self._write_defaults(top)
-            mapping_to_reduced_atom_types = self._write_atomtypes(top, merge_atom_types)
+            mapping_to_reduced_atom_types = self._write_atomtypes(top, _merge_atom_types)
 
             self._write_moleculetypes(
                 top,
                 mapping_to_reduced_atom_types,
-                merge_atom_types,
+                _merge_atom_types,
             )
 
             self._write_system(top)
