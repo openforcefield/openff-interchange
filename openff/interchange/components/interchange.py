@@ -421,6 +421,7 @@ class Interchange(DefaultModel):
         prefix: str,
         decimal: int = 3,
         hydrogen_mass: float = 1.007947,
+        _merge_atom_types: bool = False,
     ):
         """
         Export this Interchange object to GROMACS files.
@@ -436,6 +437,9 @@ class Interchange(DefaultModel):
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
+        _merge_atom_types: bool, default = False
+            The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
+            If False, each atom will have its own atom type.
 
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
@@ -447,13 +451,14 @@ class Interchange(DefaultModel):
             gro_file=prefix + ".gro",
         )
 
-        writer.to_top()
+        writer.to_top(_merge_atom_types=_merge_atom_types)
         writer.to_gro(decimal=decimal)
 
     def to_top(
         self,
         file_path: Path | str,
         hydrogen_mass: float = 1.007947,
+        _merge_atom_types: bool = False,
     ):
         """
         Export this Interchange to a GROMACS topology file.
@@ -466,6 +471,9 @@ class Interchange(DefaultModel):
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
+        _merge_atom_types: book, default=False
+            The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
+            If False, each atom will have its own atom type.
 
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
@@ -474,7 +482,7 @@ class Interchange(DefaultModel):
         GROMACSWriter(
             system=_convert(self, hydrogen_mass=hydrogen_mass),
             top_file=file_path,
-        ).to_top()
+        ).to_top(_merge_atom_types=_merge_atom_types)
 
     def to_gro(self, file_path: Path | str, decimal: int = 3):
         """

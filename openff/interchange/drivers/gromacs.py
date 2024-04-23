@@ -51,6 +51,7 @@ def get_gromacs_energies(
     mdp: str = "auto",
     round_positions: int = 8,
     detailed: bool = False,
+    _merge_atom_types: bool = False,
 ) -> EnergyReport:
     """
     Given an OpenFF Interchange object, return single-point energies as computed by GROMACS.
@@ -67,6 +68,8 @@ def get_gromacs_energies(
         A decimal precision for the positions in the `.gro` file.
     detailed : bool, default=False
         If True, return a detailed report containing the energies of each term.
+    _merge_atom_types: bool, default=False
+        If True, energy should be computed with merging atom types.
 
     Returns
     -------
@@ -79,6 +82,7 @@ def get_gromacs_energies(
             interchange=interchange,
             mdp=mdp,
             round_positions=round_positions,
+            merge_atom_types=_merge_atom_types,
         ),
         detailed=detailed,
     )
@@ -88,11 +92,16 @@ def _get_gromacs_energies(
     interchange: Interchange,
     mdp: str = "auto",
     round_positions: int = 8,
+    merge_atom_types: bool = False,
 ) -> dict[str, unit.Quantity]:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             prefix = "_tmp"
-            interchange.to_gromacs(prefix=prefix, decimal=round_positions)
+            interchange.to_gromacs(
+                prefix=prefix,
+                decimal=round_positions,
+                _merge_atom_types=merge_atom_types,
+            )
 
             if mdp == "auto":
                 mdconfig = MDConfig.from_interchange(interchange)
