@@ -11,6 +11,10 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+* #972 Fixes a bug in which PME electrostatics "cutoffs" were not parsed in `from_openmm`.
+
 ## 0.3.26 - 2024-04-16
 
 * #952 Drops support for Python 3.9.

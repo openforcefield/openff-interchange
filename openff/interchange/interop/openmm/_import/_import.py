@@ -216,6 +216,7 @@ def _convert_nonbonded_force(
 
     if force.getNonbondedMethod() == 4:
         vdw.cutoff = force.getCutoffDistance()
+        electrostatics.cutoff = force.getCutoffDistance()
     else:
         raise UnsupportedImportError(
             f"Parsing a non-bonded force of type {type(force)} with {force.getNonbondedMethod()} not yet supported.",
