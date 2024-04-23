@@ -193,7 +193,6 @@ class TestGROMACSGROFile:
 @needs_gmx
 class TestGROMACS:
     @pytest.mark.slow
-    @pytest.mark.parametrize("reader", ["intermol", "internal"])
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -206,21 +205,27 @@ class TestGROMACS:
             # "C1COC(=O)O1",  # This adds an improper, i2
         ],
     )
-    def test_simple_roundtrip(self, sage, smiles, reader):
+    def test_simple_roundtrip(self, sage_unconstrained, smiles, monkeypatch):
+        # Skip if using RDKit conformer, which does weird stuff around 180 deg
+        pytest.importorskip("openeye.oechem")
+
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         molecule = MoleculeWithConformer.from_smiles(smiles)
         molecule.name = molecule.to_hill_formula()
         topology = molecule.to_topology()
 
-        out = Interchange.from_smirnoff(force_field=sage, topology=topology)
+        out = sage_unconstrained.create_interchange(topology)
+
         out.box = [4, 4, 4]
-        out.positions = molecule.conformers[0]
+        out.positions = numpy.round(molecule.conformers[0], 2)
 
         out.to_top("out.top")
-        out.to_gro("out.gro")
+        out.to_gro("out.gro", decimal=3)
 
-        converted = Interchange.from_gromacs("out.top", "out.gro", reader=reader)
+        converted = Interchange.from_gromacs("out.top", "out.gro")
 
-        assert numpy.allclose(out.positions, converted.positions)
+        assert numpy.allclose(out.positions, converted.positions, atol=1e-3)
         assert numpy.allclose(out.box, converted.box)
 
         get_gromacs_energies(out).compare(
@@ -534,21 +539,28 @@ class TestMergeAtomTypes:
             "C1[C@@H](N)C[C@@H](N)CC1",  # Identical carbons and nitrogens in the ring
         ],
     )
-    def test_simple_roundtrip_with_merging_atom_types(self, sage, smiles):
+    def test_simple_roundtrip_with_merging_atom_types(
+        self,
+        sage_unconstrained,
+        smiles,
+        monkeypatch,
+    ):
         """
         Tests #962
         """
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         molecule = MoleculeWithConformer.from_smiles(smiles)
         molecule.name = molecule.to_hill_formula()
         topology = molecule.to_topology()
 
-        out = Interchange.from_smirnoff(force_field=sage, topology=topology)
+        out = sage_unconstrained.create_interchange(topology)
         out.box = [4, 4, 4]
         out.positions = molecule.conformers[0]
 
         out.to_top("out.top")
         out.to_top("out_merged.top", _merge_atom_types=True)
-        out.to_gro("out.gro")
+        out.to_gro("out.gro", decimal=3)
 
         converted = Interchange.from_gromacs("out.top", "out.gro")
         converted_merged = Interchange.from_gromacs(

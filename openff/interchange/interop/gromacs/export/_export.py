@@ -105,7 +105,7 @@ class GROMACSWriter(DefaultModel):
             if len(reduced_atom_types) > 0:
                 _previous_name = reduced_atom_types[-1][0]
                 _previous_idx = int(_previous_name.split("_")[1])
-                return f"AT_{_previous_idx+1}"
+                return f"AT_{_previous_idx + 1}"
             else:
                 return "AT_0"
 
