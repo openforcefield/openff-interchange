@@ -193,8 +193,6 @@ class TestGROMACSGROFile:
 @needs_gmx
 class TestGROMACS:
     @pytest.mark.slow
-    @pytest.mark.skip("from_top is not yet refactored for new Topology API")
-    @pytest.mark.parametrize("reader", ["intermol", "internal"])
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -207,21 +205,27 @@ class TestGROMACS:
             # "C1COC(=O)O1",  # This adds an improper, i2
         ],
     )
-    def test_simple_roundtrip(self, sage, smiles, reader):
+    def test_simple_roundtrip(self, sage_unconstrained, smiles, monkeypatch):
+        # Skip if using RDKit conformer, which does weird stuff around 180 deg
+        pytest.importorskip("openeye.oechem")
+
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         molecule = MoleculeWithConformer.from_smiles(smiles)
         molecule.name = molecule.to_hill_formula()
         topology = molecule.to_topology()
 
-        out = Interchange.from_smirnoff(force_field=sage, topology=topology)
+        out = sage_unconstrained.create_interchange(topology)
+
         out.box = [4, 4, 4]
-        out.positions = molecule.conformers[0]
+        out.positions = numpy.round(molecule.conformers[0], 2)
 
         out.to_top("out.top")
-        out.to_gro("out.gro")
+        out.to_gro("out.gro", decimal=3)
 
-        converted = Interchange.from_gromacs("out.top", "out.gro", reader=reader)
+        converted = Interchange.from_gromacs("out.top", "out.gro")
 
-        assert numpy.allclose(out.positions, converted.positions)
+        assert numpy.allclose(out.positions, converted.positions, atol=1e-3)
         assert numpy.allclose(out.box, converted.box)
 
         get_gromacs_energies(out).compare(
@@ -494,6 +498,121 @@ class TestCommonBoxes:
             numpy.array(original_box_vectors.value_in_unit(openmm.unit.nanometer)),
             numpy.array(parsed_box_vectors.value_in_unit(openmm.unit.nanometer)),
         )
+
+
+class TestMergeAtomTypes:
+    @pytest.mark.slow
+    @pytest.mark.parametrize(
+        "smiles",
+        [
+            "CC",  # Two identical carbons
+            "C1CCCCC1",  # Identical carbons in the ring
+            "C1[C@@H](N)C[C@@H](N)CC1",  # Identical carbons and nitrogens in the ring
+        ],
+    )
+    def test_energies_with_merging_atom_types(self, sage, smiles):
+        """
+        Tests #962
+        """
+        molecule = MoleculeWithConformer.from_smiles(smiles)
+        molecule.name = molecule.to_hill_formula()
+        topology = molecule.to_topology()
+
+        out = Interchange.from_smirnoff(force_field=sage, topology=topology)
+        out.box = [4, 4, 4]
+        out.positions = molecule.conformers[0]
+
+        get_gromacs_energies(out).compare(
+            get_gromacs_energies(out, _merge_atom_types=True),
+            tolerances={
+                "Bond": 0.002 * molecule.n_bonds * unit.kilojoule / unit.mol,
+                "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
+            },
+        )
+
+    @pytest.mark.slow
+    @pytest.mark.parametrize(
+        "smiles",
+        [
+            "CC",  # Two identical carbons
+            "C1CCCCC1",  # Identical carbons in the ring
+            "C1[C@@H](N)C[C@@H](N)CC1",  # Identical carbons and nitrogens in the ring
+        ],
+    )
+    def test_simple_roundtrip_with_merging_atom_types(
+        self,
+        sage_unconstrained,
+        smiles,
+        monkeypatch,
+    ):
+        """
+        Tests #962
+        """
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        molecule = MoleculeWithConformer.from_smiles(smiles)
+        molecule.name = molecule.to_hill_formula()
+        topology = molecule.to_topology()
+
+        out = sage_unconstrained.create_interchange(topology)
+        out.box = [4, 4, 4]
+        out.positions = molecule.conformers[0]
+
+        out.to_top("out.top")
+        out.to_top("out_merged.top", _merge_atom_types=True)
+        out.to_gro("out.gro", decimal=3)
+
+        converted = Interchange.from_gromacs("out.top", "out.gro")
+        converted_merged = Interchange.from_gromacs(
+            "out_merged.top",
+            "out.gro",
+        )
+
+        assert numpy.allclose(converted.positions, converted_merged.positions)
+        assert numpy.allclose(converted.box, converted_merged.box)
+
+        get_gromacs_energies(converted_merged).compare(
+            get_gromacs_energies(converted),
+            tolerances={
+                "Bond": 0.002 * molecule.n_bonds * unit.kilojoule / unit.mol,
+                "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
+            },
+        )
+
+    @pytest.mark.parametrize(
+        "molecule_list",
+        [
+            ["CC", "CCO"],
+            ["CC", "CCCC"],
+            ["c1ccccc1", "CC", "CCO", "O"],
+            ["c1ccncc1", "n1cnccc1", "[nH]1cccc1"],
+        ],
+    )
+    def test_merge_atom_types_of_similar_molecules(
+        self,
+        molecule_list,
+        sage,
+    ):
+        pytest.importorskip("parmed")
+
+        topology = Topology.from_molecules(
+            [Molecule.from_smiles(smi) for smi in molecule_list],
+        )
+
+        out = sage.create_interchange(topology)
+
+        for merge in [True, False]:
+            out.to_top(f"{merge}.top", _merge_atom_types=merge)
+
+        not_merged = parmed.load_file("False.top")
+        merged = parmed.load_file("True.top")
+
+        # These are (n_atoms x 1) lists of parameters, which should be
+        # read from [ atoms ] section and cross-referenced to [ atomtypes ]
+        for attr in ["sigma", "epsilon", "charge"]:
+            assert [getattr(atom, attr) for atom in not_merged.atoms] == [
+                getattr(atom, attr) for atom in merged.atoms
+            ]
 
 
 @needs_gmx
