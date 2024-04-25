@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macOS-latest
+          - macos-12
           - ubuntu-latest
         python-version:
           - "3.10"
