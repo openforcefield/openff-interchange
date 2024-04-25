@@ -121,7 +121,10 @@ def _convert(
         # Also rename it if it's already MOL\d+ since that was probably assigned by this function
         # earlier in a pipeline. The molecule_types dict keys by molecule names and it's important
         # that they are unique (in the same way that the unitand moleucle names are)
-        if re.match(r"^$|MOL\d+", unique_molecule.name):
+        if re.match(
+            r"^$|MOL\d+",
+            getattr(unique_molecule, "name", ""),  # SimpleMolecule might not have .name
+        ):
             unique_molecule.name = "MOL" + str(unique_molecule_index)
 
         if unique_molecule.name in system.molecule_types:
