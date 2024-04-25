@@ -10,6 +10,7 @@ dependencies:
   - openff-toolkit-base >=0.14.5
   - openff-units
   - openff-models
+  - ambertools =22
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
   - rdkit
   # Optional features

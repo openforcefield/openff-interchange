@@ -10,12 +10,13 @@ dependencies:
   - pydantic =2
   - openmm
   # OpenFF stack
-  - openff-toolkit =0.15.2
+  - openff-toolkit ~=0.16
   - openff-interchange-base
   - openff-models
   - smirnoff-plugins =2024
-  # openff-nagl
-  # openff-nagl-models
+  - openff-nagl
+  - openff-nagl-models
+  - ambertools =22
   # Optional features
   - mbuild =0.17
   - foyer >=0.12.1
@@ -24,7 +25,7 @@ dependencies:
   - mdtraj
   - intermol
   - openeye-toolkits >=2023.2
-  - pytest =8.0
+  - pytest
   - pytest-cov
   - pytest-xdist
   - pytest-randomly
