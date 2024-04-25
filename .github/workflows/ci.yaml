@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macOS-latest
+          - macos-12
           - ubuntu-latest
         python-version:
           - "3.10"
@@ -71,7 +71,7 @@ jobs:
     - name: Install OpenMM
       if: ${{ matrix.openmm == true }}
       run: |
-        micromamba install openmm openmmforcefields "smirnoff-plugins =2024" -c conda-forge
+        micromamba install openmm "smirnoff-plugins =2024" -c conda-forge
         pip install git+https://github.com/jthorton/de-forcefields.git
 
     - name: Uninstall OpenMM
@@ -79,13 +79,13 @@ jobs:
       run: |
         micromamba remove openmm mdtraj
         # Removing mBuild also removes some leaves, need to re-install them
-        micromamba install rdkit packmol
+        micromamba install rdkit packmol "lammps >=2023.08.02"
 
     - name: Install AmberTools and RDKit
       if: ${{ matrix.openeye == false }}
       # Unclear why, but around October 2023 this downgrades JAX to broken 0.1.x builds
       # and also uninstalls RDKit
-      run: micromamba install rdkit "ambertools =23" "jax >=0.3" "jaxlib >=0.3" -c conda-forge
+      run: micromamba install rdkit "ambertools =23" "lammps >=2023.08.02" "jax >=0.3" "jaxlib >=0.3" -c conda-forge
 
     - name: Install Foyer
       run: micromamba install "foyer >=0.12.1" -c conda-forge -yq
