@@ -401,6 +401,19 @@ class TestGROMACS:
             {"Nonbonded": 0.5 * unit.kilojoule_per_mole},
         )
 
+    @pytest.mark.parametrize("name", ["MOL0", "MOL999", ""])
+    def test_exisiting_mol0_names_overwritten(self, name, sage, ethanol, cyclohexane):
+        pytest.importorskip("parmed")
+
+        ethanol.name = name
+        cyclohexane.name = name
+
+        sage.create_interchange(
+            Topology.from_molecules([ethanol, cyclohexane]),
+        ).to_top("tmp.top")
+
+        assert [*parmed.load_file("tmp.top").molecules.keys()] == ["MOL0", "MOL1"]
+
 
 class TestGROMACSMetadata:
     @skip_if_missing("openmm")
