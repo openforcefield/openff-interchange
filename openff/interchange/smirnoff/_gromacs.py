@@ -1,4 +1,5 @@
 import itertools
+import re
 from collections import defaultdict
 from typing import Optional, TypeAlias, Union
 
@@ -116,8 +117,18 @@ def _convert(
     for unique_molecule_index in unique_molecule_map:
         unique_molecule = interchange.topology.molecule(unique_molecule_index)
 
-        if getattr(unique_molecule, "name", "") == "":
+        # If this molecule doesn't have a name ("^$", empty string), name it MOL0 incrementing
+        # Also rename it if it's already MOL\d+ since that was probably assigned by this function
+        # earlier in a pipeline. The molecule_types dict keys by molecule names and it's important
+        # that they are unique (in the same way that the unitand moleucle names are)
+        if re.match(r"^$|MOL\d+", unique_molecule.name):
             unique_molecule.name = "MOL" + str(unique_molecule_index)
+
+        if unique_molecule.name in system.molecule_types:
+            raise RuntimeError(
+                "Problem keeping molecule names unique. This should not be possible - please"
+                "raise an issue describing how this error occurred.",
+            )
 
         for atom in unique_molecule.atoms:
             atom_type_name = f"{unique_molecule.name}_{particle_map[unique_molecule.atom_index(atom)]}"
