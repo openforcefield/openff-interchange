@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macOS-latest
+          - macos-13
           - ubuntu-latest
         python-version:
           - "3.10"
@@ -56,7 +56,7 @@ jobs:
       run: |
         # These packages are brought in by conda (via the toolkit) and must be removed manually
         # since pip doesn't know about the -base split and does not uninstall the -base package
-        micromamba remove --force openff-interchange openff-interchange-base
+        micromamba remove openff-interchange openff-interchange-base
         python -m pip install . plugins/
 
     - name: Install and license OpenEye Toolkits
@@ -85,7 +85,7 @@ jobs:
       if: ${{ matrix.openeye == false }}
       # Unclear why, but around October 2023 this downgrades JAX to broken 0.1.x builds
       # and also uninstalls RDKit
-      run: micromamba install rdkit "ambertools =23" "jax >=0.3" "jaxlib >=0.3" -c conda-forge
+      run: micromamba install rdkit "ambertools ==23.3" "jax >=0.3" "jaxlib >=0.3" -c conda-forge
 
     - name: Install Foyer
       run: micromamba install "foyer >=0.12.1" -c conda-forge -yq
