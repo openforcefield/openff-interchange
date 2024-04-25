@@ -16,7 +16,7 @@ dependencies:
   - smirnoff-plugins =2024
   - openff-nagl
   - openff-nagl-models
-  - ambertools =22
+  - ambertools =23
   # Optional features
   - mbuild =0.17
   - foyer >=0.12.1
@@ -35,7 +35,6 @@ dependencies:
   - gromacs =2023.3=nompi_*_103
   - lammps >=2023.08.02
   - panedr
-  - openmmforcefields
   # Typing
   - mypy
   - typing-extensions

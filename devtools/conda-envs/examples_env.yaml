@@ -13,7 +13,7 @@ dependencies:
   - openff-models
   - openff-nagl
   - openff-nagl-models
-  - ambertools =22
+  - ambertools =23
   # Optional features
   - unyt
   - mbuild =0.17
@@ -28,7 +28,6 @@ dependencies:
   - pytest =8.0
   - pytest-xdist
   - nbval
-  - openmmforcefields >=0.11.2
   - rich
   # Drivers
   - gromacs =2023.3=nompi_*_103

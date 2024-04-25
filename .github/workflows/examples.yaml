@@ -73,6 +73,7 @@ jobs:
         python -m pytest --nbval-lax --dist loadscope -n logical --durations=20 \
           examples/ \
           --ignore=examples/deprecated/ \
+          --ignore=examples/experimental/openmmforcefields/ \
           --ignore=examples/lammps/ \
           --ignore=examples/protein_ligand/ \
           --ignore=examples/conformer_energies/conformer_energies.ipynb

@@ -22,7 +22,6 @@ dependencies:
   - gmso =0.12
   # Testing
   - mdtraj
-  - openmmforcefields
   - intermol
   - openeye-toolkits >=2023.2
   - pytest-cov
