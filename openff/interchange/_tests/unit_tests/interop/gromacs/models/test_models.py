@@ -19,7 +19,7 @@ def molecule1():
         "[H][O][c]1[c]([H])[c]([O][H])[c]([H])[c]([O][H])[c]1[H]",
     )
     molecule.generate_conformers(n_conformers=1)
-    molecule.name = "MOL1"
+    molecule.name = "MOL__1"
 
     return molecule
 
@@ -28,7 +28,7 @@ def molecule1():
 def molecule2():
     molecule = Molecule.from_smiles("C1=C(C=C(C=C1C(=O)O)C(=O)O)C(=O)O")
     molecule.generate_conformers(n_conformers=1)
-    molecule.name = "MOL2"
+    molecule.name = "MOL__2"
 
     molecule.conformers[0] += numpy.array([5, 0, 0]) * unit.angstrom
 
@@ -96,7 +96,7 @@ class TestModels:
 @pytest.mark.slow
 class TestAddRemoveMoleculeType:
     @needs_gmx
-    @pytest.mark.parametrize("molecule_name", ["MOL1", "MOL2"])
+    @pytest.mark.parametrize("molecule_name", ["MOL__1", "MOL__2"])
     def test_remove_basic(self, combined_system, molecule_name):
         combined_system.remove_molecule_type(molecule_name)
 
@@ -110,7 +110,7 @@ class TestAddRemoveMoleculeType:
         )
 
     @pytest.mark.slow
-    @pytest.mark.parametrize("molecule_name", ["MOL1", "MOL2"])
+    @pytest.mark.parametrize("molecule_name", ["MOL__1", "MOL__2"])
     def test_add_existing_molecule_type(self, combined_system, molecule_name):
         with pytest.raises(
             ValueError,
@@ -140,8 +140,8 @@ class TestAddRemoveMoleculeType:
         )
         molecule2_sage = _convert(Interchange.from_smirnoff(sage, [molecule2], box=box))
 
-        parsley_system.add_molecule_type(molecule2_parsley.molecule_types["MOL2"], 1)
-        sage_system.add_molecule_type(molecule2_sage.molecule_types["MOL2"], 1)
+        parsley_system.add_molecule_type(molecule2_parsley.molecule_types["MOL__2"], 1)
+        sage_system.add_molecule_type(molecule2_sage.molecule_types["MOL__2"], 1)
 
         parsley_system.positions = combined_system.positions
         sage_system.positions = combined_system.positions
@@ -163,10 +163,10 @@ class TestAddRemoveMoleculeType:
         positions1 = numpy.vstack([system1.positions, system2.positions])
         positions2 = numpy.vstack([system2.positions, system1.positions])
 
-        system1.add_molecule_type(system2.molecule_types["MOL2"], 1)
+        system1.add_molecule_type(system2.molecule_types["MOL__2"], 1)
         system1.positions = positions1
 
-        system2.add_molecule_type(system1.molecule_types["MOL1"], 1)
+        system2.add_molecule_type(system1.molecule_types["MOL__1"], 1)
         system2.positions = positions2
 
         system1.to_files(prefix="order1", decimal=8)
@@ -182,27 +182,27 @@ class TestAddRemoveMoleculeType:
     def test_clashing_atom_types(self, combined_system, system1, system2):
         with pytest.raises(
             ValueError,
-            match="The molecule type MOL1 is already present in this system.",
+            match="The molecule type MOL__1 is already present in this system.",
         ):
-            combined_system.add_molecule_type(system1.molecule_types["MOL1"], 1)
+            combined_system.add_molecule_type(system1.molecule_types["MOL__1"], 1)
 
         with pytest.raises(
             ValueError,
-            match="The molecule type MOL2 is already present in this system.",
+            match="The molecule type MOL__2 is already present in this system.",
         ):
-            combined_system.add_molecule_type(system2.molecule_types["MOL2"], 1)
+            combined_system.add_molecule_type(system2.molecule_types["MOL__2"], 1)
 
         with pytest.raises(
             ValueError,
-            match="The molecule type MOL1 is already present in this system.",
+            match="The molecule type MOL__1 is already present in this system.",
         ):
-            system1.add_molecule_type(system1.molecule_types["MOL1"], 1)
+            system1.add_molecule_type(system1.molecule_types["MOL__1"], 1)
 
         with pytest.raises(
             ValueError,
-            match="The molecule type MOL2 is already present in this system.",
+            match="The molecule type MOL__2 is already present in this system.",
         ):
-            system2.add_molecule_type(system2.molecule_types["MOL2"], 1)
+            system2.add_molecule_type(system2.molecule_types["MOL__2"], 1)
 
 
 class TestToFiles:

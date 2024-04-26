@@ -441,6 +441,11 @@ class Interchange(DefaultModel):
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
 
+        Notes
+        -----
+        Molecule names in written files are not guaranteed to match the `Moleclue.name` attribute of the
+        molecules in the topology, especially if they are empty strings or not unique.
+
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
@@ -474,6 +479,11 @@ class Interchange(DefaultModel):
         _merge_atom_types: book, default=False
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
+
+        Notes
+        -----
+        Molecule names in written files are not guaranteed to match the `Moleclue.name` attribute of the
+        molecules in the topology, especially if they are empty strings or not unique.
 
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter

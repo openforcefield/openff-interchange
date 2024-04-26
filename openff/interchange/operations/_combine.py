@@ -106,6 +106,11 @@ def _combine(
                     {pot_key: handler.potentials[pot_key]},
                 )
 
+        # Ensure the charge cache is rebuilt
+        if handler_name == "Electrostatics":
+            self_handler._charges_cached = False
+            self_handler._get_charges()
+
         result.collections[handler_name] = self_handler
 
     if result.positions is not None and input2.positions is not None:
