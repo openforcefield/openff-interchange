@@ -220,17 +220,26 @@ def to_interchange(
                         f"Dihedral type {type(dihedral)} not implemented.",
                     )
 
-                topology_key = key_type(
-                    atom_indices=(
-                        dihedral.atom1 + molecule_start_index - 1,
-                        dihedral.atom2 + molecule_start_index - 1,
-                        dihedral.atom3 + molecule_start_index - 1,
-                        dihedral.atom4 + molecule_start_index - 1,
-                    ),
-                )
+                _key_assigned = False
+                mult = 0
+                while not _key_assigned:
+                    topology_key = key_type(
+                        atom_indices=(
+                            dihedral.atom1 + molecule_start_index - 1,
+                            dihedral.atom2 + molecule_start_index - 1,
+                            dihedral.atom3 + molecule_start_index - 1,
+                            dihedral.atom4 + molecule_start_index - 1,
+                        ),
+                        mult=mult,
+                    )
+                    if topology_key not in collection.key_map:
+                        _key_assigned = True
+                    else:
+                        mult += 1
 
                 potential_key = PotentialKey(
                     id="-".join(map(str, topology_key.atom_indices)),
+                    mult=topology_key.mult,
                 )
 
                 if isinstance(
