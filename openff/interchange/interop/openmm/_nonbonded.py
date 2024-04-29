@@ -976,6 +976,7 @@ def _set_particle_parameters(
                         particle_index,
                         [*parameters.values()],
                     )
+                    del parameters
                 else:
                     vdw_force.setParticleParameters(particle_index, [sigma, epsilon])
 
@@ -990,9 +991,43 @@ def _set_particle_parameters(
         for virtual_site_key in molecule_virtual_site_map[
             interchange.topology.molecule_index(molecule)
         ]:
-            # TODO: Also set the vdW parameters, including figuring out how to wire up
-            #       custom non-bonded functional forms
             particle_index = openff_openmm_particle_map[virtual_site_key]
+
+            if vdw is not None:
+                pot_key = vdw.key_map[virtual_site_key]
+
+                if vdw.is_plugin:
+                    parameters = vdw.potentials[pot_key].parameters
+
+                    if hasattr(vdw, "modify_parameters"):
+                        # This method stripsopenmm.units ..
+                        parameters = vdw.modify_parameters(parameters)
+                    else:
+                        # so manually strip them if the method is not present
+                        parameters = {key: val.m for key, val in parameters.items()}
+
+                else:
+                    sigma = vdw.potentials[pot_key].parameters["sigma"]
+                    epsilon = vdw.potentials[pot_key].parameters["epsilon"]
+
+                    sigma = sigma.m_as(unit.nanometer)
+                    epsilon = epsilon.m_as(unit.kilojoule / unit.mol)
+            else:
+                sigma = openmm.unit.Quantity(0.0, openmm.unit.nanometer)
+                epsilon = openmm.unit.Quantity(0.0, openmm.unit.kilojoules_per_mole)
+
+            if vdw_force is not None:
+
+                # TODO: Refactor getting the "vdW" parameters by particle index into
+                #       a common function
+
+                if vdw.is_plugin:
+                    vdw_force.setParticleParameters(
+                        particle_index,
+                        [*parameters.values()],
+                    )
+                else:
+                    vdw_force.setParticleParameters(particle_index, [sigma, epsilon])
 
             partial_charge = partial_charges[virtual_site_key].m_as(unit.e)
 
