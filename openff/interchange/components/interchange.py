@@ -966,7 +966,7 @@ class Interchange(DefaultModel):
 
     @experimental
     def combine(self, other: "Interchange") -> "Interchange":
-        """Combine two Interchange objects. This method is unstable and not yet unsafe."""
+        """Combine two Interchange objects. This method is unstable and not yet safe for general use."""
         from openff.interchange.operations._combine import _combine
 
         return _combine(self, other)
