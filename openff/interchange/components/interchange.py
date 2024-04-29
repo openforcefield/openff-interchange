@@ -955,7 +955,7 @@ class Interchange(DefaultModel):
 
     @experimental
     def __add__(self, other: "Interchange") -> "Interchange":
-        """Combine two Interchange objects. This method is unstable and not yet unsafe."""
+        """Combine two Interchange objects. This method is unstable and not yet safe for general use."""
         warnings.warn(
             "The `+` operator is deprecated. Use `Interchange.combine` instead.",
             InterchangeDeprecationWarning,
