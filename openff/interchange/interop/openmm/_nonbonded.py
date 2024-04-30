@@ -1000,11 +1000,26 @@ def _set_particle_parameters(
                     parameters = vdw.potentials[pot_key].parameters
 
                     if hasattr(vdw, "modify_parameters"):
-                        # This method stripsopenmm.units ..
+                        # This method strips openmm.units ..
+
                         parameters = vdw.modify_parameters(parameters)
+
                     else:
                         # so manually strip them if the method is not present
                         parameters = {key: val.m for key, val in parameters.items()}
+
+                    # a non-LJ vdW interaction might be mixed with virtual site parameters that have
+                    # zeroed-out sigma and epsilon; in this case
+                    if {tuple(vdw.potentials[pot_key].parameters.keys())} != {
+                        vdw.potential_parameters(),
+                    }:
+                        parameters = {
+                            key: val
+                            for key, val in zip(
+                                vdw.potential_parameters(),
+                                vdw.default_parameter_values(),
+                            )
+                        }
 
                 else:
                     sigma = vdw.potentials[pot_key].parameters["sigma"]

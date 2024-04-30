@@ -377,12 +377,17 @@ def _plugins(
                     topology=topology,
                 )
             except TypeError:
+                tagnames = [x._TAGNAME for x in collection.allowed_parameter_handlers()]
+
+                if len(tagnames) > 1:
+                    raise NotImplementedError(
+                        f"Collection {collection} requires multiple handlers, but only one was provided.",
+                    )
+
                 collection = collection_class.create(
                     parameter_handler=force_field[handler_class._TAGNAME],
                     topology=topology,
-                    vdw_collection=interchange[
-                        "DoubleExponential"
-                    ],  # need to hook into .acts_as attribute
+                    vdw_collection=interchange[tagnames[0]],
                     electrostatics_collection=interchange["Electrostatics"],
                 )
 
