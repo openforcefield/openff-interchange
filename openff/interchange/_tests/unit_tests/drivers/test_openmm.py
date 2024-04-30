@@ -1,5 +1,7 @@
+from copy import deepcopy
+
 import pytest
-from openff.toolkit import ForceField
+from openff.toolkit import ForceField, Quantity
 from openff.utilities.utilities import has_package
 
 from openff.interchange._tests import MoleculeWithConformer, get_test_file_path
@@ -8,6 +10,21 @@ from openff.interchange.drivers.openmm import _process, get_openmm_energies
 
 if has_package("openmm"):
     import openmm
+
+
+@pytest.fixture
+def methane_dimer(sage):
+    molecule = MoleculeWithConformer.from_smiles("C")
+    topology = deepcopy(molecule).to_topology()
+
+    molecule._conformers[0] += Quantity([4, 0, 0], "angstrom")
+
+    topology.add_molecule(molecule)
+
+    interchange = sage.create_interchange(topology)
+    interchange.minimize()
+
+    return interchange
 
 
 class TestProcess:
@@ -80,6 +97,7 @@ class TestProcess:
 
 class TestReportWithPlugins:
     pytest.importorskip("smirnoff_plugins")
+    pytest.importorskip("openeye")
 
     @pytest.fixture
     def ligand(self):
@@ -117,3 +135,26 @@ class TestReportWithPlugins:
                 detailed=False,
             ).total_energy.m,
         )
+
+    def test_intermolecular_plugin_vdw_energies_reported(
+        self,
+        de_force_field,
+        methane_dimer,
+    ):
+        new_interchange = de_force_field.create_interchange(methane_dimer.topology)
+        new_interchange.positions = methane_dimer.positions
+
+        new_interchange.minimize(
+            engine="openmm",
+            force_tolerance=Quantity(0.01, "kilojoule_per_mole / nanometer"),
+        )
+
+        energies = get_openmm_energies(
+            new_interchange,
+            combine_nonbonded_forces=False,
+            detailed=True,
+        )
+
+        # vdW (non-LJ) interaction energy should be slightly negative; for comparison,
+        # sage number is -1.377 kJ/mol
+        assert -5 < energies["vdW"].m_as(kj_mol) < -1
