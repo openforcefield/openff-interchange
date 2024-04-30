@@ -1,11 +1,12 @@
 """
 Helper functions for producing `openmm.Force` objects for non-bonded terms.
 """
-from collections import defaultdict
-from typing import DefaultDict, NamedTuple, Optional, Union
 
-from openff.toolkit import Molecule
-from openff.units import unit
+import itertools
+from collections import defaultdict
+from typing import DefaultDict, NamedTuple, Optional
+
+from openff.toolkit import Molecule, unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 
@@ -19,7 +20,11 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
 )
 from openff.interchange.interop.common import _build_particle_map
-from openff.interchange.models import TopologyKey, VirtualSiteKey
+from openff.interchange.models import (
+    SingleAtomChargeTopologyKey,
+    TopologyKey,
+    VirtualSiteKey,
+)
 
 if has_package("openmm"):
     import openmm
@@ -36,11 +41,11 @@ _MIXING_RULE_EXPRESSIONS: dict[str, str] = {
 class _NonbondedData(NamedTuple):
     vdw_collection: vdWCollection
     vdw_cutoff: unit.Quantity
-    vdw_method: Optional[str]
-    vdw_expression: Optional[str]
-    mixing_rule: Optional[str]
+    vdw_method: str | None
+    vdw_expression: str | None
+    mixing_rule: str | None
     electrostatics_collection: ElectrostaticsCollection
-    electrostatics_method: Optional[str]
+    electrostatics_method: str | None
     periodic: bool
 
 
@@ -49,7 +54,7 @@ def _process_nonbonded_forces(
     system: openmm.System,
     combine_nonbonded_forces: bool = False,
     ewald_tolerance: float = 1e-4,
-) -> dict[Union[int, VirtualSiteKey], int]:
+) -> dict[int | VirtualSiteKey, int]:
     """
     Process the non-bonded collections in an Interchange into corresponding openmm objects.
 
@@ -158,7 +163,7 @@ def _add_particles_to_system(
     interchange: "Interchange",
     system: openmm.System,
     molecule_virtual_site_map,
-) -> dict[Union[int, VirtualSiteKey], int]:
+) -> dict[int | VirtualSiteKey, int]:
     particle_map = _build_particle_map(
         interchange,
         molecule_virtual_site_map,
@@ -227,15 +232,15 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
             vdw = None  # type: ignore[assignment]
 
     if vdw:
-        vdw_cutoff: Optional[unit.Quanaity] = vdw.cutoff
+        vdw_cutoff: unit.Quanaity | None = vdw.cutoff
 
         if interchange.box is None:
-            vdw_method: Optional[str] = vdw.nonperiodic_method.lower()
+            vdw_method: str | None = vdw.nonperiodic_method.lower()
         else:
-            vdw_method: Optional[str] = vdw.periodic_method.lower()
+            vdw_method: str | None = vdw.periodic_method.lower()
 
-        mixing_rule: Optional[str] = getattr(vdw, "mixing_rule", None)
-        vdw_expression: Optional[str] = vdw.expression.replace("**", "^")
+        mixing_rule: str | None = getattr(vdw, "mixing_rule", None)
+        vdw_expression: str | None = vdw.expression.replace("**", "^")
     else:
         vdw_cutoff = None
         vdw_method = None
@@ -248,7 +253,7 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
         electrostatics = None  # type: ignore[assignment]
 
     if electrostatics is None:
-        electrostatics_method: Optional[str] = None
+        electrostatics_method: str | None = None
     else:
         if interchange.box is None:
             electrostatics_method = getattr(
@@ -277,7 +282,7 @@ def _create_single_nonbonded_force(
     system: openmm.System,
     ewald_tolerance: float,
     molecule_virtual_site_map: dict["Molecule", list[VirtualSiteKey]],
-    openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int],
+    openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
 ):
     """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site collections."""
     if data.mixing_rule not in ("lorentz-berthelot", None):
@@ -374,7 +379,16 @@ def _create_single_nonbonded_force(
             top_key = TopologyKey(atom_indices=(atom_index,))
 
             if data.electrostatics_collection is not None:
-                partial_charge = partial_charges[top_key].m_as(unit.e)
+                try:
+                    partial_charge = partial_charges[top_key].m_as(unit.e)
+                except KeyError:
+                    # TODO: Work around this by updating the handler or .charges
+                    #       to support looking up directly based on atom index,
+                    #       not creating a new TopologyKey each time
+                    other_top_key = SingleAtomChargeTopologyKey(
+                        this_atom_index=atom_index,
+                    )
+                    partial_charge = partial_charges[other_top_key].m_as(unit.e)
             else:
                 partial_charge = 0.0
 
@@ -493,87 +507,67 @@ def _create_exceptions(
 
     # Faster to loop through exceptions and look up parents than opposite
     if parent_virtual_particle_mapping not in (None, dict()):
-        # First add exceptions between each virtual particle and parent atom
-        for (
-            parent,
-            virtual_particles_of_this_parent,
-        ) in parent_virtual_particle_mapping.items():
-            for virtual_particle in virtual_particles_of_this_parent:
-                # These indices are of the OpenMM particles, so no need to use map
-                non_bonded_force.addException(
-                    parent,
-                    virtual_particle,
-                    0.0,
-                    1.0,
-                    0.0,
-                    True,
-                )
 
         for exception_index in range(non_bonded_force.getNumExceptions()):
             # These particles should only be atoms in this loop
             (
                 p1,
                 p2,
-                charge_prod,
                 _,
-                epsilon,
+                _,
+                _,
             ) = non_bonded_force.getExceptionParameters(exception_index)
+
+            # Adding parent-(child of neighbor) exceptions from either p1 or p2
             for virtual_particle_of_p1 in parent_virtual_particle_mapping[p1]:
-                # If this iterable is not empty, add an exception between p1's virtual
-                # particle and the "other" atom in p1's exception
-                if virtual_particle_of_p1 == p2:
-                    continue
+                if virtual_particle_of_p1 != p2:
+                    _add_exception_from_existing_exception(
+                        force=non_bonded_force,
+                        existing_exception_index=exception_index,
+                        new_p1=virtual_particle_of_p1,
+                        new_p2=p2,
+                    )
 
-                if charge_prod._value == epsilon._value == 0.0:
-                    non_bonded_force.addException(
-                        particle1=virtual_particle_of_p1,
-                        particle2=p2,
-                        chargeProd=0.0,
-                        sigma=1.0,
-                        epsilon=0.0,
-                        replace=True,
-                    )
-                else:
-                    # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
-                    v1_parameters = non_bonded_force.getParticleParameters(
-                        virtual_particle_of_p1,
-                    )
-                    p2_parameters = non_bonded_force.getParticleParameters(p2)
-                    non_bonded_force.addException(
-                        particle1=virtual_particle_of_p1,
-                        particle2=p2,
-                        chargeProd=v1_parameters[0] * p2_parameters[0],
-                        sigma=(v1_parameters[1] + p2_parameters[1]) * 0.5,
-                        epsilon=(v1_parameters[2] * p2_parameters[2]) ** 0.5,
-                    )
+            # If this iterable is not empty, add an exception between p2's virtual
+            # particle and the "other" atom in p2's exception
             for virtual_particle_of_p2 in parent_virtual_particle_mapping[p2]:
-                # If this iterable is not empty, add an exception between p1's virtual
-                # particle and the "other" atom in p1's exception
-                if virtual_particle_of_p2 == p1:
-                    continue
+                if virtual_particle_of_p2 != p1:
+                    _add_exception_from_existing_exception(
+                        force=non_bonded_force,
+                        existing_exception_index=exception_index,
+                        new_p1=virtual_particle_of_p2,
+                        new_p2=p1,
+                    )
 
-                if charge_prod._value == epsilon._value == 0.0:
-                    non_bonded_force.addException(
-                        particle1=virtual_particle_of_p2,
-                        particle2=p1,
-                        chargeProd=0.0,
-                        sigma=1.0,
-                        epsilon=0.0,
-                        replace=True,
-                    )
-                else:
-                    # TODO: Pass mixing rule into Decide on best logic for inheriting scaled 1-4 interactions
-                    v2_parameters = non_bonded_force.getParticleParameters(
-                        virtual_particle_of_p2,
-                    )
-                    p1_parameters = non_bonded_force.getParticleParameters(p1)
-                    non_bonded_force.addException(
-                        particle1=virtual_particle_of_p2,
-                        particle2=p1,
-                        chargeProd=v2_parameters[0] * p1_parameters[0],
-                        sigma=(v2_parameters[1] + p1_parameters[1]) * 0.5,
-                        epsilon=(v2_parameters[2] * p1_parameters[2]) ** 0.5,
-                    )
+            # Adding (child of this parent)-(child of neighbor) exceptions
+            for v1, v2 in itertools.product(
+                parent_virtual_particle_mapping[p1],
+                parent_virtual_particle_mapping[p2],
+            ):
+                _add_exception_from_existing_exception(
+                    force=non_bonded_force,
+                    existing_exception_index=exception_index,
+                    new_p1=v1,
+                    new_p2=v2,
+                )
+
+        for (
+            parent,
+            virtual_particles_of_this_parent,
+        ) in parent_virtual_particle_mapping.items():
+            for virtual_particle in virtual_particles_of_this_parent:
+                # Add exceptions between each virtual particle and parent atom
+                _add_zeroed_exception(non_bonded_force, parent, virtual_particle)
+
+            # Add exceptions (all zeros) between each virtual site - virtual site pair
+            # of a common parent such as the two dummy atoms on TIP5P
+            for v1, v2 in itertools.product(
+                virtual_particles_of_this_parent,
+                virtual_particles_of_this_parent,
+            ):
+                # No need to add symmetric/duplicate exceptions, nor self-self exceptions
+                if v1 < v2:
+                    _add_zeroed_exception(non_bonded_force, v1, v2)
 
 
 def _create_multiple_nonbonded_forces(
@@ -582,7 +576,7 @@ def _create_multiple_nonbonded_forces(
     system: openmm.System,
     ewald_tolerance: float,
     molecule_virtual_site_map: dict,
-    openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int],
+    openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
 ):
     from openff.interchange.components.toolkit import _get_14_pairs
 
@@ -757,7 +751,7 @@ def _create_vdw_force(
     interchange: "Interchange",
     molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
     has_virtual_sites: bool,
-) -> Optional[openmm.CustomNonbondedForce]:
+) -> openmm.CustomNonbondedForce | None:
     vdw_collection: Optional["vdWCollection"] = data.vdw_collection
 
     if vdw_collection is None:
@@ -770,9 +764,11 @@ def _create_vdw_force(
     )
 
     vdw_force = openmm.CustomNonbondedForce(
-        f"{vdw_expression}"
-        if mixing_rule_expression in (None, "")
-        else f"{vdw_expression}; {mixing_rule_expression}",
+        (
+            f"{vdw_expression}"
+            if mixing_rule_expression in (None, "")
+            else f"{vdw_expression}; {mixing_rule_expression}"
+        ),
     )
     vdw_force.setName("vdW force")
 
@@ -794,6 +790,7 @@ def _create_vdw_force(
         for _ in molecule.atoms:
             vdw_force.addParticle(vdw_collection.default_parameter_values())
 
+    for molecule in interchange.topology.molecules:
         if has_virtual_sites:
             molecule_index = interchange.topology.molecule_index(molecule)
             for _ in molecule_virtual_site_map[molecule_index]:
@@ -846,7 +843,7 @@ def _create_electrostatics_force(
     molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
     has_virtual_sites: bool,
     openff_openmm_particle_map,
-) -> Optional[openmm.NonbondedForce]:
+) -> openmm.NonbondedForce | None:
     if data.electrostatics_collection is None:
         return None
 
@@ -862,12 +859,16 @@ def _create_electrostatics_force(
         for _ in molecule.atoms:
             electrostatics_force.addParticle(0.0, 1.0, 0.0)
 
+    for molecule in interchange.topology.molecules:
         if has_virtual_sites:
             molecule_index = interchange.topology.molecule_index(molecule)
             for virtual_site_key in molecule_virtual_site_map[molecule_index]:
                 force_index = electrostatics_force.addParticle(0.0, 1.0, 0.0)
 
+                # this is an "OpenFF" index
                 parent_atom_index = virtual_site_key.orientation_atom_indices[0]
+
+                # this dict contains only "OpenMM" indices, so look through map
                 parent_virtual_particle_mapping[
                     openff_openmm_particle_map[parent_atom_index]
                 ].append(force_index)
@@ -921,7 +922,7 @@ def _set_particle_parameters(
     interchange: "Interchange",
     has_virtual_sites: bool,
     molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
-    openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int],
+    openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
 ):
     if electrostatics_force is not None:
         electrostatics: ElectrostaticsCollection = data.electrostatics_collection
@@ -1058,3 +1059,49 @@ def _get_scaled_potential_function(potential: str) -> str:
             break
 
     return ";".join(split_potential)
+
+
+def _add_exception_from_existing_exception(
+    force: openmm.NonbondedForce,
+    existing_exception_index: int,
+    new_p1: int,
+    new_p2: int,
+    charge_scaling: float = 0.8333333333,
+    vdw_scaling: float = 0.5,
+):
+    """Map the interactions of an existing exception onto a new particle pair."""
+    _, _, charge_product, _, epsilon = force.getExceptionParameters(
+        existing_exception_index,
+    )
+
+    # Assume this means that the existing p1-p2 pair is a 1-2 or 1-3 interaction
+    if charge_product._value == epsilon._value == 0.0:
+        _add_zeroed_exception(force, new_p1, new_p2)
+
+    else:
+        # TODO: Using mixing rule here, do not simply assume Lorentz-Berthelot
+        p1_parameters = force.getParticleParameters(new_p1)
+        p2_parameters = force.getParticleParameters(new_p2)
+
+        force.addException(
+            particle1=new_p1,
+            particle2=new_p2,
+            chargeProd=p1_parameters[0] * p2_parameters[0] * charge_scaling,
+            sigma=(p1_parameters[1] + p2_parameters[1]) * 0.5,
+            epsilon=(p1_parameters[2] * p2_parameters[2]) ** 0.5 * vdw_scaling,
+        )
+
+
+def _add_zeroed_exception(
+    force: openmm.NonbondedForce,
+    particle1: int,
+    particle2: int,
+):
+    force.addException(
+        particle1=particle1,
+        particle2=particle2,
+        chargeProd=0.0,
+        sigma=1.0,
+        epsilon=0.0,
+        replace=True,
+    )

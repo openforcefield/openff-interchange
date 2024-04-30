@@ -1,10 +1,8 @@
 import numpy
 import pytest
-from openff.toolkit import Molecule, Topology
-from openff.units import unit
+from openff.toolkit import Molecule, Topology, unit
 
 from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest
 from openff.interchange.interop.gromacs._interchange import (
     _convert_topology,
     to_interchange,
@@ -13,8 +11,8 @@ from openff.interchange.interop.gromacs.models.models import GROMACSSystem
 from openff.interchange.smirnoff._gromacs import _convert
 
 
-class TestToInterchange(_BaseTest):
-    @pytest.fixture()
+class TestToInterchange:
+    @pytest.fixture
     def simple_interchange(self, sage_unconstrained) -> Interchange:
         topology = Topology()
         for index, (smiles, name) in enumerate(
@@ -38,7 +36,7 @@ class TestToInterchange(_BaseTest):
 
         return sage_unconstrained.create_interchange(topology)
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_convert_basic_system(self, monkeypatch, simple_interchange):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
@@ -59,8 +57,8 @@ class TestToInterchange(_BaseTest):
             assert name in converted.collections
 
 
-class TestConvertTopology(_BaseTest):
-    @pytest.fixture()
+class TestConvertTopology:
+    @pytest.fixture
     def simple_system(self, sage_unconstrained) -> GROMACSSystem:
         molecule = Molecule.from_smiles("CCO")
         molecule.generate_conformers(n_conformers=1)
@@ -69,7 +67,7 @@ class TestConvertTopology(_BaseTest):
 
         return _convert(sage_unconstrained.create_interchange(topology))
 
-    @pytest.fixture()
+    @pytest.fixture
     def water_dimer(self, sage_unconstrained, water):
         water.name = "WAT"
         topology = Topology.from_molecules([water, water])

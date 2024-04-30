@@ -1,9 +1,8 @@
 import pytest
-from openff.units import unit
+from openff.toolkit import unit
 from openff.units.openmm import ensure_quantity
 from openff.utilities.testing import skip_if_missing
 
-from openff.interchange._tests import _BaseTest
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import (
@@ -13,8 +12,8 @@ from openff.interchange.exceptions import (
 )
 
 
-class TestEnergyReport(_BaseTest):
-    @pytest.fixture()
+class TestEnergyReport:
+    @pytest.fixture
     def report(self):
         return EnergyReport(
             energies={

@@ -16,11 +16,13 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macOS-latest
+          - macos-12
           - ubuntu-latest
         python-version:
-          - "3.9"
           - "3.10"
+          - "3.11"
+        pydantic-version:
+          - "2"
         openeye:
           - true
           - false
@@ -36,9 +38,9 @@ jobs:
       uses: mamba-org/setup-micromamba@v1
       with:
         environment-file: devtools/conda-envs/beta_env.yaml
-        channel-priority: "flexible"
         create-args: >-
           python=${{ matrix.python-version }}
+          pydantic=${{ matrix.pydantic-version }}
 
     - name: Install package
       run: |
@@ -46,9 +48,7 @@ jobs:
         python -m pip install . plugins/
 
     - name: Environment Information
-      run: |
-        conda info
-        conda list
+      run: conda info && conda list
 
     - name: License OpenEye
       if: ${{ matrix.openeye == true }}
@@ -60,16 +60,15 @@ jobs:
 
     - name: Run mypy
       continue-on-error: true
-      run: |
-        mypy --show-error-codes --namespace-packages -p "openff.interchange"
+      run: mypy --show-error-codes --namespace-packages -p "openff.interchange"
 
     - name: Run all tests
       if: always()
-      run: |
-        python -m pytest -v $COV openff/interchange/ -m "slow or not slow"
+      run: python -m pytest -v $COV openff/interchange/ -m "slow or not slow"
 
     - name: Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
         fail_ci_if_error: false

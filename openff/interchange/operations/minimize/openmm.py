@@ -1,7 +1,8 @@
 """Minimize energy using OpenMM."""
+
 from typing import TYPE_CHECKING
 
-from openff.units import Quantity
+from openff.toolkit import Quantity
 from openff.utilities.utilities import requires_package
 
 from openff.interchange.exceptions import MinimizationError, MissingPositionsError
@@ -22,11 +23,12 @@ def minimize_openmm(
     from openff.units.openmm import from_openmm
 
     simulation = interchange.to_openmm_simulation(
-        openmm.LangevinMiddleIntegrator(
+        integrator=openmm.LangevinMiddleIntegrator(
             293.15 * openmm.unit.kelvin,
             1.0 / openmm.unit.picosecond,
             2.0 * openmm.unit.femtosecond,
         ),
+        combine_nonbonded_forces=False,
     )
 
     simulation.context.computeVirtualSites()

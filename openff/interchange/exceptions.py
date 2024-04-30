@@ -102,6 +102,14 @@ class UnsupportedCombinationError(InterchangeException):
     """General exception for something going wrong in Interchange object combination."""
 
 
+class CutoffMismatchError(UnsupportedCombinationError):
+    """Non-bonded cutoffs do not match."""
+
+
+class SwitchingFunctionMismatchError(UnsupportedCombinationError):
+    """Switching distances or the use of a switching function does not match."""
+
+
 class PluginCompatibilityError(InterchangeException):
     """A plugin is incompatible with the current version of Interchange in the way it is called."""
 

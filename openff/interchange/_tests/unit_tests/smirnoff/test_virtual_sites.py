@@ -3,18 +3,15 @@ from typing import TYPE_CHECKING
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     LibraryChargeHandler,
     VirtualSiteHandler,
     vdWHandler,
 )
-from openff.units import Quantity, unit
 from openff.units.openmm import to_openmm
 from openff.utilities import has_package, skip_if_missing
-
-from openff.interchange._tests import _BaseTest
 
 if has_package("openmm") or TYPE_CHECKING:
     import openmm
@@ -37,11 +34,11 @@ class TestSMIRNOFFVirtualSiteCharges:
         sage_with_bond_charge.get_parameter_handler("ChargeIncrementModel")
         sage_with_bond_charge["ChargeIncrementModel"].partial_charge_method = "zeros"
 
-        sage_with_bond_charge["VirtualSites"].parameters[
-            0
-        ].charge_increment1 = Quantity(
-            chlorine_charge,
-            unit.elementary_charge,
+        sage_with_bond_charge["VirtualSites"].parameters[0].charge_increment1 = (
+            Quantity(
+                chlorine_charge,
+                unit.elementary_charge,
+            )
         )
 
         out = sage_with_bond_charge.create_interchange(
@@ -79,7 +76,7 @@ class TestSMIRNOFFVirtualSiteCharges:
 
 
 @skip_if_missing("openmm")
-class TestSMIRNOFFVirtualSites(_BaseTest):
+class TestSMIRNOFFVirtualSites:
     from openff.toolkit._tests.mocking import VirtualSiteMocking
 
     @classmethod
@@ -145,7 +142,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             1 if system.isVirtualSite(i) else 0 for i in range(system.getNumParticles())
         )
 
-        input_conformer = unit.Quantity(
+        input_conformer = Quantity(
             numpy.vstack(
                 [
                     input_conformer.m_as(unit.angstrom),
@@ -187,14 +184,14 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 "[Cl:1][C:2]([H:3])([H:4])[H:5]",
                 VirtualSiteMocking.sp3_conformer(),
                 (0, 1),
-                unit.Quantity(numpy.array([[0.0, 3.0, 0.0]]), unit.angstrom),
+                Quantity(numpy.array([[0.0, 3.0, 0.0]]), unit.angstrom),
             ),
             (
                 VirtualSiteMocking.bond_charge_parameter("[C:1]#[C:2]"),
                 "[H:1][C:2]#[C:3][H:4]",
                 VirtualSiteMocking.sp1_conformer(),
                 (2, 3),
-                unit.Quantity(
+                Quantity(
                     numpy.array([[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]]),
                     unit.angstrom,
                 ),
@@ -206,7 +203,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 (0, 1, 2, 3),
                 (
                     VirtualSiteMocking.sp2_conformer()[0]
-                    + unit.Quantity(  # noqa
+                    + Quantity(  # noqa
                         numpy.array(
                             [[1.0, numpy.sqrt(2), 1.0], [1.0, -numpy.sqrt(2), -1.0]],
                         ),
@@ -234,7 +231,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 "[H:2][O:1][H:3]",
                 VirtualSiteMocking.sp2_conformer()[1:, :],
                 (0, 1, 2),
-                unit.Quantity(
+                Quantity(
                     numpy.array(
                         [
                             [numpy.sqrt(2), numpy.sqrt(2), 0.0],
@@ -579,3 +576,27 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 Molecule.from_smiles("N").to_topology(),
             )["VirtualSites"].potentials
         } == {"TrivalentLonePair"}
+
+    def test_identical_smirks_do_not_clash(
+        self,
+        sage_with_two_virtual_sites_same_smirks,
+    ):
+        """Reproduce issue #940."""
+        nitrogen = Molecule.from_mapped_smiles("[H:2][N:1]([H:3])[H:4]")
+
+        out = sage_with_two_virtual_sites_same_smirks.create_interchange(
+            nitrogen.to_topology(),
+        )
+
+        charges = [charge.m for charge in out["Electrostatics"].charges.values()]
+
+        assert sum(charges) == pytest.approx(0.0)
+
+        # The second parameter shifts 5 e of charge from the nitrogen to the
+        # virtual site, so the nitrogen should end up with a VERY positive charge. If
+        # the parameter collision in the issue happens, this should closer to +1.0.
+        # Use rough numbers because of AM1-BCC inconsistency.
+        assert charges[0] > 4.0
+
+        # charges on virtual sites should not match
+        assert charges[-2] != charges[-1]

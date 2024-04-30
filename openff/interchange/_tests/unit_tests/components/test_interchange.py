@@ -1,18 +1,16 @@
-from copy import deepcopy
-
 import numpy
 import pytest
-from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     ParameterHandler,
 )
-from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
+from openff.interchange._pydantic import ValidationError
 from openff.interchange._tests import (
-    _BaseTest,
+    MoleculeWithConformer,
     get_test_file_path,
     needs_gmx,
     needs_lmp,
@@ -28,14 +26,9 @@ from openff.interchange.exceptions import (
     SMIRNOFFHandlersNotImplementedError,
 )
 
-try:
-    from pydantic.v1 import ValidationError
-except ImportError:
-    from pydantic import ValidationError
 
-
-@pytest.mark.slow()
-class TestInterchange(_BaseTest):
+@pytest.mark.slow
+class TestInterchange:
     def test_getitem(self, sage):
         """Test behavior of Interchange.__getitem__"""
         mol = Molecule.from_smiles("CCO")
@@ -77,7 +70,7 @@ class TestInterchange(_BaseTest):
         tip3p.deregister_parameter_handler("Electrostatics")
 
         topology = water.to_topology()
-        topology.box_vectors = unit.Quantity([4, 4, 4], units=unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], units=unit.nanometer)
 
         with pytest.raises(MissingParameterHandlerError, match="modify partial"):
             Interchange.from_smirnoff(tip3p, topology)
@@ -100,85 +93,6 @@ class TestInterchange(_BaseTest):
         with pytest.raises(ValidationError):
             tmp.box = [2, 2, 3, 90, 90, 90]
 
-    @skip_if_missing("openmm")
-    def test_basic_combination(self, monkeypatch, sage_unconstrained):
-        """Test basic use of Interchange.__add__() based on the README example"""
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
-        mol = Molecule.from_smiles("C")
-        mol.generate_conformers(n_conformers=1)
-        top = Topology.from_molecules([mol])
-
-        interchange = Interchange.from_smirnoff(sage_unconstrained, top)
-
-        interchange.box = [4, 4, 4] * numpy.eye(3)
-        interchange.positions = mol.conformers[0]
-
-        # Copy and translate atoms by [1, 1, 1]
-        other = Interchange()
-        other = deepcopy(interchange)
-        other.positions += 1.0 * unit.nanometer
-
-        combined = interchange + other
-
-        # Just see if it can be converted into OpenMM and run
-        get_openmm_energies(combined)
-
-    def test_parameters_do_not_clash(self, monkeypatch, sage_unconstrained):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
-        thf = Molecule.from_smiles("C1CCOC1")
-        ace = Molecule.from_smiles("CC(=O)O")
-
-        thf.generate_conformers(n_conformers=1)
-        ace.generate_conformers(n_conformers=1)
-
-        def make_interchange(molecule: Molecule) -> Interchange:
-            molecule.generate_conformers(n_conformers=1)
-            interchange = Interchange.from_smirnoff(
-                force_field=sage_unconstrained,
-                topology=[molecule],
-            )
-            interchange.positions = molecule.conformers[0]
-
-            return interchange
-
-        thf_interchange = make_interchange(thf)
-        ace_interchange = make_interchange(ace)
-        complex_interchange = thf_interchange + ace_interchange
-
-        thf_vdw = thf_interchange["vdW"].get_system_parameters()
-        ace_vdw = ace_interchange["vdW"].get_system_parameters()
-        add_vdw = complex_interchange["vdW"].get_system_parameters()
-
-        numpy.testing.assert_equal(numpy.vstack([thf_vdw, ace_vdw]), add_vdw)
-
-        # TODO: Ensure the de-duplication is maintained after exports
-
-    def test_positions_setting(self, monkeypatch, sage):
-        """Test that positions exist on the result if and only if
-        both input objects have positions."""
-
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
-        ethane = Molecule.from_smiles("CC")
-        methane = Molecule.from_smiles("C")
-
-        ethane_interchange = Interchange.from_smirnoff(
-            sage,
-            [ethane],
-        )
-        methane_interchange = Interchange.from_smirnoff(sage, [methane])
-
-        ethane.generate_conformers(n_conformers=1)
-        methane.generate_conformers(n_conformers=1)
-
-        assert (methane_interchange + ethane_interchange).positions is None
-        methane_interchange.positions = methane.conformers[0]
-        assert (methane_interchange + ethane_interchange).positions is None
-        ethane_interchange.positions = ethane.conformers[0]
-        assert (methane_interchange + ethane_interchange).positions is not None
-
     def test_input_topology_not_modified(self, sage):
         molecule = Molecule.from_smiles("CCO")
         molecule.generate_conformers(n_conformers=1)
@@ -194,7 +108,7 @@ class TestInterchange(_BaseTest):
     @pytest.mark.skip("LAMMPS export experimental")
     @needs_gmx
     @needs_lmp
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @skip_if_missing("foyer")
     def test_atom_ordering(self):
         """Test that atom indices in bonds are ordered consistently between the slot map and topology"""
@@ -263,55 +177,61 @@ class TestInterchange(_BaseTest):
         assert isinstance(out.topology, Topology)
 
     @skip_if_missing("openmm")
-    def test_to_openmm_simulation(self, sage):
-        import numpy
-        import openmm
-        import openmm.app
-        import openmm.unit
-
+    @pytest.mark.parametrize("generate_conformers", [True, False])
+    def test_to_openmm_simulation(
+        self,
+        sage,
+        default_integrator,
+        generate_conformers,
+    ):
         molecule = Molecule.from_smiles("CCO")
 
-        simulation = Interchange.from_smirnoff(
-            force_field=sage,
-            topology=molecule.to_topology(),
-        ).to_openmm_simulation(
-            integrator=openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond),
-        )
-
-        numpy.testing.assert_allclose(
-            numpy.linalg.norm(
-                simulation.context.getState(getPositions=True).getPositions(
-                    asNumpy=True,
-                ),
-            ),
-            numpy.zeros((molecule.n_atoms, 3)),
-        )
-
-        del simulation
-
-        molecule.generate_conformers(n_conformers=1)
+        if generate_conformers:
+            molecule.generate_conformers(n_conformers=1)
+            expected_positions = molecule.conformers[0].m_as(unit.nanometer)
+        else:
+            expected_positions = numpy.zeros((molecule.n_atoms, 3))
 
         simulation = Interchange.from_smirnoff(
             force_field=sage,
             topology=molecule.to_topology(),
-        ).to_openmm_simulation(
-            integrator=openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond),
-        )
+        ).to_openmm_simulation(integrator=default_integrator)
 
         numpy.testing.assert_allclose(
             simulation.context.getState(getPositions=True).getPositions(asNumpy=True),
-            molecule.conformers[0].m_as(unit.nanometer),
+            expected_positions,
         )
+
+    def test_add_barostat(self, sage, default_integrator, default_barostat):
+        import openmm
+        import openmm.unit
+
+        topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        simulation = sage.create_interchange(topology).to_openmm_simulation(
+            integrator=default_integrator,
+            additional_forces=[default_barostat],
+        )
+
+        for force in simulation.system.getForces():
+            if isinstance(force, openmm.MonteCarloBarostat):
+                assert force.getDefaultPressure() == 1.0 * openmm.unit.bar
+                assert force.getDefaultTemperature() == 300.0 * openmm.unit.kelvin
+                break
+        else:
+            raise Exception("No barostat found")
 
     @skip_if_missing("nglview")
     @skip_if_missing("openmm")
-    def test_visualize(self, sage):
+    @pytest.mark.parametrize("include_virtual_sites", [True, False])
+    def test_visualize(self, include_virtual_sites, tip4p, sage):
         import nglview
 
-        molecule = Molecule.from_smiles("CCO")
+        molecule = Molecule.from_smiles("O")
 
         out = Interchange.from_smirnoff(
-            force_field=sage,
+            force_field=tip4p if include_virtual_sites else sage,
             topology=molecule.to_topology(),
         )
 
@@ -324,12 +244,15 @@ class TestInterchange(_BaseTest):
         molecule.generate_conformers(n_conformers=1)
         out.positions = molecule.conformers[0]
 
-        assert isinstance(out.visualize(), nglview.NGLWidget)
+        assert isinstance(
+            out.visualize(include_virtual_sites=include_virtual_sites),
+            nglview.NGLWidget,
+        )
 
 
 @skip_if_missing("openmm")
 @skip_if_missing("mdtraj")
-class TestToPDB(_BaseTest):
+class TestToPDB:
     def test_to_pdb_with_virtual_sites(self, water, tip4p):
         import mdtraj
 
@@ -382,7 +305,7 @@ class TestToPDB(_BaseTest):
             )
 
 
-class TestUnimplementedSMIRNOFFCases(_BaseTest):
+class TestUnimplementedSMIRNOFFCases:
     def test_bogus_smirnoff_handler(self, sage):
         top = Molecule.from_smiles("CC").to_topology()
 
@@ -396,7 +319,7 @@ class TestUnimplementedSMIRNOFFCases(_BaseTest):
             Interchange.from_smirnoff(force_field=sage, topology=top)
 
 
-class TestBadExports(_BaseTest):
+class TestBadExports:
     @skip_if_missing("openmm")
     def test_invalid_topology(self, sage):
         """Test that InvalidTopologyError is caught when passing an unsupported
@@ -424,7 +347,7 @@ class TestBadExports(_BaseTest):
             force_field=sage,
             topology=[Molecule.from_smiles("CC")],
         )
-        zero_positions.positions = unit.Quantity(
+        zero_positions.positions = Quantity(
             numpy.zeros((zero_positions.topology.n_atoms, 3)),
             unit.nanometer,
         )
@@ -433,7 +356,7 @@ class TestBadExports(_BaseTest):
 
 
 @skip_if_missing("openmm")
-class TestInterchangeSerialization(_BaseTest):
+class TestInterchangeSerialization:
     def test_json_roundtrip(self, sage, water, ethanol):
         topology = Topology.from_molecules(
             [
@@ -445,7 +368,7 @@ class TestInterchangeSerialization(_BaseTest):
         for molecule in topology.molecules:
             molecule.generate_conformers(n_conformers=1)
 
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
 
         original = Interchange.from_smirnoff(
             force_field=sage,
@@ -459,15 +382,15 @@ class TestInterchangeSerialization(_BaseTest):
         )
 
 
-class TestWrappedCalls(_BaseTest):
+class TestWrappedCalls:
     """Test that methods which delegate out to other submodules call them."""
 
-    @pytest.fixture()
+    @pytest.fixture
     def simple_interchange(self, sage):
         mol = Molecule.from_smiles("CCO")
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
-        top.box_vectors = unit.Quantity(numpy.eye(3) * 4, unit.nanometer)
+        top.box_vectors = Quantity(numpy.eye(3) * 4, unit.nanometer)
 
         return Interchange.from_smirnoff(force_field=sage, topology=top)
 
@@ -481,7 +404,7 @@ class TestWrappedCalls(_BaseTest):
             Interchange.from_gromacs()
 
     @skip_if_missing("openmm")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_from_openmm_called(self, monkeypatch, simple_interchange):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 

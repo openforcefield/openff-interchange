@@ -3,17 +3,11 @@ from pathlib import Path
 import numpy as np
 import parmed as pmd
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from openff.units import unit
+from openff.toolkit import Molecule, Topology, unit
 from openff.utilities.testing import has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import (
-    HAS_GROMACS,
-    _BaseTest,
-    get_test_files_dir_path,
-    needs_gmx,
-)
+from openff.interchange._tests import HAS_GROMACS, get_test_files_dir_path, needs_gmx
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
@@ -34,7 +28,7 @@ if HAS_GROMACS:
 
 
 @skip_if_missing("foyer")
-class TestFoyer(_BaseTest):
+class TestFoyer:
     @pytest.fixture(scope="session")
     def oplsaa(self):
         return foyer.forcefields.load_OPLSAA()
@@ -99,7 +93,7 @@ class TestFoyer(_BaseTest):
         assert oplsaa_interchange_ethanol["Electrostatics"].scale_14 == 0.5
 
     @needs_gmx
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.skip(
         reason="Exporting to OpenMM with geometric mixing rules not yet implemented",
     )
@@ -122,7 +116,7 @@ class TestFoyer(_BaseTest):
         argnames="molecule_path",
         argvalues=[*get_test_files_dir_path("foyer_test_molecules").glob("*.sdf")],
     )
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_interchange_energies(self, molecule_path, get_interchanges, oplsaa):
         if "ethanol" in str(molecule_path) or "adamantane" in str(molecule_path):
             pytest.skip("Foyer/ParmEd bug with this molecule")
@@ -161,7 +155,7 @@ class TestFoyer(_BaseTest):
 
 @skip_if_missing("foyer")
 class TestRBTorsions(TestFoyer):
-    @pytest.fixture()
+    @pytest.fixture
     def ethanol_with_rb_torsions(self, sage):
         mol = Molecule.from_smiles("CC")
         mol.name = "ETH"
@@ -201,7 +195,7 @@ class TestRBTorsions(TestFoyer):
         return out
 
     @needs_gmx
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.skip(reason="Something is broken with RBTorsions in OpenMM export")
     def test_rb_torsions(self, ethanol_with_rb_torsions):
         omm = get_openmm_energies(ethanol_with_rb_torsions, round_positions=3).energies[
@@ -214,7 +208,7 @@ class TestRBTorsions(TestFoyer):
 
         assert (gmx - omm).m_as(kj_mol) < 1e-6
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @skip_if_missing("foyer")
     @skip_if_missing("mbuild")
     @needs_gmx

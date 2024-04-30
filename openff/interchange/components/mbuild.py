@@ -1,8 +1,8 @@
 """Utilities for processing and interfacing with mBuild models."""
+
 from typing import TYPE_CHECKING
 
-from openff.toolkit.topology import Molecule, Topology
-from openff.units import unit
+from openff.toolkit import Molecule, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
 
 if has_package("mbuild") or TYPE_CHECKING:
@@ -18,7 +18,7 @@ def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
     --------
     .. code-block:: python
 
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> from openff.interchange.components.mbuild import offmol_to_compound
         >>> mol = Molecule.from_smiles("CCO")
         >>> compound = offmol_to_compound(mol)
@@ -56,7 +56,7 @@ def offtop_to_compound(off_top: "Topology") -> "mb.Compound":
     --------
     .. code-block:: python
 
-        >>> from openff.toolkit.topology import Molecule, Topology
+        >>> from openff.toolkit import Molecule, Topology
         >>> from openff.interchange.components.mbuild import offtop_to_compound
         >>> ethanol = Molecule.from_smiles("CCO")
         >>> ethanol.name = "ETH"

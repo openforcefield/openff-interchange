@@ -21,14 +21,14 @@ $ INTERCHANGE_EXPERIMENTAL=1 python my_script.py
 ...
 ```
 
-or Jupyter notebook or equivalent:
+or Jupyter tool of choice:
 
 ```shell
-$ INTERCHANGE_EXPERIMENTAL=1 jupyter-notbook my_notebook.ipynb
+$ INTERCHANGE_EXPERIMENTAL=1 jupyter-lab my_notebook.ipynb
 ...
 ```
 
-or, with cloud services like Google Colab and Binder, use the [`%env`](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-env) magic command:
+or, with cloud services like Google Colab, use the [`%env`](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-env) magic command:
 
 ```
 %env INTERCHANGE_EXPERIMENTAL=1

@@ -1,14 +1,15 @@
 """Functions for running energy evluations with GROMACS."""
+
 import subprocess
-import sys
 import tempfile
+from importlib import resources
 from pathlib import Path
 from shutil import which
-from typing import Optional, Union
 
-from openff.units import unit
+from openff.toolkit import Quantity, unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
+from openff.interchange import Interchange
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
@@ -18,17 +19,8 @@ from openff.interchange.exceptions import (
     GMXNotFoundError,
 )
 
-if sys.version_info >= (3, 10):
-    from importlib import resources
-else:
-    import importlib_resources as resources
 
-from openff.units import Quantity
-
-from openff.interchange import Interchange
-
-
-def _find_gromacs_executable(raise_exception: bool = False) -> Optional[str]:
+def _find_gromacs_executable(raise_exception: bool = False) -> str | None:
     """Attempt to locate a GROMACS executable based on commonly-used names."""
     gromacs_executable_names = ["gmx", "gmx_mpi", "gmx_d", "gmx_mpi_d"]
 
@@ -59,6 +51,7 @@ def get_gromacs_energies(
     mdp: str = "auto",
     round_positions: int = 8,
     detailed: bool = False,
+    _merge_atom_types: bool = False,
 ) -> EnergyReport:
     """
     Given an OpenFF Interchange object, return single-point energies as computed by GROMACS.
@@ -75,6 +68,8 @@ def get_gromacs_energies(
         A decimal precision for the positions in the `.gro` file.
     detailed : bool, default=False
         If True, return a detailed report containing the energies of each term.
+    _merge_atom_types: bool, default=False
+        If True, energy should be computed with merging atom types.
 
     Returns
     -------
@@ -87,6 +82,7 @@ def get_gromacs_energies(
             interchange=interchange,
             mdp=mdp,
             round_positions=round_positions,
+            merge_atom_types=_merge_atom_types,
         ),
         detailed=detailed,
     )
@@ -96,11 +92,16 @@ def _get_gromacs_energies(
     interchange: Interchange,
     mdp: str = "auto",
     round_positions: int = 8,
+    merge_atom_types: bool = False,
 ) -> dict[str, unit.Quantity]:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             prefix = "_tmp"
-            interchange.to_gromacs(prefix=prefix, decimal=round_positions)
+            interchange.to_gromacs(
+                prefix=prefix,
+                decimal=round_positions,
+                _merge_atom_types=merge_atom_types,
+            )
 
             if mdp == "auto":
                 mdconfig = MDConfig.from_interchange(interchange)
@@ -118,9 +119,9 @@ def _get_gromacs_energies(
 
 
 def _run_gmx_energy(
-    top_file: Union[Path, str],
-    gro_file: Union[Path, str],
-    mdp_file: Union[Path, str],
+    top_file: Path | str,
+    gro_file: Path | str,
+    mdp_file: Path | str,
     maxwarn: int = 1,
 ) -> dict[str, unit.Quantity]:
     """
@@ -183,7 +184,7 @@ def _run_gmx_energy(
 def _get_gmx_energy_vdw(gmx_energies: dict) -> Quantity:
     """Get the total nonbonded energy from a set of GROMACS energies."""
     gmx_vdw = 0.0 * kj_mol
-    for key in ["LJ (SR)", "LJ-14", "Disper. corr.", "Buck.ham (SR)"]:
+    for key in ["LJ (SR)", "LJ recip.", "LJ-14", "Disper. corr.", "Buck.ham (SR)"]:
         if key in gmx_energies:
             gmx_vdw += gmx_energies[key]
 

@@ -1,12 +1,12 @@
 import itertools
+import re
 from collections import defaultdict
-from typing import Optional, Union
+from typing import Optional, TypeAlias, Union
 
+from openff.toolkit import Molecule, Quantity, unit
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
-from openff.toolkit.topology.molecule import Atom, Molecule
-from openff.units import Quantity, unit
+from openff.toolkit.topology.molecule import Atom
 from openff.units.elements import MASSES, SYMBOLS
-from typing_extensions import TypeAlias
 
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.potentials import Collection
@@ -46,7 +46,10 @@ _WATER = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
 _SIMPLE_WATER = _SimpleMolecule.from_molecule(_WATER)
 
 
-def _convert(interchange: Interchange) -> GROMACSSystem:
+def _convert(
+    interchange: Interchange,
+    hydrogen_mass: float = 1.007947,
+) -> GROMACSSystem:
     """Convert an `Interchange` object to `GROMACSSystem`."""
     if "vdW" in interchange.collections:
         nonbonded_function = 1
@@ -114,8 +117,21 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
     for unique_molecule_index in unique_molecule_map:
         unique_molecule = interchange.topology.molecule(unique_molecule_index)
 
-        if getattr(unique_molecule, "name", "") == "":
+        # If this molecule doesn't have a name ("^$", empty string), name it MOL0 incrementing
+        # Also rename it if it's already MOL\d+ since that was probably assigned by this function
+        # earlier in a pipeline. The molecule_types dict keys by molecule names and it's important
+        # that they are unique (in the same way that the unitand moleucle names are)
+        if re.match(
+            r"^$|MOL\d+",
+            getattr(unique_molecule, "name", ""),  # SimpleMolecule might not have .name
+        ):
             unique_molecule.name = "MOL" + str(unique_molecule_index)
+
+        if unique_molecule.name in system.molecule_types:
+            raise RuntimeError(
+                "Problem keeping molecule names unique. This should not be possible - please"
+                "raise an issue describing how this error occurred.",
+            )
 
         for atom in unique_molecule.atoms:
             atom_type_name = f"{unique_molecule.name}_{particle_map[unique_molecule.atom_index(atom)]}"
@@ -165,7 +181,7 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
                 epsilon=vdw_parameters["epsilon"].to(unit.kilojoule_per_mole),
             )
 
-    _partial_charges: dict[Union[int, VirtualSiteKey], float] = dict()
+    _partial_charges: dict[int | VirtualSiteKey, float] = dict()
 
     # Indexed by particle (atom or virtual site) indices
     for key, charge in interchange["Electrostatics"].charges.items():
@@ -265,6 +281,9 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             _atom_atom_type_map,
         )
 
+        # Apply HMR to this molecule only
+        _apply_hmr(molecule, unique_molecule, hydrogen_mass)
+
         system.molecule_types[unique_molecule.name] = molecule
 
         system.molecules[unique_molecule.name] = len(
@@ -281,7 +300,11 @@ def _convert(interchange: Interchange) -> GROMACSSystem:
             get_positions_with_virtual_sites,
         )
 
-        system.positions = get_positions_with_virtual_sites(interchange)
+        system.positions = get_positions_with_virtual_sites(
+            interchange,
+            collate=True,
+        )
+
     else:
         system.positions = interchange.positions
 
@@ -298,7 +321,10 @@ def _convert_bonds(
     if len(molecule.settles) > 0:
         return
 
-    collection = interchange["Bonds"]
+    try:
+        collection = interchange["Bonds"]
+    except LookupError:
+        return
 
     for bond in unique_molecule.bonds:
         molecule_indices = tuple(
@@ -348,7 +374,10 @@ def _convert_angles(
     if len(molecule.settles) > 0:
         return
 
-    collection = interchange["Angles"]
+    try:
+        collection = interchange["Angles"]
+    except LookupError:
+        return
 
     for angle in unique_molecule.angles:
         topology_indices = tuple(interchange.topology.atom_index(a) for a in angle)
@@ -641,24 +670,26 @@ def _convert_settles(
     for atom_pair in itertools.combinations(topology_atom_indices, 2):
         key = BondKey(atom_indices=atom_pair)
 
+        # First grab SETTLES distances from constraints, not bond lengths
         if key not in interchange["Constraints"].key_map:
             return
 
+        constraints = interchange["Constraints"]
+
         try:
             constraint_lengths.add(
-                interchange["Bonds"]
-                .potentials[interchange["Bonds"].key_map[key]]
-                .parameters["length"],
+                constraints.potentials[constraints.key_map[key]].parameters["distance"],
             )
-        # KeyError (subclass of LookupErrorR) when this BondKey is not found in the bond collection
-        # LookupError for the Interchange not having a bond collection
-        # in either case, look to the constraint collection for this distance
         except LookupError:
-            constraint_lengths.add(
-                interchange["Constraints"]
-                .potentials[interchange["Constraints"].key_map[key]]
-                .parameters["distance"],
-            )
+            try:
+                bonds = interchange["Bonds"]
+                constraint_lengths.add(
+                    bonds.potentials[bonds.key_map[key]].parameters["length"],
+                )
+            except LookupError:
+                raise RuntimeError(
+                    f"Could not find a constraint distance for atoms {key.atom_indices=}",
+                )
 
     if len(constraint_lengths) != 2:
         raise RuntimeError(
@@ -692,3 +723,54 @@ def _convert_settles(
             other_atoms=[1, 2],
         ),
     )
+
+
+# TODO: Refactor this with the OpenMM version into a common mass mask?
+def _apply_hmr(
+    gromacs_molecule: GROMACSMolecule,
+    toolkit_molecule: Molecule,
+    hydrogen_mass: float,
+):
+    if abs(hydrogen_mass - 1.008) < 1e-3:
+        return
+
+    if len(gromacs_molecule.virtual_sites) > 0:
+        raise UnsupportedExportError(
+            "Hydrogen mass repartitioning with virtual sites present, even on "
+            " rigid water, is not yet supported.",
+        )
+
+    water = Molecule.from_smiles("O")
+
+    def _is_water(molecule: Molecule) -> bool:
+        return molecule.is_isomorphic_with(water)
+
+    _hydrogen_mass = hydrogen_mass * unit.dalton
+
+    for bond in toolkit_molecule.bonds:
+
+        heavy_atom, hydrogen_atom = bond.atoms
+
+        if heavy_atom.atomic_number == 1:
+
+            heavy_atom, hydrogen_atom = hydrogen_atom, heavy_atom
+
+        # TODO: This should only skip rigid waters, even though HMR or flexible water is questionable
+        if (
+            (hydrogen_atom.atomic_number == 1)
+            and (heavy_atom.atomic_number != 1)  # noqa: W503
+            and not (_is_water(hydrogen_atom.molecule))  # noqa: W503
+        ):
+
+            # these are molecule indices, whereas in the OpenMM function they are topology indices
+            # these are indexed to the toolkit molecule (0-index), not the GROMACS molecule (1-index),
+            # although indexing into GROMACSMolecule.atoms is 0-indexed, GROAMCSAtom.index is 1-indexed
+            hydrogen_index = hydrogen_atom.molecule_atom_index
+            heavy_index = heavy_atom.molecule_atom_index
+
+            mass_to_transfer = (
+                _hydrogen_mass - gromacs_molecule.atoms[hydrogen_index].mass
+            )
+
+            gromacs_molecule.atoms[hydrogen_index].mass += mass_to_transfer
+            gromacs_molecule.atoms[heavy_index].mass -= mass_to_transfer

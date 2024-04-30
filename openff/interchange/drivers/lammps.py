@@ -1,10 +1,10 @@
 """Functions for running energy evluations with LAMMPS."""
-import subprocess
-from shutil import which
-from typing import Optional
+
+import tempfile
 
 import numpy
-from openff.units import unit
+from openff.toolkit import Quantity, unit
+from openff.utilities import MissingOptionalDependencyError, requires_package
 
 from openff.interchange import Interchange
 from openff.interchange.components.mdconfig import MDConfig
@@ -12,23 +12,9 @@ from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import LAMMPSNotFoundError, LAMMPSRunError
 
 
-def _find_lammps_executable(raise_exception: bool = False) -> Optional[str]:
-    """Attempt to locate a LAMMPS executable based on commonly-used names."""
-    lammps_executable_names = ["lammps", "lmp_serial", "lmp_mpi"]
-
-    for name in lammps_executable_names:
-        if which(name):
-            return name
-
-    if raise_exception:
-        raise LAMMPSNotFoundError
-    else:
-        return None
-
-
 def get_lammps_energies(
     interchange: Interchange,
-    round_positions: Optional[int] = None,
+    round_positions: int | None = None,
     detailed: bool = False,
 ) -> EnergyReport:
     """
@@ -54,45 +40,51 @@ def get_lammps_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
-    return _process(
-        _get_lammps_energies(interchange, round_positions),
-        detailed,
-    )
+    try:
+        return _process(
+            _get_lammps_energies(interchange, round_positions),
+            detailed,
+        )
+    except MissingOptionalDependencyError:
+        raise LAMMPSNotFoundError
 
 
+@requires_package("lammps")
 def _get_lammps_energies(
     interchange: Interchange,
-    round_positions: Optional[int] = None,
+    round_positions: int | None = None,
 ) -> dict[str, unit.Quantity]:
-    lmp = _find_lammps_executable(raise_exception=True)
+    import lammps
 
     if round_positions is not None:
         interchange.positions = numpy.round(interchange.positions, round_positions)
 
-    interchange.to_lammps("out.lmp")
-    mdconfig = MDConfig.from_interchange(interchange)
-    mdconfig.write_lammps_input(
-        input_file="tmp.in",
-    )
+    with tempfile.TemporaryDirectory():
+        interchange.to_lammps("out.lmp")
+        mdconfig = MDConfig.from_interchange(interchange)
+        mdconfig.write_lammps_input(
+            interchange=interchange,
+            input_file="tmp.in",
+        )
 
-    run_cmd = f"{lmp} -i tmp.in"
+    # By default, LAMMPS spits out logs to the screen, turn it off
+    # https://matsci.org/t/how-to-remove-or-redirect-python-lammps-stdout/38075/5
+    # not that this is not sent to STDOUT, so `contextlib.redirect_stdout` won't work
+    runner = lammps.lammps(cmdargs=["-screen", "none", "-nocite"])
 
-    proc = subprocess.Popen(
-        run_cmd,
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-
-    _, err = proc.communicate()
-
-    if proc.returncode:
-        raise LAMMPSRunError(err)
+    try:
+        runner.file("tmp.in")
+    # LAMMPS does not raise a custom exception :(
+    except Exception as error:
+        raise LAMMPSRunError from error
 
     # thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe
-    parsed_energies = unit.kilocalorie_per_mole * _parse_lammps_log("log.lammps")
+    parsed_energies = [
+        Quantity(energy, "kilocalorie_per_mole")
+        for energy in runner.last_thermo().values()
+    ]
 
+    # TODO: Sanely map LAMMPS's energy names to the ones we care about
     return {
         "Bond": parsed_energies[0],
         "Angle": parsed_energies[1],
@@ -123,17 +115,3 @@ def _process(
             ),
         },
     )
-
-
-def _parse_lammps_log(file_in: str) -> list[float]:
-    """Parse a LAMMPS log file for energy components."""
-    tag = False
-    with open(file_in) as fi:
-        for line in fi.readlines():
-            if tag:
-                data = [float(val) for val in line.split()]
-                tag = False
-            if line.strip().startswith("E_bond"):
-                tag = True
-
-    return data

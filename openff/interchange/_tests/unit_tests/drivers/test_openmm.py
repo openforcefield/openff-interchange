@@ -13,7 +13,7 @@ if has_package("openmm"):
 class TestProcess:
     pytest.importorskip("openmm")
 
-    @pytest.fixture()
+    @pytest.fixture
     def dummy_system(self):
         system = openmm.System()
         for force in [
@@ -27,7 +27,7 @@ class TestProcess:
 
         return system
 
-    @pytest.fixture()
+    @pytest.fixture
     def dummy_system_split(self, dummy_system):
         dummy_system.addForce(openmm.CustomNonbondedForce("sigma*epsilon"))
         dummy_system.addForce(openmm.CustomBondForce("sigma*epsilon"))
@@ -81,11 +81,11 @@ class TestProcess:
 class TestReportWithPlugins:
     pytest.importorskip("smirnoff_plugins")
 
-    @pytest.fixture()
+    @pytest.fixture
     def ligand(self):
         return MoleculeWithConformer.from_smiles("CC[C@@](/C=C\\[H])(C=C)O")
 
-    @pytest.fixture()
+    @pytest.fixture
     def de_force_field(self) -> ForceField:
         return ForceField(
             get_test_file_path("de-force-1.0.1.offxml"),

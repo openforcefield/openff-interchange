@@ -1,4 +1,5 @@
 """A project (and object) for storing, manipulating, and converting molecular mechanics data."""
+
 import importlib
 from types import ModuleType
 from typing import TYPE_CHECKING

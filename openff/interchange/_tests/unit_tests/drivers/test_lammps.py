@@ -1,16 +1,16 @@
 import pytest
-from openff.units import unit
+from openff.toolkit import Quantity, unit
 
+from openff.interchange._tests import MoleculeWithConformer, needs_lmp
 from openff.interchange.constants import kj_mol
-from openff.interchange.drivers.lammps import _process
+from openff.interchange.drivers.lammps import _process, get_lammps_energies
 
 
 class TestProcess:
-    @pytest.fixture()
+    @pytest.fixture
     def dummy_energies(self):
         energies = [
-            unit.Quantity(val, kj_mol)
-            for val in [2.0, 1.0, 1.5, 0.5, -100.0, 0.1, -4, -400]
+            Quantity(val, kj_mol) for val in [2.0, 1.0, 1.5, 0.5, -100.0, 0.1, -4, -400]
         ]
 
         return {
@@ -46,3 +46,12 @@ class TestProcess:
             dummy_energies,
             detailed=True,
         )
+
+
+class TestLAMMPSDriver:
+    @needs_lmp
+    def test_can_write_without_torsions(self, sage):
+        topology = MoleculeWithConformer.from_smiles("N").to_topology()
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
+
+        assert get_lammps_energies(sage.create_interchange(topology))["Bond"].m == 0.0

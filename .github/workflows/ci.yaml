@@ -23,14 +23,12 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macOS-latest
+          - macos-12
           - ubuntu-latest
         python-version:
-          - "3.9"
           - "3.10"
           - "3.11"
         pydantic-version:
-          - "1"
           - "2"
         openeye:
           - true
@@ -38,13 +36,6 @@ jobs:
         openmm:
           - true
           - false
-        exclude:
-          - openeye: false
-            python-version: "3.11"
-          - pydantic-version: "1"
-            python-version: "3.9"
-          - pydantic-version: "1"
-            python-version: "3.10"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -71,7 +62,7 @@ jobs:
     - name: Install and license OpenEye Toolkits
       if: ${{ matrix.openeye == true }}
       run: |
-        micromamba install openeye-toolkits -c openeye
+        micromamba install "openeye-toolkits >=2023.2" -c openeye
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
       env:
@@ -79,20 +70,22 @@ jobs:
 
     - name: Install OpenMM
       if: ${{ matrix.openmm == true }}
-      run: micromamba install openmm "smirnoff-plugins =2023" -c conda-forge
+      run: |
+        micromamba install openmm "smirnoff-plugins =2024" -c conda-forge
+        pip install git+https://github.com/jthorton/de-forcefields.git
 
     - name: Uninstall OpenMM
       if: ${{ matrix.openmm == false && matrix.openeye == true }}
       run: |
         micromamba remove openmm mdtraj
         # Removing mBuild also removes some leaves, need to re-install them
-        micromamba install rdkit packmol
+        micromamba install rdkit packmol "lammps >=2023.08.02"
 
     - name: Install AmberTools and RDKit
       if: ${{ matrix.openeye == false }}
       # Unclear why, but around October 2023 this downgrades JAX to broken 0.1.x builds
       # and also uninstalls RDKit
-      run: micromamba install rdkit "ambertools =23" "jax >=0.3" "jaxlib >=0.3" -c conda-forge
+      run: micromamba install rdkit "ambertools =23" "lammps >=2023.08.02" "jax >=0.3" "jaxlib >=0.3" -c conda-forge
 
     - name: Install Foyer
       run: micromamba install "foyer >=0.12.1" -c conda-forge -yq
@@ -101,12 +94,12 @@ jobs:
       if: always()
       run: |
         python -m pytest $COV openff/interchange/ \
-          -r fE -nauto --durations=10 \
+          -r fExs -n logical --durations=10 \
           -m "slow or not slow" \
           --ignore=openff/interchange/_tests/energy_tests/test_energies.py
 
     - name: Run small molecule regression tests
-      if: ${{ matrix.python-version == 3.9 && matrix.openeye == true && matrix.openmm == true }}
+      if: ${{ matrix.python-version == '3.10' && matrix.openeye == true && matrix.openmm == true }}
       run: |
         micromamba install deepdiff rich click -c conda-forge
         python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git
@@ -134,15 +127,17 @@ jobs:
 
     - name: Run mypy
       continue-on-error: true
+      if: ${{ matrix.python-version == '3.11' }}
       run: |
         # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
         # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
         micromamba remove jax
-        mypy --show-error-codes --namespace-packages -p "openff.interchange" --exclude "openff/interchange/_tests/data/"
+        mypy -p "openff.interchange" --exclude "openff/interchange/_tests/"
         mypy --show-error-codes plugins/nonbonded_plugins/
 
     - name: Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
         fail_ci_if_error: false
