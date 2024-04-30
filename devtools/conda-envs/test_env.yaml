@@ -10,6 +10,7 @@ dependencies:
   - openff-toolkit-base >=0.14.5
   - openff-units
   - openff-models
+  - ambertools =23
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
   - rdkit
   # Optional features
@@ -19,7 +20,6 @@ dependencies:
   - gmso =0.12
   # Testing
   - mdtraj
-  - openmmforcefields
   - intermol
   - jax
   - pytest
@@ -30,7 +30,7 @@ dependencies:
   - nglview
   # Drivers
   - gromacs =2023.3=nompi_*_103
-  - lammps
+  - lammps >=2023.08.02
   - panedr
   # Typing
   - mypy

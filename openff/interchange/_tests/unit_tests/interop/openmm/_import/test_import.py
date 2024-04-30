@@ -176,6 +176,39 @@ class TestFromOpenMM:
             del off_atom_metadata["match_info"]
             assert roundtrip_atom.metadata == off_atom_metadata
 
+    def test_electrostatics_cutoff_not_ignored(self, monkeypatch, ethanol):
+        pytest.importorskip("openmmforcefields")
+
+        import openmm.app
+        import openmm.unit
+        from openmmforcefields.generators import GAFFTemplateGenerator
+
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        topology = ethanol.to_topology()
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+
+        gaff = GAFFTemplateGenerator(molecules=ethanol)
+        force_field = openmm.app.ForceField()
+
+        force_field.registerTemplateGenerator(gaff.generator)
+
+        system = force_field.createSystem(
+            topology=topology.to_openmm(),
+            nonbondedMethod=openmm.app.PME,
+            nonbondedCutoff=1.2345 * openmm.unit.nanometer,
+        )
+
+        interchange = Interchange.from_openmm(
+            system=system,
+            topology=topology.to_openmm(),
+        )
+
+        assert interchange["Electrostatics"].cutoff.m_as(
+            unit.nanometer,
+        ) == pytest.approx(1.2345)
+        assert interchange["vdW"].cutoff.m_as(unit.nanometer) == pytest.approx(1.2345)
+
     @needs_gmx
     def test_fill_in_rigid_water_parameters(self, water_dimer, monkeypatch):
         import openmm.app
