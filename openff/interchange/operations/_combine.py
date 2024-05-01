@@ -96,10 +96,12 @@ def _combine(
             except ValueError:
                 assert len(new_atom_indices) == 1
                 new_top_key.this_atom_index = new_atom_indices[0]
-            _mult = 0
-            while _tmp_pot_key in self_handler.potentials:
-                _tmp_pot_key.mult = _mult
-                _mult += 1
+            # If interchange was not created with SMIRNOFF, we need avoid merging potentials with same key
+            if pot_key.associated_handler == "ExternalSource":
+                _mult = 0
+                while _tmp_pot_key in self_handler.potentials:
+                    _tmp_pot_key.mult = _mult
+                    _mult += 1
 
             self_handler.key_map.update({new_top_key: _tmp_pot_key})
             if handler_name == "Constraints":

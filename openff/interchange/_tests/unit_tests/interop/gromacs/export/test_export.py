@@ -23,11 +23,7 @@ from openff.interchange._tests import (
 from openff.interchange.components.nonbonded import BuckinghamvdWCollection
 from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
-from openff.interchange.exceptions import (
-    EnergyError,
-    GMXMdrunError,
-    UnsupportedExportError,
-)
+from openff.interchange.exceptions import GMXMdrunError, UnsupportedExportError
 from openff.interchange.interop.gromacs._import._import import (
     _read_box,
     _read_coordinates,
@@ -486,15 +482,12 @@ class TestGROMACS:
                 "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
             },
         )
-        try:
-            get_gromacs_energies(combined).compare(
-                get_gromacs_energies(combined_from_converted),
-                tolerances={
-                    "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
-                },
-            )
-        except EnergyError:
-            pytest.xfail("Not sure why these energies differ; parameters look okay")
+        get_gromacs_energies(combined).compare(
+            get_gromacs_energies(combined_from_converted),
+            tolerances={
+                "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
+            },
+        )
 
 
 class TestGROMACSMetadata:
