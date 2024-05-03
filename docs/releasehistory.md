@@ -13,6 +13,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+* #980 Fixes #978 in which some dihedral parameters were lost in `Interchange.from_gromacs`.
 * #972 Fixes a bug in which PME electrostatics "cutoffs" were not parsed in `from_openmm`.
 
 ## 0.3.26 - 2024-04-16

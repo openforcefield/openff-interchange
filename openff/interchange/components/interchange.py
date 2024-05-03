@@ -801,6 +801,11 @@ class Interchange(DefaultModel):
         interchange : Interchange
             An Interchange object representing the contents of the GROMACS files.
 
+        Notes
+        -----
+        Bond parameters may not correctly be parsed, such as when using SMIRNOFF
+        force fields with hydrogen bond constraints.
+
         """
         from openff.interchange.interop.gromacs._import._import import from_files
         from openff.interchange.interop.gromacs._interchange import to_interchange
