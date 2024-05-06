@@ -88,6 +88,7 @@ def _combine(
             continue
 
         for top_key, pot_key in handler.key_map.items():
+            _tmp_pot_key = copy.deepcopy(pot_key)
             new_atom_indices = tuple(idx + atom_offset for idx in top_key.atom_indices)
             new_top_key = top_key.__class__(**top_key.dict())
             try:
@@ -95,15 +96,21 @@ def _combine(
             except ValueError:
                 assert len(new_atom_indices) == 1
                 new_top_key.this_atom_index = new_atom_indices[0]
+            # If interchange was not created with SMIRNOFF, we need avoid merging potentials with same key
+            if pot_key.associated_handler == "ExternalSource":
+                _mult = 0
+                while _tmp_pot_key in self_handler.potentials:
+                    _tmp_pot_key.mult = _mult
+                    _mult += 1
 
-            self_handler.key_map.update({new_top_key: pot_key})
+            self_handler.key_map.update({new_top_key: _tmp_pot_key})
             if handler_name == "Constraints":
                 self_handler.potentials.update(
-                    {pot_key: handler.potentials[pot_key]},
+                    {_tmp_pot_key: handler.potentials[pot_key]},
                 )
             else:
                 self_handler.potentials.update(
-                    {pot_key: handler.potentials[pot_key]},
+                    {_tmp_pot_key: handler.potentials[pot_key]},
                 )
 
         # Ensure the charge cache is rebuilt

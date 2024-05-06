@@ -67,7 +67,10 @@ def to_interchange(
     impropers = ImproperTorsionCollection()
 
     vdw.potentials = {
-        PotentialKey(id=f"{atom_type.name}"): Potential(
+        PotentialKey(
+            id=f"{atom_type.name}",
+            associated_handler="ExternalSource",
+        ): Potential(
             parameters={"sigma": atom_type.sigma, "epsilon": atom_type.epsilon},
         )
         for atom_type in system.atom_types.values()
@@ -84,11 +87,19 @@ def to_interchange(
                 )
 
                 vdw.key_map.update(
-                    {topology_key: PotentialKey(id=f"{atom.atom_type}")},
+                    {
+                        topology_key: PotentialKey(
+                            id=f"{atom.atom_type}",
+                            associated_handler="ExternalSource",
+                        ),
+                    },
                 )
 
                 # GROMACS does NOT necessarily tie partial charges to atom types, so need a new key for each atom
-                electrostatics_key = PotentialKey(id=f"{topology_key.atom_indices[0]}")
+                electrostatics_key = PotentialKey(
+                    id=f"{topology_key.atom_indices[0]}",
+                    associated_handler="ExternalSource",
+                )
                 electrostatics.key_map.update(
                     {topology_key: electrostatics_key},
                 )
@@ -170,6 +181,7 @@ def to_interchange(
 
                 potential_key = PotentialKey(
                     id="-".join(map(str, topology_key.atom_indices)),
+                    associated_handler="ExternalSource",
                 )
 
                 potential = Potential(
@@ -193,6 +205,7 @@ def to_interchange(
 
                 potential_key = PotentialKey(
                     id="-".join(map(str, topology_key.atom_indices)),
+                    associated_handler="ExternalSource",
                 )
 
                 potential = Potential(
@@ -220,17 +233,27 @@ def to_interchange(
                         f"Dihedral type {type(dihedral)} not implemented.",
                     )
 
-                topology_key = key_type(
-                    atom_indices=(
-                        dihedral.atom1 + molecule_start_index - 1,
-                        dihedral.atom2 + molecule_start_index - 1,
-                        dihedral.atom3 + molecule_start_index - 1,
-                        dihedral.atom4 + molecule_start_index - 1,
-                    ),
-                )
+                _key_assigned = False
+                mult = 0
+                while not _key_assigned:
+                    topology_key = key_type(
+                        atom_indices=(
+                            dihedral.atom1 + molecule_start_index - 1,
+                            dihedral.atom2 + molecule_start_index - 1,
+                            dihedral.atom3 + molecule_start_index - 1,
+                            dihedral.atom4 + molecule_start_index - 1,
+                        ),
+                        mult=mult,
+                    )
+                    if topology_key not in collection.key_map:
+                        _key_assigned = True
+                    else:
+                        mult += 1
 
                 potential_key = PotentialKey(
                     id="-".join(map(str, topology_key.atom_indices)),
+                    mult=topology_key.mult,
+                    associated_handler="ExternalSource",
                 )
 
                 if isinstance(

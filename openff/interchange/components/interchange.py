@@ -801,6 +801,11 @@ class Interchange(DefaultModel):
         interchange : Interchange
             An Interchange object representing the contents of the GROMACS files.
 
+        Notes
+        -----
+        Bond parameters may not correctly be parsed, such as when using SMIRNOFF
+        force fields with hydrogen bond constraints.
+
         """
         from openff.interchange.interop.gromacs._import._import import from_files
         from openff.interchange.interop.gromacs._interchange import to_interchange
@@ -955,7 +960,7 @@ class Interchange(DefaultModel):
 
     @experimental
     def __add__(self, other: "Interchange") -> "Interchange":
-        """Combine two Interchange objects. This method is unstable and not yet unsafe."""
+        """Combine two Interchange objects. This method is unstable and not yet safe for general use."""
         warnings.warn(
             "The `+` operator is deprecated. Use `Interchange.combine` instead.",
             InterchangeDeprecationWarning,
@@ -966,7 +971,7 @@ class Interchange(DefaultModel):
 
     @experimental
     def combine(self, other: "Interchange") -> "Interchange":
-        """Combine two Interchange objects. This method is unstable and not yet unsafe."""
+        """Combine two Interchange objects. This method is unstable and not yet safe for general use."""
         from openff.interchange.operations._combine import _combine
 
         return _combine(self, other)

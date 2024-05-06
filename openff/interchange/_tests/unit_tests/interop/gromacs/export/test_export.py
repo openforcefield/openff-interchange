@@ -414,6 +414,81 @@ class TestGROMACS:
 
         assert [*parmed.load_file("tmp.top").molecules.keys()] == ["MOL0", "MOL1"]
 
+    @pytest.mark.parametrize("name", ["MOL0", "MOL222", ""])
+    def test_roundtrip_with_combine(
+        self,
+        name,
+        sage_unconstrained,
+        ethanol,
+        cyclohexane,
+        monkeypatch,
+    ):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+        for molecule in [ethanol, cyclohexane]:
+            molecule.name = name
+            molecule.generate_conformers(n_conformers=1)
+
+        # translate one by 1 nm
+        cyclohexane._conformers = [
+            cyclohexane.conformers[0] + Quantity([0, 0, 1], "nanometer"),
+        ]
+
+        ethanol_interchange = sage_unconstrained.create_interchange(
+            ethanol.to_topology(),
+        )
+        ethanol_interchange.box = [4, 4, 4]
+
+        cyclohexane_interchange = sage_unconstrained.create_interchange(
+            cyclohexane.to_topology(),
+        )
+        cyclohexane_interchange.box = [4, 4, 4]
+
+        combined = ethanol_interchange.combine(cyclohexane_interchange)
+
+        ethanol_interchange.to_gromacs("ethanol", decimal=8)
+        cyclohexane_interchange.to_gromacs("cyclohexane", decimal=8)
+        combined.to_gromacs("combined", decimal=8)
+
+        converted_ethanol = Interchange.from_gromacs(
+            "ethanol.top",
+            "ethanol.gro",
+        )
+        converted_cyclohexane = Interchange.from_gromacs(
+            "cyclohexane.top",
+            "cyclohexane.gro",
+        )
+
+        converted_combined = Interchange.from_gromacs(
+            "combined.top",
+            "combined.gro",
+        )
+
+        combined_from_converted = converted_ethanol.combine(converted_cyclohexane)
+        combined_from_converted["vdW"].cutoff = combined["vdW"].cutoff
+        converted_combined["vdW"].cutoff = combined["vdW"].cutoff
+
+        assert numpy.allclose(converted_combined.positions, combined.positions)
+        assert numpy.allclose(
+            converted_combined.positions,
+            combined_from_converted.positions,
+        )
+        assert numpy.allclose(converted_combined.box, combined.box)
+        assert numpy.allclose(converted_combined.box, combined_from_converted.box)
+
+        get_gromacs_energies(combined).compare(
+            get_gromacs_energies(converted_combined),
+            tolerances={
+                "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
+            },
+        )
+        get_gromacs_energies(combined).compare(
+            get_gromacs_energies(combined_from_converted),
+            tolerances={
+                "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
+            },
+        )
+
 
 class TestGROMACSMetadata:
     @skip_if_missing("openmm")
