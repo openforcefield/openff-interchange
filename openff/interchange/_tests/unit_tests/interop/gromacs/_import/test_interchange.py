@@ -1,6 +1,7 @@
 import pytest
 from openff.toolkit import Quantity
 
+from openff.interchange._tests import needs_gmx
 from openff.interchange.drivers.gromacs import get_gromacs_energies
 from openff.interchange.interop.gromacs._import._import import from_files
 from openff.interchange.interop.gromacs._interchange import to_interchange
@@ -8,6 +9,7 @@ from openff.interchange.interop.gromacs._interchange import to_interchange
 
 class TestToInterchange:
 
+    @needs_gmx
     def test_torsion_multiplicities_stored_in_keys(
         self,
         ethanol,

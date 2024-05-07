@@ -36,7 +36,12 @@ if has_package("openmm"):
     import openmm.unit
 
 
-class TestToGro:
+@needs_gmx
+class _NeedsGROMACS:
+    pass
+
+
+class TestToGro(_NeedsGROMACS):
     def test_residue_names(self, sage):
         """Reproduce issue #642."""
         # This could maybe just test the behavior of _convert?
@@ -69,8 +74,7 @@ class TestToGro:
 
 @skip_if_missing("mdtraj")
 @skip_if_missing("openmm")
-@needs_gmx
-class TestGROMACSGROFile:
+class TestGROMACSGROFile(_NeedsGROMACS):
     try:
         _INTERMOL_PATH = resources.files(
             "intermol.tests.gromacs.unit_tests",
@@ -190,8 +194,7 @@ class TestGROMACSGROFile:
         assert openmm_atom_names == pdb_atom_names
 
 
-@needs_gmx
-class TestGROMACS:
+class TestGROMACS(_NeedsGROMACS):
     @pytest.mark.slow
     @pytest.mark.parametrize(
         "smiles",
@@ -490,7 +493,7 @@ class TestGROMACS:
         )
 
 
-class TestGROMACSMetadata:
+class TestGROMACSMetadata(_NeedsGROMACS):
     @skip_if_missing("openmm")
     @skip_if_missing("mdtraj")
     @pytest.mark.slow
@@ -525,7 +528,7 @@ class TestGROMACSMetadata:
         assert openmm_atom_names == pdb_atom_names
 
 
-class TestSettles:
+class TestSettles(_NeedsGROMACS):
     def test_settles_units(self, monkeypatch, water):
         """Reproduce issue #720."""
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
@@ -552,7 +555,7 @@ class TestSettles:
 
 @pytest.mark.slow
 @requires_package("openmm")
-class TestCommonBoxes:
+class TestCommonBoxes(_NeedsGROMACS):
     @pytest.mark.parametrize(
         "pdb_file",
         [
@@ -588,7 +591,7 @@ class TestCommonBoxes:
         )
 
 
-class TestMergeAtomTypes:
+class TestMergeAtomTypes(_NeedsGROMACS):
     @pytest.mark.slow
     @pytest.mark.parametrize(
         "smiles",
@@ -703,8 +706,7 @@ class TestMergeAtomTypes:
             ]
 
 
-@needs_gmx
-class TestGROMACSVirtualSites:
+class TestGROMACSVirtualSites(_NeedsGROMACS):
     @pytest.fixture
     def sigma_hole_type(self, sage):
         """A handler with a bond charge virtual site on a C-Cl bond."""
