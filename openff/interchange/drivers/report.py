@@ -46,7 +46,8 @@ class EnergyReport(DefaultModel):
             if key not in _KNOWN_ENERGY_TERMS:
                 raise InvalidEnergyError(f"Energy type {key} not understood.")
             if not isinstance(val, Quantity):
-                v[key] = MolarEnergyQuantity.__call__(val)
+                v[key] = MolarEnergyQuantity.__call__(str(val))
+
         return v
 
     @property

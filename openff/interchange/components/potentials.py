@@ -89,25 +89,24 @@ class Potential(DefaultModel):
 class WrappedPotential(DefaultModel):
     """Model storing other Potential model(s) inside inner data."""
 
-    class InnerData(DefaultModel):
-        """The potentials being wrapped."""
-
-        data: dict[Potential, float]
-
-    _inner_data: InnerData = PrivateAttr()
+    _inner_data: dict[Potential, float] = PrivateAttr()
 
     def __init__(self, data: Potential | dict) -> None:
+        # Needed to set some Pydantic magic, at least __pydantic_private__;
+        # won't actually process the input here
+        super().__init__()
+
         if isinstance(data, Potential):
-            self._inner_data = self.InnerData(data={data: 1.0})
-        elif isinstance(data, dict):
-            self._inner_data = self.InnerData(data=data)
+            data = {data: 1.0}
+
+        self._inner_data = data
 
     @property
     def parameters(self) -> dict[str, Quantity]:
         """Get the parameters as represented by the stored potentials and coefficients."""
         keys: set[str] = {
             param_key
-            for pot in self._inner_data.data.keys()
+            for pot in self._inner_data.keys()
             for param_key in pot.parameters.keys()
         }
         params = dict()
@@ -116,14 +115,14 @@ class WrappedPotential(DefaultModel):
                 {
                     key: sum(
                         coeff * pot.parameters[key]
-                        for pot, coeff in self._inner_data.data.items()
+                        for pot, coeff in self._inner_data.items()
                     ),
                 },
             )
         return params
 
     def __repr__(self) -> str:
-        return str(self._inner_data.data)
+        return str(self._inner_data)
 
 
 class Collection(DefaultModel):
