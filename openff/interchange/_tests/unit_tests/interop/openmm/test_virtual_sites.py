@@ -637,3 +637,50 @@ class TestOpenMMVirtualSiteExclusions:
 
             else:
                 raise Exception("Unexpected exception found")
+
+
+class TestvdWOnVirtualSites:
+    """Test the somehow rare case of virtual sites having non-charge interactions."""
+
+    def test_oxygen_interactions_shifted_to_virtual_site(
+        self,
+        water,
+    ):
+        """
+        Just as a convenient dummy case, shift the oxygen's vdW interactions to
+        the virtual site and export to OpenMM.
+        """
+        openmm.unit = pytest.importorskip("openmm.unit")
+
+        # Any 4- or 5-site water model will do, but this one is simpler since
+        # it doesn't have bundled ion parameters
+        force_field = ForceField("tip4p_ew-1.0.0.offxml")
+
+        oxygen_parameters = force_field["vdW"]["[#1]-[#8X2H2+0:1]-[#1]"]
+
+        force_field["VirtualSites"].parameters[0].sigma = oxygen_parameters.sigma
+        force_field["VirtualSites"].parameters[0].epsilon = oxygen_parameters.epsilon
+
+        force_field["vdW"]["[#1]-[#8X2H2+0:1]-[#1]"].epsilon *= 0.0
+
+        system = force_field.create_openmm_system(water.to_topology())
+
+        for force in system.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                oxygen = force.getParticleParameters(0)
+                dummy = force.getParticleParameters(3)
+
+                assert (
+                    oxygen[2].value_in_unit(openmm.unit.kilojoule_per_mole) == 0.0
+                )  # sigma doesn't matter
+
+                assert dummy[1].value_in_unit(openmm.unit.nanometer) == pytest.approx(
+                    0.316435,
+                )
+                assert dummy[2].value_in_unit(
+                    openmm.unit.kilojoule_per_mole,
+                ) == pytest.approx(0.680946)
+
+            break
+        else:
+            raise Exception("Did not find a NonbondedForce")

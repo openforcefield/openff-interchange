@@ -97,8 +97,6 @@ def _create_interchange(
 
     interchange.box = _topology.box_vectors if box is None else box
 
-    _plugins(interchange, force_field, _topology)
-
     _bonds(interchange, force_field, _topology, partial_bond_orders_from_molecules)
     _constraints(
         interchange,
@@ -118,6 +116,8 @@ def _create_interchange(
         charge_from_molecules,
         allow_nonintegral_charges,
     )
+    _plugins(interchange, force_field, _topology)
+
     _virtual_sites(interchange, force_field, _topology)
 
     _gbsa(interchange, force_field, _topology)
@@ -371,10 +371,25 @@ def _plugins(
 
         if len(handler_classes) == 1:
             handler_class = handler_classes[0]
-            collection = collection_class.create(
-                parameter_handler=force_field[handler_class._TAGNAME],
-                topology=topology,
-            )
+            try:
+                collection = collection_class.create(
+                    parameter_handler=force_field[handler_class._TAGNAME],
+                    topology=topology,
+                )
+            except TypeError:
+                tagnames = [x._TAGNAME for x in collection.allowed_parameter_handlers()]
+
+                if len(tagnames) > 1:
+                    raise NotImplementedError(
+                        f"Collection {collection} requires multiple handlers, but only one was provided.",
+                    )
+
+                collection = collection_class.create(
+                    parameter_handler=force_field[handler_class._TAGNAME],
+                    topology=topology,
+                    vdw_collection=interchange[tagnames[0]],
+                    electrostatics_collection=interchange["Electrostatics"],
+                )
 
         else:
             # If this collection takes multiple handlers, pass it a list. Consider making this type the default.
