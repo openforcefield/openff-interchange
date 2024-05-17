@@ -630,8 +630,6 @@ def pack_box(
         When packmol fails to execute / converge.
 
     """
-    import rdkit
-
     # Make sure packmol can be found.
     packmol_path = _find_packmol()
 
@@ -728,46 +726,7 @@ def pack_box(
         if not packmol_succeeded:
             raise PACKMOLRuntimeError(result)
 
-        try:
-            # Load the coordinates from the PDB file with RDKit (because its already
-            # a dependency)
-            rdmol = rdkit.Chem.rdmolfiles.MolFromPDBFile(
-                output_file_path,
-                sanitize=False,
-                removeHs=False,
-                proximityBonding=False,
-            )
-
-            positions = rdmol.GetConformers()[0].GetPositions()
-        except AttributeError:
-            # Handle a case in which RDKit doesn't parse PACKMOL's PDB files
-            # with more than 99,999 atoms
-            try:
-                import mdtraj
-
-                positions = mdtraj.load(output_file_path).xyz[0] * 0.1
-            except ModuleNotFoundError as error:
-                raise PACKMOLRuntimeError(
-                    "PACKMOL output could not be parsed by RDKit, possibly because "
-                    "this file has 100,000 or more atoms. Parsing this file in this "
-                    "particular case requires the optional dependency MDTraj.",
-                ) from error
-            except ValueError:
-                try:
-                    import openmm.unit
-                    from openmm.app import PDBFile
-
-                    pdb_file = PDBFile(output_file_path)
-                    positions = pdb_file.getPositions(asNumpy=True).value_in_unit(
-                        openmm.unit.angstrom,
-                    )
-
-                except ModuleNotFoundError as error:
-                    raise PACKMOLRuntimeError(
-                        "PACKMOL output could not be parsed by RDKit, possibly because "
-                        "this file has 100,000 or more atoms. Tried using MDTraj and OpenMM, "
-                        "but neither are installed.",
-                    ) from error
+        positions = _load_positions(output_file_path)
 
     # TODO: This currently does not run if we encountered an error in the
     # context manager
@@ -818,6 +777,52 @@ def _max_dist_between_points(points: Quantity) -> Quantity:
     # Now compute all the distances and get the greatest distance in O(h^2)
     max_dist = distance.pdist(hullpoints, metric="euclidean").max()
     return max_dist * units
+
+
+def _load_positions(output_file_path) -> NDArray:
+    try:
+        import rdkit
+
+        # Load the coordinates from the PDB file with RDKit (because its already
+        # a dependency)
+        rdmol = rdkit.Chem.rdmolfiles.MolFromPDBFile(
+            output_file_path,
+            sanitize=False,
+            removeHs=False,
+            proximityBonding=False,
+        )
+
+        return rdmol.GetConformers()[0].GetPositions()
+
+    except AttributeError:
+        # RDKit's PDB parser doesn't like >99,999 atoms, tyr something else
+        pass
+    try:
+        import mdtraj
+
+        return mdtraj.load(output_file_path).xyz[0] * 0.1
+    except (ValueError, ModuleNotFoundError):
+        # Something went wrong here, next try OpenMM
+        pass
+
+    try:
+        import openmm.unit
+        from openmm.app import PDBFile
+
+        pdb_file = PDBFile(output_file_path)
+        return pdb_file.getPositions(asNumpy=True).value_in_unit(
+            openmm.unit.angstrom,
+        )
+
+    except ModuleNotFoundError:
+        # Fall back to a generic error
+        pass
+
+    raise PACKMOLRuntimeError(
+        "PACKMOL output could not be parsed by RDKit, possibly because "
+        "this file has 100,000 or more atoms. Tried using MDTraj and OpenMM, "
+        "but neither are installed and/or both failed.",
+    )
 
 
 def solvate_topology(
