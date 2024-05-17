@@ -713,11 +713,15 @@ def pack_box(
         )
 
         with open(input_file_path) as file_handle:
-            result = subprocess.check_output(
-                packmol_path,
-                stdin=file_handle,
-                stderr=subprocess.STDOUT,
-            ).decode("utf-8")
+            try:
+                result = subprocess.check_output(
+                    packmol_path,
+                    stdin=file_handle,
+                    stderr=subprocess.STDOUT,
+                ).decode("utf-8")
+            except subprocess.CalledProcessError as error:
+                if "173" in str(error):
+                    raise PACKMOLRuntimeError from error
 
             packmol_succeeded = result.find("Success!") > 0
 
@@ -748,6 +752,22 @@ def pack_box(
                     "this file has 100,000 or more atoms. Parsing this file in this "
                     "particular case requires the optional dependency MDTraj.",
                 ) from error
+            except ValueError:
+                try:
+                    import openmm.unit
+                    from openmm.app import PDBFile
+
+                    pdb_file = PDBFile(output_file_path)
+                    positions = pdb_file.getPositions(asNumpy=True).value_in_unit(
+                        openmm.unit.angstrom,
+                    )
+
+                except ModuleNotFoundError as error:
+                    raise PACKMOLRuntimeError(
+                        "PACKMOL output could not be parsed by RDKit, possibly because "
+                        "this file has 100,000 or more atoms. Tried using MDTraj and OpenMM, "
+                        "but neither are installed.",
+                    ) from error
 
     # TODO: This currently does not run if we encountered an error in the
     # context manager
