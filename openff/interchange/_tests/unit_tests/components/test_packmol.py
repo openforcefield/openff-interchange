@@ -389,8 +389,8 @@ class TestPackmolWrapper:
             )
 
     @pytest.mark.skipif(
-        has_package("mdtraj"),
-        reason="Test requires that MDTraj is not installed",
+        has_package("mdtraj") or has_package("openmm"),
+        reason="Test requires that MDTraj **and** OpenMM are not installed",
     )
     def test_noninteger_serial_error(self):
         """See issue #794."""
@@ -406,9 +406,21 @@ class TestPackmolWrapper:
                 mass_density=0.1 * unit.grams / unit.milliliters,
             )
 
+    @pytest.mark.slow
     @skip_if_missing("mdtraj")
     def test_noninteger_serial_fallback(self):
         """See issue #794."""
+        pack_box(
+            molecules=[Molecule.from_smiles("CCO")],
+            number_of_copies=[11112],
+            box_shape=UNIT_CUBE,
+            tolerance=1.0 * unit.angstrom,
+            mass_density=0.1 * unit.grams / unit.milliliters,
+        )
+
+    @pytest.mark.slow
+    @skip_if_missing("mdtraj")
+    def test_load_100_000_atoms(self):
         pack_box(
             molecules=[Molecule.from_smiles("CCO")],
             number_of_copies=[11112],
