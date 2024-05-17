@@ -389,8 +389,8 @@ class TestPackmolWrapper:
             )
 
     @pytest.mark.skipif(
-        has_package("mdtraj"),
-        reason="Test requires that MDTraj is not installed",
+        has_package("mdtraj") or has_package("openmm"),
+        reason="Test requires that MDTraj **and** OpeNMM are not installed",
     )
     def test_noninteger_serial_error(self):
         """See issue #794."""
