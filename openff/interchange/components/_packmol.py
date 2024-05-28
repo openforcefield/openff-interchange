@@ -11,14 +11,14 @@ from copy import deepcopy
 from distutils.spawn import find_executable
 from typing import Literal
 
-import numpy as np
+import numpy
 from numpy.typing import ArrayLike, NDArray
 from openff.toolkit import Molecule, Quantity, RDKitToolkitWrapper, Topology, unit
 from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
-UNIT_CUBE = np.asarray(
+UNIT_CUBE = numpy.asarray(
     [
         [1, 0, 0],
         [0, 1, 0],
@@ -33,11 +33,11 @@ between solutes has only about 71% the volume, and therefore requires simulation
 of much less solvent.
 """
 
-RHOMBIC_DODECAHEDRON = np.array(
+RHOMBIC_DODECAHEDRON = numpy.array(
     [
         [1.0, 0.0, 0.0],
         [0.0, 1.0, 0.0],
-        [0.5, 0.5, np.sqrt(2.0) / 2.0],
+        [0.5, 0.5, numpy.sqrt(2.0) / 2.0],
     ],
 )
 """
@@ -50,11 +50,11 @@ XY plane allows the first two box vectors to be parallel to the x- and y-axes
 respectively, which is simple to picture and appropriate for soluble systems.
 """
 
-RHOMBIC_DODECAHEDRON_XYHEX = np.array(
+RHOMBIC_DODECAHEDRON_XYHEX = numpy.array(
     [
         [1.0, 0.0, 0.0],
-        [0.5, np.sqrt(3.0) / 2.0, 0.0],
-        [0.5, np.sqrt(3.0) / 6.0, np.sqrt(6.0) / 3.0],
+        [0.5, numpy.sqrt(3.0) / 2.0, 0.0],
+        [0.5, numpy.sqrt(3.0) / 6.0, numpy.sqrt(6.0) / 3.0],
     ],
 )
 """
@@ -156,7 +156,7 @@ def _validate_inputs(
         raise PACKMOLValueError(
             "`box_shape` must be an array with shape (3, 3) or (3,)",
         )
-    if not np.all(np.linalg.norm(box_shape, axis=-1) > 0.0):
+    if not numpy.all(numpy.linalg.norm(box_shape, axis=-1) > 0.0):
         raise PACKMOLValueError("All vectors in `box_shape` must have a positive norm.")
 
     if len(molecules) != len(number_of_copies):
@@ -201,15 +201,15 @@ def _box_vectors_are_in_reduced_form(box_vectors: Quantity) -> bool:
         and ax > 0
         and by > 0
         and cz > 0
-        and ax >= 2 * np.abs(bx)
-        and ax >= 2 * np.abs(cx)
-        and by >= 2 * np.abs(cy)
+        and ax >= 2 * numpy.abs(bx)
+        and ax >= 2 * numpy.abs(cx)
+        and by >= 2 * numpy.abs(cy)
     )
 
 
 def _unit_vec(vec: Quantity) -> Quantity:
     """Get a unit vector in the direction of ``vec``."""
-    return vec / np.linalg.norm(vec)
+    return vec / numpy.linalg.norm(vec)
 
 
 def _compute_brick_from_box_vectors(box_vectors: Quantity) -> Quantity:
@@ -225,7 +225,7 @@ def _compute_brick_from_box_vectors(box_vectors: Quantity) -> Quantity:
     # This should have already been checked with a nice error message, but it is
     # an important invariant so we'll check it again here
     assert _box_vectors_are_in_reduced_form(box_vectors)
-    return np.diagonal(box_vectors)
+    return numpy.diagonal(box_vectors)
 
 
 def _range_neg_pos(stop):
@@ -277,7 +277,7 @@ def _wrap_into(
     # Iterate over linear combinations of lattice vectors
     for lattice_vec in _iter_lattice_vecs(box, max_order):
         # If all the points satisfy the condition, we're done
-        if np.all(condition(points)):
+        if numpy.all(condition(points)):
             break
 
         # Otherwise, choose the points that would satisfy the condition if we
@@ -313,7 +313,10 @@ def _wrap_into_brick(points: Quantity, box: Quantity, max_order: int = 3):
     return _wrap_into(
         points,
         box,
-        lambda points: np.all((np.zeros(3) <= points) & (points < brick), axis=-1),
+        lambda points: numpy.all(
+            (numpy.zeros(3) <= points) & (points < brick),
+            axis=-1,
+        ),
         max_order,
     )
 
@@ -386,7 +389,7 @@ def _scale_box(box: NDArray, volume: Quantity) -> Quantity:
     working_unit = unit.angstrom
     final_volume = volume.m_as(working_unit**3)
 
-    initial_volume = np.abs(np.linalg.det(box))
+    initial_volume = numpy.abs(numpy.linalg.det(box))
     volume_scale_factor = final_volume / initial_volume
     linear_scale_factor = volume_scale_factor ** (1 / 3)
     return linear_scale_factor * box * working_unit
@@ -543,7 +546,7 @@ def _center_topology_at(
     elif center_solute in [True, "BOX_VECS"]:
         new_center = box_vectors.sum(axis=0) / 2.0
     elif center_solute == "ORIGIN":
-        new_center = np.zeros(3)
+        new_center = numpy.zeros(3)
     elif center_solute == "BRICK":
         new_center = brick_size / 2.0
     else:
@@ -636,9 +639,9 @@ def pack_box(
     if packmol_path is None:
         raise OSError("Packmol not found, cannot run pack_box()")
 
-    box_shape = np.asarray(box_shape)
+    box_shape = numpy.asarray(box_shape)
     if box_shape.shape == (3,):
-        box_shape = box_shape * np.identity(3)
+        box_shape = box_shape * numpy.identity(3)
 
     # Validate the inputs.
     _validate_inputs(
@@ -761,7 +764,7 @@ def _max_dist_between_points(points: Quantity) -> Quantity:
 
     points, units = points.m, points.u
 
-    points_array = np.asarray(points)
+    points_array = numpy.asarray(points)
     if points_array.shape[1] != 3 or points_array.ndim != 2:
         raise PACKMOLValueError("Points should be an n*3 array")
 
@@ -781,48 +784,19 @@ def _max_dist_between_points(points: Quantity) -> Quantity:
 
 def _load_positions(output_file_path) -> NDArray:
     try:
-        import rdkit
-
-        # Load the coordinates from the PDB file with RDKit (because its already
-        # a dependency)
-        rdmol = rdkit.Chem.rdmolfiles.MolFromPDBFile(
-            output_file_path,
-            sanitize=False,
-            removeHs=False,
-            proximityBonding=False,
+        return numpy.asarray(
+            [
+                [line[31:39], line[39:46], line[47:54]]
+                for line in open(output_file_path).readlines()
+                if line.startswith("HETATM")
+            ],
+            dtype=numpy.float32,
         )
-
-        return rdmol.GetConformers()[0].GetPositions()
-
-    except AttributeError:
-        # RDKit's PDB parser doesn't like >99,999 atoms, tyr something else
-        pass
-    try:
-        import mdtraj
-
-        return mdtraj.load(output_file_path).xyz[0] * 0.1
-    except (ValueError, ModuleNotFoundError):
-        # Something went wrong here, next try OpenMM
-        pass
-
-    try:
-        import openmm.unit
-        from openmm.app import PDBFile
-
-        pdb_file = PDBFile(output_file_path)
-        return pdb_file.getPositions(asNumpy=True).value_in_unit(
-            openmm.unit.angstrom,
-        )
-
-    except ModuleNotFoundError:
-        # Fall back to a generic error
-        pass
-
-    raise PACKMOLRuntimeError(
-        "PACKMOL output could not be parsed by RDKit, possibly because "
-        "this file has 100,000 or more atoms. Tried using MDTraj and OpenMM, "
-        "but neither are installed and/or both failed.",
-    )
+    except Exception as error:
+        raise PACKMOLRuntimeError(
+            "PACKMOL output could not be parsed by a native coordinate parser, "
+            "please raise an issue with code reproducing this error.",
+        ) from error
 
 
 def solvate_topology(
@@ -872,7 +846,7 @@ def solvate_topology(
     box_vectors = box_shape * image_distance
 
     # Compute target masses of solvent
-    box_volume = np.linalg.det(box_vectors.m) * box_vectors.u**3
+    box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
     target_mass = box_volume * target_density
     solute_mass = sum(
         sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
@@ -902,8 +876,8 @@ def solvate_topology(
 
     # Neutralise the system by adding and removing salt
     solute_charge = sum([molecule.total_charge for molecule in topology.molecules])
-    na_to_add = np.ceil(nacl_to_add - solute_charge.m / 2.0)
-    cl_to_add = np.floor(nacl_to_add + solute_charge.m / 2.0)
+    na_to_add = numpy.ceil(nacl_to_add - solute_charge.m / 2.0)
+    cl_to_add = numpy.floor(nacl_to_add + solute_charge.m / 2.0)
 
     # Pack the box
     return pack_box(
@@ -959,7 +933,7 @@ def solvate_topology_nonwater(
     box_vectors = box_shape * image_distance
 
     # Compute target masses of solvent
-    box_volume = np.linalg.det(box_vectors.m) * box_vectors.u**3
+    box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
     target_mass = box_volume * target_density
     solute_mass = sum(
         sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
