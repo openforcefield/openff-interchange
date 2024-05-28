@@ -788,7 +788,7 @@ def _load_positions(output_file_path) -> NDArray:
             [
                 [line[31:39], line[39:46], line[47:54]]
                 for line in open(output_file_path).readlines()
-                if line.startswith("HETATM")
+                if line.startswith("HETATM") or line.startswith("ATOM")
             ],
             dtype=numpy.float32,
         )
