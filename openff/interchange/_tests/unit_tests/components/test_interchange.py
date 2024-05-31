@@ -375,7 +375,7 @@ class TestInterchangeSerialization:
             topology=topology,
         )
 
-        roundtripped = Interchange.parse_raw(original.json())
+        roundtripped = Interchange.parse_raw(original.model_dump_json())
 
         get_openmm_energies(original, combine_nonbonded_forces=False).compare(
             get_openmm_energies(roundtripped, combine_nonbonded_forces=False),

@@ -65,6 +65,8 @@ def test_json_roundtrip_preserves_float_values():
 
     assert collection.scale_14 == scale_factor
 
-    roundtripped = SMIRNOFFElectrostaticsCollection.parse_raw(collection.json())
+    roundtripped = SMIRNOFFElectrostaticsCollection.parse_raw(
+        collection.model_dump_json(),
+    )
 
     assert roundtripped.scale_14 == scale_factor

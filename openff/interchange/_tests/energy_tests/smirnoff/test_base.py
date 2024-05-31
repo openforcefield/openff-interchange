@@ -16,7 +16,7 @@ def test_issue_908(sage_unconstrained):
     state1 = sage_unconstrained.create_interchange(topology)
 
     with open("test.json", "w") as f:
-        f.write(state1.json())
+        f.write(state1.model_dump_json())
 
     state2 = Interchange.parse_file("test.json")
 

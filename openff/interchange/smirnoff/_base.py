@@ -37,7 +37,7 @@ def _sanitize(o) -> str | dict:
     if isinstance(o, dict):
         return {_sanitize(k): _sanitize(v) for k, v in o.items()}
     elif isinstance(o, DefaultModel):
-        return o.json()
+        return o.model_dump_json()
     elif isinstance(o, Quantity):
         return custom_quantity_encoder(o)
     return o

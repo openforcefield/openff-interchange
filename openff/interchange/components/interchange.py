@@ -36,6 +36,7 @@ from openff.interchange.exceptions import (
 from openff.interchange.operations.minimize import (
     _DEFAULT_ENERGY_MINIMIZATION_TOLERANCE,
 )
+from openff.interchange.serialization import _AnnotatedTopology
 from openff.interchange.smirnoff import (
     SMIRNOFFConstraintCollection,
     SMIRNOFFVirtualSiteCollection,
@@ -139,7 +140,7 @@ class Interchange(DefaultModel):
     """
 
     collections: dict[str, Collection] = Field(dict())
-    topology: Topology | None = Field(None)
+    topology: _AnnotatedTopology | None = Field(None)
     mdconfig: MDConfig | None = Field(None)
     box: NanometerQuantity | None = Field(None)
     positions: NanometerQuantity | None = Field(None)
