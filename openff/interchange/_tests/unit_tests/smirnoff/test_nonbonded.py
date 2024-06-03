@@ -104,7 +104,7 @@ class TestNonbonded:
         numpy.testing.assert_allclose(
             [
                 charge.m_as(unit.e)
-                for charge in electrostatics_handler._get._get_charges().values()
+                for charge in electrostatics_handler._get_charges().values()
             ],
             reference_charges,
         )

@@ -3,14 +3,21 @@
 import ast
 import json
 import warnings
-from typing import Union
+from typing import Annotated, Any, Union
 
 import numpy
 from openff.models.models import DefaultModel
 from openff.toolkit import Quantity
 from openff.utilities.utilities import has_package, requires_package
+from pydantic import (
+    ValidationError,
+    ValidationInfo,
+    ValidatorFunctionWrapHandler,
+    WrapSerializer,
+)
+from pydantic.functional_validators import WrapValidator
 
-from openff.interchange._pydantic import Field, PrivateAttr, validator
+from openff.interchange._pydantic import Field, PrivateAttr
 from openff.interchange.exceptions import MissingParametersError
 from openff.interchange.models import (
     LibraryChargeTopologyKey,
@@ -62,25 +69,69 @@ def potential_loader(data: str) -> dict:
     return tmp
 
 
+def validate_parameters(
+    v: Any,
+    handler: ValidatorFunctionWrapHandler,
+    info: ValidationInfo,
+) -> dict[str, Quantity]:
+    """Validate the parameters field of a Potential object."""
+    if info.mode in ("json", "python"):
+        tmp: dict[str, int | bool | str | dict] = {}
+
+        for key, val in v.items():
+            if isinstance(val, dict):
+                print(f"turning {val} of type {type(val)} into a quantity ...")
+                quantity_dict = json.loads(val)
+                tmp[key] = Quantity(
+                    quantity_dict["val"],
+                    quantity_dict["unit"],
+                )
+            elif isinstance(val, Quantity):
+                tmp[key] = val
+            elif isinstance(val, str):
+                loaded = json.loads(val)
+                if isinstance(loaded, dict):
+                    tmp[key] = Quantity(
+                        loaded["val"],
+                        loaded["unit"],
+                    )
+                else:
+                    tmp[key] = val
+
+            else:
+                raise ValidationError(
+                    f"Unexpected type {type(val)} found in JSON blob.",
+                )
+
+        return tmp
+
+
+def serialize_parameters(value: dict[str, Quantity], handler, info) -> dict[str, str]:
+    """Serialize the parameters field of a Potential object."""
+    if info.mode == "json":
+        return {
+            k: json.dumps(
+                {
+                    "val": v.m,
+                    "unit": str(v.units),
+                },
+            )
+            for k, v in value.items()
+        }
+
+
+ParameterDict = Annotated[
+    dict[str, Any],
+    WrapValidator(validate_parameters),
+    WrapSerializer(serialize_parameters),
+]
+
+
 class Potential(DefaultModel):
     """Base class for storing applied parameters."""
 
-    parameters: dict[str, Quantity] = dict()
+    parameters: ParameterDict = Field(dict())
     map_key: int | None = None
-
-    @validator("parameters")
-    def validate_parameters(
-        cls,
-        v: dict[str, Quantity],
-    ) -> dict[str, Quantity]:
-        for key, val in v.items():
-            # TODO: A lot of validation logic was in {FloatQuantity|ArrayQuantity}.validate_type
-            # which no longer has an obvious home in these types
-            if isinstance(val, list):
-                v[key] = Quantity(val)
-            else:
-                v[key] = Quantity(val)
-        return v
 
     def __hash__(self) -> int:
         return hash(tuple(self.parameters.values()))
