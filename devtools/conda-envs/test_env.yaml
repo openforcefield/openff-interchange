@@ -37,3 +37,5 @@ dependencies:
   - typing-extensions
   - types-setuptools
   - pandas-stubs
+  - pip:
+    - git+https://github.com/openforcefield/openff-models.git@pydantic-2-redo
