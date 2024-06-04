@@ -12,6 +12,7 @@ from openff.models.types.dimension_types import VelocityQuantity
 from openff.models.types.serialization import QuantityEncoder
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
+from pydantic import ConfigDict
 
 from openff.interchange._experimental import experimental
 from openff.interchange._pydantic import Field
@@ -23,7 +24,7 @@ from openff.interchange.common._valence import (
     ProperTorsionCollection,
 )
 from openff.interchange.components.mdconfig import MDConfig
-from openff.interchange.components.potentials import Collection
+from openff.interchange.components.potentials import Collection, _AnnotatedCollections
 from openff.interchange.exceptions import (
     MissingParameterHandlerError,
     MissingPositionsError,
@@ -139,7 +140,9 @@ class Interchange(DefaultModel):
     .. warning :: This API is experimental and subject to change.
     """
 
-    collections: dict[str, Collection] = Field(dict())
+    model_config = ConfigDict(validate_assignment=True)
+
+    collections: _AnnotatedCollections = Field(dict())
     topology: _AnnotatedTopology | None = Field(None)
     mdconfig: MDConfig | None = Field(None)
     box: _AnnotatedBox | None = Field(None)

@@ -74,6 +74,18 @@ def box_validator(
 
     if isinstance(value, Quantity):
         pass
+    elif isinstance(value, numpy.ndarray):
+        return numpy.eye(3) * Quantity(value, "nanometer")
+    elif isinstance(value, list):
+        if any(["openmm" in str(type(x)) for x in value]):
+            # Special case for some OpenMM boxes, which are list[openmm.unit.Quantity]
+            from openff.units.openmm import from_openmm
+
+            # these are probably already 3x3, so don't need to multiply by I
+            return from_openmm(value)
+        else:
+            # but could simply be box=[4, 4, 4]
+            return numpy.eye(3) * Quantity(value, "nanometer")
     elif isinstance(value, str):
         tmp = json.loads(value)
         value = Quantity(tmp["val"], unit.Unit(tmp["unit"]))
@@ -122,7 +134,7 @@ def positions_validator(
         tmp = json.loads(value)
         return Quantity(tmp["val"], unit.Unit(tmp["unit"]))
     else:
-        raise Exception
+        raise Exception(f"Failed to convert positions of type {type(value)}")
 
 
 _AnnotatedPositions = Annotated[

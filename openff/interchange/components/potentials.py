@@ -478,3 +478,46 @@ class Collection(DefaultModel):
             return self.key_map
         else:
             return super().__getattribute__(attr)
+
+
+def validate_collections(
+    v: Any,
+    handler: ValidatorFunctionWrapHandler,
+    info: ValidationInfo,
+) -> dict:
+    """Validate the collections dict from a JSON blob."""
+    from openff.interchange.smirnoff import (
+        SMIRNOFFAngleCollection,
+        SMIRNOFFBondCollection,
+        SMIRNOFFConstraintCollection,
+        SMIRNOFFElectrostaticsCollection,
+        SMIRNOFFImproperTorsionCollection,
+        SMIRNOFFProperTorsionCollection,
+        SMIRNOFFvdWCollection,
+        SMIRNOFFVirtualSiteCollection,
+    )
+
+    _class_mapping = {
+        "Bonds": SMIRNOFFBondCollection,
+        "Angles": SMIRNOFFAngleCollection,
+        "Constraints": SMIRNOFFConstraintCollection,
+        "ProperTorsions": SMIRNOFFProperTorsionCollection,
+        "ImproperTorsions": SMIRNOFFImproperTorsionCollection,
+        "vdW": SMIRNOFFvdWCollection,
+        "Electrostatics": SMIRNOFFElectrostaticsCollection,
+        "VirtualSites": SMIRNOFFVirtualSiteCollection,
+    }
+
+    if info.mode == "json":
+        pass
+
+    return {
+        collection_name: _class_mapping[collection_name].model_validate(collection_data)
+        for collection_name, collection_data in v.items()
+    }
+
+
+_AnnotatedCollections = Annotated[
+    dict[str, Collection],
+    WrapValidator(validate_collections),
+]
