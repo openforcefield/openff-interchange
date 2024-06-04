@@ -7,16 +7,14 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Union, overload
 
-import numpy as np
 from openff.models.models import DefaultModel
 from openff.models.types.dimension_types import VelocityQuantity
 from openff.models.types.serialization import QuantityEncoder
-from openff.models.types.unit_types import NanometerQuantity
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange._experimental import experimental
-from openff.interchange._pydantic import Field, validator
+from openff.interchange._pydantic import Field
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._valence import (
     AngleCollection,
@@ -27,8 +25,6 @@ from openff.interchange.common._valence import (
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.components.potentials import Collection
 from openff.interchange.exceptions import (
-    InvalidBoxError,
-    InvalidTopologyError,
     MissingParameterHandlerError,
     MissingPositionsError,
     UnsupportedExportError,
@@ -36,7 +32,11 @@ from openff.interchange.exceptions import (
 from openff.interchange.operations.minimize import (
     _DEFAULT_ENERGY_MINIMIZATION_TOLERANCE,
 )
-from openff.interchange.serialization import _AnnotatedTopology
+from openff.interchange.serialization import (
+    _AnnotatedBox,
+    _AnnotatedPositions,
+    _AnnotatedTopology,
+)
 from openff.interchange.smirnoff import (
     SMIRNOFFConstraintCollection,
     SMIRNOFFVirtualSiteCollection,
@@ -142,51 +142,9 @@ class Interchange(DefaultModel):
     collections: dict[str, Collection] = Field(dict())
     topology: _AnnotatedTopology | None = Field(None)
     mdconfig: MDConfig | None = Field(None)
-    box: NanometerQuantity | None = Field(None)
-    positions: NanometerQuantity | None = Field(None)
+    box: _AnnotatedBox | None = Field(None)
+    positions: _AnnotatedPositions | None = Field(None)
     velocities: VelocityQuantity | None = Field(None)
-
-    @validator("box", allow_reuse=True)
-    def validate_box(cls, value) -> Quantity | None:
-        if value is None:
-            return value
-
-        validated = NanometerQuantity.__call__(value)
-
-        dimensions = np.atleast_2d(validated).shape
-
-        if dimensions == (3, 3):
-            return validated
-        elif dimensions == (1, 3):
-            return validated * np.eye(3)
-        else:
-            raise InvalidBoxError(
-                f"Failed to convert value {value} to 3x3 box vectors. Please file an issue if you think this "
-                "input should be supported and the failure is an error.",
-            )
-
-    @validator("topology", pre=True)
-    def validate_topology(cls, value):
-        if value is None:
-            return None
-        if isinstance(value, Topology):
-            try:
-                return Topology(other=value)
-            except Exception as exception:
-                # Topology cannot roundtrip with simple molecules
-                for molecule in value.molecules:
-                    if molecule.__class__.__name__ == "_SimpleMolecule":
-                        return value
-                raise exception
-        elif isinstance(value, list):
-            return Topology.from_molecules(value)
-        elif value.__class__.__name__ == "_OFFBioTop":
-            raise InvalidTopologyError("_OFFBioTop is no longer supported")
-        else:
-            raise InvalidTopologyError(
-                "Could not process topology argument, expected openff.toolkit.Topology. "
-                f"Found object of type {type(value)}.",
-            )
 
     def _infer_positions(self) -> Quantity | None:
         """

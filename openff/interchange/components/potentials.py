@@ -176,6 +176,126 @@ class WrappedPotential(DefaultModel):
         return str(self._inner_data)
 
 
+def validate_potential_or_wrapped_potential(
+    v: Any,
+    handler: ValidatorFunctionWrapHandler,
+    info: ValidationInfo,
+) -> dict[str, Quantity]:
+    """Validate the parameters field of a Potential object."""
+    if info.mode == "json":
+        if "parameters" in v:
+            return Potential.model_validate(v)
+        else:
+            return WrappedPotential.model_validate(v)
+
+
+PotentialOrWrappedPotential = Annotated[
+    Union[Potential, WrappedPotential],
+    WrapValidator(validate_potential_or_wrapped_potential),
+]
+
+
+def validate_key_map(v: Any, handler, info) -> dict:
+    """Validate the key_map field of a Collection object."""
+    from openff.interchange.models import (
+        AngleKey,
+        BondKey,
+        ImproperTorsionKey,
+        LibraryChargeTopologyKey,
+        ProperTorsionKey,
+        SingleAtomChargeTopologyKey,
+    )
+
+    tmp = dict()
+    if info.mode == "json":
+        for key, val in v.items():
+            val_dict = json.loads(val)
+
+            match val_dict["associated_handler"]:
+                case "Bonds":
+                    key_class = BondKey
+                case "Angles":
+                    key_class = AngleKey
+                case "ProperTorsions":
+                    key_class = ProperTorsionKey
+                case "ImproperTorsions":
+                    key_class = ImproperTorsionKey
+                case "LibraryCharges":
+                    key_class = LibraryChargeTopologyKey
+                case "ToolkitAM1BCCHandler":
+                    key_class = SingleAtomChargeTopologyKey
+
+                case _:
+                    key_class = TopologyKey
+
+            try:
+                tmp.update(
+                    {
+                        key_class.model_validate_json(
+                            key,
+                        ): PotentialKey.model_validate_json(val),
+                    },
+                )
+            except Exception:
+                raise Exception(val_dict["associated_handler"])
+
+            del key_class
+
+        v = tmp
+    return v
+
+
+def serialize_key_map(value: dict[str, str], handler, info) -> dict[str, str]:
+    """Serialize the parameters field of a Potential object."""
+    if info.mode == "json":
+        return {
+            key.model_dump_json(): value.model_dump_json()
+            for key, value in value.items()
+        }
+
+
+KeyMap = Annotated[
+    dict[TopologyKey | LibraryChargeTopologyKey, PotentialKey],
+    WrapValidator(validate_key_map),
+    WrapSerializer(serialize_key_map),
+]
+
+
+def validate_potential_dict(
+    v: Any,
+    handler: ValidatorFunctionWrapHandler,
+    info: ValidationInfo,
+):
+    """Validate the parameters field of a Potential object."""
+    if info.mode == "json":
+        return {
+            PotentialKey.model_validate_json(key): Potential.model_validate_json(val)
+            for key, val in v.items()
+        }
+
+    return v
+
+
+def serialize_potential_dict(
+    value: dict[str, Quantity],
+    handler,
+    info,
+) -> dict[str, str]:
+    """Serialize the parameters field of a Potential object."""
+    if info.mode == "json":
+        return {
+            key.model_dump_json(): value.model_dump_json()
+            for key, value in value.items()
+        }
+
+
+Potentials = Annotated[
+    dict[PotentialKey, PotentialOrWrappedPotential],
+    WrapValidator(validate_potential_dict),
+    WrapSerializer(serialize_potential_dict),
+]
+
+
 class Collection(DefaultModel):
     """Base class for storing parametrized force field data."""
 
@@ -188,11 +308,11 @@ class Collection(DefaultModel):
         ...,
         description="The analytical expression governing the potentials in this handler.",
     )
-    key_map: dict[TopologyKey | LibraryChargeTopologyKey, PotentialKey] = Field(
+    key_map: KeyMap = Field(
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )
-    potentials: dict[PotentialKey, Potential | WrappedPotential] = Field(
+    potentials: Potentials = Field(
         dict(),
         description="A mapping between PotentialKey objects and Potential objects.",
     )

@@ -78,6 +78,32 @@ def _check_supported_handlers(force_field: ForceField):
         )
 
 
+def validate_topology(value):
+    """Validate a topology-like argument, spliced from a previous validator."""
+    from openff.interchange.exceptions import InvalidTopologyError
+
+    if value is None:
+        return None
+    if isinstance(value, Topology):
+        try:
+            return Topology(other=value)
+        except Exception as exception:
+            # Topology cannot roundtrip with simple molecules
+            for molecule in value.molecules:
+                if molecule.__class__.__name__ == "_SimpleMolecule":
+                    return value
+            raise exception
+    elif isinstance(value, list):
+        return Topology.from_molecules(value)
+    elif value.__class__.__name__ == "_OFFBioTop":
+        raise InvalidTopologyError("_OFFBioTop is no longer supported")
+    else:
+        raise InvalidTopologyError(
+            "Could not process topology argument, expected openff.toolkit.Topology. "
+            f"Found object of type {type(value)}.",
+        )
+
+
 def _create_interchange(
     force_field: ForceField,
     topology: Topology | list[Molecule],
@@ -87,11 +113,13 @@ def _create_interchange(
     partial_bond_orders_from_molecules: list[Molecule] | None = None,
     allow_nonintegral_charges: bool = False,
 ) -> Interchange:
+
     _check_supported_handlers(force_field)
 
     interchange = Interchange()
 
-    _topology = Interchange.validate_topology(topology)
+    # TODO: Need to re-introduce logic lost when validator re-use was nuked
+    _topology = validate_topology(topology)
 
     interchange.positions = _infer_positions(_topology, positions)
 
