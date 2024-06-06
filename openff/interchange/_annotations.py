@@ -3,6 +3,7 @@ from typing import Annotated
 
 from openff.toolkit import Quantity
 from pydantic import (
+    AfterValidator,
     ValidationInfo,
     ValidatorFunctionWrapHandler,
     WrapSerializer,
@@ -56,4 +57,37 @@ _Quantity = Annotated[
     Quantity,
     WrapValidator(quantity_validator),
     WrapSerializer(quantity_json_serializer),
+]
+
+
+def _is_dimensionless(quantity: Quantity) -> None:
+    assert quantity.is_dimensionless
+
+
+def _is_distance(quantity: Quantity) -> None:
+    assert quantity.is_compatible_with("nanometer")
+
+
+def _is_velocity(quantity: Quantity) -> None:
+    assert quantity.is_compatible_with("nanometer / picosecond")
+
+
+_DimensionlessQuantity = Annotated[
+    Quantity,
+    WrapValidator(quantity_validator),
+    AfterValidator(_is_dimensionless),
+]
+
+_DistanceQuantity = Annotated[
+    Quantity,
+    WrapValidator(quantity_validator),
+    AfterValidator(_is_distance),
+]
+
+_LengthQuantity = _DistanceQuantity
+
+_VelocityQuantity = Annotated[
+    Quantity,
+    WrapValidator(quantity_validator),
+    AfterValidator(_is_velocity),
 ]

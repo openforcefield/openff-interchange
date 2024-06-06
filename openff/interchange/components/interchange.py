@@ -8,12 +8,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Union, overload
 
 from openff.models.models import DefaultModel
-from openff.models.types.dimension_types import VelocityQuantity
 from openff.models.types.serialization import QuantityEncoder
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import ConfigDict
 
+from openff.interchange._annotations import _VelocityQuantity
 from openff.interchange._experimental import experimental
 from openff.interchange._pydantic import Field
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
@@ -147,7 +147,7 @@ class Interchange(DefaultModel):
     mdconfig: MDConfig | None = Field(None)
     box: _AnnotatedBox | None = Field(None)
     positions: _AnnotatedPositions | None = Field(None)
-    velocities: VelocityQuantity | None = Field(None)
+    velocities: _VelocityQuantity | None = Field(None)
 
     def _infer_positions(self) -> Quantity | None:
         """

@@ -2,9 +2,9 @@ import abc
 from collections.abc import Iterable
 from typing import Literal
 
-from openff.models.types.dimension_types import DistanceQuantity
 from openff.toolkit import Quantity, unit
 
+from openff.interchange._annotations import _DistanceQuantity
 from openff.interchange._pydantic import Field, PrivateAttr
 from openff.interchange.components.potentials import Collection
 from openff.interchange.constants import _PME
@@ -14,7 +14,7 @@ from openff.interchange.models import LibraryChargeTopologyKey, TopologyKey
 class _NonbondedCollection(Collection, abc.ABC):
     type: str = "nonbonded"
 
-    cutoff: DistanceQuantity = Field(
+    cutoff: _DistanceQuantity = Field(
         Quantity(10.0, unit.angstrom),
         description="The distance at which pairwise interactions are truncated",
     )
@@ -63,7 +63,7 @@ class vdWCollection(_NonbondedCollection):
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )
 
-    switch_width: DistanceQuantity = Field(
+    switch_width: _DistanceQuantity = Field(
         Quantity(1.0, unit.angstrom),
         description="The width over which the switching function is applied",
     )

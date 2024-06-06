@@ -92,6 +92,8 @@ def box_validator(
     else:
         raise Exception()
 
+    value = value.to("nanometer")
+
     dimensions = numpy.atleast_2d(value).shape
 
     if dimensions == (3, 3):
@@ -106,7 +108,7 @@ def box_validator(
 
 
 _AnnotatedBox = Annotated[
-    NanometerQuantity,
+    Quantity,
     WrapValidator(box_validator),
 ]
 

@@ -1,9 +1,9 @@
 """Classes used to represent GROMACS state."""
 
 from openff.models.models import DefaultModel
-from openff.models.types.dimension_types import DistanceQuantity
 from openff.toolkit import Quantity
 
+from openff.interchange._annotations import _DistanceQuantity
 from openff.interchange._pydantic import (
     Field,
     PositiveInt,
@@ -162,11 +162,11 @@ class GROMACSSettles(DefaultModel):
         description="The GROMACS index of the first atom in the water.",
     )
 
-    oxygen_hydrogen_distance: DistanceQuantity = Field(
+    oxygen_hydrogen_distance: _DistanceQuantity = Field(
         description="The fixed distance between the oxygen and hydrogen.",
     )
 
-    hydrogen_hydrogen_distance: DistanceQuantity = Field(
+    hydrogen_hydrogen_distance: _DistanceQuantity = Field(
         description="The fixed distance between the oxygen and hydrogen.",
     )
 
@@ -295,8 +295,8 @@ class GROMACSMolecule(DefaultModel):
 class GROMACSSystem(DefaultModel):
     """A GROMACS system. Adapted from Intermol."""
 
-    positions: DistanceQuantity | None = None
-    box: DistanceQuantity | None = None
+    positions: _DistanceQuantity | None = None
+    box: _DistanceQuantity | None = None
 
     name: str = ""
     nonbonded_function: int = Field(

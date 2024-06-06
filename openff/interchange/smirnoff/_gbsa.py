@@ -1,14 +1,11 @@
 from collections.abc import Iterable
 from typing import Literal
 
-from openff.models.types.dimension_types import (
-    DimensionlessQuantity,
-    LengthQuantity,
-    build_dimension_type,
-)
+from openff.models.types.dimension_types import build_dimension_type
 from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler
 
+from openff.interchange._annotations import _DimensionlessQuantity, _LengthQuantity
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kcal_mol_a2
 from openff.interchange.exceptions import InvalidParameterHandlerError
@@ -25,11 +22,11 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
 
     gb_model: str = "OBC1"
 
-    solvent_dielectric: DimensionlessQuantity = Quantity(78.5, "dimensionless")
-    solute_dielectric: DimensionlessQuantity = Quantity(1.0, "dimensionless")
+    solvent_dielectric: _DimensionlessQuantity = Quantity(78.5, "dimensionless")
+    solute_dielectric: _DimensionlessQuantity = Quantity(1.0, "dimensionless")
     sa_model: str | None = "ACE"
     surface_area_penalty: KcalMolA2 = 5.4 * kcal_mol_a2
-    solvent_radius: LengthQuantity = 1.4 * unit.angstrom
+    solvent_radius: _LengthQuantity = 1.4 * unit.angstrom
 
     @classmethod
     def allowed_parameter_handlers(cls):
