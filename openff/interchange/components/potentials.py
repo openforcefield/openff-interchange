@@ -17,6 +17,7 @@ from pydantic import (
 )
 from pydantic.functional_validators import WrapValidator
 
+from openff.interchange._annotations import _Quantity
 from openff.interchange._pydantic import Field, PrivateAttr
 from openff.interchange.exceptions import MissingParametersError
 from openff.interchange.models import (
@@ -130,7 +131,7 @@ ParameterDict = Annotated[
 class Potential(DefaultModel):
     """Base class for storing applied parameters."""
 
-    parameters: ParameterDict = Field(dict())
+    parameters: dict[str, _Quantity] = Field(dict())
     map_key: int | None = None
 
     def __hash__(self) -> int:
@@ -207,7 +208,7 @@ def validate_key_map(v: Any, handler, info) -> dict:
     )
 
     tmp = dict()
-    if info.mode == "json":
+    if info.mode in ("json", "python"):
         for key, val in v.items():
             val_dict = json.loads(val)
 
@@ -237,11 +238,15 @@ def validate_key_map(v: Any, handler, info) -> dict:
                     },
                 )
             except Exception:
-                raise Exception(val_dict["associated_handler"])
+                raise ValueError(val_dict["associated_handler"])
 
             del key_class
 
         v = tmp
+
+    else:
+        raise ValueError(f"Validation mode {info.mode} not implemented.")
+
     return v
 
 
@@ -252,6 +257,9 @@ def serialize_key_map(value: dict[str, str], handler, info) -> dict[str, str]:
             key.model_dump_json(): value.model_dump_json()
             for key, value in value.items()
         }
+
+    else:
+        raise NotImplementedError(f"Serialization mode {info.mode} not implemented.")
 
 
 KeyMap = Annotated[
@@ -508,13 +516,13 @@ def validate_collections(
         "VirtualSites": SMIRNOFFVirtualSiteCollection,
     }
 
-    if info.mode == "json":
-        pass
-
-    return {
-        collection_name: _class_mapping[collection_name].model_validate(collection_data)
-        for collection_name, collection_data in v.items()
-    }
+    if info.mode in ("json", "python"):
+        return {
+            collection_name: _class_mapping[collection_name].model_validate(
+                collection_data,
+            )
+            for collection_name, collection_data in v.items()
+        }
 
 
 _AnnotatedCollections = Annotated[

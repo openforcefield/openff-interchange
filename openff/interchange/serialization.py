@@ -133,8 +133,12 @@ def positions_validator(
     elif isinstance(value, str):
         tmp = json.loads(value)
         return Quantity(tmp["val"], unit.Unit(tmp["unit"]))
+    elif "openmm" in str(type(value)):
+        from openff.units.openmm import from_openmm
+
+        return from_openmm(value)
     else:
-        raise Exception(f"Failed to convert positions of type {type(value)}")
+        raise ValueError(f"Failed to convert positions of type {type(value)}")
 
 
 _AnnotatedPositions = Annotated[

@@ -20,6 +20,8 @@ def test_issue_908(sage_unconstrained):
 
     state2 = Interchange.parse_file("test.json")
 
+    assert state2["Electrostatics"].scale_14 == 0.8333333333
+
     get_gromacs_energies(state1).compare(get_gromacs_energies(state2))
     get_openmm_energies(
         state1,
