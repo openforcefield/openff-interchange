@@ -26,7 +26,7 @@ if has_package("openmm"):
     import openmm.app
     import openmm.unit
 
-from openff.interchange._pydantic import ValidationError
+from pydantic import ValidationError
 
 
 class TestSMIRNOFFValenceCollections:

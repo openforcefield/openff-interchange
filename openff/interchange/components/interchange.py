@@ -11,11 +11,10 @@ from openff.models.models import DefaultModel
 from openff.models.types.serialization import QuantityEncoder
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 
 from openff.interchange._annotations import _VelocityQuantity
 from openff.interchange._experimental import experimental
-from openff.interchange._pydantic import Field
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._valence import (
     AngleCollection,

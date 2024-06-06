@@ -13,8 +13,8 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ToolkitAM1BCCHandler,
     vdWHandler,
 )
+from pydantic import Field, PrivateAttr
 
-from openff.interchange._pydantic import Field, PrivateAttr
 from openff.interchange.common._nonbonded import (
     ElectrostaticsCollection,
     _NonbondedCollection,

@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Literal
 
 from openff.models.models import DefaultModel
 from openff.toolkit import Quantity, unit
+from pydantic import Field
 
 from openff.interchange._annotations import _DistanceQuantity
-from openff.interchange._pydantic import Field
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,

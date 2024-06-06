@@ -8,9 +8,9 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     VirtualSiteHandler,
 )
+from pydantic import Field
 
 from openff.interchange._annotations import _Quantity
-from openff.interchange._pydantic import Field
 from openff.interchange.components._particles import _VirtualSite
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import (

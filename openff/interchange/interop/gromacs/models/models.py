@@ -2,15 +2,9 @@
 
 from openff.models.models import DefaultModel
 from openff.toolkit import Quantity
+from pydantic import Field, PositiveInt, PrivateAttr, conint, validator
 
 from openff.interchange._annotations import _DistanceQuantity
-from openff.interchange._pydantic import (
-    Field,
-    PositiveInt,
-    PrivateAttr,
-    conint,
-    validator,
-)
 
 
 class GROMACSAtomType(DefaultModel):

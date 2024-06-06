@@ -1,8 +1,8 @@
 from typing import Literal
 
 from openff.toolkit import Topology, unit
+from pydantic import Field
 
-from openff.interchange._pydantic import Field
 from openff.interchange.common._valence import (
     AngleCollection,
     BondCollection,

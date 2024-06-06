@@ -6,9 +6,9 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
 )
 from openff.utilities.testing import skip_if_missing
+from pydantic import ValidationError
 
 from openff.interchange import Interchange
-from openff.interchange._pydantic import ValidationError
 from openff.interchange._tests import (
     MoleculeWithConformer,
     get_test_file_path,

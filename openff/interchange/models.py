@@ -4,8 +4,7 @@ import abc
 from typing import Any, Literal
 
 from openff.models.models import DefaultModel
-
-from openff.interchange._pydantic import Field
+from pydantic import Field
 
 
 class TopologyKey(DefaultModel, abc.ABC):

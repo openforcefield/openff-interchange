@@ -10,6 +10,8 @@ from openff.models.models import DefaultModel
 from openff.toolkit import Quantity
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import (
+    Field,
+    PrivateAttr,
     ValidationError,
     ValidationInfo,
     ValidatorFunctionWrapHandler,
@@ -18,7 +20,6 @@ from pydantic import (
 from pydantic.functional_validators import WrapValidator
 
 from openff.interchange._annotations import _Quantity
-from openff.interchange._pydantic import Field, PrivateAttr
 from openff.interchange.exceptions import MissingParametersError
 from openff.interchange.models import (
     LibraryChargeTopologyKey,
