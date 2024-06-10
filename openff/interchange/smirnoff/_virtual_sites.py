@@ -2,7 +2,6 @@ import math
 from typing import Literal
 
 import numpy
-from openff.models.types.dimension_types import DegreeQuantity
 from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
@@ -10,7 +9,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from pydantic import Field
 
-from openff.interchange._annotations import _Quantity
+from openff.interchange._annotations import _DegreeQuantity, _Quantity
 from openff.interchange.components._particles import _VirtualSite
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import (
@@ -220,8 +219,8 @@ class _BondChargeVirtualSite(_VirtualSite):
 class _MonovalentLonePairVirtualSite(_VirtualSite):
     type: Literal["MonovalentLonePair"]
     distance: _Quantity
-    out_of_plane_angle: DegreeQuantity
-    in_plane_angle: DegreeQuantity
+    out_of_plane_angle: _DegreeQuantity
+    in_plane_angle: _DegreeQuantity
     orientations: tuple[int, ...]
 
     @property
@@ -264,7 +263,7 @@ class _MonovalentLonePairVirtualSite(_VirtualSite):
 class _DivalentLonePairVirtualSite(_VirtualSite):
     type: Literal["DivalentLonePair"]
     distance: _Quantity
-    out_of_plane_angle: DegreeQuantity
+    out_of_plane_angle: _DegreeQuantity
     orientations: tuple[int, ...]
 
     @property

@@ -8,6 +8,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     IndexedParameterAttribute,
     ParameterAttribute,
     VirtualSiteHandler,
+    _BaseVirtualSiteType,
     _VirtualSiteType,
 )
 from openff.toolkit.utils.exceptions import SMIRNOFFSpecError
@@ -23,7 +24,7 @@ from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollec
 class BuckinghamVirtualSiteHandler(VirtualSiteHandler):
     """A handler for virtual sites compatible with the Buckingham (exp-6) functional form."""
 
-    class BuckinghamVirtualSiteType(VirtualSiteHandler.VirtualSiteType):
+    class BuckinghamVirtualSiteType(_BaseVirtualSiteType):
         """A type for virtual sites compatible with the Buckingham (exp-6) functional form."""
 
         _ELEMENT_NAME = "BuckinghamVirtualSite"
@@ -37,13 +38,14 @@ class BuckinghamVirtualSiteHandler(VirtualSiteHandler):
         outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
         inPlaneAngle = ParameterAttribute(unit=unit.degree)
 
-        _DEFAULT_A = 0.0 * unit.kilojoule_per_mole
-        _DEFAULT_B = 0.0 * unit.nanometer**-1
-        _DEFAULT_C = 0.0 * unit.kilojoule_per_mole * unit.nanometer**6
+        _DEFAULT_A = 1.0 * unit.kilojoule_per_mole
+        _DEFAULT_B = 2.0 * unit.nanometer**-1
+        _DEFAULT_C = 3.0 * unit.kilojoule_per_mole * unit.nanometer**6
 
-        a = ParameterAttribute(_DEFAULT_A, unit=_DEFAULT_A.units)
-        b = ParameterAttribute(_DEFAULT_B, unit=_DEFAULT_B.units)
-        c = ParameterAttribute(_DEFAULT_C, unit=_DEFAULT_C.units)
+        # `unit` argument must be a Unit object, not a string
+        a = ParameterAttribute(default=_DEFAULT_A, unit=_DEFAULT_A.units)
+        b = ParameterAttribute(default=_DEFAULT_B, unit=_DEFAULT_B.units)
+        c = ParameterAttribute(default=_DEFAULT_C, unit=_DEFAULT_C.units)
 
         charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
 

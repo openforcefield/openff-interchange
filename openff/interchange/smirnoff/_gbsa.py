@@ -1,17 +1,39 @@
 from collections.abc import Iterable
 from typing import Literal
 
-from openff.models.types.dimension_types import build_dimension_type
 from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler
 
-from openff.interchange._annotations import _DimensionlessQuantity, _LengthQuantity
+# TODO: Move build_dimension_type functionality here
+from openff.interchange._annotations import (
+    AfterValidator,
+    Annotated,
+    WrapSerializer,
+    WrapValidator,
+    _DimensionlessQuantity,
+    _LengthQuantity,
+    quantity_json_serializer,
+    quantity_validator,
+)
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kcal_mol_a2
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
 
-KcalMolA2 = build_dimension_type("kilocalorie_per_mole / angstrom ** 2")
+
+def _is_kcal_mol_a2(quantity: Quantity) -> None:
+    if quantity.is_compatible_with("kilocalorie_per_mole / angstrom ** 2"):
+        return quantity.to("kilocalorie_per_mole / angstrom ** 2")
+    else:
+        raise ValueError(f"Quantity {quantity} is not compatible with a kcal/mol/a2.")
+
+
+_KcalMolA2 = Annotated[
+    Quantity,
+    WrapValidator(quantity_validator),
+    AfterValidator(_is_kcal_mol_a2),
+    WrapSerializer(quantity_json_serializer),
+]
 
 
 class SMIRNOFFGBSACollection(SMIRNOFFCollection):
@@ -25,7 +47,7 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
     solvent_dielectric: _DimensionlessQuantity = Quantity(78.5, "dimensionless")
     solute_dielectric: _DimensionlessQuantity = Quantity(1.0, "dimensionless")
     sa_model: str | None = "ACE"
-    surface_area_penalty: KcalMolA2 = 5.4 * kcal_mol_a2
+    surface_area_penalty: _KcalMolA2 = 5.4 * kcal_mol_a2
     solvent_radius: _LengthQuantity = 1.4 * unit.angstrom
 
     @classmethod

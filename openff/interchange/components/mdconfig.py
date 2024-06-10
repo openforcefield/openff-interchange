@@ -3,7 +3,6 @@
 import warnings
 from typing import TYPE_CHECKING, Literal
 
-from openff.models.models import DefaultModel
 from openff.toolkit import Quantity, unit
 from pydantic import Field
 
@@ -13,6 +12,7 @@ from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
+from openff.interchange.pydantic import _BaseModel
 from openff.interchange.warnings import SwitchingFunctionNotImplementedWarning
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ DispCorr                 = Ener
 """
 
 
-class MDConfig(DefaultModel):
+class MDConfig(_BaseModel):
     """A partial superset of runtime configurations for MD engines."""
 
     periodic: bool = Field(

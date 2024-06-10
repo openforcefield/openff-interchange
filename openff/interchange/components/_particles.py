@@ -4,13 +4,13 @@ Temporary module for second-class virtual site objects.
 
 import abc
 
-from openff.models.models import DefaultModel
 from openff.toolkit import Quantity
 
 from openff.interchange._annotations import _DistanceQuantity
+from openff.interchange.pydantic import _BaseModel
 
 
-class _VirtualSite(DefaultModel, abc.ABC):
+class _VirtualSite(_BaseModel, abc.ABC):
     type: str
     distance: _DistanceQuantity
     orientations: tuple[int, ...]

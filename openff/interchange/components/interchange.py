@@ -1,19 +1,19 @@
 """An object for storing, manipulating, and converting molecular mechanics data."""
 
-import copy
-import json
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Union, overload
 
-from openff.models.models import DefaultModel
-from openff.models.types.serialization import QuantityEncoder
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
-from pydantic import ConfigDict, Field
+from pydantic import Field
 
-from openff.interchange._annotations import _VelocityQuantity
+from openff.interchange._annotations import (
+    _BoxQuantity,
+    _PositionsQuantity,
+    _VelocityQuantity,
+)
 from openff.interchange._experimental import experimental
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._valence import (
@@ -32,11 +32,8 @@ from openff.interchange.exceptions import (
 from openff.interchange.operations.minimize import (
     _DEFAULT_ENERGY_MINIMIZATION_TOLERANCE,
 )
-from openff.interchange.serialization import (
-    _AnnotatedBox,
-    _AnnotatedPositions,
-    _AnnotatedTopology,
-)
+from openff.interchange.pydantic import _BaseModel
+from openff.interchange.serialization import _AnnotatedTopology
 from openff.interchange.smirnoff import (
     SMIRNOFFConstraintCollection,
     SMIRNOFFVirtualSiteCollection,
@@ -53,85 +50,7 @@ if TYPE_CHECKING:
     import openmm.app
 
 
-class TopologyEncoder(json.JSONEncoder):
-    """Custom encoder for `Topology` objects."""
-
-    def default(self, obj: Topology):
-        """Encode a `Topology` object to JSON."""
-        _topology = copy.deepcopy(obj)
-        for molecule in _topology.molecules:
-            molecule._conformers = None
-
-        return _topology.to_json()
-
-
-def interchange_dumps(v, *, default):
-    """Dump an Interchange to JSON after converting to compatible types."""
-    from openff.interchange.smirnoff._base import dump_collection
-
-    return json.dumps(
-        {
-            "positions": QuantityEncoder().default(v["positions"]),
-            "box": QuantityEncoder().default(v["box"]),
-            "topology": TopologyEncoder().default(v["topology"]),
-            "collections": {
-                key: dump_collection(v["collections"][key], default=default)
-                for key in v["collections"]
-            },
-        },
-        default=default,
-    )
-
-
-def interchange_loader(data: str) -> dict:
-    """Load a JSON representation of an Interchange object."""
-    tmp: dict[str, int | bool | str | dict | None] = {}
-
-    for key, val in json.loads(data).items():
-        if val is None:
-            continue
-        if key == "positions":
-            tmp["positions"] = Quantity(val["val"], unit.Unit(val["unit"]))
-        elif key == "velocities":
-            tmp["velocities"] = Quantity(val["val"], unit.Unit(val["unit"]))
-        elif key == "box":
-            tmp["box"] = Quantity(val["val"], unit.Unit(val["unit"]))
-        elif key == "topology":
-            tmp["topology"] = Topology.from_json(val)
-        elif key == "collections":
-            from openff.interchange.smirnoff import (
-                SMIRNOFFAngleCollection,
-                SMIRNOFFBondCollection,
-                SMIRNOFFConstraintCollection,
-                SMIRNOFFElectrostaticsCollection,
-                SMIRNOFFImproperTorsionCollection,
-                SMIRNOFFProperTorsionCollection,
-                SMIRNOFFvdWCollection,
-                SMIRNOFFVirtualSiteCollection,
-            )
-
-            tmp["collections"] = {}
-
-            _class_mapping = {
-                "Bonds": SMIRNOFFBondCollection,
-                "Angles": SMIRNOFFAngleCollection,
-                "Constraints": SMIRNOFFConstraintCollection,
-                "ProperTorsions": SMIRNOFFProperTorsionCollection,
-                "ImproperTorsions": SMIRNOFFImproperTorsionCollection,
-                "vdW": SMIRNOFFvdWCollection,
-                "Electrostatics": SMIRNOFFElectrostaticsCollection,
-                "VirtualSites": SMIRNOFFVirtualSiteCollection,
-            }
-
-            for collection_name, collection_data in val.items():
-                tmp["collections"][collection_name] = _class_mapping[  # type: ignore
-                    collection_name
-                ].parse_raw(collection_data)
-
-    return tmp
-
-
-class Interchange(DefaultModel):
+class Interchange(_BaseModel):
     """
     A object for storing, manipulating, and converting molecular mechanics data.
 
@@ -139,26 +58,12 @@ class Interchange(DefaultModel):
     .. warning :: This API is experimental and subject to change.
     """
 
-    model_config = ConfigDict(validate_assignment=True)
-
     collections: _AnnotatedCollections = Field(dict())
     topology: _AnnotatedTopology | None = Field(None)
     mdconfig: MDConfig | None = Field(None)
-    box: _AnnotatedBox | None = Field(None)
-    positions: _AnnotatedPositions | None = Field(None)
-    velocities: _VelocityQuantity | None = Field(None)
-
-    def _infer_positions(self) -> Quantity | None:
-        """
-        Attempt to set Interchange.positions based on conformers in molecules in the topology.
-
-        If _any_ molecule lacks conformers, return None.
-        If _all_ molecules have conformers, return an array of shape (self.topology.n_atoms, 3)
-        generated by concatenating the positions of each molecule, using only the 0th conformer.
-        """
-        from openff.interchange.common._positions import _infer_positions
-
-        return _infer_positions(self.topology, self.positions)
+    box: _BoxQuantity | None = Field(None)  # Needs shape/OpenMM validation
+    positions: _PositionsQuantity | None = Field(None)  # Ditto
+    velocities: _VelocityQuantity | None = Field(None)  # Ditto
 
     @classmethod
     def from_smirnoff(

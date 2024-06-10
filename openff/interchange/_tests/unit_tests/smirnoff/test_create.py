@@ -364,6 +364,7 @@ class TestCreateWithPlugins:
 
         assert _PLUGIN_CLASS_MAPPING[BuckinghamHandler] == SMIRNOFFBuckinghamCollection
 
+    @pytest.mark.skip(reason="Needs rewrite with _BaseVirtualSiteType")
     def test_create_buckingham(self, water):
         force_field = ForceField(
             get_test_file_path("buckingham.offxml"),

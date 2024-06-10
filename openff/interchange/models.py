@@ -3,11 +3,12 @@
 import abc
 from typing import Any, Literal
 
-from openff.models.models import DefaultModel
 from pydantic import Field
 
+from openff.interchange.pydantic import _BaseModel
 
-class TopologyKey(DefaultModel, abc.ABC):
+
+class TopologyKey(_BaseModel, abc.ABC):
     """
     A unique identifier of a segment of a chemical topology.
 
@@ -145,7 +146,7 @@ class ImproperTorsionKey(ProperTorsionKey):
         return self.atom_indices[1]
 
 
-class LibraryChargeTopologyKey(DefaultModel):
+class LibraryChargeTopologyKey(_BaseModel):
     """
     A unique identifier of the atoms associated with a library charge.
     """
@@ -173,7 +174,7 @@ class SingleAtomChargeTopologyKey(LibraryChargeTopologyKey):
     """
 
 
-class ChargeModelTopologyKey(DefaultModel):
+class ChargeModelTopologyKey(_BaseModel):
     """Subclass of `TopologyKey` for use with charge models only."""
 
     this_atom_index: int
@@ -188,7 +189,7 @@ class ChargeModelTopologyKey(DefaultModel):
         return hash((self.this_atom_index, self.partial_charge_method))
 
 
-class ChargeIncrementTopologyKey(DefaultModel):
+class ChargeIncrementTopologyKey(_BaseModel):
     """Subclass of `TopologyKey` for use with charge increments only."""
 
     # TODO: Eventually rename this for coherence with `TopologyKey`
@@ -234,7 +235,7 @@ class VirtualSiteKey(TopologyKey):
         )
 
 
-class PotentialKey(DefaultModel):
+class PotentialKey(_BaseModel):
     """
     A unique identifier of an instance of physical parameters as applied to a segment of a chemical topology.
 

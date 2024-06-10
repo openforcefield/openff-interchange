@@ -14,10 +14,10 @@ dependencies:
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
   - rdkit
   # Optional features
-  # GMSO does not support Pydantic 2; should come in release after 0.12.0
-  - foyer >=0.12.1
-  - mbuild
-  - gmso =0.12
+  # Need to add MoSDeF stack back
+  # foyer >=0.12.1
+  # mbuild
+  # gmso =0.12
   # Testing
   - mdtraj
   - intermol

@@ -4,7 +4,6 @@ import math
 from collections.abc import Iterable
 from typing import Literal
 
-from openff.models.types.dimension_types import DimensionlessQuantity, DistanceQuantity
 from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterAttribute,
@@ -14,6 +13,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     _allow_only,
 )
 
+from openff.interchange._annotations import _DimensionlessQuantity, _DistanceQuantity
 from openff.interchange.components.potentials import Potential
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.smirnoff._nonbonded import _SMIRNOFFNonbondedCollection
@@ -145,7 +145,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 
     mixing_rule: str = "Buckingham"
 
-    switch_width: DistanceQuantity = Quantity(1.0, unit.angstrom)
+    switch_width: _DistanceQuantity = Quantity(1.0, unit.angstrom)
 
     @classmethod
     def allowed_parameter_handlers(cls) -> _HandlerIterable:
@@ -275,10 +275,10 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     mixing_rule: str = ""
 
-    switch_width: DistanceQuantity = Quantity("1.0 angstrom")
+    switch_width: _DistanceQuantity = Quantity("1.0 angstrom")
 
-    alpha: DimensionlessQuantity
-    beta: DimensionlessQuantity
+    alpha: _DimensionlessQuantity
+    beta: _DimensionlessQuantity
 
     @classmethod
     def allowed_parameter_handlers(cls) -> _HandlerIterable:
@@ -317,7 +317,7 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     def modify_parameters(
         self,
-        original_parameters: dict[str, unit.Quantity],
+        original_parameters: dict[str, Quantity],
     ) -> dict[str, float]:
         """Optionally modify parameters prior to their being stored in a force."""
         # It's important that these keys are in the order of self.potential_parameters(),

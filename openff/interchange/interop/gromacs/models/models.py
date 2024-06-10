@@ -1,13 +1,13 @@
 """Classes used to represent GROMACS state."""
 
-from openff.models.models import DefaultModel
 from openff.toolkit import Quantity
 from pydantic import Field, PositiveInt, PrivateAttr, conint, validator
 
 from openff.interchange._annotations import _DistanceQuantity
+from openff.interchange.pydantic import _BaseModel
 
 
-class GROMACSAtomType(DefaultModel):
+class GROMACSAtomType(_BaseModel):
     """Base class for GROMACS atom types."""
 
     name: str
@@ -38,7 +38,7 @@ class LennardJonesAtomType(GROMACSAtomType):
     epsilon: Quantity
 
 
-class GROMACSAtom(DefaultModel):
+class GROMACSAtom(_BaseModel):
     """Base class for GROMACS atoms."""
 
     index: PositiveInt
@@ -52,7 +52,7 @@ class GROMACSAtom(DefaultModel):
 
 
 # Should the physical values (distance/angles) be float or Quantity?
-class GROMACSVirtualSite(DefaultModel):
+class GROMACSVirtualSite(_BaseModel):
     """Base class for storing GROMACS virtual sites."""
 
     type: str
@@ -124,7 +124,7 @@ class GROMACSVirtualSite4fdn(GROMACSVirtualSite):
     c: float
 
 
-class GROMACSBond(DefaultModel):
+class GROMACSBond(_BaseModel):
     """A GROMACS bond."""
 
     atom1: PositiveInt = Field(
@@ -138,7 +138,7 @@ class GROMACSBond(DefaultModel):
     k: Quantity
 
 
-class GROMACSPair(DefaultModel):
+class GROMACSPair(_BaseModel):
     """A GROMACS pair."""
 
     atom1: PositiveInt = Field(
@@ -149,7 +149,7 @@ class GROMACSPair(DefaultModel):
     )
 
 
-class GROMACSSettles(DefaultModel):
+class GROMACSSettles(_BaseModel):
     """A settles-style constraint for water."""
 
     first_atom: PositiveInt = Field(
@@ -165,7 +165,7 @@ class GROMACSSettles(DefaultModel):
     )
 
 
-class GROMACSExclusion(DefaultModel):
+class GROMACSExclusion(_BaseModel):
     """An Exclusion between an atom and other(s)."""
 
     # Extra exclusions within a molecule can be added manually in a [ exclusions ] section. Each
@@ -177,7 +177,7 @@ class GROMACSExclusion(DefaultModel):
     other_atoms: list[PositiveInt]
 
 
-class GROMACSAngle(DefaultModel):
+class GROMACSAngle(_BaseModel):
     """A GROMACS angle."""
 
     atom1: PositiveInt = Field(
@@ -193,7 +193,7 @@ class GROMACSAngle(DefaultModel):
     k: Quantity
 
 
-class GROMACSDihedral(DefaultModel):
+class GROMACSDihedral(_BaseModel):
     """A GROMACS dihedral."""
 
     atom1: PositiveInt = Field(
@@ -238,7 +238,7 @@ class PeriodicImproperDihedral(GROMACSDihedral):
     multiplicity: PositiveInt
 
 
-class GROMACSMolecule(DefaultModel):
+class GROMACSMolecule(_BaseModel):
     """Base class for GROMACS molecules."""
 
     name: str
@@ -286,7 +286,7 @@ class GROMACSMolecule(DefaultModel):
     _contained_atom_types: dict[str, LennardJonesAtomType] = PrivateAttr()
 
 
-class GROMACSSystem(DefaultModel):
+class GROMACSSystem(_BaseModel):
     """A GROMACS system. Adapted from Intermol."""
 
     positions: _DistanceQuantity | None = None

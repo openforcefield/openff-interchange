@@ -6,7 +6,6 @@ import warnings
 from typing import Annotated, Any, Union
 
 import numpy
-from openff.models.models import DefaultModel
 from openff.toolkit import Quantity
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import (
@@ -26,6 +25,7 @@ from openff.interchange.models import (
     PotentialKey,
     TopologyKey,
 )
+from openff.interchange.pydantic import _BaseModel
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if has_package("jax"):
@@ -129,7 +129,7 @@ ParameterDict = Annotated[
 ]
 
 
-class Potential(DefaultModel):
+class Potential(_BaseModel):
     """Base class for storing applied parameters."""
 
     parameters: dict[str, _Quantity] = Field(dict())
@@ -139,7 +139,7 @@ class Potential(DefaultModel):
         return hash(tuple(self.parameters.values()))
 
 
-class WrappedPotential(DefaultModel):
+class WrappedPotential(_BaseModel):
     """Model storing other Potential model(s) inside inner data."""
 
     _inner_data: dict[Potential, float] = PrivateAttr()
@@ -316,7 +316,7 @@ Potentials = Annotated[
 ]
 
 
-class Collection(DefaultModel):
+class Collection(_BaseModel):
     """Base class for storing parametrized force field data."""
 
     type: str = Field(..., description="The type of potentials this handler stores.")
