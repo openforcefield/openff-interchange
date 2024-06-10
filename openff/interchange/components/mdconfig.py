@@ -4,7 +4,7 @@ import warnings
 from typing import TYPE_CHECKING, Literal
 
 from openff.models.models import DefaultModel
-from openff.models.types import FloatQuantity
+from openff.models.types.dimension_types import DistanceQuantity
 from openff.toolkit import Quantity, unit
 
 from openff.interchange._pydantic import Field
@@ -43,7 +43,7 @@ class MDConfig(DefaultModel):
         "cutoff",
         description="The method used to calculate the vdW interactions.",
     )
-    vdw_cutoff: FloatQuantity["angstrom"] = Field(
+    vdw_cutoff: DistanceQuantity = Field(
         Quantity(9.0, unit.angstrom),
         description="The distance at which pairwise interactions are truncated",
     )
@@ -56,7 +56,7 @@ class MDConfig(DefaultModel):
         False,
         description="Whether or not to use a switching function for the vdw interactions",
     )
-    switching_distance: FloatQuantity["angstrom"] = Field(
+    switching_distance: DistanceQuantity = Field(
         Quantity(0.0, unit.angstrom),
         description="The distance at which the switching function is applied",
     )
@@ -64,7 +64,7 @@ class MDConfig(DefaultModel):
         None,
         description="The method used to compute pairwise electrostatic interactions",
     )
-    coul_cutoff: FloatQuantity["angstrom"] = Field(
+    coul_cutoff: DistanceQuantity = Field(
         Quantity(9.0, unit.angstrom),
         description=(
             "The distance at which electrostatic interactions are truncated or transition from "

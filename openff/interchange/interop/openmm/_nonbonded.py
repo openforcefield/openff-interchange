@@ -6,7 +6,7 @@ import itertools
 from collections import defaultdict
 from typing import DefaultDict, NamedTuple, Optional
 
-from openff.toolkit import Molecule, unit
+from openff.toolkit import Molecule, Quantity, unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 
@@ -40,7 +40,7 @@ _MIXING_RULE_EXPRESSIONS: dict[str, str] = {
 
 class _NonbondedData(NamedTuple):
     vdw_collection: vdWCollection
-    vdw_cutoff: unit.Quantity
+    vdw_cutoff: Quantity
     vdw_method: str | None
     vdw_expression: str | None
     mixing_rule: str | None
@@ -232,7 +232,7 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
             vdw = None  # type: ignore[assignment]
 
     if vdw:
-        vdw_cutoff: unit.Quanaity | None = vdw.cutoff
+        vdw_cutoff: Quantity | None = vdw.cutoff
 
         if interchange.box is None:
             vdw_method: str | None = vdw.nonperiodic_method.lower()

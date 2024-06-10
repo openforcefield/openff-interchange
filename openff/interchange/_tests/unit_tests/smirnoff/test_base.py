@@ -21,8 +21,8 @@ class TestSMIRNOFFCollection:
             pass
 
         class DummySMIRNOFFCollection(SMIRNOFFCollection):
-            type = "Bonds"
-            expression = "1+1"
+            type: str = "Dummy"
+            expression: str = "1+1"
 
             @classmethod
             def allowed_parameter_handlers(cls):

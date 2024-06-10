@@ -1,7 +1,7 @@
 import warnings
 from typing import TYPE_CHECKING, Union
 
-from openff.models.types import ArrayQuantity
+from openff.models.types.dimension_types import DistanceQuantity
 from openff.toolkit import Quantity, Topology
 from openff.utilities.utilities import has_package, requires_package
 
@@ -116,7 +116,8 @@ def from_openmm(
     else:
         _box_vectors = system.getDefaultPeriodicBoxVectors()
 
-    interchange.box = ArrayQuantity.validate_type(_box_vectors)
+    # TODO: There should probably be a more public box validator, checking for shape, etc.
+    interchange.box = DistanceQuantity.__call__(_box_vectors)
 
     if interchange.topology is not None:
         if interchange.topology.n_bonds > len(interchange.collections["Bonds"].key_map):

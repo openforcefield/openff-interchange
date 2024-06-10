@@ -4,8 +4,8 @@ import math
 from collections.abc import Iterable
 from typing import Literal
 
-from openff.models.types import FloatQuantity
-from openff.toolkit import Topology
+from openff.models.types.dimension_types import DimensionlessQuantity, DistanceQuantity
+from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterAttribute,
     ParameterHandler,
@@ -13,7 +13,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     VirtualSiteHandler,
     _allow_only,
 )
-from openff.units import unit
 
 from openff.interchange.components.potentials import Potential
 from openff.interchange.exceptions import InvalidParameterHandlerError
@@ -32,11 +31,11 @@ class BuckinghamHandler(ParameterHandler):
         _VALENCE_TYPE = "Atom"
         _ELEMENT_NAME = "Atom"
 
-        a = ParameterAttribute(default=None, unit=unit.kilojoule_per_mole)
-        b = ParameterAttribute(default=None, unit=unit.nanometer**-1)
+        a = ParameterAttribute(default=None, unit="kilojoule_per_mole")
+        b = ParameterAttribute(default=None, unit="nanometer**-1")
         c = ParameterAttribute(
             default=None,
-            unit=unit.kilojoule_per_mole * unit.nanometer**6,
+            unit="kilojoule_per_mole * nanometer**6",
         )
 
     _TAGNAME = "Buckingham"
@@ -47,8 +46,8 @@ class BuckinghamHandler(ParameterHandler):
     scale14 = ParameterAttribute(default=0.5, converter=float)
     scale15 = ParameterAttribute(default=1.0, converter=float)
 
-    cutoff = ParameterAttribute(default=9.0 * unit.angstroms, unit=unit.angstrom)
-    switch_width = ParameterAttribute(default=1.0 * unit.angstroms, unit=unit.angstrom)
+    cutoff = ParameterAttribute(default=Quantity("9.0 angstrom"), unit="angstrom")
+    switch_width = ParameterAttribute(default=Quantity("1.0 angstrom"), unit="angstrom")
 
     periodic_method = ParameterAttribute(
         default="cutoff",
@@ -146,7 +145,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 
     mixing_rule: str = "Buckingham"
 
-    switch_width: FloatQuantity["angstrom"] = unit.Quantity(1.0, unit.angstrom)  # noqa
+    switch_width: DistanceQuantity = Quantity(1.0, unit.angstrom)
 
     @classmethod
     def allowed_parameter_handlers(cls) -> _HandlerIterable:
@@ -276,10 +275,10 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     mixing_rule: str = ""
 
-    switch_width: FloatQuantity["angstrom"] = unit.Quantity(1.0, unit.angstrom)  # noqa
+    switch_width: DistanceQuantity = Quantity("1.0 angstrom")
 
-    alpha: FloatQuantity["dimensionless"]  # noqa
-    beta: FloatQuantity["dimensionless"]  # noqa
+    alpha: DimensionlessQuantity
+    beta: DimensionlessQuantity
 
     @classmethod
     def allowed_parameter_handlers(cls) -> _HandlerIterable:

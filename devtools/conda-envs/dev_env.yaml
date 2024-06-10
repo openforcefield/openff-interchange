@@ -13,10 +13,9 @@ dependencies:
   - openff-toolkit ~=0.16
   - openff-interchange-base
   - openff-models
-  - smirnoff-plugins =2024
-  - openff-nagl
-  - openff-nagl-models
-  - ambertools =23
+  # smirnoff-plugins =2024
+  # openff-nagl
+  # openff-nagl-models
   # Optional features
   - mbuild =0.17
   - foyer >=0.12.1
@@ -55,3 +54,4 @@ dependencies:
   - tuna
   - pip:
     - git+https://github.com/jthorton/de-forcefields.git
+    - git+https://github.com/openforcefield/openff-models.git@pydantic-2-redo

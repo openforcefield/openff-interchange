@@ -9,7 +9,8 @@ from typing import TYPE_CHECKING, Literal, Union, overload
 
 import numpy as np
 from openff.models.models import DefaultModel
-from openff.models.types import ArrayQuantity, QuantityEncoder
+from openff.models.types.dimension_types import DistanceQuantity, VelocityQuantity
+from openff.models.types.serialization import QuantityEncoder
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
 
@@ -139,24 +140,16 @@ class Interchange(DefaultModel):
     collections: dict[str, Collection] = Field(dict())
     topology: Topology = Field(None)
     mdconfig: MDConfig = Field(None)
-    box: ArrayQuantity["nanometer"] = Field(None)
-    positions: ArrayQuantity["nanometer"] = Field(None)
-    velocities: ArrayQuantity["nanometer / picosecond"] = Field(None)
-
-    class Config:
-        """Custom Pydantic-facing configuration for the Interchange class."""
-
-        json_loads = interchange_loader
-        json_dumps = interchange_dumps
-        validate_assignment = True
-        arbitrary_types_allowed = True
+    box: DistanceQuantity | None = Field(None)
+    positions: DistanceQuantity | None = Field(None)
+    velocities: VelocityQuantity | None = Field(None)
 
     @validator("box", allow_reuse=True)
     def validate_box(cls, value) -> Quantity | None:
         if value is None:
             return value
 
-        validated = ArrayQuantity.validate_type(value)
+        validated = DistanceQuantity.__call__(value)
 
         dimensions = np.atleast_2d(validated).shape
 

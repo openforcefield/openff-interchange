@@ -3,12 +3,10 @@
 import ast
 import json
 import warnings
-from collections.abc import Callable
 from typing import Union
 
 import numpy
 from openff.models.models import DefaultModel
-from openff.models.types import ArrayQuantity, FloatQuantity
 from openff.toolkit import Quantity
 from openff.utilities.utilities import has_package, requires_package
 
@@ -67,27 +65,21 @@ def potential_loader(data: str) -> dict:
 class Potential(DefaultModel):
     """Base class for storing applied parameters."""
 
-    parameters: dict[str, FloatQuantity] = dict()
+    parameters: dict[str, Quantity] = dict()
     map_key: int | None = None
-
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders: dict[type, Callable] = DefaultModel.Config.json_encoders
-        json_loads: Callable = potential_loader
-        validate_assignment: bool = True
-        arbitrary_types_allowed: bool = True
 
     @validator("parameters")
     def validate_parameters(
         cls,
-        v: dict[str, ArrayQuantity | FloatQuantity],
-    ) -> dict[str, FloatQuantity]:
+        v: dict[str, Quantity],
+    ) -> dict[str, Quantity]:
         for key, val in v.items():
+            # TODO: A lot of validation logic was in {FloatQuantity|ArrayQuantity}.validate_type
+            # which no longer has an obvious home in these types
             if isinstance(val, list):
-                v[key] = ArrayQuantity.validate_type(val)
+                v[key] = Quantity(val)
             else:
-                v[key] = FloatQuantity.validate_type(val)
+                v[key] = Quantity(val)
         return v
 
     def __hash__(self) -> int:
@@ -111,7 +103,7 @@ class WrappedPotential(DefaultModel):
             self._inner_data = self.InnerData(data=data)
 
     @property
-    def parameters(self) -> dict[str, FloatQuantity]:
+    def parameters(self) -> dict[str, Quantity]:
         """Get the parameters as represented by the stored potentials and coefficients."""
         keys: set[str] = {
             param_key

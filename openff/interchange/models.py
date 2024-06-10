@@ -48,6 +48,9 @@ class TopologyKey(DefaultModel, abc.ABC):
     def __hash__(self) -> int:
         return hash(tuple(self.atom_indices))
 
+    def __eq__(self, other: Any) -> bool:
+        return self.__hash__() == other.__hash__()
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} with atom indices {self.atom_indices}"
 

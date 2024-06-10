@@ -1,10 +1,10 @@
 import abc
 import json
-from typing import TypeVar
+from typing import Literal, TypeVar
 
 from openff.models.models import DefaultModel
-from openff.models.types import custom_quantity_encoder
-from openff.toolkit import Quantity, Topology, unit
+from openff.models.types.serialization import custom_quantity_encoder
+from openff.toolkit import Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -38,7 +38,7 @@ def _sanitize(o) -> str | dict:
         return {_sanitize(k): _sanitize(v) for k, v in o.items()}
     elif isinstance(o, DefaultModel):
         return o.json()
-    elif isinstance(o, unit.Quantity):
+    elif isinstance(o, Quantity):
         return custom_quantity_encoder(o)
     return o
 
@@ -186,19 +186,13 @@ def _check_all_valence_terms_assigned(
 class SMIRNOFFCollection(Collection, abc.ABC):
     """Base class for handlers storing potentials produced by SMIRNOFF force fields."""
 
+    type: Literal["Bonds"] = "Bonds"
+
     is_plugin: bool = False
 
     def modify_openmm_forces(self, *args, **kwargs):
         """Optionally modify, create, or delete forces. Currently only available to plugins."""
         raise NotImplementedError()
-
-    class Config:
-        """Default configuration options for SMIRNOFF potential handlers."""
-
-        json_dumps = dump_collection
-        json_loads = collection_loader
-        validate_assignment = True
-        arbitrary_types_allowed = True
 
     @classmethod
     @abc.abstractmethod
@@ -291,7 +285,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
 
     @classmethod
     def create(
-        cls: type[T],
+        cls,  # type[T],
         parameter_handler: TP,
         topology: "Topology",
     ) -> T:

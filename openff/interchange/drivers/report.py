@@ -3,8 +3,8 @@
 import warnings
 
 from openff.models.models import DefaultModel
-from openff.models.types import FloatQuantity
-from openff.toolkit import unit
+from openff.models.types.dimension_types import MolarEnergyQuantity
+from openff.toolkit import Quantity
 
 from openff.interchange._pydantic import validator
 from openff.interchange.constants import kj_mol
@@ -31,7 +31,7 @@ class EnergyReport(DefaultModel):
     """A lightweight class containing single-point energies as computed by energy tests."""
 
     # TODO: Should the default be None or 0.0 kj_mol?
-    energies: dict[str, FloatQuantity | None] = {
+    energies: dict[str, MolarEnergyQuantity | None] = {
         "Bond": None,
         "Angle": None,
         "Torsion": None,
@@ -45,8 +45,8 @@ class EnergyReport(DefaultModel):
         for key, val in v.items():
             if key not in _KNOWN_ENERGY_TERMS:
                 raise InvalidEnergyError(f"Energy type {key} not understood.")
-            if not isinstance(val, unit.Quantity):
-                v[key] = FloatQuantity.validate_type(val)
+            if not isinstance(val, Quantity):
+                v[key] = MolarEnergyQuantity.__call__(val)
         return v
 
     @property
@@ -54,7 +54,7 @@ class EnergyReport(DefaultModel):
         """Return the total energy."""
         return self["total"]
 
-    def __getitem__(self, item: str) -> FloatQuantity | None:
+    def __getitem__(self, item: str) -> MolarEnergyQuantity | None:
         if type(item) is not str:
             raise LookupError(
                 "Only str arguments can be currently be used for lookups.\n"
@@ -74,7 +74,7 @@ class EnergyReport(DefaultModel):
     def compare(
         self,
         other: "EnergyReport",
-        tolerances: dict[str, FloatQuantity] | None = None,
+        tolerances: dict[str, MolarEnergyQuantity] | None = None,
     ):
         """
         Compare two energy reports.
@@ -84,7 +84,7 @@ class EnergyReport(DefaultModel):
         other: EnergyReport
             The other `EnergyReport` to compare energies against
 
-        tolerances: dict of str: `FloatQuantity`
+        tolerances: dict of str: Quantity
             Per-key allowed differences in energies
 
         """
@@ -124,7 +124,7 @@ class EnergyReport(DefaultModel):
     def diff(
         self,
         other: "EnergyReport",
-    ) -> dict[str, FloatQuantity]:
+    ) -> dict[str, MolarEnergyQuantity]:
         """
         Return the per-key energy differences between these reports.
 
@@ -135,11 +135,11 @@ class EnergyReport(DefaultModel):
 
         Returns
         -------
-        energy_differences : dict of str: `FloatQuantity`
+        energy_differences : dict of str: Quantity
             Per-key energy differences
 
         """
-        energy_differences: dict[str, FloatQuantity] = dict()
+        energy_differences: dict[str, MolarEnergyQuantity] = dict()
 
         nonbondeds_processed = False
 
@@ -175,13 +175,13 @@ class EnergyReport(DefaultModel):
 
         return energy_differences
 
-    def __sub__(self, other: "EnergyReport") -> dict[str, FloatQuantity]:
+    def __sub__(self, other: "EnergyReport") -> dict[str, MolarEnergyQuantity]:
         diff = dict()
         for key in self.energies:
             if key not in other.energies:
                 warnings.warn(f"Did not find key {key} in second report", stacklevel=2)
                 continue
-            diff[key]: FloatQuantity = self.energies[key] - other.energies[key]  # type: ignore
+            diff[key]: MolarEnergyQuantity = self.energies[key] - other.energies[key]  # type: ignore
 
         return diff
 
@@ -197,7 +197,7 @@ class EnergyReport(DefaultModel):
             f"Electrostatics:\t\t{self['Electrostatics']}\n"
         )
 
-    def _get_nonbonded_energy(self) -> FloatQuantity:
+    def _get_nonbonded_energy(self) -> MolarEnergyQuantity:
         nonbonded_energy = 0.0 * kj_mol
         for key in ("Nonbonded", "vdW", "Electrostatics"):
             if key in self.energies is not None:

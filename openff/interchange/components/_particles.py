@@ -5,13 +5,13 @@ Temporary module for second-class virtual site objects.
 import abc
 
 from openff.models.models import DefaultModel
-from openff.models.types import FloatQuantity
+from openff.models.types.dimension_types import DistanceQuantity
 from openff.toolkit import Quantity
 
 
 class _VirtualSite(DefaultModel, abc.ABC):
     type: str
-    distance: FloatQuantity["nanometer"]
+    distance: DistanceQuantity
     orientations: tuple[int, ...]
 
     @abc.abstractproperty

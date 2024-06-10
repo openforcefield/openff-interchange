@@ -1,6 +1,6 @@
 from typing import Literal
 
-from openff.models.types import FloatQuantity
+from openff.models.types.dimension_types import DistanceQuantity
 from openff.toolkit import Quantity, Topology, unit
 from openff.utilities.utilities import has_package
 
@@ -58,9 +58,9 @@ class FoyerElectrostaticsHandler(ElectrostaticsCollection):
     """Handler storing electrostatics potentials as produced by a Foyer force field."""
 
     force_field_key: str = "atoms"
-    cutoff: FloatQuantity["angstrom"] = 9.0 * unit.angstrom
+    cutoff: DistanceQuantity = 9.0 * unit.angstrom
 
-    _charges: dict[TopologyKey, Quantity] = PrivateAttr(dict())  # type: ignore
+    _charges: dict[TopologyKey, Quantity] = PrivateAttr(default_factory=dict)
 
     def store_charges(
         self,

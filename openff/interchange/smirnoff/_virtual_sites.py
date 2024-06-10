@@ -2,7 +2,7 @@ import math
 from typing import Literal
 
 import numpy
-from openff.models.types import FloatQuantity
+from openff.models.types.dimension_types import DegreeQuantity, DistanceQuantity
 from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
@@ -188,7 +188,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
 
 class _BondChargeVirtualSite(_VirtualSite):
     type: Literal["BondCharge"]
-    distance: FloatQuantity["nanometer"]
+    distance: DistanceQuantity
     orientations: tuple[int, ...]
 
     @property
@@ -200,7 +200,7 @@ class _BondChargeVirtualSite(_VirtualSite):
         return origin_weight, x_direction, y_direction
 
     @property
-    def local_frame_positions(self) -> unit.Quantity:
+    def local_frame_positions(self) -> Quantity:
         distance_unit = self.distance.units
         return Quantity(
             [-self.distance.m, 0.0, 0.0],
@@ -218,9 +218,9 @@ class _BondChargeVirtualSite(_VirtualSite):
 
 class _MonovalentLonePairVirtualSite(_VirtualSite):
     type: Literal["MonovalentLonePair"]
-    distance: FloatQuantity["nanometer"]
-    out_of_plane_angle: FloatQuantity["degree"]
-    in_plane_angle: FloatQuantity["degree"]
+    distance: DistanceQuantity
+    out_of_plane_angle: DegreeQuantity
+    in_plane_angle: DegreeQuantity
     orientations: tuple[int, ...]
 
     @property
@@ -262,8 +262,8 @@ class _MonovalentLonePairVirtualSite(_VirtualSite):
 
 class _DivalentLonePairVirtualSite(_VirtualSite):
     type: Literal["DivalentLonePair"]
-    distance: FloatQuantity["nanometer"]
-    out_of_plane_angle: FloatQuantity["degree"]
+    distance: DistanceQuantity
+    out_of_plane_angle: DegreeQuantity
     orientations: tuple[int, ...]
 
     @property
@@ -304,7 +304,7 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
 
 class _TrivalentLonePairVirtualSite(_VirtualSite):
     type: Literal["TrivalentLonePair"]
-    distance: FloatQuantity["nanometer"]
+    distance: DistanceQuantity
     orientations: tuple[int, ...]
 
     @property

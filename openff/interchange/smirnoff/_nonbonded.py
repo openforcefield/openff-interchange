@@ -14,7 +14,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 
-from openff.interchange._pydantic import Field
+from openff.interchange._pydantic import Field, PrivateAttr
 from openff.interchange.common._nonbonded import (
     ElectrostaticsCollection,
     _NonbondedCollection,
@@ -269,6 +269,9 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         "reaction-field",
     ] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
+
+    _charges = PrivateAttr(default_factory=dict)
+    _charges_cached: bool
 
     @classmethod
     def allowed_parameter_handlers(cls):
