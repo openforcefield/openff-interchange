@@ -412,12 +412,20 @@ def _plugins(
                         f"Collection {collection} requires multiple handlers, but only one was provided.",
                     )
 
-                collection = collection_class.create(
-                    parameter_handler=force_field[handler_class._TAGNAME],
-                    topology=topology,
-                    vdw_collection=interchange[tagnames[0]],
-                    electrostatics_collection=interchange["Electrostatics"],
-                )
+                try:
+                    collection = collection_class.create(
+                        parameter_handler=force_field[handler_class._TAGNAME],
+                        topology=topology,
+                        vdw_collection=interchange[tagnames[0]],
+                        electrostatics_collection=interchange["Electrostatics"],
+                    )
+                except TypeError:
+                    collection = collection_class.create(
+                        parameter_handler=force_field[handler_class._TAGNAME],
+                        topology=topology,
+                        vdw_collection=interchange[tagnames[0]],
+                        electrostatics_collection=interchange["Electrostatics"],
+                    )
 
         else:
             # If this collection takes multiple handlers, pass it a list. Consider making this type the default.

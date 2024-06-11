@@ -28,8 +28,7 @@ class BuckinghamHandler(ParameterHandler):
     class BuckinghamType(ParameterType):
         """A custom SMIRNOFF type for Buckingham interactions."""
 
-        _VALENCE_TYPE = "Atom"
-        _ELEMENT_NAME = "Atom"
+        _ELEMENT_NAME = "Buckingham"
 
         a = ParameterAttribute(default=None, unit="kilojoule_per_mole")
         b = ParameterAttribute(default=None, unit="nanometer**-1")
@@ -70,7 +69,6 @@ class DoubleExponentialHandler(ParameterHandler):
     class DoubleExponentialType(ParameterType):
         """A custom SMIRNOFF type for double exponential interactions."""
 
-        _VALENCE_TYPE = "Atom"
         _ELEMENT_NAME = "Atom"
 
         r_min = ParameterAttribute(default=None, unit=unit.nanometers)
@@ -115,7 +113,6 @@ class C4IonHandler(ParameterHandler):
     class C4IonType(ParameterType):
         """A custom SMIRNOFF type for C4 ion interactions."""
 
-        _VALENCE_TYPE = "Atom"
         _ELEMENT_NAME = "Atom"
 
         c = ParameterAttribute(
