@@ -7,8 +7,8 @@ dependencies:
   - python =3.10
   - pip
   - numpy =1
-  - pydantic =1
-  - openff-toolkit-base =0.15.2
+  - pydantic =2
+  - openff-toolkit-base
   - openff-models
   - openmm >=7.6
   - mbuild
@@ -20,8 +20,8 @@ dependencies:
   # readthedocs dependencies
   - myst-parser
   - numpydoc
-  - autodoc-pydantic
-  - sphinx>=4.4.0,<5
+  - autodoc-pydantic =2
+  - sphinx ~=4.4
   - sphinxcontrib-mermaid
   - sphinx-notfound-page
   - pip:
