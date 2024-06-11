@@ -159,11 +159,20 @@ def _is_nanometer(quantity: Quantity) -> Quantity:
         raise ValueError(f"Quantity {quantity} is not a distance.") from error
 
 
+def _duck_to_nanometer(value: Any):
+    """Cast list or ndarray without units to Quantity[ndarray] of nanometer."""
+    if isinstance(value, (list, numpy.ndarray)):
+        return Quantity(value, "nanometer")
+    else:
+        return value
+
+
 _PositionsQuantity = Annotated[
     Quantity,
     WrapValidator(quantity_validator),
     AfterValidator(_is_nanometer),
     AfterValidator(_is_positions),
+    BeforeValidator(_duck_to_nanometer),
     WrapSerializer(quantity_json_serializer),
 ]
 
@@ -175,14 +184,6 @@ def _is_box(quantity) -> Quantity:
         return numpy.eye(3) * quantity
     else:
         raise ValueError(f"Quantity {quantity} is not a box.")
-
-
-def _duck_to_nanometer(value: Any):
-    """Cast list or ndarray without units to Quantity[ndarray] of nanometer."""
-    if isinstance(value, (list, numpy.ndarray)):
-        return Quantity(value, "nanometer")
-    else:
-        return value
 
 
 def _unwrap_list_of_openmm_quantities(value: Any):

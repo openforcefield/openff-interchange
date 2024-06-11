@@ -11,7 +11,6 @@ from openff.utilities.utilities import has_package, requires_package
 from pydantic import (
     Field,
     PrivateAttr,
-    ValidationError,
     ValidationInfo,
     ValidatorFunctionWrapHandler,
     WrapSerializer,
@@ -48,85 +47,6 @@ def __getattr__(name: str):
         return Collection
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-def potential_loader(data: str) -> dict:
-    """Load a JSON blob dumped from a `Collection`."""
-    tmp: dict[str, int | bool | str | dict] = {}
-
-    for key, val in json.loads(data).items():
-        if isinstance(val, (str, type(None))):
-            tmp[key] = val  # type: ignore
-        elif isinstance(val, dict):
-            if key == "parameters":
-                tmp["parameters"] = dict()
-
-                for key_, val_ in val.items():
-                    loaded = json.loads(val_)
-                    tmp["parameters"][key_] = Quantity(  # type: ignore[index]
-                        loaded["val"],
-                        loaded["unit"],
-                    )
-
-    return tmp
-
-
-def validate_parameters(
-    v: Any,
-    handler: ValidatorFunctionWrapHandler,
-    info: ValidationInfo,
-) -> dict[str, Quantity]:
-    """Validate the parameters field of a Potential object."""
-    if info.mode in ("json", "python"):
-        tmp: dict[str, int | bool | str | dict] = {}
-
-        for key, val in v.items():
-            if isinstance(val, dict):
-                print(f"turning {val} of type {type(val)} into a quantity ...")
-                quantity_dict = json.loads(val)
-                tmp[key] = Quantity(
-                    quantity_dict["val"],
-                    quantity_dict["unit"],
-                )
-            elif isinstance(val, Quantity):
-                tmp[key] = val
-            elif isinstance(val, str):
-                loaded = json.loads(val)
-                if isinstance(loaded, dict):
-                    tmp[key] = Quantity(
-                        loaded["val"],
-                        loaded["unit"],
-                    )
-                else:
-                    tmp[key] = val
-
-            else:
-                raise ValidationError(
-                    f"Unexpected type {type(val)} found in JSON blob.",
-                )
-
-        return tmp
-
-
-def serialize_parameters(value: dict[str, Quantity], handler, info) -> dict[str, str]:
-    """Serialize the parameters field of a Potential object."""
-    if info.mode == "json":
-        return {
-            k: json.dumps(
-                {
-                    "val": v.m,
-                    "unit": str(v.units),
-                },
-            )
-            for k, v in value.items()
-        }
-
-
-ParameterDict = Annotated[
-    dict[str, Any],
-    WrapValidator(validate_parameters),
-    WrapSerializer(serialize_parameters),
-]
 
 
 class Potential(_BaseModel):

@@ -46,7 +46,7 @@ def _create_interchange(
     positions: Quantity | None = None,
 ) -> Interchange:
     interchange = Interchange()
-    _topology = Interchange.validate_topology(topology)
+    _topology = Topology(topology)
 
     interchange.positions = _infer_positions(_topology, positions)
 

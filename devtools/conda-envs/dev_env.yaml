@@ -14,8 +14,9 @@ dependencies:
   - openff-interchange-base
   - openff-models
   # smirnoff-plugins =2024
-  # openff-nagl
-  # openff-nagl-models
+  - openff-nagl
+  - openff-nagl-models
+  - ambertools =23
   # Optional features
   - mbuild =0.17
   - foyer >=0.12.1
@@ -29,7 +30,7 @@ dependencies:
   - pytest-xdist
   - pytest-randomly
   - nbval
-  # de-forcefields  # needs new release
+  # de-forcefields  # add back after smirnoff-plugins update
   # Drivers
   - gromacs
   - lammps >=2023.08.02
@@ -52,6 +53,3 @@ dependencies:
   - flake8
   - snakeviz
   - tuna
-  - pip:
-    - git+https://github.com/jthorton/de-forcefields.git
-    - git+https://github.com/openforcefield/openff-models.git@pydantic-2-redo
