@@ -9,7 +9,6 @@ dependencies:
   - numpy =1
   - pydantic =2
   - openff-toolkit-base
-  - openff-models
   - openmm >=7.6
   - mbuild
   - foyer >=0.12.1

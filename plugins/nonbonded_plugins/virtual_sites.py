@@ -29,12 +29,9 @@ class BuckinghamVirtualSiteHandler(VirtualSiteHandler):
         _DEFAULT_C = 0.0 * unit.kilojoule_per_mole * unit.nanometer**6
 
         # `unit` argument must be a Unit object, not a string
-        a = ParameterAttribute(default=_DEFAULT_A, unit=unit.kilojoule_per_mole)
-        b = ParameterAttribute(default=_DEFAULT_B, unit=unit.nanometer**-1)
-        c = ParameterAttribute(
-            default=_DEFAULT_C,
-            unit=unit.kilojoule_per_mole * unit.nanometer**6,
-        )
+        a = ParameterAttribute(default=_DEFAULT_A, unit=_DEFAULT_A.units)
+        b = ParameterAttribute(default=_DEFAULT_B, unit=_DEFAULT_B.units)
+        c = ParameterAttribute(default=_DEFAULT_C, unit=_DEFAULT_C.units)
 
     _TAGNAME = "BuckinghamVirtualSites"
     _INFOTYPE = BuckinghamVirtualSiteType

@@ -12,7 +12,6 @@ dependencies:
   # OpenFF stack
   - openff-toolkit ~=0.16
   - openff-interchange-base
-  - openff-models
   # smirnoff-plugins =2024
   - openff-nagl
   - openff-nagl-models
