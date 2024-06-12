@@ -57,7 +57,7 @@ class BondKey(TopologyKey):
     A unique identifier of the atoms associated in a bond potential.
     """
 
-    atom_indices: tuple[int, ...] = Field(
+    atom_indices: tuple[int, int] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
@@ -71,7 +71,14 @@ class BondKey(TopologyKey):
     )
 
     def __hash__(self) -> int:
+        if self.bond_order is None:
+            return hash(tuple(self.atom_indices))
         return hash((tuple(self.atom_indices), self.bond_order))
+
+    def __eq__(self, other) -> bool:
+        return super().__eq__(other) or (
+            self.bond_order is None and other == self.atom_indices
+        )
 
     def __repr__(self) -> str:
         return (
@@ -85,9 +92,12 @@ class AngleKey(TopologyKey):
     A unique identifier of the atoms associated in an angle potential.
     """
 
-    atom_indices: tuple[int, ...] = Field(
+    atom_indices: tuple[int, int, int] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
+
+    def __eq__(self, other) -> bool:
+        return super().__eq__(other) or other == self.atom_indices
 
 
 class ProperTorsionKey(TopologyKey):
@@ -95,7 +105,7 @@ class ProperTorsionKey(TopologyKey):
     A unique identifier of the atoms associated in a proper torsion potential.
     """
 
-    atom_indices: tuple[int, ...] = Field(
+    atom_indices: tuple[int, int, int, int] | tuple[()] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
@@ -121,7 +131,17 @@ class ProperTorsionKey(TopologyKey):
     )
 
     def __hash__(self) -> int:
+        if self.mult is None and self.bond_order is None and self.phase is None:
+            return hash(tuple(self.atom_indices))
         return hash((tuple(self.atom_indices), self.mult, self.bond_order, self.phase))
+
+    def __eq__(self, other) -> bool:
+        return super().__eq__(other) or (
+            self.mult is None
+            and self.bond_order is None
+            and self.phase is None
+            and other == tuple(self.atom_indices)
+        )
 
     def __repr__(self) -> str:
         return (
@@ -154,12 +174,15 @@ class LibraryChargeTopologyKey(DefaultModel):
     this_atom_index: int
 
     @property
-    def atom_indices(self) -> tuple[int, ...]:
+    def atom_indices(self) -> tuple[int]:
         """Alias for `this_atom_index`."""
         return (self.this_atom_index,)
 
     def __hash__(self) -> int:
         return hash((self.this_atom_index,))
+
+    def __eq__(self, other) -> bool:
+        return super().__eq__(other) or other == self.this_atom_index
 
 
 class SingleAtomChargeTopologyKey(LibraryChargeTopologyKey):
