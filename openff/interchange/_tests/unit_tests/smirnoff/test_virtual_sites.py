@@ -203,7 +203,7 @@ class TestSMIRNOFFVirtualSites:
                 (0, 1, 2, 3),
                 (
                     VirtualSiteMocking.sp2_conformer()[0]
-                    + Quantity(  # noqa
+                    + Quantity(
                         numpy.array(
                             [[1.0, numpy.sqrt(2), 1.0], [1.0, -numpy.sqrt(2), -1.0]],
                         ),
