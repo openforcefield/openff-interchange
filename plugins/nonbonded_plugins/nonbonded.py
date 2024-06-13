@@ -30,11 +30,11 @@ class BuckinghamHandler(ParameterHandler):
 
         _ELEMENT_NAME = "Buckingham"
 
-        a = ParameterAttribute(default=None, unit="kilojoule_per_mole")
-        b = ParameterAttribute(default=None, unit="nanometer**-1")
+        a = ParameterAttribute(default=None, unit=unit.kilojoule_per_mole)
+        b = ParameterAttribute(default=None, unit=unit.nanometer**-1)
         c = ParameterAttribute(
             default=None,
-            unit="kilojoule_per_mole * nanometer**6",
+            unit=unit.kilojoule_per_mole * unit.nanometer**6,
         )
 
     _TAGNAME = "Buckingham"
@@ -45,8 +45,11 @@ class BuckinghamHandler(ParameterHandler):
     scale14 = ParameterAttribute(default=0.5, converter=float)
     scale15 = ParameterAttribute(default=1.0, converter=float)
 
-    cutoff = ParameterAttribute(default=Quantity("9.0 angstrom"), unit="angstrom")
-    switch_width = ParameterAttribute(default=Quantity("1.0 angstrom"), unit="angstrom")
+    cutoff = ParameterAttribute(default=Quantity("9.0 angstrom"), unit=unit.angstrom)
+    switch_width = ParameterAttribute(
+        default=Quantity("1.0 angstrom"),
+        unit=unit.angstrom,
+    )
 
     periodic_method = ParameterAttribute(
         default="cutoff",
