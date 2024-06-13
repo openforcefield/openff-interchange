@@ -8,7 +8,11 @@ from openff.utilities import get_data_file_path, has_package
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import MoleculeWithConformer, get_test_file_path
+from openff.interchange._tests import (
+    MoleculeWithConformer,
+    get_protein,
+    get_test_file_path,
+)
 from openff.interchange._tests.unit_tests.plugins.test_smirnoff_plugins import (
     TestDoubleExponential,
 )
@@ -786,12 +790,7 @@ class TestToOpenMMTopology:
         Test that to_openmm preserves atom names that are unique per-residue by default
         """
         # Create a topology from a capped dialanine
-        peptide = Molecule.from_polymer_pdb(
-            get_data_file_path(
-                "proteins/MainChain_ALA_ALA.pdb",
-                "openff.toolkit",
-            ),
-        )
+        peptide = get_protein("MainChain_ALA_ALA")
         off_topology = Topology.from_molecules([peptide])
 
         # Assert the test's assumptions
@@ -830,9 +829,7 @@ class TestToOpenMMTopology:
         Test that to_openmm generates atom names that are unique per-residue
         """
         # Create a topology from a capped dialanine
-        peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
-        )
+        peptide = get_protein("MainChain_ALA_ALA")
         off_topology = Topology.from_molecules([peptide])
 
         # Remove atom names from some residues, make others have duplicate atom names
@@ -891,9 +888,7 @@ class TestToOpenMMTopology:
         when the topology has residues
         """
         # Create a topology from a capped dialanine
-        peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
-        )
+        peptide = get_protein("MainChain_ALA_ALA")
         off_topology = Topology.from_molecules([peptide])
 
         # Remove atom names from some residues, make others have duplicate atom names

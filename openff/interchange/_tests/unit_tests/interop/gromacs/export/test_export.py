@@ -17,6 +17,7 @@ from openff.utilities import (
 from openff.interchange import Interchange
 from openff.interchange._tests import (
     MoleculeWithConformer,
+    get_protein,
     get_test_file_path,
     needs_gmx,
 )
@@ -148,12 +149,7 @@ class TestGROMACSGROFile(_NeedsGROMACS):
         """Test that residue information is passed through to .gro files."""
         import mdtraj
 
-        protein = Molecule.from_polymer_pdb(
-            get_data_file_path(
-                "proteins/MainChain_HIE.pdb",
-                "openff.toolkit",
-            ),
-        )
+        protein = get_protein("MainChain_HIE")
 
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
@@ -175,9 +171,7 @@ class TestGROMACSGROFile(_NeedsGROMACS):
 
     @pytest.mark.slow
     def test_atom_names_pdb(self):
-        peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
-        )
+        peptide = get_protein("MainChain_ALA_ALA")
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
         Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_gro(
@@ -293,15 +287,15 @@ class TestGROMACS(_NeedsGROMACS):
         import parmed
         from openff.units.openmm import from_openmm
 
-        pdb_path = get_data_file_path(
-            "proteins/MainChain_HIE.pdb",
-            "openff.toolkit",
-        )
-
-        protein = Molecule.from_polymer_pdb(pdb_path)
+        protein = get_protein("MainChain_HIE")
 
         box_vectors = from_openmm(
-            openmm.app.PDBFile(pdb_path).topology.getPeriodicBoxVectors(),
+            openmm.app.PDBFile(
+                get_data_file_path(
+                    "proteins/MainChain_HIE.pdb",
+                    "openff.toolkit",
+                ),
+            ).topology.getPeriodicBoxVectors(),
         )
 
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
@@ -498,12 +492,7 @@ class TestGROMACSMetadata(_NeedsGROMACS):
     @skip_if_missing("mdtraj")
     @pytest.mark.slow
     def test_atom_names_pdb(self):
-        peptide = Molecule.from_polymer_pdb(
-            get_data_file_path(
-                "proteins/MainChain_ALA_ALA.pdb",
-                "openff.toolkit",
-            ),
-        )
+        peptide = get_protein("MainChain_ALA_ALA")
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
         Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_gro(

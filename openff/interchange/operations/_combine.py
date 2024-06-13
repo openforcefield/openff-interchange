@@ -90,7 +90,7 @@ def _combine(
         for top_key, pot_key in handler.key_map.items():
             _tmp_pot_key = copy.deepcopy(pot_key)
             new_atom_indices = tuple(idx + atom_offset for idx in top_key.atom_indices)
-            new_top_key = top_key.__class__(**top_key.dict())
+            new_top_key = top_key.__class__(**top_key.model_dump())
             try:
                 new_top_key.atom_indices = new_atom_indices
             except (ValueError, AttributeError):

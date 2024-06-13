@@ -18,7 +18,7 @@ def test_issue_908(sage_unconstrained):
     with open("test.json", "w") as f:
         f.write(state1.model_dump_json())
 
-    state2 = Interchange.parse_file("test.json")
+    state2 = Interchange.model_validate_json("test.json")
 
     assert state2["Electrostatics"].scale_14 == 0.8333333333
 

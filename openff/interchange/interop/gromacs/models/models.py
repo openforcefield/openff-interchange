@@ -1,10 +1,42 @@
 """Classes used to represent GROMACS state."""
 
+from typing import Annotated
+
 from openff.toolkit import Quantity
-from pydantic import Field, PositiveInt, PrivateAttr, conint, validator
+from pydantic import (
+    Field,
+    PositiveInt,
+    PrivateAttr,
+    ValidationInfo,
+    ValidatorFunctionWrapHandler,
+    WrapValidator,
+)
 
 from openff.interchange._annotations import _DistanceQuantity
 from openff.interchange.pydantic import _BaseModel
+
+
+def validate_particle_type(
+    value: str,
+    handler: ValidatorFunctionWrapHandler,
+    info: ValidationInfo,
+) -> str:
+    """Validate the particle_type field."""
+    # info.data is like the extra values argument in v1
+    values = info.data
+
+    if values["mass"].m == 0.0:
+        assert value in ("D", "V"), 'Particle type must be "D" or "V" if massless'
+    elif values["mass"].m > 0.0:
+        assert value == "A", 'Particle type must be "A" if it has mass'
+
+    return value
+
+
+_ParticleType = Annotated[
+    str,
+    WrapValidator(validate_particle_type),
+]
 
 
 class GROMACSAtomType(_BaseModel):
@@ -15,20 +47,7 @@ class GROMACSAtomType(_BaseModel):
     atomic_number: int
     mass: Quantity
     charge: Quantity
-    particle_type: str
-
-    @validator("particle_type")
-    def validate_particle_type(
-        cls,
-        v: str,
-        values,
-    ) -> str:
-        if values["mass"].m == 0.0:
-            assert v in ("D", "V"), 'Particle type must be "D" or "V" if massless'
-        elif values["mass"].m > 0.0:
-            assert v == "A", 'Particle type must be "A" if it has mass'
-
-        return v
+    particle_type: _ParticleType
 
 
 class LennardJonesAtomType(GROMACSAtomType):
@@ -57,7 +76,7 @@ class GROMACSVirtualSite(_BaseModel):
 
     type: str
     name: str
-    header_tag: conint(ge=2)
+    header_tag: Annotated[int, Field(strict=True, ge=2)]
     site: PositiveInt
     func: PositiveInt
     orientation_atoms: list[int]

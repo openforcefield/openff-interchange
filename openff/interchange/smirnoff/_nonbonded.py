@@ -883,7 +883,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     # Copy the keys associated with the reference molecule to the duplicate molecule
                     for key in matches:
                         if key.this_atom_index == unique_molecule_atom_index:
-                            new_key = key.__class__(**key.dict())
+                            new_key = key.__class__(**key.model_dump())
                             new_key.this_atom_index = topology_atom_index
 
                             # Have this new key (on a duplicate molecule) point to the same potential

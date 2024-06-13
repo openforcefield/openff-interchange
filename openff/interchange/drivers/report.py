@@ -1,11 +1,12 @@
 """Storing and processing results of energy evaluations."""
 
 import warnings
+from typing import Annotated
 
 from openff.toolkit import Quantity
-from pydantic import validator
+from pydantic import BeforeValidator, Field
 
-from openff.interchange._annotations import _kJMolQuantity
+from openff.interchange._annotations import _Quantity
 from openff.interchange.constants import kj_mol
 from openff.interchange.exceptions import (
     EnergyError,
@@ -27,35 +28,59 @@ _KNOWN_ENERGY_TERMS: set[str] = {
 }
 
 
+def energies_validator(value: dict[str, Quantity | None]) -> dict[str, Quantity | None]:
+    """Validate a dict of energies."""
+    if not isinstance(value, dict):
+        raise ValueError(f"wrong input type{type(value)}")
+
+    for key, val in value.items():
+        if key not in _KNOWN_ENERGY_TERMS:
+            raise InvalidEnergyError(f"Energy type {key} not understood.")
+
+        if val is None:
+            continue
+
+        if "openmm" in str(type(val)):
+            from openff.units.openmm import from_openmm
+
+            value[key] = from_openmm(val).to("kilojoule / mole")
+            continue
+
+        if isinstance(val, Quantity):
+            value[key] = val.to("kilojoule / mole")
+
+        else:
+            raise InvalidEnergyError(f"Energy type {key} not understood.")
+
+    return value
+
+
+_EnergiesDict = Annotated[
+    dict[str, _Quantity | None],
+    BeforeValidator(energies_validator),
+]
+
+
 class EnergyReport(_BaseModel):
     """A lightweight class containing single-point energies as computed by energy tests."""
 
     # TODO: Should the default be None or 0.0 kj_mol?
-    energies: dict[str, _kJMolQuantity | None] = {
-        "Bond": None,
-        "Angle": None,
-        "Torsion": None,
-        "vdW": None,
-        "Electrostatics": None,
-    }
-
-    @validator("energies")
-    def validate_energies(cls, v: dict) -> dict:
-        """Validate the structure of a dict mapping keys to energies."""
-        for key, val in v.items():
-            if key not in _KNOWN_ENERGY_TERMS:
-                raise InvalidEnergyError(f"Energy type {key} not understood.")
-            if not isinstance(val, Quantity):
-                v[key] = _kJMolQuantity.__call__(str(val))
-
-        return v
+    energies: _EnergiesDict = Field(
+        {
+            "Bond": None,
+            "Angle": None,
+            "Torsion": None,
+            "vdW": None,
+            "Electrostatics": None,
+        },
+    )
 
     @property
     def total_energy(self):
         """Return the total energy."""
         return self["total"]
 
-    def __getitem__(self, item: str) -> _kJMolQuantity | None:
+    def __getitem__(self, item: str) -> Quantity | None:
         if type(item) is not str:
             raise LookupError(
                 "Only str arguments can be currently be used for lookups.\n"
@@ -70,12 +95,12 @@ class EnergyReport(_BaseModel):
 
     def update(self, new_energies: dict) -> None:
         """Update the energies in this report with new value(s)."""
-        self.energies.update(self.validate_energies(new_energies))
+        self.energies.update(energies_validator(new_energies))
 
     def compare(
         self,
         other: "EnergyReport",
-        tolerances: dict[str, _kJMolQuantity] | None = None,
+        tolerances: dict[str, Quantity] | None = None,
     ):
         """
         Compare two energy reports.
@@ -125,7 +150,7 @@ class EnergyReport(_BaseModel):
     def diff(
         self,
         other: "EnergyReport",
-    ) -> dict[str, _kJMolQuantity]:
+    ) -> dict[str, Quantity]:
         """
         Return the per-key energy differences between these reports.
 
@@ -140,7 +165,7 @@ class EnergyReport(_BaseModel):
             Per-key energy differences
 
         """
-        energy_differences: dict[str, _kJMolQuantity] = dict()
+        energy_differences: dict[str, Quantity] = dict()
 
         nonbondeds_processed = False
 
@@ -176,13 +201,13 @@ class EnergyReport(_BaseModel):
 
         return energy_differences
 
-    def __sub__(self, other: "EnergyReport") -> dict[str, _kJMolQuantity]:
+    def __sub__(self, other: "EnergyReport") -> dict[str, Quantity]:
         diff = dict()
         for key in self.energies:
             if key not in other.energies:
                 warnings.warn(f"Did not find key {key} in second report", stacklevel=2)
                 continue
-            diff[key]: _kJMolQuantity = self.energies[key] - other.energies[key]  # type: ignore
+            diff[key]: Quantity = self.energies[key] - other.energies[key]  # type: ignore
 
         return diff
 
@@ -198,7 +223,7 @@ class EnergyReport(_BaseModel):
             f"Electrostatics:\t\t{self['Electrostatics']}\n"
         )
 
-    def _get_nonbonded_energy(self) -> _kJMolQuantity:
+    def _get_nonbonded_energy(self) -> Quantity:
         nonbonded_energy = 0.0 * kj_mol
         for key in ("Nonbonded", "vdW", "Electrostatics"):
             if key in self.energies is not None:

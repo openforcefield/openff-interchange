@@ -1,7 +1,7 @@
 import numpy as np
 import parmed
 import pytest
-from openff.toolkit import ForceField, Molecule
+from openff.toolkit import ForceField, Molecule, Topology
 from openff.units import unit
 from openff.utilities import (
     get_data_file_path,
@@ -11,7 +11,7 @@ from openff.utilities import (
 )
 
 from openff.interchange import Interchange
-from openff.interchange._tests import get_test_file_path, requires_openeye
+from openff.interchange._tests import get_protein, get_test_file_path, requires_openeye
 from openff.interchange.drivers import get_amber_energies, get_openmm_energies
 from openff.interchange.exceptions import UnsupportedExportError
 
@@ -33,7 +33,9 @@ if has_package("openmm"):
 def test_atom_names_with_padding(molecule):
     # pytest processes fixtures before the decorator can be applied
     if molecule.endswith(".pdb"):
-        molecule = Molecule(get_test_file_path(molecule).as_posix())
+        molecule = Topology.from_pdb(
+            get_test_file_path(molecule).as_posix(),
+        ).molecule(0)
     else:
         molecule = Molecule.from_smiles(molecule)
 
@@ -150,9 +152,8 @@ class TestPRMTOP:
     @skip_if_missing("openmm")
     @pytest.mark.slow
     def test_atom_names_pdb(self):
-        peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
-        )
+        peptide = get_protein("MainChain_ALA_ALA")
+
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
         Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_prmtop(
