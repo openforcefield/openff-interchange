@@ -34,7 +34,12 @@ def test_atom_names_with_padding(molecule):
     # pytest processes fixtures before the decorator can be applied
     if molecule.endswith(".pdb"):
         molecule = Topology.from_pdb(
-            get_test_file_path(molecule).as_posix(),
+            file_path=get_test_file_path(molecule).as_posix(),
+            unique_molecules=[
+                Molecule.from_smiles(
+                    "COc1ccc(Nc2nc(cn3ccnc23)-c2ccc3cc[nH]c3c2)cc1OC",
+                ),
+            ],
         ).molecule(0)
     else:
         molecule = Molecule.from_smiles(molecule)

@@ -126,7 +126,7 @@ class TestGROMACSGROFile:
 
     @pytest.mark.slow
     def test_atom_names_pdb(self):
-        peptide = get_protein("MainChain_ALA_ALA.pdb")
+        peptide = get_protein("MainChain_ALA_ALA")
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
         Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_gro(
@@ -243,7 +243,7 @@ class TestGROMACS:
 
         box_vectors = from_openmm(
             openmm.app.PDBFile(
-                pdb_path=get_data_file_path(
+                get_data_file_path(
                     "proteins/MainChain_HIE.pdb",
                     "openff.toolkit",
                 ),
