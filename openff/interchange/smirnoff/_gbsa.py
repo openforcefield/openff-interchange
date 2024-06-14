@@ -12,6 +12,7 @@ from openff.interchange._annotations import (
     WrapValidator,
     _DimensionlessQuantity,
     _LengthQuantity,
+    _unit_validator_factory,
     quantity_json_serializer,
     quantity_validator,
 )
@@ -20,18 +21,10 @@ from openff.interchange.constants import kcal_mol_a2
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
 
-
-def _is_kcal_mol_a2(quantity: Quantity) -> None:
-    if quantity.is_compatible_with("kilocalorie_per_mole / angstrom ** 2"):
-        return quantity.to("kilocalorie_per_mole / angstrom ** 2")
-    else:
-        raise ValueError(f"Quantity {quantity} is not compatible with a kcal/mol/a2.")
-
-
 _KcalMolA2 = Annotated[
     Quantity,
     WrapValidator(quantity_validator),
-    AfterValidator(_is_kcal_mol_a2),
+    AfterValidator(_unit_validator_factory("kilocalorie_per_mole / angstrom ** 2")),
     WrapSerializer(quantity_json_serializer),
 ]
 

@@ -85,18 +85,9 @@ def validate_topology(value):
     if value is None:
         return None
     if isinstance(value, Topology):
-        try:
-            return Topology(other=value)
-        except Exception as exception:
-            # Topology cannot roundtrip with simple molecules
-            for molecule in value.molecules:
-                if molecule.__class__.__name__ == "_SimpleMolecule":
-                    return value
-            raise exception
+        return Topology(other=value)
     elif isinstance(value, list):
         return Topology.from_molecules(value)
-    elif value.__class__.__name__ == "_OFFBioTop":
-        raise InvalidTopologyError("_OFFBioTop is no longer supported")
     else:
         raise InvalidTopologyError(
             "Could not process topology argument, expected openff.toolkit.Topology. "

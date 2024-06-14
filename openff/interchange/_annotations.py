@@ -1,4 +1,5 @@
-import json
+import functools
+from collections.abc import Callable
 from typing import Annotated, Any
 
 import numpy
@@ -13,6 +14,60 @@ from pydantic import (
 )
 
 
+def _has_compatible_dimensionality(
+    quantity: Quantity,
+    unit: str,
+    convert: bool,
+) -> Quantity:
+    """Check if a Quantity has the same dimensionality as a given unit and optionally convert."""
+    if quantity.is_compatible_with(unit):
+        if convert:
+            return quantity.to(unit)
+        else:
+            return quantity
+    else:
+        raise ValueError(
+            f"Dimensionality of {quantity=} is not compatible with {unit=}",
+        )
+
+
+def _dimensionality_valiator_factory(unit: str) -> Callable:
+    """Return a function, meant to be passed to a validator, that checks for a specific unit."""
+    return functools.partial(_has_compatible_dimensionality, unit=unit, convert=False)
+
+
+def _unit_validator_factory(unit: str) -> Callable:
+    """Return a function, meant to be passed to a validator, that checks for a specific unit."""
+    return functools.partial(_has_compatible_dimensionality, unit=unit, convert=True)
+
+
+(
+    _is_distance,
+    _is_velocity,
+) = (
+    _dimensionality_valiator_factory(unit=_unit)
+    for _unit in [
+        "nanometer",
+        "nanometer / picosecond",
+    ]
+)
+
+(
+    _is_dimensionless,
+    _is_kj_mol,
+    _is_nanometer,
+    _is_degree,
+) = (
+    _unit_validator_factory(unit=_unit)
+    for _unit in [
+        "dimensionless",
+        "kilojoule / mole",
+        "nanometer",
+        "degree",
+    ]
+)
+
+
 def quantity_validator(
     value: str | Quantity | dict,
     handler: ValidatorFunctionWrapHandler,
@@ -20,13 +75,12 @@ def quantity_validator(
 ) -> Quantity:
     """Take Quantity-like objects and convert them to Quantity objects."""
     if info.mode == "json":
-        if isinstance(value, str):
-            value = json.loads(value)
+        assert isinstance(value, dict), "Quantity must be in dict form here."
 
         # this is coupled to how a Quantity looks in JSON
         return Quantity(value["value"], value["unit"])
 
-        # some more work is needed with arrays, lists, tuples, etc.
+        # some more work may be needed to work with arrays, lists, tuples, etc.
 
     assert info.mode == "python"
 
@@ -69,42 +123,6 @@ _Quantity = Annotated[
     WrapSerializer(quantity_json_serializer),
 ]
 
-
-def _is_dimensionless(quantity: Quantity) -> None:
-    if quantity.dimensionless:
-        return quantity
-    else:
-        raise ValueError(f"Quantity {quantity} is not dimensionless.")
-
-
-def _is_distance(quantity: Quantity) -> Quantity:
-    if quantity.is_compatible_with("nanometer"):
-        return quantity
-    else:
-        raise ValueError(f"Quantity {quantity} is not a distance.")
-
-
-def _is_velocity(quantity: Quantity) -> None:
-    if quantity.is_compatible_with("nanometer / picosecond"):
-        return quantity
-    else:
-        raise ValueError(f"Quantity {quantity} is not a velocity.")
-
-
-def _is_degree(quantity: Quantity) -> Quantity:
-    try:
-        return quantity.to("degree")
-    except Exception as error:
-        raise ValueError(f"Quantity {quantity} is compatible with degree.") from error
-
-
-def _is_kj_mol(quantity: Quantity) -> Quantity:
-    try:
-        return quantity.to("kilojoule / mole")
-    except Exception as error:
-        raise ValueError("Quantity is not compatible with kJ/mol.") from error
-
-
 _DimensionlessQuantity = Annotated[
     Quantity,
     WrapValidator(quantity_validator),
@@ -143,20 +161,13 @@ _kJMolQuantity = Annotated[
 ]
 
 
-def _is_positions(quantity: Quantity) -> Quantity:
+def _is_positions_shape(quantity: Quantity) -> Quantity:
     if quantity.m.shape[1] == 3:
         return quantity
     else:
         raise ValueError(
             f"Quantity {quantity} of wrong shape ({quantity.shape}) to be positions.",
         )
-
-
-def _is_nanometer(quantity: Quantity) -> Quantity:
-    try:
-        return quantity.to("nanometer")
-    except Exception as error:
-        raise ValueError(f"Quantity {quantity} is not a distance.") from error
 
 
 def _duck_to_nanometer(value: Any):
@@ -171,13 +182,13 @@ _PositionsQuantity = Annotated[
     Quantity,
     WrapValidator(quantity_validator),
     AfterValidator(_is_nanometer),
-    AfterValidator(_is_positions),
+    AfterValidator(_is_positions_shape),
     BeforeValidator(_duck_to_nanometer),
     WrapSerializer(quantity_json_serializer),
 ]
 
 
-def _is_box(quantity) -> Quantity:
+def _is_box_shape(quantity) -> Quantity:
     if quantity.m.shape == (3, 3):
         return quantity
     elif quantity.m.shape == (3,):
@@ -208,7 +219,7 @@ _BoxQuantity = Annotated[
     Quantity,
     WrapValidator(quantity_validator),
     AfterValidator(_is_distance),
-    AfterValidator(_is_box),
+    AfterValidator(_is_box_shape),
     BeforeValidator(_duck_to_nanometer),
     BeforeValidator(_unwrap_list_of_openmm_quantities),
     WrapSerializer(quantity_json_serializer),
