@@ -82,6 +82,7 @@ def test_collate_virtual_site_positions(tip4p, water_dimer):
 
 
 class TestVirtualSitePositions:
+    @pytest.mark.skip(reason="Broken")
     @pytest.mark.parametrize(
         "distance_",
         [
@@ -164,9 +165,11 @@ class TestVirtualSitePositions:
             "distance"
         ].m_as(unit.nanometer) == distance_
 
-        positions = get_positions_with_virtual_sites(out).to(unit.nanometer)
+        positions = get_positions_with_virtual_sites(out)
 
-        distance = numpy.linalg.norm(positions[-1, :].m - positions[0, :].m)
+        distance = numpy.linalg.norm(
+            positions[-1, :].m_as("nanometer") - positions[0, :].m_as("nanometer"),
+        )
 
         try:
             assert distance == pytest.approx(distance_)

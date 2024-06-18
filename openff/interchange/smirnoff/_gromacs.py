@@ -139,6 +139,7 @@ def _convert(
 
             topology_index = particle_map[interchange.topology.atom_index(atom)]
             key = TopologyKey(atom_indices=(topology_index,))
+
             vdw_parameters = vdw_collection.potentials[
                 vdw_collection.key_map[key]
             ].parameters

@@ -281,7 +281,18 @@ def validate_potential_dict(
             for key, val in v.items()
         }
 
-    return v
+    elif info.mode == "python":
+        # Unclear why str sometimes sneak into here in Python mode; everything
+        # should be object (PotentialKey/Potential) or dict at this point ...
+        return {
+            PotentialKey.model_validate_json(key) if isinstance(key, str) else key: (
+                Potential.model_validate_json(val) if isinstance(val, str) else val
+            )
+            for key, val in v.items()
+        }
+
+    else:
+        raise NotImplementedError(f"Validation mode {info.mode} not implemented.")
 
 
 def serialize_potential_dict(

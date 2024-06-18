@@ -2,13 +2,14 @@ import math
 from typing import Literal
 
 import numpy
-from openff.models.types.dimension_types import DegreeQuantity, DistanceQuantity
+from openff.models.types.dimension_types import DegreeQuantity
 from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     VirtualSiteHandler,
 )
 
+from openff.interchange._annotations import _Quantity
 from openff.interchange._pydantic import Field
 from openff.interchange.components._particles import _VirtualSite
 from openff.interchange.components.potentials import Potential
@@ -188,7 +189,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
 
 class _BondChargeVirtualSite(_VirtualSite):
     type: Literal["BondCharge"]
-    distance: DistanceQuantity
+    distance: _Quantity
     orientations: tuple[int, ...]
 
     @property
@@ -218,7 +219,7 @@ class _BondChargeVirtualSite(_VirtualSite):
 
 class _MonovalentLonePairVirtualSite(_VirtualSite):
     type: Literal["MonovalentLonePair"]
-    distance: DistanceQuantity
+    distance: _Quantity
     out_of_plane_angle: DegreeQuantity
     in_plane_angle: DegreeQuantity
     orientations: tuple[int, ...]
@@ -232,7 +233,7 @@ class _MonovalentLonePairVirtualSite(_VirtualSite):
         return origin_weight, x_direction, y_direction
 
     @property
-    def local_frame_positions(self) -> unit.Quantity:
+    def local_frame_positions(self) -> Quantity:
         theta = self.in_plane_angle.m_as(unit.radian)
         phi = self.out_of_plane_angle.m_as(unit.radian)
 
@@ -262,7 +263,7 @@ class _MonovalentLonePairVirtualSite(_VirtualSite):
 
 class _DivalentLonePairVirtualSite(_VirtualSite):
     type: Literal["DivalentLonePair"]
-    distance: DistanceQuantity
+    distance: _Quantity
     out_of_plane_angle: DegreeQuantity
     orientations: tuple[int, ...]
 
@@ -275,7 +276,7 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
         return origin_weight, x_direction, y_direction
 
     @property
-    def local_frame_positions(self) -> unit.Quantity:
+    def local_frame_positions(self) -> Quantity:
         theta = self.out_of_plane_angle.m_as(unit.radian)
 
         distance_unit = self.distance.units
@@ -304,7 +305,7 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
 
 class _TrivalentLonePairVirtualSite(_VirtualSite):
     type: Literal["TrivalentLonePair"]
-    distance: DistanceQuantity
+    distance: _Quantity
     orientations: tuple[int, ...]
 
     @property
@@ -316,7 +317,7 @@ class _TrivalentLonePairVirtualSite(_VirtualSite):
         return origin_weight, x_direction, y_direction
 
     @property
-    def local_frame_positions(self) -> unit.Quantity:
+    def local_frame_positions(self) -> Quantity:
         distance_unit = self.distance.units
         return Quantity(
             [-self.distance.m, 0.0, 0.0],
@@ -456,7 +457,7 @@ def _convert_local_coordinates(
 def _generate_positions(
     interchange,
     virtual_site_collection: SMIRNOFFVirtualSiteCollection,
-    conformer: Quantity | None = None,
+    conformer: _Quantity | None = None,
 ) -> Quantity:
     # TODO: Capture these objects instead of generating them on-the-fly so many times
 
