@@ -5,8 +5,8 @@
         <Constraint smirks="[#1:1]-[#8X2H2+0]-[#1:2]" id="c-tip3p-H-O-H" distance="1.5139006545247014 * angstrom"></Constraint>
     </Constraints>
     <Buckingham version="0.3" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1.0" cutoff="9.0 * angstrom ** 1" switch_width="1.0 * angstrom ** 1" periodic_method="cutoff" nonperiodic_method="no-cutoff" combining_rules="Lorentz-Berthelot">
-        <Atom smirks="[#1:1]-[#8X2H2+0]-[#1]" a="0.0 * kilojoule_per_mole ** 1" b="0.0 * nanometer ** -1" c="0.0 * kilojoule_per_mole ** 1 * nanometer ** 6"></Atom>
-        <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" a="1600000.0 * kilojoule_per_mole ** 1" b="42.0 * nanometer ** -1" c="0.003 * kilojoule_per_mole ** 1 * nanometer ** 6"></Atom>
+        <Buckingham smirks="[#1:1]-[#8X2H2+0]-[#1]" a="0.0 * kilojoule_per_mole ** 1" b="0.0 * nanometer ** -1" c="0.0 * kilojoule_per_mole ** 1 * nanometer ** 6"></Buckingham>
+        <Buckingham smirks="[#1]-[#8X2H2+0:1]-[#1]" a="1600000.0 * kilojoule_per_mole ** 1" b="42.0 * nanometer ** -1" c="0.003 * kilojoule_per_mole ** 1 * nanometer ** 6"></Buckingham>
     </Buckingham>
     <Electrostatics version="0.3" scale12="0.0" scale13="0.0" scale14="0.8333333333" scale15="1.0" cutoff="9.0 * angstrom" switch_width="0.0 * angstrom" method="PME"></Electrostatics>
     <LibraryCharges version="0.3">

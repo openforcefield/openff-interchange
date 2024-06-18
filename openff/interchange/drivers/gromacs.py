@@ -6,7 +6,7 @@ from importlib import resources
 from pathlib import Path
 from shutil import which
 
-from openff.toolkit import Quantity, unit
+from openff.toolkit import Quantity
 from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.interchange import Interchange
@@ -93,7 +93,7 @@ def _get_gromacs_energies(
     mdp: str = "auto",
     round_positions: int = 8,
     merge_atom_types: bool = False,
-) -> dict[str, unit.Quantity]:
+) -> dict[str, Quantity]:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             prefix = "_tmp"
@@ -123,7 +123,7 @@ def _run_gmx_energy(
     gro_file: Path | str,
     mdp_file: Path | str,
     maxwarn: int = 1,
-) -> dict[str, unit.Quantity]:
+) -> dict[str, Quantity]:
     """
     Given GROMACS files, return single-point energies as computed by GROMACS.
 
@@ -140,7 +140,7 @@ def _run_gmx_energy(
 
     Returns
     -------
-    energies: Dict[str, unit.Quantity]
+    energies: Dict[str, Quantity]
         A dictionary of energies, keyed by the GROMACS energy term name.
 
     """
@@ -212,7 +212,7 @@ def _get_gmx_energy_torsion(gmx_energies: dict) -> Quantity:
 
 
 @requires_package("panedr")
-def _parse_gmx_energy(edr_path: str) -> dict[str, unit.Quantity]:
+def _parse_gmx_energy(edr_path: str) -> dict[str, Quantity]:
     """Parse an `.edr` file written by `gmx energy`."""
     import panedr
 
@@ -249,7 +249,7 @@ def _parse_gmx_energy(edr_path: str) -> dict[str, unit.Quantity]:
 
 
 def _process(
-    energies: dict[str, unit.Quantity],
+    energies: dict[str, Quantity],
     detailed: bool = False,
 ) -> EnergyReport:
     """Process energies from GROMACS into a standardized format."""

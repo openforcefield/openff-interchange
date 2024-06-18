@@ -49,7 +49,7 @@ class TestCreate:
         """Ensure tip3p charges packaged with sage are applied over AM1-BCC charges.
         https://github.com/openforcefield/openff-toolkit/issues/1199"""
         out = Interchange.from_smirnoff(force_field=sage, topology=[water])
-        found_charges = [v.m for v in out["Electrostatics"].charges.values()]
+        found_charges = [v.m for v in out["Electrostatics"]._get_charges().values()]
 
         assert numpy.allclose(found_charges, [-0.834, 0.417, 0.417])
 
@@ -176,9 +176,11 @@ class TestChargeFromMolecules:
         )
 
         found_charges_no_uses = [
-            v.m for v in default["Electrostatics"].charges.values()
+            v.m for v in default["Electrostatics"]._get_charges().values()
         ]
-        found_charges_uses = [v.m for v in uses["Electrostatics"].charges.values()]
+        found_charges_uses = [
+            v.m for v in uses["Electrostatics"]._get_charges().values()
+        ]
 
         assert not numpy.allclose(found_charges_no_uses, found_charges_uses)
 
@@ -231,7 +233,7 @@ class TestChargeFromMolecules:
         )
 
         expected_charges = [0.3, 0.0, -0.3]
-        found_charges = [v.m for v in out["Electrostatics"].charges.values()]
+        found_charges = [v.m for v in out["Electrostatics"]._get_charges().values()]
 
         assert numpy.allclose(expected_charges, found_charges)
 

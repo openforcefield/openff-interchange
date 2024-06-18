@@ -6,9 +6,9 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
 )
 from openff.utilities.testing import skip_if_missing
+from pydantic import ValidationError
 
 from openff.interchange import Interchange
-from openff.interchange._pydantic import ValidationError
 from openff.interchange._tests import (
     MoleculeWithConformer,
     get_test_file_path,
@@ -375,7 +375,7 @@ class TestInterchangeSerialization:
             topology=topology,
         )
 
-        roundtripped = Interchange.parse_raw(original.json())
+        roundtripped = Interchange.model_validate_json(original.model_dump_json())
 
         get_openmm_energies(original, combine_nonbonded_forces=False).compare(
             get_openmm_energies(roundtripped, combine_nonbonded_forces=False),

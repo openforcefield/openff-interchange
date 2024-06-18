@@ -3,22 +3,28 @@
 import ast
 import json
 import warnings
-from collections.abc import Callable
-from typing import Union
+from typing import Annotated, Any, Union
 
 import numpy
-from openff.models.models import DefaultModel
-from openff.models.types import ArrayQuantity, FloatQuantity
 from openff.toolkit import Quantity
 from openff.utilities.utilities import has_package, requires_package
+from pydantic import (
+    Field,
+    PrivateAttr,
+    ValidationInfo,
+    ValidatorFunctionWrapHandler,
+    WrapSerializer,
+)
+from pydantic.functional_validators import WrapValidator
 
-from openff.interchange._pydantic import Field, PrivateAttr, validator
+from openff.interchange._annotations import _Quantity
 from openff.interchange.exceptions import MissingParametersError
 from openff.interchange.models import (
     LibraryChargeTopologyKey,
     PotentialKey,
     TopologyKey,
 )
+from openff.interchange.pydantic import _BaseModel
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if has_package("jax"):
@@ -43,79 +49,37 @@ def __getattr__(name: str):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-def potential_loader(data: str) -> dict:
-    """Load a JSON blob dumped from a `Collection`."""
-    tmp: dict[str, int | bool | str | dict] = {}
-
-    for key, val in json.loads(data).items():
-        if isinstance(val, (str, type(None))):
-            tmp[key] = val  # type: ignore
-        elif isinstance(val, dict):
-            if key == "parameters":
-                tmp["parameters"] = dict()
-
-                for key_, val_ in val.items():
-                    loaded = json.loads(val_)
-                    tmp["parameters"][key_] = Quantity(  # type: ignore[index]
-                        loaded["val"],
-                        loaded["unit"],
-                    )
-
-    return tmp
-
-
-class Potential(DefaultModel):
+class Potential(_BaseModel):
     """Base class for storing applied parameters."""
 
-    parameters: dict[str, FloatQuantity] = dict()
+    parameters: dict[str, _Quantity] = Field(dict())
     map_key: int | None = None
-
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders: dict[type, Callable] = DefaultModel.Config.json_encoders
-        json_loads: Callable = potential_loader
-        validate_assignment: bool = True
-        arbitrary_types_allowed: bool = True
-
-    @validator("parameters")
-    def validate_parameters(
-        cls,
-        v: dict[str, ArrayQuantity | FloatQuantity],
-    ) -> dict[str, FloatQuantity]:
-        for key, val in v.items():
-            if isinstance(val, list):
-                v[key] = ArrayQuantity.validate_type(val)
-            else:
-                v[key] = FloatQuantity.validate_type(val)
-        return v
 
     def __hash__(self) -> int:
         return hash(tuple(self.parameters.values()))
 
 
-class WrappedPotential(DefaultModel):
+class WrappedPotential(_BaseModel):
     """Model storing other Potential model(s) inside inner data."""
 
-    class InnerData(DefaultModel):
-        """The potentials being wrapped."""
-
-        data: dict[Potential, float]
-
-    _inner_data: InnerData = PrivateAttr()
+    _inner_data: dict[Potential, float] = PrivateAttr()
 
     def __init__(self, data: Potential | dict) -> None:
+        # Needed to set some Pydantic magic, at least __pydantic_private__;
+        # won't actually process the input here
+        super().__init__()
+
         if isinstance(data, Potential):
-            self._inner_data = self.InnerData(data={data: 1.0})
-        elif isinstance(data, dict):
-            self._inner_data = self.InnerData(data=data)
+            data = {data: 1.0}
+
+        self._inner_data = data
 
     @property
-    def parameters(self) -> dict[str, FloatQuantity]:
+    def parameters(self) -> dict[str, Quantity]:
         """Get the parameters as represented by the stored potentials and coefficients."""
         keys: set[str] = {
             param_key
-            for pot in self._inner_data.data.keys()
+            for pot in self._inner_data.keys()
             for param_key in pot.parameters.keys()
         }
         params = dict()
@@ -124,17 +88,155 @@ class WrappedPotential(DefaultModel):
                 {
                     key: sum(
                         coeff * pot.parameters[key]
-                        for pot, coeff in self._inner_data.data.items()
+                        for pot, coeff in self._inner_data.items()
                     ),
                 },
             )
         return params
 
     def __repr__(self) -> str:
-        return str(self._inner_data.data)
+        return str(self._inner_data)
 
 
-class Collection(DefaultModel):
+def validate_potential_or_wrapped_potential(
+    v: Any,
+    handler: ValidatorFunctionWrapHandler,
+    info: ValidationInfo,
+) -> dict[str, Quantity]:
+    """Validate the parameters field of a Potential object."""
+    if info.mode == "json":
+        if "parameters" in v:
+            return Potential.model_validate(v)
+        else:
+            return WrappedPotential.model_validate(v)
+
+
+PotentialOrWrappedPotential = Annotated[
+    Union[Potential, WrappedPotential],
+    WrapValidator(validate_potential_or_wrapped_potential),
+]
+
+
+def validate_key_map(v: Any, handler, info) -> dict:
+    """Validate the key_map field of a Collection object."""
+    from openff.interchange.models import (
+        AngleKey,
+        BondKey,
+        ImproperTorsionKey,
+        LibraryChargeTopologyKey,
+        ProperTorsionKey,
+        SingleAtomChargeTopologyKey,
+    )
+
+    tmp = dict()
+    if info.mode in ("json", "python"):
+        for key, val in v.items():
+            val_dict = json.loads(val)
+
+            match val_dict["associated_handler"]:
+                case "Bonds":
+                    key_class = BondKey
+                case "Angles":
+                    key_class = AngleKey
+                case "ProperTorsions":
+                    key_class = ProperTorsionKey
+                case "ImproperTorsions":
+                    key_class = ImproperTorsionKey
+                case "LibraryCharges":
+                    key_class = LibraryChargeTopologyKey
+                case "ToolkitAM1BCCHandler":
+                    key_class = SingleAtomChargeTopologyKey
+
+                case _:
+                    key_class = TopologyKey
+
+            try:
+                tmp.update(
+                    {
+                        key_class.model_validate_json(
+                            key,
+                        ): PotentialKey.model_validate_json(val),
+                    },
+                )
+            except Exception:
+                raise ValueError(val_dict["associated_handler"])
+
+            del key_class
+
+        v = tmp
+
+    else:
+        raise ValueError(f"Validation mode {info.mode} not implemented.")
+
+    return v
+
+
+def serialize_key_map(value: dict[str, str], handler, info) -> dict[str, str]:
+    """Serialize the parameters field of a Potential object."""
+    if info.mode == "json":
+        return {
+            key.model_dump_json(): value.model_dump_json()
+            for key, value in value.items()
+        }
+
+    else:
+        raise NotImplementedError(f"Serialization mode {info.mode} not implemented.")
+
+
+KeyMap = Annotated[
+    dict[TopologyKey | LibraryChargeTopologyKey, PotentialKey],
+    WrapValidator(validate_key_map),
+    WrapSerializer(serialize_key_map),
+]
+
+
+def validate_potential_dict(
+    v: Any,
+    handler: ValidatorFunctionWrapHandler,
+    info: ValidationInfo,
+):
+    """Validate the parameters field of a Potential object."""
+    if info.mode == "json":
+        return {
+            PotentialKey.model_validate_json(key): Potential.model_validate_json(val)
+            for key, val in v.items()
+        }
+
+    elif info.mode == "python":
+        # Unclear why str sometimes sneak into here in Python mode; everything
+        # should be object (PotentialKey/Potential) or dict at this point ...
+        return {
+            PotentialKey.model_validate_json(key) if isinstance(key, str) else key: (
+                Potential.model_validate_json(val) if isinstance(val, str) else val
+            )
+            for key, val in v.items()
+        }
+
+    else:
+        raise NotImplementedError(f"Validation mode {info.mode} not implemented.")
+
+
+def serialize_potential_dict(
+    value: dict[str, Quantity],
+    handler,
+    info,
+) -> dict[str, str]:
+    """Serialize the parameters field of a Potential object."""
+    if info.mode == "json":
+        return {
+            key.model_dump_json(): value.model_dump_json()
+            for key, value in value.items()
+        }
+
+
+Potentials = Annotated[
+    dict[PotentialKey, PotentialOrWrappedPotential],
+    WrapValidator(validate_potential_dict),
+    WrapSerializer(serialize_potential_dict),
+]
+
+
+class Collection(_BaseModel):
     """Base class for storing parametrized force field data."""
 
     type: str = Field(..., description="The type of potentials this handler stores.")
@@ -146,11 +248,11 @@ class Collection(DefaultModel):
         ...,
         description="The analytical expression governing the potentials in this handler.",
     )
-    key_map: dict[TopologyKey | LibraryChargeTopologyKey, PotentialKey] = Field(
+    key_map: KeyMap = Field(
         dict(),
         description="A mapping between TopologyKey objects and PotentialKey objects.",
     )
-    potentials: dict[PotentialKey, Potential | WrappedPotential] = Field(
+    potentials: Potentials = Field(
         dict(),
         description="A mapping between PotentialKey objects and Potential objects.",
     )
@@ -316,3 +418,46 @@ class Collection(DefaultModel):
             return self.key_map
         else:
             return super().__getattribute__(attr)
+
+
+def validate_collections(
+    v: Any,
+    handler: ValidatorFunctionWrapHandler,
+    info: ValidationInfo,
+) -> dict:
+    """Validate the collections dict from a JSON blob."""
+    from openff.interchange.smirnoff import (
+        SMIRNOFFAngleCollection,
+        SMIRNOFFBondCollection,
+        SMIRNOFFConstraintCollection,
+        SMIRNOFFElectrostaticsCollection,
+        SMIRNOFFImproperTorsionCollection,
+        SMIRNOFFProperTorsionCollection,
+        SMIRNOFFvdWCollection,
+        SMIRNOFFVirtualSiteCollection,
+    )
+
+    _class_mapping = {
+        "Bonds": SMIRNOFFBondCollection,
+        "Angles": SMIRNOFFAngleCollection,
+        "Constraints": SMIRNOFFConstraintCollection,
+        "ProperTorsions": SMIRNOFFProperTorsionCollection,
+        "ImproperTorsions": SMIRNOFFImproperTorsionCollection,
+        "vdW": SMIRNOFFvdWCollection,
+        "Electrostatics": SMIRNOFFElectrostaticsCollection,
+        "VirtualSites": SMIRNOFFVirtualSiteCollection,
+    }
+
+    if info.mode in ("json", "python"):
+        return {
+            collection_name: _class_mapping[collection_name].model_validate(
+                collection_data,
+            )
+            for collection_name, collection_data in v.items()
+        }
+
+
+_AnnotatedCollections = Annotated[
+    dict[str, Collection],
+    WrapValidator(validate_collections),
+]

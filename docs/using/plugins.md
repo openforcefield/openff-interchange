@@ -102,7 +102,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 
 class BuckinghamHandler(ParameterHandler):
     class BuckinghamType(ParameterType):
-        _VALENCE_TYPE = "Atom"
         _ELEMENT_NAME = "Atom"
 
         a = ParameterAttribute(default=None, unit=unit.kilojoule_per_mole)
@@ -138,7 +137,6 @@ Notice that
 * `BuckinghamHandler` (the "handler class") is a subclass of `ParameterHandler`
 * `BuckinghamType` (the "type class")
   * is a subclass of `ParameterType`
-  * defines `"Atom"` as its `_VALENCE_TYPE`, or chemical environment
   * defines `"Atom"` as its `_ELEMENT_TYPE`, which defines how it is serialized
   * has unit-tagged attributes `a`, `b`, and `c`, corresponding to particular values for each parameter
 * the handler class also

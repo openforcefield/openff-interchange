@@ -3,7 +3,7 @@
 import tempfile
 
 import numpy
-from openff.toolkit import Quantity, unit
+from openff.toolkit import Quantity
 from openff.utilities import MissingOptionalDependencyError, requires_package
 
 from openff.interchange import Interchange
@@ -53,7 +53,7 @@ def get_lammps_energies(
 def _get_lammps_energies(
     interchange: Interchange,
     round_positions: int | None = None,
-) -> dict[str, unit.Quantity]:
+) -> dict[str, Quantity]:
     import lammps
 
     if round_positions is not None:
@@ -98,7 +98,7 @@ def _get_lammps_energies(
 
 
 def _process(
-    energies: dict[str, unit.Quantity],
+    energies: dict[str, Quantity],
     detailed: bool = False,
 ) -> EnergyReport:
     if detailed:

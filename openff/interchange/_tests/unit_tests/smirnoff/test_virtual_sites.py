@@ -53,7 +53,7 @@ class TestSMIRNOFFVirtualSiteCharges:
             "BondCharge",
         }
 
-        charges = [charge.m for charge in out["Electrostatics"].charges.values()]
+        charges = [charge.m for charge in out["Electrostatics"]._get_charges().values()]
 
         assert sum(charges) == 0.0
 
@@ -590,7 +590,7 @@ class TestSMIRNOFFVirtualSites:
             nitrogen.to_topology(),
         )
 
-        charges = [charge.m for charge in out["Electrostatics"].charges.values()]
+        charges = [charge.m for charge in out["Electrostatics"]._get_charges().values()]
 
         assert sum(charges) == pytest.approx(0.0)
 

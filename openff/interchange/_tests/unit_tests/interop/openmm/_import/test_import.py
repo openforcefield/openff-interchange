@@ -84,6 +84,7 @@ class TestFromOpenMM:
             box = Interchange.from_openmm(system=simple_system).box
 
         assert box.shape == (3, 3)
+
         assert type(box.m[2][2]) in (float, numpy.float64, numpy.float32)
         assert type(box.m[1][1]) is not Quantity
 

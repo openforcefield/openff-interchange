@@ -139,10 +139,12 @@ def _convert(
 
             topology_index = particle_map[interchange.topology.atom_index(atom)]
             key = TopologyKey(atom_indices=(topology_index,))
+
             vdw_parameters = vdw_collection.potentials[
                 vdw_collection.key_map[key]
             ].parameters
-            charge = electrostatics_collection.charges[key]
+
+            charge = electrostatics_collection._get_charges()[key]
 
             # Build atom types
             system.atom_types[atom_type_name] = LennardJonesAtomType(
@@ -167,7 +169,8 @@ def _convert(
             vdw_parameters = vdw_collection.potentials[
                 vdw_collection.key_map[virtual_site_key]
             ].parameters
-            charge = electrostatics_collection.charges[key]
+
+            charge = electrostatics_collection._get_charges()[key]
 
             # TODO: Separate class for "atom types" representing virtual sites?
             system.atom_types[atom_type_name] = LennardJonesAtomType(
@@ -184,7 +187,7 @@ def _convert(
     _partial_charges: dict[int | VirtualSiteKey, float] = dict()
 
     # Indexed by particle (atom or virtual site) indices
-    for key, charge in interchange["Electrostatics"].charges.items():
+    for key, charge in interchange["Electrostatics"]._get_charges().items():
         if type(key) is TopologyKey:
             _partial_charges[key.atom_indices[0]] = charge
         elif type(key) is VirtualSiteKey:
@@ -615,7 +618,7 @@ def _convert_virtual_sites(
                 residue_index=molecule.atoms[0].residue_index,
                 residue_name=molecule.atoms[0].residue_name,
                 charge_group_number=1,
-                charge=interchange["Electrostatics"].charges[virtual_site_key],
+                charge=interchange["Electrostatics"]._get_charges()[virtual_site_key],
                 mass=Quantity(0.0, unit.dalton),
             ),
         )

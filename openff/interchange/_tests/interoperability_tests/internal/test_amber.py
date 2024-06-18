@@ -10,6 +10,7 @@ from openff.utilities import (
 )
 
 from openff.interchange import Interchange
+from openff.interchange._tests import get_protein
 from openff.interchange.drivers import get_amber_energies, get_openmm_energies
 
 if has_package("openmm"):
@@ -93,9 +94,7 @@ class TestPRMTOP:
         import MDAnalysis
         import mdtraj
 
-        peptide = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
-        )
+        peptide = get_protein("MainChain_ALA_ALA")
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
         Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_prmtop(

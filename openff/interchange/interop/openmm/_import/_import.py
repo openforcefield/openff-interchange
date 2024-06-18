@@ -1,7 +1,6 @@
 import warnings
 from typing import TYPE_CHECKING, Union
 
-from openff.models.types import ArrayQuantity
 from openff.toolkit import Quantity, Topology
 from openff.utilities.utilities import has_package, requires_package
 
@@ -105,18 +104,23 @@ def from_openmm(
         interchange.positions = positions
 
     if box_vectors is not None:
-        _box_vectors = box_vectors
+        _box_vectors: Quantity = box_vectors
 
     elif topology is not None:
         if isinstance(topology, openmm.app.Topology):
-            _box_vectors = topology.getPeriodicBoxVectors()
+            from openff.units.openmm import from_openmm as from_openmm_
+
+            _box_vectors = from_openmm_(topology.getPeriodicBoxVectors())
         elif isinstance(topology, Topology):
             _box_vectors = topology.box_vectors
 
     else:
-        _box_vectors = system.getDefaultPeriodicBoxVectors()
+        from openff.units.openmm import from_openmm as from_openmm_
 
-    interchange.box = ArrayQuantity.validate_type(_box_vectors)
+        _box_vectors = from_openmm_(system.getDefaultPeriodicBoxVectors())
+
+    # TODO: There should probably be a more public box validator, checking for shape, etc.
+    interchange.box = _box_vectors
 
     if interchange.topology is not None:
         if interchange.topology.n_bonds > len(interchange.collections["Bonds"].key_map):
@@ -388,7 +392,7 @@ def _fill_in_rigid_water_bonds(interchange: "Interchange"):
                 ),
             )
 
-            if bond_key not in interchange["Bonds"]:
+            if bond_key not in interchange["Bonds"].key_map:
                 # add 1 A / 50,000 kcal/mol/A2 force constant
                 interchange["Bonds"].key_map.update({bond_key: rigid_water_bond_key})
 
@@ -401,7 +405,7 @@ def _fill_in_rigid_water_bonds(interchange: "Interchange"):
                 ),
             )
 
-            if angle_key not in interchange["Angles"]:
+            if angle_key not in interchange["Angles"].key_map:
                 # add very flimsy force constant, since equilibrium angles differ
                 # across models
                 interchange["Angles"].key_map.update({angle_key: rigid_water_angle_key})

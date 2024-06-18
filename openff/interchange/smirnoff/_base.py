@@ -1,10 +1,7 @@
 import abc
-import json
-from typing import TypeVar
+from typing import Literal, TypeVar
 
-from openff.models.models import DefaultModel
-from openff.models.types import custom_quantity_encoder
-from openff.toolkit import Quantity, Topology, unit
+from openff.toolkit import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -13,7 +10,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ProperTorsionHandler,
 )
 
-from openff.interchange.components.potentials import Collection, Potential
+from openff.interchange.components.potentials import Collection
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     SMIRNOFFParameterAttributeNotImplementedError,
@@ -29,75 +26,6 @@ from openff.interchange.models import (
 
 T = TypeVar("T", bound="SMIRNOFFCollection")
 TP = TypeVar("TP", bound="ParameterHandler")
-
-
-def _sanitize(o) -> str | dict:
-    # `BaseModel.json()` assumes that all keys and values in dicts are JSON-serializable, which is a problem
-    # for the mapping dicts `key_map` and `potentials`.
-    if isinstance(o, dict):
-        return {_sanitize(k): _sanitize(v) for k, v in o.items()}
-    elif isinstance(o, DefaultModel):
-        return o.json()
-    elif isinstance(o, unit.Quantity):
-        return custom_quantity_encoder(o)
-    return o
-
-
-def dump_collection(v, *, default):
-    """Dump a SMIRNOFFCollection to JSON after converting to compatible types."""
-    return json.dumps(_sanitize(v), default=default)
-
-
-def collection_loader(data: str) -> dict:
-    """Load a JSON blob dumped from a `Collection`."""
-    tmp: dict[str, int | float | bool | str | dict | None] = {}
-
-    for key, val in json.loads(data).items():
-        if val is None:
-            tmp[key] = val
-        elif isinstance(val, (int, float, bool)):
-            tmp[key] = val
-        elif isinstance(val, (str)):
-            # These are stored as string but must be parsed into `Quantity`
-            if key in ("cutoff", "switch_width"):
-                tmp[key] = Quantity(*json.loads(val).values())  # type: ignore[arg-type]
-            else:
-                tmp[key] = val
-        elif isinstance(val, dict):
-            if key == "key_map":
-                key_map = {}
-
-                for key_, val_ in val.items():
-                    if "atom_indices" in key_:
-                        topology_key: TopologyKey | LibraryChargeTopologyKey = (
-                            TopologyKey.parse_raw(key_)
-                        )
-
-                    else:
-                        topology_key = LibraryChargeTopologyKey.parse_raw(key_)
-
-                    # TODO: Not obvious if cosmetic attributes survive here
-                    potential_key = PotentialKey(**val_)
-
-                    key_map[topology_key] = potential_key
-
-                tmp[key] = key_map  # type: ignore[assignment]
-
-            elif key == "potentials":
-                potentials = {}
-
-                for key_, val_ in val.items():
-                    potential_key = PotentialKey.parse_raw(key_)
-                    potential = Potential.parse_raw(json.dumps(val_))
-
-                    potentials[potential_key] = potential
-
-                tmp[key] = potentials  # type: ignore[assignment]
-
-            else:
-                raise NotImplementedError(f"Cannot parse {key} in this JSON.")
-
-    return tmp
 
 
 # Coped from the toolkit, see
@@ -186,19 +114,13 @@ def _check_all_valence_terms_assigned(
 class SMIRNOFFCollection(Collection, abc.ABC):
     """Base class for handlers storing potentials produced by SMIRNOFF force fields."""
 
+    type: Literal["Bonds"] = "Bonds"
+
     is_plugin: bool = False
 
     def modify_openmm_forces(self, *args, **kwargs):
         """Optionally modify, create, or delete forces. Currently only available to plugins."""
         raise NotImplementedError()
-
-    class Config:
-        """Default configuration options for SMIRNOFF potential handlers."""
-
-        json_dumps = dump_collection
-        json_loads = collection_loader
-        validate_assignment = True
-        arbitrary_types_allowed = True
 
     @classmethod
     @abc.abstractmethod
@@ -291,7 +213,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
 
     @classmethod
     def create(
-        cls: type[T],
+        cls,  # type[T],
         parameter_handler: TP,
         topology: "Topology",
     ) -> T:

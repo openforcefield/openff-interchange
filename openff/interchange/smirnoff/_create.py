@@ -78,6 +78,23 @@ def _check_supported_handlers(force_field: ForceField):
         )
 
 
+def validate_topology(value):
+    """Validate a topology-like argument, spliced from a previous validator."""
+    from openff.interchange.exceptions import InvalidTopologyError
+
+    if value is None:
+        return None
+    if isinstance(value, Topology):
+        return Topology(other=value)
+    elif isinstance(value, list):
+        return Topology.from_molecules(value)
+    else:
+        raise InvalidTopologyError(
+            "Could not process topology argument, expected openff.toolkit.Topology. "
+            f"Found object of type {type(value)}.",
+        )
+
+
 def _create_interchange(
     force_field: ForceField,
     topology: Topology | list[Molecule],
@@ -87,11 +104,13 @@ def _create_interchange(
     partial_bond_orders_from_molecules: list[Molecule] | None = None,
     allow_nonintegral_charges: bool = False,
 ) -> Interchange:
+
     _check_supported_handlers(force_field)
 
     interchange = Interchange()
 
-    _topology = Interchange.validate_topology(topology)
+    # TODO: Need to re-introduce logic lost when validator re-use was nuked
+    _topology = validate_topology(topology)
 
     interchange.positions = _infer_positions(_topology, positions)
 
@@ -384,12 +403,20 @@ def _plugins(
                         f"Collection {collection} requires multiple handlers, but only one was provided.",
                     )
 
-                collection = collection_class.create(
-                    parameter_handler=force_field[handler_class._TAGNAME],
-                    topology=topology,
-                    vdw_collection=interchange[tagnames[0]],
-                    electrostatics_collection=interchange["Electrostatics"],
-                )
+                try:
+                    collection = collection_class.create(
+                        parameter_handler=force_field[handler_class._TAGNAME],
+                        topology=topology,
+                        vdw_collection=interchange[tagnames[0]],
+                        electrostatics_collection=interchange["Electrostatics"],
+                    )
+                except TypeError:
+                    collection = collection_class.create(
+                        parameter_handler=force_field[handler_class._TAGNAME],
+                        topology=topology,
+                        vdw_collection=interchange[tagnames[0]],
+                        electrostatics_collection=interchange["Electrostatics"],
+                    )
 
         else:
             # If this collection takes multiple handlers, pass it a list. Consider making this type the default.
