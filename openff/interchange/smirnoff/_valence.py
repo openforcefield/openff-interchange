@@ -137,7 +137,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
         if self.key_map:
             # TODO: Should the key_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
-            self.key_map: dict[BondKey, PotentialKey] = dict()  # type: ignore[assignment]
+            self.key_map: dict[BondKey, PotentialKey] = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             parameter: BondHandler.BondType = val.parameter_type
@@ -194,7 +194,10 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
             smirks = potential_key.id
             force_field_parameters = parameter_handler.parameters[smirks]
 
+            assert isinstance(topology_key, BondKey)
+
             if topology_key.bond_order:
+
                 bond_order = topology_key.bond_order
                 if force_field_parameters.k_bondorder:
                     data = force_field_parameters.k_bondorder
@@ -497,7 +500,8 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
 
         """
         if self.key_map:
-            self.key_map: dict[ProperTorsionKey, PotentialKey] = dict()  # type: ignore[assignment]
+            self.key_map: dict[ProperTorsionKey, PotentialKey] = dict()
+
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             parameter: ProperTorsionHandler.ProperTorsionType = val.parameter_type
@@ -558,6 +562,8 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
             smirks = potential_key.id
             n = potential_key.mult
             parameter = parameter_handler.parameters[smirks]
+
+            assert isinstance(topology_key, ProperTorsionKey)
 
             if topology_key.bond_order:
                 bond_order = topology_key.bond_order

@@ -1,3 +1,4 @@
+import builtins
 import copy
 import functools
 import warnings
@@ -193,7 +194,7 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
 
     @classmethod
     def create(
-        cls: type[T],
+        cls: builtins.type[T],
         parameter_handler: vdWHandler,
         topology: Topology,
     ) -> T:
@@ -266,7 +267,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         "Coulomb",
         "cutoff",
         "no-cutoff",
-        "reaction-field",
     ] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
@@ -290,14 +290,14 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @property
     def _charges_without_virtual_sites(
         self,
-    ) -> dict[TopologyKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
         return self._get_charges(include_virtual_sites=False)
 
     @property
     def charges(
         self,
-    ) -> dict[TopologyKey | VirtualSiteKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:
             self._charges = self._get_charges(include_virtual_sites=True)
@@ -308,7 +308,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     def _get_charges(
         self,
         include_virtual_sites=True,
-    ) -> dict[TopologyKey | VirtualSiteKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
         """Get the total partial charge on each atom or particle."""
         # Keyed by index for atoms and by VirtualSiteKey for virtual sites.
         charges: dict[VirtualSiteKey | int, Quantity] = dict()
@@ -408,7 +408,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
     @classmethod
     def create(
-        cls: type[T],
+        cls: builtins.type[T],
         parameter_handler: Any,
         topology: Topology,
         charge_from_molecules=None,

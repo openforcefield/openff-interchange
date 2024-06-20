@@ -1,5 +1,6 @@
 import abc
-from typing import Literal, TypeVar
+import builtins
+from typing import TypeVar
 
 from openff.toolkit import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -114,9 +115,11 @@ def _check_all_valence_terms_assigned(
 class SMIRNOFFCollection(Collection, abc.ABC):
     """Base class for handlers storing potentials produced by SMIRNOFF force fields."""
 
-    type: Literal["Bonds"] = "Bonds"
+    type: str = "BASE_CLASS"
 
     is_plugin: bool = False
+
+    expression: str = "BASE_CLASS"
 
     def modify_openmm_forces(self, *args, **kwargs):
         """Optionally modify, create, or delete forces. Currently only available to plugins."""
@@ -213,7 +216,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
 
     @classmethod
     def create(
-        cls,  # type[T],
+        cls: builtins.type[T],
         parameter_handler: TP,
         topology: "Topology",
     ) -> T:
@@ -240,6 +243,6 @@ class SMIRNOFFCollection(Collection, abc.ABC):
 
     def __repr__(self) -> str:
         return (
-            f"Handler '{self.type}' with expression '{self.expression}', {len(self.key_map)} mapping keys, "
+            f"Handler '{self.type_}' with expression '{self.expression}', {len(self.key_map)} mapping keys, "
             f"and {len(self.potentials)} potentials"
         )

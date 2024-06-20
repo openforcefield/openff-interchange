@@ -22,7 +22,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler, BondCollection):
     """Handler storing bond potentials as produced by a Foyer force field."""
 
     type: Literal["Bonds"] = "Bonds"
-    expression: str = "k/2*(r-length)**2"
+    expression: Literal["k/2*(r-length)**2"] = "k/2*(r-length)**2"
     force_field_key: str = "harmonic_bonds"
     connection_attribute: str = "bonds"
 
@@ -59,7 +59,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler, AngleCollection):
     """Handler storing angle potentials as produced by a Foyer force field."""
 
     type: Literal["Angles"] = "Angles"
-    expression: str = "k/2*(theta-angle)**2"
+    expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
     force_field_key: str = "harmonic_angles"
     connection_attribute: str = "angles"
 

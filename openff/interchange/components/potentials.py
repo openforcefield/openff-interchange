@@ -102,13 +102,16 @@ def validate_potential_or_wrapped_potential(
     v: Any,
     handler: ValidatorFunctionWrapHandler,
     info: ValidationInfo,
-) -> dict[str, Quantity]:
+) -> Potential | WrappedPotential:
     """Validate the parameters field of a Potential object."""
     if info.mode == "json":
         if "parameters" in v:
             return Potential.model_validate(v)
         else:
             return WrappedPotential.model_validate(v)
+
+    else:
+        raise NotImplementedError(f"Validation mode {info.mode} not implemented.")
 
 
 PotentialOrWrappedPotential = Annotated[
@@ -132,6 +135,8 @@ def validate_key_map(v: Any, handler, info) -> dict:
     if info.mode in ("json", "python"):
         for key, val in v.items():
             val_dict = json.loads(val)
+
+            key_class: type[TopologyKey | LibraryChargeTopologyKey]
 
             match val_dict["associated_handler"]:
                 case "Bonds":
@@ -171,7 +176,11 @@ def validate_key_map(v: Any, handler, info) -> dict:
     return v
 
 
-def serialize_key_map(value: dict[str, str], handler, info) -> dict[str, str]:
+def serialize_key_map(
+    value: dict[TopologyKey, PotentialKey],
+    handler,
+    info,
+) -> dict[str, str]:
     """Serialize the parameters field of a Potential object."""
     if info.mode == "json":
         return {
@@ -217,7 +226,7 @@ def validate_potential_dict(
 
 
 def serialize_potential_dict(
-    value: dict[str, Quantity],
+    value: dict[PotentialKey, Potential],
     handler,
     info,
 ) -> dict[str, str]:
@@ -227,6 +236,8 @@ def serialize_potential_dict(
             key.model_dump_json(): value.model_dump_json()
             for key, value in value.items()
         }
+    else:
+        raise NotImplementedError(f"Serialization mode {info.mode} not implemented.")
 
 
 Potentials = Annotated[
@@ -429,6 +440,7 @@ def validate_collections(
     from openff.interchange.smirnoff import (
         SMIRNOFFAngleCollection,
         SMIRNOFFBondCollection,
+        SMIRNOFFCollection,
         SMIRNOFFConstraintCollection,
         SMIRNOFFElectrostaticsCollection,
         SMIRNOFFImproperTorsionCollection,
@@ -437,7 +449,7 @@ def validate_collections(
         SMIRNOFFVirtualSiteCollection,
     )
 
-    _class_mapping = {
+    _class_mapping: dict[str, type[SMIRNOFFCollection]] = {
         "Bonds": SMIRNOFFBondCollection,
         "Angles": SMIRNOFFAngleCollection,
         "Constraints": SMIRNOFFConstraintCollection,
@@ -455,6 +467,9 @@ def validate_collections(
             )
             for collection_name, collection_data in v.items()
         }
+
+    else:
+        raise NotImplementedError(f"Validation mode {info.mode} not implemented.")
 
 
 _AnnotatedCollections = Annotated[

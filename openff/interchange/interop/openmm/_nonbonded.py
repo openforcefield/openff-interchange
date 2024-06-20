@@ -708,7 +708,7 @@ def _create_multiple_nonbonded_forces(
                             eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
                         else:
                             raise UnsupportedExportError(
-                                f"Unsupported mixing rule: {data['mixing_rule']}",
+                                f"Unsupported mixing rule: {data.mixing_rule}",
                             )
 
                         # ... and set the 1-4 interactions

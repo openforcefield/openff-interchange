@@ -93,6 +93,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
         "Ewald3D-ConductingBoundary",
         "cutoff",
         "no-cutoff",
+        "reaction-field",
     ] = Field(_PME)
     nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
@@ -106,7 +107,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
     _charges_cached: bool = PrivateAttr(default=False)
 
     @property
-    def charges(self) -> dict[TopologyKey, Quantity]:
+    def charges(self) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:
             self._charges = self._get_charges(include_virtual_sites=False)
@@ -117,7 +118,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
     def _get_charges(
         self,
         include_virtual_sites: bool = False,
-    ) -> dict[TopologyKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
         if include_virtual_sites:
             raise NotImplementedError()
 

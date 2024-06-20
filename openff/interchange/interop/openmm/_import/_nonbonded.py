@@ -6,8 +6,10 @@ from openff.interchange.common._nonbonded import ElectrostaticsCollection
 class BasicElectrostaticsCollection(ElectrostaticsCollection):
     """A slightly more complete collection than the base class."""
 
+    _charges: dict[int, Quantity] = dict()  # type: ignore[assignment]
+
     @property
-    def charges(
+    def charges(  # type: ignore[override]
         self,
     ) -> dict[int, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""

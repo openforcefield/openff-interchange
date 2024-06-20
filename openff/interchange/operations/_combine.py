@@ -12,6 +12,7 @@ from openff.interchange.exceptions import (
     SwitchingFunctionMismatchError,
     UnsupportedCombinationError,
 )
+from openff.interchange.models import LibraryChargeTopologyKey
 
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
@@ -92,10 +93,12 @@ def _combine(
             new_atom_indices = tuple(idx + atom_offset for idx in top_key.atom_indices)
             new_top_key = top_key.__class__(**top_key.model_dump())
             try:
-                new_top_key.atom_indices = new_atom_indices
+                new_top_key.atom_indices = new_atom_indices  # type: ignore[misc]
             except (ValueError, AttributeError):
                 assert len(new_atom_indices) == 1
+                assert isinstance(new_top_key, LibraryChargeTopologyKey)
                 new_top_key.this_atom_index = new_atom_indices[0]
+
             # If interchange was not created with SMIRNOFF, we need avoid merging potentials with same key
             if pot_key.associated_handler == "ExternalSource":
                 _mult = 0
