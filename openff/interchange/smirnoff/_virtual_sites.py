@@ -35,10 +35,10 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
     A handler which stores the information necessary to construct virtual sites (virtual particles).
     """
 
-    key_map: dict[VirtualSiteKey, PotentialKey] = Field(
+    key_map: dict[VirtualSiteKey, PotentialKey] = Field(  # type: ignore[assignment]
         dict(),
         description="A mapping between VirtualSiteKey objects and PotentialKey objects.",
-    )  # type: ignore[assignment]
+    )
 
     type: Literal["VirtualSites"] = "VirtualSites"
     expression: Literal[""] = ""

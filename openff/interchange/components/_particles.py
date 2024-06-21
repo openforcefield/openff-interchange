@@ -6,7 +6,7 @@ import abc
 
 from openff.toolkit import Quantity
 
-from openff.interchange._annotations import _DistanceQuantity
+from openff.interchange._annotations import _DistanceQuantity, _Quantity
 from openff.interchange.pydantic import _BaseModel
 
 
@@ -15,15 +15,16 @@ class _VirtualSite(_BaseModel, abc.ABC):
     distance: _DistanceQuantity
     orientations: tuple[int, ...]
 
-    @abc.abstractproperty
+    @property
     def local_frame_weights(self) -> tuple[list[float], ...]:
         raise NotImplementedError()
 
+    @property
     def local_frame_positions(self) -> Quantity:
         raise NotImplementedError()
 
     @property
-    def _local_frame_coordinates(self) -> Quantity:
+    def local_frame_coordinates(self) -> _Quantity:
         """
         Return the position of this virtual site in its local frame in spherical coordinates.
 

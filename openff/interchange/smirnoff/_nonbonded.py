@@ -1,3 +1,4 @@
+import builtins
 import copy
 import functools
 import warnings
@@ -146,6 +147,11 @@ class _SMIRNOFFNonbondedCollection(SMIRNOFFCollection, _NonbondedCollection):
 class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
     """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
 
+    type: Literal["vdW"] = Field("vdW")
+    expression: Literal["4*epsilon*((sigma/r)**12-(sigma/r)**6)"] = Field(
+        "4*epsilon*((sigma/r)**12-(sigma/r)**6)",
+    )
+
     @classmethod
     def allowed_parameter_handlers(cls):
         """Return a list of allowed types of ParameterHandler classes."""
@@ -193,7 +199,7 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
 
     @classmethod
     def create(
-        cls: type[T],
+        cls: builtins.type[T],
         parameter_handler: vdWHandler,
         topology: Topology,
     ) -> T:
@@ -256,18 +262,23 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     rather than having each in their own handler.
     """
 
+    type: Literal["Electrostatics"] = Field("Electrostatics")
+
+    expression: Literal["coul"] = "coul"
+
     periodic_potential: Literal[
         "Ewald3D-ConductingBoundary",
         "cutoff",
         "no-cutoff",
         "reaction-field",
     ] = Field(_PME)
+
     nonperiodic_potential: Literal[
         "Coulomb",
         "cutoff",
         "no-cutoff",
-        "reaction-field",
     ] = Field("Coulomb")
+
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     _charges = PrivateAttr(default_factory=dict)
@@ -290,14 +301,14 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @property
     def _charges_without_virtual_sites(
         self,
-    ) -> dict[TopologyKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
         return self._get_charges(include_virtual_sites=False)
 
     @property
     def charges(
         self,
-    ) -> dict[TopologyKey | VirtualSiteKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:
             self._charges = self._get_charges(include_virtual_sites=True)
@@ -308,7 +319,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     def _get_charges(
         self,
         include_virtual_sites=True,
-    ) -> dict[TopologyKey | VirtualSiteKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
         """Get the total partial charge on each atom or particle."""
         # Keyed by index for atoms and by VirtualSiteKey for virtual sites.
         charges: dict[VirtualSiteKey | int, Quantity] = dict()
@@ -408,7 +419,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
     @classmethod
     def create(
-        cls: type[T],
+        cls: builtins.type[T],
         parameter_handler: Any,
         topology: Topology,
         charge_from_molecules=None,
@@ -485,8 +496,8 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         """
         Map a matched library charge parameter to a set of potentials.
         """
-        matches = {}
-        potentials = {}
+        matches: dict[LibraryChargeTopologyKey, PotentialKey] = dict()
+        potentials: dict[PotentialKey, Potential] = dict()
 
         for i, (atom_index, charge) in enumerate(zip(atom_indices, parameter.charge)):
             topology_key = LibraryChargeTopologyKey(this_atom_index=atom_index)
@@ -548,7 +559,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         cls,
         parameter_handler: Union["LibraryChargeHandler", "ChargeIncrementModelHandler"],
         unique_molecule: Molecule,
-    ) -> tuple[dict[TopologyKey, PotentialKey], dict[PotentialKey, Potential]]:
+    ) -> tuple[
+        dict[TopologyKey | SingleAtomChargeTopologyKey, PotentialKey],
+        dict[PotentialKey, Potential],
+    ]:
         """
         Construct a slot and potential map for a slot based parameter handler.
         """
@@ -692,7 +706,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         """
         Construct a slot and potential map for a particular reference molecule and set of parameter handlers.
         """
-        matches: dict[TopologyKey, PotentialKey] = dict()
+        matches: dict[TopologyKey | SingleAtomChargeTopologyKey, PotentialKey] = dict()
         potentials: dict[PotentialKey, Potential] = dict()
 
         expected_matches = {i for i in range(unique_molecule.n_atoms)}

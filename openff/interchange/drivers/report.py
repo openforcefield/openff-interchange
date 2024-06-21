@@ -183,8 +183,8 @@ class EnergyReport(_BaseModel):
                     self["Electrostatics"] and other["Electrostatics"]
                 ) is not None:
                     for key in ("vdW", "Electrostatics"):
-                        energy_differences[key] = self[key] - other[key]
-                        energy_differences[key] = self[key] - other[key]
+                        energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
+                        energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
 
                         nonbondeds_processed = True
 

@@ -5,7 +5,7 @@ class NGLWidget(object):
     def add_representation(
         self,
         repr_type: str,
-        selection: Union[str, Iterable],
+        selection: Union[str, Iterable] = "all",
         **kwargs,
     ): ...
 

@@ -187,11 +187,11 @@ def _convert(
     _partial_charges: dict[int | VirtualSiteKey, float] = dict()
 
     # Indexed by particle (atom or virtual site) indices
-    for key, charge in interchange["Electrostatics"]._get_charges().items():
-        if type(key) is TopologyKey:
+    for key_, charge in interchange["Electrostatics"]._get_charges().items():
+        if type(key_) is TopologyKey:
             _partial_charges[key.atom_indices[0]] = charge
-        elif type(key) is VirtualSiteKey:
-            _partial_charges[key] = charge
+        elif type(key_) is VirtualSiteKey:
+            _partial_charges[key_] = charge
         else:
             raise RuntimeError()
 

@@ -413,14 +413,14 @@ def _plugins(
                     )
 
                 try:
-                    collection = collection_class.create(
+                    collection = collection_class.create(  # type: ignore[call-arg]
                         parameter_handler=force_field[handler_class._TAGNAME],
                         topology=topology,
                         vdw_collection=interchange[tagnames[0]],
                         electrostatics_collection=interchange["Electrostatics"],
                     )
                 except TypeError:
-                    collection = collection_class.create(
+                    collection = collection_class.create(  # type: ignore[call-arg]
                         parameter_handler=force_field[handler_class._TAGNAME],
                         topology=topology,
                         vdw_collection=interchange[tagnames[0]],

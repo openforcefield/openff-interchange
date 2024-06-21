@@ -73,8 +73,8 @@ class GROMACSWriter(_BaseModel):
             ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n",
         )
 
-        reduced_atom_types = []
-        mapping_to_reduced_atom_types = {}
+        reduced_atom_types: list[tuple[str, LennardJonesAtomType]] = list()
+        mapping_to_reduced_atom_types: dict[str, str] = dict()
 
         def _is_atom_type_in_list(
             atom_type,
@@ -98,7 +98,9 @@ class GROMACSWriter(_BaseModel):
                     return _at_name
             return False
 
-        def _get_new_entry_name(atom_type_list) -> str:
+        def _get_new_entry_name(
+            atom_type_list: list[tuple[str, LennardJonesAtomType]],
+        ) -> str:
             """
             Entry name for atom type to be added.
             """
@@ -116,13 +118,13 @@ class GROMACSWriter(_BaseModel):
                 )
 
             if merge_atom_types:
-                if _is_atom_type_in_list(atom_type, reduced_atom_types):
-                    mapping_to_reduced_atom_types[atom_type.name] = (
-                        _is_atom_type_in_list(
-                            atom_type,
-                            reduced_atom_types,
-                        )
-                    )
+                atom_type_is_in_list: bool | str = _is_atom_type_in_list(
+                    atom_type,
+                    reduced_atom_types,
+                )
+
+                if isinstance(atom_type_is_in_list, str):
+                    mapping_to_reduced_atom_types[atom_type.name] = atom_type_is_in_list
                 else:
                     _at_name = _get_new_entry_name(reduced_atom_types)
                     reduced_atom_types.append((_at_name, atom_type))
@@ -153,6 +155,7 @@ class GROMACSWriter(_BaseModel):
                 f"{atom_type.epsilon.m :.16g}\n",
             )
         top.write("\n")
+
         return mapping_to_reduced_atom_types
 
     def _write_moleculetypes(

@@ -1,6 +1,7 @@
 import pytest
 from openff.toolkit import Molecule, unit
 from openff.utilities.testing import skip_if_missing
+from pydantic import ValidationError
 
 from openff.interchange.exceptions import UnsupportedCutoffMethodError
 
@@ -25,14 +26,20 @@ class TestUnsupportedCases:
         if periodic:
             interchange.box = [4, 4, 4] * unit.nanometer
             interchange["Electrostatics"].periodic_potential = "reaction-field"
-        else:
-            interchange["Electrostatics"].nonperiodic_potential = "reaction-field"
 
-        with pytest.raises(
-            UnsupportedCutoffMethodError,
-            match="Reaction field electrostatics not supported. ",
-        ):
-            interchange.to_openmm(combine_nonbonded_forces=False)
+            with pytest.raises(
+                UnsupportedCutoffMethodError,
+                match="Reaction field electrostatics not supported. ",
+            ):
+                interchange.to_openmm(combine_nonbonded_forces=False)
+
+        else:
+            # Not clear that reaction field works with periodic systems, so this can't be set
+            with pytest.raises(
+                ValidationError,
+                match="Input should be 'Coulomb', 'cutoff' or 'no-cutoff'",
+            ):
+                interchange["Electrostatics"].nonperiodic_potential = "reaction-field"
 
 
 @skip_if_missing("openmm")

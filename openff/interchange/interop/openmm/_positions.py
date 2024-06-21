@@ -17,6 +17,8 @@ def to_openmm_positions(
     include_virtual_sites: bool = True,
 ) -> "openmm.unit.Quantity":
     """Generate an array of positions of all particles, optionally including virtual sites."""
+    assert interchange.positions is not None
+
     if include_virtual_sites:
         from openff.interchange.interop._virtual_sites import (
             get_positions_with_virtual_sites,
