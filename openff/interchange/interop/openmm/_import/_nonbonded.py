@@ -1,17 +1,19 @@
 from openff.toolkit import Quantity
 
 from openff.interchange.common._nonbonded import ElectrostaticsCollection
+from openff.interchange.models import LibraryChargeTopologyKey, TopologyKey
 
 
 class BasicElectrostaticsCollection(ElectrostaticsCollection):
     """A slightly more complete collection than the base class."""
 
-    _charges: dict[int, Quantity] = dict()  # type: ignore[assignment]
+    _charges: dict[TopologyKey | LibraryChargeTopologyKey, Quantity] = dict()
+    _charges_cached: bool = False
 
     @property
-    def charges(  # type: ignore[override]
+    def charges(
         self,
-    ) -> dict[int, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:
             self._charges = self._get_charges()
@@ -19,8 +21,10 @@ class BasicElectrostaticsCollection(ElectrostaticsCollection):
 
         return self._charges
 
-    def _get_charges(self):
-        charges: dict[int, Quantity] = dict()
+    def _get_charges(  # type: ignore[override]
+        self,
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
+        charges: dict[TopologyKey | LibraryChargeTopologyKey, Quantity] = dict()
 
         for topology_key, potential_key in self.key_map.items():
             potential = self.potentials[potential_key]

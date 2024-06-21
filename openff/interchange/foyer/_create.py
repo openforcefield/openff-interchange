@@ -17,7 +17,7 @@ from openff.interchange.foyer._valence import (
     FoyerRBImproperHandler,
     FoyerRBProperHandler,
 )
-from openff.interchange.models import TopologyKey
+from openff.interchange.models import LibraryChargeTopologyKey, TopologyKey
 
 if has_package("foyer"):
     from foyer.forcefield import Forcefield
@@ -53,7 +53,10 @@ def _create_interchange(
 
     # This block is from a mega merge, unclear if it's still needed
     for name, handler_class in get_handlers_callable().items():
-        interchange.collections[name] = handler_class()
+        interchange.collections[name] = handler_class(
+            type=name,
+            expression=f"FOYER_{name}",
+        )
 
     vdw_handler = interchange["vdW"]
     vdw_handler.scale_14 = force_field.lj14scale
@@ -76,7 +79,9 @@ def _create_interchange(
 
     # TODO: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
 
-    charges = electrostatics.charges
+    charges: dict[TopologyKey | LibraryChargeTopologyKey, Quantity] = (
+        electrostatics.charges
+    )
 
     for molecule in interchange.topology.molecules:
         molecule_charges = [
@@ -85,7 +90,9 @@ def _create_interchange(
             ].m
             for atom in molecule.atoms
         ]
-        molecule.partial_charges = Quantity(
+
+        # Quantity(list[Quantity]) works ... but is a big magical to mypy
+        molecule.partial_charges = Quantity(  # type: ignore[call-overload]
             molecule_charges,
             unit.elementary_charge,
         )

@@ -3,7 +3,6 @@ Common helpers for exporting virtual sites.
 """
 
 from collections import defaultdict
-from collections.abc import Iterable
 from typing import DefaultDict
 
 import numpy
@@ -34,7 +33,7 @@ def _virtual_site_parent_molecule_mapping(
         A dictionary mapping virtual site keys to the index of the molecule they belong to.
 
     """
-    mapping = dict()
+    mapping: dict[VirtualSiteKey, int] = dict()
 
     if "VirtualSites" not in interchange.collections:
         return mapping
@@ -164,7 +163,7 @@ def get_positions_with_virtual_sites(
 
 def _get_separation_by_atom_indices(
     interchange: Interchange,
-    atom_indices: Iterable[int],
+    atom_indices: tuple[int, ...],
     prioritize_geometry: bool = False,
 ) -> Quantity:
     """
@@ -175,6 +174,8 @@ def _get_separation_by_atom_indices(
     This is slow, but often necessary for converting virtual site "distances" to weighted
     averages (unitless) of orientation atom positions.
     """
+    assert interchange.positions is not None
+
     if prioritize_geometry:
         p1 = interchange.positions[atom_indices[1]]
         p0 = interchange.positions[atom_indices[0]]
@@ -182,41 +183,37 @@ def _get_separation_by_atom_indices(
         return p1 - p0
 
     if "Constraints" in interchange.collections:
-        collection = interchange["Constraints"]
+        constraints = interchange["Constraints"]
 
-        for key in collection.key_map:
+        for key in constraints.key_map:
             if (key.atom_indices == atom_indices) or (
                 key.atom_indices[::-1] == atom_indices
             ):
-                return collection.potentials[collection.key_map[key]].parameters[
+                return constraints.potentials[constraints.key_map[key]].parameters[
                     "distance"
                 ]
 
     if "Bonds" in interchange.collections:
-        collection = interchange["Bonds"]
+        bonds = interchange["Bonds"]
 
-        for key in collection.key_map:
+        for key in bonds.key_map:
             if (key.atom_indices == atom_indices) or (
                 key.atom_indices[::-1] == atom_indices
             ):
-                return collection.potentials[collection.key_map[key]].parameters[
-                    "length"
-                ]
+                return bonds.potentials[bonds.key_map[key]].parameters["length"]
 
     # Two heavy atoms may be on opposite ends of an angle, in which case it's still
     # possible to determine their separation as defined by the geometry of the force field
     if "Angles" in interchange.collections:
-        collection = interchange["Angles"]
+        angles = interchange["Angles"]
 
         index0 = atom_indices[0]
         index1 = atom_indices[1]
-        for key in collection.key_map:
+        for key in angles.key_map:
             if (key.atom_indices[0] == index0 and key.atom_indices[2] == index1) or (
                 key.atom_indices[2] == index0 and key.atom_indices[0] == index1
             ):
-                gamma = collection.potentials[collection.key_map[key]].parameters[
-                    "angle"
-                ]
+                gamma = angles.potentials[angles.key_map[key]].parameters["angle"]
 
                 a = _get_separation_by_atom_indices(
                     interchange,

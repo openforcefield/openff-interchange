@@ -92,7 +92,7 @@ def _check_add_positive_mass(mass_to_add):
         )
 
 
-def _check_box_shape_shape(box_shape: ArrayLike):
+def _check_box_shape_shape(box_shape: NDArray):
     """Check the .shape of the box_shape argument."""
     if box_shape.shape != (3, 3):
         raise PACKMOLValueError(
@@ -531,27 +531,28 @@ def _build_input_file(
 
 
 def _center_topology_at(
-    center_solute: bool | Literal["BOX_VECS", "ORIGIN", "BRICK"],
+    center_solute: Literal["NO", "YES", "BOX_VECS", "ORIGIN", "BRICK"],
     topology: Topology,
     box_vectors: Quantity,
     brick_size: Quantity,
 ) -> Topology:
     """Return a copy of the topology centered as requested."""
-    if isinstance(center_solute, str):
-        center_solute = center_solute.upper()
+    _center_solute = center_solute.upper()
+
     topology = Topology(topology)
 
-    if center_solute is False:
+    if _center_solute == "NO":
         return topology
-    elif center_solute in [True, "BOX_VECS"]:
+    elif _center_solute in ["YES", "BOX_VECS"]:
         new_center = box_vectors.sum(axis=0) / 2.0
-    elif center_solute == "ORIGIN":
+    elif _center_solute == "ORIGIN":
         new_center = numpy.zeros(3)
-    elif center_solute == "BRICK":
+    elif _center_solute == "BRICK":
         new_center = brick_size / 2.0
     else:
         PACKMOLValueError(
-            f"center_solute must be a bool, 'BOX_VECS', 'ORIGIN', or 'BRICK', not {center_solute!r}",
+            "center_solute must be 'NO', 'YES', 'BOX_VECS', 'ORIGIN', or 'BRICK', "
+            f"not {center_solute!r}",
         )
 
     positions = topology.get_positions()
@@ -569,7 +570,7 @@ def pack_box(
     box_vectors: Quantity | None = None,
     mass_density: Quantity | None = None,
     box_shape: ArrayLike = RHOMBIC_DODECAHEDRON,
-    center_solute: bool | Literal["BOX_VECS", "ORIGIN", "BRICK"] = False,
+    center_solute: Literal["NO", "YES", "BOX_VECS", "ORIGIN", "BRICK"] = "NO",
     working_directory: str | None = None,
     retain_working_files: bool = False,
 ) -> Topology:
@@ -609,12 +610,12 @@ def pack_box(
         <http://docs.openmm.org/latest/userguide/theory/
         05_other_features.html#periodic-boundary-conditions>`_.
     center_solute
-        How to center ``solute`` in the simulation box. If ``True``
+        How to center ``solute`` in the simulation box. If ``"YES"``
         or ``"box_vecs"``, the solute's center of geometry will be placed at
         the center of the box's parallelopiped representation. If ``"origin"``,
         the solute will centered at the origin. If ``"brick"``, the solute will
         be centered in the box's rectangular brick representation. If
-        ``False`` (the default), the solute will not be moved.
+        ``"NO"`` (the default), the solute will not be moved.
     working_directory: str, optional
         The directory in which to generate the temporary working files. If
         ``None``, a temporary one will be created.
@@ -678,7 +679,7 @@ def pack_box(
     brick_size = _compute_brick_from_box_vectors(box_vectors)
 
     # Center the solute
-    if center_solute and solute is not None:
+    if center_solute != "NO" and solute is not None:
         solute = _center_topology_at(
             center_solute,
             solute,
@@ -956,5 +957,5 @@ def solvate_topology_nonwater(
         solute=topology,
         tolerance=tolerance,
         box_vectors=box_vectors,
-        center_solute=True,
+        center_solute="YES",
     )

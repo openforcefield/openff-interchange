@@ -118,7 +118,7 @@ def _combine(
 
         # Ensure the charge cache is rebuilt
         if handler_name == "Electrostatics":
-            self_handler._charges_cached = False
+            self_handler._charges_cached = False  # type: ignore[attr-defined]
             self_handler._get_charges()
 
         result.collections[handler_name] = self_handler

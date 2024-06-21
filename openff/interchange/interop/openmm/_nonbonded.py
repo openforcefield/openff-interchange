@@ -220,27 +220,28 @@ def _add_particles_to_system(
 
 def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
     try:
-        vdw: "vdWCollection" = interchange["vdW"]
+        vdw = interchange["vdW"]
     except LookupError:
         for collection in interchange.collections.values():
             if collection.is_plugin:
                 if collection.acts_as == "vdW":
                     # We can't be completely sure all plugins subclass out of vdWCollection here
-                    vdw = collection  # type: ignore[assignment]
+                    assert isinstance(collection, vdWCollection)
+                    vdw = collection
                     break
         else:
-            vdw = None  # type: ignore[assignment]
+            vdw = None
 
     if vdw:
         vdw_cutoff: Quantity | None = vdw.cutoff
 
         if interchange.box is None:
-            vdw_method: str | None = vdw.nonperiodic_method.lower()
+            vdw_method = vdw.nonperiodic_method.lower()
         else:
-            vdw_method: str | None = vdw.periodic_method.lower()
+            vdw_method = vdw.periodic_method.lower()
 
-        mixing_rule: str | None = getattr(vdw, "mixing_rule", None)
-        vdw_expression: str | None = vdw.expression.replace("**", "^")
+        mixing_rule = getattr(vdw, "mixing_rule", None)
+        vdw_expression = vdw.expression.replace("**", "^")
     else:
         vdw_cutoff = None
         vdw_method = None
@@ -248,9 +249,9 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
         vdw_expression = None
 
     try:
-        electrostatics: "ElectrostaticsCollection" = interchange["Electrostatics"]
+        electrostatics: ElectrostaticsCollection | None = interchange["Electrostatics"]
     except LookupError:
-        electrostatics = None  # type: ignore[assignment]
+        electrostatics = None
 
     if electrostatics is None:
         electrostatics_method: str | None = None
@@ -265,12 +266,12 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
             electrostatics_method = getattr(electrostatics, "periodic_potential", _PME)
 
     return _NonbondedData(
-        vdw_collection=vdw,
+        vdw_collection=vdw,  # type: ignore[arg-type]
         vdw_cutoff=vdw_cutoff,
         vdw_method=vdw_method,
         vdw_expression=vdw_expression,
         mixing_rule=mixing_rule,
-        electrostatics_collection=electrostatics,
+        electrostatics_collection=electrostatics,  # type: ignore[arg-type]
         electrostatics_method=electrostatics_method,
         periodic=interchange.box is None,
     )
@@ -342,15 +343,15 @@ def _create_single_nonbonded_force(
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
             non_bonded_force.setEwaldErrorTolerance(ewald_tolerance)
 
-        elif data["vdw_method"] == data["electrostatics_method"] == "cutoff":
-            if data["vdw_cutoff"] != data["electrostatics_collection"].cutoff:
+        elif data.vdw_method == data.electrostatics_method == "cutoff":
+            if data.vdw_cutoff != data.electrostatics_collection.cutoff:
                 raise UnsupportedExportError(
                     "If using cutoff vdW and electrostatics, cutoffs must match.",
                 )
 
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
             non_bonded_force.setCutoffDistance(
-                to_openmm_quantity(data["vdw_cutoff"]),
+                to_openmm_quantity(data.vdw_cutoff),
             )
 
         else:
@@ -624,7 +625,7 @@ def _create_multiple_nonbonded_forces(
         if vdw.is_plugin:
             # TODO: Custom mixing rules in plugins is untested
             vdw_14_force = openmm.CustomBondForce(
-                _get_scaled_potential_function(data.vdw_expression),
+                _get_scaled_potential_function(data.vdw_expression),  # type: ignore[arg-type]
             )
             vdw_14_force.setName("vdW 1-4 force")
 
@@ -645,7 +646,7 @@ def _create_multiple_nonbonded_forces(
                 vdw_14_force.addGlobalParameter(term, value)
 
         else:
-            vdw_expression: str = data.vdw_expression
+            vdw_expression = data.vdw_expression
 
             vdw_14_force = openmm.CustomBondForce(vdw_expression)
             vdw_14_force.setName("vdW 1-4 force")
@@ -759,7 +760,7 @@ def _create_vdw_force(
 
     vdw_expression: str = data.vdw_expression  # type: ignore[assignment]
     mixing_rule_expression: str = _MIXING_RULE_EXPRESSIONS.get(
-        data.mixing_rule,
+        data.mixing_rule,  # type: ignore[arg-type]
         "",
     )
 

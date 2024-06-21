@@ -8,7 +8,11 @@ from openff.interchange._annotations import _DistanceQuantity
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.components.potentials import Potential
 from openff.interchange.foyer._base import _copy_params
-from openff.interchange.models import PotentialKey, TopologyKey
+from openff.interchange.models import (
+    LibraryChargeTopologyKey,
+    PotentialKey,
+    TopologyKey,
+)
 
 if has_package("foyer"):
     from foyer.forcefield import Forcefield
@@ -60,7 +64,9 @@ class FoyerElectrostaticsHandler(ElectrostaticsCollection):
     force_field_key: str = "atoms"
     cutoff: _DistanceQuantity = 9.0 * unit.angstrom
 
-    _charges: dict[TopologyKey, Quantity] = PrivateAttr(default_factory=dict)
+    _charges: dict[TopologyKey | LibraryChargeTopologyKey, Quantity] = PrivateAttr(
+        default_factory=dict,
+    )
 
     def store_charges(
         self,

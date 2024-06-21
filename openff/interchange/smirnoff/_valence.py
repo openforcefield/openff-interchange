@@ -587,7 +587,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
                             map_key=map_key,
                         ),
                     )
-                potential = WrappedPotential(
+                potential: Potential | WrappedPotential = WrappedPotential(
                     {pot: coeff for pot, coeff in zip(pots, coeffs)},
                 )
             else:
@@ -597,7 +597,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
                     "phase": parameter.phase[n],
                     "idivf": parameter.idivf[n] * unit.dimensionless,
                 }
-                potential = Potential(parameters=parameters)  # type: ignore[assignment]
+                potential = Potential(parameters=parameters)
             self.potentials[potential_key] = potential
 
     @classmethod
