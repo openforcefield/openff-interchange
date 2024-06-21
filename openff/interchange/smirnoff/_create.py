@@ -107,41 +107,50 @@ def _create_interchange(
 
     _check_supported_handlers(force_field)
 
-    interchange = Interchange()
+    # interchange = Interchange(topology=topology)
+    # or maybe
+    interchange = Interchange(topology=validate_topology(topology))
 
-    # TODO: Need to re-introduce logic lost when validator re-use was nuked
-    _topology = validate_topology(topology)
+    interchange.positions = _infer_positions(interchange.topology, positions)
 
-    interchange.positions = _infer_positions(_topology, positions)
+    interchange.box = interchange.topology.box_vectors if box is None else box
 
-    interchange.box = _topology.box_vectors if box is None else box
-
-    _bonds(interchange, force_field, _topology, partial_bond_orders_from_molecules)
+    _bonds(
+        interchange,
+        force_field,
+        interchange.topology,
+        partial_bond_orders_from_molecules,
+    )
     _constraints(
         interchange,
         force_field,
-        _topology,
+        interchange.topology,
         bonds=interchange.collections.get("Bonds", None),  # type: ignore[arg-type]
     )
-    _angles(interchange, force_field, _topology)
-    _propers(interchange, force_field, _topology, partial_bond_orders_from_molecules)
-    _impropers(interchange, force_field, _topology)
+    _angles(interchange, force_field, interchange.topology)
+    _propers(
+        interchange,
+        force_field,
+        interchange.topology,
+        partial_bond_orders_from_molecules,
+    )
+    _impropers(interchange, force_field, interchange.topology)
 
-    _vdw(interchange, force_field, _topology)
+    _vdw(interchange, force_field, interchange.topology)
     _electrostatics(
         interchange,
         force_field,
-        _topology,
+        interchange.topology,
         charge_from_molecules,
         allow_nonintegral_charges,
     )
-    _plugins(interchange, force_field, _topology)
+    _plugins(interchange, force_field, interchange.topology)
 
-    _virtual_sites(interchange, force_field, _topology)
+    _virtual_sites(interchange, force_field, interchange.topology)
 
-    _gbsa(interchange, force_field, _topology)
+    _gbsa(interchange, force_field, interchange.topology)
 
-    interchange.topology = _topology
+    interchange.topology = interchange.topology
 
     return interchange
 
