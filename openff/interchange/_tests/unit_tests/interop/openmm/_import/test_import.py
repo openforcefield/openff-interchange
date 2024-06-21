@@ -75,13 +75,19 @@ class TestFromOpenMM:
     ):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
+        topology = Molecule.from_smiles("C").to_topology()
+
         if as_argument:
             box = Interchange.from_openmm(
                 system=simple_system,
+                topology=topology,
                 box_vectors=simple_system.getDefaultPeriodicBoxVectors(),
             ).box
         else:
-            box = Interchange.from_openmm(system=simple_system).box
+            box = Interchange.from_openmm(
+                system=simple_system,
+                topology=topology,
+            ).box
 
         assert box.shape == (3, 3)
 

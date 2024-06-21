@@ -37,15 +37,41 @@ if TYPE_CHECKING:
 def from_openmm(
     *,
     system: "openmm.System",
+    topology: Union["openmm.app.Topology", Topology],
     positions: Quantity | None = None,
-    topology: Union["openmm.app.Topology", Topology, None] = None,
     box_vectors: Quantity | None = None,
 ) -> "Interchange":
     """Create an Interchange object from OpenMM data."""
     from openff.interchange import Interchange
 
     _check_compatible_inputs(system=system, topology=topology)
-    interchange = Interchange()
+
+    if isinstance(topology, openmm.app.Topology):
+        from openff.units.openmm import from_openmm as from_openmm_
+
+        from openff.interchange.components.toolkit import _simple_topology_from_openmm
+
+        openff_topology = _simple_topology_from_openmm(topology)
+
+        if topology.getPeriodicBoxVectors() is not None:
+            openff_topology.box_vectors = from_openmm_(topology.getPeriodicBoxVectors())
+
+        # OpenMM topologies do not store positions
+
+    elif isinstance(topology, Topology):
+
+        openff_topology = topology
+        positions = openff_topology.get_positions()
+
+    elif topology is None:
+        raise ValueError("A topology must be provided.")
+
+    else:
+        raise ValueError(
+            f"Could not process `topology` argument of type {type(topology)=}.",
+        )
+
+    interchange = Interchange(topology=openff_topology)
 
     if system:
         constraints = _convert_constraints(system)
@@ -74,22 +100,6 @@ def from_openmm(
                     f"Unsupported OpenMM Force type ({type(force)}) found.",
                 )
 
-    if isinstance(topology, openmm.app.Topology):
-        from openff.interchange.components.toolkit import _simple_topology_from_openmm
-
-        openff_topology = _simple_topology_from_openmm(topology)
-
-        interchange.topology = openff_topology
-
-    elif isinstance(topology, Topology):
-
-        interchange.topology = topology
-        interchange.positions = topology.get_positions()
-
-    elif topology is None:
-
-        interchange.topology = topology
-
     if positions is None:
 
         warnings.warn(
@@ -104,29 +114,25 @@ def from_openmm(
         interchange.positions = positions
 
     if box_vectors is not None:
-        _box_vectors: Quantity = box_vectors
+        _box_vectors = box_vectors
 
-    elif topology is not None:
-        if isinstance(topology, openmm.app.Topology):
-            from openff.units.openmm import from_openmm as from_openmm_
-
-            _box_vectors = from_openmm_(topology.getPeriodicBoxVectors())
-        elif isinstance(topology, Topology):
-            _box_vectors = topology.box_vectors
+    elif interchange.topology.box_vectors is not None:
+        _box_vectors = interchange.topology.box_vectors
 
     else:
+        # If there is no box argument passed and the topology is non-periodic
+        # and the system does not have default box vectors, it'll end up as None
         from openff.units.openmm import from_openmm as from_openmm_
 
         _box_vectors = from_openmm_(system.getDefaultPeriodicBoxVectors())
 
-    # TODO: There should probably be a more public box validator, checking for shape, etc.
+    # TODO: Does this run through the Interchange.box validator?
     interchange.box = _box_vectors
 
-    if interchange.topology is not None:
-        if interchange.topology.n_bonds > len(interchange.collections["Bonds"].key_map):
-            # There are probably missing (physics) bonds from rigid waters. The topological
-            # bonds are probably processed correctly.
-            _fill_in_rigid_water_bonds(interchange)
+    if interchange.topology.n_bonds > len(interchange.collections["Bonds"].key_map):
+        # There are probably missing (physics) bonds from rigid waters. The topological
+        # bonds are probably processed correctly.
+        _fill_in_rigid_water_bonds(interchange)
 
     return interchange
 
