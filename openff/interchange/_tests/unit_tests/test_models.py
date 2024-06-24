@@ -1,4 +1,5 @@
 from openff.interchange.models import (
+    AngleKey,
     BondKey,
     ImproperTorsionKey,
     PotentialKey,
@@ -110,3 +111,58 @@ def test_reprs():
     assert "blah" in repr(potential_key)
     assert "mult 2" in repr(potential_key)
     assert "bond order 1.111" in repr(potential_key)
+
+
+def test_bondkey_eq_hash():
+    """
+    When __eq__ is true, the hashes must be equal.
+
+    The converse is not required in Python; hash collisions between unequal
+    objects are allowed and will be handled according to __eq__, possibly
+    with a small runtime cost.
+    """
+
+    assert BondKey(atom_indices=(1, 3)) == (1, 3)
+    assert hash(BondKey(atom_indices=(1, 3))) == hash((1, 3))
+    assert BondKey(atom_indices=(1, 3)) != (1, 4)
+    assert BondKey(atom_indices=(1, 3), bond_order=None) == (1, 3)
+    assert hash(BondKey(atom_indices=(1, 3), bond_order=None)) == hash((1, 3))
+    assert BondKey(atom_indices=(1, 3), bond_order=None) != ((1, 3), None)
+    assert BondKey(atom_indices=(1, 3), bond_order=1.5) != (1, 3)
+    assert BondKey(atom_indices=(1, 3), bond_order=1.5) != ((1, 3), None)
+    assert BondKey(atom_indices=(1, 3), bond_order=1.5) != ((1, 3), 1.5)
+
+
+def test_anglekey_eq_hash():
+    """
+    When __eq__ is true, the hashes must be equal.
+
+    The converse is not required in Python; hash collisions between unequal
+    objects are allowed and will be handled according to __eq__, possibly
+    with a small runtime cost.
+    """
+    assert AngleKey(atom_indices=(1, 3, 16)) == (1, 3, 16)
+    assert hash(AngleKey(atom_indices=(1, 3, 16))) == hash((1, 3, 16))
+    assert AngleKey(atom_indices=(1, 3, 16)) != (1, 3)
+    assert AngleKey(atom_indices=(1, 3, 16)) != (1, 3, 15)
+
+
+def test_torsionkey_eq_hash():
+    """
+    When __eq__ is true, the hashes must be equal.
+
+    The converse is not required in Python; hash collisions between unequal
+    objects are allowed and will be handled according to __eq__, possibly
+    with a small runtime cost.
+    """
+    assert ProperTorsionKey(atom_indices=(1, 2, 3, 4)) == (1, 2, 3, 4)
+    assert hash(ProperTorsionKey(atom_indices=(1, 2, 3, 4))) == hash((1, 2, 3, 4))
+    assert ProperTorsionKey(
+        atom_indices=(1, 2, 3, 4),
+        mult=None,
+        phase=None,
+        bond_order=None,
+    ) == (1, 2, 3, 4)
+    assert ProperTorsionKey(atom_indices=(1, 2, 3, 4), mult=0) != (1, 2, 3, 4)
+    assert ProperTorsionKey(atom_indices=(1, 2, 3, 4), phase=1.5) != (1, 2, 3, 4)
+    assert ProperTorsionKey(atom_indices=(1, 2, 3, 4), bond_order=1.5) != (1, 2, 3, 4)

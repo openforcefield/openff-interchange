@@ -316,3 +316,6 @@ class Collection(DefaultModel):
             return self.key_map
         else:
             return super().__getattribute__(attr)
+
+    def __getitem__(self, key) -> Potential:
+        return self.potentials[self.key_map[key]]

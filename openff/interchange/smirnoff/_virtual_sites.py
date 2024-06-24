@@ -446,8 +446,8 @@ def _convert_local_coordinates(
     # rather than 0 degrees from the z-axis.
     vsite_positions = local_coordinate_frames[0] + d * (
         cos_theta * cos_phi * local_coordinate_frames[1]
-        + sin_theta * cos_phi * local_coordinate_frames[2]  # noqa
-        + sin_phi * local_coordinate_frames[3]  # noqa
+        + sin_theta * cos_phi * local_coordinate_frames[2]
+        + sin_phi * local_coordinate_frames[3]
     )
 
     return vsite_positions

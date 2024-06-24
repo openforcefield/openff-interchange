@@ -119,6 +119,11 @@ md.log
 *stderr.txt
 *stdout.txt
 
+# LAMMPS
+log.lammps
+out.lmp
+tmp.in
+
 # OS
 .DS_Store
 .DS_Store?
