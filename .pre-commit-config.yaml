@@ -46,7 +46,7 @@ repos:
     exclude: openff/interchange/_version.py|setup.py
     args: ["--py310-plus"]
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.4.9
+  rev: v0.5.1
   hooks:
     - id: ruff
       args: ["check", "--select", "NPY"]
@@ -63,7 +63,7 @@ repos:
       args: ["openff/interchange/", "-e", "openff/interchange/_tests/"]
       pass_filenames: false
 - repo: https://github.com/adamchainz/blacken-docs
-  rev: 1.16.0
+  rev: 1.18.0
   hooks:
   - id: blacken-docs
     files: ^docs/
