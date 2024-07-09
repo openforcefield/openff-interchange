@@ -295,9 +295,9 @@ def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
 
     for molecule_index, molecule in enumerate(interchange.topology.molecules):
         # molecule_hash = molecule.ordered_connection_table_hash()
-        molecule_hash = f'{molecule_index}_{molecule.ordered_connection_table_hash()}' # salt with mol ID to allow chemically-identical Molecules to be labelled with distinct IDs)
+        molecule_hash = f"{molecule_index}_{molecule.ordered_connection_table_hash()}"  # salt with mol ID to allow chemically-identical Molecules to be labelled with distinct IDs)
         # TODO: see if this fix also applied for the same issue in GROMACS/AMBER writers
-        
+
         molecule_map[molecule_hash] = molecule_index
         for atom in molecule.atoms:
             atom_molecule_map[atom] = molecule_hash
