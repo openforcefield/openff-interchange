@@ -53,10 +53,7 @@ def _create_interchange(
 
     # This block is from a mega merge, unclear if it's still needed
     for name, handler_class in get_handlers_callable().items():
-        interchange.collections[name] = handler_class(
-            type=name,
-            expression=f"FOYER_{name}",
-        )
+        interchange.collections[name] = handler_class(type=name)
 
     vdw_handler = interchange["vdW"]
     vdw_handler.scale_14 = force_field.lj14scale

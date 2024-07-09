@@ -405,7 +405,9 @@ def _plugins(
                     topology=topology,
                 )
             except TypeError:
-                tagnames = [x._TAGNAME for x in collection.allowed_parameter_handlers()]
+                tagnames = [
+                    x._TAGNAME for x in collection_class.allowed_parameter_handlers()
+                ]
 
                 if len(tagnames) > 1:
                     raise NotImplementedError(

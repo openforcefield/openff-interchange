@@ -61,6 +61,7 @@ class FoyerVDWHandler(vdWCollection):
 class FoyerElectrostaticsHandler(ElectrostaticsCollection):
     """Handler storing electrostatics potentials as produced by a Foyer force field."""
 
+    expression: str = "FOYER_Electrostatics"
     force_field_key: str = "atoms"
     cutoff: _DistanceQuantity = 9.0 * unit.angstrom
 

@@ -189,7 +189,7 @@ def _convert(
     # Indexed by particle (atom or virtual site) indices
     for key_, charge in interchange["Electrostatics"]._get_charges().items():
         if type(key_) is TopologyKey:
-            _partial_charges[key.atom_indices[0]] = charge
+            _partial_charges[key_.atom_indices[0]] = charge
         elif type(key_) is VirtualSiteKey:
             _partial_charges[key_] = charge
         else:

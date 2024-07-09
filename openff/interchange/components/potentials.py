@@ -33,6 +33,8 @@ if has_package("jax"):
     # even though many should be NDArray | Array
     from jax import Array
     from jax import numpy as jax_numpy
+else:
+    Array = NDArray
 
 
 def __getattr__(name: str):
