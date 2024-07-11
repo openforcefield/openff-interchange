@@ -5,12 +5,13 @@ from importlib import resources
 
 import numpy
 import pytest
-from openff.toolkit import Molecule
+from openff.toolkit import Molecule, Topology
 from openff.toolkit.utils import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
 )
+from openff.utilities import get_data_file_path
 from openff.utilities.utilities import has_executable, has_package
 
 from openff.interchange.drivers.gromacs import _find_gromacs_executable
@@ -89,6 +90,16 @@ class MoleculeWithConformer(Molecule):
         molecule.name = name
 
         return molecule
+
+
+def get_protein(name: str) -> Molecule:
+    """Get a protein from openff/toolkit/data/proteins based on PDB name."""
+    return Topology.from_pdb(
+        get_data_file_path(
+            relative_path=f"proteins/{name}.pdb",
+            package_name="openff.toolkit",
+        ),
+    ).molecule(0)
 
 
 HAS_GROMACS = _find_gromacs_executable() is not None

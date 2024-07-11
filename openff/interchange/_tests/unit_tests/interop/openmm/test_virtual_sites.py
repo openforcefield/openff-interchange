@@ -29,7 +29,9 @@ class TestBondChargeVirtualSite:
     ):
         import openmm
 
-        sage_with_bond_charge["VirtualSites"].parameters[0].distance = Quantity(
+        sage_with_bond_charge["VirtualSites"].get_parameter(
+            parameter_attrs={"smirks": "[#6:2]-[#17X1:1]"},
+        )[0].distance = Quantity(
             distance_,
             unit.angstrom,
         )
@@ -132,7 +134,9 @@ class TestFourSiteWater:
 
         tip4p = ForceField("tip4p_fb.offxml")
 
-        tip4p["VirtualSites"].parameters[0].distance = Quantity(
+        tip4p["VirtualSites"].get_parameter(
+            parameter_attrs={"smirks": "[#1:2]-[#8X2H2+0:1]-[#1:3]"},
+        )[0].distance = Quantity(
             distance_,
             unit.angstrom,
         )
@@ -326,7 +330,6 @@ class TestOpenMMVirtualSiteExclusions:
                     # Safeguard against some of the behavior seen in #919
                     for index in range(num_exceptions):
                         p1, p2, *_ = force.getExceptionParameters(index)
-                        print(p1, p2)
 
                         if sorted([p1, p2]) == [0, 3]:
                             raise Exception(
@@ -658,8 +661,16 @@ class TestvdWOnVirtualSites:
 
         oxygen_parameters = force_field["vdW"]["[#1]-[#8X2H2+0:1]-[#1]"]
 
-        force_field["VirtualSites"].parameters[0].sigma = oxygen_parameters.sigma
-        force_field["VirtualSites"].parameters[0].epsilon = oxygen_parameters.epsilon
+        force_field["VirtualSites"].get_parameter(
+            parameter_attrs={
+                "smirks": "[#1:2]-[#8X2H2+0:1]-[#1:3]",
+            },
+        )[0].sigma = oxygen_parameters.sigma
+        force_field["VirtualSites"].get_parameter(
+            parameter_attrs={
+                "smirks": "[#1:2]-[#8X2H2+0:1]-[#1:3]",
+            },
+        )[0].epsilon = oxygen_parameters.epsilon
 
         force_field["vdW"]["[#1]-[#8X2H2+0:1]-[#1]"].epsilon *= 0.0
 

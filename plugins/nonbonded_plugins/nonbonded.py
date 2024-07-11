@@ -4,8 +4,7 @@ import math
 from collections.abc import Iterable
 from typing import Literal
 
-from openff.models.types import FloatQuantity
-from openff.toolkit import Topology
+from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterAttribute,
     ParameterHandler,
@@ -13,8 +12,8 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     VirtualSiteHandler,
     _allow_only,
 )
-from openff.units import unit
 
+from openff.interchange._annotations import _DimensionlessQuantity, _DistanceQuantity
 from openff.interchange.components.potentials import Potential
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.smirnoff._nonbonded import _SMIRNOFFNonbondedCollection
@@ -29,8 +28,7 @@ class BuckinghamHandler(ParameterHandler):
     class BuckinghamType(ParameterType):
         """A custom SMIRNOFF type for Buckingham interactions."""
 
-        _VALENCE_TYPE = "Atom"
-        _ELEMENT_NAME = "Atom"
+        _ELEMENT_NAME = "Buckingham"
 
         a = ParameterAttribute(default=None, unit=unit.kilojoule_per_mole)
         b = ParameterAttribute(default=None, unit=unit.nanometer**-1)
@@ -47,8 +45,11 @@ class BuckinghamHandler(ParameterHandler):
     scale14 = ParameterAttribute(default=0.5, converter=float)
     scale15 = ParameterAttribute(default=1.0, converter=float)
 
-    cutoff = ParameterAttribute(default=9.0 * unit.angstroms, unit=unit.angstrom)
-    switch_width = ParameterAttribute(default=1.0 * unit.angstroms, unit=unit.angstrom)
+    cutoff = ParameterAttribute(default=Quantity("9.0 angstrom"), unit=unit.angstrom)
+    switch_width = ParameterAttribute(
+        default=Quantity("1.0 angstrom"),
+        unit=unit.angstrom,
+    )
 
     periodic_method = ParameterAttribute(
         default="cutoff",
@@ -71,7 +72,6 @@ class DoubleExponentialHandler(ParameterHandler):
     class DoubleExponentialType(ParameterType):
         """A custom SMIRNOFF type for double exponential interactions."""
 
-        _VALENCE_TYPE = "Atom"
         _ELEMENT_NAME = "Atom"
 
         r_min = ParameterAttribute(default=None, unit=unit.nanometers)
@@ -116,7 +116,6 @@ class C4IonHandler(ParameterHandler):
     class C4IonType(ParameterType):
         """A custom SMIRNOFF type for C4 ion interactions."""
 
-        _VALENCE_TYPE = "Atom"
         _ELEMENT_NAME = "Atom"
 
         c = ParameterAttribute(
@@ -146,7 +145,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 
     mixing_rule: str = "Buckingham"
 
-    switch_width: FloatQuantity["angstrom"] = unit.Quantity(1.0, unit.angstrom)  # noqa
+    switch_width: _DistanceQuantity = Quantity(1.0, unit.angstrom)
 
     @classmethod
     def allowed_parameter_handlers(cls) -> _HandlerIterable:
@@ -276,10 +275,10 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     mixing_rule: str = ""
 
-    switch_width: FloatQuantity["angstrom"] = unit.Quantity(1.0, unit.angstrom)  # noqa
+    switch_width: _DistanceQuantity = Quantity("1.0 angstrom")
 
-    alpha: FloatQuantity["dimensionless"]  # noqa
-    beta: FloatQuantity["dimensionless"]  # noqa
+    alpha: _DimensionlessQuantity
+    beta: _DimensionlessQuantity
 
     @classmethod
     def allowed_parameter_handlers(cls) -> _HandlerIterable:
@@ -318,7 +317,7 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     def modify_parameters(
         self,
-        original_parameters: dict[str, unit.Quantity],
+        original_parameters: dict[str, Quantity],
     ) -> dict[str, float]:
         """Optionally modify parameters prior to their being stored in a force."""
         # It's important that these keys are in the order of self.potential_parameters(),

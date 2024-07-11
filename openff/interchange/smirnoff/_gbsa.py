@@ -1,14 +1,32 @@
 from collections.abc import Iterable
 from typing import Literal
 
-from openff.models.types import FloatQuantity
 from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler
 
+# TODO: Move build_dimension_type functionality here
+from openff.interchange._annotations import (
+    AfterValidator,
+    Annotated,
+    WrapSerializer,
+    WrapValidator,
+    _DimensionlessQuantity,
+    _LengthQuantity,
+    _unit_validator_factory,
+    quantity_json_serializer,
+    quantity_validator,
+)
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kcal_mol_a2
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
+
+_KcalMolA2 = Annotated[
+    Quantity,
+    WrapValidator(quantity_validator),
+    AfterValidator(_unit_validator_factory("kilocalorie_per_mole / angstrom ** 2")),
+    WrapSerializer(quantity_json_serializer),
+]
 
 
 class SMIRNOFFGBSACollection(SMIRNOFFCollection):
@@ -19,13 +37,11 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
 
     gb_model: str = "OBC1"
 
-    solvent_dielectric: FloatQuantity["dimensionless"] = 78.5
-    solute_dielectric: FloatQuantity["dimensionless"] = 1.0
+    solvent_dielectric: _DimensionlessQuantity = Quantity(78.5, "dimensionless")
+    solute_dielectric: _DimensionlessQuantity = Quantity(1.0, "dimensionless")
     sa_model: str | None = "ACE"
-    surface_area_penalty: FloatQuantity["kilocalorie_per_mole / angstrom ** 2"] = (
-        5.4 * kcal_mol_a2
-    )
-    solvent_radius: FloatQuantity["angstrom"] = 1.4 * unit.angstrom
+    surface_area_penalty: _KcalMolA2 = 5.4 * kcal_mol_a2
+    solvent_radius: _LengthQuantity = 1.4 * unit.angstrom
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -83,8 +99,14 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
 
         collection = cls(
             gb_model=parameter_handler.gb_model,
-            solvent_dielectric=parameter_handler.solvent_dielectric,
-            solute_dielectric=parameter_handler.solute_dielectric,
+            solvent_dielectric=Quantity(
+                parameter_handler.solvent_dielectric,
+                "dimensionless",
+            ),
+            solute_dielectric=Quantity(
+                parameter_handler.solute_dielectric,
+                "dimensionless",
+            ),
             solvent_radius=parameter_handler.solvent_radius,
             sa_model=parameter_handler.sa_model,
             surface_area_penalty=parameter_handler.surface_area_penalty,

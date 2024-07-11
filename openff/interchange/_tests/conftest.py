@@ -290,7 +290,7 @@ def gbsa_force_field() -> ForceField:
 @pytest.fixture
 def basic_top() -> Topology:
     topology = MoleculeWithConformer.from_smiles("C").to_topology()
-    topology.box_vectors = unit.Quantity([5, 5, 5], unit.nanometer)
+    topology.box_vectors = Quantity([5, 5, 5], unit.nanometer)
     return topology
 
 
@@ -585,7 +585,7 @@ def acetaldehyde():
 @pytest.fixture
 def methane_with_conformer(methane):
     methane.add_conformer(
-        unit.Quantity(
+        Quantity(
             _rng.random((methane.n_atoms, 3)),
             unit.angstrom,
         ),
@@ -596,7 +596,7 @@ def methane_with_conformer(methane):
 @pytest.fixture
 def ethanol_with_conformer(ethanol):
     ethanol.add_conformer(
-        unit.Quantity(
+        Quantity(
             _rng.random((ethanol.n_atoms, 3)),
             unit.angstrom,
         ),

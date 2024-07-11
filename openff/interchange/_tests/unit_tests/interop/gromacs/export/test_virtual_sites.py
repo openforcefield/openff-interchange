@@ -36,7 +36,11 @@ class TestBondChargeVirtualSite:
         import openmm
         import openmm.app
 
-        sage_with_bond_charge["VirtualSites"].parameters[0].distance = Quantity(
+        sage_with_bond_charge["VirtualSites"].get_parameter(
+            parameter_attrs={
+                "smirks": "[#6:2]-[#17X1:1]",
+            },
+        )[0].distance = Quantity(
             distance_,
             unit.angstrom,
         )

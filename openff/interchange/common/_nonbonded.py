@@ -2,10 +2,10 @@ import abc
 from collections.abc import Iterable
 from typing import Literal
 
-from openff.models.types import FloatQuantity
 from openff.toolkit import Quantity, unit
+from pydantic import Field, PrivateAttr
 
-from openff.interchange._pydantic import Field, PrivateAttr
+from openff.interchange._annotations import _DistanceQuantity
 from openff.interchange.components.potentials import Collection
 from openff.interchange.constants import _PME
 from openff.interchange.models import LibraryChargeTopologyKey, TopologyKey
@@ -14,7 +14,7 @@ from openff.interchange.models import LibraryChargeTopologyKey, TopologyKey
 class _NonbondedCollection(Collection, abc.ABC):
     type: str = "nonbonded"
 
-    cutoff: FloatQuantity["angstrom"] = Field(  # noqa
+    cutoff: _DistanceQuantity = Field(
         Quantity(10.0, unit.angstrom),
         description="The distance at which pairwise interactions are truncated",
     )
@@ -36,6 +36,18 @@ class _NonbondedCollection(Collection, abc.ABC):
         description="The scaling factor applied to 1-5 interactions",
     )
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @classmethod
+    def __init_subclass__(cls, **kwargs):
+        """Hack to get electrostatics subclasses to have private attributes."""
+        if "Electrostatics" in cls.__name__:
+            cls._charges = dict()
+            cls._charges_cached = False
+
+        return super().__pydantic_init_subclass__(**kwargs)
+
 
 class vdWCollection(_NonbondedCollection):
     """Handler storing vdW potentials."""
@@ -51,7 +63,7 @@ class vdWCollection(_NonbondedCollection):
         description="The mixing rule (combination rule) used in computing pairwise vdW interactions",
     )
 
-    switch_width: FloatQuantity["angstrom"] = Field(  # noqa
+    switch_width: _DistanceQuantity = Field(
         Quantity(1.0, unit.angstrom),
         description="The width over which the switching function is applied",
     )
@@ -88,8 +100,10 @@ class ElectrostaticsCollection(_NonbondedCollection):
     _charges: dict[
         TopologyKey | LibraryChargeTopologyKey,
         Quantity,
-    ] = PrivateAttr(dict())
-    _charges_cached: bool = PrivateAttr(False)
+    ] = PrivateAttr(
+        default_factory=dict,
+    )
+    _charges_cached: bool = PrivateAttr(default=False)
 
     @property
     def charges(self) -> dict[TopologyKey, Quantity]:

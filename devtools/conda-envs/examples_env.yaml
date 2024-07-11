@@ -10,7 +10,6 @@ dependencies:
   - openmm
   # OpenFF stack
   - openff-toolkit
-  - openff-models
   - openff-nagl
   - openff-nagl-models
   - ambertools =23
@@ -30,5 +29,5 @@ dependencies:
   - nbval
   - rich
   # Drivers
-  - gromacs =2023.3=nompi_*_103
+  - gromacs
   - lammps >=2023.08.02

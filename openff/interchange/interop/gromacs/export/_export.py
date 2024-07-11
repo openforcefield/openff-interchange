@@ -2,7 +2,6 @@ import pathlib
 import warnings
 
 import numpy
-from openff.models.models import DefaultModel
 from openff.toolkit import unit
 
 from openff.interchange.exceptions import MissingPositionsError
@@ -16,9 +15,10 @@ from openff.interchange.interop.gromacs.models.models import (
     PeriodicProperDihedral,
     RyckaertBellemansDihedral,
 )
+from openff.interchange.pydantic import _BaseModel
 
 
-class GROMACSWriter(DefaultModel):
+class GROMACSWriter(_BaseModel):
     """Thin wrapper for writing GROMACS systems."""
 
     system: GROMACSSystem

@@ -34,11 +34,13 @@ class TestSMIRNOFFVirtualSiteCharges:
         sage_with_bond_charge.get_parameter_handler("ChargeIncrementModel")
         sage_with_bond_charge["ChargeIncrementModel"].partial_charge_method = "zeros"
 
-        sage_with_bond_charge["VirtualSites"].parameters[0].charge_increment1 = (
-            Quantity(
-                chlorine_charge,
-                unit.elementary_charge,
-            )
+        sage_with_bond_charge["VirtualSites"].get_parameter(
+            parameter_attrs={
+                "smirks": "[#6:2]-[#17X1:1]",
+            },
+        )[0].charge_increment1 = Quantity(
+            chlorine_charge,
+            unit.elementary_charge,
         )
 
         out = sage_with_bond_charge.create_interchange(
@@ -51,7 +53,7 @@ class TestSMIRNOFFVirtualSiteCharges:
             "BondCharge",
         }
 
-        charges = [charge.m for charge in out["Electrostatics"].charges.values()]
+        charges = [charge.m for charge in out["Electrostatics"]._get_charges().values()]
 
         assert sum(charges) == 0.0
 
@@ -588,7 +590,7 @@ class TestSMIRNOFFVirtualSites:
             nitrogen.to_topology(),
         )
 
-        charges = [charge.m for charge in out["Electrostatics"].charges.values()]
+        charges = [charge.m for charge in out["Electrostatics"]._get_charges().values()]
 
         assert sum(charges) == pytest.approx(0.0)
 

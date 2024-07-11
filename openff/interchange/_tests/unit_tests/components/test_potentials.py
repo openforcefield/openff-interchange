@@ -84,6 +84,6 @@ class TestPotentialSerialization:
         )
 
     def test_json_roundtrip(self, dummy_potential):
-        potential = Potential.parse_raw(dummy_potential.json())
+        potential = Potential.model_validate_json(dummy_potential.model_dump_json())
 
         assert potential.parameters == dummy_potential.parameters

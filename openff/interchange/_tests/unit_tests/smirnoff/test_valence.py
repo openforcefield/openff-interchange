@@ -26,7 +26,7 @@ if has_package("openmm"):
     import openmm.app
     import openmm.unit
 
-from openff.interchange._pydantic import ValidationError
+from pydantic import ValidationError
 
 
 class TestSMIRNOFFValenceCollections:
@@ -74,7 +74,9 @@ class TestSMIRNOFFValenceCollections:
 
         top_key = AngleKey(atom_indices=(0, 1, 2))
         pot_key = angle_potentials.key_map[top_key]
+
         assert pot_key.associated_handler == "Angles"
+
         pot = angle_potentials.potentials[pot_key]
 
         assert pot.parameters["k"].to(kcal_mol_rad2).magnitude == pytest.approx(2.5)

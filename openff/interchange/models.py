@@ -3,12 +3,12 @@
 import abc
 from typing import Any, Literal
 
-from openff.models.models import DefaultModel
+from pydantic import Field
 
-from openff.interchange._pydantic import Field
+from openff.interchange.pydantic import _BaseModel
 
 
-class TopologyKey(DefaultModel, abc.ABC):
+class TopologyKey(_BaseModel, abc.ABC):
     """
     A unique identifier of a segment of a chemical topology.
 
@@ -47,6 +47,9 @@ class TopologyKey(DefaultModel, abc.ABC):
 
     def __hash__(self) -> int:
         return hash(tuple(self.atom_indices))
+
+    def __eq__(self, other: Any) -> bool:
+        return self.__hash__() == other.__hash__()
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} with atom indices {self.atom_indices}"
@@ -95,6 +98,9 @@ class AngleKey(TopologyKey):
     atom_indices: tuple[int, int, int] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
+
+    def __hash__(self) -> int:
+        return hash(tuple(self.atom_indices))
 
     def __eq__(self, other) -> bool:
         return super().__eq__(other) or other == self.atom_indices
@@ -163,7 +169,7 @@ class ImproperTorsionKey(ProperTorsionKey):
         return self.atom_indices[1]
 
 
-class LibraryChargeTopologyKey(DefaultModel):
+class LibraryChargeTopologyKey(_BaseModel):
     """
     A unique identifier of the atoms associated with a library charge.
     """
@@ -191,7 +197,7 @@ class SingleAtomChargeTopologyKey(LibraryChargeTopologyKey):
     """
 
 
-class ChargeModelTopologyKey(DefaultModel):
+class ChargeModelTopologyKey(_BaseModel):
     """Subclass of `TopologyKey` for use with charge models only."""
 
     this_atom_index: int
@@ -206,7 +212,7 @@ class ChargeModelTopologyKey(DefaultModel):
         return hash((self.this_atom_index, self.partial_charge_method))
 
 
-class ChargeIncrementTopologyKey(DefaultModel):
+class ChargeIncrementTopologyKey(_BaseModel):
     """Subclass of `TopologyKey` for use with charge increments only."""
 
     # TODO: Eventually rename this for coherence with `TopologyKey`
@@ -252,7 +258,7 @@ class VirtualSiteKey(TopologyKey):
         )
 
 
-class PotentialKey(DefaultModel):
+class PotentialKey(_BaseModel):
     """
     A unique identifier of an instance of physical parameters as applied to a segment of a chemical topology.
 

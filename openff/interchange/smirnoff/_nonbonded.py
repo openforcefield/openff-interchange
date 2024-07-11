@@ -13,8 +13,8 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ToolkitAM1BCCHandler,
     vdWHandler,
 )
+from pydantic import Field, PrivateAttr
 
-from openff.interchange._pydantic import Field
 from openff.interchange.common._nonbonded import (
     ElectrostaticsCollection,
     _NonbondedCollection,
@@ -269,6 +269,9 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         "reaction-field",
     ] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
+
+    _charges = PrivateAttr(default_factory=dict)
+    _charges_cached: bool
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -880,7 +883,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     # Copy the keys associated with the reference molecule to the duplicate molecule
                     for key in matches:
                         if key.this_atom_index == unique_molecule_atom_index:
-                            new_key = key.__class__(**key.dict())
+                            new_key = key.__class__(**key.model_dump())
                             new_key.this_atom_index = topology_atom_index
 
                             # Have this new key (on a duplicate molecule) point to the same potential
@@ -888,7 +891,8 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                             self.key_map[new_key] = matches[key]
 
         topology_charges = [0.0] * topology.n_atoms
-        for key, val in self.charges.items():
+
+        for key, val in self._get_charges().items():
             topology_charges[key.atom_indices[0]] = val.m
 
         # TODO: Better data structures in Topology.identical_molecule_groups will make this
