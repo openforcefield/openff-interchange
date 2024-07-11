@@ -702,7 +702,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         cls,
         parameter_handlers: dict[str, ElectrostaticsHandlerType],
         unique_molecule: Molecule,
-    ) -> tuple[dict[TopologyKey, PotentialKey], dict[PotentialKey, Potential]]:
+    ) -> tuple[
+        dict[TopologyKey | SingleAtomChargeTopologyKey, PotentialKey],
+        dict[PotentialKey, Potential],
+    ]:
         """
         Construct a slot and potential map for a particular reference molecule and set of parameter handlers.
         """

@@ -1045,12 +1045,12 @@ def _set_particle_parameters(
                 else:
                     vdw_force.setParticleParameters(particle_index, [sigma, epsilon])
 
-            partial_charge = partial_charges[virtual_site_key].m_as(unit.e)
+            partial_charge = partial_charges[virtual_site_key].m_as(unit.e)  # type: ignore[index]
 
             if electrostatics_force is not None:
                 electrostatics_force.setParticleParameters(
                     particle_index,
-                    partial_charges[virtual_site_key].m_as(unit.e),
+                    partial_charges[virtual_site_key].m_as(unit.e),  # type: ignore[index]
                     0.0,
                     0.0,
                 )
