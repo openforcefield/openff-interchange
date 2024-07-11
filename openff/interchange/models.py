@@ -76,7 +76,8 @@ class BondKey(TopologyKey):
     def __hash__(self) -> int:
         if self.bond_order is None:
             return hash(tuple(self.atom_indices))
-        return hash((tuple(self.atom_indices), self.bond_order))
+        else:
+            return hash((tuple(self.atom_indices), self.bond_order))
 
     def __eq__(self, other) -> bool:
         return super().__eq__(other) or (

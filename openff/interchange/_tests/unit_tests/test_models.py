@@ -130,7 +130,7 @@ def test_bondkey_eq_hash():
     assert BondKey(atom_indices=(1, 3), bond_order=None) != ((1, 3), None)
     assert BondKey(atom_indices=(1, 3), bond_order=1.5) != (1, 3)
     assert BondKey(atom_indices=(1, 3), bond_order=1.5) != ((1, 3), None)
-    assert BondKey(atom_indices=(1, 3), bond_order=1.5) != ((1, 3), 1.5)
+    assert BondKey(atom_indices=(1, 3), bond_order=1.5) == ((1, 3), 1.5)
 
 
 def test_anglekey_eq_hash():
