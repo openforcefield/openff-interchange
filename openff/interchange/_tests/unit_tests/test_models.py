@@ -125,6 +125,7 @@ def test_bondkey_eq_hash():
     assert BondKey(atom_indices=(1, 3)) == (1, 3)
     assert hash(BondKey(atom_indices=(1, 3))) == hash((1, 3))
     assert BondKey(atom_indices=(1, 3)) != (1, 4)
+    assert BondKey(atom_indices=(1, 3)) != (3, 1)
     assert BondKey(atom_indices=(1, 3), bond_order=None) == (1, 3)
     assert hash(BondKey(atom_indices=(1, 3), bond_order=None)) == hash((1, 3))
     assert BondKey(atom_indices=(1, 3), bond_order=None) != ((1, 3), None)
@@ -143,6 +144,7 @@ def test_anglekey_eq_hash():
     """
     assert AngleKey(atom_indices=(1, 3, 16)) == (1, 3, 16)
     assert hash(AngleKey(atom_indices=(1, 3, 16))) == hash((1, 3, 16))
+    assert AngleKey(atom_indices=(1, 3, 16)) != (16, 3, 1)
     assert AngleKey(atom_indices=(1, 3, 16)) != (1, 3)
     assert AngleKey(atom_indices=(1, 3, 16)) != (1, 3, 15)
 
@@ -157,6 +159,7 @@ def test_torsionkey_eq_hash():
     """
     assert ProperTorsionKey(atom_indices=(1, 2, 3, 4)) == (1, 2, 3, 4)
     assert hash(ProperTorsionKey(atom_indices=(1, 2, 3, 4))) == hash((1, 2, 3, 4))
+    assert ProperTorsionKey(atom_indices=(1, 2, 3, 4)) != (4, 3, 2, 1)
     assert ProperTorsionKey(
         atom_indices=(1, 2, 3, 4),
         mult=None,

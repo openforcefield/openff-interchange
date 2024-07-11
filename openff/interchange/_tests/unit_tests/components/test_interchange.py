@@ -52,6 +52,7 @@ class TestInterchange:
         idx_a, idx_b = first_bondkey.atom_indices
         assert (
             out["Bonds"][idx_a, idx_b]
+            == out["Bonds"][idx_b, idx_a]
             == out["Bonds"].potentials[out["Bonds"].key_map[first_bondkey]]
         )
 
