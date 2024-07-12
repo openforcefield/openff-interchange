@@ -122,6 +122,8 @@ def test_bondkey_eq_hash():
     with a small runtime cost.
     """
 
+    assert BondKey(atom_indices=(1, 3)) == BondKey(atom_indices=(1, 3))
+    assert BondKey(atom_indices=(1, 3)) == TopologyKey(atom_indices=(1, 3))
     assert BondKey(atom_indices=(1, 3)) == (1, 3)
     assert hash(BondKey(atom_indices=(1, 3))) == hash((1, 3))
     assert BondKey(atom_indices=(1, 3)) != (1, 4)
@@ -142,6 +144,8 @@ def test_anglekey_eq_hash():
     objects are allowed and will be handled according to __eq__, possibly
     with a small runtime cost.
     """
+    assert AngleKey(atom_indices=(1, 3, 16)) == AngleKey(atom_indices=(1, 3, 16))
+    assert AngleKey(atom_indices=(1, 3, 16)) == TopologyKey(atom_indices=(1, 3, 16))
     assert AngleKey(atom_indices=(1, 3, 16)) == (1, 3, 16)
     assert hash(AngleKey(atom_indices=(1, 3, 16))) == hash((1, 3, 16))
     assert AngleKey(atom_indices=(1, 3, 16)) != (16, 3, 1)
@@ -157,6 +161,12 @@ def test_torsionkey_eq_hash():
     objects are allowed and will be handled according to __eq__, possibly
     with a small runtime cost.
     """
+    assert ProperTorsionKey(atom_indices=(1, 2, 3, 4)) == ProperTorsionKey(
+        atom_indices=(1, 2, 3, 4),
+    )
+    assert ProperTorsionKey(atom_indices=(1, 2, 3, 4)) == TopologyKey(
+        atom_indices=(1, 2, 3, 4),
+    )
     assert ProperTorsionKey(atom_indices=(1, 2, 3, 4)) == (1, 2, 3, 4)
     assert hash(ProperTorsionKey(atom_indices=(1, 2, 3, 4))) == hash((1, 2, 3, 4))
     assert ProperTorsionKey(atom_indices=(1, 2, 3, 4)) != (4, 3, 2, 1)
@@ -169,3 +179,22 @@ def test_torsionkey_eq_hash():
     assert ProperTorsionKey(atom_indices=(1, 2, 3, 4), mult=0) != (1, 2, 3, 4)
     assert ProperTorsionKey(atom_indices=(1, 2, 3, 4), phase=1.5) != (1, 2, 3, 4)
     assert ProperTorsionKey(atom_indices=(1, 2, 3, 4), bond_order=1.5) != (1, 2, 3, 4)
+
+    assert ProperTorsionKey(atom_indices=(1, 2, 3, 4), mult=0) == (
+        (1, 2, 3, 4),
+        0,
+        None,
+        None,
+    )
+    assert ProperTorsionKey(atom_indices=(1, 2, 3, 4), phase=1.5) == (
+        (1, 2, 3, 4),
+        None,
+        1.5,
+        None,
+    )
+    assert ProperTorsionKey(atom_indices=(1, 2, 3, 4), bond_order=1.5) == (
+        (1, 2, 3, 4),
+        None,
+        None,
+        1.5,
+    )
