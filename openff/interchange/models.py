@@ -19,9 +19,12 @@ class TopologyKey(_BaseModel, abc.ABC):
     bond, but not the force constant or equilibrium bond length as determined by the
     force field.
 
+    Topology keys compare equal to (and hash the same as) tuples of their atom
+    indices as long as their other fields are `None`.
+
     Examples
     --------
-    Create a TopologyKey identifying some speicfic angle
+    Create a ``TopologyKey`` identifying some specific angle
 
     .. code-block:: pycon
 
@@ -30,13 +33,29 @@ class TopologyKey(_BaseModel, abc.ABC):
         >>> this_angle
         TopologyKey with atom indices (2, 1, 3)
 
-    Create a TopologyKey indentifying just one atom
+    Create a ``TopologyKey`` indentifying just one atom
 
     .. code-block:: pycon
 
         >>> this_atom = TopologyKey(atom_indices=(4,))
         >>> this_atom
         TopologyKey with atom indices (4,)
+
+    Compare a ``TopologyKey`` to a tuple containing the atom indices
+
+    .. code-block:: pycon
+
+        >>> key = TopologyKey(atom_indices=(0, 1))
+        >>> key == (0, 1)
+        True
+
+    Index into a dictionary with a tuple
+
+    .. code-block:: pycon
+
+        >>> d = {TopologyKey(atom_indices=(0, 1)): "some_bond"}
+        >>> d[0, 1]
+        'some_bond'
 
     """
 
@@ -67,6 +86,22 @@ class TopologyKey(_BaseModel, abc.ABC):
 class BondKey(TopologyKey):
     """
     A unique identifier of the atoms associated in a bond potential.
+
+    Examples
+    --------
+    Index into a dictionary with a tuple
+
+    .. code-block:: pycon
+
+        >>> d = {
+        ...     BondKey(atom_indices=(0, 1)): "some_bond",
+        ...     BondKey(atom_indices=(1, 2), bond_order=1.5): "some_other_bond",
+        ... }
+        >>> d[0, 1]
+        'some_bond'
+        >>> d[(1, 2), 1.5]
+        'some_other_bond'
+
     """
 
     atom_indices: tuple[int, int] = Field(
@@ -98,6 +133,17 @@ class BondKey(TopologyKey):
 class AngleKey(TopologyKey):
     """
     A unique identifier of the atoms associated in an angle potential.
+
+    Examples
+    --------
+    Index into a dictionary with a tuple
+
+    .. code-block:: pycon
+
+        >>> d = {AngleKey(atom_indices=(0, 1, 2)): "some_angle"}
+        >>> d[0, 1, 2]
+        'some_angle'
+
     """
 
     atom_indices: tuple[int, int, int] = Field(
@@ -111,6 +157,25 @@ class AngleKey(TopologyKey):
 class ProperTorsionKey(TopologyKey):
     """
     A unique identifier of the atoms associated in a proper torsion potential.
+
+    Examples
+    --------
+    Index into a dictionary with a tuple
+
+    .. code-block:: pycon
+
+        >>> d = {
+        ...     ProperTorsionKey(atom_indices=(0, 1, 2, 3)): "torsion1",
+        ...     ProperTorsionKey(atom_indices=(0, 1, 2, 3), mult=2): "torsion2",
+        ...     ProperTorsionKey(atom_indices=(5, 6, 7, 8), mult=2, phase=0.78, bond_order=1.5): "torsion3",
+        ... }
+        >>> d[0, 1, 2, 3]
+        'torsion1'
+        >>> d[(0, 1, 2, 3), 2, None, None]
+        'torsion2'
+        >>> d[(5, 6, 7, 8), 2, 0.78, 1.5]
+        'torsion3'
+
     """
 
     atom_indices: tuple[int, int, int, int] | tuple[()] = Field(
@@ -168,6 +233,25 @@ class ImproperTorsionKey(ProperTorsionKey):
     A unique identifier of the atoms associated in an improper torsion potential.
 
     The central atom is the second atom in the `atom_indices` tuple, or accessible via `get_central_atom_index`.
+
+    Examples
+    --------
+    Index into a dictionary with a tuple
+
+    .. code-block:: pycon
+
+        >>> d = {
+        ...     ImproperTorsionKey(atom_indices=(0, 1, 2, 3)): "torsion1",
+        ...     ImproperTorsionKey(atom_indices=(0, 1, 2, 3), mult=2): "torsion2",
+        ...     ImproperTorsionKey(atom_indices=(5, 6, 7, 8), mult=2, phase=0.78, bond_order=1.5): "torsion3",
+        ... }
+        >>> d[0, 1, 2, 3]
+        'torsion1'
+        >>> d[(0, 1, 2, 3), 2, None, None]
+        'torsion2'
+        >>> d[(5, 6, 7, 8), 2, 0.78, 1.5]
+        'torsion3'
+
     """
 
     def get_central_atom_index(self) -> int:
@@ -235,7 +319,9 @@ class ChargeIncrementTopologyKey(_BaseModel):
 
 
 class VirtualSiteKey(TopologyKey):
-    """A unique identifier of a virtual site in the scope of a chemical topology."""
+    """
+    A unique identifier of a virtual site in the scope of a chemical topology.
+    """
 
     # TODO: Overriding the attribute of a parent class is clumsy, but less grief than
     #       having this not inherit from `TopologyKey`. It might be useful to just have
