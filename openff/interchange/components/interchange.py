@@ -56,6 +56,21 @@ class Interchange(_BaseModel):
 
     .. warning :: This object is in an early and experimental state and unsuitable for production.
     .. warning :: This API is experimental and subject to change.
+
+    Examples
+    --------
+    Create an ``Interchange`` from an OpenFF ``ForceField`` and ``Molecule``
+
+    >>> from openff.toolkit import ForceField, Molecule
+    >>> sage = ForceField("openff-2.2.0.offxml")
+    >>> top = Molecule.from_smiles("CCC").to_topology()
+    >>> interchange = sage.create_interchange(top)
+
+    Get the parameters for the bond between atoms 0 and 1
+
+    >>> interchange["Bonds"][0, 1]
+    Potential(...)
+
     """
 
     collections: _AnnotatedCollections = Field(dict())

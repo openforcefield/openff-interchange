@@ -134,17 +134,17 @@ def _validate_inputs(
     """
     if (
         box_vectors is None
-        and mass_density is None  # noqa: W503
-        and (solute is None or solute.box_vectors is None)  # noqa: W503
+        and mass_density is None
+        and (solute is None or solute.box_vectors is None)
     ):
         raise PACKMOLValueError(
             "One of `box_vectors`, `mass_density`, or"
-            + " `solute.box_vectors` must be specified.",  # noqa: W503
+            + " `solute.box_vectors` must be specified.",
         )
     if box_vectors is not None and mass_density is not None:
         raise PACKMOLValueError(
             "`box_vectors` and `mass_density` cannot be specified together;"
-            + " choose one or the other.",  # noqa: W503
+            + " choose one or the other.",
         )
 
     if box_vectors is not None and box_vectors.shape != (3, 3):

@@ -419,6 +419,16 @@ class Collection(_BaseModel):
         else:
             return super().__getattribute__(attr)
 
+    def __getitem__(self, key) -> Potential:
+        if (
+            isinstance(key, tuple)
+            and key not in self.key_map
+            and tuple(reversed(key)) in self.key_map
+        ):
+            return self.potentials[self.key_map[tuple(reversed(key))]]
+
+        return self.potentials[self.key_map[key]]
+
 
 def validate_collections(
     v: Any,

@@ -204,8 +204,8 @@ def _apply_hmr(
         # TODO: This should only skip rigid waters, even though HMR or flexible water is questionable
         if (
             (hydrogen_atom.atomic_number == 1)
-            and (heavy_atom.atomic_number != 1)  # noqa: W503
-            and not (_is_water(hydrogen_atom.molecule))  # noqa: W503
+            and (heavy_atom.atomic_number != 1)
+            and not (_is_water(hydrogen_atom.molecule))
         ):
 
             hydrogen_index = interchange.topology.atom_index(hydrogen_atom)
