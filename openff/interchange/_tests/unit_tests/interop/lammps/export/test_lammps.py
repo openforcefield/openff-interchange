@@ -1,14 +1,14 @@
-import numpy
-import pytest
-import lammps
 from pathlib import Path
 
+import lammps
+import numpy
+import pytest
 from openff.toolkit import ForceField, Molecule, Topology, unit
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, needs_lmp
-from openff.interchange.drivers import get_lammps_energies, get_openmm_energies
 from openff.interchange.components.mdconfig import MDConfig
+from openff.interchange.drivers import get_lammps_energies, get_openmm_energies
 
 
 @needs_lmp
@@ -79,15 +79,15 @@ class TestLammps:
         sidelen: int = 2,
     ) -> bool:
         """Test to see if interop.lammps.export._write_atoms() writes unique ids for each distinct Molecule"""
-        assert(isinstance(sidelen, int) and sidelen > 1)
+        assert isinstance(sidelen, int) and sidelen > 1
 
         # NOTE: the input file name can have an arbitrary name, but the data file !MUST! be named "out.lmp", as this is
         # the filename hard-coded into the read_data output of MDConfig.write_lammps_input()
         # Would be really nice to have more control over this programmatically in the future (perhaps have optional "data_file" kwarg?)
         cwd = Path.cwd()
-        lmp_file_name : str = 'temp'
-        lammps_input_path = cwd / f'{lmp_file_name}.in'  
-        lammps_data_path  = cwd / 'out.lmp' 
+        lmp_file_name: str = "temp"
+        lammps_input_path = cwd / f"{lmp_file_name}.in"
+        lammps_data_path = cwd / "out.lmp"
 
         # BUILD TOPOLOGY
         ## 1) compute effective radius as the greatest atomic distance from barycenter (avoids collisions when tiling)
@@ -138,21 +138,29 @@ class TestLammps:
         interchange.to_lammps(lammps_data_path)
 
         mdconfig = MDConfig.from_interchange(interchange)
-        mdconfig.write_lammps_input(interchange=interchange, input_file=lammps_input_path)
+        mdconfig.write_lammps_input(
+            interchange=interchange, input_file=lammps_input_path
+        )
 
         ## 4) EXTRACT ATOM INFO FROM WRITTEN LAMMPS FILE TO TEST IF MOLEUCLE IDS ARE BEING WRITTEN CORRECTLY
-        with lammps.lammps(cmdargs=['-screen', 'none', '-log', 'none']) as lmp: # Ask LAMMPS nicely not to spam console or produce stray log files
-            lmp.file('temp.in') # can't use lmp.command('read_data ...'), as atom/bond/pair/dihedral styles are not set in the Interchange-generated LAMMPS data file
-            written_mol_ids = set(
+        with lammps.lammps(
+            cmdargs=["-screen", "none", "-log", "none"]
+        ) as lmp:  # Ask LAMMPS nicely not to spam console or produce stray log files
+            lmp.file(
+                "temp.in"
+            )  # can't use lmp.command('read_data ...'), as atom/bond/pair/dihedral styles are not set in the Interchange-generated LAMMPS data file
+            written_mol_ids = {
                 mol_id
-                    for _, mol_id in zip(range(lmp.get_natoms()), lmp.extract_atom('molecule')) 
-            )  # need to zip with range capped at n_atoms, otherwise will iterate forever
-        
+                for _, mol_id in zip(
+                    range(lmp.get_natoms()), lmp.extract_atom("molecule")
+                )
+            }  # need to zip with range capped at n_atoms, otherwise will iterate forever
+
         # dispose of the lammps files once we've read them to leave no trace on disc
-        lammps_input_path.unlink() 
-        lammps_data_path.unlink() 
+        lammps_input_path.unlink()
+        lammps_data_path.unlink()
 
         # if all has gone well, we'd expect for each of the N molecules to have ids from [1...N]
-        expected_mol_ids = {i + 1 for i in range(interchange.topology.n_molecules)}  
+        expected_mol_ids = {i + 1 for i in range(interchange.topology.n_molecules)}
 
         assert expected_mol_ids == written_mol_ids
