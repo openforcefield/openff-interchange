@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, Type
+from typing import Any
 
 import numpy
 import pytest
