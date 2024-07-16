@@ -82,7 +82,9 @@ class TestLammps:
 
         # BUILD TOPOLOGY
         ## 1) compute effective radius as the greatest atomic distance from barycenter (avoids collisions when tiling)
-        pilot_mol = MoleculeWithConformer.from_smiles(smiles) # this will serve as a prototype for all other Molecule copies in the Topology
+        pilot_mol = MoleculeWithConformer.from_smiles(
+            smiles
+        )  # this will serve as a prototype for all other Molecule copies in the Topology
 
         conf = pilot_mol.conformers[0]
         COM = conf.mean(axis=0)
