@@ -75,10 +75,11 @@ class TestLammps:
         self,
         smiles: str,
         sage_unconstrained: ForceField,
-        sidelen: int = 0,
+        sidelen: int = 2,
     ) -> bool:
         """Test to see if interop.lammps.export._write_atoms() writes unique ids for each distinct Molecule"""
         temp_lammps_path = Path.cwd() / "temp.lmp"
+        assert(isinstance(sidelen, int) and sidelen > 1)
 
         # BUILD TOPOLOGY
         ## 1) compute effective radius as the greatest atomic distance from barycenter (avoids collisions when tiling)
