@@ -81,7 +81,7 @@ class TestLammps:
         [
             "CCO",
             "N1CCCC1",
-            "c1cccc1c",
+            "c1ccccc1",
         ],
     )
     def test_unique_lammps_mol_ids(
