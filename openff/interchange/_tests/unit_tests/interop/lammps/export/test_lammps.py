@@ -72,6 +72,17 @@ class TestLammps:
             },
         )
 
+    @pytest.mark.parametrize("sidelen", [2, 3])
+    @pytest.mark.parametrize(
+        "smiles",
+        [ 
+            "O",   # nothing particularly special about these molecules
+            "CCO", # just testing that unique IDs hold for diverse chemistries
+            "N1CCCC1",
+            "c1cccc1c",
+
+        ]
+    )
     def test_unique_lammps_mol_ids(
         self,
         smiles: str,
