@@ -1,20 +1,19 @@
 """Runtime settings for MD simulations."""
+
+import warnings
 from typing import TYPE_CHECKING, Literal
 
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
-from openff.units import unit
+from openff.toolkit import Quantity, unit
 
+from openff.interchange._pydantic import Field
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
-
-try:
-    from pydantic.v1 import Field
-except ImportError:
-    from pydantic import Field
+from openff.interchange.warnings import SwitchingFunctionNotImplementedWarning
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
@@ -45,7 +44,7 @@ class MDConfig(DefaultModel):
         description="The method used to calculate the vdW interactions.",
     )
     vdw_cutoff: FloatQuantity["angstrom"] = Field(
-        unit.Quantity(9.0, unit.angstrom),
+        Quantity(9.0, unit.angstrom),
         description="The distance at which pairwise interactions are truncated",
     )
     mixing_rule: str = Field(
@@ -58,7 +57,7 @@ class MDConfig(DefaultModel):
         description="Whether or not to use a switching function for the vdw interactions",
     )
     switching_distance: FloatQuantity["angstrom"] = Field(
-        unit.Quantity(0.0, unit.angstrom),
+        Quantity(0.0, unit.angstrom),
         description="The distance at which the switching function is applied",
     )
     coul_method: str = Field(
@@ -66,7 +65,7 @@ class MDConfig(DefaultModel):
         description="The method used to compute pairwise electrostatic interactions",
     )
     coul_cutoff: FloatQuantity["angstrom"] = Field(
-        unit.Quantity(9.0, unit.angstrom),
+        Quantity(9.0, unit.angstrom),
         description=(
             "The distance at which electrostatic interactions are truncated or transition from "
             "short- to long-range."
@@ -170,6 +169,8 @@ class MDConfig(DefaultModel):
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
                 mdp.write("coulomb-modifier = None\n")
                 mdp.write("fourier-spacing = 0.12\n")
+                # TODO: Wire this through like `ewald_tolerance` in `to_openmm`
+                mdp.write("ewald-rtol = 1e-4\n")
             elif self.coul_method == "reactionfield":
                 mdp.write("coulombtype = Reaction-field\n")
                 mdp.write(f"rcoulomb = {coul_cutoff}\n")
@@ -180,8 +181,12 @@ class MDConfig(DefaultModel):
 
             if self.vdw_method == "cutoff":
                 mdp.write("vdwtype = cutoff\n")
-            elif self.vdw_method == _PME:
+            elif self.vdw_method in ("Ewald3D", "pme", "PME", _PME):
                 mdp.write("vdwtype = PME\n")
+                # TODO: Wire this through like `ewald_tolerance` in `to_openmm`
+                # TODO: Should this match electrostatics PME tolerance?
+                mdp.write("ewald-rtol-lj = 1e-4\n")
+                mdp.write("lj-pme-comb-rule = geometric\n")
             else:
                 raise UnsupportedExportError(
                     f"vdW method {self.vdw_method} not supported",
@@ -190,7 +195,7 @@ class MDConfig(DefaultModel):
             vdw_cutoff = round(self.vdw_cutoff.m_as(unit.nanometer), 4)
             mdp.write(f"rvdw = {vdw_cutoff}\n")
 
-            if self.switching_function:
+            if self.switching_function and self.vdw_method == "cutoff":
                 mdp.write("vdw-modifier = Potential-switch\n")
                 distance = round(self.switching_distance.m_as(unit.nanometer), 4)
                 mdp.write(f"rvdw-switch = {distance}\n")
@@ -200,21 +205,82 @@ class MDConfig(DefaultModel):
 
     def write_lammps_input(
         self,
+        interchange: "Interchange",
         input_file: str = "run.in",
         data_file: str = "out.lmp",
     ) -> None:
-        """
-        Write a LAMMPS input file for running single-point energies.
+        """Write a LAMMPS input file for running single-point energies."""
+        # TODO: Get constrained angles
+        # TODO: Process rigid water
 
-        Parameters
-        ----------
-        input_file
-            The name of the input file to write.
-        data_file
-            The name of the data file to write.
+        def _get_coeffs_of_constrained_bonds_and_angles(
+            interchange: "Interchange",
+        ) -> tuple[set[int], set[int]]:
+            """
+            Get coefficients of bonds and angles that appear to be constrained.
 
-        """
+            Refactor this when LAMMPS export uses a dedicated class.
+
+            * Coefficients are matched by stored SMIRKS
+            * Coefficients are ints associated with Bond Coeffs / Angle Coeffs section
+            * Coefficients are zero-indexed
+            """
+            constraint_styles = {
+                key.associated_handler for key in interchange["Constraints"].potentials
+            }
+
+            if len(constraint_styles.difference({"Bonds", "Angles"})) > 0:
+                raise NotImplementedError(
+                    "Found unsupported constraints case in LAMMPS input writer.",
+                )
+
+            constrained_bond_smirks = {
+                key.id
+                for key in interchange["Constraints"].potentials
+                if key.associated_handler == "Bonds"
+            }
+
+            constrained_angle_smirks = {
+                key.id
+                for key in interchange["Constraints"].potentials
+                if key.associated_handler == "Angles"
+            }
+
+            return (
+                {
+                    key
+                    for key, val in dict(
+                        enumerate(interchange["Bonds"].potentials),
+                    ).items()
+                    if val.id in constrained_bond_smirks
+                },
+                {
+                    key
+                    for key, val in dict(
+                        enumerate(interchange["Angles"].potentials),
+                    ).items()
+                    if val.id in constrained_angle_smirks
+                },
+            )
+
+        # zero-indexed here
+        (
+            constrained_bond_coeffs,
+            constrained_angle_coeffs,
+        ) = _get_coeffs_of_constrained_bonds_and_angles(interchange)
+
         with open(input_file, "w") as lmp:
+
+            if self.switching_function is not None:
+                if self.switching_distance.m > 0.0:
+                    warnings.warn(
+                        f"A switching distance {self.switching_distance} was specified by the "
+                        "force field, but LAMMPS may not implement a switching function as "
+                        "specified by SMIRNOFF. Using a hard cut-off instead. Non-bonded "
+                        "interactions will be affected.",
+                        SwitchingFunctionNotImplementedWarning,
+                    )
+
             lmp.write(
                 "units real\n"
                 "atom_style full\n"
@@ -222,10 +288,25 @@ class MDConfig(DefaultModel):
                 "dimension 3\nboundary p p p\n\n",
             )
 
-            lmp.write("bond_style hybrid harmonic\n")
-            lmp.write("angle_style hybrid harmonic\n")
-            lmp.write("dihedral_style hybrid fourier\n")
-            lmp.write("improper_style cvff\n")
+            if len(interchange["Bonds"].key_map) > 0:
+                lmp.write("bond_style hybrid harmonic\n")
+
+            if len(interchange["Angles"].key_map) > 0:
+                lmp.write("angle_style hybrid harmonic\n")
+
+            try:
+                if len(interchange["ProperTorsions"].key_map) > 0:
+                    lmp.write("dihedral_style hybrid fourier\n")
+            except LookupError:
+                # no torsions here
+                pass
+
+            try:
+                if len(interchange["ImproperTorsions"].key_map) > 0:
+                    lmp.write("improper_style cvff\n")
+            except LookupError:
+                # no impropers here
+                pass
 
             # TODO: LAMMPS puts this information in the "run" file. Should it live in MDConfig or not?
             scale_factors = {
@@ -242,6 +323,7 @@ class MDConfig(DefaultModel):
                     "1-5": 1,
                 },
             }
+
             lmp.write(
                 "special_bonds lj "
                 f"{scale_factors['vdW']['1-2']} "
@@ -284,6 +366,25 @@ class MDConfig(DefaultModel):
                 "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n",
             )
 
+            if len(constrained_bond_coeffs.union(constrained_angle_coeffs)) > 0:
+                # https://docs.lammps.org/fix_shake.html
+                # TODO: Apply fix to just a group (sub-group)?
+                lmp.write(
+                    "fix 100 all shake 0.0001 20 10 ",
+                )
+
+                if constrained_bond_coeffs:
+                    lmp.write(
+                        f"b {' '.join([str(val + 1) for val in constrained_bond_coeffs])}",
+                    )
+
+                if constrained_angle_coeffs:
+                    lmp.write(
+                        f"a {' '.join([str(val + 1) for val in constrained_angle_coeffs])}",
+                    )
+
+                lmp.write("\n")
+
             if self.coul_method == _PME:
                 # Note: LAMMPS will error out if using kspace on something with all zero charges,
                 # so this may not work if all partial charges are zero
@@ -297,12 +398,17 @@ class MDConfig(DefaultModel):
             sander.write("single-point energy\n&cntrl\nimin=1,\nmaxcyc=0,\nntb=1,\n")
 
             if self.switching_function is not None:
-                distance = round(self.switching_distance.m_as(unit.angstrom), 4)
-                # This value must be negative for a switching function to not be applied.
-                # The Amber22 manual misstates the behavior of this case.
-                if distance == 0.0:
-                    distance = -1.0
-                sander.write(f"fswitch={distance},\n")
+                if self.switching_distance.m > 0.0:
+                    warnings.warn(
+                        f"A switching distance {self.switching_distance} was specified by the "
+                        "force field, but Amber does not implement a switching function. Using a "
+                        "hard cut-off instead. Non-bonded interactions will be affected.",
+                        SwitchingFunctionNotImplementedWarning,
+                    )
+
+                # Whether this is stored as zero or positive distance, pass a
+                # negative value to ensure it's turned off.
+                sander.write(f"fswitch={-1.0},\n")
 
             if self.constraints in ["none", None]:
                 sander.write("ntc=1,\nntf=1,\n")
@@ -359,8 +465,6 @@ def _infer_constraints(interchange: "Interchange") -> str:
                 return "all-angles"
 
             else:
-                import warnings
-
                 warnings.warn(
                     "Ambiguous failure while processing constraints. Constraining h-bonds as a stopgap.",
                 )

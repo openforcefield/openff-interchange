@@ -1,16 +1,17 @@
-"""Interfaces with LAMMPS."""
-from pathlib import Path
-from typing import IO, Union
+"""Export to LAMMPS."""
 
-import numpy as np
-from openff.units import unit
+from pathlib import Path
+from typing import IO
+
+import numpy
+from openff.toolkit.topology.molecule import Atom, unit
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError
-from openff.interchange.models import AngleKey, BondKey
+from openff.interchange.models import PotentialKey
 
 
-def to_lammps(interchange: Interchange, file_path: Union[Path, str]):
+def to_lammps(interchange: Interchange, file_path: Path | str):
     """Write an Interchange object to a LAMMPS data file."""
     if isinstance(file_path, str):
         path = Path(file_path)
@@ -62,14 +63,14 @@ def to_lammps(interchange: Interchange, file_path: Union[Path, str]):
 
         # write types section
 
-        x_min, y_min, z_min = np.min(
+        x_min, y_min, z_min = numpy.min(
             interchange.positions.to(unit.angstrom),
             axis=0,
         ).magnitude
         if interchange.box is None:
             L_x, L_y, L_z = 100, 100, 100
-        elif (interchange.box.m == np.diag(np.diagonal(interchange.box.m))).all():
-            L_x, L_y, L_z = np.diag(interchange.box.to(unit.angstrom).magnitude)
+        elif (interchange.box.m == numpy.diag(numpy.diagonal(interchange.box.m))).all():
+            L_x, L_y, L_z = numpy.diag(interchange.box.to(unit.angstrom).magnitude)
         else:
             raise NotImplementedError(
                 "Interchange does not yet support exporting non-rectangular boxes to LAMMPS",
@@ -270,26 +271,56 @@ def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
 
     atom_type_map_inv = dict({v: k for k, v in atom_type_map.items()})
 
-    electrostatics_handler = interchange["Electrostatics"]
-    vdw_hander = interchange["vdW"]
+    vdw_handler = interchange["vdW"]
 
-    charges = electrostatics_handler.charges
+    charges = interchange["Electrostatics"].charges
+    positions = interchange.positions.m_as(unit.angstrom)
 
-    for atom in interchange.topology.atoms:
-        atom_index = interchange.topology.atom_index(atom)
-        try:
-            molecule_index = int(atom.metadata["residue_number"])
-        except KeyError:
-            # TODO: Is there a mapping between molecules and their
-            #       "molecule index" somewhere?
-            molecule_index = 0
+    """
+    for molecule_index, molecule in enumerate(interchange.topology.molecules):
+        for atom in molecule.atoms:
+            atom._molecule_index = molecule_index
+    """
+    # Looking up an atom in a topology is slow, so establish a mapping between
+    # atom and molecule indices by iterating through the topology once beforehand
+    atom_map: dict[int, Atom] = dict()
 
-        top_key = AngleKey(atom_indices=(atom_index,))
-        pot_key = vdw_hander.key_map[top_key]
+    # the molecule is hashed for speed (bypassing an RDKit/OpenEye conversion)
+    # didn't look into hashing atoms
+    molecule_map: dict[int, int] = dict()
+    atom_molecule_map: dict[Atom, int] = dict()
+
+    for atom_index, atom in enumerate(interchange.topology.atoms):
+        atom_map[atom_index] = atom
+
+    for molecule_index, molecule in enumerate(interchange.topology.molecules):
+        # inject mol ID into hash to allow chemically-identical Molecules
+        # to be labelled with distinct IDs
+        molecule_hash = hash(
+            f"{molecule_index}_{molecule.ordered_connection_table_hash()}",
+        )
+        # TODO: see if this fix also applied for the same issue in GROMACS/AMBER writers
+
+        molecule_map[molecule_hash] = molecule_index
+        for atom in molecule.atoms:
+            atom_molecule_map[atom] = molecule_hash
+
+    def atom_index_to_molecule_index(atom_index: int) -> int:
+        """Given an atom index (in the topology), return the molecule index."""
+        return molecule_map[atom_molecule_map[atom_map[atom_index]]]
+
+    for _, (top_key, pot_key) in enumerate(vdw_handler.key_map.items()):
+        # TODO: Surely there's an easier way to get the molecule
+        #       index from an atom index?
+        atom_index = top_key.atom_indices[0]
+        molecule_index = atom_index_to_molecule_index(atom_index)
+
         atom_type = atom_type_map_inv[pot_key]
 
-        charge = charges[top_key].m_as(unit.e)
-        pos = interchange.positions[atom_index].to(unit.angstrom).magnitude
+        charge = charges[top_key].m
+
+        pos = positions[atom_index]
+
         lmp_file.write(
             "{:d}\t{:d}\t{:d}\t{:.8g}\t{:.8g}\t{:.8g}\t{:.8g}\n".format(
                 atom_index + 1,
@@ -303,33 +334,27 @@ def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
         )
 
 
+# Note: For this and the other valence writers, a significant portion of runtime
+# appears to be spent looking up the LAMMPS "type" index from the potential key.
+# (bond_map[pot_key]). Not sure why - I thought dictionary lookups were always
+# fast - but it might be worth looking into.
 def _write_bonds(lmp_file: IO, interchange: Interchange):
     """Write the Bonds section of a LAMMPS data file."""
     lmp_file.write("\nBonds\n\n")
 
     bond_handler = interchange["Bonds"]
-    bond_type_map = dict(enumerate(bond_handler.potentials))
+    bond_map: dict[PotentialKey, int] = {
+        potential_key: index
+        for index, potential_key in enumerate(bond_handler.potentials)
+    }
 
-    bond_type_map_inv = dict({v: k for k, v in bond_type_map.items()})
-
-    for bond_idx, bond in enumerate(interchange.topology.bonds):
-        indices = (
-            interchange.topology.atom_index(bond.atom1),
-            interchange.topology.atom_index(bond.atom2),
-        )
-        top_key = BondKey(atom_indices=indices)
-        if top_key in bond_handler.key_map:
-            pot_key = bond_handler.key_map[top_key]
-        else:
-            top_key = BondKey(atom_indices=indices[::-1])
-            pot_key = bond_handler.key_map[top_key]
-
-        bond_type = bond_type_map_inv[pot_key]
+    for bond_index, (top_key, pot_key) in enumerate(bond_handler.key_map.items()):
+        indices = top_key.atom_indices
 
         lmp_file.write(
             "{:d}\t{:d}\t{:d}\t{:d}\n".format(
-                bond_idx + 1,
-                bond_type + 1,
+                bond_index + 1,
+                bond_map[pot_key] + 1,
                 indices[0] + 1,
                 indices[1] + 1,
             ),
@@ -341,21 +366,18 @@ def _write_angles(lmp_file: IO, interchange: Interchange):
     lmp_file.write("\nAngles\n\n")
 
     angle_handler = interchange["Angles"]
-    angle_type_map = dict(enumerate(angle_handler.potentials))
+    angle_map: dict[PotentialKey, int] = {
+        potential_key: index
+        for index, potential_key in enumerate(angle_handler.potentials)
+    }
 
-    angle_type_map_inv = dict({v: k for k, v in angle_type_map.items()})
-
-    for angle_idx, angle in enumerate(interchange.topology.angles):
-        # These are "topology indices"
-        indices = tuple(interchange.topology.atom_index(a) for a in angle)
-        top_key = AngleKey(atom_indices=indices)
-        pot_key = angle_handler.key_map[top_key]
-        angle_type = angle_type_map_inv[pot_key]
+    for angle_index, (top_key, pot_key) in enumerate(angle_handler.key_map.items()):
+        indices = top_key.atom_indices
 
         lmp_file.write(
             "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
-                angle_idx + 1,
-                angle_type + 1,
+                angle_index + 1,
+                angle_map[pot_key] + 1,
                 indices[0] + 1,
                 indices[1] + 1,
                 indices[2] + 1,
@@ -368,27 +390,24 @@ def _write_propers(lmp_file: IO, interchange: Interchange):
     lmp_file.write("\nDihedrals\n\n")
 
     proper_handler = interchange["ProperTorsions"]
-    proper_type_map = dict(enumerate(proper_handler.potentials))
+    proper_map: dict[PotentialKey, int] = {
+        potential_key: index
+        for index, potential_key in enumerate(proper_handler.potentials)
+    }
 
-    proper_type_map_inv = dict({v: k for k, v in proper_type_map.items()})
+    for proper_index, (top_key, pot_key) in enumerate(proper_handler.key_map.items()):
+        indices = top_key.atom_indices
 
-    for proper_idx, proper in enumerate(interchange.topology.propers):
-        indices = tuple(interchange.topology.atom_index(a) for a in proper)
-
-        for top_key, pot_key in proper_handler.key_map.items():
-            if indices == top_key.atom_indices:
-                proper_type_idx = proper_type_map_inv[pot_key]
-
-                lmp_file.write(
-                    "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
-                        proper_idx + 1,
-                        proper_type_idx + 1,
-                        indices[0] + 1,
-                        indices[1] + 1,
-                        indices[2] + 1,
-                        indices[3] + 1,
-                    ),
-                )
+        lmp_file.write(
+            "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
+                proper_index + 1,
+                proper_map[pot_key] + 1,
+                indices[0] + 1,
+                indices[1] + 1,
+                indices[2] + 1,
+                indices[3] + 1,
+            ),
+        )
 
 
 def _write_impropers(lmp_file: IO, interchange: Interchange):
@@ -396,32 +415,30 @@ def _write_impropers(lmp_file: IO, interchange: Interchange):
     lmp_file.write("\nImpropers\n\n")
 
     improper_handler = interchange["ImproperTorsions"]
-    improper_type_map = dict(enumerate(improper_handler.potentials))
+    improper_map: dict[PotentialKey, int] = {
+        potential_key: index
+        for index, potential_key in enumerate(improper_handler.potentials)
+    }
 
-    improper_type_map_inv = dict({v: k for k, v in improper_type_map.items()})
+    # Molecule/Topology.impropers lists the central atom SECOND,
+    # but the improper collection lists the central atom FIRST,
+    # However, at this point we're not looking in the topology directly,
+    # we're assuming that the contents of the collection is encompassing
+    for improper_index, (top_key, pot_key) in enumerate(
+        improper_handler.key_map.items(),
+    ):
+        indices = top_key.atom_indices
 
-    # Molecule/Topology.impropers lists the central atom **second** ...
-    for improper_idx, improper in enumerate(interchange.topology.impropers):
-        indices = tuple(interchange.topology.atom_index(a) for a in improper)
-
-        # ... so the tuple must be modified to list the central atom **first**,
-        # which is how the improper handler's slot map is built up
-        _indices = tuple((indices[1], indices[0], indices[2], indices[3]))
-
-        for top_key, pot_key in improper_handler.key_map.items():
-            if _indices == top_key.atom_indices:
-                improper_type_idx = improper_type_map_inv[pot_key]
-
-                # https://github.com/openforcefield/openff-interchange/issues/544
-                # LAMMPS, at least with `improper_style cvff`, lists the
-                # central atom FIRST, whereas `indices` lists it SECOND
-                lmp_file.write(
-                    "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
-                        improper_idx + 1,
-                        improper_type_idx + 1,
-                        indices[1] + 1,
-                        indices[0] + 1,
-                        indices[2] + 1,
-                        indices[3] + 1,
-                    ),
-                )
+        # https://github.com/openforcefield/openff-interchange/issues/544
+        # LAMMPS, at least with `improper_style cvff`, lists the
+        # central atom FIRST, which matches the collection
+        lmp_file.write(
+            "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
+                improper_index + 1,
+                improper_map[pot_key] + 1,
+                indices[1] + 1,
+                indices[0] + 1,
+                indices[2] + 1,
+                indices[3] + 1,
+            ),
+        )

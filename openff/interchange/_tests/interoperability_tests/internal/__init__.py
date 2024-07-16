@@ -1,1 +1,1 @@
-"""Interoperability tests for internal writers."""
+"""Interoperability tests with Amber."""

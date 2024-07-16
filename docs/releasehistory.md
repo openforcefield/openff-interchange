@@ -11,6 +11,89 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## 0.3.27 - 2024-05-29
+
+* #980 Fixes #978 in which some dihedral parameters were lost in `Interchange.from_gromacs`.
+* #982 Improves handling of plugins with custom vdW interactions on virtual sites.
+* #972 Fixes a bug in which PME electrostatics "cutoffs" were not parsed in `from_openmm`.
+* #975 Fixes a bug in which some molecule names were not unique in GROMACS export.
+* #987 Supports systems with >99,999 atoms in the PACKMOL wrapper.
+
+## 0.3.26 - 2024-04-16
+
+* #952 Drops support for Python 3.9.
+* #853 Better support LJPME in some GROMACS tests.
+* #954 Fixes a broken link in plugin documentation.
+* #963 Removes pre-set partial charges from host-guest example.
+* #956 Adds another helper function for solvation in non-aqueous solvent.
+* #946 Adds support for GROMACS's `3fad` virtual sites.
+* #918 Improves storage of cosmetic attributes.
+* #880 Improves virtual site example notebook.
+
+## 0.3.25 - 2024-03-29
+
+* #947 Fixes a bug in which virtual site parameters with identical SMIRKS would clash.
+* #948 Updates the GAFF example.
+* #950 Fixes a bug in which atom ordering was often incorrect in GROMACS `.gro` files when virtual sites were present.
+* #942 Fixes an errant internally-thrown `DeprecationWarning`.
+* #942 Recommends `jupyter-lab` over `jupyer-notebook`.
+
+## 0.3.24 - 2024-03-19
+
+* #925 Adds documentation of upcoming v0.4 changes.
+* #933 Fixes #934 in which atom order was sometimes mangled in `Interchange.from_openmm`.
+* #932 Fixes #935 in which `KeyError` was sometimes raised after `Interchange.combine`.
+* #929 A warning is raised when positions are not passed to `Interchange.from_openmm`.
+* #930 Adds `additional_forces` argument to `create_openmm_simulation`.
+* #938 An error is raised when non-bonded settings do not match when using `Interchange.combine`.
+
+## 0.3.23 - 2024-03-07
+
+* #923 An error is raised in `Interchange.from_openmm` when the topology and system are incompatible.
+* #912 A warning is raised when writing an input/run file (not data file) to an engine that does not implement a switching function described by SMIRNOFF.
+* #916 Some internal code paths are re-organized, including removing the `openff.interchange.interop.internal` submodule.
+* #916 Improves speed of `Interchange.to_lammps`, particularly for larger systems.
+* #920 Fixes a bug in which virtual site exclusions were incorrect when using split non-bonded forces.
+* #915 Deprecates `Interchange.__add__` in favor of `Interchange.combine`.
+* #897 Improves energy evaluation with LAMMPS when some bonds are constrained.
+
+## 0.3.22 - 2024-02-27
+
+* #912 Fixes a bug in which rigid water geometries were incorrectly written to GROMACS files.
+* #909 Fixes a bug in which numerical values such as `scale_14` were lost when parsing JSON dumps.
+
+## 0.3.21 - 2024-02-20
+
+* #906 Fixes a bug in which intramolecular interactions between virtual sites were not properly excluded with OpenMM.
+* #901 `Interchange.from_openmm` now requires the `system` argument.
+* #903 The Python API of LAMMPS is now internally used for LAMMPS energy calculations.
+
+## 0.3.20 - 2024-02-12
+
+* #891 Adds support for hydrogen mass repartitioning (HMR) in GROMACS export. Note that this implementation never modifies masses in waters and requires the system contains no virtual sites.
+* #887 Adds support for hydrogen mass repartitioning (HMR) in OpenMM export. Note that this implementation never modifies masses in waters and requires the system contains no virtual sites.
+
+### 0.3.19 - 2024-02-05
+
+* #867 Tags `PotentialKey.virtual_site_type` with the associated type provided by SMIRNOFF parameters.
+* #857 Tags `PotentialKey.associated_handler` when importing data from OpenMM.
+* #848 Raises a more useful error when `Interchange.minimize` is called while positions are not present.
+* #852 Support LJPME in OpenMM export.
+* #871 Re-introduces Foyer compatibility with version 0.12.1.
+* #883 Improve topology interoperability after importing data from OpenMM, using OpenFF Toolkit 0.15.2.
+* #883 Falls back to `Topology.visualize` in most cases.
+
+### Bugfixes
+
+* #848 Fixes a bug in which `Interchange.minimize` erroneously appended virtual site positions to the `positions` attribute.
+* #883 Using `openff-models` 0.1.2, fixes parsing box information from OpenMM data.
+* #883 Skips writing unnecessary PDB file during visualization.
+* #883 Preserves atom metadata when round-tripping topologies with OpenMM.
+
+### Documentation improvements
+
+* #864 Updates installation instructions.
+
 ## 0.3.18 - 2023-11-16
 
 ### Bugfixes
@@ -433,14 +516,14 @@ This release supports Python 3.8 and 3.9; it may be compatible with older and ne
 
 ### Breaking changes
 
-* #357 The `_OFFBioTop` constructor now requires an `mdtraj.Topology` passed through the `mdtop` argumment.
+* #357 The `_OFFBioTop` constructor now requires an `mdtraj.Topology` passed through the `mdtop` argument.
 * #363 This project is no longer tested on Python 3.7
 
 ### Bugfixes
 
 * #351 Fix setting byte order while processing bytes to NumPy arrays
 * #354 Fix positions processing in `Interchange.__add__`
-* `e176033` Fixes nonbonded energies not being parsed while reporting energies from the OpenMM drver.
+* `e176033` Fixes non-bonded energies not being parsed while reporting energies from the OpenMM driver.
 
 ## 0.1.3 - 2021-11-12
 
@@ -515,7 +598,7 @@ This pre-release of the OpenFF Interchange adds preliminary support for virtual 
 
 ### Testing and reliability improvements
 
-* #269 OpenEye toolkits are now used in automated testing by default.
+* #269 OpenEye Toolkits are now used in automated testing by default.
 * #281 Refactors the test suite into unit tests, interoperability tests, and energy comparison tests.
 * #289 Improves the Amber energy driver.
 * #292 Improves some ParmEd conversions.

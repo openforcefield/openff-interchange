@@ -1,5 +1,5 @@
 import pytest
-from openff.units import Quantity, unit
+from openff.toolkit import Quantity, unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange._tests import MoleculeWithConformer
@@ -36,7 +36,11 @@ class TestBondChargeVirtualSite:
         import openmm
         import openmm.app
 
-        sage_with_bond_charge["VirtualSites"].parameters[0].distance = Quantity(
+        sage_with_bond_charge["VirtualSites"].get_parameter(
+            parameter_attrs={
+                "smirks": "[#6:2]-[#17X1:1]",
+            },
+        )[0].distance = Quantity(
             distance_,
             unit.angstrom,
         )

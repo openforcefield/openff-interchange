@@ -7,7 +7,7 @@ from openff.interchange.interop.gromacs._import._topology import (
 )
 
 
-@pytest.mark.slow()
+@pytest.mark.slow
 def test_complex(monkeypatch):
     monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 

@@ -1,36 +1,15 @@
 import numpy
-import pytest
-from openff.toolkit import Topology
+from openff.toolkit import Quantity, Topology
 from openff.units import unit
 
-from openff.interchange._tests import _BaseTest
+from openff.interchange._tests import _rng
 from openff.interchange.common._positions import _infer_positions
 
 
-class TestInferPositions(_BaseTest):
-    @pytest.fixture()
-    def methane_with_conformer(self, methane):
-        methane.add_conformer(
-            unit.Quantity(
-                numpy.random.random((methane.n_atoms, 3)),
-                unit.angstrom,
-            ),
-        )
-        return methane
-
-    @pytest.fixture()
-    def ethanol_with_conformer(self, ethanol):
-        ethanol.add_conformer(
-            unit.Quantity(
-                numpy.random.random((ethanol.n_atoms, 3)),
-                unit.angstrom,
-            ),
-        )
-        return ethanol
-
+class TestInferPositions:
     def test_short_circuit(self, methane):
-        positions = unit.Quantity(
-            numpy.random.random((methane.n_atoms, 3)),
+        positions = Quantity(
+            _rng.random((methane.n_atoms, 3)),
             unit.angstrom,
         )
 
@@ -51,7 +30,7 @@ class TestInferPositions(_BaseTest):
         topology = Topology.from_molecules(
             [methane_with_conformer, ethanol_with_conformer],
         )
-        expected_positions = unit.Quantity(
+        expected_positions = Quantity(
             numpy.concatenate(
                 [
                     methane_with_conformer.conformers[0].m,

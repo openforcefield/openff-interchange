@@ -1,4 +1,5 @@
 """Functions for running energy evluations with all available engines."""
+
 import warnings
 from collections.abc import Iterable
 
@@ -52,7 +53,7 @@ def get_all_energies(
         if engine_name not in _engines:
             continue
         try:
-            all_energies[engine_name] = engine_driver(interchange)  # type: ignore[operator]
+            all_energies[engine_name] = engine_driver(interchange=interchange)  # type: ignore[operator]
         except engine_exception:
             pass
 
@@ -66,7 +67,7 @@ def get_summary_data(
     _engines: Iterable[str] = ("OpenMM", "Amber", "GROMACS", "LAMMPS"),
 ) -> "DataFrame":
     """Return a pandas DataFrame with summaries of energies from all available engines."""
-    from openff.units import unit
+    from openff.toolkit import unit
     from pandas import DataFrame
 
     kj_mol = unit.kilojoule / unit.mol

@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.5.0
+  rev: v4.6.0
   hooks:
   - id: check-yaml
   - id: end-of-file-fixer
@@ -12,35 +12,44 @@ repos:
   hooks:
   - id: add-trailing-comma
 - repo: https://github.com/psf/black
-  rev: 23.11.0
+  rev: 24.4.2
   hooks:
   - id: black
     files: ^openff|plugins|stubs
   - id: black-jupyter
     files: ^examples
 - repo: https://github.com/PyCQA/isort
-  rev: 5.12.0
+  rev: 5.13.2
   hooks:
   - id: isort
     files: ^openff|plugins|stubs
+- repo: https://github.com/asottile/yesqa
+  rev: v1.5.0
+  hooks:
+  - id: yesqa
 - repo: https://github.com/PyCQA/flake8
-  rev: 6.1.0
+  rev: 7.1.0
   hooks:
   - id: flake8
     files: ^openff|plugins|stubs
     additional_dependencies: [
         'flake8-bugbear',
         'flake8-absolute-import',
-        'flake8-pytest-style',
+        'flake8-pytest-style==2',
         'flake8-no-pep420',
     ]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.15.0
+  rev: v3.16.0
   hooks:
   - id: pyupgrade
     files: ^openff|plugins|stubs
     exclude: openff/interchange/_version.py|setup.py
-    args: ["--py39-plus"]
+    args: ["--py310-plus"]
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.5.2
+  hooks:
+    - id: ruff
+      args: ["check", "--select", "NPY"]
 - repo: https://github.com/pycqa/pydocstyle
   rev: 6.3.0
   hooks:
@@ -48,33 +57,33 @@ repos:
     files: ^openff|plugins
     args: ["--config=setup.cfg"]
 - repo: https://github.com/econchick/interrogate
-  rev: 1.5.0
+  rev: 1.7.0
   hooks:
     - id: interrogate
       args: ["openff/interchange/", "-e", "openff/interchange/_tests/"]
       pass_filenames: false
-- repo: https://github.com/asottile/blacken-docs
-  rev: 1.16.0
+- repo: https://github.com/adamchainz/blacken-docs
+  rev: 1.18.0
   hooks:
   - id: blacken-docs
     files: ^docs/
 - repo: https://github.com/igorshubovych/markdownlint-cli
-  rev: v0.37.0
+  rev: v0.41.0
   hooks:
   - id: markdownlint
     exclude: .github
-    args: ["--disable", "MD013", "MD033", "MD024", "MD046", "--ignore", "docs/using/experimental.md", "--"]
+    args: ["--disable", "MD013", "MD033", "MD024", "MD046", "--ignore", "docs/using/experimental.md", "--ignore", "docs/using/status.md", "--"]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.7.0
+  rev: 1.8.5
   hooks:
     - id: nbqa-pyupgrade
       files: ^examples
       args:
-        - --py38-plus
+        - --py310-plus
     - id: nbqa-isort
       files: ^examples
 - repo: https://github.com/kynan/nbstripout
-  rev: 0.6.1
+  rev: 0.7.1
   hooks:
     - id: nbstripout
       files: ^examples

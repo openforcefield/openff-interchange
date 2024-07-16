@@ -1,11 +1,11 @@
 """Functions for running energy evluations with Amber."""
+
 import subprocess
 import tempfile
 from pathlib import Path
 from shutil import which
-from typing import Union
 
-from openff.units import unit
+from openff.toolkit import unit
 from openff.utilities.utilities import temporary_cd
 
 from openff.interchange import Interchange
@@ -80,9 +80,9 @@ def _get_amber_energies(
 
 
 def _run_sander(
-    inpcrd_file: Union[Path, str],
-    prmtop_file: Union[Path, str],
-    input_file: Union[Path, str],
+    inpcrd_file: Path | str,
+    prmtop_file: Path | str,
+    input_file: Path | str,
 ) -> dict[str, unit.Quantity]:
     """
     Given Amber files, return single-point energies as computed by Amber.

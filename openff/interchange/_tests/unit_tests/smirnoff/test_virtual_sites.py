@@ -3,19 +3,15 @@ from typing import TYPE_CHECKING
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     LibraryChargeHandler,
     VirtualSiteHandler,
     vdWHandler,
 )
-from openff.units import Quantity, unit
 from openff.units.openmm import to_openmm
 from openff.utilities import has_package, skip_if_missing
-
-from openff.interchange import Interchange
-from openff.interchange._tests import _BaseTest
 
 if has_package("openmm") or TYPE_CHECKING:
     import openmm
@@ -38,9 +34,11 @@ class TestSMIRNOFFVirtualSiteCharges:
         sage_with_bond_charge.get_parameter_handler("ChargeIncrementModel")
         sage_with_bond_charge["ChargeIncrementModel"].partial_charge_method = "zeros"
 
-        sage_with_bond_charge["VirtualSites"].parameters[
-            0
-        ].charge_increment1 = Quantity(
+        sage_with_bond_charge["VirtualSites"].get_parameter(
+            parameter_attrs={
+                "smirks": "[#6:2]-[#17X1:1]",
+            },
+        )[0].charge_increment1 = Quantity(
             chlorine_charge,
             unit.elementary_charge,
         )
@@ -50,6 +48,10 @@ class TestSMIRNOFFVirtualSiteCharges:
                 "[H:3][C:1]([H:4])([H:5])[Cl:2]",
             ).to_topology(),
         )
+
+        assert {key.virtual_site_type for key in out["VirtualSites"].potentials} == {
+            "BondCharge",
+        }
 
         charges = [charge.m for charge in out["Electrostatics"].charges.values()]
 
@@ -76,7 +78,7 @@ class TestSMIRNOFFVirtualSiteCharges:
 
 
 @skip_if_missing("openmm")
-class TestSMIRNOFFVirtualSites(_BaseTest):
+class TestSMIRNOFFVirtualSites:
     from openff.toolkit._tests.mocking import VirtualSiteMocking
 
     @classmethod
@@ -136,16 +138,13 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
 
         force_field = cls.build_force_field(handler)
 
-        system = Interchange.from_smirnoff(
-            force_field=force_field,
-            topology=molecule.to_topology(),
-        ).to_openmm(combine_nonbonded_forces=True)
+        system = force_field.create_openmm_system(molecule.to_topology())
 
         n_v_sites = sum(
             1 if system.isVirtualSite(i) else 0 for i in range(system.getNumParticles())
         )
 
-        input_conformer = unit.Quantity(
+        input_conformer = Quantity(
             numpy.vstack(
                 [
                     input_conformer.m_as(unit.angstrom),
@@ -187,14 +186,14 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 "[Cl:1][C:2]([H:3])([H:4])[H:5]",
                 VirtualSiteMocking.sp3_conformer(),
                 (0, 1),
-                unit.Quantity(numpy.array([[0.0, 3.0, 0.0]]), unit.angstrom),
+                Quantity(numpy.array([[0.0, 3.0, 0.0]]), unit.angstrom),
             ),
             (
                 VirtualSiteMocking.bond_charge_parameter("[C:1]#[C:2]"),
                 "[H:1][C:2]#[C:3][H:4]",
                 VirtualSiteMocking.sp1_conformer(),
                 (2, 3),
-                unit.Quantity(
+                Quantity(
                     numpy.array([[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]]),
                     unit.angstrom,
                 ),
@@ -206,7 +205,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 (0, 1, 2, 3),
                 (
                     VirtualSiteMocking.sp2_conformer()[0]
-                    + unit.Quantity(  # noqa
+                    + Quantity(  # noqa
                         numpy.array(
                             [[1.0, numpy.sqrt(2), 1.0], [1.0, -numpy.sqrt(2), -1.0]],
                         ),
@@ -234,7 +233,7 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
                 "[H:2][O:1][H:3]",
                 VirtualSiteMocking.sp2_conformer()[1:, :],
                 (0, 1, 2),
-                unit.Quantity(
+                Quantity(
                     numpy.array(
                         [
                             [numpy.sqrt(2), numpy.sqrt(2), 0.0],
@@ -490,12 +489,14 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
         )
         force_field.register_parameter_handler(handler)
 
-        system: openmm.System = Interchange.from_smirnoff(
-            force_field,
-            topology,
-        ).to_openmm(
-            combine_nonbonded_forces=True,
-        )
+        assert {
+            key.virtual_site_type
+            for key in force_field.create_interchange(topology)[
+                "VirtualSites"
+            ].potentials
+        } == {parameter.type for parameter in parameters}
+
+        system = force_field.create_openmm_system(topology)
 
         assert system.getNumParticles() == expected_n_total
 
@@ -541,3 +542,63 @@ class TestSMIRNOFFVirtualSites(_BaseTest):
             expected_total_charge,
             total_charge.value_in_unit(openmm.unit.elementary_charge),
         )
+
+    def test_virtual_site_type_stored_in_potential_key(
+        self,
+        ethanol,
+        sage_with_bond_charge,
+        sage_with_trivalent_nitrogen,
+    ):
+        # Can't use a fixture here because of the modified versions
+        sage = ForceField("openff-2.1.0.offxml")
+
+        assert {
+            key.virtual_site_type
+            for key in sage.create_interchange(ethanol.to_topology())["vdW"].potentials
+        } == {None}
+
+        with pytest.raises(LookupError):
+            assert {
+                key.virtual_site_type
+                for key in sage.create_interchange(ethanol.to_topology())[
+                    "VirtualSites"
+                ].potentials
+            } == {None}
+
+        assert {
+            key.virtual_site_type
+            for key in sage_with_bond_charge.create_interchange(
+                Molecule.from_smiles("CCl").to_topology(),
+            )["VirtualSites"].potentials
+        } == {"BondCharge"}
+
+        assert {
+            key.virtual_site_type
+            for key in sage_with_trivalent_nitrogen.create_interchange(
+                Molecule.from_smiles("N").to_topology(),
+            )["VirtualSites"].potentials
+        } == {"TrivalentLonePair"}
+
+    def test_identical_smirks_do_not_clash(
+        self,
+        sage_with_two_virtual_sites_same_smirks,
+    ):
+        """Reproduce issue #940."""
+        nitrogen = Molecule.from_mapped_smiles("[H:2][N:1]([H:3])[H:4]")
+
+        out = sage_with_two_virtual_sites_same_smirks.create_interchange(
+            nitrogen.to_topology(),
+        )
+
+        charges = [charge.m for charge in out["Electrostatics"].charges.values()]
+
+        assert sum(charges) == pytest.approx(0.0)
+
+        # The second parameter shifts 5 e of charge from the nitrogen to the
+        # virtual site, so the nitrogen should end up with a VERY positive charge. If
+        # the parameter collision in the issue happens, this should closer to +1.0.
+        # Use rough numbers because of AM1-BCC inconsistency.
+        assert charges[0] > 4.0
+
+        # charges on virtual sites should not match
+        assert charges[-2] != charges[-1]

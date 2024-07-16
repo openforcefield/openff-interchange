@@ -1,4 +1,5 @@
 """Custom classes exposed as plugins."""
+
 import math
 from collections.abc import Iterable
 from typing import Literal

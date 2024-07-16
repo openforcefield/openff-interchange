@@ -1,6 +1,5 @@
 name: openff-interchange-env
 channels:
-  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
 dependencies:
   # Core
@@ -8,15 +7,17 @@ dependencies:
   - numpy
   - pydantic
   # OpenFF stack
-  - openff-toolkit-base >=0.14.3
+  - openff-toolkit-base >=0.16
   - openff-units
   - openff-models
+  - ambertools =23
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
   - rdkit
   # Optional features
   # GMSO does not support Pydantic 2; should come in release after 0.12.0
-  # foyer
-  # mbuild
+  - foyer >=0.12.1
+  - mbuild
+  - gmso =0.12
   # Testing
   - mdtraj
   - intermol
@@ -27,13 +28,12 @@ dependencies:
   - pytest-randomly
   - nbval
   - nglview
-  - mdanalysis
   # Drivers
-  - gromacs =2023.3=nompi_*_101
-  - lammps
+  - gromacs
+  - lammps >=2023.08.02
   - panedr
   # Typing
-  - mypy =1.3
+  - mypy
   - typing-extensions
   - types-setuptools
   - pandas-stubs

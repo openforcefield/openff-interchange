@@ -2,18 +2,13 @@ import math
 
 import numpy
 import pytest
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField, VirtualSiteHandler
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 from openff.utilities import get_data_file_path, has_package
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import (
-    MoleculeWithConformer,
-    _BaseTest,
-    get_test_file_path,
-)
+from openff.interchange._tests import MoleculeWithConformer, get_test_file_path
 from openff.interchange._tests.unit_tests.plugins.test_smirnoff_plugins import (
     TestDoubleExponential,
 )
@@ -80,7 +75,7 @@ def _compare_openmm_topologies(
 
 
 @skip_if_missing("openmm")
-class TestOpenMM(_BaseTest):
+class TestOpenMM:
     @pytest.mark.parametrize("inputs", nonbonded_methods)
     def test_openmm_nonbonded_methods(self, inputs, sage, ethanol):
         """See test_nonbonded_method_resolution in openff.toolkit._tests/test_forcefield.py"""
@@ -243,7 +238,7 @@ class TestOpenMM(_BaseTest):
                 raise Exception("Did not find 1-4 Cl-Br interaction.")
 
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.parametrize("mol_smi", ["C", "CC", "CCO"])
     def test_openmm_roundtrip(self, sage, mol_smi):
         topology = MoleculeWithConformer.from_smiles(mol_smi).to_topology()
@@ -265,7 +260,7 @@ class TestOpenMM(_BaseTest):
         )
 
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_combine_nonbonded_forces(self, sage):
         topology = MoleculeWithConformer.from_smiles(
             "ClC#CCl",
@@ -363,9 +358,9 @@ class TestOpenMM(_BaseTest):
     def test_nonstandard_cutoffs_match(self, sage):
         """Test that multiple nonbonded forces use the same cutoff."""
         topology = Molecule.from_smiles("C").to_topology()
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
 
-        cutoff = unit.Quantity(1.555, unit.nanometer)
+        cutoff = Quantity(1.555, unit.nanometer)
 
         sage["vdW"].cutoff = cutoff
 
@@ -385,7 +380,7 @@ class TestOpenMM(_BaseTest):
 
 
 @skip_if_missing("openmm")
-class TestOpenMMSwitchingFunction(_BaseTest):
+class TestOpenMMSwitchingFunction:
     def test_switching_function_applied(self, sage, basic_top):
         out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
             combine_nonbonded_forces=True,
@@ -439,8 +434,6 @@ class TestOpenMMSwitchingFunction(_BaseTest):
 
 @skip_if_missing("openmm")
 class TestOpenMMWithPlugins(TestDoubleExponential):
-    pytest.importorskip("deforcefields")
-
     def test_combine_compatibility(self, de_force_field):
         out = Interchange.from_smirnoff(
             force_field=de_force_field,
@@ -468,48 +461,110 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
             ):
                 assert force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff
 
-    def test_double_exponential_create_simulation(self, de_force_field):
+    def test_double_exponential_create_simulation(
+        self,
+        de_force_field,
+        default_integrator,
+    ):
         from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 
         topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
 
         out = Interchange.from_smirnoff(
             de_force_field,
             topology,
         )
 
-        system = out.to_openmm(combine_nonbonded_forces=False)
-
-        simulation = openmm.app.Simulation(
-            to_openmm_topology(out),
-            system,
-            openmm.LangevinIntegrator(300, 1, 0.002),
-            openmm.Platform.getPlatformByName("CPU"),
+        simulation = out.to_openmm_simulation(
+            combine_nonbonded_forces=False,
+            integrator=default_integrator,
         )
-
-        simulation.context.setPositions(
-            to_openmm_positions(out, include_virtual_sites=False),
-        )
-        simulation.context.setPeriodicBoxVectors(*out.box.to_openmm())
 
         state = simulation.context.getState(getEnergy=True)
         energy = state.getPotentialEnergy().in_units_of(openmm.unit.kilojoule_per_mole)
 
+        # Values manually computed 01/24/2024 with Python 3.11, macOS ...
         if OpenEyeToolkitWrapper.is_available():
-            expected_energy = 13.591709748611304
+            # ... openeye-toolkits 2023.2.3
+            expected_energy = 13.607998372016262
         else:
-            expected_energy = 37.9516622967221
+            # ... ambertools 23.3, rdkit 2023.09.4
+            expected_energy = 37.951662726270584
 
         # Different operating systems report different energies around 0.001 kJ/mol,
         # locally testing this should enable something like 1e-6 kJ/mol
         assert abs(energy._value - expected_energy) < 3e-3
 
+    def test_minimize_water_dimer(self, de_force_field, water_dimer):
+        interchange = de_force_field.create_interchange(water_dimer)
+
+        original_energies = get_openmm_energies(
+            interchange,
+            combine_nonbonded_forces=False,
+        )
+
+        interchange.minimize()
+
+        new_energies = get_openmm_energies(
+            interchange,
+            combine_nonbonded_forces=False,
+        )
+
+        # the vdW energy might have increased, but the electrostatics energy should
+        # dwarf it - this is just how water behaves - but only look at the total
+        assert new_energies.total_energy < original_energies.total_energy
+
+    def test_minimize_mixed_system(self, de_force_field):
+        """Check a system with a non-LJ functional form, virtual sites, and multiple molecules."""
+        interchange = de_force_field.create_interchange(
+            Topology.from_pdb(
+                get_test_file_path("hexanol-water.pdb"),
+                unique_molecules=[
+                    Molecule.from_smiles("O"),
+                    Molecule.from_smiles("CCCCCCO"),
+                ],
+            ),
+        )
+
+        original_energies = get_openmm_energies(
+            interchange,
+            combine_nonbonded_forces=False,
+        )
+
+        interchange.minimize()
+
+        new_energies = get_openmm_energies(
+            interchange,
+            combine_nonbonded_forces=False,
+        )
+
+        # March 2024: non-bonded energies decrease significantly, valence do not
+        #
+        # original_energies: {
+        #   'Bond': <Quantity(0.823814244, 'kilojoule / mole')>,
+        #   'Angle': <Quantity(263.952367, 'kilojoule / mole')>,
+        #   'Torsion': <Quantity(15.5416592, 'kilojoule / mole')>,
+        #   'Electrostatics': <Quantity(7.51418904, 'kilojoule / mole')>,
+        #   'vdW': <Quantity(5842.3125, 'kilojoule / mole')>,
+        # }
+        # new_energies: {
+        #   'Bond': <Quantity(0.830504993, 'kilojoule / mole')>,
+        #   'Angle': <Quantity(250.47977, 'kilojoule / mole')>,
+        #   'Torsion': <Quantity(20.6318574, 'kilojoule / mole')>,
+        #   'Electrostatics': <Quantity(-168.244031, 'kilojoule / mole')>,
+        #   'vdW': <Quantity(-11.3446069, 'kilojoule / mole')>,
+        # }
+        assert new_energies.total_energy < original_energies.total_energy
+        assert new_energies["vdW"] < original_energies["vdW"]
+        assert new_energies["Electrostatics"] < original_energies["Electrostatics"]
+
 
 @skip_if_missing("openmm")
-@pytest.mark.slow()
+@pytest.mark.slow
 class TestOpenMMVirtualSites:
-    @pytest.fixture()
+
+    @pytest.fixture
     def sage_with_sigma_hole(self, sage):
         """Fixture that loads an SMIRNOFF XML with a C-Cl sigma hole."""
         # TODO: Move this into BaseTest to that GROMACS and others can access it
@@ -530,7 +585,7 @@ class TestOpenMMVirtualSites:
 
         return sage
 
-    @pytest.fixture()
+    @pytest.fixture
     def sage_with_monovalent_lone_pair(self, sage):
         virtual_site_handler = VirtualSiteHandler(version=0.3)
 
@@ -573,79 +628,7 @@ class TestOpenMMVirtualSites:
 
 
 @skip_if_missing("openmm")
-class TestOpenMMVirtualSiteExclusions(_BaseTest):
-    def test_tip5p_num_exceptions(self, water):
-        tip5p = ForceField(get_test_file_path("tip5p.offxml"))
-
-        out = Interchange.from_smirnoff(tip5p, [water]).to_openmm(
-            combine_nonbonded_forces=True,
-        )
-
-        # In a TIP5P water    expected exceptions include (total 10)
-        #
-        # V(3)  V(4)          Oxygen to hydrogens and particles (4)
-        #    \ /                - (0, 1), (0, 2), (0, 3), (0, 4)
-        #     O(0)            Hyrogens to virtual particles (4)
-        #    / \                - (1, 3), (1, 4), (2, 3), (2, 4)
-        # H(1)  H(2)          Hydrogens and virtual particles to each other (2)
-        #                       - (1, 2), (3, 4)
-
-        for force in out.getForces():
-            if isinstance(force, openmm.NonbondedForce):
-                assert force.getNumExceptions() == 10
-
-    def test_dichloroethane_exceptions(self, sage):
-        """Test a case in which a parent's 1-4 exceptions must be 'imported'."""
-        from openff.toolkit._tests.mocking import VirtualSiteMocking
-
-        # This molecule has heavy atoms with indices (1-indexed) CL1, C2, C3, Cl4,
-        # resulting in 1-4 interactions between the Cl-Cl pair and some Cl-H pairs
-        dichloroethane = Molecule.from_mapped_smiles(
-            "[Cl:1][C:2]([H:5])([H:6])[C:3]([H:7])([H:8])[Cl:4]",
-        )
-
-        # This parameter pulls 0.1 and 0.2e from Cl (parent) and C, respectively, and has
-        # LJ parameters of 4 A, 3 kJ/mol
-        parameter = VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]")
-
-        handler = VirtualSiteHandler(version="0.3")
-        handler.add_parameter(parameter=parameter)
-
-        sage.register_parameter_handler(handler)
-
-        system = Interchange.from_smirnoff(sage, [dichloroethane]).to_openmm(
-            combine_nonbonded_forces=True,
-        )
-
-        assert system.isVirtualSite(8)
-        assert system.isVirtualSite(9)
-
-        non_bonded_force = [
-            f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)
-        ][0]
-
-        for exception_index in range(non_bonded_force.getNumExceptions()):
-            p1, p2, q, sigma, epsilon = non_bonded_force.getExceptionParameters(
-                exception_index,
-            )
-            if p2 == 8:
-                # Parent Cl, adjacent C and its bonded H, and the 1-3 C
-                if p1 in (0, 1, 2, 4, 5):
-                    assert q._value == epsilon._value == 0.0
-                # 1-4 Cl or 1-4 Hs
-                if p1 in (3, 6, 7):
-                    for value in (q, sigma, epsilon):
-                        assert value._value != 0, (q, sigma, epsilon)
-            if p2 == 9:
-                if p1 in (3, 1, 2, 6, 7):
-                    assert q._value == epsilon._value == 0.0
-                if p1 in (0, 4, 5):
-                    for value in (q, sigma, epsilon):
-                        assert value._value != 0, (q, sigma, epsilon)
-
-
-@skip_if_missing("openmm")
-class TestToOpenMMTopology(_BaseTest):
+class TestToOpenMMTopology:
     def test_num_virtual_sites(self, water, tip4p):
         out = Interchange.from_smirnoff(tip4p, [water])
 
@@ -661,7 +644,7 @@ class TestToOpenMMTopology(_BaseTest):
         and as the wrapped method of the same name on the `Interchange` class.
         """
         topology = water.to_topology()
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
 
         out = Interchange.from_smirnoff(tip4p, topology)
 
@@ -796,7 +779,7 @@ class TestToOpenMMTopology(_BaseTest):
         # and 12 atoms named "", for a total of 3 unique atom names
         assert len(atom_names) == 3
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.parametrize("explicit_arg", [True, False])
     def test_preserve_per_residue_unique_atom_names(self, explicit_arg, sage):
         """
@@ -840,7 +823,7 @@ class TestToOpenMMTopology(_BaseTest):
         final_atomnames = [str(atom.name) for atom in omm_topology.atoms()]
         assert final_atomnames == init_atomnames
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     @pytest.mark.parametrize("explicit_arg", [True, False])
     def test_generate_per_residue_unique_atom_names(self, explicit_arg, sage):
         """
@@ -1002,7 +985,7 @@ class TestToOpenMMTopology(_BaseTest):
 
 
 @skip_if_missing("openmm")
-class TestToOpenMMPositions(_BaseTest):
+class TestToOpenMMPositions:
     def test_missing_positions(self):
         with pytest.raises(
             MissingPositionsError,
@@ -1036,7 +1019,7 @@ class TestToOpenMMPositions(_BaseTest):
         out = Interchange.from_smirnoff(tip4p, topology)
 
         # Approximate conformer position with a duplicate 5 A away in x
-        out.positions = unit.Quantity(
+        out.positions = Quantity(
             numpy.array(
                 [
                     [0.85, 1.17, 0.84],
@@ -1074,7 +1057,7 @@ class TestToOpenMMPositions(_BaseTest):
 
 @skip_if_missing("mdtraj")
 @skip_if_missing("openmm")
-class TestOpenMMToPDB(_BaseTest):
+class TestOpenMMToPDB:
     def test_to_pdb(self, sage, water):
         import mdtraj
 
@@ -1091,7 +1074,8 @@ class TestOpenMMToPDB(_BaseTest):
 
 @skip_if_missing("openmm")
 class TestBuckingham:
-    def test_water_with_virtual_sites(self, water):
+    @pytest.mark.parametrize("n_molecules", [1, 2, 5])
+    def test_water_with_virtual_sites(self, n_molecules, water):
         force_field = ForceField(
             get_test_file_path("buckingham_virtual_sites.offxml"),
             load_plugins=True,
@@ -1099,7 +1083,7 @@ class TestBuckingham:
 
         interchange = Interchange.from_smirnoff(
             force_field=force_field,
-            topology=water.to_topology(),
+            topology=Topology.from_molecules(n_molecules * [water]),
             box=[4, 4, 4],
         )
 
@@ -1122,18 +1106,25 @@ class TestBuckingham:
                     electrostatics14 = force
                     continue
 
-        assert system.getNumParticles() == 4
+        assert system.getNumParticles() == 4 * n_molecules
 
-        masses = [15.99943, 1.007947, 1.007947, 0.0]
+        masses = [15.99943, 1.007947, 1.007947]
 
         for particle_index in range(system.getNumParticles()):
-            assert system.isVirtualSite(particle_index) == (particle_index == 3)
-            assert system.getParticleMass(particle_index)._value == pytest.approx(
-                masses[particle_index],
-            )
+            if particle_index < n_molecules * 3:
+                # atoms should repeat O H H O H H ...
+                assert system.getParticleMass(particle_index)._value == pytest.approx(
+                    masses[particle_index % 3],
+                )
+                assert not system.isVirtualSite(particle_index)
+
+            else:
+                # all virtual sites should be at the end
+                assert system.isVirtualSite(particle_index)
+                assert system.getParticleMass(particle_index)._value == 0.0
 
         charges = openmm.unit.Quantity(
-            [0.0, 0.53254, 0.53254, -1.06508],
+            n_molecules * [0.0, 0.53254, 0.53254] + n_molecules * [-1.06508],
             openmm.unit.elementary_charge,
         )
 
@@ -1142,10 +1133,15 @@ class TestBuckingham:
 
         for index in range(vdw.getNumParticles()):
             parameters = vdw.getParticleParameters(index)
-            for p in parameters:
-                assert (p == 0) == (index > 0)
+            if index % 3 == 0 and not system.isVirtualSite(index):
+                assert parameters[0] == 1600000.0
 
-        assert vdw.getParticleParameters(0) == (1600000.0, 42.0, 0.003)
+        for molecule_index in range(n_molecules):
+            assert vdw.getParticleParameters(molecule_index * 3) == (
+                1600000.0,
+                42.0,
+                0.003,
+            )
 
         # This test should be replaced with one that uses a more complex
         # system than a single water molecule and look at vdw14 force
@@ -1154,20 +1150,21 @@ class TestBuckingham:
         with pytest.raises(PluginCompatibilityError):
             get_openmm_energies(interchange, combine_nonbonded_forces=True)
 
-        with pytest.warns(
-            UserWarning,
-            match="energies from split forces with virtual sites",
-        ):
-            assert not math.isnan(
-                get_openmm_energies(
-                    interchange,
-                    combine_nonbonded_forces=False,
-                ).total_energy.m,
-            )
+        if n_molecules == 1:
+            with pytest.warns(
+                UserWarning,
+                match="energies from split forces with virtual sites",
+            ):
+                assert not math.isnan(
+                    get_openmm_energies(
+                        interchange,
+                        combine_nonbonded_forces=False,
+                    ).total_energy.m,
+                )
 
 
 @skip_if_missing("openmm")
-class TestGBSA(_BaseTest):
+class TestGBSA:
     def test_create_gbsa(self, gbsa_force_field):
         interchange = Interchange.from_smirnoff(
             force_field=gbsa_force_field,

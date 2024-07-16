@@ -1,24 +1,25 @@
 import pytest
-from openff.toolkit import Molecule, Topology
+from openff.toolkit import Molecule, Topology, unit
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.utilities.testing import skip_if_missing
 
-from openff.interchange._tests import _BaseTest
+from openff.interchange._tests import get_test_file_path
 from openff.interchange.components.toolkit import (
     _check_electrostatics_handlers,
     _combine_topologies,
     _get_14_pairs,
     _get_num_h_bonds,
+    _lookup_virtual_site_parameter,
     _simple_topology_from_openmm,
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def simple_methane():
     return _SimpleMolecule.from_molecule(Molecule.from_smiles("C"))
 
 
-@pytest.fixture()
+@pytest.fixture
 def simple_water(water):
     return _SimpleMolecule.from_molecule(water)
 
@@ -36,7 +37,7 @@ def test_simple_topology_uniqueness(simple_methane, simple_water):
     assert len(topology.identical_molecule_groups) == 2
 
 
-class TestToolkitUtils(_BaseTest):
+class TestToolkitUtils:
     @pytest.mark.parametrize(
         ("smiles", "num_pairs"),
         [
@@ -111,3 +112,89 @@ class TestToolkitUtils(_BaseTest):
             3,
             9,
         ]
+
+    def test_simple_subgraph_atom_ordering(self):
+        """
+        Test that simple molecules created from subgraphs use nodes in ascending
+        order (like you'd always do for atom indices)
+        """
+        pytest.importorskip("openmm")
+
+        import openmm.app
+
+        crazy_water = openmm.app.PDBFile(
+            get_test_file_path("copied_reordered_water.pdb").as_posix(),
+        )
+
+        expected_atomic_numbers = [
+            8,
+            1,
+            1,
+            1,
+            8,
+            1,
+            1,
+            1,
+            8,
+            1,
+            8,
+            1,
+        ]
+
+        simple_topology = _simple_topology_from_openmm(crazy_water.topology)
+
+        for atom, expected_atomic_number in zip(
+            simple_topology.atoms,
+            expected_atomic_numbers,
+        ):
+            assert atom.atomic_number == expected_atomic_number
+
+
+def test_lookup_virtual_site_parameter(
+    sage,
+    tip4p,
+    sage_with_two_virtual_sites_same_smirks,
+):
+    with pytest.raises(
+        NotImplementedError,
+    ):
+        _lookup_virtual_site_parameter(
+            sage["LibraryCharges"],
+            smirks="",
+            name="",
+            match="",
+        )
+
+    assert _lookup_virtual_site_parameter(
+        parameter_handler=tip4p["VirtualSites"],
+        smirks="[#1:2]-[#8X2H2+0:1]-[#1:3]",
+        name="EP",
+        match="once",
+    )
+
+    ep1 = _lookup_virtual_site_parameter(
+        sage_with_two_virtual_sites_same_smirks["VirtualSites"],
+        smirks="[#7:1](-[*:2])(-[*:3])-[*:4]",
+        name="EP1",
+        match="once",
+    )
+    assert ep1.distance.m_as(unit.nanometer) == -0.5
+
+    ep2 = _lookup_virtual_site_parameter(
+        sage_with_two_virtual_sites_same_smirks["VirtualSites"],
+        smirks="[#7:1](-[*:2])(-[*:3])-[*:4]",
+        name="EP2",
+        match="once",
+    )
+    assert ep2.distance.m_as(unit.nanometer) == 1.5
+
+    with pytest.raises(
+        ValueError,
+        match="No VirtualSiteType found with .*EP3",
+    ):
+        _lookup_virtual_site_parameter(
+            sage_with_two_virtual_sites_same_smirks["VirtualSites"],
+            smirks="[#7:1](-[*:2])(-[*:3])-[*:4]",
+            name="EP3",
+            match="once",
+        )

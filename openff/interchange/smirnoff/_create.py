@@ -1,9 +1,6 @@
-from typing import Optional, Union
-
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff import ParameterHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
-from openff.units import Quantity
 from packaging.version import Version
 
 from openff.interchange import Interchange
@@ -49,9 +46,9 @@ _PLUGIN_CLASS_MAPPING: dict[
 ] = dict()
 
 for collection_plugin in load_smirnoff_plugins():
-    parameter_handlers: list[
-        type["ParameterHandler"]
-    ] = collection_plugin.allowed_parameter_handlers()
+    parameter_handlers: list[type["ParameterHandler"]] = (
+        collection_plugin.allowed_parameter_handlers()
+    )
 
     for parameter_handler in parameter_handlers:
         if parameter_handler in load_handler_plugins():
@@ -83,11 +80,11 @@ def _check_supported_handlers(force_field: ForceField):
 
 def _create_interchange(
     force_field: ForceField,
-    topology: Union[Topology, list[Molecule]],
-    box: Optional[Quantity] = None,
-    positions: Optional[Quantity] = None,
-    charge_from_molecules: Optional[list[Molecule]] = None,
-    partial_bond_orders_from_molecules: Optional[list[Molecule]] = None,
+    topology: Topology | list[Molecule],
+    box: Quantity | None = None,
+    positions: Quantity | None = None,
+    charge_from_molecules: list[Molecule] | None = None,
+    partial_bond_orders_from_molecules: list[Molecule] | None = None,
     allow_nonintegral_charges: bool = False,
 ) -> Interchange:
     _check_supported_handlers(force_field)
@@ -99,8 +96,6 @@ def _create_interchange(
     interchange.positions = _infer_positions(_topology, positions)
 
     interchange.box = _topology.box_vectors if box is None else box
-
-    _plugins(interchange, force_field, _topology)
 
     _bonds(interchange, force_field, _topology, partial_bond_orders_from_molecules)
     _constraints(
@@ -121,6 +116,8 @@ def _create_interchange(
         charge_from_molecules,
         allow_nonintegral_charges,
     )
+    _plugins(interchange, force_field, _topology)
+
     _virtual_sites(interchange, force_field, _topology)
 
     _gbsa(interchange, force_field, _topology)
@@ -134,7 +131,7 @@ def _bonds(
     interchange: Interchange,
     force_field: ForceField,
     _topology: Topology,
-    partial_bond_orders_from_molecules: Optional[list[Molecule]] = None,
+    partial_bond_orders_from_molecules: list[Molecule] | None = None,
 ):
     if "Bonds" not in force_field.registered_parameter_handlers:
         return
@@ -159,7 +156,7 @@ def _constraints(
     interchange: Interchange,
     force_field: ForceField,
     topology: Topology,
-    bonds: Optional[SMIRNOFFBondCollection] = None,
+    bonds: SMIRNOFFBondCollection | None = None,
 ):
     interchange.collections.update(
         {
@@ -252,7 +249,7 @@ def _electrostatics(
     interchange: Interchange,
     force_field: ForceField,
     topology: Topology,
-    charge_from_molecules: Optional[list[Molecule]] = None,
+    charge_from_molecules: list[Molecule] | None = None,
     allow_nonintegral_charges: bool = False,
 ):
     if "Electrostatics" not in force_field.registered_parameter_handlers:
@@ -374,10 +371,25 @@ def _plugins(
 
         if len(handler_classes) == 1:
             handler_class = handler_classes[0]
-            collection = collection_class.create(
-                parameter_handler=force_field[handler_class._TAGNAME],
-                topology=topology,
-            )
+            try:
+                collection = collection_class.create(
+                    parameter_handler=force_field[handler_class._TAGNAME],
+                    topology=topology,
+                )
+            except TypeError:
+                tagnames = [x._TAGNAME for x in collection.allowed_parameter_handlers()]
+
+                if len(tagnames) > 1:
+                    raise NotImplementedError(
+                        f"Collection {collection} requires multiple handlers, but only one was provided.",
+                    )
+
+                collection = collection_class.create(
+                    parameter_handler=force_field[handler_class._TAGNAME],
+                    topology=topology,
+                    vdw_collection=interchange[tagnames[0]],
+                    electrostatics_collection=interchange["Electrostatics"],
+                )
 
         else:
             # If this collection takes multiple handlers, pass it a list. Consider making this type the default.

@@ -102,7 +102,7 @@ autodoc_mock_imports = ["jax"]
 autodoc_default_options = {
     "member-order": "bysource",
     "undoc-members": True,
-    "inherited-members": False,
+    "inherited-members": [],
     "show-inheritance": True,
 }
 autodoc_preserve_defaults = True

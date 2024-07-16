@@ -1,12 +1,14 @@
 """
 Units tests for openff.interchange.components._packmol
 """
+
 import numpy
 import pytest
 from openff.toolkit.topology import Molecule
-from openff.units import unit
+from openff.units import Quantity, unit
 from openff.utilities import has_package, skip_if_missing
 
+from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange.components._packmol import (
     RHOMBIC_DODECAHEDRON,
     RHOMBIC_DODECAHEDRON_XYHEX,
@@ -16,6 +18,7 @@ from openff.interchange.components._packmol import (
     _scale_box,
     pack_box,
     solvate_topology,
+    solvate_topology_nonwater,
 )
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
@@ -89,7 +92,7 @@ class TestPackmolWrapper:
         Test that _compute_brick() raises an exception with an irreduced box.
         """
         # This is a rhombic dodecahedron with the first and last rows swapped
-        box = unit.Quantity(
+        box = Quantity(
             numpy.asarray(
                 [
                     [0.5, 0.5, numpy.sqrt(2.0) / 2.0],
@@ -133,6 +136,20 @@ class TestPackmolWrapper:
                 molecules,
                 [2],
                 box_vectors=20 * numpy.identity(4) * unit.angstrom,
+            )
+
+    def test_packmol_bad_box_shape(self, molecules):
+        with pytest.raises(PACKMOLValueError, match=r"with shape \(3, 3\)"):
+            solvate_topology(
+                molecules[0].to_topology(),
+                box_shape=20 * numpy.identity(4) * unit.angstrom,
+            )
+
+        with pytest.raises(PACKMOLValueError, match=r"with shape \(3, 3\)"):
+            solvate_topology_nonwater(
+                molecules[0].to_topology(),
+                solvent=Molecule.from_smiles("CCCCCCO"),
+                box_shape=20 * numpy.identity(4) * unit.angstrom,
             )
 
     def test_packmol_underspecified(self, molecules):
@@ -229,7 +246,7 @@ class TestPackmolWrapper:
         assert topology.n_atoms == 20
         assert topology.n_bonds == 20
 
-    @pytest.mark.slow()
+    @pytest.mark.slow
     def test_amino_acids(self):
         amino_residues = {
             "C[C@H](N)C(=O)O": "ALA",
@@ -349,9 +366,31 @@ class TestPackmolWrapper:
             solvated_topology.box_vectors[2, 0] == solvated_topology.box_vectors[2, 1]
         )
 
+    def test_packmol_add_negative_solvent_mass(self):
+        ligand = MoleculeWithConformer.from_smiles("C1CN2C(=N1)SSC2=S")
+
+        with pytest.raises(
+            PACKMOLValueError,
+            match="Solute mass is greater than target mass",
+        ):
+            solvate_topology(
+                ligand.to_topology(),
+                target_density=Quantity(1e-6, "kilogram/meter**3"),
+            )
+
+        with pytest.raises(
+            PACKMOLValueError,
+            match="Solute mass is greater than target mass",
+        ):
+            solvate_topology_nonwater(
+                ligand.to_topology(),
+                solvent=Molecule.from_smiles("CCCCCCO"),
+                target_density=Quantity(1e-6, "kilogram/meter**3"),
+            )
+
     @pytest.mark.skipif(
-        has_package("mdtraj"),
-        reason="Test requires that MDTraj is not installed",
+        has_package("mdtraj") or has_package("openmm"),
+        reason="Test requires that MDTraj **and** OpenMM are not installed",
     )
     def test_noninteger_serial_error(self):
         """See issue #794."""
@@ -367,9 +406,21 @@ class TestPackmolWrapper:
                 mass_density=0.1 * unit.grams / unit.milliliters,
             )
 
+    @pytest.mark.slow
     @skip_if_missing("mdtraj")
     def test_noninteger_serial_fallback(self):
         """See issue #794."""
+        pack_box(
+            molecules=[Molecule.from_smiles("CCO")],
+            number_of_copies=[11112],
+            box_shape=UNIT_CUBE,
+            tolerance=1.0 * unit.angstrom,
+            mass_density=0.1 * unit.grams / unit.milliliters,
+        )
+
+    @pytest.mark.slow
+    @skip_if_missing("mdtraj")
+    def test_load_100_000_atoms(self):
         pack_box(
             molecules=[Molecule.from_smiles("CCO")],
             number_of_copies=[11112],

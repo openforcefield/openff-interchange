@@ -1,17 +1,17 @@
 """Unit tests for common virtual site functions."""
+
 from random import random
 
 import numpy
 import pytest
-from openff.toolkit import ForceField
-from openff.units import Quantity, unit
+from openff.toolkit import ForceField, Quantity, unit
 
 from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange.exceptions import MissingVirtualSitesError
 from openff.interchange.interop._virtual_sites import get_positions_with_virtual_sites
 
 
-@pytest.fixture()
+@pytest.fixture
 def tip4p_interchange(water, tip4p):
     return tip4p.create_interchange(water.to_topology())
 
@@ -37,6 +37,50 @@ def test_nonzero_positions(tip4p_interchange):
     )
 
 
+def test_collate_virtual_site_positions(tip4p, water_dimer):
+    out = tip4p.create_interchange(water_dimer)
+
+    out.box = Quantity([10, 10, 10], unit.nanometer)
+
+    # move the second water far away, since we're later checking that
+    # each water's virtual site is close to its oxygen
+    out.positions[3:] += Quantity([3, 3, 3], unit.nanometer)
+
+    positions = get_positions_with_virtual_sites(
+        out,
+        collate=False,
+    ).m_as(unit.nanometer)
+
+    collated_positions = get_positions_with_virtual_sites(
+        out,
+        collate=True,
+    ).m_as(unit.nanometer)
+
+    # first three atoms and last virtual site should not be affected
+    assert positions[:3, :] == pytest.approx(collated_positions[:3, :])
+    assert positions[-1, :] == pytest.approx(collated_positions[-1, :])
+
+    # first molecule's virtual site is placed at 4th position if collated,
+    # second-to-last position if not
+    assert positions[-2] == pytest.approx(collated_positions[3])
+
+    def are_close(a, b):
+        """Given two positions, return that they're < 1 nanometer apart."""
+        return numpy.linalg.norm(a - b) < 1
+
+    # each molecule's oxygen and virtual site should be close-ish
+    assert are_close(positions[0], positions[-2])
+    assert are_close(positions[3], positions[-1])
+    assert are_close(collated_positions[0], collated_positions[3])
+    assert are_close(collated_positions[4], collated_positions[7])
+
+    # different molecules' oxygen and virtual site should NOT be close-ish
+    assert not are_close(positions[0], positions[-1])
+    assert not are_close(positions[3], positions[-2])
+    assert not are_close(collated_positions[0], collated_positions[7])
+    assert not are_close(collated_positions[4], collated_positions[3])
+
+
 class TestVirtualSitePositions:
     @pytest.mark.parametrize(
         "distance_",
@@ -53,7 +97,9 @@ class TestVirtualSitePositions:
         sage_with_bond_charge,
         distance_,
     ):
-        sage_with_bond_charge["VirtualSites"].parameters[0].distance = Quantity(
+        sage_with_bond_charge["VirtualSites"].get_parameter(
+            parameter_attrs={"smirks": "[#6:2]-[#17X1:1]"},
+        )[0].distance = Quantity(
             distance_,
             unit.nanometer,
         )
@@ -93,16 +139,16 @@ class TestVirtualSitePositions:
         distance_,
         theta,
     ):
-        sage_with_planar_monovalent_carbonyl["VirtualSites"].parameters[
-            0
-        ].distance = Quantity(
+        sage_with_planar_monovalent_carbonyl["VirtualSites"].get_parameter(
+            parameter_attrs={"smirks": "[#8:1]=[#6X3+0:2]-[#6:3]"},
+        )[0].distance = Quantity(
             distance_,
             unit.nanometer,
         )
 
-        sage_with_planar_monovalent_carbonyl["VirtualSites"].parameters[
-            0
-        ].inPlaneAngle = Quantity(
+        sage_with_planar_monovalent_carbonyl["VirtualSites"].get_parameter(
+            parameter_attrs={"smirks": "[#8:1]=[#6X3+0:2]-[#6:3]"},
+        )[0].inPlaneAngle = Quantity(
             theta,
             unit.degree,
         )
@@ -166,7 +212,9 @@ class TestVirtualSitePositions:
     ):
         tip4p = ForceField("tip4p_fb.offxml")
 
-        tip4p["VirtualSites"].parameters[0].distance = Quantity(
+        tip4p["VirtualSites"].get_parameter(
+            parameter_attrs={"smirks": "[#1:2]-[#8X2H2+0:1]-[#1:3]"},
+        )[0].distance = Quantity(
             distance_,
             unit.nanometer,
         )
@@ -200,7 +248,9 @@ class TestVirtualSitePositions:
         ammonia_tetrahedral,
         distance_,
     ):
-        sage_with_trivalent_nitrogen["VirtualSites"].parameters[0].distance = Quantity(
+        sage_with_trivalent_nitrogen["VirtualSites"].get_parameter(
+            parameter_attrs={"smirks": "[#1:2][#7:1]([#1:3])[#1:4]"},
+        )[0].distance = Quantity(
             distance_,
             unit.angstrom,
         )
