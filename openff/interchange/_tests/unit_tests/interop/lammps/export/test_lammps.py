@@ -3,7 +3,7 @@ from typing import Any, Dict, Type
 
 import numpy
 import pytest
-from openff.toolkit import Molecule, Topology, unit, ForceField
+from openff.toolkit import ForceField, Molecule, Topology, unit
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, needs_lmp
@@ -25,7 +25,10 @@ class TestLammps:
         ],
     )
     def test_to_lammps_single_mols(
-        self, mol: str, sage_unconstrained: ForceField, n_mols: int
+        self,
+        mol: str,
+        sage_unconstrained: ForceField,
+        n_mols: int,
     ) -> None:
         """
         Test that Interchange.to_openmm Interchange.to_lammps report sufficiently similar energies.
@@ -69,12 +72,13 @@ class TestLammps:
         )
 
     def test_unique_lammps_mol_ids(
-        self, smiles: str, sage_unconstrained: ForceField, sidelen: int = 0
+        self,
+        smiles: str,
+        sage_unconstrained: ForceField,
+        sidelen: int = 0,
     ) -> bool:
         """Test to see if interop.lammps.export._write_atoms() writes unique ids for each distinct Molecule"""
-        temp_lammps_path = (
-            Path.cwd() / "temp.lmp"
-        )
+        temp_lammps_path = Path.cwd() / "temp.lmp"
 
         # BUILD TOPOLOGY
         ## 0) generate pilot Molecule and conformer
@@ -99,7 +103,7 @@ class TestLammps:
                         numpy.arange(sidelen) for _ in range(3)
                     ],  # the 3 here is for 3-dimensions
                 )
-            ]
+            ],
         )
 
         ## 3) build topology by tiling
@@ -107,7 +111,7 @@ class TestLammps:
         for int_offset in xyz_offsets:
             mol = Molecule.from_smiles(smiles)
             mol.add_conformer(
-                (conf_centered + 2 * r_eff * int_offset).to("nm")
+                (conf_centered + 2 * r_eff * int_offset).to("nm"),
             )  # space copied by effective diameter
             tiled_top.add_molecule(mol)
 
@@ -119,7 +123,8 @@ class TestLammps:
 
         # EXPORT TO LAMMPS
         interchange = Interchange.from_smirnoff(
-            sage_unconstrained, tiled_top
+            sage_unconstrained,
+            tiled_top,
         )  # , charge_from_molecules=[pilot_mol])
         # UNRELATED QUESTION: why are waters not correctly recognized?
         # PDB residue name on output is always UNK for Molecule.from_smiles("O"), EVEN when using tip3p.offxml)
@@ -128,7 +133,7 @@ class TestLammps:
 
         # EXTRACT ATOM INFO FROM WRITTEN LAMMPS FILE TO TEST IF MOLEUCLE IDS ARE BEING WRITTEN CORRECTLY
         with temp_lammps_path.open(
-            "r"
+            "r",
         ) as lmp_file:  # pull out text from temporary lammps file ...
             all_lines = [
                 line for line in lmp_file.read().split("\n") if line
@@ -155,7 +160,8 @@ class TestLammps:
             return {
                 field_label: FieldType(str_val)
                 for str_val, (field_label, FieldType) in zip(
-                    atom_line.split("\t"), KEYWORDS.items()
+                    atom_line.split("\t"),
+                    KEYWORDS.items(),
                 )
             }
 
