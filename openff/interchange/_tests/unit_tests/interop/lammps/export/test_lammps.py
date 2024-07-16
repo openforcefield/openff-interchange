@@ -3,8 +3,7 @@ from typing import Any, Dict, Type
 
 import numpy
 import pytest
-from openff.toolkit import Molecule, Topology, unit
-from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.toolkit import Molecule, Topology, unit, ForceField
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, needs_lmp
@@ -75,7 +74,7 @@ class TestLammps:
         """Test to see if interop.lammps.export._write_atoms() writes unique ids for each distinct Molecule"""
         temp_lammps_path = (
             Path.cwd() / "temp.lmp"
-        )  # NOTE: lammps writer doesn't currently support IO-like object passing, so need to intercept output with temporary file
+        )
 
         # BUILD TOPOLOGY
         ## 0) generate pilot Molecule and conformer
@@ -168,4 +167,4 @@ class TestLammps:
             i + 1 for i in range(interchange.topology.n_molecules)
         }  # we'd like for each of the N molecules to have ids from [1...N]
 
-        return expected_mol_ids == written_mol_ids
+        assert expected_mol_ids == written_mol_ids
