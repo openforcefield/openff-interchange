@@ -75,13 +75,12 @@ class TestLammps:
     @pytest.mark.parametrize("sidelen", [2, 3])
     @pytest.mark.parametrize(
         "smiles",
-        [ 
-            "O",   # nothing particularly special about these molecules
-            "CCO", # just testing that unique IDs hold for diverse chemistries
+        [
+            "O",  # nothing particularly special about these molecules
+            "CCO",  # just testing that unique IDs hold for diverse chemistries
             "N1CCCC1",
             "c1cccc1c",
-
-        ]
+        ],
     )
     def test_unique_lammps_mol_ids(
         self,
@@ -150,20 +149,22 @@ class TestLammps:
 
         mdconfig = MDConfig.from_interchange(interchange)
         mdconfig.write_lammps_input(
-            interchange=interchange, input_file=lammps_input_path
+            interchange=interchange,
+            input_file=lammps_input_path,
         )
 
         ## 4) EXTRACT ATOM INFO FROM WRITTEN LAMMPS FILE TO TEST IF MOLEUCLE IDS ARE BEING WRITTEN CORRECTLY
         with lammps.lammps(
-            cmdargs=["-screen", "none", "-log", "none"]
+            cmdargs=["-screen", "none", "-log", "none"],
         ) as lmp:  # Ask LAMMPS nicely not to spam console or produce stray log files
             lmp.file(
-                "temp.in"
+                "temp.in",
             )  # can't use lmp.command('read_data ...'), as atom/bond/pair/dihedral styles are not set in the Interchange-generated LAMMPS data file
             written_mol_ids = {
                 mol_id
                 for _, mol_id in zip(
-                    range(lmp.get_natoms()), lmp.extract_atom("molecule")
+                    range(lmp.get_natoms()),
+                    lmp.extract_atom("molecule"),
                 )
             }  # need to zip with range capped at n_atoms, otherwise will iterate forever
 
