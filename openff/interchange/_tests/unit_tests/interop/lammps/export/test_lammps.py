@@ -81,12 +81,9 @@ class TestLammps:
         temp_lammps_path = Path.cwd() / "temp.lmp"
 
         # BUILD TOPOLOGY
-        ## 0) generate pilot Molecule and conformer
-        pilot_mol = Molecule.from_smiles(smiles)
-        pilot_mol.generate_conformers(n_conformers=1)
-        # pilot_mol.assign_partial_charges(partial_charge_method='gasteiger') # generate dummy charges for testing
-
         ## 1) compute effective radius as the greatest atomic distance from barycenter (avoids collisions when tiling)
+        pilot_mol = MoleculeWithConformer.from_smiles(smiles) # this will serve as a prototype for all other Molecule copies in the Topology
+
         conf = pilot_mol.conformers[0]
         COM = conf.mean(axis=0)
         conf_centered = conf - COM
@@ -125,9 +122,7 @@ class TestLammps:
         interchange = Interchange.from_smirnoff(
             sage_unconstrained,
             tiled_top,
-        )  # , charge_from_molecules=[pilot_mol])
-        # UNRELATED QUESTION: why are waters not correctly recognized?
-        # PDB residue name on output is always UNK for Molecule.from_smiles("O"), EVEN when using tip3p.offxml)
+        )
         interchange.box = box_vectors
         interchange.to_lammps(temp_lammps_path)
 
