@@ -429,6 +429,12 @@ class Interchange(_BaseModel):
         system : openmm.System
             The OpenMM System object.
 
+        Notes
+        -----
+        There are some sharp edges and quirks when using this method. Be aware of some documented
+        issues in the :doc:`/using/edges` section of the user guide. If you encounter surprising
+        behavior that is not documented, please raise an issue.
+
         """
         from openff.interchange.interop.openmm import (
             to_openmm_system as _to_openmm_system,
