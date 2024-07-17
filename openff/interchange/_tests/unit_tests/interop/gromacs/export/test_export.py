@@ -192,6 +192,27 @@ class TestGROMACSGROFile(_NeedsGROMACS):
         openmm_atom_names = openmm.app.GromacsGroFile("atom_names.gro").atomNames
 
         assert openmm_atom_names == pdb_atom_names
+        
+    def test_residue_id_increment(self):
+        """Test that residue IDs increment properly for multiple molecules."""
+
+        mol1 = MoleculeWithConformer.from_smiles("CCO")
+        mol2 = MoleculeWithConformer.from_smiles("CCO")
+
+        for atom in mol1.atoms:
+            atom.metadata["residue_name"] = "MOL1"
+        for atom in mol2.atoms:
+            atom.metadata["residue_name"] = "MOL2"
+
+        interchange = Interchange.from_smirnoff(ForceField("openff-2.0.0.offxml"), [mol1, mol2])
+        interchange.to_gro("resid.gro")
+
+        with open("resid.gro", "r") as gro_file:
+            lines = gro_file.readlines()
+            residue_ids = {int(line[:5].strip()) for line in lines[2:-2]}
+
+            # expecting residue IDs 1 and 2 for MOL1 and MOL2 respectively
+            assert residue_ids == {1, 2}
 
 
 class TestGROMACS(_NeedsGROMACS):
