@@ -11,6 +11,11 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## 0.3.28 - 2024-07-17
+
+* #991 Fixes the virtual site example for upstream changes in virtual site parameter lookup.
+* #1000 Fixes a bug in which molecule IDs were mangled in the LAMMPS export.
+
 ## 0.3.27 - 2024-05-29
 
 * #980 Fixes #978 in which some dihedral parameters were lost in `Interchange.from_gromacs`.
