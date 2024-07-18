@@ -47,6 +47,8 @@ def minimize_openmm(
         else:
             raise MinimizationError("OpenMM Minimization failed.") from error
 
+    assert interchange.positions is not None
+
     # Assume that all virtual sites are placed at the _end_, so the 0th through
     # (number of atoms)th positions are the massive particles
     return from_openmm(

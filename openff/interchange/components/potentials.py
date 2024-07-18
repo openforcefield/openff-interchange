@@ -6,6 +6,7 @@ import warnings
 from typing import Annotated, Any, Union
 
 import numpy
+from numpy.typing import NDArray
 from openff.toolkit import Quantity
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import (
@@ -28,12 +29,12 @@ from openff.interchange.pydantic import _BaseModel
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if has_package("jax"):
-    from jax import numpy as jax_numpy
-
-from numpy.typing import ArrayLike
-
-if has_package("jax"):
+    # JAX stubs seem very broken, not adding this to type annotations
+    # even though many should be NDArray | Array
     from jax import Array
+    from jax import numpy as jax_numpy
+else:
+    Array = NDArray
 
 
 def __getattr__(name: str):
@@ -102,13 +103,16 @@ def validate_potential_or_wrapped_potential(
     v: Any,
     handler: ValidatorFunctionWrapHandler,
     info: ValidationInfo,
-) -> dict[str, Quantity]:
+) -> Potential | WrappedPotential:
     """Validate the parameters field of a Potential object."""
     if info.mode == "json":
         if "parameters" in v:
             return Potential.model_validate(v)
         else:
             return WrappedPotential.model_validate(v)
+
+    else:
+        raise NotImplementedError(f"Validation mode {info.mode} not implemented.")
 
 
 PotentialOrWrappedPotential = Annotated[
@@ -132,6 +136,8 @@ def validate_key_map(v: Any, handler, info) -> dict:
     if info.mode in ("json", "python"):
         for key, val in v.items():
             val_dict = json.loads(val)
+
+            key_class: type[TopologyKey | LibraryChargeTopologyKey]
 
             match val_dict["associated_handler"]:
                 case "Bonds":
@@ -171,7 +177,11 @@ def validate_key_map(v: Any, handler, info) -> dict:
     return v
 
 
-def serialize_key_map(value: dict[str, str], handler, info) -> dict[str, str]:
+def serialize_key_map(
+    value: dict[TopologyKey, PotentialKey],
+    handler,
+    info,
+) -> dict[str, str]:
     """Serialize the parameters field of a Potential object."""
     if info.mode == "json":
         return {
@@ -217,7 +227,7 @@ def validate_potential_dict(
 
 
 def serialize_potential_dict(
-    value: dict[str, Quantity],
+    value: dict[PotentialKey, Potential],
     handler,
     info,
 ) -> dict[str, str]:
@@ -227,6 +237,8 @@ def serialize_potential_dict(
             key.model_dump_json(): value.model_dump_json()
             for key, value in value.items()
         }
+    else:
+        raise NotImplementedError(f"Serialization mode {info.mode} not implemented.")
 
 
 Potentials = Annotated[
@@ -285,7 +297,7 @@ class Collection(_BaseModel):
     def get_force_field_parameters(
         self,
         use_jax: bool = False,
-    ) -> Union["ArrayLike", "Array"]:
+    ) -> NDArray:
         """Return a flattened representation of the force field parameters."""
         # TODO: Handle WrappedPotential
         if any(
@@ -309,20 +321,20 @@ class Collection(_BaseModel):
                 ],
             )
 
-    def set_force_field_parameters(self, new_p: "ArrayLike") -> None:
+    def set_force_field_parameters(self, new_p: NDArray) -> None:
         """Set the force field parameters from a flattened representation."""
         mapping = self.get_mapping()
-        if new_p.shape[0] != len(mapping):  # type: ignore
+        if new_p.shape[0] != len(mapping):
             raise RuntimeError
 
         for potential_key, potential_index in self.get_mapping().items():
             potential = self.potentials[potential_key]
-            if len(new_p[potential_index, :]) != len(potential.parameters):  # type: ignore
+            if len(new_p[potential_index, :]) != len(potential.parameters):
                 raise RuntimeError
 
             for parameter_index, parameter_key in enumerate(potential.parameters):
                 parameter_units = potential.parameters[parameter_key].units
-                modified_parameter = new_p[potential_index, parameter_index]  # type: ignore
+                modified_parameter = new_p[potential_index, parameter_index]
 
                 self.potentials[potential_key].parameters[parameter_key] = (
                     modified_parameter * parameter_units
@@ -332,7 +344,7 @@ class Collection(_BaseModel):
         self,
         p=None,
         use_jax: bool = False,
-    ) -> Union["ArrayLike", "Array"]:
+    ) -> NDArray:
         """
         Return a flattened representation of system parameters.
 
@@ -374,7 +386,7 @@ class Collection(_BaseModel):
         self,
         p=None,
         use_jax: bool = True,
-    ) -> Union["ArrayLike", "Array"]:
+    ) -> NDArray:
         """Return an array of system parameters, given an array of force field parameters."""
         if p is None:
             p = self.get_force_field_parameters(use_jax=use_jax)
@@ -391,7 +403,7 @@ class Collection(_BaseModel):
         )
 
     @requires_package("jax")
-    def get_param_matrix(self) -> Union["Array", "ArrayLike"]:
+    def get_param_matrix(self) -> Array:
         """Get a matrix representing the mapping between force field and system parameters."""
         from functools import partial
 
@@ -406,7 +418,7 @@ class Collection(_BaseModel):
         jac_parametrize = jax.jacfwd(parametrize_partial)
         jac_res = jac_parametrize(p)
 
-        return jac_res.reshape(-1, p.flatten().shape[0])  # type: ignore[union-attr]
+        return jac_res.reshape(-1, p.flatten().shape[0])
 
     def __getattr__(self, attr: str):
         if attr == "slot_map":
@@ -439,6 +451,7 @@ def validate_collections(
     from openff.interchange.smirnoff import (
         SMIRNOFFAngleCollection,
         SMIRNOFFBondCollection,
+        SMIRNOFFCollection,
         SMIRNOFFConstraintCollection,
         SMIRNOFFElectrostaticsCollection,
         SMIRNOFFImproperTorsionCollection,
@@ -447,7 +460,7 @@ def validate_collections(
         SMIRNOFFVirtualSiteCollection,
     )
 
-    _class_mapping = {
+    _class_mapping: dict[str, type[SMIRNOFFCollection]] = {
         "Bonds": SMIRNOFFBondCollection,
         "Angles": SMIRNOFFAngleCollection,
         "Constraints": SMIRNOFFConstraintCollection,
@@ -465,6 +478,9 @@ def validate_collections(
             )
             for collection_name, collection_data in v.items()
         }
+
+    else:
+        raise NotImplementedError(f"Validation mode {info.mode} not implemented.")
 
 
 _AnnotatedCollections = Annotated[

@@ -92,7 +92,6 @@ jobs:
       run: micromamba install "foyer >=0.12.1" -c conda-forge -yq
 
     - name: Run tests
-      if: always()
       run: |
         python -m pytest $COV openff/interchange/ \
           -r fExs -n logical --durations=10 \
@@ -127,7 +126,6 @@ jobs:
         python devtools/scripts/molecule-regressions.py
 
     - name: Run mypy
-      continue-on-error: true
       if: ${{ matrix.python-version == '3.11' }}
       run: |
         # As of 01/23, JAX with mypy is too slow to use without a pre-built cache

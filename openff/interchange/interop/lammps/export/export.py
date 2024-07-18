@@ -18,6 +18,13 @@ def to_lammps(interchange: Interchange, file_path: Path | str):
     if isinstance(file_path, Path):
         path = file_path
 
+    if interchange.positions is None:
+        raise UnsupportedExportError(
+            "Interchange object must have positions to export to LAMMPS data file",
+        )
+
+    assert interchange.positions is not None
+
     n_atoms = interchange.topology.n_atoms
     if "Bonds" in interchange.collections:
         n_bonds = len(interchange["Bonds"].key_map.keys())
@@ -267,6 +274,8 @@ def _write_improper_coeffs(lmp_file: IO, interchange: Interchange):
 
 def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
     """Write the Atoms section of a LAMMPS data file."""
+    assert interchange.positions is not None
+
     lmp_file.write("\nAtoms\n\n")
 
     atom_type_map_inv = dict({v: k for k, v in atom_type_map.items()})

@@ -7,7 +7,7 @@ dependencies:
   - numpy
   - pydantic
   # OpenFF stack
-  - openff-toolkit-base >=0.16
+  - openff-toolkit-base ~=0.16
   - openff-units
   - ambertools =23
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
@@ -27,7 +27,7 @@ dependencies:
   - nbval
   - nglview
   # Drivers
-  - gromacs
+  - gromacs =2024
   - lammps >=2023.08.02
   - panedr
   # Typing

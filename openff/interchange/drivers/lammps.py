@@ -56,6 +56,8 @@ def _get_lammps_energies(
 ) -> dict[str, Quantity]:
     import lammps
 
+    assert interchange.positions is not None
+
     if round_positions is not None:
         interchange.positions = numpy.round(interchange.positions, round_positions)
 

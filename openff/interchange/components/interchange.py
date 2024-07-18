@@ -448,7 +448,7 @@ class Interchange(_BaseModel):
             hydrogen_mass=hydrogen_mass,
         )
 
-    to_openmm = to_openmm_system
+    to_openmm = to_openmm_system  # type: ignore[pydantic-field]
 
     def to_openmm_topology(
         self,
@@ -579,6 +579,8 @@ class Interchange(_BaseModel):
             raise MissingPositionsError(
                 "Positions are required to write a `.pdb` file but found None.",
             )
+
+        assert self.positions is not None
 
         # TODO: Simply wire `include_virtual_sites` to `to_openmm_{topology|positions}`?
         if include_virtual_sites:

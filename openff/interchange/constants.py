@@ -2,9 +2,11 @@
 Commonly-used constants.
 """
 
+from typing import Literal
+
 from openff.toolkit import unit
 
-_PME = "Ewald3D-ConductingBoundary"
+_PME: Literal["Ewald3D-ConductingBoundary"] = "Ewald3D-ConductingBoundary"
 kj_mol = unit.Unit("kilojoule / mol")
 kcal_mol = unit.kilocalorie_per_mole
 

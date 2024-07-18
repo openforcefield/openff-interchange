@@ -61,7 +61,7 @@ class MDConfig(_BaseModel):
         description="The distance at which the switching function is applied",
     )
     coul_method: str = Field(
-        None,
+        "Unknown",
         description="The method used to compute pairwise electrostatic interactions",
     )
     coul_cutoff: _DistanceQuantity = Field(
@@ -137,7 +137,7 @@ class MDConfig(_BaseModel):
         if "Electrostatics" in interchange.collections:
             electrostatics = interchange["Electrostatics"]
             if self.coul_method.lower() == "pme":
-                electrostatics.periodic_potential = _PME  # type: ignore[assignment]
+                electrostatics.periodic_potential = _PME
             else:
                 electrostatics.periodic_potential = self.coul_method  # type: ignore[assignment]
             electrostatics.cutoff = self.coul_cutoff
