@@ -429,91 +429,31 @@ def _convert_dihedrals(
         None,
     )
 
-    # TODO: Ensure number of torsions written matches what is expected
-    for proper in unique_molecule.propers:
-        topology_indices = tuple(interchange.topology.atom_index(a) for a in proper)
-        molecule_indices = tuple(unique_molecule.atom_index(a) for a in proper)
+    atom_indices_in_this_molecule = {
+        interchange.topology.atom_index(a) for a in unique_molecule.atoms
+    }
 
-        if proper_torsion_handler:
-            for top_key in proper_torsion_handler.key_map:
-                if top_key.atom_indices[0] not in [
-                    topology_indices[0],
-                    topology_indices[3],
-                ]:
-                    continue
-                if top_key.atom_indices[1] not in [
-                    topology_indices[1],
-                    topology_indices[2],
-                ]:
-                    continue
-                if top_key.atom_indices[2] not in [
-                    topology_indices[2],
-                    topology_indices[1],
-                ]:
-                    continue
-                if top_key.atom_indices[3] not in [
-                    topology_indices[3],
-                    topology_indices[0],
-                ]:
-                    continue
-                if top_key.atom_indices in (topology_indices, topology_indices[::-1]):
-                    pot_key = proper_torsion_handler.key_map[top_key]
-                    params = proper_torsion_handler.potentials[pot_key].parameters
+    offset = min(atom_indices_in_this_molecule)
 
-                    idivf = int(params["idivf"]) if "idivf" in params else 1
+    if proper_torsion_handler:
+        for top_key in proper_torsion_handler.key_map:
+            dihedral = _create_single_dihedral(
+                top_key,
+                atom_indices_in_this_molecule,
+                proper_torsion_handler,
+                offset,
+            )
+            if dihedral is not None:
+                molecule.dihedrals.append(dihedral)
 
-                    molecule.dihedrals.append(
-                        PeriodicProperDihedral(
-                            atom1=molecule_indices[0] + 1,
-                            atom2=molecule_indices[1] + 1,
-                            atom3=molecule_indices[2] + 1,
-                            atom4=molecule_indices[3] + 1,
-                            phi=params["phase"].to(unit.degree),
-                            k=params["k"].to(unit.kilojoule_per_mole) / idivf,
-                            multiplicity=int(params["periodicity"]),
-                        ),
-                    )
-
-        if rb_torsion_handler:
-            for top_key in rb_torsion_handler.key_map:
-                if top_key.atom_indices[0] not in [
-                    topology_indices[0],
-                    topology_indices[3],
-                ]:
-                    continue
-                if top_key.atom_indices[1] not in [
-                    topology_indices[1],
-                    topology_indices[2],
-                ]:
-                    continue
-                if top_key.atom_indices[2] not in [
-                    topology_indices[2],
-                    topology_indices[1],
-                ]:
-                    continue
-                if top_key.atom_indices[3] not in [
-                    topology_indices[3],
-                    topology_indices[0],
-                ]:
-                    continue
-                if top_key.atom_indices in [topology_indices, topology_indices[::-1]]:
-                    pot_key = rb_torsion_handler.key_map[top_key]
-                    params = rb_torsion_handler.potentials[pot_key].parameters
-
-                    molecule.dihedrals.append(
-                        RyckaertBellemansDihedral(
-                            atom1=molecule_indices[0] + 1,
-                            atom2=molecule_indices[1] + 1,
-                            atom3=molecule_indices[2] + 1,
-                            atom4=molecule_indices[3] + 1,
-                            c0=params["c0"],
-                            c1=params["c1"],
-                            c2=params["c2"],
-                            c3=params["c3"],
-                            c4=params["c4"],
-                            c5=params["c5"],
-                        ),
-                    )
+    if rb_torsion_handler:
+        for top_key in rb_torsion_handler.key_map:
+            dihedral = _create_single_rb_torsion(
+                top_key,
+                atom_indices_in_this_molecule,
+                rb_torsion_handler,
+                offset,
+            )
 
     # TODO: Ensure number of torsions written matches what is expected
     if improper_torsion_handler:
@@ -562,6 +502,63 @@ def _convert_dihedrals(
                             multiplicity=int(params["periodicity"]),
                         ),
                     )
+
+
+def _create_single_dihedral(
+    top_key,
+    atom_indices_in_this_molecule: set[int],
+    proper_torsion_handler,
+    offset: int,
+) -> PeriodicProperDihedral | None:
+    # assume that all atoms in this torsion are in the same molecule,
+    # so if the index of the first atom in the torsion is not in the unique
+    # molecule, skip the molecule altogether
+    if top_key.atom_indices[0] not in atom_indices_in_this_molecule:
+        return
+
+    params = proper_torsion_handler.potentials[
+        proper_torsion_handler.key_map[top_key]
+    ].parameters
+
+    idivf = int(params["idivf"]) if "idivf" in params else 1
+
+    return PeriodicProperDihedral(
+        atom1=top_key.atom_indices[0] - offset + 1,
+        atom2=top_key.atom_indices[0] - offset + 1,
+        atom3=top_key.atom_indices[0] - offset + 1,
+        atom4=top_key.atom_indices[0] - offset + 1,
+        phi=params["phase"],
+        k=params["k"] / idivf,
+        multiplicity=int(params["periodicity"]),
+    )
+
+
+def _create_single_rb_torsion(
+    top_key,
+    atom_indices_in_this_molecule: set[int],
+    rb_torsion_handler,
+    offset: int,
+) -> RyckaertBellemansDihedral | None:
+    # see same reason in _create_single_dihedral
+    if top_key.atom_indices[0] not in atom_indices_in_this_molecule:
+        return
+
+    params = rb_torsion_handler.potentials[
+        rb_torsion_handler.key_map[top_key]
+    ].parameters
+
+    return RyckaertBellemansDihedral(
+        atom1=top_key.atom_indices[0] - offset + 1,
+        atom2=top_key.atom_indices[0] - offset + 1,
+        atom3=top_key.atom_indices[0] - offset + 1,
+        atom4=top_key.atom_indices[0] - offset + 1,
+        c0=params["c0"],
+        c1=params["c1"],
+        c2=params["c2"],
+        c3=params["c3"],
+        c4=params["c4"],
+        c5=params["c5"],
+    )
 
 
 def _convert_virtual_sites(
