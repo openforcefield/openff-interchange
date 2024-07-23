@@ -196,21 +196,21 @@ def _convert(
 
         molecule = GROMACSMolecule(name=unique_molecule.name)
 
-        for atom in unique_molecule.atoms:
-            unique_residue_names = {
-                atom.metadata.get("residue_name", None)
-                for atom in unique_molecule.atoms
-            }
+        unique_residue_names = {
+            atom.metadata.get("residue_name", None) for atom in unique_molecule.atoms
+        }
 
-            if None in unique_residue_names:
-                if len(unique_residue_names) > 1:
-                    raise NotImplementedError(
-                        "If some atoms have residue names, all atoms must have residue names.",
-                    )
-                else:
-                    # Use dummy since we're already iterating over this molecule's atoms
-                    for _atom in unique_molecule.atoms:
-                        _atom.metadata["residue_name"] = unique_molecule.name
+        if None in unique_residue_names:
+            if len(unique_residue_names) > 1:
+                raise NotImplementedError(
+                    "If some atoms have residue names, all atoms must have residue names.",
+                )
+            else:
+                # Use dummy since we're already iterating over this molecule's atoms
+                for _atom in unique_molecule.atoms:
+                    _atom.metadata["residue_name"] = unique_molecule.name
+
+        for atom in unique_molecule.atoms:
 
             name = (
                 SYMBOLS[atom.atomic_number]
@@ -332,7 +332,6 @@ def _convert_bonds(
         molecule.bonds.append(
             _create_single_bond(
                 top_key,
-                atom_indices_in_this_molecule,
                 collection,
                 offset,
             ),
@@ -341,7 +340,6 @@ def _convert_bonds(
 
 def _create_single_bond(
     top_key,
-    atom_indices_in_this_molecule: set[int],
     collection,
     offset: int,
 ) -> GROMACSBond:
@@ -383,7 +381,6 @@ def _convert_angles(
         molecule.angles.append(
             _create_single_angle(
                 top_key,
-                atom_indices_in_this_molecule,
                 collection,
                 offset,
             ),
@@ -392,7 +389,6 @@ def _convert_angles(
 
 def _create_single_angle(
     top_key,
-    atom_indices_in_this_molecule: set[int],
     collection,
     offset: int,
 ) -> GROMACSAngle:
@@ -433,13 +429,15 @@ def _convert_dihedrals(
 
     if proper_torsion_handler:
         for top_key in proper_torsion_handler.key_map:
+            # assume that all atoms in this torsion are in the same molecule,
+            # so if the index of the first atom in the torsion is not in the unique
+            # molecule, skip the molecule altogether
             if top_key.atom_indices[0] not in atom_indices_in_this_molecule:
                 continue
 
             molecule.dihedrals.append(
                 _create_single_dihedral(
                     top_key,
-                    atom_indices_in_this_molecule,
                     proper_torsion_handler,
                     offset,
                 ),
@@ -453,7 +451,6 @@ def _convert_dihedrals(
             molecule.dihedrals.append(
                 _create_single_rb_torsion(
                     top_key,
-                    atom_indices_in_this_molecule,
                     rb_torsion_handler,
                     offset,
                 ),
@@ -510,18 +507,15 @@ def _convert_dihedrals(
 
 def _create_single_dihedral(
     top_key,
-    atom_indices_in_this_molecule: set[int],
     proper_torsion_handler,
     offset: int,
 ) -> PeriodicProperDihedral | None:
-    # assume that all atoms in this torsion are in the same molecule,
-    # so if the index of the first atom in the torsion is not in the unique
-    # molecule, skip the molecule altogether
     params = proper_torsion_handler.potentials[
         proper_torsion_handler.key_map[top_key]
     ].parameters
 
-    idivf = int(params["idivf"]) if "idivf" in params else 1
+    # skip dimensionality check, trust it's dimensionless
+    idivf = int(params["idivf"].m) if "idivf" in params else 1
 
     return PeriodicProperDihedral(
         atom1=top_key.atom_indices[0] - offset + 1,
@@ -530,20 +524,17 @@ def _create_single_dihedral(
         atom4=top_key.atom_indices[3] - offset + 1,
         phi=params["phase"].to(unit.degree),
         k=params["k"].to(unit.kilojoule_per_mole) / idivf,
-        multiplicity=int(params["periodicity"]),
+        multiplicity=int(
+            params["periodicity"].m,
+        ),  # skip  dimension check, trust it's demensionless
     )
 
 
 def _create_single_rb_torsion(
     top_key,
-    atom_indices_in_this_molecule: set[int],
     rb_torsion_handler,
     offset: int,
 ) -> RyckaertBellemansDihedral | None:
-    # see same reason in _create_single_dihedral
-    if top_key.atom_indices[0] not in atom_indices_in_this_molecule:
-        return
-
     params = rb_torsion_handler.potentials[
         rb_torsion_handler.key_map[top_key]
     ].parameters
