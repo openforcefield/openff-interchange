@@ -287,11 +287,7 @@ def _convert(
         system.molecule_types[unique_molecule.name] = molecule
 
         system.molecules[unique_molecule.name] = len(
-            [
-                molecule
-                for molecule in interchange.topology.molecules
-                if molecule.is_isomorphic_with(unique_molecule)
-            ],
+            interchange.topology.identical_molecule_groups[unique_molecule_index],
         )
 
     if "VirtualSites" in interchange.collections:
