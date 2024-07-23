@@ -11,11 +11,7 @@ from openff.units.elements import MASSES, SYMBOLS
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.potentials import Collection
 from openff.interchange.components.toolkit import _get_14_pairs
-from openff.interchange.exceptions import (
-    MissingAngleError,
-    MissingBondError,
-    UnsupportedExportError,
-)
+from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.interop._virtual_sites import (
     _virtual_site_parent_molecule_mapping,
 )
@@ -322,44 +318,42 @@ def _convert_bonds(
     except LookupError:
         return
 
-    for bond in unique_molecule.bonds:
-        molecule_indices = tuple(
-            sorted(unique_molecule.atom_index(a) for a in bond.atoms),
-        )
-        topology_indices = tuple(
-            sorted(interchange.topology.atom_index(atom) for atom in bond.atoms),
-        )
+    # if this is slow, pass it among valence converters
+    atom_indices_in_this_molecule = {
+        interchange.topology.atom_index(a) for a in unique_molecule.atoms
+    }
 
-        found_match = False
-        for top_key in collection.key_map:
-            top_key: TopologyKey  # type: ignore[no-redef]
-            if top_key.atom_indices == topology_indices:
-                pot_key = collection.key_map[top_key]
-                found_match = True
-                break
-            elif top_key.atom_indices == topology_indices[::-1]:
-                pot_key = collection.key_map[top_key]
-                found_match = True
-                break
-            else:
-                found_match = False
+    offset = min(atom_indices_in_this_molecule)
 
-        if not found_match:
-            raise MissingBondError(
-                f"Failed to find parameters for bond with topology indices {topology_indices}",
-            )
-
-        params = collection.potentials[pot_key].parameters
+    for top_key in collection.key_map:
+        if top_key.atom_indices[0] not in atom_indices_in_this_molecule:
+            continue
 
         molecule.bonds.append(
-            GROMACSBond(
-                atom1=molecule_indices[0] + 1,
-                atom2=molecule_indices[1] + 1,
-                function=1,
-                length=params["length"].to(unit.nanometer),
-                k=params["k"].to(unit.kilojoule_per_mole / unit.nanometer**2),
+            _create_single_bond(
+                top_key,
+                atom_indices_in_this_molecule,
+                collection,
+                offset,
             ),
         )
+
+
+def _create_single_bond(
+    top_key,
+    atom_indices_in_this_molecule: set[int],
+    collection,
+    offset: int,
+) -> GROMACSBond:
+    params = collection.potentials[collection.key_map[top_key]].parameters
+
+    return GROMACSBond(
+        atom1=top_key.atom_indices[0] - offset + 1,
+        atom2=top_key.atom_indices[1] - offset + 1,
+        function=1,
+        length=params["length"].to(unit.nanometer),
+        k=params["k"].to(unit.kilojoule_per_mole / unit.nanometer**2),
+    )
 
 
 def _convert_angles(
@@ -375,36 +369,42 @@ def _convert_angles(
     except LookupError:
         return
 
-    for angle in unique_molecule.angles:
-        topology_indices = tuple(interchange.topology.atom_index(a) for a in angle)
-        molecule_indices = tuple(unique_molecule.atom_index(a) for a in angle)
+    # If this is slow, pass it among valence converters
+    atom_indices_in_this_molecule = {
+        interchange.topology.atom_index(a) for a in unique_molecule.atoms
+    }
 
-        found_match = False
-        for top_key in collection.key_map:
-            top_key: TopologyKey  # type: ignore[no-redef]
-            if top_key.atom_indices == topology_indices:
-                pot_key = collection.key_map[top_key]
-                found_match = True
-                break
-            else:
-                found_match = False
+    offset = min(atom_indices_in_this_molecule)
 
-        if not found_match:
-            raise MissingAngleError(
-                f"Failed to find parameters for angle with topology indices {topology_indices}",
-            )
-
-        params = collection.potentials[pot_key].parameters
+    for top_key in collection.key_map:
+        if top_key.atom_indices[0] not in atom_indices_in_this_molecule:
+            continue
 
         molecule.angles.append(
-            GROMACSAngle(
-                atom1=molecule_indices[0] + 1,
-                atom2=molecule_indices[1] + 1,
-                atom3=molecule_indices[2] + 1,
-                angle=params["angle"].to(unit.degree),
-                k=params["k"].to(unit.kilojoule_per_mole / unit.radian**2),
+            _create_single_angle(
+                top_key,
+                atom_indices_in_this_molecule,
+                collection,
+                offset,
             ),
         )
+
+
+def _create_single_angle(
+    top_key,
+    atom_indices_in_this_molecule: set[int],
+    collection,
+    offset: int,
+) -> GROMACSAngle:
+    params = collection.potentials[collection.key_map[top_key]].parameters
+
+    return GROMACSAngle(
+        atom1=top_key.atom_indices[0] - offset + 1,
+        atom2=top_key.atom_indices[1] - offset + 1,
+        atom3=top_key.atom_indices[2] - offset + 1,
+        angle=params["angle"].to(unit.degree),
+        k=params["k"].to(unit.kilojoule_per_mole / unit.radian**2),
+    )
 
 
 def _convert_dihedrals(
