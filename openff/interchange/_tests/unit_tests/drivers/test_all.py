@@ -74,7 +74,9 @@ class TestDriversAll:
         # Check that (some of) the data is reasonable, this tolerance should be greatly reduced
         # See https://github.com/openforcefield/openff-interchange/issues/632
         for key in ["Bond", "Angle", "Torsion"]:
-            assert summary.describe().loc["std", key] < 0.001
+            assert (
+                summary.describe().loc["std", key] < 0.001
+            ), f"{key} failed comparison"
 
         # Check that (some of) the data did not NaN out
         for val in summary["Torsion"].to_dict().values():

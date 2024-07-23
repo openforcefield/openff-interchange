@@ -437,22 +437,30 @@ def _convert_dihedrals(
 
     if proper_torsion_handler:
         for top_key in proper_torsion_handler.key_map:
-            dihedral = _create_single_dihedral(
-                top_key,
-                atom_indices_in_this_molecule,
-                proper_torsion_handler,
-                offset,
+            if top_key.atom_indices[0] not in atom_indices_in_this_molecule:
+                continue
+
+            molecule.dihedrals.append(
+                _create_single_dihedral(
+                    top_key,
+                    atom_indices_in_this_molecule,
+                    proper_torsion_handler,
+                    offset,
+                ),
             )
-            if dihedral is not None:
-                molecule.dihedrals.append(dihedral)
 
     if rb_torsion_handler:
         for top_key in rb_torsion_handler.key_map:
-            dihedral = _create_single_rb_torsion(
-                top_key,
-                atom_indices_in_this_molecule,
-                rb_torsion_handler,
-                offset,
+            if top_key.atom_indices[0] not in atom_indices_in_this_molecule:
+                continue
+
+            molecule.dihedrals.append(
+                _create_single_rb_torsion(
+                    top_key,
+                    atom_indices_in_this_molecule,
+                    rb_torsion_handler,
+                    offset,
+                ),
             )
 
     # TODO: Ensure number of torsions written matches what is expected
@@ -513,9 +521,6 @@ def _create_single_dihedral(
     # assume that all atoms in this torsion are in the same molecule,
     # so if the index of the first atom in the torsion is not in the unique
     # molecule, skip the molecule altogether
-    if top_key.atom_indices[0] not in atom_indices_in_this_molecule:
-        return
-
     params = proper_torsion_handler.potentials[
         proper_torsion_handler.key_map[top_key]
     ].parameters
@@ -524,11 +529,11 @@ def _create_single_dihedral(
 
     return PeriodicProperDihedral(
         atom1=top_key.atom_indices[0] - offset + 1,
-        atom2=top_key.atom_indices[0] - offset + 1,
-        atom3=top_key.atom_indices[0] - offset + 1,
-        atom4=top_key.atom_indices[0] - offset + 1,
-        phi=params["phase"],
-        k=params["k"] / idivf,
+        atom2=top_key.atom_indices[1] - offset + 1,
+        atom3=top_key.atom_indices[2] - offset + 1,
+        atom4=top_key.atom_indices[3] - offset + 1,
+        phi=params["phase"].to(unit.degree),
+        k=params["k"].to(unit.kilojoule_per_mole) / idivf,
         multiplicity=int(params["periodicity"]),
     )
 
@@ -549,9 +554,9 @@ def _create_single_rb_torsion(
 
     return RyckaertBellemansDihedral(
         atom1=top_key.atom_indices[0] - offset + 1,
-        atom2=top_key.atom_indices[0] - offset + 1,
-        atom3=top_key.atom_indices[0] - offset + 1,
-        atom4=top_key.atom_indices[0] - offset + 1,
+        atom2=top_key.atom_indices[1] - offset + 1,
+        atom3=top_key.atom_indices[2] - offset + 1,
+        atom4=top_key.atom_indices[3] - offset + 1,
         c0=params["c0"],
         c1=params["c1"],
         c2=params["c2"],
