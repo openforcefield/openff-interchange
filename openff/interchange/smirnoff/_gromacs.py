@@ -133,11 +133,15 @@ def _convert(
             atom_type_name = f"{unique_molecule.name}_{particle_map[unique_molecule.atom_index(atom)]}"
             _atom_atom_type_map[atom] = atom_type_name
 
-            topology_index = particle_map[interchange.topology.atom_index(atom)]
+            # when looking up parameters, use the topology index, not the particle index ...
+            # ... or so I think is the expectation of the `TopologyKey`s in the vdW collection
+            topology_index = interchange.topology.atom_index(atom)
             key = TopologyKey(atom_indices=(topology_index,))
+
             vdw_parameters = vdw_collection.potentials[
                 vdw_collection.key_map[key]
             ].parameters
+
             charge = electrostatics_collection.charges[key]
 
             # Build atom types
