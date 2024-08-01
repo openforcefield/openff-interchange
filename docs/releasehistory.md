@@ -11,6 +11,11 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## 0.3.29 - 2024-08-01
+
+* #1023 Fixes a bug in which non-bonded parameter lookup sometimes crashed when virtual sites were present.
+* #1018 #1019 Improve performance of `Interchange.to_top`, particularly after importing from OpenMM objects.
+
 ## 0.3.28 - 2024-07-17
 
 * #991 Fixes the virtual site example for upstream changes in virtual site parameter lookup.

@@ -1,11 +1,12 @@
 """Assorted utilities used in tests."""
 
 import pathlib
+import random
 from importlib import resources
 
 import numpy
 import pytest
-from openff.toolkit import Molecule
+from openff.toolkit import ForceField, Molecule, Topology
 from openff.toolkit.utils import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -13,6 +14,7 @@ from openff.toolkit.utils import (
 )
 from openff.utilities.utilities import has_executable, has_package
 
+from openff.interchange import Interchange
 from openff.interchange.drivers.gromacs import _find_gromacs_executable
 
 if has_package("openmm"):
@@ -110,3 +112,38 @@ needs_not_sander = pytest.mark.skipif(
     HAS_SANDER,
     reason="sander needs to NOT be installed",
 )
+
+
+def shuffle_topology(
+    interchange: Interchange,
+    force_field: ForceField,
+    seed: int = 123455,
+) -> Interchange:
+    """Shuffle the atom order of the topology and return a new Interchange object."""
+    assert interchange.positions is not None, "Written to also manage positions"
+
+    rng = random.Random(seed)
+
+    shuffled_topology = Topology()
+
+    # can't easily shuffle a generator ...
+    for molecule in interchange.topology.molecules:
+        topology_indices = [
+            interchange.topology.atom_index(atom) for atom in molecule.atoms
+        ]
+
+        molecule._conformers = [
+            interchange.positions[topology_indices, :].to("angstrom"),
+        ]
+
+        # so just randomize order at insertion time
+        shuffled_topology._molecules.insert(
+            rng.randint(0, len(shuffled_topology._molecules)),
+            molecule,
+        )
+
+    shuffled_topology._invalidate_cached_properties()
+
+    shuffled_topology.box_vectors = interchange.topology.box_vectors
+
+    return force_field.create_interchange(shuffled_topology)

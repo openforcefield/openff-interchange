@@ -6,6 +6,7 @@ tmp.in
 _tmp_pdb_file.pdb
 mdout.mdp
 run.cpt
+run_prev.cpt
 run.gro
 run.xtc
 tip4p.gro
