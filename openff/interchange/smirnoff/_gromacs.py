@@ -240,14 +240,12 @@ def _convert(
                 ),
             )
 
-            this_molecule_atom_type_names = tuple(
-                atom.atom_type for atom in molecule.atoms
-            )
+        this_molecule_atom_type_names = tuple(atom.atom_type for atom in molecule.atoms)
 
-            molecule._contained_atom_types = {
-                atom_type_name: system.atom_types[atom_type_name]
-                for atom_type_name in this_molecule_atom_type_names
-            }
+        molecule._contained_atom_types = {
+            atom_type_name: system.atom_types[atom_type_name]
+            for atom_type_name in this_molecule_atom_type_names
+        }
 
         # Use a set to de-duplicate
         pairs: set[tuple] = {*_get_14_pairs(unique_molecule)}
