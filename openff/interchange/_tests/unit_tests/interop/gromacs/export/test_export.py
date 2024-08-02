@@ -1,3 +1,4 @@
+import random
 from importlib import resources
 from math import exp
 
@@ -39,6 +40,14 @@ if has_package("openmm"):
 @needs_gmx
 class _NeedsGROMACS:
     pass
+
+
+def parse_residue_ids(file) -> list[str]:
+    """Parse residue IDs, and only the residue IDs, from a GROMACS .gro file."""
+    with open(file) as f:
+        ids = [int(line[:5]) for line in f.readlines()[2:-1]]
+
+    return ids
 
 
 class TestToGro(_NeedsGROMACS):
@@ -143,8 +152,9 @@ class TestGROMACSGROFile(_NeedsGROMACS):
             out.to_gro("tmp.gro")
 
     @pytest.mark.slow
+    @pytest.mark.parametrize("offset_residue_ids", [True, False])
     @skip_if_missing("openmm")
-    def test_residue_info(self, sage):
+    def test_residue_info(self, offset_residue_ids):
         """Test that residue information is passed through to .gro files."""
         import mdtraj
 
@@ -154,6 +164,19 @@ class TestGROMACSGROFile(_NeedsGROMACS):
                 "openff.toolkit",
             ),
         )
+
+        if offset_residue_ids:
+            offset = random.randint(10, 20)
+
+            for atom in protein.atoms:
+                atom.metadata["residue_number"] = str(
+                    int(atom.metadata["residue_number"]) + offset,
+                )
+
+            # Need to manually update residues _and_ atoms
+            # https://github.com/openforcefield/openff-toolkit/issues/1921
+            for residue in protein.residues:
+                residue.residue_number = str(int(residue.residue_number) + offset)
 
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
@@ -171,7 +194,23 @@ class TestGROMACSGROFile(_NeedsGROMACS):
             out.topology.hierarchy_iterator("residues"),
         ):
             assert found_residue.name == original_residue.residue_name
-            assert str(found_residue.resSeq) == original_residue.residue_number
+            found_index = [*original_residue.atoms][0].metadata["residue_number"]
+            assert str(found_residue.resSeq) == found_index
+
+    def test_fill_in_residue_ids(self, sage):
+        """Ensure that, if inputs have no residue_number, they are generated on-the-fly."""
+        sage.create_interchange(
+            Topology.from_molecules(
+                [MoleculeWithConformer.from_smiles(smi) for smi in ["CC", "O", "C"]],
+            ),
+        ).to_gro("fill.gro")
+
+        expected_residue_ids = 8 * [1] + 3 * [2] + 5 * [3]
+
+        found_residue_ids = parse_residue_ids("fill.gro")
+
+        for expected, found in zip(expected_residue_ids, found_residue_ids):
+            assert expected == found
 
     @pytest.mark.slow
     def test_atom_names_pdb(self):
