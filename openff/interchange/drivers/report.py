@@ -5,8 +5,8 @@ import warnings
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
 from openff.toolkit import unit
+from pydantic.v1 import validator
 
-from openff.interchange._pydantic import validator
 from openff.interchange.constants import kj_mol
 from openff.interchange.exceptions import (
     EnergyError,

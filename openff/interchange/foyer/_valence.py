@@ -1,6 +1,6 @@
 from openff.toolkit import Topology, unit
+from pydantic.v1 import Field
 
-from openff.interchange._pydantic import Field
 from openff.interchange.common._valence import (
     AngleCollection,
     BondCollection,

@@ -12,9 +12,9 @@ from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, QuantityEncoder
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
+from pydantic.v1 import Field, validator
 
 from openff.interchange._experimental import experimental
-from openff.interchange._pydantic import Field, validator
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._valence import (
     AngleCollection,

@@ -2,8 +2,8 @@ from collections.abc import Iterable
 from typing import Literal
 
 from openff.toolkit.topology.molecule import Atom
+from pydantic.v1 import Field
 
-from openff.interchange._pydantic import Field
 from openff.interchange.components.potentials import Collection
 
 
