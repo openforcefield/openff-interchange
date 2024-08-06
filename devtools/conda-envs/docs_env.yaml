@@ -7,7 +7,7 @@ dependencies:
   - python =3.10
   - pip
   - numpy =1
-  - pydantic =1
+  - pydantic =1.10.17
   - openff-toolkit-base =0.15.2
   - openff-models
   - openmm >=7.6

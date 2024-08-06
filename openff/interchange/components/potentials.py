@@ -11,8 +11,8 @@ from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
 from openff.toolkit import Quantity
 from openff.utilities.utilities import has_package, requires_package
+from pydantic.v1 import Field, PrivateAttr, validator
 
-from openff.interchange._pydantic import Field, PrivateAttr, validator
 from openff.interchange.exceptions import MissingParametersError
 from openff.interchange.models import (
     LibraryChargeTopologyKey,

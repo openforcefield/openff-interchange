@@ -3,14 +3,7 @@
 from openff.models.models import DefaultModel
 from openff.models.types import ArrayQuantity, FloatQuantity
 from openff.toolkit import Quantity
-
-from openff.interchange._pydantic import (
-    Field,
-    PositiveInt,
-    PrivateAttr,
-    conint,
-    validator,
-)
+from pydantic.v1 import Field, PositiveInt, PrivateAttr, conint, validator
 
 
 class GROMACSAtomType(DefaultModel):

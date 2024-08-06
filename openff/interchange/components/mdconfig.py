@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Literal
 from openff.models.models import DefaultModel
 from openff.models.types import FloatQuantity
 from openff.toolkit import Quantity, unit
+from pydantic.v1 import Field
 
-from openff.interchange._pydantic import Field
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,

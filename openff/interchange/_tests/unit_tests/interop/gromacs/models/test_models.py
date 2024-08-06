@@ -3,9 +3,9 @@ from copy import deepcopy
 import numpy
 import pytest
 from openff.toolkit import Molecule, Quantity, Topology, unit
+from pydantic.v1 import ValidationError
 
 from openff.interchange import Interchange
-from openff.interchange._pydantic import ValidationError
 from openff.interchange._tests import needs_gmx
 from openff.interchange.components.mdconfig import get_intermol_defaults
 from openff.interchange.drivers.gromacs import _process, _run_gmx_energy
