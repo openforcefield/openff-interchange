@@ -45,7 +45,7 @@ class _NeedsGROMACS:
 def parse_residue_ids(file) -> list[str]:
     """Parse residue IDs, and only the residue IDs, from a GROMACS .gro file."""
     with open(file) as f:
-        ids = [int(line[:5]) for line in f.readlines()[2:-1]]
+        ids = [line[:5].strip() for line in f.readlines()[2:-1]]
 
     return ids
 
@@ -205,9 +205,40 @@ class TestGROMACSGROFile(_NeedsGROMACS):
             ),
         ).to_gro("fill.gro")
 
-        expected_residue_ids = 8 * [1] + 3 * [2] + 5 * [3]
+        expected_residue_ids = 8 * ["1"] + 3 * ["2"] + 5 * ["3"]
 
         found_residue_ids = parse_residue_ids("fill.gro")
+
+        for expected, found in zip(expected_residue_ids, found_residue_ids):
+            assert expected == found
+
+    def test_atom_index_gt_100_000(self, water, sage):
+        """Ensure that atom indices are written correctly for large numbers."""
+        water.add_hierarchy_scheme(
+            ("residue_name", "residue_number"),
+            "residues",
+        )
+
+        topology = Topology.from_molecules(2 * [water])
+
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        # Can't just update atoms' metadata, neeed to create these scheme/element objects
+        # and need to also modify the residue objects themselves
+        for molecule_index, molecule in enumerate(topology.molecules):
+            for atom in molecule.atoms:
+                atom.metadata["residue_number"] = str(molecule_index + 123_456)
+
+        for residue_index, residue in enumerate(topology.residues):
+            residue.residue_number = str(residue_index + 123_456)
+
+        interchange = sage.create_interchange(topology)
+
+        interchange.to_gro("large.gro")
+
+        expected_residue_ids = 3 * ["23456"] + 3 * ["23457"]
+
+        found_residue_ids = parse_residue_ids("large.gro")
 
         for expected, found in zip(expected_residue_ids, found_residue_ids):
             assert expected == found
