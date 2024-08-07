@@ -1,6 +1,8 @@
 """Runtime settings for MD simulations."""
 
 import warnings
+from io import StringIO
+from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from openff.models.models import DefaultModel
@@ -18,13 +20,15 @@ from openff.interchange.warnings import SwitchingFunctionNotImplementedWarning
 if TYPE_CHECKING:
     from openff.interchange import Interchange
 
-MDP_HEADER = """
-nsteps                   = 0
-nstenergy                = 1000
-continuation             = yes
-cutoff-scheme            = verlet
+MDP_HEADER = """\
+; Single point energy
+nsteps                   = 0      ; Perform no MD steps
+nstenergy                = 1000   ; Write energies to .EDR file
+continuation             = yes    ; Do not apply constraints at start
+cutoff-scheme            = verlet ; Use a Verlet pair list for cutoffs
 
-DispCorr                 = Ener
+; Force field configuration
+disp-corr                = Ener
 """
 
 
@@ -144,64 +148,69 @@ class MDConfig(DefaultModel):
 
     def write_mdp_file(self, mdp_file: str = "auto_generated.mdp") -> None:
         """Write a GROMACS `.mdp` file for running single-point energies."""
-        with open(mdp_file, "w") as mdp:
+        # Construct the MDP file in memory so nothing is written to disk if an
+        # error is encountered.
+        with StringIO() as mdp:
             mdp.write(MDP_HEADER)
 
             if self.periodic:
-                mdp.write("pbc = xyz\n")
+                mdp.write("pbc                      = xyz\n")
             else:
-                mdp.write("pbc = no\n")
+                mdp.write("pbc                      = no\n")
 
-            mdp.write(f"constraints = {self.constraints}\n")
+            mdp.write(f"constraints              = {self.constraints}\n")
 
             coul_cutoff = round(self.coul_cutoff.m_as(unit.nanometer), 4)
 
             if self.coul_method == "cutoff":
-                mdp.write("coulombtype = Cut-off\n")
-                mdp.write("coulomb-modifier = None\n")
-                mdp.write(f"rcoulomb = {coul_cutoff}\n")
+                mdp.write("coulombtype              = Cut-off\n")
+                mdp.write("coulomb-modifier         = None\n")
+                mdp.write(f"rcoulomb                 = {coul_cutoff}\n")
             elif self.coul_method in (_PME, "PME", "pme"):
                 if not self.periodic:
                     raise UnsupportedCutoffMethodError(
                         "PME is not valid with a non-periodic system.",
                     )
-                mdp.write("coulombtype = PME\n")
-                mdp.write(f"rcoulomb = {coul_cutoff}\n")
-                mdp.write("coulomb-modifier = None\n")
-                mdp.write("fourier-spacing = 0.12\n")
+                mdp.write("coulombtype              = PME\n")
+                mdp.write(f"rcoulomb                 = {coul_cutoff}\n")
+                mdp.write("coulomb-modifier         = None\n")
+                mdp.write("fourier-spacing          = 0.12\n")
                 # TODO: Wire this through like `ewald_tolerance` in `to_openmm`
-                mdp.write("ewald-rtol = 1e-4\n")
+                mdp.write("ewald-rtol               = 1e-4\n")
             elif self.coul_method == "reactionfield":
-                mdp.write("coulombtype = Reaction-field\n")
-                mdp.write(f"rcoulomb = {coul_cutoff}\n")
+                mdp.write("coulombtype              = Reaction-field\n")
+                mdp.write(f"rcoulomb                 = {coul_cutoff}\n")
             else:
                 raise UnsupportedExportError(
                     f"Electrostatics method {self.coul_method} not supported",
                 )
 
             if self.vdw_method == "cutoff":
-                mdp.write("vdwtype = cutoff\n")
+                mdp.write("vdwtype                  = cutoff\n")
             elif self.vdw_method in ("Ewald3D", "pme", "PME", _PME):
-                mdp.write("vdwtype = PME\n")
+                mdp.write("vdwtype                  = PME\n")
                 # TODO: Wire this through like `ewald_tolerance` in `to_openmm`
                 # TODO: Should this match electrostatics PME tolerance?
-                mdp.write("ewald-rtol-lj = 1e-4\n")
-                mdp.write("lj-pme-comb-rule = geometric\n")
+                mdp.write("ewald-rtol-lj            = 1e-4\n")
+                mdp.write("lj-pme-comb-rule         = geometric\n")
             else:
                 raise UnsupportedExportError(
                     f"vdW method {self.vdw_method} not supported",
                 )
 
             vdw_cutoff = round(self.vdw_cutoff.m_as(unit.nanometer), 4)
-            mdp.write(f"rvdw = {vdw_cutoff}\n")
+            mdp.write(f"rvdw                     = {vdw_cutoff}\n")
 
             if self.switching_function and self.vdw_method == "cutoff":
-                mdp.write("vdw-modifier = Potential-switch\n")
+                mdp.write("vdw-modifier             = Potential-switch\n")
                 distance = round(self.switching_distance.m_as(unit.nanometer), 4)
-                mdp.write(f"rvdw-switch = {distance}\n")
+                mdp.write(f"rvdw-switch              = {distance}\n")
             else:
-                mdp.write("vdw-modifier = None\n")
-                mdp.write("rvdwswitch = 0\n")
+                mdp.write("vdw-modifier             = None\n")
+                mdp.write("rvdwswitch               = 0\n")
+
+            # No errors, we can now write to disk!
+            Path(mdp_file).write_text(mdp.getvalue())
 
     def write_lammps_input(
         self,
