@@ -445,6 +445,7 @@ class GROMACSWriter(DefaultModel):
         gro.write(f"{n_particles}\n")
 
         count = 0
+        residue_id = 1
         for molecule_name, molecule in self.system.molecule_types.items():
             n_copies = self.system.molecules[molecule_name]
 
@@ -456,7 +457,8 @@ class GROMACSWriter(DefaultModel):
                         f"%{decimal + 5}.{decimal}f"
                         f"%{decimal + 5}.{decimal}f\n"
                         % (
-                            atom.residue_index,  # This needs to be looked up from a different data structure
+                            residue_id = 1,
+                            # (hidden: 1013) atom.residue_index,  # This needs to be looked up from a different data structure
                             atom.residue_name[:5],
                             atom.name[:5],
                             (count + 1) % 100000,
@@ -467,6 +469,7 @@ class GROMACSWriter(DefaultModel):
                     )
 
                     count += 1
+                residue_id += 1
 
         if self.system.box is None:
             warnings.warn(
