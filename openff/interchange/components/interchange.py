@@ -548,8 +548,10 @@ class Interchange(DefaultModel):
         Parameters
         ----------
         file_path
-            The prefix to use for the LAMMPS data and run input files, i.e.
-            "foo" will produce "foo.lmp" and "foo_pointenergy.in".
+            The prefix to use for the LAMMPS data and run input files. If a path
+            ending in ".lmp" is given, the extension will be dropped to generate
+            the prefix. For example, both "foo" and "foo.lmp" will produce files
+            named "foo.lmp" and "foo_pointenergy.in".
         writer
             The file writer to use. Currently, only `"internal"` is supported.
 
