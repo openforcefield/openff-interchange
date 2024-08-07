@@ -216,6 +216,7 @@ class MDConfig(_BaseModel):
         self,
         interchange: "Interchange",
         input_file: str = "run.in",
+        data_file: str = "out.lmp",
     ) -> None:
         """Write a LAMMPS input file for running single-point energies."""
         # TODO: Get constrained angles
@@ -365,7 +366,7 @@ class MDConfig(_BaseModel):
                     f"Mixing rule {self.mixing_rule} not supported",
                 )
 
-            lmp.write("read_data out.lmp\n\n")
+            lmp.write(f"read_data {data_file}\n\n")
             lmp.write(
                 "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n",
             )
