@@ -430,7 +430,7 @@ class Interchange(DefaultModel):
         ----------
         prefix: str
             The prefix to use for the GROMACS topology and coordinate files, i.e. "foo" will produce
-            "foo.top" and "foo.gro".
+            "foo.top", "foo.gro", and "foo_pointenergy.mdp".
         decimal: int, default=3
             The number of decimal places to use when writing the GROMACS coordinate file.
         hydrogen_mass : float, default=1.007947
@@ -458,6 +458,33 @@ class Interchange(DefaultModel):
 
         writer.to_top(_merge_atom_types=_merge_atom_types)
         writer.to_gro(decimal=decimal)
+
+        self.to_mdp(prefix + "_pointenergy.mdp")
+
+    def to_mdp(self, file_path: Path | str):
+        """
+        Write a GROMACS run configuration ``.MDP`` file for a single-point energy.
+
+        GROMACS considers many of the simulation parameters specified by an
+        ``Interchange`` to be run configuration options rather than features of
+        the topology. These options are set in the ``.MDP`` file. The written
+        ``.MDP`` file includes the appropriate non-bonded configuration for the
+        ``Interchange``. The ``nsteps``, ``nstenergy``, and ``continuation``
+        configuration values are configured for a single-point energy
+        calculation and may be changed as appropriate to perform other
+        calculations. See the `GROMACS documentation`_ for details.
+
+        .. _GROMACS documentation: https://manual.gromacs.org/documentation/\
+        current/user-guide/mdp-options.html
+
+        Parameters
+        ----------
+        file_path
+            The path to the created GROMACS ``.MDP`` file
+
+        """
+        mdconfig = MDConfig.from_interchange(self)
+        mdconfig.write_mdp_file(str(file_path))
 
     def to_top(
         self,
