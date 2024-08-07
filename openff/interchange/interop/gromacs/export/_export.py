@@ -200,7 +200,7 @@ class GROMACSWriter(DefaultModel):
                 top.write(
                     f"{atom.index :6d} "
                     f"{mapping_to_reduced_atom_types[atom.atom_type] :6s}"
-                    f"{atom.residue_index :8d} "
+                    f"{atom.residue_index % 100_000 :8d} "
                     f"{atom.residue_name :8s} "
                     f"{atom.name :6s}"
                     f"{atom.charge_group_number :6d}"
@@ -211,7 +211,7 @@ class GROMACSWriter(DefaultModel):
                 top.write(
                     f"{atom.index :6d} "
                     f"{atom.atom_type :6s}"
-                    f"{atom.residue_index :8d} "
+                    f"{atom.residue_index % 100_000 :8d} "
                     f"{atom.residue_name :8s} "
                     f"{atom.name :6s}"
                     f"{atom.charge_group_number :6d}"
@@ -448,15 +448,17 @@ class GROMACSWriter(DefaultModel):
         for molecule_name, molecule in self.system.molecule_types.items():
             n_copies = self.system.molecules[molecule_name]
 
-            for _ in range(n_copies):
+            for copy_index in range(n_copies):
+
                 for atom in molecule.atoms:
+
                     gro.write(
                         f"%5d%-5s%5s%5d"
                         f"%{decimal + 5}.{decimal}f"
                         f"%{decimal + 5}.{decimal}f"
                         f"%{decimal + 5}.{decimal}f\n"
                         % (
-                            atom.residue_index,  # This needs to be looked up from a different data structure
+                            (atom.residue_index + copy_index) % 100_000,
                             atom.residue_name[:5],
                             atom.name[:5],
                             (count + 1) % 100000,

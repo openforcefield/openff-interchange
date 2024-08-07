@@ -330,7 +330,6 @@ class TestOpenMMVirtualSiteExclusions:
                     # Safeguard against some of the behavior seen in #919
                     for index in range(num_exceptions):
                         p1, p2, *_ = force.getExceptionParameters(index)
-                        print(p1, p2)
 
                         if sorted([p1, p2]) == [0, 3]:
                             raise Exception(
