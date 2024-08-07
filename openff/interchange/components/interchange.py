@@ -542,6 +542,31 @@ class Interchange(DefaultModel):
         ).to_gro(decimal=decimal)
 
     def to_lammps(self, file_path: Path | str, writer="internal"):
+        """
+        Export this ``Interchange`` to LAMMPS data and run input files.
+
+        Parameters
+        ----------
+        file_path
+            The prefix to use for the LAMMPS data and run input files, i.e.
+            "foo" will produce "foo.lmp" and "foo_pointenergy.in".
+        writer
+            The file writer to use. Currently, only `"internal"` is supported.
+
+        """
+        # TODO: Rename `file_path` to `prefix` (breaking change)
+        prefix = str(file_path)
+        if prefix.endswith(".lmp"):
+            prefix = prefix[:-4]
+
+        datafile_path = prefix + ".lmp"
+        self.to_lammps_datafile(datafile_path, writer=writer)
+        self.to_lammps_input(
+            prefix + "_pointenergy.in",
+            datafile_path,
+        )
+
+    def to_lammps_datafile(self, file_path: Path | str, writer="internal"):
         """Export this Interchange to a LAMMPS data file."""
         if writer == "internal":
             from openff.interchange.interop.lammps import to_lammps
@@ -549,6 +574,34 @@ class Interchange(DefaultModel):
             to_lammps(self, file_path)
         else:
             raise UnsupportedExportError
+
+    def to_lammps_input(
+        self,
+        file_path: Path | str,
+        data_file: Path | str | None = None,
+    ):
+        """
+        Write a LAMMPS run input file for a single-point energy calculation.
+
+        LAMMPS considers many of the simulation parameters specified by an
+        ``Interchange`` to be run configuration options rather than features of
+        the force field. These options are set in the run input file.
+
+        Parameters
+        ----------
+        file_path
+            The path to the created LAMMPS run input file
+        data_file
+            The path to the LAMMPS data file that should be read by the input
+            file. If not given, ``file_path`` with the extension ``.lmp`` will
+            be used.
+
+        """
+        if data_file is None:
+            data_file = Path(file_path).with_suffix(".lmp")
+
+        mdconfig = MDConfig.from_interchange(self)
+        mdconfig.write_lammps_input(self, str(file_path), data_file=str(data_file))
 
     def to_openmm_system(
         self,
