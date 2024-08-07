@@ -278,7 +278,9 @@ class MDConfig(DefaultModel):
             constrained_angle_coeffs,
         ) = _get_coeffs_of_constrained_bonds_and_angles(interchange)
 
-        with open(input_file, "w") as lmp:
+        # Construct the input file in memory so nothing is written to disk if an
+        # error is encountered.
+        with StringIO() as lmp:
 
             if self.switching_function is not None:
                 if self.switching_distance.m > 0.0:
@@ -397,9 +399,14 @@ class MDConfig(DefaultModel):
 
             lmp.write("run 0\n")
 
+            # No errors, safe to write to disk!
+            Path(input_file).write_text(lmp.getvalue())
+
     def write_sander_input_file(self, input_file: str = "run.in") -> None:
         """Write a Sander input file for running single-point energies."""
-        with open(input_file, "w") as sander:
+        # Construct the file in memory so nothing is written to disk if an
+        # error is encountered.
+        with StringIO() as sander:
             sander.write("single-point energy\n&cntrl\nimin=1,\nmaxcyc=0,\nntb=1,\n")
 
             if self.switching_function is not None:
@@ -443,6 +450,9 @@ class MDConfig(DefaultModel):
                 sander.write("/\n&ewald\norder=4\nskinnb=1.0\n/")
 
             sander.write("/\n")
+
+            # No errors, safe to write to disk!
+            Path(input_file).write_text(sander.getvalue())
 
 
 def _infer_constraints(interchange: "Interchange") -> str:
