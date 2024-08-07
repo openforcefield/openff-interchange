@@ -816,6 +816,22 @@ class Interchange(DefaultModel):
         else:
             raise UnsupportedExportError
 
+    def to_sander_input(self, file_path: Path | str):
+        """
+        Export this ``Interchange`` to a run input file for Amber's SANDER engine.
+
+        Amber considers many of the simulation parameters specified by an
+        ``Interchange`` to be run configuration options rather than parameters
+        of the topology. These options are set in the SANDER or PMEMD run input
+        file. The written SANDER input file includes the appropriate non-bonded
+        configuration for the ``Interchange`` which are essential to reproduce
+        the desired force field. The file also includes configuration for a
+        single-point energy calculation, which should be modified to produce the
+        desired simulation.
+        """
+        mdconfig = MDConfig.from_interchange(self)
+        mdconfig.write_sander_input_file(str(file_path))
+
     @classmethod
     @requires_package("foyer")
     def from_foyer(
