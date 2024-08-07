@@ -1,42 +1,16 @@
 # Exporting to other software
 
-`Interchange` provides several methods to produce input data for other
-software. Note that none of these methods write out all the information
-stored in an `Interchange`; they support a design where the principle
-source of truth is the rich chemical information in the `Interchange`
-object, and exported files are tools to perform some operation.
+`Interchange` provides several methods to produce input data for other software. Note that none of these methods write out all the information stored in an `Interchange`; they support a design where the principle source of truth is the rich chemical information in the `Interchange` object, and exported files are tools to perform some operation.
 
 (sec-mdconfig)=
 
 ## Run control/config files
 
-SMIRNOFF force fields include several parameters that many MD engines do not
-include as part of their topologies. These values are essential for accurately
-simulating output from Interchange, but they are configured in the same files
-that are used for general control of simulation runtime behavior. As a result,
-Interchange cannot simply provide complete versions of these files.
-
-Instead, Interchange provides [`MDConfig`], a class that writes stub versions of
-MD engine run input files. These files must be modified and completed before
-they can be used to run a simulation.
-
-`MDConfig` can be constructed from an existing Interchange:
-
-```python
-from openff.interchange import Interchange
-from openff.interchange.components.mdconfig import MDConfig
-
-interchange = Interchange.from_smirnoff(...)
-
-mdconfig = MDConfig.from_interchange(interchange)
-```
-
-[`MDConfig`]: openff.interchange.components.mdconfig.MDConfig
+SMIRNOFF force fields include several parameters that many MD engines consider to be run configuration options rather than force field parameters. These values are essential for accurately simulating output from Interchange, but they are configured in the same files that are used for general control of simulation runtime behavior. As a result, Interchange cannot simply provide complete versions of these files. Instead, Interchange writes stub versions of MD engine run input files. These files must be modified and completed before they can be used to run a simulation.
 
 ## General purpose
 
-An [`Interchange`] can be written out as the common PDB structure format
-with the [`Interchange.to_pdb()`] method:
+An [`Interchange`] can be written out as the common PDB structure format with the [`Interchange.to_pdb()`] method:
 
 ```python
 interchange.to_pdb("out.pdb")
@@ -44,55 +18,45 @@ interchange.to_pdb("out.pdb")
 
 ## GROMACS
 
-Once an [`Interchange`] object has been constructed, the `.gro` and `.top` files
-can be written using [`Interchange.to_top()`] and [`Interchange.to_gro()`]:
+Once an [`Interchange`] object has been constructed, the `.gro`, `.top`, and `.mdp` files can be written using [`Interchange.to_top()`], [`Interchange.to_gro()`], and [`Interchange.to_mdp()`]:
 
 ```python
-interchange.to_gro("out.gro")
-interchange.to_top("out.top")
+interchange.to_gro("mysim.gro")
+interchange.to_top("mysim.top")
+interchange.to_mdp("mysim_pointenergy.mdp")
 ```
 
-A .MDP file can be written from an [MDConfig object] constructed from the
-interchange. The resulting file will run a single-point energy calculation and
-should be modified for the desired simulation:
+The [`Interchange.to_gromacs()`] convenience method produces all three files in one invocation:
 
 ```python
-mdconfig.write_mdp_file(mdp_file="auto_generated.mdp")
+interchange.to_gromacs("mysim")  # Produces the same three files
 ```
+
+Note that the MDP file generated is configured for a single-point energy calculation and must be modified to run other simulations.
 
 ## LAMMPS
 
-An [`Interchange`] object can be written to a LAMMPS data file with
-[`Interchange.to_lammps()`]
+An [`Interchange`] object can be written to LAMMPS data and run input files with [`Interchange.to_lammps()`]
 
 ```python
-interchange.to_lammps("data.lmp")
+interchange.to_lammps("data")  # Produces `data.lmp` and `data_pointenergy.in`
 ```
 
-An input file can be written from an [MDConfig object] constructed from the interchange. The resulting file will run a single-point energy calculation and
-should be modified for the desired simulation:
+Note that the generated run input file will run a single-point energy calculation and should be modified for the desired simulation.
 
-```python
-mdconfig.write_lammps_input(input_file="auto_generated.in")
-```
-
-Note that LAMMPS does not seem to implement a switching function as [commonly used](https://openforcefield.github.io/standards/standards/smirnoff/#vdw) by SMIRNOFF force fields.
+LAMMPS does not implement a switching function as [commonly used](https://openforcefield.github.io/standards/standards/smirnoff/#vdw) by SMIRNOFF force fields, so these force fields will produce different results in LAMMPS than in OpenMM or GROMACS.
 
 ## OpenMM
 
-An [`Interchange`] object can be converted to an `openmm.System` object with
-[`Interchange.to_openmm()`].
+An [`Interchange`] object can be converted to an `openmm.System` object with [`Interchange.to_openmm()`].
 
 ```python
 openmm_sys = interchange.to_openmm()
 ```
 
-By default, this will separate non-bonded interactions into several different
-`openmm.Force` objects. To combine everything into a single
-`openmm.NonbondedForce`, use the `combine_nonbonded_forces=True` argument.
+By default, this will separate non-bonded interactions into several different `openmm.Force` objects. To combine everything into a single `openmm.NonbondedForce`, use the `combine_nonbonded_forces=True` argument.
 
-The accompanying OpenMM topology can be constructed with the
-[`Topology.to_openmm()`] method:
+The accompanying OpenMM topology can be constructed with the [`Topology.to_openmm()`] method:
 
 ```python
 openmm_top = interchange.topology.to_openmm()
@@ -107,23 +71,15 @@ openmm_box: openmm.unit.Quantity = interchange.box.to_openmm()
 
 ## Amber
 
-An `Interchange` object can be written to Amber parameter/topology and
-coordinate files with [`Interchange.to_prmtop()`] and [`Interchange.to_inpcrd()`]:
+An `Interchange` object can be written to Amber parameter/topology, coordinate, and SANDER run input files with [`Interchange.to_prmtop()`], [`Interchange.to_inpcrd()`], and [`Interchange.to_sander_input()`]:
 
 ```python
 interchange.to_prmtop("out.prmtop")
 interchange.to_inpcrd("out.inpcrd")
+interchange.to_sander_input("out_pointenergy.in")
 ```
 
-A run control file can be written from an [MDConfig object] constructed from the
-interchange. The resulting file will run a single-point energy calculation and
-should be modified for the desired simulation:
-
-```python
-mdconfig.write_sander_input_file(input_file="auto_generated.in")
-```
-
-Note that Amber does not implement a switching function as [commonly used](https://openforcefield.github.io/standards/standards/smirnoff/#vdw) by SMIRNOFF force fields.
+Note that the SANDER input file generated is configured for a single-point energy calculation and must be modified to run other simulations. Interchange cannot currently produce PMEMD input files. Amber does not implement a switching function as [commonly used](https://openforcefield.github.io/standards/standards/smirnoff/#vdw) by SMIRNOFF force fields, so these force fields will produce different results in Amber than in OpenMM or GROMACS.
 
 <!--
 ## CHARMM
@@ -139,10 +95,12 @@ interchange.to_crd("out.to_crd")
 [`Interchange`]: openff.interchange.components.interchange.Interchange
 [`Interchange.to_pdb()`]: openff.interchange.components.interchange.Interchange.to_pdb
 [`Interchange.to_top()`]: openff.interchange.components.interchange.Interchange.to_top
-[`Interchange.to_gro()`]: openff.interchange.components.interchange.Interchange.to_gro
+[`Interchange.to_gro()`]: openff.interchange.components.interchange.Interchange.to_top
+[`Interchange.to_mdp()`]: openff.interchange.components.interchange.Interchange.to_mdp
+[`Interchange.to_gromacs()`]: openff.interchange.components.interchange.Interchange.to_gromacs
 [`Interchange.to_lammps()`]: openff.interchange.components.interchange.Interchange.to_lammps
 [`Interchange.to_openmm()`]: openff.interchange.components.interchange.Interchange.to_openmm
 [`Interchange.to_prmtop()`]: openff.interchange.components.interchange.Interchange.to_prmtop
 [`Interchange.to_inpcrd()`]: openff.interchange.components.interchange.Interchange.to_inpcrd
+[`Interchange.to_sander_input()`]: openff.interchange.components.interchange.Interchange.to_sander_input
 [`Topology.to_openmm()`]: openff.toolkit.topology.Topology.to_openmm
-[MDConfig object]: sec-mdconfig
