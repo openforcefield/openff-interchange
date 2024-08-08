@@ -31,7 +31,7 @@ def _has_compatible_dimensionality(
         )
 
 
-def _dimensionality_valiator_factory(unit: str) -> Callable:
+def _dimensionality_validator_factory(unit: str) -> Callable:
     """Return a function, meant to be passed to a validator, that checks for a specific unit."""
     return functools.partial(_has_compatible_dimensionality, unit=unit, convert=False)
 
@@ -45,7 +45,7 @@ def _unit_validator_factory(unit: str) -> Callable:
     _is_distance,
     _is_velocity,
 ) = (
-    _dimensionality_valiator_factory(unit=_unit)
+    _dimensionality_validator_factory(unit=_unit)
     for _unit in [
         "nanometer",
         "nanometer / picosecond",
@@ -78,7 +78,7 @@ def quantity_validator(
         assert isinstance(value, dict), "Quantity must be in dict form here."
 
         # this is coupled to how a Quantity looks in JSON
-        return Quantity(value["value"], value["unit"])
+        return Quantity(value["val"], value["unit"])
 
         # some more work may be needed to work with arrays, lists, tuples, etc.
 
@@ -89,7 +89,7 @@ def quantity_validator(
     elif isinstance(value, str):
         return Quantity(value)
     elif isinstance(value, dict):
-        return Quantity(value["value"], value["unit"])
+        return Quantity(value["val"], value["unit"])
     if "openmm" in str(type(value)):
         from openff.units.openmm import from_openmm
 
