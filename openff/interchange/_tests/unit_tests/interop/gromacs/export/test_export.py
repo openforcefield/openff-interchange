@@ -524,9 +524,11 @@ class TestSettles(_NeedsGROMACS):
 
         water.name = "WAT"
 
-        ForceField("openff-2.1.0.offxml").create_interchange(
+        interchange = ForceField("openff-2.1.0.offxml").create_interchange(
             water.to_topology(),
-        ).to_gromacs(
+        )
+        interchange.box = [10, 10, 10]
+        interchange.to_gromacs(
             prefix="settles",
         )
 
