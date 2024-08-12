@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - develop
   pull_request:
     branches:
       - main
+      - develop
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
@@ -71,8 +73,7 @@ jobs:
     - name: Install OpenMM
       if: ${{ matrix.openmm == true }}
       run: |
-        micromamba install openmm "smirnoff-plugins =2024" -c conda-forge
-        pip install git+https://github.com/jthorton/de-forcefields.git
+        micromamba install openmm -c conda-forge
 
     - name: Uninstall OpenMM
       if: ${{ matrix.openmm == false && matrix.openeye == true }}

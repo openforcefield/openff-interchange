@@ -11,7 +11,6 @@ dependencies:
   - openmm >=7.6
   # OpenFF stack
   - openff-toolkit >=0.15.2
-  - openff-models
   - openff-nagl ~=0.3.7
   - openff-nagl-models =0.1
   # Optional features
@@ -42,5 +41,3 @@ dependencies:
   - typing-extensions
   - types-setuptools
   - pandas-stubs >=1.2.0.56
-  - pip:
-    - git+https://github.com/jthorton/de-forcefields.git

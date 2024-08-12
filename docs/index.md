@@ -29,6 +29,7 @@ using/collections.md
 using/migrating.md
 using/plugins.md
 using/status.md
+using/edges.md
 using/experimental.md
 
 ```

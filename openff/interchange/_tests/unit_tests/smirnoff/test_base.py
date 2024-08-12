@@ -21,8 +21,8 @@ class TestSMIRNOFFCollection:
             pass
 
         class DummySMIRNOFFCollection(SMIRNOFFCollection):
-            type = "Bonds"
-            expression = "1+1"
+            type: str = "Dummy"
+            expression: str = "1+1"
 
             @classmethod
             def allowed_parameter_handlers(cls):
@@ -65,6 +65,8 @@ def test_json_roundtrip_preserves_float_values():
 
     assert collection.scale_14 == scale_factor
 
-    roundtripped = SMIRNOFFElectrostaticsCollection.parse_raw(collection.json())
+    roundtripped = SMIRNOFFElectrostaticsCollection.model_validate_json(
+        collection.model_dump_json(),
+    )
 
     assert roundtripped.scale_14 == scale_factor

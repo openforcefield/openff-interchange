@@ -3,11 +3,12 @@
 import abc
 from typing import Any, Literal
 
-from openff.models.models import DefaultModel
-from pydantic.v1 import Field
+from pydantic import Field
+
+from openff.interchange.pydantic import _BaseModel
 
 
-class TopologyKey(DefaultModel, abc.ABC):
+class TopologyKey(_BaseModel, abc.ABC):
     """
     A unique identifier of a segment of a chemical topology.
 
@@ -18,9 +19,12 @@ class TopologyKey(DefaultModel, abc.ABC):
     bond, but not the force constant or equilibrium bond length as determined by the
     force field.
 
+    Topology keys compare equal to (and hash the same as) tuples of their atom
+    indices as long as their other fields are `None`.
+
     Examples
     --------
-    Create a TopologyKey identifying some speicfic angle
+    Create a ``TopologyKey`` identifying some specific angle
 
     .. code-block:: pycon
 
@@ -29,13 +33,29 @@ class TopologyKey(DefaultModel, abc.ABC):
         >>> this_angle
         TopologyKey with atom indices (2, 1, 3)
 
-    Create a TopologyKey indentifying just one atom
+    Create a ``TopologyKey`` indentifying just one atom
 
     .. code-block:: pycon
 
         >>> this_atom = TopologyKey(atom_indices=(4,))
         >>> this_atom
         TopologyKey with atom indices (4,)
+
+    Compare a ``TopologyKey`` to a tuple containing the atom indices
+
+    .. code-block:: pycon
+
+        >>> key = TopologyKey(atom_indices=(0, 1))
+        >>> key == (0, 1)
+        True
+
+    Index into a dictionary with a tuple
+
+    .. code-block:: pycon
+
+        >>> d = {TopologyKey(atom_indices=(0, 1)): "some_bond"}
+        >>> d[0, 1]
+        'some_bond'
 
     """
 
@@ -44,8 +64,20 @@ class TopologyKey(DefaultModel, abc.ABC):
         description="The indices of the atoms occupied by this interaction",
     )
 
+    def _tuple(self) -> tuple[Any, ...]:
+        """Tuple representation of this key."""
+        return tuple(self.atom_indices)
+
     def __hash__(self) -> int:
-        return hash(tuple(self.atom_indices))
+        return hash(self._tuple())
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, tuple):
+            return self._tuple() == other
+        elif isinstance(other, TopologyKey):
+            return self._tuple() == other._tuple()
+        else:
+            return NotImplemented
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} with atom indices {self.atom_indices}"
@@ -54,9 +86,25 @@ class TopologyKey(DefaultModel, abc.ABC):
 class BondKey(TopologyKey):
     """
     A unique identifier of the atoms associated in a bond potential.
+
+    Examples
+    --------
+    Index into a dictionary with a tuple
+
+    .. code-block:: pycon
+
+        >>> d = {
+        ...     BondKey(atom_indices=(0, 1)): "some_bond",
+        ...     BondKey(atom_indices=(1, 2), bond_order=1.5): "some_other_bond",
+        ... }
+        >>> d[0, 1]
+        'some_bond'
+        >>> d[(1, 2), 1.5]
+        'some_other_bond'
+
     """
 
-    atom_indices: tuple[int, ...] = Field(
+    atom_indices: tuple[int, int] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
@@ -69,8 +117,11 @@ class BondKey(TopologyKey):
         ),
     )
 
-    def __hash__(self) -> int:
-        return hash((tuple(self.atom_indices), self.bond_order))
+    def _tuple(self) -> tuple[int, ...] | tuple[tuple[int, ...], float]:
+        if self.bond_order is None:
+            return tuple(self.atom_indices)
+        else:
+            return (tuple(self.atom_indices), float(self.bond_order))
 
     def __repr__(self) -> str:
         return (
@@ -82,19 +133,52 @@ class BondKey(TopologyKey):
 class AngleKey(TopologyKey):
     """
     A unique identifier of the atoms associated in an angle potential.
+
+    Examples
+    --------
+    Index into a dictionary with a tuple
+
+    .. code-block:: pycon
+
+        >>> d = {AngleKey(atom_indices=(0, 1, 2)): "some_angle"}
+        >>> d[0, 1, 2]
+        'some_angle'
+
     """
 
-    atom_indices: tuple[int, ...] = Field(
+    atom_indices: tuple[int, int, int] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
+
+    def _tuple(self) -> tuple[int, ...]:
+        return tuple(self.atom_indices)
 
 
 class ProperTorsionKey(TopologyKey):
     """
     A unique identifier of the atoms associated in a proper torsion potential.
+
+    Examples
+    --------
+    Index into a dictionary with a tuple
+
+    .. code-block:: pycon
+
+        >>> d = {
+        ...     ProperTorsionKey(atom_indices=(0, 1, 2, 3)): "torsion1",
+        ...     ProperTorsionKey(atom_indices=(0, 1, 2, 3), mult=2): "torsion2",
+        ...     ProperTorsionKey(atom_indices=(5, 6, 7, 8), mult=2, phase=0.78, bond_order=1.5): "torsion3",
+        ... }
+        >>> d[0, 1, 2, 3]
+        'torsion1'
+        >>> d[(0, 1, 2, 3), 2, None, None]
+        'torsion2'
+        >>> d[(5, 6, 7, 8), 2, 0.78, 1.5]
+        'torsion3'
+
     """
 
-    atom_indices: tuple[int, ...] = Field(
+    atom_indices: tuple[int, int, int, int] | tuple[()] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
@@ -119,8 +203,22 @@ class ProperTorsionKey(TopologyKey):
         ),
     )
 
-    def __hash__(self) -> int:
-        return hash((tuple(self.atom_indices), self.mult, self.bond_order, self.phase))
+    def _tuple(
+        self,
+    ) -> (
+        tuple[()]
+        | tuple[int, int, int, int]
+        | tuple[
+            tuple[int, int, int, int] | tuple[()],
+            int | None,
+            float | None,
+            float | None,
+        ]
+    ):
+        if self.mult is None and self.phase is None and self.bond_order is None:
+            return tuple(self.atom_indices)
+        else:
+            return (tuple(self.atom_indices), self.mult, self.phase, self.bond_order)
 
     def __repr__(self) -> str:
         return (
@@ -135,6 +233,25 @@ class ImproperTorsionKey(ProperTorsionKey):
     A unique identifier of the atoms associated in an improper torsion potential.
 
     The central atom is the second atom in the `atom_indices` tuple, or accessible via `get_central_atom_index`.
+
+    Examples
+    --------
+    Index into a dictionary with a tuple
+
+    .. code-block:: pycon
+
+        >>> d = {
+        ...     ImproperTorsionKey(atom_indices=(0, 1, 2, 3)): "torsion1",
+        ...     ImproperTorsionKey(atom_indices=(0, 1, 2, 3), mult=2): "torsion2",
+        ...     ImproperTorsionKey(atom_indices=(5, 6, 7, 8), mult=2, phase=0.78, bond_order=1.5): "torsion3",
+        ... }
+        >>> d[0, 1, 2, 3]
+        'torsion1'
+        >>> d[(0, 1, 2, 3), 2, None, None]
+        'torsion2'
+        >>> d[(5, 6, 7, 8), 2, 0.78, 1.5]
+        'torsion3'
+
     """
 
     def get_central_atom_index(self) -> int:
@@ -142,7 +259,7 @@ class ImproperTorsionKey(ProperTorsionKey):
         return self.atom_indices[1]
 
 
-class LibraryChargeTopologyKey(DefaultModel):
+class LibraryChargeTopologyKey(_BaseModel):
     """
     A unique identifier of the atoms associated with a library charge.
     """
@@ -153,12 +270,15 @@ class LibraryChargeTopologyKey(DefaultModel):
     this_atom_index: int
 
     @property
-    def atom_indices(self) -> tuple[int, ...]:
+    def atom_indices(self) -> tuple[int]:
         """Alias for `this_atom_index`."""
         return (self.this_atom_index,)
 
     def __hash__(self) -> int:
         return hash((self.this_atom_index,))
+
+    def __eq__(self, other) -> bool:
+        return super().__eq__(other) or other == self.this_atom_index
 
 
 class SingleAtomChargeTopologyKey(LibraryChargeTopologyKey):
@@ -167,7 +287,7 @@ class SingleAtomChargeTopologyKey(LibraryChargeTopologyKey):
     """
 
 
-class ChargeModelTopologyKey(DefaultModel):
+class ChargeModelTopologyKey(_BaseModel):
     """Subclass of `TopologyKey` for use with charge models only."""
 
     this_atom_index: int
@@ -182,7 +302,7 @@ class ChargeModelTopologyKey(DefaultModel):
         return hash((self.this_atom_index, self.partial_charge_method))
 
 
-class ChargeIncrementTopologyKey(DefaultModel):
+class ChargeIncrementTopologyKey(_BaseModel):
     """Subclass of `TopologyKey` for use with charge increments only."""
 
     # TODO: Eventually rename this for coherence with `TopologyKey`
@@ -199,7 +319,9 @@ class ChargeIncrementTopologyKey(DefaultModel):
 
 
 class VirtualSiteKey(TopologyKey):
-    """A unique identifier of a virtual site in the scope of a chemical topology."""
+    """
+    A unique identifier of a virtual site in the scope of a chemical topology.
+    """
 
     # TODO: Overriding the attribute of a parent class is clumsy, but less grief than
     #       having this not inherit from `TopologyKey`. It might be useful to just have
@@ -217,18 +339,16 @@ class VirtualSiteKey(TopologyKey):
         description="The `match` attribute of the associated virtual site type",
     )
 
-    def __hash__(self) -> int:
-        return hash(
-            (
-                self.orientation_atom_indices,
-                self.name,
-                self.type,
-                self.match,
-            ),
+    def _tuple(self) -> tuple[tuple[int, ...], str, str, str]:
+        return (
+            self.orientation_atom_indices,
+            self.name,
+            self.type,
+            self.match,
         )
 
 
-class PotentialKey(DefaultModel):
+class PotentialKey(_BaseModel):
     """
     A unique identifier of an instance of physical parameters as applied to a segment of a chemical topology.
 

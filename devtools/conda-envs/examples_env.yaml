@@ -10,7 +10,6 @@ dependencies:
   - openmm
   # OpenFF stack
   - openff-toolkit
-  - openff-models
   - openff-nagl
   - openff-nagl-models
   - ambertools =23

@@ -1,19 +1,19 @@
 """An object for storing, manipulating, and converting molecular mechanics data."""
 
-import copy
-import json
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Union, overload
 
-import numpy as np
-from openff.models.models import DefaultModel
-from openff.models.types import ArrayQuantity, QuantityEncoder
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
-from pydantic.v1 import Field, validator
+from pydantic import Field
 
+from openff.interchange._annotations import (
+    _BoxQuantity,
+    _PositionsQuantity,
+    _VelocityQuantity,
+)
 from openff.interchange._experimental import experimental
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._valence import (
@@ -23,10 +23,8 @@ from openff.interchange.common._valence import (
     ProperTorsionCollection,
 )
 from openff.interchange.components.mdconfig import MDConfig
-from openff.interchange.components.potentials import Collection
+from openff.interchange.components.potentials import Collection, _AnnotatedCollections
 from openff.interchange.exceptions import (
-    InvalidBoxError,
-    InvalidTopologyError,
     MissingParameterHandlerError,
     MissingPositionsError,
     UnsupportedExportError,
@@ -34,6 +32,8 @@ from openff.interchange.exceptions import (
 from openff.interchange.operations.minimize import (
     _DEFAULT_ENERGY_MINIMIZATION_TOLERANCE,
 )
+from openff.interchange.pydantic import _BaseModel
+from openff.interchange.serialization import _AnnotatedTopology
 from openff.interchange.smirnoff import (
     SMIRNOFFConstraintCollection,
     SMIRNOFFVirtualSiteCollection,
@@ -50,160 +50,35 @@ if TYPE_CHECKING:
     import openmm.app
 
 
-class TopologyEncoder(json.JSONEncoder):
-    """Custom encoder for `Topology` objects."""
-
-    def default(self, obj: Topology):
-        """Encode a `Topology` object to JSON."""
-        _topology = copy.deepcopy(obj)
-        for molecule in _topology.molecules:
-            molecule._conformers = None
-
-        return _topology.to_json()
-
-
-def interchange_dumps(v, *, default):
-    """Dump an Interchange to JSON after converting to compatible types."""
-    from openff.interchange.smirnoff._base import dump_collection
-
-    return json.dumps(
-        {
-            "positions": QuantityEncoder().default(v["positions"]),
-            "box": QuantityEncoder().default(v["box"]),
-            "topology": TopologyEncoder().default(v["topology"]),
-            "collections": {
-                key: dump_collection(v["collections"][key], default=default)
-                for key in v["collections"]
-            },
-        },
-        default=default,
-    )
-
-
-def interchange_loader(data: str) -> dict:
-    """Load a JSON representation of an Interchange object."""
-    tmp: dict[str, int | bool | str | dict | None] = {}
-
-    for key, val in json.loads(data).items():
-        if val is None:
-            continue
-        if key == "positions":
-            tmp["positions"] = Quantity(val["val"], unit.Unit(val["unit"]))
-        elif key == "velocities":
-            tmp["velocities"] = Quantity(val["val"], unit.Unit(val["unit"]))
-        elif key == "box":
-            tmp["box"] = Quantity(val["val"], unit.Unit(val["unit"]))
-        elif key == "topology":
-            tmp["topology"] = Topology.from_json(val)
-        elif key == "collections":
-            from openff.interchange.smirnoff import (
-                SMIRNOFFAngleCollection,
-                SMIRNOFFBondCollection,
-                SMIRNOFFConstraintCollection,
-                SMIRNOFFElectrostaticsCollection,
-                SMIRNOFFImproperTorsionCollection,
-                SMIRNOFFProperTorsionCollection,
-                SMIRNOFFvdWCollection,
-                SMIRNOFFVirtualSiteCollection,
-            )
-
-            tmp["collections"] = {}
-
-            _class_mapping = {
-                "Bonds": SMIRNOFFBondCollection,
-                "Angles": SMIRNOFFAngleCollection,
-                "Constraints": SMIRNOFFConstraintCollection,
-                "ProperTorsions": SMIRNOFFProperTorsionCollection,
-                "ImproperTorsions": SMIRNOFFImproperTorsionCollection,
-                "vdW": SMIRNOFFvdWCollection,
-                "Electrostatics": SMIRNOFFElectrostaticsCollection,
-                "VirtualSites": SMIRNOFFVirtualSiteCollection,
-            }
-
-            for collection_name, collection_data in val.items():
-                tmp["collections"][collection_name] = _class_mapping[  # type: ignore
-                    collection_name
-                ].parse_raw(collection_data)
-
-    return tmp
-
-
-class Interchange(DefaultModel):
+class Interchange(_BaseModel):
     """
     A object for storing, manipulating, and converting molecular mechanics data.
 
     .. warning :: This object is in an early and experimental state and unsuitable for production.
     .. warning :: This API is experimental and subject to change.
+
+    Examples
+    --------
+    Create an ``Interchange`` from an OpenFF ``ForceField`` and ``Molecule``
+
+    >>> from openff.toolkit import ForceField, Molecule
+    >>> sage = ForceField("openff-2.2.0.offxml")
+    >>> top = Molecule.from_smiles("CCC").to_topology()
+    >>> interchange = sage.create_interchange(top)
+
+    Get the parameters for the bond between atoms 0 and 1
+
+    >>> interchange["Bonds"][0, 1]
+    Potential(...)
+
     """
 
-    collections: dict[str, Collection] = Field(dict())
-    topology: Topology = Field(None)
-    mdconfig: MDConfig = Field(None)
-    box: ArrayQuantity["nanometer"] = Field(None)
-    positions: ArrayQuantity["nanometer"] = Field(None)
-    velocities: ArrayQuantity["nanometer / picosecond"] = Field(None)
-
-    class Config:
-        """Custom Pydantic-facing configuration for the Interchange class."""
-
-        json_loads = interchange_loader
-        json_dumps = interchange_dumps
-        validate_assignment = True
-        arbitrary_types_allowed = True
-
-    @validator("box", allow_reuse=True)
-    def validate_box(cls, value) -> Quantity | None:
-        if value is None:
-            return value
-
-        validated = ArrayQuantity.validate_type(value)
-
-        dimensions = np.atleast_2d(validated).shape
-
-        if dimensions == (3, 3):
-            return validated
-        elif dimensions == (1, 3):
-            return validated * np.eye(3)
-        else:
-            raise InvalidBoxError(
-                f"Failed to convert value {value} to 3x3 box vectors. Please file an issue if you think this "
-                "input should be supported and the failure is an error.",
-            )
-
-    @validator("topology", pre=True)
-    def validate_topology(cls, value):
-        if value is None:
-            return None
-        if isinstance(value, Topology):
-            try:
-                return Topology(other=value)
-            except Exception as exception:
-                # Topology cannot roundtrip with simple molecules
-                for molecule in value.molecules:
-                    if molecule.__class__.__name__ == "_SimpleMolecule":
-                        return value
-                raise exception
-        elif isinstance(value, list):
-            return Topology.from_molecules(value)
-        elif value.__class__.__name__ == "_OFFBioTop":
-            raise InvalidTopologyError("_OFFBioTop is no longer supported")
-        else:
-            raise InvalidTopologyError(
-                "Could not process topology argument, expected openff.toolkit.Topology. "
-                f"Found object of type {type(value)}.",
-            )
-
-    def _infer_positions(self) -> Quantity | None:
-        """
-        Attempt to set Interchange.positions based on conformers in molecules in the topology.
-
-        If _any_ molecule lacks conformers, return None.
-        If _all_ molecules have conformers, return an array of shape (self.topology.n_atoms, 3)
-        generated by concatenating the positions of each molecule, using only the 0th conformer.
-        """
-        from openff.interchange.common._positions import _infer_positions
-
-        return _infer_positions(self.topology, self.positions)
+    collections: _AnnotatedCollections = Field(dict())
+    topology: _AnnotatedTopology
+    mdconfig: MDConfig | None = Field(None)
+    box: _BoxQuantity | None = Field(None)  # Needs shape/OpenMM validation
+    positions: _PositionsQuantity | None = Field(None)  # Ditto
+    velocities: _VelocityQuantity | None = Field(None)  # Ditto
 
     @classmethod
     def from_smirnoff(
@@ -635,6 +510,12 @@ class Interchange(DefaultModel):
         -------
         system : openmm.System
             The OpenMM System object.
+
+        Notes
+        -----
+        There are some sharp edges and quirks when using this method. Be aware of some documented
+        issues in the :doc:`/using/edges` section of the user guide. If you encounter surprising
+        behavior that is not documented, please raise an issue.
 
         """
         from openff.interchange.interop.openmm import (

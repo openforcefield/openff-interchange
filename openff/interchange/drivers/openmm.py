@@ -4,7 +4,7 @@ import warnings
 from typing import TYPE_CHECKING, Optional
 
 import numpy
-from openff.toolkit import unit
+from openff.toolkit import Quantity
 from openff.units.openmm import ensure_quantity
 from openff.utilities.utilities import has_package, requires_package
 
@@ -143,7 +143,7 @@ def _process(
     combine_nonbonded_forces: bool,
     detailed: bool,
 ) -> EnergyReport:
-    staged: dict[str, unit.Quantity] = dict()
+    staged: dict[str, Quantity] = dict()
 
     valence_map = {
         openmm.HarmonicBondForce: "Bond",

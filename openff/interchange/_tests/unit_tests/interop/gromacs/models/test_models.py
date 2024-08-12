@@ -3,7 +3,7 @@ from copy import deepcopy
 import numpy
 import pytest
 from openff.toolkit import Molecule, Quantity, Topology, unit
-from pydantic.v1 import ValidationError
+from pydantic import ValidationError
 
 from openff.interchange import Interchange
 from openff.interchange._tests import needs_gmx

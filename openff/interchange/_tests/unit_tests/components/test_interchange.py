@@ -6,7 +6,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
 )
 from openff.utilities.testing import skip_if_missing
-from pydantic.v1 import ValidationError
+from pydantic import ValidationError
 
 from openff.interchange import Interchange
 from openff.interchange._tests import (
@@ -48,6 +48,14 @@ class TestInterchange:
         with pytest.raises(LookupError, match="Could not find"):
             out["CMAPs"]
 
+        first_bondkey = next(iter(out["Bonds"].key_map))
+        idx_a, idx_b = first_bondkey.atom_indices
+        assert (
+            out["Bonds"][idx_a, idx_b]
+            == out["Bonds"][idx_b, idx_a]
+            == out["Bonds"].potentials[out["Bonds"].key_map[first_bondkey]]
+        )
+
     def test_get_parameters(self, sage):
         mol = Molecule.from_smiles("CCO")
         out = Interchange.from_smirnoff(force_field=sage, topology=[mol])
@@ -88,7 +96,7 @@ class TestInterchange:
         assert out["Electrostatics"].cutoff == 7.89 * unit.angstrom
 
     def test_box_setter(self):
-        tmp = Interchange()
+        tmp = Interchange(topology=Molecule.from_smiles("O").to_topology())
 
         with pytest.raises(ValidationError):
             tmp.box = [2, 2, 3, 90, 90, 90]
@@ -156,10 +164,10 @@ class TestInterchange:
     def test_validate_simple_topology(self, sage):
         from openff.interchange.components.toolkit import _simple_topology_from_openmm
 
-        tmp = Interchange()
-        tmp.topology = _simple_topology_from_openmm(
+        topology = _simple_topology_from_openmm(
             Molecule.from_smiles("CCO").to_topology().to_openmm(),
         )
+        Interchange(topology=topology)
 
     def test_from_sage_molecule_list(self, sage):
         out = Interchange.from_smirnoff(
@@ -375,7 +383,7 @@ class TestInterchangeSerialization:
             topology=topology,
         )
 
-        roundtripped = Interchange.parse_raw(original.json())
+        roundtripped = Interchange.model_validate_json(original.model_dump_json())
 
         get_openmm_energies(original, combine_nonbonded_forces=False).compare(
             get_openmm_energies(roundtripped, combine_nonbonded_forces=False),

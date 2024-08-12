@@ -516,7 +516,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         prmtop.write("%FLAG CHARGE\n" "%FORMAT(5E16.8)\n")
         charges = [
             charge.m_as(unit.e) * AMBER_COULOMBS_CONSTANT
-            for charge in interchange["Electrostatics"].charges.values()
+            for charge in interchange["Electrostatics"]._get_charges().values()
         ]
         text_blob = "".join([f"{val:16.8E}" for val in charges])
         _write_text_blob(prmtop, text_blob)
@@ -640,7 +640,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         prmtop.write("%FLAG ANGLE_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
         angle_k = [
             interchange["Angles"].potentials[key].parameters["k"].m_as(kcal_mol_rad2)
-            / 2  # noqa
+            / 2
             for key in potential_key_to_angle_type_mapping
         ]
         text_blob = "".join([f"{val:16.8E}" for val in angle_k])

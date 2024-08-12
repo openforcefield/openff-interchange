@@ -1,5 +1,7 @@
+from typing import Literal
+
 from openff.toolkit import Topology, unit
-from pydantic.v1 import Field
+from pydantic import Field
 
 from openff.interchange.common._valence import (
     AngleCollection,
@@ -19,10 +21,10 @@ from openff.interchange.models import PotentialKey, TopologyKey
 class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler, BondCollection):
     """Handler storing bond potentials as produced by a Foyer force field."""
 
-    type = "Bonds"
-    expression = "k/2*(r-length)**2"
-    force_field_key = "harmonic_bonds"
-    connection_attribute = "bonds"
+    type: Literal["Bonds"] = "Bonds"
+    expression: str = "k/2*(r-length)**2"
+    force_field_key: str = "harmonic_bonds"
+    connection_attribute: str = "bonds"
 
     def get_params_with_units(self, params):
         """Get the parameters of this handler, tagged with units."""
@@ -56,8 +58,8 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler, BondCollection):
 class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler, AngleCollection):
     """Handler storing angle potentials as produced by a Foyer force field."""
 
-    type = "Angles"
-    expression = "k/2*(theta-angle)**2"
+    type: Literal["Angles"] = "Angles"
+    expression: str = "k/2*(theta-angle)**2"
     force_field_key: str = "harmonic_angles"
     connection_attribute: str = "angles"
 
@@ -96,8 +98,8 @@ class FoyerRBProperHandler(
 ):
     """Handler storing Ryckaert-Bellemans proper torsion potentials as produced by a Foyer force field."""
 
-    force_field_key = "rb_propers"
-    type = "RBTorsions"
+    force_field_key: str = "rb_propers"
+    type: Literal["RBTorsions"] = "RBTorsions"
     expression: str = Field(
         "c0 + "
         "c1 * (cos(phi - 180)) "
@@ -137,18 +139,18 @@ class FoyerRBProperHandler(
 class FoyerRBImproperHandler(FoyerRBProperHandler):
     """Handler storing Ryckaert-Bellemans improper torsion potentials as produced by a Foyer force field."""
 
-    type = "RBImpropers"  # type: ignore[assignment]
+    type: Literal["RBImpropers"] = "RBImpropers"
     connection_attribute: str = "impropers"
 
 
 class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler, ProperTorsionCollection):
     """Handler storing periodic proper torsion potentials as produced by a Foyer force field."""
 
-    force_field_key = "periodic_propers"
+    force_field_key: str = "periodic_propers"
     connection_attribute: str = "propers"
     raise_on_missing_params: bool = False
-    type = "ProperTorsions"
-    expression = "k*(1+cos(periodicity*theta-phase))"
+    type: str = "ProperTorsions"
+    expression: str = "k*(1+cos(periodicity*theta-phase))"
 
     def get_params_with_units(self, params):
         """Get the parameters of this handler, tagged with units."""
@@ -165,7 +167,7 @@ class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler, ProperTorsionCollec
 class FoyerPeriodicImproperHandler(FoyerPeriodicProperHandler):
     """Handler storing periodic improper torsion potentials as produced by a Foyer force field."""
 
-    type = "ImproperTorsions"  # type: ignore[assignment]
+    type: str = "ImproperTorsions"
     connection_attribute: str = "impropers"
 
 

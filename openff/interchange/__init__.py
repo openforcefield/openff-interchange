@@ -29,7 +29,10 @@ def __getattr__(name) -> ModuleType:
     """
     module = _objects.get(name)
     if module is not None:
-        return importlib.import_module(module).__dict__[name]
+        try:
+            return importlib.import_module(module).__dict__[name]
+        except ImportError as error:
+            raise ImportError from error
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

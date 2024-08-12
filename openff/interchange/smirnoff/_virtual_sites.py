@@ -2,14 +2,14 @@ import math
 from typing import Literal
 
 import numpy
-from openff.models.types import FloatQuantity
 from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     VirtualSiteHandler,
 )
-from pydantic.v1 import Field
+from pydantic import Field
 
+from openff.interchange._annotations import _DegreeQuantity, _Quantity
 from openff.interchange.components._particles import _VirtualSite
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import (
@@ -188,7 +188,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
 
 class _BondChargeVirtualSite(_VirtualSite):
     type: Literal["BondCharge"]
-    distance: FloatQuantity["nanometer"]
+    distance: _Quantity
     orientations: tuple[int, ...]
 
     @property
@@ -200,7 +200,7 @@ class _BondChargeVirtualSite(_VirtualSite):
         return origin_weight, x_direction, y_direction
 
     @property
-    def local_frame_positions(self) -> unit.Quantity:
+    def local_frame_positions(self) -> Quantity:
         distance_unit = self.distance.units
         return Quantity(
             [-self.distance.m, 0.0, 0.0],
@@ -218,9 +218,9 @@ class _BondChargeVirtualSite(_VirtualSite):
 
 class _MonovalentLonePairVirtualSite(_VirtualSite):
     type: Literal["MonovalentLonePair"]
-    distance: FloatQuantity["nanometer"]
-    out_of_plane_angle: FloatQuantity["degree"]
-    in_plane_angle: FloatQuantity["degree"]
+    distance: _Quantity
+    out_of_plane_angle: _DegreeQuantity
+    in_plane_angle: _DegreeQuantity
     orientations: tuple[int, ...]
 
     @property
@@ -232,7 +232,7 @@ class _MonovalentLonePairVirtualSite(_VirtualSite):
         return origin_weight, x_direction, y_direction
 
     @property
-    def local_frame_positions(self) -> unit.Quantity:
+    def local_frame_positions(self) -> Quantity:
         theta = self.in_plane_angle.m_as(unit.radian)
         phi = self.out_of_plane_angle.m_as(unit.radian)
 
@@ -262,8 +262,8 @@ class _MonovalentLonePairVirtualSite(_VirtualSite):
 
 class _DivalentLonePairVirtualSite(_VirtualSite):
     type: Literal["DivalentLonePair"]
-    distance: FloatQuantity["nanometer"]
-    out_of_plane_angle: FloatQuantity["degree"]
+    distance: _Quantity
+    out_of_plane_angle: _DegreeQuantity
     orientations: tuple[int, ...]
 
     @property
@@ -275,7 +275,7 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
         return origin_weight, x_direction, y_direction
 
     @property
-    def local_frame_positions(self) -> unit.Quantity:
+    def local_frame_positions(self) -> Quantity:
         theta = self.out_of_plane_angle.m_as(unit.radian)
 
         distance_unit = self.distance.units
@@ -304,7 +304,7 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
 
 class _TrivalentLonePairVirtualSite(_VirtualSite):
     type: Literal["TrivalentLonePair"]
-    distance: FloatQuantity["nanometer"]
+    distance: _Quantity
     orientations: tuple[int, ...]
 
     @property
@@ -316,7 +316,7 @@ class _TrivalentLonePairVirtualSite(_VirtualSite):
         return origin_weight, x_direction, y_direction
 
     @property
-    def local_frame_positions(self) -> unit.Quantity:
+    def local_frame_positions(self) -> Quantity:
         distance_unit = self.distance.units
         return Quantity(
             [-self.distance.m, 0.0, 0.0],
@@ -446,8 +446,8 @@ def _convert_local_coordinates(
     # rather than 0 degrees from the z-axis.
     vsite_positions = local_coordinate_frames[0] + d * (
         cos_theta * cos_phi * local_coordinate_frames[1]
-        + sin_theta * cos_phi * local_coordinate_frames[2]  # noqa
-        + sin_phi * local_coordinate_frames[3]  # noqa
+        + sin_theta * cos_phi * local_coordinate_frames[2]
+        + sin_phi * local_coordinate_frames[3]
     )
 
     return vsite_positions
@@ -456,7 +456,7 @@ def _convert_local_coordinates(
 def _generate_positions(
     interchange,
     virtual_site_collection: SMIRNOFFVirtualSiteCollection,
-    conformer: Quantity | None = None,
+    conformer: _Quantity | None = None,
 ) -> Quantity:
     # TODO: Capture these objects instead of generating them on-the-fly so many times
 

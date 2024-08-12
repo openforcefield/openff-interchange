@@ -5,16 +5,16 @@ from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from openff.models.models import DefaultModel
-from openff.models.types import FloatQuantity
 from openff.toolkit import Quantity, unit
-from pydantic.v1 import Field
+from pydantic import Field
 
+from openff.interchange._annotations import _DistanceQuantity
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
+from openff.interchange.pydantic import _BaseModel
 from openff.interchange.warnings import SwitchingFunctionNotImplementedWarning
 
 if TYPE_CHECKING:
@@ -32,7 +32,7 @@ disp-corr                = Ener
 """
 
 
-class MDConfig(DefaultModel):
+class MDConfig(_BaseModel):
     """A partial superset of runtime configurations for MD engines."""
 
     periodic: bool = Field(
@@ -47,7 +47,7 @@ class MDConfig(DefaultModel):
         "cutoff",
         description="The method used to calculate the vdW interactions.",
     )
-    vdw_cutoff: FloatQuantity["angstrom"] = Field(
+    vdw_cutoff: _DistanceQuantity = Field(
         Quantity(9.0, unit.angstrom),
         description="The distance at which pairwise interactions are truncated",
     )
@@ -60,7 +60,7 @@ class MDConfig(DefaultModel):
         False,
         description="Whether or not to use a switching function for the vdw interactions",
     )
-    switching_distance: FloatQuantity["angstrom"] = Field(
+    switching_distance: _DistanceQuantity = Field(
         Quantity(0.0, unit.angstrom),
         description="The distance at which the switching function is applied",
     )
@@ -68,7 +68,7 @@ class MDConfig(DefaultModel):
         None,
         description="The method used to compute pairwise electrostatic interactions",
     )
-    coul_cutoff: FloatQuantity["angstrom"] = Field(
+    coul_cutoff: _DistanceQuantity = Field(
         Quantity(9.0, unit.angstrom),
         description=(
             "The distance at which electrostatic interactions are truncated or transition from "
@@ -527,10 +527,10 @@ def get_intermol_defaults(periodic: bool = False) -> MDConfig:
         periodic=periodic,
         constraints="none",
         vdw_method="cutoff",
-        vdw_cutoff=0.9 * unit.nanometer,
+        vdw_cutoff=Quantity(0.9, "nanometer"),
         mixing_rule="lorentz-berthelot",
         switching_function=False,
-        switching_distance=0.0,
+        switching_distance=Quantity(0.0, "angstrom"),
         coul_method="PME" if periodic else "cutoff",
         coul_cutoff=(0.9 * unit.nanometer if periodic else 2.0 * unit.nanometer),
     )

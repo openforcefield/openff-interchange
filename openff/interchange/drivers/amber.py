@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 from shutil import which
 
-from openff.toolkit import unit
+from openff.toolkit import Quantity, unit
 from openff.utilities.utilities import temporary_cd
 
 from openff.interchange import Interchange
@@ -56,7 +56,7 @@ def get_amber_energies(
 def _get_amber_energies(
     interchange: Interchange,
     writer: str = "internal",
-) -> dict[str, unit.Quantity]:
+) -> dict[str, Quantity]:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
             if writer == "internal":
@@ -83,7 +83,7 @@ def _run_sander(
     inpcrd_file: Path | str,
     prmtop_file: Path | str,
     input_file: Path | str,
-) -> dict[str, unit.Quantity]:
+) -> dict[str, Quantity]:
     """
     Given Amber files, return single-point energies as computed by Amber.
 
@@ -98,7 +98,7 @@ def _run_sander(
 
     Returns
     -------
-    energies: Dict[str, unit.Quantity]
+    energies: Dict[str, Quantity]
         A dictionary of energies, keyed by the GROMACS energy term name.
 
     """
@@ -128,7 +128,7 @@ def _run_sander(
     return _parse_amber_energy("mdinfo")
 
 
-def _parse_amber_energy(mdinfo: str) -> dict[str, unit.Quantity]:
+def _parse_amber_energy(mdinfo: str) -> dict[str, Quantity]:
     """
     Parse AMBER output file and group the energy terms in a dict.
 
@@ -177,7 +177,7 @@ def _parse_amber_energy(mdinfo: str) -> dict[str, unit.Quantity]:
     return e_out
 
 
-def _get_amber_energy_vdw(amber_energies: dict) -> unit.Quantity:
+def _get_amber_energy_vdw(amber_energies: dict) -> Quantity:
     """Get the total nonbonded energy from a set of Amber energies."""
     amber_vdw = 0.0 * unit.kilojoule_per_mole
     for key in ["VDWAALS", "1-4 VDW", "1-4 NB"]:
@@ -187,7 +187,7 @@ def _get_amber_energy_vdw(amber_energies: dict) -> unit.Quantity:
     return amber_vdw
 
 
-def _get_amber_energy_coul(amber_energies: dict) -> unit.Quantity:
+def _get_amber_energy_coul(amber_energies: dict) -> Quantity:
     """Get the total nonbonded energy from a set of Amber energies."""
     amber_coul = 0.0 * unit.kilojoule_per_mole
     for key in ["EEL", "1-4 EEL"]:
@@ -198,7 +198,7 @@ def _get_amber_energy_coul(amber_energies: dict) -> unit.Quantity:
 
 
 def _process(
-    energies: dict[str, unit.Quantity],
+    energies: dict[str, Quantity],
     detailed: bool = False,
 ) -> EnergyReport:
     if detailed:

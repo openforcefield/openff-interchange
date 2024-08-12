@@ -91,13 +91,23 @@ SMIRNOFFImproperTorsionCollection(type='ImproperTorsions',
 
 ```
 
+We can also access a collection by indexing directly into the Interchange itself:
+
+```pycon
+>>> interchange["ImproperTorsions"]  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
+SMIRNOFFImproperTorsionCollection(type='ImproperTorsions',
+    expression='k*(1+cos(periodicity*theta-phase))',
+    key_map={},
+    potentials={})
+```
+
 In the bond collection for example, each pair of bonded atoms maps to one of two
 potential keys, one for the carbon-carbon bond, and the other for the
 carbon-hydrogen bonds. It's clear from the SMIRKS codes that atoms 0 and 1 are
 the carbon atoms, and atoms 2 through 7 are the hydrogens:
 
 ```pycon
->>> interchange.collections["Bonds"].key_map  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
+>>> interchange["Bonds"].key_map  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
 {TopologyKey(atom_indices=(0, 1), ...): PotentialKey(id='[#6X4:1]-[#6X4:2]', ...),
  TopologyKey(atom_indices=(0, 2), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
  TopologyKey(atom_indices=(0, 3), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
@@ -117,7 +127,7 @@ The bond collection also maps the two potential keys to the appropriate `Potenti
 Here we can read off the force constant and length:
 
 ```pycon
->>> interchange.collections["Bonds"].potentials  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
+>>> interchange["Bonds"].potentials  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
 {PotentialKey(id='[#6X4:1]-[#6X4:2]', ...):
      Potential(parameters={'k': <Quantity(529.242972, 'kilocalorie / angstrom ** 2 / mole')>,
                            'length': <Quantity(1.52190126, 'angstrom')>}, ...),
@@ -127,16 +137,21 @@ Here we can read off the force constant and length:
 
 ```
 
-We can even modify a value here, export the new interchange, and see that all of
-the bonds have been updated:
+Any `TopologyKey` that only specifies atom indices can be accessed by indexing directly into the `Collection` with those atom indices:
+
+```pycon
+>>> interchange["Bonds"][0, 1]  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
+Potential(parameters={'k': <Quantity(529.242972, 'kilocalorie / angstrom ** 2 / mole')>, 'length': <Quantity(1.52190126, 'angstrom')>}, map_key=None)
+
+```
+
+We can even modify a value here, export the new interchange, and see that all of the bonds have been updated:
 
 ```pycon
 >>> from openff.interchange.models import TopologyKey
 >>> from openff.units import unit
 >>> # Get the potential from the first C-H bond
->>> top_key = TopologyKey(atom_indices=(0, 2))
->>> pot_key = interchange.collections["Bonds"].key_map[top_key]
->>> potential = interchange.collections["Bonds"].potentials[pot_key]
+>>> potential = interchange["Bonds"][0, 2]
 >>> # Modify the potential
 >>> potential.parameters["length"] = 3.1415926 * unit.nanometer
 >>> # Write out the modified interchange to a GROMACS .top file
