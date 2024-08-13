@@ -57,9 +57,7 @@ class ProperTorsionCollection(Collection):
     """Handler storing periodic proper torsion potentials."""
 
     type: Literal["ProperTorsions"] = "ProperTorsions"
-    expression: Literal["k*(1+cos(periodicity*theta-phase))"] = (
-        "k*(1+cos(periodicity*theta-phase))"
-    )
+    expression: Literal["k*(1+cos(periodicity*theta-phase))"] = "k*(1+cos(periodicity*theta-phase))"
 
     @classmethod
     def supported_parameters(cls) -> Iterable[str]:
@@ -90,9 +88,7 @@ class ImproperTorsionCollection(Collection):
     """Handler storing periodic improper torsion potentials."""
 
     type: Literal["ImproperTorsions"] = "ImproperTorsions"
-    expression: Literal["k*(1+cos(periodicity*theta-phase))"] = (
-        "k*(1+cos(periodicity*theta-phase))"
-    )
+    expression: Literal["k*(1+cos(periodicity*theta-phase))"] = "k*(1+cos(periodicity*theta-phase))"
 
     @classmethod
     def supported_parameters(cls) -> Iterable[str]:

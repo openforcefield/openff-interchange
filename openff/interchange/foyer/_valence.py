@@ -46,9 +46,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler, BondCollection):
             )
             top_key = TopologyKey(atom_indices=atom_indices)
 
-            pot_key_ids = tuple(
-                _get_potential_key_id(atom_slots, idx) for idx in atom_indices
-            )
+            pot_key_ids = tuple(_get_potential_key_id(atom_slots, idx) for idx in atom_indices)
 
             self.key_map[top_key] = PotentialKey(
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
@@ -83,9 +81,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler, AngleCollection):
             atom_indices = tuple(topology.atom_index(atom) for atom in angle)
             top_key = TopologyKey(atom_indices=atom_indices)
 
-            pot_key_ids = tuple(
-                _get_potential_key_id(atom_slots, idx) for idx in atom_indices
-            )
+            pot_key_ids = tuple(_get_potential_key_id(atom_slots, idx) for idx in atom_indices)
 
             self.key_map[top_key] = PotentialKey(
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
@@ -127,9 +123,7 @@ class FoyerRBProperHandler(
             atom_indices = tuple(topology.atom_index(atom) for atom in proper)
             top_key = TopologyKey(atom_indices=atom_indices)
 
-            pot_key_ids = tuple(
-                _get_potential_key_id(atom_slots, idx) for idx in atom_indices
-            )
+            pot_key_ids = tuple(_get_potential_key_id(atom_slots, idx) for idx in atom_indices)
 
             self.key_map[top_key] = PotentialKey(
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),

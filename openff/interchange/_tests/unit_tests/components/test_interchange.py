@@ -106,10 +106,10 @@ class TestInterchange:
         molecule.generate_conformers(n_conformers=1)
         molecule.conformers[0] += 1 * unit.angstrom
         topology = molecule.to_topology()
-        original = list(topology.molecules)[0].conformers[0]
+        original = next(topology.molecules).conformers[0]
 
         Interchange.from_smirnoff(force_field=sage, topology=topology)
-        new = list(topology.molecules)[0].conformers[0]
+        new = next(topology.molecules).conformers[0]
 
         assert numpy.sum((original - new).m_as(unit.angstrom)) == pytest.approx(0)
 

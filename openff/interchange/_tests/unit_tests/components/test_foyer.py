@@ -65,10 +65,7 @@ class TestFoyer:
 
             if isinstance(molecule_or_molecules, list):
                 openff_interchange.positions = np.vstack(
-                    tuple(
-                        molecule.conformers[0].m_as(unit.nanometer)
-                        for molecule in molecule_or_molecules
-                    ),
+                    tuple(molecule.conformers[0].m_as(unit.nanometer) for molecule in molecule_or_molecules),
                 )
             else:
                 openff_interchange.positions = molecule_or_molecules.conformers[0].m_as(
@@ -198,9 +195,7 @@ class TestRBTorsions(TestFoyer):
     @pytest.mark.slow
     @pytest.mark.skip(reason="Something is broken with RBTorsions in OpenMM export")
     def test_rb_torsions(self, ethanol_with_rb_torsions):
-        omm = get_openmm_energies(ethanol_with_rb_torsions, round_positions=3).energies[
-            "Torsion"
-        ]
+        omm = get_openmm_energies(ethanol_with_rb_torsions, round_positions=3).energies["Torsion"]
         gmx = get_gromacs_energies(
             ethanol_with_rb_torsions,
             round_positions=3,

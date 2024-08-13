@@ -1,11 +1,11 @@
-from typing import Iterable, Union
+from typing import Iterable
 
-class NGLWidget(object):
+class NGLWidget:
     ...
     def add_representation(
         self,
         repr_type: str,
-        selection: Union[str, Iterable],
+        selection: str | Iterable,
         **kwargs,
     ): ...
 

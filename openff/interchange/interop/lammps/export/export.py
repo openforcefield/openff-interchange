@@ -77,16 +77,9 @@ def to_lammps(interchange: Interchange, file_path: Path | str):
             )
 
         lmp_file.write(
-            "{:.10g} {:.10g} xlo xhi\n"
-            "{:.10g} {:.10g} ylo yhi\n"
-            "{:.10g} {:.10g} zlo zhi\n".format(
-                x_min,
-                x_min + L_x,
-                y_min,
-                y_min + L_y,
-                z_min,
-                z_min + L_z,
-            ),
+            f"{x_min:.10g} {x_min + L_x:.10g} xlo xhi\n"
+            f"{y_min:.10g} {y_min + L_y:.10g} ylo yhi\n"
+            f"{z_min:.10g} {z_min + L_z:.10g} zlo zhi\n",
         )
 
         lmp_file.write("0.0 0.0 0.0 xy xz yz\n")
@@ -316,15 +309,13 @@ def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
         pos = positions[atom_index]
 
         lmp_file.write(
-            "{:d}\t{:d}\t{:d}\t{:.8g}\t{:.8g}\t{:.8g}\t{:.8g}\n".format(
-                atom_index + 1,
-                molecule_index + 1,
-                atom_type + 1,
-                charge,
-                pos[0],
-                pos[1],
-                pos[2],
-            ),
+            f"{atom_index + 1:d}\t"
+            f"{molecule_index + 1:d}\t"
+            f"{atom_type + 1:d}\t"
+            f"{charge:.8g}\t"
+            f"{pos[0]:.8g}\t"
+            f"{pos[1]:.8g}\t"
+            f"{pos[2]:.8g}\n",
         )
 
 
@@ -346,12 +337,10 @@ def _write_bonds(lmp_file: IO, interchange: Interchange):
         indices = top_key.atom_indices
 
         lmp_file.write(
-            "{:d}\t{:d}\t{:d}\t{:d}\n".format(
-                bond_index + 1,
-                bond_map[pot_key] + 1,
-                indices[0] + 1,
-                indices[1] + 1,
-            ),
+            f"{bond_index + 1:d}\t"
+            f"{bond_map[pot_key] + 1:d}\t"
+            f"{indices[0] + 1:d}\t"
+            f"{indices[1] + 1:d}\n",
         )
 
 
@@ -369,13 +358,11 @@ def _write_angles(lmp_file: IO, interchange: Interchange):
         indices = top_key.atom_indices
 
         lmp_file.write(
-            "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
-                angle_index + 1,
-                angle_map[pot_key] + 1,
-                indices[0] + 1,
-                indices[1] + 1,
-                indices[2] + 1,
-            ),
+            f"{angle_index + 1:d}\t"
+            f"{angle_map[pot_key] + 1:d}\t"
+            f"{indices[0] + 1:d}\t"
+            f"{indices[1] + 1:d}\t"
+            f"{indices[2] + 1:d}\n",
         )
 
 
@@ -393,14 +380,12 @@ def _write_propers(lmp_file: IO, interchange: Interchange):
         indices = top_key.atom_indices
 
         lmp_file.write(
-            "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
-                proper_index + 1,
-                proper_map[pot_key] + 1,
-                indices[0] + 1,
-                indices[1] + 1,
-                indices[2] + 1,
-                indices[3] + 1,
-            ),
+            f"{proper_index + 1:d}\t"
+            f"{proper_map[pot_key] + 1:d}\t"
+            f"{indices[0] + 1:d}\t"
+            f"{indices[1] + 1:d}\t"
+            f"{indices[2] + 1:d}\t"
+            f"{indices[3] + 1:d}\n",
         )
 
 
@@ -427,12 +412,10 @@ def _write_impropers(lmp_file: IO, interchange: Interchange):
         # LAMMPS, at least with `improper_style cvff`, lists the
         # central atom FIRST, which matches the collection
         lmp_file.write(
-            "{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(
-                improper_index + 1,
-                improper_map[pot_key] + 1,
-                indices[1] + 1,
-                indices[0] + 1,
-                indices[2] + 1,
-                indices[3] + 1,
-            ),
+            f"{improper_index + 1:d}\t"
+            f"{improper_map[pot_key] + 1:d}\t"
+            f"{indices[1] + 1:d}\t"
+            f"{indices[0] + 1:d}\t"
+            f"{indices[2] + 1:d}\t"
+            f"{indices[3] + 1:d}\n",
         )

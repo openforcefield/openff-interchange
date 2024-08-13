@@ -183,9 +183,7 @@ class TestEnergies:
                 get_gromacs_energies(out, mdp="auto").energies["Electrostatics"].m,
             )
             lmp.append(
-                get_lammps_energies(out)
-                .energies["Electrostatics"]
-                .m_as(unit.kilojoule / unit.mol),
+                get_lammps_energies(out).energies["Electrostatics"].m_as(unit.kilojoule / unit.mol),
             )
 
         assert np.sum(np.sqrt(np.square(np.asarray(lmp) - np.asarray(gmx)))) < 1e-3

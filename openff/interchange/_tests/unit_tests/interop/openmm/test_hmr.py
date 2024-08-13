@@ -34,7 +34,6 @@ def test_hmr_basic(sage, reversed, ethanol, reversed_ethanol):
     assert found_mass == pytest.approx(expected_mass)
 
     for particle_index, atom in enumerate(topology.atoms):
-
         if atom.atomic_number == 1:
             assert system.getParticleMass(particle_index)._value == hydrogen_mass
 
@@ -67,7 +66,6 @@ def test_hmr_not_applied_to_water(sage, water):
     assert found_mass == pytest.approx(expected_mass)
 
     for particle_index, atom in enumerate(interchange.topology.atoms):
-
         if atom.atomic_number == 1:
             assert system.getParticleMass(particle_index) == element.hydrogen.mass
 

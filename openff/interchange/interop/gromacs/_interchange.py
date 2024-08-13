@@ -109,10 +109,11 @@ def to_interchange(
                 )
 
             if len(molecule_type.settles) > 0:
-                if [
-                    system.atom_types[a.atom_type].atomic_number
-                    for a in molecule_type.atoms
-                ] != [8, 1, 1]:
+                if [system.atom_types[a.atom_type].atomic_number for a in molecule_type.atoms] != [
+                    8,
+                    1,
+                    1,
+                ]:
                     raise NotImplementedError(
                         "Settles have only been implemented for water with OHH ordering.",
                     )
@@ -331,10 +332,11 @@ def _convert_topology(
                 atomic_number=system.atom_types[atom.atom_type].atomic_number,
             )
 
-        if [
-            system.atom_types[atom.atom_type].atomic_number
-            for atom in molecule_type.atoms
-        ] == [8, 1, 1]:
+        if [system.atom_types[atom.atom_type].atomic_number for atom in molecule_type.atoms] == [
+            8,
+            1,
+            1,
+        ]:
             graph.add_edge(0, 1)
             graph.add_edge(0, 2)
         else:

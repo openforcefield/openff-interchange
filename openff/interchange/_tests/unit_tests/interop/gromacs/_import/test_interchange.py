@@ -8,7 +8,6 @@ from openff.interchange.interop.gromacs._interchange import to_interchange
 
 
 class TestToInterchange:
-
     @needs_gmx
     def test_torsion_multiplicities_stored_in_keys(
         self,

@@ -180,11 +180,9 @@ class Interchange(_BaseModel):
 
         if backend == "nglview":
             if include_virtual_sites:
-
                 return self._visualize_nglview(include_virtual_sites=True)
 
             else:
-
                 # Interchange.topology might have its own positions;
                 # just use Interchange.positions
                 original_positions = self.topology.get_positions()
@@ -212,7 +210,6 @@ class Interchange(_BaseModel):
                 return widget
 
         else:
-
             raise UnsupportedExportError
 
     @requires_package("nglview")
@@ -824,8 +821,7 @@ class Interchange(_BaseModel):
         """Syntax sugar for looking up collections or other components."""
         if type(item) is not str:
             raise LookupError(
-                "Only str arguments can be currently be used for lookups.\n"
-                f"Found item {item} of type {type(item)}",
+                "Only str arguments can be currently be used for lookups.\n" f"Found item {item} of type {type(item)}",
             )
         if item == "positions":
             return self.positions

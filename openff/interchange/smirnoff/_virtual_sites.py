@@ -121,9 +121,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                         virtual_site_type=parameter.type,
                     )
                     self.key_map[virtual_site_key] = potential_key
-                    self.virtual_site_key_topology_index_map[virtual_site_key] = (
-                        virtual_site_index
-                    )
+                    self.virtual_site_key_topology_index_map[virtual_site_key] = virtual_site_index
                     virtual_site_index += 1
 
     def store_potentials(  # type: ignore[override]
@@ -181,9 +179,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                 },
             )
             electrostatics_collection.key_map[virtual_site_key] = electrostatics_key
-            electrostatics_collection.potentials[electrostatics_key] = (
-                electrostatics_potential
-            )
+            electrostatics_collection.potentials[electrostatics_key] = electrostatics_potential
 
 
 class _BondChargeVirtualSite(_VirtualSite):

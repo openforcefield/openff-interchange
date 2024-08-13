@@ -79,10 +79,7 @@ def _get_lammps_energies(
         raise LAMMPSRunError from error
 
     # thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe
-    parsed_energies = [
-        Quantity(energy, "kilocalorie_per_mole")
-        for energy in runner.last_thermo().values()
-    ]
+    parsed_energies = [Quantity(energy, "kilocalorie_per_mole") for energy in runner.last_thermo().values()]
 
     # TODO: Sanely map LAMMPS's energy names to the ones we care about
     return {
@@ -110,8 +107,6 @@ def _process(
             "Angle": energies["Angle"],
             "Torsion": energies["ProperTorsion"] + energies["ImproperTorsion"],
             "vdW": energies["vdW"] + energies["DispersionCorrection"],
-            "Electrostatics": (
-                energies["ElectrostaticsShort"] + energies["ElectrostaticsLong"]
-            ),
+            "Electrostatics": (energies["ElectrostaticsShort"] + energies["ElectrostaticsLong"]),
         },
     )

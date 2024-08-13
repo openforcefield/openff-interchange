@@ -62,18 +62,14 @@ def _build_particle_map(
             particle_index += 1
 
         if collate:
-            for virtual_site_key in molecule_virtual_site_map[
-                interchange.topology.molecule_index(molecule)
-            ]:
+            for virtual_site_key in molecule_virtual_site_map[interchange.topology.molecule_index(molecule)]:
                 particle_map[virtual_site_key] = particle_index
 
                 particle_index += 1
 
     if not collate:
         for molecule in interchange.topology.molecules:
-            for virtual_site_key in molecule_virtual_site_map[
-                interchange.topology.molecule_index(molecule)
-            ]:
+            for virtual_site_key in molecule_virtual_site_map[interchange.topology.molecule_index(molecule)]:
                 particle_map[virtual_site_key] = particle_index
 
                 particle_index += 1

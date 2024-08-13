@@ -92,8 +92,7 @@ class SMIRNOFFBuckinghamVirtualSiteCollection(SMIRNOFFVirtualSiteCollection):
             vdw_key = PotentialKey(id=potential_key.id, associated_handler="vdw")
             vdw_potential = Potential(
                 parameters={
-                    parameter_name: getattr(parameter, parameter_name)
-                    for parameter_name in self.specific_parameters()
+                    parameter_name: getattr(parameter, parameter_name) for parameter_name in self.specific_parameters()
                 },
             )
             vdw_collection.key_map[virtual_site_key] = vdw_key
@@ -111,9 +110,7 @@ class SMIRNOFFBuckinghamVirtualSiteCollection(SMIRNOFFVirtualSiteCollection):
                 },
             )
             electrostatics_collection.key_map[virtual_site_key] = electrostatics_key
-            electrostatics_collection.potentials[electrostatics_key] = (
-                electrostatics_potential
-            )
+            electrostatics_collection.potentials[electrostatics_key] = electrostatics_potential
 
     @classmethod
     def create(

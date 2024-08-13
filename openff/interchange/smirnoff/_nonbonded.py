@@ -104,9 +104,7 @@ def _downconvert_vdw_handler(vdw_handler: vdWHandler):
             stacklevel=2,
         )
 
-        if (vdw_handler.periodic_method != "cutoff") or (
-            vdw_handler.nonperiodic_method != "no-cutoff"
-        ):
+        if (vdw_handler.periodic_method != "cutoff") or (vdw_handler.nonperiodic_method != "no-cutoff"):
             raise NotImplementedError("Down-converting vdWHandler failed.")
 
         vdw_handler.version = Version("0.3")
@@ -184,8 +182,7 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
 
             potential = Potential(
                 parameters={
-                    parameter: getattr(force_field_parameters, parameter)
-                    for parameter in self.potential_parameters()
+                    parameter: getattr(force_field_parameters, parameter) for parameter in self.potential_parameters()
                 },
             )
 
@@ -330,9 +327,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                     # Apply increments to "orientation" atoms
                     for i, increment in enumerate(parameter_value):
-                        orientation_atom_index = topology_key.orientation_atom_indices[
-                            i
-                        ]
+                        orientation_atom_index = topology_key.orientation_atom_indices[i]
 
                         charges[orientation_atom_index] = _add_charges(
                             charges.get(orientation_atom_index, _ZERO_CHARGE),
@@ -433,9 +428,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         f"{handler.version}.",
                     )
 
-        toolkit_handler_with_metadata = [
-            p for p in parameter_handlers if type(p) is ElectrostaticsHandler
-        ][0]
+        toolkit_handler_with_metadata = [p for p in parameter_handlers if type(p) is ElectrostaticsHandler][0]
 
         handler = cls(
             type=toolkit_handler_with_metadata.TAGNAME,
@@ -518,9 +511,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         potentials = {}
 
         for i, atom_index in enumerate(atom_indices):
-            other_atom_indices = tuple(
-                val for val in atom_indices if val is not atom_index
-            )
+            other_atom_indices = tuple(val for val in atom_indices if val is not atom_index)
             topology_key = ChargeIncrementTopologyKey(
                 this_atom_index=atom_index,
                 other_atom_indices=other_atom_indices,
@@ -677,9 +668,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             )
             potentials[potential_key] = Potential(parameters={"charge": partial_charge})
 
-            matches[SingleAtomChargeTopologyKey(this_atom_index=atom_index)] = (
-                potential_key
-            )
+            matches[SingleAtomChargeTopologyKey(this_atom_index=atom_index)] = potential_key
 
         return partial_charge_method, matches, potentials
 
@@ -735,20 +724,18 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     for topology_key, potential_key in am1_matches.items()
                 }
 
-                matched_atom_indices = {
-                    index for key in slot_matches for index in key.atom_indices
-                }
+                matched_atom_indices = {index for key in slot_matches for index in key.atom_indices}
                 matched_atom_indices.update(
                     {index for key in am1_matches for index in key.atom_indices},
                 )
 
             elif slot_matches is not None:
-                matched_atom_indices = {
-                    index for key in slot_matches for index in key.atom_indices
-                }
+                matched_atom_indices = {index for key in slot_matches for index in key.atom_indices}
             else:
                 matched_atom_indices = {
-                    index for key in am1_matches for index in key.atom_indices  # type: ignore[union-attr]
+                    index
+                    for key in am1_matches
+                    for index in key.atom_indices  # type: ignore[union-attr]
                 }
 
             if matched_atom_indices != expected_matches:
@@ -835,11 +822,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         # Reshape the parameter handlers into a dictionary for easier referencing.
         parameter_handlers = {
             handler.TAGNAME: handler
-            for handler in (
-                parameter_handler
-                if isinstance(parameter_handler, list)
-                else [parameter_handler]
-            )
+            for handler in (parameter_handler if isinstance(parameter_handler, list) else [parameter_handler])
         }
 
         self.potentials = dict()

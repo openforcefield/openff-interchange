@@ -147,7 +147,7 @@ def _simple_topology_from_graph(graph: networkx.Graph) -> Topology:
         # the subgraphs are returned out of "atom order", like
         # if atoms in an later molecule have lesser atom indices
         # than this molecule
-        assert topology.n_atoms == [*subgraph.nodes][0]
+        assert topology.n_atoms == next(iter(subgraph.nodes))
 
         topology.add_molecule(_SimpleMolecule._from_subgraph(subgraph))
 
@@ -196,11 +196,7 @@ def _lookup_virtual_site_parameter(
         raise NotImplementedError("Only VirtualSiteHandler is currently supported.")
 
     for virtual_site_type in parameter_handler.parameters:
-        if (
-            virtual_site_type.smirks == smirks
-            and virtual_site_type.name == name
-            and virtual_site_type.match == match
-        ):
+        if virtual_site_type.smirks == smirks and virtual_site_type.name == name and virtual_site_type.match == match:
             return virtual_site_type
     else:
         raise ValueError(

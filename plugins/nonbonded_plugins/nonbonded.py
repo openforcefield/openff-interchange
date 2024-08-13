@@ -136,9 +136,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 
     acts_as: str = "vdW"
 
-    expression: str = (
-        "a*exp(-b*r)-c*r^-6;" "a=sqrt(a1*a2);" "b=2/(1/b1+1/b2);" "c=sqrt(c1*c2);"
-    )
+    expression: str = "a*exp(-b*r)-c*r^-6;" "a=sqrt(a1*a2);" "b=2/(1/b1+1/b2);" "c=sqrt(c1*c2);"
 
     periodic_method: str = "cutoff"
     nonperiodic_method: str = "no-cutoff"
@@ -198,8 +196,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 
             potential = Potential(
                 parameters={
-                    parameter: getattr(force_field_parameters, parameter)
-                    for parameter in self.potential_parameters()
+                    parameter: getattr(force_field_parameters, parameter) for parameter in self.potential_parameters()
                 },
             )
 
@@ -352,8 +349,7 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
             potential = Potential(
                 parameters={
-                    parameter: getattr(force_field_parameters, parameter)
-                    for parameter in self.potential_parameters()
+                    parameter: getattr(force_field_parameters, parameter) for parameter in self.potential_parameters()
                 },
             )
 
@@ -443,9 +439,7 @@ class SMIRNOFFC4IonCollection(_SMIRNOFFNonbondedCollection):
     @classmethod
     def check_openmm_requirements(cls, combine_nonbonded_forces: bool) -> None:
         """Run through a list of assertions about what is compatible when exporting this to OpenMM."""
-        assert (
-            combine_nonbonded_forces
-        ), "The r ** -4 term is only implemented with a single `NonbondedForce`."
+        assert combine_nonbonded_forces, "The r ** -4 term is only implemented with a single `NonbondedForce`."
 
     def store_potentials(self, parameter_handler: DoubleExponentialHandler) -> None:
         """
@@ -458,8 +452,7 @@ class SMIRNOFFC4IonCollection(_SMIRNOFFNonbondedCollection):
 
             potential = Potential(
                 parameters={
-                    parameter: getattr(force_field_parameters, parameter)
-                    for parameter in self.potential_parameters()
+                    parameter: getattr(force_field_parameters, parameter) for parameter in self.potential_parameters()
                 },
             )
 

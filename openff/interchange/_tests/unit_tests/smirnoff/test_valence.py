@@ -140,9 +140,7 @@ class TestSMIRNOFFValenceCollections:
             topology=acetaldehyde.to_topology(),
         )
 
-        assert [*collection.potentials.values()][0].parameters[
-            "idivf"
-        ] == 5.555 * unit.dimensionless
+        assert [*collection.potentials.values()][0].parameters["idivf"] == 5.555 * unit.dimensionless
 
 
 class TestBondCollection:
@@ -425,11 +423,7 @@ class TestParameterInterpolation:
         omm_system = out.to_openmm(combine_nonbonded_forces=True)
 
         # Verify that the assigned bond parameters were correctly interpolated
-        off_bond_force = [
-            force
-            for force in omm_system.getForces()
-            if isinstance(force, openmm.HarmonicBondForce)
-        ][0]
+        off_bond_force = [force for force in omm_system.getForces() if isinstance(force, openmm.HarmonicBondForce)][0]
 
         for idx in range(off_bond_force.getNumBonds()):
             params = off_bond_force.getBondParameters(idx)
@@ -437,9 +431,7 @@ class TestParameterInterpolation:
             atom1, atom2 = params[0], params[1]
             atom1_mol, atom2_mol = central_atoms
 
-            if ((atom1 == atom1_mol) and (atom2 == atom2_mol)) or (
-                (atom1 == atom2_mol) and (atom2 == atom1_mol)
-            ):
+            if ((atom1 == atom1_mol) and (atom2 == atom2_mol)) or ((atom1 == atom2_mol) and (atom2 == atom1_mol)):
                 k = params[-1]
                 length = params[-2]
                 numpy.testing.assert_allclose(
@@ -457,9 +449,7 @@ class TestParameterInterpolation:
 
         # Verify that the assigned torsion parameters were correctly interpolated
         off_torsion_force = [
-            force
-            for force in omm_system.getForces()
-            if isinstance(force, openmm.PeriodicTorsionForce)
+            force for force in omm_system.getForces() if isinstance(force, openmm.PeriodicTorsionForce)
         ][0]
 
         for idx in range(off_torsion_force.getNumTorsions()):
@@ -468,9 +458,7 @@ class TestParameterInterpolation:
             atom2, atom3 = params[1], params[2]
             atom2_mol, atom3_mol = central_atoms
 
-            if ((atom2 == atom2_mol) and (atom3 == atom3_mol)) or (
-                (atom2 == atom3_mol) and (atom3 == atom2_mol)
-            ):
+            if ((atom2 == atom2_mol) and (atom3 == atom3_mol)) or ((atom2 == atom3_mol) and (atom3 == atom2_mol)):
                 k = params[-1]
                 numpy.testing.assert_allclose(
                     k / k.unit,

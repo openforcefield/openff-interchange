@@ -98,13 +98,9 @@ class TestOpenMM:
             topology.box_vectors = None
 
         if inputs["periodic"]:
-            sage.get_parameter_handler("vdW", {}).periodic_method = inputs[
-                "vdw_periodic"
-            ]
+            sage.get_parameter_handler("vdW", {}).periodic_method = inputs["vdw_periodic"]
         else:
-            sage.get_parameter_handler("vdW", {}).nonperiodic_method = inputs[
-                "vdw_nonperiodic"
-            ]
+            sage.get_parameter_handler("vdW", {}).nonperiodic_method = inputs["vdw_nonperiodic"]
 
         sage.get_parameter_handler(
             "Electrostatics",
@@ -118,13 +114,9 @@ class TestOpenMM:
             nonbonded_method = result
             # The method is validated and may raise an exception if it's not supported.
             if inputs["periodic"]:
-                sage.get_parameter_handler("vdW", {}).periodic_method = inputs[
-                    "vdw_periodic"
-                ]
+                sage.get_parameter_handler("vdW", {}).periodic_method = inputs["vdw_periodic"]
             else:
-                sage.get_parameter_handler("vdW", {}).nonperiodic_method = inputs[
-                    "vdw_nonperiodic"
-                ]
+                sage.get_parameter_handler("vdW", {}).nonperiodic_method = inputs["vdw_nonperiodic"]
 
             sage.get_parameter_handler(
                 "Electrostatics",
@@ -287,9 +279,7 @@ class TestOpenMM:
         separate = get_openmm_energies(out, combine_nonbonded_forces=False)
         combined = get_openmm_energies(out, combine_nonbonded_forces=True)
 
-        assert (
-            separate["vdW"] + separate["Electrostatics"] - combined["Nonbonded"]
-        ).m < 0.001
+        assert (separate["vdW"] + separate["Electrostatics"] - combined["Nonbonded"]).m < 0.001
 
     def test_openmm_no_angle_force_if_constrained(self, water, sage):
         topology = water.to_topology()
@@ -567,7 +557,6 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
 @skip_if_missing("openmm")
 @pytest.mark.slow
 class TestOpenMMVirtualSites:
-
     @pytest.fixture
     def sage_with_sigma_hole(self, sage):
         """Fixture that loads an SMIRNOFF XML with a C-Cl sigma hole."""
@@ -873,9 +862,7 @@ class TestToOpenMMTopology:
         atom_names = set()
         for atom in omm_topology.atoms():
             atom_names.add(atom.name)
-        assert (
-            len(atom_names) < 32
-        ), "There should be duplicate atom names in this output topology"
+        assert len(atom_names) < 32, "There should be duplicate atom names in this output topology"
 
     @pytest.mark.parametrize("ensure_unique_atom_names", ["chains", True])
     def test_generate_per_molecule_unique_atom_names_with_residues(
@@ -923,9 +910,7 @@ class TestToOpenMMTopology:
         atom_names = set()
         for atom in omm_topology.atoms():
             atom_names.add(atom.name)
-        assert (
-            len(atom_names) == 32
-        ), "There should not be duplicate atom names in this output topology"
+        assert len(atom_names) == 32, "There should not be duplicate atom names in this output topology"
 
     @pytest.mark.parametrize(
         "ensure_unique_atom_names",
@@ -958,25 +943,17 @@ class TestToOpenMMTopology:
         )
 
         # Get the atom names back from the initial molecules after calling to_openmm
-        final_atomnames_mols = [
-            atom.name for atom in [*ethanol.atoms, *benzene.atoms, *benzene.atoms]
-        ]
+        final_atomnames_mols = [atom.name for atom in [*ethanol.atoms, *benzene.atoms, *benzene.atoms]]
         # Get the atom names back from the initial topology after calling to_openmm
         final_atomnames_offtop = [atom.name for atom in off_topology.atoms]
         # Get the atom names back from the new OpenMM topology
         final_atomnames_ommtop = [atom.name for atom in omm_topology.atoms()]
 
         # Check the appropriate properties!
-        assert (
-            init_atomnames == final_atomnames_mols
-        ), "Molecules' atom names were changed"
-        assert (
-            init_atomnames == final_atomnames_offtop
-        ), "Topology's atom names were changed"
+        assert init_atomnames == final_atomnames_mols, "Molecules' atom names were changed"
+        assert init_atomnames == final_atomnames_offtop, "Topology's atom names were changed"
         if ensure_unique_atom_names:
-            assert (
-                init_atomnames != final_atomnames_ommtop
-            ), "New atom names should've been generated but weren't"
+            assert init_atomnames != final_atomnames_ommtop, "New atom names should've been generated but weren't"
 
 
 @skip_if_missing("openmm")

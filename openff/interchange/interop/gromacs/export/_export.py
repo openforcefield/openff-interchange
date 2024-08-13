@@ -117,11 +117,9 @@ class GROMACSWriter(_BaseModel):
 
             if merge_atom_types:
                 if _is_atom_type_in_list(atom_type, reduced_atom_types):
-                    mapping_to_reduced_atom_types[atom_type.name] = (
-                        _is_atom_type_in_list(
-                            atom_type,
-                            reduced_atom_types,
-                        )
+                    mapping_to_reduced_atom_types[atom_type.name] = _is_atom_type_in_list(
+                        atom_type,
+                        reduced_atom_types,
                     )
                 else:
                     _at_name = _get_new_entry_name(reduced_atom_types)
@@ -165,8 +163,7 @@ class GROMACSWriter(_BaseModel):
             top.write("[ moleculetype ]\n")
 
             top.write(
-                f"{molecule_name.replace(' ', '_')}\t"
-                f"{molecule_type.nrexcl:10d}\n\n",
+                f"{molecule_name.replace(' ', '_')}\t" f"{molecule_type.nrexcl:10d}\n\n",
             )
 
             self._write_atoms(
@@ -296,9 +293,7 @@ class GROMACSWriter(_BaseModel):
 
             if function in [1, 4]:
                 top.write(
-                    f"{dihedral.phi.m :20.12f}"
-                    f"{dihedral.k.m :20.12f}"
-                    f"{dihedral.multiplicity :18d}",
+                    f"{dihedral.phi.m :20.12f}" f"{dihedral.k.m :20.12f}" f"{dihedral.multiplicity :18d}",
                 )
 
             elif function == 3:

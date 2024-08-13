@@ -47,8 +47,5 @@ dependencies:
   - pdbfixer
   - ipdb
   - pre-commit
-  - black
-  - isort
-  - flake8
   - snakeviz
   - tuna

@@ -690,9 +690,7 @@ class TestMergeAtomTypes(_NeedsGROMACS):
         # These are (n_atoms x 1) lists of parameters, which should be
         # read from [ atoms ] section and cross-referenced to [ atomtypes ]
         for attr in ["sigma", "epsilon", "charge"]:
-            assert [getattr(atom, attr) for atom in not_merged.atoms] == [
-                getattr(atom, attr) for atom in merged.atoms
-            ]
+            assert [getattr(atom, attr) for atom in not_merged.atoms] == [getattr(atom, attr) for atom in merged.atoms]
 
 
 class TestGROMACSVirtualSites(_NeedsGROMACS):
@@ -775,8 +773,6 @@ class TestGROMACSVirtualSites(_NeedsGROMACS):
 
         assert system.getForce(0).getNumParticles() == 8
 
-        charges = [
-            system.getForce(0).getParticleParameters(i)[0]._value for i in range(4)
-        ]
+        charges = [system.getForce(0).getParticleParameters(i)[0]._value for i in range(4)]
 
         assert sum(charges) == pytest.approx(0.0)

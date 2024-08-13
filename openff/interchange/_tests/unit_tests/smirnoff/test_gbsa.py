@@ -56,9 +56,7 @@ class TestGBSACollection:
         assert len(collection.key_map) == 9
         assert len(collection.potentials) == 4
 
-        oxygen_parameters = collection.potentials[
-            collection.key_map[TopologyKey(atom_indices=(2,))]
-        ].parameters
+        oxygen_parameters = collection.potentials[collection.key_map[TopologyKey(atom_indices=(2,))]].parameters
 
         assert oxygen_parameters["radius"] == Quantity(0.15, unit.nanometer)
         assert oxygen_parameters["scale"] == Quantity(0.85, unit.dimensionless)
