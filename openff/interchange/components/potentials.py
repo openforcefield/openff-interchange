@@ -39,8 +39,7 @@ if has_package("jax"):
 def __getattr__(name: str):
     if name == "PotentialHandler":
         warnings.warn(
-            "`PotentialHandler` has been renamed to `Collection`. "
-            "Importing `Collection` instead.",
+            "`PotentialHandler` has been renamed to `Collection`. " "Importing `Collection` instead.",
             InterchangeDeprecationWarning,
             stacklevel=2,
         )
@@ -77,19 +76,12 @@ class WrappedPotential(_BaseModel):
     @property
     def parameters(self) -> dict[str, Quantity]:
         """Get the parameters as represented by the stored potentials and coefficients."""
-        keys: set[str] = {
-            param_key
-            for pot in self._inner_data.keys()
-            for param_key in pot.parameters.keys()
-        }
+        keys: set[str] = {param_key for pot in self._inner_data.keys() for param_key in pot.parameters.keys()}
         params = dict()
         for key in keys:
             params.update(
                 {
-                    key: sum(
-                        coeff * pot.parameters[key]
-                        for pot, coeff in self._inner_data.items()
-                    ),
+                    key: sum(coeff * pot.parameters[key] for pot, coeff in self._inner_data.items()),
                 },
             )
         return params
@@ -174,10 +166,7 @@ def validate_key_map(v: Any, handler, info) -> dict:
 def serialize_key_map(value: dict[str, str], handler, info) -> dict[str, str]:
     """Serialize the parameters field of a Potential object."""
     if info.mode == "json":
-        return {
-            key.model_dump_json(): value.model_dump_json()
-            for key, value in value.items()
-        }
+        return {key.model_dump_json(): value.model_dump_json() for key, value in value.items()}
 
     else:
         raise NotImplementedError(f"Serialization mode {info.mode} not implemented.")
@@ -197,10 +186,7 @@ def validate_potential_dict(
 ):
     """Validate the parameters field of a Potential object."""
     if info.mode == "json":
-        return {
-            PotentialKey.model_validate_json(key): Potential.model_validate_json(val)
-            for key, val in v.items()
-        }
+        return {PotentialKey.model_validate_json(key): Potential.model_validate_json(val) for key, val in v.items()}
 
     elif info.mode == "python":
         # Unclear why str sometimes sneak into here in Python mode; everything
@@ -223,10 +209,7 @@ def serialize_potential_dict(
 ) -> dict[str, str]:
     """Serialize the parameters field of a Potential object."""
     if info.mode == "json":
-        return {
-            key.model_dump_json(): value.model_dump_json()
-            for key, value in value.items()
-        }
+        return {key.model_dump_json(): value.model_dump_json() for key, value in value.items()}
 
 
 Potentials = Annotated[
@@ -262,12 +245,8 @@ class Collection(_BaseModel):
         """
         Return a set of variables found in the expression but not in any potentials.
         """
-        vars_in_potentials = set([*self.potentials.values()][0].parameters.keys())
-        vars_in_expression = {
-            node.id
-            for node in ast.walk(ast.parse(self.expression))
-            if isinstance(node, ast.Name)
-        }
+        vars_in_potentials = next(iter(self.potentials.values())).parameters.keys()
+        vars_in_expression = {node.id for node in ast.walk(ast.parse(self.expression)) if isinstance(node, ast.Name)}
         return vars_in_expression - vars_in_potentials
 
     def _get_parameters(self, atom_indices: tuple[int]) -> dict:
@@ -278,8 +257,7 @@ class Collection(_BaseModel):
                 parameters = potential.parameters
                 return parameters
         raise MissingParametersError(
-            f"Could not find parameter in parameter in handler {self.type} "
-            f"associated with atoms {atom_indices}",
+            f"Could not find parameter in parameter in handler {self.type} " f"associated with atoms {atom_indices}",
         )
 
     def get_force_field_parameters(
@@ -288,25 +266,16 @@ class Collection(_BaseModel):
     ) -> Union["ArrayLike", "Array"]:
         """Return a flattened representation of the force field parameters."""
         # TODO: Handle WrappedPotential
-        if any(
-            isinstance(potential, WrappedPotential)
-            for potential in self.potentials.values()
-        ):
+        if any(isinstance(potential, WrappedPotential) for potential in self.potentials.values()):
             raise NotImplementedError
 
         if use_jax:
             return jax_numpy.array(
-                [
-                    [v.m for v in p.parameters.values()]
-                    for p in self.potentials.values()
-                ],
+                [[v.m for v in p.parameters.values()] for p in self.potentials.values()],
             )
         else:
             return numpy.array(
-                [
-                    [v.m for v in p.parameters.values()]
-                    for p in self.potentials.values()
-                ],
+                [[v.m for v in p.parameters.values()] for p in self.potentials.values()],
             )
 
     def set_force_field_parameters(self, new_p: "ArrayLike") -> None:
@@ -324,9 +293,7 @@ class Collection(_BaseModel):
                 parameter_units = potential.parameters[parameter_key].units
                 modified_parameter = new_p[potential_index, parameter_index]  # type: ignore
 
-                self.potentials[potential_key].parameters[parameter_key] = (
-                    modified_parameter * parameter_units
-                )
+                self.potentials[potential_key].parameters[parameter_key] = modified_parameter * parameter_units
 
     def get_system_parameters(
         self,
@@ -339,10 +306,7 @@ class Collection(_BaseModel):
         These values are effectively force field parameters as applied to a chemical topology.
         """
         # TODO: Handle WrappedPotential
-        if any(
-            isinstance(potential, WrappedPotential)
-            for potential in self.potentials.values()
-        ):
+        if any(isinstance(potential, WrappedPotential) for potential in self.potentials.values()):
             raise NotImplementedError
 
         if p is None:
@@ -420,11 +384,7 @@ class Collection(_BaseModel):
             return super().__getattribute__(attr)
 
     def __getitem__(self, key) -> Potential:
-        if (
-            isinstance(key, tuple)
-            and key not in self.key_map
-            and tuple(reversed(key)) in self.key_map
-        ):
+        if isinstance(key, tuple) and key not in self.key_map and tuple(reversed(key)) in self.key_map:
             return self.potentials[self.key_map[tuple(reversed(key))]]
 
         return self.potentials[self.key_map[key]]

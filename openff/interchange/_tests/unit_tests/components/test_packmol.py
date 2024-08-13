@@ -78,14 +78,13 @@ class TestPackmolWrapper:
         # Same units
         assert brick.u == box.u
         # Same volume
-        l, w, h = brick.m
+        length, width, height = brick.m
         assert numpy.isclose(
             numpy.abs(numpy.linalg.det(box.m)),
-            numpy.abs(l * w * h),
+            numpy.abs(length * width * height),
         )
         # Is rectangular
         assert brick.shape == (3,)
-        x, y, z = brick.m
 
     def test_compute_brick_from_box_vectors_not_reduced(self):
         """
@@ -359,12 +358,8 @@ class TestPackmolWrapper:
         ]:
             assert solvated_topology.box_vectors[position[0], position[1]].m == [0.0]
 
-        assert (
-            solvated_topology.box_vectors[0, 0] == solvated_topology.box_vectors[1, 1]
-        )
-        assert (
-            solvated_topology.box_vectors[2, 0] == solvated_topology.box_vectors[2, 1]
-        )
+        assert solvated_topology.box_vectors[0, 0] == solvated_topology.box_vectors[1, 1]
+        assert solvated_topology.box_vectors[2, 0] == solvated_topology.box_vectors[2, 1]
 
     def test_packmol_add_negative_solvent_mass(self):
         ligand = MoleculeWithConformer.from_smiles("C1CN2C(=N1)SSC2=S")

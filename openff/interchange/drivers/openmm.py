@@ -72,9 +72,7 @@ def get_openmm_energies(
         combine_nonbonded_forces=combine_nonbonded_forces,
     )
 
-    box_vectors: openmm.unit.Quantity = (
-        None if interchange.box is None else interchange.box.to_openmm()
-    )
+    box_vectors: openmm.unit.Quantity = None if interchange.box is None else interchange.box.to_openmm()
 
     positions: openmm.unit.Quantity = to_openmm_positions(
         interchange,
@@ -117,11 +115,7 @@ def _get_openmm_energies(
         context.setPeriodicBoxVectors(*box_vectors)
 
     context.setPositions(
-        (
-            numpy.round(positions, round_positions)
-            if round_positions is not None
-            else positions
-        ),
+        (numpy.round(positions, round_positions) if round_positions is not None else positions),
     )
 
     raw_energies: dict[int, openmm.unit.Quantity] = dict()
@@ -191,11 +185,7 @@ def _process(
         processed = staged
 
     else:
-        processed = {
-            key: staged[key]
-            for key in ["Bond", "Angle", "Torsion", "RBTorsion"]
-            if key in staged
-        }
+        processed = {key: staged[key] for key in ["Bond", "Angle", "Torsion", "RBTorsion"] if key in staged}
 
         nonbonded_energies = [
             staged[key]
@@ -220,10 +210,7 @@ def _process(
 
             processed["Electrostatics"] = ensure_quantity(
                 numpy.sum(
-                    [
-                        staged.get(key, zero)
-                        for key in ["Electrostatics", "Electrostatics 1-4"]
-                    ],
+                    [staged.get(key, zero) for key in ["Electrostatics", "Electrostatics 1-4"]],
                 ),
                 "openff",
             )

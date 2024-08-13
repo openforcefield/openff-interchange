@@ -46,9 +46,7 @@ _PLUGIN_CLASS_MAPPING: dict[
 ] = dict()
 
 for collection_plugin in load_smirnoff_plugins():
-    parameter_handlers: list[type["ParameterHandler"]] = (
-        collection_plugin.allowed_parameter_handlers()
-    )
+    parameter_handlers: list[type["ParameterHandler"]] = collection_plugin.allowed_parameter_handlers()
 
     for parameter_handler in parameter_handlers:
         if parameter_handler in load_handler_plugins():
@@ -104,7 +102,6 @@ def _create_interchange(
     partial_bond_orders_from_molecules: list[Molecule] | None = None,
     allow_nonintegral_charges: bool = False,
 ) -> Interchange:
-
     _check_supported_handlers(force_field)
 
     # interchange = Interchange(topology=topology)
@@ -381,16 +378,11 @@ def _plugins(
     for collection_class in _PLUGIN_CLASS_MAPPING.values():
         # Track the handlers (keys) that map to this collection (value)
         handler_classes = [
-            handler
-            for handler in _PLUGIN_CLASS_MAPPING
-            if _PLUGIN_CLASS_MAPPING[handler] == collection_class
+            handler for handler in _PLUGIN_CLASS_MAPPING if _PLUGIN_CLASS_MAPPING[handler] == collection_class
         ]
 
         if not all(
-            [
-                handler_class._TAGNAME in force_field.registered_parameter_handlers
-                for handler_class in handler_classes
-            ],
+            [handler_class._TAGNAME in force_field.registered_parameter_handlers for handler_class in handler_classes],
         ):
             continue
 
@@ -430,8 +422,7 @@ def _plugins(
         else:
             # If this collection takes multiple handlers, pass it a list. Consider making this type the default.
             handlers: list[ParameterHandler] = [
-                force_field[handler_class._TAGNAME]
-                for handler_class in _PLUGIN_CLASS_MAPPING.keys()
+                force_field[handler_class._TAGNAME] for handler_class in _PLUGIN_CLASS_MAPPING.keys()
             ]
 
             collection = collection_class.create(

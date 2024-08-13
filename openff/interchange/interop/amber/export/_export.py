@@ -151,15 +151,11 @@ def _get_bond_lists(
     for bond, key_ in interchange["Bonds"].key_map.items():
         bond_type_index = potential_key_to_bond_type_mapping[key_]
 
-        these_atomic_numbers = tuple(
-            atomic_numbers[index] for index in bond.atom_indices
-        )
+        these_atomic_numbers = tuple(atomic_numbers[index] for index in bond.atom_indices)
 
         bond_indices = tuple(sorted(bond.atom_indices))
 
-        bonds_list = (
-            bonds_inc_hydrogen if 1 in these_atomic_numbers else bonds_without_hydrogen
-        )
+        bonds_list = bonds_inc_hydrogen if 1 in these_atomic_numbers else bonds_without_hydrogen
 
         bonds_list.append(bond_indices[0] * 3)
         bonds_list.append(bond_indices[1] * 3)
@@ -179,22 +175,12 @@ def _get_angle_lists(
     for angle, key_ in interchange["Angles"].key_map.items():
         angle_type_index = potential_key_to_angle_type_mapping[key_]
 
-        these_atomic_numbers = tuple(
-            atomic_numbers[index] for index in angle.atom_indices
-        )
+        these_atomic_numbers = tuple(atomic_numbers[index] for index in angle.atom_indices)
 
         angle_indices = list(angle.atom_indices)
-        angle_indices = (
-            angle_indices
-            if angle_indices[0] < angle_indices[-1]
-            else list(reversed(angle_indices))
-        )
+        angle_indices = angle_indices if angle_indices[0] < angle_indices[-1] else list(reversed(angle_indices))
 
-        angles_list = (
-            angles_inc_hydrogen
-            if 1 in these_atomic_numbers
-            else angles_without_hydrogen
-        )
+        angles_list = angles_inc_hydrogen if 1 in these_atomic_numbers else angles_without_hydrogen
 
         angles_list.append(angle_indices[0] * 3)
         angles_list.append(angle_indices[1] * 3)
@@ -235,9 +221,7 @@ def _get_dihedral_lists(
                     ),
                 )
 
-            these_atomic_numbers = tuple(
-                atomic_numbers[index] for index in dihedral.atom_indices
-            )
+            these_atomic_numbers = tuple(atomic_numbers[index] for index in dihedral.atom_indices)
 
             # See if the non-bonded interactions of the first and fourth atoms need to be exluded
 
@@ -261,11 +245,7 @@ def _get_dihedral_lists(
             else:
                 exclude_nonbonded = 1
 
-            dihedrals_list = (
-                dihedrals_inc_hydrogen
-                if 1 in these_atomic_numbers
-                else dihedrals_without_hydrogen
-            )
+            dihedrals_list = dihedrals_inc_hydrogen if 1 in these_atomic_numbers else dihedrals_without_hydrogen
 
             dihedrals_list.append(atom1_index * 3)
             dihedrals_list.append(atom2_index * 3)
@@ -283,15 +263,9 @@ def _get_dihedral_lists(
 
             # Assume that no improper torsions include 1-4 pairs, so don't check nor track them
 
-            these_atomic_numbers = tuple(
-                atomic_numbers[index] for index in improper.atom_indices
-            )
+            these_atomic_numbers = tuple(atomic_numbers[index] for index in improper.atom_indices)
 
-            dihedrals_list = (
-                dihedrals_inc_hydrogen
-                if 1 in these_atomic_numbers
-                else dihedrals_without_hydrogen
-            )
+            dihedrals_list = dihedrals_inc_hydrogen if 1 in these_atomic_numbers else dihedrals_without_hydrogen
 
             dihedrals_list.append(atom1_index * 3)
             dihedrals_list.append(atom2_index * 3)
@@ -350,8 +324,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
             key: i for i, key in enumerate(interchange["vdW"].potentials)
         }
         atom_type_indices = [
-            potential_key_to_atom_type_mapping[potential_key]
-            for potential_key in interchange["vdW"].key_map.values()
+            potential_key_to_atom_type_mapping[potential_key] for potential_key in interchange["vdW"].key_map.values()
         ]
 
         potential_key_to_bond_type_mapping: dict[PotentialKey, int] = {
@@ -382,9 +355,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         number_excluded_atoms, excluded_atoms_list = _get_exclusion_lists(
             per_atom_exclusion_lists,
         )
-        atomic_numbers = tuple(
-            atom.atomic_number for atom in interchange.topology.atoms
-        )
+        atomic_numbers = tuple(atom.atomic_number for atom in interchange.topology.atoms)
 
         bonds_inc_hydrogen, bonds_without_hydrogen = _get_bond_lists(
             interchange,
@@ -555,7 +526,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
 
                 coeff_index = int(i + (j + 1) * j / 2) + 1  # FORTRAN IDX
 
-                # index = NONBONDED PARM INDEX [NTYPES × (ATOM TYPE INDEX(i) − 1) + ATOM TYPE INDEX(j)]
+                # index = NONBONDED PARM INDEX [NTYPES * (ATOM TYPE INDEX(i) - 1) + ATOM TYPE INDEX(j)]
                 parm_index_fwd = (
                     NTYPES * (atom_type_index_i - 1) + atom_type_index_j  # FORTRAN IDX
                 )
@@ -593,8 +564,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         _write_text_blob(prmtop, text_blob)
 
         residue_names = [
-            getattr(residue, "residue_name", "RES")
-            for residue in interchange.topology.hierarchy_iterator("residues")
+            getattr(residue, "residue_name", "RES") for residue in interchange.topology.hierarchy_iterator("residues")
         ]
 
         # Avoid blank residue labels, though this is a band-aid. See issue #652
@@ -607,7 +577,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
 
         residue_pointers = (
             [
-                interchange.topology.atom_index([*residue.atoms][0])
+                interchange.topology.atom_index(next(iter(residue.atoms)))
                 for residue in interchange.topology.hierarchy_iterator("residues")
             ]
             if NRES > 1
@@ -628,10 +598,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
 
         prmtop.write("%FLAG BOND_EQUIL_VALUE\n" "%FORMAT(5E16.8)\n")
         bond_length = [
-            interchange["Bonds"]
-            .potentials[key]
-            .parameters["length"]
-            .m_as(unit.angstrom)
+            interchange["Bonds"].potentials[key].parameters["length"].m_as(unit.angstrom)
             for key in potential_key_to_bond_type_mapping
         ]
         text_blob = "".join([f"{val:16.8E}" for val in bond_length])
@@ -639,8 +606,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
 
         prmtop.write("%FLAG ANGLE_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
         angle_k = [
-            interchange["Angles"].potentials[key].parameters["k"].m_as(kcal_mol_rad2)
-            / 2
+            interchange["Angles"].potentials[key].parameters["k"].m_as(kcal_mol_rad2) / 2
             for key in potential_key_to_angle_type_mapping
         ]
         text_blob = "".join([f"{val:16.8E}" for val in angle_k])

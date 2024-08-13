@@ -110,7 +110,7 @@ def quantity_json_serializer(
         magnitude = magnitude.tolist()
 
     return {
-        "value": magnitude,
+        "val": magnitude,
         "unit": str(quantity.units),
     }
 

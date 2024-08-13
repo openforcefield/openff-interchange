@@ -95,9 +95,7 @@ class MDConfig(_BaseModel):
                     mdconfig.switching_function = False
                 else:
                     mdconfig.switching_function = True
-                    mdconfig.switching_distance = (
-                        mdconfig.vdw_cutoff - vdw_collection.switch_width
-                    )
+                    mdconfig.switching_distance = mdconfig.vdw_cutoff - vdw_collection.switch_width
             else:
                 mdconfig.switching_function = False
 
@@ -224,9 +222,7 @@ class MDConfig(_BaseModel):
             * Coefficients are ints associated with Bond Coeffs / Angle Coeffs section
             * Coefficients are zero-indexed
             """
-            constraint_styles = {
-                key.associated_handler for key in interchange["Constraints"].potentials
-            }
+            constraint_styles = {key.associated_handler for key in interchange["Constraints"].potentials}
 
             if len(constraint_styles.difference({"Bonds", "Angles"})) > 0:
                 raise NotImplementedError(
@@ -234,15 +230,11 @@ class MDConfig(_BaseModel):
                 )
 
             constrained_bond_smirks = {
-                key.id
-                for key in interchange["Constraints"].potentials
-                if key.associated_handler == "Bonds"
+                key.id for key in interchange["Constraints"].potentials if key.associated_handler == "Bonds"
             }
 
             constrained_angle_smirks = {
-                key.id
-                for key in interchange["Constraints"].potentials
-                if key.associated_handler == "Angles"
+                key.id for key in interchange["Constraints"].potentials if key.associated_handler == "Angles"
             }
 
             return (
@@ -269,7 +261,6 @@ class MDConfig(_BaseModel):
         ) = _get_coeffs_of_constrained_bonds_and_angles(interchange)
 
         with open(input_file, "w") as lmp:
-
             if self.switching_function is not None:
                 if self.switching_distance.m > 0.0:
                     warnings.warn(
@@ -281,10 +272,7 @@ class MDConfig(_BaseModel):
                     )
 
             lmp.write(
-                "units real\n"
-                "atom_style full\n"
-                "\n"
-                "dimension 3\nboundary p p p\n\n",
+                "units real\n" "atom_style full\n" "\n" "dimension 3\nboundary p p p\n\n",
             )
 
             if len(interchange["Bonds"].key_map) > 0:

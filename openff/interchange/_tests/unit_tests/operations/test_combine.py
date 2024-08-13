@@ -101,7 +101,6 @@ class TestCombine:
         basic_top,
         handler,
     ):
-
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
         sage_modified = ForceField("openff-2.1.0.offxml")
@@ -122,7 +121,6 @@ class TestCombine:
         sage,
         basic_top,
     ):
-
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
         sage_modified = ForceField("openff-2.1.0.offxml")

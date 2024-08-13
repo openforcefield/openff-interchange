@@ -182,8 +182,7 @@ def _apply_hmr(
 
     if system.getNumParticles() != interchange.topology.n_atoms:
         raise UnsupportedExportError(
-            "Hydrogen mass repartitioning with virtual sites present, even on "
-            " rigid water, is not yet supported.",
+            "Hydrogen mass repartitioning with virtual sites present, even on " " rigid water, is not yet supported.",
         )
 
     water = Molecule.from_smiles("O")
@@ -194,11 +193,9 @@ def _apply_hmr(
     _hydrogen_mass = hydrogen_mass * openmm.unit.dalton
 
     for bond in interchange.topology.bonds:
-
         heavy_atom, hydrogen_atom = bond.atoms
 
         if heavy_atom.atomic_number == 1:
-
             heavy_atom, hydrogen_atom = hydrogen_atom, heavy_atom
 
         # TODO: This should only skip rigid waters, even though HMR or flexible water is questionable
@@ -207,7 +204,6 @@ def _apply_hmr(
             and (heavy_atom.atomic_number != 1)
             and not (_is_water(hydrogen_atom.molecule))
         ):
-
             hydrogen_index = interchange.topology.atom_index(hydrogen_atom)
             heavy_index = interchange.topology.atom_index(heavy_atom)
 

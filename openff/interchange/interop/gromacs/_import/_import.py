@@ -121,13 +121,10 @@ def from_files(top_file, gro_file, cls=GROMACSSystem) -> GROMACSSystem:
                 raise ValueError(f"Invalid directive {current_directive}")
 
     for molecule_type in system.molecule_types.values():
-        this_molecule_atom_type_names = tuple(
-            atom.atom_type for atom in molecule_type.atoms
-        )
+        this_molecule_atom_type_names = tuple(atom.atom_type for atom in molecule_type.atoms)
 
         molecule_type._contained_atom_types = {
-            atom_type_name: system.atom_types[atom_type_name]
-            for atom_type_name in this_molecule_atom_type_names
+            atom_type_name: system.atom_types[atom_type_name] for atom_type_name in this_molecule_atom_type_names
         }
 
     system.positions = _read_coordinates(gro_file)

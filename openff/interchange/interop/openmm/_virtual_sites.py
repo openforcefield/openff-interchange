@@ -25,8 +25,7 @@ def _create_openmm_virtual_site(
     # mapping has a different meaning if looking up a virtual site, but that should not happen here
     # as a virtual site's orientation atom should never be a virtual site
     openmm_indices: list[int] = [
-        openff_openmm_particle_map[openff_index]
-        for openff_index in virtual_site.orientations
+        openff_openmm_particle_map[openff_index] for openff_index in virtual_site.orientations
     ]
 
     # It is assumed that the first "orientation" atom is the "parent" atom.

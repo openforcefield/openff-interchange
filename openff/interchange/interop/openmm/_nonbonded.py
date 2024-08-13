@@ -184,9 +184,7 @@ def _add_particles_to_system(
             )
 
     for molecule in interchange.topology.molecules:
-        for virtual_site_key in molecule_virtual_site_map[
-            interchange.topology.molecule_index(molecule)
-        ]:
+        for virtual_site_key in molecule_virtual_site_map[interchange.topology.molecule_index(molecule)]:
             from openff.interchange.interop.openmm._virtual_sites import (
                 _create_openmm_virtual_site,
             )
@@ -220,7 +218,7 @@ def _add_particles_to_system(
 
 def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
     try:
-        vdw: "vdWCollection" = interchange["vdW"]
+        vdw: vdWCollection = interchange["vdW"]
     except LookupError:
         for collection in interchange.collections.values():
             if collection.is_plugin:
@@ -248,7 +246,7 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
         vdw_expression = None
 
     try:
-        electrostatics: "ElectrostaticsCollection" = interchange["Electrostatics"]
+        electrostatics: ElectrostaticsCollection = interchange["Electrostatics"]
     except LookupError:
         electrostatics = None  # type: ignore[assignment]
 
@@ -304,9 +302,7 @@ def _create_single_nonbonded_force(
     system.addForce(non_bonded_force)
 
     if interchange.box is None:
-        if (data.vdw_method in ("no-cutoff", None)) and (
-            data.electrostatics_method in ("Coulomb", None)
-        ):
+        if (data.vdw_method in ("no-cutoff", None)) and (data.electrostatics_method in ("Coulomb", None)):
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
             non_bonded_force.setUseDispersionCorrection(True)
             if data.vdw_cutoff:
@@ -426,9 +422,7 @@ def _create_single_nonbonded_force(
             )
 
             _potential_key = interchange["VirtualSites"].key_map[virtual_site_key]
-            virtual_site_potential = interchange["VirtualSites"].potentials[
-                _potential_key
-            ]
+            virtual_site_potential = interchange["VirtualSites"].potentials[_potential_key]
             virtual_site_object = _create_virtual_site_object(
                 virtual_site_key,
                 virtual_site_potential,
@@ -445,9 +439,7 @@ def _create_single_nonbonded_force(
                     "vdW and/or electrostatics interactions",
                 )
 
-            charge_increments = coul.potentials[coul_key].parameters[
-                "charge_increments"
-            ]
+            charge_increments = coul.potentials[coul_key].parameters["charge_increments"]
             charge = to_openmm_quantity(-sum(charge_increments))
 
             vdw_parameters = vdw.potentials[vdw_key].parameters
@@ -462,9 +454,7 @@ def _create_single_nonbonded_force(
                     f"Mismatch in system ({system_index=}) and force ({force_index=}) indexing",
                 )
 
-            parent_atom_index = openff_openmm_particle_map[
-                virtual_site_object.orientations[0]
-            ]
+            parent_atom_index = openff_openmm_particle_map[virtual_site_object.orientations[0]]
 
             parent_virtual_particle_mapping[parent_atom_index].append(force_index)
 
@@ -488,10 +478,7 @@ def _create_exceptions(
 ):
     # The topology indices reported by toolkit methods must be converted to openmm indices
     bonds = [
-        sorted(
-            openff_openmm_particle_map[interchange.topology.atom_index(a)]
-            for a in bond.atoms
-        )
+        sorted(openff_openmm_particle_map[interchange.topology.atom_index(a)] for a in bond.atoms)
         for bond in interchange.topology.bonds
     ]
 
@@ -507,7 +494,6 @@ def _create_exceptions(
 
     # Faster to loop through exceptions and look up parents than opposite
     if parent_virtual_particle_mapping not in (None, dict()):
-
         for exception_index in range(non_bonded_force.getNumExceptions()):
             # These particles should only be atoms in this loop
             (
@@ -631,7 +617,7 @@ def _create_multiple_nonbonded_forces(
             # feed in r_min1, epsilon1, ..., r_min2, epsilon2, ... each as individual parameters
             for index in [1, 2]:
                 for parameter in vdw.potential_parameters():
-                    vdw_14_force.addPerBondParameter(f"{parameter}{str(index)}")
+                    vdw_14_force.addPerBondParameter(f"{parameter}{index!s}")
 
             vdw_14_force.addGlobalParameter("scale14", vdw.scale_14)
 
@@ -735,9 +721,7 @@ def _create_multiple_nonbonded_forces(
             system.addForce(force)
 
     if vdw_force is not None and electrostatics_force is not None:
-        if (vdw_force.getNonbondedMethod() > 0) ^ (
-            electrostatics_force.getNonbondedMethod() > 0
-        ):
+        if (vdw_force.getNonbondedMethod() > 0) ^ (electrostatics_force.getNonbondedMethod() > 0):
             raise UnsupportedCutoffMethodError(
                 "When using `openmm.CustomNonbondedForce`, vdW and electrostatics cutoff methods "
                 "must agree on whether or not periodic boundary conditions should be used. "
@@ -752,7 +736,7 @@ def _create_vdw_force(
     molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
     has_virtual_sites: bool,
 ) -> openmm.CustomNonbondedForce | None:
-    vdw_collection: Optional["vdWCollection"] = data.vdw_collection
+    vdw_collection: Optional[vdWCollection] = data.vdw_collection
 
     if vdw_collection is None:
         return None
@@ -869,9 +853,7 @@ def _create_electrostatics_force(
                 parent_atom_index = virtual_site_key.orientation_atom_indices[0]
 
                 # this dict contains only "OpenMM" indices, so look through map
-                parent_virtual_particle_mapping[
-                    openff_openmm_particle_map[parent_atom_index]
-                ].append(force_index)
+                parent_virtual_particle_mapping[openff_openmm_particle_map[parent_atom_index]].append(force_index)
 
     if data.electrostatics_method == "reaction-field":
         raise UnsupportedCutoffMethodError(
@@ -932,7 +914,7 @@ def _set_particle_parameters(
     else:
         partial_charges = None
 
-    vdw: "vdWCollection" = data.vdw_collection
+    vdw: vdWCollection = data.vdw_collection
 
     for molecule in interchange.topology.molecules:
         for atom in molecule.atoms:
@@ -988,9 +970,7 @@ def _set_particle_parameters(
                     0.0,
                 )
 
-        for virtual_site_key in molecule_virtual_site_map[
-            interchange.topology.molecule_index(molecule)
-        ]:
+        for virtual_site_key in molecule_virtual_site_map[interchange.topology.molecule_index(molecule)]:
             particle_index = openff_openmm_particle_map[virtual_site_key]
 
             if vdw is not None:
@@ -1032,7 +1012,6 @@ def _set_particle_parameters(
                 epsilon = openmm.unit.Quantity(0.0, openmm.unit.kilojoules_per_mole)
 
             if vdw_force is not None:
-
                 # TODO: Refactor getting the "vdW" parameters by particle index into
                 #       a common function
 

@@ -132,19 +132,13 @@ def _validate_inputs(
         elements.
 
     """
-    if (
-        box_vectors is None
-        and mass_density is None
-        and (solute is None or solute.box_vectors is None)
-    ):
+    if box_vectors is None and mass_density is None and (solute is None or solute.box_vectors is None):
         raise PACKMOLValueError(
-            "One of `box_vectors`, `mass_density`, or"
-            + " `solute.box_vectors` must be specified.",
+            "One of `box_vectors`, `mass_density`, or" + " `solute.box_vectors` must be specified.",
         )
     if box_vectors is not None and mass_density is not None:
         raise PACKMOLValueError(
-            "`box_vectors` and `mass_density` cannot be specified together;"
-            + " choose one or the other.",
+            "`box_vectors` and `mass_density` cannot be specified together;" + " choose one or the other.",
         )
 
     if box_vectors is not None and box_vectors.shape != (3, 3):
@@ -355,10 +349,7 @@ def _box_from_density(
 
     """
     # Get the desired volume in cubic working units
-    total_mass = sum(
-        sum([atom.mass for atom in molecule.atoms]) * n
-        for molecule, n in zip(molecules, n_copies)
-    )
+    total_mass = sum(sum([atom.mass for atom in molecule.atoms]) * n for molecule, n in zip(molecules, n_copies))
     volume = total_mass / mass_density
 
     return _scale_box(box_shape, volume)
@@ -848,9 +839,7 @@ def solvate_topology(
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
     target_mass = box_volume * target_density
-    solute_mass = sum(
-        sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
-    )
+    solute_mass = sum(sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules)
     solvent_mass = target_mass - solute_mass
 
     _check_add_positive_mass(solvent_mass)
@@ -935,9 +924,7 @@ def solvate_topology_nonwater(
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
     target_mass = box_volume * target_density
-    solute_mass = sum(
-        sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
-    )
+    solute_mass = sum(sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules)
 
     solvent_mass_to_add = target_mass - solute_mass
 
@@ -946,9 +933,7 @@ def solvate_topology_nonwater(
     _solvent = deepcopy(solvent)
     solvent_mass = sum([atom.mass for atom in _solvent.atoms])
 
-    solvent_to_add = (
-        (solvent_mass_to_add / solvent_mass).m_as(unit.dimensionless).round()
-    )
+    solvent_to_add = (solvent_mass_to_add / solvent_mass).m_as(unit.dimensionless).round()
 
     return pack_box(
         molecules=[solvent],

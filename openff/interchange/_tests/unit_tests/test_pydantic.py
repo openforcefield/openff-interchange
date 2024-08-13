@@ -6,12 +6,10 @@ from openff.interchange.pydantic import _BaseModel
 
 
 class Person(_BaseModel):
-
     mass: _Quantity = Field()
 
 
 class Roster(_BaseModel):
-
     people: dict[str, Person] = Field(dict())
 
     foo: _Quantity = Field()
@@ -50,7 +48,6 @@ def test_model_with_array_quantity():
 
 
 def test_nested_model():
-
     roster = Roster(
         people={"Bob": {"mass": "100.0 kilogram"}, "Alice": {"mass": "70.0 kilogram"}},
         foo="10.0 year",

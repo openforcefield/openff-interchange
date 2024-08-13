@@ -406,10 +406,7 @@ class GROMACSSystem(_BaseModel):
 
         molecule_names = [*self.molecules.keys()]
         molecules_before = molecule_names[: molecule_names.index(molecule_name)]
-        n_atoms_before = sum(
-            len(self.molecule_types[name].atoms) * self.molecules[name]
-            for name in molecules_before
-        )
+        n_atoms_before = sum(len(self.molecule_types[name].atoms) * self.molecules[name] for name in molecules_before)
 
         if self.positions is not None:
             row_indices_to_delete = [

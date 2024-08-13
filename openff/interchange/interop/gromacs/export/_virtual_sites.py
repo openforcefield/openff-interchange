@@ -28,7 +28,6 @@ def _create_gromacs_virtual_site(
     virtual_site_key: VirtualSiteKey,
     particle_map: dict[int | VirtualSiteKey, int],
 ) -> GROMACSVirtualSite:
-
     # Orientation atom indices are topology indices, but here they need to be indexed as molecule
     # indices. Store the difference between an orientation atom's molecule and topology indices.
     # (It can probably be any of the orientation atoms.)
@@ -44,8 +43,7 @@ def _create_gromacs_virtual_site(
 
     # These are GROMACS "molecule" indices, already mapped back from the topology on to the molecule
     gromacs_indices: list[int] = [
-        particle_map[openff_index] - offset + 1
-        for openff_index in virtual_site.orientations
+        particle_map[openff_index] - offset + 1 for openff_index in virtual_site.orientations
     ]
 
     if isinstance(virtual_site, _BondChargeVirtualSite):

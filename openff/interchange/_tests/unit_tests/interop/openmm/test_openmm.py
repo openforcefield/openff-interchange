@@ -38,16 +38,8 @@ class TestToOpenMM:
 
         split_system = interchange.to_openmm(combine_nonbonded_forces=False)
 
-        vdw_14_force = [
-            force
-            for force in split_system.getForces()
-            if force.getName() == "vdW 1-4 force"
-        ][0]
-        vdw_force = [
-            force
-            for force in split_system.getForces()
-            if force.getName() == "vdW force"
-        ][0]
+        vdw_14_force = [force for force in split_system.getForces() if force.getName() == "vdW 1-4 force"][0]
+        vdw_force = [force for force in split_system.getForces() if force.getName() == "vdW force"][0]
 
         assert vdw_force.getParticleParameters(0) == vdw_force.getParticleParameters(3)
 

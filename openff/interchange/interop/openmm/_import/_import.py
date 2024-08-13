@@ -59,7 +59,6 @@ def from_openmm(
         # OpenMM topologies do not store positions
 
     elif isinstance(topology, Topology):
-
         openff_topology = topology
         positions = openff_topology.get_positions()
 
@@ -101,16 +100,13 @@ def from_openmm(
                 )
 
     if positions is None:
-
         warnings.warn(
-            "Nothing was passed to the `positions` argument, are you sure "
-            "you don't want to pass positions?",
+            "Nothing was passed to the `positions` argument, are you sure " "you don't want to pass positions?",
             MissingPositionsWarning,
             stacklevel=2,
         )
 
     else:
-
         interchange.positions = positions
 
     if box_vectors is not None:
