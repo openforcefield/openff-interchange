@@ -23,7 +23,7 @@ dependencies:
   - mdtraj
   - pdbfixer
   - nglview
-  - openeye-toolkits >=2023.2
+  - openeye-toolkits =2024.1.0
   - pytest =8.0
   - pytest-xdist
   - nbval

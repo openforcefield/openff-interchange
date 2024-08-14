@@ -17,6 +17,7 @@ def test_hmr_basic(sage, reversed, ethanol, reversed_ethanol):
     topology = molecule.to_topology()
 
     interchange = sage.create_interchange(topology)
+    interchange.box = [10, 10, 10]
 
     interchange.to_gromacs(prefix="asdf", hydrogen_mass=hydrogen_mass)
 
@@ -39,6 +40,7 @@ def test_hmr_not_applied_to_water(sage, water):
     hydrogen_mass = 1.23
 
     interchange = sage.create_interchange(water.to_topology())
+    interchange.box = [10, 10, 10]
 
     interchange.to_gromacs(prefix="fff", hydrogen_mass=hydrogen_mass)
 

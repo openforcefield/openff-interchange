@@ -44,6 +44,8 @@ def parse_mdp(file: str) -> dict[str, str]:
 
     with open(file) as f:
         for line in f.readlines():
+            line, _semicolon, _comment = line.partition(";")
+
             split = [token.replace("-", "") for token in line.split()]
 
             if len(split) == 0:

@@ -302,7 +302,7 @@ class Interchange(_BaseModel):
         ----------
         prefix: str
             The prefix to use for the GROMACS topology and coordinate files, i.e. "foo" will produce
-            "foo.top" and "foo.gro".
+            "foo.top", "foo.gro", and "foo_pointenergy.mdp".
         decimal: int, default=3
             The number of decimal places to use when writing the GROMACS coordinate file.
         hydrogen_mass : float, default=1.007947
@@ -330,6 +330,33 @@ class Interchange(_BaseModel):
 
         writer.to_top(_merge_atom_types=_merge_atom_types)
         writer.to_gro(decimal=decimal)
+
+        self.to_mdp(prefix + "_pointenergy.mdp")
+
+    def to_mdp(self, file_path: Path | str):
+        """
+        Write a GROMACS run configuration ``.MDP`` file for a single-point energy.
+
+        GROMACS considers many of the simulation parameters specified by an
+        ``Interchange`` to be run configuration options rather than features of
+        the topology. These options are set in the ``.MDP`` file. The written
+        ``.MDP`` file includes the appropriate non-bonded configuration for the
+        ``Interchange``. The ``nsteps``, ``nstenergy``, and ``continuation``
+        configuration values are configured for a single-point energy
+        calculation and may be changed as appropriate to perform other
+        calculations. See the `GROMACS documentation`_ for details.
+
+        .. _GROMACS documentation: https://manual.gromacs.org/documentation/\
+        current/user-guide/mdp-options.html
+
+        Parameters
+        ----------
+        file_path
+            The path to the created GROMACS ``.MDP`` file
+
+        """
+        mdconfig = MDConfig.from_interchange(self)
+        mdconfig.write_mdp_file(str(file_path))
 
     def to_top(
         self,
@@ -387,6 +414,33 @@ class Interchange(_BaseModel):
         ).to_gro(decimal=decimal)
 
     def to_lammps(self, file_path: Path | str, writer="internal"):
+        """
+        Export this ``Interchange`` to LAMMPS data and run input files.
+
+        Parameters
+        ----------
+        file_path
+            The prefix to use for the LAMMPS data and run input files. If a path
+            ending in ".lmp" is given, the extension will be dropped to generate
+            the prefix. For example, both "foo" and "foo.lmp" will produce files
+            named "foo.lmp" and "foo_pointenergy.in".
+        writer
+            The file writer to use. Currently, only `"internal"` is supported.
+
+        """
+        # TODO: Rename `file_path` to `prefix` (breaking change)
+        prefix = str(file_path)
+        if prefix.endswith(".lmp"):
+            prefix = prefix[:-4]
+
+        datafile_path = prefix + ".lmp"
+        self.to_lammps_datafile(datafile_path, writer=writer)
+        self.to_lammps_input(
+            prefix + "_pointenergy.in",
+            datafile_path,
+        )
+
+    def to_lammps_datafile(self, file_path: Path | str, writer="internal"):
         """Export this Interchange to a LAMMPS data file."""
         if writer == "internal":
             from openff.interchange.interop.lammps import to_lammps
@@ -394,6 +448,34 @@ class Interchange(_BaseModel):
             to_lammps(self, file_path)
         else:
             raise UnsupportedExportError
+
+    def to_lammps_input(
+        self,
+        file_path: Path | str,
+        data_file: Path | str | None = None,
+    ):
+        """
+        Write a LAMMPS run input file for a single-point energy calculation.
+
+        LAMMPS considers many of the simulation parameters specified by an
+        ``Interchange`` to be run configuration options rather than features of
+        the force field. These options are set in the run input file.
+
+        Parameters
+        ----------
+        file_path
+            The path to the created LAMMPS run input file
+        data_file
+            The path to the LAMMPS data file that should be read by the input
+            file. If not given, ``file_path`` with the extension ``.lmp`` will
+            be used.
+
+        """
+        if data_file is None:
+            data_file = Path(file_path).with_suffix(".lmp")
+
+        mdconfig = MDConfig.from_interchange(self)
+        mdconfig.write_lammps_input(self, str(file_path), data_file=str(data_file))
 
     def to_openmm_system(
         self,
@@ -613,6 +695,22 @@ class Interchange(_BaseModel):
 
         else:
             raise UnsupportedExportError
+
+    def to_sander_input(self, file_path: Path | str):
+        """
+        Export this ``Interchange`` to a run input file for Amber's SANDER engine.
+
+        Amber considers many of the simulation parameters specified by an
+        ``Interchange`` to be run configuration options rather than parameters
+        of the topology. These options are set in the SANDER or PMEMD run input
+        file. The written SANDER input file includes the appropriate non-bonded
+        configuration for the ``Interchange`` which are essential to reproduce
+        the desired force field. The file also includes configuration for a
+        single-point energy calculation, which should be modified to produce the
+        desired simulation.
+        """
+        mdconfig = MDConfig.from_interchange(self)
+        mdconfig.write_sander_input_file(str(file_path))
 
     @classmethod
     @requires_package("foyer")

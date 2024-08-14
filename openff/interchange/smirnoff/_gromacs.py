@@ -11,11 +11,7 @@ from openff.units.elements import MASSES, SYMBOLS
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.potentials import Collection
 from openff.interchange.components.toolkit import _get_14_pairs
-from openff.interchange.exceptions import (
-    MissingAngleError,
-    MissingBondError,
-    UnsupportedExportError,
-)
+from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.interop._virtual_sites import (
     _virtual_site_parent_molecule_mapping,
 )
@@ -135,7 +131,9 @@ def _convert(
             atom_type_name = f"{unique_molecule.name}_{particle_map[unique_molecule.atom_index(atom)]}"
             _atom_atom_type_map[atom] = atom_type_name
 
-            topology_index = particle_map[interchange.topology.atom_index(atom)]
+            # when looking up parameters, use the topology index, not the particle index ...
+            # ... or so I think is the expectation of the `TopologyKey`s in the vdW collection
+            topology_index = interchange.topology.atom_index(atom)
             key = TopologyKey(atom_indices=(topology_index,))
 
             vdw_parameters = vdw_collection.potentials[vdw_collection.key_map[key]].parameters
@@ -195,18 +193,21 @@ def _convert(
 
         molecule = GROMACSMolecule(name=unique_molecule.name)
 
-        for atom in unique_molecule.atoms:
-            unique_residue_names = {atom.metadata.get("residue_name", None) for atom in unique_molecule.atoms}
+        unique_residue_names = {
+            atom.metadata.get("residue_name", None) for atom in unique_molecule.atoms
+        }
 
-            if None in unique_residue_names:
-                if len(unique_residue_names) > 1:
-                    raise NotImplementedError(
-                        "If some atoms have residue names, all atoms must have residue names.",
-                    )
-                else:
-                    # Use dummy since we're already iterating over this molecule's atoms
-                    for _atom in unique_molecule.atoms:
-                        _atom.metadata["residue_name"] = unique_molecule.name
+        if None in unique_residue_names:
+            if len(unique_residue_names) > 1:
+                raise NotImplementedError(
+                    "If some atoms have residue names, all atoms must have residue names.",
+                )
+            else:
+                # Use dummy since we're already iterating over this molecule's atoms
+                for _atom in unique_molecule.atoms:
+                    _atom.metadata["residue_name"] = unique_molecule.name
+
+        for atom in unique_molecule.atoms:
 
             name = SYMBOLS[atom.atomic_number] if getattr(atom, "name", "") == "" else atom.name
 
@@ -228,11 +229,12 @@ def _convert(
                 ),
             )
 
-            this_molecule_atom_type_names = tuple(atom.atom_type for atom in molecule.atoms)
+        this_molecule_atom_type_names = tuple(atom.atom_type for atom in molecule.atoms)
 
-            molecule._contained_atom_types = {
-                atom_type_name: system.atom_types[atom_type_name] for atom_type_name in this_molecule_atom_type_names
-            }
+        molecule._contained_atom_types = {
+            atom_type_name: system.atom_types[atom_type_name]
+            for atom_type_name in this_molecule_atom_type_names
+        }
 
         # Use a set to de-duplicate
         pairs: set[tuple] = {*_get_14_pairs(unique_molecule)}
@@ -272,7 +274,7 @@ def _convert(
         system.molecule_types[unique_molecule.name] = molecule
 
         system.molecules[unique_molecule.name] = len(
-            [molecule for molecule in interchange.topology.molecules if molecule.is_isomorphic_with(unique_molecule)],
+            interchange.topology.identical_molecule_groups[unique_molecule_index],
         )
 
     if "VirtualSites" in interchange.collections:
@@ -307,44 +309,40 @@ def _convert_bonds(
     except LookupError:
         return
 
-    for bond in unique_molecule.bonds:
-        molecule_indices = tuple(
-            sorted(unique_molecule.atom_index(a) for a in bond.atoms),
-        )
-        topology_indices = tuple(
-            sorted(interchange.topology.atom_index(atom) for atom in bond.atoms),
-        )
+    # if this is slow, pass it among valence converters
+    atom_indices_in_this_molecule = {
+        interchange.topology.atom_index(a) for a in unique_molecule.atoms
+    }
 
-        found_match = False
-        for top_key in collection.key_map:
-            top_key: TopologyKey  # type: ignore[no-redef]
-            if top_key.atom_indices == topology_indices:
-                pot_key = collection.key_map[top_key]
-                found_match = True
-                break
-            elif top_key.atom_indices == topology_indices[::-1]:
-                pot_key = collection.key_map[top_key]
-                found_match = True
-                break
-            else:
-                found_match = False
+    offset = min(atom_indices_in_this_molecule)
 
-        if not found_match:
-            raise MissingBondError(
-                f"Failed to find parameters for bond with topology indices {topology_indices}",
-            )
-
-        params = collection.potentials[pot_key].parameters
+    for top_key in collection.key_map:
+        if top_key.atom_indices[0] not in atom_indices_in_this_molecule:
+            continue
 
         molecule.bonds.append(
-            GROMACSBond(
-                atom1=molecule_indices[0] + 1,
-                atom2=molecule_indices[1] + 1,
-                function=1,
-                length=params["length"].to(unit.nanometer),
-                k=params["k"].to(unit.kilojoule_per_mole / unit.nanometer**2),
+            _create_single_bond(
+                top_key,
+                collection,
+                offset,
             ),
         )
+
+
+def _create_single_bond(
+    top_key,
+    collection,
+    offset: int,
+) -> GROMACSBond:
+    params = collection.potentials[collection.key_map[top_key]].parameters
+
+    return GROMACSBond(
+        atom1=top_key.atom_indices[0] - offset + 1,
+        atom2=top_key.atom_indices[1] - offset + 1,
+        function=1,
+        length=params["length"].to(unit.nanometer),
+        k=params["k"].to(unit.kilojoule_per_mole / unit.nanometer**2),
+    )
 
 
 def _convert_angles(
@@ -360,36 +358,40 @@ def _convert_angles(
     except LookupError:
         return
 
-    for angle in unique_molecule.angles:
-        topology_indices = tuple(interchange.topology.atom_index(a) for a in angle)
-        molecule_indices = tuple(unique_molecule.atom_index(a) for a in angle)
+    # If this is slow, pass it among valence converters
+    atom_indices_in_this_molecule = {
+        interchange.topology.atom_index(a) for a in unique_molecule.atoms
+    }
 
-        found_match = False
-        for top_key in collection.key_map:
-            top_key: TopologyKey  # type: ignore[no-redef]
-            if top_key.atom_indices == topology_indices:
-                pot_key = collection.key_map[top_key]
-                found_match = True
-                break
-            else:
-                found_match = False
+    offset = min(atom_indices_in_this_molecule)
 
-        if not found_match:
-            raise MissingAngleError(
-                f"Failed to find parameters for angle with topology indices {topology_indices}",
-            )
-
-        params = collection.potentials[pot_key].parameters
+    for top_key in collection.key_map:
+        if top_key.atom_indices[0] not in atom_indices_in_this_molecule:
+            continue
 
         molecule.angles.append(
-            GROMACSAngle(
-                atom1=molecule_indices[0] + 1,
-                atom2=molecule_indices[1] + 1,
-                atom3=molecule_indices[2] + 1,
-                angle=params["angle"].to(unit.degree),
-                k=params["k"].to(unit.kilojoule_per_mole / unit.radian**2),
+            _create_single_angle(
+                top_key,
+                collection,
+                offset,
             ),
         )
+
+
+def _create_single_angle(
+    top_key,
+    collection,
+    offset: int,
+) -> GROMACSAngle:
+    params = collection.potentials[collection.key_map[top_key]].parameters
+
+    return GROMACSAngle(
+        atom1=top_key.atom_indices[0] - offset + 1,
+        atom2=top_key.atom_indices[1] - offset + 1,
+        atom3=top_key.atom_indices[2] - offset + 1,
+        angle=params["angle"].to(unit.degree),
+        k=params["k"].to(unit.kilojoule_per_mole / unit.radian**2),
+    )
 
 
 def _convert_dihedrals(
@@ -410,91 +412,40 @@ def _convert_dihedrals(
         None,
     )
 
-    # TODO: Ensure number of torsions written matches what is expected
-    for proper in unique_molecule.propers:
-        topology_indices = tuple(interchange.topology.atom_index(a) for a in proper)
-        molecule_indices = tuple(unique_molecule.atom_index(a) for a in proper)
+    atom_indices_in_this_molecule = {
+        interchange.topology.atom_index(a) for a in unique_molecule.atoms
+    }
 
-        if proper_torsion_handler:
-            for top_key in proper_torsion_handler.key_map:
-                if top_key.atom_indices[0] not in [
-                    topology_indices[0],
-                    topology_indices[3],
-                ]:
-                    continue
-                if top_key.atom_indices[1] not in [
-                    topology_indices[1],
-                    topology_indices[2],
-                ]:
-                    continue
-                if top_key.atom_indices[2] not in [
-                    topology_indices[2],
-                    topology_indices[1],
-                ]:
-                    continue
-                if top_key.atom_indices[3] not in [
-                    topology_indices[3],
-                    topology_indices[0],
-                ]:
-                    continue
-                if top_key.atom_indices in (topology_indices, topology_indices[::-1]):
-                    pot_key = proper_torsion_handler.key_map[top_key]
-                    params = proper_torsion_handler.potentials[pot_key].parameters
+    offset = min(atom_indices_in_this_molecule)
 
-                    idivf = int(params["idivf"]) if "idivf" in params else 1
+    if proper_torsion_handler:
+        for top_key in proper_torsion_handler.key_map:
+            # assume that all atoms in this torsion are in the same molecule,
+            # so if the index of the first atom in the torsion is not in the unique
+            # molecule, skip the molecule altogether
+            if top_key.atom_indices[0] not in atom_indices_in_this_molecule:
+                continue
 
-                    molecule.dihedrals.append(
-                        PeriodicProperDihedral(
-                            atom1=molecule_indices[0] + 1,
-                            atom2=molecule_indices[1] + 1,
-                            atom3=molecule_indices[2] + 1,
-                            atom4=molecule_indices[3] + 1,
-                            phi=params["phase"].to(unit.degree),
-                            k=params["k"].to(unit.kilojoule_per_mole) / idivf,
-                            multiplicity=int(params["periodicity"]),
-                        ),
-                    )
+            molecule.dihedrals.append(
+                _create_single_dihedral(
+                    top_key,
+                    proper_torsion_handler,
+                    offset,
+                ),
+            )
 
-        if rb_torsion_handler:
-            for top_key in rb_torsion_handler.key_map:
-                if top_key.atom_indices[0] not in [
-                    topology_indices[0],
-                    topology_indices[3],
-                ]:
-                    continue
-                if top_key.atom_indices[1] not in [
-                    topology_indices[1],
-                    topology_indices[2],
-                ]:
-                    continue
-                if top_key.atom_indices[2] not in [
-                    topology_indices[2],
-                    topology_indices[1],
-                ]:
-                    continue
-                if top_key.atom_indices[3] not in [
-                    topology_indices[3],
-                    topology_indices[0],
-                ]:
-                    continue
-                if top_key.atom_indices in [topology_indices, topology_indices[::-1]]:
-                    pot_key = rb_torsion_handler.key_map[top_key]
-                    params = rb_torsion_handler.potentials[pot_key].parameters
+    if rb_torsion_handler:
+        for top_key in rb_torsion_handler.key_map:
+            if top_key.atom_indices[0] not in atom_indices_in_this_molecule:
+                continue
 
-                    molecule.dihedrals.append(
-                        RyckaertBellemansDihedral(
-                            atom1=molecule_indices[0] + 1,
-                            atom2=molecule_indices[1] + 1,
-                            atom3=molecule_indices[2] + 1,
-                            atom4=molecule_indices[3] + 1,
-                            c0=params["c0"],
-                            c1=params["c1"],
-                            c2=params["c2"],
-                            c3=params["c3"],
-                            c4=params["c4"],
-                            c5=params["c5"],
-                        ),
-                    )
+            molecule.dihedrals.append(
+                _create_single_rb_torsion(
+                    top_key,
+                    rb_torsion_handler,
+                    offset,
+                ),
+            )
 
     # TODO: Ensure number of torsions written matches what is expected
     if improper_torsion_handler:
@@ -541,6 +492,54 @@ def _convert_dihedrals(
                             multiplicity=int(params["periodicity"]),
                         ),
                     )
+
+
+def _create_single_dihedral(
+    top_key,
+    proper_torsion_handler,
+    offset: int,
+) -> PeriodicProperDihedral | None:
+    params = proper_torsion_handler.potentials[
+        proper_torsion_handler.key_map[top_key]
+    ].parameters
+
+    # skip dimensionality check, trust it's dimensionless
+    idivf = int(params["idivf"].m) if "idivf" in params else 1
+
+    return PeriodicProperDihedral(
+        atom1=top_key.atom_indices[0] - offset + 1,
+        atom2=top_key.atom_indices[1] - offset + 1,
+        atom3=top_key.atom_indices[2] - offset + 1,
+        atom4=top_key.atom_indices[3] - offset + 1,
+        phi=params["phase"].to(unit.degree),
+        k=params["k"].to(unit.kilojoule_per_mole) / idivf,
+        multiplicity=int(
+            params["periodicity"].m,
+        ),  # skip  dimension check, trust it's demensionless
+    )
+
+
+def _create_single_rb_torsion(
+    top_key,
+    rb_torsion_handler,
+    offset: int,
+) -> RyckaertBellemansDihedral | None:
+    params = rb_torsion_handler.potentials[
+        rb_torsion_handler.key_map[top_key]
+    ].parameters
+
+    return RyckaertBellemansDihedral(
+        atom1=top_key.atom_indices[0] - offset + 1,
+        atom2=top_key.atom_indices[1] - offset + 1,
+        atom3=top_key.atom_indices[2] - offset + 1,
+        atom4=top_key.atom_indices[3] - offset + 1,
+        c0=params["c0"],
+        c1=params["c1"],
+        c2=params["c2"],
+        c3=params["c3"],
+        c4=params["c4"],
+        c5=params["c5"],
+    )
 
 
 def _convert_virtual_sites(

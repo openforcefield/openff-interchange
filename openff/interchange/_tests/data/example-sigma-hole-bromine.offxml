@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <VirtualSites version="0.3" exclusion_policy="parents">
+        <!-- A chlorine bound to (any) carbon, for fixing sigma holes -->
+        <VirtualSite
+            smirks="[#6:2]-[#35X1:1]"
+            epsilon="0.0 * kilojoules_per_mole ** 1"
+            type="BondCharge"
+            match="all_permutations"
+            distance="1.45 * angstrom ** 1"
+            outOfPlaneAngle="None"
+            inPlaneAngle="None"
+            charge_increment1="-0.063 * elementary_charge ** 1"
+            charge_increment2="0.0 * elementary_charge ** 1"
+            sigma="0.0 * angstrom ** 1"
+            name="sigma_hole">
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>

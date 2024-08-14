@@ -387,6 +387,9 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
         for index, charge in charges.items():
             if type(index) is int:
+                # Note this uses the topology index, even if the particle index differs in an export,
+                # i.e. if a molecule earlier in the topology has (collated) virtual sites as is
+                # common with GROMACS files
                 returned_charges[TopologyKey(atom_indices=(index,))] = charge
             elif type(index) is VirtualSiteKey:
                 if include_virtual_sites:
