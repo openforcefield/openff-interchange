@@ -67,8 +67,7 @@ def _process_bond_forces(
         harmonic_bond_force = openmm.HarmonicBondForce()
     else:
         raise UnsupportedExportError(
-            "Found an unsupported functional form in the bond handler:\n\t"
-            f"{bond_handler.expression=}",
+            "Found an unsupported functional form in the bond handler:\n\t" f"{bond_handler.expression=}",
         )
 
     openmm_sys.addForce(harmonic_bond_force)
@@ -128,8 +127,7 @@ def _process_angle_forces(
             harmonic_angle_force.addPerAngleParameter(parameter_name)
     else:
         raise UnsupportedExportError(
-            "Found an unsupported functional form in the angle handler:\n\t"
-            f"{angle_handler.expression=}",
+            "Found an unsupported functional form in the angle handler:\n\t" f"{angle_handler.expression=}",
         )
 
     openmm_sys.addForce(harmonic_angle_force)
@@ -159,10 +157,7 @@ def _process_angle_forces(
 
         if custom:
             params = angle_handler.potentials[pot_key].parameters
-            parameter_values = [
-                to_openmm_quantity(params[val])
-                for val in angle_handler.potential_parameters()
-            ]
+            parameter_values = [to_openmm_quantity(params[val]) for val in angle_handler.potential_parameters()]
 
             harmonic_angle_force.addAngle(
                 openmm_indices[0],

@@ -38,10 +38,7 @@ class TestNonbonded:
             methane.to_topology(),
         )
         numpy.testing.assert_allclose(
-            [
-                charge.m_as(unit.e)
-                for charge in electrostatics_handler._get_charges().values()
-            ],
+            [charge.m_as(unit.e) for charge in electrostatics_handler._get_charges().values()],
             reference_charges,
         )
 
@@ -66,10 +63,7 @@ class TestNonbonded:
         )
 
         numpy.testing.assert_allclose(
-            [
-                charge.m_as(unit.e)
-                for charge in electrostatics_handler._get_charges().values()
-            ],
+            [charge.m_as(unit.e) for charge in electrostatics_handler._get_charges().values()],
             [-0.1, 0.025, 0.025, 0.025, 0.025],
         )
 
@@ -102,10 +96,7 @@ class TestNonbonded:
         # AM1-Mulliken charges are [-0.168,  0.168], increments are [0.1, -0.1],
         # sum is [-0.068,  0.068]
         numpy.testing.assert_allclose(
-            [
-                charge.m_as(unit.e)
-                for charge in electrostatics_handler._get_charges().values()
-            ],
+            [charge.m_as(unit.e) for charge in electrostatics_handler._get_charges().values()],
             reference_charges,
         )
 
@@ -128,10 +119,7 @@ class TestNonbonded:
         partial_charges = [c.m for c in hexane_diol.partial_charges]
 
         assigned_charges = [
-            v.m
-            for v in Interchange.from_smirnoff(sage, [hexane_diol])["Electrostatics"]
-            ._get_charges()
-            .values()
+            v.m for v in Interchange.from_smirnoff(sage, [hexane_diol])["Electrostatics"]._get_charges().values()
         ]
 
         try:
@@ -217,9 +205,7 @@ class TestElectrostatics:
         ) -> dict[int, Quantity]:
             return {
                 key.atom_indices[0]: val
-                for key, val in sage.create_interchange(molecule.to_topology())[
-                    "Electrostatics"
-                ]
+                for key, val in sage.create_interchange(molecule.to_topology())["Electrostatics"]
                 ._get_charges()
                 .items()
             }
@@ -311,12 +297,7 @@ class TestSMIRNOFFChargeIncrements:
         )
         sage.register_parameter_handler(charge_handler)
         assert 0.0 == pytest.approx(
-            sum(
-                v.m
-                for v in Interchange.from_smirnoff(sage, [methane])["Electrostatics"]
-                ._get_charges()
-                .values()
-            ),
+            sum(v.m for v in Interchange.from_smirnoff(sage, [methane])["Electrostatics"]._get_charges().values()),
         )
 
     def test_charge_increment_forwawrd_reverse_molecule(

@@ -83,8 +83,7 @@ class EnergyReport(_BaseModel):
     def __getitem__(self, item: str) -> Quantity | None:
         if type(item) is not str:
             raise LookupError(
-                "Only str arguments can be currently be used for lookups.\n"
-                f"Found item {item} of type {type(item)}",
+                "Only str arguments can be currently be used for lookups.\n" f"Found item {item} of type {type(item)}",
             )
         if item in self.energies.keys():
             return self.energies[item]
@@ -128,9 +127,7 @@ class EnergyReport(_BaseModel):
         tolerances = default_tolerances
 
         # Ensure everything is in kJ/mol for safety of later comparison
-        energy_differences = {
-            key: diff.to(kj_mol) for key, diff in self.diff(other).items()
-        }
+        energy_differences = {key: diff.to(kj_mol) for key, diff in self.diff(other).items()}
 
         if ("Nonbonded" in tolerances) != ("Nonbonded" in energy_differences):
             raise IncompatibleTolerancesError(
@@ -191,9 +188,7 @@ class EnergyReport(_BaseModel):
                         continue
 
                 else:
-                    energy_differences["Nonbonded"] = (
-                        self._get_nonbonded_energy() - other._get_nonbonded_energy()
-                    )
+                    energy_differences["Nonbonded"] = self._get_nonbonded_energy() - other._get_nonbonded_energy()
 
                     nonbondeds_processed = True
 

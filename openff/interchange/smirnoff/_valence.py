@@ -263,7 +263,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
         if type(parameter_handler) not in cls.allowed_parameter_handlers():
             raise InvalidParameterHandlerError
 
-        handler: "SMIRNOFFBondCollection" = cls(
+        handler: SMIRNOFFBondCollection = cls(
             type="Bonds",
             expression="k/2*(r-length)**2",
             fractional_bond_order_method=parameter_handler.fractional_bondorder_method,
@@ -351,9 +351,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
             self.key_map = dict()
 
         try:
-            constraint_handler = [
-                p for p in parameter_handlers if type(p) is ConstraintHandler
-            ][0]
+            constraint_handler = [p for p in parameter_handlers if type(p) is ConstraintHandler][0]
         except IndexError:
             return
 
@@ -466,9 +464,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
     """Handler storing proper torsions potentials as produced by a SMIRNOFF force field."""
 
     type: Literal["ProperTorsions"] = "ProperTorsions"
-    expression: Literal["k*(1+cos(periodicity*theta-phase))"] = (
-        "k*(1+cos(periodicity*theta-phase))"
-    )
+    expression: Literal["k*(1+cos(periodicity*theta-phase))"] = "k*(1+cos(periodicity*theta-phase))"
     fractional_bond_order_method: Literal["AM1-Wiberg"] = "AM1-Wiberg"
     fractional_bond_order_interpolation: Literal["linear"] = "linear"
 
@@ -605,17 +601,14 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
         Create a SMIRNOFFProperTorsionCollection from toolkit data.
 
         """
-        collection: "SMIRNOFFProperTorsionCollection" = cls(
+        collection: SMIRNOFFProperTorsionCollection = cls(
             type="ProperTorsions",
             expression="k*(1+cos(periodicity*theta-phase))",
             fractional_bond_order_method=parameter_handler.fractional_bondorder_method,
             fractional_bond_order_interpolation=parameter_handler.fractional_bondorder_interpolation,
         )
 
-        if any(
-            getattr(p, "k_bondorder", None) is not None
-            for p in parameter_handler.parameters
-        ):
+        if any(getattr(p, "k_bondorder", None) is not None for p in parameter_handler.parameters):
             _check_molecule_uniqueness(partial_bond_orders_from_molecules)
 
             for molecule in topology.molecules:
@@ -638,9 +631,7 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection, ImproperTorsionColle
     """Handler storing improper torsions potentials as produced by a SMIRNOFF force field."""
 
     type: Literal["ImproperTorsions"] = "ImproperTorsions"
-    expression: Literal["k*(1+cos(periodicity*theta-phase))"] = (
-        "k*(1+cos(periodicity*theta-phase))"
-    )
+    expression: Literal["k*(1+cos(periodicity*theta-phase))"] = "k*(1+cos(periodicity*theta-phase))"
     # TODO: Consider whether or not default_idivf should be stored here
 
     @classmethod

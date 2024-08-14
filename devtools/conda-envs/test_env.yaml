@@ -4,6 +4,7 @@ channels:
 dependencies:
   # Core
   - python
+  - versioneer-518
   - numpy
   - pydantic >=1.10.17,<3
   # OpenFF stack

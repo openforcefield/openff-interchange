@@ -74,22 +74,15 @@ def _check_all_valence_terms_assigned(
                 unassigned_str += f"({atom.name} {atom.symbol}), "
             unassigned_atom_tuples.append(tuple(unassigned_atoms))
         err_msg += (
-            "{parameter_handler} was not able to find parameters for the following valence terms:\n"
-            "{unassigned_str}"
-        ).format(
-            parameter_handler=handler.__class__.__name__,
-            unassigned_str=unassigned_str,
+            f"{handler.__class__.__name__} was not able to find parameters for the "
+            f"following valence terms:\n{unassigned_str}"
         )
     if len(not_found_terms) > 0:
         if err_msg != "":
             err_msg += "\n"
         not_found_str = "\n- ".join([str(x) for x in not_found_terms])
         err_msg += (
-            "{parameter_handler} assigned terms that were not found in the topology:\n"
-            "- {not_found_str}"
-        ).format(
-            parameter_handler=handler.__class__.__name__,
-            not_found_str=not_found_str,
+            f"{handler.__class__.__name__} assigned terms that were not found in the topology:\n" f"- {not_found_str}"
         )
     if err_msg:
         err_msg += "\n"

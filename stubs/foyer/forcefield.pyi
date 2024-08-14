@@ -1,13 +1,13 @@
-from typing import Any, Dict, Union
+from typing import Any
 
-class Forcefield(object):
+class Forcefield:
     def __init__(self, name: int): ...
     def get_parameters(
         self,
         group: str,
-        key: Union[str, list[str]],
+        key: str | list[str],
         keys_are_atom_classes: bool = False,
-    ) -> Dict[str, float]: ...
+    ) -> dict[str, float]: ...
     @staticmethod
     def get_generator(ff: Forcefield, gen_type: Any) -> Any: ...
     @property

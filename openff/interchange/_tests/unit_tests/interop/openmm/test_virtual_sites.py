@@ -287,15 +287,9 @@ class TestTIP5PVsOpenMM:
 
         # Both particles should be indexed as O-H-H, but the order of the hydrogens should be flipped
         # (this is how the local positions are the same but "real" space positions are flipped)
-        assert openff_virtual_sites[0].getParticle(0) == openff_virtual_sites[
-            1
-        ].getParticle(0)
-        assert openff_virtual_sites[0].getParticle(1) == openff_virtual_sites[
-            1
-        ].getParticle(2)
-        assert openff_virtual_sites[0].getParticle(2) == openff_virtual_sites[
-            1
-        ].getParticle(1)
+        assert openff_virtual_sites[0].getParticle(0) == openff_virtual_sites[1].getParticle(0)
+        assert openff_virtual_sites[0].getParticle(1) == openff_virtual_sites[1].getParticle(2)
+        assert openff_virtual_sites[0].getParticle(2) == openff_virtual_sites[1].getParticle(1)
 
         # TODO: Also doubly compare geometry to OpenMM result
 
@@ -410,8 +404,7 @@ class TestOpenMMVirtualSiteExclusions:
 
         if vdw_force is not None:
             exclusions = [
-                sorted(vdw_force.getExclusionParticles(index))
-                for index in range(vdw_force.getNumExclusions())
+                sorted(vdw_force.getExclusionParticles(index)) for index in range(vdw_force.getNumExclusions())
             ]
 
             check_exceptions(exclusions)
@@ -442,9 +435,7 @@ class TestOpenMMVirtualSiteExclusions:
         assert system.isVirtualSite(8)
         assert system.isVirtualSite(9)
 
-        non_bonded_force = [
-            f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)
-        ][0]
+        non_bonded_force = [f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)][0]
 
         for exception_index in range(non_bonded_force.getNumExceptions()):
             p1, p2, q, sigma, epsilon = non_bonded_force.getExceptionParameters(
@@ -479,10 +470,7 @@ class TestOpenMMVirtualSiteExclusions:
 
         for force in system.getForces():
             if isinstance(force, openmm.NonbondedForce):
-                exceptions = [
-                    force.getExceptionParameters(index)
-                    for index in range(force.getNumExceptions())
-                ]
+                exceptions = [force.getExceptionParameters(index) for index in range(force.getNumExceptions())]
 
         assert len(exceptions) == 10
 
@@ -534,10 +522,7 @@ class TestOpenMMVirtualSiteExclusions:
         #
         for force in system.getForces():
             if isinstance(force, openmm.NonbondedForce):
-                exceptions = [
-                    force.getExceptionParameters(index)
-                    for index in range(force.getNumExceptions())
-                ]
+                exceptions = [force.getExceptionParameters(index) for index in range(force.getNumExceptions())]
 
                 break
 
@@ -600,19 +585,11 @@ class TestOpenMMVirtualSiteExclusions:
 
         # the virtual sites on hydrogens don't carry charge, so they're only truly
         # zeroed if their vdW interactions are turned off
-        assert {
-            tuple(sorted((p1, p2)))
-            for p1, p2, _, _, epsilon in exceptions
-            if epsilon._value == 0.0
-        } == set(
+        assert {tuple(sorted((p1, p2))) for p1, p2, _, _, epsilon in exceptions if epsilon._value == 0.0} == set(
             expected_zeroed_pairs,
         )
 
-        assert {
-            tuple(sorted((p1, p2)))
-            for p1, p2, _, _, epsilon in exceptions
-            if epsilon._value != 0.0
-        } == set(
+        assert {tuple(sorted((p1, p2))) for p1, p2, _, _, epsilon in exceptions if epsilon._value != 0.0} == set(
             expected_14_pairs,
         )
 
@@ -681,9 +658,7 @@ class TestvdWOnVirtualSites:
                 oxygen = force.getParticleParameters(0)
                 dummy = force.getParticleParameters(3)
 
-                assert (
-                    oxygen[2].value_in_unit(openmm.unit.kilojoule_per_mole) == 0.0
-                )  # sigma doesn't matter
+                assert oxygen[2].value_in_unit(openmm.unit.kilojoule_per_mole) == 0.0  # sigma doesn't matter
 
                 assert dummy[1].value_in_unit(openmm.unit.nanometer) == pytest.approx(
                     0.316435,

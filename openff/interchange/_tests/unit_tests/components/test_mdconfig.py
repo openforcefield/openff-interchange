@@ -273,7 +273,6 @@ class TestWriteSanderInput:
 
 
 class TestWriteLAMMPSInput:
-
     def test_switching_function_warning(
         self,
         system_no_constraints,
@@ -311,7 +310,6 @@ class TestWriteLAMMPSInput:
             constrained_ligand_rigid_water_box,
             unconstrained_ligand_rigid_water_box,
         ]:
-
             with pytest.raises(
                 NotImplementedError,
                 match="unsupported constraints case",

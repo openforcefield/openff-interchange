@@ -158,12 +158,8 @@ class TestVirtualSitePositions:
             carbonyl_planar.to_topology(),
         )
 
-        assert [*out["VirtualSites"].potentials.values()][0].parameters[
-            "inPlaneAngle"
-        ].m_as(unit.degree) == theta
-        assert [*out["VirtualSites"].potentials.values()][0].parameters[
-            "distance"
-        ].m_as(unit.nanometer) == distance_
+        assert [*out["VirtualSites"].potentials.values()][0].parameters["inPlaneAngle"].m_as(unit.degree) == theta
+        assert [*out["VirtualSites"].potentials.values()][0].parameters["distance"].m_as(unit.nanometer) == distance_
 
         positions = get_positions_with_virtual_sites(out)
 

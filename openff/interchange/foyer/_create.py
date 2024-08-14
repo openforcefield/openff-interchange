@@ -80,10 +80,7 @@ def _create_interchange(
 
     for molecule in interchange.topology.molecules:
         molecule_charges = [
-            charges[
-                TopologyKey(atom_indices=(interchange.topology.atom_index(atom),))
-            ].m
-            for atom in molecule.atoms
+            charges[TopologyKey(atom_indices=(interchange.topology.atom_index(atom),))].m for atom in molecule.atoms
         ]
         molecule.partial_charges = Quantity(
             molecule_charges,

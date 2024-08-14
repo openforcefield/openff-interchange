@@ -34,8 +34,7 @@ def _check_nonbonded_compatibility(
     for key in ["vdW", "Electrostatics"]:
         if interchange1[key].cutoff != interchange2[key].cutoff:
             raise CutoffMismatchError(
-                f"{key} cutoffs do not match. Found "
-                f"{interchange1[key].cutoff} and {interchange2[key].cutoff}.",
+                f"{key} cutoffs do not match. Found " f"{interchange1[key].cutoff} and {interchange2[key].cutoff}.",
             )
 
     if interchange1["vdW"].switch_width != interchange2["vdW"].switch_width:
@@ -49,7 +48,6 @@ def _combine(
     input1: "Interchange",
     input2: "Interchange",
 ) -> "Interchange":
-
     warnings.warn(
         "Interchange object combination is experimental and likely to produce "
         "strange results. Any workflow using this method is not guaranteed to "

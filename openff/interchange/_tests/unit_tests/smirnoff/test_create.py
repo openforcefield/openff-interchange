@@ -175,12 +175,8 @@ class TestChargeFromMolecules:
             charge_from_molecules=[molecule],
         )
 
-        found_charges_no_uses = [
-            v.m for v in default["Electrostatics"]._get_charges().values()
-        ]
-        found_charges_uses = [
-            v.m for v in uses["Electrostatics"]._get_charges().values()
-        ]
+        found_charges_no_uses = [v.m for v in default["Electrostatics"]._get_charges().values()]
+        found_charges_uses = [v.m for v in uses["Electrostatics"]._get_charges().values()]
 
         assert not numpy.allclose(found_charges_no_uses, found_charges_uses)
 
@@ -296,16 +292,12 @@ class TestPartialBondOrdersFromMolecules:
 
         # TODO: There should be a better way of plucking this torsion's TopologyKey
         for topology_key in out["ProperTorsions"].key_map.keys():
-            if (
-                tuple(sorted(topology_key.atom_indices))[1:3] == sorted_indices
-            ) and topology_key.bond_order == 1.55:
+            if (tuple(sorted(topology_key.atom_indices))[1:3] == sorted_indices) and topology_key.bond_order == 1.55:
                 torsion_key = topology_key
                 break
 
         torsion_potential = out["ProperTorsions"].key_map[torsion_key]
-        found_torsion_k = (
-            out["ProperTorsions"].potentials[torsion_potential].parameters["k"]
-        )
+        found_torsion_k = out["ProperTorsions"].potentials[torsion_potential].parameters["k"]
 
         assert found_torsion_k.m_as(kcal_mol) == pytest.approx(1.44)
 

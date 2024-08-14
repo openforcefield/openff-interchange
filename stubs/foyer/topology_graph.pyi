@@ -1,15 +1,15 @@
-from typing import Any, Optional
+from typing import Any
 
-class TopologyGraph(object):
+class TopologyGraph:
     @classmethod
     def from_openff_topology(cls: Any, openff_topology: Any) -> Any: ...
     def add_atom(
         self,
         index: int,
         name: str,
-        atomic_number: Optional[int] = None,
-        element: Optional[Any] = None,
-        **kwargs
+        atomic_number: int | None = None,
+        element: Any | None = None,
+        **kwargs,
     ) -> None: ...
     def add_bond(self, atom_1_index: int, atom_2_index: int) -> None: ...
     @classmethod

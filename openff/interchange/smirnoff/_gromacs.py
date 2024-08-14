@@ -54,8 +54,7 @@ def _convert(
         gen_pairs = True
     else:
         raise UnsupportedExportError(
-            "Could not find a handler for short-ranged vdW interactions that is compatible "
-            "with GROMACS.",
+            "Could not find a handler for short-ranged vdW interactions that is compatible " "with GROMACS.",
         )
 
     if _combination_rule == "lorentz-berthelot":
@@ -64,8 +63,7 @@ def _convert(
         combination_rule = 3
     else:
         raise UnsupportedExportError(
-            f"Could not find a GROMACS-compatible combination rule for mixing rule "
-            f"{_combination_rule}.",
+            f"Could not find a GROMACS-compatible combination rule for mixing rule " f"{_combination_rule}.",
         )
 
     scale_electrostatics = interchange["Electrostatics"].scale_14
@@ -102,7 +100,7 @@ def _convert(
 
     # Give each atom in each unique molecule a unique name so that can act like an atom type
 
-    _atom_atom_type_map: dict["Atom", str] = dict()
+    _atom_atom_type_map: dict[Atom, str] = dict()
 
     try:
         vdw_collection = interchange["vdW"]
@@ -138,9 +136,7 @@ def _convert(
             topology_index = interchange.topology.atom_index(atom)
             key = TopologyKey(atom_indices=(topology_index,))
 
-            vdw_parameters = vdw_collection.potentials[
-                vdw_collection.key_map[key]
-            ].parameters
+            vdw_parameters = vdw_collection.potentials[vdw_collection.key_map[key]].parameters
 
             charge = electrostatics_collection._get_charges()[key]
 
@@ -156,17 +152,13 @@ def _convert(
                 epsilon=vdw_parameters["epsilon"].to(unit.kilojoule_per_mole),
             )
 
-        for virtual_site_key in molecule_virtual_site_map[
-            interchange.topology.molecule_index(unique_molecule)
-        ]:
+        for virtual_site_key in molecule_virtual_site_map[interchange.topology.molecule_index(unique_molecule)]:
             atom_type_name = f"{unique_molecule.name}_{particle_map[virtual_site_key]}"
             _atom_atom_type_map[virtual_site_key] = atom_type_name
 
             topology_index = particle_map[virtual_site_key]
 
-            vdw_parameters = vdw_collection.potentials[
-                vdw_collection.key_map[virtual_site_key]
-            ].parameters
+            vdw_parameters = vdw_collection.potentials[vdw_collection.key_map[virtual_site_key]].parameters
 
             charge = electrostatics_collection._get_charges()[key]
 
@@ -217,11 +209,7 @@ def _convert(
 
         for atom in unique_molecule.atoms:
 
-            name = (
-                SYMBOLS[atom.atomic_number]
-                if getattr(atom, "name", "") == ""
-                else atom.name
-            )
+            name = SYMBOLS[atom.atomic_number] if getattr(atom, "name", "") == "" else atom.name
 
             charge = _partial_charges[interchange.topology.atom_index(atom)]
 
@@ -411,15 +399,15 @@ def _convert_dihedrals(
     unique_molecule: MoleculeLike,
     interchange: Interchange,
 ):
-    rb_torsion_handler: Optional["Collection"] = interchange.collections.get(
+    rb_torsion_handler: Optional[Collection] = interchange.collections.get(
         "RBTorsions",
         None,
     )
-    proper_torsion_handler: Optional["Collection"] = interchange.collections.get(
+    proper_torsion_handler: Optional[Collection] = interchange.collections.get(
         "ProperTorsions",
         None,
     )
-    improper_torsion_handler: Optional["Collection"] = interchange.collections.get(
+    improper_torsion_handler: Optional[Collection] = interchange.collections.get(
         "ImproperTorsions",
         None,
     )
@@ -463,9 +451,7 @@ def _convert_dihedrals(
     if improper_torsion_handler:
         # Molecule/Topology.impropers lists the central atom **second** ...
         for improper in unique_molecule.smirnoff_impropers:
-            topology_indices = tuple(
-                interchange.topology.atom_index(a) for a in improper
-            )
+            topology_indices = tuple(interchange.topology.atom_index(a) for a in improper)
             # ... so the tuple must be modified to list the central atom **first**,
             # which is how the improper handler's slot map is built up
             indices_to_match = (
@@ -566,9 +552,7 @@ def _convert_virtual_sites(
     if "VirtualSites" not in interchange.collections:
         return
 
-    for virtual_site_key in molecule_virtual_site_map[
-        interchange.topology.molecule_index(unique_molecule)
-    ]:
+    for virtual_site_key in molecule_virtual_site_map[interchange.topology.molecule_index(unique_molecule)]:
         from openff.interchange.smirnoff._virtual_sites import (
             _create_virtual_site_object,
         )
@@ -653,9 +637,7 @@ def _convert_settles(
             "if you would benefit from this assumption changing.",
         )
 
-    topology_atom_indices = [
-        interchange.topology.atom_index(atom) for atom in unique_molecule.atoms
-    ]
+    topology_atom_indices = [interchange.topology.atom_index(atom) for atom in unique_molecule.atoms]
 
     constraint_lengths = set()
 
@@ -728,8 +710,7 @@ def _apply_hmr(
 
     if len(gromacs_molecule.virtual_sites) > 0:
         raise UnsupportedExportError(
-            "Hydrogen mass repartitioning with virtual sites present, even on "
-            " rigid water, is not yet supported.",
+            "Hydrogen mass repartitioning with virtual sites present, even on " " rigid water, is not yet supported.",
         )
 
     water = Molecule.from_smiles("O")
@@ -740,11 +721,9 @@ def _apply_hmr(
     _hydrogen_mass = hydrogen_mass * unit.dalton
 
     for bond in toolkit_molecule.bonds:
-
         heavy_atom, hydrogen_atom = bond.atoms
 
         if heavy_atom.atomic_number == 1:
-
             heavy_atom, hydrogen_atom = hydrogen_atom, heavy_atom
 
         # TODO: This should only skip rigid waters, even though HMR or flexible water is questionable
@@ -753,16 +732,13 @@ def _apply_hmr(
             and (heavy_atom.atomic_number != 1)
             and not (_is_water(hydrogen_atom.molecule))
         ):
-
             # these are molecule indices, whereas in the OpenMM function they are topology indices
             # these are indexed to the toolkit molecule (0-index), not the GROMACS molecule (1-index),
             # although indexing into GROMACSMolecule.atoms is 0-indexed, GROAMCSAtom.index is 1-indexed
             hydrogen_index = hydrogen_atom.molecule_atom_index
             heavy_index = heavy_atom.molecule_atom_index
 
-            mass_to_transfer = (
-                _hydrogen_mass - gromacs_molecule.atoms[hydrogen_index].mass
-            )
+            mass_to_transfer = _hydrogen_mass - gromacs_molecule.atoms[hydrogen_index].mass
 
             gromacs_molecule.atoms[hydrogen_index].mass += mass_to_transfer
             gromacs_molecule.atoms[heavy_index].mass -= mass_to_transfer

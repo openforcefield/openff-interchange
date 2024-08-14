@@ -9,9 +9,7 @@ from openff.interchange.drivers.lammps import _process, get_lammps_energies
 class TestProcess:
     @pytest.fixture
     def dummy_energies(self):
-        energies = [
-            Quantity(val, kj_mol) for val in [2.0, 1.0, 1.5, 0.5, -100.0, 0.1, -4, -400]
-        ]
+        energies = [Quantity(val, kj_mol) for val in [2.0, 1.0, 1.5, 0.5, -100.0, 0.1, -4, -400]]
 
         return {
             "Bond": energies[0],
@@ -30,12 +28,8 @@ class TestProcess:
         for key in ["Bond", "Angle"]:
             assert processed[key] == dummy_energies[key]
 
-        assert processed["Torsion"] == (
-            dummy_energies["ProperTorsion"] + dummy_energies["ImproperTorsion"]
-        )
-        assert processed["vdW"] == (
-            dummy_energies["vdW"] + dummy_energies["DispersionCorrection"]
-        )
+        assert processed["Torsion"] == (dummy_energies["ProperTorsion"] + dummy_energies["ImproperTorsion"])
+        assert processed["vdW"] == (dummy_energies["vdW"] + dummy_energies["DispersionCorrection"])
         assert processed["Electrostatics"] == (
             dummy_energies["ElectrostaticsShort"] + dummy_energies["ElectrostaticsLong"]
         )

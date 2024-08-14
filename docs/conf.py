@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Configuration file for the Sphinx documentation builder.
 #
@@ -13,6 +12,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
 # Incase the project was not installed
+import importlib
 import os
 import sys
 
@@ -132,7 +132,6 @@ myst_enable_extensions = [
 # sphinx-notfound-page
 # https://github.com/readthedocs/sphinx-notfound-page
 # Renders a 404 page with absolute links
-import importlib
 
 if importlib.util.find_spec("notfound"):
     extensions.append("notfound.extension")

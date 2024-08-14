@@ -70,8 +70,7 @@ class TestSMIRNOFFVirtualSiteCharges:
         assert charges[-1] == -1 * chlorine_charge
 
         charges_without_virtual_sites = [
-            charge.m
-            for charge in out["Electrostatics"]._charges_without_virtual_sites.values()
+            charge.m for charge in out["Electrostatics"]._charges_without_virtual_sites.values()
         ]
 
         assert sum(charges_without_virtual_sites) == chlorine_charge != 0.0
@@ -140,9 +139,7 @@ class TestSMIRNOFFVirtualSites:
 
         system = force_field.create_openmm_system(molecule.to_topology())
 
-        n_v_sites = sum(
-            1 if system.isVirtualSite(i) else 0 for i in range(system.getNumParticles())
-        )
+        n_v_sites = sum(1 if system.isVirtualSite(i) else 0 for i in range(system.getNumParticles()))
 
         input_conformer = Quantity(
             numpy.vstack(
@@ -271,10 +268,7 @@ class TestSMIRNOFFVirtualSites:
             # to ensure that the orientation remains invariant as expected.
             shuffled_atom_order = {i: i for i in range(molecule.n_atoms)}
             shuffled_atom_order.update(
-                {
-                    old_index: new_index
-                    for old_index, new_index in zip(atoms_to_shuffle, atom_permutation)
-                },
+                {old_index: new_index for old_index, new_index in zip(atoms_to_shuffle, atom_permutation)},
             )
 
             molecule = molecule.remap(shuffled_atom_order)
@@ -490,10 +484,7 @@ class TestSMIRNOFFVirtualSites:
         force_field.register_parameter_handler(handler)
 
         assert {
-            key.virtual_site_type
-            for key in force_field.create_interchange(topology)[
-                "VirtualSites"
-            ].potentials
+            key.virtual_site_type for key in force_field.create_interchange(topology)["VirtualSites"].potentials
         } == {parameter.type for parameter in parameters}
 
         system = force_field.create_openmm_system(topology)
@@ -514,9 +505,7 @@ class TestSMIRNOFFVirtualSites:
             charge, sigma, epsilon = force.getParticleParameters(i)
 
             # Make sure v-sites are massless.
-            assert (
-                numpy.isclose(system.getParticleMass(i)._value, 0.0)
-            ) == system.isVirtualSite(i)
+            assert (numpy.isclose(system.getParticleMass(i)._value, 0.0)) == system.isVirtualSite(i)
 
             assert numpy.isclose(
                 expected_charge.m_as(unit.elementary_charge),
@@ -534,8 +523,7 @@ class TestSMIRNOFFVirtualSites:
             total_charge += charge
 
         expected_total_charge = sum(
-            molecule.total_charge.m_as(unit.elementary_charge)
-            for molecule in topology.molecules
+            molecule.total_charge.m_as(unit.elementary_charge) for molecule in topology.molecules
         )
 
         assert numpy.isclose(
@@ -552,17 +540,14 @@ class TestSMIRNOFFVirtualSites:
         # Can't use a fixture here because of the modified versions
         sage = ForceField("openff-2.1.0.offxml")
 
-        assert {
-            key.virtual_site_type
-            for key in sage.create_interchange(ethanol.to_topology())["vdW"].potentials
-        } == {None}
+        assert {key.virtual_site_type for key in sage.create_interchange(ethanol.to_topology())["vdW"].potentials} == {
+            None,
+        }
 
         with pytest.raises(LookupError):
             assert {
                 key.virtual_site_type
-                for key in sage.create_interchange(ethanol.to_topology())[
-                    "VirtualSites"
-                ].potentials
+                for key in sage.create_interchange(ethanol.to_topology())["VirtualSites"].potentials
             } == {None}
 
         assert {

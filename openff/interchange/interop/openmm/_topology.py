@@ -127,9 +127,7 @@ def to_openmm_topology(
             last_residue = residue
 
         if has_virtual_sites:
-            virtual_sites_in_this_molecule: list[VirtualSiteKey] = (
-                molecule_virtual_site_map[molecule_index]
-            )
+            virtual_sites_in_this_molecule: list[VirtualSiteKey] = molecule_virtual_site_map[molecule_index]
             for this_virtual_site in virtual_sites_in_this_molecule:
                 virtual_site_name = this_virtual_site.name
 
@@ -147,8 +145,11 @@ def to_openmm_topology(
         bond_types = {1: openmm.app.Single, 2: openmm.app.Double, 3: openmm.app.Triple}
         for bond in molecule.bonds:
             atom1, atom2 = bond.atoms
-            atom1_idx, atom2_idx = topology.atom_index(atom1), topology.atom_index(
-                atom2,
+            atom1_idx, atom2_idx = (
+                topology.atom_index(atom1),
+                topology.atom_index(
+                    atom2,
+                ),
             )
             if isinstance(bond, Bond):
                 if bond.is_aromatic:

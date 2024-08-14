@@ -103,10 +103,7 @@ class TestToolkitUtils:
             ).to_openmm(),
         )
 
-        assert all(
-            isinstance(molecule, _SimpleMolecule)
-            for molecule in simple_topology.molecules
-        )
+        assert all(isinstance(molecule, _SimpleMolecule) for molecule in simple_topology.molecules)
 
         assert sorted(molecule.n_atoms for molecule in simple_topology.molecules) == [
             3,

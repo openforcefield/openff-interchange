@@ -37,10 +37,7 @@ class TestSMIRNOFFCollection:
 
         assert DummyParameterHandler in dummy_handler.allowed_parameter_handlers()
         assert AngleHandler not in dummy_handler.allowed_parameter_handlers()
-        assert (
-            DummyParameterHandler
-            not in SMIRNOFFAngleCollection.allowed_parameter_handlers()
-        )
+        assert DummyParameterHandler not in SMIRNOFFAngleCollection.allowed_parameter_handlers()
 
         dummy_handler = DummyParameterHandler(version=0.3)
 

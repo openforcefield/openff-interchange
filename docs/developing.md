@@ -16,10 +16,11 @@ Style is enforced with automated linters that run in CI. See `.github/workflows/
 
 ### Linters
 
-* `black`: Automated, deterministic, and consistent code formatting.
-* `isort`: Sorts imports.
-* `flake8`: Catches many iffy practices before they can grow into bugs. Check the action to see what plugins are used.
-* `pyupgrade`: Automatically update code for features and syntax of newer Python versions.
+* `ruff`: Re-implements in Rust
+  * `black`: Automated, deterministic, and consistent code formatting.
+  * `isort`: Sorts imports.
+  * `flake8`: Catches many iffy practices before they can grow into bugs. Check the action to see what plugins are used.
+  * `pyupgrade`: Automatically update code for features and syntax of newer Python versions.
 
 ### Type-checking
 
