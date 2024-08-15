@@ -4,7 +4,7 @@ import warnings
 import numpy
 from openff.toolkit import unit
 
-from openff.interchange.exceptions import MissingPositionsError
+from openff.interchange.exceptions import MissingPositionsError, UnsupportedExportError
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSSystem,
     GROMACSVirtualSite2,
@@ -464,14 +464,9 @@ class GROMACSWriter(_BaseModel):
                     count += 1
 
         if self.system.box is None:
-            warnings.warn(
-                "WARNING: System defined with no box vectors, which GROMACS does not offically "
-                "support in versions 2020 or newer (see "
-                "https://gitlab.com/gromacs/gromacs/-/issues/3526). Setting box vectors to a 5 "
-                " nm cube.",
-                stacklevel=2,
+            raise UnsupportedExportError(
+                "GROMACS versions 2020 and newer do not support systems without periodicity/box vectors.",
             )
-            box = 5 * numpy.eye(3)
         else:
             box = self.system.box.m_as(unit.nanometer)
 

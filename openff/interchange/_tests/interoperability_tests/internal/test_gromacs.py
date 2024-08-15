@@ -88,16 +88,6 @@ class TestGROMACSGROFile:
         n_decimals = len(str(coords[0, 0]).split(".")[1])
         assert n_decimals == 12
 
-    def test_vaccum_warning(self, sage):
-        molecule = MoleculeWithConformer.from_smiles("CCO")
-
-        out = Interchange.from_smirnoff(force_field=sage, topology=[molecule])
-
-        assert out.box is None
-
-        with pytest.warns(UserWarning, match="gitlab"):
-            out.to_gro("tmp.gro")
-
     @pytest.mark.slow
     @skip_if_missing("openmm")
     def test_residue_info(self, sage):
@@ -112,6 +102,8 @@ class TestGROMACSGROFile:
             force_field=ff14sb,
             topology=[protein],
         )
+
+        out.box=[4, 4, 4]
 
         out.to_gro("tmp.gro")
 
@@ -129,9 +121,11 @@ class TestGROMACSGROFile:
         peptide = get_protein("MainChain_ALA_ALA")
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
-        Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_gro(
-            "atom_names.gro",
-        )
+        out = ff14sb.create_interchange(peptide.to_topology())
+
+        out.box = [4, 4, 4]
+
+        out.to_gro("atom_names.gro")
 
         pdb_object = openmm.app.PDBFile(
             get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
@@ -349,36 +343,6 @@ class TestGROMACS:
             get_openmm_energies(out, combine_nonbonded_forces=True),
             {"Nonbonded": 0.5 * unit.kilojoule_per_mole},
         )
-
-
-class TestGROMACSMetadata:
-    @skip_if_missing("openmm")
-    @skip_if_missing("mdtraj")
-    @pytest.mark.slow
-    def test_atom_names_pdb(self):
-        peptide = get_protein("MainChain_ALA_ALA")
-        ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
-
-        Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_gro(
-            "atom_names.gro",
-        )
-        Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_top(
-            "atom_names.top",
-        )
-
-        pdb_object = openmm.app.PDBFile(
-            get_data_file_path(
-                "proteins/MainChain_ALA_ALA.pdb",
-                "openff.toolkit",
-            ),
-        )
-        openmm_object = openmm.app.GromacsTopFile("atom_names.top")
-
-        pdb_atom_names = [atom.name for atom in pdb_object.topology.atoms()]
-
-        openmm_atom_names = [atom.name for atom in openmm_object.topology.atoms()]
-
-        assert openmm_atom_names == pdb_atom_names
 
 
 @needs_gmx
