@@ -359,6 +359,9 @@ class TestBadExports:
             numpy.zeros((zero_positions.topology.n_atoms, 3)),
             unit.nanometer,
         )
+
+        zero_positions.box = [4, 4, 4]
+
         with pytest.warns(UserWarning, match="seem to all be zero"):
             zero_positions.to_gro("foo.gro")
 
