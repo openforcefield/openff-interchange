@@ -342,15 +342,15 @@ def _create_single_nonbonded_force(
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
             non_bonded_force.setEwaldErrorTolerance(ewald_tolerance)
 
-        elif data["vdw_method"] == data["electrostatics_method"] == "cutoff":
-            if data["vdw_cutoff"] != data["electrostatics_collection"].cutoff:
+        elif data.vdw_method == data.electrostatics_method == "cutoff":
+            if data.vdw_cutoff != data.electrostatics_collection.cutoff:
                 raise UnsupportedExportError(
                     "If using cutoff vdW and electrostatics, cutoffs must match.",
                 )
 
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
             non_bonded_force.setCutoffDistance(
-                to_openmm_quantity(data["vdw_cutoff"]),
+                to_openmm_quantity(data.vdw_cutoff),
             )
 
         else:
@@ -708,7 +708,7 @@ def _create_multiple_nonbonded_forces(
                             eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
                         else:
                             raise UnsupportedExportError(
-                                f"Unsupported mixing rule: {data['mixing_rule']}",
+                                f"Unsupported mixing rule: {data.mixing_rule}",
                             )
 
                         # ... and set the 1-4 interactions
