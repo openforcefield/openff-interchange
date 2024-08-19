@@ -639,16 +639,6 @@ class Interchange(_BaseModel):
 
         return simulation
 
-    def to_prmtop(self, file_path: Path | str, writer="internal"):
-        """Export this Interchange to an Amber .prmtop file."""
-        if writer == "internal":
-            from openff.interchange.interop.amber import to_prmtop
-
-            to_prmtop(self, file_path)
-
-        else:
-            raise UnsupportedExportError
-
     @requires_package("openmm")
     def to_pdb(self, file_path: Path | str, include_virtual_sites: bool = False):
         """Export this Interchange to a .pdb file."""
@@ -685,6 +675,40 @@ class Interchange(_BaseModel):
     def to_crd(self, file_path: Path | str):
         """Export this Interchange to a CHARMM-style .crd file."""
         raise UnsupportedExportError
+
+    def to_amber(
+        self,
+        prefix: str,
+    ):
+        """
+        Export this Interchange object to Amber files.
+
+        Parameters
+        ----------
+        prefix: str
+            The prefix to use for the Amber parameter/topology, coordinate, and run files, i.e.
+            "foo" will produce "foo.top", "foo.gro", and "foo_pointenergy.in".
+
+        Notes
+        -----
+        The run input file is configured for a single-point energy calculation with sander. It is
+        likely portable to pmemd with little or no work.
+
+        """
+        self.to_prmtop(f"{prefix}.prmtop")
+        self.to_inpcrd(f"{prefix}.inpcrd")
+
+        self.to_sander_input(f"{prefix}_pointenergy.in")
+
+    def to_prmtop(self, file_path: Path | str, writer="internal"):
+        """Export this Interchange to an Amber .prmtop file."""
+        if writer == "internal":
+            from openff.interchange.interop.amber import to_prmtop
+
+            to_prmtop(self, file_path)
+
+        else:
+            raise UnsupportedExportError
 
     def to_inpcrd(self, file_path: Path | str, writer="internal"):
         """Export this Interchange to an Amber .inpcrd file."""

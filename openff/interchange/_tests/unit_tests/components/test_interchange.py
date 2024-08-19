@@ -1,3 +1,4 @@
+import subprocess
 import numpy
 import pytest
 from openff.toolkit import Molecule, Quantity, Topology, unit
@@ -426,6 +427,18 @@ class TestWrappedCalls:
             system=system,
             positions=positions,
             box_vectors=box,
+        )
+
+    def test_to_amber(self, simple_interchange):
+        simple_interchange.to_amber(prefix='blargh')
+
+        # Just make sure it returns a non-zero error code
+        subprocess.check_output(
+            "sander -i blargh_pointenergy.in "
+            "-c blargh.inpcrd "
+            "-p blargh.prmtop "
+            "-o out.mdout -O",
+            shell=True,
         )
 
     def test_from_gromacs_called(self, monkeypatch, simple_interchange):
