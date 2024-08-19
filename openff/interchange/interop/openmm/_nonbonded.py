@@ -3,6 +3,7 @@ Helper functions for producing `openmm.Force` objects for non-bonded terms.
 """
 
 import itertools
+import warnings
 from collections import defaultdict
 from typing import DefaultDict, NamedTuple, Optional
 
@@ -25,6 +26,7 @@ from openff.interchange.models import (
     TopologyKey,
     VirtualSiteKey,
 )
+from openff.interchange.warnings import NonbondedSettingsWarning
 
 if has_package("openmm"):
     import openmm
@@ -272,7 +274,7 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
         mixing_rule=mixing_rule,
         electrostatics_collection=electrostatics,
         electrostatics_method=electrostatics_method,
-        periodic=interchange.box is None,
+        periodic=interchange.box is not None,
     )
 
 
@@ -342,21 +344,23 @@ def _create_single_nonbonded_force(
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
             non_bonded_force.setEwaldErrorTolerance(ewald_tolerance)
 
-        elif data["vdw_method"] == data["electrostatics_method"] == "cutoff":
-            if data["vdw_cutoff"] != data["electrostatics_collection"].cutoff:
+        elif (data.vdw_method == "cutoff") and (
+            data.electrostatics_method == "reaction-field"
+        ):
+            if data.vdw_cutoff != data.electrostatics_collection.cutoff:
                 raise UnsupportedExportError(
-                    "If using cutoff vdW and electrostatics, cutoffs must match.",
+                    "If using cutoff vdW and reaction-field electrostatics, cutoffs must match.",
                 )
 
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
             non_bonded_force.setCutoffDistance(
-                to_openmm_quantity(data["vdw_cutoff"]),
+                to_openmm_quantity(data.vdw_cutoff),
             )
 
         else:
             raise UnsupportedCutoffMethodError(
                 f"Combination of non-bonded cutoff methods {data.vdw_method} (vdW) and "
-                "{data.electrostatics_method} (Electrostatics) not currently supported or invalid with "
+                f"{data.electrostatics_method} (Electrostatics) not currently supported or invalid with "
                 f"`combine_nonbonded_forces=True` and `.box={interchange.box}`.",
             )
 
@@ -874,9 +878,26 @@ def _create_electrostatics_force(
                 ].append(force_index)
 
     if data.electrostatics_method == "reaction-field":
-        raise UnsupportedCutoffMethodError(
-            "Reaction field electrostatics not supported. If this use case is important to you, "
-            "please raise an issue describing the scope of functionality you would like to use.",
+        warnings.warn(
+            "OpenMM implements reaction field electrostatics with CutoffPeriodic and CutoffNonperiodic. "
+            "See http://docs.openmm.org/latest/userguide/theory/02_standard_forces.html?highlight="
+            "reaction%20field#coulomb-interaction-with-cutoff",
+            NonbondedSettingsWarning,
+        )
+
+        if data.periodic:
+            print("Setting NonbondedMethod to CutoffPeriodic")
+            electrostatics_force.setNonbondedMethod(
+                openmm.NonbondedForce.CutoffPeriodic,
+            )
+        else:
+            print("Setting NonbondedMethod to CutoffNonPeriodic")
+            electrostatics_force.setNonbondedMethod(
+                openmm.NonbondedForce.CutoffNonPeriodic,
+            )
+
+        electrostatics_force.setCutoffDistance(
+            to_openmm_quantity(data.electrostatics_collection.cutoff),
         )
 
     elif data.electrostatics_method == _PME:
@@ -898,8 +919,11 @@ def _create_electrostatics_force(
 
     elif data.electrostatics_method == "cutoff":
         raise UnsupportedCutoffMethodError(
-            "OpenMM does not support electrostatics with a hard cutoff.",
+            "OpenMM does not support electrostatics with a hard cutoff (and no reaction field "
+            'modification). Consider using `"reaction-field"` to get force(s) with CutoffPeriodic '
+            "or CutoffNonperiodic.",
         )
+
     else:
         raise UnsupportedCutoffMethodError(
             f"Electrostatics method {data.electrostatics_method} not supported",
@@ -912,6 +936,7 @@ def _create_electrostatics_force(
         openff_openmm_particle_map,
         parent_virtual_particle_mapping,
     )
+
     return electrostatics_force
 
 

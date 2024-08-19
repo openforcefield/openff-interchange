@@ -11,3 +11,7 @@ class SwitchingFunctionNotImplementedWarning(UserWarning):
 
 class MissingPositionsWarning(UserWarning):
     """Warning for when positions are likely needed but missing."""
+
+
+class NonbondedSettingsWarning(UserWarning):
+    """Warning for when details of nonbonded implementations get messy."""
