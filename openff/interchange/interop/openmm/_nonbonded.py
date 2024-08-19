@@ -305,6 +305,14 @@ def _create_single_nonbonded_force(
     non_bonded_force.setName("Nonbonded force")
     system.addForce(non_bonded_force)
 
+    # This limitation is independent of periodicity and vdW method, so check it first
+    if data.electrostatics_method == "cutoff":
+        raise UnsupportedCutoffMethodError(
+            "OpenMM does not support electrostatics with a hard cutoff (and no reaction field "
+            'modification). Consider using `"reaction-field"` to get force(s) with CutoffPeriodic '
+            "or CutoffNonperiodic.",
+        )
+
     if interchange.box is None:
         if (data.vdw_method in ("no-cutoff", None)) and (
             data.electrostatics_method in ("Coulomb", None)
