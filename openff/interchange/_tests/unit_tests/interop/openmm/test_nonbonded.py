@@ -41,11 +41,13 @@ class TestUnsupportedCases:
 
 @skip_if_missing("openmm")
 class TestCutoffElectrostatics:
+    @pytest.mark.parametrize("periodic", [True, False])
     @pytest.mark.parametrize("combine", [True, False])
     def test_export_reaction_field_electrostatics(
         self,
         sage,
         basic_top,
+        periodic,
         combine,
     ):
 
@@ -54,21 +56,39 @@ class TestCutoffElectrostatics:
 
         out = sage.create_interchange(basic_top)
 
-        assert out.box is not None
-        out["Electrostatics"].periodic_potential = "reaction-field"
+        if periodic:
+            out["Electrostatics"].periodic_potential = "reaction-field"
+        else:
+            out["Electrostatics"].nonperiodic_potential = "reaction-field"
+            out.box = None
+
+        assert (out.box is not None) == periodic
 
         out["Electrostatics"].cutoff = out["vdW"].cutoff
+
+        if combine and not periodic:
+            with pytest.raises(
+                UnsupportedCutoffMethodError,
+                match="Combination of",
+            ):
+                system = out.to_openmm(combine_nonbonded_forces=combine)
+            return
 
         system = out.to_openmm(combine_nonbonded_forces=combine)
 
         for force in system.getForces():
             if isinstance(force, openmm.NonbondedForce):
+
                 assert 0.9 == force.getCutoffDistance() / openmm.unit.nanometer
 
-                # Not testing non-periodic case
-                assert (
-                    force.getNonbondedMethod() == openmm.NonbondedForce.CutoffPeriodic
-                )
+                if periodic:
+                    expected_force = openmm.NonbondedForce.CutoffPeriodic
+                else:
+                    expected_force = openmm.NonbondedForce.CutoffNonPeriodic
+
+                assert expected_force == force.getNonbondedMethod()
+
+                del force
 
                 break
         else:

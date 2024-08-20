@@ -747,9 +747,9 @@ def _create_multiple_nonbonded_forces(
             system.addForce(force)
 
     if vdw_force is not None and electrostatics_force is not None:
-        if (vdw_force.getNonbondedMethod() > 0) ^ (
-            electrostatics_force.getNonbondedMethod() > 0
-        ):
+        vdw_uses = vdw_force.usesPeriodicBoundaryConditions()
+        elec_uses = electrostatics_force.usesPeriodicBoundaryConditions()
+        if vdw_uses != elec_uses:
             raise UnsupportedCutoffMethodError(
                 "When using `openmm.CustomNonbondedForce`, vdW and electrostatics cutoff methods "
                 "must agree on whether or not periodic boundary conditions should be used. "
@@ -894,12 +894,10 @@ def _create_electrostatics_force(
         )
 
         if data.periodic:
-            print("Setting NonbondedMethod to CutoffPeriodic")
             electrostatics_force.setNonbondedMethod(
                 openmm.NonbondedForce.CutoffPeriodic,
             )
         else:
-            print("Setting NonbondedMethod to CutoffNonPeriodic")
             electrostatics_force.setNonbondedMethod(
                 openmm.NonbondedForce.CutoffNonPeriodic,
             )
