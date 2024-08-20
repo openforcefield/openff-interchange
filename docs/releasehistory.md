@@ -22,6 +22,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * Several classes and methods which were deprecated in the 0.3 line of releases are now removed.
 * `ProperTorsionKey` no longer accepts an empty tuple as atom indices.
 
+## 0.3.30 - 2024-08
+
+* #1039 Updates support of "cutoff" electrostatics in `.to_openmm` to better reflect what OpenMM supports. Set `"reaction-field"` to force the use of `CutoffPeriodic`, provided the vdW and electrostatic cutoff distances match. The potential/method `"cutoff"` is no longer supported but may be re-added in the future.
+
 ## 0.3.29 - 2024-08-01
 
 * #1023 Fixes a bug in which non-bonded parameter lookup sometimes crashed when virtual sites were present.
