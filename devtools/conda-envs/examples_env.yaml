@@ -9,7 +9,7 @@ dependencies:
   - pydantic =2
   - openmm
   # OpenFF stack
-  - openff-toolkit
+  - openff-toolkit ~=0.16.4
   - openff-models
   - openff-nagl
   - openff-nagl-models

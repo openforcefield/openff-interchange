@@ -7,7 +7,7 @@ dependencies:
   - numpy
   - pydantic >=1.10.17,<3
   # OpenFF stack
-  - openff-toolkit-base >=0.16  # make ~=0.16.4 on release
+  - openff-toolkit-base ~=0.16.4
   - openff-units
   - openff-models
   - ambertools =23
@@ -40,7 +40,3 @@ dependencies:
   - typing-extensions
   - types-setuptools
   - pandas-stubs
-  - pip:
-    # at 1395a6b6ce3dc48600dd7d8ed8a71301d26bbb47
-    # which should be 0.16.4
-    - git+https://github.com/openforcefield/openff-toolkit.git@main
