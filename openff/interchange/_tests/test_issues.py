@@ -6,8 +6,9 @@ import numpy
 import parmed
 import pytest
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
-from openff.utilities import get_data_file_path
+from openff.utilities import get_data_file_path, skip_if_missing
 
+from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, shuffle_topology
 from openff.interchange.components._packmol import pack_box
 from openff.interchange.drivers import get_openmm_energies
@@ -76,3 +77,40 @@ def test_issue_1022(pack):
                 ),
                 tolerances={"Nonbonded": Quantity("1e-3 kilojoule_per_mole")},
             )
+
+
+@skip_if_missing("openmm")
+def test_issue_1031(monkeypatch):
+    import openmm.app
+
+    monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+    # just grab some small PDB file from the toolkit, doesn't need to be huge, just
+    # needs to include some relevant atom names
+    openmm_topology = openmm.app.PDBFile(
+        get_data_file_path(
+            "proteins/MainChain_HIE.pdb",
+            "openff.toolkit",
+        ),
+    ).topology
+
+    openmm_atom_names = {atom.name for atom in openmm_topology.atoms()}
+
+    interchange = Interchange.from_openmm(
+        system=openmm.app.ForceField(
+            "amber99sb.xml",
+            "tip3p.xml",
+        ).createSystem(
+            openmm_topology,
+            nonbondedMethod=openmm.app.PME,
+        ),
+        topology=openmm_topology,
+    )
+
+    openff_atom_names = {atom.name for atom in interchange.topology.atoms}
+
+    assert sorted(openmm_atom_names) == sorted(openff_atom_names)
+
+    # check a few atom names to ensure these didn't end up being empty sets
+    for atom_name in ("NE2", "H3", "HA", "CH3", "CA", "CB", "CE1"):
+        assert atom_name in openff_atom_names

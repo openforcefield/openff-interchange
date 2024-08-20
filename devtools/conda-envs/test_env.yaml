@@ -7,7 +7,7 @@ dependencies:
   - numpy
   - pydantic >=1.10.17,<3
   # OpenFF stack
-  - openff-toolkit-base >=0.16
+  - openff-toolkit-base ~=0.16.4
   - openff-units
   - openff-models
   - ambertools =23
@@ -31,6 +31,9 @@ dependencies:
   # Drivers
   - gromacs
   - lammps >=2023.08.02
+  # shim for a build issue that's probably localized to conda-forge
+  # https://github.com/conda-forge/lammps-feedstock/issues/207
+  - openmpi =4
   - panedr
   # Typing
   - mypy
