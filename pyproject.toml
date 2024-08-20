@@ -11,3 +11,6 @@ ignore-nested-classes = true
 ignore-setters = true
 ignore-regex = ["^Test.*", "test_.*", "^_.*"]
 fail-under = 90
+
+[tool.ruff.lint.per-file-ignores]
+"examples/deprecated/*" = ["NPY"]
