@@ -420,8 +420,8 @@ class Interchange(_BaseModel):
         Parameters
         ----------
         prefix
-            The prefix to use for the LAMMPS data and run input files. For 
-            example, "foo" will produce files named "foo.lmp" and 
+            The prefix to use for the LAMMPS data and run input files. For
+            example, "foo" will produce files named "foo.lmp" and
             "foo_pointenergy.in".
         writer
             The file writer to use. Currently, only `"internal"` is supported.
@@ -548,12 +548,12 @@ class Interchange(_BaseModel):
 
         Positions are set on the `Simulation` if present on the `Interchange`.
 
-        Additional forces, such as a barostat, should be added with the 
+        Additional forces, such as a barostat, should be added with the
         ``additional_forces`` argument to avoid having to re-initialize
-        the ``Context``. Re-initializing the ``Context`` after adding a 
-        ``Force`` is necessary due to `implementation details`_ 
+        the ``Context``. Re-initializing the ``Context`` after adding a
+        ``Force`` is necessary due to `implementation details`_
         in OpenMM.
-        
+
         .. _implementation details: https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#why-does-it-ignore-changes-i-make-to-a-system-or-force
 
         Parameters
