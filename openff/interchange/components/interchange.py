@@ -427,7 +427,8 @@ class Interchange(_BaseModel):
             The file writer to use. Currently, only `"internal"` is supported.
 
         """
-        datafile_path = str(prefix) + ".lmp"
+        prefix = str(prefix)
+        datafile_path = prefix + ".lmp"
         self.to_lammps_datafile(datafile_path, writer=writer)
         self.to_lammps_input(
             prefix + "_pointenergy.in",
