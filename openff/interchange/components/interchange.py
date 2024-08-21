@@ -408,12 +408,13 @@ class Interchange(_BaseModel):
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
 
+        # TODO: Write the coordinates without the full conversion
         GROMACSWriter(
             system=_convert(self),
             gro_file=file_path,
         ).to_gro(decimal=decimal)
 
-    def to_lammps(self, file_path: Path | str, writer="internal"):
+    def to_lammps(self, file_path: Path | str):
         """
         Export this ``Interchange`` to LAMMPS data and run input files.
 
@@ -424,8 +425,6 @@ class Interchange(_BaseModel):
             ending in ".lmp" is given, the extension will be dropped to generate
             the prefix. For example, both "foo" and "foo.lmp" will produce files
             named "foo.lmp" and "foo_pointenergy.in".
-        writer
-            The file writer to use. Currently, only `"internal"` is supported.
 
         """
         # TODO: Rename `file_path` to `prefix` (breaking change)
@@ -434,20 +433,17 @@ class Interchange(_BaseModel):
             prefix = prefix[:-4]
 
         datafile_path = prefix + ".lmp"
-        self.to_lammps_datafile(datafile_path, writer=writer)
+        self.to_lammps_datafile(datafile_path)
         self.to_lammps_input(
             prefix + "_pointenergy.in",
             datafile_path,
         )
 
-    def to_lammps_datafile(self, file_path: Path | str, writer="internal"):
+    def to_lammps_datafile(self, file_path: Path | str):
         """Export this Interchange to a LAMMPS data file."""
-        if writer == "internal":
-            from openff.interchange.interop.lammps import to_lammps
+        from openff.interchange.interop.lammps import to_lammps
 
-            to_lammps(self, file_path)
-        else:
-            raise UnsupportedExportError
+        to_lammps(self, file_path)
 
     def to_lammps_input(
         self,
@@ -639,15 +635,11 @@ class Interchange(_BaseModel):
 
         return simulation
 
-    def to_prmtop(self, file_path: Path | str, writer="internal"):
+    def to_prmtop(self, file_path: Path | str):
         """Export this Interchange to an Amber .prmtop file."""
-        if writer == "internal":
-            from openff.interchange.interop.amber import to_prmtop
+        from openff.interchange.interop.amber import to_prmtop
 
-            to_prmtop(self, file_path)
-
-        else:
-            raise UnsupportedExportError
+        to_prmtop(self, file_path)
 
     @requires_package("openmm")
     def to_pdb(self, file_path: Path | str, include_virtual_sites: bool = False):
@@ -686,15 +678,11 @@ class Interchange(_BaseModel):
         """Export this Interchange to a CHARMM-style .crd file."""
         raise UnsupportedExportError
 
-    def to_inpcrd(self, file_path: Path | str, writer="internal"):
+    def to_inpcrd(self, file_path: Path | str):
         """Export this Interchange to an Amber .inpcrd file."""
-        if writer == "internal":
-            from openff.interchange.interop.amber import to_inpcrd
+        from openff.interchange.interop.amber import to_inpcrd
 
-            to_inpcrd(self, file_path)
-
-        else:
-            raise UnsupportedExportError
+        to_inpcrd(self, file_path)
 
     def to_sander_input(self, file_path: Path | str):
         """
@@ -858,17 +846,6 @@ class Interchange(_BaseModel):
         raise MissingParameterHandlerError(
             f"Could not find parameter handler of name {handler_name}",
         )
-
-    def __getattr__(self, attr: str):
-        if attr == "handlers":
-            warnings.warn(
-                "The `handlers` attribute is deprecated. Use `collections` instead.",
-                InterchangeDeprecationWarning,
-                stacklevel=2,
-            )
-            return self.collections
-        else:
-            return super().__getattribute__(attr)
 
     @overload
     def __getitem__(self, item: Literal["Bonds"]) -> "BondCollection": ...

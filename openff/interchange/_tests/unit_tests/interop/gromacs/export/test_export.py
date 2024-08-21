@@ -371,8 +371,8 @@ class TestGROMACS(_NeedsGROMACS):
         out.topology = top
         out.box = [10, 10, 10] * unit.nanometer
         out.positions = [[0, 0, 0], [0.3, 0, 0]] * unit.nanometer
-        out.to_gro("out.gro", writer="internal")
-        out.to_top("out.top", writer="internal")
+        out.to_gro("out.gro")
+        out.to_top("out.top")
 
         omm_energies = get_openmm_energies(out, combine_nonbonded_forces=True)
         by_hand = A * exp(-B * r) - C * r**-6

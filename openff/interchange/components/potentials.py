@@ -2,7 +2,6 @@
 
 import ast
 import json
-import warnings
 from typing import Annotated, Any, Union
 
 import numpy
@@ -25,7 +24,6 @@ from openff.interchange.models import (
     TopologyKey,
 )
 from openff.interchange.pydantic import _BaseModel
-from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if has_package("jax"):
     from jax import numpy as jax_numpy
@@ -34,18 +32,6 @@ from numpy.typing import ArrayLike
 
 if has_package("jax"):
     from jax import Array
-
-
-def __getattr__(name: str):
-    if name == "PotentialHandler":
-        warnings.warn(
-            "`PotentialHandler` has been renamed to `Collection`. " "Importing `Collection` instead.",
-            InterchangeDeprecationWarning,
-            stacklevel=2,
-        )
-        return Collection
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 class Potential(_BaseModel):
@@ -371,17 +357,6 @@ class Collection(_BaseModel):
         jac_res = jac_parametrize(p)
 
         return jac_res.reshape(-1, p.flatten().shape[0])  # type: ignore[union-attr]
-
-    def __getattr__(self, attr: str):
-        if attr == "slot_map":
-            warnings.warn(
-                "The `slot_map` attribute is deprecated. Use `key_map` instead.",
-                InterchangeDeprecationWarning,
-                stacklevel=2,
-            )
-            return self.key_map
-        else:
-            return super().__getattribute__(attr)
 
     def __getitem__(self, key) -> Potential:
         if isinstance(key, tuple) and key not in self.key_map and tuple(reversed(key)) in self.key_map:
