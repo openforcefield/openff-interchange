@@ -87,6 +87,8 @@ def validate_potential_or_wrapped_potential(
             return Potential.model_validate(v)
         else:
             return WrappedPotential.model_validate(v)
+    else:
+        raise NotImplementedError(f"Validation mode {info.mode} not implemented.")
 
 
 PotentialOrWrappedPotential = Annotated[

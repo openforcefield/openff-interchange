@@ -1,8 +1,7 @@
 """Custom Pydantic models."""
 
 import abc
-from typing import Any, Literal
-
+from typing import Any, Literal, cast
 from pydantic import Field
 
 from openff.interchange.pydantic import _BaseModel
@@ -58,20 +57,18 @@ class TopologyKey(_BaseModel, abc.ABC):
         'some_bond'
 
     """
-
-    # TODO: Swith to `pydantic.contuple` once 1.10.3 or 2.0.0 is released
     atom_indices: tuple[int, ...] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
-    def _tuple(self) -> tuple[Any, ...]:
-        """Tuple representation of this key."""
+    def _tuple(self) -> tuple:
+        """Tuple representation of this key, which is overriden by most child classes."""
         return tuple(self.atom_indices)
 
     def __hash__(self) -> int:
         return hash(self._tuple())
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, tuple):
             return self._tuple() == other
         elif isinstance(other, TopologyKey):
@@ -117,11 +114,17 @@ class BondKey(TopologyKey):
         ),
     )
 
-    def _tuple(self) -> tuple[int, ...] | tuple[tuple[int, ...], float]:
+    def _tuple(self) -> tuple[int, int] | tuple[tuple[int, int], float]:
         if self.bond_order is None:
-            return tuple(self.atom_indices)
+            return cast(tuple[int, int], self.atom_indices)
         else:
-            return (tuple(self.atom_indices), float(self.bond_order))
+            return (
+                cast(
+                    tuple[int, int],
+                    self.atom_indices,
+                ),
+                float(self.bond_order),
+            )
 
     def __repr__(self) -> str:
         return (
@@ -150,8 +153,8 @@ class AngleKey(TopologyKey):
         description="The indices of the atoms occupied by this interaction",
     )
 
-    def _tuple(self) -> tuple[int, ...]:
-        return tuple(self.atom_indices)
+    def _tuple(self) -> tuple[int, int, int]:
+        return cast(tuple[int, int, int], self.atom_indices)
 
 
 class ProperTorsionKey(TopologyKey):
@@ -178,7 +181,7 @@ class ProperTorsionKey(TopologyKey):
 
     """
 
-    atom_indices: tuple[int, int, int, int] | tuple[()] = Field(
+    atom_indices: tuple[int, int, int, int] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
 
@@ -206,19 +209,24 @@ class ProperTorsionKey(TopologyKey):
     def _tuple(
         self,
     ) -> (
-        tuple[()]
-        | tuple[int, int, int, int]
+        tuple[int, int, int, int]
         | tuple[
-            tuple[int, int, int, int] | tuple[()],
+            tuple[int, int, int, int],
             int | None,
             float | None,
             float | None,
         ]
     ):
         if self.mult is None and self.phase is None and self.bond_order is None:
-            return tuple(self.atom_indices)
+            return cast(tuple[int, int, int, int], self.atom_indices)
         else:
-            return (tuple(self.atom_indices), self.mult, self.phase, self.bond_order)
+            return (
+                cast(
+                    tuple[int, int, int, int],
+                     self.atom_indices,
+                ),
+                    self.mult, self.phase, self.bond_order,
+            )
 
     def __repr__(self) -> str:
         return (
@@ -294,7 +302,7 @@ class ChargeModelTopologyKey(_BaseModel):
     partial_charge_method: str
 
     @property
-    def atom_indices(self) -> tuple[int, ...]:
+    def atom_indices(self) -> tuple[int]:
         """Alias for `this_atom_index`."""
         return (self.this_atom_index,)
 
@@ -310,7 +318,7 @@ class ChargeIncrementTopologyKey(_BaseModel):
     other_atom_indices: tuple[int, ...]
 
     @property
-    def atom_indices(self) -> tuple[int, ...]:
+    def atom_indices(self) -> tuple[int]:
         """Alias for `this_atom_index`."""
         return (self.this_atom_index,)
 

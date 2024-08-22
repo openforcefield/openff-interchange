@@ -20,6 +20,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
   * Users freqently approximate vacuum simulation with periodic boundary conditions by applying a large box. This has some performance issues and some non-bonded terms likely differ numerically compared to similar implementations in other engines.
 * The wrapped use of external readers and writers is removed, and with it arguments like `writer` in many `Interchange.to_x` calls.
 * Several classes and methods which were deprecated in the 0.3 line of releases are now removed.
+* `ProperTorsionKey` no longer accepts an empty tuple as atom indices.
 
 ## 0.3.29 - 2024-08-01
 

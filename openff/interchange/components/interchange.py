@@ -243,12 +243,12 @@ class Interchange(_BaseModel):
                 "Cannot visualize system without positions.",
             ) from error
 
-        widget.add_representation("line", sele="water")
-        widget.add_representation("spacefill", sele="ion")
-        widget.add_representation("cartoon", sele="protein")
+        widget.add_representation("line", selection="water")
+        widget.add_representation("spacefill", selection="ion")
+        widget.add_representation("cartoon", selection="protein")
         widget.add_representation(
             "licorice",
-            sele="not water and not ion and not protein",
+            selection="not water and not ion and not protein",
             radius=0.25,
             multipleBond=False,
         )
@@ -523,7 +523,8 @@ class Interchange(_BaseModel):
             hydrogen_mass=hydrogen_mass,
         )
 
-    to_openmm = to_openmm_system
+    def to_openmm(self, *args, **kwargs):
+        return self.to_openmm_system(*args, **kwargs)
 
     def to_openmm_topology(
         self,

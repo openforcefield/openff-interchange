@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, TextIO
 
 from openff.utilities.utilities import has_package, requires_package
+from openff.interchange.smirnoff._base import SMIRNOFFCollection
 
 from openff.interchange.exceptions import (
     PluginCompatibilityError,
@@ -76,6 +77,8 @@ def to_openmm_system(
 
     for collection in interchange.collections.values():
         if collection.is_plugin:
+            assert isinstance(collection, SMIRNOFFCollection)
+
             try:
                 collection.check_openmm_requirements(combine_nonbonded_forces)
             except AssertionError as error:
@@ -129,6 +132,8 @@ def to_openmm_system(
 
     for collection in interchange.collections.values():
         if collection.is_plugin:
+            assert isinstance(collection, SMIRNOFFCollection)
+
             try:
                 collection.modify_openmm_forces(
                     interchange,

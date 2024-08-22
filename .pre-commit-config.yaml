@@ -46,3 +46,9 @@ repos:
   hooks:
     - id: nbstripout
       files: ^examples
+- repo: https://github.com/asottile/pyupgrade
+  rev: v3.17.0
+  hooks:
+  - id: pyupgrade
+    args:
+      - --py310-plus

@@ -1,7 +1,7 @@
 import itertools
 import re
 from collections import defaultdict
-from typing import Optional, TypeAlias, Union
+from typing import TypeAlias, Union
 
 from openff.toolkit import Molecule, Quantity, unit
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
@@ -399,15 +399,15 @@ def _convert_dihedrals(
     unique_molecule: MoleculeLike,
     interchange: Interchange,
 ):
-    rb_torsion_handler: Optional[Collection] = interchange.collections.get(
+    rb_torsion_handler: Collection | None = interchange.collections.get(
         "RBTorsions",
         None,
     )
-    proper_torsion_handler: Optional[Collection] = interchange.collections.get(
+    proper_torsion_handler: Collection | None = interchange.collections.get(
         "ProperTorsions",
         None,
     )
-    improper_torsion_handler: Optional[Collection] = interchange.collections.get(
+    improper_torsion_handler: Collection | None = interchange.collections.get(
         "ImproperTorsions",
         None,
     )
@@ -498,7 +498,7 @@ def _create_single_dihedral(
     top_key,
     proper_torsion_handler,
     offset: int,
-) -> PeriodicProperDihedral | None:
+) -> PeriodicProperDihedral:
     params = proper_torsion_handler.potentials[
         proper_torsion_handler.key_map[top_key]
     ].parameters
@@ -523,7 +523,7 @@ def _create_single_rb_torsion(
     top_key,
     rb_torsion_handler,
     offset: int,
-) -> RyckaertBellemansDihedral | None:
+) -> RyckaertBellemansDihedral:
     params = rb_torsion_handler.potentials[
         rb_torsion_handler.key_map[top_key]
     ].parameters

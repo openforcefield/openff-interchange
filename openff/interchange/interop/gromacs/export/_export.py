@@ -67,14 +67,14 @@ class GROMACSWriter(_BaseModel):
             f"{self.system.coul_14:8.6f}\n\n",
         )
 
-    def _write_atomtypes(self, top, merge_atom_types: bool) -> dict[str, str]:
+    def _write_atomtypes(self, top, merge_atom_types: bool) -> dict[str, bool | str]:
         top.write("[ atomtypes ]\n")
         top.write(
             ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n",
         )
 
-        reduced_atom_types = []
-        mapping_to_reduced_atom_types = {}
+        reduced_atom_types: list[tuple[str, LennardJonesAtomType]]= list()
+        mapping_to_reduced_atom_types = dict()
 
         def _is_atom_type_in_list(
             atom_type,

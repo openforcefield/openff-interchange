@@ -1,6 +1,7 @@
 from openff.toolkit import Quantity
 
 from openff.interchange.common._nonbonded import ElectrostaticsCollection
+from openff.interchange.models import TopologyKey
 
 
 class BasicElectrostaticsCollection(ElectrostaticsCollection):
@@ -17,8 +18,8 @@ class BasicElectrostaticsCollection(ElectrostaticsCollection):
 
         return self._charges
 
-    def _get_charges(self):
-        charges: dict[int, Quantity] = dict()
+    def _get_charges(self) -> dict[TopologyKey, Quantity]:
+        charges: dict[TopologyKey, Quantity] = dict()
 
         for topology_key, potential_key in self.key_map.items():
             potential = self.potentials[potential_key]

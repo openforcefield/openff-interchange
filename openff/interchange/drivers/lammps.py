@@ -57,7 +57,10 @@ def _get_lammps_energies(
     import lammps
 
     if round_positions is not None:
-        interchange.positions = numpy.round(interchange.positions, round_positions)
+        interchange.positions = numpy.round(
+            interchange.positions,  # type: ignore[arg-type]
+            round_positions,
+        )
 
     with tempfile.TemporaryDirectory():
         interchange.to_lammps("out.lmp")

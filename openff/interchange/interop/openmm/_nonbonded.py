@@ -4,7 +4,7 @@ Helper functions for producing `openmm.Force` objects for non-bonded terms.
 
 import itertools
 from collections import defaultdict
-from typing import DefaultDict, NamedTuple, Optional
+from typing import DefaultDict, NamedTuple
 
 from openff.toolkit import Molecule, Quantity, unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
@@ -43,7 +43,7 @@ class _NonbondedData(NamedTuple):
     vdw_cutoff: Quantity
     vdw_method: str | None
     vdw_expression: str | None
-    mixing_rule: str | None
+    mixing_rule: str
     electrostatics_collection: ElectrostaticsCollection
     electrostatics_method: str | None
     periodic: bool
@@ -237,12 +237,12 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
         else:
             vdw_method: str | None = vdw.periodic_method.lower()
 
-        mixing_rule: str | None = getattr(vdw, "mixing_rule", None)
+        mixing_rule: str = getattr(vdw, "mixing_rule", "")
         vdw_expression: str | None = vdw.expression.replace("**", "^")
     else:
         vdw_cutoff = None
         vdw_method = None
-        mixing_rule = None
+        mixing_rule = ""
         vdw_expression = None
 
     try:
@@ -283,7 +283,7 @@ def _create_single_nonbonded_force(
     openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
 ):
     """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site collections."""
-    if data.mixing_rule not in ("lorentz-berthelot", None):
+    if data.mixing_rule not in ("lorentz-berthelot", ""):
         raise UnsupportedExportError(
             "OpenMM's default NonbondedForce only supports Lorentz-Berthelot mixing rules. "
             f"Found {data.mixing_rule}. "
@@ -694,7 +694,7 @@ def _create_multiple_nonbonded_forces(
                             eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
                         else:
                             raise UnsupportedExportError(
-                                f"Unsupported mixing rule: {data['mixing_rule']}",
+                                f"Unsupported mixing rule: {data.mixing_rule}",
                             )
 
                         # ... and set the 1-4 interactions
@@ -736,7 +736,7 @@ def _create_vdw_force(
     molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
     has_virtual_sites: bool,
 ) -> openmm.CustomNonbondedForce | None:
-    vdw_collection: Optional[vdWCollection] = data.vdw_collection
+    vdw_collection: vdWCollection | None = data.vdw_collection
 
     if vdw_collection is None:
         return None
@@ -906,13 +906,11 @@ def _set_particle_parameters(
     molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
     openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
 ):
-    if electrostatics_force is not None:
-        electrostatics: ElectrostaticsCollection = data.electrostatics_collection
+    # TODO: Some funky plugins might have no charges, so there eventually should be
+    #       handling for electrostatics_force = None
+    electrostatics: ElectrostaticsCollection = data.electrostatics_collection
 
-        partial_charges = electrostatics._get_charges()
-
-    else:
-        partial_charges = None
+    partial_charges = electrostatics._get_charges()
 
     vdw: vdWCollection = data.vdw_collection
 
@@ -924,10 +922,7 @@ def _set_particle_parameters(
 
             top_key = TopologyKey(atom_indices=(atom_index,))
 
-            if partial_charges is not None:
-                partial_charge = partial_charges[top_key].m_as(unit.e)
-            else:
-                partial_charge = 0.0
+            partial_charge = partial_charges[top_key].m_as(unit.e)
 
             if vdw is not None:
                 pot_key = vdw.key_map[top_key]

@@ -190,7 +190,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
         self.nonperiodic_method = parameter_handler.nonperiodic_method.lower()
         self.cutoff = parameter_handler.cutoff
 
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             smirks = potential_key.id
             force_field_parameters = parameter_handler.parameters[smirks]
 
@@ -343,7 +343,7 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
         self.nonperiodic_method = parameter_handler.nonperiodic_method.lower()
         self.cutoff = parameter_handler.cutoff
 
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             smirks = potential_key.id
             force_field_parameters = parameter_handler.parameters[smirks]
 
@@ -446,7 +446,7 @@ class SMIRNOFFC4IonCollection(_SMIRNOFFNonbondedCollection):
         Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
 
         """
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             smirks = potential_key.id
             force_field_parameters = parameter_handler.parameters[smirks]
 
