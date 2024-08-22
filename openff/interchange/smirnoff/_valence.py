@@ -1,5 +1,5 @@
 import warnings
-from typing import Literal
+from typing import Literal, Self
 
 from openff.toolkit import Molecule, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -32,11 +32,8 @@ from openff.interchange.models import (
 )
 from openff.interchange.smirnoff._base import (
     SMIRNOFFCollection,
-    T,
     _check_all_valence_terms_assigned,
 )
-
-_CollectionAlias = type[T]
 
 
 def _upconvert_bondhandler(bond_handler: BondHandler):
@@ -137,7 +134,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
         if self.key_map:
             # TODO: Should the key_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
-            self.key_map: dict[BondKey, PotentialKey] = dict()  # type: ignore[assignment]
+            self.key_map: dict[BondKey, PotentialKey] = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             parameter: BondHandler.BondType = val.parameter_type
@@ -194,8 +191,8 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
             smirks = potential_key.id
             force_field_parameters = parameter_handler.parameters[smirks]
 
-            if topology_key.bond_order:
-                bond_order = topology_key.bond_order
+            if topology_key.bond_order:  # type: ignore[union-attr]
+                bond_order = topology_key.bond_order  # type: ignore[union-attr]
                 if force_field_parameters.k_bondorder:
                     data = force_field_parameters.k_bondorder
                 else:
@@ -247,11 +244,11 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
 
     @classmethod
     def create(
-        cls: _CollectionAlias,
+        cls,
         parameter_handler: BondHandler,
         topology: Topology,
         partial_bond_orders_from_molecules: list[Molecule] | None = None,
-    ) -> "SMIRNOFFBondCollection":
+    ) -> Self:
         """
         Create a SMIRNOFFBondCollection from toolkit data.
 
@@ -293,7 +290,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
 class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
     """Handler storing constraint potentials as produced by a SMIRNOFF force field."""
 
-    type: Literal["Constraints"] = "Constraints"
+    type: Literal["Constraints"] = "Constraints"  # type: ignore[assignment]
     expression: Literal[""] = ""
 
     @classmethod
@@ -313,11 +310,11 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
 
     @classmethod
     def create(
-        cls: _CollectionAlias,
+        cls,
         parameter_handler: list,
         topology: Topology,
         bonds: SMIRNOFFBondCollection | None = None,
-    ) -> "SMIRNOFFConstraintCollection":
+    ) -> Self:
         """
         Create a SMIRNOFFCollection from toolkit data.
 
@@ -420,7 +417,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
 class SMIRNOFFAngleCollection(SMIRNOFFCollection, AngleCollection):
     """Handler storing angle potentials as produced by a SMIRNOFF force field."""
 
-    type: Literal["Angles"] = "Angles"
+    type: Literal["Angles"] = "Angles"  # type: ignore[assignment]
     expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
 
     @classmethod
@@ -463,7 +460,7 @@ class SMIRNOFFAngleCollection(SMIRNOFFCollection, AngleCollection):
 class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollection):
     """Handler storing proper torsions potentials as produced by a SMIRNOFF force field."""
 
-    type: Literal["ProperTorsions"] = "ProperTorsions"
+    type: Literal["ProperTorsions"] = "ProperTorsions"  # type: ignore[assignment]
     expression: Literal["k*(1+cos(periodicity*theta-phase))"] = "k*(1+cos(periodicity*theta-phase))"
     fractional_bond_order_method: Literal["AM1-Wiberg"] = "AM1-Wiberg"
     fractional_bond_order_interpolation: Literal["linear"] = "linear"
@@ -493,7 +490,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
 
         """
         if self.key_map:
-            self.key_map: dict[ProperTorsionKey, PotentialKey] = dict()  # type: ignore[assignment]
+            self.key_map: dict[ProperTorsionKey, PotentialKey] = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             parameter: ProperTorsionHandler.ProperTorsionType = val.parameter_type
@@ -555,8 +552,8 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
             n = potential_key.mult
             parameter = parameter_handler.parameters[smirks]
 
-            if topology_key.bond_order:
-                bond_order = topology_key.bond_order
+            if topology_key.bond_order:  # type: ignore[union-attr]
+                bond_order = topology_key.bond_order  # type: ignore[union-attr]
                 data = parameter.k_bondorder[n]
                 coeffs = _get_interpolation_coeffs(
                     fractional_bond_order=bond_order,
@@ -592,11 +589,11 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
 
     @classmethod
     def create(
-        cls: _CollectionAlias,
+        cls,
         parameter_handler: ProperTorsionHandler,
         topology: Topology,
         partial_bond_orders_from_molecules=None,
-    ) -> "SMIRNOFFProperTorsionCollection":
+    ) -> Self:
         """
         Create a SMIRNOFFProperTorsionCollection from toolkit data.
 
@@ -630,7 +627,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
 class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection, ImproperTorsionCollection):
     """Handler storing improper torsions potentials as produced by a SMIRNOFF force field."""
 
-    type: Literal["ImproperTorsions"] = "ImproperTorsions"
+    type: Literal["ImproperTorsions"] = "ImproperTorsions"  # type: ignore[assignment]
     expression: Literal["k*(1+cos(periodicity*theta-phase))"] = "k*(1+cos(periodicity*theta-phase))"
     # TODO: Consider whether or not default_idivf should be stored here
 

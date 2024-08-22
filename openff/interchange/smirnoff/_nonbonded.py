@@ -2,7 +2,7 @@ import copy
 import functools
 import warnings
 from collections.abc import Iterable
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, Optional, Union, Self
 
 import numpy
 from openff.toolkit import Molecule, Quantity, Topology, unit
@@ -37,7 +37,7 @@ from openff.interchange.models import (
     TopologyKey,
     VirtualSiteKey,
 )
-from openff.interchange.smirnoff._base import SMIRNOFFCollection, T
+from openff.interchange.smirnoff._base import SMIRNOFFCollection
 
 ElectrostaticsHandlerType = Union[
     ElectrostaticsHandler,
@@ -190,10 +190,10 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
 
     @classmethod
     def create(
-        cls: type[T],
+        cls,
         parameter_handler: vdWHandler,
         topology: Topology,
-    ) -> T:
+    ) -> Self:
         """
         Create a SMIRNOFFvdWCollection from toolkit data.
 
@@ -258,13 +258,13 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         "cutoff",
         "no-cutoff",
         "reaction-field",
-    ] = Field(_PME)
+    ] = Field(_PME)  # type: ignore[assignment]
     nonperiodic_potential: Literal[
         "Coulomb",
         "cutoff",
         "no-cutoff",
         "reaction-field",
-    ] = Field("Coulomb")
+    ] = Field("Coulomb")  # type: ignore[assignment]
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     _charges = PrivateAttr(default_factory=dict)
@@ -287,14 +287,14 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @property
     def _charges_without_virtual_sites(
         self,
-    ) -> dict[TopologyKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
         return self._get_charges(include_virtual_sites=False)
 
     @property
     def charges(
         self,
-    ) -> dict[TopologyKey | VirtualSiteKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:
             self._charges = self._get_charges(include_virtual_sites=True)
@@ -305,7 +305,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     def _get_charges(
         self,
         include_virtual_sites=True,
-    ) -> dict[TopologyKey | VirtualSiteKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, Quantity]:
         """Get the total partial charge on each atom or particle."""
         # Keyed by index for atoms and by VirtualSiteKey for virtual sites.
         charges: dict[VirtualSiteKey | int, Quantity] = dict()
@@ -381,7 +381,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     raise NotImplementedError()
 
         returned_charges: dict[
-            TopologyKey | LibraryChargeTopologyKey,
+            TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey,
             Quantity,
         ] = dict()
 
@@ -406,12 +406,12 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
     @classmethod
     def create(
-        cls: type[T],
+        cls,
         parameter_handler: Any,
         topology: Topology,
         charge_from_molecules=None,
         allow_nonintegral_charges: bool = False,
-    ) -> T:
+    ) -> Self:
         """
         Create a SMIRNOFFElectrostaticsCollection from toolkit data.
 

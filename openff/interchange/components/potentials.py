@@ -80,7 +80,7 @@ def validate_potential_or_wrapped_potential(
     v: Any,
     handler: ValidatorFunctionWrapHandler,
     info: ValidationInfo,
-) -> dict[str, Quantity]:
+) -> Potential | WrappedPotential:
     """Validate the parameters field of a Potential object."""
     if info.mode == "json":
         if "parameters" in v:
@@ -113,6 +113,8 @@ def validate_key_map(v: Any, handler, info) -> dict:
         for key, val in v.items():
             val_dict = json.loads(val)
 
+            key_class: type[TopologyKey]
+
             match val_dict["associated_handler"]:
                 case "Bonds":
                     key_class = BondKey
@@ -123,9 +125,9 @@ def validate_key_map(v: Any, handler, info) -> dict:
                 case "ImproperTorsions":
                     key_class = ImproperTorsionKey
                 case "LibraryCharges":
-                    key_class = LibraryChargeTopologyKey
+                    key_class = LibraryChargeTopologyKey  # type: ignore[assignment]
                 case "ToolkitAM1BCCHandler":
-                    key_class = SingleAtomChargeTopologyKey
+                    key_class = SingleAtomChargeTopologyKey  # type: ignore[assignment]
 
                 case _:
                     key_class = TopologyKey
@@ -151,7 +153,7 @@ def validate_key_map(v: Any, handler, info) -> dict:
     return v
 
 
-def serialize_key_map(value: dict[str, str], handler, info) -> dict[str, str]:
+def serialize_key_map(value: dict[TopologyKey, PotentialKey], handler, info) -> dict[str, str]:
     """Serialize the parameters field of a Potential object."""
     if info.mode == "json":
         return {key.model_dump_json(): value.model_dump_json() for key, value in value.items()}
@@ -190,20 +192,23 @@ def validate_potential_dict(
         raise NotImplementedError(f"Validation mode {info.mode} not implemented.")
 
 
-def serialize_potential_dict(
-    value: dict[str, Quantity],
+def serialize_potentials(
+    value: dict[PotentialKey, Potential],
     handler,
     info,
 ) -> dict[str, str]:
-    """Serialize the parameters field of a Potential object."""
+    """Serialize the potentials field."""
     if info.mode == "json":
-        return {key.model_dump_json(): value.model_dump_json() for key, value in value.items()}
 
+        return {key.model_dump_json(): _value.model_dump_json() for key, _value in value.items()}
+
+    else:
+        raise NotImplementedError(f"Serialization mode {info.mode} not implemented.")
 
 Potentials = Annotated[
     dict[PotentialKey, PotentialOrWrappedPotential],
     WrapValidator(validate_potential_dict),
-    WrapSerializer(serialize_potential_dict),
+    WrapSerializer(serialize_potentials),
 ]
 
 
@@ -360,9 +365,9 @@ class Collection(_BaseModel):
 
         return jac_res.reshape(-1, p.flatten().shape[0])  # type: ignore[union-attr]
 
-    def __getitem__(self, key) -> Potential:
+    def __getitem__(self, key) -> Potential | WrappedPotential:
         if isinstance(key, tuple) and key not in self.key_map and tuple(reversed(key)) in self.key_map:
-            return self.potentials[self.key_map[tuple(reversed(key))]]
+            return self.potentials[self.key_map[tuple(reversed(key))]]  # type: ignore[index]
 
         return self.potentials[self.key_map[key]]
 
@@ -374,6 +379,7 @@ def validate_collections(
 ) -> dict:
     """Validate the collections dict from a JSON blob."""
     from openff.interchange.smirnoff import (
+        SMIRNOFFCollection,
         SMIRNOFFAngleCollection,
         SMIRNOFFBondCollection,
         SMIRNOFFConstraintCollection,
@@ -384,7 +390,7 @@ def validate_collections(
         SMIRNOFFVirtualSiteCollection,
     )
 
-    _class_mapping = {
+    _class_mapping: dict[str, type[SMIRNOFFCollection]] = {
         "Bonds": SMIRNOFFBondCollection,
         "Angles": SMIRNOFFAngleCollection,
         "Constraints": SMIRNOFFConstraintCollection,
@@ -402,6 +408,8 @@ def validate_collections(
             )
             for collection_name, collection_data in v.items()
         }
+    else:
+        raise ValueError(f"Validation mode {info.mode} not implemented.")
 
 
 _AnnotatedCollections = Annotated[

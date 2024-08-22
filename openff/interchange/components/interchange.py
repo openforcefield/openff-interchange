@@ -34,6 +34,7 @@ from openff.interchange.operations.minimize import (
 )
 from openff.interchange.pydantic import _BaseModel
 from openff.interchange.serialization import _AnnotatedTopology
+from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.smirnoff import (
     SMIRNOFFConstraintCollection,
     SMIRNOFFVirtualSiteCollection,
@@ -891,7 +892,16 @@ class Interchange(_BaseModel):
     ) -> "ElectrostaticsCollection": ...
 
     @overload
-    def __getitem__(self, item: str) -> "Collection": ...
+    def __getitem__(
+        self,
+        item: Literal['GBSA'],
+    ) -> "SMIRNOFFGBSACollection": ...
+
+    @overload
+    def __getitem__(
+        self,
+        item: str,
+    ) -> "Collection": ...
 
     def __getitem__(self, item: str):
         """Syntax sugar for looking up collections or other components."""

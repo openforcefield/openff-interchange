@@ -8,7 +8,7 @@ from pydantic import Field, PrivateAttr
 from openff.interchange._annotations import _DistanceQuantity
 from openff.interchange.components.potentials import Collection
 from openff.interchange.constants import _PME
-from openff.interchange.models import LibraryChargeTopologyKey, TopologyKey
+from openff.interchange.models import LibraryChargeTopologyKey, TopologyKey, VirtualSiteKey
 
 
 class _NonbondedCollection(Collection, abc.ABC):
@@ -91,7 +91,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
         "Ewald3D-ConductingBoundary",
         "cutoff",
         "no-cutoff",
-    ] = Field(_PME)
+    ] = Field(_PME)  # type: ignore[assignment]
     nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
@@ -104,7 +104,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
     _charges_cached: bool = PrivateAttr(default=False)
 
     @property
-    def charges(self) -> dict[TopologyKey, Quantity]:
+    def charges(self) -> dict[TopologyKey| LibraryChargeTopologyKey | VirtualSiteKey, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:
             self._charges = self._get_charges(include_virtual_sites=False)
@@ -115,7 +115,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
     def _get_charges(
         self,
         include_virtual_sites: bool = False,
-    ) -> dict[TopologyKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
         if include_virtual_sites:
             raise NotImplementedError()
 
