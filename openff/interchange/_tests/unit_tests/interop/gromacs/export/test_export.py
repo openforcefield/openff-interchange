@@ -194,7 +194,6 @@ class TestGROMACSGROFile(_NeedsGROMACS):
 
 
 class TestGROMACS(_NeedsGROMACS):
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -585,7 +584,6 @@ class TestCommonBoxes(_NeedsGROMACS):
 
 
 class TestMergeAtomTypes(_NeedsGROMACS):
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -755,6 +753,7 @@ class TestGROMACSVirtualSites(_NeedsGROMACS):
 
         assert abs(numpy.sum([p.charge for p in gmx_top.atoms])) < 1e-3
 
+    @pytest.mark.slow
     def test_carbonyl_example(self, sage_with_planar_monovalent_carbonyl, ethanol):
         """Test that a single-molecule planar carbonyl example can run 0 steps."""
         ethanol.generate_conformers(n_conformers=1)

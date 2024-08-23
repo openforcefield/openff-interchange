@@ -16,6 +16,8 @@ if has_package("openmm"):
 
 @skip_if_missing("openmm")
 class TestOpenMMMinimization:
+
+    @pytest.mark.slow
     def test_minimization_decreases_energy(self, sage):
         system = sage.create_interchange(
             MoleculeWithConformer.from_smiles("CNC(=O)C1=C(N)C=C(F)C=C1").to_topology(),

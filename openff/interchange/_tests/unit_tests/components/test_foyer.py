@@ -113,7 +113,6 @@ class TestFoyer:
         argnames="molecule_path",
         argvalues=[*get_test_files_dir_path("foyer_test_molecules").glob("*.sdf")],
     )
-    @pytest.mark.slow
     def test_interchange_energies(self, molecule_path, get_interchanges, oplsaa):
         if "ethanol" in str(molecule_path) or "adamantane" in str(molecule_path):
             pytest.skip("Foyer/ParmEd bug with this molecule")
@@ -203,7 +202,6 @@ class TestRBTorsions(TestFoyer):
 
         assert (gmx - omm).m_as(kj_mol) < 1e-6
 
-    @pytest.mark.slow
     @skip_if_missing("foyer")
     @skip_if_missing("mbuild")
     @needs_gmx

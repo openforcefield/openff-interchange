@@ -25,7 +25,6 @@ from openff.interchange.drivers.all import get_all_energies, get_summary_data
 
 
 @skip_if_missing("openmm")
-@pytest.mark.slow
 class TestDriversAll:
     @pytest.fixture
     def basic_interchange(self, sage_unconstrained):

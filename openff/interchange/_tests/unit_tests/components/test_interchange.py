@@ -27,7 +27,6 @@ from openff.interchange.exceptions import (
 )
 
 
-@pytest.mark.slow
 class TestInterchange:
     def test_getitem(self, sage):
         """Test behavior of Interchange.__getitem__"""
@@ -415,7 +414,6 @@ class TestWrappedCalls:
             Interchange.from_gromacs()
 
     @skip_if_missing("openmm")
-    @pytest.mark.slow
     def test_from_openmm_called(self, monkeypatch, simple_interchange):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 

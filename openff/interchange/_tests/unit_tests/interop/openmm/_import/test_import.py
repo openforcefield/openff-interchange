@@ -154,6 +154,7 @@ class TestFromOpenMM:
             assert atom.metadata["insertion_code"] == "A"
             assert atom.metadata["residue_name"] == "BNZ"
 
+    @pytest.mark.slow
     def test_openmm_native_roundtrip_metadata(self, monkeypatch, sage):
         """
         Test that metadata is the same whether we load a PDB through OpenMM+Interchange vs. Topology.from_pdb.
