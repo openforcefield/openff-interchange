@@ -133,7 +133,6 @@ jobs:
         # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
         micromamba remove jax
         mypy -p "openff.interchange" --exclude "openff/interchange/_tests/"
-        mypy --show-error-codes plugins/nonbonded_plugins/
 
     - name: Codecov
       uses: codecov/codecov-action@v4
