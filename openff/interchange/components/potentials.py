@@ -2,7 +2,7 @@
 
 import ast
 import json
-from typing import Annotated, Any, Union
+from typing import Annotated, Any
 
 import numpy
 from openff.toolkit import Quantity
@@ -32,6 +32,8 @@ from numpy.typing import ArrayLike
 
 if has_package("jax"):
     from jax import Array
+else:
+    Array = Any
 
 
 class Potential(_BaseModel):
@@ -92,7 +94,7 @@ def validate_potential_or_wrapped_potential(
 
 
 PotentialOrWrappedPotential = Annotated[
-    Union[Potential, WrappedPotential],
+    Potential | WrappedPotential,
     WrapValidator(validate_potential_or_wrapped_potential),
 ]
 
@@ -256,7 +258,7 @@ class Collection(_BaseModel):
     def get_force_field_parameters(
         self,
         use_jax: bool = False,
-    ) -> Union["ArrayLike", "Array"]:
+    ) -> ArrayLike | Array:
         """Return a flattened representation of the force field parameters."""
         # TODO: Handle WrappedPotential
         if any(isinstance(potential, WrappedPotential) for potential in self.potentials.values()):
@@ -271,7 +273,7 @@ class Collection(_BaseModel):
                 [[v.m for v in p.parameters.values()] for p in self.potentials.values()],
             )
 
-    def set_force_field_parameters(self, new_p: "ArrayLike") -> None:
+    def set_force_field_parameters(self, new_p: ArrayLike) -> None:
         """Set the force field parameters from a flattened representation."""
         mapping = self.get_mapping()
         if new_p.shape[0] != len(mapping):  # type: ignore
@@ -292,7 +294,7 @@ class Collection(_BaseModel):
         self,
         p=None,
         use_jax: bool = False,
-    ) -> Union["ArrayLike", "Array"]:
+    ) -> ArrayLike | Array:
         """
         Return a flattened representation of system parameters.
 
@@ -331,7 +333,7 @@ class Collection(_BaseModel):
         self,
         p=None,
         use_jax: bool = True,
-    ) -> Union["ArrayLike", "Array"]:
+    ) -> ArrayLike | "Array":
         """Return an array of system parameters, given an array of force field parameters."""
         if p is None:
             p = self.get_force_field_parameters(use_jax=use_jax)
@@ -348,7 +350,7 @@ class Collection(_BaseModel):
         )
 
     @requires_package("jax")
-    def get_param_matrix(self) -> Union["Array", "ArrayLike"]:
+    def get_param_matrix(self) -> ArrayLike | "Array":
         """Get a matrix representing the mapping between force field and system parameters."""
         from functools import partial
 

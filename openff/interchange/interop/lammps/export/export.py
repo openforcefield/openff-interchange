@@ -64,7 +64,7 @@ def to_lammps(interchange: Interchange, file_path: Path | str):
         # write types section
 
         x_min, y_min, z_min = numpy.min(
-            interchange.positions.to(unit.angstrom),
+            interchange.positions.to(unit.angstrom),  # type: ignore[union-attr]
             axis=0,
         ).magnitude
         if interchange.box is None:
@@ -267,7 +267,7 @@ def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
     vdw_handler = interchange["vdW"]
 
     charges = interchange["Electrostatics"]._get_charges()
-    positions = interchange.positions.m_as(unit.angstrom)
+    positions = interchange.positions.m_as(unit.angstrom)  # type: ignore[union-attr]
 
     """
     for molecule_index, molecule in enumerate(interchange.topology.molecules):

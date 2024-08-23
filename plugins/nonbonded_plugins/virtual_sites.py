@@ -40,6 +40,8 @@ class BuckinghamVirtualSiteHandler(VirtualSiteHandler):
 class SMIRNOFFBuckinghamVirtualSiteCollection(SMIRNOFFVirtualSiteCollection):
     """A collection storing virtual sites compatible with the Buckingham (exp-6) functional form."""
 
+    is_plugin: bool = True
+
     @classmethod
     def supported_parameters(cls):
         """Return a list of parameter attributes supported by this handler."""

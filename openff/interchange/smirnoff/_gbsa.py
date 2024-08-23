@@ -32,7 +32,7 @@ _KcalMolA2 = Annotated[
 class SMIRNOFFGBSACollection(SMIRNOFFCollection):
     """Collection storing GBSA potentials as produced by a SMIRNOFF force field."""
 
-    type: Literal["GBSA"] = "GBSA"  # type: ignore[assignment]
+    type: Literal["GBSA"] = "GBSA"
     expression: str = "GBSA-OBC1"
 
     gb_model: str = "OBC1"

@@ -65,7 +65,7 @@ class MDConfig(_BaseModel):
         description="The distance at which the switching function is applied",
     )
     coul_method: str = Field(
-        None,
+        "",
         description="The method used to compute pairwise electrostatic interactions",
     )
     coul_cutoff: _DistanceQuantity = Field(

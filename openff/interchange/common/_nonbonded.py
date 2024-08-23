@@ -115,7 +115,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
     def _get_charges(
         self,
         include_virtual_sites: bool = False,
-    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
+    ) -> dict[TopologyKey | VirtualSiteKey | LibraryChargeTopologyKey, Quantity]:
         if include_virtual_sites:
             raise NotImplementedError()
 

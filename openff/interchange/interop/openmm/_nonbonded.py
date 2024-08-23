@@ -121,7 +121,7 @@ def _process_nonbonded_forces(
             break
         if collection.is_plugin:
             # TODO: Here is where to detect an electrostatics plugin, if one ever exists
-            if collection.acts_as == "vdW":
+            if collection.acts_as == "vdW":  # type: ignore[attr-defined]
                 has_vdw = True
                 break
 
@@ -224,7 +224,7 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
     except LookupError:
         for collection in interchange.collections.values():
             if collection.is_plugin:
-                if collection.acts_as == "vdW":
+                if collection.acts_as == "vdW":  # type: ignore[attr-defined]
                     # We can't be completely sure all plugins subclass out of vdWCollection here
                     vdw = collection  # type: ignore[assignment]
                     break
@@ -237,7 +237,7 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
         if interchange.box is None:
             vdw_method: str | None = vdw.nonperiodic_method.lower()
         else:
-            vdw_method: str | None = vdw.periodic_method.lower()
+            vdw_method = vdw.periodic_method.lower()
 
         mixing_rule: str = getattr(vdw, "mixing_rule", "")
         vdw_expression: str | None = vdw.expression.replace("**", "^")
@@ -622,7 +622,7 @@ def _create_multiple_nonbonded_forces(
         if vdw.is_plugin:
             # TODO: Custom mixing rules in plugins is untested
             vdw_14_force = openmm.CustomBondForce(
-                _get_scaled_potential_function(data.vdw_expression),
+                _get_scaled_potential_function(data.vdw_expression),  # type: ignore[arg-type]
             )
             vdw_14_force.setName("vdW 1-4 force")
 
@@ -633,17 +633,17 @@ def _create_multiple_nonbonded_forces(
 
             vdw_14_force.addGlobalParameter("scale14", vdw.scale_14)
 
-            for global_parameter in vdw.global_parameters():
+            for global_parameter in vdw.global_parameters():  # type: ignore[attr-defined]
                 vdw_14_force.addGlobalParameter(
                     global_parameter,
                     getattr(vdw, global_parameter).m,
                 )
 
-            for term, value in data.vdw_collection.pre_computed_terms().items():
+            for term, value in data.vdw_collection.pre_computed_terms().items():  # type: ignore[attr-defined]
                 vdw_14_force.addGlobalParameter(term, value)
 
         else:
-            vdw_expression: str = data.vdw_expression
+            vdw_expression: str = data.vdw_expression  # type: ignore
 
             vdw_14_force = openmm.CustomBondForce(vdw_expression)
             vdw_14_force.setName("vdW 1-4 force")
@@ -775,13 +775,13 @@ def _create_vdw_force(
 
     if vdw_collection.is_plugin:
         # TODO: Move this block outside of the plugin conditional
-        for global_parameter in vdw_collection.global_parameters():
+        for global_parameter in vdw_collection.global_parameters():  # type: ignore[attr-defined]
             vdw_force.addGlobalParameter(
                 global_parameter,
                 getattr(vdw_collection, global_parameter).m,
             )
 
-        for term, value in vdw_collection.pre_computed_terms().items():
+        for term, value in vdw_collection.pre_computed_terms().items():  # type: ignore[attr-defined]
             vdw_force.addGlobalParameter(term, value)
 
     for molecule in interchange.topology.molecules:

@@ -1,5 +1,6 @@
 import warnings
-from typing import Literal, Self
+from typing import Literal
+from typing_extensions import Self
 
 from openff.toolkit import Molecule, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -260,14 +261,14 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
         if type(parameter_handler) not in cls.allowed_parameter_handlers():
             raise InvalidParameterHandlerError
 
-        handler: SMIRNOFFBondCollection = cls(
+        collection = cls(
             type="Bonds",
             expression="k/2*(r-length)**2",
             fractional_bond_order_method=parameter_handler.fractional_bondorder_method,
             fractional_bond_order_interpolation=parameter_handler.fractional_bondorder_interpolation,
         )
 
-        if handler._get_uses_interpolation(parameter_handler):
+        if collection._get_uses_interpolation(parameter_handler):
             _check_molecule_uniqueness(partial_bond_orders_from_molecules)
 
             for molecule in topology.molecules:
@@ -278,19 +279,19 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
                 # TODO: expose conformer generation and fractional bond order assigment knobs to user via API
                 molecule.generate_conformers(n_conformers=1)
                 molecule.assign_fractional_bond_orders(
-                    bond_order_model=handler.fractional_bond_order_method.lower(),
+                    bond_order_model=collection.fractional_bond_order_method.lower(),
                 )
 
-        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
-        handler.store_potentials(parameter_handler=parameter_handler)
+        collection.store_matches(parameter_handler=parameter_handler, topology=topology)
+        collection.store_potentials(parameter_handler=parameter_handler)
 
-        return handler
+        return collection
 
 
 class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
     """Handler storing constraint potentials as produced by a SMIRNOFF force field."""
 
-    type: Literal["Constraints"] = "Constraints"  # type: ignore[assignment]
+    type: Literal["Constraints"] = "Constraints"
     expression: Literal[""] = ""
 
     @classmethod
@@ -417,7 +418,7 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
 class SMIRNOFFAngleCollection(SMIRNOFFCollection, AngleCollection):
     """Handler storing angle potentials as produced by a SMIRNOFF force field."""
 
-    type: Literal["Angles"] = "Angles"  # type: ignore[assignment]
+    type: Literal["Angles"] = "Angles"
     expression: Literal["k/2*(theta-angle)**2"] = "k/2*(theta-angle)**2"
 
     @classmethod
@@ -460,7 +461,7 @@ class SMIRNOFFAngleCollection(SMIRNOFFCollection, AngleCollection):
 class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollection):
     """Handler storing proper torsions potentials as produced by a SMIRNOFF force field."""
 
-    type: Literal["ProperTorsions"] = "ProperTorsions"  # type: ignore[assignment]
+    type: Literal["ProperTorsions"] = "ProperTorsions"
     expression: Literal["k*(1+cos(periodicity*theta-phase))"] = "k*(1+cos(periodicity*theta-phase))"
     fractional_bond_order_method: Literal["AM1-Wiberg"] = "AM1-Wiberg"
     fractional_bond_order_interpolation: Literal["linear"] = "linear"
@@ -598,7 +599,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
         Create a SMIRNOFFProperTorsionCollection from toolkit data.
 
         """
-        collection: SMIRNOFFProperTorsionCollection = cls(
+        collection = cls(
             type="ProperTorsions",
             expression="k*(1+cos(periodicity*theta-phase))",
             fractional_bond_order_method=parameter_handler.fractional_bondorder_method,
@@ -627,7 +628,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
 class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection, ImproperTorsionCollection):
     """Handler storing improper torsions potentials as produced by a SMIRNOFF force field."""
 
-    type: Literal["ImproperTorsions"] = "ImproperTorsions"  # type: ignore[assignment]
+    type: Literal["ImproperTorsions"] = "ImproperTorsions"
     expression: Literal["k*(1+cos(periodicity*theta-phase))"] = "k*(1+cos(periodicity*theta-phase))"
     # TODO: Consider whether or not default_idivf should be stored here
 

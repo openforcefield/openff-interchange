@@ -353,7 +353,7 @@ def _virtual_sites(
         # is directed to act as it
         for collection in interchange.collections.values():
             if collection.is_plugin:
-                if collection.acts_as == "vdW":
+                if collection.acts_as == "vdW":  # type: ignore[attr-defined]
                     vdw = collection  # type: ignore[assignment]
                     break
         else:
@@ -405,14 +405,14 @@ def _plugins(
                     )
 
                 try:
-                    collection = collection_class.create(
+                    collection = collection_class.create(  # type: ignore[call-arg]
                         parameter_handler=force_field[handler_class._TAGNAME],
                         topology=topology,
                         vdw_collection=interchange[tagnames[0]],
                         electrostatics_collection=interchange["Electrostatics"],
                     )
                 except TypeError:
-                    collection = collection_class.create(
+                    collection = collection_class.create(  # type: ignore[call-arg]
                         parameter_handler=force_field[handler_class._TAGNAME],
                         topology=topology,
                         vdw_collection=interchange[tagnames[0]],

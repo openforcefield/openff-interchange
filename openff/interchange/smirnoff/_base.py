@@ -1,5 +1,6 @@
 import abc
-from typing import Literal, TypeVar, Self
+from typing_extensions import Self
+from typing import TypeVar
 
 from openff.toolkit import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -106,7 +107,7 @@ def _check_all_valence_terms_assigned(
 class SMIRNOFFCollection(Collection, abc.ABC):
     """Base class for handlers storing potentials produced by SMIRNOFF force fields."""
 
-    type: Literal["Bonds"] = "Bonds"
+    type: str
 
     is_plugin: bool = False
 

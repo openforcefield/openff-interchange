@@ -2,7 +2,8 @@ import copy
 import functools
 import warnings
 from collections.abc import Iterable
-from typing import Any, Literal, Optional, Union, Self
+from typing import Any, Literal, Optional
+from typing_extensions import Self
 
 import numpy
 from openff.toolkit import Molecule, Quantity, Topology, unit
@@ -39,12 +40,9 @@ from openff.interchange.models import (
 )
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
 
-ElectrostaticsHandlerType = Union[
-    ElectrostaticsHandler,
-    ToolkitAM1BCCHandler,
-    ChargeIncrementModelHandler,
-    LibraryChargeHandler,
-]
+ElectrostaticsHandlerType = (
+    ElectrostaticsHandler | ToolkitAM1BCCHandler | ChargeIncrementModelHandler | LibraryChargeHandler
+)
 
 
 _ZERO_CHARGE = Quantity(0.0, unit.elementary_charge)
@@ -540,7 +538,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @classmethod
     def _find_slot_matches(
         cls,
-        parameter_handler: Union["LibraryChargeHandler", "ChargeIncrementModelHandler"],
+        parameter_handler: LibraryChargeHandler | ChargeIncrementModelHandler,
         unique_molecule: Molecule,
     ) -> tuple[dict[TopologyKey, PotentialKey], dict[PotentialKey, Potential]]:
         """
@@ -614,7 +612,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @classmethod
     def _find_charge_model_matches(
         cls,
-        parameter_handler: Union["ToolkitAM1BCCHandler", ChargeIncrementModelHandler],
+        parameter_handler: ToolkitAM1BCCHandler | ChargeIncrementModelHandler,
         unique_molecule: Molecule,
     ) -> tuple[
         str,
@@ -737,8 +735,8 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             else:
                 matched_atom_indices = {
                     index
-                    for key in am1_matches
-                    for index in key.atom_indices  # type: ignore[union-attr]
+                    for key in am1_matches  # type: ignore[union-attr]
+                    for index in key.atom_indices
                 }
 
             if matched_atom_indices != expected_matches:

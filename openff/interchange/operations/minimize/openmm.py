@@ -55,7 +55,7 @@ def minimize_openmm(
         ).getPositions(
                     asNumpy=True,
         )[
-            : interchange.positions.shape[0],
+            : interchange.positions.shape[0],  # type: ignore[union-attr]
             :,
         ],
     )

@@ -1,3 +1,5 @@
+import numpy
+from numpy.typing import NDArray
 from openff.toolkit import Topology
 from openff.units import Quantity, unit
 from openff.utilities.utilities import has_package
@@ -53,36 +55,36 @@ def _create_interchange(
 
     # This block is from a mega merge, unclear if it's still needed
     for name, handler_class in get_handlers_callable().items():
-        interchange.collections[name] = handler_class()
+        interchange.collections[name] = handler_class()  # type: ignore[call-arg]
 
     vdw_handler = interchange["vdW"]
     vdw_handler.scale_14 = force_field.lj14scale
-    vdw_handler.store_matches(force_field, topology=interchange.topology)
-    vdw_handler.store_potentials(force_field=force_field)
+    vdw_handler.store_matches(force_field, topology=interchange.topology)  # type: ignore[attr-defined]
+    vdw_handler.store_potentials(force_field=force_field)  # type: ignore[attr-defined]
 
     atom_slots = vdw_handler.key_map
 
     electrostatics = interchange["Electrostatics"]
     electrostatics.scale_14 = force_field.coulomb14scale
-    electrostatics.store_charges(
+    electrostatics.store_charges(  # type: ignore[attr-defined]
         atom_slots=atom_slots,
         force_field=force_field,
     )
 
     for name, handler in interchange.collections.items():
         if name not in ["vdW", "Electrostatics"]:
-            handler.store_matches(atom_slots, topology=interchange.topology)
-            handler.store_potentials(force_field)
+            handler.store_matches(atom_slots, topology=interchange.topology)  # type: ignore[attr-defined]
+            handler.store_potentials(force_field)  # type: ignore[attr-defined]
 
     # TODO: Populate .mdconfig, but only after a reasonable number of state mutations have been tested
 
     charges = electrostatics.charges
 
     for molecule in interchange.topology.molecules:
-        molecule_charges = [
+        molecule_charges: NDArray[numpy.int_] = numpy.asarray([
             charges[TopologyKey(atom_indices=(interchange.topology.atom_index(atom),))].m for atom in molecule.atoms
-        ]
-        molecule.partial_charges = Quantity(
+        ])
+        molecule.partial_charges = Quantity(  # type: ignore[call-overload]
             molecule_charges,
             unit.elementary_charge,
         )

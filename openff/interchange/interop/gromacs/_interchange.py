@@ -253,7 +253,7 @@ def to_interchange(
 
                 potential_key = PotentialKey(
                     id="-".join(map(str, topology_key.atom_indices)),
-                    mult=topology_key.mult,
+                    mult=topology_key.mult,  # type: ignore[attr-defined]
                     associated_handler="ExternalSource",
                 )
 

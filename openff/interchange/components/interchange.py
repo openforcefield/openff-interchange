@@ -3,7 +3,7 @@
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Union, overload
+from typing import TYPE_CHECKING, Literal, overload, Union
 
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
@@ -400,7 +400,7 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        file_path: Union[Path, str]
+        file_path: Path | str
             The path to the GROMACS coordinate file to write.
         decimal: int, default=3
             The number of decimal places to use when writing the GROMACS coordinate file.
@@ -757,9 +757,9 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        topology_file : Union[Path, str]
+        topology_file : Path | str
             The path to a GROMACS topology file.
-        gro_file : Union[Path, str]
+        gro_file : Path | str
             The path to a GROMACS coordinate file.
 
         Returns
@@ -894,7 +894,7 @@ class Interchange(_BaseModel):
     @overload
     def __getitem__(
         self,
-        item: Literal['GBSA'],
+        item: Literal["GBSA"],
     ) -> "SMIRNOFFGBSACollection": ...
 
     @overload

@@ -2,8 +2,6 @@
 Helper functions for producing `openmm.Force` objects for valence terms.
 """
 
-from typing import Union
-
 from openff.toolkit import unit as off_unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
@@ -18,7 +16,7 @@ if has_package("openmm"):
 def _process_constraints(
     interchange,
     openmm_sys,
-    particle_map: dict[Union[int, "VirtualSiteKey"], int],
+    particle_map: dict[int | VirtualSiteKey, int],
 ) -> set[tuple[int, ...]]:
     """
     Process the Constraints section of an Interchange object.
@@ -53,7 +51,7 @@ def _process_bond_forces(
     openmm_sys,
     add_constrained_forces: bool,
     constrained_pairs: set[tuple[int, ...]],
-    particle_map: dict[Union[int, "VirtualSiteKey"], int],
+    particle_map: dict[int| VirtualSiteKey, int],
 ):
     """
     Process the Bonds section of an Interchange object.

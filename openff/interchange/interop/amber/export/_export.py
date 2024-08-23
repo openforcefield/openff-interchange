@@ -721,7 +721,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         _write_text_blob(prmtop, text_blob)
 
         if IFBOX == 1:
-            if (interchange.box.m != np.diag(np.diagonal(interchange.box.m))).any():
+            if (interchange.box.m != np.diag(np.diagonal(interchange.box.m))).any():  # type: ignore[union-attr]
                 raise NotImplementedError(
                     "Interchange does not yet support exporting non-rectangular boxes to Amber",
                 )
@@ -775,7 +775,7 @@ def to_inpcrd(interchange: "Interchange", file_path: Path | str):
     with open(path, "w") as inpcrd:
         inpcrd.write(f"\n{n_atoms:5d}{time:15.7e}\n")
 
-        coords = interchange.positions.m_as(unit.angstrom)
+        coords = interchange.positions.m_as(unit.angstrom)  # type: ignore[union-attr]
         blob = "".join([f"{val:12.7f}".rjust(12) for val in coords.flatten()])
 
         for line in textwrap.wrap(blob, width=72, drop_whitespace=False):

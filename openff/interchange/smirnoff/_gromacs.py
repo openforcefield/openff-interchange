@@ -1,7 +1,7 @@
 import itertools
 import re
 from collections import defaultdict
-from typing import TypeAlias, Union
+from typing import TypeAlias
 
 from openff.toolkit import Molecule, Quantity, unit
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
@@ -34,9 +34,9 @@ from openff.interchange.interop.gromacs.models.models import (
     PeriodicProperDihedral,
     RyckaertBellemansDihedral,
 )
-from openff.interchange.models import BondKey, TopologyKey, VirtualSiteKey
+from openff.interchange.models import BondKey, TopologyKey, VirtualSiteKey, LibraryChargeTopologyKey
 
-MoleculeLike: TypeAlias = Union[Molecule, _SimpleMolecule]
+MoleculeLike: TypeAlias = Molecule | _SimpleMolecule
 
 _WATER = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
 _SIMPLE_WATER = _SimpleMolecule.from_molecule(_WATER)
@@ -134,7 +134,7 @@ def _convert(
             # when looking up parameters, use the topology index, not the particle index ...
             # ... or so I think is the expectation of the `TopologyKey`s in the vdW collection
             topology_index = interchange.topology.atom_index(atom)
-            key = TopologyKey(atom_indices=(topology_index,))
+            key: TopologyKey | VirtualSiteKey | LibraryChargeTopologyKey = TopologyKey(atom_indices=(topology_index,))
 
             vdw_parameters = vdw_collection.potentials[vdw_collection.key_map[key]].parameters
 
