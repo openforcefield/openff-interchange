@@ -34,8 +34,7 @@ def _check_nonbonded_compatibility(
     for key in ["vdW", "Electrostatics"]:
         if interchange1[key].cutoff != interchange2[key].cutoff:  # type: ignore[attr-defined]
             raise CutoffMismatchError(
-                f"{key} cutoffs do not match. Found "
-                f"{interchange1[key].cutoff} and {interchange2[key].cutoff}.",  # type: ignore[attr-defined]
+                f"{key} cutoffs do not match. Found {interchange1[key].cutoff} and {interchange2[key].cutoff}.",  # type: ignore[attr-defined]
             )
 
     if interchange1["vdW"].switch_width != interchange2["vdW"].switch_width:

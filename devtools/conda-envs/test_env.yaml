@@ -6,7 +6,7 @@ dependencies:
   - python
   - versioneer-518
   - numpy
-  - pydantic >=1.10.17,<3
+  - pydantic =2
   # OpenFF stack
   - openff-toolkit-base ~=0.16.4
   - openff-units
@@ -14,10 +14,22 @@ dependencies:
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
   - rdkit
   # Optional features
-  - foyer >=0.12.1
-  - mbuild
-  - gmso =0.12
-  - smirnoff-plugins
+  - openmm
+  # smirnoff-plugins =2024
+  # de-forcefields  # add back after smirnoff-plugins update
+  - openff-nagl
+  - openff-nagl-models
+  - mbuild ~=0.18
+  - foyer =1
+  - gmso ~=0.12
+  - nglview
+  # Drivers
+  - gromacs
+  - lammps >=2023.08.02
+  # shim for a build issue that's probably localized to conda-forge
+  # https://github.com/conda-forge/lammps-feedstock/issues/207
+  - openmpi =4
+  - panedr
   # Testing
   - mdtraj
   - intermol
@@ -27,14 +39,6 @@ dependencies:
   - pytest-xdist
   - pytest-randomly
   - nbval
-  - nglview
-  # Drivers
-  - gromacs
-  - lammps >=2023.08.02
-  # shim for a build issue that's probably localized to conda-forge
-  # https://github.com/conda-forge/lammps-feedstock/issues/207
-  - openmpi =4
-  - panedr
   # Typing
   - mypy
   - typing-extensions

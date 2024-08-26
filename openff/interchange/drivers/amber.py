@@ -136,7 +136,7 @@ def _parse_amber_energy(mdinfo: str) -> dict[str, Quantity]:
             break
     else:
         raise AmberError(
-            "Unable to detect where energy info starts in AMBER " f"output file: {mdinfo}",
+            f"Unable to detect where energy info starts in AMBER output file: {mdinfo}",
         )
 
     # Strange ranges for amber file data.

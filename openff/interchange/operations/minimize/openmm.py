@@ -53,7 +53,7 @@ def minimize_openmm(
         simulation.context.getState(
             getPositions=True,
         ).getPositions(
-                    asNumpy=True,
+            asNumpy=True,
         )[
             : interchange.positions.shape[0],  # type: ignore[union-attr]
             :,

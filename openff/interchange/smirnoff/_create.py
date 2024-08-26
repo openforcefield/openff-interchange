@@ -418,7 +418,6 @@ def _plugins(
                         vdw_collection=interchange[tagnames[0]],
                         electrostatics_collection=interchange["Electrostatics"],
                     )
-
         else:
             # If this collection takes multiple handlers, pass it a list. Consider making this type the default.
             handlers: list[ParameterHandler] = [

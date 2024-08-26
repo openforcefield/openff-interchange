@@ -73,7 +73,7 @@ class GROMACSWriter(_BaseModel):
             ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n",
         )
 
-        reduced_atom_types: list[tuple[str, LennardJonesAtomType]]= list()
+        reduced_atom_types: list[tuple[str, LennardJonesAtomType]] = list()
         mapping_to_reduced_atom_types = dict()
 
         def _is_atom_type_in_list(
@@ -163,7 +163,7 @@ class GROMACSWriter(_BaseModel):
             top.write("[ moleculetype ]\n")
 
             top.write(
-                f"{molecule_name.replace(' ', '_')}\t" f"{molecule_type.nrexcl:10d}\n\n",
+                f"{molecule_name.replace(' ', '_')}\t{molecule_type.nrexcl:10d}\n\n",
             )
 
             self._write_atoms(
@@ -293,7 +293,7 @@ class GROMACSWriter(_BaseModel):
 
             if function in [1, 4]:
                 top.write(
-                    f"{dihedral.phi.m :20.12f}" f"{dihedral.k.m :20.12f}" f"{dihedral.multiplicity :18d}",
+                    f"{dihedral.phi.m :20.12f}{dihedral.k.m :20.12f}{dihedral.multiplicity :18d}",
                 )
 
             elif function == 3:

@@ -2,6 +2,7 @@
 
 import abc
 from typing import Any, Literal, cast
+
 from pydantic import Field
 
 from openff.interchange.pydantic import _BaseModel
@@ -57,6 +58,7 @@ class TopologyKey(_BaseModel, abc.ABC):
         'some_bond'
 
     """
+
     atom_indices: tuple[int, ...] = Field(
         description="The indices of the atoms occupied by this interaction",
     )
@@ -223,9 +225,11 @@ class ProperTorsionKey(TopologyKey):
             return (
                 cast(
                     tuple[int, int, int, int],
-                     self.atom_indices,
+                    self.atom_indices,
                 ),
-                    self.mult, self.phase, self.bond_order,
+                self.mult,
+                self.phase,
+                self.bond_order,
             )
 
     def __repr__(self) -> str:

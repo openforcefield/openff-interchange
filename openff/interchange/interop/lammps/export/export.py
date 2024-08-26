@@ -335,18 +335,14 @@ def _write_bonds(lmp_file: IO, interchange: Interchange):
 
     bond_handler = interchange["Bonds"]
     bond_map: dict[PotentialKey, int] = {
-        potential_key: index
-        for index, potential_key in enumerate(bond_handler.potentials)
+        potential_key: index for index, potential_key in enumerate(bond_handler.potentials)
     }
 
     for bond_index, (top_key, pot_key) in enumerate(bond_handler.key_map.items()):
         indices = top_key.atom_indices
 
         lmp_file.write(
-            f"{bond_index + 1:d}\t"
-            f"{bond_map[pot_key] + 1:d}\t"
-            f"{indices[0] + 1:d}\t"
-            f"{indices[1] + 1:d}\n",
+            f"{bond_index + 1:d}\t{bond_map[pot_key] + 1:d}\t{indices[0] + 1:d}\t{indices[1] + 1:d}\n",
         )
 
 
@@ -356,8 +352,7 @@ def _write_angles(lmp_file: IO, interchange: Interchange):
 
     angle_handler = interchange["Angles"]
     angle_map: dict[PotentialKey, int] = {
-        potential_key: index
-        for index, potential_key in enumerate(angle_handler.potentials)
+        potential_key: index for index, potential_key in enumerate(angle_handler.potentials)
     }
 
     for angle_index, (top_key, pot_key) in enumerate(angle_handler.key_map.items()):
@@ -378,8 +373,7 @@ def _write_propers(lmp_file: IO, interchange: Interchange):
 
     proper_handler = interchange["ProperTorsions"]
     proper_map: dict[PotentialKey, int] = {
-        potential_key: index
-        for index, potential_key in enumerate(proper_handler.potentials)
+        potential_key: index for index, potential_key in enumerate(proper_handler.potentials)
     }
 
     for proper_index, (top_key, pot_key) in enumerate(proper_handler.key_map.items()):
@@ -401,8 +395,7 @@ def _write_impropers(lmp_file: IO, interchange: Interchange):
 
     improper_handler = interchange["ImproperTorsions"]
     improper_map: dict[PotentialKey, int] = {
-        potential_key: index
-        for index, potential_key in enumerate(improper_handler.potentials)
+        potential_key: index for index, potential_key in enumerate(improper_handler.potentials)
     }
 
     # Molecule/Topology.impropers lists the central atom SECOND,

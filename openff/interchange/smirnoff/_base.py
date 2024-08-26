@@ -1,5 +1,4 @@
 import abc
-from typing_extensions import Self
 from typing import TypeVar
 
 from openff.toolkit import Topology
@@ -10,6 +9,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
 )
+from typing_extensions import Self
 
 from openff.interchange.components.potentials import Collection
 from openff.interchange.exceptions import (
@@ -82,7 +82,7 @@ def _check_all_valence_terms_assigned(
             err_msg += "\n"
         not_found_str = "\n- ".join([str(x) for x in not_found_terms])
         err_msg += (
-            f"{handler.__class__.__name__} assigned terms that were not found in the topology:\n" f"- {not_found_str}"
+            f"{handler.__class__.__name__} assigned terms that were not found in the topology:\n- {not_found_str}"
         )
     if err_msg:
         err_msg += "\n"

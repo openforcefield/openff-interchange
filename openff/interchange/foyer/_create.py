@@ -81,9 +81,9 @@ def _create_interchange(
     charges = electrostatics.charges
 
     for molecule in interchange.topology.molecules:
-        molecule_charges: NDArray[numpy.int_] = numpy.asarray([
-            charges[TopologyKey(atom_indices=(interchange.topology.atom_index(atom),))].m for atom in molecule.atoms
-        ])
+        molecule_charges: NDArray[numpy.int_] = numpy.asarray(
+            [charges[TopologyKey(atom_indices=(interchange.topology.atom_index(atom),))].m for atom in molecule.atoms],
+        )
         molecule.partial_charges = Quantity(  # type: ignore[call-overload]
             molecule_charges,
             unit.elementary_charge,

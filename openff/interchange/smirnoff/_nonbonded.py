@@ -3,7 +3,6 @@ import functools
 import warnings
 from collections.abc import Iterable
 from typing import Any, Literal, Optional, Union
-from typing_extensions import Self
 
 import numpy
 from openff.toolkit import Molecule, Quantity, Topology, unit
@@ -15,6 +14,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 from pydantic import Field, PrivateAttr
+from typing_extensions import Self
 
 from openff.interchange.common._nonbonded import (
     ElectrostaticsCollection,
@@ -39,7 +39,6 @@ from openff.interchange.models import (
     VirtualSiteKey,
 )
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
-
 
 ElectrostaticsHandlerType = Union[
     ElectrostaticsHandler,
@@ -259,13 +258,17 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         "cutoff",
         "no-cutoff",
         "reaction-field",
-    ] = Field(_PME)  # type: ignore[assignment]
+    ] = Field(
+        _PME,
+    )  # type: ignore[assignment]
     nonperiodic_potential: Literal[
         "Coulomb",
         "cutoff",
         "no-cutoff",
         "reaction-field",
-    ] = Field("Coulomb")  # type: ignore[assignment]
+    ] = Field(
+        "Coulomb",
+    )  # type: ignore[assignment]
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     _charges = PrivateAttr(default_factory=dict)

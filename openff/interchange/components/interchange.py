@@ -3,7 +3,7 @@
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, overload, Union
+from typing import TYPE_CHECKING, Literal, Union, overload
 
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
@@ -34,11 +34,11 @@ from openff.interchange.operations.minimize import (
 )
 from openff.interchange.pydantic import _BaseModel
 from openff.interchange.serialization import _AnnotatedTopology
-from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.smirnoff import (
     SMIRNOFFConstraintCollection,
     SMIRNOFFVirtualSiteCollection,
 )
+from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if has_package("foyer"):
@@ -907,7 +907,7 @@ class Interchange(_BaseModel):
         """Syntax sugar for looking up collections or other components."""
         if type(item) is not str:
             raise LookupError(
-                "Only str arguments can be currently be used for lookups.\n" f"Found item {item} of type {type(item)}",
+                f"Only str arguments can be currently be used for lookups.\nFound item {item} of type {type(item)}",
             )
         if item == "positions":
             return self.positions

@@ -273,7 +273,6 @@ class MDConfig(_BaseModel):
         # Construct the input file in memory so nothing is written to disk if an
         # error is encountered.
         with StringIO() as lmp:
-
             if self.switching_function is not None:
                 if self.switching_distance.m > 0.0:
                     warnings.warn(

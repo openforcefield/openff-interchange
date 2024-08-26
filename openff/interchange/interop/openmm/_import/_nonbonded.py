@@ -1,7 +1,11 @@
 from openff.toolkit import Quantity
 
 from openff.interchange.common._nonbonded import ElectrostaticsCollection
-from openff.interchange.models import TopologyKey, LibraryChargeTopologyKey, VirtualSiteKey
+from openff.interchange.models import (
+    LibraryChargeTopologyKey,
+    TopologyKey,
+    VirtualSiteKey,
+)
 
 
 class BasicElectrostaticsCollection(ElectrostaticsCollection):
@@ -18,7 +22,9 @@ class BasicElectrostaticsCollection(ElectrostaticsCollection):
 
         return self._charges
 
-    def _get_charges(self) -> dict[  # type: ignore[override]
+    def _get_charges(  # type: ignore
+        self,
+    ) -> dict[
         TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey,
         Quantity,
     ]:

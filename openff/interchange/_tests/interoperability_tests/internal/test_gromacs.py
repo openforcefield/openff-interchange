@@ -98,7 +98,7 @@ class TestGROMACSGROFile:
             topology=[protein],
         )
 
-        out.box=[4, 4, 4]
+        out.box = [4, 4, 4]
 
         out.to_gro("tmp.gro")
 

@@ -50,7 +50,6 @@ class TestCutoffElectrostatics:
         periodic,
         combine,
     ):
-
         import openmm
         import openmm.unit
 
@@ -78,7 +77,6 @@ class TestCutoffElectrostatics:
 
         for force in system.getForces():
             if isinstance(force, openmm.NonbondedForce):
-
                 assert 0.9 == force.getCutoffDistance() / openmm.unit.nanometer
 
                 if periodic:

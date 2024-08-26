@@ -83,7 +83,7 @@ class EnergyReport(_BaseModel):
     def __getitem__(self, item: str) -> Quantity | None:
         if type(item) is not str:
             raise LookupError(
-                "Only str arguments can be currently be used for lookups.\n" f"Found item {item} of type {type(item)}",
+                f"Only str arguments can be currently be used for lookups.\nFound item {item} of type {type(item)}",
             )
         if item in self.energies.keys():
             return self.energies[item]

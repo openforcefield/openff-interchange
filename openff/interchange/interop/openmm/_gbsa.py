@@ -4,7 +4,6 @@ from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 
-
 if has_package("openmm"):
     import openmm
 

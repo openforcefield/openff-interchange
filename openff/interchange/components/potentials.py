@@ -155,7 +155,11 @@ def validate_key_map(v: Any, handler, info) -> dict:
     return v
 
 
-def serialize_key_map(value: dict[TopologyKey, PotentialKey], handler, info) -> dict[str, str]:
+def serialize_key_map(
+    value: dict[TopologyKey, PotentialKey],
+    handler,
+    info,
+) -> dict[str, str]:
     """Serialize the parameters field of a Potential object."""
     if info.mode == "json":
         return {key.model_dump_json(): value.model_dump_json() for key, value in value.items()}
@@ -201,11 +205,11 @@ def serialize_potentials(
 ) -> dict[str, str]:
     """Serialize the potentials field."""
     if info.mode == "json":
-
         return {key.model_dump_json(): _value.model_dump_json() for key, _value in value.items()}
 
     else:
         raise NotImplementedError(f"Serialization mode {info.mode} not implemented.")
+
 
 Potentials = Annotated[
     dict[PotentialKey, PotentialOrWrappedPotential],
@@ -252,7 +256,7 @@ class Collection(_BaseModel):
                 parameters = potential.parameters
                 return parameters
         raise MissingParametersError(
-            f"Could not find parameter in parameter in handler {self.type} " f"associated with atoms {atom_indices}",
+            f"Could not find parameter in parameter in handler {self.type} associated with atoms {atom_indices}",
         )
 
     def get_force_field_parameters(
@@ -381,9 +385,9 @@ def validate_collections(
 ) -> dict:
     """Validate the collections dict from a JSON blob."""
     from openff.interchange.smirnoff import (
-        SMIRNOFFCollection,
         SMIRNOFFAngleCollection,
         SMIRNOFFBondCollection,
+        SMIRNOFFCollection,
         SMIRNOFFConstraintCollection,
         SMIRNOFFElectrostaticsCollection,
         SMIRNOFFImproperTorsionCollection,

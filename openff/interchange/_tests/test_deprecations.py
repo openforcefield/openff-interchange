@@ -5,7 +5,6 @@ from openff.interchange.warnings import InterchangeDeprecationWarning
 
 
 class TestDeprecation:
-
     @pytest.fixture
     def prepared_system(self, sage, water):
         return Interchange.from_smirnoff(sage, [water])

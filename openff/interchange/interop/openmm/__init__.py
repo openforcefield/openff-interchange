@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, TextIO
 
 from openff.utilities.utilities import has_package, requires_package
-from openff.interchange.smirnoff._base import SMIRNOFFCollection
 
 from openff.interchange.exceptions import (
     PluginCompatibilityError,
@@ -14,6 +13,7 @@ from openff.interchange.exceptions import (
 from openff.interchange.interop.openmm._import._import import from_openmm
 from openff.interchange.interop.openmm._positions import to_openmm_positions
 from openff.interchange.interop.openmm._topology import to_openmm_topology
+from openff.interchange.smirnoff._base import SMIRNOFFCollection
 
 if has_package("openmm"):
     import openmm

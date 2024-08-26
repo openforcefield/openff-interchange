@@ -252,7 +252,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
     """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
 
-    type: Literal["DoubleExponential"] = "DoubleExponential"
+    type: Literal["OtherDoubleExponential"] = "OtherDoubleExponential"
 
     is_plugin: bool = True
 
@@ -274,6 +274,7 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     switch_width: _DistanceQuantity = Quantity("1.0 angstrom")
 
+    # TODO: Automagically convert floats into dimensionless Quantity objects
     alpha: _DimensionlessQuantity
     beta: _DimensionlessQuantity
 
@@ -372,8 +373,8 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
             )
 
         handler = cls(  # type: ignore
-            alpha=parameter_handler.alpha,
-            beta=parameter_handler.beta,
+            alpha=Quantity(parameter_handler.alpha),
+            beta=Quantity(parameter_handler.beta),
             scale_13=parameter_handler.scale13,
             scale_14=parameter_handler.scale14,
             scale_15=parameter_handler.scale15,

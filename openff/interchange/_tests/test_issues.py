@@ -27,7 +27,6 @@ def test_issue_723():
 
 @pytest.mark.parametrize("pack", [True, False])
 def test_issue_1022(pack):
-
     topology = Topology.from_molecules(
         [
             MoleculeWithConformer.from_smiles(smi)
@@ -65,7 +64,6 @@ def test_issue_1022(pack):
 
     if pack:
         for seed in random.sample(range(0, 10**10), 5):
-
             # TODO: Compare GROMACS energies here as well
             get_openmm_energies(interchange).compare(
                 get_openmm_energies(

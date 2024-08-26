@@ -348,9 +348,7 @@ def _create_single_nonbonded_force(
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
             non_bonded_force.setEwaldErrorTolerance(ewald_tolerance)
 
-        elif (data.vdw_method == "cutoff") and (
-            data.electrostatics_method == "reaction-field"
-        ):
+        elif (data.vdw_method == "cutoff") and (data.electrostatics_method == "reaction-field"):
             if data.vdw_cutoff != data.electrostatics_collection.cutoff:
                 raise UnsupportedExportError(
                     "If using cutoff vdW and reaction-field electrostatics, cutoffs must match.",

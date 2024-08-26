@@ -51,7 +51,7 @@ def _process_bond_forces(
     openmm_sys,
     add_constrained_forces: bool,
     constrained_pairs: set[tuple[int, ...]],
-    particle_map: dict[int| VirtualSiteKey, int],
+    particle_map: dict[int | VirtualSiteKey, int],
 ):
     """
     Process the Bonds section of an Interchange object.
@@ -65,7 +65,7 @@ def _process_bond_forces(
         harmonic_bond_force = openmm.HarmonicBondForce()
     else:
         raise UnsupportedExportError(
-            "Found an unsupported functional form in the bond handler:\n\t" f"{bond_handler.expression=}",
+            f"Found an unsupported functional form in the bond handler:\n\t{bond_handler.expression=}",
         )
 
     openmm_sys.addForce(harmonic_bond_force)
@@ -125,7 +125,7 @@ def _process_angle_forces(
             harmonic_angle_force.addPerAngleParameter(parameter_name)
     else:
         raise UnsupportedExportError(
-            "Found an unsupported functional form in the angle handler:\n\t" f"{angle_handler.expression=}",
+            f"Found an unsupported functional form in the angle handler:\n\t{angle_handler.expression=}",
         )
 
     openmm_sys.addForce(harmonic_angle_force)
