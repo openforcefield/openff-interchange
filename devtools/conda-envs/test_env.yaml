@@ -17,6 +17,7 @@ dependencies:
   - foyer >=0.12.1
   - mbuild
   - gmso =0.12
+  - smirnoff-plugins
   # Testing
   - mdtraj
   - intermol

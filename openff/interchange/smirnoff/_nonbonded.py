@@ -2,7 +2,7 @@ import copy
 import functools
 import warnings
 from collections.abc import Iterable
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Union
 from typing_extensions import Self
 
 import numpy
@@ -40,10 +40,13 @@ from openff.interchange.models import (
 )
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
 
-ElectrostaticsHandlerType = (
-    ElectrostaticsHandler | ToolkitAM1BCCHandler | ChargeIncrementModelHandler | LibraryChargeHandler
-)
 
+ElectrostaticsHandlerType = Union[
+    ElectrostaticsHandler,
+    ToolkitAM1BCCHandler,
+    ChargeIncrementModelHandler,
+    LibraryChargeHandler,
+]
 
 _ZERO_CHARGE = Quantity(0.0, unit.elementary_charge)
 

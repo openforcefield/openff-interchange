@@ -218,7 +218,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
                 f"supported by potential type {type(cls)}",
             )
 
-        handler = cls(
+        handler = cls(  # type: ignore
             scale_13=parameter_handler.scale13,
             scale_14=parameter_handler.scale14,
             scale_15=parameter_handler.scale15,
@@ -371,7 +371,7 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
                 f"supported by potential type {type(cls)}",
             )
 
-        handler = cls(
+        handler = cls(  # type: ignore
             alpha=parameter_handler.alpha,
             beta=parameter_handler.beta,
             scale_13=parameter_handler.scale13,

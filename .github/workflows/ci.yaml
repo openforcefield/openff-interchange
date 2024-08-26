@@ -131,8 +131,8 @@ jobs:
         # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
         # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
         micromamba remove jax
-        mypy -p "openff.interchange" --exclude "openff/interchange/_tests/"
-        mypy --show-error-codes plugins/nonbonded_plugins/
+        python -m mypy -p "openff.interchange" --exclude "openff/interchange/_tests/"
+        python -m mypy plugins/nonbonded_plugins/
 
     - name: Codecov
       uses: codecov/codecov-action@v4
