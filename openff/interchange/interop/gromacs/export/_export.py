@@ -16,6 +16,7 @@ from openff.interchange.interop.gromacs.models.models import (
     RyckaertBellemansDihedral,
 )
 from openff.interchange.pydantic import _BaseModel
+from openff.interchange.warnings import MissingPositionsWarning
 
 
 class GROMACSWriter(_BaseModel):
@@ -419,8 +420,7 @@ class GROMACSWriter(_BaseModel):
         elif numpy.allclose(self.system.positions, 0):
             warnings.warn(
                 "Positions seem to all be zero. Result coordinate file may be non-physical.",
-                UserWarning,
-                stacklevel=2,
+                MissingPositionsWarning,
             )
 
         n_particles = sum(

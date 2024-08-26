@@ -59,7 +59,7 @@ def _convert(
         gen_pairs = True
     else:
         raise UnsupportedExportError(
-            "Could not find a handler for short-ranged vdW interactions that is compatible " "with GROMACS.",
+            "Could not find a handler for short-ranged vdW interactions that is compatible with GROMACS.",
         )
 
     if _combination_rule == "lorentz-berthelot":
@@ -703,7 +703,7 @@ def _apply_hmr(
 
     if len(gromacs_molecule.virtual_sites) > 0:
         raise UnsupportedExportError(
-            "Hydrogen mass repartitioning with virtual sites present, even on " " rigid water, is not yet supported.",
+            "Hydrogen mass repartitioning with virtual sites present, even on rigid water, is not yet supported.",
         )
 
     water = Molecule.from_smiles("O")

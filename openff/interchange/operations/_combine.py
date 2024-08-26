@@ -12,6 +12,7 @@ from openff.interchange.exceptions import (
     SwitchingFunctionMismatchError,
     UnsupportedCombinationError,
 )
+from openff.interchange.warnings import InterchangeCombinationWarning
 
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
@@ -49,11 +50,11 @@ def _combine(
     input2: "Interchange",
 ) -> "Interchange":
     warnings.warn(
-        "Interchange object combination is experimental and likely to produce "
-        "strange results. Any workflow using this method is not guaranteed to "
-        "be suitable for production. Use with extreme caution and thoroughly "
-        "validate results!",
-        stacklevel=2,
+        "Interchange object combination is complex and likely to produce strange results outside "
+        "of a limited set of use cases it has been tested in. Any workflow using this method is "
+        "not guaranteed to be suitable for production or stable between versions. Use with "
+        "extreme caution and thoroughly validate results!",
+        InterchangeCombinationWarning,
     )
 
     result = copy.deepcopy(input1)
@@ -81,7 +82,6 @@ def _combine(
             warnings.warn(
                 f"'other' Interchange object has collection with name {collection_name} not "
                 f"found in 'self,' but it has now been added.",
-                stacklevel=2,
             )
             continue
 
@@ -123,6 +123,7 @@ def _combine(
     else:
         warnings.warn(
             "Setting positions to None because one or both objects added together were missing positions.",
+            InterchangeCombinationWarning,
         )
         result.positions = None
 

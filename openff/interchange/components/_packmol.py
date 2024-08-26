@@ -8,7 +8,6 @@ import subprocess
 import tempfile
 from collections.abc import Callable
 from copy import deepcopy
-from distutils.spawn import find_executable
 from typing import Literal
 
 import numpy
@@ -78,11 +77,7 @@ def _find_packmol() -> str | None:
         `None`.
 
     """
-    return (
-        find_executable("packmol") or shutil.which("packmol") or None
-        if "PACKMOL" not in os.environ
-        else os.environ["PACKMOL"]
-    )
+    return shutil.which("packmol")
 
 
 def _check_add_positive_mass(mass_to_add):

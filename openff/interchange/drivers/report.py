@@ -200,7 +200,7 @@ class EnergyReport(_BaseModel):
         diff = dict()
         for key in self.energies:
             if key not in other.energies:
-                warnings.warn(f"Did not find key {key} in second report", stacklevel=2)
+                warnings.warn(f"Did not find key {key} in second report")
                 continue
             diff[key]: Quantity = self.energies[key] - other.energies[key]  # type: ignore
 

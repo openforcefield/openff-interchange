@@ -284,7 +284,7 @@ class MDConfig(_BaseModel):
                     )
 
             lmp.write(
-                "units real\n" "atom_style full\n" "\n" "dimension 3\nboundary p p p\n\n",
+                "units real\natom_style full\n\ndimension 3\nboundary p p p\n\n",
             )
 
             if len(interchange["Bonds"].key_map) > 0:

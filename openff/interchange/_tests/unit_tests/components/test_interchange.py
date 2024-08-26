@@ -404,11 +404,6 @@ class TestWrappedCalls:
 
         return Interchange.from_smirnoff(force_field=sage, topology=top)
 
-    @skip_if_missing("openmm")
-    def test_from_openmm_error(self):
-        with pytest.raises(ExperimentalFeatureException):
-            Interchange.from_openmm()
-
     def test_from_gromacs_error(self):
         with pytest.raises(ExperimentalFeatureException):
             Interchange.from_gromacs()

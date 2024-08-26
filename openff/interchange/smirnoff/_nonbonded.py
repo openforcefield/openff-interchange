@@ -39,6 +39,7 @@ from openff.interchange.models import (
     VirtualSiteKey,
 )
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
+from openff.interchange.warnings import ForceFieldModificationWarning
 
 ElectrostaticsHandlerType = Union[
     ElectrostaticsHandler,
@@ -75,7 +76,7 @@ def _upconvert_vdw_handler(vdw_handler: vdWHandler):
             "Automatically up-converting vdWHandler from version 0.3 to 0.4. Consider manually upgrading "
             "this vdW (or <vdW> section in an OFFXML file) to 0.4 or newer. For more details, "
             "see https://openforcefield.github.io/standards/standards/smirnoff/#vdw.",
-            stacklevel=2,
+            ForceFieldModificationWarning,
         )
 
         if vdw_handler.method != "cutoff":
@@ -101,7 +102,7 @@ def _downconvert_vdw_handler(vdw_handler: vdWHandler):
         warnings.warn(
             "Automatically down-converting vdWHandler from version 0.4 to 0.3. In the future, this "
             "down-conversion will not happen and version 0.3 will not be supported.",
-            stacklevel=2,
+            ForceFieldModificationWarning,
         )
 
         if (vdw_handler.periodic_method != "cutoff") or (vdw_handler.nonperiodic_method != "no-cutoff"):

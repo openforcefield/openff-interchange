@@ -15,3 +15,11 @@ class MissingPositionsWarning(UserWarning):
 
 class NonbondedSettingsWarning(UserWarning):
     """Warning for when details of nonbonded implementations get messy."""
+
+
+class ForceFieldModificationWarning(UserWarning):
+    """Warning for when a ForceField is modified."""
+
+
+class InterchangeCombinationWarning(UserWarning):
+    """Warning for when combining Interchange objects."""

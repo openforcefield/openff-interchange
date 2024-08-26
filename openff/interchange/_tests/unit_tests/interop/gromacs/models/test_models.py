@@ -120,6 +120,7 @@ class TestAddRemoveMoleculeType:
             )
 
     @needs_gmx
+    @pytest.mark.filterwarnings("ignore:Automatically up-converting BondHandler from version 0.3 to 0.4.")
     def test_different_force_field_different_energies(
         self,
         combined_system,

@@ -109,6 +109,7 @@ class TestFoyer:
         )
 
     @needs_gmx
+    @pytest.mark.filterwarnings("ignore:Parameters have not been assigned to all impropers.")
     @pytest.mark.parametrize(
         argnames="molecule_path",
         argvalues=[*get_test_files_dir_path("foyer_test_molecules").glob("*.sdf")],
@@ -202,6 +203,7 @@ class TestRBTorsions(TestFoyer):
 
         assert (gmx - omm).m_as(kj_mol) < 1e-6
 
+    @pytest.mark.filterwarnings("ignore:Parameters have not been assigned to all impropers.")
     @skip_if_missing("foyer")
     @skip_if_missing("mbuild")
     @needs_gmx

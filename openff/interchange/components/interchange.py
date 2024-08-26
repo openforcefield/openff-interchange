@@ -55,8 +55,7 @@ class Interchange(_BaseModel):
     """
     A object for storing, manipulating, and converting molecular mechanics data.
 
-    .. warning :: This object is in an early and experimental state and unsuitable for production.
-    .. warning :: This API is experimental and subject to change.
+    .. warning :: This API is not stable and subject to change.
 
     Examples
     --------
@@ -753,7 +752,8 @@ class Interchange(_BaseModel):
         """
         Create an Interchange object from GROMACS files.
 
-        WARNING! This method is experimental and not suitable for production.
+        .. warning :: This method is experimental and not officially suitable for production.
+        .. warning :: This API is not stable and subject to change.
 
         Parameters
         ----------
@@ -784,7 +784,6 @@ class Interchange(_BaseModel):
         )
 
     @classmethod
-    @experimental
     def from_openmm(
         cls,
         system: "openmm.System",
@@ -795,7 +794,7 @@ class Interchange(_BaseModel):
         """
         Create an Interchange object from OpenMM objects.
 
-        WARNING! This method is experimental and not yet suitable for production.
+        .. warning :: This API is not stable and subject to change.
 
         Notes
         -----
@@ -921,18 +920,15 @@ class Interchange(_BaseModel):
                 f"collections registered:\n\t{[*self.collections.keys()]}",
             )
 
-    @experimental
     def __add__(self, other: "Interchange") -> "Interchange":
         """Combine two Interchange objects. This method is unstable and not yet safe for general use."""
         warnings.warn(
             "The `+` operator is deprecated. Use `Interchange.combine` instead.",
             InterchangeDeprecationWarning,
-            stacklevel=2,
         )
 
         return self.combine(other)
 
-    @experimental
     def combine(self, other: "Interchange") -> "Interchange":
         """Combine two Interchange objects. This method is unstable and not yet safe for general use."""
         from openff.interchange.operations._combine import _combine

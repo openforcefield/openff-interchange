@@ -464,11 +464,11 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
             NCOPY,
         ]
 
-        prmtop.write("%FLAG POINTERS\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG POINTERS\n%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in pointers])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG ATOM_NAME\n" "%FORMAT(20a4)\n")
+        prmtop.write("%FLAG ATOM_NAME\n%FORMAT(20a4)\n")
 
         atom_names: list[str] = list()
 
@@ -484,7 +484,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         text_blob = "".join([str(val).rjust(4) for val in atom_names])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG CHARGE\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG CHARGE\n%FORMAT(5E16.8)\n")
         charges = [
             charge.m_as(unit.e) * AMBER_COULOMBS_CONSTANT
             for charge in interchange["Electrostatics"]._get_charges().values()
@@ -492,20 +492,20 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         text_blob = "".join([f"{val:16.8E}" for val in charges])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG ATOMIC_NUMBER\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG ATOMIC_NUMBER\n%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in atomic_numbers])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG MASS\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG MASS\n%FORMAT(5E16.8)\n")
         masses = [a.mass.m for a in interchange.topology.atoms]
         text_blob = "".join([f"{val:16.8E}" for val in masses])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG ATOM_TYPE_INDEX\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG ATOM_TYPE_INDEX\n%FORMAT(10I8)\n")
         text_blob = "".join([str(val + 1).rjust(8) for val in atom_type_indices])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG NUMBER_EXCLUDED_ATOMS\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG NUMBER_EXCLUDED_ATOMS\n%FORMAT(10I8)\n")
         # https://ambermd.org/prmtop.pdf says this section is ignored (!?)
         text_blob = "".join([str(val).rjust(8) for val in number_excluded_atoms])
         _write_text_blob(prmtop, text_blob)
@@ -559,7 +559,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
             for value in values  # type: ignore
         ), "an internal error occurred"
 
-        prmtop.write("%FLAG NONBONDED_PARM_INDEX\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG NONBONDED_PARM_INDEX\n%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in nonbonded_parm_indices])
         _write_text_blob(prmtop, text_blob)
 
@@ -571,7 +571,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         if residue_names == list():
             residue_names = ["RES"]
 
-        prmtop.write("%FLAG RESIDUE_LABEL\n" "%FORMAT(20a4)\n")
+        prmtop.write("%FLAG RESIDUE_LABEL\n%FORMAT(20a4)\n")
         text_blob = "".join([val.ljust(4) for val in residue_names])
         _write_text_blob(prmtop, text_blob)
 
@@ -583,12 +583,12 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
             if NRES > 1
             else [0]
         )
-        prmtop.write("%FLAG RESIDUE_POINTER\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG RESIDUE_POINTER\n%FORMAT(10I8)\n")
         text_blob = "".join([str(val + 1).rjust(8) for val in residue_pointers])
         _write_text_blob(prmtop, text_blob)
 
         # TODO: Exclude (?) bonds containing hydrogens
-        prmtop.write("%FLAG BOND_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG BOND_FORCE_CONSTANT\n%FORMAT(5E16.8)\n")
         bond_k = [
             interchange["Bonds"].potentials[key].parameters["k"].m_as(kcal_mol_a2) / 2
             for key in potential_key_to_bond_type_mapping
@@ -596,7 +596,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         text_blob = "".join([f"{val:16.8E}" for val in bond_k])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG BOND_EQUIL_VALUE\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG BOND_EQUIL_VALUE\n%FORMAT(5E16.8)\n")
         bond_length = [
             interchange["Bonds"].potentials[key].parameters["length"].m_as(unit.angstrom)
             for key in potential_key_to_bond_type_mapping
@@ -604,7 +604,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         text_blob = "".join([f"{val:16.8E}" for val in bond_length])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG ANGLE_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG ANGLE_FORCE_CONSTANT\n%FORMAT(5E16.8)\n")
         angle_k = [
             interchange["Angles"].potentials[key].parameters["k"].m_as(kcal_mol_rad2) / 2
             for key in potential_key_to_angle_type_mapping
@@ -612,7 +612,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         text_blob = "".join([f"{val:16.8E}" for val in angle_k])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG ANGLE_EQUIL_VALUE\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG ANGLE_EQUIL_VALUE\n%FORMAT(5E16.8)\n")
         angle_theta = [
             interchange["Angles"].potentials[key].parameters["angle"].m_as(unit.radian)
             for key in potential_key_to_angle_type_mapping
@@ -631,91 +631,91 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
             dihedral_periodicity.append(params["periodicity"].m_as(unit.dimensionless))
             dihedral_phase.append(params["phase"].m_as(unit.radian))
 
-        prmtop.write("%FLAG DIHEDRAL_FORCE_CONSTANT\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG DIHEDRAL_FORCE_CONSTANT\n%FORMAT(5E16.8)\n")
         text_blob = "".join([f"{val:16.8E}" for val in dihedral_k])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG DIHEDRAL_PERIODICITY\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG DIHEDRAL_PERIODICITY\n%FORMAT(5E16.8)\n")
         text_blob = "".join([f"{val:16.8E}" for val in dihedral_periodicity])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG DIHEDRAL_PHASE\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG DIHEDRAL_PHASE\n%FORMAT(5E16.8)\n")
         text_blob = "".join([f"{val:16.8E}" for val in dihedral_phase])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG SCEE_SCALE_FACTOR\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG SCEE_SCALE_FACTOR\n%FORMAT(5E16.8)\n")
         scee = NPTRA * [1.2]
         text_blob = "".join([f"{val:16.8E}" for val in scee])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG SCNB_SCALE_FACTOR\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG SCNB_SCALE_FACTOR\n%FORMAT(5E16.8)\n")
         scnb = NPTRA * [2.0]
         text_blob = "".join([f"{val:16.8E}" for val in scnb])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG SOLTY\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG SOLTY\n%FORMAT(5E16.8)\n")
         prmtop.write(f"{0:16.8E}\n")
 
-        prmtop.write("%FLAG LENNARD_JONES_ACOEF\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG LENNARD_JONES_ACOEF\n%FORMAT(5E16.8)\n")
         text_blob = "".join([f"{val:16.8E}" for val in acoefs])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG LENNARD_JONES_BCOEF\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG LENNARD_JONES_BCOEF\n%FORMAT(5E16.8)\n")
         text_blob = "".join([f"{val:16.8E}" for val in bcoefs])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG BONDS_INC_HYDROGEN\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG BONDS_INC_HYDROGEN\n%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in bonds_inc_hydrogen])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG BONDS_WITHOUT_HYDROGEN\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG BONDS_WITHOUT_HYDROGEN\n%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in bonds_without_hydrogen])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG ANGLES_INC_HYDROGEN\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG ANGLES_INC_HYDROGEN\n%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in angles_inc_hydrogen])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG ANGLES_WITHOUT_HYDROGEN\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG ANGLES_WITHOUT_HYDROGEN\n%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in angles_without_hydrogen])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG DIHEDRALS_INC_HYDROGEN\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG DIHEDRALS_INC_HYDROGEN\n%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in dihedrals_inc_hydrogen])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG DIHEDRALS_WITHOUT_HYDROGEN\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG DIHEDRALS_WITHOUT_HYDROGEN\n%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in dihedrals_without_hydrogen])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG EXCLUDED_ATOMS_LIST\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG EXCLUDED_ATOMS_LIST\n%FORMAT(10I8)\n")
         text_blob = "".join([str(val).rjust(8) for val in excluded_atoms_list])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG HBOND_ACOEF\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG HBOND_ACOEF\n%FORMAT(5E16.8)\n")
         _write_text_blob(prmtop, "")
 
-        prmtop.write("%FLAG HBOND_BCOEF\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG HBOND_BCOEF\n%FORMAT(5E16.8)\n")
         _write_text_blob(prmtop, "")
 
-        prmtop.write("%FLAG HBCUT\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG HBCUT\n%FORMAT(5E16.8)\n")
         _write_text_blob(prmtop, "")
 
-        prmtop.write("%FLAG AMBER_ATOM_TYPE\n" "%FORMAT(20a4)\n")
+        prmtop.write("%FLAG AMBER_ATOM_TYPE\n%FORMAT(20a4)\n")
         text_blob = "".join([val.ljust(4) for val in typemap.values()])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG TREE_CHAIN_CLASSIFICATION\n" "%FORMAT(20a4)\n")
+        prmtop.write("%FLAG TREE_CHAIN_CLASSIFICATION\n%FORMAT(20a4)\n")
         blahs = NATOM * ["BLA"]
         text_blob = "".join([val.ljust(4) for val in blahs])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG JOIN_ARRAY\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG JOIN_ARRAY\n%FORMAT(10I8)\n")
         _ = NATOM * [0]
         text_blob = "".join([str(val).rjust(8) for val in _])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG IROTAT\n" "%FORMAT(10I8)\n")
+        prmtop.write("%FLAG IROTAT\n%FORMAT(10I8)\n")
         _ = NATOM * [0]
         text_blob = "".join([str(val).rjust(8) for val in _])
         _write_text_blob(prmtop, text_blob)
@@ -726,36 +726,36 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
                     "Interchange does not yet support exporting non-rectangular boxes to Amber",
                 )
 
-            prmtop.write("%FLAG SOLVENT_POINTERS\n" "%FORMAT(3I8)\n")
+            prmtop.write("%FLAG SOLVENT_POINTERS\n%FORMAT(3I8)\n")
             prmtop.write("       1       1       2\n")
 
             # TODO: No easy way to accurately export this section while
             #       using an MDTraj topology
-            prmtop.write("%FLAG ATOMS_PER_MOLECULE\n" "%FORMAT(10I8)\n")
+            prmtop.write("%FLAG ATOMS_PER_MOLECULE\n%FORMAT(10I8)\n")
             prmtop.write(str(interchange.topology.n_atoms).rjust(8))
             prmtop.write("\n")
 
-            prmtop.write("%FLAG BOX_DIMENSIONS\n" "%FORMAT(5E16.8)\n")
+            prmtop.write("%FLAG BOX_DIMENSIONS\n%FORMAT(5E16.8)\n")
             box = [90.0]
             for i in range(3):
                 box.append(interchange.box[i, i].m_as(unit.angstrom))  # type: ignore
             text_blob = "".join([f"{val:16.8E}" for val in box])
             _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG RADIUS_SET\n" "%FORMAT(1a80)\n")
+        prmtop.write("%FLAG RADIUS_SET\n%FORMAT(1a80)\n")
         prmtop.write("0\n")
 
-        prmtop.write("%FLAG RADII\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG RADII\n%FORMAT(5E16.8)\n")
         radii = NATOM * [0]
         text_blob = "".join([f"{val:16.8E}" for val in radii])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG SCREEN\n" "%FORMAT(5E16.8)\n")
+        prmtop.write("%FLAG SCREEN\n%FORMAT(5E16.8)\n")
         screen = NATOM * [0]
         text_blob = "".join([f"{val:16.8E}" for val in screen])
         _write_text_blob(prmtop, text_blob)
 
-        prmtop.write("%FLAG IPOL\n" "%FORMAT(1I8)\n")
+        prmtop.write("%FLAG IPOL\n%FORMAT(1I8)\n")
         prmtop.write("       0\n")
 
 
