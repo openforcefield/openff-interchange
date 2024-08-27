@@ -94,9 +94,7 @@ jobs:
     - name: Run tests
       if: always()
       run: |
-        python -m pytest $COV openff/interchange/ \
-          -r fExs -n logical --durations=10 \
-          --ignore=openff/interchange/_tests/energy_tests/test_energies.py
+        python -m pytest $COV openff/interchange/ -r fExs -n logical --durations=10
 
     - name: Run small molecule regression tests
       if: ${{ matrix.python-version == '3.10' && matrix.openeye == true && matrix.openmm == true }}

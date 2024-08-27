@@ -128,14 +128,13 @@ class Interchange(_BaseModel):
 
         .. code-block:: pycon
 
-            >>> from openff.interchange import Interchange
             >>> from openff.toolkit import ForceField, Molecule
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
             >>> sage = ForceField("openff-2.0.0.offxml")
-            >>> interchange = Interchange.from_smirnoff(topology=[mol], force_field=sage)
+            >>> interchange = sage.create_interchange(mol.to_topology())
             >>> interchange
-            Interchange with 8 atoms, non-periodic topology
+            Interchange with 7 collections, non-periodic topology with 8 atoms.
 
         """
         from openff.interchange.smirnoff._create import _create_interchange
@@ -576,7 +575,7 @@ class Interchange(_BaseModel):
 
         Examples
         --------
-        Create an OpenMM simulation with a Langevin integrator:
+        Create an OpenMM simulation with a Langevin integrator and a Monte Carlo barostat:
 
         >>> import openmm
         >>> import openmm.unit
@@ -591,13 +590,10 @@ class Interchange(_BaseModel):
         ...     293.15 * openmm.unit.kelvin,
         ...     25,
         ... )
-        >>> simulation = interchange.to_openmm_simulation(
+        >>> simulation = interchange.to_openmm_simulation(  # doctest: +SKIP
         ...     integrator=integrator,
         ...     additional_forces=[barostat],
         ... )
-
-        Add a barostat:
-
 
         Re-initializing the `Context` after adding a `Force` is necessary due to implementation details in OpenMM.
         For more, see
@@ -730,7 +726,7 @@ class Interchange(_BaseModel):
             >>> oplsaa = Forcefield(name="oplsaa")
             >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
             >>> interchange
-            Interchange with 8 atoms, non-periodic topology
+            Interchange with 8 collections, non-periodic topology with 8 atoms.
 
         """
         from openff.interchange.foyer._create import _create_interchange
