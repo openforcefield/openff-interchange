@@ -11,6 +11,7 @@ from openff.interchange.warnings import MissingPositionsWarning
 
 
 class TestUnsupportedCases:
+    @pytest.mark.filterwarnings("ignore:.*are you sure you don't want to pass positions")
     def test_error_topology_mismatch(self, monkeypatch, sage_unconstrained, ethanol):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 

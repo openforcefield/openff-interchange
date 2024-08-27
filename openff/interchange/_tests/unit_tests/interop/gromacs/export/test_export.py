@@ -194,7 +194,6 @@ class TestGROMACSGROFile(_NeedsGROMACS):
 
 
 class TestGROMACS(_NeedsGROMACS):
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -371,8 +370,8 @@ class TestGROMACS(_NeedsGROMACS):
         out.topology = top
         out.box = [10, 10, 10] * unit.nanometer
         out.positions = [[0, 0, 0], [0.3, 0, 0]] * unit.nanometer
-        out.to_gro("out.gro", writer="internal")
-        out.to_top("out.top", writer="internal")
+        out.to_gro("out.gro")
+        out.to_top("out.top")
 
         omm_energies = get_openmm_energies(out, combine_nonbonded_forces=True)
         by_hand = A * exp(-B * r) - C * r**-6
@@ -416,6 +415,7 @@ class TestGROMACS(_NeedsGROMACS):
 
         assert [*parmed.load_file("tmp.top").molecules.keys()] == ["MOL0", "MOL1"]
 
+    @pytest.mark.filterwarnings("ignore:Setting positions to None")
     @pytest.mark.parametrize("name", ["MOL0", "MOL222", ""])
     def test_roundtrip_with_combine(
         self,
@@ -585,7 +585,6 @@ class TestCommonBoxes(_NeedsGROMACS):
 
 
 class TestMergeAtomTypes(_NeedsGROMACS):
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -755,6 +754,7 @@ class TestGROMACSVirtualSites(_NeedsGROMACS):
 
         assert abs(numpy.sum([p.charge for p in gmx_top.atoms])) < 1e-3
 
+    @pytest.mark.slow
     def test_carbonyl_example(self, sage_with_planar_monovalent_carbonyl, ethanol):
         """Test that a single-molecule planar carbonyl example can run 0 steps."""
         ethanol.generate_conformers(n_conformers=1)

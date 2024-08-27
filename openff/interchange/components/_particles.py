@@ -15,15 +15,19 @@ class _VirtualSite(_BaseModel, abc.ABC):
     distance: _DistanceQuantity
     orientations: tuple[int, ...]
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def local_frame_weights(self) -> tuple[list[float], ...]:
         raise NotImplementedError()
 
+    @property
+    @abc.abstractmethod
     def local_frame_positions(self) -> Quantity:
         raise NotImplementedError()
 
     @property
-    def _local_frame_coordinates(self) -> Quantity:
+    @abc.abstractmethod
+    def local_frame_coordinates(self) -> Quantity:
         """
         Return the position of this virtual site in its local frame in spherical coordinates.
 

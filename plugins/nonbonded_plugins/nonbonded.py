@@ -190,7 +190,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
         self.nonperiodic_method = parameter_handler.nonperiodic_method.lower()
         self.cutoff = parameter_handler.cutoff
 
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             smirks = potential_key.id
             force_field_parameters = parameter_handler.parameters[smirks]
 
@@ -218,7 +218,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
                 f"supported by potential type {type(cls)}",
             )
 
-        handler = cls(
+        handler = cls(  # type: ignore
             scale_13=parameter_handler.scale13,
             scale_14=parameter_handler.scale14,
             scale_15=parameter_handler.scale15,
@@ -252,7 +252,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
     """Handler storing vdW potentials as produced by a SMIRNOFF force field."""
 
-    type: Literal["DoubleExponential"] = "DoubleExponential"
+    type: Literal["OtherDoubleExponential"] = "OtherDoubleExponential"
 
     is_plugin: bool = True
 
@@ -274,6 +274,7 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
 
     switch_width: _DistanceQuantity = Quantity("1.0 angstrom")
 
+    # TODO: Automagically convert floats into dimensionless Quantity objects
     alpha: _DimensionlessQuantity
     beta: _DimensionlessQuantity
 
@@ -343,7 +344,7 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
         self.nonperiodic_method = parameter_handler.nonperiodic_method.lower()
         self.cutoff = parameter_handler.cutoff
 
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             smirks = potential_key.id
             force_field_parameters = parameter_handler.parameters[smirks]
 
@@ -371,9 +372,9 @@ class SMIRNOFFDoubleExponentialCollection(_SMIRNOFFNonbondedCollection):
                 f"supported by potential type {type(cls)}",
             )
 
-        handler = cls(
-            alpha=parameter_handler.alpha,
-            beta=parameter_handler.beta,
+        handler = cls(  # type: ignore
+            alpha=Quantity(parameter_handler.alpha),
+            beta=Quantity(parameter_handler.beta),
             scale_13=parameter_handler.scale13,
             scale_14=parameter_handler.scale14,
             scale_15=parameter_handler.scale15,
@@ -446,7 +447,7 @@ class SMIRNOFFC4IonCollection(_SMIRNOFFNonbondedCollection):
         Populate self.potentials with key-val pairs of [TopologyKey, PotentialKey].
 
         """
-        for potential_key in self.slot_map.values():
+        for potential_key in self.key_map.values():
             smirks = potential_key.id
             force_field_parameters = parameter_handler.parameters[smirks]
 

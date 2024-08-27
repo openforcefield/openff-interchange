@@ -14,27 +14,23 @@ from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import (
     AmberError,
     AmberExecutableNotFoundError,
-    InvalidWriterError,
     SanderError,
 )
 
 
 def get_amber_energies(
     interchange: Interchange,
-    writer: str = "internal",
     detailed: bool = False,
 ) -> EnergyReport:
     """
     Given an OpenFF Interchange object, return single-point energies as computed by Amber.
 
-    .. warning :: This API is experimental and subject to change.
+    .. warning :: This API is not stable and subject to change.
 
     Parameters
     ----------
     interchange : openff.interchange.components.interchange.Interchange
         An OpenFF Interchange object to compute the single-point energy of
-    writer : str, default="internal"
-        A string key identifying the backend to be used to write Amber files.
     detailed : bool, default=False
         If True, return a detailed report containing the energies of each
 
@@ -47,7 +43,6 @@ def get_amber_energies(
     return _process(
         _get_amber_energies(
             interchange=interchange,
-            writer=writer,
         ),
         detailed=False,
     )
@@ -55,19 +50,12 @@ def get_amber_energies(
 
 def _get_amber_energies(
     interchange: Interchange,
-    writer: str = "internal",
 ) -> dict[str, Quantity]:
     with tempfile.TemporaryDirectory() as tmpdir:
         with temporary_cd(tmpdir):
-            if writer == "internal":
-                interchange.to_inpcrd("out.inpcrd")
-                interchange.to_prmtop("out.prmtop")
-            elif writer == "parmed":
-                struct = interchange._to_parmed()
-                struct.save("out.inpcrd")
-                struct.save("out.prmtop")
-            else:
-                raise InvalidWriterError(f"Unsupported `writer` argument {writer}")
+            # TODO: Use to_amber if implemented
+            interchange.to_inpcrd("out.inpcrd")
+            interchange.to_prmtop("out.prmtop")
 
             mdconfig = MDConfig.from_interchange(interchange)
             mdconfig.write_sander_input_file("run.in")
@@ -148,7 +136,7 @@ def _parse_amber_energy(mdinfo: str) -> dict[str, Quantity]:
             break
     else:
         raise AmberError(
-            "Unable to detect where energy info starts in AMBER " f"output file: {mdinfo}",
+            f"Unable to detect where energy info starts in AMBER output file: {mdinfo}",
         )
 
     # Strange ranges for amber file data.

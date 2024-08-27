@@ -22,7 +22,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler, BondCollection):
     """Handler storing bond potentials as produced by a Foyer force field."""
 
     type: Literal["Bonds"] = "Bonds"
-    expression: str = "k/2*(r-length)**2"
+    expression: str = "k/2*(r-length)**2"  # type: ignore[assignment]
     force_field_key: str = "harmonic_bonds"
     connection_attribute: str = "bonds"
 
@@ -57,7 +57,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler, AngleCollection):
     """Handler storing angle potentials as produced by a Foyer force field."""
 
     type: Literal["Angles"] = "Angles"
-    expression: str = "k/2*(theta-angle)**2"
+    expression: str = "k/2*(theta-angle)**2"  # type: ignore[assignment]
     force_field_key: str = "harmonic_angles"
     connection_attribute: str = "angles"
 
@@ -133,7 +133,7 @@ class FoyerRBProperHandler(
 class FoyerRBImproperHandler(FoyerRBProperHandler):
     """Handler storing Ryckaert-Bellemans improper torsion potentials as produced by a Foyer force field."""
 
-    type: Literal["RBImpropers"] = "RBImpropers"
+    type: Literal["RBImpropers"] = "RBImpropers"  # type: ignore[assignment]
     connection_attribute: str = "impropers"
 
 
@@ -143,8 +143,8 @@ class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler, ProperTorsionCollec
     force_field_key: str = "periodic_propers"
     connection_attribute: str = "propers"
     raise_on_missing_params: bool = False
-    type: str = "ProperTorsions"
-    expression: str = "k*(1+cos(periodicity*theta-phase))"
+    type: str = "ProperTorsions"  # type: ignore[assignment]
+    expression: str = "k*(1+cos(periodicity*theta-phase))"  # type: ignore[assignment]
 
     def get_params_with_units(self, params):
         """Get the parameters of this handler, tagged with units."""

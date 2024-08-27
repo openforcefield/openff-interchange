@@ -8,7 +8,6 @@ import subprocess
 import tempfile
 from collections.abc import Callable
 from copy import deepcopy
-from distutils.spawn import find_executable
 from typing import Literal
 
 import numpy
@@ -78,11 +77,7 @@ def _find_packmol() -> str | None:
         `None`.
 
     """
-    return (
-        find_executable("packmol") or shutil.which("packmol") or None
-        if "PACKMOL" not in os.environ
-        else os.environ["PACKMOL"]
-    )
+    return shutil.which("packmol")
 
 
 def _check_add_positive_mass(mass_to_add):
@@ -92,7 +87,7 @@ def _check_add_positive_mass(mass_to_add):
         )
 
 
-def _check_box_shape_shape(box_shape: ArrayLike):
+def _check_box_shape_shape(box_shape: NDArray):
     """Check the .shape of the box_shape argument."""
     if box_shape.shape != (3, 3):
         raise PACKMOLValueError(
@@ -528,9 +523,10 @@ def _center_topology_at(
     brick_size: Quantity,
 ) -> Topology:
     """Return a copy of the topology centered as requested."""
-    if isinstance(center_solute, str):
-        center_solute = center_solute.upper()
     topology = Topology(topology)
+
+    if isinstance(center_solute, str):
+        center_solute = center_solute.upper()  # type: ignore[assignment]
 
     if center_solute is False:
         return topology

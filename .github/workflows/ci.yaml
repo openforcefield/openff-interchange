@@ -94,10 +94,7 @@ jobs:
     - name: Run tests
       if: always()
       run: |
-        python -m pytest $COV openff/interchange/ \
-          -r fExs -n logical --durations=10 \
-          -m "slow or not slow" \
-          --ignore=openff/interchange/_tests/energy_tests/test_energies.py
+        python -m pytest $COV openff/interchange/ -r fExs -n logical --durations=10
 
     - name: Run small molecule regression tests
       if: ${{ matrix.python-version == '3.10' && matrix.openeye == true && matrix.openmm == true }}
@@ -127,14 +124,13 @@ jobs:
         python devtools/scripts/molecule-regressions.py
 
     - name: Run mypy
-      continue-on-error: true
-      if: ${{ matrix.python-version == '3.11' }}
+      if: ${{ matrix.python-version == '3.10' }}
       run: |
         # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
         # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
         micromamba remove jax
-        mypy -p "openff.interchange" --exclude "openff/interchange/_tests/"
-        mypy --show-error-codes plugins/nonbonded_plugins/
+        python -m mypy -p "openff.interchange" --exclude "openff/interchange/_tests/"
+        python -m mypy plugins/nonbonded_plugins/
 
     - name: Codecov
       uses: codecov/codecov-action@v4

@@ -139,9 +139,7 @@ def shuffle_topology(
 
     # can't easily shuffle a generator ...
     for molecule in interchange.topology.molecules:
-        topology_indices = [
-            interchange.topology.atom_index(atom) for atom in molecule.atoms
-        ]
+        topology_indices = [interchange.topology.atom_index(atom) for atom in molecule.atoms]
 
         molecule._conformers = [
             interchange.positions[topology_indices, :].to("angstrom"),

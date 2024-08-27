@@ -3,7 +3,6 @@ Common helpers for exporting virtual sites.
 """
 
 from collections import defaultdict
-from collections.abc import Iterable
 from typing import DefaultDict
 
 import numpy
@@ -34,7 +33,7 @@ def _virtual_site_parent_molecule_mapping(
         A dictionary mapping virtual site keys to the index of the molecule they belong to.
 
     """
-    mapping = dict()
+    mapping: dict[VirtualSiteKey, int] = dict()
 
     if "VirtualSites" not in interchange.collections:
         return mapping
@@ -164,7 +163,7 @@ def get_positions_with_virtual_sites(
 
 def _get_separation_by_atom_indices(
     interchange: Interchange,
-    atom_indices: Iterable[int],
+    atom_indices: tuple[int, ...],
     prioritize_geometry: bool = False,
 ) -> Quantity:
     """
@@ -176,8 +175,8 @@ def _get_separation_by_atom_indices(
     averages (unitless) of orientation atom positions.
     """
     if prioritize_geometry:
-        p1 = interchange.positions[atom_indices[1]]
-        p0 = interchange.positions[atom_indices[0]]
+        p1 = interchange.positions[atom_indices[1]]  # type: ignore[index]
+        p0 = interchange.positions[atom_indices[0]]  # type: ignore[index]
 
         return p1 - p0
 
@@ -189,7 +188,7 @@ def _get_separation_by_atom_indices(
                 return collection.potentials[collection.key_map[key]].parameters["distance"]
 
     if "Bonds" in interchange.collections:
-        collection = interchange["Bonds"]
+        collection = interchange["Bonds"]  # type: ignore[assignment]
 
         for key in collection.key_map:
             if (key.atom_indices == atom_indices) or (key.atom_indices[::-1] == atom_indices):
@@ -198,7 +197,7 @@ def _get_separation_by_atom_indices(
     # Two heavy atoms may be on opposite ends of an angle, in which case it's still
     # possible to determine their separation as defined by the geometry of the force field
     if "Angles" in interchange.collections:
-        collection = interchange["Angles"]
+        collection = interchange["Angles"]  # type: ignore[assignment]
 
         index0 = atom_indices[0]
         index1 = atom_indices[1]

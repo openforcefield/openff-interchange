@@ -92,8 +92,6 @@ class TestModels:
             )
 
 
-#    GROMACSAtomType
-@pytest.mark.slow
 class TestAddRemoveMoleculeType:
     @needs_gmx
     @pytest.mark.parametrize("molecule_name", ["MOL__1", "MOL__2"])
@@ -122,6 +120,7 @@ class TestAddRemoveMoleculeType:
             )
 
     @needs_gmx
+    @pytest.mark.filterwarnings("ignore:Automatically up-converting BondHandler from version 0.3 to 0.4.")
     def test_different_force_field_different_energies(
         self,
         combined_system,
@@ -159,6 +158,7 @@ class TestAddRemoveMoleculeType:
         assert _parsley_energy != _sage_energy
 
     @needs_gmx
+    @pytest.mark.slow
     def test_molecule_order_independent(self, system1, system2):
         positions1 = numpy.vstack([system1.positions, system2.positions])
         positions2 = numpy.vstack([system2.positions, system1.positions])

@@ -36,6 +36,9 @@ def to_interchange(
     """
     Convert a GROMACS system to an Interchange object.
 
+    .. warning :: This API is experimental and subject to change.
+    .. warning :: This method is experimental and not officially suitable for production.
+
     Parameters
     ----------
     system: GROMACSSystem
@@ -253,7 +256,7 @@ def to_interchange(
 
                 potential_key = PotentialKey(
                     id="-".join(map(str, topology_key.atom_indices)),
-                    mult=topology_key.mult,
+                    mult=topology_key.mult,  # type: ignore[attr-defined]
                     associated_handler="ExternalSource",
                 )
 

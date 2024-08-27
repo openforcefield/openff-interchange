@@ -12,9 +12,10 @@ repos:
   hooks:
   - id: add-trailing-comma
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.5.7
+  rev: v0.6.2
   hooks:
     - id: ruff
+    - id: ruff-format
 - repo: https://github.com/econchick/interrogate
   rev: 1.7.0
   hooks:
@@ -46,3 +47,9 @@ repos:
   hooks:
     - id: nbstripout
       files: ^examples
+- repo: https://github.com/asottile/pyupgrade
+  rev: v3.17.0
+  hooks:
+  - id: pyupgrade
+    args:
+      - --py310-plus

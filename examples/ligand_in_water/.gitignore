@@ -11,3 +11,4 @@ run.gro
 run.xtc
 tip4p.gro
 tip4p.top
+tip4p_pointenergy.mdp

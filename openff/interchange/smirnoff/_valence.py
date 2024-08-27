@@ -11,6 +11,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ProperTorsionHandler,
 )
 from packaging.version import Version
+from typing_extensions import Self
 
 from openff.interchange.common._valence import (
     AngleCollection,
@@ -32,11 +33,9 @@ from openff.interchange.models import (
 )
 from openff.interchange.smirnoff._base import (
     SMIRNOFFCollection,
-    T,
     _check_all_valence_terms_assigned,
 )
-
-_CollectionAlias = type[T]
+from openff.interchange.warnings import ForceFieldModificationWarning
 
 
 def _upconvert_bondhandler(bond_handler: BondHandler):
@@ -49,7 +48,7 @@ def _upconvert_bondhandler(bond_handler: BondHandler):
             "Automatically up-converting BondHandler from version 0.3 to 0.4. Consider manually upgrading "
             "this BondHandler (or <Bonds> section in an OFFXML file) to 0.4 or newer. For more details, "
             "see https://openforcefield.github.io/standards/standards/smirnoff/#bonds.",
-            stacklevel=2,
+            ForceFieldModificationWarning,
         )
 
         bond_handler.version = Version("0.4")
@@ -137,7 +136,7 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
         if self.key_map:
             # TODO: Should the key_map always be reset, or should we be able to partially
             # update it? Also Note the duplicated code in the child classes
-            self.key_map: dict[BondKey, PotentialKey] = dict()  # type: ignore[assignment]
+            self.key_map: dict[BondKey, PotentialKey] = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             parameter: BondHandler.BondType = val.parameter_type
@@ -194,8 +193,8 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
             smirks = potential_key.id
             force_field_parameters = parameter_handler.parameters[smirks]
 
-            if topology_key.bond_order:
-                bond_order = topology_key.bond_order
+            if topology_key.bond_order:  # type: ignore[union-attr]
+                bond_order = topology_key.bond_order  # type: ignore[union-attr]
                 if force_field_parameters.k_bondorder:
                     data = force_field_parameters.k_bondorder
                 else:
@@ -247,11 +246,11 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
 
     @classmethod
     def create(
-        cls: _CollectionAlias,
+        cls,
         parameter_handler: BondHandler,
         topology: Topology,
         partial_bond_orders_from_molecules: list[Molecule] | None = None,
-    ) -> "SMIRNOFFBondCollection":
+    ) -> Self:
         """
         Create a SMIRNOFFBondCollection from toolkit data.
 
@@ -263,14 +262,14 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
         if type(parameter_handler) not in cls.allowed_parameter_handlers():
             raise InvalidParameterHandlerError
 
-        handler: SMIRNOFFBondCollection = cls(
+        collection = cls(
             type="Bonds",
             expression="k/2*(r-length)**2",
             fractional_bond_order_method=parameter_handler.fractional_bondorder_method,
             fractional_bond_order_interpolation=parameter_handler.fractional_bondorder_interpolation,
         )
 
-        if handler._get_uses_interpolation(parameter_handler):
+        if collection._get_uses_interpolation(parameter_handler):
             _check_molecule_uniqueness(partial_bond_orders_from_molecules)
 
             for molecule in topology.molecules:
@@ -281,13 +280,13 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
                 # TODO: expose conformer generation and fractional bond order assigment knobs to user via API
                 molecule.generate_conformers(n_conformers=1)
                 molecule.assign_fractional_bond_orders(
-                    bond_order_model=handler.fractional_bond_order_method.lower(),
+                    bond_order_model=collection.fractional_bond_order_method.lower(),
                 )
 
-        handler.store_matches(parameter_handler=parameter_handler, topology=topology)
-        handler.store_potentials(parameter_handler=parameter_handler)
+        collection.store_matches(parameter_handler=parameter_handler, topology=topology)
+        collection.store_potentials(parameter_handler=parameter_handler)
 
-        return handler
+        return collection
 
 
 class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
@@ -313,11 +312,11 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
 
     @classmethod
     def create(
-        cls: _CollectionAlias,
+        cls,
         parameter_handler: list,
         topology: Topology,
         bonds: SMIRNOFFBondCollection | None = None,
-    ) -> "SMIRNOFFConstraintCollection":
+    ) -> Self:
         """
         Create a SMIRNOFFCollection from toolkit data.
 
@@ -493,7 +492,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
 
         """
         if self.key_map:
-            self.key_map: dict[ProperTorsionKey, PotentialKey] = dict()  # type: ignore[assignment]
+            self.key_map: dict[ProperTorsionKey, PotentialKey] = dict()
         matches = parameter_handler.find_matches(topology)
         for key, val in matches.items():
             parameter: ProperTorsionHandler.ProperTorsionType = val.parameter_type
@@ -555,8 +554,8 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
             n = potential_key.mult
             parameter = parameter_handler.parameters[smirks]
 
-            if topology_key.bond_order:
-                bond_order = topology_key.bond_order
+            if topology_key.bond_order:  # type: ignore[union-attr]
+                bond_order = topology_key.bond_order  # type: ignore[union-attr]
                 data = parameter.k_bondorder[n]
                 coeffs = _get_interpolation_coeffs(
                     fractional_bond_order=bond_order,
@@ -592,16 +591,16 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
 
     @classmethod
     def create(
-        cls: _CollectionAlias,
+        cls,
         parameter_handler: ProperTorsionHandler,
         topology: Topology,
         partial_bond_orders_from_molecules=None,
-    ) -> "SMIRNOFFProperTorsionCollection":
+    ) -> Self:
         """
         Create a SMIRNOFFProperTorsionCollection from toolkit data.
 
         """
-        collection: SMIRNOFFProperTorsionCollection = cls(
+        collection = cls(
             type="ProperTorsions",
             expression="k*(1+cos(periodicity*theta-phase))",
             fractional_bond_order_method=parameter_handler.fractional_bondorder_method,

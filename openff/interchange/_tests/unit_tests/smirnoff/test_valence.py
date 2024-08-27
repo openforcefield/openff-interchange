@@ -191,7 +191,6 @@ class TestConstraintCollection:
 
 
 class TestBondOrderInterpolation:
-    @pytest.mark.slow
     def test_input_bond_orders_ignored(self, ethanol, xml_ff_bo_bonds):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
