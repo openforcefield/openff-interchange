@@ -114,3 +114,23 @@ def test_issue_1031(monkeypatch):
     # check a few atom names to ensure these didn't end up being empty sets
     for atom_name in ("NE2", "H3", "HA", "CH3", "CA", "CB", "CE1"):
         assert atom_name in openff_atom_names
+
+
+def test_issue_1033(water, sage):
+    """Test issue/PR 1033, in which charges were not ordered topologically."""
+    pytest.importorskip("parmed")
+
+    interchange = sage.create_interchange(
+        Topology.from_molecules(3 * [water]),
+    )
+
+    interchange.to_prmtop("test.prmtop")
+
+    structure = parmed.load_file("test.prmtop")
+
+    # atoms should be ordered OHH OHH OHH, charges should be as well
+    assert 3 * [
+        (8, -0.834),
+        (1, 0.417),
+        (1, 0.417),
+    ] == [(atom.atomic_number, atom.charge) for atom in structure.atoms]

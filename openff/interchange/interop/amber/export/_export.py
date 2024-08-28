@@ -22,7 +22,7 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
     UnsupportedMixingRuleError,
 )
-from openff.interchange.models import PotentialKey
+from openff.interchange.models import PotentialKey, TopologyKey
 
 
 def _write_text_blob(file, blob):
@@ -514,9 +514,15 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG CHARGE\n" "%FORMAT(5E16.8)\n")
+        electro = interchange["Electrostatics"]
         charges = [
-            charge.m_as(unit.e) * AMBER_COULOMBS_CONSTANT
-            for charge in interchange["Electrostatics"].charges.values()
+            charge * AMBER_COULOMBS_CONSTANT
+            for charge in [
+                electro.charges[TopologyKey(atom_indices=(index,))].m_as(
+                    unit.elementary_charge,
+                )
+                for index in range(interchange.topology.n_atoms)
+            ]
         ]
         text_blob = "".join([f"{val:16.8E}" for val in charges])
         _write_text_blob(prmtop, text_blob)
