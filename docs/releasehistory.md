@@ -11,6 +11,10 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## 0.3.x
+
+* #1045 Fixes a bug in which charges were sometimes misordered in `.prmtop` files.
+
 ## 0.3.30 - 2024-08
 
 * #1039 Updates support of "cutoff" electrostatics in `.to_openmm` to better reflect what OpenMM supports. Set `"reaction-field"` to force the use of `CutoffPeriodic`, provided the vdW and electrostatic cutoff distances match. The potential/method `"cutoff"` is no longer supported but may be re-added in the future.
