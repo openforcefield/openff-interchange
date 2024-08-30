@@ -20,7 +20,7 @@ def get_lammps_energies(
     """
     Given an OpenFF Interchange object, return single-point energies as computed by LAMMPS.
 
-    .. warning :: This API is experimental and subject to change.
+    .. warning :: This API is not stable and subject to change.
 
     .. todo :: Split out _running_ LAMMPS into a separate internal function
 
@@ -57,7 +57,10 @@ def _get_lammps_energies(
     import lammps
 
     if round_positions is not None:
-        interchange.positions = numpy.round(interchange.positions, round_positions)
+        interchange.positions = numpy.round(
+            interchange.positions,  # type: ignore[arg-type]
+            round_positions,
+        )
 
     with tempfile.TemporaryDirectory():
         interchange.to_lammps("out.lmp")

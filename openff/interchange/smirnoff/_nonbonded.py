@@ -14,6 +14,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 from pydantic import Field, PrivateAttr
+from typing_extensions import Self
 
 from openff.interchange.common._nonbonded import (
     ElectrostaticsCollection,
@@ -37,7 +38,8 @@ from openff.interchange.models import (
     TopologyKey,
     VirtualSiteKey,
 )
-from openff.interchange.smirnoff._base import SMIRNOFFCollection, T
+from openff.interchange.smirnoff._base import SMIRNOFFCollection
+from openff.interchange.warnings import ForceFieldModificationWarning
 
 ElectrostaticsHandlerType = Union[
     ElectrostaticsHandler,
@@ -45,7 +47,6 @@ ElectrostaticsHandlerType = Union[
     ChargeIncrementModelHandler,
     LibraryChargeHandler,
 ]
-
 
 _ZERO_CHARGE = Quantity(0.0, unit.elementary_charge)
 
@@ -75,7 +76,7 @@ def _upconvert_vdw_handler(vdw_handler: vdWHandler):
             "Automatically up-converting vdWHandler from version 0.3 to 0.4. Consider manually upgrading "
             "this vdW (or <vdW> section in an OFFXML file) to 0.4 or newer. For more details, "
             "see https://openforcefield.github.io/standards/standards/smirnoff/#vdw.",
-            stacklevel=2,
+            ForceFieldModificationWarning,
         )
 
         if vdw_handler.method != "cutoff":
@@ -101,7 +102,7 @@ def _downconvert_vdw_handler(vdw_handler: vdWHandler):
         warnings.warn(
             "Automatically down-converting vdWHandler from version 0.4 to 0.3. In the future, this "
             "down-conversion will not happen and version 0.3 will not be supported.",
-            stacklevel=2,
+            ForceFieldModificationWarning,
         )
 
         if (vdw_handler.periodic_method != "cutoff") or (vdw_handler.nonperiodic_method != "no-cutoff"):
@@ -190,10 +191,10 @@ class SMIRNOFFvdWCollection(vdWCollection, SMIRNOFFCollection):
 
     @classmethod
     def create(
-        cls: type[T],
+        cls,
         parameter_handler: vdWHandler,
         topology: Topology,
-    ) -> T:
+    ) -> Self:
         """
         Create a SMIRNOFFvdWCollection from toolkit data.
 
@@ -258,13 +259,17 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         "cutoff",
         "no-cutoff",
         "reaction-field",
-    ] = Field(_PME)
+    ] = Field(
+        _PME,
+    )  # type: ignore[assignment]
     nonperiodic_potential: Literal[
         "Coulomb",
         "cutoff",
         "no-cutoff",
         "reaction-field",
-    ] = Field("Coulomb")
+    ] = Field(
+        "Coulomb",
+    )  # type: ignore[assignment]
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     _charges = PrivateAttr(default_factory=dict)
@@ -287,14 +292,14 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @property
     def _charges_without_virtual_sites(
         self,
-    ) -> dict[TopologyKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
         return self._get_charges(include_virtual_sites=False)
 
     @property
     def charges(
         self,
-    ) -> dict[TopologyKey | VirtualSiteKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, Quantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:
             self._charges = self._get_charges(include_virtual_sites=True)
@@ -305,7 +310,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     def _get_charges(
         self,
         include_virtual_sites=True,
-    ) -> dict[TopologyKey | VirtualSiteKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, Quantity]:
         """Get the total partial charge on each atom or particle."""
         # Keyed by index for atoms and by VirtualSiteKey for virtual sites.
         charges: dict[VirtualSiteKey | int, Quantity] = dict()
@@ -381,7 +386,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     raise NotImplementedError()
 
         returned_charges: dict[
-            TopologyKey | LibraryChargeTopologyKey,
+            TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey,
             Quantity,
         ] = dict()
 
@@ -406,12 +411,12 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
     @classmethod
     def create(
-        cls: type[T],
+        cls,
         parameter_handler: Any,
         topology: Topology,
         charge_from_molecules=None,
         allow_nonintegral_charges: bool = False,
-    ) -> T:
+    ) -> Self:
         """
         Create a SMIRNOFFElectrostaticsCollection from toolkit data.
 
@@ -540,7 +545,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @classmethod
     def _find_slot_matches(
         cls,
-        parameter_handler: Union["LibraryChargeHandler", "ChargeIncrementModelHandler"],
+        parameter_handler: LibraryChargeHandler | ChargeIncrementModelHandler,
         unique_molecule: Molecule,
     ) -> tuple[dict[TopologyKey, PotentialKey], dict[PotentialKey, Potential]]:
         """
@@ -614,7 +619,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @classmethod
     def _find_charge_model_matches(
         cls,
-        parameter_handler: Union["ToolkitAM1BCCHandler", ChargeIncrementModelHandler],
+        parameter_handler: ToolkitAM1BCCHandler | ChargeIncrementModelHandler,
         unique_molecule: Molecule,
     ) -> tuple[
         str,
@@ -737,8 +742,8 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             else:
                 matched_atom_indices = {
                     index
-                    for key in am1_matches
-                    for index in key.atom_indices  # type: ignore[union-attr]
+                    for key in am1_matches  # type: ignore[union-attr]
+                    for index in key.atom_indices
                 }
 
             if matched_atom_indices != expected_matches:

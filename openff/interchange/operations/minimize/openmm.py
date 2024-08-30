@@ -50,8 +50,12 @@ def minimize_openmm(
     # Assume that all virtual sites are placed at the _end_, so the 0th through
     # (number of atoms)th positions are the massive particles
     return from_openmm(
-        simulation.context.getState(getPositions=True).getPositions(asNumpy=True)[
-            : interchange.positions.shape[0],
+        simulation.context.getState(
+            getPositions=True,
+        ).getPositions(
+            asNumpy=True,
+        )[
+            : interchange.positions.shape[0],  # type: ignore[union-attr]
             :,
         ],
     )

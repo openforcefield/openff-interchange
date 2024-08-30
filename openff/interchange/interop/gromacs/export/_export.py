@@ -4,7 +4,7 @@ import warnings
 import numpy
 from openff.toolkit import unit
 
-from openff.interchange.exceptions import MissingPositionsError
+from openff.interchange.exceptions import MissingPositionsError, UnsupportedExportError
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSSystem,
     GROMACSVirtualSite2,
@@ -16,6 +16,7 @@ from openff.interchange.interop.gromacs.models.models import (
     RyckaertBellemansDihedral,
 )
 from openff.interchange.pydantic import _BaseModel
+from openff.interchange.warnings import MissingPositionsWarning
 
 
 class GROMACSWriter(_BaseModel):
@@ -67,14 +68,14 @@ class GROMACSWriter(_BaseModel):
             f"{self.system.coul_14:8.6f}\n\n",
         )
 
-    def _write_atomtypes(self, top, merge_atom_types: bool) -> dict[str, str]:
+    def _write_atomtypes(self, top, merge_atom_types: bool) -> dict[str, bool | str]:
         top.write("[ atomtypes ]\n")
         top.write(
             ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n",
         )
 
-        reduced_atom_types = []
-        mapping_to_reduced_atom_types = {}
+        reduced_atom_types: list[tuple[str, LennardJonesAtomType]] = list()
+        mapping_to_reduced_atom_types = dict()
 
         def _is_atom_type_in_list(
             atom_type,
@@ -163,7 +164,7 @@ class GROMACSWriter(_BaseModel):
             top.write("[ moleculetype ]\n")
 
             top.write(
-                f"{molecule_name.replace(' ', '_')}\t" f"{molecule_type.nrexcl:10d}\n\n",
+                f"{molecule_name.replace(' ', '_')}\t{molecule_type.nrexcl:10d}\n\n",
             )
 
             self._write_atoms(
@@ -293,7 +294,7 @@ class GROMACSWriter(_BaseModel):
 
             if function in [1, 4]:
                 top.write(
-                    f"{dihedral.phi.m :20.12f}" f"{dihedral.k.m :20.12f}" f"{dihedral.multiplicity :18d}",
+                    f"{dihedral.phi.m :20.12f}{dihedral.k.m :20.12f}{dihedral.multiplicity :18d}",
                 )
 
             elif function == 3:
@@ -419,8 +420,7 @@ class GROMACSWriter(_BaseModel):
         elif numpy.allclose(self.system.positions, 0):
             warnings.warn(
                 "Positions seem to all be zero. Result coordinate file may be non-physical.",
-                UserWarning,
-                stacklevel=2,
+                MissingPositionsWarning,
             )
 
         n_particles = sum(
@@ -464,14 +464,9 @@ class GROMACSWriter(_BaseModel):
                     count += 1
 
         if self.system.box is None:
-            warnings.warn(
-                "WARNING: System defined with no box vectors, which GROMACS does not offically "
-                "support in versions 2020 or newer (see "
-                "https://gitlab.com/gromacs/gromacs/-/issues/3526). Setting box vectors to a 5 "
-                " nm cube.",
-                stacklevel=2,
+            raise UnsupportedExportError(
+                "GROMACS versions 2020 and newer do not support systems without periodicity/box vectors.",
             )
-            box = 5 * numpy.eye(3)
         else:
             box = self.system.box.m_as(unit.nanometer)
 

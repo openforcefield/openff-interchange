@@ -65,7 +65,7 @@ class MDConfig(_BaseModel):
         description="The distance at which the switching function is applied",
     )
     coul_method: str = Field(
-        None,
+        "",
         description="The method used to compute pairwise electrostatic interactions",
     )
     coul_cutoff: _DistanceQuantity = Field(
@@ -273,7 +273,6 @@ class MDConfig(_BaseModel):
         # Construct the input file in memory so nothing is written to disk if an
         # error is encountered.
         with StringIO() as lmp:
-
             if self.switching_function is not None:
                 if self.switching_distance.m > 0.0:
                     warnings.warn(
@@ -285,7 +284,7 @@ class MDConfig(_BaseModel):
                     )
 
             lmp.write(
-                "units real\n" "atom_style full\n" "\n" "dimension 3\nboundary p p p\n\n",
+                "units real\natom_style full\n\ndimension 3\nboundary p p p\n\n",
             )
 
             if len(interchange["Bonds"].key_map) > 0:

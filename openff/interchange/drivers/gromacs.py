@@ -56,7 +56,7 @@ def get_gromacs_energies(
     """
     Given an OpenFF Interchange object, return single-point energies as computed by GROMACS.
 
-    .. warning :: This API is experimental and subject to change.
+    .. warning :: This API is not stable and subject to change.
 
     Parameters
     ----------

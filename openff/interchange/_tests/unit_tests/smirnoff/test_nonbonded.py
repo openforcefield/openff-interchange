@@ -21,7 +21,6 @@ from openff.interchange.smirnoff._nonbonded import (
 
 
 class TestNonbonded:
-    @pytest.mark.slow
     def test_electrostatics_am1_handler(self, methane):
         methane.assign_partial_charges(partial_charge_method="am1bcc")
 

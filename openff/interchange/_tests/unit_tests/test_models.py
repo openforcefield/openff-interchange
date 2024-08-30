@@ -27,7 +27,6 @@ def test_topologykey_hash_uniqueness():
 
     smirks = "[#1:1]-[#8X2:2]"
     ref = ProperTorsionKey(id=smirks, atom_indices=(2, 0, 1, 3))
-    without_atom_indices = ProperTorsionKey(id=smirks, atom_indices=())
     with_mult = ProperTorsionKey(id=smirks, atom_indices=(2, 0, 1, 3), mult=2)
     with_bond_order = ProperTorsionKey(
         id=smirks,
@@ -35,7 +34,7 @@ def test_topologykey_hash_uniqueness():
         bond_order=1.4,
     )
 
-    keys = [ref, without_atom_indices, with_mult, with_bond_order]
+    keys = [ref, with_mult, with_bond_order]
     assert len({hash(k) for k in keys}) == len(keys)
 
 

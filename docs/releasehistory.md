@@ -11,6 +11,22 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## 0.4.0 - 2024
+
+* Pydantic v2 is now used at runtime. As a consequence, models containing `Interchange`s cannot also use models from the v1 API.
+* `Interchange.to_gromacs` and similar methods now raise an error if no box is defined.
+  * Previously, this was a warning.
+  * GROMACS dropped support for (proper) vacuum simulations in version 2020 and there are no immediate plans to re-introduce it.
+  * Users freqently approximate vacuum simulation with periodic boundary conditions by applying a large box. This has some performance issues and some non-bonded terms likely differ numerically compared to similar implementations in other engines.
+* The wrapped use of external readers and writers is removed, and with it arguments like `writer` in many `Interchange.to_x` calls.
+* Several classes and methods which were deprecated in the 0.3 line of releases are now removed.
+* Previously-deprecated examples are removed.
+* `ProperTorsionKey` no longer accepts an empty tuple as atom indices.
+
+## 0.3.30 - 2024-08
+
+* #1039 Updates support of "cutoff" electrostatics in `.to_openmm` to better reflect what OpenMM supports. Set `"reaction-field"` to force the use of `CutoffPeriodic`, provided the vdW and electrostatic cutoff distances match. The potential/method `"cutoff"` is no longer supported but may be re-added in the future.
+
 ## 0.3.29 - 2024-08-01
 
 * #1023 Fixes a bug in which non-bonded parameter lookup sometimes crashed when virtual sites were present.

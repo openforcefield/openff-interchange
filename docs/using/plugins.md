@@ -217,7 +217,7 @@ At this point, we have created a class that can parse sections of a custom OFFXM
 from openff.toolkit import Topology
 
 from typing import Literal, Type
-from openff.models.types import FloatQuantity
+from openff.interchange._annotations import DistanceQuantity
 from openff.interchange.smirnoff._nonbonded import _SMIRNOFFNonbondedCollection
 from openff.interchange.components.potentials import Potential
 
@@ -231,7 +231,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
 
     mixing_rule: str = "Buckingham"
 
-    switch_width: FloatQuantity["angstrom"] = unit.Quantity(1.0, unit.angstrom)
+    switch_width: DistanceQuantity = unit.Quantity(1.0, unit.angstrom)
 
     @classmethod
     def allowed_parameter_handlers(cls):

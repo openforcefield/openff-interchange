@@ -1,7 +1,7 @@
 import itertools
 import re
 from collections import defaultdict
-from typing import Optional, TypeAlias, Union
+from typing import TypeAlias
 
 from openff.toolkit import Molecule, Quantity, unit
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
@@ -34,9 +34,14 @@ from openff.interchange.interop.gromacs.models.models import (
     PeriodicProperDihedral,
     RyckaertBellemansDihedral,
 )
-from openff.interchange.models import BondKey, TopologyKey, VirtualSiteKey
+from openff.interchange.models import (
+    BondKey,
+    LibraryChargeTopologyKey,
+    TopologyKey,
+    VirtualSiteKey,
+)
 
-MoleculeLike: TypeAlias = Union[Molecule, _SimpleMolecule]
+MoleculeLike: TypeAlias = Molecule | _SimpleMolecule
 
 _WATER = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
 _SIMPLE_WATER = _SimpleMolecule.from_molecule(_WATER)
@@ -54,7 +59,7 @@ def _convert(
         gen_pairs = True
     else:
         raise UnsupportedExportError(
-            "Could not find a handler for short-ranged vdW interactions that is compatible " "with GROMACS.",
+            "Could not find a handler for short-ranged vdW interactions that is compatible with GROMACS.",
         )
 
     if _combination_rule == "lorentz-berthelot":
@@ -63,7 +68,7 @@ def _convert(
         combination_rule = 3
     else:
         raise UnsupportedExportError(
-            f"Could not find a GROMACS-compatible combination rule for mixing rule " f"{_combination_rule}.",
+            f"Could not find a GROMACS-compatible combination rule for mixing rule {_combination_rule}.",
         )
 
     scale_electrostatics = interchange["Electrostatics"].scale_14
@@ -134,7 +139,9 @@ def _convert(
             # when looking up parameters, use the topology index, not the particle index ...
             # ... or so I think is the expectation of the `TopologyKey`s in the vdW collection
             topology_index = interchange.topology.atom_index(atom)
-            key = TopologyKey(atom_indices=(topology_index,))
+            key: TopologyKey | VirtualSiteKey | LibraryChargeTopologyKey = TopologyKey(
+                atom_indices=(topology_index,),
+            )
 
             vdw_parameters = vdw_collection.potentials[vdw_collection.key_map[key]].parameters
 
@@ -193,9 +200,7 @@ def _convert(
 
         molecule = GROMACSMolecule(name=unique_molecule.name)
 
-        unique_residue_names = {
-            atom.metadata.get("residue_name", None) for atom in unique_molecule.atoms
-        }
+        unique_residue_names = {atom.metadata.get("residue_name", None) for atom in unique_molecule.atoms}
 
         if None in unique_residue_names:
             if len(unique_residue_names) > 1:
@@ -208,7 +213,6 @@ def _convert(
                     _atom.metadata["residue_name"] = unique_molecule.name
 
         for atom in unique_molecule.atoms:
-
             name = SYMBOLS[atom.atomic_number] if getattr(atom, "name", "") == "" else atom.name
 
             charge = _partial_charges[interchange.topology.atom_index(atom)]
@@ -232,8 +236,7 @@ def _convert(
         this_molecule_atom_type_names = tuple(atom.atom_type for atom in molecule.atoms)
 
         molecule._contained_atom_types = {
-            atom_type_name: system.atom_types[atom_type_name]
-            for atom_type_name in this_molecule_atom_type_names
+            atom_type_name: system.atom_types[atom_type_name] for atom_type_name in this_molecule_atom_type_names
         }
 
         # Use a set to de-duplicate
@@ -310,9 +313,7 @@ def _convert_bonds(
         return
 
     # if this is slow, pass it among valence converters
-    atom_indices_in_this_molecule = {
-        interchange.topology.atom_index(a) for a in unique_molecule.atoms
-    }
+    atom_indices_in_this_molecule = {interchange.topology.atom_index(a) for a in unique_molecule.atoms}
 
     offset = min(atom_indices_in_this_molecule)
 
@@ -359,9 +360,7 @@ def _convert_angles(
         return
 
     # If this is slow, pass it among valence converters
-    atom_indices_in_this_molecule = {
-        interchange.topology.atom_index(a) for a in unique_molecule.atoms
-    }
+    atom_indices_in_this_molecule = {interchange.topology.atom_index(a) for a in unique_molecule.atoms}
 
     offset = min(atom_indices_in_this_molecule)
 
@@ -399,22 +398,20 @@ def _convert_dihedrals(
     unique_molecule: MoleculeLike,
     interchange: Interchange,
 ):
-    rb_torsion_handler: Optional[Collection] = interchange.collections.get(
+    rb_torsion_handler: Collection | None = interchange.collections.get(
         "RBTorsions",
         None,
     )
-    proper_torsion_handler: Optional[Collection] = interchange.collections.get(
+    proper_torsion_handler: Collection | None = interchange.collections.get(
         "ProperTorsions",
         None,
     )
-    improper_torsion_handler: Optional[Collection] = interchange.collections.get(
+    improper_torsion_handler: Collection | None = interchange.collections.get(
         "ImproperTorsions",
         None,
     )
 
-    atom_indices_in_this_molecule = {
-        interchange.topology.atom_index(a) for a in unique_molecule.atoms
-    }
+    atom_indices_in_this_molecule = {interchange.topology.atom_index(a) for a in unique_molecule.atoms}
 
     offset = min(atom_indices_in_this_molecule)
 
@@ -498,10 +495,8 @@ def _create_single_dihedral(
     top_key,
     proper_torsion_handler,
     offset: int,
-) -> PeriodicProperDihedral | None:
-    params = proper_torsion_handler.potentials[
-        proper_torsion_handler.key_map[top_key]
-    ].parameters
+) -> PeriodicProperDihedral:
+    params = proper_torsion_handler.potentials[proper_torsion_handler.key_map[top_key]].parameters
 
     # skip dimensionality check, trust it's dimensionless
     idivf = int(params["idivf"].m) if "idivf" in params else 1
@@ -523,10 +518,8 @@ def _create_single_rb_torsion(
     top_key,
     rb_torsion_handler,
     offset: int,
-) -> RyckaertBellemansDihedral | None:
-    params = rb_torsion_handler.potentials[
-        rb_torsion_handler.key_map[top_key]
-    ].parameters
+) -> RyckaertBellemansDihedral:
+    params = rb_torsion_handler.potentials[rb_torsion_handler.key_map[top_key]].parameters
 
     return RyckaertBellemansDihedral(
         atom1=top_key.atom_indices[0] - offset + 1,
@@ -710,7 +703,7 @@ def _apply_hmr(
 
     if len(gromacs_molecule.virtual_sites) > 0:
         raise UnsupportedExportError(
-            "Hydrogen mass repartitioning with virtual sites present, even on " " rigid water, is not yet supported.",
+            "Hydrogen mass repartitioning with virtual sites present, even on rigid water, is not yet supported.",
         )
 
     water = Molecule.from_smiles("O")

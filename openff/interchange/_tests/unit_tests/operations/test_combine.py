@@ -38,6 +38,8 @@ class TestCombine:
         # Just see if it can be converted into OpenMM and run
         get_openmm_energies(combined)
 
+    @pytest.mark.filterwarnings("ignore:Setting positions to None")
+    @pytest.mark.slow
     def test_parameters_do_not_clash(self, monkeypatch, sage_unconstrained):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 

@@ -13,6 +13,7 @@ from openff.interchange.exceptions import (
 from openff.interchange.interop.openmm._import._import import from_openmm
 from openff.interchange.interop.openmm._positions import to_openmm_positions
 from openff.interchange.interop.openmm._topology import to_openmm_topology
+from openff.interchange.smirnoff._base import SMIRNOFFCollection
 
 if has_package("openmm"):
     import openmm
@@ -76,6 +77,8 @@ def to_openmm_system(
 
     for collection in interchange.collections.values():
         if collection.is_plugin:
+            assert isinstance(collection, SMIRNOFFCollection)
+
             try:
                 collection.check_openmm_requirements(combine_nonbonded_forces)
             except AssertionError as error:
@@ -129,6 +132,8 @@ def to_openmm_system(
 
     for collection in interchange.collections.values():
         if collection.is_plugin:
+            assert isinstance(collection, SMIRNOFFCollection)
+
             try:
                 collection.modify_openmm_forces(
                     interchange,
@@ -182,7 +187,7 @@ def _apply_hmr(
 
     if system.getNumParticles() != interchange.topology.n_atoms:
         raise UnsupportedExportError(
-            "Hydrogen mass repartitioning with virtual sites present, even on " " rigid water, is not yet supported.",
+            "Hydrogen mass repartitioning with virtual sites present, even on rigid water, is not yet supported.",
         )
 
     water = Molecule.from_smiles("O")

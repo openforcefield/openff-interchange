@@ -1,5 +1,5 @@
 import abc
-from typing import Literal, TypeVar
+from typing import TypeVar
 
 from openff.toolkit import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -9,6 +9,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
 )
+from typing_extensions import Self
 
 from openff.interchange.components.potentials import Collection
 from openff.interchange.exceptions import (
@@ -24,7 +25,6 @@ from openff.interchange.models import (
     TopologyKey,
 )
 
-T = TypeVar("T", bound="SMIRNOFFCollection")
 TP = TypeVar("TP", bound="ParameterHandler")
 
 
@@ -82,7 +82,7 @@ def _check_all_valence_terms_assigned(
             err_msg += "\n"
         not_found_str = "\n- ".join([str(x) for x in not_found_terms])
         err_msg += (
-            f"{handler.__class__.__name__} assigned terms that were not found in the topology:\n" f"- {not_found_str}"
+            f"{handler.__class__.__name__} assigned terms that were not found in the topology:\n- {not_found_str}"
         )
     if err_msg:
         err_msg += "\n"
@@ -107,7 +107,7 @@ def _check_all_valence_terms_assigned(
 class SMIRNOFFCollection(Collection, abc.ABC):
     """Base class for handlers storing potentials produced by SMIRNOFF force fields."""
 
-    type: Literal["Bonds"] = "Bonds"
+    type: str
 
     is_plugin: bool = False
 
@@ -189,7 +189,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
             "SMIRNOFFBondCollection",
             "SMIRNOFFAngleCollection",
         ]:
-            valence_terms = self.valence_terms(topology)
+            valence_terms = self.valence_terms(topology)  # type: ignore[attr-defined]
 
             _check_all_valence_terms_assigned(
                 handler=parameter_handler,
@@ -206,10 +206,10 @@ class SMIRNOFFCollection(Collection, abc.ABC):
 
     @classmethod
     def create(
-        cls,  # type[T],
+        cls,
         parameter_handler: TP,
         topology: "Topology",
-    ) -> T:
+    ) -> Self:
         """
         Create a SMIRNOFFCOllection from toolkit data.
 
@@ -217,7 +217,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
         if type(parameter_handler) not in cls.allowed_parameter_handlers():
             raise InvalidParameterHandlerError(type(parameter_handler))
 
-        collection = cls()
+        collection = cls()  # type: ignore[call-arg]
         if hasattr(collection, "fractional_bondorder_method"):
             if getattr(parameter_handler, "fractional_bondorder_method", None):
                 collection.fractional_bond_order_method = (  # type: ignore[attr-defined]

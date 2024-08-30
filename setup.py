@@ -1,19 +1,13 @@
-import sys
-from setuptools import setup, find_namespace_packages
 import versioneer
+from setuptools import find_namespace_packages, setup
 
 short_description = "A project (and object) for storing, manipulating, and converting molecular mechanics data."
-
-# from https://github.com/pytest-dev/pytest-runner#conditional-requirement
-needs_pytest = {"pytest", "test", "ptr"}.intersection(sys.argv)
-pytest_runner = ["pytest-runner"] if needs_pytest else []
 
 with open("README.md") as handle:
     long_description = handle.read()
 
 
 setup(
-    # Self-descriptive entries which should always be present
     name="openff-interchange",
     author="Open Force Field Initiative",
     author_email="info@openforcefield.org",

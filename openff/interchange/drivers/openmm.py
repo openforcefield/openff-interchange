@@ -29,7 +29,7 @@ def get_openmm_energies(
     """
     Given an OpenFF Interchange object, return single-point energies as computed by OpenMM.
 
-    .. warning :: This API is experimental and subject to change.
+    .. warning :: This API is not stable and subject to change.
 
     Parameters
     ----------
@@ -59,7 +59,6 @@ def get_openmm_energies(
                 warnings.warn(
                     "Collecting energies from split forces with virtual sites is experimental",
                     UserWarning,
-                    stacklevel=2,
                 )
 
             has_virtual_sites = True

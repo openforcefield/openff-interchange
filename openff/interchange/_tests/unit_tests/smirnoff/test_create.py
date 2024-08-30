@@ -106,7 +106,6 @@ class TestCreate:
                 assert potential_key.cosmetic_attributes["fOO"] == "bAR"
 
 
-@pytest.mark.slow
 class TestUnassignedParameters:
     def test_catch_unassigned_bonds(self, sage, ethanol_top):
         for param in sage["Bonds"].parameters:
@@ -162,7 +161,6 @@ def test_library_charges_from_molecule():
 
 
 class TestChargeFromMolecules:
-    @pytest.mark.slow
     def test_charge_from_molecules_basic(self, sage):
         molecule = Molecule.from_smiles("CCO")
         molecule.assign_partial_charges(partial_charge_method="am1bcc")
@@ -321,7 +319,6 @@ class TestPartialBondOrdersFromMolecules:
             _get_interpolated_bond_k(empty["Bonds"]),
         )
 
-    @pytest.mark.slow
     def test_partial_bond_order_from_molecules_no_matches(self, ethanol):
         from openff.toolkit._tests.test_forcefield import xml_ff_bo
 

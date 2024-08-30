@@ -42,7 +42,6 @@ def get_all_energies(
     except UnsupportedCutoffMethodError as error:
         warnings.warn(
             f"Skipping OpenMM, driver failed with error:\n\t{error}",
-            stacklevel=2,
         )
 
     for engine_name, engine_driver, engine_exception in [

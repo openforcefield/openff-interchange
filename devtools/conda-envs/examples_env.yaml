@@ -5,29 +5,35 @@ channels:
 dependencies:
   # Core
   - python
+  - versioneer-518
   - numpy
   - pydantic =2
-  - openmm
   # OpenFF stack
-  - openff-toolkit
-  - openff-nagl
-  - openff-nagl-models
+  - openff-toolkit-base ~=0.16.4
+  - openff-units
   - ambertools =23
   # Optional features
-  - unyt
-  - mbuild =0.17
-  - foyer >=0.12.1
-  - gmso =0.12
-  # Examples
-  - jax
-  - mdtraj
-  - pdbfixer
+  - openff-nagl
+  - openff-nagl-models
+  - mbuild ~=0.18
+  - foyer =1
+  - gmso ~=0.12
   - nglview
-  - openeye-toolkits =2024.1.0
-  - pytest =8.0
-  - pytest-xdist
-  - nbval
-  - rich
   # Drivers
   - gromacs
   - lammps >=2023.08.02
+  # shim for a build issue that's probably localized to conda-forge
+  # https://github.com/conda-forge/lammps-feedstock/issues/207
+  - openmpi =4
+  - panedr
+  # Testing
+  - mdtraj
+  - pytest
+  - pytest-xdist
+  - nbval
+  # Examples
+  - openmmforcefields
+  - jax
+  - pdbfixer
+  - openeye-toolkits =2024.1.0
+  - rich

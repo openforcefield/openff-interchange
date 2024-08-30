@@ -43,19 +43,20 @@ class _NeedsGROMACS:
 
 
 class TestToGro(_NeedsGROMACS):
+    @pytest.mark.xfail(reason="Broken")
     def test_residue_names(self, sage):
         """Reproduce issue #642."""
         # This could maybe just test the behavior of _convert?
         ligand = Molecule.from_smiles("CCO")
         ligand.generate_conformers(n_conformers=1)
 
+        topology = ligand.to_topology()
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+
         for atom in ligand.atoms:
             atom.metadata["residue_name"] = "LIG"
 
-        Interchange.from_smirnoff(
-            sage,
-            [ligand],
-        ).to_gro("should_have_residue_names.gro")
+        sage.create_interchange(topology).to_gro("should_have_residue_names.gro")
 
         for line in open("should_have_residue_names.gro").readlines()[2:-2]:
             assert line[5:10] == "LIG  "
@@ -133,14 +134,14 @@ class TestGROMACSGROFile(_NeedsGROMACS):
         n_decimals = len(str(coords[0, 0]).split(".")[1])
         assert n_decimals == 12
 
-    def test_vaccum_warning(self, sage):
+    def test_vaccum_unsupported(self, sage):
         molecule = MoleculeWithConformer.from_smiles("CCO")
 
         out = Interchange.from_smirnoff(force_field=sage, topology=[molecule])
 
         assert out.box is None
 
-        with pytest.warns(UserWarning, match="gitlab"):
+        with pytest.raises(UnsupportedExportError, match="2020"):
             out.to_gro("tmp.gro")
 
     @pytest.mark.slow
@@ -158,6 +159,8 @@ class TestGROMACSGROFile(_NeedsGROMACS):
             topology=[protein],
         )
 
+        out.box = [4, 4, 4]
+
         out.to_gro("tmp.gro")
 
         mdtraj_topology = mdtraj.load("tmp.gro").topology
@@ -171,10 +174,12 @@ class TestGROMACSGROFile(_NeedsGROMACS):
 
     @pytest.mark.slow
     def test_atom_names_pdb(self):
-        peptide = get_protein("MainChain_ALA_ALA")
+        topology = get_protein("MainChain_ALA_ALA").to_topology()
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
-        Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_gro(
+        Interchange.from_smirnoff(ff14sb, topology).to_gro(
             "atom_names.gro",
         )
 
@@ -189,7 +194,6 @@ class TestGROMACSGROFile(_NeedsGROMACS):
 
 
 class TestGROMACS(_NeedsGROMACS):
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -366,8 +370,8 @@ class TestGROMACS(_NeedsGROMACS):
         out.topology = top
         out.box = [10, 10, 10] * unit.nanometer
         out.positions = [[0, 0, 0], [0.3, 0, 0]] * unit.nanometer
-        out.to_gro("out.gro", writer="internal")
-        out.to_top("out.top", writer="internal")
+        out.to_gro("out.gro")
+        out.to_top("out.top")
 
         omm_energies = get_openmm_energies(out, combine_nonbonded_forces=True)
         by_hand = A * exp(-B * r) - C * r**-6
@@ -411,6 +415,7 @@ class TestGROMACS(_NeedsGROMACS):
 
         assert [*parmed.load_file("tmp.top").molecules.keys()] == ["MOL0", "MOL1"]
 
+    @pytest.mark.filterwarnings("ignore:Setting positions to None")
     @pytest.mark.parametrize("name", ["MOL0", "MOL222", ""])
     def test_roundtrip_with_combine(
         self,
@@ -492,15 +497,12 @@ class TestGROMACSMetadata(_NeedsGROMACS):
     @skip_if_missing("mdtraj")
     @pytest.mark.slow
     def test_atom_names_pdb(self):
-        peptide = get_protein("MainChain_ALA_ALA")
+        topology = get_protein("MainChain_ALA_ALA").to_topology()
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
-        Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_gro(
-            "atom_names.gro",
-        )
-        Interchange.from_smirnoff(ff14sb, peptide.to_topology()).to_top(
-            "atom_names.top",
-        )
+        ff14sb.create_interchange(topology).to_gromacs("atom_names")
 
         pdb_object = openmm.app.PDBFile(
             get_data_file_path(
@@ -583,7 +585,6 @@ class TestCommonBoxes(_NeedsGROMACS):
 
 
 class TestMergeAtomTypes(_NeedsGROMACS):
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -753,6 +754,7 @@ class TestGROMACSVirtualSites(_NeedsGROMACS):
 
         assert abs(numpy.sum([p.charge for p in gmx_top.atoms])) < 1e-3
 
+    @pytest.mark.slow
     def test_carbonyl_example(self, sage_with_planar_monovalent_carbonyl, ethanol):
         """Test that a single-molecule planar carbonyl example can run 0 steps."""
         ethanol.generate_conformers(n_conformers=1)

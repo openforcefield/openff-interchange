@@ -3,8 +3,9 @@ Helper functions for producing `openmm.Force` objects for non-bonded terms.
 """
 
 import itertools
+import warnings
 from collections import defaultdict
-from typing import DefaultDict, NamedTuple, Optional
+from typing import DefaultDict, NamedTuple
 
 from openff.toolkit import Molecule, Quantity, unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
@@ -25,6 +26,7 @@ from openff.interchange.models import (
     TopologyKey,
     VirtualSiteKey,
 )
+from openff.interchange.warnings import NonbondedSettingsWarning
 
 if has_package("openmm"):
     import openmm
@@ -43,7 +45,7 @@ class _NonbondedData(NamedTuple):
     vdw_cutoff: Quantity
     vdw_method: str | None
     vdw_expression: str | None
-    mixing_rule: str | None
+    mixing_rule: str
     electrostatics_collection: ElectrostaticsCollection
     electrostatics_method: str | None
     periodic: bool
@@ -119,7 +121,7 @@ def _process_nonbonded_forces(
             break
         if collection.is_plugin:
             # TODO: Here is where to detect an electrostatics plugin, if one ever exists
-            if collection.acts_as == "vdW":
+            if collection.acts_as == "vdW":  # type: ignore[attr-defined]
                 has_vdw = True
                 break
 
@@ -222,7 +224,7 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
     except LookupError:
         for collection in interchange.collections.values():
             if collection.is_plugin:
-                if collection.acts_as == "vdW":
+                if collection.acts_as == "vdW":  # type: ignore[attr-defined]
                     # We can't be completely sure all plugins subclass out of vdWCollection here
                     vdw = collection  # type: ignore[assignment]
                     break
@@ -235,14 +237,14 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
         if interchange.box is None:
             vdw_method: str | None = vdw.nonperiodic_method.lower()
         else:
-            vdw_method: str | None = vdw.periodic_method.lower()
+            vdw_method = vdw.periodic_method.lower()
 
-        mixing_rule: str | None = getattr(vdw, "mixing_rule", None)
+        mixing_rule: str = getattr(vdw, "mixing_rule", "")
         vdw_expression: str | None = vdw.expression.replace("**", "^")
     else:
         vdw_cutoff = None
         vdw_method = None
-        mixing_rule = None
+        mixing_rule = ""
         vdw_expression = None
 
     try:
@@ -270,7 +272,7 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
         mixing_rule=mixing_rule,
         electrostatics_collection=electrostatics,
         electrostatics_method=electrostatics_method,
-        periodic=interchange.box is None,
+        periodic=interchange.box is not None,
     )
 
 
@@ -283,7 +285,7 @@ def _create_single_nonbonded_force(
     openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
 ):
     """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site collections."""
-    if data.mixing_rule not in ("lorentz-berthelot", None):
+    if data.mixing_rule not in ("lorentz-berthelot", ""):
         raise UnsupportedExportError(
             "OpenMM's default NonbondedForce only supports Lorentz-Berthelot mixing rules. "
             f"Found {data.mixing_rule}. "
@@ -300,6 +302,14 @@ def _create_single_nonbonded_force(
     non_bonded_force = openmm.NonbondedForce()
     non_bonded_force.setName("Nonbonded force")
     system.addForce(non_bonded_force)
+
+    # This limitation is independent of periodicity and vdW method, so check it first
+    if data.electrostatics_method == "cutoff":
+        raise UnsupportedCutoffMethodError(
+            "OpenMM does not support electrostatics with a hard cutoff (and no reaction field "
+            'modification). Consider using `"reaction-field"` to get force(s) with CutoffPeriodic '
+            "or CutoffNonperiodic.",
+        )
 
     if interchange.box is None:
         if (data.vdw_method in ("no-cutoff", None)) and (data.electrostatics_method in ("Coulomb", None)):
@@ -338,21 +348,21 @@ def _create_single_nonbonded_force(
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
             non_bonded_force.setEwaldErrorTolerance(ewald_tolerance)
 
-        elif data["vdw_method"] == data["electrostatics_method"] == "cutoff":
-            if data["vdw_cutoff"] != data["electrostatics_collection"].cutoff:
+        elif (data.vdw_method == "cutoff") and (data.electrostatics_method == "reaction-field"):
+            if data.vdw_cutoff != data.electrostatics_collection.cutoff:
                 raise UnsupportedExportError(
-                    "If using cutoff vdW and electrostatics, cutoffs must match.",
+                    "If using cutoff vdW and reaction-field electrostatics, cutoffs must match.",
                 )
 
             non_bonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
             non_bonded_force.setCutoffDistance(
-                to_openmm_quantity(data["vdw_cutoff"]),
+                to_openmm_quantity(data.vdw_cutoff),
             )
 
         else:
             raise UnsupportedCutoffMethodError(
                 f"Combination of non-bonded cutoff methods {data.vdw_method} (vdW) and "
-                "{data.electrostatics_method} (Electrostatics) not currently supported or invalid with "
+                f"{data.electrostatics_method} (Electrostatics) not currently supported or invalid with "
                 f"`combine_nonbonded_forces=True` and `.box={interchange.box}`.",
             )
 
@@ -610,7 +620,7 @@ def _create_multiple_nonbonded_forces(
         if vdw.is_plugin:
             # TODO: Custom mixing rules in plugins is untested
             vdw_14_force = openmm.CustomBondForce(
-                _get_scaled_potential_function(data.vdw_expression),
+                _get_scaled_potential_function(data.vdw_expression),  # type: ignore[arg-type]
             )
             vdw_14_force.setName("vdW 1-4 force")
 
@@ -621,17 +631,17 @@ def _create_multiple_nonbonded_forces(
 
             vdw_14_force.addGlobalParameter("scale14", vdw.scale_14)
 
-            for global_parameter in vdw.global_parameters():
+            for global_parameter in vdw.global_parameters():  # type: ignore[attr-defined]
                 vdw_14_force.addGlobalParameter(
                     global_parameter,
                     getattr(vdw, global_parameter).m,
                 )
 
-            for term, value in data.vdw_collection.pre_computed_terms().items():
+            for term, value in data.vdw_collection.pre_computed_terms().items():  # type: ignore[attr-defined]
                 vdw_14_force.addGlobalParameter(term, value)
 
         else:
-            vdw_expression: str = data.vdw_expression
+            vdw_expression: str = data.vdw_expression  # type: ignore
 
             vdw_14_force = openmm.CustomBondForce(vdw_expression)
             vdw_14_force.setName("vdW 1-4 force")
@@ -694,7 +704,7 @@ def _create_multiple_nonbonded_forces(
                             eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
                         else:
                             raise UnsupportedExportError(
-                                f"Unsupported mixing rule: {data['mixing_rule']}",
+                                f"Unsupported mixing rule: {data.mixing_rule}",
                             )
 
                         # ... and set the 1-4 interactions
@@ -721,7 +731,9 @@ def _create_multiple_nonbonded_forces(
             system.addForce(force)
 
     if vdw_force is not None and electrostatics_force is not None:
-        if (vdw_force.getNonbondedMethod() > 0) ^ (electrostatics_force.getNonbondedMethod() > 0):
+        vdw_uses = vdw_force.usesPeriodicBoundaryConditions()
+        elec_uses = electrostatics_force.usesPeriodicBoundaryConditions()
+        if vdw_uses != elec_uses:
             raise UnsupportedCutoffMethodError(
                 "When using `openmm.CustomNonbondedForce`, vdW and electrostatics cutoff methods "
                 "must agree on whether or not periodic boundary conditions should be used. "
@@ -736,7 +748,7 @@ def _create_vdw_force(
     molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
     has_virtual_sites: bool,
 ) -> openmm.CustomNonbondedForce | None:
-    vdw_collection: Optional[vdWCollection] = data.vdw_collection
+    vdw_collection: vdWCollection | None = data.vdw_collection
 
     if vdw_collection is None:
         return None
@@ -761,13 +773,13 @@ def _create_vdw_force(
 
     if vdw_collection.is_plugin:
         # TODO: Move this block outside of the plugin conditional
-        for global_parameter in vdw_collection.global_parameters():
+        for global_parameter in vdw_collection.global_parameters():  # type: ignore[attr-defined]
             vdw_force.addGlobalParameter(
                 global_parameter,
                 getattr(vdw_collection, global_parameter).m,
             )
 
-        for term, value in vdw_collection.pre_computed_terms().items():
+        for term, value in vdw_collection.pre_computed_terms().items():  # type: ignore[attr-defined]
             vdw_force.addGlobalParameter(term, value)
 
     for molecule in interchange.topology.molecules:
@@ -856,9 +868,24 @@ def _create_electrostatics_force(
                 parent_virtual_particle_mapping[openff_openmm_particle_map[parent_atom_index]].append(force_index)
 
     if data.electrostatics_method == "reaction-field":
-        raise UnsupportedCutoffMethodError(
-            "Reaction field electrostatics not supported. If this use case is important to you, "
-            "please raise an issue describing the scope of functionality you would like to use.",
+        warnings.warn(
+            "OpenMM implements reaction field electrostatics with CutoffPeriodic and CutoffNonperiodic. "
+            "See http://docs.openmm.org/latest/userguide/theory/02_standard_forces.html?highlight="
+            "reaction%20field#coulomb-interaction-with-cutoff",
+            NonbondedSettingsWarning,
+        )
+
+        if data.periodic:
+            electrostatics_force.setNonbondedMethod(
+                openmm.NonbondedForce.CutoffPeriodic,
+            )
+        else:
+            electrostatics_force.setNonbondedMethod(
+                openmm.NonbondedForce.CutoffNonPeriodic,
+            )
+
+        electrostatics_force.setCutoffDistance(
+            to_openmm_quantity(data.electrostatics_collection.cutoff),
         )
 
     elif data.electrostatics_method == _PME:
@@ -880,8 +907,11 @@ def _create_electrostatics_force(
 
     elif data.electrostatics_method == "cutoff":
         raise UnsupportedCutoffMethodError(
-            "OpenMM does not support electrostatics with a hard cutoff.",
+            "OpenMM does not support electrostatics with a hard cutoff (and no reaction field "
+            'modification). Consider using `"reaction-field"` to get force(s) with CutoffPeriodic '
+            "or CutoffNonperiodic.",
         )
+
     else:
         raise UnsupportedCutoffMethodError(
             f"Electrostatics method {data.electrostatics_method} not supported",
@@ -894,6 +924,7 @@ def _create_electrostatics_force(
         openff_openmm_particle_map,
         parent_virtual_particle_mapping,
     )
+
     return electrostatics_force
 
 
@@ -906,13 +937,11 @@ def _set_particle_parameters(
     molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
     openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
 ):
-    if electrostatics_force is not None:
-        electrostatics: ElectrostaticsCollection = data.electrostatics_collection
+    # TODO: Some funky plugins might have no charges, so there eventually should be
+    #       handling for electrostatics_force = None
+    electrostatics: ElectrostaticsCollection = data.electrostatics_collection
 
-        partial_charges = electrostatics._get_charges()
-
-    else:
-        partial_charges = None
+    partial_charges = electrostatics._get_charges()
 
     vdw: vdWCollection = data.vdw_collection
 
@@ -924,10 +953,7 @@ def _set_particle_parameters(
 
             top_key = TopologyKey(atom_indices=(atom_index,))
 
-            if partial_charges is not None:
-                partial_charge = partial_charges[top_key].m_as(unit.e)
-            else:
-                partial_charge = 0.0
+            partial_charge = partial_charges[top_key].m_as(unit.e)
 
             if vdw is not None:
                 pot_key = vdw.key_map[top_key]
