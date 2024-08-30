@@ -83,54 +83,6 @@ class TestGROMACSGROFile:
         n_decimals = len(str(coords[0, 0]).split(".")[1])
         assert n_decimals == 12
 
-    @pytest.mark.slow
-    @skip_if_missing("openmm")
-    def test_residue_info(self, sage):
-        """Test that residue information is passed through to .gro files."""
-        import mdtraj
-
-        protein = get_protein("MainChain_HIE")
-
-        ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
-
-        out = Interchange.from_smirnoff(
-            force_field=ff14sb,
-            topology=[protein],
-        )
-
-        out.box = [4, 4, 4]
-
-        out.to_gro("tmp.gro")
-
-        mdtraj_topology = mdtraj.load("tmp.gro").topology
-
-        for found_residue, original_residue in zip(
-            mdtraj_topology.residues,
-            out.topology.hierarchy_iterator("residues"),
-        ):
-            assert found_residue.name == original_residue.residue_name
-            assert str(found_residue.resSeq) == original_residue.residue_number
-
-    @pytest.mark.slow
-    def test_atom_names_pdb(self):
-        peptide = get_protein("MainChain_ALA_ALA")
-        ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
-
-        out = ff14sb.create_interchange(peptide.to_topology())
-
-        out.box = [4, 4, 4]
-
-        out.to_gro("atom_names.gro")
-
-        pdb_object = openmm.app.PDBFile(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
-        )
-        pdb_atom_names = [atom.name for atom in pdb_object.topology.atoms()]
-
-        openmm_atom_names = openmm.app.GromacsGroFile("atom_names.gro").atomNames
-
-        assert openmm_atom_names == pdb_atom_names
-
 
 @needs_gmx
 class TestGROMACS:

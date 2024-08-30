@@ -317,6 +317,8 @@ class Interchange(_BaseModel):
         Molecule names in written files are not guaranteed to match the `Moleclue.name` attribute of the
         molecules in the topology, especially if they are empty strings or not unique.
 
+        See `to_gro` and `to_top` for more details.
+
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
@@ -402,6 +404,16 @@ class Interchange(_BaseModel):
             The path to the GROMACS coordinate file to write.
         decimal: int, default=3
             The number of decimal places to use when writing the GROMACS coordinate file.
+
+        Residue IDs must be positive integers (or string representations thereof).
+
+        Residue IDs greater than 99,999 are reduced modulo 100,000 in line with common GROMACS practice.
+
+        Residue names and IDs from the topology are used, if present, and otherwise are generated internally.
+
+        Behavior when some, but not all, residue names and IDs are present in the topology is undefined.
+
+        If residue IDs are generated internally, they are assigned sequentially to each molecule starting at 1.
 
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter

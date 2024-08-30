@@ -5,6 +5,7 @@ channels:
 dependencies:
   # Core
   - python =3.10
+  - pip
   - versioneer-518
   - numpy
   - pydantic =2
