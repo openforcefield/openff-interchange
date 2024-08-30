@@ -42,6 +42,8 @@ repos:
         - --py310-plus
     - id: nbqa-ruff
       files: ^examples
+      args:
+        - --fix
 - repo: https://github.com/kynan/nbstripout
   rev: 0.7.1
   hooks:

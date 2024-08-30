@@ -74,12 +74,18 @@ openmm_box: openmm.unit.Quantity = interchange.box.to_openmm()
 An `Interchange` object can be written to Amber parameter/topology, coordinate, and SANDER run input files with [`Interchange.to_prmtop()`], [`Interchange.to_inpcrd()`], and [`Interchange.to_sander_input()`]:
 
 ```python
-interchange.to_prmtop("out.prmtop")
-interchange.to_inpcrd("out.inpcrd")
-interchange.to_sander_input("out_pointenergy.in")
+interchange.to_prmtop("mysim.prmtop")
+interchange.to_inpcrd("mysim.inpcrd")
+interchange.to_sander_input("mysim_pointenergy.in")
 ```
 
-Note that the SANDER input file generated is configured for a single-point energy calculation and must be modified to run other simulations. Interchange cannot currently produce PMEMD input files. Amber does not implement a switching function as [commonly used](https://openforcefield.github.io/standards/standards/smirnoff/#vdw) by SMIRNOFF force fields, so these force fields will produce different results in Amber than in OpenMM or GROMACS.
+The [`Interchange.to_amber()`] convenience method produces all three files in one invocation:
+
+```python
+interchange.to_amber("mysim")  # Produces the same three files
+```
+
+Note that the input file generated is configured for a single-point energy calculation with sander and must be modified to run other simulations. Interchange cannot currently produce PMEMD input files. Amber does not implement a switching function as [commonly used](https://openforcefield.github.io/standards/standards/smirnoff/#vdw) by SMIRNOFF force fields, so these force fields will produce different results in Amber than in OpenMM or GROMACS.
 
 <!--
 ## CHARMM
