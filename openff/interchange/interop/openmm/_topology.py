@@ -183,8 +183,6 @@ def to_openmm_topology(
             for this_virtual_site in virtual_sites_in_this_molecule:
                 virtual_site_name = this_virtual_site.name
 
-                print(f"adding virtual site to molecule {topology.molecule_index(molecule)}")
-
                 openmm_topology.addAtom(
                     virtual_site_name,
                     virtual_site_element,
