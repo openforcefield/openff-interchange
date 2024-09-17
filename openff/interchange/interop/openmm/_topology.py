@@ -15,6 +15,7 @@ if has_package("openmm") or TYPE_CHECKING:
 
 def to_openmm_topology(
     interchange: "Interchange",
+    collate: bool = False,
     ensure_unique_atom_names: str | bool = "residues",
 ) -> "openmm.app.Topology":
     """Create an OpenMM Topology containing some virtual site information (if appropriate)."""
@@ -126,7 +127,7 @@ def to_openmm_topology(
             last_chain = chain
             last_residue = residue
 
-        if has_virtual_sites:
+        if has_virtual_sites and collate:
             virtual_sites_in_this_molecule: list[VirtualSiteKey] = molecule_virtual_site_map[molecule_index]
             for this_virtual_site in virtual_sites_in_this_molecule:
                 virtual_site_name = this_virtual_site.name
@@ -172,6 +173,23 @@ def to_openmm_topology(
                 type=bond_type,
                 order=bond_order,
             )
+
+    if has_virtual_sites and not collate:
+        virtual_site_chain = openmm_topology.addChain(atom_chain_id)
+        virtual_site_residue = openmm_topology.addResidue("VS", virtual_site_chain)
+
+        for molecule_index, molecule in enumerate(topology.molecules):
+            virtual_sites_in_this_molecule: list[VirtualSiteKey] = molecule_virtual_site_map[molecule_index]
+            for this_virtual_site in virtual_sites_in_this_molecule:
+                virtual_site_name = this_virtual_site.name
+
+                print(f"adding virtual site to molecule {topology.molecule_index(molecule)}")
+
+                openmm_topology.addAtom(
+                    virtual_site_name,
+                    virtual_site_element,
+                    virtual_site_residue,
+                )
 
     if interchange.box is not None:
         from openff.units.openmm import to_openmm

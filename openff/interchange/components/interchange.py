@@ -539,6 +539,7 @@ class Interchange(_BaseModel):
 
     def to_openmm_topology(
         self,
+        collate: bool = False,
         ensure_unique_atom_names: str | bool = "residues",
     ):
         """Export components of this Interchange to an OpenMM Topology."""
@@ -546,6 +547,7 @@ class Interchange(_BaseModel):
 
         return to_openmm_topology(
             self,
+            collate=collate,
             ensure_unique_atom_names=ensure_unique_atom_names,
         )
 
@@ -661,6 +663,7 @@ class Interchange(_BaseModel):
             )
 
             openmm_topology = self.to_openmm_topology(
+                collate=True,
                 ensure_unique_atom_names=False,
             )
             positions = get_positions_with_virtual_sites(self)
