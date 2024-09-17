@@ -542,7 +542,17 @@ class Interchange(_BaseModel):
         collate: bool = False,
         ensure_unique_atom_names: str | bool = "residues",
     ):
-        """Export components of this Interchange to an OpenMM Topology."""
+        """
+        Export components of this Interchange to an OpenMM Topology.
+
+        Parameters
+        ----------
+        collate
+            If False, the default, all virtual sites will be added to a single residue at the end of the topology.
+            If True, virtual sites will be collated with their associated molecule and added to the residue of the last
+            atom in the molecule they belong to.
+
+        """
         from openff.interchange.interop.openmm._topology import to_openmm_topology
 
         return to_openmm_topology(

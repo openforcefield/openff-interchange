@@ -18,7 +18,19 @@ def to_openmm_topology(
     collate: bool = False,
     ensure_unique_atom_names: str | bool = "residues",
 ) -> "openmm.app.Topology":
-    """Create an OpenMM Topology containing some virtual site information (if appropriate)."""
+    """
+    Create an OpenMM Topology containing some virtual site information (if appropriate).
+
+    Parameters
+    ----------
+    interchange
+        The Interchange object to convert to an OpenMM Topology.
+    collate
+        If False, the default, all virtual sites will be added to a single residue at the end of the topology.
+        If True, virtual sites will be collated with their associated molecule and added to the residue of the last
+        atom in the molecule they belong to.
+
+    """
     # Heavily cribbed from the toolkit
     # https://github.com/openforcefield/openff-toolkit/blob/0.11.0rc2/openff/toolkit/topology/topology.py
 
