@@ -622,10 +622,11 @@ class TestOpenMMVirtualSites:
 
 @skip_if_missing("openmm")
 class TestToOpenMMTopology:
-    def test_num_virtual_sites(self, water, tip4p):
+    @pytest.mark.parametrize("collate", [True, False])
+    def test_num_virtual_sites(self, water, tip4p, collate):
         out = Interchange.from_smirnoff(tip4p, [water])
 
-        assert _get_num_virtual_sites(to_openmm_topology(out)) == 1
+        assert _get_num_virtual_sites(to_openmm_topology(out, collate=collate)) == 1
 
         # TODO: Monkeypatch Topology.to_openmm() and emit a warning when it seems
         #       to be used while virtual sites are present in a handler

@@ -15,9 +15,22 @@ if has_package("openmm") or TYPE_CHECKING:
 
 def to_openmm_topology(
     interchange: "Interchange",
+    collate: bool = False,
     ensure_unique_atom_names: str | bool = "residues",
 ) -> "openmm.app.Topology":
-    """Create an OpenMM Topology containing some virtual site information (if appropriate)."""
+    """
+    Create an OpenMM Topology containing some virtual site information (if appropriate).
+
+    Parameters
+    ----------
+    interchange
+        The Interchange object to convert to an OpenMM Topology.
+    collate
+        If False, the default, all virtual sites will be added to a single residue at the end of the topology.
+        If True, virtual sites will be collated with their associated molecule and added to the residue of the last
+        atom in the molecule they belong to.
+
+    """
     # Heavily cribbed from the toolkit
     # https://github.com/openforcefield/openff-toolkit/blob/0.11.0rc2/openff/toolkit/topology/topology.py
 
@@ -126,7 +139,7 @@ def to_openmm_topology(
             last_chain = chain
             last_residue = residue
 
-        if has_virtual_sites:
+        if has_virtual_sites and collate:
             virtual_sites_in_this_molecule: list[VirtualSiteKey] = molecule_virtual_site_map[molecule_index]
             for this_virtual_site in virtual_sites_in_this_molecule:
                 virtual_site_name = this_virtual_site.name
@@ -172,6 +185,21 @@ def to_openmm_topology(
                 type=bond_type,
                 order=bond_order,
             )
+
+    if has_virtual_sites and not collate:
+        virtual_site_chain = openmm_topology.addChain(atom_chain_id)
+        virtual_site_residue = openmm_topology.addResidue("VS", virtual_site_chain)
+
+        for molecule_index, molecule in enumerate(topology.molecules):
+            virtual_sites_in_this_molecule: list[VirtualSiteKey] = molecule_virtual_site_map[molecule_index]
+            for this_virtual_site in virtual_sites_in_this_molecule:
+                virtual_site_name = this_virtual_site.name
+
+                openmm_topology.addAtom(
+                    virtual_site_name,
+                    virtual_site_element,
+                    virtual_site_residue,
+                )
 
     if interchange.box is not None:
         from openff.units.openmm import to_openmm
