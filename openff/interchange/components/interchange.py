@@ -658,7 +658,12 @@ class Interchange(_BaseModel):
 
     @requires_package("openmm")
     def to_pdb(self, file_path: Path | str, include_virtual_sites: bool = False):
-        """Export this Interchange to a .pdb file."""
+        """
+        Export this Interchange to a .pdb file.
+
+        Note that virtual sites are collated into each molecule, which differs from the default
+        behavior of Interchange.to_openmm_topology.
+        """
         from openff.interchange.interop.openmm import _to_pdb
 
         if self.positions is None:

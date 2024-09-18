@@ -11,6 +11,10 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+* #1051 Updates `to_openmm_topology` to place virtual sites at the end, matching the behavior of `to_openmm_system`. The old behavior (collating within molecules) is available with `collate=True`.
+
 ## 0.4.0 - 2024
 
 * Pydantic v2 is now used at runtime. As a consequence, models containing `Interchange`s cannot also use models from the v1 API.
