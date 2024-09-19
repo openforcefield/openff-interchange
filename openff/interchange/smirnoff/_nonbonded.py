@@ -504,10 +504,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             matches[topology_key] = potential_key
             potentials[potential_key] = potential
 
-            logger.info(
-                f"Charge section LibraryCharges applied {charge.m} to atom index {atom_index}",
-            )
-
         return matches, potentials
 
     @classmethod
@@ -683,12 +679,15 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             )
             potentials[potential_key] = Potential(parameters={"charge": partial_charge})
 
-            matches[SingleAtomChargeTopologyKey(this_atom_index=atom_index)] = potential_key
-
-            logger.info(
-                f"Charge section {handler_name}, method {partial_charge_method}, applied {partial_charge.m} "
-                f"to atom {atom_index}",
-            )
+            matches[
+                SingleAtomChargeTopologyKey(
+                    this_atom_index=atom_index,
+                    extras={
+                        "handler": handler_name,
+                        "partial_charge_method": partial_charge_method,
+                    },
+                )
+            ] = potential_key
 
         return partial_charge_method, matches, potentials
 
@@ -816,6 +815,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             index_in_topology = atom_map[index_in_molecule_with_charges]
             topology_key = SingleAtomChargeTopologyKey(
                 this_atom_index=index_in_topology,
+                extras={"handler": "preset"},
             )
             potential_key = PotentialKey(
                 id=mapped_smiles,
@@ -826,11 +826,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             potential = Potential(parameters={"charge": partial_charge})
             matches[topology_key] = potential_key
             potentials[potential_key] = potential
-
-            logger.info(
-                f"Atom with topology index {index_in_topology} getting prespecified charge {partial_charge} "
-                f"from a molecule with mapped smiles {mapped_smiles}",
-            )
 
         return True, matches, potentials
 
@@ -896,6 +891,31 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                             # Have this new key (on a duplicate molecule) point to the same potential
                             # as the old key (on a unique/reference molecule)
+                            if type(new_key) is LibraryChargeTopologyKey:
+                                logger.info(
+                                    "Charge section LibraryCharges applied to (topology) atom index "
+                                    f"{topology_atom_index}",
+                                )
+
+                            elif type(new_key) is SingleAtomChargeTopologyKey:
+                                if new_key.extras["handler"] == "ToolkitAM1BCCHandler":
+                                    logger.info(
+                                        "Charge section ToolkitAM1BCC, using charge method "
+                                        f"{new_key.extras['partial_charge_method']}, "
+                                        f"applied to (topology) atom index {topology_atom_index}",
+                                    )
+
+                                elif new_key.extras["handler"] == "preset":
+                                    logger.info(
+                                        f"Preset charges applied to atom index {topology_atom_index}",
+                                    )
+
+                                else:
+                                    raise ValueError(f"Unhandled handler {new_key.extras['handler']}")
+
+                            else:
+                                raise ValueError(f"Unhandled key type {type(new_key)}")
+
                             self.key_map[new_key] = matches[key]
 
         topology_charges = [0.0] * topology.n_atoms
