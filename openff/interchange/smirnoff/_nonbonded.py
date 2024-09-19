@@ -1,5 +1,6 @@
 import copy
 import functools
+import logging
 import warnings
 from collections.abc import Iterable
 from typing import Any, Literal, Optional, Union
@@ -40,6 +41,8 @@ from openff.interchange.models import (
 )
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
 from openff.interchange.warnings import ForceFieldModificationWarning
+
+logger = logging.getLogger(__name__)
 
 ElectrostaticsHandlerType = Union[
     ElectrostaticsHandler,
@@ -501,6 +504,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             matches[topology_key] = potential_key
             potentials[potential_key] = potential
 
+            logger.info(
+                f"Charge section LibraryCharges applied {charge.m} to atom index {atom_index}",
+            )
+
         return matches, potentials
 
     @classmethod
@@ -678,6 +685,11 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
             matches[SingleAtomChargeTopologyKey(this_atom_index=atom_index)] = potential_key
 
+            logger.info(
+                f"Charge section {handler_name}, method {partial_charge_method}, applied {partial_charge.m} "
+                f"to atom {atom_index}",
+            )
+
         return partial_charge_method, matches, potentials
 
     @classmethod
@@ -814,6 +826,11 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             potential = Potential(parameters={"charge": partial_charge})
             matches[topology_key] = potential_key
             potentials[potential_key] = potential
+
+            logger.info(
+                f"Atom with topology index {index_in_topology} getting prespecified charge {partial_charge} "
+                f"from a molecule with mapped smiles {mapped_smiles}",
+            )
 
         return True, matches, potentials
 
