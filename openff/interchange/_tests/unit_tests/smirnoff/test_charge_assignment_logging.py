@@ -92,6 +92,7 @@ Other details
 
 # TODO: Handle whether or not NAGL/graph charges are applied
 AM1BCC_KEY = "am1bccelf10" if OPENEYE_AVAILABLE else "am1bcc"
+NAGL_KEY = "openff-gnn-am1bcc-0.1.0-rc.2.pt"
 
 
 def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, list[int]]:
@@ -125,20 +126,46 @@ def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, l
         elif message.startswith("Preset charges"):
             info["preset"].append(int(message.split("atom index")[-1]))
 
+        elif message.startswith("Charge section ChargeIncrementModel"):
+            if "using charge method" in message:
+                info[f"chargeincrements_{message.split(',')[1].split(' ')[-1]}"].append(
+                    int(message.split("atom index ")[-1]),
+                )
+
+            elif "applying charge increment" in message:
+                # TODO: Store the "other" atoms?
+                info["chargeincrements"].append(int(message.split("atom ")[1].split(" ")[0]))
+
         else:
             raise ValueError(f"Unexpected log message {message}")
 
     return {key: sorted(val) for key, val in info.items()}
 
 
-def check_method(
-    atom_indices: tuple[int],
-    method: str,
-):
-    """
-    Check logs that a given set of atom indices was assigned by a given partial charge assignment method.
-    """
-    pass
+@pytest.fixture
+def sage_with_nagl(sage):
+    from openff.toolkit.typing.engines.smirnoff.parameters import ChargeIncrementModelHandler, ChargeIncrementType
+
+    sage.register_parameter_handler(
+        parameter_handler=ChargeIncrementModelHandler(
+            version=0.3,
+            partial_charge_method=NAGL_KEY,
+        ),
+    )
+
+    # Add dummy "BCCs" for testing, even though this model has BCCs built into
+    # the partial charge assignment method
+    sage["ChargeIncrementModel"].add_parameter(
+        parameter=ChargeIncrementType(
+            smirks="[#6:1]-[#1:2]",
+            charge_increment=[
+                "0.1 elementary_charge",
+                "-0.1 elementary_charge",
+            ],
+        ),
+    )
+
+    return sage
 
 
 @pytest.fixture
@@ -207,7 +234,7 @@ def ligand_and_water_and_ions(ligand, water_and_ions) -> Topology:
 7.xSage with preset charges on ligand A
 8.xSage with preset charges on water
 9.xSage with (ligand) virtual site parameters
-10. AM1-with-custom-BCCs Sage with ligand and ions water
+10.xAM1-with-custom-BCCs Sage with ligand and ions water
 """
 
 
@@ -342,3 +369,34 @@ def test_case9(caplog, sage_with_bond_charge):
 
         # atoms 0 and 1 are the orientation atoms of the sigma hole virtual site
         assert info["orientation"] == [0, 1]
+
+
+def test_case10(caplog, sage_with_nagl, ligand):
+    from openff.toolkit.utils.nagl_wrapper import NAGLToolkitWrapper
+    from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
+    from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
+
+    pytest.importorskip("openff.nagl")
+    pytest.importorskip("rdkit")
+
+    with caplog.at_level(logging.INFO):
+        with toolkit_registry_manager(
+            toolkit_registry=ToolkitRegistry(
+                toolkit_precedence=[NAGLToolkitWrapper, RDKitToolkitWrapper],
+            ),
+        ):
+            sage_with_nagl.create_interchange(ligand.to_topology())
+
+        info = map_methods_to_atom_indices(caplog)
+
+        # atoms 0 through 5 are ligand, getting NAGL charges
+        assert info[f"chargeincrements_{NAGL_KEY}"] == [*range(0, 9)]
+
+        # TODO: These are logged symmetrically (i.e. hydrogens are listed)
+        # even though the charges appear to be correct, assert should
+        # simply by == [0, 1] since the hydrogens shouldn't be caught
+        assert 0 in info["chargeincrements"]
+        assert 1 in info["chargeincrements"]
+
+        # the standard AM1-BCC should not have ran
+        assert AM1BCC_KEY not in info

@@ -386,6 +386,11 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         parameter_value,
                     )
 
+                    logger.info(
+                        "Charge section ChargeIncrementModel, applying charge increment from atom "
+                        f"{topology_key.this_atom_index} to atoms {topology_key.other_atom_indices}",
+                    )
+
                 else:
                     raise NotImplementedError()
 
@@ -913,6 +918,17 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                                 else:
                                     raise ValueError(f"Unhandled handler {new_key.extras['handler']}")
+
+                            elif type(new_key) is ChargeModelTopologyKey:
+                                logger.info(
+                                    "Charge section ChargeIncrementModel, using charge method "
+                                    f"{new_key.partial_charge_method}, "
+                                    f"applied to (topology) atom index {new_key.this_atom_index}",
+                                )
+
+                            elif type(new_key) is ChargeIncrementTopologyKey:
+                                # here is where the actual increments could be logged
+                                pass
 
                             else:
                                 raise ValueError(f"Unhandled key type {type(new_key)}")
