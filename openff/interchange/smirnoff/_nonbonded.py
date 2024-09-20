@@ -331,6 +331,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                     total_charge: Quantity = numpy.sum(parameter_value)
                     # assumes virtual sites can only have charges determined in one step
+
                     charges[topology_key] = -1.0 * total_charge
 
                     # Apply increments to "orientation" atoms
