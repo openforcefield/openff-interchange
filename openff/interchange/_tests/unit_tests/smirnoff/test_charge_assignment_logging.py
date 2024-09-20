@@ -150,6 +150,22 @@ def ligand() -> Molecule:
 
 
 @pytest.fixture
+def solvent() -> Molecule:
+    return Molecule.from_mapped_smiles("[H:3][C:1]([H:4])([H:5])[N:2]([H:6])[H:7]")
+
+
+def ligand_in_solvent(ligand, solvent) -> Topology:
+    return Topology.from_molecules(
+        [
+            ligand,
+            solvent,
+            solvent,
+            solvent,
+        ],
+    )
+
+
+@pytest.fixture
 def water_and_ions(water, ions) -> Topology:
     topology = Topology.from_molecules(3 * [water])
     for molecule in ions.molecules:
@@ -169,14 +185,15 @@ def ligand_and_water_and_ions(ligand, water_and_ions) -> Topology:
 
 
 """
-1. Sage with a ligand in water/ions
-2. Sage with a ligand in non-water solvent
-3. Sage with a ligand in mixed solvent
+0.xSage with just a ligand
+1.xSage with a ligand in water/ions
+2.xSage with a ligand in non-water solvent
+3.xSage with a ligand in mixed solvent
 4. ff14SB with Sage
 5. ff14SB with Sage and preset charges on Protein A
 6. Sage with ligand and OPC water
-7. Sage with preset charges on ligand A
-8. Sage with preset charges on water
+7.xSage with preset charges on ligand A
+8.xSage with preset charges on water
 9. Sage with (ligand) virtual site parameters
 10. AM1-with-custom-BCCs Sage with ligand and ions water
 """
@@ -205,6 +222,39 @@ def test_case1(caplog, sage, ligand_and_water_and_ions):
         assert sorted(info["library"]) == [*range(9, 22)]
 
 
+def test_case2(caplog, sage, ligand, solvent):
+    topology = Topology.from_molecules([ligand, solvent, solvent, solvent])
+
+    with caplog.at_level(logging.INFO):
+        sage.create_interchange(topology)
+
+        info = map_methods_to_atom_indices(caplog)
+
+        # everything should get AM1-BCC charges
+        assert sorted(info[AM1BCC_KEY]) == [*range(0, topology.n_atoms)]
+
+
+def test_case3(caplog, sage, ligand_and_water_and_ions, solvent):
+    for index in range(3):
+        ligand_and_water_and_ions.add_molecule(solvent)
+
+    ligand_and_water_and_ions.molecule(0).assign_partial_charges(partial_charge_method="gasteiger")
+
+    with caplog.at_level(logging.INFO):
+        sage.create_interchange(
+            ligand_and_water_and_ions,
+        )
+
+        info = map_methods_to_atom_indices(caplog)
+
+        # atoms 0 through 8 are ethanol, getting AM1-BCC,
+        # and also solvent molecules (starting at index 22)
+        assert sorted(info[AM1BCC_KEY]) == [*range(0, 9), *range(22, 22 + 3 * 7)]
+
+        # atoms 9 through 21 are water + ions, getting library charges
+        assert sorted(info["library"]) == [*range(9, 22)]
+
+
 def test_case7(caplog, sage, ligand_and_water_and_ions):
     ligand_and_water_and_ions.molecule(0).assign_partial_charges(partial_charge_method="gasteiger")
 
@@ -221,3 +271,21 @@ def test_case7(caplog, sage, ligand_and_water_and_ions):
 
         # atoms 9 through 21 are water + ions, getting library charges
         assert sorted(info["library"]) == [*range(9, 22)]
+
+
+def test_case8(caplog, sage, water_and_ions):
+    water_and_ions.molecule(0).assign_partial_charges(partial_charge_method="gasteiger")
+
+    with caplog.at_level(logging.INFO):
+        sage.create_interchange(
+            water_and_ions,
+            charge_from_molecules=[water_and_ions.molecule(0)],
+        )
+
+        info = map_methods_to_atom_indices(caplog)
+
+        # atoms 0 through 8 are water, getting preset charges
+        assert sorted(info["preset"]) == [*range(0, 9)]
+
+        # atoms 9 through 12 are ions, getting library charges
+        assert sorted(info["library"]) == [*range(9, 13)]
