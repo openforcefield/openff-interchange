@@ -8,6 +8,8 @@ import pytest
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.toolkit.utils import OPENEYE_AVAILABLE
 
+from openff.interchange._tests import get_protein
+
 """
 Hierarchy is
 1. Match molceules with preset charges
@@ -110,7 +112,7 @@ def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, l
             info["library"].append(int(message.split("atom index ")[-1]))
 
         elif message.startswith("Charge section ToolkitAM1BCC"):
-            info[caplog.records[0].msg.split(", ")[1].split(" ")[-1]].append(int(message.split("atom index ")[-1]))
+            info[message.split(", ")[1].split(" ")[-1]].append(int(message.split("atom index ")[-1]))
 
         # without also pulling the virtual site - particle mapping (which is different for each engine)
         # it's hard to store more information than the orientation atoms that are affected by each
@@ -292,6 +294,45 @@ def test_case3(caplog, sage, ligand_and_water_and_ions, solvent):
 
         # atoms 9 through 21 are water + ions, getting library charges
         assert info["library"] == [*range(9, 22)]
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("preset_on_protein", [True, False])
+def test_cases4_5(caplog, ligand_and_water_and_ions, preset_on_protein):
+    ff = ForceField("ff14sb_off_impropers_0.0.3.offxml", "openff-2.0.0.offxml")
+
+    complex = get_protein("MainChain_ALA_ALA").to_topology()
+
+    for molecule in ligand_and_water_and_ions.molecules:
+        complex.add_molecule(molecule)
+
+    if preset_on_protein:
+        complex.molecule(0).assign_partial_charges(partial_charge_method="zeros")
+
+    with caplog.at_level(logging.INFO):
+        if preset_on_protein:
+            ff.create_interchange(complex, charge_from_molecules=[complex.molecule(0)])
+        else:
+            ff.create_interchange(complex)
+
+        info = map_methods_to_atom_indices(caplog)
+
+        assert info[AM1BCC_KEY] == [*range(complex.molecule(0).n_atoms, complex.molecule(0).n_atoms + 9)]
+
+        if preset_on_protein:
+            # protein gets preset charges
+            assert info["preset"] == [*range(0, complex.molecule(0).n_atoms)]
+
+            # everything after the protein and ligand should get library charges
+            assert info["library"] == [
+                *range(complex.molecule(0).n_atoms + 9, complex.n_atoms),
+            ]
+        else:
+            # the protein and everything after the ligand should get library charges
+            assert info["library"] == [
+                *range(0, complex.molecule(0).n_atoms),
+                *range(complex.molecule(0).n_atoms + 9, complex.n_atoms),
+            ]
 
 
 def test_case6(caplog, ligand, water):
