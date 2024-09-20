@@ -31,6 +31,7 @@ using/plugins.md
 using/status.md
 using/edges.md
 using/experimental.md
+using/advanced.md
 
 ```
 
