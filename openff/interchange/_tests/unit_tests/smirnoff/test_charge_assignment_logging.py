@@ -104,7 +104,9 @@ def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, l
     info = defaultdict(list)
 
     for record in caplog.records:
-        assert record.levelname == "INFO", "Only INFO logs are expected."
+        # skip logged warnings from upstreams/other packages
+        if record.name.startswith("openff.interchange"):
+            assert record.levelname == "INFO", "Only INFO logs are expected."
 
         message = record.msg
 
@@ -230,8 +232,8 @@ def ligand_and_water_and_ions(ligand, water_and_ions) -> Topology:
 1.xSage with a ligand in water/ions
 2.xSage with a ligand in non-water solvent
 3.xSage with a ligand in mixed solvent
-4. ff14SB with Sage
-5. ff14SB with Sage and preset charges on Protein A
+4.xff14SB with Sage
+5.xff14SB with Sage and preset charges on Protein A
 6.xSage with ligand and OPC water
 7.xSage with preset charges on ligand A
 8.xSage with preset charges on water
