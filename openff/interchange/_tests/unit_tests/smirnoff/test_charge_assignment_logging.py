@@ -1,10 +1,11 @@
 """Test charge assignment logging."""
 
 import logging
+import re
 from collections import defaultdict
 
 import pytest
-from openff.toolkit import Molecule, Topology
+from openff.toolkit import ForceField, Molecule, Topology
 from openff.toolkit.utils import OPENEYE_AVAILABLE
 
 """
@@ -95,7 +96,7 @@ AM1BCC_KEY = "am1bccelf10" if OPENEYE_AVAILABLE else "am1bcc"
 
 def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, list[int]]:
     """
-    Map partial charge assignment methods to atom indices.
+    Map partial charge assignment methods to (sorted) atom indices.
     """
     info = defaultdict(list)
 
@@ -110,13 +111,24 @@ def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, l
         elif message.startswith("Charge section ToolkitAM1BCC"):
             info[caplog.records[0].msg.split(", ")[1].split(" ")[-1]].append(int(message.split("atom index ")[-1]))
 
+        # without also pulling the virtual site - particle mapping (which is different for each engine)
+        # it's hard to store more information than the orientation atoms that are affected by each
+        # virtual site's charges
+        elif message.startswith("Charge section VirtualSites"):
+            orientation_atoms: list[int] = [
+                int(value.strip()) for value in re.findall(r"\((.*?)\)", message)[0].split(",")
+            ]
+
+            for atom in orientation_atoms:
+                info["orientation"].append(atom)
+
         elif message.startswith("Preset charges"):
             info["preset"].append(int(message.split("atom index")[-1]))
 
         else:
             raise ValueError(f"Unexpected log message {message}")
 
-    return info
+    return {key: sorted(val) for key, val in info.items()}
 
 
 def check_method(
@@ -191,10 +203,10 @@ def ligand_and_water_and_ions(ligand, water_and_ions) -> Topology:
 3.xSage with a ligand in mixed solvent
 4. ff14SB with Sage
 5. ff14SB with Sage and preset charges on Protein A
-6. Sage with ligand and OPC water
+6.xSage with ligand and OPC water
 7.xSage with preset charges on ligand A
 8.xSage with preset charges on water
-9. Sage with (ligand) virtual site parameters
+9.xSage with (ligand) virtual site parameters
 10. AM1-with-custom-BCCs Sage with ligand and ions water
 """
 
@@ -206,7 +218,7 @@ def test_case0(caplog, sage, ligand):
         info = map_methods_to_atom_indices(caplog)
 
         # atoms 0 through 8 are ethanol, getting AM1-BCC
-        assert sorted(info[AM1BCC_KEY]) == [*range(0, 9)]
+        assert info[AM1BCC_KEY] == [*range(0, 9)]
 
 
 def test_case1(caplog, sage, ligand_and_water_and_ions):
@@ -216,10 +228,10 @@ def test_case1(caplog, sage, ligand_and_water_and_ions):
         info = map_methods_to_atom_indices(caplog)
 
         # atoms 0 through 8 are ethanol, getting AM1-BCC
-        assert sorted(info[AM1BCC_KEY]) == [*range(0, 9)]
+        assert info[AM1BCC_KEY] == [*range(0, 9)]
 
         # atoms 9 through 21 are water + ions, getting library charges
-        assert sorted(info["library"]) == [*range(9, 22)]
+        assert info["library"] == [*range(9, 22)]
 
 
 def test_case2(caplog, sage, ligand, solvent):
@@ -231,7 +243,7 @@ def test_case2(caplog, sage, ligand, solvent):
         info = map_methods_to_atom_indices(caplog)
 
         # everything should get AM1-BCC charges
-        assert sorted(info[AM1BCC_KEY]) == [*range(0, topology.n_atoms)]
+        assert info[AM1BCC_KEY] == [*range(0, topology.n_atoms)]
 
 
 def test_case3(caplog, sage, ligand_and_water_and_ions, solvent):
@@ -249,10 +261,34 @@ def test_case3(caplog, sage, ligand_and_water_and_ions, solvent):
 
         # atoms 0 through 8 are ethanol, getting AM1-BCC,
         # and also solvent molecules (starting at index 22)
-        assert sorted(info[AM1BCC_KEY]) == [*range(0, 9), *range(22, 22 + 3 * 7)]
+        assert info[AM1BCC_KEY] == [*range(0, 9), *range(22, 22 + 3 * 7)]
 
         # atoms 9 through 21 are water + ions, getting library charges
-        assert sorted(info["library"]) == [*range(9, 22)]
+        assert info["library"] == [*range(9, 22)]
+
+
+def test_case6(caplog, ligand, water):
+    force_field = ForceField("openff-2.0.0.offxml", "opc.offxml")
+
+    topology = Topology.from_molecules([ligand, water, water, water])
+
+    with caplog.at_level(logging.INFO):
+        force_field.create_interchange(topology)
+
+        info = map_methods_to_atom_indices(caplog)
+
+        # atoms 0 through 8 are ethanol, getting AM1-BCC charges
+        assert info[AM1BCC_KEY] == [*range(0, 9)]
+
+        # atoms 9 through 17 are water atoms, getting library charges
+        assert info["library"] == [*range(9, 18)]
+
+        # particles 18 through 20 are water virtual sites, but the current logging strategy
+        # makes it hard to match these up (and the particle indices are different OpenMM/GROMACS/etc)
+
+        # can still check that orientation atoms are subject to virtual site
+        # charge increments (even if the increment is +0.0 e)
+        assert info["orientation"] == [*range(9, 18)]
 
 
 def test_case7(caplog, sage, ligand_and_water_and_ions):
@@ -267,10 +303,10 @@ def test_case7(caplog, sage, ligand_and_water_and_ions):
         info = map_methods_to_atom_indices(caplog)
 
         # atoms 0 through 8 are ethanol, getting preset charges
-        assert sorted(info["preset"]) == [*range(0, 9)]
+        assert info["preset"] == [*range(0, 9)]
 
         # atoms 9 through 21 are water + ions, getting library charges
-        assert sorted(info["library"]) == [*range(9, 22)]
+        assert info["library"] == [*range(9, 22)]
 
 
 def test_case8(caplog, sage, water_and_ions):
@@ -285,7 +321,24 @@ def test_case8(caplog, sage, water_and_ions):
         info = map_methods_to_atom_indices(caplog)
 
         # atoms 0 through 8 are water, getting preset charges
-        assert sorted(info["preset"]) == [*range(0, 9)]
+        assert info["preset"] == [*range(0, 9)]
 
         # atoms 9 through 12 are ions, getting library charges
-        assert sorted(info["library"]) == [*range(9, 13)]
+        assert info["library"] == [*range(9, 13)]
+
+
+def test_case9(caplog, sage_with_bond_charge):
+    with caplog.at_level(logging.INFO):
+        sage_with_bond_charge.create_interchange(
+            Molecule.from_mapped_smiles(
+                "[H:3][C:1]([H:4])([H:5])[Cl:2]",
+            ).to_topology(),
+        )
+
+        info = map_methods_to_atom_indices(caplog)
+
+        # atoms 0 through 5 are ligand, getting AM1-BCC charges
+        assert info[AM1BCC_KEY] == [*range(0, 5)]
+
+        # atoms 0 and 1 are the orientation atoms of the sigma hole virtual site
+        assert info["orientation"] == [0, 1]
