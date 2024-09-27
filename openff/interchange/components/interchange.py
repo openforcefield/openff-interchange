@@ -109,7 +109,8 @@ class Interchange(_BaseModel):
             positions are taken from the molecules in topology, if present on all molecules.
         charge_from_molecules : `List[openff.toolkit.molecule.Molecule]`, optional
             If specified, partial charges will be taken from the given molecules
-            instead of being determined by the force field.
+            instead of being determined by the force field. In either case, charges
+            on the input topology are ignored.
         partial_bond_orders_from_molecules : List[openff.toolkit.molecule.Molecule], optional
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
@@ -120,6 +121,10 @@ class Interchange(_BaseModel):
         -----
         If the `Molecule` objects in the `topology` argument each contain conformers, the returned `Interchange` object
         will have its positions set via concatenating the 0th conformer of each `Molecule`.
+
+        If the `Molecule` objects in the `topology` argument have stored partial charges, these are ignored and charges
+        are assigned according to the contents of the force field. To override the force field and use preset charges,
+        use the `charge_from_molecules` argument.
 
         Examples
         --------
