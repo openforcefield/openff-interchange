@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, TextIO
 
 from openff.utilities.utilities import has_package, requires_package
 
+from openff.interchange._annotations import PositiveFloat
 from openff.interchange.exceptions import (
     NegativeMassError,
     PluginCompatibilityError,
@@ -37,7 +38,7 @@ def to_openmm_system(
     combine_nonbonded_forces: bool = False,
     add_constrained_forces: bool = False,
     ewald_tolerance: float = 1e-4,
-    hydrogen_mass: float = 1.007947,
+    hydrogen_mass: PositiveFloat = 1.007947,
 ) -> "openmm.System":
     """
     Convert an Interchange to an OpenmM System.
@@ -54,7 +55,7 @@ def to_openmm_system(
         on a bond or angle that is fully constrained.
     ewald_tolerance : float, default=1e-4
         The value passed to `NonbondedForce.setEwaldErrorTolerance`
-    hydrogen_mass : float, default=1.007947
+    hydrogen_mass : PositiveFloat, default=1.007947
         The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
         than the default value, mass will be transferred from neighboring heavy atoms.
 
@@ -179,7 +180,7 @@ def _to_pdb(
 def _apply_hmr(
     system: "openmm.System",
     interchange: "Interchange",
-    hydrogen_mass: float,
+    hydrogen_mass: PositiveFloat,
 ):
     from openff.toolkit import Molecule
 
