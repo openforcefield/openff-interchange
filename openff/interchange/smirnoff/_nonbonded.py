@@ -13,9 +13,10 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ToolkitAM1BCCHandler,
     vdWHandler,
 )
-from pydantic import Field, PrivateAttr
+from pydantic import Field, PrivateAttr, computed_field
 from typing_extensions import Self
 
+from openff.interchange._annotations import _ElementaryChargeQuantity
 from openff.interchange.common._nonbonded import (
     ElectrostaticsCollection,
     _NonbondedCollection,
@@ -272,8 +273,9 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     )  # type: ignore[assignment]
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
-    _charges = PrivateAttr(default_factory=dict)
-    _charges_cached: bool
+    # TODO: Charge caching doesn't work when this is defined in the model
+    # _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr(default_factory=dict)
+    _charges_cached: bool = PrivateAttr(default=False)
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -292,14 +294,15 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @property
     def _charges_without_virtual_sites(
         self,
-    ) -> dict[TopologyKey | LibraryChargeTopologyKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom, excluding virtual sites."""
         return self._get_charges(include_virtual_sites=False)
 
+    @computed_field
     @property
     def charges(
         self,
-    ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:
             self._charges = self._get_charges(include_virtual_sites=True)
@@ -310,10 +313,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     def _get_charges(
         self,
         include_virtual_sites=True,
-    ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom or particle."""
         # Keyed by index for atoms and by VirtualSiteKey for virtual sites.
-        charges: dict[VirtualSiteKey | int, Quantity] = dict()
+        charges: dict[VirtualSiteKey | int, _ElementaryChargeQuantity] = dict()
 
         for topology_key, potential_key in self.key_map.items():
             potential = self.potentials[potential_key]
