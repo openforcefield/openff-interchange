@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, TextIO
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange.exceptions import (
+    NegativeMassError,
     PluginCompatibilityError,
     UnsupportedExportError,
 )
@@ -211,10 +212,18 @@ def _apply_hmr(
         ):
             hydrogen_index = interchange.topology.atom_index(hydrogen_atom)
             heavy_index = interchange.topology.atom_index(heavy_atom)
+            heavy_mass = system.getParticleMass(heavy_index)
 
             # This will need to be wired up through the OpenFF-OpenMM particle index map
             # when virtual sites + HMR are supported
             mass_to_transfer = _hydrogen_mass - system.getParticleMass(hydrogen_index)
+
+            if mass_to_transfer > heavy_mass:
+                raise NegativeMassError(
+                    f"Particle with index {heavy_index} would have a negative mass after hydrogen "
+                    "mass repartitioning. Consider transferring a smaller mass than "
+                    f"{hydrogen_mass=}.",
+                )
 
             system.setParticleMass(
                 hydrogen_index,
@@ -223,5 +232,5 @@ def _apply_hmr(
 
             system.setParticleMass(
                 heavy_index,
-                system.getParticleMass(heavy_index) - mass_to_transfer,
+                heavy_mass - mass_to_transfer,
             )
