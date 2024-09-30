@@ -105,13 +105,13 @@ class ElectrostaticsCollection(_NonbondedCollection):
     # _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr(default_factory=dict)
     _charges_cached: bool = PrivateAttr(default=False)
 
-    @computed_field
+    @computed_field  # type: ignore[misc]
     @property
     def charges(
         self,
     ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom, including virtual sites."""
-        if len(self._charges) == 0 or self._charges_cached is False:
+        if len(self._charges) == 0 or self._charges_cached is False:  # type: ignore[has-type]
             self._charges = self._get_charges(include_virtual_sites=False)
             self._charges_cached = True
 

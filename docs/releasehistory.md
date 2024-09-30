@@ -22,6 +22,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * Several classes and methods which were deprecated in the 0.3 line of releases are now removed.
 * Previously-deprecated examples are removed.
 * `ProperTorsionKey` no longer accepts an empty tuple as atom indices.
+* Fixes a regression in which some `ElectrostaticsCollection.charges` properties did not return cached values.
 
 ## 0.3.30 - 2024-08
 

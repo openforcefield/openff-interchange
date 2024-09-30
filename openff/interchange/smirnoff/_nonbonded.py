@@ -298,7 +298,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         """Get the total partial charge on each atom, excluding virtual sites."""
         return self._get_charges(include_virtual_sites=False)
 
-    @computed_field
+    @computed_field  # type: ignore[misc]
     @property
     def charges(
         self,
