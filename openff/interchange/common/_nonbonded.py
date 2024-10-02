@@ -1,6 +1,6 @@
 import abc
 from collections.abc import Iterable
-from typing import Literal
+from typing import Any, Literal
 
 from openff.toolkit import Quantity, unit
 from pydantic import Field, PrivateAttr, computed_field
@@ -101,8 +101,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
     nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
-    # TODO: Charge caching doesn't work when this is defined in the model
-    # _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr(default_factory=dict)
+    _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr(default_factory=dict)
     _charges_cached: bool = PrivateAttr(default=False)
 
     @computed_field  # type: ignore[misc]
@@ -112,7 +111,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
     ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:  # type: ignore[has-type]
-            self._charges = self._get_charges(include_virtual_sites=False)
+            self._charges.update(self._get_charges(include_virtual_sites=False))
             self._charges_cached = True
 
         return self._charges
