@@ -101,7 +101,7 @@ def _validate_inputs(
     solute: Topology | None,
     box_shape: NDArray,
     box_vectors: Quantity | None,
-    mass_density: Quantity | None,
+    target_density: Quantity | None,
 ):
     """
     Validate the inputs which were passed to the main pack method.
@@ -117,23 +117,23 @@ def _validate_inputs(
         The OpenFF Topology to be solvated.
     box_vectors : openff.units.Quantity,
         The box vectors to fill in units compatible with angstroms. If `None`,
-        `mass_density` must be provided.
-    mass_density : openff.units.Quantity, optional
+        `target_density` must be provided.
+    target_density : openff.units.Quantity, optional
         Target mass density for final system with units compatible with g / mL.
          If `None`, `box_size` must be provided.
     box_shape: NDArray
         The shape of the simulation box, used in conjunction with the
-        `mass_density` parameter. Should have shape (3, 3) with all positive
+        `target_density` parameter. Should have shape (3, 3) with all positive
         elements.
 
     """
-    if box_vectors is None and mass_density is None and (solute is None or solute.box_vectors is None):
+    if box_vectors is None and target_density is None and (solute is None or solute.box_vectors is None):
         raise PACKMOLValueError(
-            "One of `box_vectors`, `mass_density`, or" + " `solute.box_vectors` must be specified.",
+            "One of `box_vectors`, `target_density`, or" + " `solute.box_vectors` must be specified.",
         )
-    if box_vectors is not None and mass_density is not None:
+    if box_vectors is not None and target_density is not None:
         raise PACKMOLValueError(
-            "`box_vectors` and `mass_density` cannot be specified together;" + " choose one or the other.",
+            "`box_vectors` and `target_density` cannot be specified together;" + " choose one or the other.",
         )
 
     if box_vectors is not None and box_vectors.shape != (3, 3):
@@ -313,7 +313,7 @@ def _wrap_into_brick(points: Quantity, box: Quantity, max_order: int = 3):
 def _box_from_density(
     molecules: list[Molecule],
     n_copies: list[int],
-    mass_density: Quantity,
+    target_density: Quantity,
     box_shape: NDArray,
 ) -> Quantity:
     """
@@ -329,12 +329,12 @@ def _box_from_density(
         The molecules in the system.
     n_copies : list of int
         The number of copies of each molecule.
-    mass_density : openff.units.Quantity
+    target_density : openff.units.Quantity
         The target mass density for final system. It should have units
         compatible with g / mL.
     box_shape: NDArray
         The shape of the simulation box, used in conjunction with the
-        `mass_density` parameter. Should have shape (3, 3) with all positive
+        `target_density` parameter. Should have shape (3, 3) with all positive
         elements.
 
     Returns
@@ -345,7 +345,7 @@ def _box_from_density(
     """
     # Get the desired volume in cubic working units
     total_mass = sum(sum([atom.mass for atom in molecule.atoms]) * n for molecule, n in zip(molecules, n_copies))
-    volume = total_mass / mass_density
+    volume = total_mass / target_density
 
     return _scale_box(box_shape, volume)
 
@@ -554,7 +554,7 @@ def pack_box(
     solute: Topology | None = None,
     tolerance: Quantity = 2.0 * unit.angstrom,
     box_vectors: Quantity | None = None,
-    mass_density: Quantity | None = None,
+    target_density: Quantity | None = None,
     box_shape: ArrayLike = RHOMBIC_DODECAHEDRON,
     center_solute: bool | Literal["BOX_VECS", "ORIGIN", "BRICK"] = False,
     working_directory: str | None = None,
@@ -572,7 +572,7 @@ def pack_box(
         equal to the length of ``molecules``.
     solute: Topology, optional
         An OpenFF :py:class:`Topology <openff.toolkit.Topology>` to
-        include in the box. If ``box_vectors`` and ``mass_density`` are not
+        include in the box. If ``box_vectors`` and ``target_density`` are not
         specified, box vectors can be taken from ``solute.box_vectors``.
     tolerance : openff.units.Quantity
         The minimum spacing between molecules during packing in units of
@@ -582,15 +582,15 @@ def pack_box(
         stable simulations after energy minimisation.
     box_vectors : openff.units.Quantity, optional
         The box vectors to fill in units of distance. If ``None``,
-        ``mass_density`` must be provided. Array with shape (3,3). Box vectors
+        ``target_density`` must be provided. Array with shape (3,3). Box vectors
         must be provided in `OpenMM reduced form <http://docs.openmm.org/latest/
         userguide/theory/05_other_features.html#periodic-boundary-conditions>`_.
-    mass_density : openff.units.Quantity, optional
+    target_density : openff.units.Quantity, optional
         Target mass density for final system with units compatible with g / mL.
         If ``None``, ``box_size`` must be provided.
     box_shape: Arraylike, optional
         The shape of the simulation box, used in conjunction with
-        the ``mass_density`` parameter. Should be a dimensionless array with
+        the ``target_density`` parameter. Should be a dimensionless array with
         shape (3,3) for a triclinic box or (3,) for a rectangular box. Shape
         vectors must be provided in `OpenMM reduced form
         <http://docs.openmm.org/latest/userguide/theory/
@@ -637,15 +637,15 @@ def pack_box(
         solute,
         box_shape,
         box_vectors,
-        mass_density,
+        target_density,
     )
 
     # Estimate the box_size from mass density if one is not provided.
-    if mass_density is not None:
+    if target_density is not None:
         box_vectors = _box_from_density(
             molecules,
             number_of_copies,
-            mass_density,
+            target_density,
             box_shape,
         )
     # If neither box size nor density are given, take box vectors from solute
@@ -791,7 +791,7 @@ def solvate_topology(
     nacl_conc: Quantity = 0.1 * unit.mole / unit.liter,
     padding: Quantity = 1.2 * unit.nanometer,
     box_shape: NDArray = RHOMBIC_DODECAHEDRON,
-    target_density: Quantity = 1.0 * unit.gram / unit.milliliter,
+    target_density: Quantity = 0.9 * unit.gram / unit.milliliter,
     tolerance: Quantity = 2.0 * unit.angstrom,
 ) -> Topology:
     """
@@ -879,7 +879,7 @@ def solvate_topology_nonwater(
     solvent: Molecule,
     padding: Quantity = 1.2 * unit.nanometer,
     box_shape: NDArray = RHOMBIC_DODECAHEDRON,
-    target_density: Quantity = 1.0 * unit.gram / unit.milliliter,
+    target_density: Quantity = 0.6 * unit.gram / unit.milliliter,
     tolerance: Quantity = 2.0 * unit.angstrom,
 ) -> Topology:
     """

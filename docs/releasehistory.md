@@ -22,6 +22,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * Several classes and methods which were deprecated in the 0.3 line of releases are now removed.
 * Previously-deprecated examples are removed.
 * `ProperTorsionKey` no longer accepts an empty tuple as atom indices.
+* Default densities for Packmol wrapper functions have been lowered to 0.9 g/cc and 0.6 g/cc for water and non-water solvent, respectively.
+* Argument `mass_density` to some packing functions has been renamed to `target_density` for consistency and to better reflect its usage.
 
 ## 0.3.30 - 2024-08
 

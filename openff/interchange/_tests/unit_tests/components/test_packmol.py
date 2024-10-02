@@ -167,7 +167,7 @@ class TestPackmolWrapper:
             pack_box(
                 molecules,
                 number_of_copies=[1],
-                mass_density=1.0 * unit.grams / unit.milliliter,
+                target_density=1.0 * unit.grams / unit.milliliter,
                 box_vectors=20 * numpy.identity(3) * unit.angstrom,
             )
 
@@ -192,7 +192,7 @@ class TestPackmolWrapper:
         topology = pack_box(
             molecules,
             [10],
-            mass_density=1.0 * unit.grams / unit.milliliter,
+            target_density=1.0 * unit.grams / unit.milliliter,
         )
 
         assert topology is not None
@@ -397,7 +397,7 @@ class TestPackmolWrapper:
                 number_of_copies=[11112],
                 box_shape=UNIT_CUBE,
                 tolerance=1.0 * unit.angstrom,
-                mass_density=0.1 * unit.grams / unit.milliliters,
+                target_density=0.1 * unit.grams / unit.milliliters,
             )
 
     @pytest.mark.slow
@@ -409,7 +409,7 @@ class TestPackmolWrapper:
             number_of_copies=[11112],
             box_shape=UNIT_CUBE,
             tolerance=1.0 * unit.angstrom,
-            mass_density=0.1 * unit.grams / unit.milliliters,
+            target_density=0.1 * unit.grams / unit.milliliters,
         )
 
     @pytest.mark.slow
@@ -420,5 +420,5 @@ class TestPackmolWrapper:
             number_of_copies=[11112],
             box_shape=UNIT_CUBE,
             tolerance=1.0 * unit.angstrom,
-            mass_density=0.1 * unit.grams / unit.milliliters,
+            target_density=0.1 * unit.grams / unit.milliliters,
         )
