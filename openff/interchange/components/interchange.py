@@ -431,7 +431,7 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        
+
         prefix
             The prefix to use for the LAMMPS data and run input files. For
             example, "foo" will produce files named "foo.lmp" and
@@ -591,7 +591,7 @@ class Interchange(_BaseModel):
 
         Examples
         --------
-        
+
         Create an OpenMM simulation with a Langevin integrator and a Monte Carlo barostat:
 
         >>> import openmm
@@ -611,7 +611,7 @@ class Interchange(_BaseModel):
         ...     integrator=integrator,
         ...     additional_forces=[barostat],
         ... )
-        
+
         """
         import openmm.app
 
