@@ -3,9 +3,9 @@ from collections.abc import Iterable
 from typing import Literal
 
 from openff.toolkit import Quantity, unit
-from pydantic import Field, PrivateAttr
+from pydantic import Field, PrivateAttr, computed_field
 
-from openff.interchange._annotations import _DistanceQuantity
+from openff.interchange._annotations import _DistanceQuantity, _ElementaryChargeQuantity
 from openff.interchange.components.potentials import Collection
 from openff.interchange.constants import _PME
 from openff.interchange.models import (
@@ -101,20 +101,17 @@ class ElectrostaticsCollection(_NonbondedCollection):
     nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
-    _charges: dict[
-        TopologyKey | LibraryChargeTopologyKey,
-        Quantity,
-    ] = PrivateAttr(
-        default_factory=dict,
-    )
+    # TODO: Charge caching doesn't work when this is defined in the model
+    # _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr(default_factory=dict)
     _charges_cached: bool = PrivateAttr(default=False)
 
+    @computed_field  # type: ignore[misc]
     @property
     def charges(
         self,
-    ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, Quantity]:
+    ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom, including virtual sites."""
-        if len(self._charges) == 0 or self._charges_cached is False:
+        if len(self._charges) == 0 or self._charges_cached is False:  # type: ignore[has-type]
             self._charges = self._get_charges(include_virtual_sites=False)
             self._charges_cached = True
 
@@ -123,7 +120,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
     def _get_charges(
         self,
         include_virtual_sites: bool = False,
-    ) -> dict[TopologyKey | VirtualSiteKey | LibraryChargeTopologyKey, Quantity]:
+    ) -> dict[TopologyKey | VirtualSiteKey | LibraryChargeTopologyKey, _ElementaryChargeQuantity]:
         if include_virtual_sites:
             raise NotImplementedError()
 

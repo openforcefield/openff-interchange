@@ -33,7 +33,7 @@ from numpy.typing import ArrayLike
 if has_package("jax"):
     from jax import Array
 else:
-    Array = Any
+    Array = Any  # type: ignore
 
 
 class Potential(_BaseModel):
