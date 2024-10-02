@@ -101,9 +101,8 @@ def from_openmm(
 
     if positions is None:
         warnings.warn(
-            "Nothing was passed to the `positions` argument, are you sure " "you don't want to pass positions?",
+            "Nothing was passed to the `positions` argument, are you sure you don't want to pass positions?",
             MissingPositionsWarning,
-            stacklevel=2,
         )
 
     else:

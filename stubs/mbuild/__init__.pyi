@@ -4,7 +4,11 @@ class Particle:
     def __init__(self, name: str | None) -> None: ...
 
 class Compound:
-    def __init__(self, name: str = "Compound", subcompounds: list | None = None) -> None: ...
+    def __init__(
+        self,
+        name: str = "Compound",
+        subcompounds: list | None = None,
+    ) -> None: ...
     name: str
     xyz: Any
     def add(

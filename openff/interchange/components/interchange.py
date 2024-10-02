@@ -38,6 +38,7 @@ from openff.interchange.smirnoff import (
     SMIRNOFFConstraintCollection,
     SMIRNOFFVirtualSiteCollection,
 )
+from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if has_package("foyer"):
@@ -54,8 +55,7 @@ class Interchange(_BaseModel):
     """
     A object for storing, manipulating, and converting molecular mechanics data.
 
-    .. warning :: This object is in an early and experimental state and unsuitable for production.
-    .. warning :: This API is experimental and subject to change.
+    .. warning :: This API is not stable and subject to change.
 
     Examples
     --------
@@ -128,14 +128,13 @@ class Interchange(_BaseModel):
 
         .. code-block:: pycon
 
-            >>> from openff.interchange import Interchange
             >>> from openff.toolkit import ForceField, Molecule
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
             >>> sage = ForceField("openff-2.0.0.offxml")
-            >>> interchange = Interchange.from_smirnoff(topology=[mol], force_field=sage)
+            >>> interchange = sage.create_interchange(mol.to_topology())
             >>> interchange
-            Interchange with 8 atoms, non-periodic topology
+            Interchange with 7 collections, non-periodic topology with 8 atoms.
 
         """
         from openff.interchange.smirnoff._create import _create_interchange
@@ -243,12 +242,12 @@ class Interchange(_BaseModel):
                 "Cannot visualize system without positions.",
             ) from error
 
-        widget.add_representation("line", sele="water")
-        widget.add_representation("spacefill", sele="ion")
-        widget.add_representation("cartoon", sele="protein")
+        widget.add_representation("line", selection="water")
+        widget.add_representation("spacefill", selection="ion")
+        widget.add_representation("cartoon", selection="protein")
         widget.add_representation(
             "licorice",
-            sele="not water and not ion and not protein",
+            selection="not water and not ion and not protein",
             radius=0.25,
             multipleBond=False,
         )
@@ -317,6 +316,8 @@ class Interchange(_BaseModel):
         -----
         Molecule names in written files are not guaranteed to match the `Moleclue.name` attribute of the
         molecules in the topology, especially if they are empty strings or not unique.
+
+        See `to_gro` and `to_top` for more details.
 
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
@@ -399,50 +400,57 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        file_path: Union[Path, str]
+        file_path: Path | str
             The path to the GROMACS coordinate file to write.
         decimal: int, default=3
             The number of decimal places to use when writing the GROMACS coordinate file.
+
+        Residue IDs must be positive integers (or string representations thereof).
+
+        Residue IDs greater than 99,999 are reduced modulo 100,000 in line with common GROMACS practice.
+
+        Residue names and IDs from the topology are used, if present, and otherwise are generated internally.
+
+        Behavior when some, but not all, residue names and IDs are present in the topology is undefined.
+
+        If residue IDs are generated internally, they are assigned sequentially to each molecule starting at 1.
 
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
         from openff.interchange.smirnoff._gromacs import _convert
 
+        # TODO: Write the coordinates without the full conversion
         GROMACSWriter(
             system=_convert(self),
             gro_file=file_path,
         ).to_gro(decimal=decimal)
 
-    def to_lammps(self, prefix: str, writer="internal"):
+    def to_lammps(self, prefix: str):
         """
         Export this ``Interchange`` to LAMMPS data and run input files.
 
         Parameters
         ----------
+        
         prefix
             The prefix to use for the LAMMPS data and run input files. For
             example, "foo" will produce files named "foo.lmp" and
             "foo_pointenergy.in".
-        writer
-            The file writer to use. Currently, only `"internal"` is supported.
 
         """
         prefix = str(prefix)
         datafile_path = prefix + ".lmp"
-        self.to_lammps_datafile(datafile_path, writer=writer)
+        self.to_lammps_datafile(datafile_path)
         self.to_lammps_input(
             prefix + "_pointenergy.in",
             datafile_path,
         )
 
-    def to_lammps_datafile(self, file_path: Path | str, writer="internal"):
+    def to_lammps_datafile(self, file_path: Path | str):
         """Export this Interchange to a LAMMPS data file."""
-        if writer == "internal":
-            from openff.interchange.interop.lammps import to_lammps
+        from openff.interchange.interop.lammps import to_lammps
 
-            to_lammps(self, file_path)
-        else:
-            raise UnsupportedExportError
+        to_lammps(self, file_path)
 
     def to_lammps_input(
         self,
@@ -522,7 +530,8 @@ class Interchange(_BaseModel):
             hydrogen_mass=hydrogen_mass,
         )
 
-    to_openmm = to_openmm_system
+    def to_openmm(self, *args, **kwargs):
+        return self.to_openmm_system(*args, **kwargs)
 
     def to_openmm_topology(
         self,
@@ -582,7 +591,8 @@ class Interchange(_BaseModel):
 
         Examples
         --------
-        Create an OpenMM simulation with a Langevin integrator and Monte Carlo barostat:
+        
+        Create an OpenMM simulation with a Langevin integrator and a Monte Carlo barostat:
 
         >>> import openmm
         >>> import openmm.unit
@@ -597,11 +607,11 @@ class Interchange(_BaseModel):
         ...     293.15 * openmm.unit.kelvin,
         ...     25,
         ... )
-        >>> simulation = interchange.to_openmm_simulation(
+        >>> simulation = interchange.to_openmm_simulation(  # doctest: +SKIP
         ...     integrator=integrator,
         ...     additional_forces=[barostat],
         ... )
-
+        
         """
         import openmm.app
 
@@ -634,16 +644,6 @@ class Interchange(_BaseModel):
             )
 
         return simulation
-
-    def to_prmtop(self, file_path: Path | str, writer="internal"):
-        """Export this Interchange to an Amber .prmtop file."""
-        if writer == "internal":
-            from openff.interchange.interop.amber import to_prmtop
-
-            to_prmtop(self, file_path)
-
-        else:
-            raise UnsupportedExportError
 
     @requires_package("openmm")
     def to_pdb(self, file_path: Path | str, include_virtual_sites: bool = False):
@@ -682,15 +682,41 @@ class Interchange(_BaseModel):
         """Export this Interchange to a CHARMM-style .crd file."""
         raise UnsupportedExportError
 
-    def to_inpcrd(self, file_path: Path | str, writer="internal"):
+    def to_amber(
+        self,
+        prefix: str,
+    ):
+        """
+        Export this Interchange object to Amber files.
+
+        Parameters
+        ----------
+        prefix: str
+            The prefix to use for the Amber parameter/topology, coordinate, and run files, i.e.
+            "foo" will produce "foo.top", "foo.gro", and "foo_pointenergy.in".
+
+        Notes
+        -----
+        The run input file is configured for a single-point energy calculation with sander. It is
+        likely portable to pmemd with little or no work.
+
+        """
+        self.to_prmtop(f"{prefix}.prmtop")
+        self.to_inpcrd(f"{prefix}.inpcrd")
+
+        self.to_sander_input(f"{prefix}_pointenergy.in")
+
+    def to_prmtop(self, file_path: Path | str):
+        """Export this Interchange to an Amber .prmtop file."""
+        from openff.interchange.interop.amber import to_prmtop
+
+        to_prmtop(self, file_path)
+
+    def to_inpcrd(self, file_path: Path | str):
         """Export this Interchange to an Amber .inpcrd file."""
-        if writer == "internal":
-            from openff.interchange.interop.amber import to_inpcrd
+        from openff.interchange.interop.amber import to_inpcrd
 
-            to_inpcrd(self, file_path)
-
-        else:
-            raise UnsupportedExportError
+        to_inpcrd(self, file_path)
 
     def to_sander_input(self, file_path: Path | str):
         """
@@ -737,7 +763,7 @@ class Interchange(_BaseModel):
             >>> oplsaa = Forcefield(name="oplsaa")
             >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
             >>> interchange
-            Interchange with 8 atoms, non-periodic topology
+            Interchange with 8 collections, non-periodic topology with 8 atoms.
 
         """
         from openff.interchange.foyer._create import _create_interchange
@@ -759,13 +785,14 @@ class Interchange(_BaseModel):
         """
         Create an Interchange object from GROMACS files.
 
-        WARNING! This method is experimental and not suitable for production.
+        .. warning :: This method is experimental and not officially suitable for production.
+        .. warning :: This API is not stable and subject to change.
 
         Parameters
         ----------
-        topology_file : Union[Path, str]
+        topology_file : Path | str
             The path to a GROMACS topology file.
-        gro_file : Union[Path, str]
+        gro_file : Path | str
             The path to a GROMACS coordinate file.
 
         Returns
@@ -790,7 +817,6 @@ class Interchange(_BaseModel):
         )
 
     @classmethod
-    @experimental
     def from_openmm(
         cls,
         system: "openmm.System",
@@ -801,7 +827,7 @@ class Interchange(_BaseModel):
         """
         Create an Interchange object from OpenMM objects.
 
-        WARNING! This method is experimental and not yet suitable for production.
+        .. warning :: This API is not stable and subject to change.
 
         Notes
         -----
@@ -855,17 +881,6 @@ class Interchange(_BaseModel):
             f"Could not find parameter handler of name {handler_name}",
         )
 
-    def __getattr__(self, attr: str):
-        if attr == "handlers":
-            warnings.warn(
-                "The `handlers` attribute is deprecated. Use `collections` instead.",
-                InterchangeDeprecationWarning,
-                stacklevel=2,
-            )
-            return self.collections
-        else:
-            return super().__getattribute__(attr)
-
     @overload
     def __getitem__(self, item: Literal["Bonds"]) -> "BondCollection": ...
 
@@ -909,13 +924,22 @@ class Interchange(_BaseModel):
     ) -> "ElectrostaticsCollection": ...
 
     @overload
-    def __getitem__(self, item: str) -> "Collection": ...
+    def __getitem__(
+        self,
+        item: Literal["GBSA"],
+    ) -> "SMIRNOFFGBSACollection": ...
+
+    @overload
+    def __getitem__(
+        self,
+        item: str,
+    ) -> "Collection": ...
 
     def __getitem__(self, item: str):
         """Syntax sugar for looking up collections or other components."""
         if type(item) is not str:
             raise LookupError(
-                "Only str arguments can be currently be used for lookups.\n" f"Found item {item} of type {type(item)}",
+                f"Only str arguments can be currently be used for lookups.\nFound item {item} of type {type(item)}",
             )
         if item == "positions":
             return self.positions
@@ -929,18 +953,15 @@ class Interchange(_BaseModel):
                 f"collections registered:\n\t{[*self.collections.keys()]}",
             )
 
-    @experimental
     def __add__(self, other: "Interchange") -> "Interchange":
         """Combine two Interchange objects. This method is unstable and not yet safe for general use."""
         warnings.warn(
             "The `+` operator is deprecated. Use `Interchange.combine` instead.",
             InterchangeDeprecationWarning,
-            stacklevel=2,
         )
 
         return self.combine(other)
 
-    @experimental
     def combine(self, other: "Interchange") -> "Interchange":
         """Combine two Interchange objects. This method is unstable and not yet safe for general use."""
         from openff.interchange.operations._combine import _combine

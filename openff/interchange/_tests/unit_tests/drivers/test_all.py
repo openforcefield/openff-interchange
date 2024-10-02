@@ -25,7 +25,6 @@ from openff.interchange.drivers.all import get_all_energies, get_summary_data
 
 
 @skip_if_missing("openmm")
-@pytest.mark.slow
 class TestDriversAll:
     @pytest.fixture
     def basic_interchange(self, sage_unconstrained):
@@ -74,9 +73,7 @@ class TestDriversAll:
         # Check that (some of) the data is reasonable, this tolerance should be greatly reduced
         # See https://github.com/openforcefield/openff-interchange/issues/632
         for key in ["Bond", "Angle", "Torsion"]:
-            assert (
-                summary.describe().loc["std", key] < 0.001
-            ), f"{key} failed comparison"
+            assert summary.describe().loc["std", key] < 0.001, f"{key} failed comparison"
 
         # Check that (some of) the data did not NaN out
         for val in summary["Torsion"].to_dict().values():

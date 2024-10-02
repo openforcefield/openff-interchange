@@ -5,3 +5,4 @@ test.in
 traj.dcd
 _tmp_pdb_file.pdb
 auto_generated.in
+interchange_pointenergy.in

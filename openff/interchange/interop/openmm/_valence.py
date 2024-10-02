@@ -2,8 +2,6 @@
 Helper functions for producing `openmm.Force` objects for valence terms.
 """
 
-from typing import Union
-
 from openff.toolkit import unit as off_unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
@@ -18,7 +16,7 @@ if has_package("openmm"):
 def _process_constraints(
     interchange,
     openmm_sys,
-    particle_map: dict[Union[int, "VirtualSiteKey"], int],
+    particle_map: dict[int | VirtualSiteKey, int],
 ) -> set[tuple[int, ...]]:
     """
     Process the Constraints section of an Interchange object.
@@ -53,7 +51,7 @@ def _process_bond_forces(
     openmm_sys,
     add_constrained_forces: bool,
     constrained_pairs: set[tuple[int, ...]],
-    particle_map: dict[Union[int, "VirtualSiteKey"], int],
+    particle_map: dict[int | VirtualSiteKey, int],
 ):
     """
     Process the Bonds section of an Interchange object.
@@ -67,7 +65,7 @@ def _process_bond_forces(
         harmonic_bond_force = openmm.HarmonicBondForce()
     else:
         raise UnsupportedExportError(
-            "Found an unsupported functional form in the bond handler:\n\t" f"{bond_handler.expression=}",
+            f"Found an unsupported functional form in the bond handler:\n\t{bond_handler.expression=}",
         )
 
     openmm_sys.addForce(harmonic_bond_force)
@@ -127,7 +125,7 @@ def _process_angle_forces(
             harmonic_angle_force.addPerAngleParameter(parameter_name)
     else:
         raise UnsupportedExportError(
-            "Found an unsupported functional form in the angle handler:\n\t" f"{angle_handler.expression=}",
+            f"Found an unsupported functional form in the angle handler:\n\t{angle_handler.expression=}",
         )
 
     openmm_sys.addForce(harmonic_angle_force)

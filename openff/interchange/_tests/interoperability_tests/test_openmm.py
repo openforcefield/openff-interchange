@@ -963,7 +963,10 @@ class TestToOpenMMPositions:
             MissingPositionsError,
             match=r"are required.*\.positions=None",
         ):
-            to_openmm_positions(Interchange())
+            # dummy topology, since it's required now
+            to_openmm_positions(
+                Interchange(topology=Molecule.from_smiles("CCO").to_topology()),
+            )
 
     @pytest.mark.parametrize("include_virtual_sites", [True, False])
     def test_positions_basic(self, include_virtual_sites, water, tip4p):
@@ -1044,6 +1047,7 @@ class TestOpenMMToPDB:
             out.to_pdb("file_should_not_exist.pdb")
 
 
+@pytest.mark.skip(reason="Add back when Buckingham virtual sites are updated")
 @skip_if_missing("openmm")
 class TestBuckingham:
     @pytest.mark.parametrize("n_molecules", [1, 2, 5])

@@ -8,10 +8,10 @@ dependencies:
   - pip
   - numpy =1
   - pydantic =2
-  - openff-toolkit-base
-  - openmm >=7.6
+  - openff-toolkit-base ~=0.16.4
+  - openmm =8
   - mbuild
-  - foyer >=0.12.1
+  - foyer =1
   - nglview
   - panedr
   - typing-extensions

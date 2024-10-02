@@ -30,7 +30,6 @@ def test_load_smirnoff_plugins():
 
 class TestDoubleExponential:
     pytest.importorskip("openmm")
-    pytest.importorskip("smirnoff_plugins")
 
     @pytest.fixture
     def de_force_field(self) -> ForceField:
@@ -42,8 +41,8 @@ class TestDoubleExponential:
         # This force field also includes a 4-site water model, remove that for now
         force_field.deregister_parameter_handler("VirtualSites")
         force_field.deregister_parameter_handler("LibraryCharges")
-        force_field["DoubleExponential"].parameters.pop(-1)
-        force_field["DoubleExponential"].parameters.pop(-1)
+        force_field["OtherDoubleExponential"].parameters.pop(-1)
+        force_field["OtherDoubleExponential"].parameters.pop(-1)
         force_field["Constraints"].parameters.pop(-1)
         force_field["Constraints"].parameters.pop(-1)
 

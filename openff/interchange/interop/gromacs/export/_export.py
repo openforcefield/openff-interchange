@@ -16,6 +16,7 @@ from openff.interchange.interop.gromacs.models.models import (
     RyckaertBellemansDihedral,
 )
 from openff.interchange.pydantic import _BaseModel
+from openff.interchange.warnings import MissingPositionsWarning
 
 
 class GROMACSWriter(_BaseModel):
@@ -67,14 +68,14 @@ class GROMACSWriter(_BaseModel):
             f"{self.system.coul_14:8.6f}\n\n",
         )
 
-    def _write_atomtypes(self, top, merge_atom_types: bool) -> dict[str, str]:
+    def _write_atomtypes(self, top, merge_atom_types: bool) -> dict[str, bool | str]:
         top.write("[ atomtypes ]\n")
         top.write(
             ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n",
         )
 
-        reduced_atom_types = []
-        mapping_to_reduced_atom_types = {}
+        reduced_atom_types: list[tuple[str, LennardJonesAtomType]] = list()
+        mapping_to_reduced_atom_types = dict()
 
         def _is_atom_type_in_list(
             atom_type,
@@ -163,7 +164,7 @@ class GROMACSWriter(_BaseModel):
             top.write("[ moleculetype ]\n")
 
             top.write(
-                f"{molecule_name.replace(' ', '_')}\t" f"{molecule_type.nrexcl:10d}\n\n",
+                f"{molecule_name.replace(' ', '_')}\t{molecule_type.nrexcl:10d}\n\n",
             )
 
             self._write_atoms(
@@ -197,7 +198,7 @@ class GROMACSWriter(_BaseModel):
                 top.write(
                     f"{atom.index :6d} "
                     f"{mapping_to_reduced_atom_types[atom.atom_type] :6s}"
-                    f"{atom.residue_index :8d} "
+                    f"{atom.residue_index % 100_000 :8d} "
                     f"{atom.residue_name :8s} "
                     f"{atom.name :6s}"
                     f"{atom.charge_group_number :6d}"
@@ -208,7 +209,7 @@ class GROMACSWriter(_BaseModel):
                 top.write(
                     f"{atom.index :6d} "
                     f"{atom.atom_type :6s}"
-                    f"{atom.residue_index :8d} "
+                    f"{atom.residue_index % 100_000 :8d} "
                     f"{atom.residue_name :8s} "
                     f"{atom.name :6s}"
                     f"{atom.charge_group_number :6d}"
@@ -293,7 +294,7 @@ class GROMACSWriter(_BaseModel):
 
             if function in [1, 4]:
                 top.write(
-                    f"{dihedral.phi.m :20.12f}" f"{dihedral.k.m :20.12f}" f"{dihedral.multiplicity :18d}",
+                    f"{dihedral.phi.m :20.12f}{dihedral.k.m :20.12f}{dihedral.multiplicity :18d}",
                 )
 
             elif function == 3:
@@ -419,8 +420,7 @@ class GROMACSWriter(_BaseModel):
         elif numpy.allclose(self.system.positions, 0):
             warnings.warn(
                 "Positions seem to all be zero. Result coordinate file may be non-physical.",
-                UserWarning,
-                stacklevel=2,
+                MissingPositionsWarning,
             )
 
         n_particles = sum(
@@ -443,7 +443,7 @@ class GROMACSWriter(_BaseModel):
         for molecule_name, molecule in self.system.molecule_types.items():
             n_copies = self.system.molecules[molecule_name]
 
-            for _ in range(n_copies):
+            for copy_index in range(n_copies):
                 for atom in molecule.atoms:
                     gro.write(
                         f"%5d%-5s%5s%5d"
@@ -451,7 +451,7 @@ class GROMACSWriter(_BaseModel):
                         f"%{decimal + 5}.{decimal}f"
                         f"%{decimal + 5}.{decimal}f\n"
                         % (
-                            atom.residue_index,  # This needs to be looked up from a different data structure
+                            (atom.residue_index + copy_index) % 100_000,
                             atom.residue_name[:5],
                             atom.name[:5],
                             (count + 1) % 100000,

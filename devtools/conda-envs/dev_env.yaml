@@ -4,22 +4,33 @@ channels:
   - openeye
 dependencies:
   # Core
-  - python =3.11
+  - python =3.10
+  - pip
+  - versioneer-518
   - pip
   - numpy
   - pydantic =2
-  - openmm
   # OpenFF stack
-  - openff-toolkit ~=0.16
-  - openff-interchange-base
-  # smirnoff-plugins =2024
-  - openff-nagl
-  - openff-nagl-models
+  - openff-toolkit-base ~=0.16.4
+  - openff-units
   - ambertools =23
   # Optional features
-  - mbuild ~=0.17
-  - foyer ~=0.12
+  - openmm
+  # smirnoff-plugins =2024
+  # de-forcefields  # add back after smirnoff-plugins update
+  - openff-nagl
+  - openff-nagl-models
+  - mbuild ~=0.18
+  - foyer =1
   - gmso ~=0.12
+  - nglview
+  # Drivers
+  - gromacs =2024
+  - lammps >=2023.08.02
+  - panedr
+  # shim for a build issue that's probably localized to conda-forge
+  # https://github.com/conda-forge/lammps-feedstock/issues/207
+  - openmpi =4
   # Testing
   - mdtraj
   - intermol
@@ -29,21 +40,13 @@ dependencies:
   - pytest-xdist
   - pytest-randomly
   - nbval
-  # de-forcefields  # add back after smirnoff-plugins update
-  # Drivers
-  - gromacs =2024
-  - lammps >=2023.08.02
-  - panedr
   # Typing
   - mypy
   - typing-extensions
   - types-setuptools
   - pandas-stubs
   # Development tools
-  # https://github.com/mamba-org/mamba/issues/1523#issuecomment-1246591319
-  - micromamba
   - jupyterlab
-  - nglview
   - pdbfixer
   - ipdb
   - pre-commit

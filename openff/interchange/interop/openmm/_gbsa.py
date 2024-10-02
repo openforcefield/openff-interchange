@@ -2,6 +2,7 @@ from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError
+from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 
 if has_package("openmm"):
     import openmm
@@ -16,7 +17,7 @@ def _process_gbsa(
     from openff.toolkit import unit
 
     try:
-        collection = interchange.collections["GBSA"]
+        collection: SMIRNOFFGBSACollection = interchange.collections["GBSA"]  # type: ignore[assignment]
     except KeyError:
         return
 

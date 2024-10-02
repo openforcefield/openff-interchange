@@ -83,7 +83,7 @@ class EnergyReport(_BaseModel):
     def __getitem__(self, item: str) -> Quantity | None:
         if type(item) is not str:
             raise LookupError(
-                "Only str arguments can be currently be used for lookups.\n" f"Found item {item} of type {type(item)}",
+                f"Only str arguments can be currently be used for lookups.\nFound item {item} of type {type(item)}",
             )
         if item in self.energies.keys():
             return self.energies[item]
@@ -180,8 +180,8 @@ class EnergyReport(_BaseModel):
                     self["Electrostatics"] and other["Electrostatics"]
                 ) is not None:
                     for key in ("vdW", "Electrostatics"):
-                        energy_differences[key] = self[key] - other[key]
-                        energy_differences[key] = self[key] - other[key]
+                        energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
+                        energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
 
                         nonbondeds_processed = True
 
@@ -200,7 +200,7 @@ class EnergyReport(_BaseModel):
         diff = dict()
         for key in self.energies:
             if key not in other.energies:
-                warnings.warn(f"Did not find key {key} in second report", stacklevel=2)
+                warnings.warn(f"Did not find key {key} in second report")
                 continue
             diff[key]: Quantity = self.energies[key] - other.energies[key]  # type: ignore
 

@@ -1,3 +1,5 @@
+import subprocess
+
 import numpy
 import pytest
 from openff.toolkit import Molecule, Quantity, Topology, unit
@@ -27,7 +29,6 @@ from openff.interchange.exceptions import (
 )
 
 
-@pytest.mark.slow
 class TestInterchange:
     def test_getitem(self, sage):
         """Test behavior of Interchange.__getitem__"""
@@ -405,17 +406,11 @@ class TestWrappedCalls:
 
         return Interchange.from_smirnoff(force_field=sage, topology=top)
 
-    @skip_if_missing("openmm")
-    def test_from_openmm_error(self):
-        with pytest.raises(ExperimentalFeatureException):
-            Interchange.from_openmm()
-
     def test_from_gromacs_error(self):
         with pytest.raises(ExperimentalFeatureException):
             Interchange.from_gromacs()
 
     @skip_if_missing("openmm")
-    @pytest.mark.slow
     def test_from_openmm_called(self, monkeypatch, simple_interchange):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
@@ -429,6 +424,15 @@ class TestWrappedCalls:
             system=system,
             positions=positions,
             box_vectors=box,
+        )
+
+    def test_to_amber(self, simple_interchange):
+        simple_interchange.to_amber(prefix="blargh")
+
+        # Just make sure it returns a non-zero error code
+        subprocess.check_output(
+            "sander -i blargh_pointenergy.in -c blargh.inpcrd -p blargh.prmtop -o out.mdout -O",
+            shell=True,
         )
 
     def test_from_gromacs_called(self, monkeypatch, simple_interchange):

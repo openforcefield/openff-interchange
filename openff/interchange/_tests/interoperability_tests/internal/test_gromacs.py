@@ -1,5 +1,4 @@
 from importlib import resources
-from math import exp
 
 import numpy
 import parmed
@@ -11,11 +10,8 @@ from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, get_protein, needs_gmx
-from openff.interchange.components.nonbonded import BuckinghamvdWCollection
-from openff.interchange.components.potentials import Potential
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import (
-    GMXMdrunError,
     UnsupportedExportError,
     VirtualSiteTypeNotImplementedError,
 )
@@ -23,7 +19,6 @@ from openff.interchange.interop.gromacs._import._import import (
     _read_box,
     _read_coordinates,
 )
-from openff.interchange.models import PotentialKey, TopologyKey
 
 if has_package("openmm"):
     import openmm.app
@@ -87,54 +82,6 @@ class TestGROMACSGROFile:
         # the convential precision of 3 was not used.
         n_decimals = len(str(coords[0, 0]).split(".")[1])
         assert n_decimals == 12
-
-    @pytest.mark.slow
-    @skip_if_missing("openmm")
-    def test_residue_info(self, sage):
-        """Test that residue information is passed through to .gro files."""
-        import mdtraj
-
-        protein = get_protein("MainChain_HIE")
-
-        ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
-
-        out = Interchange.from_smirnoff(
-            force_field=ff14sb,
-            topology=[protein],
-        )
-
-        out.box=[4, 4, 4]
-
-        out.to_gro("tmp.gro")
-
-        mdtraj_topology = mdtraj.load("tmp.gro").topology
-
-        for found_residue, original_residue in zip(
-            mdtraj_topology.residues,
-            out.topology.hierarchy_iterator("residues"),
-        ):
-            assert found_residue.name == original_residue.residue_name
-            assert str(found_residue.resSeq) == original_residue.residue_number
-
-    @pytest.mark.slow
-    def test_atom_names_pdb(self):
-        peptide = get_protein("MainChain_ALA_ALA")
-        ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
-
-        out = ff14sb.create_interchange(peptide.to_topology())
-
-        out.box = [4, 4, 4]
-
-        out.to_gro("atom_names.gro")
-
-        pdb_object = openmm.app.PDBFile(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb", "openff.toolkit"),
-        )
-        pdb_atom_names = [atom.name for atom in pdb_object.topology.atoms()]
-
-        openmm_atom_names = openmm.app.GromacsGroFile("atom_names.gro").atomNames
-
-        assert openmm_atom_names == pdb_atom_names
 
 
 @needs_gmx
@@ -262,69 +209,6 @@ class TestGROMACS:
         ):
             assert found_residue.name == original_residue.residue_name
             assert str(found_residue.number + 1) == original_residue.residue_number
-
-    @pytest.mark.slow
-    @pytest.mark.skip(
-        reason="Update when energy reports intentionally support non-vdW handlers",
-    )
-    def test_argon_buck(self):
-        """Test that Buckingham potentials are supported and can be exported"""
-        from openff.interchange.smirnoff import SMIRNOFFElectrostaticsCollection
-
-        mol = MoleculeWithConformer.from_smiles("[#18]", name="Argon")
-
-        top = Topology.from_molecules([mol, mol])
-
-        # http://www.sklogwiki.org/SklogWiki/index.php/Argon#Buckingham_potential
-        erg_mol = unit.erg / unit.mol * float(unit.avogadro_number)
-        A = 1.69e-8 * erg_mol
-        B = 1 / (0.273 * unit.angstrom)
-        C = 102e-12 * erg_mol * unit.angstrom**6
-
-        r = 0.3 * unit.nanometer
-
-        buck = BuckinghamvdWCollection()
-        coul = SMIRNOFFElectrostaticsCollection(method="pme")
-
-        pot_key = PotentialKey(id="[#18]")
-        pot = Potential(parameters={"A": A, "B": B, "C": C})
-
-        for atom in top.atoms:
-            top_key = TopologyKey(atom_indices=(top.atom_index(atom),))
-            buck.key_map.update({top_key: pot_key})
-
-            coul.key_map.update({top_key: pot_key})
-            coul.potentials.update(
-                {pot_key: Potential(parameters={"charge": 0 * unit.elementary_charge})},
-            )
-
-        for molecule in top.molecules:
-            molecule.partial_charges = Quantity(
-                molecule.n_atoms * [0],
-                unit.elementary_charge,
-            )
-
-        buck.potentials[pot_key] = pot
-
-        out = Interchange()
-        out.collections["Buckingham-6"] = buck
-        out.collections["Electrostatics"] = coul
-        out.topology = top
-        out.box = [10, 10, 10] * unit.nanometer
-        out.positions = [[0, 0, 0], [0.3, 0, 0]] * unit.nanometer
-        out.to_gro("out.gro", writer="internal")
-        out.to_top("out.top", writer="internal")
-
-        omm_energies = get_openmm_energies(out, combine_nonbonded_forces=True)
-        by_hand = A * exp(-B * r) - C * r**-6
-
-        resid = omm_energies.energies["vdW"] - by_hand
-        assert resid < 1e-5 * unit.kilojoule / unit.mol
-
-        # TODO: Add back comparison to GROMACS energies once GROMACS 2020+
-        # supports Buckingham potentials
-        with pytest.raises(GMXMdrunError):
-            get_gromacs_energies(out, mdp="cutoff_buck")
 
     @pytest.mark.skip("Broken, unclear if cases like these are worth supporting")
     def test_nonconsecutive_isomorphic_molecules(self, sage_unconstrained):

@@ -1,3 +1,4 @@
+import random
 from importlib import resources
 from math import exp
 
@@ -40,6 +41,14 @@ if has_package("openmm"):
 @needs_gmx
 class _NeedsGROMACS:
     pass
+
+
+def parse_residue_ids(file) -> list[str]:
+    """Parse residue IDs, and only the residue IDs, from a GROMACS .gro file."""
+    with open(file) as f:
+        ids = [line[:5].strip() for line in f.readlines()[2:-1]]
+
+    return ids
 
 
 class TestToGro(_NeedsGROMACS):
@@ -145,12 +154,26 @@ class TestGROMACSGROFile(_NeedsGROMACS):
             out.to_gro("tmp.gro")
 
     @pytest.mark.slow
+    @pytest.mark.parametrize("offset_residue_ids", [True, False])
     @skip_if_missing("openmm")
-    def test_residue_info(self, sage):
+    def test_residue_info(self, offset_residue_ids):
         """Test that residue information is passed through to .gro files."""
         import mdtraj
 
         protein = get_protein("MainChain_HIE")
+
+        if offset_residue_ids:
+            offset = random.randint(10, 20)
+
+            for atom in protein.atoms:
+                atom.metadata["residue_number"] = str(
+                    int(atom.metadata["residue_number"]) + offset,
+                )
+
+            # Need to manually update residues _and_ atoms
+            # https://github.com/openforcefield/openff-toolkit/issues/1921
+            for residue in protein.residues:
+                residue.residue_number = str(int(residue.residue_number) + offset)
 
         ff14sb = ForceField("ff14sb_off_impropers_0.0.3.offxml")
 
@@ -170,7 +193,55 @@ class TestGROMACSGROFile(_NeedsGROMACS):
             out.topology.hierarchy_iterator("residues"),
         ):
             assert found_residue.name == original_residue.residue_name
-            assert str(found_residue.resSeq) == original_residue.residue_number
+            found_index = [*original_residue.atoms][0].metadata["residue_number"]
+            assert str(found_residue.resSeq) == found_index
+
+    def test_fill_in_residue_ids(self, sage):
+        """Ensure that, if inputs have no residue_number, they are generated on-the-fly."""
+        topology = Topology.from_molecules(
+            [MoleculeWithConformer.from_smiles(smi) for smi in ["CC", "O", "C"]],
+        )
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+
+        sage.create_interchange(topology).to_gro("fill.gro")
+
+        expected_residue_ids = 8 * ["1"] + 3 * ["2"] + 5 * ["3"]
+
+        found_residue_ids = parse_residue_ids("fill.gro")
+
+        for expected, found in zip(expected_residue_ids, found_residue_ids):
+            assert expected == found
+
+    def test_atom_index_gt_100_000(self, water, sage):
+        """Ensure that atom indices are written correctly for large numbers."""
+        water.add_hierarchy_scheme(
+            ("residue_name", "residue_number"),
+            "residues",
+        )
+
+        topology = Topology.from_molecules(2 * [water])
+
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        # Can't just update atoms' metadata, neeed to create these scheme/element objects
+        # and need to also modify the residue objects themselves
+        for molecule_index, molecule in enumerate(topology.molecules):
+            for atom in molecule.atoms:
+                atom.metadata["residue_number"] = str(molecule_index + 123_456)
+
+        for residue_index, residue in enumerate(topology.residues):
+            residue.residue_number = str(residue_index + 123_456)
+
+        interchange = sage.create_interchange(topology)
+
+        interchange.to_gro("large.gro")
+
+        expected_residue_ids = 3 * ["23456"] + 3 * ["23457"]
+
+        found_residue_ids = parse_residue_ids("large.gro")
+
+        for expected, found in zip(expected_residue_ids, found_residue_ids):
+            assert expected == found
 
     @pytest.mark.slow
     def test_atom_names_pdb(self):
@@ -194,7 +265,6 @@ class TestGROMACSGROFile(_NeedsGROMACS):
 
 
 class TestGROMACS(_NeedsGROMACS):
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -371,8 +441,8 @@ class TestGROMACS(_NeedsGROMACS):
         out.topology = top
         out.box = [10, 10, 10] * unit.nanometer
         out.positions = [[0, 0, 0], [0.3, 0, 0]] * unit.nanometer
-        out.to_gro("out.gro", writer="internal")
-        out.to_top("out.top", writer="internal")
+        out.to_gro("out.gro")
+        out.to_top("out.top")
 
         omm_energies = get_openmm_energies(out, combine_nonbonded_forces=True)
         by_hand = A * exp(-B * r) - C * r**-6
@@ -416,6 +486,7 @@ class TestGROMACS(_NeedsGROMACS):
 
         assert [*parmed.load_file("tmp.top").molecules.keys()] == ["MOL0", "MOL1"]
 
+    @pytest.mark.filterwarnings("ignore:Setting positions to None")
     @pytest.mark.parametrize("name", ["MOL0", "MOL222", ""])
     def test_roundtrip_with_combine(
         self,
@@ -585,7 +656,6 @@ class TestCommonBoxes(_NeedsGROMACS):
 
 
 class TestMergeAtomTypes(_NeedsGROMACS):
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "smiles",
         [
@@ -755,6 +825,7 @@ class TestGROMACSVirtualSites(_NeedsGROMACS):
 
         assert abs(numpy.sum([p.charge for p in gmx_top.atoms])) < 1e-3
 
+    @pytest.mark.slow
     def test_carbonyl_example(self, sage_with_planar_monovalent_carbonyl, ethanol):
         """Test that a single-molecule planar carbonyl example can run 0 steps."""
         ethanol.generate_conformers(n_conformers=1)

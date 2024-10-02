@@ -2,8 +2,7 @@
 
 import ast
 import json
-import warnings
-from typing import Annotated, Any, Union
+from typing import Annotated, Any
 
 import numpy
 from openff.toolkit import Quantity
@@ -25,7 +24,6 @@ from openff.interchange.models import (
     TopologyKey,
 )
 from openff.interchange.pydantic import _BaseModel
-from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if has_package("jax"):
     from jax import numpy as jax_numpy
@@ -34,18 +32,8 @@ from numpy.typing import ArrayLike
 
 if has_package("jax"):
     from jax import Array
-
-
-def __getattr__(name: str):
-    if name == "PotentialHandler":
-        warnings.warn(
-            "`PotentialHandler` has been renamed to `Collection`. " "Importing `Collection` instead.",
-            InterchangeDeprecationWarning,
-            stacklevel=2,
-        )
-        return Collection
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+else:
+    Array = Any
 
 
 class Potential(_BaseModel):
@@ -94,17 +82,19 @@ def validate_potential_or_wrapped_potential(
     v: Any,
     handler: ValidatorFunctionWrapHandler,
     info: ValidationInfo,
-) -> dict[str, Quantity]:
+) -> Potential | WrappedPotential:
     """Validate the parameters field of a Potential object."""
     if info.mode == "json":
         if "parameters" in v:
             return Potential.model_validate(v)
         else:
             return WrappedPotential.model_validate(v)
+    else:
+        raise NotImplementedError(f"Validation mode {info.mode} not implemented.")
 
 
 PotentialOrWrappedPotential = Annotated[
-    Union[Potential, WrappedPotential],
+    Potential | WrappedPotential,
     WrapValidator(validate_potential_or_wrapped_potential),
 ]
 
@@ -125,6 +115,8 @@ def validate_key_map(v: Any, handler, info) -> dict:
         for key, val in v.items():
             val_dict = json.loads(val)
 
+            key_class: type[TopologyKey]
+
             match val_dict["associated_handler"]:
                 case "Bonds":
                     key_class = BondKey
@@ -135,9 +127,9 @@ def validate_key_map(v: Any, handler, info) -> dict:
                 case "ImproperTorsions":
                     key_class = ImproperTorsionKey
                 case "LibraryCharges":
-                    key_class = LibraryChargeTopologyKey
+                    key_class = LibraryChargeTopologyKey  # type: ignore[assignment]
                 case "ToolkitAM1BCCHandler":
-                    key_class = SingleAtomChargeTopologyKey
+                    key_class = SingleAtomChargeTopologyKey  # type: ignore[assignment]
 
                 case _:
                     key_class = TopologyKey
@@ -163,7 +155,11 @@ def validate_key_map(v: Any, handler, info) -> dict:
     return v
 
 
-def serialize_key_map(value: dict[str, str], handler, info) -> dict[str, str]:
+def serialize_key_map(
+    value: dict[TopologyKey, PotentialKey],
+    handler,
+    info,
+) -> dict[str, str]:
     """Serialize the parameters field of a Potential object."""
     if info.mode == "json":
         return {key.model_dump_json(): value.model_dump_json() for key, value in value.items()}
@@ -202,20 +198,23 @@ def validate_potential_dict(
         raise NotImplementedError(f"Validation mode {info.mode} not implemented.")
 
 
-def serialize_potential_dict(
-    value: dict[str, Quantity],
+def serialize_potentials(
+    value: dict[PotentialKey, Potential],
     handler,
     info,
 ) -> dict[str, str]:
-    """Serialize the parameters field of a Potential object."""
+    """Serialize the potentials field."""
     if info.mode == "json":
-        return {key.model_dump_json(): value.model_dump_json() for key, value in value.items()}
+        return {key.model_dump_json(): _value.model_dump_json() for key, _value in value.items()}
+
+    else:
+        raise NotImplementedError(f"Serialization mode {info.mode} not implemented.")
 
 
 Potentials = Annotated[
     dict[PotentialKey, PotentialOrWrappedPotential],
     WrapValidator(validate_potential_dict),
-    WrapSerializer(serialize_potential_dict),
+    WrapSerializer(serialize_potentials),
 ]
 
 
@@ -257,13 +256,13 @@ class Collection(_BaseModel):
                 parameters = potential.parameters
                 return parameters
         raise MissingParametersError(
-            f"Could not find parameter in parameter in handler {self.type} " f"associated with atoms {atom_indices}",
+            f"Could not find parameter in parameter in handler {self.type} associated with atoms {atom_indices}",
         )
 
     def get_force_field_parameters(
         self,
         use_jax: bool = False,
-    ) -> Union["ArrayLike", "Array"]:
+    ) -> ArrayLike | Array:
         """Return a flattened representation of the force field parameters."""
         # TODO: Handle WrappedPotential
         if any(isinstance(potential, WrappedPotential) for potential in self.potentials.values()):
@@ -278,7 +277,7 @@ class Collection(_BaseModel):
                 [[v.m for v in p.parameters.values()] for p in self.potentials.values()],
             )
 
-    def set_force_field_parameters(self, new_p: "ArrayLike") -> None:
+    def set_force_field_parameters(self, new_p: ArrayLike) -> None:
         """Set the force field parameters from a flattened representation."""
         mapping = self.get_mapping()
         if new_p.shape[0] != len(mapping):  # type: ignore
@@ -299,7 +298,7 @@ class Collection(_BaseModel):
         self,
         p=None,
         use_jax: bool = False,
-    ) -> Union["ArrayLike", "Array"]:
+    ) -> ArrayLike | Array:
         """
         Return a flattened representation of system parameters.
 
@@ -338,7 +337,7 @@ class Collection(_BaseModel):
         self,
         p=None,
         use_jax: bool = True,
-    ) -> Union["ArrayLike", "Array"]:
+    ) -> ArrayLike | "Array":
         """Return an array of system parameters, given an array of force field parameters."""
         if p is None:
             p = self.get_force_field_parameters(use_jax=use_jax)
@@ -355,7 +354,7 @@ class Collection(_BaseModel):
         )
 
     @requires_package("jax")
-    def get_param_matrix(self) -> Union["Array", "ArrayLike"]:
+    def get_param_matrix(self) -> ArrayLike | "Array":
         """Get a matrix representing the mapping between force field and system parameters."""
         from functools import partial
 
@@ -372,20 +371,9 @@ class Collection(_BaseModel):
 
         return jac_res.reshape(-1, p.flatten().shape[0])  # type: ignore[union-attr]
 
-    def __getattr__(self, attr: str):
-        if attr == "slot_map":
-            warnings.warn(
-                "The `slot_map` attribute is deprecated. Use `key_map` instead.",
-                InterchangeDeprecationWarning,
-                stacklevel=2,
-            )
-            return self.key_map
-        else:
-            return super().__getattribute__(attr)
-
-    def __getitem__(self, key) -> Potential:
+    def __getitem__(self, key) -> Potential | WrappedPotential:
         if isinstance(key, tuple) and key not in self.key_map and tuple(reversed(key)) in self.key_map:
-            return self.potentials[self.key_map[tuple(reversed(key))]]
+            return self.potentials[self.key_map[tuple(reversed(key))]]  # type: ignore[index]
 
         return self.potentials[self.key_map[key]]
 
@@ -399,6 +387,7 @@ def validate_collections(
     from openff.interchange.smirnoff import (
         SMIRNOFFAngleCollection,
         SMIRNOFFBondCollection,
+        SMIRNOFFCollection,
         SMIRNOFFConstraintCollection,
         SMIRNOFFElectrostaticsCollection,
         SMIRNOFFImproperTorsionCollection,
@@ -407,7 +396,7 @@ def validate_collections(
         SMIRNOFFVirtualSiteCollection,
     )
 
-    _class_mapping = {
+    _class_mapping: dict[str, type[SMIRNOFFCollection]] = {
         "Bonds": SMIRNOFFBondCollection,
         "Angles": SMIRNOFFAngleCollection,
         "Constraints": SMIRNOFFConstraintCollection,
@@ -425,6 +414,8 @@ def validate_collections(
             )
             for collection_name, collection_data in v.items()
         }
+    else:
+        raise ValueError(f"Validation mode {info.mode} not implemented.")
 
 
 _AnnotatedCollections = Annotated[

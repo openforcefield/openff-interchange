@@ -1,6 +1,5 @@
 """Plugins handling virtual sites."""
 
-from nonbonded_plugins.nonbonded import SMIRNOFFBuckinghamCollection
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterAttribute,
     VirtualSiteHandler,
@@ -8,6 +7,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import unit
 
+from nonbonded_plugins.nonbonded import SMIRNOFFBuckinghamCollection
 from openff.interchange.components.potentials import Potential
 from openff.interchange.components.toolkit import _validated_list_to_array
 from openff.interchange.exceptions import InvalidParameterHandlerError
@@ -39,6 +39,8 @@ class BuckinghamVirtualSiteHandler(VirtualSiteHandler):
 
 class SMIRNOFFBuckinghamVirtualSiteCollection(SMIRNOFFVirtualSiteCollection):
     """A collection storing virtual sites compatible with the Buckingham (exp-6) functional form."""
+
+    is_plugin: bool = True
 
     @classmethod
     def supported_parameters(cls):
