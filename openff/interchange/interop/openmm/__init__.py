@@ -219,7 +219,7 @@ def _apply_hmr(
             # when virtual sites + HMR are supported
             mass_to_transfer = _hydrogen_mass - system.getParticleMass(hydrogen_index)
 
-            if mass_to_transfer > heavy_mass:
+            if mass_to_transfer >= heavy_mass:
                 raise NegativeMassError(
                     f"Particle with index {heavy_index} would have a negative mass after hydrogen "
                     "mass repartitioning. Consider transferring a smaller mass than "
