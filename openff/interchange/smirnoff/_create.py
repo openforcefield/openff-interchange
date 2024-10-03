@@ -8,6 +8,7 @@ from openff.interchange.common._positions import _infer_positions
 from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
     MissingParameterHandlerError,
+    PresetChargesError,
     SMIRNOFFHandlersNotImplementedError,
 )
 from openff.interchange.plugins import load_smirnoff_plugins
@@ -93,6 +94,40 @@ def validate_topology(value):
         )
 
 
+def _preprocess_preset_charges(
+    molecules_with_preset_charges: list[Molecule] | None,
+) -> list[Molecule] | None:
+    """
+    Pre-process the charge_from_molecules argument.
+
+    If charge_from_molecules is None, return None.
+
+    If charge_from_molecules is list[Molecule], ensure that
+
+    1. The input is a list of Molecules
+    2. Each molecule has assign partial charges
+    3. Ensure no molecules are isomorphic with another in the list
+
+    """
+    if molecules_with_preset_charges is None:
+        return None
+
+    molecule_set = {molecule.to_smiles for molecule in molecules_with_preset_charges}
+
+    if len(molecule_set) != len(molecules_with_preset_charges):
+        raise PresetChargesError(
+            "All molecules in the charge_from_molecules list must be isomorphically unique from each other",
+        )
+
+    for molecule in molecules_with_preset_charges:
+        if molecule.partial_charges is None:
+            raise PresetChargesError(
+                "All molecules in the charge_from_molecules list must have partial charges assigned.",
+            )
+
+    return molecules_with_preset_charges
+
+
 def _create_interchange(
     force_field: ForceField,
     topology: Topology | list[Molecule],
@@ -102,6 +137,8 @@ def _create_interchange(
     partial_bond_orders_from_molecules: list[Molecule] | None = None,
     allow_nonintegral_charges: bool = False,
 ) -> Interchange:
+    molecules_with_preset_charges = _preprocess_preset_charges(charge_from_molecules)
+
     _check_supported_handlers(force_field)
 
     # interchange = Interchange(topology=topology)
@@ -138,7 +175,7 @@ def _create_interchange(
         interchange,
         force_field,
         interchange.topology,
-        charge_from_molecules,
+        molecules_with_preset_charges,
         allow_nonintegral_charges,
     )
     _plugins(interchange, force_field, interchange.topology)
@@ -274,7 +311,7 @@ def _electrostatics(
     interchange: Interchange,
     force_field: ForceField,
     topology: Topology,
-    charge_from_molecules: list[Molecule] | None = None,
+    molecules_with_preset_charges: list[Molecule] | None = None,
     allow_nonintegral_charges: bool = False,
 ):
     if "Electrostatics" not in force_field.registered_parameter_handlers:
@@ -304,7 +341,7 @@ def _electrostatics(
                     if handler is not None
                 ],
                 topology=topology,
-                charge_from_molecules=charge_from_molecules,
+                charge_from_molecules=molecules_with_preset_charges,
                 allow_nonintegral_charges=allow_nonintegral_charges,
             ),
         },
