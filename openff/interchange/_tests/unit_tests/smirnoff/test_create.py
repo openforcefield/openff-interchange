@@ -7,6 +7,7 @@ from openff.interchange import Interchange
 from openff.interchange._tests import get_test_file_path
 from openff.interchange.constants import kcal_mol, kcal_mol_a2
 from openff.interchange.exceptions import (
+    PresetChargesError,
     UnassignedAngleError,
     UnassignedBondError,
     UnassignedTorsionError,
@@ -160,7 +161,8 @@ def test_library_charges_from_molecule():
     assert library_charges.charge == [*mol.partial_charges]
 
 
-class TestChargeFromMolecules:
+class TestPresetCharges:
+    @pytest.mark.slow
     def test_charge_from_molecules_basic(self, sage):
         molecule = Molecule.from_smiles("CCO")
         molecule.assign_partial_charges(partial_charge_method="am1bcc")
@@ -230,6 +232,37 @@ class TestChargeFromMolecules:
         found_charges = [v.m for v in out["Electrostatics"]._get_charges().values()]
 
         assert numpy.allclose(expected_charges, found_charges)
+
+    def test_error_when_any_missing_partial_charges(sage, self):
+        topology = Topology.from_molecules(
+            [
+                Molecule.from_smiles("C"),
+                Molecule.from_smiles("CCO"),
+            ],
+        )
+
+        with pytest.raises(
+            PresetChargesError,
+            match="all.*must have partial charges",
+        ):
+            sage.create_interchange(
+                topology,
+                charge_from_molecules=[Molecule.from_smiles("C")],
+            )
+
+    def test_error_multiple_isomorphic_molecules(self, sage, ethanol, reversed_ethanol):
+        # these ethanol fixtures *do* have charges, if they didn't have charges it would be
+        # ambiguous which error should be raised
+        topology = Topology.from_molecules([ethanol, reversed_ethanol, ethanol])
+
+        with pytest.raises(
+            PresetChargesError,
+            match="All molecules.*isomorphic.*unique",
+        ):
+            sage.create_interchange(
+                topology,
+                charge_from_molecules=[ethanol, reversed_ethanol],
+            )
 
 
 @skip_if_missing("openmm")
