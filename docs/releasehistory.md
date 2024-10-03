@@ -23,6 +23,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * Previously-deprecated examples are removed.
 * `ProperTorsionKey` no longer accepts an empty tuple as atom indices.
 * An error is now raised when HMR would result in an OpenMM particle (aside from virtual sites) having negative (or zero) mass.
+* Fixes a regression in which some `ElectrostaticsCollection.charges` properties did not return cached values.
 
 ## 0.3.30 - 2024-08
 

@@ -112,3 +112,10 @@ def test_issue_1031(monkeypatch):
     # check a few atom names to ensure these didn't end up being empty sets
     for atom_name in ("NE2", "H3", "HA", "CH3", "CA", "CB", "CE1"):
         assert atom_name in openff_atom_names
+
+
+def test_issue_1052(sage, ethanol):
+    """Test that _SMIRNOFFElectrostaticsCollection.charges is populated."""
+    out = sage.create_interchange(ethanol.to_topology())
+
+    assert len(out["Electrostatics"].charges) > 0
