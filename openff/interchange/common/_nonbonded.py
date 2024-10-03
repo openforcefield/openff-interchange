@@ -110,7 +110,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
         self,
     ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom, including virtual sites."""
-        if len(self._charges) == 0 or self._charges_cached is False:  # type: ignore[has-type]
+        if len(self._charges) == 0 or self._charges_cached is False:
             self._charges.update(self._get_charges(include_virtual_sites=False))
             self._charges_cached = True
 

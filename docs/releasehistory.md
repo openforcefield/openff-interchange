@@ -24,6 +24,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * `ProperTorsionKey` no longer accepts an empty tuple as atom indices.
 * Fixes a regression in which some `ElectrostaticsCollection.charges` properties did not return cached values.
 * The `charge_from_molecules` argument must include only molecules that contain partial charges and are non-isomorphic with each other.
+* The `charge_from_molecules` argument as used by the OpenFF Toolkit is handled internally as `molecules_with_preset_charges`.
 
 ## 0.3.30 - 2024-08
 

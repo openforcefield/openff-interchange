@@ -125,7 +125,7 @@ jobs:
         python devtools/scripts/molecule-regressions.py
 
     - name: Run mypy
-      if: ${{ matrix.python-version == '3.10' }}
+      if: ${{ matrix.python-version == '3.11' }}
       run: |
         # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
         # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875

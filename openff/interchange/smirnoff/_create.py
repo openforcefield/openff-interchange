@@ -98,11 +98,11 @@ def _preprocess_preset_charges(
     molecules_with_preset_charges: list[Molecule] | None,
 ) -> list[Molecule] | None:
     """
-    Pre-process the charge_from_molecules argument.
+    Pre-process the molecules_with_preset_charges argument.
 
-    If charge_from_molecules is None, return None.
+    If molecules_with_preset_charges is None, return None.
 
-    If charge_from_molecules is list[Molecule], ensure that
+    If molecules_with_preset_charges is list[Molecule], ensure that
 
     1. The input is a list of Molecules
     2. Each molecule has assign partial charges
@@ -112,17 +112,17 @@ def _preprocess_preset_charges(
     if molecules_with_preset_charges is None:
         return None
 
-    molecule_set = {molecule.to_smiles for molecule in molecules_with_preset_charges}
+    molecule_set = {molecule.to_smiles() for molecule in molecules_with_preset_charges}
 
     if len(molecule_set) != len(molecules_with_preset_charges):
         raise PresetChargesError(
-            "All molecules in the charge_from_molecules list must be isomorphically unique from each other",
+            "All molecules in the molecules_with_preset_charges list must be isomorphically unique from each other",
         )
 
     for molecule in molecules_with_preset_charges:
         if molecule.partial_charges is None:
             raise PresetChargesError(
-                "All molecules in the charge_from_molecules list must have partial charges assigned.",
+                "All molecules in the molecules_with_preset_charges list must have partial charges assigned.",
             )
 
     return molecules_with_preset_charges
@@ -133,11 +133,11 @@ def _create_interchange(
     topology: Topology | list[Molecule],
     box: Quantity | None = None,
     positions: Quantity | None = None,
-    charge_from_molecules: list[Molecule] | None = None,
+    molecules_with_preset_charges: list[Molecule] | None = None,
     partial_bond_orders_from_molecules: list[Molecule] | None = None,
     allow_nonintegral_charges: bool = False,
 ) -> Interchange:
-    molecules_with_preset_charges = _preprocess_preset_charges(charge_from_molecules)
+    molecules_with_preset_charges = _preprocess_preset_charges(molecules_with_preset_charges)
 
     _check_supported_handlers(force_field)
 
@@ -341,7 +341,7 @@ def _electrostatics(
                     if handler is not None
                 ],
                 topology=topology,
-                charge_from_molecules=molecules_with_preset_charges,
+                molecules_with_preset_charges=molecules_with_preset_charges,
                 allow_nonintegral_charges=allow_nonintegral_charges,
             ),
         },

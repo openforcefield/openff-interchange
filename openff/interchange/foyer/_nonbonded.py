@@ -60,7 +60,7 @@ class FoyerElectrostaticsHandler(ElectrostaticsCollection):
     force_field_key: str = "atoms"
     cutoff: _DistanceQuantity = 9.0 * unit.angstrom
 
-    _charges: dict[TopologyKey, Quantity] = PrivateAttr(default_factory=dict)  # type: ignore[assignment]
+    _charges: dict[TopologyKey, Quantity] = PrivateAttr(default_factory=dict)
 
     def store_charges(
         self,

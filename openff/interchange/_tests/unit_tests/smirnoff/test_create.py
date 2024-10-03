@@ -233,7 +233,7 @@ class TestPresetCharges:
 
         assert numpy.allclose(expected_charges, found_charges)
 
-    def test_error_when_any_missing_partial_charges(sage, self):
+    def test_error_when_any_missing_partial_charges(self, sage):
         topology = Topology.from_molecules(
             [
                 Molecule.from_smiles("C"),
@@ -243,7 +243,7 @@ class TestPresetCharges:
 
         with pytest.raises(
             PresetChargesError,
-            match="all.*must have partial charges",
+            match="All.*must have partial charges",
         ):
             sage.create_interchange(
                 topology,

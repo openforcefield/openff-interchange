@@ -146,7 +146,7 @@ class Interchange(_BaseModel):
             topology=topology,
             box=box,
             positions=positions,
-            charge_from_molecules=charge_from_molecules,
+            molecules_with_preset_charges=charge_from_molecules,
             partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
             allow_nonintegral_charges=allow_nonintegral_charges,
         )
