@@ -23,6 +23,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * Previously-deprecated examples are removed.
 * `ProperTorsionKey` no longer accepts an empty tuple as atom indices.
 * Fixes a regression in which some `ElectrostaticsCollection.charges` properties did not return cached values.
+* The `charge_from_molecules` argument must include only molecules that contain partial charges and are non-isomorphic with each other.
 
 ## 0.3.30 - 2024-08
 
