@@ -1,3 +1,5 @@
+import warnings
+
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff import ParameterHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
@@ -26,6 +28,7 @@ from openff.interchange.smirnoff._valence import (
     SMIRNOFFProperTorsionCollection,
 )
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
+from openff.interchange.warnings import PresetChargesAndVirtualSitesWarning
 
 _SUPPORTED_PARAMETER_HANDLERS: set[str] = {
     "Constraints",
@@ -140,6 +143,14 @@ def _create_interchange(
     molecules_with_preset_charges = _preprocess_preset_charges(molecules_with_preset_charges)
 
     _check_supported_handlers(force_field)
+
+    if molecules_with_preset_charges is not None and "VirtualSites" in force_field.registered_parameter_handlers:
+        warnings.warn(
+            "Preset charges were provided (via `charge_from_molecules`) alongside a force field that includes "
+            "virtual site parameters. Note that virtual sites will be applied charges from the force field and "
+            "cannot be given preset charges.",
+            PresetChargesAndVirtualSitesWarning,
+        )
 
     # interchange = Interchange(topology=topology)
     # or maybe
