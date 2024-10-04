@@ -304,6 +304,19 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:
+            # TODO: Clearing this dict **should not be necessary** but in some cases in appears
+            #       that this class attribute persists in some cases, possibly only on a single
+            #       thread. Ideas to try include
+            #           * Drop @computed_field ?
+            #           * Don't handle caching ourselves and let Pydantic do it (i.e. have this
+            #               function simply retrun ._get_charges(...)
+            #
+            #       Hopefully this isn't a major issue - caches for large systems should still
+            #       only be build once
+            #
+            #       Some more context: https://github.com/openforcefield/openff-interchange/issues/842#issuecomment-2394211357
+            self._charges.clear()
+
             self._charges.update(self._get_charges(include_virtual_sites=True))
             self._charges_cached = True
 

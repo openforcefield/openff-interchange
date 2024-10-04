@@ -281,13 +281,11 @@ class TestPresetCharges:
         )
 
         with pytest.warns(PresetChargesAndVirtualSitesWarning):
-            out = tip4p.create_interchange(
+            # This dict is probably ordered O H H VS
+            charges = tip4p.create_interchange(
                 water.to_topology(),
                 charge_from_molecules=[water],
-            )
-
-        # This dict is probably ordered O H H VS
-        charges = out["Electrostatics"].charges
+            )["Electrostatics"].charges
 
         # tip4p_fb.offxml is meant to result in charges of -1.0517362213526 (VS) 0 (O) and 0.5258681106763 (H)
         # the force field has 0.0 for all library charges (skipping AM1-BCC), so preset charges screw this up.
@@ -300,9 +298,6 @@ class TestPresetCharges:
             [-2.0, 1.5258681106763001, 1.5258681106763001, -1.0517362213526],
         )
 
-        # The cache seems to leak charges between tests
-        out["Electrostatics"]._charges.clear()
-
     def test_virtual_site_charge_increments_applied_after_preset_charges_ligand(
         self,
         sage_with_sigma_hole,
@@ -314,13 +309,12 @@ class TestPresetCharges:
             "elementary_charge",
         )
 
-        out = sage_with_sigma_hole.create_interchange(
-            ligand.to_topology(),
-            charge_from_molecules=[ligand],
-        )
-
-        # This dict is probably ordered C Cl Cl Cl Cl VS VS VS VS
-        charges = out["Electrostatics"].charges
+        with pytest.warns(PresetChargesAndVirtualSitesWarning):
+            # This dict is probably ordered C Cl Cl Cl Cl VS VS VS VS
+            charges = sage_with_sigma_hole.create_interchange(
+                ligand.to_topology(),
+                charge_from_molecules=[ligand],
+            )["Electrostatics"].charges
 
         # this fake sigma hole parameter shifts 0.1 e from the carbon and 0.2 e from the chlorine, so the
         # resulting charges should be like
@@ -331,9 +325,6 @@ class TestPresetCharges:
             [charge.m for charge in charges.values()],
             [1.6, -0.1, -0.1, -0.1, -0.1, -0.3, -0.3, -0.3, -0.3],
         )
-
-        # The cache seems to leak charges between tests
-        out["Electrostatics"]._charges.clear()
 
 
 @skip_if_missing("openmm")
