@@ -273,7 +273,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     )  # type: ignore[assignment]
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
-    _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr(default_factory=dict)
+    _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr(dict())
     _charges_cached: bool = PrivateAttr(default=False)
 
     @classmethod
