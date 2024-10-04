@@ -1,5 +1,34 @@
 # Sharp edges
 
+## Quirks of charge assignment
+
+### Charge assignment hierarchy
+
+Interchange, following the [SMIRNOFF specification](https://openforcefield.github.io/standards/standards/smirnoff/#partial-charge-and-electrostatics-models), assigns charges to (heavy) atoms with the following priority:
+
+1. **Preset charges**: Look for molecule matches in the `charge_from_molecules` argument
+2. **Library charges**: Look for chemical environment matches in library charges
+3. **Charge increments**: Look for chemical environment matches in charge increments
+4. **AM1-BCC**: Try to run some variant of AM1-BCC (presumably this is were graph charges go)
+
+If charges are successfully assigned using a method, no lower-priority methods in this list are attempted. For example:
+
+* A force field with library charge parameters for peptides (i.e. a biopolymer force field, covering all appropriate residues) will NOT try to call AM1-BCC on a biopolymers.
+* If a ligand is successfully assigned preset charges, chemical environment matching of library charges and charge increments will be skipped, as will AM1-BCC.
+* If a variant of AM1-BCC (i.e. using something other than AM1 and/or using custom BCCs) is encoded in a `<ChargeIncrementModel>` section, other AM1-BCC implementations will not be called.
+* If preset charges are not provided, a force field like OpenFF's Parsley or Sage lines without (many) library charges or charge increments will attempt AM1-BCC on all molecules (except water and monoatomic ions).
+
+After all of these steps are complete and all heavy atoms given partial charges, virtual sites are assigned charges using the values of `charge_increment`s in the virtual site parameters. Because virtual site charge are only described by the force field, using preset charges with virtual sites is discouraged.
+
+### Preset charges
+
+The following restrictions are in place when using preset charges:
+
+* All molecules in the the `charge_from_molecules` list must be non-isomorphic with each other.
+* All molecules in the the `charge_from_molecules` list must have partial charges.
+
+Using preset charges with virtual sites is discouraged as it can provide surprising results.
+
 ## Quirks of `from_openmm`
 
 ### Modified masses are ignored
