@@ -10,6 +10,7 @@ from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field
 
 from openff.interchange._annotations import (
+    PositiveFloat,
     _BoxQuantity,
     _PositionsQuantity,
     _VelocityQuantity,
@@ -291,7 +292,7 @@ class Interchange(_BaseModel):
         self,
         prefix: str,
         decimal: int = 3,
-        hydrogen_mass: float = 1.007947,
+        hydrogen_mass: PositiveFloat = 1.007947,
         _merge_atom_types: bool = False,
     ):
         """
@@ -304,7 +305,7 @@ class Interchange(_BaseModel):
             "foo.top", "foo.gro", and "foo_pointenergy.mdp".
         decimal: int, default=3
             The number of decimal places to use when writing the GROMACS coordinate file.
-        hydrogen_mass : float, default=1.007947
+        hydrogen_mass : PostitiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
@@ -362,7 +363,7 @@ class Interchange(_BaseModel):
     def to_top(
         self,
         file_path: Path | str,
-        hydrogen_mass: float = 1.007947,
+        hydrogen_mass: PositiveFloat = 1.007947,
         _merge_atom_types: bool = False,
     ):
         """
@@ -372,7 +373,7 @@ class Interchange(_BaseModel):
         ----------
         file_path
             The path to the GROMACS topology file to write.
-        hydrogen_mass : float, default=1.007947
+        hydrogen_mass : PostitiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
@@ -489,7 +490,7 @@ class Interchange(_BaseModel):
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
         ewald_tolerance: float = 1e-4,
-        hydrogen_mass: float = 1.007947,
+        hydrogen_mass: PositiveFloat = 1.007947,
     ):
         """
         Export this Interchange to an OpenMM System.
@@ -505,7 +506,7 @@ class Interchange(_BaseModel):
             on a bond or angle that is fully constrained.
         ewald_tolerance : float, default=1e-4
             The value passed to `NonbondedForce.setEwaldErrorTolerance`
-        hydrogen_mass : float, default=1.007947
+        hydrogen_mass : PostitiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
