@@ -287,6 +287,25 @@ class Interchange(_BaseModel):
         else:
             raise NotImplementedError(f"Engine {engine} is not implemented.")
 
+    def get_positions(self, include_virtual_sites: bool = False) -> Quantity:
+        """
+        Get the positions associated with this Interchange.
+
+        Parameters
+        ----------
+        include_virtual_sites : bool, default=False
+            Include virtual sites in the returned positions.
+
+        Returns
+        -------
+        positions : openff.units.Quantity
+            The positions of the atoms in the system.
+
+        """
+        from openff.interchange.interop.common import _to_positions
+
+        return _to_positions(self, include_virtual_sites=include_virtual_sites)
+
     def to_gromacs(
         self,
         prefix: str,
@@ -614,8 +633,6 @@ class Interchange(_BaseModel):
         """
         import openmm.app
 
-        from openff.interchange.interop.openmm._positions import to_openmm_positions
-
         system = self.to_openmm_system(
             combine_nonbonded_forces=combine_nonbonded_forces,
             add_constrained_forces=add_constrained_forces,
@@ -639,7 +656,7 @@ class Interchange(_BaseModel):
         # include_virtual_sites could possibly be False
         if self.positions is not None:
             simulation.context.setPositions(
-                to_openmm_positions(self, include_virtual_sites=True),
+                self.get_positions(include_virtual_sites=True).to_openmm(),
             )
 
         return simulation
