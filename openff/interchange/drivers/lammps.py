@@ -7,7 +7,6 @@ from openff.toolkit import Quantity
 from openff.utilities import MissingOptionalDependencyError, requires_package
 
 from openff.interchange import Interchange
-from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import LAMMPSNotFoundError, LAMMPSRunError
 
@@ -63,12 +62,7 @@ def _get_lammps_energies(
         )
 
     with tempfile.TemporaryDirectory():
-        interchange.to_lammps("out.lmp")
-        mdconfig = MDConfig.from_interchange(interchange)
-        mdconfig.write_lammps_input(
-            interchange=interchange,
-            input_file="tmp.in",
-        )
+        interchange.to_lammps("out")
 
     # By default, LAMMPS spits out logs to the screen, turn it off
     # https://matsci.org/t/how-to-remove-or-redirect-python-lammps-stdout/38075/5
@@ -76,7 +70,7 @@ def _get_lammps_energies(
     runner = lammps.lammps(cmdargs=["-screen", "none", "-nocite"])
 
     try:
-        runner.file("tmp.in")
+        runner.file("out_pointenergy.in")
     # LAMMPS does not raise a custom exception :(
     except Exception as error:
         raise LAMMPSRunError from error
