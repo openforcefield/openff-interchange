@@ -578,7 +578,7 @@ class Interchange(_BaseModel):
             If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
             on a bond or angle that is fully constrained.
         additional_forces : Iterable[openmm.Force], default=tuple()
-            Additional forces to be added to the system, eg. barostats, that are not
+            Additional forces to be added to the system, e.g. barostats, that are not
             added by the force field.
         **kwargs
             Further keyword parameters are passed on to
