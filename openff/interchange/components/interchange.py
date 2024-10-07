@@ -426,24 +426,20 @@ class Interchange(_BaseModel):
             gro_file=file_path,
         ).to_gro(decimal=decimal)
 
-    def to_lammps(self, file_path: Path | str):
+    def to_lammps(self, prefix: str):
         """
         Export this ``Interchange`` to LAMMPS data and run input files.
 
         Parameters
         ----------
-        file_path
-            The prefix to use for the LAMMPS data and run input files. If a path
-            ending in ".lmp" is given, the extension will be dropped to generate
-            the prefix. For example, both "foo" and "foo.lmp" will produce files
-            named "foo.lmp" and "foo_pointenergy.in".
+
+        prefix
+            The prefix to use for the LAMMPS data and run input files. For
+            example, "foo" will produce files named "foo.lmp" and
+            "foo_pointenergy.in".
 
         """
-        # TODO: Rename `file_path` to `prefix` (breaking change)
-        prefix = str(file_path)
-        if prefix.endswith(".lmp"):
-            prefix = prefix[:-4]
-
+        prefix = str(prefix)
         datafile_path = prefix + ".lmp"
         self.to_lammps_datafile(datafile_path)
         self.to_lammps_input(
@@ -563,6 +559,14 @@ class Interchange(_BaseModel):
 
         Positions are set on the `Simulation` if present on the `Interchange`.
 
+        Additional forces, such as a barostat, should be added with the
+        ``additional_forces`` argument to avoid having to re-initialize
+        the ``Context``. Re-initializing the ``Context`` after adding a
+        ``Force`` is necessary due to `implementation details`_
+        in OpenMM.
+
+        .. _implementation details: https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#why-does-it-ignore-changes-i-make-to-a-system-or-force
+
         Parameters
         ----------
         integrator : subclass of openmm.Integrator
@@ -575,7 +579,7 @@ class Interchange(_BaseModel):
             If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
             on a bond or angle that is fully constrained.
         additional_forces : Iterable[openmm.Force], default=tuple()
-            Additional forces to be added to the system, i.e. barostats that are not
+            Additional forces to be added to the system, e.g. barostats, that are not
             added by the force field.
         **kwargs
             Further keyword parameters are passed on to
@@ -588,6 +592,7 @@ class Interchange(_BaseModel):
 
         Examples
         --------
+
         Create an OpenMM simulation with a Langevin integrator and a Monte Carlo barostat:
 
         >>> import openmm
@@ -607,10 +612,6 @@ class Interchange(_BaseModel):
         ...     integrator=integrator,
         ...     additional_forces=[barostat],
         ... )
-
-        Re-initializing the `Context` after adding a `Force` is necessary due to implementation details in OpenMM.
-        For more, see
-        https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#why-does-it-ignore-changes-i-make-to-a-system-or-force
 
         """
         import openmm.app
