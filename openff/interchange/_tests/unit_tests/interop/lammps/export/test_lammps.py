@@ -8,7 +8,6 @@ from openff.utilities import temporary_cd
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, needs_lmp
-from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.drivers import get_lammps_energies, get_openmm_energies
 
 rng = numpy.random.default_rng(821)
@@ -105,24 +104,17 @@ class TestLammps:
         topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         with temporary_cd():
-            lammps_input_path = Path.cwd() / "temp.in"
-            lammps_data_path = Path.cwd() / "out.lmp"
+            lammps_prefix = Path.cwd() / "lammps_test"
 
             interchange = sage_unconstrained.create_interchange(topology)
-            interchange.to_lammps(lammps_data_path)
-
-            mdconfig = MDConfig.from_interchange(interchange)
-            mdconfig.write_lammps_input(
-                interchange=interchange,
-                input_file=lammps_input_path,
-            )
+            interchange.to_lammps(lammps_prefix)
 
             # Extract molecule IDs from data file
             with lammps.lammps(
                 cmdargs=["-screen", "none", "-log", "none"],
             ) as lmp:
                 lmp.file(
-                    "temp.in",
+                    "lammps_test_pointenergy.in",
                 )
                 written_mol_ids = {
                     mol_id

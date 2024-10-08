@@ -10,6 +10,7 @@ from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field
 
 from openff.interchange._annotations import (
+    PositiveFloat,
     _BoxQuantity,
     _PositionsQuantity,
     _VelocityQuantity,
@@ -310,7 +311,7 @@ class Interchange(_BaseModel):
         self,
         prefix: str,
         decimal: int = 3,
-        hydrogen_mass: float = 1.007947,
+        hydrogen_mass: PositiveFloat = 1.007947,
         _merge_atom_types: bool = False,
     ):
         """
@@ -323,7 +324,7 @@ class Interchange(_BaseModel):
             "foo.top", "foo.gro", and "foo_pointenergy.mdp".
         decimal: int, default=3
             The number of decimal places to use when writing the GROMACS coordinate file.
-        hydrogen_mass : float, default=1.007947
+        hydrogen_mass : PostitiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
@@ -381,7 +382,7 @@ class Interchange(_BaseModel):
     def to_top(
         self,
         file_path: Path | str,
-        hydrogen_mass: float = 1.007947,
+        hydrogen_mass: PositiveFloat = 1.007947,
         _merge_atom_types: bool = False,
     ):
         """
@@ -391,7 +392,7 @@ class Interchange(_BaseModel):
         ----------
         file_path
             The path to the GROMACS topology file to write.
-        hydrogen_mass : float, default=1.007947
+        hydrogen_mass : PostitiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
@@ -444,24 +445,20 @@ class Interchange(_BaseModel):
             gro_file=file_path,
         ).to_gro(decimal=decimal)
 
-    def to_lammps(self, file_path: Path | str):
+    def to_lammps(self, prefix: str):
         """
         Export this ``Interchange`` to LAMMPS data and run input files.
 
         Parameters
         ----------
-        file_path
-            The prefix to use for the LAMMPS data and run input files. If a path
-            ending in ".lmp" is given, the extension will be dropped to generate
-            the prefix. For example, both "foo" and "foo.lmp" will produce files
-            named "foo.lmp" and "foo_pointenergy.in".
+
+        prefix
+            The prefix to use for the LAMMPS data and run input files. For
+            example, "foo" will produce files named "foo.lmp" and
+            "foo_pointenergy.in".
 
         """
-        # TODO: Rename `file_path` to `prefix` (breaking change)
-        prefix = str(file_path)
-        if prefix.endswith(".lmp"):
-            prefix = prefix[:-4]
-
+        prefix = str(prefix)
         datafile_path = prefix + ".lmp"
         self.to_lammps_datafile(datafile_path)
         self.to_lammps_input(
@@ -508,7 +505,7 @@ class Interchange(_BaseModel):
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
         ewald_tolerance: float = 1e-4,
-        hydrogen_mass: float = 1.007947,
+        hydrogen_mass: PositiveFloat = 1.007947,
     ):
         """
         Export this Interchange to an OpenMM System.
@@ -524,7 +521,7 @@ class Interchange(_BaseModel):
             on a bond or angle that is fully constrained.
         ewald_tolerance : float, default=1e-4
             The value passed to `NonbondedForce.setEwaldErrorTolerance`
-        hydrogen_mass : float, default=1.007947
+        hydrogen_mass : PostitiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
@@ -581,6 +578,14 @@ class Interchange(_BaseModel):
 
         Positions are set on the `Simulation` if present on the `Interchange`.
 
+        Additional forces, such as a barostat, should be added with the
+        ``additional_forces`` argument to avoid having to re-initialize
+        the ``Context``. Re-initializing the ``Context`` after adding a
+        ``Force`` is necessary due to `implementation details`_
+        in OpenMM.
+
+        .. _implementation details: https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#why-does-it-ignore-changes-i-make-to-a-system-or-force
+
         Parameters
         ----------
         integrator : subclass of openmm.Integrator
@@ -593,7 +598,7 @@ class Interchange(_BaseModel):
             If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
             on a bond or angle that is fully constrained.
         additional_forces : Iterable[openmm.Force], default=tuple()
-            Additional forces to be added to the system, i.e. barostats that are not
+            Additional forces to be added to the system, e.g. barostats, that are not
             added by the force field.
         **kwargs
             Further keyword parameters are passed on to
@@ -606,6 +611,7 @@ class Interchange(_BaseModel):
 
         Examples
         --------
+
         Create an OpenMM simulation with a Langevin integrator and a Monte Carlo barostat:
 
         >>> import openmm
@@ -625,10 +631,6 @@ class Interchange(_BaseModel):
         ...     integrator=integrator,
         ...     additional_forces=[barostat],
         ... )
-
-        Re-initializing the `Context` after adding a `Force` is necessary due to implementation details in OpenMM.
-        For more, see
-        https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#why-does-it-ignore-changes-i-make-to-a-system-or-force
 
         """
         import openmm.app
