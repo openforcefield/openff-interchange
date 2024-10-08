@@ -273,7 +273,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     )  # type: ignore[assignment]
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
-    _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr(default_factory=dict)
+    _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr(dict())
     _charges_cached: bool = PrivateAttr(default=False)
 
     @classmethod
@@ -304,6 +304,19 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:
+            # TODO: Clearing this dict **should not be necessary** but in some cases in appears
+            #       that this class attribute persists in some cases, possibly only on a single
+            #       thread. Ideas to try include
+            #           * Drop @computed_field ?
+            #           * Don't handle caching ourselves and let Pydantic do it (i.e. have this
+            #               function simply retrun ._get_charges(...)
+            #
+            #       Hopefully this isn't a major issue - caches for large systems should still
+            #       only be build once
+            #
+            #       Some more context: https://github.com/openforcefield/openff-interchange/issues/842#issuecomment-2394211357
+            self._charges.clear()
+
             self._charges.update(self._get_charges(include_virtual_sites=True))
             self._charges_cached = True
 
@@ -349,7 +362,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     if potential_key.associated_handler in (
                         "LibraryCharges",
                         "ToolkitAM1BCCHandler",
-                        "charge_from_molecules",
+                        "molecules_with_preset_charges",
                         "ExternalSource",
                     ):
                         charges[atom_index] = _add_charges(
@@ -416,7 +429,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         cls,
         parameter_handler: Any,
         topology: Topology,
-        charge_from_molecules=None,
+        molecules_with_preset_charges=None,
         allow_nonintegral_charges: bool = False,
     ) -> Self:
         """
@@ -455,7 +468,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         handler.store_matches(
             parameter_handlers,
             topology,
-            charge_from_molecules=charge_from_molecules,
+            molecules_with_preset_charges=molecules_with_preset_charges,
             allow_nonintegral_charges=allow_nonintegral_charges,
         )
         handler._charges = dict()
@@ -777,12 +790,12 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         cls,
         topology: Topology,
         unique_molecule: Molecule,
-        charge_from_molecules=Optional[list[Molecule]],
+        molecules_with_preset_charges=Optional[list[Molecule]],
     ) -> tuple[bool, dict, dict]:
-        if charge_from_molecules is None:
+        if molecules_with_preset_charges is None:
             return False, dict(), dict()
 
-        for molecule_with_charges in charge_from_molecules:
+        for molecule_with_charges in molecules_with_preset_charges:
             if molecule_with_charges.is_isomorphic_with(unique_molecule):
                 break
         else:
@@ -810,7 +823,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             potential_key = PotentialKey(
                 id=mapped_smiles,
                 mult=index_in_molecule_with_charges,  # Not sure this prevents clashes in some corner cases
-                associated_handler="charge_from_molecules",
+                associated_handler="molecules_with_preset_charges",
                 bond_order=None,
             )
             potential = Potential(parameters={"charge": partial_charge})
@@ -823,7 +836,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         self,
         parameter_handler: ElectrostaticsHandlerType | list[ElectrostaticsHandlerType],
         topology: Topology,
-        charge_from_molecules=None,
+        molecules_with_preset_charges=None,
         allow_nonintegral_charges: bool = False,
     ) -> None:
         """
@@ -846,10 +859,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             flag, matches, potentials = self._assign_charges_from_molecules(
                 topology,
                 unique_molecule,
-                charge_from_molecules,
+                molecules_with_preset_charges,
             )
             # TODO: Here is where the toolkit calls self.check_charges_assigned(). Do we skip this
-            #       entirely given that we are not accepting `charge_from_molecules`?
+            #       entirely given that we are not accepting `molecules_with_preset_charges`?
 
             if not flag:
                 # TODO: Rename this method to something like `_find_matches`
