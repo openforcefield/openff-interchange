@@ -288,13 +288,13 @@ class Interchange(_BaseModel):
         else:
             raise NotImplementedError(f"Engine {engine} is not implemented.")
 
-    def get_positions(self, include_virtual_sites: bool = False) -> Quantity:
+    def get_positions(self, include_virtual_sites: bool = True) -> Quantity:
         """
         Get the positions associated with this Interchange.
 
         Parameters
         ----------
-        include_virtual_sites : bool, default=False
+        include_virtual_sites : bool, default=True
             Include virtual sites in the returned positions.
 
         Returns
