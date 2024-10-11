@@ -26,7 +26,7 @@ def to_openmm_topology(
     interchange
         The Interchange object to convert to an OpenMM Topology.
     collate
-        If False, the default, all virtual sites will be added to a single residue at the end of the topology.
+        If False, the default, virtual sites will be added to residues at the end of the topology.
         If True, virtual sites will be collated with their associated molecule and added to the residue of the last
         atom in the molecule they belong to.
 
@@ -187,18 +187,23 @@ def to_openmm_topology(
             )
 
     if has_virtual_sites and not collate:
+        # TODO: This structure is imperfect, no clue how to handle chains here
         virtual_site_chain = openmm_topology.addChain(atom_chain_id)
-        virtual_site_residue = openmm_topology.addResidue("VS", virtual_site_chain)
 
         for molecule_index, molecule in enumerate(topology.molecules):
             virtual_sites_in_this_molecule: list[VirtualSiteKey] = molecule_virtual_site_map[molecule_index]
+
+            # make a new "residue" for each molecule which has virtual sites
+            if len(virtual_sites_in_this_molecule) > 0:
+                this_virtual_site_residue = openmm_topology.addResidue("VS", virtual_site_chain)
+
             for this_virtual_site in virtual_sites_in_this_molecule:
                 virtual_site_name = this_virtual_site.name
 
                 openmm_topology.addAtom(
                     virtual_site_name,
                     virtual_site_element,
-                    virtual_site_residue,
+                    this_virtual_site_residue,
                 )
 
     if interchange.box is not None:

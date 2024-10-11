@@ -28,3 +28,16 @@ def test_collate_or_not_virtual_site_ordering(
 
     for particle_index, particle in enumerate(openmm_topology.atoms()):
         assert (particle.element is None) == (particle_index in virtual_site_indices)
+
+
+def test_each_molecule_with_virtual_sites_has_its_own_funnky_virtual_site_residue(
+    tip5p,
+    water,
+):
+    topology = tip5p.create_interchange(
+        Topology.from_molecules([water, water]),
+    ).to_openmm_topology()
+
+    assert topology.getNumResidues() == 4
+
+    assert [3, 3, 2, 2] == [len([*residue.atoms()]) for residue in topology.residues()]
