@@ -400,7 +400,7 @@ def _create_solute_pdb(
         ),
     )
     # Write to pdb
-    solute_pdb_filename = "solvate.pdb"
+    solute_pdb_filename = "_PACKING_SOLUTE.pdb"
     topology.to_file(
         solute_pdb_filename,
         file_format="PDB",
@@ -425,7 +425,7 @@ def _create_molecule_pdbs(molecules: list[Molecule]) -> list[str]:
         # right order, we'll be able to read packmol's output, since we
         # just load the PDB coordinates into a topology created from its
         # component molecules.
-        pdb_file_name = f"{index}.pdb"
+        pdb_file_name = f"_PACKING_MOLECULE{index}.pdb"
         pdb_file_names.append(pdb_file_name)
 
         molecule.to_file(
@@ -706,15 +706,25 @@ def pack_box(
                     packmol_path,
                     stdin=file_handle,
                     stderr=subprocess.STDOUT,
-                ).decode("utf-8")
+                )
             except subprocess.CalledProcessError as error:
-                if "173" in str(error):
-                    raise PACKMOLRuntimeError from error
+                # Custom error codes seem to start at 170
+                # https://github.com/m3g/packmol/blob/v20.15.1/src/exit_codes.f90#L13-L16
+                open("packmol_error.log", "w").write(error.stdout.decode("utf-8"))
 
-            packmol_succeeded = result.find("Success!") > 0
+                raise PACKMOLRuntimeError(
+                    f"PACKMOL failed with error code {error.returncode}. Wrote file packmol_error.log in working "
+                    "directory, which might be a temporary directory. Set the argument `working_directory` to "
+                    "point this to a persistent path.",
+                ) from error
+
+            packmol_succeeded = result.decode("utf-8").find("Success!") > 0
 
         if not packmol_succeeded:
-            raise PACKMOLRuntimeError(result)
+            raise PACKMOLRuntimeError(
+                "PACKMOL did not raise an error code, but 'Success!' not found in output. "
+                "Please raise an issue showing how you arrived at this error.",
+            )
 
         positions = _load_positions(output_file_path)
 

@@ -2,6 +2,8 @@
 Units tests for openff.interchange.components._packmol
 """
 
+import pathlib
+
 import numpy
 import pytest
 from openff.toolkit.topology import Molecule
@@ -422,3 +424,22 @@ class TestPackmolWrapper:
             tolerance=1.0 * unit.angstrom,
             target_density=0.1 * unit.grams / unit.milliliters,
         )
+
+    @pytest.mark.parametrize("use_local_path", [False, True])
+    def test_save_error_on_convergence_failure(self, use_local_path):
+        with pytest.raises(
+            PACKMOLRuntimeError,
+            match="failed with error code 173",
+        ):
+            pack_box(
+                molecules=[Molecule.from_smiles("CCO")],
+                number_of_copies=[100],
+                box_shape=UNIT_CUBE,
+                mass_density=100 * unit.grams / unit.milliliters,
+                working_directory="." if use_local_path else None,
+            )
+
+        if use_local_path:
+            assert "STOP 173" in open("packmol_error.log").read()
+        else:
+            assert not pathlib.Path("packmol_error.log").is_file()

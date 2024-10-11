@@ -1,9 +1,41 @@
 """Utilities for interoperability with multiple packages."""
 
+from openff.toolkit import Quantity
+
 from openff.interchange import Interchange
-from openff.interchange.exceptions import UnsupportedExportError
+from openff.interchange.exceptions import (
+    MissingPositionsError,
+    MissingVirtualSitesError,
+    UnsupportedExportError,
+)
 from openff.interchange.models import VirtualSiteKey
 from openff.interchange.smirnoff import SMIRNOFFVirtualSiteCollection
+
+
+def _to_positions(
+    interchange: "Interchange",
+    include_virtual_sites: bool = False,
+) -> Quantity:
+    """Generate an array of positions of all particles, optionally including virtual sites."""
+    if interchange.positions is None:
+        raise MissingPositionsError(
+            f"Positions are required, found {interchange.positions=}.",
+        )
+
+    if include_virtual_sites:
+        from openff.interchange.interop._virtual_sites import (
+            get_positions_with_virtual_sites,
+        )
+
+        try:
+            return get_positions_with_virtual_sites(
+                interchange,
+                use_zeros=False,
+            )
+        except MissingVirtualSitesError:
+            return interchange.positions
+    else:
+        return interchange.positions
 
 
 def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteCollection"):
