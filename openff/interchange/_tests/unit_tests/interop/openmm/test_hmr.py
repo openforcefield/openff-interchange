@@ -1,9 +1,9 @@
 import random
 
 import pytest
-from openff.toolkit import unit
+from openff.toolkit import Molecule, unit
 
-from openff.interchange.exceptions import UnsupportedExportError
+from openff.interchange.exceptions import NegativeMassError, UnsupportedExportError
 
 
 @pytest.mark.parametrize("reversed", [False, True])
@@ -68,6 +68,16 @@ def test_hmr_not_applied_to_water(sage, water):
     for particle_index, atom in enumerate(interchange.topology.atoms):
         if atom.atomic_number == 1:
             assert system.getParticleMass(particle_index) == element.hydrogen.mass
+
+
+def test_mass_is_positive(sage):
+    pytest.importorskip("openmm")
+
+    with pytest.raises(
+        NegativeMassError,
+        match="Particle with index 0 would have a negative mass after.*5.0",
+    ):
+        sage.create_interchange(Molecule.from_smiles("C").to_topology()).to_openmm(hydrogen_mass=5.0)
 
 
 def test_virtual_sites_unsupported(tip4p, water):

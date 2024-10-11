@@ -135,3 +135,10 @@ def test_issue_1049():
         assert openmm_system.isVirtualSite(particle_index) == (
             particle.element is None
         ), f"particle index {particle_index} is a virtual site in the system OR topology but not both"
+
+
+def test_issue_1052(sage, ethanol):
+    """Test that _SMIRNOFFElectrostaticsCollection.charges is populated."""
+    out = sage.create_interchange(ethanol.to_topology())
+
+    assert len(out["Electrostatics"].charges) > 0
