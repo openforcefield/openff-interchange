@@ -1,3 +1,4 @@
+import logging
 import math
 from typing import Literal
 
@@ -22,6 +23,8 @@ from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     SMIRNOFFvdWCollection,
 )
+
+logger = logging.getLogger(__name__)
 
 _DEGREES_TO_RADIANS = numpy.pi / 180.0
 
@@ -178,6 +181,12 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                     ),
                 },
             )
+
+            logger.info(
+                "Charge section VirtualSites applied to virtual site with orientation atoms "
+                f"{virtual_site_key.orientation_atom_indices}",
+            )
+
             electrostatics_collection.key_map[virtual_site_key] = electrostatics_key
             electrostatics_collection.potentials[electrostatics_key] = electrostatics_potential
 
