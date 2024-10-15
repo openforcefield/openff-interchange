@@ -12,7 +12,7 @@ from typing import Literal
 
 import numpy
 from numpy.typing import ArrayLike, NDArray
-from openff.toolkit import Molecule, Quantity, RDKitToolkitWrapper, Topology, unit
+from openff.toolkit import Molecule, Quantity, RDKitToolkitWrapper, Topology
 from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
@@ -350,7 +350,7 @@ def _box_from_density(
     return _scale_box(box_shape, volume)
 
 
-def _scale_box(box: NDArray, volume: Quantity) -> Quantity:
+def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor=1.1) -> Quantity:
     """
     Scale the parallelepiped spanned by ``box`` to the given volume.
 
@@ -366,19 +366,24 @@ def _scale_box(box: NDArray, volume: Quantity) -> Quantity:
     volume
         Desired scalar volume of the box in units of volume.
 
+    box_scaleup_factor
+        The factor, applied linearly, by which the estimated box size should be increased.
+
     Returns
     -------
     scaled_box
         3x3 matrix in angstroms.
 
     """
-    working_unit = unit.angstrom
-    final_volume = volume.m_as(working_unit**3)
+    final_volume = volume.m_as("angstrom ** 3")
 
     initial_volume = numpy.abs(numpy.linalg.det(box))
     volume_scale_factor = final_volume / initial_volume
     linear_scale_factor = volume_scale_factor ** (1 / 3)
-    return linear_scale_factor * box * working_unit
+
+    linear_scale_factor *= box_scaleup_factor
+
+    return Quantity(linear_scale_factor * box, "angstrom")
 
 
 def _create_solute_pdb(
@@ -469,8 +474,8 @@ def _build_input_file(
         The path to the output file.
 
     """
-    box_size = (box_size - tolerance).m_as(unit.angstrom)
-    tolerance = tolerance.m_as(unit.angstrom)
+    box_size = (box_size - tolerance).m_as("angstrom")
+    tolerance = tolerance.m_as("angstrom")
 
     # Add the global header options.
     output_file_path = "packmol_output.pdb"
@@ -552,7 +557,7 @@ def pack_box(
     molecules: list[Molecule],
     number_of_copies: list[int],
     solute: Topology | None = None,
-    tolerance: Quantity = 2.0 * unit.angstrom,
+    tolerance: Quantity = Quantity(2.0, "angstrom"),
     box_vectors: Quantity | None = None,
     target_density: Quantity | None = None,
     box_shape: ArrayLike = RHOMBIC_DODECAHEDRON,
@@ -619,6 +624,10 @@ def pack_box(
     PACKMOLRuntimeError
         When packmol fails to execute / converge.
 
+    Notes
+    -----
+    Returned topologies may have larger box vectors than what would be defined
+    by the target density.
     """
     # Make sure packmol can be found.
     packmol_path = _find_packmol()
@@ -741,7 +750,7 @@ def pack_box(
 
     # Set the positions, skipping the positions from solute
     n_solute_atoms = len(positions) - topology.n_atoms
-    topology.set_positions(positions[n_solute_atoms:] * unit.angstrom)
+    topology.set_positions(Quantity(positions[n_solute_atoms:], "angstrom"))
 
     # Add solute back in with the original, unwrapped positions
     if solute is not None:
@@ -798,11 +807,11 @@ def _load_positions(output_file_path) -> NDArray:
 
 def solvate_topology(
     topology: Topology,
-    nacl_conc: Quantity = 0.1 * unit.mole / unit.liter,
-    padding: Quantity = 1.2 * unit.nanometer,
+    nacl_conc: Quantity = Quantity(0.1, "mole / liter"),
+    padding: Quantity = Quantity(1.2, "nanometer"),
     box_shape: NDArray = RHOMBIC_DODECAHEDRON,
-    target_density: Quantity = 0.9 * unit.gram / unit.milliliter,
-    tolerance: Quantity = 2.0 * unit.angstrom,
+    target_density: Quantity = Quantity(0.9, "gram / milliliter"),
+    tolerance: Quantity = Quantity(2.0, "angstrom"),
 ) -> Topology:
     """
     Add water and ions to neutralise and solvate a topology.
@@ -834,6 +843,20 @@ def solvate_topology(
         values as small as 0.5 Å will converge faster and can still produce
         stable simulations after energy minimisation.
 
+    Returns
+    -------
+    Topology
+        An OpenFF ``Topology`` with the solvated system.
+
+    Raises
+    ------
+    PACKMOLRuntimeError
+        When packmol fails to execute / converge.
+
+    Notes
+    -----
+    Returned topologies may have larger box vectors than what would be defined
+    by the target density.
     """
     _check_box_shape_shape(box_shape)
 
@@ -858,16 +881,16 @@ def solvate_topology(
         [atom.mass for atom in cl.atoms],
     )
     water_mass = sum([atom.mass for atom in water.atoms])
-    molarity_pure_water = 55.5 * unit.mole / unit.liter
+    molarity_pure_water = Quantity(55.5, "mole / liter")
 
     # Compute the number of salt "molecules" to add from the mass and concentration
     nacl_mass_fraction = (nacl_conc * nacl_mass) / (molarity_pure_water * water_mass)
     nacl_mass_to_add = solvent_mass * nacl_mass_fraction
-    nacl_to_add = (nacl_mass_to_add / nacl_mass).m_as(unit.dimensionless).round()
+    nacl_to_add = (nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
 
     # Compute the number of water molecules to add to make up the remaining mass
     water_mass_to_add = solvent_mass - nacl_mass
-    water_to_add = (water_mass_to_add / water_mass).m_as(unit.dimensionless).round()
+    water_to_add = (water_mass_to_add / water_mass).m_as("dimensionless").round()
 
     # Neutralise the system by adding and removing salt
     solute_charge = sum([molecule.total_charge for molecule in topology.molecules])
@@ -887,10 +910,10 @@ def solvate_topology(
 def solvate_topology_nonwater(
     topology: Topology,
     solvent: Molecule,
-    padding: Quantity = 1.2 * unit.nanometer,
-    box_shape: NDArray = RHOMBIC_DODECAHEDRON,
     target_density: Quantity,
-    tolerance: Quantity = 2.0 * unit.angstrom,
+    padding: Quantity = Quantity(1.2, "nanometer"),
+    box_shape: NDArray = RHOMBIC_DODECAHEDRON,
+    tolerance: Quantity = Quantity(2.0, "angstrom"),
 ) -> Topology:
     """
     Add water and ions to neutralise and solvate a topology.
@@ -919,6 +942,20 @@ def solvate_topology_nonwater(
         values as small as 0.5 Å will converge faster and can still produce
         stable simulations after energy minimisation.
 
+    Returns
+    -------
+    Topology
+        An OpenFF ``Topology`` with the solvated system.
+
+    Raises
+    ------
+    PACKMOLRuntimeError
+        When packmol fails to execute / converge.
+
+    Notes
+    -----
+    Returned topologies may have larger box vectors than what would be defined
+    by the target density.
     """
     _check_box_shape_shape(box_shape)
 
@@ -939,7 +976,7 @@ def solvate_topology_nonwater(
     _solvent = deepcopy(solvent)
     solvent_mass = sum([atom.mass for atom in _solvent.atoms])
 
-    solvent_to_add = (solvent_mass_to_add / solvent_mass).m_as(unit.dimensionless).round()
+    solvent_to_add = (solvent_mass_to_add / solvent_mass).m_as("dimensionless").round()
 
     return pack_box(
         molecules=[solvent],

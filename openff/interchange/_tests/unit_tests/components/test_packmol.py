@@ -55,9 +55,12 @@ class TestPackmolWrapper:
         """Test that _scale_box() produces a box with the desired volume."""
         scaled_box = _scale_box(box, volume)
         a, b, c = scaled_box
+
         # | (a x b) . c | is the volume of the box
         # _scale_box uses numpy.linalg.det instead
-        assert numpy.isclose(numpy.abs(numpy.dot(numpy.cross(a, b), c)), volume)
+        # linear dimensions are scaled by 1.1, so volumes are scaled by 1.1 ** 3
+        assert numpy.isclose(numpy.abs(numpy.dot(numpy.cross(a, b), c)), volume * 1.1**3)
+
         assert scaled_box.u == unit.angstrom
 
     @pytest.mark.parametrize(
@@ -151,6 +154,7 @@ class TestPackmolWrapper:
                 molecules[0].to_topology(),
                 solvent=Molecule.from_smiles("CCCCCCO"),
                 box_shape=20 * numpy.identity(4) * unit.angstrom,
+                target_density=1.0 * unit.grams / unit.milliliter,
             )
 
     def test_packmol_underspecified(self, molecules):
@@ -435,7 +439,7 @@ class TestPackmolWrapper:
                 molecules=[Molecule.from_smiles("CCO")],
                 number_of_copies=[100],
                 box_shape=UNIT_CUBE,
-                mass_density=100 * unit.grams / unit.milliliters,
+                target_density=1000 * unit.grams / unit.milliliters,
                 working_directory="." if use_local_path else None,
             )
 
