@@ -9,7 +9,7 @@ surprising inconsistencies in some API points between different OpenFF tools.
 
 Currently, the `Interchange.topology` attribute is defined by the OpenFF Toolkit's `Topology` object, which is feature-rich in cheminformatics functionality but not designed for MM interoperability. Most importantly, that representation does not include virtual sites (because molecules do not have virtual sites/dummy atoms). As a result, functionality involving virtual sites must go through `Interchange` API points instead of `Interchange.topology`.
 
-For example, `Interchange.topology.get_positions()` will never include positions of virtual sites. To get the positions of a system with virtual sites included, use `Interchange.get_positions(include_virtual_sites=True)`. The default behavior of `Interchange.positions` is also to return positions without virtual sites.
+For example, `Interchange.topology.get_positions()` will never include positions of virtual sites. To get the positions of a system with virtual sites included, use `Interchange.get_positions()`. The default behavior of `Interchange.positions` is also to return positions without virtual sites, but this may change in the future.
 
 ## Quirks of `from_openmm`
 

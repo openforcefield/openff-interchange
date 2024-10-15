@@ -14,9 +14,9 @@ from openff.interchange.smirnoff import SMIRNOFFVirtualSiteCollection
 
 def _to_positions(
     interchange: "Interchange",
-    include_virtual_sites: bool = False,
+    include_virtual_sites: bool = True,
 ) -> Quantity:
-    """Generate an array of positions of all particles, optionally including virtual sites."""
+    """Generate an array of positions of all particles, optionally excluding virtual sites."""
     if interchange.positions is None:
         raise MissingPositionsError(
             f"Positions are required, found {interchange.positions=}.",
