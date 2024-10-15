@@ -889,7 +889,7 @@ def solvate_topology_nonwater(
     solvent: Molecule,
     padding: Quantity = 1.2 * unit.nanometer,
     box_shape: NDArray = RHOMBIC_DODECAHEDRON,
-    target_density: Quantity = 0.6 * unit.gram / unit.milliliter,
+    target_density: Quantity,
     tolerance: Quantity = 2.0 * unit.angstrom,
 ) -> Topology:
     """
