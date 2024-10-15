@@ -2,13 +2,19 @@ import pytest
 from openff.toolkit import Topology
 
 
+@pytest.mark.parametrize("name_sol", [True, False])
 @pytest.mark.parametrize("collate", [True, False])
 def test_collate_or_not_virtual_site_ordering(
     tip4p,
     water,
+    name_sol,
     collate,
 ):
     pytest.importorskip("openmm")
+
+    if name_sol:
+        for atom in water.atoms:
+            atom.metadata["residue_name"] = "SOL"
 
     openmm_topology = tip4p.create_interchange(
         Topology.from_molecules([water, water]),
@@ -28,6 +34,8 @@ def test_collate_or_not_virtual_site_ordering(
 
     for particle_index, particle in enumerate(openmm_topology.atoms()):
         assert (particle.element is None) == (particle_index in virtual_site_indices)
+
+    assert {residue.name for residue in openmm_topology.residues()} == {"SOL"} if name_sol else {"UNK"}
 
 
 def test_each_molecule_with_virtual_sites_has_its_own_funnky_virtual_site_residue(

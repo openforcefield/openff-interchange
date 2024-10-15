@@ -85,36 +85,24 @@ def to_openmm_topology(
         last_chain = None
         last_residue = None
         for atom in molecule.atoms:
-            # If the residue name is undefined, assume a default of "UNK"
-            if "residue_name" in atom.metadata:
-                atom_residue_name = atom.metadata["residue_name"]
-            else:
-                atom_residue_name = "UNK"
-
-            # If the residue number is undefined, assume a default of "0"
-            if "residue_number" in atom.metadata:
-                atom_residue_number = atom.metadata["residue_number"]
-            else:
-                atom_residue_number = "0"
-
-            # If the chain ID is undefined, assume a default of "X"
-            if "chain_id" in atom.metadata:
-                atom_chain_id = atom.metadata["chain_id"]
-            else:
-                atom_chain_id = "X"
+            # If the these are undefined, assume a default of
+            # residue name/number "UNK" / "0", chain ID "X"
+            atom_residue_name = atom.metadata.get("residue_name", "UNK")
+            atom_residue_number = atom.metadata.get("residue_number", "0")
+            atom_chain_id = atom.metadata.get("chain_id", "X")
 
             # Determine whether this atom should be part of the last atom's chain, or if it
             # should start a new chain
             if last_chain is None:
-                chain = openmm_topology.addChain(atom_chain_id)
+                chain = openmm_topology.addChain(id=atom_chain_id)
             elif last_chain.id == atom_chain_id:
                 chain = last_chain
             else:
-                chain = openmm_topology.addChain(atom_chain_id)
+                chain = openmm_topology.addChain(id=atom_chain_id)
             # Determine whether this atom should be a part of the last atom's residue, or if it
             # should start a new residue
             if last_residue is None:
-                residue = openmm_topology.addResidue(atom_residue_name, chain)
+                residue = openmm_topology.addResidue(name=atom_residue_name, chain=chain)
                 residue.id = atom_residue_number
             elif all(
                 (
@@ -125,7 +113,7 @@ def to_openmm_topology(
             ):
                 residue = last_residue
             else:
-                residue = openmm_topology.addResidue(atom_residue_name, chain)
+                residue = openmm_topology.addResidue(name=atom_residue_name, chain=chain)
                 residue.id = atom_residue_number
 
             # Add atom.
@@ -193,9 +181,13 @@ def to_openmm_topology(
         for molecule_index, molecule in enumerate(topology.molecules):
             virtual_sites_in_this_molecule: list[VirtualSiteKey] = molecule_virtual_site_map[molecule_index]
 
-            # make a new "residue" for each molecule which has virtual sites
+            # make a new "residue" for each molecule which has virtual sites ...
             if len(virtual_sites_in_this_molecule) > 0:
-                this_virtual_site_residue = openmm_topology.addResidue("VS", virtual_site_chain)
+                # ... but give it the name of the parent molecule
+                this_virtual_site_residue = openmm_topology.addResidue(
+                    name=molecule.atom(0).metadata.get("residue_name", "UNK"),
+                    chain=virtual_site_chain,
+                )
 
             for this_virtual_site in virtual_sites_in_this_molecule:
                 virtual_site_name = this_virtual_site.name
