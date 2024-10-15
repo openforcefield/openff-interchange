@@ -148,7 +148,8 @@ def _create_interchange(
         warnings.warn(
             "Preset charges were provided (via `charge_from_molecules`) alongside a force field that includes "
             "virtual site parameters. Note that virtual sites will be applied charges from the force field and "
-            "cannot be given preset charges.",
+            "cannot be given preset charges. Virtual sites may also affect the charges of their orientation "
+            "atoms, even if those atoms are given preset charges.",
             PresetChargesAndVirtualSitesWarning,
         )
 
