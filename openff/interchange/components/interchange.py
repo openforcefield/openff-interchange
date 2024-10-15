@@ -108,10 +108,11 @@ class Interchange(_BaseModel):
             The positions associated with atoms in the input topology. If ``None``,
             positions are taken from the molecules in topology, if present on all molecules.
         charge_from_molecules : `List[openff.toolkit.molecule.Molecule]`, optional
-            If specified, partial charges will be taken from the given molecules
-            instead of being determined by the force field. All molecules in this list
-            must have partial charges assigned and must not be isomorphic with any other
-            molecules in the list.
+            If specified, partial charges for any molecules isomorphic to those
+            given will be taken from the given molecules' `partial_charges`
+            attribute instead of being determined by the force field. All
+            molecules in this list must have partial charges assigned and must
+            not be isomorphic with any other molecules in the list.
         partial_bond_orders_from_molecules : List[openff.toolkit.molecule.Molecule], optional
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.

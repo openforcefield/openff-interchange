@@ -235,10 +235,14 @@ class TestPresetCharges:
         assert numpy.allclose(expected_charges, found_charges)
 
     def test_error_when_any_missing_partial_charges(self, sage):
+        ethanol = Molecule.from_smiles("CCO")
+
+        ethanol.assign_partial_charges(partial_charge_method="am1")
+
         topology = Topology.from_molecules(
             [
                 Molecule.from_smiles("C"),
-                Molecule.from_smiles("CCO"),
+                ethanol,
             ],
         )
 

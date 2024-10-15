@@ -115,6 +115,9 @@ def _preprocess_preset_charges(
     if molecules_with_preset_charges is None:
         return None
 
+    # This relies on Molecule.__eq__(), which may change and/or not have the same equality criteria
+    # as we want here.
+    # See https://github.com/openforcefield/openff-interchange/pull/1070#discussion_r1792728179
     molecule_set = {molecule for molecule in molecules_with_preset_charges}
 
     if len(molecule_set) != len(molecules_with_preset_charges):
