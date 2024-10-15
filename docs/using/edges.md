@@ -22,7 +22,7 @@ After all of these steps are complete and all heavy atoms given partial charges,
 
 ### Preset charges
 
-The following restrictions are in place when using preset charges:
+The charges specified by the force field can be overridden by providing molecules with partial charges to the `charge_from_molecules` argument. This may be used to make use of alternate implementations of the appropriate charge generation method, or to provide different charges to the force field. Charges provided via `charge_from_molecules` are called "preset charges" because they are pre-set by the user, rather than computed by the force field. The following restrictions are in place when using preset charges:
 
 * All molecules in the the `charge_from_molecules` list must be non-isomorphic with each other.
 * All molecules in the the `charge_from_molecules` list must have partial charges.
