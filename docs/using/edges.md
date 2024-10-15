@@ -30,6 +30,17 @@ The charges specified by the force field can be overridden by providing molecule
 
 Using preset charges with virtual sites is discouraged as it can provide surprising results.
 
+## Quirks of core OpenFF objects
+
+Future refactors may remove the side effects of these quirks, but currently there are some
+surprising inconsistencies in some API points between different OpenFF tools.
+
+### Contents of `Interchange.topology` and `Interchange` may not always be in sync
+
+Currently, the `Interchange.topology` attribute is defined by the OpenFF Toolkit's `Topology` object, which is feature-rich in cheminformatics functionality but not designed for MM interoperability. Most importantly, that representation does not include virtual sites (because molecules do not have virtual sites/dummy atoms). As a result, functionality involving virtual sites must go through `Interchange` API points instead of `Interchange.topology`.
+
+For example, `Interchange.topology.get_positions()` will never include positions of virtual sites. To get the positions of a system with virtual sites included, use `Interchange.get_positions()`. The default behavior of `Interchange.positions` is also to return positions without virtual sites, but this may change in the future.
+
 ## Quirks of `from_openmm`
 
 ### Modified masses are ignored

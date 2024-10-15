@@ -290,6 +290,10 @@ class IncompatibleTolerancesError(InterchangeException):
     """
 
 
+class NegativeMassError(InterchangeException):
+    """Exception for when a particle mass is negative."""
+
+
 class MissingVirtualSitesError(InterchangeException):
     """
     Raise when virtual sites are expected to exist but are not found.
