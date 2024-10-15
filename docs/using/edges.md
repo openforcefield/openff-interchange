@@ -26,6 +26,7 @@ The following restrictions are in place when using preset charges:
 
 * All molecules in the the `charge_from_molecules` list must be non-isomorphic with each other.
 * All molecules in the the `charge_from_molecules` list must have partial charges.
+* All copies of a molecule in the topology will be parametrized with the charges from an isomorphic molecule from the `charge_from_molecules` list.
 
 Using preset charges with virtual sites is discouraged as it can provide surprising results.
 
