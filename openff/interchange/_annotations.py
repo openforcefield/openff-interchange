@@ -3,6 +3,7 @@ from collections.abc import Callable
 from typing import Annotated, Any
 
 import numpy
+from annotated_types import Gt
 from openff.toolkit import Quantity
 from pydantic import (
     AfterValidator,
@@ -12,6 +13,8 @@ from pydantic import (
     WrapSerializer,
     WrapValidator,
 )
+
+PositiveFloat = Annotated[float, Gt(0)]
 
 
 def _has_compatible_dimensionality(
@@ -57,6 +60,7 @@ def _unit_validator_factory(unit: str) -> Callable:
     _is_kj_mol,
     _is_nanometer,
     _is_degree,
+    _is_elementary_charge,
 ) = (
     _unit_validator_factory(unit=_unit)
     for _unit in [
@@ -64,6 +68,7 @@ def _unit_validator_factory(unit: str) -> Callable:
         "kilojoule / mole",
         "nanometer",
         "degree",
+        "elementary_charge",
     ]
 )
 
@@ -150,6 +155,13 @@ _DegreeQuantity = Annotated[
     Quantity,
     WrapValidator(quantity_validator),
     AfterValidator(_is_degree),
+    WrapSerializer(quantity_json_serializer),
+]
+
+_ElementaryChargeQuantity = Annotated[
+    Quantity,
+    WrapValidator(quantity_validator),
+    AfterValidator(_is_elementary_charge),
     WrapSerializer(quantity_json_serializer),
 ]
 

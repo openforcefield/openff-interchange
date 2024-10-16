@@ -49,6 +49,7 @@ jobs:
     - name: Install conda environment
       uses: mamba-org/setup-micromamba@v1
       with:
+        micromamba-version: '1.5.10-0'
         environment-file: devtools/conda-envs/test_env.yaml
         create-args: >-
           python=${{ matrix.python-version }}
@@ -97,10 +98,10 @@ jobs:
         python -m pytest $COV openff/interchange/ -r fExs -n logical --durations=10
 
     - name: Run small molecule regression tests
-      if: ${{ matrix.python-version == '3.10' && matrix.openeye == true && matrix.openmm == true }}
+      if: ${{ matrix.openeye == true && matrix.openmm == true }}
       run: |
-        micromamba install deepdiff rich click -c conda-forge
-        python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git
+        micromamba install "deepdiff =5" rich click -c conda-forge
+        python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@fa07b62824c39af591142b402bd68103f4043f8b
 
         create_openmm_systems \
           --input             "regression_tests/small-molecule/input-topologies.json" \

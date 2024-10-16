@@ -8,6 +8,7 @@ from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.topology.molecule import Atom
 from openff.units.elements import MASSES, SYMBOLS
 
+from openff.interchange._annotations import PositiveFloat
 from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.potentials import Collection
 from openff.interchange.components.toolkit import _get_14_pairs
@@ -49,7 +50,7 @@ _SIMPLE_WATER = _SimpleMolecule.from_molecule(_WATER)
 
 def _convert(
     interchange: Interchange,
-    hydrogen_mass: float = 1.007947,
+    hydrogen_mass: PositiveFloat = 1.007947,
 ) -> GROMACSSystem:
     """Convert an `Interchange` object to `GROMACSSystem`."""
     if "vdW" in interchange.collections:
@@ -696,7 +697,7 @@ def _convert_settles(
 def _apply_hmr(
     gromacs_molecule: GROMACSMolecule,
     toolkit_molecule: Molecule,
-    hydrogen_mass: float,
+    hydrogen_mass: PositiveFloat,
 ):
     if abs(hydrogen_mass - 1.008) < 1e-3:
         return

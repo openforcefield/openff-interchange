@@ -11,6 +11,10 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+* #1051 Updates `to_openmm_topology` to place virtual sites at the end, matching the behavior of `to_openmm_system`. The old behavior (collating within molecules) is available with `collate=True`.
+
 ## 0.4.0 - 2024
 
 * Pydantic v2 is now used at runtime. As a consequence, models containing `Interchange`s cannot also use models from the v1 API.
@@ -22,6 +26,11 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * Several classes and methods which were deprecated in the 0.3 line of releases are now removed.
 * Previously-deprecated examples are removed.
 * `ProperTorsionKey` no longer accepts an empty tuple as atom indices.
+* Default densities for Packmol wrapper functions have been lowered to 0.9 g/cc and 0.6 g/cc for water and non-water solvent, respectively.
+* Argument `mass_density` to some packing functions has been renamed to `target_density` for consistency and to better reflect its usage.
+* Topologies returned by packing functions have boxes scaled up by 10% in linear dimensions compared  to the size implied by the target density.
+* An error is now raised when HMR would result in an OpenMM particle (aside from virtual sites) having negative (or zero) mass.
+* Fixes a regression in which some `ElectrostaticsCollection.charges` properties did not return cached values.
 
 ## 0.3.30 - 2024-08
 
