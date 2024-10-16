@@ -42,10 +42,15 @@ def test_each_molecule_with_virtual_sites_has_its_own_funnky_virtual_site_residu
     tip5p,
     water,
 ):
-    topology = tip5p.create_interchange(
-        Topology.from_molecules([water, water]),
-    ).to_openmm_topology()
+    topology = Topology.from_molecules([water, water])
 
-    assert topology.getNumResidues() == 4
+    for index, molecule in enumerate(topology.molecules):
+        for atom in molecule.atoms:
+            atom.metadata["residue_name"] = "SOL"
+            atom.metadata["residue_number"] = str(index)
 
-    assert [3, 3, 2, 2] == [len([*residue.atoms()]) for residue in topology.residues()]
+    openmm_topology = tip5p.create_interchange(topology).to_openmm_topology()
+
+    assert openmm_topology.getNumResidues() == 4
+
+    assert [3, 3, 2, 2] == [len([*residue.atoms()]) for residue in openmm_topology.residues()]

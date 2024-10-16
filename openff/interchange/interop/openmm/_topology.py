@@ -195,7 +195,7 @@ def to_openmm_topology(
                     name=parent_atom.residue.name,
                     chain=chain,
                     id=parent_atom.residue.id,
-                    insertionCode=parent_atom.residue.id,
+                    insertionCode=parent_atom.residue.insertionCode,
                 )
 
             virtual_site_name = virtual_site_key.name
@@ -205,6 +205,7 @@ def to_openmm_topology(
                 element=virtual_site_element,
                 residue=residue,
             )
+
     if interchange.box is not None:
         from openff.units.openmm import to_openmm
 
