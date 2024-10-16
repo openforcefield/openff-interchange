@@ -13,7 +13,7 @@ For example, `Interchange.topology.get_positions()` will never include positions
 
 ### Existing charges are ignored by default
 
-`Molecule` and `Topology` objects can store partial charges, but these are ignored by default in methods like `Interchange.from_smirnoff`. This is because partial charges in SMIRNOFF force fields are defined by sections in the force field. To override this behavior, use the `charge_from_molecules` argument. Be aware that charges, and as a result most physics, differ from what's perscribed by the contents of the force field.
+`Molecule` and `Topology` objects can store partial charges, but these are ignored by default in methods like `Interchange.from_smirnoff`. This is because partial charges in SMIRNOFF force fields are defined by sections in the force field. To override this behavior, use the `charge_from_molecules` argument. Be aware that charges, and as a result most physics, will differ from what's perscribed by the contents of the force field.
 
 ## Quirks of `from_openmm`
 

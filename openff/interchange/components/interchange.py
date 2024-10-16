@@ -587,6 +587,8 @@ class Interchange(_BaseModel):
         integrator: "openmm.Integrator",
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
+        ewald_tolerance: float = 1e-4,
+        hydrogen_mass: PositiveFloat = 1.007947,
         additional_forces: Iterable["openmm.Force"] = tuple(),
         **kwargs,
     ) -> "openmm.app.simulation.Simulation":
@@ -614,6 +616,12 @@ class Interchange(_BaseModel):
         add_constrained_forces : bool, default=False,
             If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
             on a bond or angle that is fully constrained.
+        ewald_tolerance : float, default=1e-4
+            The value passed to `NonbondedForce.setEwaldErrorTolerance`
+        hydrogen_mass : PostitiveFloat, default=1.007947
+            The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
+            than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
+            not applied to any waters and is unsupported when virtual sites are present.
         additional_forces : Iterable[openmm.Force], default=tuple()
             Additional forces to be added to the system, e.g. barostats, that are not
             added by the force field.
@@ -655,6 +663,8 @@ class Interchange(_BaseModel):
         system = self.to_openmm_system(
             combine_nonbonded_forces=combine_nonbonded_forces,
             add_constrained_forces=add_constrained_forces,
+            ewald_tolerance=ewald_tolerance,
+            hydrogen_mass=hydrogen_mass,
         )
 
         for force in additional_forces:
