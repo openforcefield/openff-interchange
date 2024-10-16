@@ -175,29 +175,36 @@ def to_openmm_topology(
             )
 
     if has_virtual_sites and not collate:
-        # TODO: This structure is imperfect, no clue how to handle chains here
-        virtual_site_chain = openmm_topology.addChain(atom_chain_id)
+        chain = None
+        residue = None
+        for virtual_site_key in interchange["VirtualSites"].key_map:
+            assert isinstance(virtual_site_key, VirtualSiteKey)
+            parent_atom_index = virtual_site_key.orientation_atom_indices[0]
+            parent_atom = omm_atoms[parent_atom_index]
 
-        for molecule_index, molecule in enumerate(topology.molecules):
-            virtual_sites_in_this_molecule: list[VirtualSiteKey] = molecule_virtual_site_map[molecule_index]
+            if chain is None or chain.id != parent_atom.residue.chain.id:
+                chain = openmm_topology.addChain(id=parent_atom.residue.chain.id)
 
-            # make a new "residue" for each molecule which has virtual sites ...
-            if len(virtual_sites_in_this_molecule) > 0:
-                # ... but give it the name of the parent molecule
-                this_virtual_site_residue = openmm_topology.addResidue(
-                    name=molecule.atom(0).metadata.get("residue_name", "UNK"),
-                    chain=virtual_site_chain,
+            if residue is None or not (
+                residue.name == parent_atom.residue.name
+                and residue.id == parent_atom.residue.id
+                and residue.insertionCode == parent_atom.residue.insertionCode
+                and residue.chain.id == parent_atom.residue.chain.id
+            ):
+                residue = openmm_topology.addResidue(
+                    name=parent_atom.residue.name,
+                    chain=chain,
+                    id=parent_atom.residue.id,
+                    insertionCode=parent_atom.residue.id,
                 )
 
-            for this_virtual_site in virtual_sites_in_this_molecule:
-                virtual_site_name = this_virtual_site.name
+            virtual_site_name = virtual_site_key.name
 
-                openmm_topology.addAtom(
-                    virtual_site_name,
-                    virtual_site_element,
-                    this_virtual_site_residue,
-                )
-
+            openmm_topology.addAtom(
+                name=virtual_site_name,
+                element=virtual_site_element,
+                residue=residue,
+            )
     if interchange.box is not None:
         from openff.units.openmm import to_openmm
 

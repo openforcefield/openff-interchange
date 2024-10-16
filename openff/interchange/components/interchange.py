@@ -697,7 +697,7 @@ class Interchange(_BaseModel):
             )
 
             openmm_topology = self.to_openmm_topology(
-                collate=True,
+                collate=False,
                 ensure_unique_atom_names=False,
             )
             positions = get_positions_with_virtual_sites(self)
