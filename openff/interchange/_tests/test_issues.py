@@ -114,6 +114,29 @@ def test_issue_1031(monkeypatch):
         assert atom_name in openff_atom_names
 
 
+def test_issue_1049():
+    pytest.importorskip("openmm")
+
+    topology = Topology.from_molecules(
+        [
+            Molecule.from_smiles("C"),
+            Molecule.from_smiles("O"),
+            Molecule.from_smiles("O"),
+        ],
+    )
+
+    interchange = ForceField("openff-2.2.0.offxml", "opc.offxml").create_interchange(topology)
+
+    openmm_topology = interchange.to_openmm_topology()
+    openmm_system = interchange.to_openmm_system()
+
+    # the same index in system should also be a virtual site in the topology
+    for particle_index, particle in enumerate(openmm_topology.atoms()):
+        assert openmm_system.isVirtualSite(particle_index) == (
+            particle.element is None
+        ), f"particle index {particle_index} is a virtual site in the system OR topology but not both"
+
+
 def test_issue_1052(sage, ethanol):
     """Test that _SMIRNOFFElectrostaticsCollection.charges is populated."""
     out = sage.create_interchange(ethanol.to_topology())

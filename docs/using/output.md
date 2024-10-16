@@ -69,6 +69,8 @@ openmm_positions: openmm.unit.Quantity = interchange.positions.to_openmm()
 openmm_box: openmm.unit.Quantity = interchange.box.to_openmm()
 ```
 
+If virtual sites are present in the system, they will all be placed at the end of the system and the topology. Optionally, virtual sites can collated within molecules in the topology, associated with the last residue in each molecule. In this case, all virtual sites are still placed at the end of the system. To do this, use `collate=True` as an argument to `Interchange.to_openmm_topology`. For discussion, see [issue #1049](https://github.com/openforcefield/openff-interchange/issues/1049).
+
 ## Amber
 
 An `Interchange` object can be written to Amber parameter/topology, coordinate, and SANDER run input files with [`Interchange.to_prmtop()`], [`Interchange.to_inpcrd()`], and [`Interchange.to_sander_input()`]:

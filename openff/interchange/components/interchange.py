@@ -555,13 +555,25 @@ class Interchange(_BaseModel):
 
     def to_openmm_topology(
         self,
+        collate: bool = False,
         ensure_unique_atom_names: str | bool = "residues",
     ):
-        """Export components of this Interchange to an OpenMM Topology."""
+        """
+        Export components of this Interchange to an OpenMM Topology.
+
+        Parameters
+        ----------
+        collate
+            If False, the default, all virtual sites will be added to a single residue at the end of the topology.
+            If True, virtual sites will be collated with their associated molecule and added to the residue of the last
+            atom in the molecule they belong to.
+
+        """
         from openff.interchange.interop.openmm._topology import to_openmm_topology
 
         return to_openmm_topology(
             self,
+            collate=collate,
             ensure_unique_atom_names=ensure_unique_atom_names,
         )
 
@@ -665,7 +677,12 @@ class Interchange(_BaseModel):
 
     @requires_package("openmm")
     def to_pdb(self, file_path: Path | str, include_virtual_sites: bool = False):
-        """Export this Interchange to a .pdb file."""
+        """
+        Export this Interchange to a .pdb file.
+
+        Note that virtual sites are collated into each molecule, which differs from the default
+        behavior of Interchange.to_openmm_topology.
+        """
         from openff.interchange.interop.openmm import _to_pdb
 
         if self.positions is None:
@@ -680,6 +697,7 @@ class Interchange(_BaseModel):
             )
 
             openmm_topology = self.to_openmm_topology(
+                collate=False,
                 ensure_unique_atom_names=False,
             )
             positions = get_positions_with_virtual_sites(self)
