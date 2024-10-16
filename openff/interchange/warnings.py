@@ -21,5 +21,9 @@ class ForceFieldModificationWarning(UserWarning):
     """Warning for when a ForceField is modified."""
 
 
+class PresetChargesAndVirtualSitesWarning(UserWarning):
+    """Warning when possibly using preset charges and virtual sites together."""
+
+
 class InterchangeCombinationWarning(UserWarning):
     """Warning for when combining Interchange objects."""

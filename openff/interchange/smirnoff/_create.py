@@ -1,3 +1,5 @@
+import warnings
+
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff import ParameterHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
@@ -8,6 +10,7 @@ from openff.interchange.common._positions import _infer_positions
 from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
     MissingParameterHandlerError,
+    PresetChargesError,
     SMIRNOFFHandlersNotImplementedError,
 )
 from openff.interchange.plugins import load_smirnoff_plugins
@@ -25,6 +28,7 @@ from openff.interchange.smirnoff._valence import (
     SMIRNOFFProperTorsionCollection,
 )
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
+from openff.interchange.warnings import PresetChargesAndVirtualSitesWarning
 
 _SUPPORTED_PARAMETER_HANDLERS: set[str] = {
     "Constraints",
@@ -93,16 +97,64 @@ def validate_topology(value):
         )
 
 
+def _preprocess_preset_charges(
+    molecules_with_preset_charges: list[Molecule] | None,
+) -> list[Molecule] | None:
+    """
+    Pre-process the molecules_with_preset_charges argument.
+
+    If molecules_with_preset_charges is None, return None.
+
+    If molecules_with_preset_charges is list[Molecule], ensure that
+
+    1. The input is a list of Molecules
+    2. Each molecule has assign partial charges
+    3. Ensure no molecules are isomorphic with another in the list
+
+    """
+    if molecules_with_preset_charges is None:
+        return None
+
+    # This relies on Molecule.__eq__(), which may change and/or not have the same equality criteria
+    # as we want here.
+    # See https://github.com/openforcefield/openff-interchange/pull/1070#discussion_r1792728179
+    molecule_set = {molecule for molecule in molecules_with_preset_charges}
+
+    if len(molecule_set) != len(molecules_with_preset_charges):
+        raise PresetChargesError(
+            "All molecules in the molecules_with_preset_charges list must be isomorphically unique from each other",
+        )
+
+    for molecule in molecules_with_preset_charges:
+        if molecule.partial_charges is None:
+            raise PresetChargesError(
+                "All molecules in the molecules_with_preset_charges list must have partial charges assigned.",
+            )
+
+    return molecules_with_preset_charges
+
+
 def _create_interchange(
     force_field: ForceField,
     topology: Topology | list[Molecule],
     box: Quantity | None = None,
     positions: Quantity | None = None,
-    charge_from_molecules: list[Molecule] | None = None,
+    molecules_with_preset_charges: list[Molecule] | None = None,
     partial_bond_orders_from_molecules: list[Molecule] | None = None,
     allow_nonintegral_charges: bool = False,
 ) -> Interchange:
+    molecules_with_preset_charges = _preprocess_preset_charges(molecules_with_preset_charges)
+
     _check_supported_handlers(force_field)
+
+    if molecules_with_preset_charges is not None and "VirtualSites" in force_field.registered_parameter_handlers:
+        warnings.warn(
+            "Preset charges were provided (via `charge_from_molecules`) alongside a force field that includes "
+            "virtual site parameters. Note that virtual sites will be applied charges from the force field and "
+            "cannot be given preset charges. Virtual sites may also affect the charges of their orientation "
+            "atoms, even if those atoms are given preset charges.",
+            PresetChargesAndVirtualSitesWarning,
+        )
 
     # interchange = Interchange(topology=topology)
     # or maybe
@@ -138,7 +190,7 @@ def _create_interchange(
         interchange,
         force_field,
         interchange.topology,
-        charge_from_molecules,
+        molecules_with_preset_charges,
         allow_nonintegral_charges,
     )
     _plugins(interchange, force_field, interchange.topology)
@@ -274,7 +326,7 @@ def _electrostatics(
     interchange: Interchange,
     force_field: ForceField,
     topology: Topology,
-    charge_from_molecules: list[Molecule] | None = None,
+    molecules_with_preset_charges: list[Molecule] | None = None,
     allow_nonintegral_charges: bool = False,
 ):
     if "Electrostatics" not in force_field.registered_parameter_handlers:
@@ -304,7 +356,7 @@ def _electrostatics(
                     if handler is not None
                 ],
                 topology=topology,
-                charge_from_molecules=charge_from_molecules,
+                molecules_with_preset_charges=molecules_with_preset_charges,
                 allow_nonintegral_charges=allow_nonintegral_charges,
             ),
         },
