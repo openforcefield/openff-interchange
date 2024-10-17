@@ -8,7 +8,7 @@ Currently, systems using custom interactions can only be exported to OpenMM. The
 
 [`ParameterHandler`]: openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler
 [`SMIRNOFFCollection`]: openff.interchange.plugins.SMIRNOFFCollection
-[SetupTools entry points]: setuptools:userguide/entry_point
+[SetupTools entry points]: inv:setuptools#userguide/entry_point
 [`openmm.Force`]: openmm.openmm.Force
 
 ## Creating a custom `ParameterHandler`
@@ -46,9 +46,9 @@ The high-level objectives of a parameter handler are to:
   * define optional attributes such as `id`
 
 [`ParameterType`]: openff.toolkit.typing.engines.smirnoff.parameters.ParameterType
-[entry point group]: setuptools:userguide/entry_point
+[entry point group]: inv:setuptools#userguide/entry_point
 [`check_handler_compatibility`]: openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.check_handler_compatibility
-[Toolkit documentation]: openff.toolkit:developing
+[Toolkit documentation]: inv:openff.toolkit#developing
 
 ## Creating a custom `SMIRNOFFCollection`
 
