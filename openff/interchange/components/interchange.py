@@ -120,12 +120,14 @@ class Interchange(_BaseModel):
 
         Notes
         -----
-        If the `Molecule` objects in the `topology` argument each contain conformers, the returned `Interchange` object
-        will have its positions set via concatenating the 0th conformer of each `Molecule`.
+        If the ``Molecule`` objects in the ``topology`` argument each contain
+        conformers, the returned ``Interchange`` object will have its positions
+        set via concatenating the 0th conformer of each ``Molecule``.
 
-        If the `Molecule` objects in the `topology` argument have stored partial charges, these are ignored and charges
-        are assigned according to the contents of the force field. To override the force field and use preset charges,
-        use the `charge_from_molecules` argument.
+        If the ``Molecule`` objects in the ``topology`` argument have stored
+        partial charges, these are ignored and charges are assigned according to
+        the contents of the force field. To override the force field and use
+        preset charges, use the ``charge_from_molecules`` argument.
 
         Examples
         --------
@@ -342,7 +344,7 @@ class Interchange(_BaseModel):
         Molecule names in written files are not guaranteed to match the `Moleclue.name` attribute of the
         molecules in the topology, especially if they are empty strings or not unique.
 
-        See `to_gro` and `to_top` for more details.
+        See :py:meth:`to_gro <Interchange.to_gro>` and :py:meth:`to_top <Interchange.to_top>` for more details.
 
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
@@ -429,6 +431,9 @@ class Interchange(_BaseModel):
             The path to the GROMACS coordinate file to write.
         decimal: int, default=3
             The number of decimal places to use when writing the GROMACS coordinate file.
+
+        Notes
+        -----
 
         Residue IDs must be positive integers (or string representations thereof).
 
@@ -569,9 +574,10 @@ class Interchange(_BaseModel):
         Parameters
         ----------
         collate
-            If False, the default, all virtual sites will be added to a single residue at the end of the topology.
-            If True, virtual sites will be collated with their associated molecule and added to the residue of the last
-            atom in the molecule they belong to.
+            If ``False``, the default, all virtual sites will be added to a
+            single residue at the end of the topology. If ``True``, virtual
+            sites will be collated with their associated molecule and added to
+            the residue of the last atom in the molecule they belong to.
 
         """
         from openff.interchange.interop.openmm._topology import to_openmm_topology
@@ -593,9 +599,14 @@ class Interchange(_BaseModel):
         **kwargs,
     ) -> "openmm.app.simulation.Simulation":
         """
-        Export this Interchange to an OpenMM `Simulation` object.
+        Export this Interchange to an OpenMM ``Simulation`` object.
 
-        Positions are set on the `Simulation` if present on the `Interchange`.
+        A :py:class:`Simulation <openmm.app.simulation.Simulation>` encapsulates
+        all the information needed for a typical OpenMM simulation into a single
+        object with a simple API.
+
+        Positions are set on the ``Simulation`` if present on the
+        ``Interchange``.
 
         Additional forces, such as a barostat, should be added with the
         ``additional_forces`` argument to avoid having to re-initialize
