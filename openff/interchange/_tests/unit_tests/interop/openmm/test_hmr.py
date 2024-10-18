@@ -103,17 +103,17 @@ def test_hmr_not_applied_to_tip4p(
 
 
 @pytest.mark.parametrize("hydrogen_mass", [1.1, 3.0])
-def test_hmr_with_ligand_virtual_sites(sage_with_bond_charge, hydrogen_mass, default_integrator):
+def test_hmr_with_ligand_virtual_sites(sage_with_bond_charge, hydrogen_mass):
     """Test that a single-molecule sigma hole example runs"""
     pytest.importorskip("openmm")
-
-    import openmm.app
+    import openmm
     import openmm.unit
 
     molecule = MoleculeWithConformer.from_mapped_smiles("[H:5][C:2]([H:6])([C:3]([H:7])([H:8])[Cl:4])[Cl:1]")
 
+    # should work fine with 4 fs, but be conservative and just use 3 fs
     simulation = sage_with_bond_charge.create_interchange(molecule.to_topology()).to_openmm_simulation(
-        integrator=default_integrator,
+        integrator=openmm.VerletIntegrator(3.0 * openmm.unit.femtosecond),
         hydrogen_mass=hydrogen_mass,
     )
 
