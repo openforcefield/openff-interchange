@@ -7,6 +7,42 @@ from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_e
 
 
 class TestTIP4PVirtualSites:
+    def test_tip4p_openmm_xml(self, water_dimer):
+        """
+        Prepare a TIP4P water dimer with OpenMM's style of 4-site water.
+
+        Below is used as a guide
+        https://openmm.github.io/openmm-cookbook/latest/notebooks/tutorials/Histone_methyltransferase_simulation_with_a_multisite_water_model_TIP4P-Ew.html
+        """
+        pytest.importorskip("openmm")
+
+        import openmm.app
+
+        modeller = openmm.app.Modeller(
+            topology=water_dimer.to_openmm_topology(),
+            positions=water_dimer.get_positions().to("nanometer").to_openmm(),
+        )
+
+        forcefield = openmm.app.ForceField("tip4pew.xml")
+
+        modeller.addExtraParticles(forcefield=forcefield)
+
+        system = forcefield.createSystem(
+            modeller.topology,
+            nonbondedMethod=openmm.app.PME,
+            nonbondedCutoff=1.0 * openmm.unit.nanometers,
+            constraints=openmm.app.HBonds,
+            rigidWater=True,
+            ewaldErrorTolerance=0.0005,
+        )
+
+        imported = Interchange.from_openmm(
+            topology=modeller.topology,
+            system=system,
+        )
+
+        get_openmm_energies(imported)
+
     def test_dimer_energy_equals(self, tip4p, water_dimer):
         out: Interchange = tip4p.create_interchange(water_dimer)
 
