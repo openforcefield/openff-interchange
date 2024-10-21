@@ -55,6 +55,17 @@ def _virtual_site_parent_molecule_mapping(
     return mapping
 
 
+def _get_molecule_virtual_site_map(interchange: Interchange) -> defaultdict[int, list[VirtualSiteKey]]:
+    virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(interchange)
+
+    molecule_virtual_site_map = defaultdict(list)
+
+    for virtual_site, molecule_index in virtual_site_molecule_map.items():
+        molecule_virtual_site_map[molecule_index].append(virtual_site)
+
+    return molecule_virtual_site_map
+
+
 def get_positions_with_virtual_sites(
     interchange: Interchange,
     collate: bool = False,

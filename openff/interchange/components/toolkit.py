@@ -1,6 +1,7 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
 
-from typing import TYPE_CHECKING, Union
+from collections import defaultdict
+from typing import TYPE_CHECKING
 
 import networkx
 import numpy
@@ -9,6 +10,8 @@ from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.typing.engines.smirnoff.parameters import VirtualSiteHandler
 from openff.toolkit.utils.collections import ValidatedList
 from openff.utilities.utilities import has_package
+
+from openff.interchange.models import ImportedVirtualSiteKey
 
 if has_package("openmm") or TYPE_CHECKING:
     import openmm.app
@@ -25,7 +28,7 @@ def _get_num_h_bonds(topology: "Topology") -> int:
     return n_bonds_containing_hydrogen
 
 
-def _get_14_pairs(topology_or_molecule: Union["Topology", "Molecule"]):
+def _get_14_pairs(topology_or_molecule: Topology | Molecule):
     """Generate tuples of atom pairs, including symmetric duplicates."""
     # TODO: A replacement of Topology.nth_degree_neighbors in the toolkit
     #       may implement this in the future.
@@ -105,27 +108,49 @@ def _check_electrostatics_handlers(force_field: "ForceField") -> bool:
     return False
 
 
-def _simple_topology_from_openmm(openmm_topology: "openmm.app.Topology") -> Topology:
+def _simple_topology_from_openmm(openmm_topology: "openmm.app.Topology", system: openmm.System) -> Topology:
     """Convert an OpenMM Topology into an OpenFF Topology consisting **only** of so-called `_SimpleMolecule`s."""
     # TODO: Splice in fully-defined OpenFF `Molecule`s?
 
     graph = networkx.Graph()
 
+    virtual_sites: list[ImportedVirtualSiteKey] = list()
+
+    # map indices of OpenMM system with virtual site to topology indices, or virtual site keys,
+    # in associated OpenFF topology, since stripping out virtual sites offsets particle indices
+    openmm_openff_particle_map: dict[int, int | ImportedVirtualSiteKey] = dict()
+
     # TODO: This is nearly identical to Topology._openmm_topology_to_networkx.
     #  Should this method be replaced with a direct call to that?
     for atom in openmm_topology.atoms():
-        graph.add_node(
-            atom.index,
-            atomic_number=atom.element.atomic_number,
-            name=atom.name,
-            residue_name=atom.residue.name,
-            # Note that residue number is mapped to residue.id here. The use of id vs. number varies in other packages
-            # and the convention for the OpenFF-OpenMM interconversion is recorded at
-            # https://docs.openforcefield.org/projects/toolkit/en/0.15.1/users/molecule_conversion.html
-            residue_number=atom.residue.id,
-            insertion_code=atom.residue.insertionCode,
-            chain_id=atom.residue.chain.id,
-        )
+        if atom.element is None:
+            virtual_sites.append(
+                # assume ThreeParticleAverageSite for now
+                ImportedVirtualSiteKey(
+                    orientation_atom_indices=[system.getVirtualSite(atom.index).getParticle(i) for i in range(3)],
+                    name=atom.name,
+                    type="ThreeParticleAverageSite",
+                ),
+            )
+
+            openmm_openff_particle_map[atom.index] = virtual_sites[-1]
+
+        else:
+            graph.add_node(
+                atom.index,
+                atomic_number=getattr(atom.element, "atomic_number", 0),
+                name=atom.name,
+                residue_name=atom.residue.name,
+                # Note that residue number is mapped to residue.id here. The use of id vs. number
+                # varies in other packages and the convention for the OpenFF-OpenMM interconversion
+                # is recorded at
+                # https://docs.openforcefield.org/projects/toolkit/en/0.15.1/users/molecule_conversion.html
+                residue_number=atom.residue.id,
+                insertion_code=atom.residue.insertionCode,
+                chain_id=atom.residue.chain.id,
+            )
+
+            openmm_openff_particle_map[atom.index] = atom.index - len(virtual_sites)
 
     for bond in openmm_topology.bonds():
         graph.add_edge(
@@ -133,7 +158,21 @@ def _simple_topology_from_openmm(openmm_topology: "openmm.app.Topology") -> Topo
             bond.atom2.index,
         )
 
-    return _simple_topology_from_graph(graph)
+    topology = _simple_topology_from_graph(graph)
+
+    topology._molecule_virtual_site_map = defaultdict(list)
+
+    # TODO: This iteration strategy scales horribly with system size - need to refactor -
+    #       since looking up topology atom indices is slow. It's probably repetitive to
+    #       look up the molecule index over and over again
+    for particle in virtual_sites:
+        molecule_index = topology.molecule_index(topology.atom(particle.orientation_atom_indices[0]).molecule)
+
+        topology._molecule_virtual_site_map[molecule_index].append(particle)
+
+    topology._particle_map = openmm_openff_particle_map
+
+    return topology
 
 
 def _simple_topology_from_graph(graph: networkx.Graph) -> Topology:
@@ -147,7 +186,10 @@ def _simple_topology_from_graph(graph: networkx.Graph) -> Topology:
         # the subgraphs are returned out of "atom order", like
         # if atoms in an later molecule have lesser atom indices
         # than this molecule
-        assert topology.n_atoms == next(iter(subgraph.nodes))
+        #
+        # Oct 2024 - need to add a test case for above?
+        # these values are not necessarily equal because of virtual sites
+        assert topology.n_atoms <= next(iter(subgraph.nodes))
 
         topology.add_molecule(_SimpleMolecule._from_subgraph(subgraph))
 
