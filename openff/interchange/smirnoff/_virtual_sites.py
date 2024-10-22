@@ -16,7 +16,8 @@ from openff.interchange.components.toolkit import (
     _lookup_virtual_site_parameter,
     _validated_list_to_array,
 )
-from openff.interchange.models import PotentialKey, VirtualSiteKey
+from openff.interchange.interop._virtual_sites import _ThreeParticleAverageSite
+from openff.interchange.models import ImportedVirtualSiteKey, PotentialKey, VirtualSiteKey
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
@@ -336,34 +337,45 @@ def _create_virtual_site_object(
 ) -> _VirtualSite:
     orientations = virtual_site_key.orientation_atom_indices
 
-    if virtual_site_key.type == "BondCharge":
-        return _BondChargeVirtualSite(
-            type="BondCharge",
-            distance=virtual_site_potential.parameters["distance"],
-            orientations=orientations,
-        )
-    elif virtual_site_key.type == "MonovalentLonePair":
-        return _MonovalentLonePairVirtualSite(
-            type="MonovalentLonePair",
-            distance=virtual_site_potential.parameters["distance"],
-            out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
-            in_plane_angle=virtual_site_potential.parameters["inPlaneAngle"],
-            orientations=orientations,
-        )
-    elif virtual_site_key.type == "DivalentLonePair":
-        return _DivalentLonePairVirtualSite(
-            type="DivalentLonePair",
-            distance=virtual_site_potential.parameters["distance"],
-            out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
-            orientations=orientations,
-        )
-    elif virtual_site_key.type == "TrivalentLonePair":
-        return _TrivalentLonePairVirtualSite(
-            type="TrivalentLonePair",
-            distance=virtual_site_potential.parameters["distance"],
-            orientations=orientations,
+    # this check is basically "is this a SMIRNOFF virtual site?"
+    # see commment at its class definition
+    if isinstance(virtual_site_key, VirtualSiteKey):
+        if virtual_site_key.type == "BondCharge":
+            return _BondChargeVirtualSite(
+                type="BondCharge",
+                distance=virtual_site_potential.parameters["distance"],
+                orientations=orientations,
+            )
+        elif virtual_site_key.type == "MonovalentLonePair":
+            return _MonovalentLonePairVirtualSite(
+                type="MonovalentLonePair",
+                distance=virtual_site_potential.parameters["distance"],
+                out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
+                in_plane_angle=virtual_site_potential.parameters["inPlaneAngle"],
+                orientations=orientations,
+            )
+        elif virtual_site_key.type == "DivalentLonePair":
+            return _DivalentLonePairVirtualSite(
+                type="DivalentLonePair",
+                distance=virtual_site_potential.parameters["distance"],
+                out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
+                orientations=orientations,
+            )
+        elif virtual_site_key.type == "TrivalentLonePair":
+            return _TrivalentLonePairVirtualSite(
+                type="TrivalentLonePair",
+                distance=virtual_site_potential.parameters["distance"],
+                orientations=orientations,
+            )
+
+    # TODO: This case shouldn't be in openff/interchange/smirnoff!
+    elif isinstance(virtual_site_key, ImportedVirtualSiteKey):
+        return _ThreeParticleAverageSite(
+            particles=virtual_site_key.orientation_atom_indices,
+            weights=virtual_site_potential.parameters["weights"],
         )
 
+        raise NotImplementedError(virtual_site_key)
     else:
         raise NotImplementedError(virtual_site_key.type)
 

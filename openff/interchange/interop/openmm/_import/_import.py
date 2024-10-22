@@ -17,6 +17,7 @@ from openff.interchange.exceptions import UnsupportedImportError
 from openff.interchange.interop.openmm._import._nonbonded import (
     BasicElectrostaticsCollection,
 )
+from openff.interchange.interop.openmm._import._virtual_sites import _convert_virtual_sites
 from openff.interchange.interop.openmm._import.compat import _check_compatible_inputs
 from openff.interchange.models import ImportedVirtualSiteKey
 from openff.interchange.warnings import MissingPositionsWarning
@@ -83,6 +84,11 @@ def from_openmm(
 
     if constraints is not None:
         interchange.collections["Constraints"] = constraints
+
+    virtual_sites = _convert_virtual_sites(system, openff_topology)
+
+    if virtual_sites is not None:
+        interchange.collections["VirtualSites"] = virtual_sites
 
     for force in system.getForces():
         if isinstance(force, openmm.NonbondedForce):

@@ -37,6 +37,11 @@ For more, see [issue #1005](https://github.com/openforcefield/openff-interchange
 
 Keywords: OpenMM, GROMACS, constraints, bond constraints, rigid water
 
+### Virtual site exclusions re-created with "parents" virtual site exclusion policy
+
+Non-bonded exclusions involving virtual sites (between virtual sites and heavy atoms or between
+virtual sites and virtual sites) are not processed. Instead, they are later re-generated assuming the "parents" exclusion policy as defined in the [SMIRNOFF specification](https://openforcefield.github.io/standards/standards/smirnoff/#virtualsites-virtual-sites-for-off-atom-charges). This should re-create typical exclusions in 4- and 5-site water models but may not be appropriate with highly custom virtual site interactions in larger molecules.
+
 ## Quirks with GROMACS
 
 ### Residue indices must begin at 1

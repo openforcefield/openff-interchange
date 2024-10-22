@@ -127,12 +127,15 @@ def _simple_topology_from_openmm(openmm_topology: "openmm.app.Topology", system:
             virtual_sites.append(
                 # assume ThreeParticleAverageSite for now
                 ImportedVirtualSiteKey(
-                    orientation_atom_indices=[system.getVirtualSite(atom.index).getParticle(i) for i in range(3)],
+                    orientation_atom_indices=[
+                        openmm_openff_particle_map[system.getVirtualSite(atom.index).getParticle(i)] for i in range(3)
+                    ],
                     name=atom.name,
                     type="ThreeParticleAverageSite",
                 ),
             )
 
+            # TODO: This will break if virtual sites are not after their parent/orientation atoms
             openmm_openff_particle_map[atom.index] = virtual_sites[-1]
 
         else:

@@ -2,23 +2,69 @@
 Common helpers for exporting virtual sites.
 """
 
+import abc
 from collections import defaultdict
-from typing import DefaultDict
+from typing import TYPE_CHECKING, DefaultDict
 
 import numpy
 from openff.toolkit import Quantity, unit
 
-from openff.interchange import Interchange
 from openff.interchange.exceptions import (
     MissingPositionsError,
     MissingVirtualSitesError,
 )
-from openff.interchange.models import VirtualSiteKey
+from openff.interchange.models import _BaseVirtualSiteKey
+from openff.interchange.pydantic import _BaseModel
+
+if TYPE_CHECKING:
+    import openmm
+
+    from openff.interchange import Interchange
+
+
+class _OpenMMVirtualSite(_BaseModel, abc.ABC):
+    particles: list[int]
+
+    @abc.abstractmethod
+    def to_openmm(self) -> "openmm.VirtualSite":
+        """Create a (subclass of) openmm.VirtualSite"""
+        raise NotImplementedError()
+
+
+class _TwoParticleAverageSite(_OpenMMVirtualSite):
+    weights: list[float]
+
+    def to_openmm(self):
+        import openmm
+
+        return openmm.TwoParticleAverageSite(
+            particle1=self.particles[0],
+            particle2=self.particles[1],
+            weight1=self.weights[0],
+            weight2=self.weights[1],
+        )
+
+
+class _ThreeParticleAverageSite(_OpenMMVirtualSite):
+    weights: list[float]
+
+    def to_openmm(self):
+        import openmm
+
+        # These arguments can't be named because (vague SWIG reasons)
+        return openmm.ThreeParticleAverageSite(
+            self.particles[0],  # particle1
+            self.particles[1],  # particle2
+            self.particles[2],  # particle3
+            self.weights[0],  # weight1
+            self.weights[1],  # weight2
+            self.weights[2],  # weight3
+        )
 
 
 def _virtual_site_parent_molecule_mapping(
-    interchange: Interchange,
-) -> dict[VirtualSiteKey, int]:
+    interchange: "Interchange",
+) -> dict[_BaseVirtualSiteKey, int]:
     """
     Map `VirtualSiteKey`s the index of the molecule they belong to.
 
@@ -33,7 +79,7 @@ def _virtual_site_parent_molecule_mapping(
         A dictionary mapping virtual site keys to the index of the molecule they belong to.
 
     """
-    mapping: dict[VirtualSiteKey, int] = dict()
+    mapping: dict[_BaseVirtualSiteKey, int] = dict()
 
     if "VirtualSites" not in interchange.collections:
         return mapping
@@ -42,7 +88,7 @@ def _virtual_site_parent_molecule_mapping(
     # how they are presented in the iterator; this may cause problems when a
     # molecule (a large ligand? polymer?) has many virtual sites
     for virtual_site_key in interchange["VirtualSites"].key_map:
-        assert isinstance(virtual_site_key, VirtualSiteKey)
+        assert isinstance(virtual_site_key, _BaseVirtualSiteKey), type(virtual_site_key)
 
         parent_atom_index = virtual_site_key.orientation_atom_indices[0]
 
@@ -55,7 +101,7 @@ def _virtual_site_parent_molecule_mapping(
     return mapping
 
 
-def _get_molecule_virtual_site_map(interchange: Interchange) -> defaultdict[int, list[VirtualSiteKey]]:
+def _get_molecule_virtual_site_map(interchange: "Interchange") -> defaultdict[int, list[_BaseVirtualSiteKey]]:
     virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(interchange)
 
     molecule_virtual_site_map = defaultdict(list)
@@ -67,7 +113,7 @@ def _get_molecule_virtual_site_map(interchange: Interchange) -> defaultdict[int,
 
 
 def get_positions_with_virtual_sites(
-    interchange: Interchange,
+    interchange: "Interchange",
     collate: bool = False,
     use_zeros: bool = False,
 ) -> Quantity:
@@ -86,7 +132,7 @@ def get_positions_with_virtual_sites(
         raise MissingVirtualSitesError()
 
     # map of molecule index to *list* of virtual site keys contained therein
-    molecule_virtual_site_map: DefaultDict[int, list[VirtualSiteKey]] = defaultdict(
+    molecule_virtual_site_map: DefaultDict[int, list[_BaseVirtualSiteKey]] = defaultdict(
         list,
     )
 
@@ -173,7 +219,7 @@ def get_positions_with_virtual_sites(
 
 
 def _get_separation_by_atom_indices(
-    interchange: Interchange,
+    interchange: "Interchange",
     atom_indices: tuple[int, ...],
     prioritize_geometry: bool = False,
 ) -> Quantity:

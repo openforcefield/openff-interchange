@@ -22,6 +22,7 @@ from openff.interchange.exceptions import (
 )
 from openff.interchange.interop.common import _build_particle_map
 from openff.interchange.models import (
+    ImportedVirtualSiteKey,
     SingleAtomChargeTopologyKey,
     TopologyKey,
     VirtualSiteKey,
@@ -449,8 +450,17 @@ def _create_single_nonbonded_force(
                     "vdW and/or electrostatics interactions",
                 )
 
-            charge_increments = coul.potentials[coul_key].parameters["charge_increments"]
-            charge = to_openmm_quantity(-sum(charge_increments))
+            try:
+                # SMIRNOFF-style virtual sites are charged from charge increments
+                # moved from their parent atoms
+                charge_increments = coul.potentials[coul_key].parameters["charge_increments"]
+
+                charge = to_openmm_quantity(-sum(charge_increments))
+            except KeyError:
+                # but stuff imported from other sources just has the charge right there
+                assert isinstance(virtual_site_key, ImportedVirtualSiteKey)
+
+                charge = coul.potentials[coul_key].parameters["charge"].to_openmm()
 
             vdw_parameters = vdw.potentials[vdw_key].parameters
             sigma = to_openmm_quantity(vdw_parameters["sigma"])
@@ -464,7 +474,13 @@ def _create_single_nonbonded_force(
                     f"Mismatch in system ({system_index=}) and force ({force_index=}) indexing",
                 )
 
-            parent_atom_index = openff_openmm_particle_map[virtual_site_object.orientations[0]]
+            try:
+                parent_atom_index = openff_openmm_particle_map[virtual_site_object.orientations[0]]
+            except AttributeError:
+                # TODO: Should unify these objects
+                assert isinstance(virtual_site_key, ImportedVirtualSiteKey)
+
+                parent_atom_index = openff_openmm_particle_map[virtual_site_object.particles[0]]
 
             parent_virtual_particle_mapping[parent_atom_index].append(force_index)
 
