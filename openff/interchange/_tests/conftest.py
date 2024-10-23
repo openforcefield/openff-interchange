@@ -32,7 +32,7 @@ def sage_no_switch(sage) -> ForceField:
 def sage_with_tip4p() -> ForceField:
     # re-build off of existing fixtures if this gets implemented
     # https://github.com/openforcefield/openff-toolkit/issues/1948
-    return ForceField("openff-2.0.0.offxml", "tip4p.offxml")
+    return ForceField("openff-2.0.0.offxml", "tip4p_fb.offxml")
 
 
 @pytest.fixture

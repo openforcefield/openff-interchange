@@ -108,8 +108,20 @@ def _check_electrostatics_handlers(force_field: "ForceField") -> bool:
     return False
 
 
-def _simple_topology_from_openmm(openmm_topology: "openmm.app.Topology", system: openmm.System) -> Topology:
-    """Convert an OpenMM Topology into an OpenFF Topology consisting **only** of so-called `_SimpleMolecule`s."""
+def _simple_topology_from_openmm(
+    openmm_topology: "openmm.app.Topology",
+    system: openmm.System | None = None,
+) -> Topology:
+    """
+    Convert an OpenMM Topology into an OpenFF Topology consisting **only** of so-called `_SimpleMolecule`s.
+
+    Arguments
+    ---------
+    openmm_topology: openmm.app.Topology
+        The OpenMM Topology to convert.
+    system: openmm.System, optional
+        The OpenMM System associated with the topology. Only needed if there are virtual sites in the topology.
+    """
     # TODO: Splice in fully-defined OpenFF `Molecule`s?
 
     graph = networkx.Graph()
@@ -124,12 +136,20 @@ def _simple_topology_from_openmm(openmm_topology: "openmm.app.Topology", system:
     #  Should this method be replaced with a direct call to that?
     for atom in openmm_topology.atoms():
         if atom.element is None:
-            virtual_sites.append(
+            try:
                 # assume ThreeParticleAverageSite for now
+                orientation_atom_indices = [
+                    openmm_openff_particle_map[system.getVirtualSite(atom.index).getParticle(i)] for i in range(3)
+                ]
+            except openmm.OpenMMException as error:
+                if "This particle is not a virtual site" in str(error):
+                    raise ValueError(
+                        "Particle ordering mismatch between OpenMM system and topology. "
+                        f"Look at particle {atom.index} in the topology.",
+                    ) from error
+            virtual_sites.append(
                 ImportedVirtualSiteKey(
-                    orientation_atom_indices=[
-                        openmm_openff_particle_map[system.getVirtualSite(atom.index).getParticle(i)] for i in range(3)
-                    ],
+                    orientation_atom_indices=orientation_atom_indices,
                     name=atom.name,
                     type="ThreeParticleAverageSite",
                 ),

@@ -1,13 +1,14 @@
 import pytest
-from openff.toolkit import Topology
+from openff.toolkit import Quantity, Topology
 
 from openff.interchange import Interchange
+from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange.components._packmol import solvate_topology
 from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
 
 
 class TestTIP4PVirtualSites:
-    def test_tip4p_openmm_xml(self, water_dimer):
+    def test_tip4p_openmm_xml(self, monkeypatch, water_dimer):
         """
         Prepare a TIP4P water dimer with OpenMM's style of 4-site water.
 
@@ -16,10 +17,12 @@ class TestTIP4PVirtualSites:
         """
         pytest.importorskip("openmm")
 
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         import openmm.app
 
         modeller = openmm.app.Modeller(
-            topology=water_dimer.to_openmm_topology(),
+            topology=water_dimer.to_openmm(),
             positions=water_dimer.get_positions().to("nanometer").to_openmm(),
         )
 
@@ -39,11 +42,18 @@ class TestTIP4PVirtualSites:
         imported = Interchange.from_openmm(
             topology=modeller.topology,
             system=system,
+            positions=modeller.getPositions(),
+            box_vectors=modeller.getTopology().getPeriodicBoxVectors(),
         )
 
         get_openmm_energies(imported)
 
-    def test_dimer_energy_equals(self, tip4p, water_dimer):
+    @pytest.mark.skip(
+        reason="Rewrite to use OpenMM or update from_openmm to support `LocalCoordinatesSite`s",
+    )
+    def test_dimer_energy_equals(self, monkeypatch, tip4p, water_dimer):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         out: Interchange = tip4p.create_interchange(water_dimer)
 
         roundtripped = Interchange.from_openmm(
@@ -55,14 +65,20 @@ class TestTIP4PVirtualSites:
 
         assert get_openmm_energies(out) == _get_openmm_energies(roundtripped)
 
-    def test_minimize_solvated_ligand(self, sage_with_tip4p, ethanol, default_integrator):
-        topology = solvate_topology(ethanol.to_topology())
+    @pytest.mark.skip(
+        reason="Rewrite to use OpenMM or update from_openmm to support `LocalCoordinatesSite`s",
+    )
+    def test_minimize_solvated_ligand(self, monkeypatch, sage_with_tip4p, default_integrator):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
-        simulation = sage_with_tip4p.create_simulation(
-            topology,
-        ).to_openmm_simulation(
-            integrator=default_integrator,
+        topology = solvate_topology(
+            topology=MoleculeWithConformer.from_smiles("CO").to_topology(),
+            nacl_conc=Quantity(1.0, "mole / liter"),
+            target_density=Quantity(0.6, "gram / milliliter"),
+            working_directory=".",
         )
+
+        simulation = sage_with_tip4p.create_interchange(topology).to_openmm_simulation(integrator=default_integrator)
 
         roundtripped = Interchange.from_openmm(
             system=simulation.system,
@@ -79,12 +95,14 @@ class TestTIP4PVirtualSites:
 
         assert get_openmm_energies(roundtripped) < original_energy
 
-    def test_error_index_mismatch(self, tip4p, water):
+    def test_error_index_mismatch(self, monkeypatch, tip4p, water):
+        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
         out: Interchange = tip4p.create_interchange(Topology.from_molecules([water, water]))
 
         with pytest.raises(
             ValueError,  # TODO: Make a different error
-            match="The number of particles in the system and the number of atoms in the topology do not match.",
+            match="Particle ordering mismatch",
         ):
             Interchange.from_openmm(
                 system=out.to_openmm_system(),

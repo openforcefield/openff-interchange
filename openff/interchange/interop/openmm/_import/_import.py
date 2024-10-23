@@ -2,6 +2,8 @@ import warnings
 from typing import TYPE_CHECKING, Union
 
 from openff.toolkit import Quantity, Topology
+from openff.units.openmm import ensure_quantity
+from openff.units.openmm import from_openmm as from_openmm_
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import ValidationError
 
@@ -50,8 +52,6 @@ def from_openmm(
     _check_compatible_inputs(system=system, topology=topology)
 
     if isinstance(topology, openmm.app.Topology):
-        from openff.units.openmm import from_openmm as from_openmm_
-
         from openff.interchange.components.toolkit import _simple_topology_from_openmm
 
         openff_topology = _simple_topology_from_openmm(topology, system)
@@ -118,7 +118,11 @@ def from_openmm(
         )
 
     else:
-        interchange.positions = positions
+        assert len(positions) == len(interchange.topology._particle_map)
+
+        interchange.positions = ensure_quantity(positions, "openff")[
+            [key for key, val in interchange.topology._particle_map.items() if isinstance(val, int)]
+        ]
 
     if box_vectors is not None:
         _box_vectors = box_vectors
@@ -129,8 +133,6 @@ def from_openmm(
     else:
         # If there is no box argument passed and the topology is non-periodic
         # and the system does not have default box vectors, it'll end up as None
-        from openff.units.openmm import from_openmm as from_openmm_
-
         _box_vectors = from_openmm_(system.getDefaultPeriodicBoxVectors())
 
     # TODO: Does this run through the Interchange.box validator?
