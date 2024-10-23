@@ -19,19 +19,19 @@ defaults:
 
 jobs:
   test:
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm }}, Pydantic ${{ matrix.pydantic-version }}, OpenEye ${{ matrix.openeye }}
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm }}, OpenEye ${{ matrix.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os:
-          - macos-12
+          - macos-13
+          - macos-latest
           - ubuntu-latest
         python-version:
           - "3.10"
           - "3.11"
-        pydantic-version:
-          - "2"
+          - "3.12"
         openeye:
           - true
           - false
@@ -47,13 +47,11 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install conda environment
-      uses: mamba-org/setup-micromamba@v1
+      uses: mamba-org/setup-micromamba@v2
       with:
-        micromamba-version: '1.5.10-0'
         environment-file: devtools/conda-envs/test_env.yaml
         create-args: >-
           python=${{ matrix.python-version }}
-          pydantic=${{ matrix.pydantic-version }}
 
     - name: Install package
       run: |
