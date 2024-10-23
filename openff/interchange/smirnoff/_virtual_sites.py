@@ -376,6 +376,7 @@ def _create_virtual_site_object(
         )
 
         raise NotImplementedError(virtual_site_key)
+
     else:
         raise NotImplementedError(virtual_site_key.type)
 
@@ -467,28 +468,44 @@ def _generate_positions(
     conformer: _Quantity | None = None,
 ) -> Quantity:
     # TODO: Capture these objects instead of generating them on-the-fly so many times
+    try:
+        local_frame_coordinates = numpy.vstack(
+            [
+                _create_virtual_site_object(
+                    virtual_site_key,
+                    virtual_site_collection.potentials[potential_key],
+                ).local_frame_coordinates
+                for virtual_site_key, potential_key in virtual_site_collection.key_map.items()
+            ],
+        )
 
-    local_frame_coordinates = numpy.vstack(
-        [
-            _create_virtual_site_object(
-                virtual_site_key,
-                virtual_site_collection.potentials[potential_key],
-            ).local_frame_coordinates
-            for virtual_site_key, potential_key in virtual_site_collection.key_map.items()
-        ],
-    )
+        local_coordinate_frames = _build_local_coordinate_frames(
+            interchange,
+            virtual_site_collection,
+        )
 
-    local_coordinate_frames = _build_local_coordinate_frames(
-        interchange,
-        virtual_site_collection,
-    )
+        virtual_site_positions = _convert_local_coordinates(
+            local_frame_coordinates,
+            local_coordinate_frames,
+        )
 
-    virtual_site_positions = _convert_local_coordinates(
-        local_frame_coordinates,
-        local_coordinate_frames,
-    )
+        return Quantity(
+            virtual_site_positions,
+            unit.nanometer,
+        )
+    except AttributeError:
+        # Handle case of virtual sites imported from OpenMM
+        # TODO: Handle case of mixed SMIRNOFF and OpenMM virtual sites
+        virtual_site_positions = list()
 
-    return Quantity(
-        virtual_site_positions,
-        unit.nanometer,
-    )
+        for key, val in virtual_site_collection.key_map.items():
+            atom_indices = key.orientation_atom_indices
+            weights = virtual_site_collection.potentials[val].parameters["weights"].m
+
+            assert len(atom_indices) == len(weights)
+
+            virtual_site_positions.append(
+                sum(interchange.positions[atom_indices[i]] * weights[i] for i in range(len(weights))),
+            )
+
+        return numpy.vstack(virtual_site_positions)

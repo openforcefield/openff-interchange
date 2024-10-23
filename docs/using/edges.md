@@ -42,6 +42,10 @@ Keywords: OpenMM, GROMACS, constraints, bond constraints, rigid water
 Non-bonded exclusions involving virtual sites (between virtual sites and heavy atoms or between
 virtual sites and virtual sites) are not processed. Instead, they are later re-generated assuming the "parents" exclusion policy as defined in the [SMIRNOFF specification](https://openforcefield.github.io/standards/standards/smirnoff/#virtualsites-virtual-sites-for-off-atom-charges). This should re-create typical exclusions in 4- and 5-site water models but may not be appropriate with highly custom virtual site interactions in larger molecules.
 
+### Virtual sites from multiple sources cannot be mixed
+
+Combining systems with virtual sites from multiple sources is not fully-featured. For example, this refers to importing a box of TIP4P-containing solvent from OpenMM with a ligand prepared with SMIRNOFF virtual sites parameters.
+
 ## Quirks with GROMACS
 
 ### Residue indices must begin at 1
