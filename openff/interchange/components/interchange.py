@@ -334,7 +334,7 @@ class Interchange(_BaseModel):
         hydrogen_mass : PostitiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
-            not applied to any waters and is unsupported when virtual sites are present.
+            not applied to any waters.
         _merge_atom_types: bool, default = False
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
@@ -402,7 +402,7 @@ class Interchange(_BaseModel):
         hydrogen_mass : PostitiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
-            not applied to any waters and is unsupported when virtual sites are present.
+            not applied to any waters.
         _merge_atom_types: book, default=False
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
@@ -534,7 +534,7 @@ class Interchange(_BaseModel):
         hydrogen_mass : PostitiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
-            not applied to any waters and is unsupported when virtual sites are present.
+            not applied to any waters.
 
         Returns
         -------
@@ -632,7 +632,7 @@ class Interchange(_BaseModel):
         hydrogen_mass : PostitiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
-            not applied to any waters and is unsupported when virtual sites are present.
+            not applied to any waters.
         additional_forces : Iterable[openmm.Force], default=tuple()
             Additional forces to be added to the system, e.g. barostats, that are not
             added by the force field.
