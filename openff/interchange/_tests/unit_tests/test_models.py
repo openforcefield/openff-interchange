@@ -1,3 +1,5 @@
+import re
+
 from openff.interchange.models import (
     AngleKey,
     BondKey,
@@ -6,6 +8,7 @@ from openff.interchange.models import (
     ProperTorsionKey,
     TopologyKey,
     VirtualSiteKey,
+    _BaseVirtualSiteKey,
 )
 
 
@@ -197,3 +200,9 @@ def test_torsionkey_eq_hash():
         None,
         1.5,
     )
+
+
+def test_virtual_site_key_repr():
+    key = _BaseVirtualSiteKey(orientation_atom_indices=[3, 4, 5], type="fOO", name="bAR")
+
+    assert re.search("orientation atom ind.*3, 4, 5", repr(key))
