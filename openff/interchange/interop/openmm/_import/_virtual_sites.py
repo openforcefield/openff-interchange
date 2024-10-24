@@ -44,7 +44,7 @@ def _convert_virtual_sites(
 
         virtual_site = system.getVirtualSite(particle_index)
 
-        openmm_particle_indices: tuple[int] = (
+        openmm_particle_indices: tuple[int, int, int] = (
             virtual_site.getParticle(0),
             virtual_site.getParticle(1),
             virtual_site.getParticle(2),

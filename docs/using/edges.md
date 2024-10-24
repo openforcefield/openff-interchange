@@ -46,6 +46,10 @@ virtual sites and virtual sites) are not processed. Instead, they are later re-g
 
 Combining systems with virtual sites from multiple sources is not fully-featured. For example, this refers to importing a box of TIP4P-containing solvent from OpenMM with a ligand prepared with SMIRNOFF virtual sites parameters.
 
+### Virtual sites must be listed after heavy atoms each molecule
+
+It's assumed that, in each molecule in an OpenMM topology, all heavy atoms are listed before any virtual sites. This includes the case of all virtual sites being listed after all heavy atoms, i.e. not collated into molecules/residues. There are no community standards areound particle ordering, but virtual sites are typically listed after heavy atoms in each molecule or residue.
+
 ## Quirks with GROMACS
 
 ### Residue indices must begin at 1

@@ -136,6 +136,10 @@ def _simple_topology_from_openmm(
     #  Should this method be replaced with a direct call to that?
     for atom in openmm_topology.atoms():
         if atom.element is None:
+            assert isinstance(
+                system,
+                openmm.System,
+            ), "`system` argument required if virtual sites are present in the topology"
             try:
                 # assume ThreeParticleAverageSite for now
                 orientation_atom_indices = [

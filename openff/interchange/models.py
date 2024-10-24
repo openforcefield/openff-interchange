@@ -330,7 +330,7 @@ class ChargeIncrementTopologyKey(_BaseModel):
         return hash((self.this_atom_index, self.other_atom_indices))
 
 
-class _BaseVirtualSiteKey(TopologyKey):
+class BaseVirtualSiteKey(TopologyKey):
     # TODO: Overriding the attribute of a parent class is clumsy, but less grief than
     #       having this not inherit from `TopologyKey`. It might be useful to just have
     #       orientation_atom_indices point to the same thing.
@@ -357,7 +357,7 @@ class _BaseVirtualSiteKey(TopologyKey):
         return f"{self.__class__.__name__} with orientation atom indices {self.orientation_atom_indices}"
 
 
-class ImportedVirtualSiteKey(_BaseVirtualSiteKey):
+class ImportedVirtualSiteKey(BaseVirtualSiteKey):
     """
     A unique identifier of a virtual site in the scope of a chemical topology.
 
@@ -369,7 +369,7 @@ class ImportedVirtualSiteKey(_BaseVirtualSiteKey):
     pass
 
 
-class VirtualSiteKey(_BaseVirtualSiteKey):
+class SMIRNOFFVirtualSiteKey(BaseVirtualSiteKey):
     """A unique identifier of a SMIRNOFF virtual site in the scope of a chemical topology."""
 
     match: Literal["once", "all_permutations"] = Field(
@@ -385,6 +385,9 @@ class VirtualSiteKey(_BaseVirtualSiteKey):
                 self.match,
             ),
         )
+
+
+VirtualSiteKey = SMIRNOFFVirtualSiteKey
 
 
 class PotentialKey(_BaseModel):

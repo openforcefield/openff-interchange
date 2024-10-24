@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
-from openff.interchange.models import _BaseVirtualSiteKey
+from openff.interchange.models import BaseVirtualSiteKey
 
 if has_package("openmm") or TYPE_CHECKING:
     import openmm.app
@@ -119,7 +119,7 @@ def to_openmm_topology(
             last_residue = residue
 
         if has_virtual_sites and collate:
-            virtual_sites_in_this_molecule: list[_BaseVirtualSiteKey] = molecule_virtual_site_map[molecule_index]
+            virtual_sites_in_this_molecule: list[BaseVirtualSiteKey] = molecule_virtual_site_map[molecule_index]
             for this_virtual_site in virtual_sites_in_this_molecule:
                 virtual_site_name = this_virtual_site.name
 
@@ -169,7 +169,7 @@ def to_openmm_topology(
         chain = None
         residue = None
         for virtual_site_key in interchange["VirtualSites"].key_map:
-            assert isinstance(virtual_site_key, _BaseVirtualSiteKey)
+            assert isinstance(virtual_site_key, BaseVirtualSiteKey)
 
             parent_atom_index = virtual_site_key.orientation_atom_indices[0]
             parent_atom = omm_atoms[parent_atom_index]

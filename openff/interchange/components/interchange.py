@@ -889,6 +889,8 @@ class Interchange(_BaseModel):
         representing an arbitrarily harmonic angle. It is expected that these values will be
         overwritten by runtime MD options.
 
+        See more limitations and sharp edges in the user guide: https://docs.openforcefield.org/projects/interchange/en/latest/using/edges.html#quirks-of-from-openmm
+
         Parameters
         ----------
         system : openmm.System

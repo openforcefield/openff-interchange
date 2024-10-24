@@ -13,7 +13,7 @@ from openff.interchange.exceptions import (
     MissingPositionsError,
     MissingVirtualSitesError,
 )
-from openff.interchange.models import _BaseVirtualSiteKey
+from openff.interchange.models import BaseVirtualSiteKey
 from openff.interchange.pydantic import _BaseModel
 
 if TYPE_CHECKING:
@@ -64,7 +64,7 @@ class _ThreeParticleAverageSite(_OpenMMVirtualSite):
 
 def _virtual_site_parent_molecule_mapping(
     interchange: "Interchange",
-) -> dict[_BaseVirtualSiteKey, int]:
+) -> dict[BaseVirtualSiteKey, int]:
     """
     Map `VirtualSiteKey`s the index of the molecule they belong to.
 
@@ -79,7 +79,7 @@ def _virtual_site_parent_molecule_mapping(
         A dictionary mapping virtual site keys to the index of the molecule they belong to.
 
     """
-    mapping: dict[_BaseVirtualSiteKey, int] = dict()
+    mapping: dict[BaseVirtualSiteKey, int] = dict()
 
     if "VirtualSites" not in interchange.collections:
         return mapping
@@ -88,7 +88,7 @@ def _virtual_site_parent_molecule_mapping(
     # how they are presented in the iterator; this may cause problems when a
     # molecule (a large ligand? polymer?) has many virtual sites
     for virtual_site_key in interchange["VirtualSites"].key_map:
-        assert isinstance(virtual_site_key, _BaseVirtualSiteKey), type(virtual_site_key)
+        assert isinstance(virtual_site_key, BaseVirtualSiteKey), type(virtual_site_key)
 
         parent_atom_index = virtual_site_key.orientation_atom_indices[0]
 
@@ -101,7 +101,7 @@ def _virtual_site_parent_molecule_mapping(
     return mapping
 
 
-def _get_molecule_virtual_site_map(interchange: "Interchange") -> defaultdict[int, list[_BaseVirtualSiteKey]]:
+def _get_molecule_virtual_site_map(interchange: "Interchange") -> defaultdict[int, list[BaseVirtualSiteKey]]:
     virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(interchange)
 
     molecule_virtual_site_map = defaultdict(list)
@@ -132,7 +132,7 @@ def get_positions_with_virtual_sites(
         raise MissingVirtualSitesError()
 
     # map of molecule index to *list* of virtual site keys contained therein
-    molecule_virtual_site_map: DefaultDict[int, list[_BaseVirtualSiteKey]] = defaultdict(
+    molecule_virtual_site_map: DefaultDict[int, list[BaseVirtualSiteKey]] = defaultdict(
         list,
     )
 

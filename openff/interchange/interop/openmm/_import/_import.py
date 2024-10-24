@@ -217,7 +217,7 @@ def _convert_nonbonded_force(
         try:
             top_key = TopologyKey(atom_indices=(particle_map[idx],))
         except ValidationError:
-            top_key: ImportedVirtualSiteKey = particle_map[idx]
+            top_key: ImportedVirtualSiteKey = particle_map[idx]  # type: ignore[no-redef]
 
         pot = Potential(
             parameters={

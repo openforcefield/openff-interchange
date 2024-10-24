@@ -7,7 +7,7 @@ from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 
 from openff.interchange.exceptions import UnsupportedExportError
-from openff.interchange.models import VirtualSiteKey
+from openff.interchange.models import BaseVirtualSiteKey
 
 if has_package("openmm"):
     import openmm
@@ -16,7 +16,7 @@ if has_package("openmm"):
 def _process_constraints(
     interchange,
     openmm_sys,
-    particle_map: dict[int | VirtualSiteKey, int],
+    particle_map: dict[int | BaseVirtualSiteKey, int],
 ) -> set[tuple[int, ...]]:
     """
     Process the Constraints section of an Interchange object.
@@ -52,7 +52,7 @@ def _process_bond_forces(
     openmm_sys,
     add_constrained_forces: bool,
     constrained_pairs: set[tuple[int, ...]],
-    particle_map: dict[int | VirtualSiteKey, int],
+    particle_map: dict[int | BaseVirtualSiteKey, int],
 ):
     """
     Process the Bonds section of an Interchange object.

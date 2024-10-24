@@ -17,7 +17,7 @@ from openff.interchange.components.toolkit import (
     _validated_list_to_array,
 )
 from openff.interchange.interop._virtual_sites import _ThreeParticleAverageSite
-from openff.interchange.models import ImportedVirtualSiteKey, PotentialKey, VirtualSiteKey
+from openff.interchange.models import BaseVirtualSiteKey, ImportedVirtualSiteKey, PotentialKey, SMIRNOFFVirtualSiteKey
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
@@ -36,14 +36,14 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
     A handler which stores the information necessary to construct virtual sites (virtual particles).
     """
 
-    key_map: dict[VirtualSiteKey, PotentialKey] = Field(
+    key_map: dict[BaseVirtualSiteKey, PotentialKey] = Field(
         dict(),
         description="A mapping between VirtualSiteKey objects and PotentialKey objects.",
     )  # type: ignore[assignment]
 
     type: Literal["VirtualSites"] = "VirtualSites"
     expression: Literal[""] = ""
-    virtual_site_key_topology_index_map: dict[VirtualSiteKey, int] = Field(
+    virtual_site_key_topology_index_map: dict[BaseVirtualSiteKey, int] = Field(
         dict(),
         description="A mapping between VirtualSiteKey objects (stored analogously to TopologyKey objects"
         "in other handlers) and topology indices describing the associated virtual site",
@@ -105,7 +105,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                 for orientation in orientations:
                     orientation_indices = orientation.topology_atom_indices
 
-                    virtual_site_key = VirtualSiteKey(
+                    virtual_site_key = SMIRNOFFVirtualSiteKey(
                         parent_atom_index=parent_index,
                         orientation_atom_indices=orientation_indices,
                         type=parameter.type,
@@ -330,7 +330,7 @@ class _TrivalentLonePairVirtualSite(_VirtualSite):
 
 
 def _create_virtual_site_object(
-    virtual_site_key: VirtualSiteKey,
+    virtual_site_key: BaseVirtualSiteKey,
     virtual_site_potential,
     # interchange: "Interchange",
     # non_bonded_force: openmm.NonbondedForce,
@@ -339,7 +339,7 @@ def _create_virtual_site_object(
 
     # this check is basically "is this a SMIRNOFF virtual site?"
     # see commment at its class definition
-    if isinstance(virtual_site_key, VirtualSiteKey):
+    if isinstance(virtual_site_key, SMIRNOFFVirtualSiteKey):
         if virtual_site_key.type == "BondCharge":
             return _BondChargeVirtualSite(
                 type="BondCharge",
@@ -368,14 +368,19 @@ def _create_virtual_site_object(
                 orientations=orientations,
             )
 
+        else:
+            raise NotImplementedError(virtual_site_key.type)
+
     # TODO: This case shouldn't be in openff/interchange/smirnoff!
     elif isinstance(virtual_site_key, ImportedVirtualSiteKey):
-        return _ThreeParticleAverageSite(
-            particles=virtual_site_key.orientation_atom_indices,
-            weights=virtual_site_potential.parameters["weights"],
-        )
+        if virtual_site_key.type == "ThreeParticleAverageSite":
+            return _ThreeParticleAverageSite(  # type: ignore[return-value]
+                particles=virtual_site_key.orientation_atom_indices,
+                weights=virtual_site_potential.parameters["weights"],
+            )
 
-        raise NotImplementedError(virtual_site_key)
+        else:
+            raise NotImplementedError(virtual_site_key.type)
 
     else:
         raise NotImplementedError(virtual_site_key.type)
@@ -496,7 +501,7 @@ def _generate_positions(
     except AttributeError:
         # Handle case of virtual sites imported from OpenMM
         # TODO: Handle case of mixed SMIRNOFF and OpenMM virtual sites
-        virtual_site_positions = list()
+        _virtual_site_positions: list[Quantity] = list()
 
         for key, val in virtual_site_collection.key_map.items():
             atom_indices = key.orientation_atom_indices
@@ -504,8 +509,8 @@ def _generate_positions(
 
             assert len(atom_indices) == len(weights)
 
-            virtual_site_positions.append(
+            _virtual_site_positions.append(
                 sum(interchange.positions[atom_indices[i]] * weights[i] for i in range(len(weights))),
             )
 
-        return numpy.vstack(virtual_site_positions)
+        return numpy.vstack(_virtual_site_positions)

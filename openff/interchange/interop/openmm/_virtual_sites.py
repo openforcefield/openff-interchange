@@ -7,7 +7,7 @@ from openff.utilities.utilities import has_package
 from openff.interchange import Interchange
 from openff.interchange.components._particles import _VirtualSite
 from openff.interchange.interop._virtual_sites import _OpenMMVirtualSite
-from openff.interchange.models import VirtualSiteKey
+from openff.interchange.models import BaseVirtualSiteKey
 
 if has_package("openmm"):
     import openmm
@@ -16,7 +16,7 @@ if has_package("openmm"):
 def _create_openmm_virtual_site(
     interchange: Interchange,
     virtual_site: _VirtualSite | _OpenMMVirtualSite,
-    openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
+    openff_openmm_particle_map: dict[int | BaseVirtualSiteKey, int],
 ) -> openmm.VirtualSite:
     if isinstance(virtual_site, _VirtualSite):
         # virtual_site.orientations is a list of the _openff_ indices, which is more or less
