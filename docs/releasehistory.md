@@ -13,6 +13,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### New features
+
+* `Interchange.from_openmm` now processes virtual sites, but only `openmm.ThreeParticleAverageSite`s.
+
 ## 0.4.0 - 2024
 
 ### Breaking changes and behavior changes

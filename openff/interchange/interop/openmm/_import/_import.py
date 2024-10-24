@@ -2,7 +2,10 @@ import warnings
 from typing import TYPE_CHECKING, Union
 
 from openff.toolkit import Quantity, Topology
+from openff.units.openmm import ensure_quantity
+from openff.units.openmm import from_openmm as from_openmm_
 from openff.utilities.utilities import has_package, requires_package
+from pydantic import ValidationError
 
 from openff.interchange._experimental import experimental
 from openff.interchange.common._nonbonded import vdWCollection
@@ -16,7 +19,9 @@ from openff.interchange.exceptions import UnsupportedImportError
 from openff.interchange.interop.openmm._import._nonbonded import (
     BasicElectrostaticsCollection,
 )
+from openff.interchange.interop.openmm._import._virtual_sites import _convert_virtual_sites
 from openff.interchange.interop.openmm._import.compat import _check_compatible_inputs
+from openff.interchange.models import ImportedVirtualSiteKey
 from openff.interchange.warnings import MissingPositionsWarning
 
 if has_package("openmm"):
@@ -47,11 +52,9 @@ def from_openmm(
     _check_compatible_inputs(system=system, topology=topology)
 
     if isinstance(topology, openmm.app.Topology):
-        from openff.units.openmm import from_openmm as from_openmm_
-
         from openff.interchange.components.toolkit import _simple_topology_from_openmm
 
-        openff_topology = _simple_topology_from_openmm(topology)
+        openff_topology = _simple_topology_from_openmm(topology, system)
 
         if topology.getPeriodicBoxVectors() is not None:
             openff_topology.box_vectors = from_openmm_(topology.getPeriodicBoxVectors())
@@ -72,32 +75,41 @@ def from_openmm(
 
     interchange = Interchange(topology=openff_topology)
 
-    if system:
-        constraints = _convert_constraints(system)
+    interchange.topology._molecule_virtual_site_map = openff_topology._molecule_virtual_site_map
+    interchange.topology._particle_map = openff_topology._particle_map
 
-        if constraints is not None:
-            interchange.collections["Constraints"] = constraints
+    # TODO: Actually build up the VirtualSiteCollection, maybe using _molecule_virtual_site_map
 
-        for force in system.getForces():
-            if isinstance(force, openmm.NonbondedForce):
-                vdw, coul = _convert_nonbonded_force(force)
-                interchange.collections["vdW"] = vdw
-                interchange.collections["Electrostatics"] = coul
-            elif isinstance(force, openmm.HarmonicBondForce):
-                bonds = _convert_harmonic_bond_force(force)
-                interchange.collections["Bonds"] = bonds
-            elif isinstance(force, openmm.HarmonicAngleForce):
-                angles = _convert_harmonic_angle_force(force)
-                interchange.collections["Angles"] = angles
-            elif isinstance(force, openmm.PeriodicTorsionForce):
-                proper_torsions = _convert_periodic_torsion_force(force)
-                interchange.collections["ProperTorsions"] = proper_torsions
-            elif isinstance(force, openmm.CMMotionRemover):
-                pass
-            else:
-                raise UnsupportedImportError(
-                    f"Unsupported OpenMM Force type ({type(force)}) found.",
-                )
+    constraints = _convert_constraints(system, openff_topology._particle_map)
+
+    if constraints is not None:
+        interchange.collections["Constraints"] = constraints
+
+    virtual_sites = _convert_virtual_sites(system, openff_topology)
+
+    if virtual_sites is not None:
+        interchange.collections["VirtualSites"] = virtual_sites
+
+    for force in system.getForces():
+        if isinstance(force, openmm.NonbondedForce):
+            vdw, coul = _convert_nonbonded_force(force, openff_topology._particle_map)
+            interchange.collections["vdW"] = vdw
+            interchange.collections["Electrostatics"] = coul
+        elif isinstance(force, openmm.HarmonicBondForce):
+            bonds = _convert_harmonic_bond_force(force)
+            interchange.collections["Bonds"] = bonds
+        elif isinstance(force, openmm.HarmonicAngleForce):
+            angles = _convert_harmonic_angle_force(force)
+            interchange.collections["Angles"] = angles
+        elif isinstance(force, openmm.PeriodicTorsionForce):
+            proper_torsions = _convert_periodic_torsion_force(force)
+            interchange.collections["ProperTorsions"] = proper_torsions
+        elif isinstance(force, openmm.CMMotionRemover):
+            pass
+        else:
+            raise UnsupportedImportError(
+                f"Unsupported OpenMM Force type ({type(force)}) found.",
+            )
 
     if positions is None:
         warnings.warn(
@@ -106,7 +118,11 @@ def from_openmm(
         )
 
     else:
-        interchange.positions = positions
+        assert len(positions) == len(interchange.topology._particle_map)
+
+        interchange.positions = ensure_quantity(positions, "openff")[
+            [key for key, val in interchange.topology._particle_map.items() if isinstance(val, int)]
+        ]
 
     if box_vectors is not None:
         _box_vectors = box_vectors
@@ -117,8 +133,6 @@ def from_openmm(
     else:
         # If there is no box argument passed and the topology is non-periodic
         # and the system does not have default box vectors, it'll end up as None
-        from openff.units.openmm import from_openmm as from_openmm_
-
         _box_vectors = from_openmm_(system.getDefaultPeriodicBoxVectors())
 
     # TODO: Does this run through the Interchange.box validator?
@@ -134,6 +148,7 @@ def from_openmm(
 
 def _convert_constraints(
     system: "openmm.System",
+    particle_map: dict[int, int | ImportedVirtualSiteKey],
 ) -> ConstraintCollection | None:
     from openff.toolkit import unit
 
@@ -172,13 +187,14 @@ def _convert_constraints(
 
         distance = _distance.value_in_unit(openmm.unit.nanometer)
 
-        constraints.key_map[BondKey(atom_indices=(atom1, atom2))] = _keys[distance]
+        constraints.key_map[BondKey(atom_indices=(particle_map[atom1], particle_map[atom2]))] = _keys[distance]
 
     return constraints
 
 
 def _convert_nonbonded_force(
     force: "openmm.NonbondedForce",
+    particle_map: dict[int, int | ImportedVirtualSiteKey],
 ) -> tuple[vdWCollection, BasicElectrostaticsCollection]:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
@@ -198,7 +214,10 @@ def _convert_nonbonded_force(
     for idx in range(n_parametrized_particles):
         charge, sigma, epsilon = force.getParticleParameters(idx)
 
-        top_key = TopologyKey(atom_indices=(idx,))
+        try:
+            top_key = TopologyKey(atom_indices=(particle_map[idx],))
+        except ValidationError:
+            top_key: ImportedVirtualSiteKey = particle_map[idx]  # type: ignore[no-redef]
 
         pot = Potential(
             parameters={

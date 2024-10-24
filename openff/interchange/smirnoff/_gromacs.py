@@ -36,10 +36,10 @@ from openff.interchange.interop.gromacs.models.models import (
     RyckaertBellemansDihedral,
 )
 from openff.interchange.models import (
+    BaseVirtualSiteKey,
     BondKey,
     LibraryChargeTopologyKey,
     TopologyKey,
-    VirtualSiteKey,
 )
 
 MoleculeLike: TypeAlias = Molecule | _SimpleMolecule
@@ -89,11 +89,11 @@ def _convert(
     ] = interchange.topology.identical_molecule_groups
 
     virtual_site_molecule_map: dict[
-        VirtualSiteKey,
+        BaseVirtualSiteKey,
         int,
     ] = _virtual_site_parent_molecule_mapping(interchange)
 
-    molecule_virtual_site_map: dict[int, list[VirtualSiteKey]] = defaultdict(list)
+    molecule_virtual_site_map: dict[int, list[BaseVirtualSiteKey]] = defaultdict(list)
 
     for virtual_site_key, molecule_index in virtual_site_molecule_map.items():
         molecule_virtual_site_map[molecule_index].append(virtual_site_key)
@@ -140,7 +140,7 @@ def _convert(
             # when looking up parameters, use the topology index, not the particle index ...
             # ... or so I think is the expectation of the `TopologyKey`s in the vdW collection
             topology_index = interchange.topology.atom_index(atom)
-            key: TopologyKey | VirtualSiteKey | LibraryChargeTopologyKey = TopologyKey(
+            key: TopologyKey | BaseVirtualSiteKey | LibraryChargeTopologyKey = TopologyKey(
                 atom_indices=(topology_index,),
             )
 
@@ -182,13 +182,13 @@ def _convert(
                 epsilon=vdw_parameters["epsilon"].to(unit.kilojoule_per_mole),
             )
 
-    _partial_charges: dict[int | VirtualSiteKey, float] = dict()
+    _partial_charges: dict[int | BaseVirtualSiteKey, float] = dict()
 
     # Indexed by particle (atom or virtual site) indices
     for key, charge in interchange["Electrostatics"]._get_charges().items():
         if type(key) is TopologyKey:
             _partial_charges[key.atom_indices[0]] = charge
-        elif type(key) is VirtualSiteKey:
+        elif isinstance(key, BaseVirtualSiteKey):
             _partial_charges[key] = charge
         else:
             raise RuntimeError()
