@@ -183,7 +183,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
             )
 
             logger.info(
-                "Charge section VirtualSites applied to virtual site with orientation atoms "
+                "Charge section VirtualSites applied to virtual site with orientation atoms at topology indices "
                 f"{virtual_site_key.orientation_atom_indices}",
             )
 

@@ -899,7 +899,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                             # as the old key (on a unique/reference molecule)
                             if type(new_key) is LibraryChargeTopologyKey:
                                 logger.info(
-                                    "Charge section LibraryCharges applied to (topology) atom index "
+                                    "Charge section LibraryCharges applied to topology atom index "
                                     f"{topology_atom_index}",
                                 )
 
@@ -908,7 +908,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                                     logger.info(
                                         "Charge section ToolkitAM1BCC, using charge method "
                                         f"{new_key.extras['partial_charge_method']}, "
-                                        f"applied to (topology) atom index {topology_atom_index}",
+                                        f"applied to topology atom index {topology_atom_index}",
                                     )
 
                                 elif new_key.extras["handler"] == "preset":
@@ -923,7 +923,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                                 logger.info(
                                     "Charge section ChargeIncrementModel, using charge method "
                                     f"{new_key.partial_charge_method}, "
-                                    f"applied to (topology) atom index {new_key.this_atom_index}",
+                                    f"applied to topology atom index {new_key.this_atom_index}",
                                 )
 
                             elif type(new_key) is ChargeIncrementTopologyKey:
