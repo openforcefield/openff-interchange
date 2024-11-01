@@ -10,6 +10,7 @@ from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field
 
 from openff.interchange._annotations import (
+    PositiveFloat,
     _BoxQuantity,
     _PositionsQuantity,
     _VelocityQuantity,
@@ -109,7 +110,8 @@ class Interchange(_BaseModel):
             positions are taken from the molecules in topology, if present on all molecules.
         charge_from_molecules : `List[openff.toolkit.molecule.Molecule]`, optional
             If specified, partial charges will be taken from the given molecules
-            instead of being determined by the force field.
+            instead of being determined by the force field. In either case, charges
+            on the input topology are ignored.
         partial_bond_orders_from_molecules : List[openff.toolkit.molecule.Molecule], optional
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
@@ -118,8 +120,14 @@ class Interchange(_BaseModel):
 
         Notes
         -----
-        If the `Molecule` objects in the `topology` argument each contain conformers, the returned `Interchange` object
-        will have its positions set via concatenating the 0th conformer of each `Molecule`.
+        If the ``Molecule`` objects in the ``topology`` argument each contain
+        conformers, the returned ``Interchange`` object will have its positions
+        set via concatenating the 0th conformer of each ``Molecule``.
+
+        If the ``Molecule`` objects in the ``topology`` argument have stored
+        partial charges, these are ignored and charges are assigned according to
+        the contents of the force field. To override the force field and use
+        preset charges, use the ``charge_from_molecules`` argument.
 
         Examples
         --------
@@ -287,11 +295,30 @@ class Interchange(_BaseModel):
         else:
             raise NotImplementedError(f"Engine {engine} is not implemented.")
 
+    def get_positions(self, include_virtual_sites: bool = True) -> Quantity:
+        """
+        Get the positions associated with this Interchange.
+
+        Parameters
+        ----------
+        include_virtual_sites : bool, default=True
+            Include virtual sites in the returned positions.
+
+        Returns
+        -------
+        positions : openff.units.Quantity
+            The positions of the atoms in the system.
+
+        """
+        from openff.interchange.interop.common import _to_positions
+
+        return _to_positions(self, include_virtual_sites=include_virtual_sites)
+
     def to_gromacs(
         self,
         prefix: str,
         decimal: int = 3,
-        hydrogen_mass: float = 1.007947,
+        hydrogen_mass: PositiveFloat = 1.007947,
         _merge_atom_types: bool = False,
     ):
         """
@@ -304,7 +331,7 @@ class Interchange(_BaseModel):
             "foo.top", "foo.gro", and "foo_pointenergy.mdp".
         decimal: int, default=3
             The number of decimal places to use when writing the GROMACS coordinate file.
-        hydrogen_mass : float, default=1.007947
+        hydrogen_mass : PostitiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
@@ -317,7 +344,7 @@ class Interchange(_BaseModel):
         Molecule names in written files are not guaranteed to match the `Moleclue.name` attribute of the
         molecules in the topology, especially if they are empty strings or not unique.
 
-        See `to_gro` and `to_top` for more details.
+        See :py:meth:`to_gro <Interchange.to_gro>` and :py:meth:`to_top <Interchange.to_top>` for more details.
 
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
@@ -362,7 +389,7 @@ class Interchange(_BaseModel):
     def to_top(
         self,
         file_path: Path | str,
-        hydrogen_mass: float = 1.007947,
+        hydrogen_mass: PositiveFloat = 1.007947,
         _merge_atom_types: bool = False,
     ):
         """
@@ -372,7 +399,7 @@ class Interchange(_BaseModel):
         ----------
         file_path
             The path to the GROMACS topology file to write.
-        hydrogen_mass : float, default=1.007947
+        hydrogen_mass : PostitiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
@@ -405,6 +432,9 @@ class Interchange(_BaseModel):
         decimal: int, default=3
             The number of decimal places to use when writing the GROMACS coordinate file.
 
+        Notes
+        -----
+
         Residue IDs must be positive integers (or string representations thereof).
 
         Residue IDs greater than 99,999 are reduced modulo 100,000 in line with common GROMACS practice.
@@ -425,24 +455,20 @@ class Interchange(_BaseModel):
             gro_file=file_path,
         ).to_gro(decimal=decimal)
 
-    def to_lammps(self, file_path: Path | str):
+    def to_lammps(self, prefix: str):
         """
         Export this ``Interchange`` to LAMMPS data and run input files.
 
         Parameters
         ----------
-        file_path
-            The prefix to use for the LAMMPS data and run input files. If a path
-            ending in ".lmp" is given, the extension will be dropped to generate
-            the prefix. For example, both "foo" and "foo.lmp" will produce files
-            named "foo.lmp" and "foo_pointenergy.in".
+
+        prefix
+            The prefix to use for the LAMMPS data and run input files. For
+            example, "foo" will produce files named "foo.lmp" and
+            "foo_pointenergy.in".
 
         """
-        # TODO: Rename `file_path` to `prefix` (breaking change)
-        prefix = str(file_path)
-        if prefix.endswith(".lmp"):
-            prefix = prefix[:-4]
-
+        prefix = str(prefix)
         datafile_path = prefix + ".lmp"
         self.to_lammps_datafile(datafile_path)
         self.to_lammps_input(
@@ -489,7 +515,7 @@ class Interchange(_BaseModel):
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
         ewald_tolerance: float = 1e-4,
-        hydrogen_mass: float = 1.007947,
+        hydrogen_mass: PositiveFloat = 1.007947,
     ):
         """
         Export this Interchange to an OpenMM System.
@@ -505,7 +531,7 @@ class Interchange(_BaseModel):
             on a bond or angle that is fully constrained.
         ewald_tolerance : float, default=1e-4
             The value passed to `NonbondedForce.setEwaldErrorTolerance`
-        hydrogen_mass : float, default=1.007947
+        hydrogen_mass : PostitiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
@@ -539,13 +565,26 @@ class Interchange(_BaseModel):
 
     def to_openmm_topology(
         self,
+        collate: bool = False,
         ensure_unique_atom_names: str | bool = "residues",
     ):
-        """Export components of this Interchange to an OpenMM Topology."""
+        """
+        Export components of this Interchange to an OpenMM Topology.
+
+        Parameters
+        ----------
+        collate
+            If ``False``, the default, all virtual sites will be added to a
+            single residue at the end of the topology. If ``True``, virtual
+            sites will be collated with their associated molecule and added to
+            the residue of the last atom in the molecule they belong to.
+
+        """
         from openff.interchange.interop.openmm._topology import to_openmm_topology
 
         return to_openmm_topology(
             self,
+            collate=collate,
             ensure_unique_atom_names=ensure_unique_atom_names,
         )
 
@@ -554,13 +593,28 @@ class Interchange(_BaseModel):
         integrator: "openmm.Integrator",
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
+        ewald_tolerance: float = 1e-4,
+        hydrogen_mass: PositiveFloat = 1.007947,
         additional_forces: Iterable["openmm.Force"] = tuple(),
         **kwargs,
     ) -> "openmm.app.simulation.Simulation":
         """
-        Export this Interchange to an OpenMM `Simulation` object.
+        Export this Interchange to an OpenMM ``Simulation`` object.
 
-        Positions are set on the `Simulation` if present on the `Interchange`.
+        A :py:class:`Simulation <openmm.app.simulation.Simulation>` encapsulates
+        all the information needed for a typical OpenMM simulation into a single
+        object with a simple API.
+
+        Positions are set on the ``Simulation`` if present on the
+        ``Interchange``.
+
+        Additional forces, such as a barostat, should be added with the
+        ``additional_forces`` argument to avoid having to re-initialize
+        the ``Context``. Re-initializing the ``Context`` after adding a
+        ``Force`` is necessary due to `implementation details`_
+        in OpenMM.
+
+        .. _implementation details: https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#why-does-it-ignore-changes-i-make-to-a-system-or-force
 
         Parameters
         ----------
@@ -573,8 +627,14 @@ class Interchange(_BaseModel):
         add_constrained_forces : bool, default=False,
             If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
             on a bond or angle that is fully constrained.
+        ewald_tolerance : float, default=1e-4
+            The value passed to `NonbondedForce.setEwaldErrorTolerance`
+        hydrogen_mass : PostitiveFloat, default=1.007947
+            The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
+            than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
+            not applied to any waters and is unsupported when virtual sites are present.
         additional_forces : Iterable[openmm.Force], default=tuple()
-            Additional forces to be added to the system, i.e. barostats that are not
+            Additional forces to be added to the system, e.g. barostats, that are not
             added by the force field.
         **kwargs
             Further keyword parameters are passed on to
@@ -587,6 +647,7 @@ class Interchange(_BaseModel):
 
         Examples
         --------
+
         Create an OpenMM simulation with a Langevin integrator and a Monte Carlo barostat:
 
         >>> import openmm
@@ -607,18 +668,14 @@ class Interchange(_BaseModel):
         ...     additional_forces=[barostat],
         ... )
 
-        Re-initializing the `Context` after adding a `Force` is necessary due to implementation details in OpenMM.
-        For more, see
-        https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#why-does-it-ignore-changes-i-make-to-a-system-or-force
-
         """
         import openmm.app
-
-        from openff.interchange.interop.openmm._positions import to_openmm_positions
 
         system = self.to_openmm_system(
             combine_nonbonded_forces=combine_nonbonded_forces,
             add_constrained_forces=add_constrained_forces,
+            ewald_tolerance=ewald_tolerance,
+            hydrogen_mass=hydrogen_mass,
         )
 
         for force in additional_forces:
@@ -639,14 +696,19 @@ class Interchange(_BaseModel):
         # include_virtual_sites could possibly be False
         if self.positions is not None:
             simulation.context.setPositions(
-                to_openmm_positions(self, include_virtual_sites=True),
+                self.get_positions(include_virtual_sites=True).to_openmm(),
             )
 
         return simulation
 
     @requires_package("openmm")
     def to_pdb(self, file_path: Path | str, include_virtual_sites: bool = False):
-        """Export this Interchange to a .pdb file."""
+        """
+        Export this Interchange to a .pdb file.
+
+        Note that virtual sites are collated into each molecule, which differs from the default
+        behavior of Interchange.to_openmm_topology.
+        """
         from openff.interchange.interop.openmm import _to_pdb
 
         if self.positions is None:
@@ -661,6 +723,7 @@ class Interchange(_BaseModel):
             )
 
             openmm_topology = self.to_openmm_topology(
+                collate=False,
                 ensure_unique_atom_names=False,
             )
             positions = get_positions_with_virtual_sites(self)

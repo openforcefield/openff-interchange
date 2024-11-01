@@ -1,6 +1,6 @@
 # Installation
 
-These instructions assume that the `mamba` package manager is installed. If you do not have Conda/Mamba or a drop-in replacement installed, see the [OpenFF installation documentation](openff.docs:install).
+These instructions assume that the `mamba` package manager is installed. If you do not have Conda/Mamba or a drop-in replacement installed, see the [OpenFF installation documentation](inv:openff.docs#install).
 
 ## Quick Installation
 

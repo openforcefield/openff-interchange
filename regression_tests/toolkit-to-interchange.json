@@ -24,7 +24,7 @@
     "type": "value-changed",
     "openmm_path": "openmmVersion",
     "deepdiff_path": null,
-    "old_value": 7.7,
-    "new_value": 8.0
+    "old_value": "8.1.2",
+    "new_value": "8.1.2"
   }
 ]

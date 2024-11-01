@@ -15,9 +15,22 @@ if has_package("openmm") or TYPE_CHECKING:
 
 def to_openmm_topology(
     interchange: "Interchange",
+    collate: bool = False,
     ensure_unique_atom_names: str | bool = "residues",
 ) -> "openmm.app.Topology":
-    """Create an OpenMM Topology containing some virtual site information (if appropriate)."""
+    """
+    Create an OpenMM Topology containing some virtual site information (if appropriate).
+
+    Parameters
+    ----------
+    interchange
+        The Interchange object to convert to an OpenMM Topology.
+    collate
+        If False, the default, virtual sites will be added to residues at the end of the topology.
+        If True, virtual sites will be collated with their associated molecule and added to the residue of the last
+        atom in the molecule they belong to.
+
+    """
     # Heavily cribbed from the toolkit
     # https://github.com/openforcefield/openff-toolkit/blob/0.11.0rc2/openff/toolkit/topology/topology.py
 
@@ -72,36 +85,24 @@ def to_openmm_topology(
         last_chain = None
         last_residue = None
         for atom in molecule.atoms:
-            # If the residue name is undefined, assume a default of "UNK"
-            if "residue_name" in atom.metadata:
-                atom_residue_name = atom.metadata["residue_name"]
-            else:
-                atom_residue_name = "UNK"
-
-            # If the residue number is undefined, assume a default of "0"
-            if "residue_number" in atom.metadata:
-                atom_residue_number = atom.metadata["residue_number"]
-            else:
-                atom_residue_number = "0"
-
-            # If the chain ID is undefined, assume a default of "X"
-            if "chain_id" in atom.metadata:
-                atom_chain_id = atom.metadata["chain_id"]
-            else:
-                atom_chain_id = "X"
+            # If the these are undefined, assume a default of
+            # residue name/number "UNK" / "0", chain ID "X"
+            atom_residue_name = atom.metadata.get("residue_name", "UNK")
+            atom_residue_number = atom.metadata.get("residue_number", "0")
+            atom_chain_id = atom.metadata.get("chain_id", "X")
 
             # Determine whether this atom should be part of the last atom's chain, or if it
             # should start a new chain
             if last_chain is None:
-                chain = openmm_topology.addChain(atom_chain_id)
+                chain = openmm_topology.addChain(id=atom_chain_id)
             elif last_chain.id == atom_chain_id:
                 chain = last_chain
             else:
-                chain = openmm_topology.addChain(atom_chain_id)
+                chain = openmm_topology.addChain(id=atom_chain_id)
             # Determine whether this atom should be a part of the last atom's residue, or if it
             # should start a new residue
             if last_residue is None:
-                residue = openmm_topology.addResidue(atom_residue_name, chain)
+                residue = openmm_topology.addResidue(name=atom_residue_name, chain=chain)
                 residue.id = atom_residue_number
             elif all(
                 (
@@ -112,7 +113,7 @@ def to_openmm_topology(
             ):
                 residue = last_residue
             else:
-                residue = openmm_topology.addResidue(atom_residue_name, chain)
+                residue = openmm_topology.addResidue(name=atom_residue_name, chain=chain)
                 residue.id = atom_residue_number
 
             # Add atom.
@@ -126,7 +127,7 @@ def to_openmm_topology(
             last_chain = chain
             last_residue = residue
 
-        if has_virtual_sites:
+        if has_virtual_sites and collate:
             virtual_sites_in_this_molecule: list[VirtualSiteKey] = molecule_virtual_site_map[molecule_index]
             for this_virtual_site in virtual_sites_in_this_molecule:
                 virtual_site_name = this_virtual_site.name
@@ -171,6 +172,38 @@ def to_openmm_topology(
                 omm_atoms[atom2_idx],
                 type=bond_type,
                 order=bond_order,
+            )
+
+    if has_virtual_sites and not collate:
+        chain = None
+        residue = None
+        for virtual_site_key in interchange["VirtualSites"].key_map:
+            assert isinstance(virtual_site_key, VirtualSiteKey)
+            parent_atom_index = virtual_site_key.orientation_atom_indices[0]
+            parent_atom = omm_atoms[parent_atom_index]
+
+            if chain is None or chain.id != parent_atom.residue.chain.id:
+                chain = openmm_topology.addChain(id=parent_atom.residue.chain.id)
+
+            if residue is None or not (
+                residue.name == parent_atom.residue.name
+                and residue.id == parent_atom.residue.id
+                and residue.insertionCode == parent_atom.residue.insertionCode
+                and residue.chain.id == parent_atom.residue.chain.id
+            ):
+                residue = openmm_topology.addResidue(
+                    name=parent_atom.residue.name,
+                    chain=chain,
+                    id=parent_atom.residue.id,
+                    insertionCode=parent_atom.residue.insertionCode,
+                )
+
+            virtual_site_name = virtual_site_key.name
+
+            openmm_topology.addAtom(
+                name=virtual_site_name,
+                element=virtual_site_element,
+                residue=residue,
             )
 
     if interchange.box is not None:

@@ -13,19 +13,54 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### New features
+
 * #1053 Logs, at the level of `logging.INFO`, how charges are assigned by SMIRNOFF force fields to each atom and virtual site.
 
 ## 0.4.0 - 2024
 
-* Pydantic v2 is now used at runtime. As a consequence, models containing `Interchange`s cannot also use models from the v1 API.
+### Breaking changes and behavior changes
+
+* Pydantic v2 is now used at runtime:
+  * V2 must be installed, but other packages may use the `pydantic.v1` backdoor to access the v1 API.
+  * Models containing `Interchange`s cannot also use models from the v1 API.
 * `Interchange.to_gromacs` and similar methods now raise an error if no box is defined.
   * Previously, this was a warning.
   * GROMACS dropped support for (proper) vacuum simulations in version 2020 and there are no immediate plans to re-introduce it.
   * Users freqently approximate vacuum simulation with periodic boundary conditions by applying a large box. This has some performance issues and some non-bonded terms likely differ numerically compared to similar implementations in other engines.
+* The `topology` attribute of the `Interchange` class is now required.
 * The wrapped use of external readers and writers is removed, and with it arguments like `writer` in many `Interchange.to_x` calls.
 * Several classes and methods which were deprecated in the 0.3 line of releases are now removed.
 * Previously-deprecated examples are removed.
 * `ProperTorsionKey` no longer accepts an empty tuple as atom indices.
+* Packing functions have been overhauled:
+  * Argument `mass_density` to some packing functions has been renamed to `target_density` for consistency and to better reflect its usage.
+  * Default densities for Packmol wrapper functions using water as the primary solvent have been lowered to 0.9 g/cc.
+  * `target_density` is now a required argument to `solvate_topology_nonwater`.
+  * Topologies returned by packing functions have boxes scaled up by 10% in linear dimensions compared to the size implied by the target density.
+  * PACKMOL failures are now better reported to the user.
+* An error is now raised when HMR would result in an OpenMM particle (aside from virtual sites) having negative (or zero) mass.
+* `to_openmm_topology` now adds virtual sites to the end of the topology by default, matching the ordering of particles in `to_openmm_system`. Previous atom ordering can be forced with `collate=True`.
+
+### Documentation improvements
+
+* Documented that existing charges on input topologies are ignored.
+* Adds an example of basic Amber usage.
+
+### New features
+
+* `hydrogen_mass` and `ewald_tolerance` are now arguments to `to_openmm_simulation`, passed on to `to_openmm_system`.
+* Adds `Interchange.get_positions`, which includes positions of virtual sites by default.
+* Adds `Interchange.to_amber`, which writes the parameter/topology, coordinate, and (`sander`) run/input files.
+* Improves handling of residue metadata to OpenMM with virtual sites.
+* Collections can now be indexed using tuples of atom indices.
+* Adds high-level run/input file getters (`Interchange.to_{mdp|lammps_datafile|sander_input}`).
+
+### Bug fixes
+
+* Fixes a regression in which some `ElectrostaticsCollection.charges` properties did not return cached values.
+* Better process atom names in `Interchange.from_openmm`
+* Fixes regression tests.
 
 ## 0.3.30 - 2024-08
 
