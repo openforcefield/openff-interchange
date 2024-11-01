@@ -7,7 +7,7 @@ SMIRNOFF force fields support several different partial charge assignment method
 1. Look for preset charges from the `charge_from_molecules` argument
 1. Look for chemical environment matches within the `<LibraryCharges>` section
 1. Look for chemical environment matches within the `<ChargeIncrementModel>` section
-1. Try to run AM1-BCC according to the `<ToolkitAM1BCC>` section or some variant 
+1. Try to run AM1-BCC according to the `<ToolkitAM1BCC>` section or some variant
 
 If a molecule gets charges from one method, attempts to match charges for later methods are skipped. Note that preset charges override the force field and are not checked for consistency; any charges provided to the `charge_from_molecules` argument technically modify the force field. For more on how SMIRNOFF defines this behavior, see [this issue](https://github.com/openforcefield/standards/issues/68) and linked discussions.
 
