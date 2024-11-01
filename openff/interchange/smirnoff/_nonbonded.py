@@ -1,5 +1,6 @@
 import copy
 import functools
+import logging
 import warnings
 from collections.abc import Iterable
 from typing import Any, Literal, Optional, Union
@@ -41,6 +42,8 @@ from openff.interchange.models import (
 )
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
 from openff.interchange.warnings import ForceFieldModificationWarning
+
+logger = logging.getLogger(__name__)
 
 ElectrostaticsHandlerType = Union[
     ElectrostaticsHandler,
@@ -330,6 +333,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                     total_charge: Quantity = numpy.sum(parameter_value)
                     # assumes virtual sites can only have charges determined in one step
+
                     charges[topology_key] = -1.0 * total_charge
 
                     # Apply increments to "orientation" atoms
@@ -382,6 +386,11 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     charges[atom_index] = _add_charges(
                         charges.get(atom_index, _ZERO_CHARGE),
                         parameter_value,
+                    )
+
+                    logger.info(
+                        "Charge section ChargeIncrementModel, applying charge increment from atom "
+                        f"{topology_key.this_atom_index} to atoms {topology_key.other_atom_indices}",
                     )
 
                 else:
@@ -678,7 +687,15 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             )
             potentials[potential_key] = Potential(parameters={"charge": partial_charge})
 
-            matches[SingleAtomChargeTopologyKey(this_atom_index=atom_index)] = potential_key
+            matches[
+                SingleAtomChargeTopologyKey(
+                    this_atom_index=atom_index,
+                    extras={
+                        "handler": handler_name,
+                        "partial_charge_method": partial_charge_method,
+                    },
+                )
+            ] = potential_key
 
         return partial_charge_method, matches, potentials
 
@@ -806,6 +823,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             index_in_topology = atom_map[index_in_molecule_with_charges]
             topology_key = SingleAtomChargeTopologyKey(
                 this_atom_index=index_in_topology,
+                extras={"handler": "preset"},
             )
             potential_key = PotentialKey(
                 id=mapped_smiles,
@@ -881,6 +899,42 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                             # Have this new key (on a duplicate molecule) point to the same potential
                             # as the old key (on a unique/reference molecule)
+                            if type(new_key) is LibraryChargeTopologyKey:
+                                logger.info(
+                                    "Charge section LibraryCharges applied to topology atom index "
+                                    f"{topology_atom_index}",
+                                )
+
+                            elif type(new_key) is SingleAtomChargeTopologyKey:
+                                if new_key.extras["handler"] == "ToolkitAM1BCCHandler":
+                                    logger.info(
+                                        "Charge section ToolkitAM1BCC, using charge method "
+                                        f"{new_key.extras['partial_charge_method']}, "
+                                        f"applied to topology atom index {topology_atom_index}",
+                                    )
+
+                                elif new_key.extras["handler"] == "preset":
+                                    logger.info(
+                                        f"Preset charges applied to atom index {topology_atom_index}",
+                                    )
+
+                                else:
+                                    raise ValueError(f"Unhandled handler {new_key.extras['handler']}")
+
+                            elif type(new_key) is ChargeModelTopologyKey:
+                                logger.info(
+                                    "Charge section ChargeIncrementModel, using charge method "
+                                    f"{new_key.partial_charge_method}, "
+                                    f"applied to topology atom index {new_key.this_atom_index}",
+                                )
+
+                            elif type(new_key) is ChargeIncrementTopologyKey:
+                                # here is where the actual increments could be logged
+                                pass
+
+                            else:
+                                raise ValueError(f"Unhandled key type {type(new_key)}")
+
                             self.key_map[new_key] = matches[key]
 
         topology_charges = [0.0] * topology.n_atoms
