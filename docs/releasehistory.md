@@ -13,6 +13,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### Bug fixes
+
+* Removes an internal use of the `@experimental` decorator which prevented `Interchange.from_openmm` from being fully removed from an experimental state.
+
 ## 0.4.0 - 2024
 
 ### Breaking changes and behavior changes
