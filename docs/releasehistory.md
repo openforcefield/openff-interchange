@@ -22,6 +22,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * The `charge_from_molecules` argument must include only molecules that contain partial charges and are non-isomorphic with each other.
 * The `charge_from_molecules` argument as used by the OpenFF Toolkit is handled internally as `molecules_with_preset_charges`.
 
+### Documentation improvements
+
+* Documents charge assignment hierarchy in the user guide.
+
 ## 0.4.0 - 2024-11-04
 
 ### Breaking changes and behavior changes
@@ -63,6 +67,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### Bug fixes
 
+* Removes an internal use of the `@experimental` decorator which prevented `Interchange.from_openmm` from being fully removed from an experimental state.
 * Fixes a regression in which some `ElectrostaticsCollection.charges` properties did not return cached values.
 * Better process atom names in `Interchange.from_openmm`
 * Fixes regression tests.
