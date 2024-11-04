@@ -132,3 +132,7 @@ tmp.in
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# pixi environments
+.pixi
+*.egg-info
