@@ -11,6 +11,8 @@ SMIRNOFF force fields support several different partial charge assignment method
 
 If a molecule gets charges from one method, attempts to match charges for later methods are skipped. Note that preset charges override the force field and are not checked for consistency; any charges provided to the `charge_from_molecules` argument technically modify the force field. For more on how SMIRNOFF defines this behavior, see [this issue](https://github.com/openforcefield/standards/issues/68) and linked discussions.
 
+After all (mass-bearing) atoms have partial charges assigned, virtual sites are given charges by transferring charge from the atoms they are associated with ("orientation" atoms) according to the parameters of the force field. (The value of these parameters can be 0.0.)
+
 Given this complexity, it may be useful to track how each atom actually got charges assigned. Interchange has opt-in logging to track this behavior. This uses the [standard library `logging` module](https://docs.python.org/3/library/logging.html) at the `INFO` level. The easiest way to get started is by adding something like `logging.basicConfig(level=logging.INFO)` to the beginning of a script or program. For example, this script:
 
 ```python

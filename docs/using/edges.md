@@ -9,7 +9,7 @@ Interchange, following the [SMIRNOFF specification](https://openforcefield.githu
 1. **Preset charges**: Look for molecule matches in the `charge_from_molecules` argument
 2. **Library charges**: Look for chemical environment matches in the `<LibraryCharges>` section of the force field
 3. **Charge increment models**: Look for chemical environment matches in the `<ChargeIncrementModel>` section of the force field
-4. **AM1-BCC**: Try to run some variant of AM1-BCC (presumably this is were graph charges go) as described by the `<ToolkitAM1BCC>` section of the force field
+4. **AM1-BCC**: Try to run some variant of AM1-BCC as described by the `<ToolkitAM1BCC>` section of the force field
 
 If charges are successfully assigned using a method, no lower-priority methods in this list are attempted. For example:
 
