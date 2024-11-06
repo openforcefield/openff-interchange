@@ -81,31 +81,33 @@ def to_lammps(interchange: Interchange, file_path: Path | str):
             b_len = numpy.linalg.norm(b)
             c_len = numpy.linalg.norm(c)
 
-            alpha = numpy.arccos(numpy.dot(b, c)/(b_len*c_len))
-            beta  = numpy.arccos(numpy.dot(c, a)/(c_len*a_len))
-            gamma = numpy.arccos(numpy.dot(a, b)/(a_len*b_len))
+            alpha = numpy.arccos(numpy.dot(b, c) / (b_len * c_len))
+            beta = numpy.arccos(numpy.dot(c, a) / (c_len * a_len))
+            gamma = numpy.arccos(numpy.dot(a, b) / (a_len * b_len))
 
             ax = a_len
-            bx = b_len*numpy.cos(gamma)
-            by = b_len*numpy.sin(gamma)
-            cx = c_len*numpy.cos(beta)
-            cy = c_len*(numpy.cos(alpha)-numpy.cos(beta)*numpy.cos(gamma))/numpy.sin(gamma)
-            cz = numpy.sqrt(c_len**2-cx**2-cy**2)
+            bx = b_len * numpy.cos(gamma)
+            by = b_len * numpy.sin(gamma)
+            cx = c_len * numpy.cos(beta)
+            cy = c_len * (numpy.cos(alpha) - numpy.cos(beta) * numpy.cos(gamma)) / numpy.sin(gamma)
+            cz = numpy.sqrt(c_len**2 - cx**2 - cy**2)
 
             xy, xz, yz = bx, cx, cy
 
-            a_new = numpy.array([ax,0,0])
-            b_new = numpy.array([bx,by,0])
-            c_new = numpy.array([cx,cy,cz])
+            a_new = numpy.array([ax, 0, 0])
+            b_new = numpy.array([bx, by, 0])
+            c_new = numpy.array([cx, cy, cz])
 
-            check  = numpy.allclose(a, a_new)
+            check = numpy.allclose(a, a_new)
             check *= numpy.allclose(b, b_new)
             check *= numpy.allclose(c, c_new)
-                        
-            if not check:            
+
+            if not check:
                 import warnings
+
                 warnings.warn(
-                    f"We are rotating the unit cell matrix. Before: a={a}, b={b}, c={c}, After: a={a_new}, b={b_new}, c={c_new}")
+                    f"We are rotating the unit cell matrix. Before: a={a}, b={b}, c={c}, After: a={a_new}, b={b_new}, c={c_new}",
+                )
 
         lmp_file.write(
             f"{x_min:.10g} {x_min + ax:.10g} xlo xhi\n"

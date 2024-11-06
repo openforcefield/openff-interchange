@@ -44,7 +44,11 @@ class TestLammps:
         mol.conformers[0] -= numpy.min(mol.conformers[0], axis=0)
         top = Topology.from_molecules(n_mols * [mol])
 
+<<<<<<< HEAD
         box_t = numpy.zeros((3,3), dtype=float) * unit.angstrom
+=======
+        box = numpy.zeros((3, 3), dtype=float) * unit.angstrom
+>>>>>>> 93384ed44aad23798252ae06fc348d2d75b4857b
 
         box_t[0] = [51.34903463831951, 0, 0] * unit.angstrom
         box_t[1] = [-0.03849979989403723, 50.9134404144338, 0] * unit.angstrom
