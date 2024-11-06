@@ -94,12 +94,17 @@ def to_lammps(interchange: Interchange, file_path: Path | str):
 
             xy, xz, yz = bx, cx, cy
 
-            a_new = [ax,0,0]
-            b_new = [bx,by,0]
-            c_new = [cx,cy,cz]
+            a_new = numpy.array([ax,0,0])
+            b_new = numpy.array([bx,by,0])
+            c_new = numpy.array([cx,cy,cz])
 
-            import warnings
-            warnings.warn(
+            check  = numpy.allclose(a, a_new)
+            check *= numpy.allclose(b, b_new)
+            check *= numpy.allclose(c, c_new)
+                        
+            if not check:            
+                import warnings
+                warnings.warn(
                     f"We are rotating the unit cell matrix. Before: a={a}, b={b}, c={c}, After: a={a_new}, b={b_new}, c={c_new}")
 
         lmp_file.write(
