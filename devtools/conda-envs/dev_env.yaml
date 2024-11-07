@@ -6,7 +6,7 @@ dependencies:
   # Core
   - python =3.10
   - pip
-  - versioneer-518
+  - versioningit
   - pip
   - numpy
   - pydantic =2
