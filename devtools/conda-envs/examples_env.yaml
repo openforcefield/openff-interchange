@@ -9,7 +9,7 @@ dependencies:
   - numpy
   - pydantic =2
   # OpenFF stack
-  - openff-toolkit-base ~=0.16.4
+  - openff-toolkit-base ~=0.16.6
   - openff-units
   - ambertools =23
   # Optional features
