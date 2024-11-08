@@ -318,6 +318,12 @@ class MissingPartialChargesError(InterchangeException):
     """
 
 
+class PresetChargesError(InterchangeException):
+    """
+    The `charge_from_molecules` is structured in an undefined way.
+    """
+
+
 class UnassignedValenceError(InterchangeException):
     """Exception raised when there are valence terms for which a ParameterHandler did not find matches."""
 
