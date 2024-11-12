@@ -45,6 +45,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Install conda environment
       uses: mamba-org/setup-micromamba@v1
