@@ -1,16 +1,16 @@
 """A project (and object) for storing, manipulating, and converting molecular mechanics data."""
 
 import importlib
+from importlib.metadata import version
 from types import ModuleType
 from typing import TYPE_CHECKING
-
-from openff.interchange._version import get_versions
 
 if TYPE_CHECKING:
     # Type checkers can't see lazy-imported objects
     from openff.interchange.components.interchange import Interchange
 
-__version__ = get_versions()["version"]
+
+__version__ = version("openff.interchange")
 
 __all__: list[str] = [
     "Interchange",

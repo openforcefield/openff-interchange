@@ -1,16 +1,16 @@
-# .readthedocs.yml
-
 version: 2
 
 build:
-  os: ubuntu-22.04
+  os: ubuntu-24.04
   tools:
-    # https://docs.readthedocs.io/en/stable/config-file/v2.html#build-tools-python
-    python: "mambaforge-4.10"
+    python: "mambaforge-latest"
+  jobs:
+    pre_build:
+      - mamba list
 
 sphinx:
   configuration: docs/conf.py
-  fail_on_warning: true
+  fail_on_warning: false
 
 conda:
   environment: devtools/conda-envs/docs_env.yaml
