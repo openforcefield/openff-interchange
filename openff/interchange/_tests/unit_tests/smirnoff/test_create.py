@@ -7,6 +7,7 @@ from openff.interchange import Interchange
 from openff.interchange._tests import get_test_file_path
 from openff.interchange.constants import kcal_mol, kcal_mol_a2
 from openff.interchange.exceptions import (
+    PresetChargesError,
     UnassignedAngleError,
     UnassignedBondError,
     UnassignedTorsionError,
@@ -21,6 +22,7 @@ from openff.interchange.smirnoff._nonbonded import (
     _upconvert_vdw_handler,
     library_charge_from_molecule,
 )
+from openff.interchange.warnings import PresetChargesAndVirtualSitesWarning
 
 
 def _get_interpolated_bond_k(bond_handler) -> float:
@@ -160,7 +162,8 @@ def test_library_charges_from_molecule():
     assert library_charges.charge == [*mol.partial_charges]
 
 
-class TestChargeFromMolecules:
+class TestPresetCharges:
+    @pytest.mark.slow
     def test_charge_from_molecules_basic(self, sage):
         molecule = Molecule.from_smiles("CCO")
         molecule.assign_partial_charges(partial_charge_method="am1bcc")
@@ -230,6 +233,102 @@ class TestChargeFromMolecules:
         found_charges = [v.m for v in out["Electrostatics"]._get_charges().values()]
 
         assert numpy.allclose(expected_charges, found_charges)
+
+    def test_error_when_any_missing_partial_charges(self, sage):
+        ethanol = Molecule.from_smiles("CCO")
+
+        ethanol.assign_partial_charges(partial_charge_method="am1bcc")
+
+        topology = Topology.from_molecules(
+            [
+                Molecule.from_smiles("C"),
+                ethanol,
+            ],
+        )
+
+        with pytest.raises(
+            PresetChargesError,
+            match="All.*must have partial charges",
+        ):
+            sage.create_interchange(
+                topology,
+                charge_from_molecules=[Molecule.from_smiles("C")],
+            )
+
+    def test_error_multiple_isomorphic_molecules(self, sage, ethanol, reversed_ethanol):
+        # these ethanol fixtures *do* have charges, if they didn't have charges it would be
+        # ambiguous which error should be raised
+        topology = Topology.from_molecules([ethanol, reversed_ethanol, ethanol])
+
+        with pytest.raises(
+            PresetChargesError,
+            match="All molecules.*isomorphic.*unique",
+        ):
+            sage.create_interchange(
+                topology,
+                charge_from_molecules=[ethanol, reversed_ethanol],
+            )
+
+    def test_virtual_site_charge_increments_applied_after_preset_charges_water(
+        self,
+        tip4p,
+        water,
+    ):
+        """
+        Test that charge increments to/from virtual sites are still applied after preset charges are set.
+
+        This is funky user input, since preset charges override library charges, which are important for water.
+        """
+        water.partial_charges = Quantity(
+            [-2.0, 1.0, 1.0],
+            "elementary_charge",
+        )
+
+        with pytest.warns(PresetChargesAndVirtualSitesWarning):
+            # This dict is probably ordered O H H VS
+            charges = tip4p.create_interchange(
+                water.to_topology(),
+                charge_from_molecules=[water],
+            )["Electrostatics"].charges
+
+        # tip4p_fb.offxml is meant to result in charges of -1.0517362213526 (VS) 0 (O) and 0.5258681106763 (H)
+        # the force field has 0.0 for all library charges (skipping AM1-BCC), so preset charges screw this up.
+        # the resulting charges, if using preset charges of [-2, 1, 1], should be the result of adding together
+        # [-2, 1, 1, 0] (preset charges) and
+        # [0, 1.5258681106763001, 1.5258681106763001, -1.0517362213526] (charge increments)
+
+        numpy.testing.assert_allclose(
+            [charge.m for charge in charges.values()],
+            [-2.0, 1.5258681106763001, 1.5258681106763001, -1.0517362213526],
+        )
+
+    def test_virtual_site_charge_increments_applied_after_preset_charges_ligand(
+        self,
+        sage_with_sigma_hole,
+    ):
+        ligand = Molecule.from_mapped_smiles("[C:1]([Cl:2])([Cl:3])([Cl:4])[Cl:5]")
+
+        ligand.partial_charges = Quantity(
+            [1.2, -0.3, -0.3, -0.3, -0.3],
+            "elementary_charge",
+        )
+
+        with pytest.warns(PresetChargesAndVirtualSitesWarning):
+            # This dict is probably ordered C Cl Cl Cl Cl VS VS VS VS
+            charges = sage_with_sigma_hole.create_interchange(
+                ligand.to_topology(),
+                charge_from_molecules=[ligand],
+            )["Electrostatics"].charges
+
+        # this fake sigma hole parameter shifts 0.1 e from the carbon and 0.2 e from the chlorine, so the
+        # resulting charges should be like
+        # [1.2, -0.3, -0.3, -0.3, -0.3] +
+        # [0.4, 0.2, 0.2, 0.2, 0.2, -0.3, -0.3, -0.3, -0.3]
+
+        numpy.testing.assert_allclose(
+            [charge.m for charge in charges.values()],
+            [1.6, -0.1, -0.1, -0.1, -0.1, -0.3, -0.3, -0.3, -0.3],
+        )
 
 
 @skip_if_missing("openmm")

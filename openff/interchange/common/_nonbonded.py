@@ -101,7 +101,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
     nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
-    _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr(default_factory=dict)
+    _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr()
     _charges_cached: bool = PrivateAttr(default=False)
 
     @computed_field  # type: ignore[prop-decorator]

@@ -84,7 +84,7 @@ def sage_with_sigma_hole(sage):
             smirks="[#6:1]-[#17:2]",
             distance=1.4 * unit.angstrom,
             type="BondCharge",
-            match="once",
+            match="all_permutations",
             charge_increment1=0.1 * unit.elementary_charge,
             charge_increment2=0.2 * unit.elementary_charge,
         ),
