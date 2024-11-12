@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Union, overload
 
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field
 
@@ -45,6 +45,7 @@ from openff.interchange.warnings import InterchangeDeprecationWarning
 if TYPE_CHECKING:
     import openmm
     import openmm.app
+    from openff.toolkit import ForceField
 
     if has_package("foyer"):
         from foyer import Forcefield as FoyerForcefield
@@ -84,7 +85,7 @@ class Interchange(_BaseModel):
     @classmethod
     def from_smirnoff(
         cls,
-        force_field: ForceField,
+        force_field: "ForceField",
         topology: Topology | list[Molecule],
         box=None,
         positions=None,

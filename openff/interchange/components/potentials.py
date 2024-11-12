@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     if has_package("jax"):
         from jax import Array
     else:
-        Array: TypeAlias = Any
+        Array: TypeAlias = Any  # type: ignore[no-redef]
 else:
     Array: TypeAlias = ArrayLike
 
