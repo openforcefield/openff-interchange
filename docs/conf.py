@@ -16,7 +16,12 @@ import importlib
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath(".."))
+try:
+    from openff.interchange import __version__
+except ModuleNotFoundError:
+    __version__ = "0.0.0"
+
+sys.path.insert(0, os.path.abspath("../"))
 
 
 # -- Project information -----------------------------------------------------
@@ -27,18 +32,12 @@ copyright = (
     "Computational Molecular Science Python Cookiecutter version 1.2"
 )
 author = "Open Force Field Initiative"
-
-# The short X.Y version
-version = ""
-# The full version, including alpha/beta/rc tags
-release = ""
+version = __version__
 
 
 # -- General configuration ---------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#
-# needs_sphinx = '1.0'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -89,7 +88,6 @@ autosummary_imported_members = False
 autosummary_context = {
     # Modules to exclude from API docs
     "exclude_modules": [
-        "openff.interchange.conftest",
         "openff.interchange._tests",  # Maybe this is excluded by default?
     ],
 }
@@ -258,7 +256,7 @@ latex_documents = [
     (
         master_doc,
         "interchange.tex",
-        "openff-interchange Documentation",
+        "Interchange Documentation",
         "interchange",
         "manual",
     ),
@@ -270,7 +268,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, "interchange", "openff-interchange Documentation", [author], 1),
+    (master_doc, "interchange", "Interchange Documentation", [author], 1),
 ]
 
 
@@ -283,7 +281,7 @@ texinfo_documents = [
     (
         master_doc,
         "interchange",
-        "openff-interchange Documentation",
+        "Interchange Documentation",
         author,
         "interchange",
         "A molecular interchange object from the Open Force Field Initiative",
