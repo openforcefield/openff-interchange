@@ -10,7 +10,7 @@ dependencies:
   - numpy =1
   - pydantic =2
   - openff-toolkit-base ~=0.16.4
-  - openmm =8
+  - openmm =8.1.2
   - mbuild
   - foyer =1
   - nglview
