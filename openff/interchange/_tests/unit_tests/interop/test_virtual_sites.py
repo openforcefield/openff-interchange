@@ -6,7 +6,7 @@ import numpy
 import pytest
 from openff.toolkit import ForceField, Quantity, unit
 
-from openff.interchange._tests import MoleculeWithConformer
+from openff.interchange._tests import MoleculeWithConformer, needs_openmm
 from openff.interchange.exceptions import MissingVirtualSitesError
 from openff.interchange.interop._virtual_sites import get_positions_with_virtual_sites
 
@@ -37,6 +37,7 @@ def test_nonzero_positions(tip4p_interchange):
     )
 
 
+@needs_openmm
 def test_collate_virtual_site_positions(tip4p, water_dimer):
     out = tip4p.create_interchange(water_dimer)
 

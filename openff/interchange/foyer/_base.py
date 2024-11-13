@@ -8,8 +8,12 @@ from openff.interchange.components.potentials import Collection, Potential
 from openff.interchange.models import PotentialKey, TopologyKey
 
 if has_package("foyer"):
-    from foyer.exceptions import MissingForceError, MissingParametersError
-    from foyer.forcefield import Forcefield
+    try:
+        from foyer.exceptions import MissingForceError, MissingParametersError
+        from foyer.forcefield import Forcefield
+    except ModuleNotFoundError:
+        # case of openff/interchange/foyer/ being detected as the real package
+        pass
 
 
 # Is this the safest way to achieve PotentialKey id separation?

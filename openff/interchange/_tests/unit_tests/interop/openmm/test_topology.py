@@ -42,6 +42,8 @@ def test_each_molecule_with_virtual_sites_has_its_own_funnky_virtual_site_residu
     tip5p,
     water,
 ):
+    pytest.importorskip("openmm")
+
     topology = Topology.from_molecules([water, water])
 
     for index, molecule in enumerate(topology.molecules):

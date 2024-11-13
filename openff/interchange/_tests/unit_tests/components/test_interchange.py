@@ -212,6 +212,8 @@ class TestInterchange:
         )
 
     def test_add_barostat(self, sage, default_integrator, default_barostat):
+        pytest.importorskip("openmm")
+
         import openmm
         import openmm.unit
 

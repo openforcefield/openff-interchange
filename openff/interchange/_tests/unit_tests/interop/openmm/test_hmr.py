@@ -3,6 +3,7 @@ import random
 import pytest
 from openff.toolkit import Molecule, unit
 
+from openff.interchange._tests import needs_openmm
 from openff.interchange.exceptions import NegativeMassError, UnsupportedExportError
 
 
@@ -80,6 +81,7 @@ def test_mass_is_positive(sage):
         sage.create_interchange(Molecule.from_smiles("C").to_topology()).to_openmm(hydrogen_mass=5.0)
 
 
+@needs_openmm
 def test_virtual_sites_unsupported(tip4p, water):
     with pytest.raises(UnsupportedExportError, match="with virtual sites"):
         tip4p.create_interchange(water.to_topology()).to_openmm(hydrogen_mass=2.0)

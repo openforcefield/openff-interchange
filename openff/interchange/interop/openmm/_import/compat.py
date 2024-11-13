@@ -1,13 +1,18 @@
-import openmm
-import openmm.app
+from typing import TYPE_CHECKING, Union
+
 from openff.toolkit import Topology
+from openff.utilities.utilities import has_package
 
 from openff.interchange.exceptions import UnsupportedImportError
 
+if has_package("openmm") or TYPE_CHECKING:
+    import openmm
+    import openmm.app
+
 
 def _check_compatible_inputs(
-    system: openmm.System,
-    topology: openmm.app.Topology | Topology | None,
+    system: "openmm.System",
+    topology: Union["openmm.app.Topology", Topology, None],
 ):
     """Check that inputs are compatible and supported."""
     for index in range(system.getNumParticles()):

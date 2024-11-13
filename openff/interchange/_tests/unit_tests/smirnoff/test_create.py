@@ -4,7 +4,7 @@ from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import get_test_file_path
+from openff.interchange._tests import get_test_file_path, needs_openmm
 from openff.interchange.constants import kcal_mol, kcal_mol_a2
 from openff.interchange.exceptions import (
     PresetChargesError,
@@ -65,6 +65,7 @@ class TestCreate:
             3,
         )
 
+    @needs_openmm
     def test_cosmetic_attributes(self):
         from openff.toolkit._tests.test_forcefield import xml_ff_w_cosmetic_elements
 

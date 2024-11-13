@@ -74,9 +74,9 @@ jobs:
         micromamba install openmm -c conda-forge
 
     - name: Uninstall OpenMM
-      if: ${{ matrix.openmm == false && matrix.openeye == true }}
+      if: ${{ matrix.openmm == false }}
       run: |
-        micromamba remove openmm mdtraj
+        micromamba remove openmm
         # Removing mBuild also removes some leaves, need to re-install them
         micromamba install rdkit packmol "lammps >=2023.08.02"
 
