@@ -14,9 +14,6 @@
 # Incase the project was not installed
 import importlib
 import os
-import sys
-
-sys.path.insert(0, os.path.abspath("../"))
 
 from openff.interchange import __version__
 
