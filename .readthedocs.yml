@@ -10,6 +10,8 @@ build:
 
 sphinx:
   configuration: docs/conf.py
+  # Interchange's docs should not produce warnings; if they start,
+  # something is broken (most likely automatic API doc generation)
   fail_on_warning: true
 
 conda:
