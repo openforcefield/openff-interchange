@@ -16,13 +16,12 @@ import importlib
 import os
 import sys
 
+sys.path.insert(0, os.path.abspath("../"))
+
 try:
     from openff.interchange import __version__
 except ModuleNotFoundError:
     __version__ = "0.0.0"
-
-sys.path.insert(0, os.path.abspath("../"))
-
 
 # -- Project information -----------------------------------------------------
 
