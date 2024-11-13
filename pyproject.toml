@@ -13,7 +13,53 @@ authors = [{name = "Open Force Field Initiative", email = "info@openforcefield.o
 license = {text = "MIT"}
 dynamic = ["version"]
 
+[tool.setuptools.packages.find]
+where = ["openff/interchange"]
+
 [tool.versioningit]
+
+[tool.mypy]
+mypy_path = "stubs/"
+python_version = "3.11"
+plugins = "numpy.typing.mypy_plugin,pydantic.mypy"
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_incomplete_stub = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pandas",
+    "networkx",
+    "openmm",
+    "openmm.app",
+    "openmm.app.element",
+    "openmm.unit",
+    "intermol.*",
+    "rdkit",
+    "openff.toolkit.*",
+    "openff.units.*",
+    "openff.utilities.*",
+    "openff.recharge.*",
+    "parmed",
+    "parmed.amber",
+    "pmdtest.utils",
+    "pytest",
+    "pint",
+    "unyt",
+    "openeye",
+    "jax",
+    "scipy.spatial",
+    "nonbonded_plugins.*",
+    "lammps",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+addopts = "--cov=openff/interchange --cov-report=xml"
 
 [tool.interrogate]
 ignore-init-method = true
@@ -60,3 +106,16 @@ known-first-party = ["openff.interchange"]
 
 [tool.ruff.lint.pydocstyle]
 property-decorators=["validator"]
+
+[tool.coverage.run]
+omit = [
+    "*/*/_tests/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]
