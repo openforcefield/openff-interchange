@@ -14,15 +14,8 @@
 # Incase the project was not installed
 import importlib
 import os
-import sys
 
-try:
-    from openff.interchange import __version__
-except ModuleNotFoundError:
-    __version__ = "0.0.0"
-
-sys.path.insert(0, os.path.abspath("../"))
-
+from openff.interchange import __version__
 
 # -- Project information -----------------------------------------------------
 
@@ -290,4 +283,13 @@ texinfo_documents = [
 ]
 
 
-# -- Extension configuration -------------------------------------------------
+# -- ReadTheDocs configuration -------------------------------------------------
+
+if os.environ.get("READTHEDOCS", "") == "True":
+    # Define the canonical URL if you are using a custom domain on Read the Docs
+    html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "")
+
+    # Tell Jinja2 templates the build is running on Read the Docs
+    if "html_context" not in globals():
+        html_context = {}
+    html_context["READTHEDOCS"] = True
