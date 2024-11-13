@@ -6,7 +6,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name="Interchange"
+name="openff-interchange"
 description = "A project (and object) for storing, manipulating, and converting molecular mechanics data."
 readme = "README.md"
 authors = [{name = "Open Force Field Initiative", email = "info@openforcefield.org"}]
