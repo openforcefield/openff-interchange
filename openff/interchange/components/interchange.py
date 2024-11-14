@@ -42,15 +42,6 @@ from openff.interchange.smirnoff import (
 from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
-if has_package("foyer"):
-    try:
-        from foyer.forcefield import Forcefield as FoyerForcefield
-    except ModuleNotFoundError:
-        # case of openff/interchange/foyer/ being detected as the real package
-        pass
-if has_package("nglview"):
-    import nglview
-
 if TYPE_CHECKING:
     import openmm
     import openmm.app

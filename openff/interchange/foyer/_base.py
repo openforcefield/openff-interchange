@@ -3,18 +3,9 @@ from copy import copy
 from typing import TYPE_CHECKING
 
 from openff.toolkit import Topology
-from openff.utilities.utilities import has_package
 
 from openff.interchange.components.potentials import Collection, Potential
 from openff.interchange.models import PotentialKey, TopologyKey
-
-if has_package("foyer"):
-    try:
-        from foyer.exceptions import MissingForceError, MissingParametersError  #  noqa
-        from foyer.forcefield import Forcefield
-    except ModuleNotFoundError:
-        # case of openff/interchange/foyer/ being detected as the real package
-        pass
 
 if TYPE_CHECKING:
     from foyer import Forcefield
