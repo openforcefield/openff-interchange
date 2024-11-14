@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from copy import copy
+from typing import TYPE_CHECKING
 
 from openff.toolkit import Topology
 from openff.utilities.utilities import has_package
@@ -9,11 +10,14 @@ from openff.interchange.models import PotentialKey, TopologyKey
 
 if has_package("foyer"):
     try:
-        from foyer.exceptions import MissingForceError, MissingParametersError
+        from foyer.exceptions import MissingForceError, MissingParametersError  #  noqa
         from foyer.forcefield import Forcefield
     except ModuleNotFoundError:
         # case of openff/interchange/foyer/ being detected as the real package
         pass
+
+if TYPE_CHECKING:
+    from foyer import Forcefield
 
 
 # Is this the safest way to achieve PotentialKey id separation?
@@ -70,6 +74,8 @@ class FoyerConnectedAtomsHandler(Collection):
 
     def store_potentials(self, force_field: "Forcefield") -> None:
         """Populate self.potentials with key-val pairs of [PotentialKey, Potential]."""
+        from foyer.exceptions import MissingForceError, MissingParametersError
+
         for pot_key in self.key_map.values():
             try:
                 params = force_field.get_parameters(
