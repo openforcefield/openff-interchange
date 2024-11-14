@@ -4,7 +4,7 @@ channels:
 dependencies:
   # Core
   - python
-  - versioneer-518
+  - versioningit
   - numpy
   - pydantic =2
   # OpenFF stack
@@ -14,7 +14,7 @@ dependencies:
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
   - rdkit
   # Optional features
-  - openmm
+  - openmm =8.1.2
   # smirnoff-plugins =2024
   # de-forcefields  # add back after smirnoff-plugins update
   - openff-nagl

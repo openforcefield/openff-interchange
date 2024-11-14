@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Union, overload
 
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field
 
@@ -42,14 +42,15 @@ from openff.interchange.smirnoff import (
 from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
-if has_package("foyer"):
-    from foyer.forcefield import Forcefield as FoyerForcefield
-if has_package("nglview"):
-    import nglview
-
 if TYPE_CHECKING:
     import openmm
     import openmm.app
+    from openff.toolkit import ForceField
+
+    if has_package("foyer"):
+        from foyer import Forcefield as FoyerForcefield
+    if has_package("nglview"):
+        import nglview
 
 
 class Interchange(_BaseModel):
@@ -84,7 +85,7 @@ class Interchange(_BaseModel):
     @classmethod
     def from_smirnoff(
         cls,
-        force_field: ForceField,
+        force_field: "ForceField",
         topology: Topology | list[Molecule],
         box=None,
         positions=None,
@@ -109,9 +110,12 @@ class Interchange(_BaseModel):
             The positions associated with atoms in the input topology. If ``None``,
             positions are taken from the molecules in topology, if present on all molecules.
         charge_from_molecules : `List[openff.toolkit.molecule.Molecule]`, optional
-            If specified, partial charges will be taken from the given molecules
-            instead of being determined by the force field. In either case, charges
-            on the input topology are ignored.
+            If specified, partial charges for any molecules isomorphic to those
+            given will be taken from the given molecules' `partial_charges`
+            attribute instead of being determined by the force field. All
+            molecules in this list must have partial charges assigned and must
+            not be isomorphic with any other molecules in the list. For all values
+            of this argument, charges on the input topology are ignored.
         partial_bond_orders_from_molecules : List[openff.toolkit.molecule.Molecule], optional
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
@@ -120,12 +124,14 @@ class Interchange(_BaseModel):
 
         Notes
         -----
-        If the `Molecule` objects in the `topology` argument each contain conformers, the returned `Interchange` object
-        will have its positions set via concatenating the 0th conformer of each `Molecule`.
+        If the ``Molecule`` objects in the ``topology`` argument each contain
+        conformers, the returned ``Interchange`` object will have its positions
+        set via concatenating the 0th conformer of each ``Molecule``.
 
-        If the `Molecule` objects in the `topology` argument have stored partial charges, these are ignored and charges
-        are assigned according to the contents of the force field. To override the force field and use preset charges,
-        use the `charge_from_molecules` argument.
+        If the ``Molecule`` objects in the ``topology`` argument have stored
+        partial charges, these are ignored and charges are assigned according to
+        the contents of the force field. To override the force field and use
+        preset charges, use the ``charge_from_molecules`` argument.
 
         Examples
         --------
@@ -150,7 +156,7 @@ class Interchange(_BaseModel):
             topology=topology,
             box=box,
             positions=positions,
-            charge_from_molecules=charge_from_molecules,
+            molecules_with_preset_charges=charge_from_molecules,
             partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
             allow_nonintegral_charges=allow_nonintegral_charges,
         )
@@ -342,7 +348,7 @@ class Interchange(_BaseModel):
         Molecule names in written files are not guaranteed to match the `Moleclue.name` attribute of the
         molecules in the topology, especially if they are empty strings or not unique.
 
-        See `to_gro` and `to_top` for more details.
+        See :py:meth:`to_gro <Interchange.to_gro>` and :py:meth:`to_top <Interchange.to_top>` for more details.
 
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
@@ -429,6 +435,9 @@ class Interchange(_BaseModel):
             The path to the GROMACS coordinate file to write.
         decimal: int, default=3
             The number of decimal places to use when writing the GROMACS coordinate file.
+
+        Notes
+        -----
 
         Residue IDs must be positive integers (or string representations thereof).
 
@@ -569,9 +578,10 @@ class Interchange(_BaseModel):
         Parameters
         ----------
         collate
-            If False, the default, all virtual sites will be added to a single residue at the end of the topology.
-            If True, virtual sites will be collated with their associated molecule and added to the residue of the last
-            atom in the molecule they belong to.
+            If ``False``, the default, all virtual sites will be added to a
+            single residue at the end of the topology. If ``True``, virtual
+            sites will be collated with their associated molecule and added to
+            the residue of the last atom in the molecule they belong to.
 
         """
         from openff.interchange.interop.openmm._topology import to_openmm_topology
@@ -593,9 +603,14 @@ class Interchange(_BaseModel):
         **kwargs,
     ) -> "openmm.app.simulation.Simulation":
         """
-        Export this Interchange to an OpenMM `Simulation` object.
+        Export this Interchange to an OpenMM ``Simulation`` object.
 
-        Positions are set on the `Simulation` if present on the `Interchange`.
+        A :py:class:`Simulation <openmm.app.simulation.Simulation>` encapsulates
+        all the information needed for a typical OpenMM simulation into a single
+        object with a simple API.
+
+        Positions are set on the ``Simulation`` if present on the
+        ``Interchange``.
 
         Additional forces, such as a barostat, should be added with the
         ``additional_forces`` argument to avoid having to re-initialize

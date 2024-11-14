@@ -5,11 +5,12 @@ dependencies:
   # Base depends
   # https://docs.readthedocs.io/en/stable/config-file/v2.html#build-tools-python
   - python =3.10
+  - versioningit
   - pip
   - numpy =1
   - pydantic =2
   - openff-toolkit-base ~=0.16.4
-  - openmm =8
+  - openmm =8.1.2
   - mbuild
   - foyer =1
   - nglview
@@ -20,8 +21,8 @@ dependencies:
   - myst-parser
   - numpydoc
   - autodoc-pydantic =2
-  - sphinx ~=4.4
+  - sphinx ==6.1.3
   - sphinxcontrib-mermaid
   - sphinx-notfound-page
   - pip:
-    - git+https://github.com/openforcefield/openff-sphinx-theme.git@main
+      - git+https://github.com/openforcefield/openff-sphinx-theme.git@main
