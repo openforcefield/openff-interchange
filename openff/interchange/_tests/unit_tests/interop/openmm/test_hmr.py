@@ -130,6 +130,9 @@ def test_hmr_with_ligand_virtual_sites(sage_with_bond_charge, hydrogen_mass):
     assert system.getParticleMass(6)._value == hydrogen_mass
     assert system.getParticleMass(7)._value == hydrogen_mass
 
+    assert system.getParticleMass(8)._value == 0.0
+    assert system.getParticleMass(9)._value == 0.0
+
     # make sure it can minimize and run briefly without crashing
     # this is a single ligand in vacuum with boring parameters
     simulation.minimizeEnergy(maxIterations=100)
