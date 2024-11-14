@@ -1,5 +1,35 @@
 # Sharp edges
 
+## Quirks of charge assignment
+
+### Charge assignment hierarchy
+
+Interchange, following the [SMIRNOFF specification](https://openforcefield.github.io/standards/standards/smirnoff/#partial-charge-and-electrostatics-models), assigns charges to (heavy) atoms with the following priority:
+
+1. **Preset charges**: Look for molecule matches in the `charge_from_molecules` argument
+2. **Library charges**: Look for chemical environment matches in the `<LibraryCharges>` section of the force field
+3. **Charge increment models**: Look for chemical environment matches in the `<ChargeIncrementModel>` section of the force field
+4. **AM1-BCC**: Try to run some variant of AM1-BCC as described by the `<ToolkitAM1BCC>` section of the force field
+
+If charges are successfully assigned using a method, no lower-priority methods in this list are attempted. For example:
+
+* A force field with library charge parameters for peptides (i.e. a biopolymer force field, covering all appropriate residues) will NOT try to call AM1-BCC on a biopolymers.
+* If a ligand is successfully assigned preset charges, chemical environment matching of library charges and charge increments will be skipped, as will AM1-BCC.
+* If a variant of AM1-BCC (i.e. using something other than AM1 and/or using custom BCCs) is encoded in a `<ChargeIncrementModel>` section, other AM1-BCC implementations will not be called.
+* If preset charges are not provided, a force field like OpenFF's Parsley or Sage lines without (many) library charges or charge increments will attempt AM1-BCC on all molecules (except water and monoatomic ions).
+
+After all of these steps are complete and all heavy atoms given partial charges, virtual sites are assigned charges using the values of `charge_increment`s in the virtual site parameters. Because virtual site charge are only described by the force field, using preset charges with virtual sites is discouraged.
+
+### Preset charges
+
+The charges specified by the force field can be overridden by providing molecules with partial charges to the `charge_from_molecules` argument. This may be used to make use of alternate implementations of the appropriate charge generation method, or to provide different charges to the force field. Charges provided via `charge_from_molecules` are called "preset charges" because they are pre-set by the user, rather than computed by the force field. The following restrictions are in place when using preset charges:
+
+* All molecules in the the `charge_from_molecules` list must be non-isomorphic with each other.
+* All molecules in the the `charge_from_molecules` list must have partial charges.
+* All copies of a molecule in the topology will be parametrized with the charges from an isomorphic molecule from the `charge_from_molecules` list.
+
+Using preset charges with virtual sites is discouraged as it can provide surprising results.
+
 ## Quirks of core OpenFF objects
 
 Future refactors may remove the side effects of these quirks, but currently there are some

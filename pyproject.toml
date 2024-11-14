@@ -1,13 +1,19 @@
 [build-system]
-requires = ["setuptools", "versioneer[toml]==0.29"]
+requires = [
+    "setuptools",
+    "versioningit",
+]
 build-backend = "setuptools.build_meta"
 
-[tool.versioneer]
-VCS = "git"
-style = "pep440"
-versionfile_source = "openff/interchange/_version.py"
-versionfile_build = "openff/interchange/_version.py"
-tag_prefix = "v"
+[project]
+name="openff-interchange"
+description = "A project (and object) for storing, manipulating, and converting molecular mechanics data."
+readme = "README.md"
+authors = [{name = "Open Force Field Initiative", email = "info@openforcefield.org"}]
+license = {text = "MIT"}
+dynamic = ["version"]
+
+[tool.versioningit]
 
 [tool.interrogate]
 ignore-init-method = true

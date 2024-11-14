@@ -7,7 +7,6 @@ from openff.units.openmm import from_openmm as from_openmm_
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import ValidationError
 
-from openff.interchange._experimental import experimental
 from openff.interchange.common._nonbonded import vdWCollection
 from openff.interchange.common._valence import (
     AngleCollection,
@@ -38,7 +37,6 @@ if TYPE_CHECKING:
 
 
 @requires_package("openmm")
-@experimental
 def from_openmm(
     *,
     system: "openmm.System",

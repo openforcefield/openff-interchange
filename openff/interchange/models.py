@@ -298,6 +298,8 @@ class SingleAtomChargeTopologyKey(LibraryChargeTopologyKey):
     Shim class for storing the result of charge_from_molecules.
     """
 
+    extras: dict = dict()  # noqa: RUF012
+
 
 class ChargeModelTopologyKey(_BaseModel):
     """Subclass of `TopologyKey` for use with charge models only."""
