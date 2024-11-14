@@ -2,9 +2,10 @@
 
 import ast
 import json
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, TypeAlias
 
 import numpy
+from numpy.typing import ArrayLike
 from openff.toolkit import Quantity
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import (
@@ -25,15 +26,13 @@ from openff.interchange.models import (
 )
 from openff.interchange.pydantic import _BaseModel
 
-if has_package("jax"):
-    from jax import numpy as jax_numpy
-
-from numpy.typing import ArrayLike
-
-if has_package("jax"):
-    from jax import Array
+if TYPE_CHECKING:
+    if has_package("jax"):
+        from jax import Array
+    else:
+        Array: TypeAlias = Any  # type: ignore[no-redef]
 else:
-    Array = Any  # type: ignore
+    Array: TypeAlias = ArrayLike
 
 
 class Potential(_BaseModel):
@@ -269,6 +268,8 @@ class Collection(_BaseModel):
             raise NotImplementedError
 
         if use_jax:
+            from jax import numpy as jax_numpy
+
             return jax_numpy.array(
                 [[v.m for v in p.parameters.values()] for p in self.potentials.values()],
             )
@@ -318,6 +319,8 @@ class Collection(_BaseModel):
             q.append(p[index])
 
         if use_jax:
+            from jax import numpy as jax_numpy
+
             return jax_numpy.array(q)
         else:
             return numpy.array(q)

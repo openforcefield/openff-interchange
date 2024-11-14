@@ -104,7 +104,7 @@ class ElectrostaticsCollection(_NonbondedCollection):
     _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr()
     _charges_cached: bool = PrivateAttr(default=False)
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def charges(
         self,
