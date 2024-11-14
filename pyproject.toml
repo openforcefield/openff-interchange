@@ -15,7 +15,7 @@ dynamic = ["version"]
 
 [tool.setuptools.packages.find]
 where = ["openff/interchange"]
-exclude = ["openff/interchange/foyer"]
+exclude = ["openff/interchange/foyer/**"]
 
 [tool.versioningit]
 
