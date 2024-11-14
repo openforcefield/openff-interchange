@@ -9,4 +9,4 @@
 | All | | | | | | | <td colspan=3>No available SMIRNOFF force fields |
 
 1. Unable to find upstream documentation
-2. See caveats in `Interchange.to_gromacs` docstring.
+2. See caveats in [`Interchange.to_gromacs` docstring](openff.interchange.Interchange.to_gromacs).
