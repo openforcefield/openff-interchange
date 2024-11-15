@@ -136,7 +136,7 @@ jobs:
         python -m mypy plugins/nonbonded_plugins/
 
     - name: Codecov
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
