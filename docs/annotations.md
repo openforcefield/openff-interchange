@@ -61,11 +61,15 @@ print(Atom.model_validate_json(carbon.model_dump_json()))
 This is an improvement, but units are still implicit. These annotations can be more specific, optionally defining the dimensionality or the _specific_ unit. The `_annotations` module defines a few of these out of the box for convenience, but more can be defined by the user using the `typing.Annotated` pattern in the source code.
 
 ```python
-from openff.interchange._annotations import _ElementaryChargeQuantity, _DistanceQuantity
+from openff.interchange._annotations import (
+    _ElementaryChargeQuantity,
+    _DistanceQuantity,
+    _MassQuantity,
+)
 
 
 class Atom(_BaseModel):
-    mass: _Quantity
+    mass: _MassQuantity
     charge: _ElementaryChargeQuantity
     position: _DistanceQuantity | None = None
 ```
@@ -87,7 +91,7 @@ except ValidationError as error:
 #     For further information visit https://errors.pydantic.dev/2.9/v/value_error
 ```
 
-The charage field was defined with an annotation that specifies not only dumensionality, but the _specific unit_. In this case, inputs are validated and converted to the specified units:
+The charge field was defined with an annotation that specifies not only dimensionality, but the _specific unit_. In this case, inputs are validated and converted to the specified units:
 
 ```python
 print(
