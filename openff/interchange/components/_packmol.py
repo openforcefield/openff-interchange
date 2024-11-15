@@ -474,7 +474,7 @@ def _build_input_file(
         The path to the output file.
 
     """
-    box_size = (box_size - tolerance).m_as("angstrom")
+    box_size = box_size.m_as("angstrom")
     tolerance = tolerance.m_as("angstrom")
 
     # Add the global header options.
