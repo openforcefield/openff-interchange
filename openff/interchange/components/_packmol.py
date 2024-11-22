@@ -567,7 +567,7 @@ def pack_box(
     box_shape: ArrayLike = RHOMBIC_DODECAHEDRON,
     center_solute: bool | Literal["BOX_VECS", "ORIGIN", "BRICK"] = False,
     working_directory: str | None = None,
-    retain_working_files: bool = False,
+    retain_working_files: bool = True,
 ) -> Topology:
     """
     Run packmol to generate a box containing a mixture of molecules.
@@ -816,6 +816,7 @@ def solvate_topology(
     box_shape: NDArray = RHOMBIC_DODECAHEDRON,
     target_density: Quantity = Quantity(0.9, "gram / milliliter"),
     tolerance: Quantity = Quantity(2.0, "angstrom"),
+    working_directory: str | None = None,
 ) -> Topology:
     """
     Add water and ions to neutralise and solvate a topology.
@@ -908,6 +909,7 @@ def solvate_topology(
         solute=topology,
         tolerance=tolerance,
         box_vectors=box_vectors,
+        working_directory=working_directory,
     )
 
 
@@ -918,6 +920,7 @@ def solvate_topology_nonwater(
     padding: Quantity = Quantity(1.2, "nanometer"),
     box_shape: NDArray = RHOMBIC_DODECAHEDRON,
     tolerance: Quantity = Quantity(2.0, "angstrom"),
+    working_directory: str | None = None,
 ) -> Topology:
     """
     Add water and ions to neutralise and solvate a topology.
@@ -989,4 +992,5 @@ def solvate_topology_nonwater(
         tolerance=tolerance,
         box_vectors=box_vectors,
         center_solute=True,
+        working_directory=working_directory,
     )
