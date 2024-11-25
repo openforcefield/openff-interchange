@@ -100,7 +100,7 @@ class Interchange(_BaseModel):
         ----------
         force_field : `openff.toolkit.ForceField`
             The force field to parameterize the topology with.
-        topology : `openff.toolkit.Topology` or `List[openff.toolkit.Molecule]`
+        topology : `openff.toolkit.Topology` or `list[openff.toolkit.Molecule]`
             The topology to parameterize, or a list of molecules to construct a
             topology from and parameterize.
         box : `openff.units.Quantity`, optional
@@ -109,14 +109,14 @@ class Interchange(_BaseModel):
         positions : `openff.units.Quantity`, optional
             The positions associated with atoms in the input topology. If ``None``,
             positions are taken from the molecules in topology, if present on all molecules.
-        charge_from_molecules : `List[openff.toolkit.molecule.Molecule]`, optional
+        charge_from_molecules : `list[openff.toolkit.molecule.Molecule]`, optional
             If specified, partial charges for any molecules isomorphic to those
             given will be taken from the given molecules' `partial_charges`
             attribute instead of being determined by the force field. All
             molecules in this list must have partial charges assigned and must
             not be isomorphic with any other molecules in the list. For all values
             of this argument, charges on the input topology are ignored.
-        partial_bond_orders_from_molecules : List[openff.toolkit.molecule.Molecule], optional
+        partial_bond_orders_from_molecules : list[openff.toolkit.molecule.Molecule], optional
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
         allow_nonintegral_charges : bool, optional, default=False
