@@ -25,10 +25,10 @@ if TYPE_CHECKING:
     from openff.interchange import Interchange
 
 __all__ = [
-    "to_openmm",
-    "to_openmm_topology",
-    "to_openmm_positions",
     "from_openmm",
+    "to_openmm",
+    "to_openmm_positions",
+    "to_openmm_topology",
 ]
 
 

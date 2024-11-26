@@ -1,4 +1,5 @@
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 class Particle:
     def __init__(self, name: str | None) -> None: ...
