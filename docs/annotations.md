@@ -1,11 +1,13 @@
 # Annotations
 
+:::{note}
 This document was written in November 2024 assuming
 
 * Python 3.10+
 * Pydantic V2 (not the V1 API backdoor)
 * Mypy 1.10+ or similarly-functional Python type-checker
 * Interchange 0.4+
+:::
 
 Consider a class to store information about atoms. It needs to store an atomic mass, a partial charge, and a position in 3-D space. The following class would work fine:
 
@@ -26,7 +28,9 @@ but this has some shortcomings:
 OpenFF's combined use of [Pint](https://pint.readthedocs.io/en/stable/) and [Pydantic](https://docs.pydantic.dev/latest/) solves these problems. To leverage these tools,
 
 1. Classes should subclass out of `openff.interchange.pydantic._BaseModel`, which is a thin wrapper around `pydantic.BaseModel`
-2. Annotations should use `openff.interchange._annotations._Quantity`, which is a thin wrapper around `openff.units.Quantity`, itself having the same behavior as `pint.Quantity`, or annotations derived thereof.
+2. Annotations should use the [`openff.interchange._annotations._*Quantity`] types, which are thin wrappers around `openff.units.Quantity`, itself having the same behavior as `pint.Quantity`, or annotations derived thereof.
+
+[`openff.interchange._annotations._*Quantity`]: https://github.com/openforcefield/openff-interchange/blob/v0.4.0/openff/interchange/_annotations.py#L127-L191
 
 The same class can be rewritten:
 
@@ -104,3 +108,5 @@ print(
 ```
 
 This can be useful if i.e. it is important that positions are universally stored with Angstroms and not nanometers.
+
+Note that this `Annotated` trick is specifically used by Pydantic classes, and will cause an error at runtime when violated - static type checkers like MyPy and PyRight will not be able to validate that units and dimensionality are correct.
