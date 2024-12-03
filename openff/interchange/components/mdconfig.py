@@ -462,12 +462,15 @@ def _infer_constraints(interchange: "Interchange") -> str:
 
             if num_constraints == num_h_bonds:
                 return "h-bonds"
-            elif num_constraints == len(interchange["Bonds"].key_map):
+            elif num_constraints == num_bonds:
                 return "all-bonds"
             elif num_constraints == (num_bonds + num_angles):
                 return "all-angles"
 
             else:
+                # TODO: Rigid waters may not have bond and angle parameters, but still have 3 constraints
+                #       per molecule. There should be a better way to process these, but it's non-trivial
+                #       to detect water molecules in a performance, scalable way without false positives.
                 warnings.warn(
                     "Ambiguous failure while processing constraints. Constraining h-bonds as a stopgap.",
                 )

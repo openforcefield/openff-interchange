@@ -100,10 +100,6 @@ class TestReportWithPlugins:
     pytest.importorskip("openeye")
 
     @pytest.fixture
-    def ligand(self):
-        return MoleculeWithConformer.from_smiles("CC[C@@](/C=C\\[H])(C=C)O")
-
-    @pytest.fixture
     def de_force_field(self) -> ForceField:
         return ForceField(
             get_test_file_path("de-force-1.0.1.offxml"),
