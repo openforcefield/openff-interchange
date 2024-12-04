@@ -5,8 +5,10 @@ from openff.interchange.drivers.amber import get_amber_energies
 from openff.interchange.drivers.gromacs import get_gromacs_energies
 from openff.interchange.drivers.lammps import get_lammps_energies
 from openff.interchange.drivers.openmm import get_openmm_energies
+from openff.interchange.drivers.report import EnergyReport
 
 __all__ = [
+    "EnergyReport",
     "get_all_energies",
     "get_amber_energies",
     "get_gromacs_energies",
