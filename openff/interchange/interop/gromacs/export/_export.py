@@ -1,5 +1,6 @@
 import pathlib
 import warnings
+from io import TextIOWrapper
 
 import numpy
 from openff.toolkit import unit
@@ -23,29 +24,41 @@ class GROMACSWriter(_BaseModel):
     """Thin wrapper for writing GROMACS systems."""
 
     system: GROMACSSystem
-    top_file: pathlib.Path | str | None = None
-    gro_file: pathlib.Path | str | None = None
+    top_file: pathlib.Path | str
+    gro_file: pathlib.Path | str
 
-    def to_top(self, _merge_atom_types: bool = False):
+    def to_top(self, monolithic: bool = True, _merge_atom_types: bool = False):
         """Write a GROMACS topology file."""
-        if self.top_file is None:
-            raise ValueError("No TOP file specified.")
-
         with open(self.top_file, "w") as top:
             self._write_defaults(top)
+
+            if monolithic:
+                atomtypes_file_object: TextIOWrapper = top
+            else:
+                prefix = str(self.top_file).split(".top")[0]
+                atomtypes_file_object = open(
+                    f"{prefix}_atomtypes.top",
+                    "w",
+                )
+                top.write(f'#include "{prefix}_atomtypes.top"\n')
+
             mapping_to_reduced_atom_types = self._write_atomtypes(
-                top,
-                _merge_atom_types,
+                top=atomtypes_file_object,
+                merge_atom_types=_merge_atom_types,
             )
 
             self._write_moleculetypes(
-                top,
-                mapping_to_reduced_atom_types,
-                _merge_atom_types,
+                top=top,
+                monolithic=monolithic,
+                mapping_to_reduced_atom_types=mapping_to_reduced_atom_types,
+                merge_atom_types=_merge_atom_types,
             )
 
             self._write_system(top)
             self._write_molecules(top)
+
+            if not monolithic:
+                atomtypes_file_object.close()
 
     def to_gro(self, decimal: int = 3):
         """Write a GROMACS coordinate file."""
@@ -55,7 +68,7 @@ class GROMACSWriter(_BaseModel):
         with open(self.gro_file, "w") as gro:
             self._write_gro(gro, decimal)
 
-    def _write_defaults(self, top):
+    def _write_defaults(self, top: TextIOWrapper):
         top.write("[ defaults ]\n")
         top.write("; nbfunc\tcomb-rule\tgen-pairs\tfudgeLJ\tfudgeQQ\n")
 
@@ -68,7 +81,7 @@ class GROMACSWriter(_BaseModel):
             f"{self.system.coul_14:8.6f}\n\n",
         )
 
-    def _write_atomtypes(self, top, merge_atom_types: bool) -> dict[str, bool | str]:
+    def _write_atomtypes(self, top: TextIOWrapper, merge_atom_types: bool) -> dict[str, bool | str]:
         top.write("[ atomtypes ]\n")
         top.write(
             ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n",
@@ -156,30 +169,46 @@ class GROMACSWriter(_BaseModel):
 
     def _write_moleculetypes(
         self,
-        top,
+        top: TextIOWrapper,
+        monolithic: bool,
         mapping_to_reduced_atom_types,
         merge_atom_types: bool,
     ):
         for molecule_name, molecule_type in self.system.molecule_types.items():
-            top.write("[ moleculetype ]\n")
+            # this string needs to be something that plays nicely in file paths
+            # and also works as GROMACS's label for the moleculetype "name"
+            canonicalized_name = f"{molecule_name.replace(' ', '_')}"
 
-            top.write(
-                f"{molecule_name.replace(' ', '_')}\t{molecule_type.nrexcl:10d}\n\n",
-            )
+            if monolithic:
+                molecule_file = top
+            else:
+                prefix = str(self.top_file).split(".top")[0]
+                molecule_file = open(
+                    file=f"{prefix}_{canonicalized_name}.itp",
+                    mode="w",
+                )
+                top.write(f'#include "{prefix}_{canonicalized_name}.itp"\n')
+
+            molecule_file.write("[ moleculetype ]\n")
+
+            molecule_file.write(f"{canonicalized_name}\t{molecule_type.nrexcl:10d}\n\n")
 
             self._write_atoms(
-                top,
+                molecule_file,
                 molecule_type,
                 mapping_to_reduced_atom_types,
                 merge_atom_types,
             )
-            self._write_pairs(top, molecule_type)
-            self._write_bonds(top, molecule_type)
-            self._write_angles(top, molecule_type)
-            self._write_dihedrals(top, molecule_type)
-            self._write_settles(top, molecule_type)
-            self._write_virtual_sites(top, molecule_type)
-            self._write_exclusions(top, molecule_type)
+            self._write_pairs(molecule_file, molecule_type)
+            self._write_bonds(molecule_file, molecule_type)
+            self._write_angles(molecule_file, molecule_type)
+            self._write_dihedrals(molecule_file, molecule_type)
+            self._write_settles(molecule_file, molecule_type)
+            self._write_virtual_sites(molecule_file, molecule_type)
+            self._write_exclusions(molecule_file, molecule_type)
+
+            if not monolithic:
+                molecule_file.close()
 
         top.write("\n")
 
