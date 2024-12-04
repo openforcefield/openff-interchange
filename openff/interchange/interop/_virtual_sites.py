@@ -3,7 +3,6 @@ Common helpers for exporting virtual sites.
 """
 
 from collections import defaultdict
-from typing import DefaultDict
 
 import numpy
 from openff.toolkit import Quantity, unit
@@ -75,7 +74,7 @@ def get_positions_with_virtual_sites(
         raise MissingVirtualSitesError()
 
     # map of molecule index to *list* of virtual site keys contained therein
-    molecule_virtual_site_map: DefaultDict[int, list[VirtualSiteKey]] = defaultdict(
+    molecule_virtual_site_map: defaultdict[int, list[VirtualSiteKey]] = defaultdict(
         list,
     )
 

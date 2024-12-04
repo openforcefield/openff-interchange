@@ -3,7 +3,7 @@ import functools
 import logging
 import warnings
 from collections.abc import Iterable
-from typing import Any, Literal, Optional, Union
+from typing import Literal, Union
 
 import numpy
 from openff.toolkit import Molecule, Quantity, Topology, unit
@@ -11,6 +11,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
     LibraryChargeHandler,
+    ParameterHandler,
     ToolkitAM1BCCHandler,
     vdWHandler,
 )
@@ -276,7 +277,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     )  # type: ignore[assignment]
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
-    _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr(dict())
+    _charges: dict[
+        TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey,
+        _ElementaryChargeQuantity,
+    ] = PrivateAttr(dict())
     _charges_cached: bool = PrivateAttr(default=False)
 
     @classmethod
@@ -402,7 +406,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     )
 
                     logger.info(
-                        "Charge section ChargeIncrementModel, applying charge increment from atom "
+                        "Charge section ChargeIncrementModel, applying charge increment from atom "  # type: ignore[union-attr]
                         f"{topology_key.this_atom_index} to atoms {topology_key.other_atom_indices}",
                     )
 
@@ -436,7 +440,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @classmethod
     def create(
         cls,
-        parameter_handler: Any,
+        parameter_handler: ParameterHandler | list[ParameterHandler],
         topology: Topology,
         molecules_with_preset_charges=None,
         allow_nonintegral_charges: bool = False,
@@ -807,7 +811,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         cls,
         topology: Topology,
         unique_molecule: Molecule,
-        molecules_with_preset_charges=Optional[list[Molecule]],
+        molecules_with_preset_charges=list[Molecule] | None,
     ) -> tuple[bool, dict, dict]:
         if molecules_with_preset_charges is None:
             return False, dict(), dict()

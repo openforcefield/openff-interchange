@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import TYPE_CHECKING, DefaultDict
+from typing import TYPE_CHECKING
 
 from openff.utilities.utilities import has_package, requires_package
 
@@ -37,7 +37,7 @@ def get_14_scaling_factors(omm_sys: "openmm.System") -> tuple[list, list]:
 
 
 def _create_torsion_dict(torsion_force) -> dict[tuple[int], list[tuple]]:
-    torsions: DefaultDict = defaultdict(list)
+    torsions = defaultdict(list)
 
     for i in range(torsion_force.getNumTorsions()):
         p1, p2, p3, p4, periodicity, phase, k = torsion_force.getTorsionParameters(i)

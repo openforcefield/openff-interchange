@@ -423,6 +423,10 @@ def _create_molecule_pdbs(molecules: list[Molecule]) -> list[str]:
         # Generate conformers if they're missing
         if molecule.n_conformers <= 0:
             molecule.generate_conformers(n_conformers=1)
+        else:
+            # Possible issues writing multi-conformer PDBs with RDKit
+            # https://github.com/openforcefield/openff-interchange/issues/1107
+            molecule._conformers = [molecule.conformers[0]]
 
         # RDKitToolkitWrapper is less buggy than OpenEye for writing PDBs
         # See https://github.com/openforcefield/openff-toolkit/issues/1307
