@@ -47,11 +47,15 @@ def _unit_validator_factory(unit: str) -> Callable:
 (
     _is_distance,
     _is_velocity,
+    _is_mass,
+    _is_temperature,
 ) = (
     _dimensionality_validator_factory(unit=_unit)
     for _unit in [
         "nanometer",
         "nanometer / picosecond",
+        "unified_atomic_mass_unit",
+        "kelvin",
     ]
 )
 
@@ -148,6 +152,20 @@ _VelocityQuantity = Annotated[
     Quantity,
     WrapValidator(quantity_validator),
     AfterValidator(_is_velocity),
+    WrapSerializer(quantity_json_serializer),
+]
+
+_MassQuantity = Annotated[
+    Quantity,
+    WrapValidator(quantity_validator),
+    AfterValidator(_is_mass),
+    WrapSerializer(quantity_json_serializer),
+]
+
+_TemperatureQuantity = Annotated[
+    Quantity,
+    WrapValidator(quantity_validator),
+    AfterValidator(_is_temperature),
     WrapSerializer(quantity_json_serializer),
 ]
 

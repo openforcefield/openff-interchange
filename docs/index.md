@@ -10,6 +10,14 @@ caption: Installation
 maxdepth: 2
 ---
 installation.md
+```
+
+```{toctree}
+---
+caption: Developing
+maxdepth: 2
+---
+annotations.md
 developing.md
 releasehistory.md
 v0.4-changes.md
