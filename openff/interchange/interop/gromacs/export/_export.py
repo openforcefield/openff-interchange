@@ -37,10 +37,10 @@ class GROMACSWriter(_BaseModel):
             else:
                 prefix = str(self.top_file).split(".top")[0]
                 atomtypes_file_object = open(
-                    f"{prefix}_atomtypes.top",
+                    f"{prefix}_atomtypes.itp",
                     "w",
                 )
-                top.write(f'#include "{prefix}_atomtypes.top"\n')
+                top.write(f'#include "{prefix}_atomtypes.itp"\n')
 
             mapping_to_reduced_atom_types = self._write_atomtypes(
                 top=atomtypes_file_object,
