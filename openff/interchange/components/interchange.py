@@ -342,7 +342,8 @@ class Interchange(_BaseModel):
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
         monolithic: bool, default=False
-            Whether the topology file should be monolithic or reference individual .itp files.
+            Whether the topology file should be monolithic (True) or reference individual .itp files (False). Note that
+            these individual .itp files rely on ad hoc atom types and cannot be transferred between systems.
         _merge_atom_types: bool, default = False
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
@@ -413,7 +414,8 @@ class Interchange(_BaseModel):
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
         monolithic: bool, default=False
-            Whether the topology file should be monolithic or reference individual .itp files.
+            Whether the topology file should be monolithic (True) or reference individual .itp files (False). Note that
+            these individual .itp files rely on ad hoc atom types and cannot be transferred between systems.
         _merge_atom_types: book, default=False
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.

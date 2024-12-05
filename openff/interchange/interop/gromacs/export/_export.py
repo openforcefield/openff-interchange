@@ -1,6 +1,6 @@
 import pathlib
 import warnings
-from io import TextIOWrapper
+from typing import IO
 
 import numpy
 from openff.toolkit import unit
@@ -33,14 +33,14 @@ class GROMACSWriter(_BaseModel):
             self._write_defaults(top)
 
             if monolithic:
-                atomtypes_file_object: TextIOWrapper = top
+                atomtypes_file_object: IO[str] = top
             else:
                 prefix = str(self.top_file).split(".top")[0]
                 atomtypes_file_object = open(
-                    f"{prefix}_atomtypes.top",
+                    f"{prefix}_atomtypes.itp",
                     "w",
                 )
-                top.write(f'#include "{prefix}_atomtypes.top"\n')
+                top.write(f'#include "{prefix}_atomtypes.itp"\n')
 
             mapping_to_reduced_atom_types = self._write_atomtypes(
                 top=atomtypes_file_object,
@@ -68,7 +68,7 @@ class GROMACSWriter(_BaseModel):
         with open(self.gro_file, "w") as gro:
             self._write_gro(gro, decimal)
 
-    def _write_defaults(self, top: TextIOWrapper):
+    def _write_defaults(self, top: IO[str]):
         top.write("[ defaults ]\n")
         top.write("; nbfunc\tcomb-rule\tgen-pairs\tfudgeLJ\tfudgeQQ\n")
 
@@ -81,7 +81,7 @@ class GROMACSWriter(_BaseModel):
             f"{self.system.coul_14:8.6f}\n\n",
         )
 
-    def _write_atomtypes(self, top: TextIOWrapper, merge_atom_types: bool) -> dict[str, bool | str]:
+    def _write_atomtypes(self, top: IO[str], merge_atom_types: bool) -> dict[str, bool | str]:
         top.write("[ atomtypes ]\n")
         top.write(
             ";type, bondingtype, atomic_number, mass, charge, ptype, sigma, epsilon\n",
@@ -169,7 +169,7 @@ class GROMACSWriter(_BaseModel):
 
     def _write_moleculetypes(
         self,
-        top: TextIOWrapper,
+        top: IO[str],
         monolithic: bool,
         mapping_to_reduced_atom_types,
         merge_atom_types: bool,
@@ -177,7 +177,7 @@ class GROMACSWriter(_BaseModel):
         for molecule_name, molecule_type in self.system.molecule_types.items():
             # this string needs to be something that plays nicely in file paths
             # and also works as GROMACS's label for the moleculetype "name"
-            canonicalized_name = f"{molecule_name.replace(' ', '_')}"
+            canonicalized_name = molecule_name.translate({ord(c): "_" for c in r' \/:<>"|?*'})
 
             if monolithic:
                 molecule_file = top
