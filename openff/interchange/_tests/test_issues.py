@@ -9,7 +9,7 @@ from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.utilities import get_data_file_path, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import MoleculeWithConformer, shuffle_topology
+from openff.interchange._tests import MoleculeWithConformer, needs_openmm, shuffle_topology
 from openff.interchange.components._packmol import pack_box
 from openff.interchange.drivers import get_openmm_energies
 
@@ -26,6 +26,7 @@ def test_issue_723():
 
 
 @pytest.mark.parametrize("pack", [True, False])
+@needs_openmm
 def test_issue_1022(pack):
     topology = Topology.from_molecules(
         [

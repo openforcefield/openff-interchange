@@ -1,8 +1,8 @@
+import pytest
 from openff.utilities import has_package, skip_if_missing
 
 if has_package("openmm"):
     import numpy
-    import pytest
     from openff.toolkit import Molecule
 
     from openff.interchange._tests import MoleculeWithConformer

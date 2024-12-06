@@ -9,8 +9,10 @@ from openff.interchange._tests import (
     HAS_LAMMPS,
     MoleculeWithConformer,
     get_test_file_path,
+    needs_foyer,
     needs_gmx,
     needs_lmp,
+    needs_openmm,
 )
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
@@ -99,7 +101,7 @@ class TestEnergies:
             lmp_energies.compare(other_energies, tolerances)
 
     @needs_gmx
-    @skip_if_missing("foyer")
+    @needs_foyer
     @skip_if_missing("mbuild")
     def test_process_rb_torsions(self, oplsaa):
         """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
@@ -194,6 +196,7 @@ class TestEnergies:
         ],
     )
     @needs_gmx
+    @needs_openmm
     @pytest.mark.slow
     def test_interpolated_parameters(self, smi):
         xml_ff_bo_all_heavy_bonds = """<?xml version='1.0' encoding='ASCII'?>
@@ -240,6 +243,7 @@ class TestEnergies:
                 )
 
     @needs_gmx
+    @needs_openmm
     def test_rb_torsion_energies(self, monkeypatch):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 

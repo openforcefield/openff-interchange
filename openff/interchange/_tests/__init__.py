@@ -13,6 +13,7 @@ from openff.toolkit.utils import (
     RDKitToolkitWrapper,
 )
 from openff.utilities import get_data_file_path
+from openff.utilities.exceptions import MissingOptionalDependencyError
 from openff.utilities.utilities import has_executable, has_package
 
 from openff.interchange import Interchange
@@ -37,6 +38,37 @@ requires_openeye = pytest.mark.skipif(
     not OpenEyeToolkitWrapper.is_available(),
     reason="Test requires OE toolkit",
 )
+
+HAS_OPENMM = has_package("openmm")
+HAS_GROMACS = _find_gromacs_executable() is not None
+HAS_LAMMPS = has_package("lammps")
+HAS_SANDER = has_executable("sander")
+
+try:
+    import foyer
+
+    assert "openff/interchange" not in foyer.__file__
+    HAS_FOYER = True
+except (ModuleNotFoundError, AssertionError, TypeError):
+    HAS_FOYER = False
+
+needs_openmm = pytest.mark.skipif(not HAS_OPENMM, reason="Needs OpenMM")
+needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
+needs_not_gmx = pytest.mark.skipif(
+    HAS_GROMACS,
+    reason="Needs GROMACS to NOT be installed",
+)
+needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs LAMMPS")
+needs_not_lmp = pytest.mark.skipif(
+    HAS_LAMMPS,
+    reason="Needs LAMMPS to NOT be installed",
+)
+needs_sander = pytest.mark.skipif(not HAS_SANDER, reason="Needs sander")
+needs_not_sander = pytest.mark.skipif(
+    HAS_SANDER,
+    reason="sander needs to NOT be installed",
+)
+needs_foyer = pytest.mark.skipif(not HAS_FOYER, reason="Needs foyer")
 
 
 _rng = numpy.random.default_rng(12345)
@@ -96,33 +128,15 @@ class MoleculeWithConformer(Molecule):
 
 def get_protein(name: str) -> Molecule:
     """Get a protein from openff/toolkit/data/proteins based on PDB name."""
-    return Topology.from_pdb(
-        get_data_file_path(
-            relative_path=f"proteins/{name}.pdb",
-            package_name="openff.toolkit",
-        ),
-    ).molecule(0)
-
-
-HAS_GROMACS = _find_gromacs_executable() is not None
-HAS_LAMMPS = has_package("lammps")
-HAS_SANDER = has_executable("sander")
-
-needs_gmx = pytest.mark.skipif(not HAS_GROMACS, reason="Needs GROMACS")
-needs_not_gmx = pytest.mark.skipif(
-    HAS_GROMACS,
-    reason="Needs GROMACS to NOT be installed",
-)
-needs_lmp = pytest.mark.skipif(not HAS_LAMMPS, reason="Needs LAMMPS")
-needs_not_lmp = pytest.mark.skipif(
-    HAS_LAMMPS,
-    reason="Needs LAMMPS to NOT be installed",
-)
-needs_sander = pytest.mark.skipif(not HAS_SANDER, reason="Needs sander")
-needs_not_sander = pytest.mark.skipif(
-    HAS_SANDER,
-    reason="sander needs to NOT be installed",
-)
+    try:
+        return Topology.from_pdb(
+            get_data_file_path(
+                relative_path=f"proteins/{name}.pdb",
+                package_name="openff.toolkit",
+            ),
+        ).molecule(0)
+    except (ModuleNotFoundError, MissingOptionalDependencyError):
+        return pytest.skip("Test requires OpenMM for protein loading")
 
 
 def shuffle_topology(

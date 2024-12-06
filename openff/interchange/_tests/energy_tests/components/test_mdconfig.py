@@ -1,12 +1,12 @@
 from openff.units import Quantity, unit
 
-from openff.interchange._tests import MoleculeWithConformer, needs_gmx, needs_lmp
+from openff.interchange._tests import MoleculeWithConformer, needs_gmx, needs_openmm
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 
 
 class TestLJPME:
     @needs_gmx
-    @needs_lmp
+    @needs_openmm
     def test_ljpme(self, sage):
         sage["vdW"].periodic_method = "Ewald3D"
 
