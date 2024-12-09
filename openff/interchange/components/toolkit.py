@@ -132,8 +132,6 @@ def _simple_topology_from_openmm(
     # in associated OpenFF topology, since stripping out virtual sites offsets particle indices
     openmm_openff_particle_map: dict[int, int | ImportedVirtualSiteKey] = dict()
 
-    # TODO: This is nearly identical to Topology._openmm_topology_to_networkx.
-    #  Should this method be replaced with a direct call to that?
     for atom in openmm_topology.atoms():
         if atom.element is None:
             assert isinstance(
