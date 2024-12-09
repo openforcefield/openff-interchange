@@ -17,11 +17,12 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 * #1081 `Interchange.from_openmm` now processes virtual sites, but only `openmm.ThreeParticleAverageSite`s.
 * #1053 Logs, at the level of `logging.INFO`, how charges are assigned by SMIRNOFF force fields to each atom and virtual site.
+* #1080 HMR is supported with OpenMM when virtual sites are present.
 
 ### Bug fixes
 
-* The `charge_from_molecules` argument must include only molecules that contain partial charges and are non-isomorphic with each other.
-* The `charge_from_molecules` argument as used by the OpenFF Toolkit is handled internally as `molecules_with_preset_charges`.
+* #1070 The `charge_from_molecules` argument must include only molecules that contain partial charges and are non-isomorphic with each other.
+* #1070 The `charge_from_molecules` argument as used by the OpenFF Toolkit is handled internally as `molecules_with_preset_charges`.
 
 ### Performance improvements
 
@@ -29,7 +30,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### Documentation improvements
 
-* Documents charge assignment hierarchy in the user guide.
+* #1070 Documents charge assignment hierarchy in the user guide.
+* #1105 Documents new Pydantic-compatible type annotations in the user guide.
 
 ## 0.4.0 - 2024-11-04
 

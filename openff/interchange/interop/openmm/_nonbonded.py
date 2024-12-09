@@ -5,7 +5,7 @@ Helper functions for producing `openmm.Force` objects for non-bonded terms.
 import itertools
 import warnings
 from collections import defaultdict
-from typing import DefaultDict, NamedTuple
+from typing import NamedTuple
 
 from openff.toolkit import Molecule, Quantity, unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
@@ -106,7 +106,7 @@ def _process_nonbonded_forces(
 
     # Mapping between OpenFF "particles" and OpenMM particles (via index). OpenFF objects
     # (keys) are either atom indices (if atoms) or `VirtualSiteKey`s if virtual sites
-    # openff_openmm_particle_map: Dict[Union[int, VirtualSiteKey], int] = dict()
+    # openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int] = dict()
     openff_openmm_particle_map = _add_particles_to_system(
         interchange,
         system,
@@ -373,7 +373,7 @@ def _create_single_nonbonded_force(
     # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
     #   of that parent atom (if any)
     # if no virtual sites at all, this remains an empty dict
-    parent_virtual_particle_mapping: DefaultDict[int, list[int]] = defaultdict(list)
+    parent_virtual_particle_mapping: defaultdict[int, list[int]] = defaultdict(list)
 
     vdw = data.vdw_collection
 
@@ -500,7 +500,7 @@ def _create_exceptions(
     non_bonded_force: openmm.NonbondedForce,
     interchange: "Interchange",
     openff_openmm_particle_map: dict,
-    parent_virtual_particle_mapping: DefaultDict[int, list[int]],
+    parent_virtual_particle_mapping: defaultdict[int, list[int]],
 ):
     # The topology indices reported by toolkit methods must be converted to openmm indices
     bonds = [
@@ -865,7 +865,7 @@ def _create_electrostatics_force(
     # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
     #   of that parent atom (if any)
     # if no virtual sites at all, this remains an empty dict
-    parent_virtual_particle_mapping: DefaultDict[int, list[int]] = defaultdict(list)
+    parent_virtual_particle_mapping: defaultdict[int, list[int]] = defaultdict(list)
 
     for molecule in interchange.topology.molecules:
         for _ in molecule.atoms:
