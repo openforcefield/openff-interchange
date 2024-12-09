@@ -809,7 +809,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @classmethod
     def _assign_charges_from_molecules(
         cls,
-        topology: Topology,
         unique_molecule: Molecule,
         molecules_with_preset_charges=list[Molecule] | None,
     ) -> tuple[bool, dict, dict]:
@@ -879,7 +878,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             unique_molecule = topology.molecule(unique_molecule_index)
 
             flag, matches, potentials = self._assign_charges_from_molecules(
-                topology,
                 unique_molecule,
                 molecules_with_preset_charges,
             )

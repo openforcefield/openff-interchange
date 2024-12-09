@@ -20,6 +20,7 @@ from openff.interchange.common._valence import (
     ProperTorsionCollection,
 )
 from openff.interchange.components.potentials import Potential, WrappedPotential
+from openff.interchange.components.toolkit import _cache_angle_parameter_lookup, _cache_torsion_parameter_lookup
 from openff.interchange.exceptions import (
     DuplicateMoleculeError,
     InvalidParameterHandlerError,
@@ -448,15 +449,16 @@ class SMIRNOFFAngleCollection(SMIRNOFFCollection, AngleCollection):
 
         """
         for potential_key in self.key_map.values():
-            smirks = potential_key.id
-            parameter = parameter_handler.parameters[smirks]
-            potential = Potential(
-                parameters={
-                    parameter_name: getattr(parameter, parameter_name)
-                    for parameter_name in self.potential_parameters()
+            self.potentials.update(
+                {
+                    potential_key: Potential(
+                        parameters=_cache_angle_parameter_lookup(
+                            potential_key,
+                            parameter_handler,
+                        ),
+                    ),
                 },
             )
-            self.potentials[potential_key] = potential
 
 
 class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollection):
@@ -550,11 +552,11 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
 
         """
         for topology_key, potential_key in self.key_map.items():
-            smirks = potential_key.id
-            n = potential_key.mult
-            parameter = parameter_handler.parameters[smirks]
-
             if topology_key.bond_order:  # type: ignore[union-attr]
+                smirks = potential_key.id
+                n = potential_key.mult
+                parameter = parameter_handler.parameters[smirks]
+
                 bond_order = topology_key.bond_order  # type: ignore[union-attr]
                 data = parameter.k_bondorder[n]
                 coeffs = _get_interpolation_coeffs(
@@ -564,12 +566,10 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
                 pots = []
                 map_keys = [*data.keys()]
                 for map_key in map_keys:
-                    parameters = {
-                        "k": parameter.k_bondorder[n][map_key],
-                        "periodicity": parameter.periodicity[n] * unit.dimensionless,
-                        "phase": parameter.phase[n],
-                        "idivf": parameter.idivf[n] * unit.dimensionless,
-                    }
+                    parameters = _cache_torsion_parameter_lookup(
+                        map_key,
+                        parameter_handler,
+                    )
                     pots.append(
                         Potential(
                             parameters=parameters,
@@ -580,12 +580,7 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
                     {pot: coeff for pot, coeff in zip(pots, coeffs)},
                 )
             else:
-                parameters = {
-                    "k": parameter.k[n],
-                    "periodicity": parameter.periodicity[n] * unit.dimensionless,
-                    "phase": parameter.phase[n],
-                    "idivf": parameter.idivf[n] * unit.dimensionless,
-                }
+                parameters = _cache_torsion_parameter_lookup(potential_key, parameter_handler)
                 potential = Potential(parameters=parameters)  # type: ignore[assignment]
             self.potentials[potential_key] = potential
 
@@ -734,11 +729,7 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection, ImproperTorsionColle
                     # Assumed to be a numerical value
                     idivf = _default_idivf * unit.dimensionless
 
-            parameters = {
-                "k": parameter.k[n],
-                "periodicity": parameter.periodicity[n] * unit.dimensionless,
-                "phase": parameter.phase[n],
-                "idivf": idivf,
-            }
+            # parameter keys happen to be the same as keys in proper torsions
+            parameters = _cache_torsion_parameter_lookup(potential_key, parameter_handler)
             potential = Potential(parameters=parameters)
             self.potentials[potential_key] = potential
