@@ -8,7 +8,7 @@ from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_e
 
 
 class TestTIP4PVirtualSites:
-    def test_tip4p_openmm_xml(self, monkeypatch, water_dimer):
+    def test_tip4p_openmm_xml(self, water_dimer):
         """
         Prepare a TIP4P water dimer with OpenMM's style of 4-site water.
 
@@ -16,8 +16,6 @@ class TestTIP4PVirtualSites:
         https://openmm.github.io/openmm-cookbook/latest/notebooks/tutorials/Histone_methyltransferase_simulation_with_a_multisite_water_model_TIP4P-Ew.html
         """
         pytest.importorskip("openmm")
-
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
         import openmm.app
 
@@ -51,9 +49,7 @@ class TestTIP4PVirtualSites:
     @pytest.mark.skip(
         reason="Rewrite to use OpenMM or update from_openmm to support `LocalCoordinatesSite`s",
     )
-    def test_dimer_energy_equals(self, monkeypatch, tip4p, water_dimer):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
+    def test_dimer_energy_equals(self, tip4p, water_dimer):
         out: Interchange = tip4p.create_interchange(water_dimer)
 
         roundtripped = Interchange.from_openmm(
@@ -68,9 +64,7 @@ class TestTIP4PVirtualSites:
     @pytest.mark.skip(
         reason="Rewrite to use OpenMM or update from_openmm to support `LocalCoordinatesSite`s",
     )
-    def test_minimize_solvated_ligand(self, monkeypatch, sage_with_tip4p, default_integrator):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
+    def test_minimize_solvated_ligand(self, sage_with_tip4p, default_integrator):
         topology = solvate_topology(
             topology=MoleculeWithConformer.from_smiles("CO").to_topology(),
             nacl_conc=Quantity(1.0, "mole / liter"),
@@ -95,9 +89,7 @@ class TestTIP4PVirtualSites:
 
         assert get_openmm_energies(roundtripped) < original_energy
 
-    def test_error_index_mismatch(self, monkeypatch, tip4p, water):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
+    def test_error_index_mismatch(self, tip4p, water):
         out: Interchange = tip4p.create_interchange(Topology.from_molecules([water, water]))
 
         with pytest.raises(
