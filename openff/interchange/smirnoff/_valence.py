@@ -566,10 +566,12 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
                 pots = []
                 map_keys = [*data.keys()]
                 for map_key in map_keys:
-                    parameters = _cache_torsion_parameter_lookup(
-                        map_key,
-                        parameter_handler,
-                    )
+                    parameters = {
+                        "k": parameter.k_bondorder[n][map_key],
+                        "periodicity": parameter.periodicity[n] * unit.dimensionless,
+                        "phase": parameter.phase[n],
+                        "idivf": parameter.idivf[n] * unit.dimensionless,
+                    }
                     pots.append(
                         Potential(
                             parameters=parameters,
@@ -730,6 +732,10 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection, ImproperTorsionColle
                     idivf = _default_idivf * unit.dimensionless
 
             # parameter keys happen to be the same as keys in proper torsions
-            parameters = _cache_torsion_parameter_lookup(potential_key, parameter_handler)
-            potential = Potential(parameters=parameters)
-            self.potentials[potential_key] = potential
+            self.potentials[potential_key] = Potential(
+                parameters=_cache_torsion_parameter_lookup(
+                    potential_key,
+                    parameter_handler,
+                    idivf=idivf,
+                ),
+            )
