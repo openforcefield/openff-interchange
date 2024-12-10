@@ -96,8 +96,8 @@ class ElectrostaticsCollection(_NonbondedCollection):
         "cutoff",
         "no-cutoff",
     ] = Field(
-        _PME,
-    )  # type: ignore[assignment]
+        _PME,  # type: ignore[arg-type]
+    )
     nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
