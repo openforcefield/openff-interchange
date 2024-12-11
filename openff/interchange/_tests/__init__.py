@@ -76,9 +76,9 @@ class MoleculeWithConformer(Molecule):
     """Thin wrapper around `Molecule` to produce an instance with a conformer in one call."""
 
     @classmethod
-    def from_smiles(self, smiles, name="", **kwargs):
+    def from_smiles(self, smiles, name="", *args, **kwargs):
         """Create from smiles and generate a single conformer."""
-        molecule = super().from_smiles(smiles, **kwargs)
+        molecule = super().from_smiles(smiles, *args, **kwargs)
         molecule.generate_conformers(n_conformers=1)
         molecule.name = name
 
