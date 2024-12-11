@@ -3,7 +3,7 @@ import random
 import pytest
 from openff.toolkit import Molecule, Topology, unit
 
-from openff.interchange._tests import MoleculeWithConformer
+from openff.interchange._tests import MoleculeWithConformer, needs_openmm
 from openff.interchange.exceptions import NegativeMassError
 
 
@@ -81,6 +81,7 @@ def test_mass_is_positive(sage):
         sage.create_interchange(Molecule.from_smiles("C").to_topology()).to_openmm(hydrogen_mass=5.0)
 
 
+@needs_openmm
 @pytest.mark.parametrize("hydrogen_mass", [1.1, 3.0])
 def test_hmr_not_applied_to_tip4p(
     tip4p,

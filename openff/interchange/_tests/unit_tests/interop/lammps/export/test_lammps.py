@@ -39,6 +39,8 @@ class TestLammps:
         TODO: Tighten tolerances
         TODO: Test periodic and non-periodic
         """
+        pytest.importorskip("openmm")
+
         mol = MoleculeWithConformer.from_smiles(mol)
         mol.conformers[0] -= numpy.min(mol.conformers[0], axis=0)
         top = Topology.from_molecules(n_mols * [mol])

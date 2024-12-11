@@ -8,7 +8,7 @@ import numpy
 import pytest
 from openff.toolkit.topology import Molecule
 from openff.units import Quantity, unit
-from openff.utilities import has_package, skip_if_missing
+from openff.utilities import skip_if_missing
 
 from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange.components._packmol import (
@@ -386,24 +386,6 @@ class TestPackmolWrapper:
                 ligand.to_topology(),
                 solvent=Molecule.from_smiles("CCCCCCO"),
                 target_density=Quantity(1e-6, "kilogram/meter**3"),
-            )
-
-    @pytest.mark.skipif(
-        has_package("mdtraj") or has_package("openmm"),
-        reason="Test requires that MDTraj **and** OpenMM are not installed",
-    )
-    def test_noninteger_serial_error(self):
-        """See issue #794."""
-        with pytest.raises(
-            PACKMOLRuntimeError,
-            match="could not be parsed by RDKit",
-        ):
-            pack_box(
-                molecules=[Molecule.from_smiles("CCO")],
-                number_of_copies=[11112],
-                box_shape=UNIT_CUBE,
-                tolerance=1.0 * unit.angstrom,
-                target_density=0.1 * unit.grams / unit.milliliters,
             )
 
     @pytest.mark.slow

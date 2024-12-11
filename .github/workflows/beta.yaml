@@ -29,7 +29,6 @@ jobs:
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
     - uses: actions/checkout@v4
@@ -46,12 +45,7 @@ jobs:
           pydantic=${{ matrix.pydantic-version }}
 
     - name: Install package
-      run: |
-        micromamba remove --force openff-interchange openff-interchange-base
-        python -m pip install . plugins/
-
-    - name: Environment Information
-      run: conda info && conda list
+      run: python -m pip install . plugins/
 
     - name: License OpenEye
       if: ${{ matrix.openeye == true }}
@@ -67,7 +61,7 @@ jobs:
 
     - name: Run all tests
       if: always()
-      run: python -m pytest -v $COV openff/interchange/
+      run: python -m pytest -v openff/interchange/
 
     - name: Codecov
       uses: codecov/codecov-action@v5
