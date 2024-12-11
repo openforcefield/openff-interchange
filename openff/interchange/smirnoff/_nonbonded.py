@@ -56,17 +56,13 @@ ElectrostaticsHandlerType = Union[
 _ZERO_CHARGE = Quantity(0.0, unit.elementary_charge)
 
 
-@unit.wraps(
-    ret=unit.elementary_charge,
-    args=(unit.elementary_charge, unit.elementary_charge),
-    strict=True,
-)
+@functools.lru_cache(None)
 def _add_charges(
-    charge1: "Quantity",
-    charge2: "Quantity",
+    charge1: float,
+    charge2: float,
 ) -> "Quantity":
     """Add two charges together."""
-    return charge1 + charge2
+    return Quantity(charge1 + charge2, "elementary_charge")
 
 
 def _upconvert_vdw_handler(vdw_handler: vdWHandler):
@@ -358,8 +354,8 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         orientation_atom_index = topology_key.orientation_atom_indices[i]
 
                         charges[orientation_atom_index] = _add_charges(
-                            charges.get(orientation_atom_index, _ZERO_CHARGE),
-                            increment,
+                            charges.get(orientation_atom_index, _ZERO_CHARGE).m,
+                            increment.m,
                         )
 
                 elif parameter_key == "charge":
@@ -374,8 +370,8 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         "ExternalSource",
                     ):
                         charges[atom_index] = _add_charges(
-                            charges.get(atom_index, _ZERO_CHARGE),
-                            parameter_value,
+                            charges.get(atom_index, _ZERO_CHARGE).m,
+                            parameter_value.m,
                         )
 
                     elif potential_key.associated_handler in (  # type: ignore[operator]
@@ -386,8 +382,8 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         # There should be a better way to do this.
 
                         charges[atom_index] = _add_charges(
-                            charges.get(atom_index, _ZERO_CHARGE),
-                            parameter_value,
+                            charges.get(atom_index, _ZERO_CHARGE).m,
+                            parameter_value.m,
                         )
 
                     else:
@@ -401,8 +397,8 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     atom_index = topology_key.atom_indices[0]
 
                     charges[atom_index] = _add_charges(
-                        charges.get(atom_index, _ZERO_CHARGE),
-                        parameter_value,
+                        charges.get(atom_index, _ZERO_CHARGE).m,
+                        parameter_value.m,
                     )
 
                     logger.info(
