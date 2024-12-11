@@ -95,9 +95,7 @@ jobs:
       run: micromamba install "foyer >=0.12.1" -c conda-forge -yq
 
     - name: Run tests
-      if: always()
-      run: |
-        python -m pytest $COV openff/interchange/ -r fExs -n logical --durations=10
+      run: python -m pytest $COV openff/interchange/ -r fExs -n logical --durations=10
 
     - name: Run small molecule regression tests
       if: ${{ matrix.openeye == true && matrix.openmm == true }}
