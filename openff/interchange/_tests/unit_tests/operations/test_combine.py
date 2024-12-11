@@ -15,10 +15,8 @@ from openff.interchange.exceptions import (
 
 class TestCombine:
     @skip_if_missing("openmm")
-    def test_basic_combination(self, monkeypatch, sage_unconstrained):
+    def test_basic_combination(self, sage_unconstrained):
         """Test basic use of Interchange.__add__() based on the README example"""
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
         mol = Molecule.from_smiles("C")
         mol.generate_conformers(n_conformers=1)
         top = Topology.from_molecules([mol])
@@ -40,9 +38,7 @@ class TestCombine:
 
     @pytest.mark.filterwarnings("ignore:Setting positions to None")
     @pytest.mark.slow
-    def test_parameters_do_not_clash(self, monkeypatch, sage_unconstrained):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
+    def test_parameters_do_not_clash(self, sage_unconstrained):
         thf = Molecule.from_smiles("C1CCOC1")
         ace = Molecule.from_smiles("CC(=O)O")
 
@@ -71,11 +67,9 @@ class TestCombine:
 
         # TODO: Ensure the de-duplication is maintained after exports
 
-    def test_positions_setting(self, monkeypatch, sage):
+    def test_positions_setting(self, sage):
         """Test that positions exist on the result if and only if
         both input objects have positions."""
-
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
         ethane = Molecule.from_smiles("CC")
         methane = Molecule.from_smiles("C")
@@ -98,13 +92,10 @@ class TestCombine:
     @pytest.mark.parametrize("handler", ["Electrostatics", "vdW"])
     def test_error_mismatched_cutoffs(
         self,
-        monkeypatch,
         sage,
         basic_top,
         handler,
     ):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
         sage_modified = ForceField("openff-2.1.0.offxml")
 
         sage_modified[handler].cutoff *= 1.5
@@ -119,12 +110,9 @@ class TestCombine:
 
     def test_error_mismatched_switching_function(
         self,
-        monkeypatch,
         sage,
         basic_top,
     ):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
         sage_modified = ForceField("openff-2.1.0.offxml")
 
         sage_modified["vdW"].switch_width *= 0.0
