@@ -4,7 +4,7 @@ channels:
   - openeye
 dependencies:
   # Core
-  - python =3.10
+  - python
   - pip
   - versioningit
   - pip
