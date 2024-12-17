@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Union, overload
 
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field
 
@@ -42,14 +42,15 @@ from openff.interchange.smirnoff import (
 from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
-if has_package("foyer"):
-    from foyer.forcefield import Forcefield as FoyerForcefield
-if has_package("nglview"):
-    import nglview
-
 if TYPE_CHECKING:
     import openmm
     import openmm.app
+    from openff.toolkit import ForceField
+
+    if has_package("foyer"):
+        from foyer import Forcefield as FoyerForcefield
+    if has_package("nglview"):
+        import nglview
 
 
 class Interchange(_BaseModel):
@@ -84,7 +85,7 @@ class Interchange(_BaseModel):
     @classmethod
     def from_smirnoff(
         cls,
-        force_field: ForceField,
+        force_field: "ForceField",
         topology: Topology | list[Molecule],
         box=None,
         positions=None,
@@ -99,7 +100,7 @@ class Interchange(_BaseModel):
         ----------
         force_field : `openff.toolkit.ForceField`
             The force field to parameterize the topology with.
-        topology : `openff.toolkit.Topology` or `List[openff.toolkit.Molecule]`
+        topology : `openff.toolkit.Topology` or `list[openff.toolkit.Molecule]`
             The topology to parameterize, or a list of molecules to construct a
             topology from and parameterize.
         box : `openff.units.Quantity`, optional
@@ -108,14 +109,14 @@ class Interchange(_BaseModel):
         positions : `openff.units.Quantity`, optional
             The positions associated with atoms in the input topology. If ``None``,
             positions are taken from the molecules in topology, if present on all molecules.
-        charge_from_molecules : `List[openff.toolkit.molecule.Molecule]`, optional
+        charge_from_molecules : `list[openff.toolkit.molecule.Molecule]`, optional
             If specified, partial charges for any molecules isomorphic to those
             given will be taken from the given molecules' `partial_charges`
             attribute instead of being determined by the force field. All
             molecules in this list must have partial charges assigned and must
             not be isomorphic with any other molecules in the list. For all values
             of this argument, charges on the input topology are ignored.
-        partial_bond_orders_from_molecules : List[openff.toolkit.molecule.Molecule], optional
+        partial_bond_orders_from_molecules : list[openff.toolkit.molecule.Molecule], optional
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
         allow_nonintegral_charges : bool, optional, default=False
@@ -334,7 +335,7 @@ class Interchange(_BaseModel):
             "foo.top", "foo.gro", and "foo_pointenergy.mdp".
         decimal: int, default=3
             The number of decimal places to use when writing the GROMACS coordinate file.
-        hydrogen_mass : PostitiveFloat, default=1.007947
+        hydrogen_mass : PositiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
@@ -402,7 +403,7 @@ class Interchange(_BaseModel):
         ----------
         file_path
             The path to the GROMACS topology file to write.
-        hydrogen_mass : PostitiveFloat, default=1.007947
+        hydrogen_mass : PositiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
@@ -534,10 +535,10 @@ class Interchange(_BaseModel):
             on a bond or angle that is fully constrained.
         ewald_tolerance : float, default=1e-4
             The value passed to `NonbondedForce.setEwaldErrorTolerance`
-        hydrogen_mass : PostitiveFloat, default=1.007947
+        hydrogen_mass : PositiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
-            not applied to any waters and is unsupported when virtual sites are present.
+            not applied to any waters.
 
         Returns
         -------
@@ -632,10 +633,10 @@ class Interchange(_BaseModel):
             on a bond or angle that is fully constrained.
         ewald_tolerance : float, default=1e-4
             The value passed to `NonbondedForce.setEwaldErrorTolerance`
-        hydrogen_mass : PostitiveFloat, default=1.007947
+        hydrogen_mass : PositiveFloat, default=1.007947
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
-            not applied to any waters and is unsupported when virtual sites are present.
+            not applied to any waters.
         additional_forces : Iterable[openmm.Force], default=tuple()
             Additional forces to be added to the system, e.g. barostats, that are not
             added by the force field.

@@ -49,7 +49,7 @@ jobs:
         fetch-depth: 0
 
     - name: Install conda environment
-      uses: mamba-org/setup-micromamba@v1
+      uses: mamba-org/setup-micromamba@v2
       with:
         micromamba-version: '1.5.10-0'
         environment-file: devtools/conda-envs/test_env.yaml
@@ -136,8 +136,7 @@ jobs:
         python -m mypy plugins/nonbonded_plugins/
 
     - name: Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
-        fail_ci_if_error: false
+        files: ./coverage.xml

@@ -25,10 +25,10 @@ if TYPE_CHECKING:
     from openff.interchange import Interchange
 
 __all__ = [
-    "to_openmm",
-    "to_openmm_topology",
-    "to_openmm_positions",
     "from_openmm",
+    "to_openmm",
+    "to_openmm_positions",
+    "to_openmm_topology",
 ]
 
 
@@ -186,11 +186,6 @@ def _apply_hmr(
 
     if abs(hydrogen_mass - 1.008) < 1e-3:
         return
-
-    if system.getNumParticles() != interchange.topology.n_atoms:
-        raise UnsupportedExportError(
-            "Hydrogen mass repartitioning with virtual sites present, even on rigid water, is not yet supported.",
-        )
 
     water = Molecule.from_smiles("O")
 

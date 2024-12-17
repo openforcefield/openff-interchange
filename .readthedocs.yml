@@ -10,7 +10,14 @@ build:
 
 sphinx:
   configuration: docs/conf.py
-  fail_on_warning: false
+  # Interchange's docs should not produce warnings; if they start,
+  # something is broken (most likely automatic API doc generation)
+  fail_on_warning: true
 
 conda:
   environment: devtools/conda-envs/docs_env.yaml
+
+python:
+  install:
+    - method: pip
+      path: .

@@ -11,7 +11,7 @@ from openff.interchange.foyer._base import _copy_params
 from openff.interchange.models import PotentialKey, TopologyKey
 
 if has_package("foyer"):
-    from foyer.forcefield import Forcefield
+    from foyer import Forcefield
 
 
 class FoyerVDWHandler(vdWCollection):
