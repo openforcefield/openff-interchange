@@ -4,7 +4,7 @@ channels:
   - openeye
 dependencies:
   # Core
-  - python =3.10
+  - python
   - pip
   - versioningit
   - pip
@@ -18,8 +18,8 @@ dependencies:
   - openmm =8.1.2
   # smirnoff-plugins =2024
   # de-forcefields  # add back after smirnoff-plugins update
-  - openff-nagl
-  - openff-nagl-models
+  - openff-nagl ~=0.5
+  - openff-nagl-models ~=0.3
   - mbuild ~=0.18
   - foyer =1
   - gmso ~=0.12
