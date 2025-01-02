@@ -3,7 +3,7 @@ name: Tests against betas
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 3 * * *"
 
 defaults:
   run:
@@ -16,13 +16,12 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macos-12
+          - macos-latest
           - ubuntu-latest
         python-version:
           - "3.10"
           - "3.11"
-        pydantic-version:
-          - "2"
+          - "3.12"
         openeye:
           - true
           - false
@@ -33,23 +32,29 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Install conda environment
-      uses: mamba-org/setup-micromamba@v1
+      uses: mamba-org/setup-micromamba@v2
       with:
-        micromamba-version: '1.5.10-0'
-        environment-file: devtools/conda-envs/beta_env.yaml
+        environment-file: devtools/conda-envs/test_env.yaml
+        condarc: |
+            channels:
+              - openeye/label/rc
+              - conda-forge/label/openmm_rc
+              - conda-forge/label/mdtraj_rc
+              - conda-forge/label/openff-toolkit_rc
+              - conda-forge/label/openff-interchange_rc
+              - openeye
+              - conda-forge
         create-args: >-
           python=${{ matrix.python-version }}
-          pydantic=${{ matrix.pydantic-version }}
 
     - name: Install package
       run: |
         micromamba remove --force openff-interchange openff-interchange-base
         python -m pip install . plugins/
-
-    - name: Environment Information
-      run: conda info && conda list
 
     - name: License OpenEye
       if: ${{ matrix.openeye == true }}
@@ -68,8 +73,7 @@ jobs:
       run: python -m pytest -v $COV openff/interchange/
 
     - name: Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
-        fail_ci_if_error: false
+        files: ./coverage.xml

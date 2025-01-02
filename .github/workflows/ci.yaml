@@ -10,7 +10,7 @@ on:
       - main
       - develop
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 5 * * *"
   workflow_dispatch:
 
 defaults:
@@ -19,19 +19,17 @@ defaults:
 
 jobs:
   test:
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm }}, Pydantic ${{ matrix.pydantic-version }}, OpenEye ${{ matrix.openeye }}
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm }}, OpenEye ${{ matrix.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os:
-          - macos-12
+          - macos-latest
           - ubuntu-latest
         python-version:
           - "3.10"
           - "3.11"
-        pydantic-version:
-          - "2"
         openeye:
           - true
           - false
@@ -45,15 +43,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Install conda environment
-      uses: mamba-org/setup-micromamba@v1
+      uses: mamba-org/setup-micromamba@v2
       with:
-        micromamba-version: '1.5.10-0'
         environment-file: devtools/conda-envs/test_env.yaml
         create-args: >-
           python=${{ matrix.python-version }}
-          pydantic=${{ matrix.pydantic-version }}
 
     - name: Install package
       run: |
@@ -125,7 +123,7 @@ jobs:
         python devtools/scripts/molecule-regressions.py
 
     - name: Run mypy
-      if: ${{ matrix.python-version == '3.10' }}
+      if: ${{ matrix.python-version == '3.11' }}
       run: |
         # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
         # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
@@ -134,8 +132,7 @@ jobs:
         python -m mypy plugins/nonbonded_plugins/
 
     - name: Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
-        fail_ci_if_error: false
+        files: ./coverage.xml

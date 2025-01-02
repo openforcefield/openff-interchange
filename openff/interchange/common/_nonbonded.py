@@ -96,21 +96,21 @@ class ElectrostaticsCollection(_NonbondedCollection):
         "cutoff",
         "no-cutoff",
     ] = Field(
-        _PME,
-    )  # type: ignore[assignment]
+        _PME,  # type: ignore[arg-type]
+    )
     nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
-    _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr(default_factory=dict)
+    _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr()
     _charges_cached: bool = PrivateAttr(default=False)
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def charges(
         self,
     ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom, including virtual sites."""
-        if len(self._charges) == 0 or self._charges_cached is False:  # type: ignore[has-type]
+        if len(self._charges) == 0 or self._charges_cached is False:
             self._charges.update(self._get_charges(include_virtual_sites=False))
             self._charges_cached = True
 

@@ -4,22 +4,22 @@ channels:
   - openeye
 dependencies:
   # Core
-  - python =3.10
+  - python
   - pip
-  - versioneer-518
+  - versioningit
   - pip
   - numpy
   - pydantic =2
   # OpenFF stack
-  - openff-toolkit-base ~=0.16.4
+  - openff-toolkit-base ~=0.16.6
   - openff-units
   - ambertools =23
   # Optional features
-  - openmm
+  - openmm =8.1.2
   # smirnoff-plugins =2024
   # de-forcefields  # add back after smirnoff-plugins update
-  - openff-nagl
-  - openff-nagl-models
+  - openff-nagl ~=0.5
+  - openff-nagl-models ~=0.3
   - mbuild ~=0.18
   - foyer =1
   - gmso ~=0.12

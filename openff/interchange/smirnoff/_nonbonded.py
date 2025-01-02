@@ -1,8 +1,9 @@
 import copy
 import functools
+import logging
 import warnings
 from collections.abc import Iterable
-from typing import Any, Literal, Optional, Union
+from typing import Literal, Union
 
 import numpy
 from openff.toolkit import Molecule, Quantity, Topology, unit
@@ -10,6 +11,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
     LibraryChargeHandler,
+    ParameterHandler,
     ToolkitAM1BCCHandler,
     vdWHandler,
 )
@@ -41,6 +43,8 @@ from openff.interchange.models import (
 )
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
 from openff.interchange.warnings import ForceFieldModificationWarning
+
+logger = logging.getLogger(__name__)
 
 ElectrostaticsHandlerType = Union[
     ElectrostaticsHandler,
@@ -273,7 +277,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     )  # type: ignore[assignment]
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
-    _charges: dict[Any, _ElementaryChargeQuantity] = PrivateAttr(default_factory=dict)
+    _charges: dict[
+        TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey,
+        _ElementaryChargeQuantity,
+    ] = PrivateAttr(dict())
     _charges_cached: bool = PrivateAttr(default=False)
 
     @classmethod
@@ -297,13 +304,26 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         """Get the total partial charge on each atom, excluding virtual sites."""
         return self._get_charges(include_virtual_sites=False)
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def charges(
         self,
     ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom, including virtual sites."""
         if len(self._charges) == 0 or self._charges_cached is False:
+            # TODO: Clearing this dict **should not be necessary** but in some cases in appears
+            #       that this class attribute persists in some cases, possibly only on a single
+            #       thread. Ideas to try include
+            #           * Drop @computed_field ?
+            #           * Don't handle caching ourselves and let Pydantic do it (i.e. have this
+            #               function simply retrun ._get_charges(...)
+            #
+            #       Hopefully this isn't a major issue - caches for large systems should still
+            #       only be build once
+            #
+            #       Some more context: https://github.com/openforcefield/openff-interchange/issues/842#issuecomment-2394211357
+            self._charges.clear()
+
             self._charges.update(self._get_charges(include_virtual_sites=True))
             self._charges_cached = True
 
@@ -330,6 +350,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                     total_charge: Quantity = numpy.sum(parameter_value)
                     # assumes virtual sites can only have charges determined in one step
+
                     charges[topology_key] = -1.0 * total_charge
 
                     # Apply increments to "orientation" atoms
@@ -349,7 +370,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     if potential_key.associated_handler in (
                         "LibraryCharges",
                         "ToolkitAM1BCCHandler",
-                        "charge_from_molecules",
+                        "molecules_with_preset_charges",
                         "ExternalSource",
                     ):
                         charges[atom_index] = _add_charges(
@@ -384,6 +405,11 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         parameter_value,
                     )
 
+                    logger.info(
+                        "Charge section ChargeIncrementModel, applying charge increment from atom "  # type: ignore[union-attr]
+                        f"{topology_key.this_atom_index} to atoms {topology_key.other_atom_indices}",
+                    )
+
                 else:
                     raise NotImplementedError()
 
@@ -414,9 +440,9 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @classmethod
     def create(
         cls,
-        parameter_handler: Any,
+        parameter_handler: ParameterHandler | list[ParameterHandler],
         topology: Topology,
-        charge_from_molecules=None,
+        molecules_with_preset_charges=None,
         allow_nonintegral_charges: bool = False,
     ) -> Self:
         """
@@ -455,7 +481,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         handler.store_matches(
             parameter_handlers,
             topology,
-            charge_from_molecules=charge_from_molecules,
+            molecules_with_preset_charges=molecules_with_preset_charges,
             allow_nonintegral_charges=allow_nonintegral_charges,
         )
         handler._charges = dict()
@@ -678,7 +704,15 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             )
             potentials[potential_key] = Potential(parameters={"charge": partial_charge})
 
-            matches[SingleAtomChargeTopologyKey(this_atom_index=atom_index)] = potential_key
+            matches[
+                SingleAtomChargeTopologyKey(
+                    this_atom_index=atom_index,
+                    extras={
+                        "handler": handler_name,
+                        "partial_charge_method": partial_charge_method,
+                    },
+                )
+            ] = potential_key
 
         return partial_charge_method, matches, potentials
 
@@ -777,12 +811,12 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         cls,
         topology: Topology,
         unique_molecule: Molecule,
-        charge_from_molecules=Optional[list[Molecule]],
+        molecules_with_preset_charges=list[Molecule] | None,
     ) -> tuple[bool, dict, dict]:
-        if charge_from_molecules is None:
+        if molecules_with_preset_charges is None:
             return False, dict(), dict()
 
-        for molecule_with_charges in charge_from_molecules:
+        for molecule_with_charges in molecules_with_preset_charges:
             if molecule_with_charges.is_isomorphic_with(unique_molecule):
                 break
         else:
@@ -806,11 +840,12 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             index_in_topology = atom_map[index_in_molecule_with_charges]
             topology_key = SingleAtomChargeTopologyKey(
                 this_atom_index=index_in_topology,
+                extras={"handler": "preset"},
             )
             potential_key = PotentialKey(
                 id=mapped_smiles,
                 mult=index_in_molecule_with_charges,  # Not sure this prevents clashes in some corner cases
-                associated_handler="charge_from_molecules",
+                associated_handler="molecules_with_preset_charges",
                 bond_order=None,
             )
             potential = Potential(parameters={"charge": partial_charge})
@@ -823,7 +858,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         self,
         parameter_handler: ElectrostaticsHandlerType | list[ElectrostaticsHandlerType],
         topology: Topology,
-        charge_from_molecules=None,
+        molecules_with_preset_charges=None,
         allow_nonintegral_charges: bool = False,
     ) -> None:
         """
@@ -846,10 +881,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             flag, matches, potentials = self._assign_charges_from_molecules(
                 topology,
                 unique_molecule,
-                charge_from_molecules,
+                molecules_with_preset_charges,
             )
             # TODO: Here is where the toolkit calls self.check_charges_assigned(). Do we skip this
-            #       entirely given that we are not accepting `charge_from_molecules`?
+            #       entirely given that we are not accepting `molecules_with_preset_charges`?
 
             if not flag:
                 # TODO: Rename this method to something like `_find_matches`
@@ -881,6 +916,42 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                             # Have this new key (on a duplicate molecule) point to the same potential
                             # as the old key (on a unique/reference molecule)
+                            if type(new_key) is LibraryChargeTopologyKey:
+                                logger.info(
+                                    "Charge section LibraryCharges applied to topology atom index "
+                                    f"{topology_atom_index}",
+                                )
+
+                            elif type(new_key) is SingleAtomChargeTopologyKey:
+                                if new_key.extras["handler"] == "ToolkitAM1BCCHandler":
+                                    logger.info(
+                                        "Charge section ToolkitAM1BCC, using charge method "
+                                        f"{new_key.extras['partial_charge_method']}, "
+                                        f"applied to topology atom index {topology_atom_index}",
+                                    )
+
+                                elif new_key.extras["handler"] == "preset":
+                                    logger.info(
+                                        f"Preset charges applied to atom index {topology_atom_index}",
+                                    )
+
+                                else:
+                                    raise ValueError(f"Unhandled handler {new_key.extras['handler']}")
+
+                            elif type(new_key) is ChargeModelTopologyKey:
+                                logger.info(
+                                    "Charge section ChargeIncrementModel, using charge method "
+                                    f"{new_key.partial_charge_method}, "
+                                    f"applied to topology atom index {new_key.this_atom_index}",
+                                )
+
+                            elif type(new_key) is ChargeIncrementTopologyKey:
+                                # here is where the actual increments could be logged
+                                pass
+
+                            else:
+                                raise ValueError(f"Unhandled key type {type(new_key)}")
+
                             self.key_map[new_key] = matches[key]
 
         topology_charges = [0.0] * topology.n_atoms

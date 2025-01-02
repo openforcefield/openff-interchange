@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Union
 from openff.toolkit import Quantity, Topology
 from openff.utilities.utilities import has_package, requires_package
 
-from openff.interchange._experimental import experimental
 from openff.interchange.common._nonbonded import vdWCollection
 from openff.interchange.common._valence import (
     AngleCollection,
@@ -33,7 +32,6 @@ if TYPE_CHECKING:
 
 
 @requires_package("openmm")
-@experimental
 def from_openmm(
     *,
     system: "openmm.System",
