@@ -13,6 +13,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### Behavior changes
+
+* #1132 Methods that return an `openmm.System` object now include a `openmm.CMMotionRemover` "force" within it.
+
 ### New features
 
 * #1053 Logs, at the level of `logging.INFO`, how charges are assigned by SMIRNOFF force fields to each atom and virtual site.

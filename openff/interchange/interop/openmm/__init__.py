@@ -147,6 +147,8 @@ def to_openmm_system(
             except NotImplementedError:
                 continue
 
+    system.addForce(openmm.CMMotionRemover())
+
     return system
 
 

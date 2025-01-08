@@ -920,6 +920,10 @@ class Interchange(_BaseModel):
         interchange : Interchange
             An Interchange object representing the contents of the OpenMM objects.
 
+        Notes
+        -----
+        An `openmm.CMMotionRemover` force, if present, is ignored.
+
         """
         from openff.interchange.interop.openmm._import._import import from_openmm
 
