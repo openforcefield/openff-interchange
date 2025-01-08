@@ -1,9 +1,9 @@
 name: Tests against betas
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: "0 3 * * *"
+  workflow_dispatch:
 
 defaults:
   run:
@@ -56,9 +56,10 @@ jobs:
         micromamba remove --force openff-interchange openff-interchange-base
         python -m pip install . plugins/
 
-    - name: License OpenEye
+    - name: Install and license OpenEye Toolkits
       if: ${{ matrix.openeye == true }}
       run: |
+        micromamba install "openeye-toolkits =2024.1.0" -c openeye
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
       env:
