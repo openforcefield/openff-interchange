@@ -97,7 +97,7 @@ jobs:
       if: ${{ matrix.openeye == true && matrix.openmm == true }}
       run: |
         micromamba install "deepdiff =5" rich click -c conda-forge
-        python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@fa07b62824c39af591142b402bd68103f4043f8b
+        python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@83067d7cce37a0f21b028651a7d98ec063572063
 
         create_openmm_systems \
           --input             "regression_tests/small-molecule/input-topologies.json" \
