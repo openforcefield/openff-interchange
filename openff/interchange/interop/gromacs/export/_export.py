@@ -141,13 +141,13 @@ class GROMACSWriter(_BaseModel):
                     mapping_to_reduced_atom_types[atom_type.name] = _at_name
             else:
                 top.write(
-                    f"{atom_type.name :<11s}\t"
-                    f"{atom_type.atomic_number :6d}\t"
-                    f"{atom_type.mass.m :.16g}\t"
-                    f"{atom_type.charge.m :.16f}\t"
-                    f"{atom_type.particle_type :5s}\t"
-                    f"{atom_type.sigma.m :.16g}\t"
-                    f"{atom_type.epsilon.m :.16g}\n",
+                    f"{atom_type.name:<11s}\t"
+                    f"{atom_type.atomic_number:6d}\t"
+                    f"{atom_type.mass.m:.16g}\t"
+                    f"{atom_type.charge.m:.16f}\t"
+                    f"{atom_type.particle_type:5s}\t"
+                    f"{atom_type.sigma.m:.16g}\t"
+                    f"{atom_type.epsilon.m:.16g}\n",
                 )
 
         if not merge_atom_types:
@@ -156,13 +156,13 @@ class GROMACSWriter(_BaseModel):
 
         for atom_type_name, atom_type in reduced_atom_types:
             top.write(
-                f"{atom_type_name :<11s}\t"
-                f"{atom_type.atomic_number :6d}\t"
-                f"{atom_type.mass.m :.16g}\t"
-                f"{atom_type.charge.m :.16f}\t"
-                f"{atom_type.particle_type :5s}\t"
-                f"{atom_type.sigma.m :.16g}\t"
-                f"{atom_type.epsilon.m :.16g}\n",
+                f"{atom_type_name:<11s}\t"
+                f"{atom_type.atomic_number:6d}\t"
+                f"{atom_type.mass.m:.16g}\t"
+                f"{atom_type.charge.m:.16f}\t"
+                f"{atom_type.particle_type:5s}\t"
+                f"{atom_type.sigma.m:.16g}\t"
+                f"{atom_type.epsilon.m:.16g}\n",
             )
         top.write("\n")
         return mapping_to_reduced_atom_types
@@ -225,25 +225,25 @@ class GROMACSWriter(_BaseModel):
         for atom in molecule_type.atoms:
             if merge_atom_types:
                 top.write(
-                    f"{atom.index :6d} "
-                    f"{mapping_to_reduced_atom_types[atom.atom_type] :6s}"
-                    f"{atom.residue_index % 100_000 :8d} "
-                    f"{atom.residue_name :8s} "
-                    f"{atom.name :6s}"
-                    f"{atom.charge_group_number :6d}"
-                    f"{atom.charge.m :20.12f}"
-                    f"{atom.mass.m :20.12f}\n",
+                    f"{atom.index:6d} "
+                    f"{mapping_to_reduced_atom_types[atom.atom_type]:6s}"
+                    f"{atom.residue_index % 100_000:8d} "
+                    f"{atom.residue_name:8s} "
+                    f"{atom.name:6s}"
+                    f"{atom.charge_group_number:6d}"
+                    f"{atom.charge.m:20.12f}"
+                    f"{atom.mass.m:20.12f}\n",
                 )
             else:
                 top.write(
-                    f"{atom.index :6d} "
-                    f"{atom.atom_type :6s}"
-                    f"{atom.residue_index % 100_000 :8d} "
-                    f"{atom.residue_name :8s} "
-                    f"{atom.name :6s}"
-                    f"{atom.charge_group_number :6d}"
-                    f"{atom.charge.m :20.12f}"
-                    f"{atom.mass.m :20.12f}\n",
+                    f"{atom.index:6d} "
+                    f"{atom.atom_type:6s}"
+                    f"{atom.residue_index % 100_000:8d} "
+                    f"{atom.residue_name:8s} "
+                    f"{atom.name:6s}"
+                    f"{atom.charge_group_number:6d}"
+                    f"{atom.charge.m:20.12f}"
+                    f"{atom.mass.m:20.12f}\n",
                 )
 
         top.write("\n")
@@ -256,7 +256,7 @@ class GROMACSWriter(_BaseModel):
 
         for pair in molecule_type.pairs:
             top.write(
-                f"{pair.atom1 :6d}\t{pair.atom2 :6d}\t{function :6d}\n",
+                f"{pair.atom1:6d}\t{pair.atom2:6d}\t{function:6d}\n",
             )
 
         top.write("\n")
@@ -269,11 +269,7 @@ class GROMACSWriter(_BaseModel):
 
         for bond in molecule_type.bonds:
             top.write(
-                f"{bond.atom1 :6d} "
-                f"{bond.atom2 :6d} "
-                f"{function :6d}"
-                f"{bond.length.m :20.12f} "
-                f"{bond.k.m :20.12f} ",
+                f"{bond.atom1:6d} {bond.atom2:6d} {function:6d}{bond.length.m:20.12f} {bond.k.m:20.12f} ",
             )
 
             top.write("\n")
@@ -288,12 +284,12 @@ class GROMACSWriter(_BaseModel):
 
         for angle in molecule_type.angles:
             top.write(
-                f"{angle.atom1 :6d} "
-                f"{angle.atom2 :6d} "
-                f"{angle.atom3 :6d} "
-                f"{function :6d} "
-                f"{angle.angle.m :20.12f} "
-                f"{angle.k.m :20.12f} ",
+                f"{angle.atom1:6d} "
+                f"{angle.atom2:6d} "
+                f"{angle.atom3:6d} "
+                f"{function:6d} "
+                f"{angle.angle.m:20.12f} "
+                f"{angle.k.m:20.12f} ",
             )
 
             top.write("\n")
@@ -314,26 +310,26 @@ class GROMACSWriter(_BaseModel):
             function = functions[type(dihedral)]
 
             top.write(
-                f"{dihedral.atom1 :6d}"
-                f"{dihedral.atom2 :6d}"
-                f"{dihedral.atom3 :6d}"
-                f"{dihedral.atom4 :6d}"
-                f"{functions[type(dihedral)] :6d}",
+                f"{dihedral.atom1:6d}"
+                f"{dihedral.atom2:6d}"
+                f"{dihedral.atom3:6d}"
+                f"{dihedral.atom4:6d}"
+                f"{functions[type(dihedral)]:6d}",
             )
 
             if function in [1, 4]:
                 top.write(
-                    f"{dihedral.phi.m :20.12f}{dihedral.k.m :20.12f}{dihedral.multiplicity :18d}",
+                    f"{dihedral.phi.m:20.12f}{dihedral.k.m:20.12f}{dihedral.multiplicity:18d}",
                 )
 
             elif function == 3:
                 top.write(
-                    f"{dihedral.c0.m :20.12f}"
-                    f"{dihedral.c1.m :20.12f}"
-                    f"{dihedral.c2.m :20.12f}"
-                    f"{dihedral.c3.m :20.12f}"
-                    f"{dihedral.c4.m :20.12f}"
-                    f"{dihedral.c5.m :20.12f}",
+                    f"{dihedral.c0.m:20.12f}"
+                    f"{dihedral.c1.m:20.12f}"
+                    f"{dihedral.c2.m:20.12f}"
+                    f"{dihedral.c3.m:20.12f}"
+                    f"{dihedral.c4.m:20.12f}"
+                    f"{dihedral.c5.m:20.12f}",
                 )
 
             else:
@@ -397,11 +393,11 @@ class GROMACSWriter(_BaseModel):
 
         for exclusion in molecule_type.exclusions:
             top.write(
-                f"{exclusion.first_atom :6d}",
+                f"{exclusion.first_atom:6d}",
             )
             for other_atom in exclusion.other_atoms:
                 top.write(
-                    f"{other_atom :6d}",
+                    f"{other_atom:6d}",
                 )
 
             top.write("\n")
@@ -416,9 +412,9 @@ class GROMACSWriter(_BaseModel):
 
         for settle in molecule_type.settles:
             top.write(
-                f"{settle.first_atom :6d}\t"
-                f"{function :6d}\t"
-                f"{settle.oxygen_hydrogen_distance.m_as(unit.nanometer) :20.12f}\t"
+                f"{settle.first_atom:6d}\t"
+                f"{function:6d}\t"
+                f"{settle.oxygen_hydrogen_distance.m_as(unit.nanometer):20.12f}\t"
                 f"{settle.hydrogen_hydrogen_distance.m_as(unit.nanometer):20.12f}\n",
             )
 
