@@ -29,8 +29,7 @@ class TestUnsupportedCases:
         with pytest.raises(
             UnsupportedImportError,
             match=re.escape(
-                "The number of particles in the system (9) and "
-                "the number of atoms in the topology (3) do not match.",
+                "The number of particles in the system (9) and the number of atoms in the topology (3) do not match.",
             ),
         ):
             from_openmm(

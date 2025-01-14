@@ -71,8 +71,7 @@ class MDConfig(_BaseModel):
     coul_cutoff: _DistanceQuantity = Field(
         Quantity(9.0, unit.angstrom),
         description=(
-            "The distance at which electrostatic interactions are truncated or transition from "
-            "short- to long-range."
+            "The distance at which electrostatic interactions are truncated or transition from short- to long-range."
         ),
     )
 

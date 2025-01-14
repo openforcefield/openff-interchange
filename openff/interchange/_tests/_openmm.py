@@ -144,9 +144,9 @@ def _compare_nonbonded_parameters(force1, force2):
         q2, sig2, eps2 = force2.getParticleParameters(i)
         assert abs(q2 - q1) < 1e-8 * openmm.unit.elementary_charge, f"charge mismatch in particle {i}: {q1} vs {q2}"
         assert abs(sig2 - sig1) < 1e-12 * openmm.unit.nanometer, f"sigma mismatch in particle {i}: {sig1} vs {sig2}"
-        assert (
-            abs(eps2 - eps1) < 1e-12 * openmm.unit.kilojoule_per_mole
-        ), f"epsilon mismatch in particle {i}: {eps1} vs {eps2}"
+        assert abs(eps2 - eps1) < 1e-12 * openmm.unit.kilojoule_per_mole, (
+            f"epsilon mismatch in particle {i}: {eps1} vs {eps2}"
+        )
 
 
 @requires_package("openmm")
