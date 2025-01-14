@@ -785,9 +785,9 @@ class TestToOpenMMTopology:
 
         # Assert the test's assumptions
         _ace, ala1, ala2, _nme = off_topology.hierarchy_iterator("residues")
-        assert [a.name for a in ala1.atoms] == [
-            a.name for a in ala2.atoms
-        ], "Test assumes both alanines have same atom names"
+        assert [a.name for a in ala1.atoms] == [a.name for a in ala2.atoms], (
+            "Test assumes both alanines have same atom names"
+        )
 
         for res in off_topology.hierarchy_iterator("residues"):
             res_atomnames = [atom.name for atom in res.atoms]
