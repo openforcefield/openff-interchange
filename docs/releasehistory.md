@@ -33,6 +33,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #1070 Documents charge assignment hierarchy in the user guide.
 * #1105 Documents new Pydantic-compatible type annotations in the user guide.
 
+### Miscellaneous
+
+* #1140 Bumps internal tests to use OpenMM 8.2.
+
 ## 0.4.0 - 2024-11-04
 
 ### Breaking changes and behavior changes
