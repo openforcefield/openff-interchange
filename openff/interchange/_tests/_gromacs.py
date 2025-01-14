@@ -14,6 +14,8 @@ def gmx_roundtrip(state: Interchange, apply_smirnoff_defaults: bool = False):
 
         get_smirnoff_defaults(periodic=True).apply(new_state)
 
+        get_gromacs_energies(state).compare(get_gromacs_energies(new_state))
+
 
 def gmx_monolithic_vs_itp(state: Interchange):
     with temporary_cd():
