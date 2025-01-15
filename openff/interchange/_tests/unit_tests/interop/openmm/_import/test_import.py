@@ -250,12 +250,16 @@ class TestFromOpenMM:
             },
         )
 
-    def test_only_constrained_water(self, water_dimer):
+    def test_only_constrained_water(
+        self,
+        water_dimer,
+        default_integrator,
+    ):
         water_dimer.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         interchange = ForceField("openff-2.2.1.offxml").create_interchange(water_dimer)
 
-        simulation = interchange.to_openmm_simulation(integrator=openmm.LangevinIntegrator(300, 1, 0.001))
+        simulation = interchange.to_openmm_simulation(integrator=default_integrator)
         system = simulation.system
 
         for index in range(system.getNumForces()):
