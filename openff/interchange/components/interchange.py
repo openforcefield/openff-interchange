@@ -1,5 +1,6 @@
 """An object for storing, manipulating, and converting molecular mechanics data."""
 
+import tempfile
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
@@ -100,7 +101,7 @@ class Interchange(_BaseModel):
         ----------
         force_field : `openff.toolkit.ForceField`
             The force field to parameterize the topology with.
-        topology : `openff.toolkit.Topology` or `List[openff.toolkit.Molecule]`
+        topology : `openff.toolkit.Topology` or `list[openff.toolkit.Molecule]`
             The topology to parameterize, or a list of molecules to construct a
             topology from and parameterize.
         box : `openff.units.Quantity`, optional
@@ -109,14 +110,14 @@ class Interchange(_BaseModel):
         positions : `openff.units.Quantity`, optional
             The positions associated with atoms in the input topology. If ``None``,
             positions are taken from the molecules in topology, if present on all molecules.
-        charge_from_molecules : `List[openff.toolkit.molecule.Molecule]`, optional
+        charge_from_molecules : `list[openff.toolkit.molecule.Molecule]`, optional
             If specified, partial charges for any molecules isomorphic to those
             given will be taken from the given molecules' `partial_charges`
             attribute instead of being determined by the force field. All
             molecules in this list must have partial charges assigned and must
             not be isomorphic with any other molecules in the list. For all values
             of this argument, charges on the input topology are ignored.
-        partial_bond_orders_from_molecules : List[openff.toolkit.molecule.Molecule], optional
+        partial_bond_orders_from_molecules : list[openff.toolkit.molecule.Molecule], optional
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
         allow_nonintegral_charges : bool, optional, default=False
@@ -323,6 +324,7 @@ class Interchange(_BaseModel):
         prefix: str,
         decimal: int = 3,
         hydrogen_mass: PositiveFloat = 1.007947,
+        monolithic: bool = True,
         _merge_atom_types: bool = False,
     ):
         """
@@ -339,6 +341,9 @@ class Interchange(_BaseModel):
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
+        monolithic: bool, default=False
+            Whether the topology file should be monolithic (True) or reference individual .itp files (False). Note that
+            these individual .itp files rely on ad hoc atom types and cannot be transferred between systems.
         _merge_atom_types: bool, default = False
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
@@ -360,7 +365,7 @@ class Interchange(_BaseModel):
             gro_file=prefix + ".gro",
         )
 
-        writer.to_top(_merge_atom_types=_merge_atom_types)
+        writer.to_top(monolithic=monolithic, _merge_atom_types=_merge_atom_types)
         writer.to_gro(decimal=decimal)
 
         self.to_mdp(prefix + "_pointenergy.mdp")
@@ -394,6 +399,7 @@ class Interchange(_BaseModel):
         self,
         file_path: Path | str,
         hydrogen_mass: PositiveFloat = 1.007947,
+        monolithic: bool = True,
         _merge_atom_types: bool = False,
     ):
         """
@@ -407,6 +413,9 @@ class Interchange(_BaseModel):
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
+        monolithic: bool, default=False
+            Whether the topology file should be monolithic (True) or reference individual .itp files (False). Note that
+            these individual .itp files rely on ad hoc atom types and cannot be transferred between systems.
         _merge_atom_types: book, default=False
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
@@ -423,7 +432,11 @@ class Interchange(_BaseModel):
         GROMACSWriter(
             system=_convert(self, hydrogen_mass=hydrogen_mass),
             top_file=file_path,
-        ).to_top(_merge_atom_types=_merge_atom_types)
+            gro_file=tempfile.NamedTemporaryFile(suffix=".gro").file.name,
+        ).to_top(
+            monolithic=monolithic,
+            _merge_atom_types=_merge_atom_types,
+        )
 
     def to_gro(self, file_path: Path | str, decimal: int = 3):
         """
@@ -456,6 +469,7 @@ class Interchange(_BaseModel):
         # TODO: Write the coordinates without the full conversion
         GROMACSWriter(
             system=_convert(self),
+            top_file=tempfile.NamedTemporaryFile(suffix=".top").file.name,
             gro_file=file_path,
         ).to_gro(decimal=decimal)
 

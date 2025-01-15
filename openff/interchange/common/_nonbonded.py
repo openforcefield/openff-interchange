@@ -7,6 +7,7 @@ from pydantic import Field, PrivateAttr, computed_field
 
 from openff.interchange._annotations import _DistanceQuantity, _ElementaryChargeQuantity
 from openff.interchange.components.potentials import Collection
+from openff.interchange.constants import _PME
 from openff.interchange.models import (
     LibraryChargeTopologyKey,
     TopologyKey,
@@ -94,7 +95,9 @@ class ElectrostaticsCollection(_NonbondedCollection):
         "Ewald3D-ConductingBoundary",
         "cutoff",
         "no-cutoff",
-    ] = Field("Ewald3D-ConductingBoundary")
+    ] = Field(
+        _PME,  # type: ignore[arg-type]
+    )
     nonperiodic_potential: Literal["Coulomb", "cutoff", "no-cutoff"] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 

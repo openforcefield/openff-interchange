@@ -12,9 +12,10 @@ repos:
   hooks:
   - id: add-trailing-comma
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.7.4
+  rev: v0.9.1
   hooks:
     - id: ruff
+      args: ["--fix"]
     - id: ruff-format
 - repo: https://github.com/econchick/interrogate
   rev: 1.7.0
@@ -28,29 +29,18 @@ repos:
   - id: blacken-docs
     files: ^docs/
 - repo: https://github.com/igorshubovych/markdownlint-cli
-  rev: v0.42.0
+  rev: v0.43.0
   hooks:
   - id: markdownlint
     exclude: .github
     args: ["--disable", "MD013", "MD033", "MD024", "MD046", "--ignore", "docs/using/experimental.md", "--ignore", "docs/using/status.md", "--"]
-- repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.9.1
-  hooks:
-    - id: nbqa-pyupgrade
-      files: ^examples
-      args:
-        - --py310-plus
-    - id: nbqa-ruff
-      files: ^examples
-      args:
-        - --fix
 - repo: https://github.com/kynan/nbstripout
   rev: 0.8.1
   hooks:
     - id: nbstripout
       files: ^examples
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.19.0
+  rev: v3.19.1
   hooks:
   - id: pyupgrade
     args:
