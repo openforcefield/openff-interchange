@@ -288,6 +288,21 @@ def gbsa_force_field() -> ForceField:
 
 
 @pytest.fixture
+def ff14sb() -> ForceField:
+    return ForceField("ff14sb_off_impropers_0.0.3.offxml")
+
+
+@pytest.fixture
+def ligand():
+    return MoleculeWithConformer.from_smiles("CC[C@@](/C=C\\[H])(C=C)O", allow_undefined_stereo=True)
+
+
+@pytest.fixture
+def caffeine():
+    return MoleculeWithConformer.from_smiles("Cn1cnc2c1c(=O)n(C)c(=O)n2C")
+
+
+@pytest.fixture
 def basic_top() -> Topology:
     topology = MoleculeWithConformer.from_smiles("C").to_topology()
     topology.box_vectors = Quantity([5, 5, 5], unit.nanometer)
@@ -469,27 +484,33 @@ def ethanol_top(ethanol):
 
 
 @pytest.fixture
-def mainchain_ala():
-    molecule = Molecule.from_file(
-        get_data_file_path("proteins/MainChain_ALA.sdf", "openff.toolkit"),
+def alanine_dipeptide() -> Topology:
+    return Topology.from_pdb(
+        get_data_file_path(
+            "proteins/MainChain_ALA_ALA.pdb",
+            "openff.toolkit",
+        ),
     )
-    molecule._add_default_hierarchy_schemes()
-    molecule.perceive_residues()
-    molecule.perceive_hierarchy()
-
-    return molecule
 
 
 @pytest.fixture
-def mainchain_arg():
-    molecule = Molecule.from_file(
-        get_data_file_path("proteins/MainChain_ARG.sdf", "openff.toolkit"),
-    )
-    molecule._add_default_hierarchy_schemes()
-    molecule.perceive_residues()
-    molecule.perceive_hierarchy()
+def mainchain_ala() -> Molecule:
+    return Topology.from_pdb(
+        get_data_file_path(
+            "proteins/MainChain_ALA.pdb",
+            "openff.toolkit",
+        ),
+    ).molecule(0)
 
-    return molecule
+
+@pytest.fixture
+def mainchain_arg() -> Molecule:
+    return Topology.from_pdb(
+        get_data_file_path(
+            "proteins/MainChain_ARG.pdb",
+            "openff.toolkit",
+        ),
+    ).molecule(0)
 
 
 @pytest.fixture

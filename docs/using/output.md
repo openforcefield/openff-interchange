@@ -34,6 +34,8 @@ interchange.to_gromacs("mysim")  # Produces the same three files
 
 Note that the MDP file generated is configured for a single-point energy calculation and must be modified to run other simulations.
 
+By default, the topology is written to as a monolithic file, which can be large. To split this into separate files with the `#include "molecule.itp"` convention, use `monolithic=False`. This produces a functionally equivalent topology file which splits non-bonded interactions into a file `mysim_nonbonded.itp` and each molecule's parameters in a separate file named according to the `Molecule.name` attribute.
+
 ## LAMMPS
 
 An [`Interchange`] object can be written to LAMMPS data and run input files with [`Interchange.to_lammps()`]

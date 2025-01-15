@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Union
 from openff.toolkit import Quantity, Topology
 from openff.utilities.utilities import has_package, requires_package
 
-from openff.interchange.common._nonbonded import vdWCollection
+from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._valence import (
     AngleCollection,
     BondCollection,
@@ -12,9 +12,6 @@ from openff.interchange.common._valence import (
     ProperTorsionCollection,
 )
 from openff.interchange.exceptions import UnsupportedImportError
-from openff.interchange.interop.openmm._import._nonbonded import (
-    BasicElectrostaticsCollection,
-)
 from openff.interchange.interop.openmm._import.compat import _check_compatible_inputs
 from openff.interchange.warnings import MissingPositionsWarning
 
@@ -122,7 +119,12 @@ def from_openmm(
     # TODO: Does this run through the Interchange.box validator?
     interchange.box = _box_vectors
 
-    if interchange.topology.n_bonds > len(interchange.collections["Bonds"].key_map):
+    try:
+        num_physics_bonds = len(interchange["Bonds"].key_map)
+    except LookupError:
+        num_physics_bonds = 0
+
+    if interchange.topology.n_bonds > num_physics_bonds:
         # There are probably missing (physics) bonds from rigid waters. The topological
         # bonds are probably processed correctly.
         _fill_in_rigid_water_bonds(interchange)
@@ -177,7 +179,7 @@ def _convert_constraints(
 
 def _convert_nonbonded_force(
     force: "openmm.NonbondedForce",
-) -> tuple[vdWCollection, BasicElectrostaticsCollection]:
+) -> tuple[vdWCollection, ElectrostaticsCollection]:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.components.potentials import Potential
@@ -189,7 +191,7 @@ def _convert_nonbonded_force(
         )
 
     vdw = vdWCollection()
-    electrostatics = BasicElectrostaticsCollection(version=0.4, scale_14=0.833333)
+    electrostatics = ElectrostaticsCollection(version=0.4, scale_14=0.833333)
 
     n_parametrized_particles = force.getNumParticles()
 
@@ -347,6 +349,12 @@ def _fill_in_rigid_water_bonds(interchange: "Interchange"):
 
     from openff.interchange.components.potentials import Potential
     from openff.interchange.models import AngleKey, BondKey, PotentialKey
+
+    if "Bonds" not in interchange.collections:
+        interchange.collections.update({"Bonds": BondCollection()})
+
+    if "Angles" not in interchange.collections:
+        interchange.collections.update({"Angles": AngleCollection()})
 
     simple_water = _SimpleMolecule.from_molecule(Molecule.from_smiles("O"))
 
