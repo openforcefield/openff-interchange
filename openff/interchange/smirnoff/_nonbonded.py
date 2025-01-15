@@ -320,7 +320,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom or particle."""
         # Keyed by index for atoms and by VirtualSiteKey for virtual sites.
-        # deal with untless (float, implicit elementary_charge) values until returning
+        # work in unitless (float, implicit elementary_charge) values until returning
         charges: dict[VirtualSiteKey | int, _ElementaryChargeQuantity] = dict()
 
         for topology_key, potential_key in self.key_map.items():
