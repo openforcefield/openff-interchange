@@ -53,7 +53,7 @@ ElectrostaticsHandlerType = Union[
     LibraryChargeHandler,
 ]
 
-_ZERO_CHARGE = Quantity(0.0, unit.elementary_charge)
+_ZERO_CHARGE = Quantity(0.0, "elementary_charge")
 
 
 @functools.lru_cache(None)
@@ -395,7 +395,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                     atom_index = topology_key.atom_indices[0]
 
-                    charges[atom_index] = charges.get(atom_index, 0.0) + parameter_value.m
+                    charges[atom_index] = _add_charges(
+                        charges.get(atom_index, _ZERO_CHARGE).m,
+                        parameter_value.m,
+                    )
 
                     logger.info(
                         "Charge section ChargeIncrementModel, applying charge increment from atom "  # type: ignore[union-attr]
