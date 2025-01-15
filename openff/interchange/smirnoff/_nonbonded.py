@@ -53,21 +53,6 @@ ElectrostaticsHandlerType = Union[
     LibraryChargeHandler,
 ]
 
-_ZERO_CHARGE = Quantity(0.0, unit.elementary_charge)
-
-
-@unit.wraps(
-    ret=unit.elementary_charge,
-    args=(unit.elementary_charge, unit.elementary_charge),
-    strict=True,
-)
-def _add_charges(
-    charge1: "Quantity",
-    charge2: "Quantity",
-) -> "Quantity":
-    """Add two charges together."""
-    return charge1 + charge2
-
 
 def _upconvert_vdw_handler(vdw_handler: vdWHandler):
     """Given a vdW with version 0.3 or 0.4, up-convert to 0.4 or short-circuit if already 0.4."""
@@ -335,6 +320,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom or particle."""
         # Keyed by index for atoms and by VirtualSiteKey for virtual sites.
+        # work in unitless (float, implicit elementary_charge) values until returning
         charges: dict[VirtualSiteKey | int, _ElementaryChargeQuantity] = dict()
 
         for topology_key, potential_key in self.key_map.items():
@@ -348,19 +334,14 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                             "virtual sites, not by a `ChargeIncrementModelHandler`.",
                         )
 
-                    total_charge: Quantity = numpy.sum(parameter_value)
                     # assumes virtual sites can only have charges determined in one step
-
-                    charges[topology_key] = -1.0 * total_charge
+                    charges[topology_key] = -1.0 * numpy.sum(parameter_value)
 
                     # Apply increments to "orientation" atoms
                     for i, increment in enumerate(parameter_value):
                         orientation_atom_index = topology_key.orientation_atom_indices[i]
 
-                        charges[orientation_atom_index] = _add_charges(
-                            charges.get(orientation_atom_index, _ZERO_CHARGE),
-                            increment,
-                        )
+                        charges[orientation_atom_index] = charges.get(orientation_atom_index, 0.0) + increment.m
 
                 elif parameter_key == "charge":
                     assert len(topology_key.atom_indices) == 1
@@ -373,10 +354,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         "molecules_with_preset_charges",
                         "ExternalSource",
                     ):
-                        charges[atom_index] = _add_charges(
-                            charges.get(atom_index, _ZERO_CHARGE),
-                            parameter_value,
-                        )
+                        charges[atom_index] = charges.get(atom_index, 0.0) + parameter_value.m
 
                     elif potential_key.associated_handler in (  # type: ignore[operator]
                         "ChargeIncrementModelHandler"
@@ -385,10 +363,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         # we "add" the charge whether or not the increment was already applied.
                         # There should be a better way to do this.
 
-                        charges[atom_index] = _add_charges(
-                            charges.get(atom_index, _ZERO_CHARGE),
-                            parameter_value,
-                        )
+                        charges[atom_index] = charges.get(atom_index, 0.0) + parameter_value.m
 
                     else:
                         raise RuntimeError(
@@ -400,10 +375,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                     atom_index = topology_key.atom_indices[0]
 
-                    charges[atom_index] = _add_charges(
-                        charges.get(atom_index, _ZERO_CHARGE),
-                        parameter_value,
-                    )
+                    charges[atom_index] = charges.get(atom_index, 0.0) + parameter_value.m
 
                     logger.info(
                         "Charge section ChargeIncrementModel, applying charge increment from atom "  # type: ignore[union-attr]
@@ -428,7 +400,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                 if include_virtual_sites:
                     returned_charges[index] = charge
 
-        return returned_charges
+        return {key: Quantity(val, "elementary_charge") for key, val in returned_charges.items()}
 
     @classmethod
     def parameter_handler_precedence(cls) -> list[str]:
@@ -956,7 +928,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
         topology_charges = [0.0] * topology.n_atoms
 
-        for key, val in self._get_charges().items():
+        for key, val in self.charges.items():
             topology_charges[key.atom_indices[0]] = val.m
 
         # TODO: Better data structures in Topology.identical_molecule_groups will make this
