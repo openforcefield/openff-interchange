@@ -49,7 +49,11 @@ if TYPE_CHECKING:
     from openff.toolkit import ForceField
 
     if has_package("foyer"):
-        from foyer import Forcefield as FoyerForcefield
+        try:
+            from foyer.forcefield import Forcefield as FoyerForcefield
+        except ModuleNotFoundError:
+            # case of openff/interchange/foyer/ being detected as the real package
+            pass
     if has_package("nglview"):
         import nglview
 
@@ -836,13 +840,13 @@ class Interchange(_BaseModel):
 
             >>> from openff.interchange import Interchange
             >>> from openff.toolkit import Molecule, Topology
-            >>> from foyer import Forcefield
+            >>> from foyer.forcefield import Forcefield  # doctest: +SKIP
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
             >>> top = Topology.from_molecules([mol])
-            >>> oplsaa = Forcefield(name="oplsaa")
-            >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
-            >>> interchange
+            >>> oplsaa = Forcefield(name="oplsaa")  # doctest: +SKIP
+            >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)  # doctest: +SKIP
+            >>> interchange  # doctest: +SKIP
             Interchange with 8 collections, non-periodic topology with 8 atoms.
 
         """

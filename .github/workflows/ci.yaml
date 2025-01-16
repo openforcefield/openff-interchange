@@ -33,10 +33,10 @@ jobs:
           - false
         openmm:
           - true
-          - false
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
+      COV: --cov=openff/interchange --cov-report=xml --cov-config=pyproject.toml --cov-append
 
     steps:
     - uses: actions/checkout@v4

@@ -22,7 +22,10 @@ from openff.interchange.foyer._valence import (
 from openff.interchange.models import TopologyKey
 
 if has_package("foyer"):
-    from foyer.forcefield import Forcefield
+    try:
+        from foyer.forcefield import Forcefield
+    except ModuleNotFoundError:
+        pass
 
 _CollectionAlias = type[Collection]
 
