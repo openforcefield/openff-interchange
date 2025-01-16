@@ -26,6 +26,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### Performance improvements
 
 * #1097 Migrates version handling to `versioningit`, which should result in shorter import times.
+* #1122 Improves performance of Interchange.from_smirnoff on polymers.
 
 ### Documentation improvements
 
