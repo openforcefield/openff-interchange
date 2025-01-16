@@ -53,6 +53,17 @@ ElectrostaticsHandlerType = Union[
     LibraryChargeHandler,
 ]
 
+_ZERO_CHARGE = Quantity(0.0, unit.elementary_charge)
+
+
+@functools.lru_cache(None)
+def _add_charges(
+    charge1: float,
+    charge2: float,
+) -> "Quantity":
+    """Add two charges together."""
+    return Quantity(charge1 + charge2, "elementary_charge")
+
 
 def _upconvert_vdw_handler(vdw_handler: vdWHandler):
     """Given a vdW with version 0.3 or 0.4, up-convert to 0.4 or short-circuit if already 0.4."""
@@ -362,7 +373,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         # the "charge" and "charge_increment" keys may not appear in that order, so
                         # we "add" the charge whether or not the increment was already applied.
                         # There should be a better way to do this.
-
                         charges[atom_index] = charges.get(atom_index, 0.0) + parameter_value.m
 
                     else:
@@ -781,7 +791,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @classmethod
     def _assign_charges_from_molecules(
         cls,
-        topology: Topology,
         unique_molecule: Molecule,
         molecules_with_preset_charges=list[Molecule] | None,
     ) -> tuple[bool, dict, dict]:
@@ -851,7 +860,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             unique_molecule = topology.molecule(unique_molecule_index)
 
             flag, matches, potentials = self._assign_charges_from_molecules(
-                topology,
                 unique_molecule,
                 molecules_with_preset_charges,
             )
