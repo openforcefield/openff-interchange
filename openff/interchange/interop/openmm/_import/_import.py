@@ -135,8 +135,6 @@ def from_openmm(
 def _convert_constraints(
     system: "openmm.System",
 ) -> ConstraintCollection | None:
-    from openff.toolkit import unit
-
     from openff.interchange.components.potentials import Potential
     from openff.interchange.models import BondKey, PotentialKey
 
@@ -164,7 +162,7 @@ def _convert_constraints(
         potential_key = PotentialKey(id=f"Constraint{index}")
         _keys[distance] = potential_key
         constraints.potentials[potential_key] = Potential(
-            parameters={"distance": distance * unit.nanometer},
+            parameters={"distance": Quantity(distance, "nanometer")},
         )
 
     for index in range(system.getNumConstraints()):
