@@ -59,8 +59,7 @@ jobs:
         python -m pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/_tests
 
     - name: Run example notebooks
-      if: always()
       run: |
-        python -m pytest --nbval-lax --durations=20 examples/ \
+        pytest --nbval-lax --durations=20 examples/ \
           --ignore=examples/deprecated/ \
           --ignore=examples/experimental
