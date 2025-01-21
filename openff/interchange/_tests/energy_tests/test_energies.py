@@ -14,6 +14,7 @@ from openff.interchange._tests import (
 )
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
+from openff.interchange.foyer._guard import has_foyer
 
 if has_package("openmm"):
     import openmm
@@ -31,7 +32,7 @@ if HAS_LAMMPS:
     from openff.interchange.drivers.lammps import get_lammps_energies
 
 
-@skip_if_missing("foyer")
+@pytest.mark.skipif(not has_foyer, reason="Foyer is not installed")
 class TestEnergies:
     @pytest.fixture(scope="session")
     def oplsaa(self):
@@ -99,7 +100,7 @@ class TestEnergies:
             lmp_energies.compare(other_energies, tolerances)
 
     @needs_gmx
-    @skip_if_missing("foyer")
+    @pytest.mark.skipif(not has_foyer, reason="Foyer is not installed")
     @skip_if_missing("mbuild")
     def test_process_rb_torsions(self, oplsaa):
         """Test that the GROMACS driver reports Ryckaert-Bellemans torsions"""
