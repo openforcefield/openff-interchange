@@ -2,11 +2,11 @@ import numpy
 from numpy.typing import NDArray
 from openff.toolkit import Topology
 from openff.units import Quantity, unit
-from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
 from openff.interchange.common._positions import _infer_positions
 from openff.interchange.components.potentials import Collection
+from openff.interchange.foyer import has_foyer
 from openff.interchange.foyer._nonbonded import (
     FoyerElectrostaticsHandler,
     FoyerVDWHandler,
@@ -21,7 +21,7 @@ from openff.interchange.foyer._valence import (
 )
 from openff.interchange.models import TopologyKey
 
-if has_package("foyer"):
+if has_foyer:
     try:
         from foyer.forcefield import Forcefield
     except ModuleNotFoundError:

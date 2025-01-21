@@ -31,6 +31,7 @@ from openff.interchange.exceptions import (
     MissingPositionsError,
     UnsupportedExportError,
 )
+from openff.interchange.foyer import has_foyer
 from openff.interchange.operations.minimize import (
     _DEFAULT_ENERGY_MINIMIZATION_TOLERANCE,
 )
@@ -48,7 +49,7 @@ if TYPE_CHECKING:
     import openmm.app
     from openff.toolkit import ForceField
 
-    if has_package("foyer"):
+    if has_foyer:
         try:
             from foyer.forcefield import Forcefield as FoyerForcefield
         except ModuleNotFoundError:

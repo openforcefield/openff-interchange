@@ -1,16 +1,16 @@
 from typing import Literal
 
 from openff.toolkit import Quantity, Topology, unit
-from openff.utilities.utilities import has_package
 from pydantic import Field, PrivateAttr
 
 from openff.interchange._annotations import _DistanceQuantity
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.components.potentials import Potential
+from openff.interchange.foyer import has_foyer
 from openff.interchange.foyer._base import _copy_params
 from openff.interchange.models import PotentialKey, TopologyKey
 
-if has_package("foyer"):
+if has_foyer:
     try:
         from foyer.forcefield import Forcefield
     except ModuleNotFoundError:

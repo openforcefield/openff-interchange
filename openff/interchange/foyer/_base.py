@@ -3,13 +3,13 @@ from copy import copy
 from typing import TYPE_CHECKING
 
 from openff.toolkit import Topology
-from openff.utilities import has_package
 
 from openff.interchange.components.potentials import Collection, Potential
+from openff.interchange.foyer import has_foyer
 from openff.interchange.models import PotentialKey, TopologyKey
 
 if TYPE_CHECKING:
-    if has_package("foyer"):
+    if has_foyer:
         try:
             from foyer.forcefield import Forcefield
         except ModuleNotFoundError:
