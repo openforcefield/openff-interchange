@@ -13,8 +13,8 @@ authors = [{name = "Open Force Field Initiative", email = "info@openforcefield.o
 license = {text = "MIT"}
 dynamic = ["version"]
 
-[tool.setuptools.packages.find]
-where = ["openff/interchange"]
+[tool.setuptools.packages]
+find = {}
 
 [tool.versioningit]
 

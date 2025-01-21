@@ -62,4 +62,7 @@ jobs:
     - name: Run example notebooks
       run: |
         python -c "from openff.interchange import __file__, __version__; print(f'{__version__=} and {__file__=}')"
-        python -m pytest --nbval-lax --dist loadscope -n logical -x examples/
+
+        python -m pytest -c /dev/null/ --nbval-lax --dist loadscope -n logical --durations=20 examples/ \
+          --ignore=examples/deprecated/ \
+          --ignore=examples/experimental

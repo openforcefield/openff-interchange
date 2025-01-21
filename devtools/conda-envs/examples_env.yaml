@@ -15,9 +15,9 @@ dependencies:
   # Optional features
   - openff-nagl ~=0.5
   - openff-nagl-models ~=0.3
-  - mbuild ~=0.18
-  - foyer =1
-  - gmso ~=0.12
+  - mbuild
+  - foyer
+  - gmso
   - nglview
   # Drivers
   - gromacs
@@ -30,7 +30,6 @@ dependencies:
   - mdtraj
   - pytest
   - pytest-xdist
-  - pytest-cov
   - nbval
   # Examples
   - openmmforcefields
