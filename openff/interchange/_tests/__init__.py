@@ -15,7 +15,7 @@ from openff.toolkit.utils import (
 from openff.utilities import get_data_file_path
 from openff.utilities.utilities import has_executable, has_package
 
-from openff.interchange import Interchange
+from openff.interchange.components.interchange import Interchange
 from openff.interchange.drivers.gromacs import _find_gromacs_executable
 
 if has_package("openmm"):
