@@ -57,7 +57,7 @@ jobs:
 
     - name: Run docexamples
       run: |
-        python -m pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/_tests
+        python -m pytest -c /dev/null/ --doctest-modules openff/interchange/ --ignore=openff/interchange/_tests
 
     - name: Run example notebooks
       run: |
