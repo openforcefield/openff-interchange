@@ -118,7 +118,6 @@ class TestInterchange:
     @needs_gmx
     @needs_lmp
     @pytest.mark.slow
-    @skip_if_missing("foyer")
     def test_atom_ordering(self):
         """Test that atom indices in bonds are ordered consistently between the slot map and topology"""
         import foyer

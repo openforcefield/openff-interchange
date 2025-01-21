@@ -13,7 +13,53 @@ authors = [{name = "Open Force Field Initiative", email = "info@openforcefield.o
 license = {text = "MIT"}
 dynamic = ["version"]
 
+[tool.setuptools.packages]
+find = {}
+
 [tool.versioningit]
+
+[tool.mypy]
+mypy_path = "stubs/"
+python_version = "3.11"
+plugins = "numpy.typing.mypy_plugin,pydantic.mypy"
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_incomplete_stub = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pandas",
+    "networkx",
+    "openmm",
+    "openmm.app",
+    "openmm.app.element",
+    "openmm.unit",
+    "intermol.*",
+    "rdkit",
+    "openff.toolkit.*",
+    "openff.units.*",
+    "openff.utilities.*",
+    "openff.recharge.*",
+    "parmed",
+    "parmed.amber",
+    "pmdtest.utils",
+    "pytest",
+    "pint",
+    "unyt",
+    "openeye",
+    "jax",
+    "scipy.spatial",
+    "nonbonded_plugins.*",
+    "lammps",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+addopts = "--cov=openff/interchange --cov-report=xml"
 
 [tool.interrogate]
 ignore-init-method = true
@@ -43,11 +89,11 @@ select = ["F", "E", "W", "NPY", "UP", "RUF", "I"]
 "openff/interchange/*_pydantic.py" = ["F401"]
 "openff/interchange/smirnoff/_gbsa.py" = ["F821"]
 "openff/interchange/smirnoff/_virtual_sites.py" = ["F821"]
-"openff/interchange/components/foyer.py" = ["F401"]
 "plugins/*" = ["INP001"]
 "openff/interchange/components/interchange.py" = ["F821"]
 "openff/interchange/components/*.py" = ["F821"]
 "openff/interchange/_tests/unit_tests/test_types.py" = ["F821"]
+"openff/interchange/foyer/_guard.py" = ["F401"]
 "openff/interchange/foyer/_nonbonded.py" = ["F821"]
 "openff/interchange/_tests/data/*" = ["INP001"]
 "openff/interchange/_tests/*" = ["RUF015"]
@@ -60,3 +106,16 @@ known-first-party = ["openff.interchange"]
 
 [tool.ruff.lint.pydocstyle]
 property-decorators=["validator"]
+
+[tool.coverage.run]
+omit = [
+    "*/*/_tests/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]
