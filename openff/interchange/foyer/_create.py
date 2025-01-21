@@ -6,7 +6,7 @@ from openff.units import Quantity, unit
 from openff.interchange import Interchange
 from openff.interchange.common._positions import _infer_positions
 from openff.interchange.components.potentials import Collection
-from openff.interchange.foyer import has_foyer
+from openff.interchange.foyer._guard import has_foyer
 from openff.interchange.foyer._nonbonded import (
     FoyerElectrostaticsHandler,
     FoyerVDWHandler,

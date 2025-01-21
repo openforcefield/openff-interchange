@@ -11,7 +11,7 @@ from openff.interchange._tests import HAS_GROMACS, get_test_files_dir_path, need
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
-from openff.interchange.foyer import has_foyer
+from openff.interchange.foyer._guard import has_foyer
 from openff.interchange.models import PotentialKey, TopologyKey
 
 if has_foyer:

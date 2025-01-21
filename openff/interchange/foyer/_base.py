@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from openff.toolkit import Topology
 
 from openff.interchange.components.potentials import Collection, Potential
-from openff.interchange.foyer import has_foyer
+from openff.interchange.foyer._guard import has_foyer
 from openff.interchange.models import PotentialKey, TopologyKey
 
 if TYPE_CHECKING:

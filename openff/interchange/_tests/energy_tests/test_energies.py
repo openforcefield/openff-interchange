@@ -12,10 +12,9 @@ from openff.interchange._tests import (
     needs_gmx,
     needs_lmp,
 )
-from openff.interchange._tests.unit_tests.components.test_foyer import TestFoyer
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
-from openff.interchange.foyer import has_foyer
+from openff.interchange.foyer._guard import has_foyer
 
 if has_package("openmm"):
     import openmm
@@ -33,7 +32,8 @@ if HAS_LAMMPS:
     from openff.interchange.drivers.lammps import get_lammps_energies
 
 
-class TestEnergies(TestFoyer):
+@pytest.mark.skipif(not has_foyer, reason="Foyer is not installed")
+class TestEnergies:
     @pytest.fixture(scope="session")
     def oplsaa(self):
         import foyer

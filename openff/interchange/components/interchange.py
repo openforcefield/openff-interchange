@@ -48,7 +48,7 @@ if TYPE_CHECKING:
     import openmm.app
     from openff.toolkit import ForceField
 
-    from openff.interchange.foyer import has_foyer
+    from openff.interchange.foyer._guard import has_foyer
 
     if has_foyer:
         try:
