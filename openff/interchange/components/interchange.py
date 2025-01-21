@@ -51,7 +51,7 @@ if TYPE_CHECKING:
 
     if has_foyer:
         try:
-            from foyer.forcefield import Forcefield as FoyerForcefield
+            from foyer import Forcefield as FoyerForcefield
         except ModuleNotFoundError:
             # case of openff/interchange/foyer/ being detected as the real package
             pass
@@ -841,7 +841,7 @@ class Interchange(_BaseModel):
 
             >>> from openff.interchange import Interchange
             >>> from openff.toolkit import Molecule, Topology
-            >>> from foyer.forcefield import Forcefield  # doctest: +SKIP
+            >>> from foyer import Forcefield  # doctest: +SKIP
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
             >>> top = Topology.from_molecules([mol])

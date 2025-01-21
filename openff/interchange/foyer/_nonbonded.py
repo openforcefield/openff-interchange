@@ -12,7 +12,7 @@ from openff.interchange.models import PotentialKey, TopologyKey
 
 if has_foyer:
     try:
-        from foyer.forcefield import Forcefield
+        from foyer import Forcefield
     except ModuleNotFoundError:
         pass
 

@@ -30,10 +30,11 @@ if HAS_GROMACS:
 
 @pytest.mark.skipif(not has_foyer, reason="Foyer is not installed")
 class TestFoyer:
+    @pytest.fixture
     def oplsaa(self):
         return foyer.forcefields.load_OPLSAA()
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture
     def oplsaa_interchange_ethanol(self, oplsaa):
         molecule = Molecule.from_file(
             get_test_files_dir_path("foyer_test_molecules") / "ethanol.sdf",
@@ -47,7 +48,7 @@ class TestFoyer:
         interchange.box = [4, 4, 4]
         return interchange
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture
     def get_interchanges(self, oplsaa):
         def interchanges_from_path(molecule_path):
             molecule_or_molecules = Molecule.from_file(molecule_path)
