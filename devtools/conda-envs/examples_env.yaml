@@ -17,7 +17,6 @@ dependencies:
   - openff-nagl-models ~=0.3
   - mbuild
   - foyer
-  - gmso
   - nglview
   # Drivers
   - gromacs
