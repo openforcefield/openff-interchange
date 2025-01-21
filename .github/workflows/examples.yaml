@@ -17,6 +17,7 @@ defaults:
 
 jobs:
   test:
+    name: Examples on ${{ matrix.os }}, Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -59,7 +60,4 @@ jobs:
         python -m pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/_tests
 
     - name: Run example notebooks
-      run: |
-        pytest --nbval-lax --durations=20 examples/ \
-          --ignore=examples/deprecated/ \
-          --ignore=examples/experimental
+      run: python -m pytest --nbval-lax --dist loadscope -n logical -x examples/
