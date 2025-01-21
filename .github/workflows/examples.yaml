@@ -58,6 +58,7 @@ jobs:
       run: python -m pytest -c /dev/null/ --doctest-modules openff/interchange/ --ignore=openff/interchange/_tests
 
     - name: Run example notebooks
-      run: python -m pytest -c /dev/null/ --nbval-lax --dist loadscope -n logical --durations=20 examples/ \
+      run: |
+        python -m pytest -c /dev/null/ --nbval-lax --dist loadscope -n logical --durations=20 examples/ \
           --ignore=examples/deprecated/ \
           --ignore=examples/experimental
