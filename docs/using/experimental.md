@@ -9,8 +9,6 @@ In order to facilitate testing these features, though, they are included in the 
 See each function's docstring for more detailed information.
 
 * `Interchange.from_gromacs`: Import data from GROMACS files.
-* `Interchange.from_openmm`: Import data from OpenMM objects.
-* `Interchange.__add__`: Combine two `Interchange` objects (this is called under the hood when using the `+` operator with two `Interchange` objects).
 
 ## Using experimental features
 
