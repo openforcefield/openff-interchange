@@ -130,9 +130,9 @@ def test_issue_1049():
 
     # the same index in system should also be a virtual site in the topology
     for particle_index, particle in enumerate(openmm_topology.atoms()):
-        assert openmm_system.isVirtualSite(particle_index) == (
-            particle.element is None
-        ), f"particle index {particle_index} is a virtual site in the system OR topology but not both"
+        assert openmm_system.isVirtualSite(particle_index) == (particle.element is None), (
+            f"particle index {particle_index} is a virtual site in the system OR topology but not both"
+        )
 
 
 def test_issue_1052(sage, ethanol):

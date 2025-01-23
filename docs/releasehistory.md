@@ -11,27 +11,38 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.4.1 - 2025-01-22
 
 ### New features
 
 * #1081 `Interchange.from_openmm` now processes virtual sites, but only `openmm.ThreeParticleAverageSite`s.
 * #1053 Logs, at the level of `logging.INFO`, how charges are assigned by SMIRNOFF force fields to each atom and virtual site.
-* #1080 HMR is supported with OpenMM when virtual sites are present.
+* #1080 Adds support for HMR in OpenMM when virtual sites are present.
+* #1119 Adds support for writing GROMACS `.itp` files.
 
 ### Bug fixes
 
 * #1070 The `charge_from_molecules` argument must include only molecules that contain partial charges and are non-isomorphic with each other.
 * #1070 The `charge_from_molecules` argument as used by the OpenFF Toolkit is handled internally as `molecules_with_preset_charges`.
+* #1134 Fixes a bug in which importing OpenMM systems containing only rigid water would crash.
+* #1111 Conformers except the first conformer are discarded in packing methods.
 
 ### Performance improvements
 
 * #1097 Migrates version handling to `versioningit`, which should result in shorter import times.
+* #1122 Improves performance of Interchange.from_smirnoff on polymers.
+* #1115 Improves processing some non-bonded parameters via caching common operations.
+* #1085 Defers some third-party imports for faster import times.
 
 ### Documentation improvements
 
 * #1070 Documents charge assignment hierarchy in the user guide.
 * #1105 Documents new Pydantic-compatible type annotations in the user guide.
+
+### Miscellaneous improvements
+
+* #1104 Consolidates configuration files to `pyproject.toml` where possible.
+* #1089 Adds regression test for JSON serialization after `Interchange.from_openmm`.
 
 ## 0.4.0 - 2024-11-04
 

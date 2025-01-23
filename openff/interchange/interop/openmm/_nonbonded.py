@@ -368,7 +368,7 @@ def _create_single_nonbonded_force(
             )
 
     if data.electrostatics_collection is not None:
-        partial_charges = data.electrostatics_collection._get_charges()
+        partial_charges = data.electrostatics_collection.charges
 
     # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
     #   of that parent atom (if any)
@@ -395,7 +395,9 @@ def _create_single_nonbonded_force(
                     other_top_key = SingleAtomChargeTopologyKey(
                         this_atom_index=atom_index,
                     )
+
                     partial_charge = partial_charges[other_top_key].m_as(unit.e)
+
             else:
                 partial_charge = 0.0
 
@@ -957,7 +959,7 @@ def _set_particle_parameters(
     #       handling for electrostatics_force = None
     electrostatics: ElectrostaticsCollection = data.electrostatics_collection
 
-    partial_charges = electrostatics._get_charges()
+    partial_charges = electrostatics.charges
 
     vdw: vdWCollection = data.vdw_collection
 

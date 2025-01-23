@@ -8,7 +8,7 @@ dependencies:
   - numpy
   - pydantic =2
   # OpenFF stack
-  - openff-toolkit-base ~=0.16.4
+  - openff-toolkit-base ~=0.16.6
   - openff-units
   - ambertools =23
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
@@ -19,9 +19,8 @@ dependencies:
   # de-forcefields  # add back after smirnoff-plugins update
   - openff-nagl =0.5
   - openff-nagl-models =0.3
-  - mbuild ~=0.18
+  - mbuild =1
   - foyer =1
-  - gmso ~=0.12
   - nglview
   # Drivers
   - gromacs

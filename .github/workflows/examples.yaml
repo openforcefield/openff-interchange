@@ -4,13 +4,11 @@ on:
   push:
     branches:
       - main
-      - develop
   pull_request:
     branches:
       - main
-      - develop
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 7 * * *"
   workflow_dispatch:
 
 defaults:
@@ -19,15 +17,16 @@ defaults:
 
 jobs:
   test:
+    name: Examples on ${{ matrix.os }}, Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
           - macos-latest
         python-version:
           - "3.10"
+          - "3.11"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -39,21 +38,14 @@ jobs:
         fetch-depth: 0
 
     - name: Install conda environment
-      uses: mamba-org/setup-micromamba@v1
+      uses: mamba-org/setup-micromamba@v2
       with:
-        micromamba-version: '1.5.10-0'
         environment-file: devtools/conda-envs/examples_env.yaml
         create-args: >-
           python=${{ matrix.python-version }}
 
     - name: Install package
-      run: |
-        python -m pip install .
-
-    - name: Environment Information
-      run: |
-        micromamba info
-        micromamba list
+      run: python -m pip install .
 
     - name: License OpenEye
       run: |
@@ -63,12 +55,10 @@ jobs:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     - name: Run docexamples
-      run: |
-        python -m pytest --doctest-modules openff/interchange/ --ignore=openff/interchange/_tests
+      run: python -m pytest -c /dev/null/ --doctest-modules openff/interchange/ --ignore=openff/interchange/_tests
 
     - name: Run example notebooks
-      if: always()
       run: |
-        python -m pytest --nbval-lax --dist loadscope -n logical --durations=20 examples/ \
+        python -m pytest -c /dev/null/ --nbval-lax --dist loadscope -n logical --durations=20 examples/ \
           --ignore=examples/deprecated/ \
           --ignore=examples/experimental

@@ -1,20 +1,32 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
 
 from collections import defaultdict
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 import networkx
 import numpy
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
-from openff.toolkit.typing.engines.smirnoff.parameters import VirtualSiteHandler
+from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler, VirtualSiteHandler
 from openff.toolkit.utils.collections import ValidatedList
 from openff.utilities.utilities import has_package
 
-from openff.interchange.models import ImportedVirtualSiteKey
+from openff.interchange.models import ImportedVirtualSiteKey, PotentialKey
 
 if has_package("openmm") or TYPE_CHECKING:
     import openmm.app
+
+
+_IDIVF_1 = Quantity(1.0, "dimensionless")
+_PERIODICITIES = {
+    1: Quantity(1, "dimensionless"),
+    2: Quantity(2, "dimensionless"),
+    3: Quantity(3, "dimensionless"),
+    4: Quantity(4, "dimensionless"),
+    5: Quantity(5, "dimensionless"),
+    6: Quantity(6, "dimensionless"),
+}
 
 
 def _get_num_h_bonds(topology: "Topology") -> int:
@@ -269,3 +281,42 @@ def _lookup_virtual_site_parameter(
         raise ValueError(
             f"No VirtualSiteType found with {smirks=}, name={name=}, and match={match=}.",
         )
+
+
+@lru_cache
+def _cache_angle_parameter_lookup(
+    potential_key: PotentialKey,
+    parameter_handler: ParameterHandler,
+) -> dict[str, Quantity]:
+    parameter = parameter_handler.parameters[potential_key.id]
+
+    return {parameter_name: getattr(parameter, parameter_name) for parameter_name in ["k", "angle"]}
+
+
+@lru_cache
+def _cache_torsion_parameter_lookup(
+    potential_key: PotentialKey,
+    parameter_handler: ParameterHandler,
+    idivf: float | None = None,
+) -> dict[str, Quantity]:
+    smirks = potential_key.id
+    n = potential_key.mult
+    parameter = parameter_handler.parameters[smirks]
+
+    if idivf is not None:
+        # case of non-standard default_idivf in impropers
+        _idivf = idivf
+    elif parameter.idivf is None:
+        # This appears to only come from imports
+        _idivf = _IDIVF_1
+    elif parameter.idivf[n] == 1.0:
+        _idivf = _IDIVF_1
+    else:
+        _idivf = Quantity(parameter.idivf[n], "dimensionless")
+
+    return {
+        "k": parameter.k[n],
+        "periodicity": _PERIODICITIES[parameter.periodicity[n]],
+        "phase": parameter.phase[n],
+        "idivf": _idivf,
+    }

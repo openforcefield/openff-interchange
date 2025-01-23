@@ -3,8 +3,9 @@ import random
 from collections import defaultdict
 
 import numpy
+import openmm
 import pytest
-from openff.toolkit import Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -237,6 +238,33 @@ class TestFromOpenMM:
                 "Electrostatics": Quantity(0.1, "kilojoule / mole"),
             },
         )
+
+    def test_only_constrained_water(self, water_dimer):
+        water_dimer.box_vectors = Quantity([4, 4, 4], "nanometer")
+
+        interchange = ForceField("openff-2.2.1.offxml").create_interchange(water_dimer)
+
+        simulation = interchange.to_openmm_simulation(integrator=openmm.LangevinIntegrator(300, 1, 0.001))
+        system = simulation.system
+
+        for index in range(system.getNumForces()):
+            if isinstance(system.getForce(index), openmm.HarmonicBondForce):
+                break
+
+        system.removeForce(index)
+
+        for index in range(system.getNumForces()):
+            if isinstance(system.getForce(index), openmm.HarmonicAngleForce):
+                break
+
+        system.removeForce(index)
+
+        interchange2 = Interchange.from_openmm(
+            system=simulation.system,
+            topology=simulation.topology,
+        )
+
+        assert interchange2.topology.n_bonds == interchange.topology.n_bonds
 
 
 @skip_if_missing("openmm")

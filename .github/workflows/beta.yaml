@@ -1,9 +1,9 @@
 name: Tests against betas
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 3 * * *"
+  workflow_dispatch:
 
 defaults:
   run:
@@ -21,15 +21,13 @@ jobs:
         python-version:
           - "3.10"
           - "3.11"
-        pydantic-version:
-          - "2"
+          - "3.12"
         openeye:
           - true
           - false
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
 
     steps:
     - uses: actions/checkout@v4
@@ -37,25 +35,28 @@ jobs:
         fetch-depth: 0
 
     - name: Install conda environment
-      uses: mamba-org/setup-micromamba@v1
+      uses: mamba-org/setup-micromamba@v2
       with:
-        micromamba-version: '1.5.10-0'
-        environment-file: devtools/conda-envs/beta_env.yaml
+        environment-file: devtools/conda-envs/test_env.yaml
+        condarc: |
+            channels:
+              - openeye/label/rc
+              - conda-forge/label/openmm_rc
+              - conda-forge/label/mdtraj_rc
+              - conda-forge/label/openff-toolkit_rc
+              - conda-forge/label/openff-interchange_rc
+              - openeye
+              - conda-forge
         create-args: >-
           python=${{ matrix.python-version }}
-          pydantic=${{ matrix.pydantic-version }}
 
     - name: Install package
-      run: |
-        micromamba remove --force openff-interchange openff-interchange-base
-        python -m pip install . plugins/
+      run: python -m pip install . plugins/
 
-    - name: Environment Information
-      run: conda info && conda list
-
-    - name: License OpenEye
+    - name: Install and license OpenEye Toolkits
       if: ${{ matrix.openeye == true }}
       run: |
+        micromamba install "openeye-toolkits =2024.1.0" -c openeye
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
       env:
@@ -67,7 +68,7 @@ jobs:
 
     - name: Run all tests
       if: always()
-      run: python -m pytest -v $COV openff/interchange/
+      run: python -m pytest -v openff/interchange/
 
     - name: Codecov
       uses: codecov/codecov-action@v5
