@@ -53,7 +53,7 @@ ElectrostaticsHandlerType = Union[
     LibraryChargeHandler,
 ]
 
-_ZERO_CHARGE = Quantity(0.0, unit.elementary_charge)
+_ZERO_CHARGE = Quantity(0.0, "elementary_charge")
 
 
 @functools.lru_cache(None)
@@ -352,7 +352,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     for i, increment in enumerate(parameter_value):
                         orientation_atom_index = topology_key.orientation_atom_indices[i]
 
-                        charges[orientation_atom_index] = charges.get(orientation_atom_index, 0.0) + increment.m
+                        charges[orientation_atom_index] = _add_charges(
+                            charges.get(orientation_atom_index, _ZERO_CHARGE).m,
+                            increment.m,
+                        )
 
                 elif parameter_key == "charge":
                     assert len(topology_key.atom_indices) == 1
@@ -365,7 +368,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         "molecules_with_preset_charges",
                         "ExternalSource",
                     ):
-                        charges[atom_index] = charges.get(atom_index, 0.0) + parameter_value.m
+                        charges[atom_index] = _add_charges(
+                            charges.get(atom_index, _ZERO_CHARGE).m,
+                            parameter_value.m,
+                        )
 
                     elif potential_key.associated_handler in (  # type: ignore[operator]
                         "ChargeIncrementModelHandler"
@@ -373,7 +379,11 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         # the "charge" and "charge_increment" keys may not appear in that order, so
                         # we "add" the charge whether or not the increment was already applied.
                         # There should be a better way to do this.
-                        charges[atom_index] = charges.get(atom_index, 0.0) + parameter_value.m
+
+                        charges[atom_index] = _add_charges(
+                            charges.get(atom_index, _ZERO_CHARGE).m,
+                            parameter_value.m,
+                        )
 
                     else:
                         raise RuntimeError(
@@ -385,7 +395,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                     atom_index = topology_key.atom_indices[0]
 
-                    charges[atom_index] = charges.get(atom_index, 0.0) + parameter_value.m
+                    charges[atom_index] = _add_charges(
+                        charges.get(atom_index, _ZERO_CHARGE).m,
+                        parameter_value.m,
+                    )
 
                     logger.info(
                         "Charge section ChargeIncrementModel, applying charge increment from atom "  # type: ignore[union-attr]
