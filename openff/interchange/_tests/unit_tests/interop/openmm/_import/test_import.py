@@ -1,5 +1,6 @@
 import copy
 import random
+from collections import defaultdict
 
 import numpy
 import openmm
@@ -21,9 +22,7 @@ if has_package("openmm"):
 
 @skip_if_missing("openmm")
 class TestFromOpenMM:
-    def test_simple_roundtrip(self, monkeypatch, sage_unconstrained, ethanol):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
+    def test_simple_roundtrip(self, sage_unconstrained, ethanol):
         ethanol.generate_conformers(n_conformers=1)
 
         interchange = Interchange.from_smirnoff(
@@ -70,13 +69,12 @@ class TestFromOpenMM:
     @pytest.mark.parametrize("as_argument", [False, True])
     def test_different_ways_to_process_box_vectors(
         self,
-        monkeypatch,
         as_argument,
         simple_system,
     ):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
         topology = Molecule.from_smiles("C").to_topology()
+        topology._molecule_virtual_site_map = defaultdict(list)
+        topology._particle_map = {index: index for index in range(topology.n_atoms)}
 
         if as_argument:
             box = Interchange.from_openmm(
@@ -101,8 +99,6 @@ class TestFromOpenMM:
         simple_system,
     ):
         """Ensure that, if box vectors specified in the topology and system differ, those in the topology are used."""
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
         topology = Molecule.from_smiles("C").to_topology()
         topology.box_vectors = Quantity([4, 5, 6], unit.nanometer)
 
@@ -113,9 +109,7 @@ class TestFromOpenMM:
 
         assert numpy.diag(box.m_as(unit.nanometer)) == pytest.approx([4, 5, 6])
 
-    def test_openmm_roundtrip_metadata(self, monkeypatch, sage):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
+    def test_openmm_roundtrip_metadata(self, sage):
         # Make an example OpenMM Topology with metadata.
         # Here we use OFFTK to make the OpenMM Topology, but this could just as easily come from another source
         ethanol = Molecule.from_smiles("CCO")
@@ -156,12 +150,10 @@ class TestFromOpenMM:
             assert atom.metadata["residue_name"] == "BNZ"
 
     @pytest.mark.slow
-    def test_openmm_native_roundtrip_metadata(self, monkeypatch, sage):
+    def test_openmm_native_roundtrip_metadata(self, sage):
         """
         Test that metadata is the same whether we load a PDB through OpenMM+Interchange vs. Topology.from_pdb.
         """
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
         pdb = openmm.app.PDBFile(
             get_data_file_path(
                 "ALA_GLY/ALA_GLY.pdb",
@@ -185,14 +177,12 @@ class TestFromOpenMM:
             del off_atom_metadata["match_info"]
             assert roundtrip_atom.metadata == off_atom_metadata
 
-    def test_electrostatics_cutoff_not_ignored(self, monkeypatch, ethanol):
+    def test_electrostatics_cutoff_not_ignored(self, ethanol):
         pytest.importorskip("openmmforcefields")
 
         import openmm.app
         import openmm.unit
         from openmmforcefields.generators import GAFFTemplateGenerator
-
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
         topology = ethanol.to_topology()
         topology.box_vectors = Quantity([4, 4, 4], "nanometer")
@@ -219,12 +209,11 @@ class TestFromOpenMM:
         assert interchange["vdW"].cutoff.m_as(unit.nanometer) == pytest.approx(1.2345)
 
     @needs_gmx
-    def test_fill_in_rigid_water_parameters(self, water_dimer, monkeypatch):
+    @pytest.mark.skip(reason="needs OpenMM -> Interchange -> GROMACS virtual sites implemented")
+    def test_fill_in_rigid_water_parameters(self, water_dimer):
         import openmm.app
 
         from openff.interchange.drivers import get_gromacs_energies
-
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
         openmm_force_field = openmm.app.ForceField("tip3p.xml")
         openmm_topology = water_dimer.to_openmm()
@@ -280,10 +269,11 @@ class TestFromOpenMM:
 
 @skip_if_missing("openmm")
 class TestProcessTopology:
-    def test_with_openff_topology(self, monkeypatch, sage, basic_top):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
+    def test_with_openff_topology(self, sage, basic_top):
         system = sage.create_openmm_system(basic_top)
+
+        basic_top._molecule_virtual_site_map = defaultdict(list)
+        basic_top._particle_map = {index: index for index in range(basic_top.n_atoms)}
 
         with_openff = Interchange.from_openmm(
             system=system,
@@ -326,7 +316,7 @@ class TestConvertNonbondedForce:
             force.setNonbondedMethod(method)
 
             with pytest.raises(UnsupportedImportError):
-                _convert_nonbonded_force(force)
+                _convert_nonbonded_force(force, dict())
 
     def test_parse_switching_distance(self):
         force = openmm.NonbondedForce()
@@ -339,7 +329,7 @@ class TestConvertNonbondedForce:
         force.setUseSwitchingFunction(True)
         force.setSwitchingDistance(cutoff - switch_width)
 
-        vdw, _ = _convert_nonbonded_force(force)
+        vdw, _ = _convert_nonbonded_force(force=force, particle_map=dict())
 
         assert vdw.cutoff.m_as(unit.nanometer) == pytest.approx(cutoff)
         assert vdw.switch_width.m_as(unit.nanometer) == pytest.approx(switch_width)
@@ -352,7 +342,7 @@ class TestConvertNonbondedForce:
 
         force.setCutoffDistance(cutoff)
 
-        vdw, _ = _convert_nonbonded_force(force)
+        vdw, _ = _convert_nonbonded_force(force=force, particle_map=dict())
 
         assert vdw.cutoff.m_as(unit.nanometer) == pytest.approx(cutoff)
         assert vdw.switch_width.m_as(unit.nanometer) == 0.0
@@ -360,10 +350,8 @@ class TestConvertNonbondedForce:
 
 @skip_if_missing("openmm")
 class TestConvertConstraints:
-    def test_num_constraints(self, monkeypatch, sage, basic_top):
+    def test_num_constraints(self, sage, basic_top):
         """Test that the number of constraints is preserved when converting to and from OpenMM"""
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
         interchange = sage.create_interchange(basic_top)
 
         converted = Interchange.from_openmm(

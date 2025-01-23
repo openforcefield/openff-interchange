@@ -17,8 +17,8 @@ dependencies:
   - openmm =8.1.2
   # smirnoff-plugins =2024
   # de-forcefields  # add back after smirnoff-plugins update
-  - openff-nagl ~=0.5
-  - openff-nagl-models ~=0.3
+  - openff-nagl =0.5
+  - openff-nagl-models =0.3
   - mbuild =1
   - foyer =1
   - nglview
