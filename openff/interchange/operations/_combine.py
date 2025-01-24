@@ -44,6 +44,13 @@ def _check_nonbonded_compatibility(
             f"{interchange1['vdW'].switch_width} and {interchange2['vdW'].switch_width}.",
         )
 
+    if (interchange1["vdW"].scale_14 != interchange2["vdW"].scale_14) or (
+        interchange1["Electrostatics"].scale_14 != interchange2["Electrostatics"].scale_14
+    ):
+        raise UnsupportedCombinationError(
+            "1-4 scaling factors in nonbonded handler(s) (vdW and/or Electrostatics do not match.",
+        )
+
 
 def _combine(
     input1: "Interchange",
