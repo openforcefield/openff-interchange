@@ -19,6 +19,7 @@ dependencies:
   - foyer
   - nglview
   # Drivers
+  - openmm =8.2
   - gromacs
   - lammps >=2023.08.02
   # shim for a build issue that's probably localized to conda-forge
