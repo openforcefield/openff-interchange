@@ -28,6 +28,16 @@ def compare(smiles: str) -> float:
 
 @skip_if_missing("openmm")
 class TestToOpenMM:
+    def test_cmm_remover_included(self, sage, basic_top):
+        import openmm
+
+        system = sage.create_interchange(basic_top).to_openmm_system()
+
+        assert isinstance(
+            system.getForce(system.getNumForces() - 1),
+            openmm.CMMotionRemover,
+        )
+
     def test_combine_nonbonded_forces_vdw_14(self, sage_unconstrained):
         molecule = Molecule.from_mapped_smiles("[C:2](#[C:3][Br:4])[Br:1]")
         molecule.generate_conformers(n_conformers=1)

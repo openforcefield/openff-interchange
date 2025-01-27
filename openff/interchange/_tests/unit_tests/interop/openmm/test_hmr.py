@@ -1,7 +1,7 @@
 import random
 
 import pytest
-from openff.toolkit import Molecule, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology
 
 from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange.exceptions import NegativeMassError
@@ -23,7 +23,7 @@ def test_hmr_basic(sage, reversed, ethanol, reversed_ethanol):
 
     system = interchange.to_openmm(hydrogen_mass=hydrogen_mass)
 
-    expected_mass = sum([atom.mass for atom in topology.atoms]).m_as(unit.dalton)
+    expected_mass = sum([atom.mass for atom in topology.atoms]).m_as("dalton")
 
     found_mass = sum(
         [
@@ -53,9 +53,7 @@ def test_hmr_not_applied_to_water(sage, water):
 
     system = interchange.to_openmm(hydrogen_mass=hydrogen_mass)
 
-    expected_mass = sum([atom.mass for atom in interchange.topology.atoms]).m_as(
-        unit.dalton,
-    )
+    expected_mass = sum([atom.mass for atom in interchange.topology.atoms]).m_as("dalton")
 
     found_mass = sum(
         [
@@ -109,10 +107,13 @@ def test_hmr_with_ligand_virtual_sites(sage_with_bond_charge, hydrogen_mass):
     import openmm
     import openmm.unit
 
-    molecule = MoleculeWithConformer.from_mapped_smiles("[H:5][C:2]([H:6])([C:3]([H:7])([H:8])[Cl:4])[Cl:1]")
+    topology = MoleculeWithConformer.from_mapped_smiles(
+        "[H:5][C:2]([H:6])([C:3]([H:7])([H:8])[Cl:4])[Cl:1]",
+    ).to_topology()
+    topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
     # should work fine with 4 fs, but be conservative and just use 3 fs
-    simulation = sage_with_bond_charge.create_interchange(molecule.to_topology()).to_openmm_simulation(
+    simulation = sage_with_bond_charge.create_interchange(topology).to_openmm_simulation(
         integrator=openmm.VerletIntegrator(3.0 * openmm.unit.femtosecond),
         hydrogen_mass=hydrogen_mass,
     )

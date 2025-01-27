@@ -67,6 +67,10 @@ For more, see [issue #1005](https://github.com/openforcefield/openff-interchange
 
 Keywords: OpenMM, GROMACS, constraints, bond constraints, rigid water
 
+### Center-of-mass motion remover ignored
+
+If present, an `openmm.CMMotionRemover` "force" is ignored when loading a system. An `Interchange` object does not store this information. Note that exported systems from `Interchange.to_openmm_system` include this force by default.
+
 ## Quirks with GROMACS
 
 ### Residue indices must begin at 1
