@@ -13,6 +13,7 @@ from openff.interchange.exceptions import (
     SwitchingFunctionMismatchError,
     UnsupportedCombinationError,
 )
+from openff.interchange.warnings import InterchangeCombinationWarning
 
 
 class TestCombine:
@@ -159,8 +160,23 @@ class TestCombine:
             interchange2["Electrostatics"].scale_14 = 0.444
 
         if vdw or electrostatics:
-            with pytest.raises(UnsupportedCombinationError, match="1-4.*nonbond"):
+            with pytest.raises(
+                UnsupportedCombinationError,
+                match="1-4.*vdW" if vdw else "1-4.*Electro",
+            ):
                 interchange2.combine(interchange1)
         else:
             # if neither are modified, that error shouldn't be raised
             interchange2.combine(interchange1)
+
+    def test_mix_different_5_6_rounding(self, parsley, sage, ethanol):
+        """Test that 0.833333 is 'upconverted' to 0.8333333333 in combination."""
+        with pytest.warns(
+            InterchangeCombinationWarning,
+            match="more digits in rounding",
+        ):
+            parsley.create_interchange(
+                ethanol.to_topology(),
+            ).combine(
+                sage.create_interchange(ethanol.to_topology()),
+            )
