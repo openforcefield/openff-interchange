@@ -12,9 +12,7 @@ from openff.interchange.warnings import MissingPositionsWarning
 
 class TestUnsupportedCases:
     @pytest.mark.filterwarnings("ignore:.*are you sure you don't want to pass positions")
-    def test_error_topology_mismatch(self, monkeypatch, sage_unconstrained, ethanol):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
+    def test_error_topology_mismatch(self, sage_unconstrained, ethanol):
         topology = ethanol.to_topology()
         topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
@@ -37,9 +35,7 @@ class TestUnsupportedCases:
                 topology=other_topology.to_openmm(),
             )
 
-    def test_found_virtual_sites(self, monkeypatch, tip4p, water):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
+    def test_found_virtual_sites(self, tip4p, water):
         topology = water.to_topology()
         topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
@@ -54,9 +50,7 @@ class TestUnsupportedCases:
                 topology=topology.to_openmm(),
             )
 
-    def test_missing_positions_warning(self, monkeypatch, sage, water):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
+    def test_missing_positions_warning(self, sage, water):
         topology = water.to_topology()
         topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 

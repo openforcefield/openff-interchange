@@ -30,7 +30,6 @@ jobs:
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      INTERCHANGE_EXPERIMENTAL: "1"
 
     steps:
     - uses: actions/checkout@v4
