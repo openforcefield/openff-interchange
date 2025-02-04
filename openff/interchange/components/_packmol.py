@@ -630,8 +630,15 @@ def pack_box(
 
     Notes
     -----
-    Returned topologies may have larger box vectors than what would be defined
-    by the target density.
+    Returned topologies may have smaller or larger box vectors than what would be defined by the
+    target density if the box size is determined by `target_density`. When calling Packmol, each
+    linear dimension of the box is scaled up by 10%.  However, Packmol by default adds a small
+    buffer (defined by the `tolerance` argument which otherwise defines the minimum distance,
+    default 2 Angstrom) at the end of the packed box, which causes small voids when tiling copies of
+    each periodic image. This void is removed in hopes of faster equilibration times but the box
+    density is slightly increased as a result. These changes may cancel each other out or result in
+    larger or smaller densities than the target density, depending on argument values.
+
     """
     # Make sure packmol can be found.
     packmol_path = _find_packmol()
