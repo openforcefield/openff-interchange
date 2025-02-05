@@ -45,6 +45,12 @@ For example, `Interchange.topology.get_positions()` will never include positions
 
 `Molecule` and `Topology` objects can store partial charges, but these are ignored by default in methods like `Interchange.from_smirnoff`. This is because partial charges in SMIRNOFF force fields are defined by sections in the force field. To override this behavior, use the `charge_from_molecules` argument. Be aware that charges, and as a result most physics, will differ from what's perscribed by the contents of the force field.
 
+## Quirks of `Interchange.combine`
+
+### Charges of isomorphic molecules may be overwritten
+
+When isomorphic molecules are found on the `Interchange` objects used in `.combine`, the charges of molecules in the argument object are used. For example, if objects `interchange1` and `interchange2` each contain toluene molecules with different partial charges, the charges from `interchange2` will be used on the object returned by `interchange1.combine(interchange2)`. For more, see [Issue #1075](https://github.com/openforcefield/openff-interchange/issues/1075).
+
 ## Quirks of `from_openmm`
 
 ### Modified masses are ignored
