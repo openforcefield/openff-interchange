@@ -49,7 +49,7 @@ For example, `Interchange.topology.get_positions()` will never include positions
 
 ### Electrostatics 1-4 scaling factors may be slightly modified
 
-Amber family force fields historically use a 1-4 scaling factor of 1 / 1.2 (or 5/6). Some older OpenFF force field releases round this to 6 digits (0.833333) but more recent releases round this to 10 digits (0.8333333333). These are not stricly equal and arguably should not be combined, but (in this case only) for easier compatibility this difference is ignored and combination proceeds as if they were both 0.833333333 from the start. If value differ significantly, i.e. 0.5 vs 0.833333, an error is raised as this difference is non-trivial.
+Amber family force fields historically use a 1-4 scaling factor of 1 / 1.2 (or 5/6). Some older OpenFF force field releases round this to 6 digits (0.833333) but more recent releases round this to 10 digits (0.8333333333). These are not strictly equal and arguably should not be combined, but (in this case only) for easier compatibility this difference is ignored and combination proceeds as if they were both 0.833333333 from the start. If value differ significantly, i.e. 0.5 vs 0.833333, an error is raised as this difference is non-trivial.
 
 ## Quirks of `from_openmm`
 
