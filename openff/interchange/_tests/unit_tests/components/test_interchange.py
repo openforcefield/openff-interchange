@@ -410,9 +410,7 @@ class TestWrappedCalls:
             Interchange.from_gromacs()
 
     @skip_if_missing("openmm")
-    def test_from_openmm_called(self, monkeypatch, simple_interchange):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
+    def test_from_openmm_called(self, simple_interchange):
         topology = simple_interchange.to_openmm_topology()
         system = simple_interchange.to_openmm()
         positions = simple_interchange.positions

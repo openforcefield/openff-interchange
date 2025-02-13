@@ -2,7 +2,7 @@ import copy
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology, unit
+from openff.toolkit import ForceField, Molecule, unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
@@ -18,17 +18,13 @@ from openff.interchange.warnings import InterchangeCombinationWarning
 
 class TestCombine:
     @skip_if_missing("openmm")
-    def test_basic_combination(self, monkeypatch, sage_unconstrained):
+    def test_basic_combination(self, sage_unconstrained):
         """Test basic use of Interchange.__add__() based on the README example"""
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
-        mol = MoleculeWithConformer.from_smiles("C")
-        top = Topology.from_molecules([mol])
+        top = MoleculeWithConformer.from_smiles("C").to_topology()
 
         interchange = Interchange.from_smirnoff(sage_unconstrained, top)
 
         interchange.box = [4, 4, 4] * numpy.eye(3)
-        interchange.positions = mol.conformers[0]
 
         # Copy and translate atoms by [1, 1, 1]
         other = Interchange(topology=copy.deepcopy(interchange.topology))
@@ -43,8 +39,6 @@ class TestCombine:
     @pytest.mark.filterwarnings("ignore:Setting positions to None")
     @pytest.mark.slow
     def test_parameters_do_not_clash(self, monkeypatch, sage_unconstrained):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
         thf = MoleculeWithConformer.from_smiles("C1CCOC1")
         ace = MoleculeWithConformer.from_smiles("CC(=O)O")
 
@@ -69,11 +63,9 @@ class TestCombine:
 
         # TODO: Ensure the de-duplication is maintained after exports
 
-    def test_positions_setting(self, monkeypatch, sage):
+    def test_positions_setting(self, sage):
         """Test that positions exist on the result if and only if
         both input objects have positions."""
-
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
         ethane = Molecule.from_smiles("CC")
         methane = Molecule.from_smiles("C")
@@ -96,13 +88,10 @@ class TestCombine:
     @pytest.mark.parametrize("handler", ["Electrostatics", "vdW"])
     def test_error_mismatched_cutoffs(
         self,
-        monkeypatch,
         sage,
         basic_top,
         handler,
     ):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
         sage_modified = ForceField("openff-2.1.0.offxml")
 
         sage_modified[handler].cutoff *= 1.5
@@ -117,12 +106,9 @@ class TestCombine:
 
     def test_error_mismatched_switching_function(
         self,
-        monkeypatch,
         sage,
         basic_top,
     ):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
         sage_modified = ForceField("openff-2.1.0.offxml")
 
         sage_modified["vdW"].switch_width *= 0.0
