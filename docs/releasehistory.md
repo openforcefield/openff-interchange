@@ -11,6 +11,12 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+### Miscellaneous improvements
+
+* #1140 Bumps internal tests to use OpenMM 8.2.
+
 ## 0.4.1 - 2025-01-22
 
 ### Behavior changes
