@@ -20,7 +20,6 @@ maxdepth: 2
 annotations.md
 developing.md
 releasehistory.md
-v0.4-changes.md
 
 ```
 
