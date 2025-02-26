@@ -11,17 +11,36 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.4.2 - 2025-02-26
+
+### Behavior changes
+
+* #1153 Changes the electrostatics 1-4 scaling factor of 0.833333 to 0.8333333333 when `Interchange.combine` would otherwise fail.
+
+### New features
+
+* #1120 Read GROMACS topology files split into `.itp` files.
+
+### Performance improvements
+
+* #1126 Fixes some charge caching issues that slowed GROMACS exports.
+
+### Documentation improvements
+
+* #1163 Fixes some Packmol wrapper docstrings.
+* #1159 Documents why `tolerance` is removed from box edges in the Packmol wrappers.
+* #1155 Documents an edge case with `Interchange.combine` when isomorphic molecules are present with different partial charges.
 
 ### Miscellaneous improvements
 
 * #1140 Bumps internal tests to use OpenMM 8.2.
+* #1150 Updates which examples are tagged as "experimental."
 
 ## 0.4.1 - 2025-01-22
 
 ### Behavior changes
 
-* #1132 Methods that return an `openmm.System` object now include a `openmm.CMMotionRemover` "force" within it.
+* #1133 Methods that return an `openmm.System` object now include a `openmm.CMMotionRemover` "force" within it.
 
 ### New features
 
