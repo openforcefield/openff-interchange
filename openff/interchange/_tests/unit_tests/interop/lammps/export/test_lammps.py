@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import lammps
 import numpy
 import pytest
 from openff.toolkit import ForceField, Quantity, Topology, unit
@@ -90,6 +89,7 @@ class TestLammps:
         n_mols,
     ) -> bool:
         """Test to see if interop.lammps.export._write_atoms() writes unique ids for each distinct Molecule"""
+        import lammps
 
         molecule = MoleculeWithConformer.from_smiles(smiles)
         topology = Topology.from_molecules(n_mols * [molecule])
