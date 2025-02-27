@@ -27,11 +27,16 @@ jobs:
         python-version:
           - "3.10"
           - "3.11"
+          - "3.12"
+          - "3.13"
         openeye:
           - true
           - false
         openmm:
           - true
+        exclude:
+          - python-version: "3.13"
+            openeye: true
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -66,18 +71,17 @@ jobs:
       run: |
         micromamba install openmm -c conda-forge
 
-    - name: Uninstall OpenMM
-      if: ${{ matrix.openmm == false && matrix.openeye == true }}
+    - name: Install Python <3.13 dependencies
+      if: ${{ matrix.python-version != '3.13' }}
       run: |
-        micromamba remove openmm mdtraj
-        # Removing mBuild also removes some leaves, need to re-install them
-        micromamba install rdkit packmol "lammps >=2023.08.02"
-
-    - name: Install AmberTools and RDKit
-      if: ${{ matrix.openeye == false }}
-      # Unclear why, but around October 2023 this downgrades JAX to broken 0.1.x builds
-      # and also uninstalls RDKit
-      run: micromamba install rdkit "ambertools =23" "lammps >=2023.08.02" "jax >=0.3" "jaxlib >=0.3" -c conda-forge
+        # https://github.com/conda-forge/lammps-feedstock/issues/207
+        micromamba install \
+          mbuild \
+          foyer \
+          "lammps >=2023.08.02" \
+          "openmpi =4" \
+          smirnoff-plugins \
+          de-forcefields
 
     - name: Run tests
       run: python -m pytest $COV openff/interchange/ -r fExs -n logical --durations=10
