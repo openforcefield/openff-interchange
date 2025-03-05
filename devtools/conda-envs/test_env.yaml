@@ -14,14 +14,13 @@ dependencies:
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
   - rdkit
   # Optional features
-  - openmm =8.1.2
+  - openmm =8.2
   # smirnoff-plugins =2024
   # de-forcefields  # add back after smirnoff-plugins update
   - openff-nagl ~=0.5
   - openff-nagl-models ~=0.3
   - mbuild =1
   - foyer =1
-  - gmso ~=0.12
   - nglview
   # Drivers
   - gromacs

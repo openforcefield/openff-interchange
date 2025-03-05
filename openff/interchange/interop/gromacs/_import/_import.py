@@ -4,6 +4,7 @@ import numpy
 from openff.toolkit import Quantity, unit
 
 from openff.interchange._experimental import experimental
+from openff.interchange.interop.gromacs._import.combine import make_monolithic
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSAngle,
     GROMACSAtom,
@@ -29,96 +30,95 @@ def from_files(top_file, gro_file, cls=GROMACSSystem) -> GROMACSSystem:
 
     https://github.com/shirtsgroup/InterMol/blob/v0.1.2/intermol/gromacs/gromacs_parser.py
     """
-    with open(top_file) as f:
-        for line in f:
-            stripped = line.split(";")[0].strip()
+    for line in make_monolithic(top_file):
+        stripped = line.split(";")[0].strip()
 
-            if len(stripped) == 0:
-                continue
+        if len(stripped) == 0:
+            continue
 
-            if stripped.startswith(";"):
-                continue
+        if stripped.startswith(";"):
+            continue
 
-            if stripped.startswith("["):
-                if not len(stripped.split()) == 3 and stripped.endswith("]"):
-                    raise ValueError("Invalid GROMACS topology file")
+        if stripped.startswith("["):
+            if not len(stripped.split()) == 3 and stripped.endswith("]"):
+                raise ValueError("Invalid GROMACS topology file")
 
-                current_directive = stripped[1:-1].strip()
+            current_directive = stripped[1:-1].strip()
 
-                continue
+            continue
 
-            if current_directive == "defaults":
-                (
-                    nonbonded_function,
-                    combination_rule,
-                    gen_pairs,
-                    vdw_14,
-                    coul_14,
-                ) = _process_defaults(line)
+        if current_directive == "defaults":
+            (
+                nonbonded_function,
+                combination_rule,
+                gen_pairs,
+                vdw_14,
+                coul_14,
+            ) = _process_defaults(line)
 
-                system = cls(
-                    nonbonded_function=nonbonded_function,
-                    combination_rule=combination_rule,
-                    gen_pairs=gen_pairs,
-                    vdw_14=vdw_14,
-                    coul_14=coul_14,
-                )
+            system = cls(
+                nonbonded_function=nonbonded_function,
+                combination_rule=combination_rule,
+                gen_pairs=gen_pairs,
+                vdw_14=vdw_14,
+                coul_14=coul_14,
+            )
 
-            elif current_directive == "atomtypes":
-                atom_type = _process_atomtype(line)
-                system.atom_types[atom_type.name] = atom_type
+        elif current_directive == "atomtypes":
+            atom_type = _process_atomtype(line)
+            system.atom_types[atom_type.name] = atom_type
 
-            elif current_directive == "moleculetype":
-                molecule_type = _process_moleculetype(line)
-                system.molecule_types[molecule_type.name] = molecule_type
+        elif current_directive == "moleculetype":
+            molecule_type = _process_moleculetype(line)
+            system.molecule_types[molecule_type.name] = molecule_type
 
-                current_molecule = molecule_type.name
+            current_molecule = molecule_type.name
 
-            elif current_directive == "atoms":
-                system.molecule_types[current_molecule].atoms.append(
-                    _process_atom(line),
-                )
+        elif current_directive == "atoms":
+            system.molecule_types[current_molecule].atoms.append(
+                _process_atom(line),
+            )
 
-            elif current_directive == "pairs":
-                system.molecule_types[current_molecule].pairs.append(
-                    _process_pair(line),
-                )
+        elif current_directive == "pairs":
+            system.molecule_types[current_molecule].pairs.append(
+                _process_pair(line),
+            )
 
-            elif current_directive == "settles":
-                system.molecule_types[current_molecule].settles.append(
-                    _process_settles(line),
-                )
+        elif current_directive == "settles":
+            system.molecule_types[current_molecule].settles.append(
+                _process_settles(line),
+            )
 
-            elif current_directive == "bonds":
-                system.molecule_types[current_molecule].bonds.append(
-                    _process_bond(line),
-                )
+        elif current_directive == "bonds":
+            system.molecule_types[current_molecule].bonds.append(
+                _process_bond(line),
+            )
 
-            elif current_directive == "angles":
-                system.molecule_types[current_molecule].angles.append(
-                    _process_angle(line),
-                )
+        elif current_directive == "angles":
+            system.molecule_types[current_molecule].angles.append(
+                _process_angle(line),
+            )
 
-            elif current_directive == "dihedrals":
-                system.molecule_types[current_molecule].dihedrals.append(
-                    _process_dihedral(line),
-                )
+        elif current_directive == "dihedrals":
+            system.molecule_types[current_molecule].dihedrals.append(
+                _process_dihedral(line),
+            )
 
-            elif current_directive in ["exclusions"]:
-                system.molecule_types[current_molecule].exclusions.append(
-                    _process_exclusion(line),
-                )
+        elif current_directive in ["exclusions"]:
+            system.molecule_types[current_molecule].exclusions.append(
+                _process_exclusion(line),
+            )
 
-            elif current_directive == "system":
-                system.name = _process_system(line)
+        elif current_directive == "system":
+            system.name = _process_system(line)
 
-            elif current_directive == "molecules":
-                molecule_name, number_of_copies = _process_molecule(line)
+        elif current_directive == "molecules":
+            molecule_name, number_of_copies = _process_molecule(line)
 
-                system.molecules[molecule_name] = number_of_copies
+            system.molecules[molecule_name] = number_of_copies
 
-            else:
-                raise ValueError(f"Invalid directive {current_directive}")
+        else:
+            raise ValueError(f"Invalid directive {current_directive}")
 
     for molecule_type in system.molecule_types.values():
         this_molecule_atom_type_names = tuple(atom.atom_type for atom in molecule_type.atoms)
