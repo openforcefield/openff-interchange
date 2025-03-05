@@ -383,7 +383,7 @@ class Interchange(_BaseModel):
         writer.to_top(
             monolithic=monolithic,
             _merge_atom_types=_merge_atom_types,
-            _normalize_charges = _normalize_charges
+            _normalize_charges=_normalize_charges,
         )
         writer.to_gro(decimal=decimal)
 
