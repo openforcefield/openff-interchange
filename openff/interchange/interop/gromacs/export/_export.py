@@ -268,9 +268,7 @@ class GROMACSWriter(_BaseModel):
             return rounded_charges
 
         charges_to_write = numpy.array([atom.charge.m for atom in molecule_type.atoms])
-        rounded_charges = (
-            _adjust_charges(charges_to_write) if normalize_charges else charges_to_write
-        )
+        rounded_charges = _adjust_charges(charges_to_write) if normalize_charges else charges_to_write
 
         for atom, charge in zip(molecule_type.atoms, rounded_charges):
             if merge_atom_types:
