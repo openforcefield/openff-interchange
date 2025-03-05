@@ -27,7 +27,12 @@ class GROMACSWriter(_BaseModel):
     top_file: pathlib.Path | str
     gro_file: pathlib.Path | str
 
-    def to_top(self, monolithic: bool = True, _merge_atom_types: bool = False):
+    def to_top(
+        self,
+        monolithic: bool = True,
+        _merge_atom_types: bool = False
+        _normalize_charges: bool = False
+    ):
         """Write a GROMACS topology file."""
         with open(self.top_file, "w") as top:
             self._write_defaults(top)
@@ -52,6 +57,7 @@ class GROMACSWriter(_BaseModel):
                 monolithic=monolithic,
                 mapping_to_reduced_atom_types=mapping_to_reduced_atom_types,
                 merge_atom_types=_merge_atom_types,
+                normalize_charges=_normalize_charges,
             )
 
             self._write_system(top)
@@ -173,6 +179,7 @@ class GROMACSWriter(_BaseModel):
         monolithic: bool,
         mapping_to_reduced_atom_types,
         merge_atom_types: bool,
+        normalize_charges: bool,
     ):
         for molecule_name, molecule_type in self.system.molecule_types.items():
             # this string needs to be something that plays nicely in file paths
@@ -198,6 +205,7 @@ class GROMACSWriter(_BaseModel):
                 molecule_type,
                 mapping_to_reduced_atom_types,
                 merge_atom_types,
+                normalize_charges,
             )
             self._write_pairs(molecule_file, molecule_type)
             self._write_bonds(molecule_file, molecule_type)
@@ -218,6 +226,7 @@ class GROMACSWriter(_BaseModel):
         molecule_type,
         mapping_to_reduced_atom_types,
         merge_atom_types: bool,
+        normalize_charges: bool,
     ):
         top.write("[ atoms ]\n")
         top.write(";index, atom type, resnum, resname, name, cgnr, charge, mass\n")
@@ -259,7 +268,9 @@ class GROMACSWriter(_BaseModel):
             return rounded_charges
 
         charges_to_write = numpy.array([atom.charge.m for atom in molecule_type.atoms])
-        rounded_charges = _adjust_charges(charges_to_write)
+        rounded_charges = (
+            _adjust_charges(charges_to_write) if normalize_charges else charges_to_write
+        )
 
         for atom, charge in zip(molecule_type.atoms, rounded_charges):
             if merge_atom_types:
