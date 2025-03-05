@@ -238,6 +238,7 @@ class GROMACSWriter(_BaseModel):
 
             def _rounding_error(_arr, _sum, _tolerance):
                 return numpy.round(numpy.sum(_arr) - _sum, _tolerance)
+
             # Initial error due to rounding
             rounding_error = _rounding_error(rounded_charges, total_charge, tolerance)
 
@@ -248,13 +249,13 @@ class GROMACSWriter(_BaseModel):
                     tolerance,
                 )
                 diff = _rounding_error(rounded_charges, total_charge, tolerance)
-                
-                # If there's a remainder of a charge after spreading everything out evenly, 
+
+                # If there's a remainder of a charge after spreading everything out evenly,
                 # dump the remainder on the first nonzero atom.
                 rounded_charges[indices[0]] = numpy.round(
-                        rounded_charges[indices[0]] - diff,
-                        tolerance,
-                    )
+                    rounded_charges[indices[0]] - diff,
+                    tolerance,
+                )
             return rounded_charges
 
         charges_to_write = numpy.array([atom.charge.m for atom in molecule_type.atoms])
