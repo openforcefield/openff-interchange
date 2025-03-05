@@ -224,30 +224,37 @@ class GROMACSWriter(_BaseModel):
 
         def _adjust_charges(charges: numpy.array, tolerance=8) -> numpy.array:
             """
-            Adjust charges so that written charge for a molecule type is 0.
+            Adjust charges so that written charge for a molecule type is integer.
+
+            We first get the initial charges and round them.
+            Note, that charges that are exactly equal to zero are never touched.
             """
+            # placeholder for output charges
             rounded_charges = numpy.round(charges, tolerance)
-            total_charge = numpy.round(numpy.sum(charges_to_write), 0)
+            # integer total charge
+            total_charge = numpy.round(numpy.sum(charges), 0)
+            # non-zero charge indices
+            indices = numpy.where(rounded_charges != 0)[0]
 
             def _rounding_error(_arr, _sum, _tolerance):
                 return numpy.round(numpy.sum(_arr) - _sum, _tolerance)
-
+            # Initial error due to rounding
             rounding_error = _rounding_error(rounded_charges, total_charge, tolerance)
 
+            # We correct rounded_charges to achieve tolerance
             if rounding_error != 0:
-                rounded_charges += numpy.round(
-                    -rounding_error / len(charges_to_write),
+                rounded_charges[indices] += numpy.round(
+                    -rounding_error / len(indices),
                     tolerance,
                 )
                 diff = _rounding_error(rounded_charges, total_charge, tolerance)
-                while diff != 0:
-                    # Never adjust 0 charges
-                    indices = numpy.where(rounded_charges != 0)[0]
-                    rounded_charges[indices[0]] = numpy.round(
+                
+                # If there's a remainder of a charge after spreading everything out evenly, 
+                # dump the remainder on the first nonzero atom.
+                rounded_charges[indices[0]] = numpy.round(
                         rounded_charges[indices[0]] - diff,
                         tolerance,
                     )
-                    diff = _rounding_error(rounded_charges, total_charge, tolerance)
             return rounded_charges
 
         charges_to_write = numpy.array([atom.charge.m for atom in molecule_type.atoms])

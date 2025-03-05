@@ -359,6 +359,9 @@ class Interchange(_BaseModel):
         Molecule names in written files are not guaranteed to match the `Moleclue.name` attribute of the
         molecules in the topology, especially if they are empty strings or not unique.
 
+        Charges written to the topology are normalized per molecule to ensure that each molecule has a charge which is
+        exactly integer. Charges that are exactly 0 are not touched.
+
         See :py:meth:`to_gro <Interchange.to_gro>` and :py:meth:`to_top <Interchange.to_top>` for more details.
 
         """
@@ -430,6 +433,9 @@ class Interchange(_BaseModel):
         -----
         Molecule names in written files are not guaranteed to match the `Moleclue.name` attribute of the
         molecules in the topology, especially if they are empty strings or not unique.
+
+        Charges written to the topology are normalized per molecule to ensure that each molecule has a charge which is
+        exactly integer. Charges that are exactly 0 are not touched.
 
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
