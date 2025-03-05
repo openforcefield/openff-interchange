@@ -30,8 +30,8 @@ class GROMACSWriter(_BaseModel):
     def to_top(
         self,
         monolithic: bool = True,
-        _merge_atom_types: bool = False
-        _normalize_charges: bool = False
+        _merge_atom_types: bool = False,
+        _normalize_charges: bool = False,
     ):
         """Write a GROMACS topology file."""
         with open(self.top_file, "w") as top:
