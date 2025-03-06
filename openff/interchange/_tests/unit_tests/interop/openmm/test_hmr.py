@@ -104,7 +104,6 @@ def test_hmr_not_applied_to_tip4p(
 def test_hmr_with_ligand_virtual_sites(
     sage_with_bond_charge,
     hydrogen_mass,
-    default_integrator,
 ):
     """Test that a single-molecule sigma hole example runs"""
     pytest.importorskip("openmm")
