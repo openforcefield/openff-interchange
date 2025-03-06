@@ -120,7 +120,11 @@ def test_hmr_with_ligand_virtual_sites(
     simulation = sage_with_bond_charge.create_interchange(
         topology,
     ).to_openmm_simulation(
-        integrator=openmm.VerletIntegrator(3.0 * openmm.unit.femtosecond),
+        integrator=openmm.LangevinMiddleIntegrator(
+            300 * openmm.unit.kelvin,
+            1 / openmm.unit.picosecond,
+            3.0 * openmm.unit.femtosecond,
+        ),
         hydrogen_mass=hydrogen_mass,
     )
 
