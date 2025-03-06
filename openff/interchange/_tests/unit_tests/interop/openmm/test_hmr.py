@@ -101,7 +101,10 @@ def test_hmr_not_applied_to_tip4p(
 
 
 @pytest.mark.parametrize("hydrogen_mass", [1.1, 3.0])
-def test_hmr_with_ligand_virtual_sites(sage_with_bond_charge, hydrogen_mass):
+def test_hmr_with_ligand_virtual_sites(
+    sage_with_bond_charge,
+    hydrogen_mass,
+):
     """Test that a single-molecule sigma hole example runs"""
     pytest.importorskip("openmm")
     import openmm
@@ -113,8 +116,14 @@ def test_hmr_with_ligand_virtual_sites(sage_with_bond_charge, hydrogen_mass):
     topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
     # should work fine with 4 fs, but be conservative and just use 3 fs
-    simulation = sage_with_bond_charge.create_interchange(topology).to_openmm_simulation(
-        integrator=openmm.VerletIntegrator(3.0 * openmm.unit.femtosecond),
+    simulation = sage_with_bond_charge.create_interchange(
+        topology,
+    ).to_openmm_simulation(
+        integrator=openmm.LangevinMiddleIntegrator(
+            300 * openmm.unit.kelvin,
+            1 / openmm.unit.picosecond,
+            3.0 * openmm.unit.femtosecond,
+        ),
         hydrogen_mass=hydrogen_mass,
     )
 

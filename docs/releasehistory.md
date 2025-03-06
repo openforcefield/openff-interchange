@@ -11,6 +11,12 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+### Behavior changes
+
+* #1137 Internally use `openmm.LangevinMiddleIntegrator`, including in the OpenMM driver.
+
 ## 0.4.2 - 2025-02-26
 
 ### Behavior changes
