@@ -2,11 +2,12 @@ import pytest
 from openff.toolkit import Quantity
 from openff.utilities import skip_if_missing
 
-from openff.interchange._tests import MoleculeWithConformer, requires_ambertools
+from openff.interchange._tests import MoleculeWithConformer, requires_ambertools, requires_openeye
 from openff.interchange.constants import kcal_mol
 from openff.interchange.drivers import get_amber_energies, get_openmm_energies
 
 
+@requires_openeye
 @requires_ambertools
 @skip_if_missing("openmm")
 @pytest.mark.parametrize(
