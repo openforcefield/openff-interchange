@@ -3,6 +3,7 @@ import pytest
 from openff.toolkit import Molecule, Topology, unit
 
 from openff.interchange import Interchange
+from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange.interop.gromacs._interchange import (
     _convert_topology,
     to_interchange,
@@ -95,3 +96,26 @@ class TestConvertTopology:
         assert converted.n_bonds == 4
 
         assert [atom.atomic_number for atom in converted.atoms] == [8, 1, 1, 8, 1, 1]
+
+    def test_nongrouped_molecules(self, sage):
+        """Test that a system containing un-grouped identical molecules is handled correctly."""
+
+        pytest.importorskip("openmm")
+
+        import openmm.app
+
+        sage.create_interchange(
+            Topology.from_molecules(
+                [
+                    MoleculeWithConformer.from_smiles("O"),
+                    MoleculeWithConformer.from_smiles("N"),
+                    MoleculeWithConformer.from_smiles("O"),
+                ],
+            ),
+        ).to_top("ungrouped.top")
+
+        assert [
+            "MOL0",
+            "MOL1",
+            "MOL0",
+        ] == [residue.name for residue in openmm.app.GromacsTopFile("ungrouped.top").topology.residues()]
