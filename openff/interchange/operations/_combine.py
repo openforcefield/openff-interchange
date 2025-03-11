@@ -75,10 +75,8 @@ def _combine(
     input2: "Interchange",
 ) -> "Interchange":
     warnings.warn(
-        "Interchange object combination is complex and likely to produce strange results outside "
-        "of a limited set of use cases it has been tested in. Any workflow using this method is "
-        "not guaranteed to be suitable for production or stable between versions. Use with "
-        "extreme caution and thoroughly validate results!",
+        "Interchange object combination is complex and may produce strange results outside "
+        "of use cases it has been tested in. Use with caution and thoroughly validate results!",
         InterchangeCombinationWarning,
     )
 
