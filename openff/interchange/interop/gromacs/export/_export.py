@@ -432,7 +432,7 @@ class GROMACSWriter(_BaseModel):
         top.write("[ molecules ]\n")
         top.write(";name\tnumber\n")
 
-        for molecule_name, n_molecules in self.system.molecules.items():
+        for molecule_name, n_molecules in self.system.molecules:
             top.write(f"{molecule_name.replace(' ', '_')}\t{n_molecules}\n")
 
         top.write("\n")

@@ -341,8 +341,8 @@ class GROMACSSystem(_BaseModel):
         dict(),
         description="Molecule types, keyed by name.",
     )
-    molecules: dict[str, int] = Field(
-        dict(),
+    molecules: list[tuple[str, int]] = Field(
+        tuple(),
         description="The number of each molecule type in the system, keyed by the name of each molecule.",
     )
 
