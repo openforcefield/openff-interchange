@@ -5,6 +5,7 @@ dependencies:
   # Base depends
   # https://docs.readthedocs.io/en/stable/config-file/v2.html#build-tools-python
   - python =3.10
+  - setuptools !=76.0.0
   - versioningit
   - pip
   - numpy =1
