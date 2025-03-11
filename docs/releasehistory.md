@@ -17,6 +17,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 * #1137 Internally use `openmm.LangevinMiddleIntegrator`, including in the OpenMM driver.
 
+### Bug fixes
+
+* #1186 Fixes an issue in which GROMACS topology files were mangled when molecules were not grouped within a topology.
+
 ## 0.4.2 - 2025-02-26
 
 ### Behavior changes
