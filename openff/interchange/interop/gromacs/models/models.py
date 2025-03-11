@@ -342,7 +342,7 @@ class GROMACSSystem(_BaseModel):
         description="Molecule types, keyed by name.",
     )
     molecules: list[tuple[str, int]] = Field(
-        tuple(),
+        list(),
         description="The number of each molecule type in the system, keyed by the name of each molecule.",
     )
 
@@ -395,18 +395,17 @@ class GROMACSSystem(_BaseModel):
                 f"The molecule type {molecule_name} is not present in this system.",
             )
 
-        if n_copies > self.molecules[molecule_name]:
-            raise ValueError(
-                f"Cannot remove {n_copies} copies of {molecule_name} from this system "
-                f"because only {self.molecules[molecule_name]} are present.",
-            )
-
-        if n_copies != 1 or self.molecules[molecule_name] != 1:
+        if n_copies != 1 or sum(n_copies for name, n_copies in self.molecules if name == molecule_name) != 1:
             raise NotImplementedError()
 
-        molecule_names = [*self.molecules.keys()]
-        molecules_before = molecule_names[: molecule_names.index(molecule_name)]
-        n_atoms_before = sum(len(self.molecule_types[name].atoms) * self.molecules[name] for name in molecules_before)
+        n_atoms_before = sum(
+            len(self.molecule_types[molecule_name].atoms) * n_copies
+            for molecule_name, n_copies in self.molecules[
+                : self.molecules.index(
+                    (molecule_name, 1),
+                )
+            ]
+        )
 
         if self.positions is not None:
             row_indices_to_delete = [
@@ -423,10 +422,7 @@ class GROMACSSystem(_BaseModel):
             )
 
         self.molecule_types.pop(molecule_name)
-        self.molecules[molecule_name] -= n_copies
-
-        if self.molecules[molecule_name] == 0:
-            self.molecules.pop(molecule_name)
+        self.molecules = [(name, n_copies) for name, n_copies in self.molecules if name != molecule_name]
 
     def add_molecule_type(self, molecule: GROMACSMolecule, n_copies: int):
         """Add a molecule type to the system."""
@@ -449,4 +445,4 @@ class GROMACSSystem(_BaseModel):
             self.atom_types[atom_type_name] = atom_type
 
         self.molecule_types[molecule.name] = molecule
-        self.molecules[molecule.name] = n_copies
+        self.molecules.append((molecule.name, n_copies))

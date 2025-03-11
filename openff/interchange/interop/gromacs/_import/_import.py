@@ -115,7 +115,7 @@ def from_files(top_file, gro_file, cls=GROMACSSystem) -> GROMACSSystem:
         elif current_directive == "molecules":
             molecule_name, number_of_copies = _process_molecule(line)
 
-            system.molecules[molecule_name] = number_of_copies
+            system.molecules.append((molecule_name, number_of_copies))
 
         else:
             raise ValueError(f"Invalid directive {current_directive}")

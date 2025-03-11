@@ -449,8 +449,8 @@ class GROMACSWriter(_BaseModel):
             )
 
         n_particles = sum(
-            len(molecule_type.atoms) * self.system.molecules[molecule_name]
-            for molecule_name, molecule_type in self.system.molecule_types.items()
+            len(self.system.molecule_types[molecule_name].atoms) * n_copies
+            for molecule_name, n_copies in self.system.molecules
         )
 
         assert n_particles == self.system.positions.shape[0], (
@@ -465,8 +465,8 @@ class GROMACSWriter(_BaseModel):
         gro.write(f"{n_particles}\n")
 
         count = 0
-        for molecule_name, molecule in self.system.molecule_types.items():
-            n_copies = self.system.molecules[molecule_name]
+        for molecule_name, n_copies in self.system.molecules:
+            molecule = self.system.molecule_types[molecule_name]
 
             for copy_index in range(n_copies):
                 for atom in molecule.atoms:
