@@ -103,7 +103,12 @@ def _get_openmm_energies(
     for index, force in enumerate(system.getForces()):
         force.setForceGroup(index)
 
-    integrator = openmm.VerletIntegrator(1.0 * openmm.unit.femtoseconds)
+    integrator = openmm.LangevinMiddleIntegrator(
+        300 * openmm.unit.kelvin,
+        1.0 / openmm.unit.picosecond,
+        1.0 * openmm.unit.femtoseconds,
+    )
+
     context = openmm.Context(
         system,
         integrator,

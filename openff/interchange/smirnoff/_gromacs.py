@@ -110,7 +110,7 @@ def _convert(
 
     try:
         vdw_collection = interchange["vdW"]
-        electrostatics_collection = interchange["Electrostatics"]
+        interchange["Electrostatics"]
     except KeyError:
         raise UnsupportedExportError("Plugins not implemented.")
 
@@ -146,8 +146,6 @@ def _convert(
 
             vdw_parameters = vdw_collection.potentials[vdw_collection.key_map[key]].parameters
 
-            charge = electrostatics_collection._get_charges()[key]
-
             # Build atom types
             system.atom_types[atom_type_name] = LennardJonesAtomType(
                 name=_atom_atom_type_map[atom],
@@ -168,8 +166,6 @@ def _convert(
 
             vdw_parameters = vdw_collection.potentials[vdw_collection.key_map[virtual_site_key]].parameters
 
-            charge = electrostatics_collection._get_charges()[key]
-
             # TODO: Separate class for "atom types" representing virtual sites?
             system.atom_types[atom_type_name] = LennardJonesAtomType(
                 name=_atom_atom_type_map[virtual_site_key],
@@ -185,13 +181,15 @@ def _convert(
     _partial_charges: dict[int | VirtualSiteKey, float] = dict()
 
     # Indexed by particle (atom or virtual site) indices
-    for key, charge in interchange["Electrostatics"]._get_charges().items():
+    for key, charge in interchange["Electrostatics"].charges.items():
         if type(key) is TopologyKey:
             _partial_charges[key.atom_indices[0]] = charge
         elif type(key) is VirtualSiteKey:
             _partial_charges[key] = charge
         else:
             raise RuntimeError()
+
+    _ordered_molecules = [None] * interchange.topology.n_molecules
 
     for unique_molecule_index in unique_molecule_map:
         unique_molecule = interchange.topology.molecule(unique_molecule_index)
@@ -277,9 +275,8 @@ def _convert(
 
         system.molecule_types[unique_molecule.name] = molecule
 
-        system.molecules[unique_molecule.name] = len(
-            interchange.topology.identical_molecule_groups[unique_molecule_index],
-        )
+        for duplicate_molecule_index, _ in unique_molecule_map[unique_molecule_index]:
+            _ordered_molecules[duplicate_molecule_index] = unique_molecule.name
 
     if "VirtualSites" in interchange.collections:
         # TODO: Some say to skip this if the user only wants a topology file?
@@ -294,6 +291,8 @@ def _convert(
 
     else:
         system.positions = interchange.positions
+
+    system.molecules = [(key, len(list(group))) for key, group in itertools.groupby(_ordered_molecules)]
 
     system.box = interchange.box
 
@@ -585,7 +584,7 @@ def _convert_virtual_sites(
                 residue_index=molecule.atoms[0].residue_index,
                 residue_name=molecule.atoms[0].residue_name,
                 charge_group_number=1,
-                charge=interchange["Electrostatics"]._get_charges()[virtual_site_key],
+                charge=interchange["Electrostatics"].charges[virtual_site_key],
                 mass=Quantity(0.0, unit.dalton),
             ),
         )

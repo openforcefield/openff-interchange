@@ -81,8 +81,10 @@ def to_interchange(
 
     molecule_start_index = 0
 
-    for molecule_name, molecule_type in system.molecule_types.items():
-        for _ in range(system.molecules[molecule_name]):
+    for molecule_name, n_copies in system.molecules:
+        molecule_type = system.molecule_types[molecule_name]
+
+        for _ in range(n_copies):
             for atom in molecule_type.atoms:
                 topology_atom_index = molecule_start_index + atom.index - 1
                 topology_key = TopologyKey(
@@ -324,10 +326,10 @@ def _convert_topology(
 
     topology = Topology()
 
-    for molecule_name, molecule_type in system.molecule_types.items():
-        graph = networkx.Graph()
+    for molecule_name, n_molecules in system.molecules:
+        molecule_type = system.molecule_types[molecule_name]
 
-        n_molecules = system.molecules[molecule_name]
+        graph = networkx.Graph()
 
         for atom in molecule_type.atoms:
             graph.add_node(

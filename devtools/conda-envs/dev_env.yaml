@@ -15,7 +15,7 @@ dependencies:
   - openff-units
   - ambertools =23
   # Optional features
-  - openmm =8.1.2
+  - openmm =8.2
   # smirnoff-plugins =2024
   # de-forcefields  # add back after smirnoff-plugins update
   - openff-nagl ~=0.5

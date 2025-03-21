@@ -4,16 +4,17 @@ import numpy as np
 import parmed as pmd
 import pytest
 from openff.toolkit import Molecule, Topology, unit
-from openff.utilities.testing import has_package, skip_if_missing
+from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import HAS_GROMACS, get_test_files_dir_path, needs_gmx
 from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers import get_openmm_energies
+from openff.interchange.foyer._guard import has_foyer
 from openff.interchange.models import PotentialKey, TopologyKey
 
-if has_package("foyer"):
+if has_foyer:
     import foyer
 
     from openff.interchange.foyer._valence import _RBTorsionHandler
@@ -27,13 +28,13 @@ if HAS_GROMACS:
     )
 
 
-@skip_if_missing("foyer")
+@pytest.mark.skipif(not has_foyer, reason="Foyer is not installed")
 class TestFoyer:
-    @pytest.fixture(scope="session")
+    @pytest.fixture
     def oplsaa(self):
         return foyer.forcefields.load_OPLSAA()
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture
     def oplsaa_interchange_ethanol(self, oplsaa):
         molecule = Molecule.from_file(
             get_test_files_dir_path("foyer_test_molecules") / "ethanol.sdf",
@@ -47,7 +48,7 @@ class TestFoyer:
         interchange.box = [4, 4, 4]
         return interchange
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture
     def get_interchanges(self, oplsaa):
         def interchanges_from_path(molecule_path):
             molecule_or_molecules = Molecule.from_file(molecule_path)
@@ -150,7 +151,6 @@ class TestFoyer:
         )
 
 
-@skip_if_missing("foyer")
 class TestRBTorsions(TestFoyer):
     @pytest.fixture
     def ethanol_with_rb_torsions(self, sage):
@@ -204,7 +204,6 @@ class TestRBTorsions(TestFoyer):
         assert (gmx - omm).m_as(kj_mol) < 1e-6
 
     @pytest.mark.filterwarnings("ignore:Parameters have not been assigned to all impropers.")
-    @skip_if_missing("foyer")
     @skip_if_missing("mbuild")
     @needs_gmx
     def test_rb_torsions_vs_foyer(self, oplsaa, ethanol_with_rb_torsions):

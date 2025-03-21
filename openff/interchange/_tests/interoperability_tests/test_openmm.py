@@ -318,7 +318,7 @@ class TestOpenMM:
         original_system = Interchange.from_smirnoff(sage, [ethanol]).to_openmm(
             combine_nonbonded_forces=True,
         )
-        assert original_system.getNumForces() == 4
+        assert original_system.getNumForces() == 5
 
         sage.deregister_parameter_handler("Constraints")
         sage.deregister_parameter_handler("Bonds")
@@ -326,14 +326,14 @@ class TestOpenMM:
         no_bonds = Interchange.from_smirnoff(sage, [ethanol]).to_openmm(
             combine_nonbonded_forces=True,
         )
-        assert no_bonds.getNumForces() == 3
+        assert no_bonds.getNumForces() == 4
 
         sage.deregister_parameter_handler("Angles")
 
         no_angles = Interchange.from_smirnoff(sage, [ethanol]).to_openmm(
             combine_nonbonded_forces=True,
         )
-        assert no_angles.getNumForces() == 2
+        assert no_angles.getNumForces() == 3
 
     def test_openmm_only_electrostatics_no_vdw(self):
         force_field_only_charges = ForceField(get_test_file_path("no_vdw.offxml"))
@@ -605,10 +605,10 @@ class TestOpenMMVirtualSites:
             combine_nonbonded_forces=True,
         )
 
-        # NonbondedForce and HarmonicBondForce; no HarmonicAngleForce (even if there were force
-        # field parameters added, the current implementation would not add an angle force because
-        # H-O-H is fully constrained)
-        assert out.getNumForces() == 2
+        # NonbondedForce, HarmonicBondForce, CMMotionRemover; no HarmonicAngleForce (even if there
+        # were force field parameters added, the current implementation would not add an angle
+        # force because H-O-H is fully constrained)
+        assert out.getNumForces() == 3
 
         # Particle indexing is 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
         #                      O, H, H, O, H, H, VS, VS, VS, VS
@@ -785,9 +785,9 @@ class TestToOpenMMTopology:
 
         # Assert the test's assumptions
         _ace, ala1, ala2, _nme = off_topology.hierarchy_iterator("residues")
-        assert [a.name for a in ala1.atoms] == [
-            a.name for a in ala2.atoms
-        ], "Test assumes both alanines have same atom names"
+        assert [a.name for a in ala1.atoms] == [a.name for a in ala2.atoms], (
+            "Test assumes both alanines have same atom names"
+        )
 
         for res in off_topology.hierarchy_iterator("residues"):
             res_atomnames = [atom.name for atom in res.atoms]

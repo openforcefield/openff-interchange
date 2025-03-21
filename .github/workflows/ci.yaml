@@ -4,11 +4,9 @@ on:
   push:
     branches:
       - main
-      - develop
   pull_request:
     branches:
       - main
-      - develop
   schedule:
     - cron: "0 5 * * *"
   workflow_dispatch:
@@ -22,7 +20,6 @@ jobs:
     name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm }}, OpenEye ${{ matrix.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         os:
           - macos-latest
@@ -35,11 +32,10 @@ jobs:
           - false
         openmm:
           - true
-          - false
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      COV: --cov=openff/interchange --cov-report=xml --cov-config=setup.cfg --cov-append
+      COV: --cov=openff/interchange --cov-report=xml --cov-config=pyproject.toml --cov-append
 
     steps:
     - uses: actions/checkout@v4
@@ -54,11 +50,7 @@ jobs:
           python=${{ matrix.python-version }}
 
     - name: Install package
-      run: |
-        # These packages are brought in by conda (via the toolkit) and must be removed manually
-        # since pip doesn't know about the -base split and does not uninstall the -base package
-        micromamba remove --force openff-interchange openff-interchange-base
-        python -m pip install . plugins/
+      run: python -m pip install . plugins/
 
     - name: Install and license OpenEye Toolkits
       if: ${{ matrix.openeye == true }}
@@ -87,26 +79,21 @@ jobs:
       # and also uninstalls RDKit
       run: micromamba install rdkit "ambertools =23" "lammps >=2023.08.02" "jax >=0.3" "jaxlib >=0.3" -c conda-forge
 
-    - name: Install Foyer
-      run: micromamba install "foyer >=0.12.1" -c conda-forge -yq
-
     - name: Run tests
-      if: always()
-      run: |
-        python -m pytest $COV openff/interchange/ -r fExs -n logical --durations=10
+      run: python -m pytest $COV openff/interchange/ -r fExs -n logical --durations=10
 
     - name: Run small molecule regression tests
       if: ${{ matrix.openeye == true && matrix.openmm == true }}
       run: |
         micromamba install "deepdiff =5" rich click -c conda-forge
-        python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@fa07b62824c39af591142b402bd68103f4043f8b
+        python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@7c98afd2b4ea425276dfe1687e639e0a56b636b4
 
         create_openmm_systems \
           --input             "regression_tests/small-molecule/input-topologies.json" \
           --output            "regression_tests/small-molecule/" \
           --using-interchange \
           --force-field       "openff-2.0.0.offxml" \
-          --n-procs           2
+          --n-procs           4
 
         # Don't trust the interchange version here, for some reason, just put it in a new directory
         mkdir regression_tests/small-molecule/omm-systems-interchange-latest/
@@ -118,7 +105,7 @@ jobs:
           --output            "regression_tests/differences.json" \
           --settings          "regression_tests/default-comparison-settings.json" \
           --expected-changes  "regression_tests/toolkit-to-interchange.json" \
-          --n-procs           2
+          --n-procs           4
 
         python devtools/scripts/molecule-regressions.py
 

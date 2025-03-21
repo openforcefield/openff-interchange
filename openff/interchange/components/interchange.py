@@ -1,5 +1,6 @@
 """An object for storing, manipulating, and converting molecular mechanics data."""
 
+import tempfile
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
@@ -47,8 +48,14 @@ if TYPE_CHECKING:
     import openmm.app
     from openff.toolkit import ForceField
 
-    if has_package("foyer"):
-        from foyer import Forcefield as FoyerForcefield
+    from openff.interchange.foyer._guard import has_foyer
+
+    if has_foyer:
+        try:
+            from foyer import Forcefield as FoyerForcefield
+        except ModuleNotFoundError:
+            # case of openff/interchange/foyer/ being detected as the real package
+            pass
     if has_package("nglview"):
         import nglview
 
@@ -323,6 +330,7 @@ class Interchange(_BaseModel):
         prefix: str,
         decimal: int = 3,
         hydrogen_mass: PositiveFloat = 1.007947,
+        monolithic: bool = True,
         _merge_atom_types: bool = False,
     ):
         """
@@ -339,6 +347,9 @@ class Interchange(_BaseModel):
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
+        monolithic: bool, default=False
+            Whether the topology file should be monolithic (True) or reference individual .itp files (False). Note that
+            these individual .itp files rely on ad hoc atom types and cannot be transferred between systems.
         _merge_atom_types: bool, default = False
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
@@ -360,7 +371,7 @@ class Interchange(_BaseModel):
             gro_file=prefix + ".gro",
         )
 
-        writer.to_top(_merge_atom_types=_merge_atom_types)
+        writer.to_top(monolithic=monolithic, _merge_atom_types=_merge_atom_types)
         writer.to_gro(decimal=decimal)
 
         self.to_mdp(prefix + "_pointenergy.mdp")
@@ -394,6 +405,7 @@ class Interchange(_BaseModel):
         self,
         file_path: Path | str,
         hydrogen_mass: PositiveFloat = 1.007947,
+        monolithic: bool = True,
         _merge_atom_types: bool = False,
     ):
         """
@@ -407,6 +419,9 @@ class Interchange(_BaseModel):
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
+        monolithic: bool, default=False
+            Whether the topology file should be monolithic (True) or reference individual .itp files (False). Note that
+            these individual .itp files rely on ad hoc atom types and cannot be transferred between systems.
         _merge_atom_types: book, default=False
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
@@ -423,7 +438,11 @@ class Interchange(_BaseModel):
         GROMACSWriter(
             system=_convert(self, hydrogen_mass=hydrogen_mass),
             top_file=file_path,
-        ).to_top(_merge_atom_types=_merge_atom_types)
+            gro_file=tempfile.NamedTemporaryFile(suffix=".gro").file.name,
+        ).to_top(
+            monolithic=monolithic,
+            _merge_atom_types=_merge_atom_types,
+        )
 
     def to_gro(self, file_path: Path | str, decimal: int = 3):
         """
@@ -456,6 +475,7 @@ class Interchange(_BaseModel):
         # TODO: Write the coordinates without the full conversion
         GROMACSWriter(
             system=_convert(self),
+            top_file=tempfile.NamedTemporaryFile(suffix=".top").file.name,
             gro_file=file_path,
         ).to_gro(decimal=decimal)
 
@@ -822,13 +842,13 @@ class Interchange(_BaseModel):
 
             >>> from openff.interchange import Interchange
             >>> from openff.toolkit import Molecule, Topology
-            >>> from foyer import Forcefield
+            >>> from foyer import Forcefield  # doctest: +SKIP
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
             >>> top = Topology.from_molecules([mol])
-            >>> oplsaa = Forcefield(name="oplsaa")
-            >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
-            >>> interchange
+            >>> oplsaa = Forcefield(name="oplsaa")  # doctest: +SKIP
+            >>> interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)  # doctest: +SKIP
+            >>> interchange  # doctest: +SKIP
             Interchange with 8 collections, non-periodic topology with 8 atoms.
 
         """
@@ -919,6 +939,10 @@ class Interchange(_BaseModel):
         -------
         interchange : Interchange
             An Interchange object representing the contents of the OpenMM objects.
+
+        Notes
+        -----
+        An `openmm.CMMotionRemover` force, if present, is ignored.
 
         """
         from openff.interchange.interop.openmm._import._import import from_openmm

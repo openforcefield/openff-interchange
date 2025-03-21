@@ -118,7 +118,6 @@ class TestInterchange:
     @needs_gmx
     @needs_lmp
     @pytest.mark.slow
-    @skip_if_missing("foyer")
     def test_atom_ordering(self):
         """Test that atom indices in bonds are ordered consistently between the slot map and topology"""
         import foyer
@@ -411,9 +410,7 @@ class TestWrappedCalls:
             Interchange.from_gromacs()
 
     @skip_if_missing("openmm")
-    def test_from_openmm_called(self, monkeypatch, simple_interchange):
-        monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
-
+    def test_from_openmm_called(self, simple_interchange):
         topology = simple_interchange.to_openmm_topology()
         system = simple_interchange.to_openmm()
         positions = simple_interchange.positions

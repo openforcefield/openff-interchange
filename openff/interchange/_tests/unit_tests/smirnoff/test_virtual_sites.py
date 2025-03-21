@@ -153,7 +153,11 @@ class TestSMIRNOFFVirtualSites:
 
         context = openmm.Context(
             system,
-            openmm.VerletIntegrator(1.0 * openmm.unit.femtosecond),
+            openmm.LangevinMiddleIntegrator(
+                300 * openmm.unit.kelvin,
+                1 / openmm.unit.picosecond,
+                2.0 * openmm.unit.femtosecond,
+            ),
             openmm.Platform.getPlatformByName("Reference"),
         )
 

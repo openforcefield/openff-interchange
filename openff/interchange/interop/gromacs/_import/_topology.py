@@ -9,7 +9,9 @@ def _create_topology_from_system(system: GROMACSSystem) -> Topology:
 
     topology = Topology()
 
-    for molecule_name, gromacs_molecule in system.molecule_types.items():
+    for molecule_name, n_copies in system.molecules:
+        gromacs_molecule = system.molecule_types[molecule_name]
+
         molecule = _SimpleMolecule()
         molecule.name = molecule_name
 
@@ -38,7 +40,7 @@ def _create_topology_from_system(system: GROMACSSystem) -> Topology:
             molecule.add_bond(molecule.atom(0), molecule.atom(1))
             molecule.add_bond(molecule.atom(0), molecule.atom(2))
 
-        for _ in range(system.molecules[molecule_name]):
+        for _ in range(n_copies):
             topology.add_molecule(molecule)
 
         # TODO: Add residue metadata

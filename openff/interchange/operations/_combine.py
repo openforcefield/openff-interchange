@@ -44,16 +44,39 @@ def _check_nonbonded_compatibility(
             f"{interchange1['vdW'].switch_width} and {interchange2['vdW'].switch_width}.",
         )
 
+    if interchange1["vdW"].scale_14 != interchange2["vdW"].scale_14:
+        raise UnsupportedCombinationError(
+            "1-4 scaling factors in vdW handler(s) do not match.",
+        )
+
+    if interchange1["Electrostatics"].scale_14 != interchange2["Electrostatics"].scale_14:
+        if sorted([interchange1["Electrostatics"].scale_14, interchange2["Electrostatics"].scale_14]) == [
+            0.833333,
+            0.8333333333,
+        ]:
+            warnings.warn(
+                "Found electrostatics 1-4 scaling factors of 5/6 with slightly different rounding "
+                "(0.833333 and 0.8333333333). This likely stems from OpenFF using more digits in rounding 1/1.2. "
+                "The value of 0.8333333333 will be used, which may or may not introduce small errors. ",
+                InterchangeCombinationWarning,
+            )
+
+            interchange1["Electrostatics"].scale_14 = 0.8333333333
+            interchange2["Electrostatics"].scale_14 = 0.8333333333
+
+        else:
+            raise UnsupportedCombinationError(
+                "1-4 scaling factors in Electrostatics handler(s) do not match.",
+            )
+
 
 def _combine(
     input1: "Interchange",
     input2: "Interchange",
 ) -> "Interchange":
     warnings.warn(
-        "Interchange object combination is complex and likely to produce strange results outside "
-        "of a limited set of use cases it has been tested in. Any workflow using this method is "
-        "not guaranteed to be suitable for production or stable between versions. Use with "
-        "extreme caution and thoroughly validate results!",
+        "Interchange object combination is complex and may produce strange results outside "
+        "of use cases it has been tested in. Use with caution and thoroughly validate results!",
         InterchangeCombinationWarning,
     )
 

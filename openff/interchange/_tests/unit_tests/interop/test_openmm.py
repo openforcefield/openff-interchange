@@ -12,6 +12,7 @@ from openff.interchange._tests._openmm import get_14_scaling_factors
 
 if has_package("openmm"):
     from openmm import (
+        CMMotionRemover,
         HarmonicAngleForce,
         HarmonicBondForce,
         NonbondedForce,
@@ -46,6 +47,8 @@ class TestOpenMM:
                 assert force.getNumBonds() == 4
             elif isinstance(force, HarmonicAngleForce):
                 assert force.getNumAngles() == 6
+            elif isinstance(force, CMMotionRemover):
+                pass
             else:
                 pytest.fail(f"Unexpected force found, type: {type(force)}")
 
