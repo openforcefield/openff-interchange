@@ -73,7 +73,7 @@ jobs:
 
     - name: Install Python <3.13 dependencies
       if: ${{ matrix.python-version != '3.13' }}
-      run: micromamba update --file devtools/conda-envs/test_not_py313.yaml
+      run: micromamba install --file devtools/conda-envs/test_not_py313.yaml
 
     - name: Run tests
       run: |
