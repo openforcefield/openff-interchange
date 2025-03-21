@@ -15,11 +15,20 @@ dependencies:
   - rdkit
   # Optional features
   - openmm =8.2
+  - smirnoff-plugins =2024
+  # de-forcefields  # add back after smirnoff-plugins update
   - openff-nagl
   - openff-nagl-models
+  # https://github.com/mosdef-hub/foyer/pull/574
+  - mbuild =1
+  - foyer =1
   - nglview
   # Drivers
   - gromacs
+  - lammps >=2023.08.02
+  # shim for a build issue that's probably localized to conda-forge
+  # https://github.com/conda-forge/lammps-feedstock/issues/207
+  - openmpi =4
   - panedr
   # Testing
   - mdtraj

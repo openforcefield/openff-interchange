@@ -73,15 +73,7 @@ jobs:
 
     - name: Install Python <3.13 dependencies
       if: ${{ matrix.python-version != '3.13' }}
-      run: |
-        # https://github.com/conda-forge/lammps-feedstock/issues/207
-        micromamba install \
-          mbuild \
-          foyer \
-          "lammps >=2023.08.02" \
-          "openmpi =4" \
-          smirnoff-plugins \
-          de-forcefields
+      run: micromamba update --file devtools/conda-envs/test_not_py313.yaml
 
     - name: Run tests
       run: |
