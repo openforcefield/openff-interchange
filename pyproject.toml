@@ -79,6 +79,16 @@ fail-under = 90
 line-length = 119
 namespace-packages = ["openff/interchange/"]
 
+[tool.coverage.run]
+omit = ["*/*/_tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]
 [tool.ruff.lint]
 ignore = ["E721","D105","D107","D200","D203","D212"]
 select = ["F", "E", "W", "NPY", "UP", "RUF", "I"]
@@ -115,15 +125,14 @@ platforms = ["osx-arm64"]
 [tool.pixi.pypi-dependencies]
 openff-interchange = { path = ".", editable = true }
 
-[tool.coverage.run]
-omit = [
-    "*/*/_tests/*",
-]
+[tool.pixi.feature.py310.dependencies]
+python = "3.10.*"
+[tool.pixi.feature.py311.dependencies]
+python = "3.11.*"
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
 
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "if TYPE_CHECKING:",
-    "raise NotImplementedError",
-    "@overload",
-]
+[tool.pixi.environments]
+py310 = ["py310"]
+py311 = ["py311"]
+py312 = ["py312"]
