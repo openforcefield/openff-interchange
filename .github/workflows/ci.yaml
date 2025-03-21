@@ -54,7 +54,7 @@ jobs:
     - name: Install and license OpenEye Toolkits
       if: ${{ matrix.openeye == true }}
       run: |
-        pixi add "openeye-toolkits =2024.1.0" -c openeye
+        pixi add "openeye-toolkits =2024.1.0"
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
       env:
