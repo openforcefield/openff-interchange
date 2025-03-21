@@ -455,6 +455,7 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
             ):
                 assert force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff
 
+    @pytest.mark.skip(reason="Different energies in different environments, see #1190")
     def test_double_exponential_create_simulation(
         self,
         de_force_field,

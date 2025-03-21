@@ -20,7 +20,7 @@ def _topology_custom_before_validator(
 ) -> Topology:
     if info.mode == "json":
         # Making a new one so no need to deepcopy
-        return handler(Topology.from_json(topology))
+        return Topology.from_json(topology)
 
     assert info.mode == "python"
     if isinstance(topology, Topology):
