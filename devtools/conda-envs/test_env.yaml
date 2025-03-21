@@ -9,8 +9,8 @@ dependencies:
   - pydantic =2
   # OpenFF stack
   - openff-toolkit-base ~=0.16.8
-  - openff-units
-  - ambertools
+  - openff-units =0.3
+  - ambertools =24
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
   - rdkit
   # Optional features
