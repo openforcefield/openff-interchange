@@ -119,8 +119,8 @@ property-decorators=["validator"]
 
 [tool.pixi.project]
 name = "openff-interchange"
-channels = ["conda-forge"]
-platforms = ["osx-arm64", "linux-64"]
+channels = ["conda-forge", "openeye"]
+platforms = ["osx-arm64", "osx-64", "linux-64"]
 
 [tool.pixi.pypi-dependencies]
 openff-interchange = { path = ".", editable = true }
