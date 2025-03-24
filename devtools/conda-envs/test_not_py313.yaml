@@ -10,7 +10,7 @@ dependencies:
   # OpenFF stack
   - openff-toolkit-base ~=0.16.8
   - openff-units =0.3
-  - ambertools =23,24
+  - ambertools
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
   - rdkit
   # Optional features
