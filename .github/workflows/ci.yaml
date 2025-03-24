@@ -54,9 +54,6 @@ jobs:
         create-args: >-
           python=${{ matrix.python-version }}
 
-    - name: Install package
-      run: python -m pip install . plugins/
-
     - name: Install and license OpenEye Toolkits
       if: ${{ matrix.openeye == true }}
       run: |
@@ -74,6 +71,9 @@ jobs:
     - name: Install Python <3.13 dependencies
       if: ${{ matrix.python-version != '3.13' }}
       run: micromamba install --file devtools/conda-envs/test_not_py313.yaml
+
+    - name: Install package
+      run: python -m pip install . plugins/
 
     - name: Run tests
       run: |
