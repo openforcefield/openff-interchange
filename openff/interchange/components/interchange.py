@@ -748,13 +748,13 @@ class Interchange(_BaseModel):
 
             openmm_topology = self.to_openmm_topology(
                 collate=False,
-                ensure_unique_atom_names=False,
+                ensure_unique_atom_names="residues",
             )
             positions = get_positions_with_virtual_sites(self)
 
         else:
             openmm_topology = self.topology.to_openmm(
-                ensure_unique_atom_names=False,
+                ensure_unique_atom_names="residues",
             )
             positions = self.positions
 
