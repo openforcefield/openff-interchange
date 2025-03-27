@@ -17,6 +17,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 * #1137 Internally use `openmm.LangevinMiddleIntegrator`, including in the OpenMM driver.
 * #1186 `GROMACSSystem.molecules` is changed from a dictionary to a list of tuples.
+* #1194 Drop support for Python 3.10
 
 ### Bug fixes
 
