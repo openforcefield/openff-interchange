@@ -343,7 +343,7 @@ class GROMACSSystem(_BaseModel):
     )
     molecules: list[tuple[str, int]] = Field(
         list(),
-        description="The number of each molecule type in the system, keyed by the name of each molecule.",
+        description="The number of each molecule type in the system, ordered topologically.",
     )
 
     @classmethod
@@ -395,7 +395,7 @@ class GROMACSSystem(_BaseModel):
                 f"The molecule type {molecule_name} is not present in this system.",
             )
 
-        if n_copies != 1 or sum(n_copies for name, n_copies in self.molecules if name == molecule_name) != 1:
+        if n_copies != 1 or sum(_n_copies for name, _n_copies in self.molecules if name == molecule_name) != 1:
             raise NotImplementedError()
 
         n_atoms_before = sum(
