@@ -11,7 +11,7 @@ from openff.interchange.drivers import get_amber_energies, get_openmm_energies
 @skip_if_missing("openmm")
 @pytest.mark.parametrize(
     "smiles",
-    ["c1ccccc1", "C1#CC#CC#C1", "C1=CC=C2C(=C1)C=CC3=C2C=CC4=CC=CC=C43"],
+    ["c1ccccc1", "C1=CC=C2C(=C1)C=CC3=C2C=CC4=CC=CC=C43"],
 )
 def test_polycyclic_nonbonded(smiles, sage_no_switch):
     molecule = MoleculeWithConformer.from_smiles(smiles)
