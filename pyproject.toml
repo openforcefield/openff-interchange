@@ -134,9 +134,10 @@ openeye-toolkits = "*"
 
 [project.optional-dependencies]
 test = ["pytest", "pytest-cov", "pytest-xdist", "pytest-randomly"]
+engines = ["gromacs", "lammps"]
 
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
 
 [tool.pixi.environments]
-py311 = {features = ["py311", "test"]}
+py311 = {features = ["py311", "test", "engines"]}

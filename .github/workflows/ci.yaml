@@ -61,7 +61,7 @@ jobs:
         # https://github.com/openforcefield/openff-units/issues/111
         python -c "from openff.toolkit import *"
 
-        pixi run -e py311 pytest $COV openff/interchange/ -r fExs -n logical --durations=10
+        pixi run -e py311 python -m pytest $COV openff/interchange/ -r fExs -n logical --durations=10
 
     - name: Run small molecule regression tests
       if: ${{ matrix.openeye == true && matrix.openmm == true }}
