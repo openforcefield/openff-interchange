@@ -128,21 +128,8 @@ versioningit = "*"
 pydantic = "=2"
 openff-toolkit = "~=0.16.8"
 
-[tool.pixi.pypi-dependencies]
-openff-interchange = { path = ".", editable = true }
-
-[tool.pixi.feature.py310.dependencies]
-python = "3.10.*"
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
-[tool.pixi.feature.py312.dependencies]
-python = "3.12.*"
-[tool.pixi.feature.py311-examples.dependencies]
-python = "3.11.*"
-openeye-toolkits = "*"
 
 [tool.pixi.environments]
-py310 = ["py310"]
 py311 = ["py311"]
-py312 = ["py312"]
-py311-examples = ["py311-examples"]
