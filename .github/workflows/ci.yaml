@@ -31,9 +31,6 @@ jobs:
           - false
         openmm:
           - true
-        exclude:
-          - python-version: "3.13"
-            openeye: true
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
