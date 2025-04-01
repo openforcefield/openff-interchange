@@ -27,7 +27,6 @@ jobs:
           - py311
         openeye:
           - true
-          - false
         openmm:
           - true
 
@@ -49,21 +48,10 @@ jobs:
     - name: Install and license OpenEye Toolkits
       if: ${{ matrix.openeye == true }}
       run: |
-        pixi install "openeye-toolkits =2024.1.0"
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
-
-    - name: Install OpenMM
-      if: ${{ matrix.openmm == true }}
-      run: |
-        pixi add openmm
-
-    - name: Uninstall OpenMM
-      if: ${{ matrix.openmm == false && matrix.openeye == true }}
-      run: |
-        pixi remove openmm mdtraj
 
     - name: Install editable build
       run: python -m pip install -e .
