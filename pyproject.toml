@@ -127,7 +127,7 @@ numpy = "*"
 versioningit = "*"
 pydantic = "=2"
 openff-toolkit = "~=0.16.8"
-ambertools = "24"
+ambertools = "*"
 rdkit = "*"
 
 [tool.pixi.feature.py311.dependencies]
