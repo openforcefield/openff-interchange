@@ -123,6 +123,7 @@ channels = ["conda-forge", "openeye"]
 platforms = ["linux-64", "osx-arm64", "osx-64"]
 
 [tool.pixi.dependencies]
+pip = "*"
 numpy = "*"
 versioningit = "*"
 pydantic = "=2"
