@@ -12,6 +12,13 @@ readme = "README.md"
 authors = [{name = "Open Force Field Initiative", email = "info@openforcefield.org"}]
 license = {text = "MIT"}
 dynamic = ["version"]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "versioningit",
+    "pydantic",
+    "openff-toolkit",
+]
 
 [tool.setuptools.packages]
 find = {}
@@ -117,10 +124,9 @@ known-first-party = ["openff.interchange"]
 [tool.ruff.lint.pydocstyle]
 property-decorators=["validator"]
 
-[tool.pixi.project]
-name = "openff-interchange"
-channels = ["conda-forge", "openeye"]
-platforms = ["osx-arm64", "osx-64", "linux-64"]
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", "osx-64"]
 
 [tool.pixi.pypi-dependencies]
 openff-interchange = { path = ".", editable = true }

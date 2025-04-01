@@ -25,7 +25,6 @@ jobs:
           - macos-latest
           - ubuntu-latest
         environment:
-          - py310
           - py311
         openeye:
           - true
