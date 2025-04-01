@@ -13,12 +13,6 @@ authors = [{name = "Open Force Field Initiative", email = "info@openforcefield.o
 license = {text = "MIT"}
 dynamic = ["version"]
 requires-python = ">=3.9"
-dependencies = [
-    "numpy",
-    "versioningit",
-    "pydantic",
-    "openff-toolkit",
-]
 
 [tool.setuptools.packages]
 find = {}
@@ -127,6 +121,12 @@ property-decorators=["validator"]
 [tool.pixi.workspace]
 channels = ["conda-forge", "openeye"]
 platforms = ["linux-64", "osx-arm64", "osx-64"]
+
+[tool.pixi.dependencies]
+numpy = "*"
+versioningit = "*"
+pydantic = "=2"
+openff-toolkit = "~=0.16.8"
 
 [tool.pixi.pypi-dependencies]
 openff-interchange = { path = ".", editable = true }
