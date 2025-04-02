@@ -132,9 +132,12 @@ ambertools = "*"
 rdkit = "*"
 openeye-toolkits = "*"
 
-[project.optional-dependencies]
-test = ["pytest", "pytest-cov", "pytest-xdist", "pytest-randomly"]
-engines = ["gromacs", "lammps"]
+[tool.pixi.feature.test]
+dependencies = {pytest = "*", pytest-cov = "*", pytest-xdist = "*", pytest-randomly = "*"}
+
+[tool.pixi.feature.engines.dependencies]
+gromacs = "*"
+lammps = "*"
 
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
