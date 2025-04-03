@@ -68,9 +68,9 @@ jobs:
       if: ${{ matrix.openeye == true && matrix.openmm == true }}
       run: |
         pixi add "deepdiff =5" rich click
-        python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@7c98afd2b4ea425276dfe1687e639e0a56b636b4
+        piri run -e ${{ matrix.environment }} python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@7c98afd2b4ea425276dfe1687e639e0a56b636b4
 
-        create_openmm_systems \
+        pixi run -e ${{ matrix.environment }} create_openmm_systems \
           --input             "regression_tests/small-molecule/input-topologies.json" \
           --output            "regression_tests/small-molecule/" \
           --using-interchange \
@@ -81,7 +81,7 @@ jobs:
         mkdir regression_tests/small-molecule/omm-systems-interchange-latest/
         mv regression_tests/small-molecule/omm-systems-interchange-*/*xml regression_tests/small-molecule/omm-systems-interchange-latest/
 
-        compare_openmm_systems \
+        pixi run -e ${{ matrix.environment }} compare_openmm_systems \
           --input-dir-a       "regression_tests/small-molecule/omm-systems-toolkit-0.10.6" \
           --input-dir-b       "regression_tests/small-molecule/omm-systems-interchange-latest" \
           --output            "regression_tests/differences.json" \
@@ -89,7 +89,7 @@ jobs:
           --expected-changes  "regression_tests/toolkit-to-interchange.json" \
           --n-procs           4
 
-        python devtools/scripts/molecule-regressions.py
+        pixi run -e ${{ matrix.environment }} python devtools/scripts/molecule-regressions.py
 
     - name: Run mypy
       if: ${{ matrix.python-version == '3.11' }}
