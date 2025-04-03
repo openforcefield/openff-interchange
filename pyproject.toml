@@ -135,12 +135,14 @@ openeye-toolkits = "*"
 [tool.pixi.feature.test]
 dependencies = {pytest = "*", pytest-cov = "*", pytest-xdist = "*", pytest-randomly = "*"}
 
-[tool.pixi.feature.engines.dependencies]
-gromacs = "*"
-lammps = "*"
+[tool.pixi.feature.engines]
+dependencies = {gromacs = "*", lammps = "*"}
 
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
 
 [tool.pixi.environments]
 py311 = {features = ["py311", "test", "engines"]}
+py312 = {features = ["py312", "test", "engines"]}
