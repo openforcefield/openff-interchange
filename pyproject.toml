@@ -132,14 +132,12 @@ ambertools = "*"
 rdkit = "*"
 openeye-toolkits = "*"
 
-[tool.pixi.feature.test]
-dependencies = {
-    pytest = "*",
-    pytest-cov = "*",
-    pytest-xdist = "*",
-    pytest-randomly = "*",
-    intermol = "*",
-}
+[tool.pixi.feature.test.dependencies]
+pytest = "*"
+pytest-cov = "*"
+pytest-xdist = "*"
+pytest-randomly = "*"
+intermol = "*"
 
 [tool.pixi.feature.engines]
 dependencies = {gromacs = "*", lammps = "*"}
