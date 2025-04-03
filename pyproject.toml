@@ -139,6 +139,11 @@ pytest-xdist = "*"
 pytest-randomly = "*"
 intermol = "*"
 
+[tool.pixi.feature.regression_tests.dependencies]
+deepdiff = "5.*"
+rich = ">=14.0.0,<15"
+click = ">=8.1.8,<9"
+
 [tool.pixi.feature.engines]
 dependencies = {gromacs = "*", lammps = "*"}
 
@@ -148,5 +153,5 @@ python = "3.11.*"
 python = "3.12.*"
 
 [tool.pixi.environments]
-py311 = {features = ["py311", "test", "engines"]}
-py312 = {features = ["py312", "test", "engines"]}
+py311 = {features = ["py311", "test", "regression_tests", "engines"]}
+py312 = {features = ["py312", "test", "regression_tests", "engines"]}
