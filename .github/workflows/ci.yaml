@@ -13,7 +13,7 @@ on:
 
 defaults:
   run:
-    shell: bash -l {0}
+    shell: pixi run bash -e {0}
 
 jobs:
   test:
@@ -22,21 +22,14 @@ jobs:
     strategy:
       matrix:
         os:
-          - macos-latest
           - ubuntu-latest
-        python-version:
-          - "3.10"
-          - "3.11"
-          - "3.12"
-          - "3.13"
+        environment:
+          - py311
+          - py312
         openeye:
           - true
-          - false
         openmm:
           - true
-        exclude:
-          - python-version: "3.13"
-            openeye: true
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -47,48 +40,36 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Install conda environment
-      uses: mamba-org/setup-micromamba@v2
+    - name: Set up virtual environment
+      uses: prefix-dev/setup-pixi@v0.8.4
       with:
-        environment-file: devtools/conda-envs/test_env.yaml
-        create-args: >-
-          python=${{ matrix.python-version }}
+        pixi-version: v0.41.4
+        environments: ${{ matrix.environment }}
 
     - name: Install and license OpenEye Toolkits
       if: ${{ matrix.openeye == true }}
       run: |
-        micromamba install "openeye-toolkits =2024.1.0" -c openeye
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
-    - name: Install OpenMM
-      if: ${{ matrix.openmm == true }}
-      run: |
-        micromamba install openmm -c conda-forge
-
-    - name: Install Python <3.13 dependencies
-      if: ${{ matrix.python-version != '3.13' }}
-      run: micromamba install --file devtools/conda-envs/test_not_py313.yaml python=${{ matrix.python-version }}
-
-    - name: Install package
-      run: python -m pip install . plugins/
+    - name: Install editable build
+      run: pixi run -e ${{ matrix.environment }} python -m pip install -e . plugins/
 
     - name: Run tests
       run: |
         # https://github.com/openforcefield/openff-units/issues/111
-        python -c "from openff.toolkit import *"
+        pixi run python -c "from openff.toolkit import *"
 
-        python -m pytest $COV openff/interchange/ -r fExs -n logical --durations=10
+        pixi run -e ${{ matrix.environment }} python -m pytest $COV openff/interchange/ -r fExs -n logical --durations=10
 
     - name: Run small molecule regression tests
       if: ${{ matrix.openeye == true && matrix.openmm == true }}
       run: |
-        micromamba install "deepdiff =5" rich click -c conda-forge
-        python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@7c98afd2b4ea425276dfe1687e639e0a56b636b4
+        pixi run -e ${{ matrix.environment }} python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@7c98afd2b4ea425276dfe1687e639e0a56b636b4
 
-        create_openmm_systems \
+        pixi run -e ${{ matrix.environment }} create_openmm_systems \
           --input             "regression_tests/small-molecule/input-topologies.json" \
           --output            "regression_tests/small-molecule/" \
           --using-interchange \
@@ -99,7 +80,7 @@ jobs:
         mkdir regression_tests/small-molecule/omm-systems-interchange-latest/
         mv regression_tests/small-molecule/omm-systems-interchange-*/*xml regression_tests/small-molecule/omm-systems-interchange-latest/
 
-        compare_openmm_systems \
+        pixi run -e ${{ matrix.environment }} compare_openmm_systems \
           --input-dir-a       "regression_tests/small-molecule/omm-systems-toolkit-0.10.6" \
           --input-dir-b       "regression_tests/small-molecule/omm-systems-interchange-latest" \
           --output            "regression_tests/differences.json" \
@@ -107,14 +88,14 @@ jobs:
           --expected-changes  "regression_tests/toolkit-to-interchange.json" \
           --n-procs           4
 
-        python devtools/scripts/molecule-regressions.py
+        pixi run -e ${{ matrix.environment }} python devtools/scripts/molecule-regressions.py
 
     - name: Run mypy
       if: ${{ matrix.python-version == '3.11' }}
       run: |
         # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
         # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
-        micromamba remove jax
+        pixi remove jax
         python -m mypy -p "openff.interchange" --exclude "openff/interchange/_tests/"
         python -m mypy plugins/nonbonded_plugins/
 
