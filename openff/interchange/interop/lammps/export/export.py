@@ -413,8 +413,8 @@ def _write_impropers(lmp_file: IO, interchange: Interchange):
         lmp_file.write(
             f"{improper_index + 1:d}\t"
             f"{improper_map[pot_key] + 1:d}\t"
-            f"{indices[1] + 1:d}\t"
             f"{indices[0] + 1:d}\t"
+            f"{indices[1] + 1:d}\t"
             f"{indices[2] + 1:d}\t"
             f"{indices[3] + 1:d}\n",
         )
