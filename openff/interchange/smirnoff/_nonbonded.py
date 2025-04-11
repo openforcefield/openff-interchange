@@ -3,7 +3,7 @@ import functools
 import logging
 import warnings
 from collections.abc import Iterable
-from typing import Literal, Union
+from typing import Literal, Self, Union
 
 import numpy
 from openff.toolkit import Molecule, Quantity, Topology, unit
@@ -16,7 +16,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     vdWHandler,
 )
 from pydantic import Field, PrivateAttr, computed_field
-from typing_extensions import Self
 
 from openff.interchange._annotations import _ElementaryChargeQuantity
 from openff.interchange.common._nonbonded import (
