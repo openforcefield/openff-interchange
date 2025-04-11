@@ -266,6 +266,13 @@ class TestGROMACSGROFile(_NeedsGROMACS):
 
 class TestGROMACS(_NeedsGROMACS):
     @pytest.mark.parametrize(
+        "monolithic",
+        [
+            True,
+            False,
+        ],
+    )
+    @pytest.mark.parametrize(
         "smiles",
         [
             "C",
@@ -277,7 +284,13 @@ class TestGROMACS(_NeedsGROMACS):
             # "C1COC(=O)O1",  # This adds an improper, i2
         ],
     )
-    def test_simple_roundtrip(self, sage_unconstrained, smiles, monkeypatch):
+    def test_simple_roundtrip(
+        self,
+        sage_unconstrained,
+        smiles,
+        monolithic,
+        monkeypatch,
+    ):
         # Skip if using RDKit conformer, which does weird stuff around 180 deg
         pytest.importorskip("openeye.oechem")
 
@@ -292,8 +305,7 @@ class TestGROMACS(_NeedsGROMACS):
         out.box = [4, 4, 4]
         out.positions = numpy.round(molecule.conformers[0], 2)
 
-        out.to_top("out.top")
-        out.to_gro("out.gro", decimal=3)
+        out.to_gromacs("out", decimal=3, monolithic=monolithic)
 
         converted = Interchange.from_gromacs("out.top", "out.gro")
 

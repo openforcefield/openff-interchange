@@ -30,7 +30,6 @@ jobs:
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      INTERCHANGE_EXPERIMENTAL: "1"
 
     steps:
     - uses: actions/checkout@v4
@@ -55,10 +54,10 @@ jobs:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     - name: Run docexamples
-      run: python -m pytest -c /dev/null/ --doctest-modules openff/interchange/ --ignore=openff/interchange/_tests
+      run: python -m pytest -c pyproject.toml --doctest-modules openff/interchange/ --ignore=openff/interchange/_tests
 
     - name: Run example notebooks
       run: |
-        python -m pytest -c /dev/null/ --nbval-lax --dist loadscope -n logical --durations=20 examples/ \
+        python -m pytest -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/ \
           --ignore=examples/deprecated/ \
           --ignore=examples/experimental

@@ -654,7 +654,11 @@ def default_integrator():
         import openmm
         import openmm.unit
 
-        return openmm.VerletIntegrator(2.0 * openmm.unit.femtosecond)
+        return openmm.LangevinMiddleIntegrator(
+            300 * openmm.unit.kelvin,
+            1 / openmm.unit.picosecond,
+            2.0 * openmm.unit.femtosecond,
+        )
 
     except ImportError:
         return None

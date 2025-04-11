@@ -189,6 +189,8 @@ def _convert(
         else:
             raise RuntimeError()
 
+    _ordered_molecules = [None] * interchange.topology.n_molecules
+
     for unique_molecule_index in unique_molecule_map:
         unique_molecule = interchange.topology.molecule(unique_molecule_index)
 
@@ -273,9 +275,8 @@ def _convert(
 
         system.molecule_types[unique_molecule.name] = molecule
 
-        system.molecules[unique_molecule.name] = len(
-            interchange.topology.identical_molecule_groups[unique_molecule_index],
-        )
+        for duplicate_molecule_index, _ in unique_molecule_map[unique_molecule_index]:
+            _ordered_molecules[duplicate_molecule_index] = unique_molecule.name
 
     if "VirtualSites" in interchange.collections:
         # TODO: Some say to skip this if the user only wants a topology file?
@@ -290,6 +291,8 @@ def _convert(
 
     else:
         system.positions = interchange.positions
+
+    system.molecules = [(key, len(list(group))) for key, group in itertools.groupby(_ordered_molecules)]
 
     system.box = interchange.box
 

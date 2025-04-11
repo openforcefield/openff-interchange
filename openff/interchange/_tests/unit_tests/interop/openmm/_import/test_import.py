@@ -95,7 +95,6 @@ class TestFromOpenMM:
 
     def test_topology_and_system_box_vectors_differ(
         self,
-        monkeypatch,
         simple_system,
     ):
         """Ensure that, if box vectors specified in the topology and system differ, those in the topology are used."""
@@ -209,7 +208,6 @@ class TestFromOpenMM:
         assert interchange["vdW"].cutoff.m_as(unit.nanometer) == pytest.approx(1.2345)
 
     @needs_gmx
-    @pytest.mark.skip(reason="needs OpenMM -> Interchange -> GROMACS virtual sites implemented")
     def test_fill_in_rigid_water_parameters(self, water_dimer):
         import openmm.app
 
@@ -239,12 +237,16 @@ class TestFromOpenMM:
             },
         )
 
-    def test_only_constrained_water(self, water_dimer):
+    def test_only_constrained_water(
+        self,
+        water_dimer,
+        default_integrator,
+    ):
         water_dimer.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         interchange = ForceField("openff-2.2.1.offxml").create_interchange(water_dimer)
 
-        simulation = interchange.to_openmm_simulation(integrator=openmm.LangevinIntegrator(300, 1, 0.001))
+        simulation = interchange.to_openmm_simulation(integrator=default_integrator)
         system = simulation.system
 
         for index in range(system.getNumForces()):

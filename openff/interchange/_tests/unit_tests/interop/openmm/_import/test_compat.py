@@ -67,27 +67,6 @@ class TestUnsupportedCases:
                 topology=modeller.topology,
             )
 
-    @pytest.mark.skip(
-        reason="Need to find a way to get OpenMM to actually use TwoParticleAverageSite",
-    )
-    def test_found_two_particle_average_virtual_site(
-        self,
-        sage_with_bond_charge,
-        default_integrator,
-    ):
-        simulation = sage_with_bond_charge.create_interchange(
-            Molecule.from_smiles("CCl").to_topology(),
-        ).to_openmm_simulation(integrator=default_integrator)
-
-        with pytest.raises(
-            UnsupportedImportError,
-            match="A particle is a `TwoParticleAverage` virtual site, which is not yet supported.",
-        ):
-            from_openmm(
-                system=simulation.system,
-                topology=simulation.topology,
-            )
-
     def test_missing_positions_warning(self, sage, water):
         topology = water.to_topology()
         topology.box_vectors = Quantity([4, 4, 4], "nanometer")

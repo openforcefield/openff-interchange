@@ -748,13 +748,13 @@ class Interchange(_BaseModel):
 
             openmm_topology = self.to_openmm_topology(
                 collate=False,
-                ensure_unique_atom_names=False,
+                ensure_unique_atom_names="residues",
             )
             positions = get_positions_with_virtual_sites(self)
 
         else:
             openmm_topology = self.topology.to_openmm(
-                ensure_unique_atom_names=False,
+                ensure_unique_atom_names="residues",
             )
             positions = self.positions
 
@@ -941,6 +941,10 @@ class Interchange(_BaseModel):
         -------
         interchange : Interchange
             An Interchange object representing the contents of the OpenMM objects.
+
+        Notes
+        -----
+        An `openmm.CMMotionRemover` force, if present, is ignored.
 
         """
         from openff.interchange.interop.openmm._import._import import from_openmm
