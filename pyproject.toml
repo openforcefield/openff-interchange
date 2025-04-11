@@ -12,7 +12,7 @@ readme = "README.md"
 authors = [{name = "Open Force Field Initiative", email = "info@openforcefield.org"}]
 license = {text = "MIT"}
 dynamic = ["version"]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 
 [tool.setuptools.packages]
 find = {}
@@ -122,6 +122,9 @@ property-decorators=["validator"]
 channels = ["conda-forge", "openeye"]
 platforms = ["linux-64", "osx-arm64", "osx-64"]
 
+[tool.pixi.tasks]
+postinstall = "pip install -e . plugins/"
+
 [tool.pixi.dependencies]
 pip = "*"
 numpy = "*"
@@ -138,6 +141,9 @@ pytest-cov = "*"
 pytest-xdist = "*"
 pytest-randomly = "*"
 intermol = "*"
+
+[tool.pixi.feature.test.tasks]
+test = "python -m pytest -v -n logical openff/interchange/"
 
 [tool.pixi.feature.regression_tests.dependencies]
 deepdiff = "5.*"
