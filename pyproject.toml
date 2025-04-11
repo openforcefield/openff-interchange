@@ -60,7 +60,8 @@ ignore_missing_imports = true
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
-addopts = "--cov=openff/interchange --cov-report=xml"
+addopts = "--cov=openff/interchange --cov-report=xml --ignore=examples/deprecated --ignore=examples/experimental"
+
 
 [tool.interrogate]
 ignore-init-method = true
@@ -145,6 +146,17 @@ intermol = "*"
 [tool.pixi.feature.test.tasks]
 test = "python -m pytest -v -n logical openff/interchange/"
 
+[tool.pixi.feature.examples.dependencies]
+mdtraj = "*"
+pytest = "*"
+pytest-xdist = "*"
+pytest-cov = "*"
+nbval = "*"
+nglview = "*"
+
+[tool.pixi.feature.examples.tasks]
+test = "python -m pytest -vx -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/"
+
 [tool.pixi.feature.regression_tests.dependencies]
 deepdiff = "5.*"
 rich = ">=14.0.0,<15"
@@ -161,3 +173,5 @@ python = "3.12.*"
 [tool.pixi.environments]
 py311 = {features = ["py311", "test", "regression_tests", "engines"]}
 py312 = {features = ["py312", "test", "regression_tests", "engines"]}
+py311examples = {features = ["py311", "examples", "engines"]}
+py312examples = {features = ["py312", "examples", "engines"]}
