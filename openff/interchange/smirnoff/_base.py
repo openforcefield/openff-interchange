@@ -1,5 +1,5 @@
 import abc
-from typing import TypeVar
+from typing import Self, TypeVar
 
 from openff.toolkit import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -9,7 +9,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
 )
-from typing_extensions import Self
 
 from openff.interchange.components.potentials import Collection
 from openff.interchange.exceptions import (

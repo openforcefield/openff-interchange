@@ -80,6 +80,8 @@ fail-under = 90
 [tool.ruff]
 line-length = 119
 namespace-packages = ["openff/interchange/"]
+# like pyupgrade's --py311-plus
+target-version = "py311"
 
 [tool.coverage.run]
 omit = ["*/*/_tests/*"]
@@ -92,7 +94,7 @@ exclude_lines = [
     "@overload",
 ]
 [tool.ruff.lint]
-ignore = ["E721","D105","D107","D200","D203","D212"]
+ignore = ["E721","D105","D107","D200","D203","D212", "UP038"]
 select = ["F", "E", "W", "NPY", "UP", "RUF", "I"]
 
 [tool.ruff.lint.per-file-ignores]
