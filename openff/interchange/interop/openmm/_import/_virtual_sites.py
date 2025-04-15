@@ -80,4 +80,4 @@ def _convert_virtual_sites(
                         },
                     )
 
-    return collection
+    return collection if len(collection.key_map) > 0 else None

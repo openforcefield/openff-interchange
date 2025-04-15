@@ -545,6 +545,9 @@ def _convert_virtual_sites(
     if "VirtualSites" not in interchange.collections:
         return
 
+    if len(molecule_virtual_site_map) == 0:
+        return
+
     for virtual_site_key in molecule_virtual_site_map[interchange.topology.molecule_index(unique_molecule)]:
         from openff.interchange.smirnoff._virtual_sites import (
             _create_virtual_site_object,
