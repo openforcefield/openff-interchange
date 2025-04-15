@@ -88,7 +88,7 @@ Combining systems with virtual sites from multiple sources is not fully-featured
 
 ### Virtual sites must be listed after heavy atoms each molecule
 
-It's assumed that, in each molecule in an OpenMM topology, all heavy atoms are listed before any virtual sites. This includes the case of all virtual sites being listed after all heavy atoms, i.e. not collated into molecules/residues. There are no community standards areound particle ordering, but virtual sites are typically listed after heavy atoms in each molecule or residue.
+It's assumed that, in each molecule in an OpenMM topology, all heavy atoms are listed before any virtual sites. This includes the case of all virtual sites being listed after all heavy atoms, i.e. not collated into molecules/residues. There are no community standards around particle ordering, but virtual sites are typically listed after heavy atoms in each molecule or residue.
 
 ### Center-of-mass motion remover ignored
 
