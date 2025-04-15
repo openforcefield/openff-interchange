@@ -10,6 +10,8 @@ from openff.interchange._annotations import _DistanceQuantity
 from openff.interchange.pydantic import _BaseModel
 
 
+# TODO: This is actually quite SMIRNOFF-specific, should be refactored out since
+#       it can't really represent a generic/abstract base class for virtual sites
 class _VirtualSite(_BaseModel, abc.ABC):
     type: str
     distance: _DistanceQuantity

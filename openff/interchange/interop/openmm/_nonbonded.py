@@ -22,9 +22,10 @@ from openff.interchange.exceptions import (
 )
 from openff.interchange.interop.common import _build_particle_map
 from openff.interchange.models import (
+    BaseVirtualSiteKey,
+    ImportedVirtualSiteKey,
     SingleAtomChargeTopologyKey,
     TopologyKey,
-    VirtualSiteKey,
 )
 from openff.interchange.warnings import NonbondedSettingsWarning
 
@@ -56,7 +57,7 @@ def _process_nonbonded_forces(
     system: openmm.System,
     combine_nonbonded_forces: bool = False,
     ewald_tolerance: float = 1e-4,
-) -> dict[int | VirtualSiteKey, int]:
+) -> dict[int | BaseVirtualSiteKey, int]:
     """
     Process the non-bonded collections in an Interchange into corresponding openmm objects.
 
@@ -91,11 +92,11 @@ def _process_nonbonded_forces(
         _check_virtual_site_exclusion_policy(virtual_sites)
 
         virtual_site_molecule_map: dict[
-            VirtualSiteKey,
+            BaseVirtualSiteKey,
             int,
         ] = _virtual_site_parent_molecule_mapping(interchange)
 
-        molecule_virtual_site_map: dict[int, list[VirtualSiteKey]] = defaultdict(list)
+        molecule_virtual_site_map: dict[int, list[BaseVirtualSiteKey]] = defaultdict(list)
 
         for virtual_site_key, molecule_index in virtual_site_molecule_map.items():
             molecule_virtual_site_map[molecule_index].append(virtual_site_key)
@@ -165,7 +166,7 @@ def _add_particles_to_system(
     interchange: "Interchange",
     system: openmm.System,
     molecule_virtual_site_map,
-) -> dict[int | VirtualSiteKey, int]:
+) -> dict[int | BaseVirtualSiteKey, int]:
     particle_map = _build_particle_map(
         interchange,
         molecule_virtual_site_map,
@@ -281,8 +282,8 @@ def _create_single_nonbonded_force(
     interchange: "Interchange",
     system: openmm.System,
     ewald_tolerance: float,
-    molecule_virtual_site_map: dict["Molecule", list[VirtualSiteKey]],
-    openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
+    molecule_virtual_site_map: dict["Molecule", list[BaseVirtualSiteKey]],
+    openff_openmm_particle_map: dict[int | BaseVirtualSiteKey, int],
 ):
     """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site collections."""
     if data.mixing_rule not in ("lorentz-berthelot", ""):
@@ -451,8 +452,17 @@ def _create_single_nonbonded_force(
                     "vdW and/or electrostatics interactions",
                 )
 
-            charge_increments = coul.potentials[coul_key].parameters["charge_increments"]
-            charge = to_openmm_quantity(-sum(charge_increments))
+            try:
+                # SMIRNOFF-style virtual sites are charged from charge increments
+                # moved from their parent atoms
+                charge_increments = coul.potentials[coul_key].parameters["charge_increments"]
+
+                charge = to_openmm_quantity(-sum(charge_increments))
+            except KeyError:
+                # but stuff imported from other sources just has the charge right there
+                assert isinstance(virtual_site_key, ImportedVirtualSiteKey)
+
+                charge = coul.potentials[coul_key].parameters["charge"].to_openmm()
 
             vdw_parameters = vdw.potentials[vdw_key].parameters
             sigma = to_openmm_quantity(vdw_parameters["sigma"])
@@ -466,7 +476,13 @@ def _create_single_nonbonded_force(
                     f"Mismatch in system ({system_index=}) and force ({force_index=}) indexing",
                 )
 
-            parent_atom_index = openff_openmm_particle_map[virtual_site_object.orientations[0]]
+            try:
+                parent_atom_index = openff_openmm_particle_map[virtual_site_object.orientations[0]]
+            except AttributeError:
+                # TODO: Should unify these objects
+                assert isinstance(virtual_site_key, ImportedVirtualSiteKey)
+
+                parent_atom_index = openff_openmm_particle_map[virtual_site_object.particles[0]]  # type: ignore[attr-defined]
 
             parent_virtual_particle_mapping[parent_atom_index].append(force_index)
 
@@ -574,7 +590,7 @@ def _create_multiple_nonbonded_forces(
     system: openmm.System,
     ewald_tolerance: float,
     molecule_virtual_site_map: dict,
-    openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
+    openff_openmm_particle_map: dict[int | BaseVirtualSiteKey, int],
 ):
     from openff.interchange.components.toolkit import _get_14_pairs
 
@@ -747,7 +763,7 @@ def _create_multiple_nonbonded_forces(
 def _create_vdw_force(
     data: _NonbondedData,
     interchange: "Interchange",
-    molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
+    molecule_virtual_site_map: dict[int, list[BaseVirtualSiteKey]],
     has_virtual_sites: bool,
 ) -> openmm.CustomNonbondedForce | None:
     vdw_collection: vdWCollection | None = data.vdw_collection
@@ -838,7 +854,7 @@ def _create_electrostatics_force(
     data: _NonbondedData,
     interchange: "Interchange",
     ewald_tolerance: float,
-    molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
+    molecule_virtual_site_map: dict[int, list[BaseVirtualSiteKey]],
     has_virtual_sites: bool,
     openff_openmm_particle_map,
 ) -> openmm.NonbondedForce | None:
@@ -936,8 +952,8 @@ def _set_particle_parameters(
     electrostatics_force: openmm.NonbondedForce,
     interchange: "Interchange",
     has_virtual_sites: bool,
-    molecule_virtual_site_map: dict[int, list[VirtualSiteKey]],
-    openff_openmm_particle_map: dict[int | VirtualSiteKey, int],
+    molecule_virtual_site_map: dict[int, list[BaseVirtualSiteKey]],
+    openff_openmm_particle_map: dict[int | BaseVirtualSiteKey, int],
 ):
     # TODO: Some funky plugins might have no charges, so there eventually should be
     #       handling for electrostatics_force = None
