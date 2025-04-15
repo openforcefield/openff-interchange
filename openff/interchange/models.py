@@ -244,7 +244,8 @@ class ImproperTorsionKey(ProperTorsionKey):
     """
     A unique identifier of the atoms associated in an improper torsion potential.
 
-    The central atom is the second atom in the `atom_indices` tuple, or accessible via `get_central_atom_index`.
+    The central atom is the first atom in the `atom_indices` tuple, or accessible via `get_central_atom_index`. Note
+    that SMIRNOFF parameters list the central atom second.
 
     Examples
     --------
@@ -268,7 +269,7 @@ class ImproperTorsionKey(ProperTorsionKey):
 
     def get_central_atom_index(self) -> int:
         """Get the index of the central atom of this improper torsion."""
-        return self.atom_indices[1]
+        return self.atom_indices[0]
 
 
 class LibraryChargeTopologyKey(_BaseModel):
