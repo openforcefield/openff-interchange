@@ -245,7 +245,8 @@ class ImproperTorsionKey(ProperTorsionKey):
     A unique identifier of the atoms associated in an improper torsion potential.
 
     The central atom is the first atom in the `atom_indices` tuple, or accessible via `get_central_atom_index`. Note
-    that SMIRNOFF parameters list the central atom second.
+    that SMIRNOFF parameters list the central atom second and molecular simulation engines may list atoms in yet
+    another order.
 
     Examples
     --------

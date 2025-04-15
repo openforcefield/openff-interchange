@@ -22,6 +22,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### Bug fixes
 
 * #1186 Fixes an issue in which GROMACS topology files were mangled when molecules were not grouped within a topology.
+* #1200 Atoms in improper torsions in LAMMPS files are now ordered correctly (with the central atom first).
+* #1200 `ImproperTorsionKey.get_central_atom_index` now returns fot correct atom index (this class stores the central atom first).
 
 ## 0.4.2 - 2025-02-26
 
