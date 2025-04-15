@@ -15,6 +15,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### Behavior changes
 
+* #1194 Drop support for Python 3.10
 * #1137 Internally use `openmm.LangevinMiddleIntegrator`, including in the OpenMM driver.
 * #1186 `GROMACSSystem.molecules` is changed from a dictionary to a list of tuples.
 * #1192 `Interchange.to_pdb` now uses `ensure_unique_atom_names="residues"` when writing PDB files, matching longstanding behavior of the toolkit. For more flexibility, use the `Interchange.topology` and options provided by `openff.toolkit.Topology.to_file`.
