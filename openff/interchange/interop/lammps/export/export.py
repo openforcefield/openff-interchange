@@ -161,7 +161,7 @@ def _write_bond_coeffs(lmp_file: IO, interchange: Interchange):
         k = k * 0.5  # Account for LAMMPS wrapping 1/2 into k
         length = params["length"].to(unit.angstrom).magnitude
 
-        lmp_file.write(f"{bond_type_idx + 1:d} harmonic\t{k:.16g}\t{length:.16g}\n")
+        lmp_file.write(f"{bond_type_idx + 1:d}\t{k:.16g}\t{length:.16g}\n")
 
     lmp_file.write("\n")
 
@@ -180,7 +180,7 @@ def _write_angle_coeffs(lmp_file: IO, interchange: Interchange):
         k = k * 0.5  # Account for LAMMPS wrapping 1/2 into k
         theta = params["angle"].to(unit.degree).magnitude
 
-        lmp_file.write(f"{angle_type_idx + 1:d} harmonic\t{k:.16g}\t{theta:.16g}\n")
+        lmp_file.write(f"{angle_type_idx + 1:d}\t{k:.16g}\t{theta:.16g}\n")
 
     lmp_file.write("\n")
 
@@ -202,7 +202,7 @@ def _write_proper_coeffs(lmp_file: IO, interchange: Interchange):
         k = k / idivf
 
         lmp_file.write(
-            f"{proper_type_idx + 1:d} fourier 1\t{k:.16g}\t{n:d}\t{phase:.16g}\n",
+            f"{proper_type_idx + 1:d} 1\t{k:.16g}\t{n:d}\t{phase:.16g}\n",
         )
 
     lmp_file.write("\n")
