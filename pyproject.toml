@@ -12,6 +12,7 @@ readme = "README.md"
 authors = [{name = "Open Force Field Initiative", email = "info@openforcefield.org"}]
 license = {text = "MIT"}
 dynamic = ["version"]
+requires-python = ">=3.11"
 
 [tool.setuptools.packages]
 find = {}
@@ -59,7 +60,8 @@ ignore_missing_imports = true
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
-addopts = "--cov=openff/interchange --cov-report=xml"
+addopts = "--cov=openff/interchange --cov-report=xml --ignore=examples/deprecated --ignore=examples/experimental"
+
 
 [tool.interrogate]
 ignore-init-method = true
@@ -78,9 +80,21 @@ fail-under = 90
 [tool.ruff]
 line-length = 119
 namespace-packages = ["openff/interchange/"]
+# like pyupgrade's --py311-plus
+target-version = "py311"
 
+[tool.coverage.run]
+omit = ["*/*/_tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]
 [tool.ruff.lint]
-ignore = ["E721","D105","D107","D200","D203","D212"]
+ignore = ["E721","D105","D107","D200","D203","D212", "UP038"]
 select = ["F", "E", "W", "NPY", "UP", "RUF", "I"]
 
 [tool.ruff.lint.per-file-ignores]
@@ -107,15 +121,59 @@ known-first-party = ["openff.interchange"]
 [tool.ruff.lint.pydocstyle]
 property-decorators=["validator"]
 
-[tool.coverage.run]
-omit = [
-    "*/*/_tests/*",
-]
+[tool.pixi.workspace]
+channels = ["conda-forge", "openeye"]
+platforms = ["linux-64", "osx-arm64", "osx-64"]
 
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "if TYPE_CHECKING:",
-    "raise NotImplementedError",
-    "@overload",
-]
+[tool.pixi.tasks]
+postinstall = "pip install -e . plugins/"
+
+[tool.pixi.dependencies]
+pip = "*"
+numpy = "*"
+versioningit = "*"
+pydantic = "=2"
+openff-toolkit = "~=0.16.8"
+ambertools = "*"
+rdkit = "*"
+openeye-toolkits = "*"
+
+[tool.pixi.feature.test.dependencies]
+pytest = "*"
+pytest-cov = "*"
+pytest-xdist = "*"
+pytest-randomly = "*"
+intermol = "*"
+
+[tool.pixi.feature.test.tasks]
+test = "python -m pytest -v -n logical openff/interchange/"
+
+[tool.pixi.feature.examples.dependencies]
+mdtraj = "*"
+pytest = "*"
+pytest-xdist = "*"
+pytest-cov = "*"
+nbval = "*"
+nglview = "*"
+
+[tool.pixi.feature.examples.tasks]
+test = "python -m pytest -vx -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/"
+
+[tool.pixi.feature.regression_tests.dependencies]
+deepdiff = "5.*"
+rich = ">=14.0.0,<15"
+click = ">=8.1.8,<9"
+
+[tool.pixi.feature.engines]
+dependencies = {gromacs = "*", lammps = "*"}
+
+[tool.pixi.feature.py311.dependencies]
+python = "3.11.*"
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+
+[tool.pixi.environments]
+py311 = {features = ["py311", "test", "regression_tests", "engines"]}
+py312 = {features = ["py312", "test", "regression_tests", "engines"]}
+py311examples = {features = ["py311", "examples", "engines"]}
+py312examples = {features = ["py312", "examples", "engines"]}

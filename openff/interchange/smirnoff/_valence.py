@@ -1,5 +1,5 @@
 import warnings
-from typing import Literal
+from typing import Literal, Self
 
 from openff.toolkit import Molecule, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -11,7 +11,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ProperTorsionHandler,
 )
 from packaging.version import Version
-from typing_extensions import Self
 
 from openff.interchange.common._valence import (
     AngleCollection,
