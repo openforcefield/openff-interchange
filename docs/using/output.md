@@ -42,7 +42,9 @@ An [`Interchange`] object can be written to LAMMPS data and run input files with
 
 ```python
 interchange.to_lammps("data")  # Produces `data.lmp` and `data_pointenergy.in`
-interchange.to_lammps("data", include_type_labels=True)  # includes LAMMPS type labels in `data.lmp`
+interchange.to_lammps(
+    "data", include_type_labels=True
+)  # includes LAMMPS type labels in `data.lmp`
 ```
 
 Note that the generated run input file will run a single-point energy calculation and should be modified for the desired simulation.
