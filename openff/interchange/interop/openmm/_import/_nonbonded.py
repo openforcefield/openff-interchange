@@ -33,9 +33,6 @@ class BasicElectrostaticsCollection(ElectrostaticsCollection):
         for topology_key, potential_key in self.key_map.items():
             potential = self.potentials[potential_key]
 
-            if len(topology_key.atom_indices) * len(potential.parameters) != 1:
-                raise RuntimeError()
-
             charges[topology_key] = potential.parameters["charge"]
 
         return charges

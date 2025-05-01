@@ -13,7 +13,7 @@ from openff.interchange.interop.gromacs.models.models import (
     GROMACSVirtualSite3,
     GROMACSVirtualSite3fad,
 )
-from openff.interchange.models import VirtualSiteKey
+from openff.interchange.models import BaseVirtualSiteKey
 from openff.interchange.smirnoff._virtual_sites import (
     _BondChargeVirtualSite,
     _DivalentLonePairVirtualSite,
@@ -25,8 +25,8 @@ from openff.interchange.smirnoff._virtual_sites import (
 def _create_gromacs_virtual_site(
     interchange: Interchange,
     virtual_site: "_VirtualSite",
-    virtual_site_key: VirtualSiteKey,
-    particle_map: dict[int | VirtualSiteKey, int],
+    virtual_site_key: BaseVirtualSiteKey,
+    particle_map: dict[int | BaseVirtualSiteKey, int],
 ) -> GROMACSVirtualSite:
     # Orientation atom indices are topology indices, but here they need to be indexed as molecule
     # indices. Store the difference between an orientation atom's molecule and topology indices.

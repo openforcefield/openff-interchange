@@ -1,5 +1,6 @@
 import copy
 import random
+from collections import defaultdict
 
 import numpy
 import openmm
@@ -72,6 +73,8 @@ class TestFromOpenMM:
         simple_system,
     ):
         topology = Molecule.from_smiles("C").to_topology()
+        topology._molecule_virtual_site_map = defaultdict(list)
+        topology._particle_map = {index: index for index in range(topology.n_atoms)}
 
         if as_argument:
             box = Interchange.from_openmm(
@@ -271,6 +274,9 @@ class TestProcessTopology:
     def test_with_openff_topology(self, sage, basic_top):
         system = sage.create_openmm_system(basic_top)
 
+        basic_top._molecule_virtual_site_map = defaultdict(list)
+        basic_top._particle_map = {index: index for index in range(basic_top.n_atoms)}
+
         with_openff = Interchange.from_openmm(
             system=system,
             topology=basic_top,
@@ -312,7 +318,7 @@ class TestConvertNonbondedForce:
             force.setNonbondedMethod(method)
 
             with pytest.raises(UnsupportedImportError):
-                _convert_nonbonded_force(force)
+                _convert_nonbonded_force(force, dict())
 
     def test_parse_switching_distance(self):
         force = openmm.NonbondedForce()
@@ -325,7 +331,7 @@ class TestConvertNonbondedForce:
         force.setUseSwitchingFunction(True)
         force.setSwitchingDistance(cutoff - switch_width)
 
-        vdw, _ = _convert_nonbonded_force(force)
+        vdw, _ = _convert_nonbonded_force(force=force, particle_map=dict())
 
         assert vdw.cutoff.m_as(unit.nanometer) == pytest.approx(cutoff)
         assert vdw.switch_width.m_as(unit.nanometer) == pytest.approx(switch_width)
@@ -338,7 +344,7 @@ class TestConvertNonbondedForce:
 
         force.setCutoffDistance(cutoff)
 
-        vdw, _ = _convert_nonbonded_force(force)
+        vdw, _ = _convert_nonbonded_force(force=force, particle_map=dict())
 
         assert vdw.cutoff.m_as(unit.nanometer) == pytest.approx(cutoff)
         assert vdw.switch_width.m_as(unit.nanometer) == 0.0
@@ -348,7 +354,6 @@ class TestConvertNonbondedForce:
 class TestConvertConstraints:
     def test_num_constraints(self, sage, basic_top):
         """Test that the number of constraints is preserved when converting to and from OpenMM"""
-
         interchange = sage.create_interchange(basic_top)
 
         converted = Interchange.from_openmm(
