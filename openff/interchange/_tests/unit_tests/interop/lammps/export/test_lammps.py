@@ -1,5 +1,4 @@
 import copy
-import tempfile
 from pathlib import Path
 
 import numpy
@@ -235,7 +234,12 @@ class TestLammps:
             "OC=O",  # Simplest molecule with a multi-term torsion
         ],
     )
-    def test_to_lammps_with_type_labels(self, mol: str, sage_unconstrained: ForceField) -> None:
+    def test_to_lammps_with_type_labels(
+        self,
+        mol: str,
+        sage_unconstrained: ForceField,
+        tmp_path,
+    ) -> None:
         import lammps
 
         from openff.interchange.exceptions import LAMMPSRunError
@@ -250,8 +254,8 @@ class TestLammps:
         interchange = Interchange.from_smirnoff(sage_unconstrained, top)
         interchange.positions = positions
         interchange.box = top.box_vectors
-        with tempfile.TemporaryDirectory():
-            interchange.to_lammps("out", include_type_labels=True)
+
+        interchange.to_lammps(tmp_path / "out", include_type_labels=True)
 
         runner = lammps.lammps(cmdargs=["-screen", "none", "-nocite"])
 
