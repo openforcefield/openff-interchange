@@ -4,10 +4,12 @@ from pathlib import Path
 from typing import IO
 
 import numpy
+import packaging.version
 from openff.toolkit.topology.molecule import Atom, unit
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError
+from openff.interchange.interop.lammps.export.provenance import get_lammps_version
 from openff.interchange.models import PotentialKey
 
 
@@ -85,6 +87,9 @@ def to_lammps(interchange: Interchange, file_path: Path | str, include_type_labe
         lmp_file.write("0.0 0.0 0.0 xy xz yz\n")
 
         if include_type_labels:
+            # type labels added in 15Sep2022, see PR #1208
+            assert get_lammps_version() > packaging.version.Version("2022.09.15")
+
             _write_atom_type_labels(lmp_file=lmp_file, interchange=interchange)
             if n_bonds > 0:
                 _write_bond_type_labels(lmp_file=lmp_file, interchange=interchange)
