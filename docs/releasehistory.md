@@ -13,6 +13,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### New features
+
+* #1216 Type labels can (optionally) be included in LAMMPS files.
+
 ### Behavior changes
 
 * #1194 Drop support for Python 3.10
