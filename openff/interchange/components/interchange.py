@@ -906,7 +906,7 @@ class Interchange(_BaseModel):
     def from_openmm(
         cls,
         system: "openmm.System",
-        topology: Union["openmm.app.Topology", Topology, None] = None,
+        topology: Union["openmm.app.Topology", Topology],
         positions: Quantity | None = None,
         box_vectors: Quantity | None = None,
     ) -> "Interchange":
@@ -928,8 +928,8 @@ class Interchange(_BaseModel):
         ----------
         system : openmm.System
             The OpenMM system.
-        topology : openmm.app.Topology, optional
-            The OpenMM topology.
+        topology : openmm.app.Topology
+            The OpenMM topology
         positions : openmm.unit.Quantity or openff.units.Quantity, optional
             The positions of particles in this system and/or topology.
         box_vectors : openmm.unit.Quantity or openff.units.Quantity, optional
