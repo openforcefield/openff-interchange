@@ -903,6 +903,24 @@ class Interchange(_BaseModel):
             ),
         )
 
+    def set_positions_from_gro(
+        self,
+        gro_file: Path | str,
+    ):
+        """Set the positions of this `Interchange` from a GROMACS coordinate `.gro` file."""
+        from openff.interchange.interop.gromacs._import._import import _read_coordinates
+
+        # should already be in nm, might not be necessary
+        coordinates = _read_coordinates(gro_file).to(unit.nanometer)
+
+        if coordinates.shape != (self.topology.n_atoms, 3):
+            raise ValueError(
+                f"Coordinates in {gro_file} do not match the number of atoms in the topology. ",
+                f"Parsed coordinates have shape {coordinates.shape} but topology has {self.topology.n_atoms} atoms.",
+            )
+
+        self.positions = coordinates
+
     @classmethod
     def from_openmm(
         cls,
