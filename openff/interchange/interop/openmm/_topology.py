@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
-from openff.interchange.models import VirtualSiteKey
+from openff.interchange.models import BaseVirtualSiteKey
 
 if has_package("openmm") or TYPE_CHECKING:
     import openmm.app
@@ -34,27 +34,18 @@ def to_openmm_topology(
     # Heavily cribbed from the toolkit
     # https://github.com/openforcefield/openff-toolkit/blob/0.11.0rc2/openff/toolkit/topology/topology.py
 
-    from collections import defaultdict
-
     from openff.toolkit import Topology
     from openff.toolkit.topology._mm_molecule import _SimpleBond
     from openff.toolkit.topology.molecule import Bond
 
-    from openff.interchange.interop._virtual_sites import (
-        _virtual_site_parent_molecule_mapping,
-    )
+    from openff.interchange.interop._virtual_sites import _get_molecule_virtual_site_map
 
     # Copy topology to avoid modifying input (eg, when generating atom names)
     topology = Topology(interchange.topology)
 
-    virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(interchange)
+    molecule_virtual_site_map = _get_molecule_virtual_site_map(interchange)
 
-    molecule_virtual_site_map = defaultdict(list)
-
-    for virtual_site, molecule_index in virtual_site_molecule_map.items():
-        molecule_virtual_site_map[molecule_index].append(virtual_site)
-
-    has_virtual_sites = len(virtual_site_molecule_map) > 0
+    has_virtual_sites = len(molecule_virtual_site_map) > 0
 
     virtual_site_element = openmm.app.element.Element.getByMass(0)
 
@@ -128,7 +119,7 @@ def to_openmm_topology(
             last_residue = residue
 
         if has_virtual_sites and collate:
-            virtual_sites_in_this_molecule: list[VirtualSiteKey] = molecule_virtual_site_map[molecule_index]
+            virtual_sites_in_this_molecule: list[BaseVirtualSiteKey] = molecule_virtual_site_map[molecule_index]
             for this_virtual_site in virtual_sites_in_this_molecule:
                 virtual_site_name = this_virtual_site.name
 
@@ -178,7 +169,8 @@ def to_openmm_topology(
         chain = None
         residue = None
         for virtual_site_key in interchange["VirtualSites"].key_map:
-            assert isinstance(virtual_site_key, VirtualSiteKey)
+            assert isinstance(virtual_site_key, BaseVirtualSiteKey)
+
             parent_atom_index = virtual_site_key.orientation_atom_indices[0]
             parent_atom = omm_atoms[parent_atom_index]
 

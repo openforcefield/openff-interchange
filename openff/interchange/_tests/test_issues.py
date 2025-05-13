@@ -78,10 +78,8 @@ def test_issue_1022(pack):
 
 
 @skip_if_missing("openmm")
-def test_issue_1031(monkeypatch):
+def test_issue_1031():
     import openmm.app
-
-    monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
     # just grab some small PDB file from the toolkit, doesn't need to be huge, just
     # needs to include some relevant atom names

@@ -64,6 +64,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### New features
 
+* #1081 `Interchange.from_openmm` now processes virtual sites, but only `openmm.ThreeParticleAverageSite`s.
 * #1053 Logs, at the level of `logging.INFO`, how charges are assigned by SMIRNOFF force fields to each atom and virtual site.
 * #1080 Adds support for HMR in OpenMM when virtual sites are present.
 * #1119 Adds support for writing GROMACS `.itp` files.

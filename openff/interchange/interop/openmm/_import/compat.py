@@ -4,6 +4,10 @@ from openff.toolkit import Topology
 
 from openff.interchange.exceptions import UnsupportedImportError
 
+_SUPPORTED_VIRTUAL_SITE_TYPES: set[type] = {
+    openmm.ThreeParticleAverageSite,
+}
+
 
 def _check_compatible_inputs(
     system: openmm.System,
@@ -12,9 +16,11 @@ def _check_compatible_inputs(
     """Check that inputs are compatible and supported."""
     for index in range(system.getNumParticles()):
         if system.isVirtualSite(index):
-            raise UnsupportedImportError(
-                "A particle is a virtual site, which is not yet supported.",
-            )
+            if type(system.getVirtualSite(index)) not in _SUPPORTED_VIRTUAL_SITE_TYPES:
+                raise UnsupportedImportError(
+                    f"A particle is a virtual site of type {type(system.getVirtualSite(index))}, "
+                    "which is not yet supported.",
+                )
 
     if isinstance(topology, Topology):
         _topology = topology.to_openmm()
